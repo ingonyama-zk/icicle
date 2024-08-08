@@ -22,69 +22,69 @@ using namespace icicle;
 
 namespace ntt_cpu {
 
-  // TODO SHANIE - after implementing real parallelism, try different sizes to choose the optimal one. Or consider using
+    // TODO SHANIE - after implementing real parallelism, try different sizes to choose the optimal one. Or consider using
   // a function to calculate subset sizes
-  // constexpr uint32_t layers_subntt_log_size[31][3] = {
+  // constexpr uint32_t layers_sub_logn[31][3] = {
   //   {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 2, 1},   {4, 3, 0},
   //   {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
   //   {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
   //   {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
-  constexpr uint32_t layers_subntt_log_size[31][3] = {
+  constexpr uint32_t layers_sub_logn[31][3] = {
     {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
     {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
     {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
     {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
 
+    struct NttTaskCordinates {
+        int h1_layer_idx;
+        int h1_subntt_idx;
+        int h0_layer_idx;
+        int h0_subntt_idx;
+        int h0_block_idx;
 
-struct NttTaskCordinates {
+        // Comparison operators for map
+        bool operator<(const NttTaskCordinates& other) const {
+            return std::tie(h1_layer_idx, h1_subntt_idx, h0_layer_idx, h0_subntt_idx, h0_block_idx) <
+                std::tie(other.h1_layer_idx, other.h1_subntt_idx, other.h0_layer_idx, other.h0_subntt_idx, other.h0_block_idx);
+        }
+    };
+
+struct NttTaskInfo {
     int logn; // Original size of the problem
-    int h1_layer_idx;  // Index of the current layer in hierarchy 1
-    int h1_subntt_idx; // Index of the sub-NTT in hierarchy 1
-    int h0_layer_idx;  // Index of the current layer in hierarchy 0
-    int h0_subntt_idx; // Index of the sub-NTT in hierarchy 0
-    int h0_block_idx;  // Index of the block in hierarchy 0 (a block is a group of sub-NTTs)
-    std::vector<int> h0_layers_subntt_log_size; // Log sizes of sub-NTTs in hierarchy 0 layers
-    std::vector<int> h1_layers_subntt_log_size; // Log sizes of sub-NTTs in hierarchy 1 layers
+    NttTaskCordinates c; // cordinates for the task
+    std::vector<int> h0_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 0 layers
+    std::vector<int> h1_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 1 layers
 
     // Constructor to initialize the struct
-    NttTaskCordinates(int logn,
-                    int h1_layer_idx=0,
-                    int h1_subntt_idx=0,
-                    int h0_layer_idx=0,
-                    int h0_subntt_idx=0,
-                    int h0_block_idx=0)
-        : logn(logn),
-          h1_layer_idx(h1_layer_idx),
-          h1_subntt_idx(h1_subntt_idx),
-          h0_layer_idx(h0_layer_idx),
-          h0_subntt_idx(h0_subntt_idx),
-          h0_block_idx(h0_block_idx) 
+    NttTaskInfo(int logn) : logn(logn)
     {
-        if (logn > 15){
-          // Initialize h1_layers_subntt_log_size
-          h1_layers_subntt_log_size = std::vector<int>(
-              std::begin(layers_subntt_log_size[logn]), 
-              std::end(layers_subntt_log_size[logn])
-          );
-
-          // Initialize h0_layers_subntt_log_size
-          h0_layers_subntt_log_size = std::vector<int>(
-              std::begin(layers_subntt_log_size[h1_layers_subntt_log_size[0]]), 
-              std::end(layers_subntt_log_size[h1_layers_subntt_log_size[0]])
-          );
-        } else {
-          h1_layers_subntt_log_size = {0, 0, 0};
-          h0_layers_subntt_log_size = std::vector<int>(
-              std::begin(layers_subntt_log_size[logn]), 
-              std::end(layers_subntt_log_size[logn])
-          );
-          
-        }
-        ICICLE_LOG_DEBUG << "NttTaskCordinates: h1_layers_subntt_log_size: " << h1_layers_subntt_log_size[0] << ", " << h1_layers_subntt_log_size[1] << ", " << h1_layers_subntt_log_size[2];
-        ICICLE_LOG_DEBUG << "NttTaskCordinates: h0_layers_subntt_log_size: " << h0_layers_subntt_log_size[0] << ", " << h0_layers_subntt_log_size[1] << ", " << h0_layers_subntt_log_size[2];
+      c.h1_layer_idx=0;
+      c.h1_subntt_idx=0;
+      c.h0_layer_idx=0;
+      c.h0_subntt_idx=0;
+      c.h0_block_idx=0;
+      if (logn > 15){
+        // Initialize h1_layers_sub_logn
+        h1_layers_sub_logn = std::vector<int>(
+          std::begin(layers_sub_logn[logn]), 
+          std::end(layers_sub_logn[logn])
+        );
+        // Initialize h0_layers_sub_logn
+        h0_layers_sub_logn = std::vector<int>(
+          std::begin(layers_sub_logn[h1_layers_sub_logn[0]]), 
+          std::end(layers_sub_logn[h1_layers_sub_logn[0]])
+        );
+      } else {
+        h1_layers_sub_logn = {0, 0, 0};
+        h0_layers_sub_logn = std::vector<int>(
+          std::begin(layers_sub_logn[logn]), 
+          std::end(layers_sub_logn[logn])
+        );
+      }
+      ICICLE_LOG_DEBUG << "NttTaskInfo: h1_layers_sub_logn: " << h1_layers_sub_logn[0] << ", " << h1_layers_sub_logn[1] << ", " << h1_layers_sub_logn[2];
+      ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn: " << h0_layers_sub_logn[0] << ", " << h0_layers_sub_logn[1] << ", " << h0_layers_sub_logn[2];
     }
 };
-
   template <typename S>
   class CpuNttDomain
   {
@@ -414,26 +414,26 @@ struct NttTaskCordinates {
     const S* twiddles,
     int domain_max_size,
     icicle::NTTDir direction = icicle::NTTDir::kForward,
-    NttTaskCordinates& cordinates = NttTaskCordinates())
+    NttTaskInfo& ntt_task_info = NttTaskInfo())
   {
-    int h0_subntt_size = 1 << cordinates.h0_layers_subntt_log_size[cordinates.h0_layer_idx];
-    int h0_nof_subntts = 1 << cordinates.h0_layers_subntt_log_size[0]; //only relevant for layer 1 
+    int h0_subntt_size = 1 << ntt_task_info.h0_layers_sub_logn[ntt_task_info.c.h0_layer_idx];
+    int h0_nof_subntts = 1 << ntt_task_info.h0_layers_sub_logn[0]; //only relevant for layer 1 
     int i, j, i_0;
-    int ntt_size = cordinates.h0_layer_idx == 0 ? 1 << (cordinates.h0_layers_subntt_log_size[0] + cordinates.h0_layers_subntt_log_size[1])
-                                                : 1 << (cordinates.h0_layers_subntt_log_size[0] + cordinates.h0_layers_subntt_log_size[1] + cordinates.h0_layers_subntt_log_size[2]);
+    int ntt_size = ntt_task_info.c.h0_layer_idx == 0 ? 1 << (ntt_task_info.h0_layers_sub_logn[0] + ntt_task_info.h0_layers_sub_logn[1])
+                                                : 1 << (ntt_task_info.h0_layers_sub_logn[0] + ntt_task_info.h0_layers_sub_logn[1] + ntt_task_info.h0_layers_sub_logn[2]);
     int stride = columns_batch ? batch_size : 1;
-    uint64_t original_size = (1 << cordinates.logn);
+    uint64_t original_size = (1 << ntt_task_info.logn);
     for (int batch = 0; batch < batch_size; ++batch) {
       E* h1_subntt_elements =
-      elements + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
+      elements + stride * (ntt_task_info.c.h1_subntt_idx << ntt_task_info.h1_layers_sub_logn[ntt_task_info.c.h1_layer_idx]); // input + subntt_idx * subntt_size
       E* elements_of_current_batch = columns_batch ? h1_subntt_elements + batch : h1_subntt_elements + batch * original_size;
       for (int elem = 0; elem < h0_subntt_size; elem++) {
-        uint64_t elem_mem_idx = stride * idx_in_mem(elem, cordinates.h0_block_idx, cordinates.h0_subntt_idx, cordinates.h0_layers_subntt_log_size, cordinates.h0_layer_idx);
-        i = (cordinates.h0_layer_idx == 0) ? elem : elem * h0_nof_subntts + cordinates.h0_subntt_idx;
-        j = (cordinates.h0_layer_idx == 0) ? cordinates.h0_subntt_idx : cordinates.h0_block_idx;
+        uint64_t elem_mem_idx = stride * idx_in_mem(elem, ntt_task_info.c.h0_block_idx, ntt_task_info.c.h0_subntt_idx, ntt_task_info.h0_layers_sub_logn, ntt_task_info.c.h0_layer_idx);
+        i = (ntt_task_info.c.h0_layer_idx == 0) ? elem : elem * h0_nof_subntts + ntt_task_info.c.h0_subntt_idx;
+        j = (ntt_task_info.c.h0_layer_idx == 0) ? ntt_task_info.c.h0_subntt_idx : ntt_task_info.c.h0_block_idx;
         uint64_t tw_idx = (direction == NTTDir::kForward) ? ((domain_max_size / ntt_size) * j * i)
                                                     : domain_max_size - ((domain_max_size / ntt_size) * j * i);
-        // if (cordinates.h0_layer_idx == 1){
+        // if (ntt_task_info.c.h0_layer_idx == 1){
         //   ICICLE_LOG_DEBUG << "elem_mem_idx: " << elem_mem_idx << ", i: " << i << ", j: " << j << ", tw_idx: " << tw_idx;
         // }
         elements_of_current_batch[elem_mem_idx] = elements_of_current_batch[elem_mem_idx] * twiddles[tw_idx];
@@ -453,7 +453,7 @@ struct NttTaskCordinates {
     std::vector<int> layers_sntt_log_size = {},
     int layer = 0,
     icicle::NTTDir dir = icicle::NTTDir::kForward,
-    NttTaskCordinates& cordinates = NttTaskCordinates())
+    NttTaskInfo& ntt_task_info = NttTaskInfo())
   {
     int subntt_size = 1 << layers_sntt_log_size[0];
     int nof_subntts = 1 << layers_sntt_log_size[1];
@@ -464,7 +464,7 @@ struct NttTaskCordinates {
     int stride = columns_batch ? batch_size : 1;
     for (int batch = 0; batch < batch_size; ++batch) {
       E* h1_subntt_elements =
-      elements + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
+      elements + stride * (ntt_task_info.c.h1_subntt_idx << ntt_task_info.h1_layers_sub_logn[ntt_task_info.c.h1_layer_idx]); // input + subntt_idx * subntt_size
       E* current_elements = columns_batch ? h1_subntt_elements + batch : h1_subntt_elements + batch * tot_ntt_size;
       for (int block_idx = 0; block_idx < nof_blocks; block_idx++) {
         for (int sntt_idx = 0; sntt_idx < nof_subntts; sntt_idx++) {
@@ -519,7 +519,7 @@ struct NttTaskCordinates {
     const std::vector<int> layers_sntt_log_size = {},
     int batch_size = 1,
     bool columns_batch = 0,
-    NttTaskCordinates& cordinates = NttTaskCordinates())
+    NttTaskInfo& ntt_task_info = NttTaskInfo())
   { // TODO shanie future - consider using an algorithm for efficient reordering
     if (layers_sntt_log_size.empty()) {
       ICICLE_LOG_ERROR << "layers_sntt_log_size is null";
@@ -539,7 +539,7 @@ struct NttTaskCordinates {
     int stride = columns_batch ? batch_size : 1;
     int rep = columns_batch ? batch_size : 1;
     E* h1_subntt_output =
-    output + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
+    output + stride * (ntt_task_info.c.h1_subntt_idx << ntt_task_info.h1_layers_sub_logn[ntt_task_info.c.h1_layer_idx]); // input + subntt_idx * subntt_size
     for (int batch = 0; batch < rep; ++batch) {
       E* current_elements =
         columns_batch
@@ -566,15 +566,14 @@ struct NttTaskCordinates {
   }
 
   template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt_basic(
+  eIcicleError h0_cpu_ntt(
     E* input,
     uint64_t original_size,
     icicle::NTTDir direction,
     const icicle::NTTConfig<S>& config,
-    NttTaskCordinates& cordinates)
+    NttTaskInfo& ntt_task_info)
   {
-    const uint64_t subntt_size = (1 << cordinates.h0_layers_subntt_log_size[cordinates.h0_layer_idx]);
-    // ICICLE_LOG_DEBUG<<"subntt_size: "<<subntt_size;
+    const uint64_t subntt_size = (1 << ntt_task_info.h0_layers_sub_logn[ntt_task_info.c.h0_layer_idx]);
     const uint64_t total_memory_size = original_size * config.batch_size;
     const int log_original_size = int(log2(original_size));
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
@@ -582,23 +581,21 @@ struct NttTaskCordinates {
 
     int stride = config.columns_batch ? config.batch_size : 1;
     E* current_input =
-      input + stride * (cordinates.h1_subntt_idx << cordinates.h1_layers_subntt_log_size[cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
-
-    // ICICLE_LOG_DEBUG<< "current_input: "<<current_input<< ". h1_layer_idx: "<<cordinates.h1_layer_idx<<". h1_subntt_idx: "<<cordinates.h1_subntt_idx<<". h0_layer_idx: "<<cordinates.h0_layer_idx <<". h0_block_idx: "<<cordinates.h0_block_idx<< ". h0_subntt_idx: "<<cordinates.h0_subntt_idx;
+      input + stride * (ntt_task_info.c.h1_subntt_idx << ntt_task_info.h1_layers_sub_logn[ntt_task_info.c.h1_layer_idx]); // input + subntt_idx * subntt_size
 
     reorder_by_bit_reverse(
-      log_original_size, current_input, config.batch_size, config.columns_batch, cordinates.h0_block_idx, cordinates.h0_subntt_idx, cordinates.h0_layers_subntt_log_size,
-      cordinates.h0_layer_idx); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
+      log_original_size, current_input, config.batch_size, config.columns_batch, ntt_task_info.c.h0_block_idx, ntt_task_info.c.h0_subntt_idx, ntt_task_info.h0_layers_sub_logn,
+      ntt_task_info.c.h0_layer_idx); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
 
     // NTT/INTT
     dit_ntt<E>(
-      current_input, original_size, config.batch_size, config.columns_batch, twiddles, direction, domain_max_size, cordinates.h0_block_idx,
-      cordinates.h0_subntt_idx, cordinates.h0_layers_subntt_log_size, cordinates.h0_layer_idx); // R --> N
+      current_input, original_size, config.batch_size, config.columns_batch, twiddles, direction, domain_max_size, ntt_task_info.c.h0_block_idx,
+      ntt_task_info.c.h0_subntt_idx, ntt_task_info.h0_layers_sub_logn, ntt_task_info.c.h0_layer_idx); // R --> N
 
-    if (cordinates.h0_layer_idx != 2 && cordinates.h0_layers_subntt_log_size[cordinates.h0_layer_idx + 1] != 0) {
+    if (ntt_task_info.c.h0_layer_idx != 2 && ntt_task_info.h0_layers_sub_logn[ntt_task_info.c.h0_layer_idx + 1] != 0) {
       refactor_subntt_output<S, E>(
         input, config.batch_size, config.columns_batch, twiddles,
-        domain_max_size, direction, cordinates);
+        domain_max_size, direction, ntt_task_info);
     }
 
 
@@ -606,222 +603,63 @@ struct NttTaskCordinates {
   }
 
   template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt_parallel(
+  eIcicleError h1_cpu_ntt(
     uint64_t size,
     uint64_t original_size,
     NTTDir direction,
     const NTTConfig<S>& config,
-    NttTaskCordinates& cordinates,
+    NttTaskInfo& ntt_task_info,
     E* input,
     const S* twiddles,
     const int domain_max_size = 0)
   {
     const int logn = int(log2(size));
-    std::vector<int> layers_sntt_log_size(
-      std::begin(layers_subntt_log_size[logn]), std::end(layers_subntt_log_size[logn]));
     // Assuming that NTT fits in the cache, so we split the NTT to layers and calculate them one after the other.
     // Subntts inside the same laye are calculate in parallel.
     // Sorting is not needed, since the elements needed for each subntt are close to each other in memory.
     // Instead of sorting, we are using the function idx_in_mem to calculate the memory index of each element.
-    for (int layer = 0; layer < layers_sntt_log_size.size(); layer++) {
-      if (layer == 0) {
-        cordinates.h0_layer_idx = 0;
-        int log_nof_subntts = layers_sntt_log_size[1];
-        int log_nof_blocks = layers_sntt_log_size[2];
-        for (int block_idx = 0; block_idx < (1 << log_nof_blocks); block_idx++) {
-          for (int subntt_idx = 0; subntt_idx < (1 << log_nof_subntts); subntt_idx++) {
-            cordinates.h0_block_idx = block_idx;
-            cordinates.h0_subntt_idx = subntt_idx;            
-            cpu_ntt_basic(input, original_size, direction, config, cordinates);
+    for (ntt_task_info.c.h0_layer_idx = 0; ntt_task_info.c.h0_layer_idx < ntt_task_info.h0_layers_sub_logn.size(); ntt_task_info.c.h0_layer_idx++) {
+      if (ntt_task_info.c.h0_layer_idx == 0) {
+        int log_nof_subntts = ntt_task_info.h0_layers_sub_logn[1];
+        int log_nof_blocks = ntt_task_info.h0_layers_sub_logn[2];
+        for (ntt_task_info.c.h0_block_idx = 0; ntt_task_info.c.h0_block_idx < (1 << log_nof_blocks); ntt_task_info.c.h0_block_idx++) {
+          for ( ntt_task_info.c.h0_subntt_idx = 0; ntt_task_info.c.h0_subntt_idx < (1 << log_nof_subntts); ntt_task_info.c.h0_subntt_idx++) {
+            h0_cpu_ntt(input, original_size, direction, config, ntt_task_info);
           }
         }
       }
-      if (layer == 1 && layers_sntt_log_size[1]) {
-        cordinates.h0_layer_idx = 1;
-        int log_nof_subntts = layers_sntt_log_size[0];
-        int log_nof_blocks = layers_sntt_log_size[2];
-        for (int block_idx = 0; block_idx < (1 << log_nof_blocks); block_idx++) {
-          for (int subntt_idx = 0; subntt_idx < (1 << log_nof_subntts); subntt_idx++) {
-            cordinates.h0_block_idx = block_idx;
-            cordinates.h0_subntt_idx = subntt_idx;
-            cpu_ntt_basic(input, original_size, direction, config, cordinates); // input=output (in-place)
+      if (ntt_task_info.c.h0_layer_idx == 1 && ntt_task_info.h0_layers_sub_logn[1]) {
+        int log_nof_subntts = ntt_task_info.h0_layers_sub_logn[0];
+        int log_nof_blocks = ntt_task_info.h0_layers_sub_logn[2];
+        for (ntt_task_info.c.h0_block_idx = 0; ntt_task_info.c.h0_block_idx < (1 << log_nof_blocks); ntt_task_info.c.h0_block_idx++) {
+          for (ntt_task_info.c.h0_subntt_idx = 0; ntt_task_info.c.h0_subntt_idx < (1 << log_nof_subntts); ntt_task_info.c.h0_subntt_idx++) {
+            h0_cpu_ntt(input, original_size, direction, config, ntt_task_info); // input=output (in-place)
           }
         }
       }
-      if (layer == 2 && layers_sntt_log_size[2]) {
-        cordinates.h0_layer_idx = 2;
-        int log_nof_blocks = layers_sntt_log_size[0] + layers_sntt_log_size[1];
-        for (int block_idx = 0; block_idx < (1 << log_nof_blocks); block_idx++) {
-          cordinates.h0_block_idx = block_idx;
-          cpu_ntt_basic(input, original_size, direction, config, cordinates);
+      if (ntt_task_info.c.h0_layer_idx == 2 && ntt_task_info.h0_layers_sub_logn[2]) {
+        int log_nof_blocks = ntt_task_info.h0_layers_sub_logn[0] + ntt_task_info.h0_layers_sub_logn[1];
+        for (ntt_task_info.c.h0_block_idx = 0; ntt_task_info.c.h0_block_idx < (1 << log_nof_blocks); ntt_task_info.c.h0_block_idx++) {
+          h0_cpu_ntt(input, original_size, direction, config, ntt_task_info);
         }
       }
-      // if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
-      //   refactor_output<S, E>(
-      //     input, original_size, config.batch_size, config.columns_batch, twiddles,
-      //     domain_max_size, layers_sntt_log_size, layer, direction, cordinates);
-      // }
     }
     // Sort the output at the end so that elements will be in right order.
     // TODO SHANIE  - After implementing for different ordering, maybe this should be done in a different place
     //              - When implementing real parallelism, consider sorting in parallel and in-place
-    if (layers_sntt_log_size[1]) { // at least 2 layers
+    if (ntt_task_info.h0_layers_sub_logn[1]) { // at least 2 layers
       if (config.columns_batch) {
-        reorder_output(input, size, layers_sntt_log_size, config.batch_size, config.columns_batch, cordinates);
+        reorder_output(input, size, ntt_task_info.h0_layers_sub_logn, config.batch_size, config.columns_batch, ntt_task_info);
       } else {
         for (int b = 0; b < config.batch_size; b++) {
           reorder_output(
-            input + b * original_size, size, layers_sntt_log_size, config.batch_size, config.columns_batch, cordinates);
+            input + b * original_size, size, ntt_task_info.h0_layers_sub_logn, config.batch_size, config.columns_batch, ntt_task_info);
         }
       }
     }
     return eIcicleError::SUCCESS;
   }
 
-
-  template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt_parallel_try(
-    uint64_t size,
-    uint64_t original_size,
-    NTTDir dir,
-    const NTTConfig<S>& config,
-    E* output,
-    const S* twiddles,
-    const int domain_max_size = 0)
-  {
-    const int logn = int(log2(size));
-    std::vector<int> layers_sntt_log_size(
-      std::begin(layers_subntt_log_size[logn]), std::end(layers_subntt_log_size[logn]));
-
-    unsigned int max_nof_parallel_threads = std::thread::hardware_concurrency();
-    std::cout << "Number of concurrent threads supported: " << max_nof_parallel_threads << std::endl;
-
-    std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> start_times(max_nof_parallel_threads*3);
-    std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> finish_times(max_nof_parallel_threads*3);
-    // Assuming that NTT fits in the cache, so we split the NTT to layers and calculate them one after the other.
-    // Subntts inside the same laye are calculate in parallel.
-    // Sorting is not needed, since the elements needed for each subntt are close to each other in memory.
-    // Instead of sorting, we are using the function idx_in_mem to calculate the memory index of each element.
-    for (int layer = 0; layer < layers_sntt_log_size.size(); layer++) {
-      #if PARALLEL
-      std::vector<std::thread> threads;
-      #endif
-      if (layer == 0) {
-        int nof_subntts =  1 << layers_sntt_log_size[1];
-        int nof_blocks = 1 << layers_sntt_log_size[2];
-        int subntts_per_thread = (nof_subntts + max_nof_parallel_threads - 1) / max_nof_parallel_threads;
-        int nof_threads = nof_subntts / subntts_per_thread;
-        ICICLE_LOG_DEBUG << "layer: "<< layer <<", number of threads: " << nof_threads << ", subntts per thread: " << subntts_per_thread << ", nof_subntts: " << nof_subntts << ", nof_blocks: " << nof_blocks;
-        for (int block_idx = 0; block_idx < nof_blocks; block_idx++) {
-          for (int thread_idx = 0; thread_idx < nof_threads; thread_idx++) {
-            #if PARALLEL
-            threads.emplace_back([&, block_idx, thread_idx] {
-            #endif
-              for (int subntt_idx = thread_idx; subntt_idx < nof_subntts; subntt_idx += nof_threads) {
-                int idx = block_idx * nof_subntts + subntt_idx;
-                ICICLE_LOG_DEBUG << "layer: "<< layer <<", block_idx: " << block_idx << ", subntt_idx: " << subntt_idx << ", idx: " << idx;
-                start_times[idx] = std::chrono::high_resolution_clock::now();
-                cpu_ntt_basic(
-                  output, original_size, dir, config, output, block_idx, subntt_idx, layers_sntt_log_size, layer);
-                finish_times[idx] = std::chrono::high_resolution_clock::now();
-              }
-            #if PARALLEL
-            });
-            #endif
-          }
-        }
-        #if PARALLEL
-        for (auto& th : threads) {
-          th.join();
-        }
-        #endif
-      }
-      if (layer == 1 && layers_sntt_log_size[1]) {
-        int nof_subntts = 1 << layers_sntt_log_size[0];
-        int nof_blocks = 1 << layers_sntt_log_size[2];
-        int subntts_per_thread = (nof_subntts + max_nof_parallel_threads - 1) / max_nof_parallel_threads;
-        int nof_threads = nof_subntts / subntts_per_thread;
-        ICICLE_LOG_DEBUG << "layer: "<< layer <<", number of threads: " << nof_threads << ", subntts per thread: " << subntts_per_thread << ", nof_subntts: " << nof_subntts << ", nof_blocks: " << nof_blocks;
-        for (int block_idx = 0; block_idx < nof_blocks; block_idx++) {
-          for (int thread_idx = 0; thread_idx < nof_threads; thread_idx++) {
-            #if PARALLEL
-            threads.emplace_back([&, block_idx, thread_idx] {
-            #endif
-              for (int subntt_idx = thread_idx; subntt_idx < nof_subntts; subntt_idx += nof_threads) {
-                int idx = (1 << layers_sntt_log_size[1]) + block_idx * nof_subntts + subntt_idx;
-                ICICLE_LOG_DEBUG << "layer: "<< layer <<", block_idx: " << block_idx << ", subntt_idx: " << subntt_idx << ", idx: " << idx;
-                start_times[idx] = std::chrono::high_resolution_clock::now();
-                cpu_ntt_basic(
-                  output, original_size, dir, config, output, block_idx, subntt_idx, layers_sntt_log_size, layer);
-                finish_times[idx] = std::chrono::high_resolution_clock::now();
-              }
-            #if PARALLEL
-            });
-            #endif
-          }
-        }
-        #if PARALLEL
-        for (auto& th : threads) {
-          th.join();
-        }
-        #endif
-      }
-      if (layer == 2 && layers_sntt_log_size[2]) {
-        int nof_blocks = 1 << (layers_sntt_log_size[0] + layers_sntt_log_size[1]);
-        int subntts_per_thread = (nof_blocks + max_nof_parallel_threads - 1) / max_nof_parallel_threads;
-        int nof_threads = nof_blocks / subntts_per_thread;
-        for (int thread_idx = 0; thread_idx < nof_threads; thread_idx++) {
-          #if PARALLEL
-          threads.emplace_back([&, thread_idx] {
-          #endif
-            for (int block_idx = thread_idx; block_idx < nof_blocks; block_idx += nof_threads) {
-              int idx = (1 << layers_sntt_log_size[1]) + (1 << layers_sntt_log_size[0]) + block_idx;
-              start_times[idx] = std::chrono::high_resolution_clock::now();
-              cpu_ntt_basic(
-                output, original_size, dir, config, output, block_idx, 0/*subntt_idx - not used*/, layers_sntt_log_size, layer);
-              finish_times[idx] = std::chrono::high_resolution_clock::now();
-            }
-          #if PARALLEL
-          });
-          #endif
-        }
-        #if PARALLEL
-        for (auto& th : threads) {
-          th.join();
-        }
-        #endif
-      }
-      // if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
-      //   refactor_output<S, E>(
-      //     output, original_size, config.batch_size, config.columns_batch, twiddles,
-      //     domain_max_size, layers_sntt_log_size, layer, dir);
-      // }
-    }
-    // Sort the output at the end so that elements will be in right order.
-    // TODO SHANIE  - After implementing for different ordering, maybe this should be done in a different place
-    //              - When implementing real parallelism, consider sorting in parallel and in-place
-    if (layers_sntt_log_size[1]) { // at least 2 layers
-      if (config.columns_batch) {
-        reorder_output(output, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
-      } else {
-        for (int b = 0; b < config.batch_size; b++) {
-          reorder_output(
-            output + b * original_size, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
-        }
-      }
-    }
-    // #if PARALLEL
-    // Print start and finish times
-    for (size_t i = 0; i < start_times.size(); ++i) {
-        auto start_ns = std::chrono::duration_cast<std::chrono::microseconds>(start_times[i].time_since_epoch()).count();
-        auto finish_ns = std::chrono::duration_cast<std::chrono::microseconds>(finish_times[i].time_since_epoch()).count();
-        // std::cout << "thread " << i << " started at " << start_ns
-        //   << " μs and finished at " << finish_ns << " μs. Total: " << (finish_ns - start_ns) << " μs\n";
-    }
-    // #endif
-    return eIcicleError::SUCCESS;
-  }
-  
   template <typename S = scalar_t, typename E = scalar_t>
   eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir direction, NTTConfig<S>& config, E* output)
   {
@@ -832,17 +670,14 @@ struct NttTaskCordinates {
     const int logn = int(log2(size));
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     const int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
-    NttTaskCordinates ntt_task_cordinates(logn);
+    NttTaskInfo ntt_task_info(logn);
 
-    // TODO SHANIE - move to init domain
     int coset_stride = 0;
     std::unique_ptr<S[]> arbitrary_coset = nullptr;
     if (config.coset_gen != S::one()) { // TODO SHANIE - implement more efficient way to find coset_stride
       try {
-        coset_stride = CpuNttDomain<S>::s_ntt_domain.coset_index.at(config.coset_gen);
-        ICICLE_LOG_DEBUG << "Coset generator found in twiddles. coset_stride=" << coset_stride;
-      } catch (const std::out_of_range& oor) {
-        ICICLE_LOG_DEBUG << "Coset generator not found in twiddles. Calculating arbitrary coset.";
+        coset_stride = CpuNttDomain<S>::s_ntt_domain.coset_index.at(config.coset_gen); //Coset generator found in twiddles
+      } catch (const std::out_of_range& oor) { //Coset generator not found in twiddles. Calculating arbitrary coset
         arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
         arbitrary_coset[0] = S::one();
         S coset_gen = direction == NTTDir::kForward ? config.coset_gen : S::inverse(config.coset_gen); // inverse for INTT
@@ -864,8 +699,6 @@ struct NttTaskCordinates {
         logn, domain_max_size, output, config.batch_size, config.columns_batch, twiddles, coset_stride, arbitrary_coset,
         direction);
     }
-    std::vector<int> layers_sntt_log_size(
-      std::begin(layers_subntt_log_size[logn]), std::end(layers_subntt_log_size[logn]));
 
     if (logn > 15) {
       // TODO future - maybe can start 4'rth layer in parallel to 3'rd layer?
@@ -874,53 +707,61 @@ struct NttTaskCordinates {
       // parallel. Sorting is done between the layers, so that the elements needed for each sunbtt are close to each
       // other in memory.
 
-      reorder_input(output, size, config.batch_size, config.columns_batch, ntt_task_cordinates.h1_layers_subntt_log_size);
+      reorder_input(output, size, config.batch_size, config.columns_batch, ntt_task_info.h1_layers_sub_logn);
       // std::cout << "PRINT REORDERED INPUT";
       // for (int i = 0; i < size; i++) {
       //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
       // }
 
-      for (int subntt_idx = 0; subntt_idx < (1 << layers_sntt_log_size[1]); subntt_idx++) {
-        ntt_task_cordinates.h1_subntt_idx = subntt_idx;
-        cpu_ntt_parallel((1 << layers_sntt_log_size[0]), size, direction, config, ntt_task_cordinates, output, twiddles, domain_max_size);
-        // ICICLE_LOG_DEBUG << "AFTER LAYER_0 H1_SUBNTT_IDX: "<< subntt_idx;
-        // for (int i = 0; i < size; i++) {
-        //   ICICLE_LOG_DEBUG << output[i];
-        // }
-        // if (subntt_idx<5){
-        //   std::cout << "AFTER LAYER_0H1_SUBNTT_IDX: "<< subntt_idx << std::endl;
-        //   for (int i = 0; i < size; i++) {
-        //     std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
-        //   }
-        // }
+      int log_nof_h1_subntts_todo_in_parallel = 15 - ntt_task_info.h1_layers_sub_logn[0] - int(log2(config.batch_size));
+      int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
+      int log_nof_subntts_chunks = ntt_task_info.h1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
+      int nof_subntts_chunks = 1 << log_nof_subntts_chunks;
+      for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
+        for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel; h1_subntt_idx_in_chunck++) {
+          ntt_task_info.c.h1_subntt_idx =  h1_subntts_chunck_idx*nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
+
+          h1_cpu_ntt((1 << ntt_task_info.h1_layers_sub_logn[0]), size, direction, config, ntt_task_info, output, twiddles, domain_max_size);
+          // ICICLE_LOG_DEBUG << "AFTER LAYER_0 H1_SUBNTT_IDX: "<< h1_subntt_idx;
+          // for (int i = 0; i < size; i++) {
+          //   ICICLE_LOG_DEBUG << output[i];
+          // }
+        }
       }
 
       refactor_and_reorder<S, E>(
         output, output /*input for next layer*/, twiddles, config.batch_size, config.columns_batch, domain_max_size,
-        ntt_task_cordinates.h1_layers_subntt_log_size, 0 /*layer*/, direction);
+        ntt_task_info.h1_layers_sub_logn, 0 /*layer*/, direction);
       // std::cout << "AFTER refactor_and_reorder";
       // for (int i = 0; i < size; i++) {
       //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
       // }
-      ntt_task_cordinates.h1_layer_idx = 1;
-      ntt_task_cordinates.h0_layers_subntt_log_size = std::vector<int>(
-            std::begin(layers_subntt_log_size[ntt_task_cordinates.h1_layers_subntt_log_size[1]]), 
-            std::end(layers_subntt_log_size[ntt_task_cordinates.h1_layers_subntt_log_size[1]]));
-      for (int subntt_idx = 0; subntt_idx < (1 << layers_sntt_log_size[0]); subntt_idx++) {
-        ntt_task_cordinates.h1_subntt_idx = subntt_idx;
-        cpu_ntt_parallel((1 << layers_sntt_log_size[1]), size, direction, config, ntt_task_cordinates, output, twiddles, domain_max_size);
+      ntt_task_info.c.h1_layer_idx = 1;
+      ntt_task_info.h0_layers_sub_logn = std::vector<int>(
+        std::begin(layers_sub_logn[ntt_task_info.h1_layers_sub_logn[1]]), 
+        std::end(layers_sub_logn[ntt_task_info.h1_layers_sub_logn[1]]));
+
+      log_nof_h1_subntts_todo_in_parallel = 15 - ntt_task_info.h1_layers_sub_logn[1] - int(log2(config.batch_size));
+      nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
+      log_nof_subntts_chunks = ntt_task_info.h1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
+      nof_subntts_chunks = 1 << log_nof_subntts_chunks;
+      for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
+        for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel; h1_subntt_idx_in_chunck++) {
+          ntt_task_info.c.h1_subntt_idx =  h1_subntts_chunck_idx*nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
+          h1_cpu_ntt((1 << ntt_task_info.h1_layers_sub_logn[1]), size, direction, config, ntt_task_info, output, twiddles, domain_max_size);
+        }
       }
       // std::cout << "AFTER LAYER_1";
       // for (int i = 0; i < size; i++) {
       //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
       // }
 
-      ntt_task_cordinates.h1_subntt_idx = 0; // reset so that refactor_output will calculate the correct memory index
+      ntt_task_info.c.h1_subntt_idx = 0; // reset so that refactor_output will calculate the correct memory index
       if (config.columns_batch) {
-        reorder_output(output, size, layers_sntt_log_size, config.batch_size, config.columns_batch, ntt_task_cordinates);
+        reorder_output(output, size, ntt_task_info.h1_layers_sub_logn, config.batch_size, config.columns_batch, ntt_task_info);
       } else {
         for (int b = 0; b < config.batch_size; b++) {
-          reorder_output(output + b * size, size, layers_sntt_log_size, config.batch_size, config.columns_batch, ntt_task_cordinates);
+          reorder_output(output + b * size, size, ntt_task_info.h1_layers_sub_logn, config.batch_size, config.columns_batch, ntt_task_info);
         }
       }
       // ICICLE_LOG_DEBUG << "AFTER reorder_output";
@@ -928,7 +769,7 @@ struct NttTaskCordinates {
       //   ICICLE_LOG_DEBUG << output[i];
       // }
     } else {
-      cpu_ntt_parallel(size, size, direction, config, ntt_task_cordinates, output, twiddles, domain_max_size);
+      h1_cpu_ntt(size, size, direction, config, ntt_task_info, output, twiddles, domain_max_size);
     }
 
     if (direction == NTTDir::kInverse) { // TODO SHANIE - do that in parallel
@@ -959,3 +800,161 @@ struct NttTaskCordinates {
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // template <typename S = scalar_t, typename E = scalar_t>
+  // eIcicleError cpu_ntt_parallel_try(
+  //   uint64_t size,
+  //   uint64_t original_size,
+  //   NTTDir dir,
+  //   const NTTConfig<S>& config,
+  //   E* output,
+  //   const S* twiddles,
+  //   const int domain_max_size = 0)
+  // {
+  //   const int logn = int(log2(size));
+  //   std::vector<int> layers_sntt_log_size(
+  //     std::begin(layers_subntt_log_size[logn]), std::end(layers_subntt_log_size[logn]));
+
+  //   unsigned int max_nof_parallel_threads = std::thread::hardware_concurrency();
+  //   std::cout << "Number of concurrent threads supported: " << max_nof_parallel_threads << std::endl;
+
+  //   std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> start_times(max_nof_parallel_threads*3);
+  //   std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> finish_times(max_nof_parallel_threads*3);
+  //   // Assuming that NTT fits in the cache, so we split the NTT to layers and calculate them one after the other.
+  //   // Subntts inside the same laye are calculate in parallel.
+  //   // Sorting is not needed, since the elements needed for each subntt are close to each other in memory.
+  //   // Instead of sorting, we are using the function idx_in_mem to calculate the memory index of each element.
+  //   for (int layer = 0; layer < layers_sntt_log_size.size(); layer++) {
+  //     #if PARALLEL
+  //     std::vector<std::thread> threads;
+  //     #endif
+  //     if (layer == 0) {
+  //       int nof_subntts =  1 << layers_sntt_log_size[1];
+  //       int nof_blocks = 1 << layers_sntt_log_size[2];
+  //       int subntts_per_thread = (nof_subntts + max_nof_parallel_threads - 1) / max_nof_parallel_threads;
+  //       int nof_threads = nof_subntts / subntts_per_thread;
+  //       ICICLE_LOG_DEBUG << "layer: "<< layer <<", number of threads: " << nof_threads << ", subntts per thread: " << subntts_per_thread << ", nof_subntts: " << nof_subntts << ", nof_blocks: " << nof_blocks;
+  //       for (int block_idx = 0; block_idx < nof_blocks; block_idx++) {
+  //         for (int thread_idx = 0; thread_idx < nof_threads; thread_idx++) {
+  //           #if PARALLEL
+  //           threads.emplace_back([&, block_idx, thread_idx] {
+  //           #endif
+  //             for (int subntt_idx = thread_idx; subntt_idx < nof_subntts; subntt_idx += nof_threads) {
+  //               int idx = block_idx * nof_subntts + subntt_idx;
+  //               ICICLE_LOG_DEBUG << "layer: "<< layer <<", block_idx: " << block_idx << ", subntt_idx: " << subntt_idx << ", idx: " << idx;
+  //               start_times[idx] = std::chrono::high_resolution_clock::now();
+  //               cpu_ntt_basic(
+  //                 output, original_size, dir, config, output, block_idx, subntt_idx, layers_sntt_log_size, layer);
+  //               finish_times[idx] = std::chrono::high_resolution_clock::now();
+  //             }
+  //           #if PARALLEL
+  //           });
+  //           #endif
+  //         }
+  //       }
+  //       #if PARALLEL
+  //       for (auto& th : threads) {
+  //         th.join();
+  //       }
+  //       #endif
+  //     }
+  //     if (layer == 1 && layers_sntt_log_size[1]) {
+  //       int nof_subntts = 1 << layers_sntt_log_size[0];
+  //       int nof_blocks = 1 << layers_sntt_log_size[2];
+  //       int subntts_per_thread = (nof_subntts + max_nof_parallel_threads - 1) / max_nof_parallel_threads;
+  //       int nof_threads = nof_subntts / subntts_per_thread;
+  //       ICICLE_LOG_DEBUG << "layer: "<< layer <<", number of threads: " << nof_threads << ", subntts per thread: " << subntts_per_thread << ", nof_subntts: " << nof_subntts << ", nof_blocks: " << nof_blocks;
+  //       for (int block_idx = 0; block_idx < nof_blocks; block_idx++) {
+  //         for (int thread_idx = 0; thread_idx < nof_threads; thread_idx++) {
+  //           #if PARALLEL
+  //           threads.emplace_back([&, block_idx, thread_idx] {
+  //           #endif
+  //             for (int subntt_idx = thread_idx; subntt_idx < nof_subntts; subntt_idx += nof_threads) {
+  //               int idx = (1 << layers_sntt_log_size[1]) + block_idx * nof_subntts + subntt_idx;
+  //               ICICLE_LOG_DEBUG << "layer: "<< layer <<", block_idx: " << block_idx << ", subntt_idx: " << subntt_idx << ", idx: " << idx;
+  //               start_times[idx] = std::chrono::high_resolution_clock::now();
+  //               cpu_ntt_basic(
+  //                 output, original_size, dir, config, output, block_idx, subntt_idx, layers_sntt_log_size, layer);
+  //               finish_times[idx] = std::chrono::high_resolution_clock::now();
+  //             }
+  //           #if PARALLEL
+  //           });
+  //           #endif
+  //         }
+  //       }
+  //       #if PARALLEL
+  //       for (auto& th : threads) {
+  //         th.join();
+  //       }
+  //       #endif
+  //     }
+  //     if (layer == 2 && layers_sntt_log_size[2]) {
+  //       int nof_blocks = 1 << (layers_sntt_log_size[0] + layers_sntt_log_size[1]);
+  //       int subntts_per_thread = (nof_blocks + max_nof_parallel_threads - 1) / max_nof_parallel_threads;
+  //       int nof_threads = nof_blocks / subntts_per_thread;
+  //       for (int thread_idx = 0; thread_idx < nof_threads; thread_idx++) {
+  //         #if PARALLEL
+  //         threads.emplace_back([&, thread_idx] {
+  //         #endif
+  //           for (int block_idx = thread_idx; block_idx < nof_blocks; block_idx += nof_threads) {
+  //             int idx = (1 << layers_sntt_log_size[1]) + (1 << layers_sntt_log_size[0]) + block_idx;
+  //             start_times[idx] = std::chrono::high_resolution_clock::now();
+  //             cpu_ntt_basic(
+  //               output, original_size, dir, config, output, block_idx, 0/*subntt_idx - not used*/, layers_sntt_log_size, layer);
+  //             finish_times[idx] = std::chrono::high_resolution_clock::now();
+  //           }
+  //         #if PARALLEL
+  //         });
+  //         #endif
+  //       }
+  //       #if PARALLEL
+  //       for (auto& th : threads) {
+  //         th.join();
+  //       }
+  //       #endif
+  //     }
+  //     // if (layer != 2 && layers_sntt_log_size[layer + 1] != 0) {
+  //     //   refactor_output<S, E>(
+  //     //     output, original_size, config.batch_size, config.columns_batch, twiddles,
+  //     //     domain_max_size, layers_sntt_log_size, layer, dir);
+  //     // }
+  //   }
+  //   // Sort the output at the end so that elements will be in right order.
+  //   // TODO SHANIE  - After implementing for different ordering, maybe this should be done in a different place
+  //   //              - When implementing real parallelism, consider sorting in parallel and in-place
+  //   if (layers_sntt_log_size[1]) { // at least 2 layers
+  //     if (config.columns_batch) {
+  //       reorder_output(output, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
+  //     } else {
+  //       for (int b = 0; b < config.batch_size; b++) {
+  //         reorder_output(
+  //           output + b * original_size, size, layers_sntt_log_size, config.batch_size, config.columns_batch);
+  //       }
+  //     }
+  //   }
+  //   // #if PARALLEL
+  //   // Print start and finish times
+  //   for (size_t i = 0; i < start_times.size(); ++i) {
+  //       auto start_ns = std::chrono::duration_cast<std::chrono::microseconds>(start_times[i].time_since_epoch()).count();
+  //       auto finish_ns = std::chrono::duration_cast<std::chrono::microseconds>(finish_times[i].time_since_epoch()).count();
+  //       // std::cout << "thread " << i << " started at " << start_ns
+  //       //   << " μs and finished at " << finish_ns << " μs. Total: " << (finish_ns - start_ns) << " μs\n";
+  //   }
+  //   // #endif
+  //   return eIcicleError::SUCCESS;
+  // }
+  
