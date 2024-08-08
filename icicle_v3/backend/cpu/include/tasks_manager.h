@@ -4,10 +4,10 @@
 #include <stdexcept>
 #include <cassert>
 
-#define LOG_TASKS_PER_THREAD 2
+#define LOG_TASKS_PER_THREAD 3
 #define TASKS_PER_THREAD (1 << LOG_TASKS_PER_THREAD)
 #define TASK_IDX_MASK (TASKS_PER_THREAD - 1)
-#define MANAGER_SLEEP_USEC 1
+#define MANAGER_SLEEP_USEC 10
 #define THREAD_SLEEP_USEC 1
 
 /**
@@ -39,17 +39,7 @@ public:
   inline bool is_completed()  { return m_status.load(std::memory_order_acquire) == COMPLETED; }
   inline bool is_idle()       { return m_status.load(std::memory_order_acquire) == IDLE; }
   inline void set_idle()      { m_status.store(IDLE, std::memory_order_release); }
-  
-  // COMMENT given that a setter for ready is implemented via dispatch, and a setter for idle is required to allow 
-  // users to handle completed results 2/3 setters have been implemented. As such one of the functions bellow 
-  // (set_completed, increment_status) is irrelevant - Help me choose which
   inline void set_completed() { assert(is_ready()); m_status.store(COMPLETED, std::memory_order_release); }
-  
-  inline void increment_status() {
-    auto curr_status = m_status.load(std::memory_order_acquire);
-    if (curr_status == COMPLETED) { m_status.store(IDLE, std::memory_order_release); }
-    else { m_status.store(static_cast<eTaskStatus>(static_cast<int>(curr_status) + 1), std::memory_order_release); }
-  }
 
   /**
    * @brief wait for a specific task to finish executing. This is a blocking function.
@@ -70,7 +60,7 @@ private:
 
 /**
  * @class TasksManager
- * @brief Class for managing parallel executions of small `Task`s which are child class of `TaskBase` described bellow.
+ * @brief Class for managing parallel executions of small `Task`s which are child class of `TaskBase` described below.
  * 
  * The class manages a vector of `Worker`s, which are threads and additional required data members for executions of 
  * `Task`s. The `Task`s are split in a thread-pool fashion - finding free slot in the `Worker`s for the user to set up 
@@ -158,7 +148,6 @@ private:
     std::thread task_executor; // Thread to be run parallel to main
     std::vector<Task> m_tasks; // vector containing the worker's task. a Vector is used to allow buffering.
     int m_next_task_idx; // Tail (input) idx of the fifo above. Checks for free task start at this idx.
-    int m_head; // Head (output) idx of the fifo above, the thread works on task at this idx. // TODO remove after debug
     bool kill; // boolean to flag from main to the thread to finish.
   };
 
@@ -170,7 +159,6 @@ template<class Task>
 TasksManager<Task>::Worker::Worker() 
 : m_tasks(TASKS_PER_THREAD), 
   m_next_task_idx(0),
-  m_head(0),
   kill(false)
   {
     // Init thread only after finishing all other setup to avoid data races
@@ -185,18 +173,17 @@ TasksManager<Task>::Worker::~Worker() {
 
 template<class Task>
 void TasksManager<Task>::Worker::worker_loop() {
-  while (true) {
+  while (!kill) {
     bool all_tasks_idle = true;
-    for (m_head = 0; m_head < m_tasks.size(); m_head++)
+    for (int head = 0; head < m_tasks.size(); head++)
     {      
-      Task* task = &m_tasks[m_head];
+      Task* task = &m_tasks[head];
       if (task->is_ready()) {
         task->execute();
         task->set_completed(); 
         all_tasks_idle = false;
       }
     }
-    if (kill) { return; }
     if (all_tasks_idle)
     {
       // Sleep as the thread apparently isn't fully utilized currently
@@ -264,7 +251,7 @@ Task* TasksManager<Task>::get_idle_or_completed_task() {
       task = m_workers[m_next_worker_idx].get_idle_or_completed_task();
       if (task != nullptr) { return task; }
     }
-    // std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
   }
 }
 
@@ -283,7 +270,7 @@ Task* TasksManager<Task>::get_completed_task() {
       completed_task = m_workers[m_next_worker_idx].get_completed_task(all_idle);
       if (completed_task != nullptr) { return completed_task; }
     }
-    // std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
+    std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
   }
   // No completed tasks were found in the loop - return null.
   completed_task = nullptr;
