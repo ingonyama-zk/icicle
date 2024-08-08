@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   cudaEvent_t ntt_start, ntt_stop;
   float icicle_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 6;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 4;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
@@ -130,6 +130,7 @@ int main(int argc, char** argv)
 
   std::cout << "Output" << std::endl;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
+  // for (int i = 0; i < 100; i++) {
     std::cout << CpuOutput[i] << std::endl;
   }
   bool success = true;

@@ -52,17 +52,17 @@ public:
   DEVICE_INLINE void loadBasicTwiddlesGeneric64(
     S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv, bool phase)
   {
-    printf(
-      "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, phase: %d\n",
-      threadIdx.x,
-      s_meta.ntt_inp_id,
-      s_meta.ntt_block_id,
-      s_meta.ntt_block_size,
-      tw_order,
-      tw_log_order,
-      tw_log_size,
-      phase
-    );
+    // printf(
+    //   "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, phase: %d\n",
+    //   threadIdx.x,
+    //   s_meta.ntt_inp_id,
+    //   s_meta.ntt_block_id,
+    //   s_meta.ntt_block_size,
+    //   tw_order,
+    //   tw_log_order,
+    //   tw_log_size,
+    //   phase
+    // );
     size_t stage_size = 1 << (tw_log_size - 1);
     uint32_t phase_offset = stage_size * phase * 3; // 3 is the number of stages
     uint32_t exp;
@@ -78,15 +78,15 @@ public:
         }
 
         // if (threadIdx.x == 0) {
-          printf(
-            "T: %d, I: %d, stage_offset: %d, block_offset: %d, exp: %d, tw: 0x%x\n",
-            threadIdx.x,
-            stage * 4 + i,
-            stage_offset,
-            block_offset,
-            exp,
-            basic_twiddles[exp].limbs_storage.limbs[0]
-          );
+          // printf(
+          //   "T: %d, I: %d, stage_offset: %d, block_offset: %d, exp: %d, tw: 0x%x\n",
+          //   threadIdx.x,
+          //   stage * 4 + i,
+          //   stage_offset,
+          //   block_offset,
+          //   exp,
+          //   basic_twiddles[exp].limbs_storage.limbs[0]
+          // );
         // }
 
         WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
@@ -95,7 +95,7 @@ public:
   }
 
   DEVICE_INLINE void loadBasicTwiddlesGeneric32(
-    S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+    S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv, bool phase)
   {
     UNROLL
     for (uint32_t j = 0; j < 2; j++) {
@@ -109,16 +109,37 @@ public:
   }
 
   DEVICE_INLINE void loadBasicTwiddlesGeneric16(
-    S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv)
+    S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv, bool phase)
   {
+    size_t stage_size = 1 << (tw_log_size - 1);
+    uint32_t exp;
+
+    uint32_t stage_offset = 0;
+    uint32_t phase_offset = stage_size * phase * 2; // 2 is the number of stages
+
     UNROLL
-    for (uint32_t j = 0; j < 4; j++) {
+    for (uint32_t stage = 0; stage < 2; stage++) {
       UNROLL
-      for (uint32_t i = 0; i < 2; i++) {
-        uint32_t exp = (s_meta.ntt_inp_id * 4 + 8 * i + j) * (s_meta.ntt_block_id & (tw_order - 1))
-                       << (tw_log_size - tw_log_order - 4);
-        WB[2 * j + i] = basic_twiddles[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
+      for (uint32_t i = 0; i < 4; i++) {
+        if (phase) {
+          exp = phase_offset + stage_offset + s_meta.ntt_inp_id * 4 + i;
+        } else {
+          exp = s_meta.ntt_inp_id + (stage * 4 + i) * 2;
+        }
+
+        // if (threadIdx.x == 0) {
+          printf(
+            "T: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
+            threadIdx.x,
+            stage * 4 + i,
+            stage_offset,
+            exp,
+            basic_twiddles[exp].limbs_storage.limbs[0]
+          );
+        // }
+        WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
       }
+      stage_offset += stage_size;
     }
   }
 
@@ -162,12 +183,12 @@ public:
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
     }
 
     UNROLL
     for (uint32_t i = 0; i < 8; i++) {
-      data[s_meta.th_stride * i * data_stride_u64] = X[i];
+      data[i * data_stride_u64] = X[i];
     }
   }
 
@@ -270,14 +291,14 @@ public:
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 4 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
     }
 
     UNROLL
-    for (uint32_t j = 0; j < 4; j++) {
+    for (uint32_t j = 0; j < 2; j++) {
       UNROLL
-      for (uint32_t i = 0; i < 2; i++) {
-        X[2 * j + i] = data[(8 * i + j) * data_stride_u64];
+      for (uint32_t i = 0; i < 4; i++) {
+        X[4 * j + i] = data[(i * 2 + j * 8) * data_stride_u64];
       }
     }
   }
@@ -340,12 +361,61 @@ public:
 
 #define BF(t, x, y) t = x; x = x + y; y = t - y;
 
+
+  // [0, 1, 2, 3] -> ntt4()
+  // [4, 5, 6, 7] -> ntt4()
   DEVICE_INLINE void ntt4_2()
   {
-    UNROLL
-    for (int i = 0; i < 2; i++) {
-      ntt4(X[4 * i], X[4 * i + 1], X[4 * i + 2], X[4 * i + 3]);
-    }
+    E T;
+
+    // Stage 0
+    X[2] = X[2] * WB[0];
+    X[3] = X[3] * WB[1];
+    BF(T, X[0], X[2]);
+    BF(T, X[1], X[3]);
+
+    X[6] = X[6] * WB[2];
+    X[7] = X[7] * WB[3];
+    BF(T, X[4], X[6]);
+    BF(T, X[5], X[7]);
+
+    // Stage 1
+    X[1] = X[1] * WB[4];
+    X[3] = X[3] * WB[5];
+    BF(T, X[0], X[1]);
+    BF(T, X[2], X[3]);
+
+    X[5] = X[5] * WB[6];
+    X[7] = X[7] * WB[7];
+    BF(T, X[4], X[5]);
+    BF(T, X[6], X[7]);
+  }
+
+  DEVICE_INLINE void ntt4_2_interlaced()
+  {
+    E T;
+
+    // Stage 0
+    X[4] = X[4] * WB[0];
+    X[5] = X[5] * WB[1];
+    BF(T, X[0], X[4]);
+    BF(T, X[1], X[5]);
+
+    X[6] = X[6] * WB[2];
+    X[7] = X[7] * WB[3];
+    BF(T, X[2], X[6]);
+    BF(T, X[3], X[7]);
+
+    // Stage 1
+    X[2] = X[2] * WB[4];
+    X[3] = X[3] * WB[5];
+    BF(T, X[0], X[2]);
+    BF(T, X[1], X[3]);
+
+    X[6] = X[6] * WB[6];
+    X[7] = X[7] * WB[7];
+    BF(T, X[4], X[6]);
+    BF(T, X[5], X[7]);
   }
 
   DEVICE_INLINE void ntt2_4()
@@ -363,41 +433,6 @@ public:
     T = X0 + X1;
     X1 = X0 - X1;
     X0 = T;
-  }
-
-  DEVICE_INLINE void ntt4(E& X0, E& X1, E& X2, E& X3)
-  {
-    E T;
-
-    T = X0 + X2;
-    X2 = X0 - X2;
-    X0 = X1 + X3;
-    X1 = X1 - X3; // T has X0, X0 has X1, X2 has X2, X1 has X3
-
-    X1 = X1 * WB[0];
-
-    X3 = X2 - X1; // X'3 = (X0 - X2) - (X1 - X3) * WB[0]
-    X1 = X2 + X1; // X'1 = (X0 - X2) + (X1 - X3) * WB[0]
-    X2 = T - X0; // X'2 = (X0 + X2) - (X1 + X3)
-    X0 = T + X0; // X'0 = (X0 + X2) + (X1 + X3)
-  }
-
-  // rbo version
-  DEVICE_INLINE void ntt4rbo(E& X0, E& X1, E& X2, E& X3)
-  {
-    E T;
-
-    T = X0 - X1;
-    X0 = X0 + X1;
-    X1 = X2 + X3;
-    X3 = X2 - X3; // T has X0, X0 has X1, X2 has X2, X1 has X3
-
-    X3 = X3 * WB[0];
-
-    X2 = X0 - X1;
-    X0 = X0 + X1;
-    X1 = T + X3;
-    X3 = T - X3;
   }
 
   DEVICE_INLINE void ntt8()
@@ -579,6 +614,44 @@ public:
           shmem[ntt_id * 16 + i * 8 + column_id + j] = X[2 * j + i];
         } else {
           X[2 * j + i] = shmem[ntt_id * 16 + i * 8 + column_id + j];
+        }
+      }
+    }
+  }
+
+  DEVICE_INLINE void SharedData16Columns4_2(E* shmem, bool store, bool high_bits, bool stride)
+  {
+    uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
+    uint32_t column_id = stride ? threadIdx.x >> 5 : threadIdx.x & 0x1;
+
+    UNROLL
+    for (uint32_t j = 0; j < 2; j++) {
+      UNROLL
+      for (uint32_t i = 0; i < 4; i++) {
+        if (store) {
+          printf("T: %d, Store X[%d] -> S[%d]\n", threadIdx.x, 4 * j + i, ntt_id * 16 + i * 2 + column_id + j * 8);
+          shmem[ntt_id * 16 + i * 2 + column_id + j * 8] = X[4 * j + i];
+        } else {
+          X[4 * j + i] = shmem[ntt_id * 16 + i * 2 + column_id + j];
+        }
+      }
+    }
+  }
+
+  DEVICE_INLINE void SharedData16Rows4_2(E* shmem, bool store, bool high_bits, bool stride)
+  {
+    uint32_t ntt_id = stride ? threadIdx.x & 0x1f : threadIdx.x >> 1;
+    uint32_t row_id = (stride ? threadIdx.x >> 5 : threadIdx.x & 0x1) * 8;
+
+    UNROLL
+    for (uint32_t j = 0; j < 2; j++) {
+      UNROLL
+      for (uint32_t i = 0; i < 4; i++) {
+        printf("T: %d, Load S[%d] -> X[%d]\n", threadIdx.x, ntt_id * 16 + row_id + 4 * j + i, 4 * j + i);
+        if (store) {
+          shmem[ntt_id * 16 + row_id + 4 * j + i] = X[4 * j + i];
+        } else {
+          X[4 * j + i] = shmem[ntt_id * 16 + row_id + 4 * j + i];
         }
       }
     }
