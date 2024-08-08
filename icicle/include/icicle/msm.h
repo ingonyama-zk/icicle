@@ -29,12 +29,12 @@ namespace icicle {
             * the MSM problem. Larger value means more on-line memory footprint but also more parallelism and less
             * computational complexity (up to a certain point). Default value: 0 (the optimal value of \f$ c \f$ is
             * chosen automatically). */
-    int bitsize;                /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
-                                 *   but if a different (better) upper bound is known, it should be reflected in this variable.
-                                 *   Default value: 0 (set to the bitsize of scalar field). */
-    int batch_size;             /**< Number of MSMs to compute. Default value: 1. */
-    bool are_points_shared_in_batch;      /**< Bases are shared for batch. Set to true if all MSMs use the same bases. Otherwise
-                                   expecting #bases==#scalars. Default value: true. */
+    int bitsize;    /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
+                     *   but if a different (better) upper bound is known, it should be reflected in this variable.
+                     *   Default value: 0 (set to the bitsize of scalar field). */
+    int batch_size; /**< Number of MSMs to compute. Default value: 1. */
+    bool are_points_shared_in_batch; /**< Bases are shared for batch. Set to true if all MSMs use the same bases.
+                              Otherwise expecting #bases==#scalars. Default value: true. */
     bool are_scalars_on_device; /**< True if scalars are on device, false if they're on host. Default value: false. */
     bool
       are_scalars_montgomery_form; /**< True if scalars are in Montgomery form, false otherwise. Default value: true. */
