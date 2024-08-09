@@ -33,8 +33,7 @@ pub struct MSMConfig {
     pub bitsize: i32,
 
     batch_size: i32,
-    are_bases_shared: bool,
-    /// MSMs in batch share the bases. If false, expecting #bases==#scalars
+    are_points_shared_in_batch: bool, /// MSMs in batch share the bases. If false, expecting #bases==#scalars
     are_scalars_on_device: bool,
     pub are_scalars_montgomery_form: bool,
     are_bases_on_device: bool,
@@ -60,7 +59,7 @@ impl Default for MSMConfig {
             c: 0,
             bitsize: 0,
             batch_size: 1,
-            are_bases_shared: true,
+            are_points_shared_in_batch: true,
             are_scalars_on_device: false,
             are_scalars_montgomery_form: false,
             are_bases_on_device: false,
@@ -144,7 +143,7 @@ pub fn msm<C: Curve + MSM<C>>(
     }
 
     let mut local_cfg = cfg.clone();
-    local_cfg.are_bases_shared = bases_size < scalars.len();
+    local_cfg.are_points_shared_in_batch = bases_size < scalars.len();
     local_cfg.batch_size = results.len() as i32;
     local_cfg.are_scalars_on_device = scalars.is_on_device();
     local_cfg.are_bases_on_device = bases.is_on_device();

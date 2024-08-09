@@ -16,7 +16,7 @@ cpu_msm(const Device& device, const S* scalars, const A* bases, int msm_size, co
   for (auto batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
     P res = P::zero();
     const S* batch_scalars = scalars + msm_size * batch_idx;
-    const A* batch_bases = config.are_bases_shared ? bases : bases + msm_size * batch_idx;
+    const A* batch_bases = config.are_points_shared_in_batch ? bases : bases + msm_size * batch_idx;
     for (auto i = 0; i < msm_size; ++i) {
       res = res + P::from_affine(batch_bases[i]) * batch_scalars[i];
     }

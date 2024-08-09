@@ -78,7 +78,7 @@ jobs:
         path: ./icicle_v3/backend/cuda
         token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Build curve
       working-directory: ./icicle_v3
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
@@ -112,7 +112,7 @@ jobs:
         path: ./icicle_v3/backend/cuda
         token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Build field
       working-directory: ./icicle_v3
       if: needs.check-changed-files.outputs.cpp_cuda == 'true'
