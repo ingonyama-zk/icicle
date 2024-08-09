@@ -1,3 +1,7 @@
+build_dcct: tests/test_dcct.cu ntt.cu thread_ntt.cu kernel_ntt.cu
+	mkdir -p work
+	nvcc -o work/test_dcct -I. -I../../include tests/test_dcct.cu -std=c++17
+
 build_verification:
 	mkdir -p work
 	nvcc -o work/test_verification -I. -I../../include tests/verification.cu -std=c++17
