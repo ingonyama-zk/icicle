@@ -514,9 +514,9 @@ namespace mxntt {
     engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, false);
 
     if (columns_batch_size)
-      engine.loadGlobalData16ColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
+      engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
     else
-      engine.loadGlobalData16(in, data_stride, log_data_stride, strided, s_meta);
+      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     if (threadIdx.x < 4) {
       printf(
@@ -552,25 +552,25 @@ namespace mxntt {
     __syncthreads();
     engine.SharedData16Rows4_2(shmem, false, false, strided); // load
 
-    // printf(
-    //   "T AFTER TRANSPOSE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-    //   threadIdx.x,
-    //   engine.X[0].limbs_storage.limbs[0],
-    //   engine.X[1].limbs_storage.limbs[0],
-    //   engine.X[2].limbs_storage.limbs[0],
-    //   engine.X[3].limbs_storage.limbs[0],
-    //   engine.X[4].limbs_storage.limbs[0],
-    //   engine.X[5].limbs_storage.limbs[0],
-    //   engine.X[6].limbs_storage.limbs[0],
-    //   engine.X[7].limbs_storage.limbs[0]
-    // );
+    printf(
+      "T AFTER TRANSPOSE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      threadIdx.x,
+      engine.X[0].limbs_storage.limbs[0],
+      engine.X[1].limbs_storage.limbs[0],
+      engine.X[2].limbs_storage.limbs[0],
+      engine.X[3].limbs_storage.limbs[0],
+      engine.X[4].limbs_storage.limbs[0],
+      engine.X[5].limbs_storage.limbs[0],
+      engine.X[6].limbs_storage.limbs[0],
+      engine.X[7].limbs_storage.limbs[0]
+    );
 
     engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, true);
     engine.ntt4_2();
     if (columns_batch_size)
-      engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
+      engine.storeGlobalData16ColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else
-      engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+      engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
   }
 #endif
 
