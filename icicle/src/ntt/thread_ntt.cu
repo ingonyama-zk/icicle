@@ -117,6 +117,18 @@ public:
     uint32_t stage_offset = 0;
     uint32_t phase_offset = stage_size * phase * 2; // 2 is the number of stages
 
+    printf(
+      "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, phase: %d\n",
+      threadIdx.x,
+      s_meta.ntt_inp_id,
+      s_meta.ntt_block_id,
+      s_meta.ntt_block_size,
+      tw_order,
+      tw_log_order,
+      tw_log_size,
+      phase
+    );
+
     UNROLL
     for (uint32_t stage = 0; stage < 2; stage++) {
       UNROLL
@@ -629,7 +641,8 @@ public:
       UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         if (store) {
-          printf("T: %d, Store X[%d] -> S[%d]\n", threadIdx.x, 4 * j + i, ntt_id * 16 + i * 2 + column_id + j * 8);
+          if (threadIdx.x < 4)
+            printf("T: %d, Store X[%d] -> S[%d]\n", threadIdx.x, 4 * j + i, ntt_id * 16 + i * 2 + column_id + j * 8);
           shmem[ntt_id * 16 + i * 2 + column_id + j * 8] = X[4 * j + i];
         } else {
           X[4 * j + i] = shmem[ntt_id * 16 + i * 2 + column_id + j];
@@ -647,7 +660,8 @@ public:
     for (uint32_t j = 0; j < 2; j++) {
       UNROLL
       for (uint32_t i = 0; i < 4; i++) {
-        printf("T: %d, Load S[%d] -> X[%d]\n", threadIdx.x, ntt_id * 16 + row_id + 4 * j + i, 4 * j + i);
+        if (threadIdx.x < 4)
+          printf("T: %d, Load S[%d] -> X[%d]\n", threadIdx.x, ntt_id * 16 + row_id + 4 * j + i, 4 * j + i);
         if (store) {
           shmem[ntt_id * 16 + row_id + 4 * j + i] = X[4 * j + i];
         } else {

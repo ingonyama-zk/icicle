@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   cudaEvent_t ntt_start, ntt_stop;
   float icicle_time;
 
-  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 4;
+  int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 8;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
   int INV = (argc > 3) ? atoi(argv[3]) : false;
