@@ -544,23 +544,25 @@ macro_rules! impl_vec_ops_bench {
             group.sampling_mode(SamplingMode::Flat);
             group.sample_size(10);
 
-            const MAX_LOG2: u32 = 25; // max length = 2 ^ MAX_LOG2
+            const MAX_LOG2: u32 = 28; // max length = 2 ^ MAX_LOG2
 
             let max_log2 = env::var("MAX_LOG2")
                 .unwrap_or_else(|_| MAX_LOG2.to_string())
                 .parse::<u32>()
                 .unwrap_or(MAX_LOG2);
 
-            for test_size_log2 in (13u32..max_log2 + 1) {
-                let test_size = 1 << test_size_log2;
+            // for test_size_log2 in [28] {
+                let test_size = 1 << 28;
 
-                if test_size > 1 << max_log2 {
-                    continue;
-                }
+                // if test_size > 1 << max_log2 {
+                //     continue;
+                // }
 
                 use icicle_core::traits::GenerateRandom;
                 use icicle_core::vec_ops::{accumulate_scalars, VecOpsConfig};
                 use icicle_cuda_runtime::memory::{HostSlice, DeviceSlice, DeviceVec};
+                use icicle_core::vec_ops::BitReverseConfig;
+                use icicle_core::vec_ops::bit_reverse_inplace;
 
                 let mut a = F::Config::generate_random(test_size);
                 let b = F::Config::generate_random(test_size);
@@ -568,6 +570,27 @@ macro_rules! impl_vec_ops_bench {
                 let a_host = HostSlice::from_mut_slice(&mut a);
                 let b_host = HostSlice::from_slice(&b);
 
+                let cfg = BitReverseConfig::default();
+
+                let bench_descr = format!(" bit_reverse_inplace - data on host {}", test_size);
+                group.bench_function(&bench_descr, |bb| {
+                    bb.iter(|| {
+                        bit_reverse_inplace(a_host, &cfg).unwrap();
+                    })
+                });
+
+                let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
+                a_device
+                    .copy_from_host(HostSlice::from_slice(&b.clone()))
+                    .unwrap();
+
+                let bench_descr = format!(" bit_reverse_inplace - data on device {}", test_size);
+                group.bench_function(&bench_descr, |bb| {
+                    bb.iter(|| {
+                        bit_reverse_inplace(&mut a_device[..], &cfg).unwrap();
+                    })
+                });
+            /*
                 let cfg = VecOpsConfig::default();
 
                 let bench_descr = format!(" accumulate - data on host {}", test_size);
@@ -593,7 +616,8 @@ macro_rules! impl_vec_ops_bench {
                         accumulate_scalars(&mut a_device[..], &b_device[..], &cfg).unwrap();
                     })
                 });
-            }
+            */
+            // }
             group.finish();
         }
 

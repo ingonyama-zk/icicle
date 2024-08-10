@@ -4,6 +4,10 @@
 #include "fields/field.cuh"
 #include "fields/quartic_extension.cuh"
 
+#include <thread>
+#include <vector>
+#include <random>
+
 namespace m31 {
   template <class CONFIG>
   class MersenneField : public Field<CONFIG>
@@ -22,10 +26,36 @@ namespace m31 {
 
     static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
 
+    // static void rand_host_many(MersenneField* out, int size)
+    // {
+    //   for (int i = 0; i < size; i++) //TODO: parallel - as it's painfully slow
+    //     out[i] = rand_host();
+    // }
+
     static void rand_host_many(MersenneField* out, int size)
     {
-      for (int i = 0; i < size; i++)
-        out[i] = rand_host();
+      int num_threads = std::thread::hardware_concurrency(); // Get number of supported threads
+      int chunk_size = size / num_threads;
+
+      auto worker = [&](int start, int end) {
+        for (int i = start; i < end; i++) {
+          out[i] = rand_host();
+        }
+      };
+
+      std::vector<std::thread> threads;
+
+      // Launch threads
+      for (int i = 0; i < num_threads; i++) {
+        int start = i * chunk_size;
+        int end = (i == num_threads - 1) ? size : (i + 1) * chunk_size;
+        threads.emplace_back(worker, start, end);
+      }
+
+      // Join threads
+      for (auto& t : threads) {
+        t.join();
+      }
     }
 
     HOST_DEVICE_INLINE MersenneField& operator=(const Field<CONFIG>& other)

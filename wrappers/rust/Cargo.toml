@@ -3,15 +3,15 @@ resolver = "2"
 members = [
   "icicle-cuda-runtime",
   "icicle-core",
-  "icicle-curves/icicle-bw6-761",
-  "icicle-curves/icicle-bls12-377",
-  "icicle-curves/icicle-bls12-381",
-  "icicle-curves/icicle-bn254",
-  "icicle-curves/icicle-grumpkin",
-  "icicle-fields/icicle-babybear",
+  # "icicle-curves/icicle-bw6-761",
+  # "icicle-curves/icicle-bls12-377",
+  # "icicle-curves/icicle-bls12-381",
+  # "icicle-curves/icicle-bn254",
+  # "icicle-curves/icicle-grumpkin",
+  # "icicle-fields/icicle-babybear",
   "icicle-fields/icicle-m31",
-  "icicle-fields/icicle-stark252",
-  "icicle-hash",
+  # "icicle-fields/icicle-stark252",
+  # "icicle-hash",
 ]
 exclude = [
   "icicle-curves/icicle-curve-template",
