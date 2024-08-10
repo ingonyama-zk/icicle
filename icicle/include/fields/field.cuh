@@ -708,6 +708,16 @@ public:
       value = value - Field{get_modulus()};
     return value;
   }
+  
+  static HOST_INLINE Field rand_host_fast(int seed)
+  {
+    Field value{};
+    for (unsigned i = 0; i < TLC; i++)
+      value.limbs_storage.limbs[i] = seed;
+    while (lt(Field{get_modulus()}, value))
+      value = value - Field{get_modulus()};
+    return value;
+  }
 
   static void rand_host_many(Field* out, int size)
   {

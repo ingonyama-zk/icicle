@@ -26,11 +26,15 @@ namespace m31 {
 
     static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
 
+    static HOST_INLINE MersenneField rand_host_fast(int seed) { return MersenneField(Field<CONFIG>::rand_host_fast(seed)); }
+
     // static void rand_host_many(MersenneField* out, int size)
     // {
     //   for (int i = 0; i < size; i++) //TODO: parallel - as it's painfully slow
     //     out[i] = rand_host();
     // }
+
+    // static HOST_INLINE MersenneField rand_host_fast(int seed) { return {(uint32_t)seed}; }
 
     static void rand_host_many(MersenneField* out, int size)
     {
@@ -39,7 +43,8 @@ namespace m31 {
 
       auto worker = [&](int start, int end) {
         for (int i = start; i < end; i++) {
-          out[i] = rand_host();
+          // out[i] = rand_host();
+          out[i] = rand_host_fast(i);
         }
       };
 

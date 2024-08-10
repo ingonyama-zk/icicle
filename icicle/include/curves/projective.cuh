@@ -216,6 +216,12 @@ public:
     return rand_scalar * generator();
   }
 
+  static HOST_INLINE Projective rand_host_fast(int seed)
+  {
+    return SCALAR_FF rand_scalar = SCALAR_FF::rand_host_fase(seed);
+    return rand_scalar * generator();
+  }
+
   static void rand_host_many(Projective* out, int size)
   {
     for (int i = 0; i < size; i++)

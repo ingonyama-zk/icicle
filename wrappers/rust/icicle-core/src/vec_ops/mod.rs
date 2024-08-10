@@ -552,7 +552,7 @@ macro_rules! impl_vec_ops_bench {
                 .unwrap_or(MAX_LOG2);
 
             // for test_size_log2 in [28] {
-                let test_size = 1 << 28;
+                let test_size = 1 << max_log2;
 
                 // if test_size > 1 << max_log2 {
                 //     continue;
@@ -565,6 +565,13 @@ macro_rules! impl_vec_ops_bench {
                 use icicle_core::vec_ops::bit_reverse_inplace;
 
                 let mut a = F::Config::generate_random(test_size);
+
+                for i in (test_size-10)..test_size {
+                    print!("{:?}, ", a[i]);
+                    // assert_eq!(a[i]., i
+                }
+                println!();
+
                 let b = F::Config::generate_random(test_size);
 
                 let a_host = HostSlice::from_mut_slice(&mut a);

@@ -49,6 +49,8 @@ public:
   }
 
   static HOST_INLINE ExtensionField rand_host() { return ExtensionField{FF::rand_host(), FF::rand_host()}; }
+  
+  static HOST_INLINE ExtensionField rand_host_fast(int seed) { return {(uint32_t)seed, (uint32_t)seed}; }
 
   static void rand_host_many(ExtensionField* out, int size)
   {
