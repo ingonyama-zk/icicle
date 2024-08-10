@@ -1,9 +1,5 @@
 # ICICLE examples: computations with polynomials
 
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
-
 ## Key-Takeaway
 
 Polynomials are crucial for Zero-Knowledge Proofs (ZKPs): they enable efficient representation and verification of computational statements, facilitate privacy-preserving protocols, and support complex mathematical operations essential for constructing and verifying proofs without revealing underlying data. Polynomial API is documented [here](https://dev.ingonyama.com/icicle/polynomials/overview)

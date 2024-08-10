@@ -2,10 +2,6 @@
 
 `ICICLE` provides Rust bindings to CUDA-accelerated C++ implementation of [Multi-Scalar Multiplication](https://github.com/ingonyama-zk/ingopedia/blob/master/src/msm.md).
 
-## Best Practices
-
-In order to save time and setting up prerequisites manually, we recommend running this example in our [ZKContainer](../../ZKContainer.md).
-
 ## Usage
 
 ```rust

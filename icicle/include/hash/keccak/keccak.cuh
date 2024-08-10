@@ -22,9 +22,14 @@ namespace keccak {
   // Number of state elements in u64
   const int KECCAK_STATE_SIZE = 25;
 
+  const int KECCAK_PADDING_CONST = 1;
+  const int SHA3_PADDING_CONST = 6;
+
   class Keccak : public Hasher<uint8_t, uint64_t>
   {
   public:
+    const int PADDING_CONST;
+
     cudaError_t run_hash_many_kernel(
       const uint8_t* input,
       uint64_t* output,
@@ -33,7 +38,34 @@ namespace keccak {
       unsigned int output_len,
       const device_context::DeviceContext& ctx) const override;
 
-    Keccak(unsigned int rate) : Hasher<uint8_t, uint64_t>(KECCAK_STATE_SIZE, KECCAK_STATE_SIZE, rate, 0) {}
+    Keccak(unsigned int rate, unsigned int padding_const)
+        : Hasher<uint8_t, uint64_t>(KECCAK_STATE_SIZE, KECCAK_STATE_SIZE, rate, 0), PADDING_CONST(padding_const)
+    {
+    }
+  };
+
+  class Keccak256 : public Keccak
+  {
+  public:
+    Keccak256() : Keccak(KECCAK_256_RATE, KECCAK_PADDING_CONST) {}
+  };
+
+  class Keccak512 : public Keccak
+  {
+  public:
+    Keccak512() : Keccak(KECCAK_512_RATE, KECCAK_PADDING_CONST) {}
+  };
+
+  class Sha3_256 : public Keccak
+  {
+  public:
+    Sha3_256() : Keccak(KECCAK_256_RATE, SHA3_PADDING_CONST) {}
+  };
+
+  class Sha3_512 : public Keccak
+  {
+  public:
+    Sha3_512() : Keccak(KECCAK_512_RATE, SHA3_PADDING_CONST) {}
   };
 } // namespace keccak
 
