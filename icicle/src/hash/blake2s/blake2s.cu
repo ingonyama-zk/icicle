@@ -6,7 +6,7 @@
 
 #include "hash/blake2s/blake2s.cuh"
 
-
+// Based on cuda-hashing-algos blake2b
 
 using namespace hash;
 
@@ -244,12 +244,12 @@ void mcm_cuda_blake2s_hash_batch(BYTE *key, WORD keylen, BYTE *in, WORD inlen, B
     cudaMalloc(&cuda_indata, inlen * n_batch);
     cudaMalloc(&cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch);
 
-    CUDA_BLAKE2S_CTX ctx;
+    // CUDA_BLAKE2S_CTX ctx;
     assert(keylen <= 32);
-    cpu_blake2s_init(&ctx, key, keylen, n_outbit);
+    // cpu_blake2s_init(&ctx, key, keylen, n_outbit);
 
     cudaMemcpy(cuda_indata, in, inlen * n_batch, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol(c_CTX, &ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
+    // cudaMemcpyToSymbol(c_CTX, &ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
 
     WORD thread = 256;
     WORD block = (n_batch + thread - 1) / thread;
