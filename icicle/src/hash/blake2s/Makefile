@@ -2,9 +2,9 @@ test_blake2s: test_blake2s.cu blake2s.cu
 	nvcc -o test_blake2s -I. -I../../../include test_blake2s.cu blake2s.cu -g
 	./test_blake2s
 
-test_blake2s_batched: test_blake2s.cu blake2s.cu 
-	nvcc -o test_blake2s_batched -I. -I../../../include test_blake2s_batched.cu blake2s.cu -g
-	./test_blake2s_batched ./1.txt ./2.txt
+test_blake2s_batched: test_blake2s_batched.cu blake2s.cu 
+	nvcc -o test_blake2s_batched -I. -I../../../include test_blake2s_batched.cu -g
+	./test_blake2s_batched ./batched_test_vectors.csv
 	
 test_blake2s_hasher: test_blake2s_hasher.cu blake2s.cu 
 	nvcc -o test_blake2s_hasher -I. -I../../../include test_blake2s_hasher.cu -g

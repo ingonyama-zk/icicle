@@ -81,7 +81,6 @@ int main(int argc, char **argv) {
     WORD keylen = strlen((char *)key);
     WORD n_outbit = 256;  // Output length in bits
     WORD n_batch = 1;  // Number of hashes to compute in parallel
-
     // Allocate memory for the output
     WORD outlen = n_outbit / 8;
     BYTE *output = (BYTE *)malloc(outlen * n_batch);
@@ -97,7 +96,7 @@ int main(int argc, char **argv) {
     START_TIMER(blake_timer)
     HashConfig config = default_hash_config();
 
-    blake2s_cuda(input, output, n_batch, inlen, n_outbit, config);
+    blake2s_cuda(input, output, n_batch, inlen, outlen, config);
     END_TIMER(blake_timer, "Blake Timer")
     
     // Print the result
