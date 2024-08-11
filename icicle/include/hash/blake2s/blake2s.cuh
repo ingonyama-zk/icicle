@@ -50,6 +50,6 @@ namespace blake2s{
     };
 
  extern "C" {
- void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE * in, WORD inlen, BYTE * out, WORD n_outbit, WORD n_batch);
+ void mcm_cuda_blake2s_hash_batch(BYTE *key, WORD keylen, BYTE *in, WORD inlen, BYTE *out, WORD output_len, WORD n_batch);
  }
 }
