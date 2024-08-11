@@ -11,7 +11,6 @@
 
 using namespace blake2s;
 
-
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
@@ -56,7 +55,7 @@ int main(int argc, char* argv[])
 
   /// Allocate memory for digests of {keep_rows} rows of a tree
   START_TIMER(timer_digests);
-  size_t digests_mem = digests_len * sizeof(BYTE)*64;
+  size_t digests_mem = digests_len * sizeof(BYTE) * 64;
   BYTE* digests = static_cast<BYTE*>(malloc(digests_mem));
   END_TIMER(timer_digests, "Allocated memory for digests");
 
@@ -81,15 +80,13 @@ int main(int argc, char* argv[])
 
   for (int i = 0; i < digests_len * 32; i++) {
     WORD root = digests[i];
-    
+
     // Print the current element in hexadecimal format
     printf("%02x", root);
 
     // After every 32 elements, print a newline to start a new row
-    if ((i + 1) % 32 == 0) {
-        printf("\n");
-    }
-}
+    if ((i + 1) % 32 == 0) { printf("\n"); }
+  }
 
   free(digests);
   free(leaves);

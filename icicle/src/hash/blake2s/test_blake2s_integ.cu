@@ -6,8 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-
-#include "hash/blake2s/blake2s.cuh"
+#include "extern.cu"
 
 using namespace blake2s;
 
@@ -16,12 +15,13 @@ using namespace blake2s;
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 extern "C" {
-void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD outlen, WORD n_batch);
+void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD n_outbit, WORD n_batch);
 }
 
 void print_hash(BYTE* hash, WORD len)
 {
-  printf("%d \n", len);
+  printf("Hash Len: %d \n", len);
+  printf("BLAKE2S hash:\n");
   for (WORD i = 0; i < len; i++) {
     printf("%02x", hash[i]);
   }
@@ -83,7 +83,6 @@ int main(int argc, char** argv)
   WORD keylen = strlen((char*)key);
   WORD n_outbit = 256; // Output length in bits
   WORD n_batch = 1;    // Number of hashes to compute in parallel
-
   // Allocate memory for the output
   WORD outlen = n_outbit / 8;
   BYTE* output = (BYTE*)malloc(outlen * n_batch);
@@ -97,11 +96,12 @@ int main(int argc, char** argv)
 
   // Perform the hashing
   START_TIMER(blake_timer)
-  mcm_cuda_blake2s_hash_batch(key, keylen, input, inlen, output, outlen, n_batch);
+  HashConfig config = default_hash_config();
+
+  blake2s_cuda(input, output, n_batch, inlen, outlen, config);
   END_TIMER(blake_timer, "Blake Timer")
 
   // Print the result
-  printf("BLAKE2S hash:\n");
   print_hash(output, outlen);
 
   // Clean up
