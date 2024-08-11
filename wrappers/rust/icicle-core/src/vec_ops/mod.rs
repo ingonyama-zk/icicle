@@ -520,7 +520,7 @@ macro_rules! impl_vec_ops_bench {
       $field_prefix:literal,
       $field:ident
     ) => {
-        use criterion::{black_box, criterion_group, criterion_main, Criterion};
+        use criterion::{black_box, criterion_group, Criterion};
         use icicle_core::{
             ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering},
         };
@@ -566,11 +566,11 @@ macro_rules! impl_vec_ops_bench {
 
                 let mut a = F::Config::generate_random(test_size);
 
-                for i in (test_size-10)..test_size {
-                    print!("{:?}, ", a[i]);
-                    // assert_eq!(a[i]., i
-                }
-                println!();
+                // for i in (test_size-10)..test_size {
+                //     print!("{:?}, ", a[i]);
+                //     // assert_eq!(a[i]., i
+                // }
+                // println!();
 
                 let b = F::Config::generate_random(test_size);
 
@@ -579,7 +579,7 @@ macro_rules! impl_vec_ops_bench {
 
                 let cfg = BitReverseConfig::default();
 
-                let bench_descr = format!(" bit_reverse_inplace - data on host {}", test_size);
+                let bench_descr = format!(" bit_reverse_inplace - data on host 2^{}", max_log2);
                 group.bench_function(&bench_descr, |bb| {
                     bb.iter(|| {
                         bit_reverse_inplace(a_host, &cfg).unwrap();
@@ -591,16 +591,16 @@ macro_rules! impl_vec_ops_bench {
                     .copy_from_host(HostSlice::from_slice(&b.clone()))
                     .unwrap();
 
-                let bench_descr = format!(" bit_reverse_inplace - data on device {}", test_size);
+                let bench_descr = format!(" bit_reverse_inplace - data on device 2^{}", max_log2);
                 group.bench_function(&bench_descr, |bb| {
                     bb.iter(|| {
                         bit_reverse_inplace(&mut a_device[..], &cfg).unwrap();
                     })
                 });
-            /*
+            //*
                 let cfg = VecOpsConfig::default();
 
-                let bench_descr = format!(" accumulate - data on host {}", test_size);
+                let bench_descr = format!(" accumulate - data on host 2^{}", max_log2);
                 group.bench_function(&bench_descr, |bb| {
                     bb.iter(|| {
                         accumulate_scalars(a_host, b_host, &cfg).unwrap();
@@ -617,18 +617,17 @@ macro_rules! impl_vec_ops_bench {
                     .copy_from_host(HostSlice::from_slice(&b))
                     .unwrap();
 
-                let bench_descr = format!(" accumulate - data on device {}", test_size);
+                let bench_descr = format!(" accumulate - data on device 2^{}", max_log2);
                 group.bench_function(&bench_descr, |bb| {
                     bb.iter(|| {
                         accumulate_scalars(&mut a_device[..], &b_device[..], &cfg).unwrap();
                     })
                 });
-            */
+            //*/
             // }
             group.finish();
         }
 
         criterion_group!(benches, benchmark_vec_ops<$field, $field>);
-        criterion_main!(benches);
     };
 }

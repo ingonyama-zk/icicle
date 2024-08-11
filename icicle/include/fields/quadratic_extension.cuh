@@ -55,7 +55,7 @@ public:
   static void rand_host_many(ExtensionField* out, int size)
   {
     for (int i = 0; i < size; i++)
-      out[i] = rand_host();
+      out[i] = rand_host_fast(i);
   }
 
   template <unsigned REDUCTION_SIZE = 1>
