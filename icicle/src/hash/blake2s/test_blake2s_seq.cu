@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 
         // Perform the hashing
         START_TIMER(blake_timer)
-        blake2s_cuda(input, output, n_batch, inlen, n_outbit, config);
+        blake2s_cuda(input, output, n_batch, inlen, outlen, config);
         END_TIMER(blake_timer, "Blake Timer")
         // Convert the output to hex string
         std::string computed_hash = byte_to_hex(output, outlen);

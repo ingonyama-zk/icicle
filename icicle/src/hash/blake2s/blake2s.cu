@@ -6,8 +6,6 @@
 
 #include "hash/blake2s/blake2s.cuh"
 
-// Based on cuda-hashing-algos blake2b
-
 using namespace hash;
 
 namespace blake2s {
@@ -237,19 +235,19 @@ __global__ void kernel_blake2s_hash(const BYTE *indata, WORD inlen, BYTE *outdat
 }
 
 extern "C" {
-void mcm_cuda_blake2s_hash_batch(BYTE *key, WORD keylen, BYTE *in, WORD inlen, BYTE *out, WORD n_outbit, WORD n_batch) {
+void mcm_cuda_blake2s_hash_batch(BYTE *key, WORD keylen, BYTE *in, WORD inlen, BYTE *out, WORD output_len, WORD n_batch) {
     BYTE *cuda_indata;
     BYTE *cuda_outdata;
-    const WORD BLAKE2S_BLOCK_SIZE = (n_outbit >> 3);
+    const WORD BLAKE2S_BLOCK_SIZE = output_len;
     cudaMalloc(&cuda_indata, inlen * n_batch);
     cudaMalloc(&cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch);
+    assert(keylen <= 32);
 
     // CUDA_BLAKE2S_CTX ctx;
-    assert(keylen <= 32);
     // cpu_blake2s_init(&ctx, key, keylen, n_outbit);
+    // cudaMemcpyToSymbol(c_CTX, &ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
 
     cudaMemcpy(cuda_indata, in, inlen * n_batch, cudaMemcpyHostToDevice);
-    // cudaMemcpyToSymbol(c_CTX, &ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
 
     WORD thread = 256;
     WORD block = (n_batch + thread - 1) / thread;
@@ -273,7 +271,7 @@ cudaError_t Blake2s::run_hash_many_kernel(
     WORD        output_len,
     const device_context::DeviceContext& ctx) const
     {
-        const WORD BLAKE2S_BLOCK_SIZE = (output_len >> 3);
+        const WORD BLAKE2S_BLOCK_SIZE = output_len;
         WORD thread = 256;
         WORD block = (number_of_states + thread - 1) / thread;
 
