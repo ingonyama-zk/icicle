@@ -44,7 +44,7 @@ class VectorOpTask : public TaskBase {
     VectorOpTask() : TaskBase() {
     }
 
-    // Set the operands to execute a task of 2 operands and 1 output and dispath the task
+    // Set the operands to execute a task of 2 operands and 1 output and dispatch the task
     void send_2ops_task(VecOperation operation, const int nof_operations, const T* op_a, const T* op_b, T* output) {
       m_operation      = operation;
       m_nof_operations = nof_operations;
@@ -54,7 +54,7 @@ class VectorOpTask : public TaskBase {
       dispatch();
     }
 
-    // Set the operands to execute a task of 1 operand and 1 output and dispath the task
+    // Set the operands to execute a task of 1 operand and 1 output and dispatch the task
     void send_1op_task(VecOperation operation, const int nof_operations, const T* op_a, T* output) {
       m_operation      = operation;
       m_nof_operations = nof_operations;
@@ -63,7 +63,7 @@ class VectorOpTask : public TaskBase {
       dispatch();
     }
 
-    // Set the operands to bitrev operation dispath the task
+    // Set the operands to bitrev operation dispatch the task
     void send_bitrev_task(VecOperation operation, int bit_size, uint64_t start_index, const int nof_operations, const T* op_a, T* output) {
       m_operation      = operation;
       m_nof_operations = nof_operations;
@@ -74,7 +74,7 @@ class VectorOpTask : public TaskBase {
       dispatch();
     }
 
-    // Set the operands to slice operation dispath the task
+    // Set the operands to slice operation dispatch the task
     void send_slice_task(VecOperation operation, uint64_t stride, const int nof_operations, const T* op_a, T* output) {
       m_operation      = operation;
       m_nof_operations = nof_operations;
@@ -147,14 +147,14 @@ class VectorOpTask : public TaskBase {
         *m_output = *m_output * m_op_a[i];
       }
     }
-    // Single worker functionality to execute convertion from barret to montgomery
+    // Single worker functionality to execute conversion from barret to montgomery
     void convert_to_montgomery() { 
       for (uint64_t i = 0; i < m_nof_operations; ++i) {
         m_output[i] = T::to_montgomery(m_op_a[i]);
       }
     }
 
-    // Single worker functionality to execute convertion from montgomery to barret
+    // Single worker functionality to execute conversion from montgomery to barret
     void convert_from_montgomery() { 
       for (uint64_t i = 0; i < m_nof_operations; ++i) {
         m_output[i] = T::from_montgomery(m_op_a[i]);
@@ -323,7 +323,7 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
   return cpu_1vector_op(VecOperation::VECTOR_SUM, vec_a, n, config, output);
 }
 
-// Once backend will support - uncoment the following line
+// Once backend will support - uncomment the following line
 //REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
 /*********************************** SUM ***********************************/
 template <typename T>
@@ -331,7 +331,7 @@ eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n
   return cpu_1vector_op(VecOperation::VECTOR_PRODUCT, vec_a, n, config, output);
 }
 
-// Once backend will support - uncoment the following line
+// Once backend will support - uncomment the following line
 //REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
 
 /*********************************** MUL BY SCALAR***********************************/
