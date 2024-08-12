@@ -15,9 +15,17 @@
 #ifndef BLAKE2_H
 #define BLAKE2_H
 
+typedef unsigned char BYTE;
+typedef unsigned int WORD;
+typedef unsigned long long LONG;
+
 #include <stddef.h>
 #include <stdint.h>
+#include "hash/hash.h"
+using namespace hash;
 
+
+namespace blake2s_hash{
 #if defined(_MSC_VER)
 #define BLAKE2_PACKED(x) __pragma(pack(push, 1)) x __pragma(pack(pop))
 #else
@@ -188,8 +196,22 @@ extern "C" {
   /* This is simply an alias for blake2b */
   int blake2( void *out, size_t outlen, const void *in, size_t inlen, const void *key, size_t keylen );
 
+  class Blake2s : public Hasher<BYTE, BYTE>
+  {
+  public:
+    void run_hash(
+        const BYTE * input,
+        BYTE * output,
+        size_t input_len,
+        size_t output_len) const override;
+
+    Blake2s() : Hasher<BYTE, BYTE>(BLAKE2S_BLOCKBYTES, BLAKE2S_BLOCKBYTES, BLAKE2S_BLOCKBYTES, 0) {}
+  };
+
+
 #if defined(__cplusplus)
 }
 #endif
 
 #endif
+}

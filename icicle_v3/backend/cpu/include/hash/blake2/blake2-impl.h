@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <string.h>
 
+namespace blake2s_hash{
 #if !defined(__cplusplus) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L)
   #if   defined(_MSC_VER)
     #define BLAKE2_INLINE __inline
@@ -158,3 +159,4 @@ static BLAKE2_INLINE void secure_zero_memory(void *v, size_t n)
 }
 
 #endif
+}
