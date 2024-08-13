@@ -223,7 +223,7 @@ int main(int argc, char** argv)
         return 0;
       }
       T::rand_host_many(host_out, vector_size); // Make hist_out != device_out.
-      // Initializa inputs with the known data
+      // Initialize inputs with the known data
       for (int i = 0; i < vector_size; i++) {
         host_in1[i] = host_in1_init[i];
         host_in2[i] = host_in2_init[i];
@@ -527,8 +527,8 @@ int main(int argc, char** argv)
         return 0;
       }
       T::rand_host_many(host_out, vector_size); // Make hist_out != device_out.
-      // Initializa inputs with the known data. For in-place tests host_in1 is going to be used as a result. So, it
-      // should be initialized later in the repetions loop.
+      // Initialize inputs with the known data. For in-place tests host_in1 is going to be used as a result. So, it
+      // should be initialized later in the repetitions loop.
       for (int i = 0; i < vector_size; i++) {
         host_in1[i] = host_in1_init[i];
         host_in2[i] = host_in2_init[i];
