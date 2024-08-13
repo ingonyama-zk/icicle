@@ -15,12 +15,30 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
+  using scalarVectorOpImpl2 = std::function<eIcicleError(
+    const Device& device,
+    scalar_t* vec_a,
+    const scalar_t* vec_b,
+    uint64_t n,
+    const VecOpsConfig& config
+    )>;
+
   void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_add) = []() -> bool {                                                                  \
       register_vector_add(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_vector_accumulate(const std::string& deviceType, scalarVectorOpImpl2 impl);
+
+#define REGISTER_VECTOR_ACCUMULATE_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_accumulate) = []() -> bool {                                                                  \
+      register_vector_accumulate(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
