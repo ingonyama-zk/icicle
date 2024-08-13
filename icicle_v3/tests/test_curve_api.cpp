@@ -92,14 +92,14 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
     out_file.close();
   }
 
-  void get_inputs(affine_t* bases, scalar_t* scalars, const int n) // TODO add precompute factor
+  void get_inputs(affine_t* bases, scalar_t* scalars, const int n, const int batch_size)
   {
     // Scalars
-    std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n) + ".dat";
-    if (!read_inputs<scalar_t>(scalars, n, scalar_file)) {
+    std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n*batch_size) + ".dat";
+    if (!read_inputs<scalar_t>(scalars, n*batch_size, scalar_file)) {
       std::cout << "Generating scalars.\n";
-      scalar_t::rand_host_many(scalars, n);
-      store_inputs<scalar_t>(scalars, n, scalar_file);
+      scalar_t::rand_host_many(scalars, n*batch_size);
+      store_inputs<scalar_t>(scalars, n*batch_size, scalar_file);
     }
     // Bases
     std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
@@ -115,19 +115,19 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
   void MSM_test()
   {
     const int logn = 17;
-    const int batch = 1; // TODO test batch
+    const int batch = 3; // TODO test batch
     const int N = 1 << logn;
     const int precompute_factor = 4;
     const int c = std::max(logn, 8) - 1;
-    const int n_threads = 8;
+    int hw_threads = std::thread::hardware_concurrency();
+    if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
+    const int n_threads = (hw_threads > 1)? hw_threads - 1 : 1;
     const int total_nof_elemets = batch * N;
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
     std::cout << "Starting MSM\n";
 
-    // scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
-    // P::rand_host_many(bases.get(), N);
-    get_inputs(bases.get(), scalars.get(), N);
+    get_inputs(bases.get(), scalars.get(), N, batch);
 
     auto result_main = std::make_unique<P[]>(batch);
     auto result_ref = std::make_unique<P[]>(batch);
