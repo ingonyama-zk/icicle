@@ -71,7 +71,7 @@ These functions provide flexibility in how you load the backend, either by speci
 
 #### Rust
 
-```
+```rust
 pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
 pub fn load_backend(path: &str) -> Result<(), eIcicleError>;
 ```
