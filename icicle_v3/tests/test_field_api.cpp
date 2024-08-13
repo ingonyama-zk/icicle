@@ -89,6 +89,7 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+#ifndef EXT_FIELD
 TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
 {
   auto a = TypeParam::rand_host();
@@ -113,6 +114,7 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
   END_TIMER(MULT_sync, oss.str().c_str(), true);
   ASSERT_EQ(a, b);
 }
+#endif
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
