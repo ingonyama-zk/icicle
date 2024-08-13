@@ -1,3 +1,13 @@
+TODO Yuval update for V3
+Key features
+Acceleration of “zk” math
+Set of libraries (for various fields, curves and more).
+Cross language: C++, Rust, Go, python?
+Backend agnosticism
+Develop on CPU, deploy on various backends
+Have CUDA
+Can build others Metal,WebGPU,Vulkan,ZPU, remote machine or any other compute backend.
+
 # What is ICICLE?
 
 [![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
