@@ -37,7 +37,6 @@ int vector_op(
     err = bn254_sub_cuda(vec_a, vec_b, n_elements, config, vec_result);
     break;
   }
-  // cudaError_t err = bn254_mul_cuda(vec_a, vec_b, n_elements, config, vec_result);
   if (err != cudaSuccess) {
     std::cerr << "Failed to multiply vectors - " << cudaGetErrorString(err) << std::endl;
     return 0;
@@ -47,8 +46,8 @@ int vector_op(
 
 int main(int argc, char** argv)
 {
-  const unsigned vector_size              = 1 << 11;
-  const unsigned not_in_place_repetitions = 1 << 0;    // Repetitions are used only for the non in-place tests.
+  const unsigned vector_size              = 1 << 15;
+  const unsigned not_in_place_repetitions = 1 << 15;    // Repetitions are used only for the non in-place tests.
   const unsigned in_place_repetitions     = 1;    // Repetitions for in-place tests should be 1. Don't check it.
 
   cudaError_t err;
@@ -83,27 +82,21 @@ int main(int argc, char** argv)
   // host data
   std::cout << "Allocate memory for the input vectors (both normal and Montgomery presentation)" << std::endl;
   T* host_in1_init = (T*)malloc(vector_size * sizeof(T));
-  std::cout << "example malloc host_in1_init" << std::endl;
   T* host_in2_init = (T*)malloc(vector_size * sizeof(T));
-  std::cout << "example malloc host_in2_init" << std::endl;
   std::cout << "Initializing vectors with normal presentation random data" << std::endl;
   T::rand_host_many(host_in1_init, vector_size);
   T::rand_host_many(host_in2_init, vector_size);
   std::cout << "Allocate memory for the output vectors" << std::endl;
   T* host_out = (T*)malloc(vector_size * sizeof(T)); // This memory will be used for the test output.
-  std::cout << "example malloc host_out" << std::endl;
   T* host_out_ref_mul = (T*)malloc(
     vector_size *
     sizeof(T)); // This memory will be used as a reference result for mul (will be compared to host_out content).
-  std::cout << "example malloc host_out_ref_mul" << std::endl;
   T* host_out_ref_add = (T*)malloc(
     vector_size *
     sizeof(T)); // This memory will be used as a reference result for add (will be compared to host_out content).
-  std::cout << "example malloc host_out_ref_add" << std::endl;    
   T* host_out_ref_sub = (T*)malloc(
     vector_size *
     sizeof(T)); // This memory will be used as a reference result for sub (will be compared to host_out content).
-  std::cout << "malloc host_out_ref_sub" << std::endl;
   std::cout << "Initializing output vectors with random data" << std::endl;
   T::rand_host_many(host_out, vector_size);
   T::rand_host_many(host_out_ref_mul, vector_size);
@@ -116,19 +109,16 @@ int main(int argc, char** argv)
   T* device_out;
 
   err = cudaMalloc((void**)&device_in1, vector_size * sizeof(T));
-  std::cout << "example cudaMalloc device_in1" << std::endl;
   if (err != cudaSuccess) {
     std::cerr << "Failed to allocate device memory - " << cudaGetErrorString(err) << std::endl;
     return 0;
   }
   err = cudaMalloc((void**)&device_in2, vector_size * sizeof(T));
-  std::cout << "example cudaMalloc device_in2" << std::endl;
   if (err != cudaSuccess) {
     std::cerr << "Failed to allocate device memory - " << cudaGetErrorString(err) << std::endl;
     return 0;
   }
   err = cudaMalloc((void**)&device_out, vector_size * sizeof(T));
-  std::cout << "example cudaMalloc device_out" << std::endl;
   if (err != cudaSuccess) {
     std::cerr << "Failed to allocate device memory - " << cudaGetErrorString(err) << std::endl;
     return 0;
@@ -154,24 +144,27 @@ int main(int argc, char** argv)
   }
   std::cout << "Starting warm-up run" << std::endl;
   // Warm-up loop
+  // for (int i = 0; i < not_in_place_repetitions; i++) {
+  for (int i = 0; i < 100; i++) {   // Nof loops set to 100 because warm-up takes too much time because inputs and outputs are on located on Host.
+    vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, MUL);
+  }
+  // Generate ref results for all ops
   for (int op = MUL; op != LAST; op++) {
-    for (int i = 0; i < not_in_place_repetitions; i++) {
-      vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
-      switch (op) {
-        case MUL:
-          err = cudaMemcpy(host_out_ref_mul, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
-          break;
-        case ADD:
-          err = cudaMemcpy(host_out_ref_add, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
-          break;
-        case SUB:
-          err = cudaMemcpy(host_out_ref_sub, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
-          break;
-      }
-      if (err != cudaSuccess) {
-        std::cerr << "Failed to copy data from device_out to host - " << cudaGetErrorString(err) << std::endl;
-        return 0;
-      }
+    vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
+    switch (op) {
+      case MUL:
+        err = cudaMemcpy(host_out_ref_mul, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+        break;
+      case ADD:
+        err = cudaMemcpy(host_out_ref_add, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+        break;
+      case SUB:
+        err = cudaMemcpy(host_out_ref_sub, device_out, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+        break;
+    }
+    if (err != cudaSuccess) {
+      std::cerr << "Failed to copy data from device_out to host - " << cudaGetErrorString(err) << std::endl;
+      return 0;
     }
   }
   //****************************************
@@ -198,35 +191,20 @@ int main(int argc, char** argv)
   //*******************************************************
   T* host_in1 =
     (T*)malloc(vector_size * sizeof(T)); // This buffer is used to load the data from host_in1_init for the benchmark.
-  std::cout << "example malloc host_in1" << std::endl;
   T* host_in2 =
     (T*)malloc(vector_size * sizeof(T)); // This buffer is used to load the data from host_in2_init for the benchmark.
-  std::cout << "example malloc host_in1" << std::endl;
   // Test when the result is not in-place
   std::cout << "*****************************************" << std::endl;
   std::cout << "*** Start not in-place benchmark loop ***" << std::endl;
   std::cout << "*****************************************" << std::endl;
   for (int op = MUL; op != LAST; op++) {
-    for (int config_idx = 0; config_idx < 32; config_idx++) {
-      // // DEBUG
-      // int num_gpus;
-      // size_t free, total;
-      // cudaGetDeviceCount( &num_gpus );
-      // std::cout << "num_gpus " << num_gpus << std::endl;
-      // for ( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) {
-      //     cudaSetDevice( gpu_id );
-      //     int id;
-      //     cudaGetDevice( &id );
-      //     cudaMemGetInfo( &free, &total );
-      //     std::cout << "GPU " << id << " memory: free=" << free << ", total=" << total << std::endl;
-      // }
-      // // DEBUG
+    for (int config_idx = 28; config_idx < 29; config_idx++) {
+    // for (int config_idx = 0; config_idx < 32; config_idx++) {
       switch (op) {
         case MUL: std::cout << "Start benchmark loop for op MUL config_idx " << config_idx << " not in-place" << std::endl; break;
         case ADD: std::cout << "Start benchmark loop for op ADD config_idx " << config_idx << " not in-place" << std::endl; break;
         case SUB: std::cout << "Start benchmark loop for op SUB config_idx " << config_idx << " not in-place" << std::endl; break;
       }
-      std::cout << "Start benchmark loop for config_idx " << config_idx << std::endl;
       // Destroy the result of the prev loop.
       T::rand_host_many(host_out, vector_size);   // Randomize host_out in order to randomize device_out.
       err = cudaMemcpy(
@@ -344,37 +322,16 @@ int main(int argc, char** argv)
       CHK_IF_RETURN(cudaPeekAtLastError());
 
       auto start_time = std::chrono::high_resolution_clock::now();
-      // Benchmark loop
-      for (int i = 0; i < not_in_place_repetitions; i++) {
-        switch (config_idx >> (nof_of_configs_for_test - nof_of_storage_configs)) { // {is_a_on_device, is_b_on_device, is_result_on_device}
-          case 0b000:
-            vector_op(host_in1, host_in2, host_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b001:
-            vector_op(host_in1, host_in2, device_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b010:
-            vector_op(host_in1, device_in2, host_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b011:
-            vector_op(host_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b100:
-            vector_op(device_in1, host_in2, host_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b101:
-            vector_op(device_in1, host_in2, device_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b110:
-            vector_op(device_in1, device_in2, host_out, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b111:
-            vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op);
-            break;
-        }
-        CHK_IF_RETURN(cudaPeekAtLastError());
+      switch (config_idx >> (nof_of_configs_for_test - nof_of_storage_configs)) { // {is_a_on_device, is_b_on_device, is_result_on_device}
+        case 0b000: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(host_in1, host_in2, host_out, vector_size, ctx, config, (Op)op); } break;
+        case 0b001: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(host_in1, host_in2, device_out, vector_size, ctx, config, (Op)op); } break;
+        case 0b010: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(host_in1, device_in2, host_out, vector_size, ctx, config, (Op)op);  } break;
+        case 0b011: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(host_in1, device_in2, device_out, vector_size, ctx, config, (Op)op); } break;
+        case 0b100: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(device_in1, host_in2, host_out, vector_size, ctx, config, (Op)op); } break;
+        case 0b101: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(device_in1, host_in2, device_out, vector_size, ctx, config, (Op)op); } break;
+        case 0b110: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(device_in1, device_in2, host_out, vector_size, ctx, config, (Op)op); } break;  
+        case 0b111: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(device_in1, device_in2, device_out, vector_size, ctx, config, (Op)op); } break;
       }
-
       auto end_time = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
       switch (op) {
@@ -513,7 +470,6 @@ int main(int argc, char** argv)
         case ADD: std::cout << "Start benchmark loop for op ADD config_idx " << config_idx << " in-place" << std::endl; break;
         case SUB: std::cout << "Start benchmark loop for op SUB config_idx " << config_idx << " in-place" << std::endl; break;
       }
-      std::cout << "Start benchmark loop for config_idx " << config_idx << std::endl;
       // Destroy the result of the prev loop.
       T::rand_host_many(host_out, vector_size);   // Randomize host_out in order to randomize device_out.
       err = cudaMemcpy(
@@ -636,31 +592,17 @@ int main(int argc, char** argv)
       // Benchmark loop
       for (int i = 0; i < in_place_repetitions; i++) {
         switch (config_idx >> (nof_of_configs_for_test - nof_of_storage_configs)) { // {is_a_on_device, is_b_on_device, is_result_on_device}
-          case 0b000:
-            vector_op(host_in1, host_in2, host_in1, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b001:
-            break;
-          case 0b010:
-            vector_op(host_in1, device_in2, host_in1, vector_size, ctx, config, (Op)op);
-            break;
-          case 0b011:
-            break;
-          case 0b100:
-            break;
-          case 0b101:
-            vector_op(device_in1, host_in2, device_in1, vector_size, ctx, config, (Op)op);
-            std::cout << "===>>> COMMAND: vector_op(device_in1, host_in2, device_in1, vector_size, ctx, config, (Op)op);" << std::endl;
-            break;
-          case 0b110:
-            break;
-          case 0b111:
-            vector_op(device_in1, device_in2, device_in1, vector_size, ctx, config, (Op)op);
-            break;
+          case 0b000: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(host_in1, host_in2, host_in1, vector_size, ctx, config, (Op)op); } break;
+          case 0b001: break;
+          case 0b010: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(host_in1, device_in2, host_in1, vector_size, ctx, config, (Op)op); } break;
+          case 0b011: break;
+          case 0b100: break;
+          case 0b101: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(device_in1, host_in2, device_in1, vector_size, ctx, config, (Op)op); } break;
+          case 0b110: break;
+          case 0b111: for (int i = 0; i < not_in_place_repetitions; i++) { vector_op(device_in1, device_in2, device_in1, vector_size, ctx, config, (Op)op); } break;
         }
         CHK_IF_RETURN(cudaPeekAtLastError());
       }
-
       auto end_time = std::chrono::high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
       switch (op) {
@@ -793,27 +735,16 @@ int main(int argc, char** argv)
 
   // clean up and exit
   free(host_in1_init);
-  std::cout << "example free host_in1_init" << std::endl;
   free(host_in2_init);
-  std::cout << "example free host_in2_init" << std::endl;
   free(host_in1);
-  std::cout << "example free host_in1" << std::endl;
   free(host_in2);
-  std::cout << "example free host_in2" << std::endl;
   free(host_out);
-  std::cout << "example free host_out" << std::endl;
   free(host_out_ref_mul);
-  std::cout << "example free host_out_ref_mul" << std::endl;
   free(host_out_ref_add);
-  std::cout << "example free host_out_ref_add" << std::endl;
   free(host_out_ref_sub);
-  std::cout << "example free host_out_ref_sub" << std::endl;
   cudaFree(device_in1);
-  std::cout << "example cudaFree device_in1" << std::endl;
   cudaFree(device_in2);
-  std::cout << "example cudaFree device_in2" << std::endl;
   cudaFree(device_out);
-  std::cout << "example cudaFree device_out" << std::endl;
   nvmlShutdown();
   return 0;
 }
