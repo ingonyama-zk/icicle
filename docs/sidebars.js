@@ -15,18 +15,43 @@ module.exports = {
       collapsed: false,
       items: [
         {
-          type: "doc",
-          label: "Getting started",
-          id: "icicle/introduction"
+          type: "category",
+          label: "Architecture overview",
+          link: {
+            type: `doc`,
+            id: "icicle/arch_overview"
+          },
+          items: [
+            {
+              type: "doc",
+              label: "Backends",
+              id: "icicle/backends"
+            },
+            {
+              type: "doc",
+              label: "Multi GPU Support",
+              id: "icicle/multi-gpu",
+            },
+            {
+              type: "doc",
+              label: "Build Your Own Backend",
+              id: "icicle/build_your_own_backend"
+            },
+          ]
         },
         {
           type: "doc",
-          label: "ICICLE Core",
-          id: "icicle/core",
+          label: "Getting started",
+          id: "icicle/getting_started"
+        },
+        {
+          type: "doc",
+          label: "ICICLE libraries",
+          id: "icicle/libraries",
         },
         {
           type: "category",
-          label: "Primitives",
+          label: "API",
           link: {
             type: `doc`,
             id: 'icicle/primitives/overview',
@@ -58,126 +83,141 @@ module.exports = {
               label: "Poseidon2 Hash",
               id: "icicle/primitives/poseidon2",
             },
-          ],
-        },
-        {
-          type: "doc",
-          label: "Polynomials",
-          id: "icicle/polynomials/overview",
-        },
-        {
-          type: "doc",
-          label: "Multi GPU Support",
-          id: "icicle/multi-gpu",
-        },
-        {
-          type: "category",
-          label: "Golang bindings",
-          link: {
-            type: `doc`,
-            id: "icicle/golang-bindings",
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "category",
-              label: "MSM",
-              link: {
-                type: `doc`,
-                id: "icicle/golang-bindings/msm",
-              },
-              collapsed: true,
-              items: [
-                {
-                  type: "doc",
-                  label: "MSM pre computation",
-                  id: "icicle/golang-bindings/msm-pre-computation",
-                }
-              ]
-            },
-            {
-              type: "doc",
-              label: "NTT",
-              id: "icicle/golang-bindings/ntt",
-            },
-            {
-              type: "doc",
-              label: "EC-NTT",
-              id: "icicle/golang-bindings/ecntt",
-            },
-            {
-              type: "doc",
-              label: "Vector operations",
-              id: "icicle/golang-bindings/vec-ops",
-            },
-            {
-              type: "doc",
-              label: "Keccak Hash",
-              id: "icicle/golang-bindings/keccak",
-            },
-            {
-              type: "doc",
-              label: "Multi GPU Support",
-              id: "icicle/golang-bindings/multi-gpu",
-            },
-          ]
-        },
-        {
-          type: "category",
-          label: "Rust bindings",
-          link: {
-            type: `doc`,
-            id: "icicle/rust-bindings",
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "category",
-              label: "MSM",
-              link: {
-                type: `doc`,
-                id: "icicle/rust-bindings/msm",
-              },
-              collapsed: true,
-              items: [
-                {
-                  type: "doc",
-                  label: "MSM pre computation",
-                  id: "icicle/rust-bindings/msm-pre-computation",
-                }
-              ]
-            },
-            {
-              type: "doc",
-              label: "NTT",
-              id: "icicle/rust-bindings/ntt",
-            },
-            {
-              type: "doc",
-              label: "EC-NTT",
-              id: "icicle/rust-bindings/ecntt",
-            },
-            {
-              type: "doc",
-              label: "Vector operations",
-              id: "icicle/rust-bindings/vec-ops",
-            },
-            {
-              type: "doc",
-              label: "Keccak Hash",
-              id: "icicle/rust-bindings/keccak",
-            },
-            {
-              type: "doc",
-              label: "Multi GPU Support",
-              id: "icicle/rust-bindings/multi-gpu",
-            },
             {
               type: "doc",
               label: "Polynomials",
-              id: "icicle/rust-bindings/polynomials",
+              id: "icicle/polynomials/overview",
+            },
+            {
+              type: "category",
+              label: "Golang bindings",
+              link: {
+                type: `doc`,
+                id: "icicle/golang-bindings",
+              },
+              collapsed: true,
+              items: [
+                {
+                  type: "category",
+                  label: "MSM",
+                  link: {
+                    type: `doc`,
+                    id: "icicle/golang-bindings/msm",
+                  },
+                  collapsed: true,
+                  items: [
+                    {
+                      type: "doc",
+                      label: "MSM pre computation",
+                      id: "icicle/golang-bindings/msm-pre-computation",
+                    }
+                  ]
+                },
+                {
+                  type: "doc",
+                  label: "NTT",
+                  id: "icicle/golang-bindings/ntt",
+                },
+                {
+                  type: "doc",
+                  label: "EC-NTT",
+                  id: "icicle/golang-bindings/ecntt",
+                },
+                {
+                  type: "doc",
+                  label: "Vector operations",
+                  id: "icicle/golang-bindings/vec-ops",
+                },
+                {
+                  type: "doc",
+                  label: "Keccak Hash",
+                  id: "icicle/golang-bindings/keccak",
+                },
+                {
+                  type: "doc",
+                  label: "Multi GPU Support",
+                  id: "icicle/golang-bindings/multi-gpu",
+                },
+              ]
+            },
+            {
+              type: "category",
+              label: "Rust bindings",
+              link: {
+                type: `doc`,
+                id: "icicle/rust-bindings",
+              },
+              collapsed: true,
+              items: [
+                {
+                  type: "category",
+                  label: "MSM",
+                  link: {
+                    type: `doc`,
+                    id: "icicle/rust-bindings/msm",
+                  },
+                  collapsed: true,
+                  items: [
+                    {
+                      type: "doc",
+                      label: "MSM pre computation",
+                      id: "icicle/rust-bindings/msm-pre-computation",
+                    }
+                  ]
+                },
+                {
+                  type: "doc",
+                  label: "NTT",
+                  id: "icicle/rust-bindings/ntt",
+                },
+                {
+                  type: "doc",
+                  label: "EC-NTT",
+                  id: "icicle/rust-bindings/ecntt",
+                },
+                {
+                  type: "doc",
+                  label: "Vector operations",
+                  id: "icicle/rust-bindings/vec-ops",
+                },
+                {
+                  type: "doc",
+                  label: "Keccak Hash",
+                  id: "icicle/rust-bindings/keccak",
+                },
+                {
+                  type: "doc",
+                  label: "Multi GPU Support",
+                  id: "icicle/rust-bindings/multi-gpu",
+                },
+                {
+                  type: "doc",
+                  label: "Polynomials",
+                  id: "icicle/rust-bindings/polynomials",
+                },
+              ],
             },
           ],
+        },
+        {
+          type: "doc",
+          label: "Using ICICLE V3",
+          id: "icicle/using_icicle",
+        },
+        {
+          type: "doc",
+          label: "Migrate from ICICLE V2",
+          id: "icicle/migrate_from_v2",
+        },
+        {
+          type: "doc",
+          label: "Benchmarks",
+          id: "icicle/benchmarks",
+        },
+        {
+          type: "doc",
+          label: "FAQ and Troubleshooting",
+          id: "icicle/faq_and_troubleshooting",
         },
         {
           type: "doc",
@@ -190,11 +230,6 @@ module.exports = {
           id: "icicle/integrations"
         },
       ]
-    },
-    {
-      type: "doc",
-      label: "ZK Containers",
-      id: "ZKContainers",
     },
     {
       type: "doc",

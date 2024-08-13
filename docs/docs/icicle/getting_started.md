@@ -1,3 +1,18 @@
+TODO Yuval update for V3
+Getting started
+Build and test 
+C++ : Build, test, install (FE + BE)
+Show all build flags (disable MSM and things like that)
+Rust & Go: build, test, install?
+Explain all build options
+Installation
+Install CUDA backend (and license)
+Install ICICLE frontend (?)
+TODO Yuval: need to enable/disable building the libs when using rust&Go
+Rust cargo install
+Go?
+
+
 # Getting started with ICICLE
 
 This guide is oriented towards developers who want to start writing code with the ICICLE libraries. If you just want to run your existing ZK circuits on GPU refer to [this guide](./integrations.md#using-icicle-integrations) please.
