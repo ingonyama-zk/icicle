@@ -37,7 +37,7 @@ namespace icicle {
 #endif // EXT_FIELD
 
   /*********************************** ACCUMULATE ***********************************/
-  ICICLE_DISPATCHER_INST(VectorAccumulateDispatcher, vector_accumulate, scalarVectorOpImpl2);
+  ICICLE_DISPATCHER_INST(VectorAccumulateDispatcher, vector_accumulate, scalarVectorOpImplInplaceA);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_accumulate)(
     scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)
@@ -53,7 +53,7 @@ namespace icicle {
   }
 
 #ifdef EXT_FIELD
-  ICICLE_DISPATCHER_INST(VectorAccumulateExtFieldDispatcher, extension_vector_accumulate, extFieldVectorOpImpl2);
+  ICICLE_DISPATCHER_INST(VectorAccumulateExtFieldDispatcher, extension_vector_accumulate, extFieldVectorOpImplInplaceA);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_accumulate)(
     extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config)

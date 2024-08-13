@@ -15,7 +15,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  using scalarVectorOpImpl2 = std::function<eIcicleError(
+  using scalarVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device,
     scalar_t* vec_a,
     const scalar_t* vec_b,
@@ -33,7 +33,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_accumulate(const std::string& deviceType, scalarVectorOpImpl2 impl);
+  void register_vector_accumulate(const std::string& deviceType, scalarVectorOpImplInplaceA impl);
 
 #define REGISTER_VECTOR_ACCUMULATE_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -242,7 +242,7 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  using extFieldVectorOpImpl2 = std::function<eIcicleError(
+  using extFieldVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device,
     extension_t* vec_a,
     const extension_t* vec_b,
@@ -259,7 +259,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_extension_vector_accumulate(const std::string& deviceType, extFieldVectorOpImpl2 impl);
+  void register_extension_vector_accumulate(const std::string& deviceType, extFieldVectorOpImplInplaceA impl);
 
 #define REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
   namespace {                                                                                                          \

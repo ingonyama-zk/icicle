@@ -127,10 +127,10 @@ TYPED_TEST(FieldApiTest, vectorOps)
   auto initial_in_a = std::make_unique<TypeParam[]>(N);
 
   std::memcpy(initial_in_a.get(), in_a.get(), N * sizeof(TypeParam));
-  run(s_reference_target, out_main.get(), VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+  run(s_reference_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
   std::memcpy(temp_result.get(), in_a.get(), N * sizeof(TypeParam));
   std::memcpy(in_a.get(), initial_in_a.get(), N * sizeof(TypeParam));
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+  run(s_main_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
   ASSERT_EQ(0, memcmp(in_a.get(), temp_result.get(), N * sizeof(TypeParam)));
 
   // add

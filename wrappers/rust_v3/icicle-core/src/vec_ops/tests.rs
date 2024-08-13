@@ -71,7 +71,7 @@ where
     test_utilities::test_set_ref_device();
     add_scalars(a_main, b, result_ref, &cfg).unwrap();
 
-    assert_eq!(result_main[0], result_ref[0]);
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
 
     stream.destroy().unwrap();
 }
@@ -100,7 +100,7 @@ where
     test_utilities::test_set_ref_device();
     sub_scalars(a_main, b, result_ref, &cfg).unwrap();
 
-    assert_eq!(result_main[0], result_ref[0]);
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
 
     stream.destroy().unwrap();
 }
@@ -129,7 +129,7 @@ where
     test_utilities::test_set_ref_device();
     mul_scalars(a_main, b, result_ref, &cfg).unwrap();
 
-    assert_eq!(result_main[0], result_ref[0]);
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
 
     stream.destroy().unwrap();
 }
@@ -157,7 +157,7 @@ where
     test_utilities::test_set_ref_device();
     accumulate_scalars(a_clone_slice, b_slice, &cfg).unwrap();
 
-    assert_eq!(a_clone_slice[0], a_main_slice[0]);
+    assert_eq!(a_clone_slice.as_slice(), a_main_slice.as_slice());
 
     stream.destroy().unwrap();
 }
