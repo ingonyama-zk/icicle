@@ -261,8 +261,7 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  extern "C" void
-  register_extension_scalar_convert_montgomery(const std::string& deviceType, extFieldConvertMontgomeryImpl);
+  void register_extension_scalar_convert_montgomery(const std::string& deviceType, extFieldConvertMontgomeryImpl);
 
 #define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
   namespace {                                                                                                          \
