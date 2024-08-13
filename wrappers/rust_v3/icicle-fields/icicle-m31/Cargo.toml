@@ -1,0 +1,19 @@
+[package]
+name = "icicle-m31"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Rust wrapper the implementation of m31 prime field by Ingonyama"
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true }
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[features]
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]

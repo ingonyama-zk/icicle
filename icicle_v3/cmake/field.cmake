@@ -1,5 +1,5 @@
 function(check_field)
-  set(SUPPORTED_FIELDS babybear;stark252)
+  set(SUPPORTED_FIELDS babybear;stark252;m31)
 
   set(IS_FIELD_SUPPORTED FALSE)
   set(I 1000)
@@ -42,7 +42,7 @@ function(setup_field_target)
 endfunction()
 
 function(add_ntt_sources_or_disable)
-  set(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
+  set(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin;m31)
 
   if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
     add_compile_definitions(NTT_ENABLED)
