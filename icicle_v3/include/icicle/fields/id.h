@@ -10,6 +10,6 @@
 
 #define BABY_BEAR 1001
 #define STARK_252 1002
-#define M31 1003
+#define M31       1003
 
 #endif
