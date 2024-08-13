@@ -200,8 +200,8 @@ int main(int argc, char** argv)
   std::cout << "*** Start not in-place benchmark loop ***" << std::endl;
   std::cout << "*****************************************" << std::endl;
   for (int op = MUL; op != LAST; op++) {
-    for (int config_idx = 28; config_idx < 29; config_idx++) {
-      // for (int config_idx = 0; config_idx < 32; config_idx++) {
+      // for (int config_idx = 28; config_idx < 29; config_idx++) {
+      for (int config_idx = 0; config_idx < 32; config_idx++) {
       switch (op) {
       case MUL:
         std::cout << "Start benchmark loop for op MUL config_idx " << config_idx << " not in-place" << std::endl;
