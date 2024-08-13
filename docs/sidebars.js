@@ -24,13 +24,13 @@ module.exports = {
           items: [
             {
               type: "doc",
-              label: "Backends",
-              id: "icicle/backends"
+              label: "CUDA Backend",
+              id: "icicle/install_cuda_backend"
             },
             {
               type: "doc",
-              label: "Multi GPU Support",
-              id: "icicle/multi-gpu",
+              label: "Multi Device Support",
+              id: "icicle/multi-device",
             },
             {
               type: "doc",
