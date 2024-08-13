@@ -176,20 +176,14 @@ namespace vec_ops {
         CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, n * sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
       }
     } else {
-      if (config.is_result_in_montgomery_form) {     
+      if (config.is_result_in_montgomery_form) {
         CHK_IF_RETURN(mont::to_montgomery(d_result, n, config.ctx.stream, d_result)); // Convert in-place.
       }
     }
 
-    if (is_d_alloc_vec_a_allocated) {
-      CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream));
-    }
-    if (is_d_alloc_vec_b_allocated) {
-      CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream));
-    }
-    if (is_d_result_allocated) {
-      CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream));
-    }
+    if (is_d_alloc_vec_a_allocated) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream)); }
+    if (is_d_alloc_vec_b_allocated) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream)); }
+    if (is_d_result_allocated) { CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream)); }
 
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
 
