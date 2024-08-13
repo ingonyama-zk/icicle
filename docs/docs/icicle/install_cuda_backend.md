@@ -7,81 +7,51 @@ The CUDA backend in ICICLE V3 is a high-performance, closed-source component des
 
 ## Installation
 
-### Default Installation Path
+The CUDA backend is a closed-source component that requires a license. To install the CUDA backend:
 
-Typically, the CUDA backend is installed to the following directory:
+1. **Download the CUDA backend package** from the [ICICLE website](#). TODO fix link.
 
+2. **Install to the default path:**
+   ```bash
+   sudo tar -xzf icicle-cuda-backend.tar.gz -C /opt/icicle/backend/
+   ```
+
+3. **Set up the environment variable if you installed it in a custom location:**
+   ```bash
+   export ICICLE_BACKEND_INSTALL_DIR=/custom/path/to/icicle/backend
+   # OR symlink
+   sudo ln -s /custom/path/to/icicle/backend /opt/icicle/backend
+   ```
+
+4. **Load the backend in your application:**
+   ```cpp
+   extern "C" eIcicleError icicle_load_backend_from_env_or_default();
+   // OR
+   extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive);
+   ```
+   Rust:
+    ```rust
+    pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
+    pub fn load_backend(path: &str) -> Result<(), eIcicleError>;
+    ```
+    Go:
+    ```
+    TODO
+    ```
+
+5. **Acquire a license key** from the [ICICLE website](#) and follow the provided instructions to activate it.
+
+
+
+### Licensing (TODO fix link)
+
+The CUDA backend requires a valid license to function. Licenses are available for purchase [here](#). After purchasing, you will receive a license key that must be installed. **Specify the license server address:**
 ```
-/opt/icicle/backend/
-``` 
-
-### Custom Installation Path
-
-If you choose to install the backend to a different location, you can specify the path using the `ICICLE_BACKEND_INSTALL_DIR` environment variable. ICICLE will attempt to load the backend from this specified path.
-
-#### Symlink Option
-
-Alternatively, you can create a symbolic link from the default installation directory to your custom install directory. This allows ICICLE to load the backend as if it were installed in the default location.
-
-Example:
-
-```bash
-sudo ln -s /custom/path/to/icicle/backend /opt/icicle/backend
+export ICICLE_LICNSE_SERVER_PATH=port@ip
 ```
-
-### Licensing
-
-The CUDA backend requires a valid license to function. Licenses are available for purchase [here](#). After purchasing, you will receive a license key that must be installed in the backend directory.
 
 For licensing instructions and detailed information, refer to the licensing documentation provided with your purchase or contact our support team for assistance.
 
 TODO update section and the link in license part above.
 
-## Usage
 
-### Loading the Backend
-
-You load the CUDA backend using the provided C++/Rust/Go API functions.
-
-#### C++
-
-```cpp
-/**
- * @brief Attempts to load the backend from either the environment variable or the default install directory.
- *
- * This function first checks if the environment variable `ICICLE_BACKEND_INSTALL_DIR` is set and points to an existing
- * directory. If so, it attempts to load the backend from that directory. If the environment variable is not set or the
- * directory does not exist, it falls back to the default directory (`/opt/icicle/backend`). If neither option is
- * successful, the function returns an error.
- *
- * @return eIcicleError The status of the backend loading operation, indicating success or failure.
- */
-extern "C" eIcicleError icicle_load_backend_from_env_or_default();
-
-/**
- * @brief Load ICICLE backend into the process from the specified install directory.
- *
- * @param path Path of the backend library or directory where backend libraries are installed.
- * @return eIcicleError Status of the loaded backend.
- */
-extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive);
-```
-
-These functions provide flexibility in how you load the backend, either by specifying a custom path or by relying on environment variables and default paths.
-
-#### Rust
-
-```rust
-pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
-pub fn load_backend(path: &str) -> Result<(), eIcicleError>;
-```
-
-#### Go
-
-```
-TODO
-```
-
----
-
-For more detailed instructions on installing and using the CUDA backend, refer to the [full documentation](#) or contact our support team for assistance.
