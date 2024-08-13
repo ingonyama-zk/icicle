@@ -41,13 +41,13 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Getting started",
-          id: "icicle/getting_started"
+          label: "ICICLE libraries",
+          id: "icicle/libraries",
         },
         {
           type: "doc",
-          label: "ICICLE libraries",
-          id: "icicle/libraries",
+          label: "Getting started",
+          id: "icicle/getting_started"
         },
         {
           type: "category",
