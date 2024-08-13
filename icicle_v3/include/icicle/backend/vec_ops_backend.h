@@ -16,12 +16,7 @@ namespace icicle {
     scalar_t* output)>;
 
   using scalarVectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device,
-    scalar_t* vec_a,
-    const scalar_t* vec_b,
-    uint64_t n,
-    const VecOpsConfig& config
-    )>;
+    const Device& device, scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)>;
 
   void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
 
@@ -35,10 +30,10 @@ namespace icicle {
 
   void register_vector_accumulate(const std::string& deviceType, scalarVectorOpImplInplaceA impl);
 
-#define REGISTER_VECTOR_ACCUMULATE_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+#define REGISTER_VECTOR_ACCUMULATE_BACKEND(DEVICE_TYPE, FUNC)                                                          \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_accumulate) = []() -> bool {                                                                  \
-      register_vector_accumulate(DEVICE_TYPE, FUNC);                                                                          \
+    static bool UNIQUE(_reg_vec_accumulate) = []() -> bool {                                                           \
+      register_vector_accumulate(DEVICE_TYPE, FUNC);                                                                   \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -243,11 +238,7 @@ namespace icicle {
     extension_t* output)>;
 
   using extFieldVectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device,
-    extension_t* vec_a,
-    const extension_t* vec_b,
-    uint64_t n,
-    const VecOpsConfig& config)>;
+    const Device& device, extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config)>;
 
   void register_extension_vector_add(const std::string& deviceType, extFieldVectorOpImpl impl);
 
@@ -261,10 +252,10 @@ namespace icicle {
 
   void register_extension_vector_accumulate(const std::string& deviceType, extFieldVectorOpImplInplaceA impl);
 
-#define REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
+#define REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_accumulate_ext_field) = []() -> bool {                                                        \
-      register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                                \
+    static bool UNIQUE(_reg_vec_accumulate_ext_field) = []() -> bool {                                                 \
+      register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                         \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
