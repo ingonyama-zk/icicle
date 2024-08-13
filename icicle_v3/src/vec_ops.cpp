@@ -46,11 +46,28 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError
-  vector_accumulate(scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)
+  eIcicleError vector_accumulate(
+    scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)
   {
     return CONCAT_EXPAND(FIELD, vector_accumulate)(vec_a, vec_b, n, config);
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(VectorAccumulateExtFieldDispatcher, extension_vector_accumulate, extFieldVectorOpImpl2);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_accumulate)(
+    extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config)
+  {
+    return VectorAccumulateExtFieldDispatcher::execute(vec_a, vec_b, n, config);
+  }
+
+  template <>
+  eIcicleError vector_accumulate(
+    extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config)
+  {
+    return CONCAT_EXPAND(FIELD, extension_vector_accumulate)(vec_a, vec_b, n, config);
+  }
+#endif // EXT_FIELD
 
   /*********************************** SUB ***********************************/
   ICICLE_DISPATCHER_INST(VectorSubDispatcher, vector_sub, scalarVectorOpImpl);
