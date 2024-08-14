@@ -5,7 +5,7 @@
 #include "icicle/utils/log.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/vec_ops.h"
-// #include "ntt_tasks.h"
+#include "ntt_tasks.h"
 #include "cpu_ntt_domain.h"
 
 #include <thread>
@@ -24,92 +24,6 @@ using namespace icicle;
 
 namespace ntt_cpu {
 
-    // TODO SHANIE - after implementing real parallelism, try different sizes to choose the optimal one. Or consider using
-  // a function to calculate subset sizes
-  constexpr uint32_t layers_sub_logn[31][3] = {
-    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
-    {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
-    {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
-    {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
-
-  struct NttTaskCordinates {
-    int h1_layer_idx=0;
-    int h1_subntt_idx=0;
-    int h0_layer_idx=0;
-    int h0_subntt_idx=0;
-    int h0_block_idx=0;
-
-    // Comparison operators for map
-    bool operator<(const NttTaskCordinates& other) const {
-      return std::tie(h1_layer_idx, h1_subntt_idx, h0_layer_idx, h0_subntt_idx, h0_block_idx) <
-        std::tie(other.h1_layer_idx, other.h1_subntt_idx, other.h0_layer_idx, other.h0_subntt_idx, other.h0_block_idx);
-    }
-  };
-
-  struct NttSubLogn {
-    int logn; // Original size of the problem
-    std::vector<std::vector<int>> h0_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 0 layers
-    std::vector<int> h1_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 1 layers
-
-    // Constructor to initialize the struct
-    NttSubLogn(int logn) : logn(logn)
-    {
-      if (logn > 15){
-        // Initialize h1_layers_sub_logn
-        h1_layers_sub_logn = std::vector<int>(
-          std::begin(layers_sub_logn[logn]), 
-          std::end(layers_sub_logn[logn])
-        );
-        // Initialize h0_layers_sub_logn
-        h0_layers_sub_logn = {std::vector<int>(
-          std::begin(layers_sub_logn[h1_layers_sub_logn[0]]), 
-          std::end(layers_sub_logn[h1_layers_sub_logn[0]])
-        ), 
-        std::vector<int>(
-          std::begin(layers_sub_logn[h1_layers_sub_logn[1]]), 
-          std::end(layers_sub_logn[h1_layers_sub_logn[1]])
-        )};
-      } else {
-        h1_layers_sub_logn = {0, 0, 0};
-        h0_layers_sub_logn = {std::vector<int>(
-          std::begin(layers_sub_logn[logn]), 
-          std::end(layers_sub_logn[logn])
-        ), {0, 0, 0}};
-      }
-      ICICLE_LOG_DEBUG << "NttTaskInfo: h1_layers_sub_logn: " << h1_layers_sub_logn[0] << ", " << h1_layers_sub_logn[1] << ", " << h1_layers_sub_logn[2];
-      ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn[0]: " << h0_layers_sub_logn[0][0] << ", " << h0_layers_sub_logn[0][1] << ", " << h0_layers_sub_logn[0][2];
-      ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn[1]: " << h0_layers_sub_logn[1][0] << ", " << h0_layers_sub_logn[1][1] << ", " << h0_layers_sub_logn[1][2];
-    }
-  };
-
-
-  template <typename S = scalar_t, typename E = scalar_t>
-  class NttCpu{
-    public:
-      NttSubLogn ntt_sub_logn;
-      NttTaskCordinates ntt_task_cordinates;
-      NTTDir direction;
-      NTTConfig<S>& config;
-      int domain_max_size;
-      const S* twiddles;
-
-      NttCpu(int logn, NTTDir direction, NTTConfig<S>& config, int domain_max_size, const S* twiddles) :  ntt_sub_logn(logn), direction(direction), config(config), domain_max_size(domain_max_size), twiddles(twiddles) {}
-
-      int bit_reverse(int n, int logn);
-      uint64_t idx_in_mem(NttTaskCordinates ntt_task_cordinates, int element);
-      eIcicleError reorder_by_bit_reverse(NttTaskCordinates ntt_task_cordinates, E* elements, bool is_top_hirarchy);
-      void dit_ntt(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles);
-      void dif_ntt(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles);
-      eIcicleError coset_mul(E* elements, const S* twiddles, int coset_stride, const std::unique_ptr<S[]>& arbitrary_coset);
-      eIcicleError reorder_input(E* input);
-      void refactor_and_reorder(E* elements, const S* twiddles);
-      eIcicleError reorder_output(E* elements, NttTaskCordinates ntt_task_cordinates, bool is_top_hirarchy);
-      void refactor_output_h0(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles);
-      eIcicleError h1_cpu_ntt(E* input, NttTaskCordinates ntt_task_cordinates);
-      eIcicleError h0_cpu_ntt(E* input, NttTaskCordinates ntt_task_cordinates);
-  };
-
-  
   template <typename S, typename E>
   int NttCpu<S, E>::bit_reverse(int n, int logn)
   {
@@ -470,7 +384,7 @@ namespace ntt_cpu {
 
   //main
   template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir direction, NTTConfig<S>& config, E* output)
+  eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>& config, E* output)
   {
     if (size & (size - 1)) {
       ICICLE_LOG_ERROR << "Size must be a power of 2. size = " << size;
@@ -481,7 +395,6 @@ namespace ntt_cpu {
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     NttCpu<S, E> ntt(logn, direction, config, domain_max_size, twiddles);
     NttTaskCordinates ntt_task_cordinates = {0, 0, 0, 0, 0};
-    // NttTasksManager <S, E> ntt_tasks_manager(logn);
 
 
     int coset_stride = 0;
@@ -510,17 +423,7 @@ namespace ntt_cpu {
     }
 
     if (logn > 15) {
-      // TODO future - maybe can start 4'rth layer in parallel to 3'rd layer?
-      // Assuming that NTT doesn't fit in the cache, so we split the NTT to 2 layers and calculate them one after the
-      // other. Inside each layer each sub-NTT calculation is split to layers as well, and those are calculated in
-      // parallel. Sorting is done between the layers, so that the elements needed for each sunbtt are close to each
-      // other in memory.
-
       ntt.reorder_input(output);
-      // std::cout << "PRINT REORDERED INPUT";
-      // for (int i = 0; i < size; i++) {
-      //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
-      // }
       int log_nof_h1_subntts_todo_in_parallel = 15 - ntt.ntt_sub_logn.h1_layers_sub_logn[0] - int(log2(config.batch_size));
       int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
       int log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
@@ -528,23 +431,12 @@ namespace ntt_cpu {
       for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
         for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel; h1_subntt_idx_in_chunck++) {
           ntt_task_cordinates.h1_subntt_idx =  h1_subntts_chunck_idx*nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
-          // h1_cpu_ntt((1 << ntt.ntt_sub_logn.h1_layers_sub_logn[0]),ntt_task_cordinates, size, direction, config, ntt.ntt_sub_logn, output, twiddles, ntt_tasks_manager, domain_max_size);
           ntt.h1_cpu_ntt(output, ntt_task_cordinates);
-          // ICICLE_LOG_DEBUG << "AFTER LAYER_0 H1_SUBNTT_IDX: "<< h1_subntt_idx;
-          // for (int i = 0; i < size; i++) {
-          //   ICICLE_LOG_DEBUG << output[i];
-          // }
         }
       }
-
-      // 
-
+      
       // ntt_tasks_manager.wait_for_all_tasks();
       ntt.refactor_and_reorder(output, twiddles);
-      // std::cout << "AFTER refactor_and_reorder";
-      // for (int i = 0; i < size; i++) {
-      //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
-      // }
       ntt_task_cordinates.h1_layer_idx = 1;
       log_nof_h1_subntts_todo_in_parallel = 15 - ntt.ntt_sub_logn.h1_layers_sub_logn[1] - int(log2(config.batch_size));
       nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
@@ -554,14 +446,8 @@ namespace ntt_cpu {
         for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel; h1_subntt_idx_in_chunck++) {
           ntt_task_cordinates.h1_subntt_idx =  h1_subntts_chunck_idx*nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
           ntt.h1_cpu_ntt(output, ntt_task_cordinates);
-
         }
       }
-      // std::cout << "AFTER LAYER_1";
-      // for (int i = 0; i < size; i++) {
-      //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
-      // }
-
       ntt_task_cordinates.h1_subntt_idx = 0; // reset so that reorder_output will calculate the correct memory index
       if (config.columns_batch) {
         ntt.reorder_output(output, ntt_task_cordinates, true);
@@ -570,10 +456,6 @@ namespace ntt_cpu {
           ntt.reorder_output(output + b * size, ntt_task_cordinates, true);
         }
       }
-      // ICICLE_LOG_DEBUG << "AFTER reorder_output";
-      // for (int i = 0; i < size; i++) {
-      //   ICICLE_LOG_DEBUG << output[i];
-      // }
     } else {
       ntt.h1_cpu_ntt(output, ntt_task_cordinates);
     }
@@ -584,24 +466,14 @@ namespace ntt_cpu {
         output[i] = output[i] * inv_size;
       }
       if (config.coset_gen != S::one()) {
-        // bool output_rev = config.ordering == Ordering::kNR || config.ordering == Ordering::kNM || config.ordering ==
-        // Ordering::kRR;
-        bool output_rev = false;
-        ntt.coset_mul(
-          output, twiddles, coset_stride, arbitrary_coset);
+        ntt.coset_mul(output, twiddles, coset_stride, arbitrary_coset);
       }
     }
 
     if (config.ordering == Ordering::kNR || config.ordering == Ordering::kRR) {
       ntt_task_cordinates = {0, 0, 0, 0, 0};
-      ntt.reorder_by_bit_reverse(
-        ntt_task_cordinates, output, true); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
+      ntt.reorder_by_bit_reverse(ntt_task_cordinates, output, true); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
     }
-    // std::cout << "FINAL OUTPUT";
-    // for (int i = 0; i < size; i++) {
-    //   std::cout <<"output["<<i<<"] = "<< output[i] << std::endl;
-    // }
-
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu
