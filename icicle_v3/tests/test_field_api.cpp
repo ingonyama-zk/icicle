@@ -76,22 +76,20 @@ TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
-  for (size_t i = 0; i < 100000; i++)
-  {
-  
-  auto a = TypeParam::rand_host();
-  auto b = TypeParam::rand_host();
-  std::cout << "a: "<<a<<std::endl;
-  std::cout << "b: "<<b<<std::endl;
-  auto b_inv = TypeParam::inverse(b);
-  auto a_neg = TypeParam::neg(a);
-  ASSERT_EQ(a + TypeParam::zero(), a);
-  ASSERT_EQ(a + b - a, b);
-  ASSERT_EQ(b * a * b_inv, a);
-  ASSERT_EQ(a + a_neg, TypeParam::zero());
-  ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
-  ASSERT_EQ(b * b_inv, TypeParam::one());
-  ASSERT_EQ(a * scalar_t::from(2), a + a);
+  for (size_t i = 0; i < 100000; i++) {
+    auto a = TypeParam::rand_host();
+    auto b = TypeParam::rand_host();
+    std::cout << "a: " << a << std::endl;
+    std::cout << "b: " << b << std::endl;
+    auto b_inv = TypeParam::inverse(b);
+    auto a_neg = TypeParam::neg(a);
+    ASSERT_EQ(a + TypeParam::zero(), a);
+    ASSERT_EQ(a + b - a, b);
+    ASSERT_EQ(b * a * b_inv, a);
+    ASSERT_EQ(a + a_neg, TypeParam::zero());
+    ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
+    ASSERT_EQ(b * b_inv, TypeParam::one());
+    ASSERT_EQ(a * scalar_t::from(2), a + a);
   }
 }
 
