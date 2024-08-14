@@ -56,9 +56,6 @@ extern "C" eIcicleError grumpkinvector_add(
   const VecOpsConfig& config,
   grumpkin::scalar_t* result);
 
-// extern "C" eIcicleError grumpkin_accumulate_cuda(
-//   const grumpkin::scalar_t* vec_a, const grumpkin::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
-
 extern "C" eIcicleError grumpkin_vector_sub(
   const grumpkin::scalar_t* vec_a,
   const grumpkin::scalar_t* vec_b,

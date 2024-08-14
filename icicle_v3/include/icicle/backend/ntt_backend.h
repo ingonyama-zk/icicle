@@ -11,7 +11,12 @@ namespace icicle {
 
   /*************************** NTT ***************************/
   using NttImpl = std::function<eIcicleError(
-    const Device& device, const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)>;
+    const Device& device,
+    const scalar_t* input,
+    int size,
+    NTTDir dir,
+    const NTTConfig<scalar_t>& config,
+    scalar_t* output)>;
 
   void register_ntt(const std::string& deviceType, NttImpl impl);
 
@@ -29,7 +34,7 @@ namespace icicle {
     const extension_t* input,
     int size,
     NTTDir dir,
-    NTTConfig<scalar_t>& config,
+    const NTTConfig<scalar_t>& config,
     extension_t* output)>;
 
   void register_extension_ntt(const std::string& deviceType, NttExtFieldImpl impl);

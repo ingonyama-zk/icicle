@@ -156,4 +156,110 @@ macro_rules! impl_ecntt_tests {
     };
 }
 
-// TODO Yuval : becnhmarks
+#[macro_export]
+macro_rules! impl_ecntt_bench {
+    (
+      $field_prefix:literal,
+      $field:ident,
+      $curve:ident
+    ) => {
+        use criterion::{black_box, criterion_group, criterion_main, Criterion};
+        use icicle_core::{
+            curve::{Affine, Curve, Projective},
+            ecntt::{ecntt, ECNTT},
+            ntt::{ntt, NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NttAlgorithm, Ordering, NTT},
+            traits::{FieldImpl, GenerateRandom},
+            vec_ops::VecOps,
+        };
+        use icicle_runtime::{
+            device::Device,
+            get_active_device, is_device_available,
+            memory::{HostOrDeviceSlice, HostSlice},
+            runtime::load_backend_from_env_or_default,
+            set_device,
+        };
+        use std::{env, sync::OnceLock};
+
+        static INIT: OnceLock<()> = OnceLock::new();
+
+        fn load_and_init_backend_device() {
+            // Attempt to load the backends
+            let _ = load_backend_from_env_or_default(); // try loading from /opt/icicle/backend or env ${ICICLE_BACKEND_INSTALL_DIR}
+
+            // Check if BENCH_TARGET is defined
+            let target = env::var("BENCH_TARGET").unwrap_or_else(|_| {
+                // If not defined, try CUDA first, fallback to CPU
+                if is_device_available(&Device::new("CUDA", 0)) {
+                    "CUDA".to_string()
+                } else {
+                    "CPU".to_string()
+                }
+            });
+
+            // Initialize the device with the determined target
+            let device = Device::new(&target, 0);
+            set_device(&device).unwrap();
+
+            println!("ICICLE benchmark with {:?}", device);
+        }
+
+        fn benchmark_ecntt<C: Curve>(c: &mut Criterion)
+        where
+            <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+            <C::ScalarField as FieldImpl>::Config: NTTDomain<C::ScalarField>,
+        {
+            use criterion::SamplingMode;
+            use icicle_core::ntt::tests::init_domain;
+            use std::env;
+
+            load_and_init_backend_device();
+
+            let group_id = format!("{} EC NTT ", $field_prefix);
+            let mut group = c.benchmark_group(&group_id);
+            group.sampling_mode(SamplingMode::Flat);
+            group.sample_size(10);
+
+            const MAX_LOG2: u32 = 9; // max length = 2 ^ MAX_LOG2 //TODO: should be limited by device ram
+
+            let max_log2 = env::var("MAX_LOG2")
+                .unwrap_or_else(|_| MAX_LOG2.to_string())
+                .parse::<u32>()
+                .unwrap_or(MAX_LOG2);
+
+            const FAST_TWIDDLES_MODE: bool = false;
+
+            INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, FAST_TWIDDLES_MODE));
+
+            for test_size_log2 in [4, 8] {
+                for batch_size_log2 in [1, 1 << 4, 128] {
+                    let test_size = 1 << test_size_log2;
+                    let batch_size = 1 << batch_size_log2;
+                    let full_size = batch_size * test_size;
+
+                    if full_size > 1 << max_log2 {
+                        continue;
+                    }
+
+                    let points = C::generate_random_projective_points(test_size);
+                    let points = HostSlice::from_slice(&points);
+                    let mut batch_ntt_result = vec![Projective::<C>::zero(); full_size];
+                    let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
+                    let mut config = NTTConfig::default();
+                    config.ordering = Ordering::kNN;
+                    config.batch_size = batch_size as i32;
+                    for dir in [NTTDir::kForward, NTTDir::kInverse] {
+                        let bench_descr = format!("{:?} {:?} {} x {}", config.ordering, dir, test_size, batch_size);
+                        group.bench_function(&bench_descr, |b| {
+                            b.iter(|| ecntt(points, dir, &mut config, batch_ntt_result))
+                        });
+                    }
+                }
+            }
+
+            group.finish();
+        }
+
+        criterion_group!(benches, benchmark_ecntt<$curve>);
+        criterion_main!(benches);
+    };
+}

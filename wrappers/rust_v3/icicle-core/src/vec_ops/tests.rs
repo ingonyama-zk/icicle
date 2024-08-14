@@ -1,7 +1,10 @@
 #![allow(unused_imports)]
 use crate::test_utilities;
 use crate::traits::GenerateRandom;
-use crate::vec_ops::{add_scalars, mul_scalars, sub_scalars, bit_reverse, bit_reverse_inplace, transpose_matrix, FieldImpl, VecOps, VecOpsConfig};
+use crate::vec_ops::{
+    add_scalars, accumulate_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, sub_scalars, transpose_matrix, FieldImpl, VecOps,
+    VecOpsConfig,
+};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{runtime, stream::IcicleStream};
@@ -36,36 +39,127 @@ pub fn check_vec_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    test_utilities::test_set_main_device();
     let test_size = 1 << 14;
 
-    let a = F::Config::generate_random(test_size);
+    check_vec_ops_scalars_add::<F>(test_size);
+    check_vec_ops_scalars_sub::<F>(test_size);
+    check_vec_ops_scalars_mul::<F>(test_size);
+    check_vec_ops_scalars_accumulate::<F>(test_size);
+}
+
+pub fn check_vec_ops_scalars_add<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let a_main = F::Config::generate_random(test_size);
     let b = F::Config::generate_random(test_size);
-    let ones = vec![F::one(); test_size];
-    let mut result = vec![F::zero(); test_size];
-    let mut result2 = vec![F::zero(); test_size];
-    let mut result3 = vec![F::zero(); test_size];
-    let a = HostSlice::from_slice(&a);
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::zero(); test_size];
+
+    let a_main = HostSlice::from_slice(&a_main);
     let b = HostSlice::from_slice(&b);
-    let ones = HostSlice::from_slice(&ones);
-    let result = HostSlice::from_mut_slice(&mut result);
-    let result2 = HostSlice::from_mut_slice(&mut result2);
-    let result3 = HostSlice::from_mut_slice(&mut result3);
+    let result_main = HostSlice::from_mut_slice(&mut result_main);
+    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
     let mut stream = IcicleStream::create().unwrap();
     let mut cfg = VecOpsConfig::default();
     cfg.stream_handle = *stream;
 
-    add_scalars(a, b, result, &cfg).unwrap();
-    sub_scalars(result, b, result2, &cfg).unwrap();
-    assert_eq!(a[0], result2[0]);
+    test_utilities::test_set_main_device();
+    add_scalars(a_main, b, result_main, &cfg).unwrap();
 
-    mul_scalars(a, ones, result3, &cfg).unwrap();
-    assert_eq!(a[0], result3[0]);
+    test_utilities::test_set_ref_device();
+    add_scalars(a_main, b, result_ref, &cfg).unwrap();
 
-    stream
-        .destroy()
-        .unwrap();
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
+
+    stream.destroy().unwrap();
+}
+
+pub fn check_vec_ops_scalars_sub<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let a_main = F::Config::generate_random(test_size);
+    let b = F::Config::generate_random(test_size);
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::zero(); test_size];
+
+    let a_main = HostSlice::from_slice(&a_main);
+    let b = HostSlice::from_slice(&b);
+    let result_main = HostSlice::from_mut_slice(&mut result_main);
+    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+
+    let mut stream = IcicleStream::create().unwrap();
+    let mut cfg = VecOpsConfig::default();
+    cfg.stream_handle = *stream;
+
+    test_utilities::test_set_main_device();
+    sub_scalars(a_main, b, result_main, &cfg).unwrap();
+
+    test_utilities::test_set_ref_device();
+    sub_scalars(a_main, b, result_ref, &cfg).unwrap();
+
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
+
+    stream.destroy().unwrap();
+}
+
+pub fn check_vec_ops_scalars_mul<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let a_main = F::Config::generate_random(test_size);
+    let b = F::Config::generate_random(test_size);
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::zero(); test_size];
+
+    let a_main = HostSlice::from_slice(&a_main);
+    let b = HostSlice::from_slice(&b);
+    let result_main = HostSlice::from_mut_slice(&mut result_main);
+    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+
+    let mut stream = IcicleStream::create().unwrap();
+    let mut cfg = VecOpsConfig::default();
+    cfg.stream_handle = *stream;
+
+    test_utilities::test_set_main_device();
+    mul_scalars(a_main, b, result_main, &cfg).unwrap();
+
+    test_utilities::test_set_ref_device();
+    mul_scalars(a_main, b, result_ref, &cfg).unwrap();
+
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
+
+    stream.destroy().unwrap();
+}
+
+pub fn check_vec_ops_scalars_accumulate<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let mut a_main = F::Config::generate_random(test_size);
+    let b = F::Config::generate_random(test_size);
+
+    let mut a_clone = a_main.clone();
+
+    let a_main_slice = HostSlice::from_mut_slice(&mut a_main);
+    let b_slice = HostSlice::from_slice(&b);
+    let a_clone_slice = HostSlice::from_mut_slice(&mut a_clone);
+
+    let mut stream = IcicleStream::create().unwrap();
+    let mut cfg = VecOpsConfig::default();
+    cfg.stream_handle = *stream;
+
+    test_utilities::test_set_main_device();
+    accumulate_scalars(a_main_slice, b_slice, &cfg).unwrap();
+
+    test_utilities::test_set_ref_device();
+    accumulate_scalars(a_clone_slice, b_slice, &cfg).unwrap();
+
+    assert_eq!(a_clone_slice.as_slice(), a_main_slice.as_slice());
+
+    stream.destroy().unwrap();
 }
 
 pub fn check_matrix_transpose<F: FieldImpl>()
@@ -108,7 +202,7 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     test_utilities::test_set_main_device();
-    
+
     const LOG_SIZE: u32 = 20;
     const TEST_SIZE: usize = 1 << LOG_SIZE;
     let input_vec = F::Config::generate_random(TEST_SIZE);

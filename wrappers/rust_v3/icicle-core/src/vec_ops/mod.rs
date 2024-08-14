@@ -38,6 +38,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    fn accumulate(
+        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
     fn sub(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -88,13 +94,13 @@ fn check_vec_ops_args<'a, F>(
     }
 
     // check device slices are on active device
-    if a.is_on_device() && !a.is_on_active_device(){
+    if a.is_on_device() && !a.is_on_active_device() {
         panic!("input a is allocated on an inactive device");
     }
-    if b.is_on_device() && !b.is_on_active_device(){
+    if b.is_on_device() && !b.is_on_active_device() {
         panic!("input b is allocated on an inactive device");
     }
-    if result.is_on_device() && !result.is_on_active_device(){
+    if result.is_on_device() && !result.is_on_active_device() {
         panic!("output is allocated on an inactive device");
     }
 
@@ -117,6 +123,19 @@ where
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::add(a, b, result, &cfg)
+}
+
+pub fn accumulate_scalars<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(a, b, a, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
 }
 
 pub fn sub_scalars<F>(
@@ -196,7 +215,7 @@ macro_rules! impl_vec_ops_field {
     ) => {
         mod $field_prefix_ident {
 
-            use crate::vec_ops::{$field, HostOrDeviceSlice};            
+            use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 
@@ -208,6 +227,14 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_vector_accumulate")]
+                pub(crate) fn vector_accumulate_ffi(
+                    a: *const $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_sub")]
@@ -261,6 +288,22 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn accumulate(
+                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_accumulate_ffi(
+                        a.as_mut_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
                     )
                     .wrap()
                 }

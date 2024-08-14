@@ -71,6 +71,7 @@ namespace icicle {
       false,   // are_points_montgomery_form
       false,   // are_results_on_device
       false,   // is_async
+      nullptr, // ext
     };
     return config;
   }

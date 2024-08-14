@@ -44,8 +44,10 @@ fn main() {
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir
-    println!(
-        "cargo:rustc-env=DEFAULT_BACKEND_INSTALL_DIR={}/lib/backend",
-        icicle_install_dir.display()
-    );
+    if cfg!(feature = "cuda_backend") || cfg!(feature = "pull_cuda_backend") {
+        println!(
+            "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend",
+            icicle_install_dir.display()
+        );
+    }
 }

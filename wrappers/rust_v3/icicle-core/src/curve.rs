@@ -19,9 +19,19 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     #[doc(hidden)]
     fn generate_random_affine_points(size: usize) -> Vec<Affine<Self>>;
     #[doc(hidden)]
-    fn convert_affine_montgomery(points: *mut Affine<Self>, len: usize, is_into: bool, stream: &IcicleStream) -> eIcicleError;
+    fn convert_affine_montgomery(
+        points: *mut Affine<Self>,
+        len: usize,
+        is_into: bool,
+        stream: &IcicleStream,
+    ) -> eIcicleError;
     #[doc(hidden)]
-    fn convert_projective_montgomery(points: *mut Projective<Self>, len: usize, is_into: bool, stream: &IcicleStream) -> eIcicleError;
+    fn convert_projective_montgomery(
+        points: *mut Projective<Self>,
+        len: usize,
+        is_into: bool,
+        stream: &IcicleStream,
+    ) -> eIcicleError;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -118,14 +128,14 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
 
 impl<C: Curve> MontgomeryConvertible for Affine<C> {
     fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device(){
+        if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
     fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device(){
+        if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
@@ -134,14 +144,14 @@ impl<C: Curve> MontgomeryConvertible for Affine<C> {
 
 impl<C: Curve> MontgomeryConvertible for Projective<C> {
     fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device(){
+        if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
     fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device(){
+        if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
@@ -238,15 +248,7 @@ macro_rules! impl_curve {
                 config.is_result_on_device = true;
                 config.is_async = false;
                 config.stream_handle = (&*stream).into();
-                unsafe {
-                    $curve_prefix_ident::_convert_affine_montgomery(
-                        points,
-                        len,
-                        is_into,
-                        &config,
-                        points
-                    )
-                }
+                unsafe { $curve_prefix_ident::_convert_affine_montgomery(points, len, is_into, &config, points) }
             }
 
             fn convert_projective_montgomery(
@@ -260,15 +262,7 @@ macro_rules! impl_curve {
                 config.is_result_on_device = true;
                 config.is_async = false;
                 config.stream_handle = (&*stream).into();
-                unsafe {
-                    $curve_prefix_ident::_convert_projective_montgomery(
-                        points,
-                        len,
-                        is_into,
-                        &config,
-                        points
-                    )
-                }
+                unsafe { $curve_prefix_ident::_convert_projective_montgomery(points, len, is_into, &config, points) }
             }
         }
     };

@@ -7,14 +7,14 @@ namespace icicle {
   /*************************** NTT ***************************/
   ICICLE_DISPATCHER_INST(NttDispatcher, ntt, NttImpl);
 
-  extern "C" eIcicleError
-  CONCAT_EXPAND(FIELD, ntt)(const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(
+    const scalar_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, scalar_t* output)
   {
     return NttDispatcher::execute(input, size, dir, config, output);
   }
 
   template <>
-  eIcicleError ntt(const scalar_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, scalar_t* output)
+  eIcicleError ntt(const scalar_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, ntt)(input, size, dir, config, output);
   }
@@ -23,13 +23,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(NttExtFieldDispatcher, extension_ntt, NttExtFieldImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_ntt)(
-    const extension_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, extension_t* output)
+    const extension_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, extension_t* output)
   {
     return NttExtFieldDispatcher::execute(input, size, dir, config, output);
   }
 
   template <>
-  eIcicleError ntt(const extension_t* input, int size, NTTDir dir, NTTConfig<scalar_t>& config, extension_t* output)
+  eIcicleError
+  ntt(const extension_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, extension_t* output)
   {
     return CONCAT_EXPAND(FIELD, extension_ntt)(input, size, dir, config, output);
   }

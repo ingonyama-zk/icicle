@@ -23,4 +23,13 @@ cmake = "0.1.50"
 [features]
 default = []
 g2 = ["icicle-bls12-377/bw6-761-g2"]
+cuda_backend = ["icicle-bls12-377/cuda_backend"]
+pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
 
+[[bench]]
+name = "ntt"
+harness = false
+
+[[bench]]
+name = "msm"
+harness = false

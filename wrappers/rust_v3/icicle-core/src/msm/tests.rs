@@ -1,5 +1,5 @@
 use crate::curve::{Affine, Curve, Projective};
-use crate::msm::{msm, precompute_bases, MSMConfig, LARGE_BUCKET_FACTOR, MSM};
+use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
 use crate::test_utilities;
 use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{
@@ -100,7 +100,7 @@ where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
     // let test_sizes = [1000, 1 << 16]; //TODO - uncomment this line after implementing fast msm
-    let test_sizes = [100]; 
+    let test_sizes = [100];
     // let batch_sizes = [1, 3, 1 << 4];
     let batch_sizes = [1, 3]; //TODO - uncomment this line after implementing fast msm
     let mut stream = IcicleStream::create().unwrap();
@@ -109,7 +109,7 @@ where
     cfg.stream_handle = *stream;
     cfg.is_async = true;
     cfg.ext
-        .set_int(LARGE_BUCKET_FACTOR, 5);
+        .set_int(CUDA_MSM_LARGE_BUCKET_FACTOR, 5);
     cfg.c = 4;
     runtime::warmup(&stream).unwrap();
     stream
@@ -184,12 +184,12 @@ where
 {
     // let test_sizes = [1 << 10, 10000]; // TODO - uncomment this line after implementing fast msm
     let test_sizes = [1 << 10]; // TODO - remove this line after implementing fast msm
-    // let test_threshold = 1 << 11; // TODO - uncomment this line after implementing fast msm
-    // let batch_sizes = [1, 3, 1 << 4]; // TODO - uncomment this line after implementing fast msm
+                                // let test_threshold = 1 << 11; // TODO - uncomment this line after implementing fast msm
+                                // let batch_sizes = [1, 3, 1 << 4]; // TODO - uncomment this line after implementing fast msm
     let batch_sizes = [1, 3]; // TODO - remove this line after implementing fast msm
     let rng = &mut thread_rng();
     for test_size in test_sizes {
-        let test_threshold = test_size>>2; // TODO - remove this line after implementing fast msm
+        let test_threshold = test_size >> 2; // TODO - remove this line after implementing fast msm
         for batch_size in batch_sizes {
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 100);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
