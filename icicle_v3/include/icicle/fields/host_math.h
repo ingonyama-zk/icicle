@@ -209,12 +209,14 @@ namespace host_math {
       multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
       return;
     } else if constexpr (NLIMBS_A == 1 && NLIMBS_B == 1) {
+      rs.limbs[1] = 0;
       rs.limbs[0] = host_math::madc_cc(as.limbs[0], bs.limbs[0], 0, rs.limbs[1]);
       return;
     } else if constexpr (NLIMBS_A == 2 && NLIMBS_B == 2) {
       const uint64_t* a = as.limbs64; // nof limbs should be even
       const uint64_t* b = bs.limbs64;
       uint64_t* r = rs.limbs64;
+      r[1] = 0;
       r[0] = host_math::madc_cc_64(a[0], b[0], 0, r[1]);
       return;
     } else {
