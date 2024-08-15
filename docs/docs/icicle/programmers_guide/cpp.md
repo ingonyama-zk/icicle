@@ -188,7 +188,7 @@ int main() {
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
     Device device = {"CUDA", 0}; // GPU-0
-    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts taht the api call returns eIcicleError::SUCCESS
+    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the api call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
   // Setup inputs
@@ -203,7 +203,7 @@ int main() {
 
   // (optional) copy scalars to device memory explicitly
   auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * N);
-  // Note: need to test err and make sure no errors occured
+  // Note: need to test err and make sure no errors occurred
   err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * N);
 
   // MSM configuration
