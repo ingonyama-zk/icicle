@@ -577,12 +577,12 @@ eIcicleError cpu_poly_divide(
   T* r_out /*OUT*/,
   uint64_t r_size)
 {
-  ICICLE_ASSERT(r_size >= (1 + denumerator_deg))
-    << "polynomial division expects r(x) size to be similar to numerator(x)";
+  ICICLE_ASSERT(r_size >= numerator_deg)
+    << "polynomial division expects r(x) size to be similar to numerator size and higher than numerator degree(x)";
   ICICLE_ASSERT(q_size >= (numerator_deg - denumerator_deg + 1))
     << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denumerator)+1";
 
-  ICICLE_CHECK(icicle_copy_async(r_out, numerator, (1 + numerator_deg) * sizeof(T), config.stream));
+  ICICLE_CHECK(icicle_copy_async(r_out, numerator, r_size * sizeof(T), config.stream));
 
   // invert largest coeff of b
   const T& lc_b_inv = T::inverse(denumerator[denumerator_deg]);
