@@ -116,9 +116,9 @@ In cargo.toml, specify the ICICLE libs to use:
 TODO fix paths
 
 [dependencies]
-icicle-runtime = { path = "../../../wrappers/rust_v3/icicle-runtime" }
-icicle-core = { path = "../../../wrappers/rust_v3/icicle-core" }
-icicle-bls12-377 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bls12-377" }
+icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
+icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
+icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
 ```
 
 The libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable to have it installed elsewhere.

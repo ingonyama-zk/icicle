@@ -22,7 +22,7 @@ The Core can be [instantiated](./getting_started) for different fields, curves, 
 
 
 ### Rust
-Each library has a corresponding crate. See [programmers guide](./programmers_guide.md) for more details.
+Each library has a corresponding crate. See [programmers guide](./programmers_guide/general.md) for more details.
 
 ### Supported curves, fields and operations
 
