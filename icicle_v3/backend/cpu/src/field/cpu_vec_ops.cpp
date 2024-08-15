@@ -181,13 +181,14 @@ private:
       uint64_t idx = m_start_index + i;     // original index
       uint64_t rev_idx = m_start_index + i; // reverse index
       // Bit reverse the iundex for 64 bits
-      rev_idx = ((rev_idx >> 1) & 0x5555555555555555) | ((rev_idx & 0x5555555555555555) << 1);   // bit rev single bits
-      rev_idx = ((rev_idx >> 2) & 0x3333333333333333) | ((rev_idx & 0x3333333333333333) << 2);   // bit rev 2 bits chunk
-      rev_idx = ((rev_idx >> 4) & 0x0F0F0F0F0F0F0F0F) | ((rev_idx & 0x0F0F0F0F0F0F0F0F) << 4);   // bit rev 4 bits chunk
-      rev_idx = ((rev_idx >> 8) & 0x00FF00FF00FF00FF) | ((rev_idx & 0x00FF00FF00FF00FF) << 8);   // bit rev 8 bits chunk
-      rev_idx = ((rev_idx >> 16) & 0x0000FFFF0000FFFF) | ((rev_idx & 0x0000FFFF0000FFFF) << 16); // bit rev 16 bits chunk
-      rev_idx = (rev_idx >> 32) | (rev_idx << 32);                                               // bit rev 32 bits chunk
-      rev_idx = rev_idx >> (64 - m_bit_size);  // Align rev_idx to the LSB
+      rev_idx = ((rev_idx >> 1) & 0x5555555555555555) | ((rev_idx & 0x5555555555555555) << 1); // bit rev single bits
+      rev_idx = ((rev_idx >> 2) & 0x3333333333333333) | ((rev_idx & 0x3333333333333333) << 2); // bit rev 2 bits chunk
+      rev_idx = ((rev_idx >> 4) & 0x0F0F0F0F0F0F0F0F) | ((rev_idx & 0x0F0F0F0F0F0F0F0F) << 4); // bit rev 4 bits chunk
+      rev_idx = ((rev_idx >> 8) & 0x00FF00FF00FF00FF) | ((rev_idx & 0x00FF00FF00FF00FF) << 8); // bit rev 8 bits chunk
+      rev_idx =
+        ((rev_idx >> 16) & 0x0000FFFF0000FFFF) | ((rev_idx & 0x0000FFFF0000FFFF) << 16); // bit rev 16 bits chunk
+      rev_idx = (rev_idx >> 32) | (rev_idx << 32);                                       // bit rev 32 bits chunk
+      rev_idx = rev_idx >> (64 - m_bit_size);                                            // Align rev_idx to the LSB
 
       if (m_output == m_op_a) { // inplace calculation
         if (rev_idx < idx) {    // only on of the threads need to work
