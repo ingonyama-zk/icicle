@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide will cover the usage of Icicle's C++ API, including device management, memory operations, data transfer, and synchronization.
+This guide covers the usage of Icicle's C++ API, including device management, memory operations, data transfer, synchronization, and compute APIs.
 
 ## Device Management
 
@@ -164,6 +164,121 @@ eIcicleError result = icicle_is_device_avialable(dev);
 char output[256];
 eIcicleError result = icicle_get_registered_devices(output, sizeof(output));
 ```
+
+## Compute APIs
+
+The structure demonstrated in the following examples is common across all compute APIs in Icicle, including NTT, vector operations, ECNTT, and others. For detailed API usage and examples, please refer to the full API documentation.
+
+### Multi-Scalar Multiplication (MSM) Example
+
+Icicle provides high-performance compute APIs such as the Multi-Scalar Multiplication (MSM) for cryptographic operations. Here's a simple example of how to use the MSM API.
+
+```cpp
+#include <iostream>
+#include "icicle/runtime.h"
+#include "icicle/api/bn254.h"
+
+using namespace bn254;
+
+int main() {
+  // Load backend and set device
+    icicle_load_backend_from_env_or_default();
+
+  // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
+  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
+  if (is_cuda_device_available) {
+    Device device = {"CUDA", 0}; // GPU-0
+    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts taht the api call returns eIcicleError::SUCCESS
+  } // else we stay on CPU backend
+
+  // Setup inputs
+  int msm_size = 1024;
+  auto scalars = std::make_unique<scalar_t[]>(msm_size);
+  auto points = std::make_unique<affine_t[]>(msm_size);
+  projective_t result;
+
+  // Generate random inputs
+  scalar_t::rand_host_many(scalars.get(), msm_size);
+  projective_t::rand_host_many(points.get(), msm_size);
+
+  // (optional) copy scalars to device memory explicitly
+  auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * N);
+  // Note: need to test err and make sure no errors occured
+  err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * N);
+
+  // MSM configuration
+  MSMConfig config = default_msm_config();
+  // tell icicle that the scalars are on device. Note that EC points and result are on host memory in this example.
+  config.are_scalars_on_device = true;
+
+  // Execute the MSM kernel (on the current device)
+  eIcicleError result_code = bn254_msm(scalars_d, points.get(), msm_size, config, &result);
+  
+  // Free the device memory
+  icicle_free(scalars_d);
+
+  // Check for errors
+  if (result_code == eIcicleError::SUCCESS) {
+    std::cout << "MSM result: " << projective_t::to_affine(result) << std::endl;
+  } else {
+    std::cerr << "MSM computation failed with error: " << result_code << std::endl;
+  }
+
+  return 0;
+}
+```
+
+### Polynomial Operations Example
+
+Here's another example demonstrating polynomial operations using Icicle:
+
+```cpp
+#include <iostream>
+#include "icicle/runtime.h"
+#include "icicle/polynomials/polynomials.h"
+#include "icicle/api/bn254.h"
+
+using namespace icicle;
+using namespace bn254;
+
+// define bn254Poly to be a polynomial over the scalar field of bn254
+using bn254Poly = Polynomial<scalar_t>;
+
+static bn254Poly randomize_polynomial(uint32_t size)
+{
+  auto coeff = std::make_unique<scalar_t[]>(size);
+  for (int i = 0; i < size; i++)
+    coeff[i] = scalar_t::rand_host();
+  return bn254Poly::from_evaluations(coeff.get(), size);
+}
+
+int main() {
+  // Load backend and set device
+  icicle_load_backend_from_env_or_default();
+
+  // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
+  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
+  if (is_cuda_device_available) {
+    Device device = {"CUDA", 0}; // GPU-0
+    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the API call returns eIcicleError::SUCCESS
+  } // else we stay on CPU backend
+
+  // randomize polynomials f(x),g(x) over the scalar field of bn254
+  int poly_size = 1024;
+  bn254Poly f = randomize_polynomial(poly_size);
+  bn254Poly g = randomize_polynomial(poly_size);
+
+  // Perform polynomial multiplication
+  auto result = f * g; // Executes on the current device
+
+  // Display result (or use result in further computations)
+  std::cout << "Polynomial multiplication result: " << result << std::endl;
+
+  return 0;
+}
+```
+
+In this example, the polynomial multiplication is used to perform polynomial multiplication on CUDA or CPU, showcasing the flexibility and power of Icicle's compute APIs.
 
 ## Error Handling
 
