@@ -200,9 +200,30 @@ module.exports = {
           ],
         },
         {
-          type: "doc",
-          label: "Programmers Guide",
-          id: "icicle/programmers_guide",
+          type: "category",
+          label: "Programmers guide",
+          link: {
+            type: `doc`,
+            id: "icicle/programmers_guide/general",
+          },
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              label: "C++",
+              id: "icicle/programmers_guide/cpp",
+            },
+            {
+              type: "doc",
+              label: "Rust",
+              id: "icicle/programmers_guide/rust",
+            },
+            {
+              type: "doc",
+              label: "Go",
+              id: "icicle/programmers_guide/go",
+            }
+          ],
         },
         {
           type: "doc",
