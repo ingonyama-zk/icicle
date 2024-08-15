@@ -22,7 +22,7 @@ pub struct VecOpsConfig<'a> {
     pub is_async: bool,
     /// If true then vec_a, vec_b and result are in montgomery form. Default value: false.
     pub is_input_in_montgomery_form: bool,
-    pub is_result_in_montgomery_form: bool
+    pub is_result_in_montgomery_form: bool,
 }
 
 impl<'a> Default for VecOpsConfig<'a> {
@@ -40,7 +40,7 @@ impl<'a> VecOpsConfig<'a> {
             is_result_on_device: false,
             is_async: false,
             is_input_in_montgomery_form: false,
-            is_result_in_montgomery_form: false
+            is_result_in_montgomery_form: false,
         }
     }
 }
