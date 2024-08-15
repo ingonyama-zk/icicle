@@ -1,3 +1,5 @@
+// #pragma GCC optimize ("no-strict-aliasing")
+
 #pragma once
 
 #include <cstdint>
@@ -141,7 +143,7 @@ namespace host_math {
     return CARRY_OUT ? carry : 0;
   }
 
-  template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT, bool USE_32 = false>
+  template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT, bool USE_32 = true> //for now we use only the 32 add/sub because the casting of the carry causes problems when compiling in release. to solve this we need to entirly split the field functions between a host version and a device version.
   static constexpr HOST_INLINE uint32_t // 32 is enough for the carry
   add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
@@ -155,7 +157,9 @@ namespace host_math {
       const uint64_t* y = ys.limbs64;
       uint64_t* r = rs.limbs64;
       // Note: returns uint64 but uint 32 is enough.
-      return add_sub_limbs_64<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
+      uint64_t result = add_sub_limbs_64<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
+      uint32_t carry = result == 1;
+      return carry;
     }
   }
 
@@ -282,3 +286,6 @@ namespace host_math {
     }
   }
 } // namespace host_math
+
+
+// #pragma GCC reset_options
