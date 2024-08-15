@@ -1,11 +1,11 @@
 
 # Getting Started with ICICLE V3
 
-Welcome to the ICICLE V3 documentation! This guide will help you get started with building, testing, and installing ICICLE, whether you're using C++, Rust, or Go. It also covers installation of the CUDA backend and important build options.
+This guide will help you get started with building, testing, and installing ICICLE, whether you're using C++, Rust, or Go. It also covers installation of the CUDA backend and important build options.
 
-## Building and Testing ICICLE
+## Building and Testing ICICLE frontend
 
-### C++: Build, Test, and Install (Frontend and Backend)
+### C++: Build, Test, and Install (Frontend)
 
 ICICLE can be built and tested in C++ using CMake. The build process is straightforward, but there are several flags you can use to customize the build for your needs.
 
@@ -25,7 +25,7 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
    ```
 
 :::note
-	To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252.
+	To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252, m31.
 	To specify a curve, use the flag -DCURVE=curve, where curve can be one of the following: bn254, bls12_377, bls12_381, bw6_761, grumpkin.
 :::
 
@@ -36,32 +36,42 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
    This is building the [libicicle_device](./libraries.md#icicle-device) and the [libicicle_field_babybear](./libraries.md#icicle-core) frontend lib that correspond to the field or curve.
 
 4. **Link:**
+   Link you application (or library) to ICICLE:
    ```cmake
    target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
    ```
 
-#### optional Commands
 
-5. **Installation**
+5. **Installation (optional):**
    To install the libs, specify the install prefix in the [cmake command](./getting_started.md#build-commands)
-   `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path is `/usr/local`.
-   Then after building, use cmake to install `cmake --install build`
+   `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path is `/usr/local` if not specified.
+   Then after building, use cmake to install the libraries:
+   ```
+   cmake -S icicle_v3 -B build -DCMAKE_INSTALL_PREFIX=/path/to/install/dir/ -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
+   cmake --build build -j # build ICICLE
+   cmake --install build # install icicle in /path/to/install/dir/
+   ```
 
-6. **Run tests:**
-   Add `-DCMAKE_BUILD_TESTS=ON` to the [cmake command](./getting_started.md#build-commands) and build.
+6. **Run tests (optional):**
+   Add `-DBUILD_TESTS=ON` to the [cmake command](./getting_started.md#build-commands) and build.
    Execute all tests
    ```bash
+   cmake -S icicle_v3 -B build --DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
+   cmake --build build -j
    cd build/tests
    ctest
    ```
-   or choose the test-suite and possible test
+   or choose the test-suite
    ```bash
    ./build/tests/test_field_api # or another test suite
-   # can specify test using regex
+   # can specify tests using regex. For example for tests with ntt in the name:
    ./build/tests/test_field_api --gtest_filter="*ntt*"
    ```
 :::note
-Some yests assume a cuda backend exists and may fail if they don't.
+Some tests assume a cuda backend exists and will fail otherwise.
+:::
+:::note
+Each C++ test-suite is an executable that links to gtest.
 :::
 
 #### Build Flags
@@ -72,20 +82,18 @@ You can customize your ICICLE build with the following flags:
 - `-DBUILD_TESTS=ON/OFF`: Enable or disable tests. Default=OFF.
 - `-DCMAKE_INSTALL_PREFIX=/install/dir`: Specify install dir. Default=/usr/local.
 
-
 ### Rust: Build, Test, and Install
-
-#### Rust
 
 To build and test ICICLE in Rust, follow these steps:
 
 1. **Navigate to the Rust bindings directory:**
    ```bash
-   cd wrappers/rust
+   cd wrappers/rust # or go to a specific field/curve 'cd wrappers/rust/icicle-fields/icicle-babybear'
    ```
 
 2. **Build the Rust project:**
    ```bash
+   TODO wht about features? Now it doesn't make sense to disable so??
    cargo build --release
    ```
 
@@ -94,40 +102,33 @@ To build and test ICICLE in Rust, follow these steps:
    cargo test
    ```
 
-4. **Install the library:**
+4. **Install the library:**: The libraries are installed to the `target/<buildmode>/deps/icicle` dir by default. For custom install dir. define the env variable `export ICICLE_INSTALL_DIR=/path/to/install/dir` before building or via cargo:
    ```bash
-   cargo install --path .
+   TODO support cargo install
+   cargo install --path /path/to/install/dir
    ```
 
-#### Rust Cargo Build and Install
+#### Use as cargo dependency
 
-To build ICICLE as dep using Cargo:
+In cargo.toml, specify the ICICLE libs to use:
 
 ```bash
+TODO fix paths
+
 [dependencies]
-TODO fix path
-icicle-runtime = { path = "crate_path" }
-icicle-core = { path = "crate_path" }
-icicle-bn254 = { path = "crate_path" }
+icicle-runtime = { path = "../../../wrappers/rust_v3/icicle-runtime" }
+icicle-core = { path = "../../../wrappers/rust_v3/icicle-core" }
+icicle-bls12-377 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bls12-377" }
 ```
 
-The libs will be built and installed to `target/release/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable to have it installed elsewhere.
+The libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable to have it installed elsewhere.
 :::note
 Make sure to have the icicle libs avaialble when deploying an application that depends on icicle shared libs.
 :::
 
+### Go: Build, Test, and Install
+TODO
 
-
-## Installation
+## Install cuda backend
 
 [Install CUDA Backend (and License)](./install_cuda_backend.md#installation)
-
-### Install ICICLE Frontend
-
-ICICLE frontend installation can vary based on your needs. You can install the frontend libraries using standard package managers for your language (e.g., `cargo` for Rust, `go get` for Go), or you can manually build and install from source as outlined above.
-
-
-
-#### Go Get Install
-
-TODO

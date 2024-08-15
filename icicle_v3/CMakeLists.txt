@@ -18,6 +18,7 @@ option(MSM "Build MSM" ON)
 option(EXT_FIELD "Build extension field" OFF)
 option(ECNTT "Build ECNTT" OFF)
 option(G2 "Build G2" OFF)
+# REMOVE END
 option(BUILD_TESTS "Build unit tests" OFF)
 option(CPU_BACKEND "Build CPU backend" ON)
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend, local path or OFF to disable pulling" OFF)
