@@ -14,8 +14,6 @@ typedef scalar_t T;
 
 enum Op { MUL, ADD, SUB, LAST };
 
-// bn254 p = 21888242871839275222246405745257275088548364400416034343698204186575808495617 
-
 int vector_op(
   T* vec_a,
   T* vec_b,
@@ -47,7 +45,7 @@ int vector_op(
 int main(int argc, char** argv)
 {
   const unsigned vector_size = 1 << 15;
-  const unsigned not_in_place_repetitions = 1 << 15; // Repetitions are used only for the non in-place tests.
+  const unsigned not_in_place_repetitions = 1 << 10; // Repetitions are used only for the non in-place tests.
   const unsigned in_place_repetitions = 1;           // Repetitions for in-place tests should be 1. Don't check it.
 
   cudaError_t err;
@@ -200,8 +198,8 @@ int main(int argc, char** argv)
   std::cout << "*** Start not in-place benchmark loop ***" << std::endl;
   std::cout << "*****************************************" << std::endl;
   for (int op = MUL; op != LAST; op++) {
-      // for (int config_idx = 28; config_idx < 29; config_idx++) {
-      for (int config_idx = 0; config_idx < 32; config_idx++) { 
+    // for (int config_idx = 28; config_idx < 29; config_idx++) {
+    for (int config_idx = 0; config_idx < 32; config_idx++) {
       switch (op) {
       case MUL:
         std::cout << "Start benchmark loop for op MUL config_idx " << config_idx << " not in-place" << std::endl;
@@ -644,32 +642,24 @@ int main(int argc, char** argv)
         switch (config_idx >> (nof_of_configs_for_test -
                                nof_of_storage_configs)) { // {is_a_on_device, is_b_on_device, is_result_on_device}
         case 0b000:
-          for (int i = 0; i < not_in_place_repetitions; i++) {
-            vector_op(host_in1, host_in2, host_in1, vector_size, ctx, config, (Op)op);
-          }
+          vector_op(host_in1, host_in2, host_in1, vector_size, ctx, config, (Op)op);
           break;
         case 0b001:
           break;
         case 0b010:
-          for (int i = 0; i < not_in_place_repetitions; i++) {
-            vector_op(host_in1, device_in2, host_in1, vector_size, ctx, config, (Op)op);
-          }
+          vector_op(host_in1, device_in2, host_in1, vector_size, ctx, config, (Op)op);
           break;
         case 0b011:
           break;
         case 0b100:
           break;
         case 0b101:
-          for (int i = 0; i < not_in_place_repetitions; i++) {
-            vector_op(device_in1, host_in2, device_in1, vector_size, ctx, config, (Op)op);
-          }
+          vector_op(device_in1, host_in2, device_in1, vector_size, ctx, config, (Op)op);
           break;
         case 0b110:
           break;
         case 0b111:
-          for (int i = 0; i < not_in_place_repetitions; i++) {
-            vector_op(device_in1, device_in2, device_in1, vector_size, ctx, config, (Op)op);
-          }
+          vector_op(device_in1, device_in2, device_in1, vector_size, ctx, config, (Op)op);
           break;
         }
         CHK_IF_RETURN(cudaPeekAtLastError());
@@ -749,6 +739,7 @@ int main(int argc, char** argv)
             std::cout << "===>>> ERROR!!! MUL: Test failed for vector index " << i
                       << ", config is printed below:" << std::endl;
             test_failed = 1;
+            break;
           }
         }
         break;
@@ -758,6 +749,7 @@ int main(int argc, char** argv)
             std::cout << "===>>> ERROR!!! ADD: Test failed for vector index " << i
                       << ", config is printed below:" << std::endl;
             test_failed = 1;
+            break;
           }
         }
         break;
@@ -767,6 +759,7 @@ int main(int argc, char** argv)
             std::cout << "===>>> ERROR!!! SUB: Test failed for vector index " << i
                       << ", config is printed below:" << std::endl;
             test_failed = 1;
+            break;
           }
         }
         break;
