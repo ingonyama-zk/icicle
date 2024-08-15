@@ -17,7 +17,7 @@ Currently our flagship products are:
 - **Cross-Language Compatibility:** Use ICICLE across multiple programming languages such as C++, Rust, Go, and possibly Python.
 - **Optimized for ZKPs:** Accelerate cryptographic operations like elliptic curve operations, MSM, NTT, Poseidon hash, and more.
 
-
+Learn more about ICICLE and its multi-backend support [here][ICICLE-OVERVIEW].
 ---
 
 ## Our Approach to Hardware Acceleration
@@ -30,14 +30,6 @@ We believe that GPUs are as critical for ZK as they are for AI.
 
 For a more in-depth understanding on this topic we suggest you read [our article on the subject](https://www.ingonyama.com/blog/revisiting-paradigm-hardware-acceleration-for-zero-knowledge-proofs).
 
-
-### About ICICLE
-
-[ICICLE](https://github.com/ingonyama-zk/icicle) is an advanced cryptography library built to harness the power of GPUs and other compute backends for ZKPs. ICICLE implements high-performance cryptographic primitives such as elliptic curve operations, MSM, NTT, Poseidon hash, and more.
-
-ICICLE is designed with ease of use in mind—developers can leverage the power of GPUs or other backends without needing to write low-level code. Our bindings for Rust, Golang, and other languages allow your team to transition from CPU to GPU or other backends with minimal changes.
-
-Learn more about ICICLE and its multi-backend support [here][ICICLE-OVERVIEW].
 
 ## Get in Touch
 

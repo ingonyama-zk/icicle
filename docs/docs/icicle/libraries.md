@@ -20,13 +20,9 @@ ICICLE Core is a template library written in C++ that implements fundamental cry
 
 The Core can be [instantiated](./getting_started) for different fields, curves, and other cryptographic components, allowing you to tailor it to your specific needs. You can link your application to one or more ICICLE libraries, depending on the requirements of your project. For example, you might only need the babybear library or a combination of babybear and a Merkle tree builder.
 
-:::note
-Every instantiation is essentially a dispatch layer that is calling backend apis based on the current thread device.
-:::
-
 
 ### Rust
-Each library has a corresponding crate. See [examples](./using_icicle.md) for more details.
+Each library has a corresponding crate. See [programmers guide](./programmers_guide.md) for more details.
 
 ### Supported curves, fields and operations
 

@@ -5,6 +5,12 @@ title: ICICLE Overview
 
 # ICICLE Overview
 
+## What is ICICLE?
+
+[![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
+
+[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library designed to accelerate zero-knowledge proofs (ZKPs) using multiple compute backends, including GPUs, CPUs, and potentially other platforms. ICICLE's key strength lies in its ability to implement blazing-fast cryptographic primitives, enabling developers to significantly reduce proving times with minimal effort.
+
 ## Key Features
 
 - **Acceleration of “zk” Math:** ICICLE provides optimized implementations for cryptographic primitives crucial to zero-knowledge proofs, such as elliptic curve operations, MSM, NTT, Poseidon hash, and more.
@@ -13,13 +19,7 @@ title: ICICLE Overview
 - **Backend Agnosticism:** Develop on CPU and deploy on various backends, including GPUs, specialized hardware, and other emerging platforms, depending on your project's needs.
 - **Extensibility:** Designed for easy integration and extension, allowing you to build and deploy custom backends and cryptographic primitives.
 
-## What is ICICLE?
-
-[![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
-
-[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library designed to accelerate zero-knowledge proofs (ZKPs) using multiple compute backends, including GPUs, CPUs, and potentially other platforms. ICICLE's key strength lies in its ability to implement blazing-fast cryptographic primitives, enabling developers to significantly reduce proving times with minimal effort.
-
-### Evolution from V2 to V3
+## Evolution from V2 to V3
 
 Originally, ICICLE was focused solely on GPU acceleration. With the release of V3, ICICLE now supports multiple backends, making it more versatile and adaptable to different hardware environments. Whether you're leveraging the power of GPUs or exploring other compute platforms, ICICLE V3 is designed to fit your needs.
 
@@ -29,7 +29,7 @@ ICICLE has been successfully integrated and used by leading ZK companies such as
 
 ## Don't Have Access to a GPU?
 
-We understand that not all developers have access to GPUs, but this shouldn't limit your ability to develop with ICICLE. Here are some ways to gain access to GPUs:
+We understand that not all developers have access to GPUs, but this shouldn't limit your ability to develop with ICICLE. Here are some ways to gain access to GPUs: (TODO should we keep this part?)
 
 ### Grants
 
@@ -69,7 +69,7 @@ ICICLE is also well-suited for prototyping and developing small-scale projects. 
 
 ## Get Started with ICICLE
 
-Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md) and [Getting Started Guide](./getting_started.md) and learn how to integrate, deploy, and extend ICICLE across different backends.
+Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md), [Getting Started Guide](./getting_started.md) and the [programmers guide](./programmers_guide.md) to learn how to integrate, deploy, and extend ICICLE across different backends.
 
 If you have any questions or need support, feel free to reach out on [Discord] or [GitHub](https://github.com/ingonyama-zk). We're here to help you accelerate your ZK development with ICICLE.
 

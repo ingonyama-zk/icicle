@@ -201,8 +201,8 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Using ICICLE V3",
-          id: "icicle/using_icicle",
+          label: "Programmers Guide",
+          id: "icicle/programmers_guide",
         },
         {
           type: "doc",
