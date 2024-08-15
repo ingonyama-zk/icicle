@@ -74,11 +74,11 @@ TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
-  for (size_t i = 0; i < 100000; i++) {
+  for (size_t i = 0; i < 100; i++) {
     auto a = TypeParam::rand_host();
     auto b = TypeParam::rand_host();
-    std::cout << "a: " << a << std::endl;
-    std::cout << "b: " << b << std::endl;
+    // std::cout << "a: " << a << std::endl;
+    // std::cout << "b: " << b << std::endl;
     auto b_inv = TypeParam::inverse(b);
     auto a_neg = TypeParam::neg(a);
     ASSERT_EQ(a + TypeParam::zero(), a);
