@@ -167,8 +167,6 @@ eIcicleError result = icicle_get_registered_devices(output, sizeof(output));
 
 ## Compute APIs
 
-The structure demonstrated in the following examples is common across all compute APIs in Icicle, including NTT, vector operations, ECNTT, and others. For detailed API usage and examples, please refer to the full API documentation.
-
 ### Multi-Scalar Multiplication (MSM) Example
 
 Icicle provides high-performance compute APIs such as the Multi-Scalar Multiplication (MSM) for cryptographic operations. Here's a simple example of how to use the MSM API.
@@ -180,14 +178,15 @@ Icicle provides high-performance compute APIs such as the Multi-Scalar Multiplic
 
 using namespace bn254;
 
-int main() {
-  // Load backend and set device
-    icicle_load_backend_from_env_or_default();
+int main()
+{
+  // Load installed backends
+  icicle_load_backend_from_env_or_default();
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
-    Device device = {"CUDA", 0}; // GPU-0
+    Device device = {"CUDA", 0};             // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts taht the api call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
@@ -202,9 +201,10 @@ int main() {
   projective_t::rand_host_many(points.get(), msm_size);
 
   // (optional) copy scalars to device memory explicitly
-  auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * N);
+  scalar_t* scalars_d = nullptr;
+  auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * msm_size);
   // Note: need to test err and make sure no errors occured
-  err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * N);
+  err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * msm_size);
 
   // MSM configuration
   MSMConfig config = default_msm_config();
@@ -212,8 +212,9 @@ int main() {
   config.are_scalars_on_device = true;
 
   // Execute the MSM kernel (on the current device)
-  eIcicleError result_code = bn254_msm(scalars_d, points.get(), msm_size, config, &result);
-  
+  eIcicleError result_code = msm(scalars_d, points.get(), msm_size, config, &result);
+  // OR call bn254_msm(scalars_d, points.get(), msm_size, config, &result);
+
   // Free the device memory
   icicle_free(scalars_d);
 
@@ -221,7 +222,7 @@ int main() {
   if (result_code == eIcicleError::SUCCESS) {
     std::cout << "MSM result: " << projective_t::to_affine(result) << std::endl;
   } else {
-    std::cerr << "MSM computation failed with error: " << result_code << std::endl;
+    std::cerr << "MSM computation failed with error: " << get_error_string(result_code) << std::endl;
   }
 
   return 0;
@@ -238,7 +239,6 @@ Here's another example demonstrating polynomial operations using Icicle:
 #include "icicle/polynomials/polynomials.h"
 #include "icicle/api/bn254.h"
 
-using namespace icicle;
 using namespace bn254;
 
 // define bn254Poly to be a polynomial over the scalar field of bn254
@@ -249,22 +249,27 @@ static bn254Poly randomize_polynomial(uint32_t size)
   auto coeff = std::make_unique<scalar_t[]>(size);
   for (int i = 0; i < size; i++)
     coeff[i] = scalar_t::rand_host();
-  return bn254Poly::from_evaluations(coeff.get(), size);
+  return bn254Poly::from_rou_evaluations(coeff.get(), size);
 }
 
-int main() {
+int main()
+{
   // Load backend and set device
   icicle_load_backend_from_env_or_default();
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
-    Device device = {"CUDA", 0}; // GPU-0
+    Device device = {"CUDA", 0};             // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the API call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
-  // randomize polynomials f(x),g(x) over the scalar field of bn254
   int poly_size = 1024;
+
+  // build domain for ntt is required for some polynomial ops that rely on ntt
+  ntt_init_domain(scalar_t::omega(12), default_ntt_init_domain_config());
+
+  // randomize polynomials f(x),g(x) over the scalar field of bn254
   bn254Poly f = randomize_polynomial(poly_size);
   bn254Poly g = randomize_polynomial(poly_size);
 
