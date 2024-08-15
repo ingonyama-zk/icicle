@@ -57,7 +57,6 @@ Memory can be allocated and freed on the active device:
 ```cpp
 void* ptr;
 eIcicleError result = icicle_malloc(&ptr, 1024); // Allocate 1024 bytes
-
 eIcicleError result = icicle_free(ptr); // Free the allocated memory
 ```
 
@@ -71,7 +70,6 @@ icicle_create_stream(&stream);
 
 void* ptr;
 eIcicleError result = icicle_malloc_async(&ptr, 1024, stream);
-
 eIcicleError result = icicle_free_async(ptr, stream);
 ```
 
@@ -90,7 +88,6 @@ Set memory to a specific value on the active device, synchronously or asynchrono
 
 ```cpp
 eIcicleError result = icicle_memset(ptr, 0, 1024); // Set 1024 bytes to 0
-
 eIcicleError result = icicle_memset_async(ptr, 0, 1024, stream);
 ```
 
@@ -107,7 +104,7 @@ eIcicleError result = icicle_copy_async(dst, src, size, stream);
 
 ### Explicit Data Transfers
 
-To avoid inference overhead, use explicit copy functions:
+To avoid device-inference overhead, use explicit copy functions:
 
 ```cpp
 eIcicleError result = icicle_copy_to_host(host_dst, device_src, size);
@@ -126,7 +123,6 @@ Streams are used to manage asynchronous operations:
 ```cpp
 icicleStreamHandle stream;
 eIcicleError result = icicle_create_stream(&stream);
-
 eIcicleError result = icicle_destroy_stream(stream);
 ```
 
@@ -138,20 +134,10 @@ Ensure all previous operations on a stream or device are completed before procee
 
 ```cpp
 eIcicleError result = icicle_stream_synchronize(stream);
-
 eIcicleError result = icicle_device_synchronize();
 ```
 
 ## Device Properties
-
-### Querying Device Properties
-
-Retrieve properties of the active device:
-
-```cpp
-DeviceProperties properties;
-eIcicleError result = icicle_get_device_properties(properties);
-```
 
 ### Checking Device Availability
 
@@ -163,6 +149,15 @@ eIcicleError result = icicle_is_device_avialable(dev);
 
 char output[256];
 eIcicleError result = icicle_get_registered_devices(output, sizeof(output));
+```
+
+### Querying Device Properties
+
+Retrieve properties of the active device:
+
+```cpp
+DeviceProperties properties;
+eIcicleError result = icicle_get_device_properties(properties);
 ```
 
 ## Compute APIs
@@ -187,7 +182,7 @@ int main()
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
     Device device = {"CUDA", 0};             // GPU-0
-    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts taht the api call returns eIcicleError::SUCCESS
+    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the api call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
   // Setup inputs
@@ -203,7 +198,7 @@ int main()
   // (optional) copy scalars to device memory explicitly
   scalar_t* scalars_d = nullptr;
   auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * msm_size);
-  // Note: need to test err and make sure no errors occured
+  // Note: need to test err and make sure no errors occurred
   err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * msm_size);
 
   // MSM configuration
