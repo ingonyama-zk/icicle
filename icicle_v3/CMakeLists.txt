@@ -11,7 +11,7 @@ include(cmake/curve.cmake)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# TODO Yuval remove those flags. Frontent will always have everything.
+# TODO Yuval remove those flags. Frontend will always have everything.
 # CUDA backend may do it for faster dev.
 option(NTT "Build NTT" ON)
 option(MSM "Build MSM" ON)

@@ -123,7 +123,7 @@ icicle-bls12-377 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bls1
 
 The libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable to have it installed elsewhere.
 :::note
-Make sure to have the icicle libs avaialble when deploying an application that depends on icicle shared libs.
+Make sure to have the icicle libs available when deploying an application that depends on icicle shared libs.
 :::
 
 ### Go: Build, Test, and Install
