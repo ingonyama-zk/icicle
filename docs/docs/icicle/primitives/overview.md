@@ -6,8 +6,8 @@ This section of the documentation is dedicated to the main APIs provided by ICIC
 
 - [MSM](./msm.md)
 - [NTT](./ntt.md)
-- [Vector Operations](./vec-ops.md)
-- [Polynomials](./polynomials/overview.md)
+- [Vector Operations](./vec_ops.md)
+- [Polynomials](../polynomials/overview.md)
 - [Keccak Hash](./keccak.md)
 - [Poseidon Hash](./poseidon.md)
 - [Poseidon2 Hash](./poseidon2.md)

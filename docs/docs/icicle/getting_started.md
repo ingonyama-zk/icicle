@@ -18,10 +18,9 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
    ```
 
 2. **Configure the build:**
-   ```bash
-   (TODO replace icicle_v3 with icicle)
+   ```bash   
    mkdir -p build && rm -rf build/*
-   cmake -S icicle_v3 -B build -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
+   cmake -S icicle -B build -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
    ```
 
 :::note
@@ -93,7 +92,7 @@ To build and test ICICLE in Rust, follow these steps:
 
 2. **Build the Rust project:**
    ```bash
-   TODO wht about features? Now it doesn't make sense to disable so??
+   TODO what about features? Now it doesn't make sense to disable features.
    cargo build --release
    ```
 
@@ -103,31 +102,32 @@ To build and test ICICLE in Rust, follow these steps:
    ```
 
 4. **Install the library:**: The libraries are installed to the `target/<buildmode>/deps/icicle` dir by default. For custom install dir. define the env variable `export ICICLE_INSTALL_DIR=/path/to/install/dir` before building or via cargo:
-   ```bash
-   TODO support cargo install
-   cargo install --path /path/to/install/dir
-   ```
+```bash
+TODO support cargo install
+cargo install --path /path/to/install/dir
+```
 
 #### Use as cargo dependency
 
 In cargo.toml, specify the ICICLE libs to use:
 
 ```bash
-TODO fix paths
-
 [dependencies]
 icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
 icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
 icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
 ```
 
+:::note
+Can specify `branch = <branch-name>` or `tag = <tag-name>` or `rev = <commit-id>`.
+:::
+
 The libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable to have it installed elsewhere.
 :::note
 Make sure to have the icicle libs available when deploying an application that depends on icicle shared libs.
 :::
 
-### Go: Build, Test, and Install
-TODO
+### Go: Build, Test, and Install (TODO)
 
 ## Install cuda backend
 

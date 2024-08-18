@@ -25,7 +25,7 @@ module.exports = {
           items: [
             {
               type: "doc",
-              label: "CUDA Backend",
+              label: "CUDA Backend (TODO how to insall)",
               id: "icicle/install_cuda_backend"
             },
             {
@@ -35,7 +35,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Build Your Own Backend",
+              label: "Build Your Own Backend (TODO)",
               id: "icicle/build_your_own_backend"
             },
           ]
@@ -71,7 +71,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Go",
+              label: "Go (TODO)",
               id: "icicle/programmers_guide/go",
             }
           ],
@@ -107,22 +107,22 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Keccak Hash",
+              label: "Keccak Hash (TODO)",
               id: "icicle/primitives/keccak",
             },
             {
               type: "doc",
-              label: "Poseidon Hash",
+              label: "Poseidon Hash (TODO)",
               id: "icicle/primitives/poseidon",
             },
             {
               type: "doc",
-              label: "Poseidon2 Hash",
+              label: "Poseidon2 Hash (TODO)",
               id: "icicle/primitives/poseidon2",
             },
             {
               type: "category",
-              label: "Golang bindings",
+              label: "Golang bindings (TODO)",
               link: {
                 type: `doc`,
                 id: "icicle/golang-bindings",
@@ -193,7 +193,7 @@ module.exports = {
                 },
                 {
                   type: "doc",
-                  label: "EC-NTT",
+                  label: "ECNTT",
                   id: "icicle/rust-bindings/ecntt",
                 },
                 {
@@ -203,18 +203,18 @@ module.exports = {
                 },
                 {
                   type: "doc",
-                  label: "Keccak Hash",
+                  label: "Polynomials",
+                  id: "icicle/rust-bindings/polynomials",
+                },
+                {
+                  type: "doc",
+                  label: "Keccak Hash (TODO)",
                   id: "icicle/rust-bindings/keccak",
                 },
                 {
                   type: "doc",
-                  label: "Multi GPU Support",
+                  label: "Multi GPU Support (TODO)",
                   id: "icicle/rust-bindings/multi-gpu",
-                },
-                {
-                  type: "doc",
-                  label: "Polynomials",
-                  id: "icicle/rust-bindings/polynomials",
                 },
               ],
             },
@@ -227,12 +227,12 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Benchmarks",
+          label: "Benchmarks (TODO)",
           id: "icicle/benchmarks",
         },
         {
           type: "doc",
-          label: "FAQ and Troubleshooting",
+          label: "FAQ and Troubleshooting (TODO)",
           id: "icicle/faq_and_troubleshooting",
         },
         {

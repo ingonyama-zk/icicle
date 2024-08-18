@@ -3,12 +3,18 @@
 ## NTT API overview
 
 ```rust
-pub fn ntt<F>(
-    input: &HostOrDeviceSlice<F>,
+pub fn ntt<T, F>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
     dir: NTTDir,
     cfg: &NTTConfig<F>,
-    output: &mut HostOrDeviceSlice<F>,
-) -> eIcicleResult<()>
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>;
+
+pub fn ntt_inplace<T, F>(
+    inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    dir: NTTDir,
+    cfg: &NTTConfig<F>,
+) -> Result<(), eIcicleError>
 ```
 
 `ntt:ntt` expects:
@@ -57,34 +63,7 @@ The `NTTConfig` struct is a configuration object used to specify parameters for 
 - **`is_async: bool`**: Specifies whether the NTT operation should be performed asynchronously. When set to `true`, the NTT function will not block the CPU, allowing other operations to proceed concurrently. Asynchronous execution requires careful synchronization to ensure data integrity and correctness.
 - **`ext: ConfigExtension`**: extended configuration for backend.
 
-#### Usage
-
-Example initialization with default settings:
-
-```rust
-let default_config = NTTConfig::default();
-```
-
-Customizing the configuration:
-
-```rust
-let custom_config = NTTConfig {
-    ctx: custom_device_context,
-    coset_gen: my_coset_generator,
-    batch_size: 10,
-    columns_batch: false,
-    ordering: Ordering::kRN,
-    are_inputs_on_device: true,
-    are_outputs_on_device: true,
-    is_async: false,
-    ntt_algorithm: NttAlgorithm::MixedRadix,
-};
-```
-
-
-TODO update for V3
-
-#### Example - TODO update for V3
+#### Example
 
 ```rust
 // Setting Bn254 points and scalars
@@ -115,74 +94,15 @@ ntt::ntt(
 .unwrap();
 ```
 
+### NTT Domain
 
-### Modes
-
-NTT supports two different modes `Batch NTT` and `Single NTT`
-
-You may toggle between single and batch NTT by simply configure `batch_size` to be larger then 1 in your `NTTConfig`.
+Before performing NTT operations, it is mandatory to construct the domain as [explained here](../primitives/ntt.md#ntt-domain).
+In rust, we have the following functions to construct, destruct the domain and retrieve a root of unity from it:
 
 ```rust
-let mut cfg = ntt::get_default_ntt_config::<ScalarField>();
-cfg.batch_size = 10 // your ntt using this config will run in batch mode.
+pub trait NTTDomain<F: FieldImpl> {
+    pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
+    pub fn release_domain<F>() -> Result<(), eIcicleError>;
+    pub fn get_root_of_unity<F>(max_size: u64) -> F;
+}
 ```
-
-`batch_size=1` would keep our NTT in single NTT mode.
-
-Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
-
-### Initializing the NTT Domain
-
-Before performing NTT operations, its necessary to initialize the NTT domain, It only needs to be called once per GPU since the twiddles are cached.
-
-```rust
-ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
-```
-
-### `initialize_domain`
-
-```rust
-pub fn initialize_domain<F>(primitive_root: F, ctx: &DeviceContext, fast_twiddles: bool) -> IcicleResult<()>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>;
-```
-
-#### Parameters
-
-- **`primitive_root`**: The primitive root of unity, chosen based on the maximum NTT size required for the computations. It must be of an order that is a power of two. This root is used to generate twiddle factors that are essential for the NTT operations.
-
-- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
-
-#### Returns
-
-- **`IcicleResult<()>`**: Will return an error if the operation fails.
-
-#### Parameters
-
-- **`primitive_root`**: The primitive root of unity, chosen based on the maximum NTT size required for the computations. It must be of an order that is a power of two. This root is used to generate twiddle factors that are essential for the NTT operations.
-
-- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
-
-#### Returns
-
-- **`IcicleResult<()>`**: Will return an error if the operation fails.
-
-### Releasing the domain
-
-The `release_domain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
-
-```rust
-pub fn release_domain<F>(ctx: &DeviceContext) -> IcicleResult<()>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<F>
-```
-
-#### Parameters
-
-- **`ctx`**: A reference to a `DeviceContext` specifying which device and stream the computation should be executed on.
-
-#### Returns
-
-The function returns an `IcicleResult<()>`, which represents the result of the operation. If the operation is successful, the function returns `Ok(())`, otherwise it returns an error.

@@ -107,6 +107,12 @@ template <typename S>
 eIcicleError ntt_init_domain(const S& primitive_root, const NTTInitDomainConfig& config);
 ```
 
+To retrive a root of unity from the domain or release it:
+```cpp
+template <typename S> eIcicleError ntt_release_domain();
+template <typename S> S get_root_of_unity(uint64_t max_size);
+```
+
 where
 
 ```cpp

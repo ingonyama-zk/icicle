@@ -3,12 +3,12 @@
 ## MSM API Overview
 
 ```rust
-pub fn msm<C: Curve>(
-    scalars: &HostOrDeviceSlice<C::ScalarField>,
-    points: &HostOrDeviceSlice<Affine<C>>,
+pub fn msm<C: Curve + MSM<C>>(
+    scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
+    bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     cfg: &MSMConfig,
-    results: &mut HostOrDeviceSlice<Projective<C>>,
-) -> IcicleResult<()>
+    results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+) -> Result<(), eIcicleError>;
 ```
 
 ### Parameters
