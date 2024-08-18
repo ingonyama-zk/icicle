@@ -55,20 +55,8 @@ The Polynomial class encapsulates a polynomial, providing a variety of operation
 
 This section outlines how to use the Polynomial API in C++. Bindings for Rust and Go are detailed under the Bindings sections.
 
-### Backend Initialization
-
-Initialization with an appropriate factory is required to configure the computational context and backend.
-
-```cpp
-#include "polynomials/polynomials.h"
-#include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
-
-// Initialize with a CUDA backend
-Polynomial::initialize(std::make_shared<CUDAPolynomialFactory>());
-```
-
 :::note
-Initialization of a factory must be done per linked curve or field.
+Make sure to set an ICICLE device prior to using the polynomial API.
 :::
 
 ### Construction

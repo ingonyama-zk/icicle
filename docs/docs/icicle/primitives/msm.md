@@ -70,60 +70,41 @@ The MSM supports batch mode - running multiple MSMs in parallel. It's always bet
 ## MSM configuration
 
 ```cpp
-  /**
-   * @struct MSMConfig
-   * Struct that encodes MSM parameters to be passed into the [MSM](@ref MSM) function. The intended use of this struct
-   * is to create it using [default_msm_config](@ref default_msm_config) function and then you'll hopefully only need to
-   * change a small number of default values for each of your MSMs.
-   */
   struct MSMConfig {
-    device_context::DeviceContext ctx; /**< Details related to the device such as its id and stream id. */
-    int points_size;         /**< Number of points in the MSM. If a batch of MSMs needs to be computed, this should be
-                              *   a number of different points. So, if each MSM re-uses the same set of points, this
-                              *   variable is set equal to the MSM size. And if every MSM uses a distinct set of
-                              *   points, it should be set to the product of MSM size and [batch_size](@ref
-                              *   batch_size). Default value: 0 (meaning it's equal to the MSM size). */
-    int precompute_factor;   /**< The number of extra points to pre-compute for each point. See the
-                              *   [precompute_msm_points](@ref precompute_msm_points) function, `precompute_factor` passed
-                              *   there needs to be equal to the one used here. Larger values decrease the
-                              *   number of computations to make, on-line memory footprint, but increase the static
-                              *   memory footprint. Default value: 1 (i.e. don't pre-compute). */
-    int c;                   /**< \f$ c \f$ value, or "window bitsize" which is the main parameter of the "bucket
-                              *   method" that we use to solve the MSM problem. As a rule of thumb, larger value
-                              *   means more on-line memory footprint but also more parallelism and less computational
-                              *   complexity (up to a certain point). Currently pre-computation is independent of
-                              *   \f$ c \f$, however in the future value of \f$ c \f$ here and the one passed into the
-                              *   [precompute_msm_points](@ref precompute_msm_points) function will need to be identical.
-                              *    Default value: 0 (the optimal value of \f$ c \f$ is chosen automatically).  */
-    int bitsize;             /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
-                              *   but if a different (better) upper bound is known, it should be reflected in this
-                              *   variable. Default value: 0 (set to the bitsize of scalar field). */
-    int large_bucket_factor; /**< Variable that controls how sensitive the algorithm is to the buckets that occur
-                              *   very frequently. Useful for efficient treatment of non-uniform distributions of
-                              *   scalars and "top windows" with few bits. Can be set to 0 to disable separate
-                              *   treatment of large buckets altogether. Default value: 10. */
-    int batch_size;          /**< The number of MSMs to compute. Default value: 1. */
-    bool are_scalars_on_device;       /**< True if scalars are on device and false if they're on host. Default value:
-                                       *   false. */
-    bool are_scalars_montgomery_form; /**< True if scalars are in Montgomery form and false otherwise. Default value:
-                                       *   true. */
-    bool are_points_on_device; /**< True if points are on device and false if they're on host. Default value: false. */
-    bool are_points_montgomery_form; /**< True if coordinates of points are in Montgomery form and false otherwise.
-                                      *   Default value: true. */
-    bool are_results_on_device; /**< True if the results should be on device and false if they should be on host. If set
-                                 *   to false, `is_async` won't take effect because a synchronization is needed to
+    icicleStreamHandle stream; /**< Stream for asynchronous execution. */
+    int precompute_factor;     /**< Number of extra points to pre-compute for each point. See the
+                                *   precompute_msm_bases function; precompute_factor passed there needs to be equal to the
+                                * one used here. Larger values decrease the number of computations to make, on-line memory
+                                * footprint, but increase the static memory footprint. Default value: 1 (i.e., don't
+                                * pre-compute). */
+    int c; /**< \f$ c \f$ value, or "window bitsize", which is the main parameter of the "bucket method" used to solve
+            * the MSM problem. Larger value means more on-line memory footprint but also more parallelism and less
+            * computational complexity (up to a certain point). Default value: 0 (the optimal value of \f$ c \f$ is
+            * chosen automatically). */
+    int bitsize;                /**< Number of bits of the largest scalar. Typically equals the bitsize of scalar field,
+                                 *   but if a different (better) upper bound is known, it should be reflected in this variable.
+                                 *   Default value: 0 (set to the bitsize of scalar field). */
+    int batch_size;             /**< Number of MSMs to compute. Default value: 1. */
+    bool are_bases_shared;      /**< Bases are shared for batch. Set to true if all MSMs use the same bases. Otherwise
+                                   expecting #bases==#scalars. Default value: true. */
+    bool are_scalars_on_device; /**< True if scalars are on device, false if they're on host. Default value: false. */
+    bool
+      are_scalars_montgomery_form; /**< True if scalars are in Montgomery form, false otherwise. Default value: true. */
+    bool are_points_on_device;     /**< True if points are on device, false if they're on host. Default value: false. */
+    bool are_points_montgomery_form; /**< True if coordinates of points are in Montgomery form, false otherwise. Default
+                                        value: true. */
+    bool are_results_on_device; /**< True if the results should be on device, false if they should be on host. If set
+                                 *   to false, is_async won't take effect because a synchronization is needed to
                                  *   transfer results to the host. Default value: false. */
-    bool is_big_triangle;       /**< Whether to do "bucket accumulation" serially. Decreases computational complexity
-                                 *   but also greatly decreases parallelism, so only suitable for large batches of MSMs.
-                                 *   Default value: false. */
     bool is_async;              /**< Whether to run the MSM asynchronously. If set to true, the MSM function will be
                                  *   non-blocking and you'd need to synchronize it explicitly by running
                                  *   `cudaStreamSynchronize` or `cudaDeviceSynchronize`. If set to false, the MSM
                                  *   function will block the current CPU thread. */
+    ConfigExtension* ext = nullptr; /**< Backend-specific extensions. */
   };
 ```
 
-## Choosing optimal parameters
+## Choosing optimal parameters (for CUDA msm)
 
 `is_big_triangle` should be `false` in almost all cases. It might provide better results only for very small MSMs (smaller than 2^8^) with a large batch (larger than 100) but this should be tested per scenario.
 Large buckets exist in two cases:
@@ -154,42 +135,23 @@ This gives a good approximation within 10% of the actual required memory for mos
 
 Here is a useful table showing optimal parameters for different MSMs. They are optimal for BLS12-377 curve when running on NVIDIA GeForce RTX 3090 Ti. This is the configuration used:
 
-```cpp
-  msm::MSMConfig config = {
-    ctx,            // DeviceContext
-    N,              // points_size
-    precomp_factor, // precompute_factor
-    user_c,         // c
-    0,              // bitsize
-    10,             // large_bucket_factor
-    batch_size,     // batch_size
-    false,          // are_scalars_on_device
-    false,          // are_scalars_montgomery_form
-    true,           // are_points_on_device
-    false,          // are_points_montgomery_form
-    true,           // are_results_on_device
-    false,          // is_big_triangle
-    true            // is_async
-  };
-```
-
 Here are the parameters and the results for the different cases:
 
-| MSM size | Batch size | Precompute factor | c | Memory estimation (GB) | Actual memory (GB) | Single MSM time (ms) |
-| --- | --- | --- | --- | --- | --- | --- |
-| 10 | 1 | 1 | 9 | 0.00227 | 0.00277 | 9.2 |
-| 10 | 1 | 23 | 11 | 0.00259 | 0.00272 | 1.76 |
-| 10 | 1000 | 1 | 7 | 0.94 | 1.09 | 0.051 |
-| 10 | 1000 | 23 | 11 | 2.59 | 2.74 | 0.025 |
-| 15 | 1 | 1 | 11 | 0.011 | 0.019 | 9.9 |
-| 15 | 1 | 16 | 16 | 0.061 | 0.065 | 2.4 |
-| 15 | 100 | 1 | 11 | 1.91 | 1.92 | 0.84 |
-| 15 | 100 | 19 | 14 | 6.32 | 6.61 | 0.56 |
-| 18 | 1 | 1 | 14 | 0.128 | 0.128 | 14.4 |
-| 18 | 1 | 15 | 17 | 0.40 | 0.42 | 5.9 |
-| 22 | 1 | 1 | 17 | 1.64 | 1.65 | 68 |
-| 22 | 1 | 13 | 21 | 5.67 | 5.94 | 54 |
-| 24 | 1 | 1 | 18 | 6.58 | 6.61 | 232 |
-| 24 | 1 | 7 | 21 | 12.4 | 13.4 | 199 |
+| MSM size | Batch size | Precompute factor | c   | Memory estimation (GB) | Actual memory (GB) | Single MSM time (ms) |
+| -------- | ---------- | ----------------- | --- | ---------------------- | ------------------ | -------------------- |
+| 10       | 1          | 1                 | 9   | 0.00227                | 0.00277            | 9.2                  |
+| 10       | 1          | 23                | 11  | 0.00259                | 0.00272            | 1.76                 |
+| 10       | 1000       | 1                 | 7   | 0.94                   | 1.09               | 0.051                |
+| 10       | 1000       | 23                | 11  | 2.59                   | 2.74               | 0.025                |
+| 15       | 1          | 1                 | 11  | 0.011                  | 0.019              | 9.9                  |
+| 15       | 1          | 16                | 16  | 0.061                  | 0.065              | 2.4                  |
+| 15       | 100        | 1                 | 11  | 1.91                   | 1.92               | 0.84                 |
+| 15       | 100        | 19                | 14  | 6.32                   | 6.61               | 0.56                 |
+| 18       | 1          | 1                 | 14  | 0.128                  | 0.128              | 14.4                 |
+| 18       | 1          | 15                | 17  | 0.40                   | 0.42               | 5.9                  |
+| 22       | 1          | 1                 | 17  | 1.64                   | 1.65               | 68                   |
+| 22       | 1          | 13                | 21  | 5.67                   | 5.94               | 54                   |
+| 24       | 1          | 1                 | 18  | 6.58                   | 6.61               | 232                  |
+| 24       | 1          | 7                 | 21  | 12.4                   | 13.4               | 199                  |
 
 The optimal values can vary per GPU and per curve. It is best to try a few combinations until you get the best results for your specific case.

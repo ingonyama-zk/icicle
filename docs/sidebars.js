@@ -21,6 +21,7 @@ module.exports = {
             type: `doc`,
             id: "icicle/arch_overview"
           },
+          collapsed: false,
           items: [
             {
               type: "doc",
@@ -51,7 +52,33 @@ module.exports = {
         },
         {
           type: "category",
-          label: "API",
+          label: "Programmers guide",
+          link: {
+            type: `doc`,
+            id: "icicle/programmers_guide/general",
+          },
+          collapsed: false,
+          items: [
+            {
+              type: "doc",
+              label: "C++",
+              id: "icicle/programmers_guide/cpp",
+            },
+            {
+              type: "doc",
+              label: "Rust",
+              id: "icicle/programmers_guide/rust",
+            },
+            {
+              type: "doc",
+              label: "Go",
+              id: "icicle/programmers_guide/go",
+            }
+          ],
+        },
+        {
+          type: "category",
+          label: "Compute API",
           link: {
             type: `doc`,
             id: 'icicle/primitives/overview',
@@ -70,6 +97,16 @@ module.exports = {
             },
             {
               type: "doc",
+              label: "Vector operations",
+              id: "icicle/primitives/vec_ops",
+            },
+            {
+              type: "doc",
+              label: "Polynomials",
+              id: "icicle/polynomials/overview",
+            },
+            {
+              type: "doc",
               label: "Keccak Hash",
               id: "icicle/primitives/keccak",
             },
@@ -82,11 +119,6 @@ module.exports = {
               type: "doc",
               label: "Poseidon2 Hash",
               id: "icicle/primitives/poseidon2",
-            },
-            {
-              type: "doc",
-              label: "Polynomials",
-              id: "icicle/polynomials/overview",
             },
             {
               type: "category",
@@ -197,32 +229,6 @@ module.exports = {
                 },
               ],
             },
-          ],
-        },
-        {
-          type: "category",
-          label: "Programmers guide",
-          link: {
-            type: `doc`,
-            id: "icicle/programmers_guide/general",
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "doc",
-              label: "C++",
-              id: "icicle/programmers_guide/cpp",
-            },
-            {
-              type: "doc",
-              label: "Rust",
-              id: "icicle/programmers_guide/rust",
-            },
-            {
-              type: "doc",
-              label: "Go",
-              id: "icicle/programmers_guide/go",
-            }
           ],
         },
         {

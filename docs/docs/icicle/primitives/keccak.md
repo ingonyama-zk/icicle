@@ -1,5 +1,7 @@
 # Keccak
 
+TODO update for V3
+
 [Keccak](https://keccak.team/files/Keccak-implementation-3.2.pdf) is a cryptographic hash function designed by Guido Bertoni, Joan Daemen, Michaël Peeters, and Gilles Van Assche. It was selected as the winner of the NIST hash function competition, becoming the basis for the [SHA-3 standard](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
 
 Keccak operates on a message input of any length and produces a fixed-size hash output. The hash function is built upon the sponge construction, which involves absorbing the input data followed by squeezing out the hash value.
