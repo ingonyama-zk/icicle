@@ -1,5 +1,7 @@
 # ECNTT
 
+TODO update for V3
+
 ## ECNTT Method
 
 The `ecntt` function computes the Elliptic Curve Number Theoretic Transform (EC-NTT) or its inverse on a batch of points of a curve.
