@@ -92,7 +92,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "NTT",
+              label: "NTT / ECNTT",
               id: "icicle/primitives/ntt",
             },
             {

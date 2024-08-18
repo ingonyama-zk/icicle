@@ -140,18 +140,14 @@ enum class NTTDir {
    kInverse  /**< Perform inverse NTT (iNTT). */
 };
 ```
-
-:::note
-This api can work for ECNTT too, given correct types, for supported curves.
-:::
-
+### EC-NTT
+This api works for ECNTT too, given correct types, for supported curves.
 
 ### Batch NTT
 
 Batch NTT allows you to compute many NTTs with a single API call. Batch NTT can significantly reduce read/write times as well as computation overhead by executing multiple NTT operations in parallel. Batch mode may also offer better utilization of computational resources (memory and compute).
 
 To compute a batch, set the `batch_size` and `columns_batch` fields of the config struct.
-
 
 ### Rust and Go bindings
 
