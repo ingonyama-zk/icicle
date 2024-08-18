@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-O2 -I. -I../../../include -Wall -Wextra -std=c++11 -pedantic -Wno-long-long
+CFLAGS=-O2 -I. -I../../../include -I../../../../../include -Wall -Wextra -std=c++17 -pedantic -Wno-long-long
 BLAKEBINS=blake2s blake2b blake2sp blake2bp blake2xs blake2xb
 
 blake2s:	blake2s.c

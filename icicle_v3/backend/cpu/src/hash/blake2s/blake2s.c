@@ -20,11 +20,10 @@
 #include <stdint.h>
 #include "hash/blake2/blake2.h"
 #include "hash/blake2/blake2-impl.h"
-#include "hash/hash.h"
+#include "icicle/hash.h"
 
-using namespace hash;
+using namespace icicle;
 
-namespace blake2s_hash {
   static const uint32_t blake2s_IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
                                          0x510E527FUL, 0x9B05688CUL, 0x1F83D9ABUL, 0x5BE0CD19UL};
 
@@ -282,16 +281,22 @@ namespace blake2s_hash {
   }
 #endif
 
-  void Blake2s::run_hash(const BYTE* input, BYTE* output, size_t input_len, size_t output_len) const
+  eIcicleError Blake2s::run_single_hash(const limb_t *input_limbs, limb_t *output_limbs, const HashConfig& config) const 
   {
-    // Call blake2s function
+    const BYTE* input_bytes = reinterpret_cast<const BYTE*>(input_limbs);
+    BYTE* output_bytes = reinterpret_cast<BYTE*>(output_limbs);  
+    std::cout << "output len (bytes): " << total_output_limbs * sizeof(limb_t) <<std::endl;
+    std::cout << "input len (bytes): " << total_input_limbs * sizeof(limb_t) <<std::endl;
+
+  // Call blake2s function
     int result = blake2s(
-      output, output_len, input, input_len,
-      nullptr, // No key used
-      0        // Key length is 0
+      output_bytes, total_output_limbs * sizeof(limb_t), // Output buffer and its size
+      input_bytes, total_input_limbs * sizeof(limb_t),   // Input buffer and its size
+      nullptr,  // No key used
+      0         // Key length is 0
     );
 
     if (result != 0) { throw std::runtime_error("Blake2s hashing failed"); }
+    return eIcicleError::SUCCESS;
   }
 
-} // namespace blake2s_hash

@@ -21,10 +21,9 @@ typedef unsigned long long LONG;
 
 #include <stddef.h>
 #include <stdint.h>
-#include "hash/hash.h"
-using namespace hash;
+#include "icicle/hash.h"
+using namespace icicle;
 
-namespace blake2s_hash {
 #if defined(_MSC_VER)
 #define BLAKE2_PACKED(x) __pragma(pack(push, 1)) x __pragma(pack(pop))
 #else
@@ -36,7 +35,7 @@ namespace blake2s_hash {
 #endif
 
   enum blake2s_constant {
-    BLAKE2S_BLOCKBYTES = 64,
+    BLAKE2S_BLOCKBYTES = 64,  //input length in bytes
     BLAKE2S_OUTBYTES = 32,
     BLAKE2S_KEYBYTES = 32,
     BLAKE2S_SALTBYTES = 8,
@@ -184,12 +183,15 @@ namespace blake2s_hash {
   /* This is simply an alias for blake2b */
   int blake2(void* out, size_t outlen, const void* in, size_t inlen, const void* key, size_t keylen);
 
-  class Blake2s : public Hasher<BYTE, BYTE>
+  class Blake2s : public Hash
   {
   public:
-    void run_hash(const BYTE* input, BYTE* output, size_t input_len, size_t output_len) const override;
-
-    Blake2s() : Hasher<BYTE, BYTE>(BLAKE2S_BLOCKBYTES, BLAKE2S_BLOCKBYTES, BLAKE2S_BLOCKBYTES, 0) {}
+    explicit Blake2s(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES/sizeof(limb_t)) {}
+    eIcicleError run_single_hash(const limb_t *input_limbs, limb_t *output_limbs, const HashConfig& config) const override;
+    eIcicleError run_multiple_hash(const limb_t *input_limbs, limb_t *output_limbs, int nof_hashes, const HashConfig& config, const limb_t *side_input_limbs = nullptr) const override {
+        // Currently just returning success; implement as needed
+        return eIcicleError::SUCCESS;
+    }
   };
 
 #if defined(__cplusplus)
@@ -197,4 +199,3 @@ namespace blake2s_hash {
 #endif
 
 #endif
-}
