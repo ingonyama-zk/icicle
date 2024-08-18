@@ -22,6 +22,19 @@ cpu_vector_add(const Device& device, const T* vec_a, const T* vec_b, uint64_t n,
 
 REGISTER_VECTOR_ADD_BACKEND("CPU", cpu_vector_add<scalar_t>);
 
+/*********************************** ACCUMULATE ***********************************/
+template <typename T>
+eIcicleError
+cpu_vector_accumulate(const Device& device, T* vec_a, const T* vec_b, uint64_t n, const VecOpsConfig& config)
+{
+  for (uint64_t i = 0; i < n; ++i) {
+    vec_a[i] = vec_a[i] + vec_b[i];
+  }
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_VECTOR_ACCUMULATE_BACKEND("CPU", cpu_vector_accumulate<scalar_t>);
+
 /*********************************** SUB ***********************************/
 template <typename T>
 eIcicleError
@@ -115,6 +128,7 @@ REGISTER_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_montgomery<scalar_t>);
 
 #ifdef EXT_FIELD
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CPU", cpu_vector_add<extension_t>);
+REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND("CPU", cpu_vector_accumulate<extension_t>);
 REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CPU", cpu_vector_sub<extension_t>);
 REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CPU", cpu_vector_mul<extension_t>);
 REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND("CPU", cpu_convert_montgomery<extension_t>);
