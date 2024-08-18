@@ -10,6 +10,12 @@ test_blake2s:	test_blake2s.c
 test_blake2s_integ:	test_blake2s_integ.c
 		$(CC) test_blake2s_integ.c blake2s.c -o $@ $(CFLAGS)
 		./test_blake2s_integ
+test_blake2s_seq:	test_blake2s_seq.c
+		$(CC) test_blake2s_seq.c blake2s.c -o $@ $(CFLAGS)
+		./test_blake2s_seq
+test_blake2s_batch:	test_blake2s_batch.c
+		$(CC) test_blake2s_batch.c blake2s.c -o $@ $(CFLAGS)
+		./test_blake2s_batch ./batched_test_vectors.csv
 
 clean:
-	rm -rf *.o $(BLAKEBINS) test_blake2s test_blake2s_integ
+	rm -rf *.o $(BLAKEBINS) test_blake2s test_blake2s_integ test_blake2s_seq test_blake2s_batch

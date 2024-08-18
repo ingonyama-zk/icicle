@@ -96,34 +96,39 @@ namespace hash {
       hash_many((const PreImage*)(input), output, number_of_states, width, output_len, cfg);
     }
 
-    virtual void run_hash_many_kernel(
-      const std::vector<PreImage>& input,
-      std::vector<Image>& output,
-      unsigned int number_of_states,
-      unsigned int input_len,
-      unsigned int output_len) const
+    // virtual void run_hash_many_kernel(
+    //   const std::vector<PreImage>& input,
+    //   std::vector<Image>& output,
+    //   unsigned int number_of_states,
+    //   unsigned int input_len,
+    //   unsigned int output_len) const
+    // {
+    //   throw std::runtime_error("Hash many kernel is not implemented for this hash");
+    // }
+
+    virtual void run_hash(const PreImage* input, Image* output, size_t input_len, size_t output_len) const
     {
       throw std::runtime_error("Hash many kernel is not implemented for this hash");
     }
 
-    virtual void run_hash(
+    void run_hash_many(
       const PreImage* input,
       Image* output,
+      unsigned int batch_size,
       size_t input_len,
-      size_t output_len) const
-    {
-      throw std::runtime_error("Hash many kernel is not implemented for this hash");
-    }
-
-    void hash_many(
-      const PreImage* input,
-      Image* output,
-      unsigned int number_of_states,
-      unsigned int input_len,
-      unsigned int output_len,
+      size_t output_len,
       const HashConfig& cfg) const
     {
-      run_hash_many_kernel(input, output, number_of_states, input_len, output_len);
+      for (unsigned int i = 0; i < batch_size; ++i) {
+        // Call run_hash for each batch
+        run_hash(input, output, input_len, output_len);
+
+        // Move the input pointer forward by the size of the input data for one batch
+        input += input_len * sizeof(PreImage);
+
+        // Move the output pointer forward by the size of the output data for one batch
+        output += output_len * sizeof(Image);
+      }
     }
   };
 } // namespace hash
