@@ -1,51 +1,5 @@
 # NTT
 
-TODO update for V3
-
-## Example
-
-```rust
-use icicle_bn254::curve::{ScalarCfg, ScalarField};
-use icicle_core::{ntt::{self, NTT}, traits::GenerateRandom};
-use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostOrDeviceSlice, stream::CudaStream};
-
-fn main() {
-    let size = 1 << 12; // Define the size of your input, e.g., 2^10
-
-    let icicle_omega = <Bn254Fr as FftField>::get_root_of_unity(
-        size.try_into()
-            .unwrap(),
-    )
-
-    // Generate random inputs
-    println!("Generating random inputs...");
-    let scalars = HostOrDeviceSlice::Host(ScalarCfg::generate_random(size));
-
-    // Allocate memory on CUDA device for NTT results
-    let mut ntt_results: HostOrDeviceSlice<'_, ScalarField> = HostOrDeviceSlice::cuda_malloc(size).expect("Failed to allocate CUDA memory");
-
-    // Create a CUDA stream
-    let stream = CudaStream::create().expect("Failed to create CUDA stream");
-    let ctx = DeviceContext::default(); // Assuming default device context
-    ScalarCfg::initialize_domain(ScalarField::from_ark(icicle_omega), &ctx, true).unwrap();
-
-    // Configure NTT
-    let mut cfg = ntt::NTTConfig::default();
-    cfg.ctx.stream = &stream;
-    cfg.is_async = true; // Set to true for asynchronous execution
-
-    // Execute NTT on device
-    println!("Executing NTT on device...");
-    ntt::ntt(&scalars, ntt::NTTDir::kForward, &cfg, &mut ntt_results).expect("Failed to execute NTT");
-
-    // Synchronize CUDA stream to ensure completion
-    stream.synchronize().expect("Failed to synchronize CUDA stream");
-
-    // Optionally, move results to host for further processing or verification
-    println!("NTT execution complete.");
-}
-```
-
 ## NTT API overview
 
 ```rust
@@ -54,7 +8,7 @@ pub fn ntt<F>(
     dir: NTTDir,
     cfg: &NTTConfig<F>,
     output: &mut HostOrDeviceSlice<F>,
-) -> IcicleResult<()>
+) -> eIcicleResult<()>
 ```
 
 `ntt:ntt` expects:
@@ -69,16 +23,16 @@ The `input` and `output` buffers can be on device or on host. Being on host mean
 ### NTT Config
 
 ```rust
-pub struct NTTConfig<'a, S> {
-    pub ctx: DeviceContext<'a>,
+pub struct NTTConfig<S> {
+    pub stream_handle: IcicleStreamHandle,
     pub coset_gen: S,
     pub batch_size: i32,
     pub columns_batch: bool,
     pub ordering: Ordering,
-    are_inputs_on_device: bool,    
-    are_outputs_on_device: bool,
+    pub are_inputs_on_device: bool,
+    pub are_outputs_on_device: bool,
     pub is_async: bool,
-    pub ntt_algorithm: NttAlgorithm,
+    pub ext: ConfigExtension,
 }
 ```
 
@@ -129,6 +83,41 @@ let custom_config = NTTConfig {
     ntt_algorithm: NttAlgorithm::MixedRadix,
 };
 ```
+
+
+TODO update for V3
+
+#### Example - TODO update for V3
+
+```rust
+// Setting Bn254 points and scalars
+println!("Generating random inputs on host for bn254...");
+let scalars = Bn254ScalarCfg::generate_random(size);
+let mut ntt_results = DeviceVec::<Bn254ScalarField>::device_malloc(size).unwrap();
+
+// constructin NTT domain
+initialize_domain(
+    ntt::get_root_of_unity::<Bn254ScalarField>(
+        size.try_into()
+            .unwrap(),
+    ),
+    &ntt::NTTInitDomainConfig::default(),
+)
+.unwrap();
+
+// Using default config
+let cfg = ntt::NTTConfig::<Bn254ScalarField>::default();
+
+// Computing NTT
+ntt::ntt(
+    HostSlice::from_slice(&scalars),
+    ntt::NTTDir::kForward,
+    &cfg,
+    &mut ntt_results[..],
+)
+.unwrap();
+```
+
 
 ### Modes
 

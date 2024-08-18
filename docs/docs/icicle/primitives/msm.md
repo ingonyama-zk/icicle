@@ -44,7 +44,7 @@ struct MSMConfig {
 };
 ```
 
-### Default Configuration
+#### Default Configuration
 
 You can obtain a default `MSMConfig` using:
 

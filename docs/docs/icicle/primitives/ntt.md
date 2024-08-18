@@ -1,5 +1,7 @@
 # NTT - Number Theoretic Transform
 
+## Overview
+
 The Number Theoretic Transform (NTT) is a variant of the Fourier Transform used over finite fields, particularly those of integers modulo a prime number. NTT operates in a discrete domain and is used primarily in applications requiring modular arithmetic, such as cryptography and polynomial multiplication.
 
 NTT is defined similarly to the Discrete Fourier Transform (DFT), but instead of using complex roots of unity, it uses roots of unity within a finite field. The definition hinges on the properties of the finite field, specifically the existence of a primitive root of unity of order $N$ (where $N$ is typically a power of 2), and the modulo operation is performed with respect to a specific prime number that supports these roots.
@@ -21,18 +23,7 @@ NTT is particularly useful because it enables efficient polynomial multiplicatio
 
 There exists also INTT which is the inverse operation of NTT. INTT can take as input an output sequence of integers from an NTT and reconstruct the original sequence.
 
-## Using NTT
-
-### Supported Bindings
-
-- [Golang](../golang-bindings/ntt.md)
-- [Rust](../rust-bindings/ntt.md)
-
-### Examples
-
-- [Rust API examples](https://github.com/ingonyama-zk/icicle/blob/d84ffd2679a4cb8f8d1ac2ad2897bc0b95f4eeeb/examples/rust/ntt/src/main.rs#L1)
-
-- [C++ API examples](https://github.com/ingonyama-zk/icicle/blob/d84ffd2679a4cb8f8d1ac2ad2897bc0b95f4eeeb/examples/c%2B%2B/ntt/example.cu#L1)
+## C++ API
 
 ### Ordering
 
@@ -52,25 +43,157 @@ The `Ordering` enum defines how inputs and outputs are arranged for the NTT oper
 
 Choosing an algorithm is heavily dependent on your use case. For example Cooley-Tukey will often use `kRN` and Gentleman-Sande often uses `kNR`.
 
-### Modes
+```cpp
+enum class Ordering {
+   kNN, /**< Inputs and outputs are in natural-order. */
+   kNR, /**< Inputs are in natural-order and outputs are in bit-reversed-order. */
+   kRN, /**< Inputs are in bit-reversed-order and outputs are in natural-order. */
+   kRR, /**< Inputs and outputs are in bit-reversed-order. */
+   kNM, /**< Inputs are in natural-order and outputs are in digit-reversed-order. */
+   kMN  /**< Inputs are in digit-reversed-order and outputs are in natural-order. */
+};
+```
 
-NTT also supports two different modes `Batch NTT` and `Single NTT`
+### `NTTConfig` Struct
 
-Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
+The `NTTConfig` struct configures teh NTT operation. It allows customization of parameters like the batch size, column batch computation, order of inputs and outputs etc.
 
-#### Single NTT
+```cpp
+  template <typename S>
+  struct NTTConfig {
+    icicleStreamHandle stream; 
+    S coset_gen;
+    int batch_size;            
+    bool columns_batch; 
+    Ordering ordering;Default value is `Ordering::kNN`.
+    bool are_inputs_on_device;      
+    bool are_outputs_on_device;     
+    bool is_async;                  
+    ConfigExtension* ext = nullptr; 
+  };
+```
 
-Single NTT will launch a single NTT computation.
+#### Default configuration
 
-Choose this mode when your application requires processing individual NTT operations in isolation.
+You can obtain a default `NTTConfig` using:
+```cpp
+template <typename S>
+static NTTConfig<S> default_ntt_config()
+{
+   NTTConfig<S> config = {
+   nullptr,       // stream
+   S::one(),      // coset_gen
+   1,             // batch_size
+   false,         // columns_batch
+   Ordering::kNN, // ordering
+   false,         // are_inputs_on_device
+   false,         // are_outputs_on_device
+   false,         // is_async
+   };
+   return config;
+}
+```
 
-#### Batch NTT Mode
+### NTT domain
+Before computing an NTT, it is mandatory to initialize the roots of unity domain for computing the NTT.
 
-Batch NTT allows you to run many NTTs with a single API call. Batch NTT mode can significantly reduce read/write times as well as computation overhead by executing multiple NTT operations in parallel. Batch mode may also offer better utilization of computational resources (memory and compute).
+:::note
+NTT domain is constructed for a given size $2^N$ and can be used for any NTT of size smaller or equal to $2^N$. For example a domain of size 32 can be used to compute NTTs of size 2,48,16,32.
+:::
 
-## Supported algorithms
+This is done by calling 
+```cpp
+template <typename S>
+eIcicleError ntt_init_domain(const S& primitive_root, const NTTInitDomainConfig& config);
+```
 
-Our NTT implementation supports two algorithms `radix-2` and `mixed-radix`.
+where
+
+```cpp
+struct NTTInitDomainConfig {
+   icicleStreamHandle stream;      /**< Stream for asynchronous execution. */
+   bool is_async;                  /**< True if operation is asynchronous. Default value is false. */
+   ConfigExtension* ext = nullptr; /**< Backend-specific extensions. */
+};
+
+static NTTInitDomainConfig default_ntt_init_domain_config()
+{
+   NTTInitDomainConfig config = {
+   nullptr, // stream
+   false    // is_async
+   };
+   return config;
+}
+```
+
+### `ntt` Function
+
+the `ntt` function computes the NTT operation:
+
+```cpp
+template <typename S, typename E>
+eIcicleError ntt(const E* input, int size, NTTDir dir, const NTTConfig<S>& config, E* output);
+
+// Where NTTDir specific whether it is a forward or inverse transform
+enum class NTTDir {
+   kForward, /**< Perform forward NTT. */
+   kInverse  /**< Perform inverse NTT (iNTT). */
+};
+```
+
+:::note
+This api can work for ECNTT too, given correct types, for supported curves.
+:::
+
+
+### Batch NTT
+
+Batch NTT allows you to compute many NTTs with a single API call. Batch NTT can significantly reduce read/write times as well as computation overhead by executing multiple NTT operations in parallel. Batch mode may also offer better utilization of computational resources (memory and compute).
+
+To compute a batch, set the `batch_size` and `columns_batch` fields of the config struct.
+
+
+### Rust and Go bindings
+
+- [Golang](../golang-bindings/ntt.md)
+- [Rust](../rust-bindings/ntt.md)
+
+### Example
+
+:::note
+This examples demonstartes how to pass configurations to the CUDA backend. This is discussed below.
+:::
+
+```cpp
+auto input = std::make_unique<scalar_t[]>(batch_size * ntt_size);
+auto output = std::make_unique<scalar_t[]>(batch_size * ntt_size);
+initialize_input(ntt_size, batch_size, input.get());
+
+// Initialize NTT domain
+scalar_t basic_root = scalar_t::omega(log_ntt_size);
+auto ntt_init_domain_cfg = default_ntt_init_domain_config();
+// Construct domain with fast twiddles (CUDA backend)
+ConfigExtension backend_cfg_ext;
+backend_cfg_ext.set(
+   CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true); // optionally construct fast_twiddles for CUDA backend
+ntt_init_domain_cfg.ext = &backend_cfg_ext;
+ntt_init_domain(&basic_root, ntt_init_domain_cfg);
+
+// ntt configuration
+NTTConfig<scalar_t> config = default_ntt_config<scalar_t>();
+ConfigExtension ntt_cfg_ext;
+config.ext = &ntt_cfg_ext;
+config.batch_size = batch_size;
+
+// Compute NTT with explicit selection of Mixed-Radix algorithm.
+ntt_cfg_ext.set(CudaBackendConfig::CUDA_NTT_ALGORITHM, CudaBackendConfig::NttAlgorithm::MixedRadix);
+ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get());
+```
+
+### CUDA backend NTT
+This section describes the CUDA ntt implementation and how to use it.
+
+Our CUDA NTT implementation supports two algorithms `radix-2` and `mixed-radix`.
 
 ### Radix 2
 
@@ -157,3 +280,7 @@ Performance really depends on logn size, batch size, ordering, inverse, coset, c
 For this reason we implemented our [heuristic auto-selection](https://github.com/ingonyama-zk/icicle/blob/main/icicle/src/ntt/ntt.cu#L573) which should choose the most efficient algorithm in most cases.
 
 We still recommend you benchmark for your specific use case if you think a different configuration would yield better results.
+
+### Fast twiddles - TODO
+
+TODO how to choose an algorithm

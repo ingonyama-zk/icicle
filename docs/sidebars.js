@@ -182,20 +182,9 @@ module.exports = {
               collapsed: true,
               items: [
                 {
-                  type: "category",
+                  type: "doc",
                   label: "MSM",
-                  link: {
-                    type: `doc`,
-                    id: "icicle/rust-bindings/msm",
-                  },
-                  collapsed: true,
-                  items: [
-                    {
-                      type: "doc",
-                      label: "MSM pre computation",
-                      id: "icicle/rust-bindings/msm-pre-computation",
-                    }
-                  ]
+                  id: "icicle/rust-bindings/msm",
                 },
                 {
                   type: "doc",

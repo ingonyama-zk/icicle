@@ -88,6 +88,30 @@ fn main() {
 
 For batch msm, simply allocate the results array with size corresponding to batch size and set the `are_bases_shared` flag in config struct.
 
+## Precomputationg
+
+Precomputes bases for the multi-scalar multiplication (MSM) by extending each base point with its multiples, facilitating more efficient MSM calculations.
+
+```rust
+/// Returns `Ok(())` if no errors occurred or a `eIcicleError` otherwise.
+pub fn precompute_bases<C: Curve + MSM<C>>(
+    points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+    config: &MSMConfig,
+    output_bases: &mut DeviceSlice<Affine<C>>,
+) -> Result<(), eIcicleError>;
+```
+
+### Parameters
+
+- **`points`**: The original set of affine points (\(P_1, P_2, ..., P_n\)) to be used in the MSM. For batch MSM operations, this should include all unique points concatenated together.
+- **`msm_size`**: The size of a single msm in order to determine optimal parameters.
+- **`cfg`**: The MSM configuration parameters.
+- **`output_bases`**: The output buffer for the extended bases. Its size must be `points.len() * precompute_factor`. This buffer should be allocated on the device for GPU computations.
+
+#### Returns
+
+`Ok(())` if the operation is successful, or an `eIcicleError` error otherwise.
+
 ## Parameters for optimal performance
 
 Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
