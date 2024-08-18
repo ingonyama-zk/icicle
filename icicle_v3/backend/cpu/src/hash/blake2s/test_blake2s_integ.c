@@ -6,19 +6,10 @@
 #include <string>
 #include "hash/blake2/blake2.h"
 #include "hash/blake2/blake2-impl.h"
-#include "hash/hash.h"
+#include "icicle/hash.h"
 #include <chrono>
 
-// namespace blake2s_hash {
-//   extern "C" cudaError_t blake2s_hasher(
-//     BYTE* input, BYTE* output, WORD number_of_blocks, WORD input_block_size, WORD output_block_size, HashConfig&
-//     config)
-//   {
-//     return Blake2s().hash_many(input, output, number_of_blocks, input_block_size, output_block_size, config);
-//   }
-// }
 
-using namespace blake2s_hash;
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -36,19 +27,21 @@ int main(void)
   size_t keylen = 0;    // Length of the key is 0
 
   // The string to hash
-  char* test_string_char = "0123456789";
+  char* test_string_char = "01234567";
   size_t test_string_len = strlen(test_string_char);
   const BYTE* test_string = (BYTE*)test_string_char;
-
+  HashConfig config ; //= default_hash_config();
   // Test simple API
   START_TIMER(blake_ref)
   {
     uint8_t hash[BLAKE2S_OUTBYTES];
     // Pass the empty key with keylen = 0
-    Blake2s().run_hash(test_string, hash, test_string_len, BLAKE2S_OUTBYTES);
+    // virtual eIcicleError run_single_hash(const limb_t *input_limbs, limb_t *output_limbs, const HashConfig& config)
+
+    Blake2s(test_string_len/sizeof(limb_t)).run_single_hash((limb_t*)test_string, (limb_t*)hash, config);
 
     // Expected hash value for "0123456789" with an empty key as a string
-    const char* expected_hash_str = "410381eb72313f23f9f62478d62ec7635f4166ab5e53a20af5c9e8f7ee445de8";
+    const char* expected_hash_str = "0d74da2a1062445822cbc8ec7bf424714e09923b4c1eba0ca2170504f56c4331";
 
     // Convert computed hash to a string
     char computed_hash_str[BLAKE2S_OUTBYTES * 2 + 1]; // Two characters per byte + null terminator
