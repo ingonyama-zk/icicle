@@ -57,7 +57,6 @@ Memory can be allocated and freed on the active device:
 ```cpp
 void* ptr;
 eIcicleError result = icicle_malloc(&ptr, 1024); // Allocate 1024 bytes
-
 eIcicleError result = icicle_free(ptr); // Free the allocated memory
 ```
 
@@ -71,7 +70,6 @@ icicle_create_stream(&stream);
 
 void* ptr;
 eIcicleError result = icicle_malloc_async(&ptr, 1024, stream);
-
 eIcicleError result = icicle_free_async(ptr, stream);
 ```
 
@@ -90,7 +88,6 @@ Set memory to a specific value on the active device, synchronously or asynchrono
 
 ```cpp
 eIcicleError result = icicle_memset(ptr, 0, 1024); // Set 1024 bytes to 0
-
 eIcicleError result = icicle_memset_async(ptr, 0, 1024, stream);
 ```
 
@@ -107,7 +104,7 @@ eIcicleError result = icicle_copy_async(dst, src, size, stream);
 
 ### Explicit Data Transfers
 
-To avoid inference overhead, use explicit copy functions:
+To avoid device-inference overhead, use explicit copy functions:
 
 ```cpp
 eIcicleError result = icicle_copy_to_host(host_dst, device_src, size);
@@ -126,7 +123,6 @@ Streams are used to manage asynchronous operations:
 ```cpp
 icicleStreamHandle stream;
 eIcicleError result = icicle_create_stream(&stream);
-
 eIcicleError result = icicle_destroy_stream(stream);
 ```
 
@@ -138,20 +134,10 @@ Ensure all previous operations on a stream or device are completed before procee
 
 ```cpp
 eIcicleError result = icicle_stream_synchronize(stream);
-
 eIcicleError result = icicle_device_synchronize();
 ```
 
 ## Device Properties
-
-### Querying Device Properties
-
-Retrieve properties of the active device:
-
-```cpp
-DeviceProperties properties;
-eIcicleError result = icicle_get_device_properties(properties);
-```
 
 ### Checking Device Availability
 
@@ -165,9 +151,16 @@ char output[256];
 eIcicleError result = icicle_get_registered_devices(output, sizeof(output));
 ```
 
-## Compute APIs
+### Querying Device Properties
 
-The structure demonstrated in the following examples is common across all compute APIs in Icicle, including NTT, vector operations, ECNTT, and others. For detailed API usage and examples, please refer to the full API documentation.
+Retrieve properties of the active device:
+
+```cpp
+DeviceProperties properties;
+eIcicleError result = icicle_get_device_properties(properties);
+```
+
+## Compute APIs
 
 ### Multi-Scalar Multiplication (MSM) Example
 
@@ -180,9 +173,10 @@ Icicle provides high-performance compute APIs such as the Multi-Scalar Multiplic
 
 using namespace bn254;
 
-int main() {
-  // Load backend and set device
-    icicle_load_backend_from_env_or_default();
+int main()
+{
+  // Load installed backends
+  icicle_load_backend_from_env_or_default();
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
@@ -212,8 +206,9 @@ int main() {
   config.are_scalars_on_device = true;
 
   // Execute the MSM kernel (on the current device)
-  eIcicleError result_code = bn254_msm(scalars_d, points.get(), msm_size, config, &result);
-  
+  eIcicleError result_code = msm(scalars_d, points.get(), msm_size, config, &result);
+  // OR call bn254_msm(scalars_d, points.get(), msm_size, config, &result);
+
   // Free the device memory
   icicle_free(scalars_d);
 
@@ -221,7 +216,7 @@ int main() {
   if (result_code == eIcicleError::SUCCESS) {
     std::cout << "MSM result: " << projective_t::to_affine(result) << std::endl;
   } else {
-    std::cerr << "MSM computation failed with error: " << result_code << std::endl;
+    std::cerr << "MSM computation failed with error: " << get_error_string(result_code) << std::endl;
   }
 
   return 0;
@@ -238,7 +233,6 @@ Here's another example demonstrating polynomial operations using Icicle:
 #include "icicle/polynomials/polynomials.h"
 #include "icicle/api/bn254.h"
 
-using namespace icicle;
 using namespace bn254;
 
 // define bn254Poly to be a polynomial over the scalar field of bn254
@@ -249,22 +243,27 @@ static bn254Poly randomize_polynomial(uint32_t size)
   auto coeff = std::make_unique<scalar_t[]>(size);
   for (int i = 0; i < size; i++)
     coeff[i] = scalar_t::rand_host();
-  return bn254Poly::from_evaluations(coeff.get(), size);
+  return bn254Poly::from_rou_evaluations(coeff.get(), size);
 }
 
-int main() {
+int main()
+{
   // Load backend and set device
   icicle_load_backend_from_env_or_default();
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
-    Device device = {"CUDA", 0}; // GPU-0
+    Device device = {"CUDA", 0};             // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the API call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
-  // randomize polynomials f(x),g(x) over the scalar field of bn254
   int poly_size = 1024;
+
+  // build domain for ntt is required for some polynomial ops that rely on ntt
+  ntt_init_domain(scalar_t::omega(12), default_ntt_init_domain_config());
+
+  // randomize polynomials f(x),g(x) over the scalar field of bn254
   bn254Poly f = randomize_polynomial(poly_size);
   bn254Poly g = randomize_polynomial(poly_size);
 
