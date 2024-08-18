@@ -7,7 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
-// #include <algorithm>
+#include <algorithm>
 
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
@@ -59,9 +59,7 @@ public:
       m_p1 = m_p1 + *m_p2_pointer;
       return;
     case ADD_P1_AND_AFFINE_P1:
-      affine_t processed_base = m_is_aff_montgomery? affine_t::from_montgomery(*m_p2_aff) : *m_p2_aff;
-      processed_base = m_negate_affine? affine_t::neg(processed_base) : processed_base;
-      m_p1 = m_p1 + processed_base;
+      m_p1 = m_p1 + m_p2_affine;
       return;
     }
   }
@@ -74,15 +72,13 @@ public:
    * @param negate_affine - flag to indicate that the base needs to be subbed instead of added.
    * @param is_montgomery - flag to indicate that the base is in Montgomery form and first needs to be converted.
    */
-  void set_phase1_addition_with_affine(const Point& bucket, const affine_t* base, int bucket_idx, 
-    bool negate_affine, bool is_montgomery)
+  // TODO remove description above and comments bellow + variables
+  void set_phase1_addition_with_affine(const Point& bucket, const affine_t base, int bucket_idx)
   {
     m_p1 = bucket;
-    m_p2_aff = base; 
+    m_p2_affine = base; 
     m_return_idx = bucket_idx; 
     m_p2_config = ADD_P1_AND_AFFINE_P1; 
-    m_negate_affine = negate_affine;
-    m_is_aff_montgomery = is_montgomery;
     dispatch();
   }
 
@@ -157,10 +153,7 @@ private:
   // Various configs of the second addend p2, one for each eAddType
   Point m_p2;
   Point const* m_p2_pointer;
-  const affine_t* m_p2_aff;
-
-  bool m_negate_affine = false;  // Flag to negate the added affine base in phase 1
-  bool m_is_aff_montgomery = false; // Flag to convert input base from montgomery
+  affine_t m_p2_affine;
 };
 
 /**
@@ -264,7 +257,7 @@ private:
    * @param base - the point from the input bases
    * @param negate_base - flag to signal the task to subtract base instead of adding it.
    */
-  void phase1_push_addition(const unsigned int task_bkt_idx, const Point bkt, const affine_t* base, bool negate_base);
+  void phase1_push_addition(const unsigned int task_bkt_idx, const Point bkt, const affine_t base);
   /**
    * @brief Handles the final results of phase 1 (after no other planned additions are required).
    * The function also handles the potential collision similarly to push_addition above.
@@ -362,11 +355,16 @@ void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bas
   int carry = 0;
   for (int i = 0; i < msm_size; i++) {
     carry = 0;
-    // TODO multithreaded montgomery once the new TasksManager multi task api is available
-    scalar_t scalar = m_are_scalars_mont ? scalar_t::from_montgomery(scalars[i]) : scalars[i]; // TODO check mont points
+    // Handle required preprocess of scalar
+    scalar_t scalar = m_are_scalars_mont ? scalar_t::from_montgomery(scalars[i]) : scalars[i];
     bool negate_p_and_s = scalar.get_scalar_digit(scalar_t::NBITS - 1, 1) > 0;
     if (negate_p_and_s) scalar = scalar_t::neg(scalar);
     for (int j = 0; j < m_precompute_factor; j++) {
+      // Handle required preprocess of base point
+      affine_t base = m_are_points_mont ? affine_t::from_montgomery(bases[m_precompute_factor * i + j])
+        : bases[m_precompute_factor * i + j];
+      if (negate_p_and_s) { base = affine_t::neg(base); }
+
       for (int k = 0; k < m_num_bms; k++) {
         // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
         if (m_num_bms * j + k > num_additions_per_scalar) { break; }
@@ -383,7 +381,7 @@ void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bas
           // Check for collision in that bucket and either dispatch an addition or store the point accordingly.
           if (m_bkts_occupancy[bkt_idx]) {
             m_bkts_occupancy[bkt_idx] = false;
-            phase1_push_addition(bkt_idx, m_buckets[bkt_idx], &bases[m_precompute_factor * i + j], (carry > 0) != negate_p_and_s );
+            phase1_push_addition(bkt_idx, m_buckets[bkt_idx], carry > 0 ? affine_t::neg(base) : base);
           } else {
             affine_t base = m_are_points_mont ? affine_t::from_montgomery(bases[m_precompute_factor * i + j])
                                        : bases[m_precompute_factor * i + j];
@@ -406,8 +404,7 @@ template <typename Point>
 void Msm<Point>::phase1_push_addition(
   const unsigned int task_bkt_idx,
   const Point bkt,
-  const affine_t* base,
-  bool negate_base)
+  const affine_t base)
 {
   EcAddTask<Point>* task = nullptr;
   while (task == nullptr) 
@@ -431,7 +428,7 @@ void Msm<Point>::phase1_push_addition(
       }
     }
     // After handling the result a new one can be set.
-    task->set_phase1_addition_with_affine(bkt, base, task_bkt_idx, negate_base, m_are_points_mont);
+    task->set_phase1_addition_with_affine(bkt, base, task_bkt_idx);
   }
 }
 
@@ -461,10 +458,16 @@ template <typename Point>
 void Msm<Point>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
 {
   auto& segments = *segments_ptr; // For readability
+  auto& segments = *segments_ptr; // For readability
   auto t = Timer("P2:bm-sums");
   phase2_setup(segments);
   if (m_segment_size > 1)
   {
+    // Send first additions - line additions.
+    for (int i = 0; i < m_num_bms * m_num_bm_segments; i++)
+    {
+      EcAddTask<Point>* task = manager.get_idle_task();
+      BmSumSegment& curr_segment = segments[i]; // For readability
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++)
     {
