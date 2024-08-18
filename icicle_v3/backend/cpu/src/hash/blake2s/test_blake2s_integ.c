@@ -9,8 +9,6 @@
 #include "icicle/hash.h"
 #include <chrono>
 
-
-
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
@@ -30,7 +28,7 @@ int main(void)
   char* test_string_char = "01234567";
   size_t test_string_len = strlen(test_string_char);
   const BYTE* test_string = (BYTE*)test_string_char;
-  HashConfig config ; //= default_hash_config();
+  HashConfig config; //= default_hash_config();
   // Test simple API
   START_TIMER(blake_ref)
   {
@@ -38,7 +36,7 @@ int main(void)
     // Pass the empty key with keylen = 0
     // virtual eIcicleError run_single_hash(const limb_t *input_limbs, limb_t *output_limbs, const HashConfig& config)
 
-    Blake2s(test_string_len/sizeof(limb_t)).run_single_hash((limb_t*)test_string, (limb_t*)hash, config);
+    Blake2s(test_string_len / sizeof(limb_t)).run_single_hash((limb_t*)test_string, (limb_t*)hash, config);
 
     // Expected hash value for "0123456789" with an empty key as a string
     const char* expected_hash_str = "0d74da2a1062445822cbc8ec7bf424714e09923b4c1eba0ca2170504f56c4331";
