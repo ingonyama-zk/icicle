@@ -1,4 +1,4 @@
-// #pragma GCC optimize ("no-strict-aliasing")
+#pragma GCC optimize ("no-strict-aliasing")
 
 #pragma once
 
@@ -293,4 +293,4 @@ namespace host_math {
   }
 } // namespace host_math
 
-// #pragma GCC reset_options
+#pragma GCC reset_options
