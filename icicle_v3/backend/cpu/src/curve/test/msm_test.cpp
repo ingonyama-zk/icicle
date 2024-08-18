@@ -5,13 +5,13 @@
 #include <cassert>
 
 // #define DUMMY_TYPES
-// #define DEBUG_PRINTS
+#define DEBUG_PRINTS
 #define P_MACRO 1000
 
 class DummyScalar
 {
 public:
-  static constexpr unsigned NBITS = 32;
+  static constexpr unsigned NBITS = 10;
 
   unsigned x;
   unsigned p = P_MACRO;
@@ -410,10 +410,10 @@ int main()
   // while (true) 
   {
     // MSM config
-    const int logn = 17;
+    const int logn = 7;
     const int N = 1 << logn;
-    const int batch_size = 1;
-    bool conv_mont = false;
+    const int batch_size = 3;
+    bool conv_mont = true;
 
     auto scalars = std::make_unique<scalar_t[]>(N*batch_size);
     auto bases = std::make_unique<affine_t[]>(N);
@@ -431,7 +431,7 @@ int main()
     auto run = [&](const char* dev_type, projective_t* result, const char* msg, bool measure, int iters, auto msm_func) {
       const int log_p = 2;
       const int c = std::max(logn, 8) - 1;
-      // const int c = 5;
+      // const int c = 4;
       const int pcf = 1 << log_p;
 
       int hw_threads = std::thread::hardware_concurrency();
