@@ -458,16 +458,10 @@ template <typename Point>
 void Msm<Point>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
 {
   auto& segments = *segments_ptr; // For readability
-  auto& segments = *segments_ptr; // For readability
   auto t = Timer("P2:bm-sums");
   phase2_setup(segments);
   if (m_segment_size > 1)
   {
-    // Send first additions - line additions.
-    for (int i = 0; i < m_num_bms * m_num_bm_segments; i++)
-    {
-      EcAddTask<Point>* task = manager.get_idle_task();
-      BmSumSegment& curr_segment = segments[i]; // For readability
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++)
     {

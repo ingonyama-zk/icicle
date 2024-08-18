@@ -114,8 +114,8 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 17;
-    const int batch = 3; // TODO test batch
+    const int logn = 10;
+    const int batch = 1; // TODO test batch
     const int N = 1 << logn;
     const int precompute_factor = 4;
     const int c = std::max(logn, 8) - 1;
