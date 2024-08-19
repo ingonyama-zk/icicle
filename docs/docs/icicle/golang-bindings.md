@@ -1,5 +1,7 @@
 # Golang bindings
 
+TODO update for V3
+
 Golang bindings allow you to use ICICLE as a golang library.
 The source code for all Golang packages can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang).
 
@@ -118,19 +120,19 @@ Replace `/path/to/shared/libs` with the actual path where the shared libraries a
 ### Supported curves and operations
 
 | Operation\Curve | bn254 | bls12_377 | bls12_381 | bw6-761 | grumpkin |
-| --- | :---: | :---: | :---: | :---: | :---: |
-| MSM | ✅ | ✅ | ✅ | ✅ | ✅ |
-| G2  | ✅ | ✅ | ✅ | ✅ | ❌ |
-| NTT | ✅ | ✅ | ✅ | ✅ | ❌ |
-| ECNTT | ✅ | ✅ | ✅ | ✅ | ❌ |
-| VecOps | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Polynomials | ✅ | ✅ | ✅ | ✅ | ❌ |
+| --------------- | :---: | :-------: | :-------: | :-----: | :------: |
+| MSM             |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
+| G2              |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
+| NTT             |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
+| ECNTT           |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
+| VecOps          |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
+| Polynomials     |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
 
 ### Supported fields and operations
 
 | Operation\Field | babybear |
-| --- | :---: |
-| VecOps | ✅ |
-| Polynomials | ✅ |
-| NTT | ✅ |
-| Extension Field | ✅ |
+| --------------- | :------: |
+| VecOps          |    ✅     |
+| Polynomials     |    ✅     |
+| NTT             |    ✅     |
+| Extension Field |    ✅     |

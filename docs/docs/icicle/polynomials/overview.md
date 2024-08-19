@@ -55,20 +55,8 @@ The Polynomial class encapsulates a polynomial, providing a variety of operation
 
 This section outlines how to use the Polynomial API in C++. Bindings for Rust and Go are detailed under the Bindings sections.
 
-### Backend Initialization
-
-Initialization with an appropriate factory is required to configure the computational context and backend.
-
-```cpp
-#include "polynomials/polynomials.h"
-#include "polynomials/cuda_backend/polynomial_cuda_backend.cuh"
-
-// Initialize with a CUDA backend
-Polynomial::initialize(std::make_shared<CUDAPolynomialFactory>());
-```
-
 :::note
-Initialization of a factory must be done per linked curve or field.
+Make sure to set an ICICLE device prior to using the polynomial API.
 :::
 
 ### Construction
@@ -336,7 +324,7 @@ The Polynomial API includes comprehensive support for multi-GPU environments, a 
 Like other components of the icicle framework, the Polynomial API allows explicit setting of the current CUDA device:
 
 ```cpp
-cudaSetDevice(int deviceID);
+icicle_set_device(devA);
 ```
 
 This function sets the active CUDA device. All subsequent operations that allocate or deal with polynomial data will be performed on this device.
@@ -347,10 +335,10 @@ Polynomials are always allocated on the current CUDA device at the time of their
 
 ```cpp
 // Set the device before creating polynomials
-cudaSetDevice(0);
+icicle_set_device(devA);
 Polynomial p1 = Polynomial::from_coefficients(coeffs, size);
 
-cudaSetDevice(1);
+icicle_set_device(devB);
 Polynomial p2 = Polynomial::from_coefficients(coeffs, size);
 ```
 
@@ -360,7 +348,7 @@ When performing operations that result in the creation of new polynomials (such 
 
 ```cpp
 // Ensure both operands are on the same device
-cudaSetDevice(0);
+icicle_set_device(devA);
 auto p3 = p1 + p2; // Throws an exception if p1 and p2 are not on the same device
 ```
 

@@ -24,7 +24,7 @@ extern "C" eIcicleError babybear_ntt(
   const babybear::scalar_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<babybear::scalar_t>& config,
+  const NTTConfig<babybear::scalar_t>& config,
   babybear::scalar_t* output);
 
 extern "C" eIcicleError babybear_ntt_release_domain();
@@ -42,9 +42,6 @@ extern "C" eIcicleError babybearextension_vector_add(
   uint64_t n,
   const VecOpsConfig& config,
   babybear::extension_t* result);
-
-// extern "C" eIcicleError babybear_extension_accumulate_cuda(
-//   const babybear::extension_t* vec_a, const babybear::extension_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError babybear_extension_vector_sub(
   const babybear::extension_t* vec_a,
@@ -67,7 +64,7 @@ extern "C" eIcicleError babybear_extension_ntt(
   const babybear::extension_t* input,
   int size,
   NTTDir dir,
-  NTTConfig<babybear::scalar_t>& config,
+  const NTTConfig<babybear::scalar_t>& config,
   babybear::extension_t* output);
 
 extern "C" void babybear_generate_scalars(babybear::scalar_t* scalars, int size);
@@ -88,9 +85,6 @@ extern "C" eIcicleError babybearvector_add(
   uint64_t n,
   const VecOpsConfig& config,
   babybear::scalar_t* result);
-
-// extern "C" eIcicleError babybear_accumulate_cuda(
-//   const babybear::scalar_t* vec_a, const babybear::scalar_t* vec_b, uint64_t n, const VecOpsConfig& config);
 
 extern "C" eIcicleError babybear_vector_sub(
   const babybear::scalar_t* vec_a,

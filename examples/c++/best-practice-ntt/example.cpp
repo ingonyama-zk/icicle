@@ -8,6 +8,7 @@
 using namespace bn254;
 
 #include "examples_utils.h"
+#include "icicle/backend/ntt_config.h"
 
 void initialize_input(const unsigned ntt_size, const unsigned batch_size, scalar_t* elements)
 {
@@ -41,7 +42,7 @@ int main(int argc, char* argv[])
   auto ntt_init_domain_cfg = default_ntt_init_domain_config();
   // set CUDA backend specific flag for init_domain
   ConfigExtension backend_cfg_ext;
-  backend_cfg_ext.set("fast_twiddles", true);
+  backend_cfg_ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
   ntt_init_domain_cfg.ext = &backend_cfg_ext;
   ICICLE_CHECK(bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg));
 
@@ -78,7 +79,7 @@ int main(int argc, char* argv[])
   config_compute.stream = stream_compute;
   //  backend specific config extension
   ConfigExtension ntt_cfg_ext;
-  ntt_cfg_ext.set("ntt_algorithm", 2); // mixed-radix
+  ntt_cfg_ext.set(CudaBackendConfig::CUDA_NTT_ALGORITHM, CudaBackendConfig::NttAlgorithm::MixedRadix);
   config_compute.ext = &ntt_cfg_ext;
 
   for (int run = 0; run < 10; run++) {
@@ -115,8 +116,8 @@ int main(int argc, char* argv[])
   // Clean-up
   for (int i = 0; i < 2; i++) {
     ICICLE_CHECK(icicle_free(d_vec[i]));
-    delete[](h_inp[i]);
-    delete[](h_out[i]);
+    delete[] (h_inp[i]);
+    delete[] (h_out[i]);
   }
   ICICLE_CHECK(icicle_destroy_stream(stream_compute));
   ICICLE_CHECK(icicle_destroy_stream(stream_d2h));

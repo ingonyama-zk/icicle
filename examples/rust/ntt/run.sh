@@ -5,7 +5,7 @@ set -e
 
 # Function to display usage information
 show_help() {
-  echo "Usage: $0 [-d DEVICE_TYPE] [-b BACKEND_INSTALL_DIR]"
+  echo "Usage: $0 [-d DEVICE_TYPE] [-b ICICLE_BACKEND_INSTALL_DIR]"
   echo
   echo "Options:"
   echo "  -d DEVICE_TYPE                  Specify the device type (default: CPU)"
@@ -55,7 +55,7 @@ if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "./target/release/deps/icicle/lib/backend")
   cargo run --release --features=cuda -- --device-type "${DEVICE_TYPE}"
 else
-  echo "Building icicle without CUDA backend, BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
+  echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="$ICICLE_BACKEND_INSTALL_DIR";
   cargo run --release -- --device-type "${DEVICE_TYPE}"
 fi

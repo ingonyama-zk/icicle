@@ -10,6 +10,7 @@
 
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/log.h"
+#include "icicle/backend/ntt_config.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -25,10 +26,6 @@ static bool VERBOSE = true;
 static int ITERS = 16;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
-
-// TODO Yuval: better include the CUDA configs and use instead of redefine
-#define CUDA_NTT_FAST_TWIDDLES_MODE "fast_twiddles"
-#define CUDA_NTT_ALGORITHM          "ntt_algorithm"
 
 template <typename T>
 class FieldApiTest : public ::testing::Test
@@ -101,6 +98,11 @@ TYPED_TEST(FieldApiTest, vectorOps)
   auto out_main = std::make_unique<TypeParam[]>(N);
   auto out_ref = std::make_unique<TypeParam[]>(N);
 
+  auto vector_accumulate_wrapper =
+    [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
+      return vector_accumulate(a, b, size, config);
+    };
+
   auto run =
     [&](const std::string& dev_type, TypeParam* out, bool measure, auto vec_op_func, const char* msg, int iters) {
       Device dev = {dev_type, 0};
@@ -120,6 +122,17 @@ TYPED_TEST(FieldApiTest, vectorOps)
   // warmup
   // run(s_reference_target, out_ref.get(), false /*=measure*/, 16 /*=iters*/);
   // run(s_main_target, out_main.get(), false /*=measure*/, 1 /*=iters*/);
+
+  // accumulate
+  auto temp_result = std::make_unique<TypeParam[]>(N);
+  auto initial_in_a = std::make_unique<TypeParam[]>(N);
+
+  std::memcpy(initial_in_a.get(), in_a.get(), N * sizeof(TypeParam));
+  run(s_reference_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+  std::memcpy(temp_result.get(), in_a.get(), N * sizeof(TypeParam));
+  std::memcpy(in_a.get(), initial_in_a.get(), N * sizeof(TypeParam));
+  run(s_main_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+  ASSERT_EQ(0, memcmp(in_a.get(), temp_result.get(), N * sizeof(TypeParam)));
 
   // add
   run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
@@ -328,7 +341,7 @@ TYPED_TEST(FieldApiTest, ntt)
     init_domain_config.stream = stream;
     init_domain_config.is_async = false;
     ConfigExtension ext;
-    ext.set(CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
 
     auto config = default_ntt_config<scalar_t>();

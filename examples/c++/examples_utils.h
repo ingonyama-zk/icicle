@@ -12,15 +12,11 @@ using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::p
 // Load and choose backend
 void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
 {
-  if (argc > 2 && 0 != strcmp(argv[2], "")) {
-    const char* backend_install_dir = argv[2];
-    std::cout << "Trying to load and backend device from " << backend_install_dir << std::endl;
-    ICICLE_CHECK(icicle_load_backend(backend_install_dir, true));
-  }
+  icicle_load_backend_from_env_or_default();
 
   const char* selected_device = argc > 1 ? argv[1] : nullptr;
   if (selected_device) {
-    std::cout << "selecting " << selected_device << " device" << std::endl;
+    ICICLE_LOG_INFO << "selecting " << selected_device << " device";
     ICICLE_CHECK(icicle_set_device(selected_device));
     return;
   }
@@ -29,10 +25,10 @@ void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
     Device device = {"CUDA", 0}; // GPU-0
-    std::cout << "setting " << device << std::endl;
+    ICICLE_LOG_INFO << "setting " << device;
     ICICLE_CHECK(icicle_set_device(device));
     return;
   }
 
-  std::cout << "CUDA device not available, falling back to CPU" << std::endl;
+  ICICLE_LOG_INFO << "CUDA device not available, falling back to CPU";
 }

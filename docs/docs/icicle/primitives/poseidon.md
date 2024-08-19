@@ -1,6 +1,10 @@
 # Poseidon
 
-[Poseidon](https://eprint.iacr.org/2019/458.pdf) is a popular hash in the ZK ecosystem primarily because it's optimized to work over large prime fields, a common setting for ZK proofs, thereby minimizing the number of multiplicative operations required.
+TODO update for V3
+
+TODO update for V3
+
+[Poseidon](https://eprint.iacr.org/2019/458.pdf) is a popular hash in the ZK ecosystem primarily because its optimized to work over large prime fields, a common setting for ZK proofs, thereby minimizing the number of multiplicative operations required.
 
 Poseidon has also been specifically designed to be efficient when implemented within ZK circuits, Poseidon uses far less constraints compared to other hash functions like Keccak or SHA-256 in the context of ZK circuits.
 

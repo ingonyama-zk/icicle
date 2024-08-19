@@ -63,6 +63,19 @@ namespace icicle {
   eIcicleError vector_add(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
+   * @brief Accumulates the elements of two vectors element-wise and stores the result in the first vector.
+   *
+   * @tparam T Type of the elements in the vectors.
+   * @param vec_a Input/output vector `a`. The result will be written back to this vector.
+   * @param vec_b Input vector `b`.
+   * @param size Number of elements in the vectors.
+   * @param config Configuration for the operation.
+   * @return eIcicleError Error code indicating success or failure.
+   */
+  template <typename T>
+  eIcicleError vector_accumulate(T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config);
+
+  /**
    * @brief Subtracts vector `b` from vector `a` element-wise.
    *
    * @tparam T Type of the elements in the vectors.

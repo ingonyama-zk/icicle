@@ -11,11 +11,14 @@ include(cmake/curve.cmake)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# TODO Yuval remove those flags. Frontend will always have everything.
+# CUDA backend may do it for faster dev.
 option(NTT "Build NTT" ON)
 option(MSM "Build MSM" ON)
 option(EXT_FIELD "Build extension field" OFF)
 option(ECNTT "Build ECNTT" OFF)
 option(G2 "Build G2" OFF)
+# REMOVE END
 option(BUILD_TESTS "Build unit tests" OFF)
 option(CPU_BACKEND "Build CPU backend" ON)
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend, local path or OFF to disable pulling" OFF)
