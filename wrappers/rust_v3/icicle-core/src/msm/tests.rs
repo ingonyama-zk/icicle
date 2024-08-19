@@ -193,7 +193,7 @@ where
     cfg.stream_handle = *stream;
     cfg.is_async = true;
     cfg.ext
-        .set_int(LARGE_BUCKET_FACTOR, 5);
+        .set_int(CUDA_MSM_LARGE_BUCKET_FACTOR, 5);
     cfg.c = 4;
     runtime::warmup(&stream).unwrap();
     stream
@@ -276,7 +276,7 @@ where
     cfg.stream_handle = *stream;
     cfg.is_async = true;
     cfg.ext
-        .set_int(LARGE_BUCKET_FACTOR, 5);
+        .set_int(CUDA_MSM_LARGE_BUCKET_FACTOR, 5);
     cfg.c = 4;
     runtime::warmup(&stream).unwrap();
     stream
