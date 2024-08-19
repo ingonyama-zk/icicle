@@ -18,7 +18,7 @@ using namespace icicle;
 class DeviceApiTest : public ::testing::Test
 {
 public:
-  static inline std::vector<std::string> s_regsitered_devices;
+  static inline std::vector<std::string> s_registered_devices;
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
@@ -26,8 +26,8 @@ public:
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif
     icicle_load_backend_from_env_or_default();
-    s_regsitered_devices = get_registered_devices_list();
-    ASSERT_GT(s_regsitered_devices.size(), 0);
+    s_registered_devices = get_registered_devices_list();
+    ASSERT_GT(s_registered_devices.size(), 0);
   }
   static void TearDownTestSuite() {}
 
@@ -46,7 +46,7 @@ TEST_F(DeviceApiTest, MemoryCopySync)
 {
   int input[2] = {1, 2};
 
-  for (const auto& device_type : s_regsitered_devices) {
+  for (const auto& device_type : s_registered_devices) {
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
@@ -65,7 +65,7 @@ TEST_F(DeviceApiTest, MemoryCopySync)
 TEST_F(DeviceApiTest, MemoryCopyAsync)
 {
   int input[2] = {1, 2};
-  for (const auto& device_type : s_regsitered_devices) {
+  for (const auto& device_type : s_registered_devices) {
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
@@ -87,7 +87,7 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
 TEST_F(DeviceApiTest, CopyDeviceInference)
 {
   int input[2] = {1, 2};
-  for (const auto& device_type : s_regsitered_devices) {
+  for (const auto& device_type : s_registered_devices) {
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
@@ -105,7 +105,7 @@ TEST_F(DeviceApiTest, CopyDeviceInference)
 TEST_F(DeviceApiTest, Memest)
 {
   char expected[2] = {1, 1};
-  for (const auto& device_type : s_regsitered_devices) {
+  for (const auto& device_type : s_registered_devices) {
     char host_mem[2] = {0, 0};
 
     // icicle::Device dev = {device_type, 0};
@@ -123,7 +123,7 @@ TEST_F(DeviceApiTest, Memest)
 
 TEST_F(DeviceApiTest, ApiError)
 {
-  for (const auto& device_type : s_regsitered_devices) {
+  for (const auto& device_type : s_registered_devices) {
     icicle::Device dev = {device_type, 0};
     icicle_set_device(dev);
     void* dev_mem = nullptr;
@@ -149,7 +149,7 @@ TEST_F(DeviceApiTest, AvailableMemory)
 
 TEST_F(DeviceApiTest, InvalidDevice)
 {
-  for (const auto& device_type : s_regsitered_devices) {
+  for (const auto& device_type : s_registered_devices) {
     icicle::Device dev = {device_type, 10}; // no such device-id thus expecting an error
     ASSERT_EQ(eIcicleError::INVALID_DEVICE, icicle_set_device(dev));
   }
