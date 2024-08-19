@@ -45,7 +45,6 @@ public:
 
     const bool is_cuda_registered = is_device_registered("CUDA");
     const bool is_cpu_registered = is_device_registered("CPU");
-    const bool is_cpu_ref_registered = is_device_registered("CPU_REF");
     // if cuda is available, want main="CUDA", ref="CPU", otherwise both are CPU.
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_ref_target = "CPU";
@@ -63,53 +62,6 @@ public:
       arr[i] = i < 1000 ? T::rand_host() : arr[i - 1000];
   }
 
-  template <typename T>
-  bool read_inputs(T* arr, const int arr_size, const std::string fname)
-  {
-    std::ifstream in_file(fname);
-    bool status = in_file.is_open();
-    if (status) {
-      for (int i = 0; i < arr_size; i++) {
-        in_file.read(reinterpret_cast<char*>(&arr[i]), sizeof(T));
-      }
-      in_file.close();
-    }
-    return status;
-  }
-
-  template <typename T>
-  void store_inputs(T* arr, const int arr_size, const std::string fname)
-  {
-    std::ofstream out_file(fname);
-    if (!out_file.is_open()) {
-      std::cerr << "Failed to open " << fname << " for writing.\n";
-      return;
-    }
-    for (int i = 0; i < arr_size; i++) {
-      out_file.write(reinterpret_cast<char*>(&arr[i]), sizeof(T));
-    }
-    out_file.close();
-  }
-
-  template <typename A, typename P>
-  void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
-  {
-    // Scalars
-    std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n * batch_size) + ".dat";
-    if (!read_inputs<scalar_t>(scalars, n * batch_size, scalar_file)) {
-      std::cout << "Generating scalars.\n";
-      scalar_t::rand_host_many(scalars, n * batch_size);
-      store_inputs<scalar_t>(scalars, n * batch_size, scalar_file);
-    }
-    // Bases
-    std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
-    if (!read_inputs<A>(bases, n, base_file)) {
-      std::cout << "Generating bases.\n";
-      P::rand_host_many(bases, n);
-      store_inputs<A>(bases, n, base_file);
-    }
-  }
-
   template <typename A, typename P>
   void MSM_test()
   {
@@ -125,12 +77,8 @@ public:
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
 
-#if 0
-    get_inputs<A,P>(bases.get(), scalars.get(), N, batch);
-#else
     scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
     P::rand_host_many(bases.get(), N);
-#endif
 
     auto result_main = std::make_unique<P[]>(batch);
     auto result_ref = std::make_unique<P[]>(batch);
@@ -142,15 +90,13 @@ public:
       std::ostringstream oss;
       oss << dev_type << " " << msg;
 
-      auto config = default_msm_config();      
-      config.are_bases_shared = true;
+      auto config = default_msm_config();
+      config.c = c;
       config.batch_size = batch;
-      config.are_points_montgomery_form = false;
-      config.are_scalars_montgomery_form = false;
+      config.are_bases_shared = true;
       config.precompute_factor = precompute_factor;
 
       ConfigExtension ext;
-      ext.set("c", c);
       ext.set("n_threads", n_threads);
       config.ext = &ext;
 
@@ -158,17 +104,7 @@ public:
       // TODO: fix CUDA backend to support host memory too.
       A* precomp_bases = nullptr;
       ICICLE_CHECK(icicle_malloc((void**)&precomp_bases, N * precompute_factor * sizeof(A)));
-#if 0                                  
-      std::string precomp_fname = "build/generated_data/precomp_N" + std::to_string(N) + "_precompute_factor" +
-                                  std::to_string(precompute_factor) + ".dat";
-      if (!read_inputs<A>(precomp_bases.get(), N * precompute_factor, precomp_fname)) {
-        std::cout << "Precomputing bases." << '\n';
-        ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
-        store_inputs<A>(precomp_bases.get(), N * precompute_factor, precomp_fname);
-      }
-#else 
-  ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));
-#endif
+      ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));
 
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
@@ -177,9 +113,9 @@ public:
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
       ICICLE_CHECK(icicle_free(precomp_bases));
     };
-    
-    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);    
-    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);    
+
+    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
       ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
       ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));

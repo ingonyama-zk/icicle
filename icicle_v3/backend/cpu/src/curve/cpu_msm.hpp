@@ -136,7 +136,7 @@ public:
     dispatch();
   }
 
-  P m_p1;             // One of the addends, and holds the addition result afterwards
+  P m_p1;                 // One of the addends, and holds the addition result afterwards
   int m_return_idx;       // Idx allowing manager to figure out where the result belong to.
   bool m_is_line = false; // Indicator for phase 2 sums between line sum and triangle sum.
 
@@ -188,25 +188,21 @@ public:
    * the results array.
    */
   void run_msm(
-    const scalar_t* scalars,
-    const A* bases,
-    const unsigned int msm_size,
-    const unsigned int batch_idx,
-    P* results);
+    const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
 private:
-  TasksManager<EcAddTask<A,P>> manager; // Tasks manager for multithreading
+  TasksManager<EcAddTask<A, P>> manager; // Tasks manager for multithreading
 
   const unsigned int m_c;                 // Pipenger constant
   const unsigned int m_num_bkts;          // Number of buckets in each bucket module
   const unsigned int m_precompute_factor; // multiplication of Ps already calculated trading memory for performance
   const unsigned int m_num_bms;           // Number of bucket modules (windows in Pipenger's algorithm)
   const bool m_are_scalars_mont;          // Are the input scalars in Montgomery representation
-  const bool m_are_Ps_mont;           //  Are the input Ps in Montgomery representation
+  const bool m_are_Ps_mont;               //  Are the input Ps in Montgomery representation
   const int m_batch_size;
 
   // Phase 1 members
-  std::vector<P> m_buckets;       // Vector of all buckets required for phase 1 (All bms in order)
+  std::vector<P> m_buckets;           // Vector of all buckets required for phase 1 (All bms in order)
   std::vector<bool> m_bkts_occupancy; // Boolean vector indicating if the corresponding bucket is occupied
 
   // Phase 2 members
@@ -298,7 +294,7 @@ private:
 };
 
 template <typename A, typename P>
-Msm<A,P>::Msm(const MSMConfig& config)
+Msm<A, P>::Msm(const MSMConfig& config)
     : manager(
         config.ext->get<int>("n_threads") > 0 ? config.ext->get<int>("n_threads")
                                               : std::thread::hardware_concurrency()),
@@ -322,12 +318,8 @@ Msm<A,P>::Msm(const MSMConfig& config)
 }
 
 template <typename A, typename P>
-void Msm<A,P>::run_msm(
-  const scalar_t* scalars,
-  const A* bases,
-  const unsigned int msm_size,
-  const unsigned int batch_idx,
-  P* results)
+void Msm<A, P>::run_msm(
+  const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results)
 {
   bucket_accumulator(scalars, bases, msm_size);
   auto segments = std::make_shared<std::vector<BmSumSegment>>(m_num_bms * m_num_bm_segments);
@@ -337,7 +329,7 @@ void Msm<A,P>::run_msm(
 }
 
 template <typename A, typename P>
-void Msm<A,P>::bucket_accumulator(const scalar_t* scalars, const A* bases, const unsigned int msm_size)
+void Msm<A, P>::bucket_accumulator(const scalar_t* scalars, const A* bases, const unsigned int msm_size)
 {
   const int coeff_bit_mask_no_sign_bit = m_num_bkts - 1;
   const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
@@ -353,8 +345,8 @@ void Msm<A,P>::bucket_accumulator(const scalar_t* scalars, const A* bases, const
     if (negate_p_and_s) scalar = scalar_t::neg(scalar);
     for (int j = 0; j < m_precompute_factor; j++) {
       // Handle required preprocess of base P
-      A base = m_are_Ps_mont ? A::from_montgomery(bases[m_precompute_factor * i + j])
-                                        : bases[m_precompute_factor * i + j];
+      A base =
+        m_are_Ps_mont ? A::from_montgomery(bases[m_precompute_factor * i + j]) : bases[m_precompute_factor * i + j];
       if (negate_p_and_s) { base = A::neg(base); }
 
       for (int k = 0; k < m_num_bms; k++) {
@@ -378,7 +370,7 @@ void Msm<A,P>::bucket_accumulator(const scalar_t* scalars, const A* bases, const
             phase1_push_addition(bkt_idx, m_buckets[bkt_idx], carry > 0 ? A::neg(base) : base);
           } else {
             A base = m_are_Ps_mont ? A::from_montgomery(bases[m_precompute_factor * i + j])
-                                              : bases[m_precompute_factor * i + j];
+                                   : bases[m_precompute_factor * i + j];
             if (negate_p_and_s) { base = A::neg(base); }
             m_bkts_occupancy[bkt_idx] = true;
             m_buckets[bkt_idx] = carry > 0 ? P::neg(P::from_affine(base)) : P::from_affine(base);
@@ -395,9 +387,9 @@ void Msm<A,P>::bucket_accumulator(const scalar_t* scalars, const A* bases, const
 }
 
 template <typename A, typename P>
-void Msm<A,P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base)
+void Msm<A, P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base)
 {
-  EcAddTask<A,P>* task = nullptr;
+  EcAddTask<A, P>* task = nullptr;
   while (task == nullptr) {
     // Use the search for an available (idle or completed) task as an opportunity to handle the existing results.
     task = manager.get_idle_or_completed_task();
@@ -419,9 +411,9 @@ void Msm<A,P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt
 }
 
 template <typename A, typename P>
-void Msm<A,P>::phase1_wait_for_completion()
+void Msm<A, P>::phase1_wait_for_completion()
 {
-  EcAddTask<A,P>* task = manager.get_completed_task();
+  EcAddTask<A, P>* task = manager.get_completed_task();
   while (task != nullptr) {
     // Check for collision in the destination bucket, and chain and addition / store result accordingly.
     if (m_bkts_occupancy[task->m_return_idx]) {
@@ -437,14 +429,14 @@ void Msm<A,P>::phase1_wait_for_completion()
 }
 
 template <typename A, typename P>
-void Msm<A,P>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
+void Msm<A, P>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
 {
   auto& segments = *segments_ptr; // For readability
   phase2_setup(segments);
   if (m_segment_size > 1) {
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
-      EcAddTask<A,P>* task = manager.get_idle_task();
+      EcAddTask<A, P>* task = manager.get_idle_task();
       BmSumSegment& curr_segment = segments[i]; // For readability
 
       int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
@@ -455,7 +447,7 @@ void Msm<A,P>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
     // Loop until all line/tri sums are done.
     int done_segments = 0;
     while (done_segments < m_num_bms * m_num_bm_segments) {
-      EcAddTask<A,P>* task = manager.get_completed_task();
+      EcAddTask<A, P>* task = manager.get_completed_task();
       BmSumSegment& curr_segment = segments[task->m_return_idx]; // For readability
 
       if (task->m_is_line) {
@@ -499,7 +491,7 @@ void Msm<A,P>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
 }
 
 template <typename A, typename P>
-void Msm<A,P>::phase2_setup(std::vector<BmSumSegment>& segments)
+void Msm<A, P>::phase2_setup(std::vector<BmSumSegment>& segments)
 {
   // Init values of partial (line) and total (triangle) sum
   for (int i = 0; i < m_num_bms; i++) {
@@ -534,20 +526,19 @@ void Msm<A,P>::phase2_setup(std::vector<BmSumSegment>& segments)
 }
 
 template <typename A, typename P>
-void Msm<A,P>::final_accumulator(
-  std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr, int idx_in_batch, P* result)
+void Msm<A, P>::final_accumulator(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr, int idx_in_batch, P* result)
 {
   // If it isn't the last MSM in the batch - run phase 3 on a separate thread to start utilizing the tasks manager on
   // the next phase 1.
   if (idx_in_batch == m_batch_size - 1) {
     phase3_thread(segments_ptr, result);
   } else {
-    m_p3_threads[idx_in_batch] = std::thread(&Msm<A,P>::phase3_thread, this, segments_ptr, result);
+    m_p3_threads[idx_in_batch] = std::thread(&Msm<A, P>::phase3_thread, this, segments_ptr, result);
   }
 }
 
 template <typename A, typename P>
-void Msm<A,P>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segments_ptr, P* result)
+void Msm<A, P>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segments_ptr, P* result)
 {
   auto& segments = *segments_ptr; // For readability
   for (int i = 0; i < m_num_bms; i++) {
@@ -619,18 +610,13 @@ eIcicleError not_supported(const MSMConfig& conf)
  */
 template <typename A, typename P>
 eIcicleError cpu_msm(
-  const Device& device,
-  const scalar_t* scalars,
-  const A* bases,
-  int msm_size,
-  const MSMConfig& config,
-  P* results)
+  const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  Msm<A,P>* msm = new Msm<A,P>(config);
+  Msm<A, P>* msm = new Msm<A, P>(config);
 
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
-  const unsigned int c = config.ext->get<int>("c");
+  const unsigned int c = config.c;
   const unsigned int precompute_factor = config.precompute_factor;
   const int num_bms = ((scalar_t::NBITS - 1) / (precompute_factor * c)) + 1;
 
@@ -664,7 +650,7 @@ eIcicleError cpu_msm_precompute_bases(
   int precompute_factor = config.precompute_factor;
   bool is_mont = config.are_points_montgomery_form;
   // bool is_mont=false;
-  const unsigned int c = config.ext->get<int>("c");
+  const unsigned int c = config.c;
   const unsigned int num_bms_no_precomp = (scalar_t::NBITS - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {
@@ -674,8 +660,7 @@ eIcicleError cpu_msm_precompute_bases(
       for (int k = 0; k < shift; k++) {
         point = P::dbl(point);
       }
-      output_bases[precompute_factor * i + j] =
-        is_mont ? A::to_montgomery(P::to_affine(point)) : P::to_affine(point);
+      output_bases[precompute_factor * i + j] = is_mont ? A::to_montgomery(P::to_affine(point)) : P::to_affine(point);
     }
   }
   return eIcicleError::SUCCESS;
