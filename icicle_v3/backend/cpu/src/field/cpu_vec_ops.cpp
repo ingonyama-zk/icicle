@@ -65,7 +65,7 @@ public:
     m_output = output;
     dispatch();
   }
-// Set the operands to execute a task of 1 operand and dispatch the task
+  // Set the operands to execute a task of 1 operand and dispatch the task
   void send_intermidiate_res_task(VecOperation operation, const int nof_operations, const T* op_a)
   {
     m_operation = operation;
@@ -242,7 +242,7 @@ private:
   int m_bit_size;           // use in bitrev operation
   uint64_t m_stride;        // used in slice operation
   T* m_output;              // pointer to the output. Can be a vector or scalar pointer
-  T  m_intermidiate_res;    // pointer to the output. Can be a vector or scalar pointer
+  T m_intermidiate_res;     // pointer to the output. Can be a vector or scalar pointer
 };
 
 #define NOF_OPERATIONS_PER_TASK 512
@@ -354,8 +354,9 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
       *output = output_initialized ? task_p->m_intermidiate_res : *output + task_p->m_intermidiate_res;
     }
     if (vec_s_offset < n) {
-      task_p->send_intermidiate_res_task(VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
-      vec_s_offset += NOF_OPERATIONS_PER_TASK;  
+      task_p->send_intermidiate_res_task(
+        VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
+      vec_s_offset += NOF_OPERATIONS_PER_TASK;
     }
   } while (task_p != nullptr);
   return eIcicleError::SUCCESS;
@@ -378,8 +379,9 @@ eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n
       *output = output_initialized ? task_p->m_intermidiate_res : *output * task_p->m_intermidiate_res;
     }
     if (vec_s_offset < n) {
-      task_p->send_intermidiate_res_task(VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
-      vec_s_offset += NOF_OPERATIONS_PER_TASK;  
+      task_p->send_intermidiate_res_task(
+        VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
+      vec_s_offset += NOF_OPERATIONS_PER_TASK;
     }
   } while (task_p != nullptr);
   return eIcicleError::SUCCESS;
