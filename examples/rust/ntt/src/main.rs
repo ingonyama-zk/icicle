@@ -23,12 +23,8 @@ struct Args {
 
 // Load backend and set device
 fn try_load_and_set_backend_device(args: &Args) {
-    if !args
-        .backend_install_dir
-        .is_empty()
-    {
-        println!("Trying to load backend from {}", &args.backend_install_dir);
-        icicle_runtime::runtime::load_backend(&args.backend_install_dir).unwrap();
+    if args.device_type != "CPU" {
+        icicle_runtime::runtime::load_backend_from_env_or_default().unwrap();
     }
     println!("Setting device {}", args.device_type);
     let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);

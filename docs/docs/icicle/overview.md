@@ -1,58 +1,77 @@
-# What is ICICLE?
+---
+slug: /icicle/overview
+title: ICICLE Overview
+---
+
+# ICICLE Overview
+
+## What is ICICLE?
 
 [![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
 
-[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library for ZK using GPUs. ICICLE implements blazing fast cryptographic primitives such as EC operations, MSM, NTT, Poseidon hash and more on GPU.
+[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library designed to accelerate zero-knowledge proofs (ZKPs) using multiple compute backends, including GPUs, CPUs, and potentially other platforms. ICICLE's key strength lies in its ability to implement blazing-fast cryptographic primitives, enabling developers to significantly reduce proving times with minimal effort.
 
-ICICLE allows developers with minimal GPU experience to effortlessly accelerate their ZK application; from our experiments, even the most naive implementation may yield 10X improvement in proving times.
+## Key Features
 
-ICICLE has been used by many leading ZK companies such as [Celer Network](https://github.com/celer-network), [Gnark](https://github.com/Consensys/gnark) and others to accelerate their ZK proving pipeline.
+- **Acceleration of “zk” Math:** ICICLE provides optimized implementations for cryptographic primitives crucial to zero-knowledge proofs, such as elliptic curve operations, MSM, NTT, Poseidon hash, and more.
+- **Set of Libraries:** ICICLE includes a comprehensive set of libraries supporting various fields, curves, and other cryptographic needs.
+- **Cross-Language Support:** Available bindings for C++, Rust, Go, and potentially Python make ICICLE accessible across different development environments.
+- **Backend Agnosticism:** Develop on CPU and deploy on various backends, including GPUs, specialized hardware, and other emerging platforms, depending on your project's needs.
+- **Extensibility:** Designed for easy integration and extension, allowing you to build and deploy custom backends and cryptographic primitives.
 
-## Dont have access to a GPU?
+## Evolution from V2 to V3
 
-We understand that not all developers have access to a GPU and we don't want this to limit anyone from developing with ICICLE.
-Here are some ways we can help you gain access to GPUs:
+Originally, ICICLE was focused solely on GPU acceleration. With the release of V3, ICICLE now supports multiple backends, making it more versatile and adaptable to different hardware environments. Whether you're leveraging the power of GPUs or exploring other compute platforms, ICICLE V3 is designed to fit your needs.
 
-:::note
+## Who Uses ICICLE?
 
-If none of the following options suit your needs, contact us on [telegram](https://t.me/RealElan) for assistance. We're committed to ensuring that a lack of a GPU doesn't become a bottleneck for you. If you need help with setup or any other issues, we're here to help you.
+ICICLE has been successfully integrated and used by leading ZK companies such as [Celer Network](https://github.com/celer-network), [Gnark](https://github.com/Consensys/gnark), and others to enhance their ZK proving pipelines.
 
-:::
+## Don't Have Access to a GPU?
+
+We understand that not all developers have access to GPUs, but this shouldn't limit your ability to develop with ICICLE. Here are some ways to gain access to GPUs.
 
 ### Grants
 
-At Ingonyama we are interested in accelerating the progress of ZK and cryptography. If you are an engineer, developer or an academic researcher we invite you to checkout [our grant program](https://www.ingonyama.com/blog/icicle-for-researchers-grants-challenges). We will give you access to GPUs and even pay you to do your dream research!
+At Ingonyama, we are committed to accelerating progress in ZK and cryptography. If you're an engineer, developer, or academic researcher, we invite you to check out [our grant program](https://www.ingonyama.com/blog/icicle-for-researchers-grants-challenges). We can provide access to GPUs and even fund your research.
 
 ### Google Colab
 
-This is a great way to get started with ICICLE instantly. Google Colab offers free GPU access to a NVIDIA T4 instance with 16 GB of memory which should be enough for experimenting and even prototyping with ICICLE.
+Google Colab is a great platform to start experimenting with ICICLE instantly. It offers free access to NVIDIA T4 GPUs, which are more than sufficient for experimenting and prototyping with ICICLE.
 
-For an extensive guide on how to setup Google Colab with ICICLE refer to [this article](./colab-instructions.md).
+For a detailed guide on setting up Google Colab with ICICLE, refer to [this article](./colab-instructions.md).
 
 ### Vast.ai
 
-[Vast.ai](https://vast.ai/) is a global GPU marketplace where you can rent many different types of GPUs by the hour for [competitive pricing](https://vast.ai/pricing). They provide on-demand and interruptible rentals depending on your need or use case; you can learn more about their rental types [here](https://vast.ai/faq#rental-types).
+[Vast.ai](https://vast.ai/) offers a global GPU marketplace where you can rent different types of GPUs by the hour at competitive prices. Whether you need on-demand or interruptible rentals, Vast.ai provides flexibility for various use cases. Learn more about their rental options [here](https://vast.ai/faq#rental-types).
 
-## What can you do with ICICLE?
+## What Can You Do with ICICLE?
 
-[ICICLE](https://github.com/ingonyama-zk/icicle) can be used in the same way you would use any other cryptography library. While developing and integrating ICICLE into many proof systems, we found some use case categories:
+[ICICLE](https://github.com/ingonyama-zk/icicle) can be used similarly to any other cryptography library. Through various integrations, ICICLE has proven effective in multiple use cases:
 
-### Circuit developers
+### Circuit Developers
 
-If you are a circuit developer and are experiencing bottlenecks while running your circuits, an ICICLE integrated prover may be the solution.
+If you're a circuit developer facing bottlenecks, integrating ICICLE into your prover may solve performance issues. ICICLE is integrated into popular ZK provers like [Gnark](https://github.com/Consensys/gnark) and [Halo2](https://github.com/zkonduit/halo2), enabling immediate GPU acceleration without additional code changes.
 
-ICICLE has been integrated into a number of popular ZK provers including [Gnark prover](https://github.com/Consensys/gnark) and [Halo2](https://github.com/zkonduit/halo2). This means that you can enjoy GPU acceleration for your existing circuits immediately without writing a single line of code by simply switching on the GPU prover flag!
+### Integrating into Existing ZK Provers
 
-### Integrating into existing ZK provers
+ICICLE allows for selective acceleration of specific parts of your ZK prover, helping to address specific bottlenecks without requiring a complete rewrite of your prover.
 
-From our collaborations we have learned that its possible to accelerate a specific part of your prover to solve for a specific bottleneck.
+### Developing Your Own ZK Provers
 
-ICICLE can be used to accelerate specific parts of your prover without completely rewriting your ZK prover.
+For those building ZK provers from the ground up, ICICLE is an ideal tool for creating optimized and scalable provers. The ability to scale across multiple machines within a data center is a key advantage when using ICICLE with GPUs.
 
-### Developing your own ZK provers
+### Developing Proof of Concepts
 
-If your goal is to build a ZK prover from the ground up, ICICLE is an ideal tool for creating a highly optimized and scalable ZK prover. A key benefit of using GPUs with ICICLE is the ability to scale your ZK prover efficiently across multiple machines within a data center.
+ICICLE is also well-suited for prototyping and developing small-scale projects. With bindings for Golang and Rust, you can easily create a library implementing specific cryptographic primitives, such as a KZG commitment library, using ICICLE.
 
-### Developing proof of concepts
+---
 
-ICICLE is also ideal for developing small prototypes. ICICLE has Golang and Rust bindings so you can easily develop a library implementing a specific primitive using ICICLE. An example would be develop a KZG commitment library using ICICLE.
+## Get Started with ICICLE
+
+Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md), [Getting Started Guide](./getting_started.md) and the [programmers guide](./programmers_guide/general.md) to learn how to integrate, deploy, and extend ICICLE across different backends.
+
+If you have any questions or need support, feel free to reach out on [Discord] or [GitHub](https://github.com/ingonyama-zk). We're here to help you accelerate your ZK development with ICICLE.
+
+[ICICLE-OVERVIEW]: ./icicle/overview.md
+[Discord]: https://discord.gg/6vYrE7waPj

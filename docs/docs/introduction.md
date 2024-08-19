@@ -10,32 +10,26 @@ Ingonyama is a next-generation semiconductor company, focusing on Zero-Knowledge
 
 Currently our flagship products are:
 
-- **ICICLE**:
-  [ICICLE](https://github.com/ingonyama-zk/icicle) is a fully featured GPU accelerated cryptography library for building ZK provers. ICICLE allows you to accelerate your existing ZK protocols in a matter of hours or implement your protocol from scratch on GPU.
+#### **ICICLE V3**
+[ICICLE V3](https://github.com/ingonyama-zk/icicle) is a versatile cryptography library designed to support multiple compute backends, including CUDA, CPU, and potentially others like Metal, WebGPU, Vulkan, and ZPU. Originally focused on GPU acceleration, ICICLE has evolved to offer backend-agnostic cryptographic acceleration, allowing you to build ZK provers or other cryptographic applications with ease, leveraging the best available hardware for your needs.
 
+- **Multiple Backend Support:** Develop on CPU and deploy on various backends including CUDA, Metal, WebGPU, Vulkan, ZPU, or even remote machines.
+- **Cross-Language Compatibility:** Use ICICLE across multiple programming languages such as C++, Rust, Go, and possibly Python.
+- **Optimized for ZKPs:** Accelerate cryptographic operations like elliptic curve operations, MSM, NTT, Poseidon hash, and more.
+
+Learn more about ICICLE and its multi-backend support [here][ICICLE-OVERVIEW].
 ---
 
-## Our current take on hardware acceleration
+## Our Approach to Hardware Acceleration
 
-We believe GPUs are as important for ZK as for AI.
+We believe that GPUs are as critical for ZK as they are for AI.
 
-- GPUs are a perfect match for ZK compute - around 97% of ZK protocol runtime is parallel by nature.
-- GPUs are simple for developers to use and scale compared to other hardware platforms.
-- GPUs are extremely competitive in terms of power / performance and price (3x cheaper compared to FPGAs).
-- GPUs are popular and readily available.
+- **Parallelism:** Approximately 97% of ZK protocol runtime is naturally parallel, making GPUs an ideal match.
+- **Developer-Friendly:** GPUs offer simplicity in scaling and usage compared to other hardware platforms.
+- **Cost-Effective:** GPUs provide a competitive balance of power, performance, and cost, often being 3x cheaper than FPGAs.
 
 For a more in-depth understanding on this topic we suggest you read [our article on the subject](https://www.ingonyama.com/blog/revisiting-paradigm-hardware-acceleration-for-zero-knowledge-proofs).
 
-Despite our current focus on GPUs we are still hard at work developing a ZPU (ZK Processing Unit), with the goal of offering a programmable hardware platform for ZK. To read more about ZPUs we suggest you read this [article](https://medium.com/@ingonyama/zpu-the-zero-knowledge-processing-unit-f886a48e00e0).
-
-## ICICLE
-
-[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library for ZK using GPUs.
-ICICLE implements blazing fast cryptographic primitives such as EC operations, MSM, NTT, Poseidon hash and more on GPU.
-
-ICICLE is designed to be easy to use, developers don't have to touch a single line of CUDA code. Our Rust and Golang bindings allow your team to transition from CPU to GPU with minimal changes.
-
-Learn more about ICICLE and GPUs [here][ICICLE-OVERVIEW].
 
 ## Get in Touch
 

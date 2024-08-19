@@ -34,8 +34,8 @@ namespace icicle {
 
 #ifndef G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
   template <>
-  eIcicleError
-  convert_montgomery(const g2_affine_t* input, size_t n, bool is_into, const VecOpsConfig& config, g2_affine_t* output)
+  eIcicleError convert_montgomery(
+    const g2_affine_t* input, uint64_t n, bool is_into, const VecOpsConfig& config, g2_affine_t* output)
   {
     return CONCAT_EXPAND(CURVE, g2_affine_convert_montgomery)(input, n, is_into, config, output);
   }
