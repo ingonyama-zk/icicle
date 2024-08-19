@@ -185,7 +185,7 @@ int main()
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
-    Device device = {"CUDA", 0};             // GPU-0
+    Device device = {"CUDA", 0}; // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the api call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
@@ -200,7 +200,7 @@ int main()
   projective_t::rand_host_many(points.get(), msm_size);
 
   // (optional) copy scalars to device memory explicitly
-  scalar_t* scalars_d = nullptr;
+  scalar_t* scalar_d = nullptr;
   auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * msm_size);
   // Note: need to test err and make sure no errors occurred
   err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * msm_size);
