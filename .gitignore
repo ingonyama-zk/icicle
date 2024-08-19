@@ -18,8 +18,3 @@
 **/icicle/build/
 **/wrappers/rust/icicle-cuda-runtime/src/bindings.rs
 **/build*
-# TODO remove bellow when development of cpu msm ends
-icicle_v3/backend/cpu/src/curve/Makefile
-icicle_v3/backend/cpu/src/curve/*.o
-icicle_v3/backend/cpu/src/curve/*.txt
-icicle_v3/backend/cpu/src/curve/msm_test

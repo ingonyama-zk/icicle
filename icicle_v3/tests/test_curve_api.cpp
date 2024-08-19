@@ -124,7 +124,6 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
     const int total_nof_elemets = batch * N;
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
-    std::cout << "Starting MSM\n";
 
     get_inputs(bases.get(), scalars.get(), N, batch);
 
