@@ -96,18 +96,18 @@ namespace vec_ops {
     E* d_vec_a;
     const E* d_vec_b;
 
-    int is_d_alloc_vec_a_allocated = 0;
+    bool is_d_alloc_vec_a_allocated = false;
     if (!config.is_a_on_device) {
       if (config.is_input_in_montgomery_form) {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
         CHK_IF_RETURN(mont::from_montgomery(d_alloc_vec_a, n, config.ctx.stream, d_alloc_vec_a));
-        is_d_alloc_vec_a_allocated = 1;
+        is_d_alloc_vec_a_allocated = true;
         d_vec_a = d_alloc_vec_a;
       } else {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
-        is_d_alloc_vec_a_allocated = 1;
+        is_d_alloc_vec_a_allocated = true;
         d_vec_a = d_alloc_vec_a;
       }
     } else {
@@ -115,25 +115,25 @@ namespace vec_ops {
         CHK_IF_RETURN(cudaMallocAsync(
           &d_alloc_vec_a, n * sizeof(E), config.ctx.stream)); // Allocate in order not to change the input.
         CHK_IF_RETURN(mont::from_montgomery(vec_a, n, config.ctx.stream, d_alloc_vec_a));
-        is_d_alloc_vec_a_allocated = 1;
+        is_d_alloc_vec_a_allocated = true;
         d_vec_a = d_alloc_vec_a;
       } else {
         d_vec_a = vec_a;
       }
     }
 
-    int is_d_alloc_vec_b_allocated = 0;
+    bool is_d_alloc_vec_b_allocated = false;
     if (!config.is_b_on_device) {
       if (config.is_input_in_montgomery_form) {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_b, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
         CHK_IF_RETURN(mont::from_montgomery(d_alloc_vec_b, n, config.ctx.stream, d_alloc_vec_b));
-        is_d_alloc_vec_b_allocated = 1;
+        is_d_alloc_vec_b_allocated = true;
         d_vec_b = d_alloc_vec_b;
       } else {
         CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_b, n * sizeof(E), config.ctx.stream));
         CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
-        is_d_alloc_vec_b_allocated = 1;
+        is_d_alloc_vec_b_allocated = true;
         d_vec_b = d_alloc_vec_b;
       }
     } else {
@@ -141,28 +141,23 @@ namespace vec_ops {
         CHK_IF_RETURN(cudaMallocAsync(
           &d_alloc_vec_b, n * sizeof(E), config.ctx.stream)); // Allocate in order not to change the input.
         CHK_IF_RETURN(mont::from_montgomery(vec_b, n, config.ctx.stream, d_alloc_vec_b));
-        is_d_alloc_vec_b_allocated = 1;
+        is_d_alloc_vec_b_allocated = true;
         d_vec_b = d_alloc_vec_b;
       } else {
         d_vec_b = vec_b;
       }
     }
 
-    int is_d_result_allocated = 0;
+    bool is_d_result_allocated = false;
     if (!config.is_result_on_device) {
       if (!is_in_place) {
         CHK_IF_RETURN(cudaMallocAsync(&d_result, n * sizeof(E), config.ctx.stream));
-        is_d_result_allocated = 1;
+        is_d_result_allocated = true;
       } else {
         d_result = d_vec_a;
       }
     } else {
-      if (!is_in_place) {
-        d_result = result;
-      } else {
-        // d_result = result = d_vec_a;    // DEBUG - looks like a bug for in-place.
-        d_result = result;
-      }
+      d_result = result;
     }
 
     // Call the kernel to perform element-wise operation
