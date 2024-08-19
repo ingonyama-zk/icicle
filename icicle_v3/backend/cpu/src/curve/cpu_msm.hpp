@@ -217,7 +217,7 @@ private:
    */
   struct BmSumSegment
   {
-    // Imagining the required BM sum as a right angle triangle - Nth element is a N heigh column of the element - 
+    // Imagining the required BM sum as a right angle triangle - Nth element is a N high column of the element - 
     // A method to summing the BM serially is starting from the top with a triangle sum up to the current line and a 
     // line sum which is calculated for each line then added to the triangle.
     // Therefore both sums are need as a part of this struct.
