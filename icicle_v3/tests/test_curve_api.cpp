@@ -64,18 +64,18 @@ public:
   }
 
   template <typename T>
-bool read_inputs(T* arr, const int arr_size, const std::string fname)
-{
-  std::ifstream in_file(fname);
-  bool status = in_file.is_open();
-  if (status) {
-    for (int i = 0; i < arr_size; i++) {
-      in_file.read(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+  bool read_inputs(T* arr, const int arr_size, const std::string fname)
+  {
+    std::ifstream in_file(fname);
+    bool status = in_file.is_open();
+    if (status) {
+      for (int i = 0; i < arr_size; i++) {
+        in_file.read(reinterpret_cast<char*>(&arr[i]), sizeof(T));
+      }
+      in_file.close();
     }
-    in_file.close();
+    return status;
   }
-  return status;
-}
 
   template <typename T>
   void store_inputs(T* arr, const int arr_size, const std::string fname)
@@ -94,11 +94,11 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
   void get_inputs(affine_t* bases, scalar_t* scalars, const int n, const int batch_size)
   {
     // Scalars
-    std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n*batch_size) + ".dat";
-    if (!read_inputs<scalar_t>(scalars, n*batch_size, scalar_file)) {
+    std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n * batch_size) + ".dat";
+    if (!read_inputs<scalar_t>(scalars, n * batch_size, scalar_file)) {
       std::cout << "Generating scalars.\n";
-      scalar_t::rand_host_many(scalars, n*batch_size);
-      store_inputs<scalar_t>(scalars, n*batch_size, scalar_file);
+      scalar_t::rand_host_many(scalars, n * batch_size);
+      store_inputs<scalar_t>(scalars, n * batch_size, scalar_file);
     }
     // Bases
     std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
@@ -108,7 +108,6 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
       store_inputs<affine_t>(bases, n, base_file);
     }
   }
-
 
   template <typename A, typename P>
   void MSM_test()
@@ -120,7 +119,7 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
     const int c = std::max(logn, 8) - 1;
     int hw_threads = std::thread::hardware_concurrency();
     if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
-    const int n_threads = (hw_threads > 1)? hw_threads - 1 : 1;
+    const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
     const int total_nof_elemets = batch * N;
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
@@ -149,14 +148,14 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
       config.ext = &ext;
 
       auto precomp_bases = std::make_unique<affine_t[]>(N * precompute_factor);
-      std::string precomp_fname =
-        "build/generated_data/precomp_N" + std::to_string(N) + "_precompute_factor" + std::to_string(precompute_factor) + ".dat";
+      std::string precomp_fname = "build/generated_data/precomp_N" + std::to_string(N) + "_precompute_factor" +
+                                  std::to_string(precompute_factor) + ".dat";
       if (!read_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname)) {
         std::cout << "Precomputing bases." << '\n';
         msm_precompute_bases(bases.get(), N, config, precomp_bases.get());
         store_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname);
       }
-      
+
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
         msm(scalars.get(), precomp_bases.get(), N, config, result);

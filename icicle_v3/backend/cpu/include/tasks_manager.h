@@ -12,7 +12,7 @@
 /**
  * @class TaskBase
  * @brief abstract base for a task supported by `TasksManager`.
- * Important - the user does not manually create these tasks - they are part of the manager and are accessed by the 
+ * Important - the user does not manually create these tasks - they are part of the manager and are accessed by the
  * various get_task functions.
  */
 class TaskBase
@@ -67,9 +67,9 @@ private:
 /**
  * @class TasksManager
  * @brief Class for managing parallel executions of small `Task`s which are child class of `TaskBase` described below.
- * 
- * The class manages a vector of `Worker`s, which are threads and additional required data members for executions of 
- * `Task`s. The `Task`s are split in a thread-pool fashion - finding free slot in the `Worker`s for the user to set up 
+ *
+ * The class manages a vector of `Worker`s, which are threads and additional required data members for executions of
+ * `Task`s. The `Task`s are split in a thread-pool fashion - finding free slot in the `Worker`s for the user to set up
  * additional tasks, and fetching completed `Task`s back to the user.
  * IMPORTANT NOTE: destroying this class or its worker members do not ensure handling of final task results, that is
  * the user's responsibility.
@@ -92,14 +92,14 @@ public:
   Task* get_idle_or_completed_task();
 
   /**
-   * @brief Get idle task to be dispatched without handling previous results (As it holds no previous result). This is 
-   * not a blocking function, 
+   * @brief Get idle task to be dispatched without handling previous results (As it holds no previous result). This is
+   * not a blocking function,
    * @return Task* - pointer to an idle task. nullptr if no task is available (All are either running or completed).
    */
   Task* get_idle_task();
 
   /**
-   * @brief Get task that holds previous result to be handled by the user. This function blocks the code until a 
+   * @brief Get task that holds previous result to be handled by the user. This function blocks the code until a
    * completed task is found or all tasks are idle with no result.
    * @return Task* - pointer to a completed task. nullptr if no task is available (all are idle without results).
    * NOTE: The task's status should be updated if new tasks are to be assigned / other completed tasks are requested.
@@ -111,7 +111,7 @@ public:
    * @brief Wait until all workers are done - i.e. all tasks are idle or completed.
    */
   void wait_done();
-  
+
 private:
   /**
    * @class Worker
@@ -127,14 +127,14 @@ private:
     Worker();
     /**
      * @brief Destructor of `Worker`.
-     * Signals the thread to terminate and joins it with main. The destructor does not handle existing tasks' results 
+     * Signals the thread to terminate and joins it with main. The destructor does not handle existing tasks' results
      * and assumes the user have already handled all the results via `TasksManager`'s api.
      */
     ~Worker();
 
     /**
      * @brief function to be ran by the thread.
-     * Routinely checks for valid inputs in all of the worker's tasks. It executes valid tasks, later marking back that 
+     * Routinely checks for valid inputs in all of the worker's tasks. It executes valid tasks, later marking back that
      * the tasks are complete. This loops until a kill signal is sent via the class's destructor.
      */
     void worker_loop();
@@ -148,14 +148,14 @@ private:
     Task* get_idle_or_completed_task();
 
     /**
-     * @brief Get idle task to be dispatched without handling previous results (As it holds no previous result). This 
-     * isn't a blocking function - it checks all worker's tasks and returns. 
+     * @brief Get idle task to be dispatched without handling previous results (As it holds no previous result). This
+     * isn't a blocking function - it checks all worker's tasks and returns.
      * @return Task* - pointer to an idle task. nullptr if no task is available.
      */
     Task* get_idle_task();
 
     /**
-     * @brief Get task that holds previous result to be handled by the user. This isn't a blocking function - it checks 
+     * @brief Get task that holds previous result to be handled by the user. This isn't a blocking function - it checks
      * all worker's tasks and returns.
      * @param is_idle - boolean flag indicating if all worker's tasks are idle.
      * @return Task* - pointer to a completed task. nullptr if no task is available.
@@ -213,32 +213,27 @@ void TasksManager<Task>::Worker::worker_loop()
   }
 }
 
-template<class Task>
-Task* TasksManager<Task>::Worker::get_idle_or_completed_task() {
-  for (int i = 0; i < m_tasks.size(); i++)
-  {
+template <class Task>
+Task* TasksManager<Task>::Worker::get_idle_or_completed_task()
+{
+  for (int i = 0; i < m_tasks.size(); i++) {
     // TASKS_PER_WORKER is a power of 2 so modulo is done via bitmask.
-    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK; 
+    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK;
 
-    if (m_tasks[m_next_task_idx].is_idle() || m_tasks[m_next_task_idx].is_completed())
-    {
+    if (m_tasks[m_next_task_idx].is_idle() || m_tasks[m_next_task_idx].is_completed()) {
       return &m_tasks[m_next_task_idx];
     }
   }
   return nullptr;
 }
 
-template<class Task>
+template <class Task>
 Task* TasksManager<Task>::Worker::get_idle_task()
 {
-  for (int i = 0; i < m_tasks.size(); i++)
-  {
-    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK; 
+  for (int i = 0; i < m_tasks.size(); i++) {
+    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK;
 
-    if (m_tasks[m_next_task_idx].is_idle())
-    {
-      return &m_tasks[m_next_task_idx];
-    }
+    if (m_tasks[m_next_task_idx].is_idle()) { return &m_tasks[m_next_task_idx]; }
   }
   return nullptr;
 }
@@ -285,13 +280,12 @@ Task* TasksManager<Task>::get_idle_or_completed_task()
   }
 }
 
-template<class Task>
+template <class Task>
 Task* TasksManager<Task>::get_idle_task()
 {
   Task* idle_task = nullptr;
-  for (int i = 0; i < m_workers.size(); i++)
-  {
-    m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1)? m_next_worker_idx + 1 : 0;
+  for (int i = 0; i < m_workers.size(); i++) {
+    m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1) ? m_next_worker_idx + 1 : 0;
 
     idle_task = m_workers[m_next_worker_idx].get_idle_task();
     if (idle_task != nullptr) { return idle_task; }
@@ -300,17 +294,16 @@ Task* TasksManager<Task>::get_idle_task()
   return nullptr;
 }
 
-template<class Task>
-Task* TasksManager<Task>::get_completed_task() {
+template <class Task>
+Task* TasksManager<Task>::get_completed_task()
+{
   Task* completed_task = nullptr;
   bool all_idle = false;
-  while (!all_idle)
-  {
+  while (!all_idle) {
     // Flag sent by reference to get_completed_task below - if a task that isn't idle is found the flag is set to false
-    all_idle = true; 
-    for (int i = 0; i < m_workers.size(); i++)
-    {
-      m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1)? m_next_worker_idx + 1 : 0;
+    all_idle = true;
+    for (int i = 0; i < m_workers.size(); i++) {
+      m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1) ? m_next_worker_idx + 1 : 0;
 
       completed_task = m_workers[m_next_worker_idx].get_completed_task(all_idle);
       if (completed_task != nullptr) { return completed_task; }
