@@ -114,7 +114,7 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
   void MSM_test()
   {
     const int logn = 12;
-    const int batch = 3; // TODO test batch
+    const int batch = 3;
     const int N = 1 << logn;
     const int precompute_factor = 3;
     const int c = std::max(logn, 8) - 1;
@@ -150,7 +150,6 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
       config.ext = &ext;
 
       auto precomp_bases = std::make_unique<affine_t[]>(N * precompute_factor);
-      // TODO update cmake to include directory?
       std::string precomp_fname =
         "build/generated_data/precomp_N" + std::to_string(N) + "_precompute_factor" + std::to_string(precompute_factor) + ".dat";
       if (!read_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname)) {

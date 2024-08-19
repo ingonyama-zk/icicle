@@ -3,9 +3,10 @@
 #include "icicle/config_extension.h"
 #include <random>
 #include <cassert>
+#include "timer.cpp"
 
 // #define DUMMY_TYPES
-#define DEBUG_PRINTS
+// #define DEBUG_PRINTS
 #define P_MACRO 1000
 
 class DummyScalar
@@ -128,7 +129,6 @@ public:
 #include "cpu_msm.hpp"
 using namespace icicle;
 
-// TODO ask for help about memory management before / at C.R.
 template <typename Point>
 std::vector<Point> msm_bucket_accumulator(
   const scalar_t* scalars,
@@ -162,7 +162,7 @@ std::vector<Point> msm_bucket_accumulator(
   std::ofstream trace_f(trace_fname);
   if (!trace_f.good()) {
     std::cout << "ERROR: can't open file:\t" << trace_fname << std::endl;
-  } // TODO remove log
+  }
 #endif
   for (int i = 0; i < msm_size; i++) {
     carry = 0;
@@ -177,7 +177,7 @@ std::vector<Point> msm_bucket_accumulator(
         if (num_bms * j + k > num_windows_m1) { break; }
 
         uint32_t curr_coeff = scalar.get_scalar_digit(num_bms * j + k, c) + carry;
-        if ((curr_coeff & ((1 << c) - 1)) != 0) { // TODO calc mask
+        if ((curr_coeff & ((1 << c) - 1)) != 0) {
           if (curr_coeff < num_bkts) {
 #ifdef DEBUG_PRINTS
             int bkt_idx = num_bkts * k + curr_coeff;
@@ -189,13 +189,13 @@ std::vector<Point> msm_bucket_accumulator(
                       << ")\n";
               trace_f << '#' << bkt_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(bkts[bkt_idx] + point).x
                       << '\n';
-            } // TODO remove double addition
+            }
 #endif
 
             bkts[num_bkts * k + curr_coeff] =
               Point::is_zero(bkts[num_bkts * k + curr_coeff])
                 ? Point::from_affine(point)
-                : bkts[num_bkts * k + curr_coeff] + point; // TODO change here order of precomp
+                : bkts[num_bkts * k + curr_coeff] + point;
             carry = 0;
           } else {
 #ifdef DEBUG_PRINTS
@@ -208,7 +208,7 @@ std::vector<Point> msm_bucket_accumulator(
                       << ")\n";
               trace_f << '#' << bkt_idx << ":\tWrite (res) free cell:\t" << Point::to_affine(bkts[bkt_idx] - point).x
                       << '\n';
-            } // TODO remove double addition
+            }
 #endif
 
             bkts[num_bkts * k + ((-curr_coeff) & coeff_bit_mask)] =
@@ -229,7 +229,7 @@ std::vector<Point> msm_bucket_accumulator(
   std::ofstream bkts_f_single(b_fname);
   if (!bkts_f_single.good()) {
     std::cout << "ERROR: can't open file:\t" << b_fname << std::endl;
-  } // TODO remove log
+  }
   for (int i = 0; i < num_bms; i++)
     for (int j = 0; j < num_bkts; j++)
       bkts_f_single << '(' << i << ',' << j << "):\t" << Point::to_affine(bkts[num_bkts * i + j]).x << '\n';
@@ -308,17 +308,16 @@ Point msm_final_sum(std::vector<Point>& bm_sums, const unsigned int c, const uns
 template <typename Point>
 eIcicleError cpu_msm_single_thread(
   const Device& device,
-  const scalar_t* scalars, // COMMENT it assumes no negative scalar inputs
+  const scalar_t* scalars,
   const affine_t* bases,
   int msm_size,
   const MSMConfig& config,
   Point* results)
 {
   auto t = Timer("total-msm-single-threaded");
-  // TODO remove at the end
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
-  const unsigned int c = config.ext->get<int>("c"); // TODO calculate instead of param
+  const unsigned int c = config.ext->get<int>("c");
   const unsigned int precompute_factor = config.precompute_factor;
   const int num_bms = ((scalar_t::NBITS - 1) / (precompute_factor * c)) + 1;
   std::cout << "\n\nnum_bms = " << num_bms << ", c=" << c << ", precomp=" << precompute_factor << "\n\n\n";

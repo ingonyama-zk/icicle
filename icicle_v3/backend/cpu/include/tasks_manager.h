@@ -1,7 +1,6 @@
 #pragma once
 #include <atomic>
 #include <thread>
-#include <stdexcept>
 #include <cassert>
 
 #define LOG_TASKS_PER_THREAD 3
@@ -13,7 +12,8 @@
 /**
  * @class TaskBase
  * @brief abstract base for a task supported by `TasksManager`.
- * Important
+ * Important - the user does not manually create these tasks - they are part of the manager and are accessed by the 
+ * various get_task functions.
  */
 class TaskBase
 {
@@ -103,7 +103,7 @@ public:
    * completed task is found or all tasks are idle with no result.
    * @return Task* - pointer to a completed task. nullptr if no task is available (all are idle without results).
    * NOTE: The task's status should be updated if new tasks are to be assigned / other completed tasks are requested.
-   * Use dispatch 
+   * Use dispatch if setting a new task, or set_idle if to just mark the task result as handled.
    */
   Task* get_completed_task();
 

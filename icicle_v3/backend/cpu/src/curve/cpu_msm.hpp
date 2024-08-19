@@ -1,13 +1,10 @@
 #pragma once
 
-
 #include <thread>
 #include <atomic>
 #include <string>
 #include <iostream>
 #include <fstream>
-#include <cassert>
-#include <algorithm>
 
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
@@ -16,10 +13,10 @@
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
 #include "tasks_manager.h"
-#include "timer.cpp"
 
-// TODO Remove after correct test with server gpu
 using namespace icicle;
+
+
 #ifdef DUMMY_TYPES // for testing
   using affine_t = DummyPoint;
   using projective_t = DummyPoint;
@@ -72,7 +69,6 @@ public:
    * @param negate_affine - flag to indicate that the base needs to be subbed instead of added.
    * @param is_montgomery - flag to indicate that the base is in Montgomery form and first needs to be converted.
    */
-  // TODO remove description above and comments bellow + variables
   void set_phase1_addition_with_affine(const Point& bucket, const affine_t base, int bucket_idx)
   {
     m_p1 = bucket;
@@ -269,7 +265,7 @@ private:
    * BMs into segments, summing each separately and passing the segments sum to be handled by the final accumulator.
    * @return vector containing segments line and triangle sums for the final accumulator.
    */
-  void bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr); // TODO void output and get segment by reference
+  void bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr);
 
   /**
    * @brief Setting up phase 2 class members according to phase 1 results. 
@@ -282,7 +278,7 @@ private:
    * @brief Final accumulation required for MSM calculation. the function will either launch a thread to perform the 
    * calculation (`phase3_tread` function) or by the main thread, depending on the position in the batch (Last msm or 
    * not).
-   * @param segments - // TODO write
+   * @param segments_ptr - pointer to vector containing the segment calculations of phase 2
    * @param idx_in_batch - idx of the current MSM in the batch.
    * @param result - output, pointer to write the MSM result to. Memory for the pointer has already been allocated by the user.
    */
@@ -323,10 +319,7 @@ Msm<Point>::Msm(const MSMConfig& config)
       m_segment_size(std::max((int)(m_num_bkts >> m_log_num_segments), 1)), 
 
       m_p3_threads(m_batch_size - 1)
-{
-  std::cout << "Params:\nthread*tasks - 1 / 2num_bms =\t" << (double)(config.ext->get<int>("n_threads") * TASKS_PER_THREAD - 1) / (double)(2 * m_num_bms) << "\nlog2 =\t" << std::log2((double)(config.ext->get<int>("n_threads") * TASKS_PER_THREAD - 1) / (double)(2 * m_num_bms)) << "\nlog num segs =\t" << m_log_num_segments << "\n";
-  std::cout << "Num segs:\t" << m_num_bm_segments << '\n';
-}
+{}
 
 template <typename Point>
 void Msm<Point>::run_msm(
@@ -346,7 +339,6 @@ void Msm<Point>::run_msm(
 template <typename Point>
 void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bases, const unsigned int msm_size)
 {
-  auto t = Timer("P1:bucket-accumulator"); // TODO remove all timers
   const int coeff_bit_mask_no_sign_bit = m_num_bkts - 1;
   const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
   // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
@@ -458,7 +450,6 @@ template <typename Point>
 void Msm<Point>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
 {
   auto& segments = *segments_ptr; // For readability
-  auto t = Timer("P2:bm-sums");
   phase2_setup(segments);
   if (m_segment_size > 1)
   {
@@ -478,7 +469,6 @@ void Msm<Point>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr
     while (done_segments < m_num_bms * m_num_bm_segments)
     {
       EcAddTask<Point>* task = manager.get_completed_task();
-      assert(task != nullptr);
       BmSumSegment& curr_segment = segments[task->m_return_idx]; // For readability
       
       if (task->m_is_line) { curr_segment.line_sum = task->m_p1; } else { curr_segment.triangle_sum = task->m_p1; }
@@ -654,7 +644,6 @@ eIcicleError cpu_msm(
   Point* results)
 {
   Msm<Point>* msm = new Msm<Point>(config);
-  auto t = Timer("total-msm");
   
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
