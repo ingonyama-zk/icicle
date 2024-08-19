@@ -1,3 +1,3 @@
-# Benchamrks
+# Benchmarks
 
-TODO explain which benchamrks exist, how to run them for a given device
+TODO explain which benchmarks exist, how to run them for a given device

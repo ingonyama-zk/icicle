@@ -122,7 +122,7 @@ In cargo.toml, specify the ICICLE libs to use:
 icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
 icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
 icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
-# add other ICICLE crates here if need aditional fields/curves
+# add other ICICLE crates here if need additional fields/curves
 ```
 
 :::note
@@ -131,7 +131,7 @@ Can specify `branch = <branch-name>` or `tag = <tag-name>` or `rev = <commit-id>
 
 As explained above, the libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable for a custom install directory.
 :::note
-Make sure to isntall the icicle libs when installing a library/application that depends on icicle.
+Make sure to install the icicle libs when installing a library/application that depends on icicle.
 :::
 
 ### Go: Build, Test, and Install (TODO)
