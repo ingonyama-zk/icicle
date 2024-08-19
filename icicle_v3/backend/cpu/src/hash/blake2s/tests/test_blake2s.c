@@ -6,10 +6,8 @@
 #include <string>
 #include "hash/blake2/blake2.h"
 #include "hash/blake2/blake2-impl.h"
-#include "hash/hash.h"
+#include "icicle/hash.h"
 #include <chrono>
-
-using namespace blake2s_hash;
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \

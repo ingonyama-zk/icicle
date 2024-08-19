@@ -1,12 +1,10 @@
-
-
 #include <iostream>
 #include <cstring>
 #include <chrono>
 #include <string>
 #include "hash/blake2/blake2.h"
 #include "hash/blake2/blake2-impl.h"
-#include "hash/hash.h"
+#include "icicle/hash.h"
 #include <chrono>
 #include <cassert>
 #include <chrono>
@@ -14,8 +12,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-
-using namespace blake2s_hash;
+#include <vector>
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -42,16 +39,22 @@ std::string byte_to_hex(BYTE* data, WORD len)
   return ss.str();
 }
 
-std::vector<std::string> load_csv(const char* filename)
+std::vector<std::pair<std::string, std::string>> load_csv(const char* filename)
 {
-  std::vector<std::string> hashes;
+  std::vector<std::pair<std::string, std::string>> data;
   std::ifstream file(filename);
   std::string line;
+
   while (std::getline(file, line)) {
-    // Directly add the line as a hash, assuming one hash per line
-    hashes.push_back(line);
+    std::stringstream line_stream(line);
+    std::string test_string, hash;
+
+    if (std::getline(line_stream, test_string, ',') && std::getline(line_stream, hash)) {
+      data.push_back({test_string, hash});
+    }
   }
-  return hashes;
+
+  return data;
 }
 
 int main(int argc, char** argv)
@@ -59,54 +62,47 @@ int main(int argc, char** argv)
   using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
   using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 
-  std::vector<std::string> test_strings = {"0",      "01",      "012",      "0123",      "01234",
-                                           "012345", "0123456", "01234567", "012345678", "0123456789"};
+  const char* csv_filename = "tests/test_vectors_variable_length.csv"; // Replace with your actual CSV file name
+  std::vector<std::pair<std::string, std::string>> test_data = load_csv(csv_filename);
 
-  const char* csv_filename = "seq_hash.csv"; // Replace with your actual CSV file name
-  std::vector<std::string> expected_hashes = load_csv(csv_filename);
-  assert(expected_hashes.size() == test_strings.size() && "Number of hashes in CSV must match number of test strings.");
-  std::cout << "Loaded hashes from CSV:" << std::endl;
-  // for (size_t i = 0; i < expected_hashes.size(); ++i) {
-  //     std::cout << "Expected hash " << i  << ": " << expected_hashes[i] << std::endl;
-  // }
+  std::cout << "Loaded test data from CSV:" << std::endl;
 
   // Test parameters
-  WORD n_outbit = 256; // Output length in bits
-  WORD n_batch = 1;    // Number of hashes to compute in parallel
-
-  // Allocate memory for the output
-  WORD outlen = n_outbit / 8;
+  WORD outlen = BLAKE2S_OUTBYTES; // Output length in bytes (32)
+  HashConfig config;
 
   // Perform the hashing
-  HashConfig config = default_hash_config();
 
-  for (size_t i = 0; i < test_strings.size(); i++) {
-    BYTE* output = (BYTE*)malloc(outlen * n_batch);
+  for (size_t i = 0; i < test_data.size(); i++) {
+    BYTE* output = (BYTE*)malloc(outlen);
     if (!output) {
       perror("Failed to allocate memory for output");
       return EXIT_FAILURE;
     }
 
-    const std::string& input_str = test_strings[i];
+    const std::string& input_str = test_data[i].first;
+    const std::string& expected_hash = test_data[i].second;
+
     BYTE* input = (BYTE*)input_str.c_str();
     size_t inlen = input_str.size();
 
     // Perform the hashing
     START_TIMER(blake_timer)
-    // blake2s_cuda(input, output, n_batch, inlen, outlen, config);
-    Blake2s().run_hash(input, output, inlen, outlen);
+    Blake2s(inlen / sizeof(limb_t)).run_single_hash((limb_t*)input, (limb_t*)output, config);
     END_TIMER(blake_timer, "Blake Timer")
+
     // Convert the output to hex string
     std::string computed_hash = byte_to_hex(output, outlen);
-    // Compare with the expected hash
 
-    if (computed_hash == expected_hashes[i]) {
+    // Compare with the expected hash
+    if (computed_hash == expected_hash) {
       std::cout << "Test " << i << " passed." << std::endl;
     } else {
       std::cout << "Test " << i << " failed." << std::endl;
-      std::cout << "Expected: " << expected_hashes[i] << std::endl;
+      std::cout << "Expected: " << expected_hash << std::endl;
       std::cout << "Got:      " << computed_hash << std::endl;
     }
+
     free(output);
   }
 

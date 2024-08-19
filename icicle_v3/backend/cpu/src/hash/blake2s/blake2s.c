@@ -285,8 +285,8 @@ eIcicleError Blake2s::run_single_hash(const limb_t* input_limbs, limb_t* output_
 {
   const BYTE* input_bytes = reinterpret_cast<const BYTE*>(input_limbs);
   BYTE* output_bytes = reinterpret_cast<BYTE*>(output_limbs);
-  std::cout << "output len (bytes): " << total_output_limbs * sizeof(limb_t) << std::endl;
-  std::cout << "input len (bytes): " << total_input_limbs * sizeof(limb_t) << std::endl;
+  // std::cout << "output len (bytes): " << total_output_limbs * sizeof(limb_t) << std::endl;
+  // std::cout << "input len (bytes): " << total_input_limbs * sizeof(limb_t) << std::endl;
 
   // Call blake2s function
   int result = blake2s(
@@ -297,5 +297,32 @@ eIcicleError Blake2s::run_single_hash(const limb_t* input_limbs, limb_t* output_
   );
 
   if (result != 0) { throw std::runtime_error("Blake2s hashing failed"); }
+  return eIcicleError::SUCCESS;
+}
+
+eIcicleError Blake2s::run_multiple_hash( // Dummy implementation running in a loop
+  const limb_t* input_limbs,
+  limb_t* output_limbs,
+  int nof_hashes,
+  const HashConfig& config,
+  const limb_t* side_input_limbs) const
+{
+  // Calculate the distance between each input in bytes
+  size_t input_stride = total_input_limbs;
+  size_t output_stride = total_output_limbs;
+
+  for (int i = 0; i < nof_hashes; ++i) {
+    // Calculate the pointer offsets for each hash
+    const limb_t* current_input = input_limbs + i * input_stride;
+    limb_t* current_output = output_limbs + i * output_stride;
+
+    // Call the single hash function for each hash
+    eIcicleError result = run_single_hash(current_input, current_output, config);
+
+    if (result != eIcicleError::SUCCESS) {
+      return result; // Return the error if hashing fails
+    }
+  }
+
   return eIcicleError::SUCCESS;
 }

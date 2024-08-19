@@ -6,7 +6,7 @@
 #include <string>
 #include "hash/blake2/blake2.h"
 #include "hash/blake2/blake2-impl.h"
-#include "hash/hash.h"
+#include "icicle/hash.h"
 #include <chrono>
 #include <cassert>
 #include <fstream>
@@ -16,8 +16,6 @@
 #include <sstream>
 #include <unordered_map>
 #include <algorithm>
-
-using namespace blake2s_hash;
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
@@ -91,11 +89,8 @@ int main(int argc, char** argv)
   }
 
   // Test parameters
-  BYTE key[32] = ""; // Example key
-  WORD keylen = strlen((char*)key);
-  WORD n_outbit = 256; // Output length in bits
-  WORD n_batch = 10;   // Number of different inputs to hash in parallel
-  size_t max_len = 10; // Max length of the test strings
+  WORD n_batch = test_strings.size();    // Number of different inputs to hash in parallel
+  size_t inlen = test_strings[0].size(); // Max length of the test strings
 
   // Calculate total input length and allocate memory for the batched input
   size_t total_len = 0;
@@ -105,15 +100,15 @@ int main(int argc, char** argv)
   BYTE* batched_input = (BYTE*)malloc(total_len);
   WORD* in_lengths = (WORD*)malloc(n_batch * sizeof(WORD));
 
-  // Copy test strings to batched input and store their lengths
+  // Copy test strings to batched input
   BYTE* current_position = batched_input;
-  for (int i = 0; i < n_batch; ++i) {
+  for (WORD i = 0; i < n_batch; ++i) {
     memcpy(current_position, test_strings[i].c_str(), test_strings[i].size());
     current_position += test_strings[i].size();
   }
 
   // Allocate memory for the output
-  WORD outlen = n_outbit / 8;
+  WORD outlen = BLAKE2S_OUTBYTES;
   BYTE* output = (BYTE*)malloc(outlen * n_batch);
   if (!output) {
     perror("Failed to allocate memory for output");
@@ -122,12 +117,13 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  printf("Key len: %d \n", keylen);
-  HashConfig config = default_hash_config();
+  HashConfig config;
   // Perform the hashing
   START_TIMER(blake_timer)
-  // blake2s_cuda(batched_input, output, n_batch, max_len, outlen, config);
-  Blake2s().run_hash_many(batched_input, output, n_batch, max_len, outlen, config);
+  // blake2s_cuda(batched_input, output, n_batch, inlen, outlen, config);
+  // Blake2s().run_hash_many(batched_input, output, n_batch, inlen, outlen, config);
+  Blake2s(inlen / sizeof(limb_t)).run_multiple_hash((limb_t*)batched_input, (limb_t*)output, n_batch, config);
+
   END_TIMER(blake_timer, "Blake Timer")
 
   // Print and compare the results
