@@ -91,7 +91,8 @@ public:
     out_file.close();
   }
 
-  void get_inputs(affine_t* bases, scalar_t* scalars, const int n, const int batch_size)
+  template <typename A, typename P>
+  void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
   {
     // Scalars
     std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n * batch_size) + ".dat";
@@ -102,10 +103,10 @@ public:
     }
     // Bases
     std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
-    if (!read_inputs<affine_t>(bases, n, base_file)) {
+    if (!read_inputs<A>(bases, n, base_file)) {
       std::cout << "Generating bases.\n";
-      projective_t::rand_host_many(bases, n);
-      store_inputs<affine_t>(bases, n, base_file);
+      P::rand_host_many(bases, n);
+      store_inputs<A>(bases, n, base_file);
     }
   }
 
@@ -124,7 +125,12 @@ public:
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
 
-    get_inputs(bases.get(), scalars.get(), N, batch);
+#if 0
+    get_inputs<A,P>(bases.get(), scalars.get(), N, batch);
+#else
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
+    P::rand_host_many(bases.get(), N);
+#endif
 
     auto result_main = std::make_unique<P[]>(batch);
     auto result_ref = std::make_unique<P[]>(batch);
@@ -136,7 +142,8 @@ public:
       std::ostringstream oss;
       oss << dev_type << " " << msg;
 
-      auto config = default_msm_config();
+      auto config = default_msm_config();      
+      config.are_bases_shared = true;
       config.batch_size = batch;
       config.are_points_montgomery_form = false;
       config.are_scalars_montgomery_form = false;
@@ -147,27 +154,35 @@ public:
       ext.set("n_threads", n_threads);
       config.ext = &ext;
 
-      auto precomp_bases = std::make_unique<affine_t[]>(N * precompute_factor);
+      // Note: allocating the precompute_bases on device since CUDA backend assumes that.
+      // TODO: fix CUDA backend to support host memory too.
+      A* precomp_bases = nullptr;
+      ICICLE_CHECK(icicle_malloc((void**)&precomp_bases, N * precompute_factor * sizeof(A)));
+#if 0                                  
       std::string precomp_fname = "build/generated_data/precomp_N" + std::to_string(N) + "_precompute_factor" +
                                   std::to_string(precompute_factor) + ".dat";
-      if (!read_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname)) {
+      if (!read_inputs<A>(precomp_bases.get(), N * precompute_factor, precomp_fname)) {
         std::cout << "Precomputing bases." << '\n';
-        msm_precompute_bases(bases.get(), N, config, precomp_bases.get());
-        store_inputs<affine_t>(precomp_bases.get(), N * precompute_factor, precomp_fname);
+        ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
+        store_inputs<A>(precomp_bases.get(), N * precompute_factor, precomp_fname);
       }
+#else 
+  ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));
+#endif
 
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
-        msm(scalars.get(), precomp_bases.get(), N, config, result);
+        ICICLE_CHECK(msm(scalars.get(), precomp_bases, N, config, result));
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
+      ICICLE_CHECK(icicle_free(precomp_bases));
     };
-
-    // run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/); // Warmup
-    run(s_main_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    // Note: avoid memcmp here because projective points may have different z but be equivalent
+    
+    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);    
+    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);    
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
+      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
+      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -282,7 +297,6 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 
 int main(int argc, char** argv)
 {
-  std::cout << "Start\n\n";
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -17,12 +17,12 @@
 using namespace icicle;
 
 #ifdef DUMMY_TYPES // for testing
-using affine_t = DummyPoint;
-using projective_t = DummyPoint;
+using A = DummyP;
+using P = DummyP;
 using scalar_t = DummyScalar;
 #else
-using affine_t = curve_config::affine_t;
-using projective_t = curve_config::projective_t;
+using A = curve_config::affine_t;
+using P = curve_config::projective_t;
 using scalar_t = curve_config::scalar_t;
 #endif
 
@@ -31,15 +31,15 @@ using scalar_t = curve_config::scalar_t;
  * @brief class deriving `TaskBase` to allow use of tasks_manager.h for MSM
  * (The task to be executed is an elliptic curve addition).
  */
-template <typename Point>
+template <typename A, typename P>
 class EcAddTask : public TaskBase
 {
 public:
   /**
-   * @brief constructor for the task ensuring points are zeros and other fields are init to invalid values (to avoid
-   * falsely handling a result at the start). The execution adds points m_p1,m_p2 and stores the result in m_p1.
+   * @brief constructor for the task ensuring Ps are zeros and other fields are init to invalid values (to avoid
+   * falsely handling a result at the start). The execution adds Ps m_p1,m_p2 and stores the result in m_p1.
    */
-  EcAddTask() : TaskBase(), m_p1(Point::zero()), m_p2(Point::zero()), m_return_idx(-1) {}
+  EcAddTask() : TaskBase(), m_p1(P::zero()), m_p2(P::zero()), m_return_idx(-1) {}
 
   /**
    * @brief Function to be executed by the tasks manager. It can be configured according to the value odf
@@ -50,8 +50,8 @@ public:
     case ADD_P1_P2_BY_VALUE:
       m_p1 = m_p1 + m_p2;
       return;
-    case ADD_P1_AND_P2_POINTER:
-      m_p1 = m_p1 + *m_p2_pointer;
+    case ADD_P1_AND_P2_PER:
+      m_p1 = m_p1 + *m_p2_Per;
       return;
     case ADD_P1_AND_AFFINE_P1:
       m_p1 = m_p1 + m_p2_affine;
@@ -61,13 +61,13 @@ public:
 
   /**
    * @brief Set up phase 1 addition between a new base and the target bucket.
-   * @param bucket - bucket to be added. It isn't passed as pointer as the bucket's value can be changed during
+   * @param bucket - bucket to be added. It isn't passed as Per as the bucket's value can be changed during
    * addition execution.
-   * @param base - affine base to be added. Passed as a pointer as the input is constant and it saves copying.
+   * @param base - affine base to be added. Passed as a Per as the input is constant and it saves copying.
    * @param negate_affine - flag to indicate that the base needs to be subbed instead of added.
    * @param is_montgomery - flag to indicate that the base is in Montgomery form and first needs to be converted.
    */
-  void set_phase1_addition_with_affine(const Point& bucket, const affine_t base, int bucket_idx)
+  void set_phase1_addition_with_affine(const P& bucket, const A base, int bucket_idx)
   {
     m_p1 = bucket;
     m_p2_affine = base;
@@ -83,7 +83,7 @@ public:
    * @param bucket - bucket to be added to the line.
    * @param segment_idx - relevant segment to identify the returning result.
    */
-  void set_phase2_addition_by_value(const Point& line_sum, const Point& bucket, int segment_idx)
+  void set_phase2_addition_by_value(const P& line_sum, const P& bucket, int segment_idx)
   {
     m_p1 = line_sum;
     m_p2 = bucket;
@@ -96,16 +96,16 @@ public:
   /**
    * @brief Set up line addition for phase 2.
    * @param line_sum - line sum to be copied because it is also given to triangle sum.
-   * @param bucket_ptr - pointer to the bucket to be added to the line, passed as a pointer to avoid copying.
+   * @param bucket_ptr - Per to the bucket to be added to the line, passed as a Per to avoid copying.
    * @param segment_idx - relevant segment to identify the returning result.
    */
-  void set_phase2_line_addition(const Point& line_sum, Point* bucket_ptr, const int segment_idx)
+  void set_phase2_line_addition(const P& line_sum, P* bucket_ptr, const int segment_idx)
   {
     m_p1 = line_sum;
-    m_p2_pointer = bucket_ptr;
+    m_p2_Per = bucket_ptr;
     m_return_idx = segment_idx;
     m_is_line = true;
-    m_p2_config = ADD_P1_AND_P2_POINTER;
+    m_p2_config = ADD_P1_AND_P2_PER;
     dispatch();
   }
 
@@ -114,14 +114,14 @@ public:
    * No need to specify segment idx as this is only assigned to a task already handling the triangle's segment idx
    * (A previous line or triangle sum of this segment).
    * @param line_sum - line sum to be copied because its value can be updated during the triangle sum execution.
-   * @param triangle_sum_ptr - pointer to the triangle sum, passed as a pointer to avoid unnecessary copying.
+   * @param triangle_sum_ptr - Per to the triangle sum, passed as a Per to avoid unnecessary copying.
    */
-  void set_phase2_triangle_addition(Point& line_sum, Point* triangle_sum_ptr)
+  void set_phase2_triangle_addition(P& line_sum, P* triangle_sum_ptr)
   {
     m_p1 = line_sum;
-    m_p2_pointer = triangle_sum_ptr;
+    m_p2_Per = triangle_sum_ptr;
     m_is_line = false;
-    m_p2_config = ADD_P1_AND_P2_POINTER;
+    m_p2_config = ADD_P1_AND_P2_PER;
     dispatch();
   }
 
@@ -129,35 +129,35 @@ public:
    * @brief Chain addition used in phase 1 when a collision between a new result and an occupied bucket.
    * @param bucket - the bucket value to be added to the existing result in p1.
    */
-  void set_phase1_collision_task(Point& bucket)
+  void set_phase1_collision_task(P& bucket)
   {
     m_p2 = bucket;
     m_p2_config = ADD_P1_P2_BY_VALUE;
     dispatch();
   }
 
-  Point m_p1;             // One of the addends, and holds the addition result afterwards
+  P m_p1;             // One of the addends, and holds the addition result afterwards
   int m_return_idx;       // Idx allowing manager to figure out where the result belong to.
   bool m_is_line = false; // Indicator for phase 2 sums between line sum and triangle sum.
 
 private:
-  enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_POINTER, ADD_P1_AND_AFFINE_P1 };
+  enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_PER, ADD_P1_AND_AFFINE_P1 };
   eAddType m_p2_config = ADD_P1_P2_BY_VALUE;
 
   // Various configs of the second addend p2, one for each eAddType
-  Point m_p2;
-  Point const* m_p2_pointer;
-  affine_t m_p2_affine;
+  P m_p2;
+  P const* m_p2_Per;
+  A m_p2_affine;
 };
 
 /**
  * @class MSM
  * @brief class for solving multi-scalar-multiplication on the cpu.
- * The class is a template depending on the element relevant to MSM (for instance EC point).
+ * The class is a template depending on the element relevant to MSM (for instance EC P).
  * NOTE The msm runs only if nof_threads * 4 > nof_bms. The user can guarantee the condition by assigning a proper
  * precompute factor that will decrease the number of BMs required to calculate the MSM.
  */
-template <typename Point>
+template <typename A, typename P>
 class Msm
 {
 public:
@@ -181,32 +181,32 @@ public:
   /**
    * @brief Main function to execute MSM computation.
    * @param scalars - Input scalars for MSM.
-   * @param bases - EC point input, affine representation.
-   * @param msm_size - Size of the above arrays, as they are given as pointers.
+   * @param bases - EC P input, affine representation.
+   * @param msm_size - Size of the above arrays, as they are given as Pers.
    * @param batch_idx - number of current MSM in the batch.
-   * @param results - pointer to Point array in which to store the results. NOTE: the user is expected to preallocate
+   * @param results - Per to P array in which to store the results. NOTE: the user is expected to preallocate
    * the results array.
    */
   void run_msm(
     const scalar_t* scalars,
-    const affine_t* bases,
+    const A* bases,
     const unsigned int msm_size,
     const unsigned int batch_idx,
-    Point* results);
+    P* results);
 
 private:
-  TasksManager<EcAddTask<Point>> manager; // Tasks manager for multithreading
+  TasksManager<EcAddTask<A,P>> manager; // Tasks manager for multithreading
 
   const unsigned int m_c;                 // Pipenger constant
   const unsigned int m_num_bkts;          // Number of buckets in each bucket module
-  const unsigned int m_precompute_factor; // multiplication of points already calculated trading memory for performance
+  const unsigned int m_precompute_factor; // multiplication of Ps already calculated trading memory for performance
   const unsigned int m_num_bms;           // Number of bucket modules (windows in Pipenger's algorithm)
   const bool m_are_scalars_mont;          // Are the input scalars in Montgomery representation
-  const bool m_are_points_mont;           //  Are the input points in Montgomery representation
+  const bool m_are_Ps_mont;           //  Are the input Ps in Montgomery representation
   const int m_batch_size;
 
   // Phase 1 members
-  std::vector<Point> m_buckets;       // Vector of all buckets required for phase 1 (All bms in order)
+  std::vector<P> m_buckets;       // Vector of all buckets required for phase 1 (All bms in order)
   std::vector<bool> m_bkts_occupancy; // Boolean vector indicating if the corresponding bucket is occupied
 
   // Phase 2 members
@@ -223,8 +223,8 @@ private:
     // A method to summing the BM serially is starting from the top with a triangle sum up to the current line and a
     // line sum which is calculated for each line then added to the triangle.
     // Therefore both sums are need as a part of this struct.
-    Point triangle_sum;
-    Point line_sum;
+    P triangle_sum;
+    P line_sum;
 
     int m_nof_received_sums = 1; // Counter for numbers of sum received in this row idx - used to determine when a new
                                  // row idx can be dispatched (Due to it depending on the two sums from the prev idx).
@@ -238,21 +238,21 @@ private:
   /**
    * @brief Phase 1 (accumulation) of MSM
    * @param scalars - scalar input.
-   * @param bases - EC point input, affine representation (Regardless of the defined Point type of the class).
-   * @param msm_size - Size of the above arrays, as they are given as pointers.
+   * @param bases - EC P input, affine representation (Regardless of the defined P type of the class).
+   * @param msm_size - Size of the above arrays, as they are given as Pers.
    */
-  void bucket_accumulator(const scalar_t* scalars, const affine_t* bases, const unsigned int msm_size);
+  void bucket_accumulator(const scalar_t* scalars, const A* bases, const unsigned int msm_size);
 
   /**
    * @brief Push addition task during phase 1.
    * Th function also handles completed addition results while attempting to insert the new addition task (including
    * potential collision that requires more urgent ec-addition of the result and the current stored value).
    * @param task_bkt_idx - address in m_buckets in which to store the result in the future.
-   * @param bkt - the point from m_buckets.
-   * @param base - the point from the input bases
+   * @param bkt - the P from m_buckets.
+   * @param base - the P from the input bases
    * @param negate_base - flag to signal the task to subtract base instead of adding it.
    */
-  void phase1_push_addition(const unsigned int task_bkt_idx, const Point bkt, const affine_t base);
+  void phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base);
   /**
    * @brief Handles the final results of phase 1 (after no other planned additions are required).
    * The function also handles the potential collision similarly to push_addition above.
@@ -277,19 +277,19 @@ private:
    * @brief Final accumulation required for MSM calculation. the function will either launch a thread to perform the
    * calculation (`phase3_tread` function) or by the main thread, depending on the position in the batch (Last msm or
    * not).
-   * @param segments_ptr - pointer to vector containing the segment calculations of phase 2
+   * @param segments_ptr - Per to vector containing the segment calculations of phase 2
    * @param idx_in_batch - idx of the current MSM in the batch.
-   * @param result - output, pointer to write the MSM result to. Memory for the pointer has already been allocated by
+   * @param result - output, Per to write the MSM result to. Memory for the Per has already been allocated by
    * the user.
    */
-  void final_accumulator(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr, int idx_in_batch, Point* result);
+  void final_accumulator(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr, int idx_in_batch, P* result);
 
   /**
    * @brief Phase 3 function to be ran by a separate thread (or main in the end of the run) - i.e. without using the
    * tasks manager. It performs the remaining serial addition in each BM and sums them to one final MSM result.
-   * @param result - pointer to write the MSM result to. Memory for the pointer has already been allocated by the user.
+   * @param result - Per to write the MSM result to. Memory for the Per has already been allocated by the user.
    */
-  void phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segments_ptr, Point* result);
+  void phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segments_ptr, P* result);
 
   /**
    * @brief Function for resetting class members between batch runs.
@@ -297,15 +297,15 @@ private:
   void batch_run_reset() { std::fill(m_bkts_occupancy.begin(), m_bkts_occupancy.end(), false); }
 };
 
-template <typename Point>
-Msm<Point>::Msm(const MSMConfig& config)
+template <typename A, typename P>
+Msm<A,P>::Msm(const MSMConfig& config)
     : manager(
         config.ext->get<int>("n_threads") > 0 ? config.ext->get<int>("n_threads")
                                               : std::thread::hardware_concurrency()),
 
       m_c(config.ext->get<int>("c")), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
       m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
-      m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_points_mont(config.are_points_montgomery_form),
+      m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_Ps_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
 
       m_buckets(m_num_bms * m_num_bkts), m_bkts_occupancy(m_num_bms * m_num_bkts, false),
@@ -321,13 +321,13 @@ Msm<Point>::Msm(const MSMConfig& config)
 {
 }
 
-template <typename Point>
-void Msm<Point>::run_msm(
+template <typename A, typename P>
+void Msm<A,P>::run_msm(
   const scalar_t* scalars,
-  const affine_t* bases,
+  const A* bases,
   const unsigned int msm_size,
   const unsigned int batch_idx,
-  Point* results)
+  P* results)
 {
   bucket_accumulator(scalars, bases, msm_size);
   auto segments = std::make_shared<std::vector<BmSumSegment>>(m_num_bms * m_num_bm_segments);
@@ -336,8 +336,8 @@ void Msm<Point>::run_msm(
   if (batch_idx < m_batch_size - 1) { batch_run_reset(); }
 }
 
-template <typename Point>
-void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bases, const unsigned int msm_size)
+template <typename A, typename P>
+void Msm<A,P>::bucket_accumulator(const scalar_t* scalars, const A* bases, const unsigned int msm_size)
 {
   const int coeff_bit_mask_no_sign_bit = m_num_bkts - 1;
   const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
@@ -352,10 +352,10 @@ void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bas
     bool negate_p_and_s = scalar.get_scalar_digit(scalar_t::NBITS - 1, 1) > 0;
     if (negate_p_and_s) scalar = scalar_t::neg(scalar);
     for (int j = 0; j < m_precompute_factor; j++) {
-      // Handle required preprocess of base point
-      affine_t base = m_are_points_mont ? affine_t::from_montgomery(bases[m_precompute_factor * i + j])
+      // Handle required preprocess of base P
+      A base = m_are_Ps_mont ? A::from_montgomery(bases[m_precompute_factor * i + j])
                                         : bases[m_precompute_factor * i + j];
-      if (negate_p_and_s) { base = affine_t::neg(base); }
+      if (negate_p_and_s) { base = A::neg(base); }
 
       for (int k = 0; k < m_num_bms; k++) {
         // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
@@ -372,16 +372,16 @@ void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bas
             bkt_idx = m_num_bkts * k + ((-curr_coeff) & coeff_bit_mask_no_sign_bit);
           }
 
-          // Check for collision in that bucket and either dispatch an addition or store the point accordingly.
+          // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
           if (m_bkts_occupancy[bkt_idx]) {
             m_bkts_occupancy[bkt_idx] = false;
-            phase1_push_addition(bkt_idx, m_buckets[bkt_idx], carry > 0 ? affine_t::neg(base) : base);
+            phase1_push_addition(bkt_idx, m_buckets[bkt_idx], carry > 0 ? A::neg(base) : base);
           } else {
-            affine_t base = m_are_points_mont ? affine_t::from_montgomery(bases[m_precompute_factor * i + j])
+            A base = m_are_Ps_mont ? A::from_montgomery(bases[m_precompute_factor * i + j])
                                               : bases[m_precompute_factor * i + j];
-            if (negate_p_and_s) { base = affine_t::neg(base); }
+            if (negate_p_and_s) { base = A::neg(base); }
             m_bkts_occupancy[bkt_idx] = true;
-            m_buckets[bkt_idx] = carry > 0 ? Point::neg(Point::from_affine(base)) : Point::from_affine(base);
+            m_buckets[bkt_idx] = carry > 0 ? P::neg(P::from_affine(base)) : P::from_affine(base);
           }
         } else {
           // Handle edge case where coeff = 1 << c due to carry overflow which means:
@@ -394,10 +394,10 @@ void Msm<Point>::bucket_accumulator(const scalar_t* scalars, const affine_t* bas
   phase1_wait_for_completion();
 }
 
-template <typename Point>
-void Msm<Point>::phase1_push_addition(const unsigned int task_bkt_idx, const Point bkt, const affine_t base)
+template <typename A, typename P>
+void Msm<A,P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base)
 {
-  EcAddTask<Point>* task = nullptr;
+  EcAddTask<A,P>* task = nullptr;
   while (task == nullptr) {
     // Use the search for an available (idle or completed) task as an opportunity to handle the existing results.
     task = manager.get_idle_or_completed_task();
@@ -418,10 +418,10 @@ void Msm<Point>::phase1_push_addition(const unsigned int task_bkt_idx, const Poi
   }
 }
 
-template <typename Point>
-void Msm<Point>::phase1_wait_for_completion()
+template <typename A, typename P>
+void Msm<A,P>::phase1_wait_for_completion()
 {
-  EcAddTask<Point>* task = manager.get_completed_task();
+  EcAddTask<A,P>* task = manager.get_completed_task();
   while (task != nullptr) {
     // Check for collision in the destination bucket, and chain and addition / store result accordingly.
     if (m_bkts_occupancy[task->m_return_idx]) {
@@ -436,26 +436,26 @@ void Msm<Point>::phase1_wait_for_completion()
   }
 }
 
-template <typename Point>
-void Msm<Point>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
+template <typename A, typename P>
+void Msm<A,P>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr)
 {
   auto& segments = *segments_ptr; // For readability
   phase2_setup(segments);
   if (m_segment_size > 1) {
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
-      EcAddTask<Point>* task = manager.get_idle_task();
+      EcAddTask<A,P>* task = manager.get_idle_task();
       BmSumSegment& curr_segment = segments[i]; // For readability
 
       int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
-      Point bucket = m_bkts_occupancy[bkt_idx] ? m_buckets[bkt_idx] : Point::zero();
+      P bucket = m_bkts_occupancy[bkt_idx] ? m_buckets[bkt_idx] : P::zero();
       task->set_phase2_addition_by_value(curr_segment.line_sum, bucket, i);
     }
 
     // Loop until all line/tri sums are done.
     int done_segments = 0;
     while (done_segments < m_num_bms * m_num_bm_segments) {
-      EcAddTask<Point>* task = manager.get_completed_task();
+      EcAddTask<A,P>* task = manager.get_completed_task();
       BmSumSegment& curr_segment = segments[task->m_return_idx]; // For readability
 
       if (task->m_is_line) {
@@ -498,8 +498,8 @@ void Msm<Point>::bm_sum(std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr
   }
 }
 
-template <typename Point>
-void Msm<Point>::phase2_setup(std::vector<BmSumSegment>& segments)
+template <typename A, typename P>
+void Msm<A,P>::phase2_setup(std::vector<BmSumSegment>& segments)
 {
   // Init values of partial (line) and total (triangle) sum
   for (int i = 0; i < m_num_bms; i++) {
@@ -510,8 +510,8 @@ void Msm<Point>::phase2_setup(std::vector<BmSumSegment>& segments)
         segment.triangle_sum = m_buckets[bkt_idx];
         segment.line_sum = m_buckets[bkt_idx];
       } else {
-        segment.triangle_sum = Point::zero();
-        segment.line_sum = Point::zero();
+        segment.triangle_sum = P::zero();
+        segment.line_sum = P::zero();
       }
       segment.m_idx_in_segment = m_segment_size - 2;
       segment.m_segment_mem_start = m_num_bkts * i + m_segment_size * j + 1;
@@ -525,35 +525,35 @@ void Msm<Point>::phase2_setup(std::vector<BmSumSegment>& segments)
       segment.triangle_sum = m_buckets[bkt_idx];
       segment.line_sum = m_buckets[bkt_idx];
     } else {
-      segment.triangle_sum = Point::zero();
-      segment.line_sum = Point::zero();
+      segment.triangle_sum = P::zero();
+      segment.line_sum = P::zero();
     }
     segment.m_idx_in_segment = m_segment_size - 2;
     segment.m_segment_mem_start = m_num_bkts * (i + 1) - m_segment_size + 1;
   }
 }
 
-template <typename Point>
-void Msm<Point>::final_accumulator(
-  std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr, int idx_in_batch, Point* result)
+template <typename A, typename P>
+void Msm<A,P>::final_accumulator(
+  std::shared_ptr<std::vector<BmSumSegment>>& segments_ptr, int idx_in_batch, P* result)
 {
   // If it isn't the last MSM in the batch - run phase 3 on a separate thread to start utilizing the tasks manager on
   // the next phase 1.
   if (idx_in_batch == m_batch_size - 1) {
     phase3_thread(segments_ptr, result);
   } else {
-    m_p3_threads[idx_in_batch] = std::thread(&Msm<Point>::phase3_thread, this, segments_ptr, result);
+    m_p3_threads[idx_in_batch] = std::thread(&Msm<A,P>::phase3_thread, this, segments_ptr, result);
   }
 }
 
-template <typename Point>
-void Msm<Point>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segments_ptr, Point* result)
+template <typename A, typename P>
+void Msm<A,P>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segments_ptr, P* result)
 {
   auto& segments = *segments_ptr; // For readability
   for (int i = 0; i < m_num_bms; i++) {
     // Weighted sum of all the lines for each bm - summed in a similar fashion of the triangle sum of phase 2
-    Point partial_sum = segments[m_num_bm_segments * (i + 1) - 1].line_sum;
-    Point total_sum = segments[m_num_bm_segments * (i + 1) - 1].line_sum;
+    P partial_sum = segments[m_num_bm_segments * (i + 1) - 1].line_sum;
+    P total_sum = segments[m_num_bm_segments * (i + 1) - 1].line_sum;
     for (int j = m_num_bm_segments - 2; j > 0; j--) {
       partial_sum = partial_sum + segments[m_num_bm_segments * i + j].line_sum;
       total_sum = total_sum + partial_sum;
@@ -563,7 +563,7 @@ void Msm<Point>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segmen
     // Convert weighted lines sum to rectangles sum by doubling
     int num_doubles = m_c - 1 - m_log_num_segments;
     for (int k = 0; k < num_doubles; k++) {
-      segments[m_num_bm_segments * i].line_sum = Point::dbl(segments[m_num_bm_segments * i].line_sum);
+      segments[m_num_bm_segments * i].line_sum = P::dbl(segments[m_num_bm_segments * i].line_sum);
     }
 
     // Sum triangles within bm linearly
@@ -580,11 +580,11 @@ void Msm<Point>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segmen
   }
 
   // Sum BM sums together
-  Point final_sum = segments[(m_num_bms - 1) * m_num_bm_segments].triangle_sum;
+  P final_sum = segments[(m_num_bms - 1) * m_num_bm_segments].triangle_sum;
   for (int i = m_num_bms - 2; i >= 0; i--) {
     // Multiply by the BM digit factor 2^c - i.e. c doublings
     for (int j = 0; j < m_c; j++) {
-      final_sum = Point::dbl(final_sum);
+      final_sum = P::dbl(final_sum);
     }
     final_sum = final_sum + segments[m_num_bm_segments * i].triangle_sum;
   }
@@ -611,22 +611,22 @@ eIcicleError not_supported(const MSMConfig& conf)
  * @brief Super function that handles the Msm class to calculate a MSM.
  * @param device - Icicle API parameter stating the device being ran on. In this case - CPU.
  * @param scalars - Input scalars for MSM.
- * @param bases - EC point input, affine representation.
- * @param msm_size - Size of the above arrays, as they are given as pointers.
+ * @param bases - EC P input, affine representation.
+ * @param msm_size - Size of the above arrays, as they are given as Pers.
  * @param config - configuration containing parameters for the MSM.
- * @param results - pointer to Point array in which to store the results. NOTE: the user is expected to preallocate the
+ * @param results - Per to P array in which to store the results. NOTE: the user is expected to preallocate the
  *                  results array.
  */
-template <typename Point>
+template <typename A, typename P>
 eIcicleError cpu_msm(
   const Device& device,
   const scalar_t* scalars,
-  const affine_t* bases,
+  const A* bases,
   int msm_size,
   const MSMConfig& config,
-  Point* results)
+  P* results)
 {
-  Msm<Point>* msm = new Msm<Point>(config);
+  Msm<A,P>* msm = new Msm<A,P>(config);
 
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
@@ -644,16 +644,16 @@ eIcicleError cpu_msm(
 }
 
 /**
- * @brief Function to precompute points multiplications - trading memory for MSM performance.
+ * @brief Function to precompute Ps multiplications - trading memory for MSM performance.
  * @param device - Icicle API parameter stating the device being ran on. In this case - CPU.
- * @param input_bases - points to precompute.
- * @param nof_bases - Size of the above array, as it is given as a pointer.
+ * @param input_bases - Ps to precompute.
+ * @param nof_bases - Size of the above array, as it is given as a Per.
  * @param config - configuration containing parameters for the MSM. In this case, the config implicitly determines the
  *                 multiplication factor(s) of the input bases.
- * @param output_bases - pointer to Point array in which to store the results. NOTE: the user is expected to
+ * @param output_bases - Per to P array in which to store the results. NOTE: the user is expected to
  *                       preallocate the results array.
  */
-template <typename A>
+template <typename A, typename P>
 eIcicleError cpu_msm_precompute_bases(
   const Device& device,
   const A* input_bases,
@@ -669,13 +669,13 @@ eIcicleError cpu_msm_precompute_bases(
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {
     output_bases[precompute_factor * i] = input_bases[i];
-    projective_t point = projective_t::from_affine(is_mont ? A::from_montgomery(input_bases[i]) : input_bases[i]);
+    P point = P::from_affine(is_mont ? A::from_montgomery(input_bases[i]) : input_bases[i]);
     for (int j = 1; j < precompute_factor; j++) {
       for (int k = 0; k < shift; k++) {
-        point = projective_t::dbl(point);
+        point = P::dbl(point);
       }
       output_bases[precompute_factor * i + j] =
-        is_mont ? A::to_montgomery(projective_t::to_affine(point)) : projective_t::to_affine(point);
+        is_mont ? A::to_montgomery(P::to_affine(point)) : P::to_affine(point);
     }
   }
   return eIcicleError::SUCCESS;
