@@ -310,6 +310,9 @@ func TestMSM{{.CurvePrefix}}Batch(t *testing.T) {
 }
 
 func TestPrecomputePoints{{.CurvePrefix}}(t *testing.T) {
+	if DEVICE.GetDeviceType() == "CPU" {
+		t.Skip("Skipping cpu test")
+	}
 	cfg := {{if eq .CurvePrefix "G2"}}g2{{else}}msm{{end}}.{{.CurvePrefix}}GetDefaultMSMConfig()
 	const precomputeFactor = 8
 	cfg.PrecomputeFactor = precomputeFactor

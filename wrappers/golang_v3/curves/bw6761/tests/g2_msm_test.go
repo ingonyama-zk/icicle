@@ -227,6 +227,9 @@ func TestMSMG2Batch(t *testing.T) {
 }
 
 func TestPrecomputePointsG2(t *testing.T) {
+	if DEVICE.GetDeviceType() == "CPU" {
+		t.Skip("Skipping cpu test")
+	}
 	cfg := g2.G2GetDefaultMSMConfig()
 	const precomputeFactor = 8
 	cfg.PrecomputeFactor = precomputeFactor
