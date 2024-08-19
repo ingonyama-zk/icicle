@@ -196,7 +196,7 @@ int main()
   projective_t::rand_host_many(points.get(), msm_size);
 
   // (optional) copy scalars to device memory explicitly
-  scalar_t* scalar_d -nullptr;
+  scalar_t* scalar_d = nullptr;
   auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * msm_size);
   // Note: need to test err and make sure no errors occurred
   err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * msm_size);

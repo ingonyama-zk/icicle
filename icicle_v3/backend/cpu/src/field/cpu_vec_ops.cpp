@@ -65,6 +65,14 @@ public:
     m_output = output;
     dispatch();
   }
+// Set the operands to execute a task of 1 operand and dispatch the task
+  void send_intermidiate_res_task(VecOperation operation, const int nof_operations, const T* op_a)
+  {
+    m_operation = operation;
+    m_nof_operations = nof_operations;
+    m_op_a = op_a;
+    dispatch();
+  }
 
   // Set the operands to bitrev operation dispatch the task
   void send_bitrev_task(
@@ -233,7 +241,8 @@ private:
   uint64_t m_start_index;   // index used in bitreverse
   int m_bit_size;           // use in bitrev operation
   uint64_t m_stride;        // used in slice operation
-  T* m_output;              // pointer to the output. The  is a vector or scalar
+  T* m_output;              // pointer to the output. Can be a vector or scalar pointer
+  T  m_intermidiate_res;    // pointer to the output. Can be a vector or scalar pointer
 };
 
 #define NOF_OPERATIONS_PER_TASK 512
@@ -257,19 +266,6 @@ cpu_2vectors_op(VecOperation op, const T* vec_a, const T* vec_b, uint64_t n, con
   for (uint64_t i = 0; i < n; i += NOF_OPERATIONS_PER_TASK) {
     VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
     task_p->send_2ops_task(op, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - i), vec_a + i, vec_b + i, output + i);
-  }
-  task_manager.wait_done();
-  return eIcicleError::SUCCESS;
-}
-
-// Execute a full task from the type T = (op) vector
-template <typename T>
-eIcicleError cpu_1vector_op(VecOperation op, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
-{
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
-  for (uint64_t i = 0; i < n; i += NOF_OPERATIONS_PER_TASK) {
-    VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
-    task_p->send_1op_task(op, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - i), vec_a + i, output);
   }
   task_manager.wait_done();
   return eIcicleError::SUCCESS;
@@ -347,7 +343,22 @@ REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
 template <typename T>
 eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
 {
-  return cpu_1vector_op(VecOperation::VECTOR_SUM, vec_a, n, config, output);
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  bool output_initialized = false;
+  uint64_t vec_s_offset = 0;
+  VectorOpTask<T>* task_p;
+  // run until all vector deployed and all tasks completed
+  do {
+    task_p = vec_s_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
+    if (task_p->is_completed()) {
+      *output = output_initialized ? task_p->m_intermidiate_res : *output + task_p->m_intermidiate_res;
+    }
+    if (vec_s_offset < n) {
+      task_p->send_intermidiate_res_task(VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
+      vec_s_offset += NOF_OPERATIONS_PER_TASK;  
+    }
+  } while (task_p != nullptr);
+  return eIcicleError::SUCCESS;
 }
 
 // Once backend will support - uncomment the following line
@@ -356,7 +367,22 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
 template <typename T>
 eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
 {
-  return cpu_1vector_op(VecOperation::VECTOR_PRODUCT, vec_a, n, config, output);
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  bool output_initialized = false;
+  uint64_t vec_s_offset = 0;
+  VectorOpTask<T>* task_p;
+  // run until all vector deployed and all tasks completed
+  do {
+    task_p = vec_s_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
+    if (task_p->is_completed()) {
+      *output = output_initialized ? task_p->m_intermidiate_res : *output * task_p->m_intermidiate_res;
+    }
+    if (vec_s_offset < n) {
+      task_p->send_intermidiate_res_task(VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
+      vec_s_offset += NOF_OPERATIONS_PER_TASK;  
+    }
+  } while (task_p != nullptr);
+  return eIcicleError::SUCCESS;
 }
 
 // Once backend will support - uncomment the following line
