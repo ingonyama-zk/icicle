@@ -10,13 +10,7 @@ pub fn ecntt<C: Curve>(
     dir: NTTDir,
     cfg: &NTTConfig<C::ScalarField>,
     output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
-) -> IcicleResult<()>
-where
-    C::ScalarField: FieldImpl,
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
-{
-    // ... function implementation ...
-}
+) -> Result<(), eIcicleError>
 ```
 
 ## Parameters
@@ -28,4 +22,4 @@ where
 
 ## Return Value
 
-- **`IcicleResult<()>`**: This function returns an `IcicleResult` which is a wrapper type that indicates success or failure of the NTT computation. On success, it contains `Ok(())`.
+- **`Result<(), eIcicleError>`**: This function returns an `eIcicleError` which is a wrapper type that indicates success or failure of the NTT computation. On success, it contains `Ok(())`.

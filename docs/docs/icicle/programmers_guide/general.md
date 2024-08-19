@@ -7,6 +7,8 @@
 
 Icicle offers a variety of compute APIs, including Number Theoretic Transforms (NTT), Multi Scalar Multiplication (MSM), vector operations, Elliptic Curve NTT (ECNTT), polynomials, and more. These APIs follow a consistent structure, making it straightforward to apply the same usage patterns across different operations.
 
+[Check out all details about compute APIs here](../primitives/overview.md).
+
 #### Common Structure of Compute APIs
 
 Each compute API in Icicle typically involves the following components:

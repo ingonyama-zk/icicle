@@ -6,6 +6,10 @@ This guide covers the usage of Icicle's C++ API, including device management, me
 
 ## Device Management
 
+:::note
+For all icicle runtime APIs see [runtime.h](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle_v3/include/icicle/runtime.h)
+:::
+
 ### Loading a Backend
 
 The backend can be loaded from a specific path or from an environment variable. This is essential for setting up the computing environment.

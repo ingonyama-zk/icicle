@@ -21,10 +21,11 @@ module.exports = {
             type: `doc`,
             id: "icicle/arch_overview"
           },
+          collapsed: false,
           items: [
             {
               type: "doc",
-              label: "CUDA Backend",
+              label: "CUDA Backend (TODO how to insall)",
               id: "icicle/install_cuda_backend"
             },
             {
@@ -34,7 +35,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Build Your Own Backend",
+              label: "Build Your Own Backend (TODO)",
               id: "icicle/build_your_own_backend"
             },
           ]
@@ -51,7 +52,33 @@ module.exports = {
         },
         {
           type: "category",
-          label: "API",
+          label: "Programmers guide",
+          link: {
+            type: `doc`,
+            id: "icicle/programmers_guide/general",
+          },
+          collapsed: false,
+          items: [
+            {
+              type: "doc",
+              label: "C++",
+              id: "icicle/programmers_guide/cpp",
+            },
+            {
+              type: "doc",
+              label: "Rust",
+              id: "icicle/programmers_guide/rust",
+            },
+            {
+              type: "doc",
+              label: "Go (TODO)",
+              id: "icicle/programmers_guide/go",
+            }
+          ],
+        },
+        {
+          type: "category",
+          label: "Compute API",
           link: {
             type: `doc`,
             id: 'icicle/primitives/overview',
@@ -65,23 +92,13 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "NTT",
+              label: "NTT / ECNTT",
               id: "icicle/primitives/ntt",
             },
             {
               type: "doc",
-              label: "Keccak Hash",
-              id: "icicle/primitives/keccak",
-            },
-            {
-              type: "doc",
-              label: "Poseidon Hash",
-              id: "icicle/primitives/poseidon",
-            },
-            {
-              type: "doc",
-              label: "Poseidon2 Hash",
-              id: "icicle/primitives/poseidon2",
+              label: "Vector operations",
+              id: "icicle/primitives/vec_ops",
             },
             {
               type: "doc",
@@ -89,8 +106,23 @@ module.exports = {
               id: "icicle/polynomials/overview",
             },
             {
+              type: "doc",
+              label: "Keccak Hash (TODO)",
+              id: "icicle/primitives/keccak",
+            },
+            {
+              type: "doc",
+              label: "Poseidon Hash (TODO)",
+              id: "icicle/primitives/poseidon",
+            },
+            {
+              type: "doc",
+              label: "Poseidon2 Hash (TODO)",
+              id: "icicle/primitives/poseidon2",
+            },
+            {
               type: "category",
-              label: "Golang bindings",
+              label: "Golang bindings (TODO)",
               link: {
                 type: `doc`,
                 id: "icicle/golang-bindings",
@@ -150,20 +182,9 @@ module.exports = {
               collapsed: true,
               items: [
                 {
-                  type: "category",
+                  type: "doc",
                   label: "MSM",
-                  link: {
-                    type: `doc`,
-                    id: "icicle/rust-bindings/msm",
-                  },
-                  collapsed: true,
-                  items: [
-                    {
-                      type: "doc",
-                      label: "MSM pre computation",
-                      id: "icicle/rust-bindings/msm-pre-computation",
-                    }
-                  ]
+                  id: "icicle/rust-bindings/msm",
                 },
                 {
                   type: "doc",
@@ -172,7 +193,7 @@ module.exports = {
                 },
                 {
                   type: "doc",
-                  label: "EC-NTT",
+                  label: "ECNTT",
                   id: "icicle/rust-bindings/ecntt",
                 },
                 {
@@ -182,47 +203,21 @@ module.exports = {
                 },
                 {
                   type: "doc",
-                  label: "Keccak Hash",
+                  label: "Polynomials",
+                  id: "icicle/rust-bindings/polynomials",
+                },
+                {
+                  type: "doc",
+                  label: "Keccak Hash (TODO)",
                   id: "icicle/rust-bindings/keccak",
                 },
                 {
                   type: "doc",
-                  label: "Multi GPU Support",
+                  label: "Multi GPU Support (TODO)",
                   id: "icicle/rust-bindings/multi-gpu",
-                },
-                {
-                  type: "doc",
-                  label: "Polynomials",
-                  id: "icicle/rust-bindings/polynomials",
                 },
               ],
             },
-          ],
-        },
-        {
-          type: "category",
-          label: "Programmers guide",
-          link: {
-            type: `doc`,
-            id: "icicle/programmers_guide/general",
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "doc",
-              label: "C++",
-              id: "icicle/programmers_guide/cpp",
-            },
-            {
-              type: "doc",
-              label: "Rust",
-              id: "icicle/programmers_guide/rust",
-            },
-            {
-              type: "doc",
-              label: "Go",
-              id: "icicle/programmers_guide/go",
-            }
           ],
         },
         {
@@ -232,12 +227,12 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Benchmarks",
+          label: "Benchmarks (TODO)",
           id: "icicle/benchmarks",
         },
         {
           type: "doc",
-          label: "FAQ and Troubleshooting",
+          label: "FAQ and Troubleshooting (TODO)",
           id: "icicle/faq_and_troubleshooting",
         },
         {

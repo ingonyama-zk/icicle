@@ -171,7 +171,7 @@ pub fn msm<C: Curve + MSM<C>>(
 ///
 /// * `output_bases` - Device-allocated buffer of size `bases_size` * `precompute_factor` for the extended bases.
 ///
-/// Returns `Ok(())` if no errors occurred or a `CudaError` otherwise.
+/// Returns `Ok(())` if no errors occurred or a `eIcicleError` otherwise.
 pub fn precompute_bases<C: Curve + MSM<C>>(
     points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
     config: &MSMConfig,
