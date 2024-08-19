@@ -299,7 +299,7 @@ Msm<A, P>::Msm(const MSMConfig& config)
         config.ext->get<int>("n_threads") > 0 ? config.ext->get<int>("n_threads")
                                               : std::thread::hardware_concurrency()),
 
-      m_c(config.ext->get<int>("c")), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
+      m_c(config.c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
       m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
       m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_Ps_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
