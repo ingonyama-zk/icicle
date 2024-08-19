@@ -2,9 +2,7 @@
 #include <cstring>
 #include <chrono>
 #include <string>
-#include "hash/blake2/blake2.h"
-#include "hash/blake2/blake2-impl.h"
-#include "icicle/hash.h"
+#include "hash/blake2/blake2s.h"
 #include <chrono>
 #include <cassert>
 #include <chrono>
@@ -17,8 +15,6 @@
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
-
-// Ensure BLAKE2S_KEYBYTES, BLAKE2S_OUTBYTES, and blake2s function are defined appropriately
 
 void print_hash(BYTE* hash, WORD len)
 {
@@ -68,27 +64,28 @@ int main(int argc, char** argv)
   std::cout << "Loaded test data from CSV:" << std::endl;
 
   // Test parameters
-  WORD outlen = BLAKE2S_OUTBYTES; // Output length in bytes (32)
   HashConfig config;
 
   // Perform the hashing
-
   for (size_t i = 0; i < test_data.size(); i++) {
-    BYTE* output = (BYTE*)malloc(outlen);
-    if (!output) {
-      perror("Failed to allocate memory for output");
-      return EXIT_FAILURE;
-    }
-
     const std::string& input_str = test_data[i].first;
     const std::string& expected_hash = test_data[i].second;
 
     BYTE* input = (BYTE*)input_str.c_str();
     size_t inlen = input_str.size();
 
+    Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
+
+    WORD outlen = blake2s.total_output_limbs * sizeof(limb_t); // Output length in bytes (32)
+    BYTE* output = (BYTE*)malloc(outlen);
+    if (!output) {
+      perror("Failed to allocate memory for output");
+      return EXIT_FAILURE;
+    }
+
     // Perform the hashing
     START_TIMER(blake_timer)
-    Blake2s(inlen / sizeof(limb_t)).run_single_hash((limb_t*)input, (limb_t*)output, config);
+    blake2s.run_single_hash((limb_t*)input, (limb_t*)output, config);
     END_TIMER(blake_timer, "Blake Timer")
 
     // Convert the output to hex string

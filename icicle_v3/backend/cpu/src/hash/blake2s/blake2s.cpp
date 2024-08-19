@@ -18,16 +18,14 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "hash/blake2/blake2.h"
-#include "hash/blake2/blake2-impl.h"
-#include "icicle/hash.h"
+#include "hash/blake2/blake2s.h"
 
 using namespace icicle;
 
-static const uint32_t blake2s_IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
-                                       0x510E527FUL, 0x9B05688CUL, 0x1F83D9ABUL, 0x5BE0CD19UL};
+const uint32_t Blake2s::blake2s_IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
+                                         0x510E527FUL, 0x9B05688CUL, 0x1F83D9ABUL, 0x5BE0CD19UL};
 
-static const uint8_t blake2s_sigma[10][16] = {
+const uint8_t Blake2s::blake2s_sigma[10][16] = {
   {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3},
   {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4}, {7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8},
   {9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13}, {2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9},
@@ -35,25 +33,25 @@ static const uint8_t blake2s_sigma[10][16] = {
   {6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5}, {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
 };
 
-static void blake2s_set_lastnode(blake2s_state* S) { S->f[1] = (uint32_t)-1; }
+void Blake2s::blake2s_set_lastnode(blake2s_state* S) const { S->f[1] = (uint32_t)-1; }
 
 /* Some helper functions, not necessarily useful */
-static int blake2s_is_lastblock(const blake2s_state* S) { return S->f[0] != 0; }
+int Blake2s::blake2s_is_lastblock(const blake2s_state* S) const { return S->f[0] != 0; }
 
-static void blake2s_set_lastblock(blake2s_state* S)
+void Blake2s::blake2s_set_lastblock(blake2s_state* S) const
 {
   if (S->last_node) blake2s_set_lastnode(S);
 
   S->f[0] = (uint32_t)-1;
 }
 
-static void blake2s_increment_counter(blake2s_state* S, const uint32_t inc)
+void Blake2s::blake2s_increment_counter(blake2s_state* S, const uint32_t inc) const
 {
   S->t[0] += inc;
   S->t[1] += (S->t[0] < inc);
 }
 
-static void blake2s_init0(blake2s_state* S)
+void Blake2s::blake2s_init0(blake2s_state* S) const
 {
   size_t i;
   memset(S, 0, sizeof(blake2s_state));
@@ -63,7 +61,7 @@ static void blake2s_init0(blake2s_state* S)
 }
 
 /* init2 xors IV with input parameter block */
-int blake2s_init_param(blake2s_state* S, const blake2s_param* P)
+int Blake2s::blake2s_init_param(blake2s_state* S, const blake2s_param* P) const
 {
   const unsigned char* p = (const unsigned char*)(P);
   size_t i;
@@ -79,7 +77,7 @@ int blake2s_init_param(blake2s_state* S, const blake2s_param* P)
 }
 
 /* Sequential blake2s initialization */
-int blake2s_init(blake2s_state* S, size_t outlen)
+int Blake2s::blake2s_init(blake2s_state* S, size_t outlen) const
 {
   blake2s_param P[1];
 
@@ -101,7 +99,7 @@ int blake2s_init(blake2s_state* S, size_t outlen)
   return blake2s_init_param(S, P);
 }
 
-int blake2s_init_key(blake2s_state* S, size_t outlen, const void* key, size_t keylen)
+int Blake2s::blake2s_init_key(blake2s_state* S, size_t outlen, const void* key, size_t keylen) const
 {
   blake2s_param P[1];
 
@@ -158,7 +156,7 @@ int blake2s_init_key(blake2s_state* S, size_t outlen, const void* key, size_t ke
     G(r, 7, v[3], v[4], v[9], v[14]);                                                                                  \
   } while (0)
 
-static void blake2s_compress(blake2s_state* S, const uint8_t in[BLAKE2S_BLOCKBYTES])
+void Blake2s::blake2s_compress(blake2s_state* S, const uint8_t in[BLAKE2S_BLOCKBYTES]) const
 {
   uint32_t m[16];
   uint32_t v[16];
@@ -200,7 +198,7 @@ static void blake2s_compress(blake2s_state* S, const uint8_t in[BLAKE2S_BLOCKBYT
 #undef G
 #undef ROUND
 
-int blake2s_update(blake2s_state* S, const void* pin, size_t inlen)
+int Blake2s::blake2s_update(blake2s_state* S, const void* pin, size_t inlen) const
 {
   const unsigned char* in = (const unsigned char*)pin;
   if (inlen > 0) {
@@ -226,7 +224,7 @@ int blake2s_update(blake2s_state* S, const void* pin, size_t inlen)
   return 0;
 }
 
-int blake2s_final(blake2s_state* S, void* out, size_t outlen)
+int Blake2s::blake2s_final(blake2s_state* S, void* out, size_t outlen) const
 {
   uint8_t buffer[BLAKE2S_OUTBYTES] = {0};
   size_t i;
@@ -248,7 +246,7 @@ int blake2s_final(blake2s_state* S, void* out, size_t outlen)
   return 0;
 }
 
-int blake2s(void* out, size_t outlen, const void* in, size_t inlen, const void* key, size_t keylen)
+int Blake2s::blake2s(void* out, size_t outlen, const void* in, size_t inlen, const void* key, size_t keylen) const
 {
   blake2s_state S[1];
 
@@ -273,13 +271,6 @@ int blake2s(void* out, size_t outlen, const void* in, size_t inlen, const void* 
   blake2s_final(S, out, outlen);
   return 0;
 }
-
-#if defined(SUPERCOP)
-int crypto_hash(unsigned char* out, unsigned char* in, unsigned long long inlen)
-{
-  return blake2s(out, BLAKE2S_OUTBYTES, in, inlen, NULL, 0);
-}
-#endif
 
 eIcicleError Blake2s::run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config) const
 {
@@ -325,4 +316,114 @@ eIcicleError Blake2s::run_multiple_hash( // Dummy implementation running in a lo
   }
 
   return eIcicleError::SUCCESS;
+}
+
+/* Helper functions */
+
+BLAKE2_INLINE uint32_t Blake2s::load32(const void* src) const
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  uint32_t w;
+  memcpy(&w, src, sizeof w);
+  return w;
+#else
+  const uint8_t* p = (const uint8_t*)src;
+  return ((uint32_t)(p[0]) << 0) | ((uint32_t)(p[1]) << 8) | ((uint32_t)(p[2]) << 16) | ((uint32_t)(p[3]) << 24);
+#endif
+}
+
+BLAKE2_INLINE uint64_t Blake2s::load64(const void* src) const
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  uint64_t w;
+  memcpy(&w, src, sizeof w);
+  return w;
+#else
+  const uint8_t* p = (const uint8_t*)src;
+  return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) | ((uint64_t)(p[3]) << 24) |
+         ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40) | ((uint64_t)(p[6]) << 48) | ((uint64_t)(p[7]) << 56);
+#endif
+}
+
+BLAKE2_INLINE uint16_t Blake2s::load16(const void* src) const
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  uint16_t w;
+  memcpy(&w, src, sizeof w);
+  return w;
+#else
+  const uint8_t* p = (const uint8_t*)src;
+  return (uint16_t)(((uint32_t)(p[0]) << 0) | ((uint32_t)(p[1]) << 8));
+#endif
+}
+
+BLAKE2_INLINE void Blake2s::store16(void* dst, uint16_t w) const
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  memcpy(dst, &w, sizeof w);
+#else
+  uint8_t* p = (uint8_t*)dst;
+  *p++ = (uint8_t)w;
+  w >>= 8;
+  *p++ = (uint8_t)w;
+#endif
+}
+
+BLAKE2_INLINE void Blake2s::store32(void* dst, uint32_t w) const
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  memcpy(dst, &w, sizeof w);
+#else
+  uint8_t* p = (uint8_t*)dst;
+  p[0] = (uint8_t)(w >> 0);
+  p[1] = (uint8_t)(w >> 8);
+  p[2] = (uint8_t)(w >> 16);
+  p[3] = (uint8_t)(w >> 24);
+#endif
+}
+
+BLAKE2_INLINE void Blake2s::store64(void* dst, uint64_t w) const
+{
+#if defined(NATIVE_LITTLE_ENDIAN)
+  memcpy(dst, &w, sizeof w);
+#else
+  uint8_t* p = (uint8_t*)dst;
+  p[0] = (uint8_t)(w >> 0);
+  p[1] = (uint8_t)(w >> 8);
+  p[2] = (uint8_t)(w >> 16);
+  p[3] = (uint8_t)(w >> 24);
+  p[4] = (uint8_t)(w >> 32);
+  p[5] = (uint8_t)(w >> 40);
+  p[6] = (uint8_t)(w >> 48);
+  p[7] = (uint8_t)(w >> 56);
+#endif
+}
+
+BLAKE2_INLINE uint64_t Blake2s::load48(const void* src) const
+{
+  const uint8_t* p = (const uint8_t*)src;
+  return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) | ((uint64_t)(p[3]) << 24) |
+         ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40);
+}
+
+BLAKE2_INLINE void Blake2s::store48(void* dst, uint64_t w) const
+{
+  uint8_t* p = (uint8_t*)dst;
+  p[0] = (uint8_t)(w >> 0);
+  p[1] = (uint8_t)(w >> 8);
+  p[2] = (uint8_t)(w >> 16);
+  p[3] = (uint8_t)(w >> 24);
+  p[4] = (uint8_t)(w >> 32);
+  p[5] = (uint8_t)(w >> 40);
+}
+
+BLAKE2_INLINE uint32_t Blake2s::rotr32(const uint32_t w, const unsigned c) const { return (w >> c) | (w << (32 - c)); }
+
+BLAKE2_INLINE uint64_t Blake2s::rotr64(const uint64_t w, const unsigned c) const { return (w >> c) | (w << (64 - c)); }
+
+/* prevents compiler optimizing out memset() */
+BLAKE2_INLINE void Blake2s::secure_zero_memory(void* v, size_t n) const
+{
+  static void* (*const volatile memset_v)(void*, int, size_t) = &memset;
+  memset_v(v, 0, n);
 }

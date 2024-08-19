@@ -1,12 +1,8 @@
-
-
 #include <iostream>
 #include <cstring>
 #include <chrono>
 #include <string>
-#include "hash/blake2/blake2.h"
-#include "hash/blake2/blake2-impl.h"
-#include "icicle/hash.h"
+#include "hash/blake2/blake2s.h"
 #include <chrono>
 #include <cassert>
 #include <fstream>
@@ -106,9 +102,11 @@ int main(int argc, char** argv)
     memcpy(current_position, test_strings[i].c_str(), test_strings[i].size());
     current_position += test_strings[i].size();
   }
+  // init blake2s
+  Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
 
   // Allocate memory for the output
-  WORD outlen = BLAKE2S_OUTBYTES;
+  WORD outlen = blake2s.total_output_limbs * sizeof(limb_t);
   BYTE* output = (BYTE*)malloc(outlen * n_batch);
   if (!output) {
     perror("Failed to allocate memory for output");
@@ -120,9 +118,7 @@ int main(int argc, char** argv)
   HashConfig config;
   // Perform the hashing
   START_TIMER(blake_timer)
-  // blake2s_cuda(batched_input, output, n_batch, inlen, outlen, config);
-  // Blake2s().run_hash_many(batched_input, output, n_batch, inlen, outlen, config);
-  Blake2s(inlen / sizeof(limb_t)).run_multiple_hash((limb_t*)batched_input, (limb_t*)output, n_batch, config);
+  blake2s.run_multiple_hash((limb_t*)batched_input, (limb_t*)output, n_batch, config);
 
   END_TIMER(blake_timer, "Blake Timer")
 
