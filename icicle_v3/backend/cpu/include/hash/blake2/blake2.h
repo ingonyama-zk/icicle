@@ -194,11 +194,7 @@ public:
     limb_t* output_limbs,
     int nof_hashes,
     const HashConfig& config,
-    const limb_t* side_input_limbs = nullptr) const override
-  {
-    // Currently just returning success; implement as needed
-    return eIcicleError::SUCCESS;
-  }
+    const limb_t* side_input_limbs = nullptr) const override;
 };
 
 #if defined(__cplusplus)
