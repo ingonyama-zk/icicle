@@ -25,7 +25,7 @@ module.exports = {
           items: [
             {
               type: "doc",
-              label: "CUDA Backend (TODO how to insall)",
+              label: "CUDA Backend (TODO finalize)",
               id: "icicle/install_cuda_backend"
             },
             {

@@ -7,7 +7,7 @@ This guide covers the usage of Icicle's C++ API, including device management, me
 ## Device Management
 
 :::note
-For all icicle runtime APIs see [runtime.h](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle_v3/include/icicle/runtime.h)
+See all icicle runtime APIs in [runtime.h](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle_v3/include/icicle/runtime.h)
 :::
 
 ### Loading a Backend
@@ -16,14 +16,9 @@ The backend can be loaded from a specific path or from an environment variable. 
 
 ```cpp
 #include "icicle/runtime.h"
-
-eIcicleError result = icicle_load_backend("/path/to/backend", true);
-```
-
-To load the backend from an environment variable or default directory:
-
-```cpp
 eIcicleError result = icicle_load_backend_from_env_or_default();
+// or load from custom install dir
+eIcicleError result = icicle_load_backend("/path/to/backend/installdir", true);
 ```
 
 ### Setting and Getting Active Device
@@ -33,7 +28,7 @@ You can set the active device for the current thread and retrieve it when needed
 ```cpp
 icicle::Device device = {"CUDA", 0}; // or other
 eIcicleError result = icicle_set_device(device);
-
+// or query current (thread) device 
 eIcicleError result = icicle_get_active_device(device);
 ```
 
@@ -70,11 +65,11 @@ You can perform memory allocation and deallocation asynchronously using streams:
 
 ```cpp
 icicleStreamHandle stream;
-icicle_create_stream(&stream);
+eIcicleError err = icicle_create_stream(&stream);
 
 void* ptr;
-eIcicleError result = icicle_malloc_async(&ptr, 1024, stream);
-eIcicleError result = icicle_free_async(ptr, stream);
+err = icicle_malloc_async(&ptr, 1024, stream);
+err = icicle_free_async(ptr, stream);
 ```
 
 ### Querying Available Memory
@@ -83,7 +78,7 @@ Retrieve the total and available memory on the active device:
 
 ```cpp
 size_t total_memory, available_memory;
-eIcicleError result = icicle_get_available_memory(total_memory, available_memory);
+eIcicleError err = icicle_get_available_memory(total_memory, available_memory);
 ```
 
 ### Setting Memory Values
@@ -91,8 +86,8 @@ eIcicleError result = icicle_get_available_memory(total_memory, available_memory
 Set memory to a specific value on the active device, synchronously or asynchronously:
 
 ```cpp
-eIcicleError result = icicle_memset(ptr, 0, 1024); // Set 1024 bytes to 0
-eIcicleError result = icicle_memset_async(ptr, 0, 1024, stream);
+eIcicleError err = icicle_memset(ptr, 0, 1024); // Set 1024 bytes to 0
+eIcicleError err = icicle_memset_async(ptr, 0, 1024, stream);
 ```
 
 ## Data Transfer
@@ -150,9 +145,6 @@ Check if a device is available and retrieve a list of registered devices:
 ```cpp
 icicle::Device dev;
 eIcicleError result = icicle_is_device_avialable(dev);
-
-char output[256];
-eIcicleError result = icicle_get_registered_devices(output, sizeof(output));
 ```
 
 ### Querying Device Properties
@@ -162,7 +154,17 @@ Retrieve properties of the active device:
 ```cpp
 DeviceProperties properties;
 eIcicleError result = icicle_get_device_properties(properties);
+
+/******************/
+// where DeviceProperties is
+struct DeviceProperties {
+  bool using_host_memory;      // Indicates if the device uses host memory
+  int num_memory_regions;      // Number of memory regions available on the device
+  bool supports_pinned_memory; // Indicates if the device supports pinned memory
+  // Add more properties as needed
+};
 ```
+
 
 ## Compute APIs
 
@@ -185,7 +187,7 @@ int main()
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
   const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
   if (is_cuda_device_available) {
-    Device device = {"CUDA", 0}; // GPU-0
+    Device device = {"CUDA", 0};             // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the api call returns eIcicleError::SUCCESS
   } // else we stay on CPU backend
 
@@ -200,7 +202,7 @@ int main()
   projective_t::rand_host_many(points.get(), msm_size);
 
   // (optional) copy scalars to device memory explicitly
-  scalar_t* scalar_d = nullptr;
+  scalar_t* scalars_d = nullptr;
   auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * msm_size);
   // Note: need to test err and make sure no errors occurred
   err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * msm_size);
@@ -275,8 +277,7 @@ int main()
   // Perform polynomial multiplication
   auto result = f * g; // Executes on the current device
 
-  // Display result (or use result in further computations)
-  std::cout << "Polynomial multiplication result: " << result << std::endl;
+  ICICLE_LOG_INFO << "Done";
 
   return 0;
 }

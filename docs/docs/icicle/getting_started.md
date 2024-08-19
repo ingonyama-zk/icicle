@@ -20,7 +20,7 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
 2. **Configure the build:**
    ```bash   
    mkdir -p build && rm -rf build/*
-   cmake -S icicle -B build -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
+   cmake -S icicle -B build -DFIELD=babybear
    ```
 
 :::note
@@ -40,22 +40,24 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
    target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
    ```
 
-
 5. **Installation (optional):**
    To install the libs, specify the install prefix in the [cmake command](./getting_started.md#build-commands)
-   `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path is `/usr/local` if not specified.
+   `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path on linux is `/usr/local` if not specified. For other systems it may differ. The cmake command will print it to the log
+   ```
+   -- CMAKE_INSTALL_PREFIX=/install/dir/for/cmake/install
+   ```
    Then after building, use cmake to install the libraries:
    ```
-   cmake -S icicle_v3 -B build -DCMAKE_INSTALL_PREFIX=/path/to/install/dir/ -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
-   cmake --build build -j # build ICICLE
-   cmake --install build # install icicle in /path/to/install/dir/
+   cmake -S icicle -B build -DFIELD=babybear -DCMAKE_INSTALL_PREFIX=/path/to/install/dir/
+   cmake --build build -j # build
+   cmake --install build # install icicle to /path/to/install/dir/
    ```
 
 6. **Run tests (optional):**
    Add `-DBUILD_TESTS=ON` to the [cmake command](./getting_started.md#build-commands) and build.
    Execute all tests
    ```bash
-   cmake -S icicle_v3 -B build --DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear
+   cmake -S icicle -B build -DFIELD=babybear -DBUILD_TESTS=ON
    cmake --build build -j
    cd build/tests
    ctest
@@ -67,19 +69,17 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
    ./build/tests/test_field_api --gtest_filter="*ntt*"
    ```
 :::note
-Some tests assume a cuda backend exists and will fail otherwise.
-:::
-:::note
-Each C++ test-suite is an executable that links to gtest.
+Most tests assume a cuda backend exists and will fail otherwise if cannot find a CUDA device.
 :::
 
 #### Build Flags
 
 You can customize your ICICLE build with the following flags:
 
-- `-DCPU_BACKEND=ON/OFF`: Enable or disable built it CPU backend. Default=ON.
-- `-DBUILD_TESTS=ON/OFF`: Enable or disable tests. Default=OFF.
-- `-DCMAKE_INSTALL_PREFIX=/install/dir`: Specify install dir. Default=/usr/local.
+- `-DCPU_BACKEND=ON/OFF`: Enable or disable built-in CPU backend. `default=ON`.
+- `-DCMAKE_INSTALL_PREFIX=/install/dir`: Specify install directory. `default=/usr/local`.
+- `-DBUILD_TESTS=ON/OFF`: Enable or disable tests. `default=OFF`.
+- `-DBUILD_BENCHMARKS=ON/OFF`: Enable or disable benchmarks. `default=OFF`.
 
 ### Rust: Build, Test, and Install
 
@@ -91,21 +91,27 @@ To build and test ICICLE in Rust, follow these steps:
    ```
 
 2. **Build the Rust project:**
-   ```bash
-   TODO what about features? Now it doesn't make sense to disable features.
+TODO what about features? Now it doesn't make sense to disable features.
+   ```bash   
    cargo build --release
    ```
 
-3. **Run tests:**
+4. **Run tests:**
    ```bash
    cargo test
    ```
+:::note
+Most tests assume a CUDA backend is installed and fail otherwise.
+:::
 
-4. **Install the library:**: The libraries are installed to the `target/<buildmode>/deps/icicle` dir by default. For custom install dir. define the env variable `export ICICLE_INSTALL_DIR=/path/to/install/dir` before building or via cargo:
+5. **Install the library:**
+
+By default, the libraries are installed to the `target/<buildmode>/deps/icicle` dir. For custom install dir. define the env variable:
 ```bash
-TODO support cargo install
-cargo install --path /path/to/install/dir
+export ICICLE_INSTALL_DIR=/path/to/install/dir
 ```
+
+(TODO: cargo install ?)
 
 #### Use as cargo dependency
 
@@ -116,15 +122,16 @@ In cargo.toml, specify the ICICLE libs to use:
 icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
 icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
 icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
+# add other ICICLE crates here if need aditional fields/curves
 ```
 
 :::note
 Can specify `branch = <branch-name>` or `tag = <tag-name>` or `rev = <commit-id>`.
 :::
 
-The libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable to have it installed elsewhere.
+As explained above, the libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable for a custom install directory.
 :::note
-Make sure to have the icicle libs available when deploying an application that depends on icicle shared libs.
+Make sure to isntall the icicle libs when installing a library/application that depends on icicle.
 :::
 
 ### Go: Build, Test, and Install (TODO)

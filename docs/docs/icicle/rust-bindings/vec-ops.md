@@ -42,59 +42,7 @@ let cfg = VecOpsConfig::default();
 
 Vector operations are implemented through the `VecOps` trait, providing methods for addition, subtraction, and multiplication of vectors.
 
-### `VecOps` Trait
-
-```rust
-pub trait VecOps<F> {
-    fn add(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
-    fn accumulate(
-        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
-    fn sub(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
-    fn mul(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
-    fn transpose(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
-        nof_rows: u32,
-        nof_cols: u32,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-
-    fn bit_reverse(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    ) -> Result<(), eIcicleError>;
-
-    fn bit_reverse_inplace(
-        input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
-}
-```
-
-#### Methods
+### Methods
 
 All operations are element-wise operations, and the results placed into the `result` param. These operations are not in place.
 
@@ -104,3 +52,53 @@ All operations are element-wise operations, and the results placed into the `res
 - **`mul`**: Performs element-wise multiplication of two vectors.
 - **`transpose`**: Performs matrix transpose.
 - **`bit_reverse/bit_reverse_inplace`**: Reverse order of elements based on bit-reverse.
+
+
+
+```rust
+pub fn add_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+
+pub fn accumulate_scalars<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+
+pub fn sub_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+
+pub fn mul_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+
+pub fn transpose_matrix<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows: u32,
+    nof_cols: u32,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+
+pub fn bit_reverse<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+) -> Result<(), eIcicleError>;
+
+pub fn bit_reverse_inplace<F>(
+    input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>;
+```
