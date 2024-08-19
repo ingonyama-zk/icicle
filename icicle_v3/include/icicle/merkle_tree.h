@@ -8,14 +8,15 @@
 #include <cstdint>
 #include <functional>
 
+namespace icicle {
 
 /**
  * @brief Configuration struct for the merkle tree.
  */
 struct MerkleTreeConfig {
-    bool are_leaves_on_device = false;  ///< True if inputs are on device, false if on host. Default is false.
-    bool are_tree_results_on_device = false; ///< True if outputs are on device, false if on host. Default is false.
-    bool is_path_on_device = false; ///< True if outputs are on device, false if on host. Default is false.
+    bool are_leaves_on_device = false;  ///< True if leaves are on device, false if on host. Default is false.
+    bool are_tree_results_on_device = false; ///< True if tree results are on device, false if on host. Default is false.
+    bool is_path_on_device = false; ///< True if path is on device, false if on host. Default is false.
     bool is_async = false;              ///< True to run the tree builder asynchronously, false to run it synchronously. Default is false.
     ConfigExtension* ext = nullptr; ///< Backend-specific extensions.
 };
@@ -100,3 +101,5 @@ class MerkleTree {
 
     // TODO: Add get_digest() method.
 };
+
+}; // namespace icicle
