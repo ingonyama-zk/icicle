@@ -2,8 +2,8 @@
 use crate::test_utilities;
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    add_scalars, accumulate_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, sub_scalars, transpose_matrix, FieldImpl, VecOps,
-    VecOpsConfig,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, sub_scalars, transpose_matrix,
+    FieldImpl, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
@@ -73,7 +73,9 @@ where
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
 
-    stream.destroy().unwrap();
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_sub<F: FieldImpl>(test_size: usize)
@@ -102,7 +104,9 @@ where
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
 
-    stream.destroy().unwrap();
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_mul<F: FieldImpl>(test_size: usize)
@@ -131,7 +135,9 @@ where
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
 
-    stream.destroy().unwrap();
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_accumulate<F: FieldImpl>(test_size: usize)
@@ -159,7 +165,9 @@ where
 
     assert_eq!(a_clone_slice.as_slice(), a_main_slice.as_slice());
 
-    stream.destroy().unwrap();
+    stream
+        .destroy()
+        .unwrap();
 }
 
 pub fn check_matrix_transpose<F: FieldImpl>()

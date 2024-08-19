@@ -71,7 +71,7 @@ println!("Generating random inputs on host for bn254...");
 let scalars = Bn254ScalarCfg::generate_random(size);
 let mut ntt_results = DeviceVec::<Bn254ScalarField>::device_malloc(size).unwrap();
 
-// constructin NTT domain
+// constructing NTT domain
 initialize_domain(
     ntt::get_root_of_unity::<Bn254ScalarField>(
         size.try_into()
