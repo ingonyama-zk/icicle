@@ -27,10 +27,10 @@ When you build your project ICICLE will be built as part of the build command.
 
 ## How do the rust bindings work?
 
-The rust bindings are rust crates that wrap the ICICLE Core libraries (C++). Each crate can wrap one or more ICICLE core libraries. They are built too when buliding the crate.
+The rust bindings are rust crates that wrap the ICICLE Core libraries (C++). Each crate can wrap one or more ICICLE core libraries. They are built too when building the crate.
 
 :::note
-Since ICICLE V3, core libraies are shared-libraries. This means that they must be installed in a directory that can be found by the linker. In addition, installing an application that depends on ICICLE must make sure to install ICICLE or have it installed on the target machine.
+Since ICICLE V3, core libraries are shared-libraries. This means that they must be installed in a directory that can be found by the linker. In addition, installing an application that depends on ICICLE must make sure to install ICICLE or have it installed on the target machine.
 :::
 
 ## Supported curves, fields and operations

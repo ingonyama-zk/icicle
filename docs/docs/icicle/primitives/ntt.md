@@ -56,7 +56,7 @@ enum class Ordering {
 
 ### `NTTConfig` Struct
 
-The `NTTConfig` struct configures teh NTT operation. It allows customization of parameters like the batch size, column batch computation, order of inputs and outputs etc.
+The `NTTConfig` struct configures the NTT operation. It allows customization of parameters like the batch size, column batch computation, order of inputs and outputs etc.
 
 ```cpp
   template <typename S>
@@ -107,7 +107,7 @@ template <typename S>
 eIcicleError ntt_init_domain(const S& primitive_root, const NTTInitDomainConfig& config);
 ```
 
-To retrive a root of unity from the domain or release it:
+To retrieve a root of unity from the domain or release it:
 ```cpp
 template <typename S> eIcicleError ntt_release_domain();
 template <typename S> S get_root_of_unity(uint64_t max_size);

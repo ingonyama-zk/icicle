@@ -66,7 +66,7 @@ Asynchronous memory operations can be performed using streams. This allows for n
 use icicle_runtime::stream::IcicleStream;
 use icicle_runtime::memory::DeviceVec;
 
-let mut stream = IcicleStream::create().unwrap(); // mutability is for the destory() method
+let mut stream = IcicleStream::create().unwrap(); // mutability is for the destroy() method
 
 // Allocate 1024 elements asynchronously on the device
 let mut device_memory: DeviceVec<u8> = DeviceVec::<u8>::device_malloc_async(1024, &stream).unwrap();
