@@ -37,8 +37,7 @@ where
             //      3) Perform all operations (without changing device on the thread)
             //      4) If necessary - export results to parent host thread
 
-            // let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18]; //TODO - uncomment this line after implementing fast msm
-            let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000];
+            let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
             test_utilities::test_set_main_device_with_id(device_id);
             let mut stream = IcicleStream::create().unwrap();
             let mut msm_results = DeviceVec::<Projective<C>>::device_malloc_async(1, &stream).unwrap();
@@ -99,10 +98,8 @@ pub fn check_msm_batch<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    // let test_sizes = [1000, 1 << 16]; //TODO - uncomment this line after implementing fast msm
-    let test_sizes = [100];
-    // let batch_sizes = [1, 3, 1 << 4];
-    let batch_sizes = [1, 3]; //TODO - uncomment this line after implementing fast msm
+    let test_sizes = [1000, 1 << 16];
+    let batch_sizes = [1, 3, 1 << 4];    
     let mut stream = IcicleStream::create().unwrap();
     let precompute_factor = 8;
     let mut cfg = MSMConfig::default();
@@ -182,14 +179,12 @@ pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    // let test_sizes = [1 << 10, 10000]; // TODO - uncomment this line after implementing fast msm
-    let test_sizes = [1 << 10]; // TODO - remove this line after implementing fast msm
-                                // let test_threshold = 1 << 11; // TODO - uncomment this line after implementing fast msm
-                                // let batch_sizes = [1, 3, 1 << 4]; // TODO - uncomment this line after implementing fast msm
-    let batch_sizes = [1, 3]; // TODO - remove this line after implementing fast msm
+    let test_sizes = [1 << 10, 10000];
+    let test_threshold = 1 << 11;
+    let batch_sizes = [1, 3, 1 << 4];
     let rng = &mut thread_rng();
     for test_size in test_sizes {
-        let test_threshold = test_size >> 2; // TODO - remove this line after implementing fast msm
+        let test_threshold = test_size >> 2;
         for batch_size in batch_sizes {
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 100);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
