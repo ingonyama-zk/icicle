@@ -46,9 +46,8 @@ public:
     const bool is_cuda_registered = is_device_registered("CUDA");
     const bool is_cpu_registered = is_device_registered("CPU");
     const bool is_cpu_ref_registered = is_device_registered("CPU_REF");
-    // if cuda is available, want main="CUDA", ref="CPU", otherwise main="CPU", ref="CPU_REF".
+    // if cuda is available, want main="CUDA", ref="CPU", otherwise both are CPU.
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    // s_ref_target = is_cuda_registered ? "CPU" : "CPU_REF";
     s_ref_target = "CPU";
   }
   static void TearDownTestSuite() {}
@@ -114,10 +113,10 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 10;
-    const int batch = 1; // TODO test batch
+    const int logn = 12;
+    const int batch = 3; // TODO test batch
     const int N = 1 << logn;
-    const int precompute_factor = 4;
+    const int precompute_factor = 3;
     const int c = std::max(logn, 8) - 1;
     int hw_threads = std::thread::hardware_concurrency();
     if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
@@ -167,9 +166,9 @@ bool read_inputs(T* arr, const int arr_size, const std::string fname)
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
-    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    // run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/); // Warmup
     run(s_main_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    // run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/); // TODO revert to gpu
+    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     // Note: avoid memcmp here because projective points may have different z but be equivalent
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
