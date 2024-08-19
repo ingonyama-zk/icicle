@@ -790,7 +790,7 @@ public:
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
     multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
     ff_storage r_reduced = {};
-    uint32_t carry;
+    uint32_t carry = 0;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if (num_of_reductions() == 2) {
       carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
@@ -864,7 +864,7 @@ public:
         rs = is_zero ? temp : (rs + temp);
         is_zero = false;
       }
-      if (multiplier & ((1 << (31 - i) - 1) << (i + 1))) break;
+      if (multiplier & ((1 << (31 - i - 1)) << (i + 1))) break;
       temp = temp + temp;
     }
     return rs;

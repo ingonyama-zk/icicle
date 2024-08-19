@@ -14,13 +14,9 @@ The backend can be loaded from a specific path or from an environment variable. 
 ```rust
 use icicle_runtime::runtime;
 
-runtime::load_backend("/path/to/backend").unwrap();
-```
-
-To load the backend from an environment variable or default directory:
-
-```rust
 runtime::load_backend_from_env_or_default().unwrap();
+// or load from custom install dir
+runtime::load_backend("/path/to/backend/installdir").unwrap();
 ```
 
 ### Setting and Getting Active Device
@@ -225,5 +221,4 @@ fn main() {
     .unwrap();
     println!("MSM result = {:?}", msm_results);
 }
-
 ```

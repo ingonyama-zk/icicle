@@ -65,7 +65,7 @@ The `NTTConfig` struct configures the NTT operation. It allows customization of 
     S coset_gen;
     int batch_size;            
     bool columns_batch; 
-    Ordering ordering;Default value is `Ordering::kNN`.
+    Ordering ordering;
     bool are_inputs_on_device;      
     bool are_outputs_on_device;     
     bool is_async;                  
@@ -98,18 +98,25 @@ static NTTConfig<S> default_ntt_config()
 Before computing an NTT, it is mandatory to initialize the roots of unity domain for computing the NTT.
 
 :::note
-NTT domain is constructed for a given size $2^N$ and can be used for any NTT of size smaller or equal to $2^N$. For example a domain of size 32 can be used to compute NTTs of size 2,48,16,32.
+NTT domain is constructed for a given size $2^N$ and can be used for any NTT of size smaller or equal to $2^N$. For example a domain of size 32 can be used to compute NTTs of size 2,4,8,16,32.
 :::
 
-This is done by calling 
 ```cpp
 template <typename S>
 eIcicleError ntt_init_domain(const S& primitive_root, const NTTInitDomainConfig& config);
 ```
 
-To retrieve a root of unity from the domain or release it:
+:::note
+Domain is constructed per device. When using multiple devices (e.g. GPUs), need to call it per device prior to calling ntt.
+:::
+
+To retrieve a root of unity from the domain:
 ```cpp
-template <typename S> eIcicleError ntt_release_domain();
+template <typename S> S get_root_of_unity(uint64_t max_size);
+```
+
+Finally, release the domain to free up device memory when not required:
+```cpp
 template <typename S> S get_root_of_unity(uint64_t max_size);
 ```
 
@@ -147,7 +154,7 @@ enum class NTTDir {
 };
 ```
 ### EC-NTT
-This api works for ECNTT too, given correct types, for supported curves.
+[The ntt api](#ntt-function) works for ECNTT too, given correct types, for supported curves.
 
 ### Batch NTT
 
@@ -162,33 +169,35 @@ To compute a batch, set the `batch_size` and `columns_batch` fields of the confi
 
 ### Example
 
-:::note
-This examples demonstartes how to pass configurations to the CUDA backend. This is discussed below.
-:::
+The following example demonstartes how to use ntt and how pass custom configurations to the CUDA backend. This is discussed below.
 
 ```cpp
+#include "icicle/backend/ntt_config.h"
+
+// allocate and init input/output
+int batch_size = /*...*/;
+int log_ntt_size = /*...*/;
+int ntt_size = 1 << log_ntt_size;
 auto input = std::make_unique<scalar_t[]>(batch_size * ntt_size);
 auto output = std::make_unique<scalar_t[]>(batch_size * ntt_size);
 initialize_input(ntt_size, batch_size, input.get());
 
-// Initialize NTT domain
+// Initialize NTT domain with fast twiddles (CUDA backend)
 scalar_t basic_root = scalar_t::omega(log_ntt_size);
 auto ntt_init_domain_cfg = default_ntt_init_domain_config();
-// Construct domain with fast twiddles (CUDA backend)
 ConfigExtension backend_cfg_ext;
-backend_cfg_ext.set(
-   CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true); // optionally construct fast_twiddles for CUDA backend
+backend_cfg_ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
 ntt_init_domain_cfg.ext = &backend_cfg_ext;
-ntt_init_domain(&basic_root, ntt_init_domain_cfg);
+ntt_init_domain(basic_root, ntt_init_domain_cfg);
 
 // ntt configuration
 NTTConfig<scalar_t> config = default_ntt_config<scalar_t>();
 ConfigExtension ntt_cfg_ext;
-config.ext = &ntt_cfg_ext;
 config.batch_size = batch_size;
 
 // Compute NTT with explicit selection of Mixed-Radix algorithm.
 ntt_cfg_ext.set(CudaBackendConfig::CUDA_NTT_ALGORITHM, CudaBackendConfig::NttAlgorithm::MixedRadix);
+config.ext = &ntt_cfg_ext;
 ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get());
 ```
 
@@ -283,6 +292,31 @@ For this reason we implemented our [heuristic auto-selection](https://github.com
 
 We still recommend you benchmark for your specific use case if you think a different configuration would yield better results.
 
-### Fast twiddles - TODO
+To Explicitly choose the algorithm:
 
-TODO how to choose an algorithm
+```cpp
+#include "icicle/backend/ntt_config.h"
+
+NTTConfig<scalar_t> config = default_ntt_config<scalar_t>();
+ConfigExtension ntt_cfg_ext;
+ntt_cfg_ext.set(CudaBackendConfig::CUDA_NTT_ALGORITHM, CudaBackendConfig::NttAlgorithm::MixedRadix);
+config.ext = &ntt_cfg_ext;
+ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get());
+```
+
+
+### Fast twiddles
+
+When using the Mixed-radix algorithm, it is recommended to initialize the domain in "fast-twiddles" mode. This is essentially allocating the domain using extra memory but enables faster ntt.
+To do so simply, pass this flag to the CUDA backend.
+
+```cpp
+#include "icicle/backend/ntt_config.h"
+
+scalar_t basic_root = scalar_t::omega(log_ntt_size);
+auto ntt_init_domain_cfg = default_ntt_init_domain_config();
+ConfigExtension backend_cfg_ext;
+backend_cfg_ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
+ntt_init_domain_cfg.ext = &backend_cfg_ext;
+ntt_init_domain(basic_root, ntt_init_domain_cfg);
+```

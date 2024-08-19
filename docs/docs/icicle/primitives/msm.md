@@ -80,7 +80,7 @@ eIcicleError msm(const S* scalars, const A* bases, int msm_size, const MSMConfig
 ```
 
 :::note
-The API is template and can work with all ICICLE curves (if corresponding lib is linked).
+The API is template and can work with all ICICLE curves (if corresponding lib is linked), including G2 groups.
 :::
 
 ### Batched MSM
@@ -91,14 +91,17 @@ Config fields `are_bases_shared` and `batch_size` are used to configure msm for 
 
 ### G2 MSM
 
-G2 MSM is also supported for most curves. It is similar to G1 MSM but using the G2 types instead.
+for G2 MSM, use the [same msm api](#msm-function) with the G2 types.
 
+:::note
+Supported curves have types for both G1 and G2.
+:::
 
 ### Precompution
 
 #### What It Does:
 
-- Precomputation: The function computes a set of additional points derived from the original base points. These precomputed points are stored and later reused during the MSM computation.
+- The function computes a set of additional points derived from the original base points. These precomputed points are stored and later reused during the MSM computation.
 - Purpose: By precomputing and storing these points, the MSM operation can reduce the number of operations needed at runtime, which can significantly speed up the calculation.
 
 #### When to Use:
@@ -112,18 +115,18 @@ eIcicleError msm_precompute_bases(const A* input_bases, int bases_size, const MS
 ```
 
 :::note
-User is allocating the `output_bases` (on host or device memory) and later use it when calling msm.
+User is allocating the `output_bases` (on host or device memory) and later use it as bases when calling msm.
 :::
 
 ## Rust and Go bindings
 
+The Rust and Go bindings provide equivalent functionality for their respective environments. Refer to their documentation for details on usage.
+
 - [Golang](../golang-bindings/msm.md)
 - [Rust](../rust-bindings/msm.md)
 
-The Rust and Go bindings provide equivalent functionality for their respective environments. Refer to their documentation for details on usage.
-
 ## CUDA backend MSM
-This section describes the CUDA msm implementation and how to use it.
+This section describes the CUDA msm implementation and how to customize it (optional).
 
 ### Algorithm description
 

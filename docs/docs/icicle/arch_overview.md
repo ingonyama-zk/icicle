@@ -21,12 +21,9 @@ ICICLE is designed to be extensible, allowing developers to integrate new backen
 - **Custom Backends:** Developers can create their own backends to leverage different hardware or optimize for specific use cases. The process of building and integrating a custom backend is documented in the [Build Your Own Backend](./build_your_own_backend.md) section.
 - **Pluggable Components:** ICICLE's architecture allows for easy integration of additional cryptographic primitives or enhancements, ensuring that the framework can evolve with the latest advancements in cryptography and hardware acceleration.
 
-TODO ADD diagram
-
 ## Multi-Device Support
 
 - **Scalability:** ICICLE supports multi-device configurations, enabling the distribution of workloads across multiple GPUs or other hardware accelerators. This feature allows for scaling ZK proofs and other cryptographic operations across larger data centers or high-performance computing environments.
-- **Device Management:** The architecture includes tools for managing multiple devices, ensuring that resources are efficiently utilized and that workloads are balanced across available hardware.
 
 ---
 
