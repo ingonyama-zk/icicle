@@ -1,18 +1,14 @@
 # ICICLE libraries
 
-TODO : review this page and see the hashes really exist
+ICICLE is composed of two main logical parts:
+1. [**ICICLE device library**](#icicle-device)
+2. [**ICICLE template core library**](#icicle-core)
 
 ## ICICLE device
 
 The ICICLE device library serves as an abstraction layer for interacting with various hardware devices. It provides a comprehensive interface for tasks such as setting the active device, querying device-specific information like free and total memory, determining the number of available devices, and managing memory allocation. Additionally, it offers functionality for copying data to and from devices, managing task queues (streams) for efficient device utilization, and abstracting the complexities of device management away from the user. 
 
-TODO update links
-
-[C++ device APIs](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle_v3/include/icicle/runtime.h)
-
-[Rust icicle-runtime crate](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/wrappers/rust_v3/icicle-runtime)
-
-TODO Golang
+See programmers guide for more details. [C++](./programmers_guide/cpp#device-management), [Rust](./programmers_guide/rust#device-management), [Go TODO](./programmers_guide/go)
 
 ## ICICLE Core
 
@@ -31,22 +27,22 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 | Operation\Curve                                     | [bn254](https://neuromancer.sk/std/bn/bn254) | [bls12-377](https://neuromancer.sk/std/bls/BLS12-377) | [bls12-381](https://neuromancer.sk/std/bls/BLS12-381) | [bw6-761](https://eprint.iacr.org/2020/351) | grumpkin |
 | --------------------------------------------------- | :------------------------------------------: | :---------------------------------------------------: | :---------------------------------------------------: | :-----------------------------------------: | :------: |
 | [MSM](./primitives/msm)                             |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
-| G2                                                  |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
+| G2 MSM                                              |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
 | [NTT](./primitives/ntt)                             |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
 | ECNTT                                               |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
-| VecOps                                              |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
+| [Vector operations](./primitives/vec_ops)           |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
 | [Polynomials](./polynomials/overview)               |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
 | [Poseidon](primitives/poseidon)                     |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
 | [Merkle Tree](primitives/poseidon#the-tree-builder) |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
 
 #### Supported fields and operations
 
-| Operation\Field                       | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/documentation/architecture_and_concepts/Cryptography/p-value/) |
-| ------------------------------------- | :----------------------------------------------: | :------------------------------------------------------------------------------------------------: |
-| VecOps                                |                        ✅                         |                                                 ✅                                                  |
-| [Polynomials](./polynomials/overview) |                        ✅                         |                                                 ✅                                                  |
-| [NTT](primitives/ntt)                 |                        ✅                         |                                                 ✅                                                  |
-| Extension Field                       |                        ✅                         |                                                 ❌                                                  |
+| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/documentation/architecture_and_concepts/Cryptography/p-value/) |
+| ----------------------------------------- | :----------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| [Vector operations](./primitives/vec_ops) |                        ✅                         |                                                 ✅                                                  |
+| [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |
+| [NTT](primitives/ntt)                     |                        ✅                         |                                                 ✅                                                  |
+| Extension Field                           |                        ✅                         |                                                 ❌                                                  |
 
 #### Supported hashes
 
@@ -60,4 +56,4 @@ Each backend may implement
 - One or more ICICLE library. For example implement only bn254 curve. 
 - One or more APIs in this library. For example MSM only.
 
-See [Build Your Own Backend](./build_your_own_backend.md) for more details.
+See [CUDA backend](./install_cuda_backend.md) and [Build Your Own Backend](./build_your_own_backend.md) for more info about implementing a backend.

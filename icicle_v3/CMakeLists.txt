@@ -9,6 +9,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 
+# Set the default build type to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build: Debug, Release, RelWithDebInfo, MinSizeRel." FORCE)
+endif()
+
+# Print the selected build type
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # TODO Yuval remove those flags. Frontend will always have everything.
@@ -36,7 +44,7 @@ include_directories(include)
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install path prefix")
 endif()
-message("-- CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+message(STATUS "CMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 # set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 

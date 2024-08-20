@@ -172,7 +172,7 @@ namespace host_math {
         r = left_shift<NLIMBS_DENOM, 1>(r);
         r.limbs[0] |= ((num.limbs[limb_idx] >> bit_idx) & 1);
         uint32_t c = add_sub_limbs<NLIMBS_DENOM, true, true>(r, denom, temp);
-        if (limb_idx < NLIMBS_Q & !c) {
+        if ((limb_idx < NLIMBS_Q) & !c) {
           r = temp;
           q.limbs[limb_idx] |= 1 << bit_idx;
         }
