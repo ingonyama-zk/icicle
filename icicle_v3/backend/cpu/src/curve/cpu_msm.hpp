@@ -13,18 +13,10 @@
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
 #include "tasks_manager.h"
+#include "icicle/backend/msm_config.h"
 
 using namespace icicle;
-
-#ifdef DUMMY_TYPES // for testing
-using A = DummyP;
-using P = DummyP;
-using scalar_t = DummyScalar;
-#else
-using A = curve_config::affine_t;
-using P = curve_config::projective_t;
-using scalar_t = curve_config::scalar_t;
-#endif
+using namespace curve_config;
 
 /**
  * @class EcAddTask
@@ -50,8 +42,8 @@ public:
     case ADD_P1_P2_BY_VALUE:
       m_p1 = m_p1 + m_p2;
       return;
-    case ADD_P1_AND_P2_PER:
-      m_p1 = m_p1 + *m_p2_Per;
+    case ADD_P1_AND_P2_POINTER:
+      m_p1 = m_p1 + *m_p2_pointer;
       return;
     case ADD_P1_AND_AFFINE_P1:
       m_p1 = m_p1 + m_p2_affine;
@@ -102,10 +94,10 @@ public:
   void set_phase2_line_addition(const P& line_sum, P* bucket_ptr, const int segment_idx)
   {
     m_p1 = line_sum;
-    m_p2_Per = bucket_ptr;
+    m_p2_pointer = bucket_ptr;
     m_return_idx = segment_idx;
     m_is_line = true;
-    m_p2_config = ADD_P1_AND_P2_PER;
+    m_p2_config = ADD_P1_AND_P2_POINTER;
     dispatch();
   }
 
@@ -119,9 +111,9 @@ public:
   void set_phase2_triangle_addition(P& line_sum, P* triangle_sum_ptr)
   {
     m_p1 = line_sum;
-    m_p2_Per = triangle_sum_ptr;
+    m_p2_pointer = triangle_sum_ptr;
     m_is_line = false;
-    m_p2_config = ADD_P1_AND_P2_PER;
+    m_p2_config = ADD_P1_AND_P2_POINTER;
     dispatch();
   }
 
@@ -141,12 +133,12 @@ public:
   bool m_is_line = false; // Indicator for phase 2 sums between line sum and triangle sum.
 
 private:
-  enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_PER, ADD_P1_AND_AFFINE_P1 };
+  enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_POINTER, ADD_P1_AND_AFFINE_P1 };
   eAddType m_p2_config = ADD_P1_P2_BY_VALUE;
 
   // Various configs of the second addend p2, one for each eAddType
   P m_p2;
-  P const* m_p2_Per;
+  P const* m_p2_pointer;
   A m_p2_affine;
 };
 
@@ -163,9 +155,10 @@ class Msm
 public:
   /**
    * @brief Constructor for Msm class.
-   * @param config - msm config. important parameters that are part of the config extension are: n_threads, c
+   * @param config - msm config. important parameters that are part of the config extension are: . NOTE: ensure c
+   * doesnot divide the scalar width without a remainder.
    */
-  Msm(const MSMConfig& config);
+  Msm(const MSMConfig& config, const int nof_threads);
 
   /**
    * @brief Destructor for Msm class.
@@ -294,22 +287,18 @@ private:
 };
 
 template <typename A, typename P>
-Msm<A, P>::Msm(const MSMConfig& config)
-    : manager(
-        config.ext->get<int>("n_threads") > 0 ? config.ext->get<int>("n_threads")
-                                              : std::thread::hardware_concurrency()),
+Msm<A, P>::Msm(const MSMConfig& config, const int nof_threads)
+    : manager(nof_threads),
 
       m_c(config.c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
-      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
+      m_num_bms(((scalar_t::NBITS) / (config.precompute_factor * m_c)) + 1),
       m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_Ps_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
 
       m_buckets(m_num_bms * m_num_bkts), m_bkts_occupancy(m_num_bms * m_num_bkts, false),
 
       m_log_num_segments(std::max(
-        (int)std::floor(
-          std::log2((double)(config.ext->get<int>("n_threads") * TASKS_PER_THREAD - 1) / (double)(2 * m_num_bms))),
-        0)),
+        (int)std::floor(std::log2((double)(nof_threads * TASKS_PER_THREAD - 1) / (double)(2 * m_num_bms))), 0)),
       m_num_bm_segments(std::min((int)(1 << m_log_num_segments), (int)(m_num_bms * m_num_bkts))),
       m_segment_size(std::max((int)(m_num_bkts >> m_log_num_segments), 1)),
 
@@ -334,7 +323,7 @@ void Msm<A, P>::bucket_accumulator(const scalar_t* scalars, const A* bases, cons
   const int coeff_bit_mask_no_sign_bit = m_num_bkts - 1;
   const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
   // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
-  const int num_additions_per_scalar = (scalar_t::NBITS - 1) / m_c; // +1 for ceiling than -1 for m1
+  const int num_additions_per_scalar = ((scalar_t::NBITS - 1) / m_c) + 1; // +1 for ceiling
 
   int carry = 0;
   for (int i = 0; i < msm_size; i++) {
@@ -342,7 +331,7 @@ void Msm<A, P>::bucket_accumulator(const scalar_t* scalars, const A* bases, cons
     // Handle required preprocess of scalar
     scalar_t scalar = m_are_scalars_mont ? scalar_t::from_montgomery(scalars[i]) : scalars[i];
     bool negate_p_and_s = scalar.get_scalar_digit(scalar_t::NBITS - 1, 1) > 0;
-    if (negate_p_and_s) scalar = scalar_t::neg(scalar);
+    if (negate_p_and_s) { scalar = scalar_t::neg(scalar); }
     for (int j = 0; j < m_precompute_factor; j++) {
       // Handle required preprocess of base P
       A base =
@@ -351,7 +340,7 @@ void Msm<A, P>::bucket_accumulator(const scalar_t* scalars, const A* bases, cons
 
       for (int k = 0; k < m_num_bms; k++) {
         // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
-        if (m_num_bms * j + k > num_additions_per_scalar) { break; }
+        if (m_num_bms * j + k == num_additions_per_scalar) { break; }
 
         uint32_t curr_coeff = scalar.get_scalar_digit(m_num_bms * j + k, m_c) + carry;
         int bkt_idx = 0;
@@ -590,11 +579,8 @@ void Msm<A, P>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segment
  */
 eIcicleError not_supported(const MSMConfig& conf)
 {
-  if (conf.is_async) { return eIcicleError::INVALID_DEVICE; }
-  // There is only host (CPU) therefore the following configs are not supported:
-  if (conf.are_scalars_on_device | conf.are_points_on_device | conf.are_results_on_device) {
-    return eIcicleError::INVALID_DEVICE;
-  }
+  // Currently c mustn't divide scalar_t without remainder
+  if (scalar_t::NBITS % conf.c == 0) { return eIcicleError::INVALID_DEVICE; }
   return eIcicleError::SUCCESS;
 }
 
@@ -612,15 +598,22 @@ template <typename A, typename P>
 eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  Msm<A, P>* msm = new Msm<A, P>(config);
-
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
   const unsigned int c = config.c;
   const unsigned int precompute_factor = config.precompute_factor;
   const int num_bms = ((scalar_t::NBITS - 1) / (precompute_factor * c)) + 1;
 
-  if (config.ext->get<int>("n_threads") <= 0) { return eIcicleError::INVALID_ARGUMENT; }
+  int nof_threads = 1;
+  if (config.ext == nullptr) {
+    int hw_threads = std::thread::hardware_concurrency();
+    nof_threads = hw_threads > 0 ? hw_threads : 1;
+  } else {
+    if (config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) <= 0) { return eIcicleError::INVALID_ARGUMENT; }
+    nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
+  }
+
+  Msm<A, P>* msm = new Msm<A, P>(config, nof_threads);
 
   for (int i = 0; i < config.batch_size; i++) {
     msm->run_msm(&scalars[msm_size * i], bases, msm_size, i, &results[i]);

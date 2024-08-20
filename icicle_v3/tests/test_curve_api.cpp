@@ -11,6 +11,7 @@
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
+#include "icicle/backend/msm_config.h"
 
 using namespace curve_config;
 using namespace icicle;
@@ -66,10 +67,11 @@ public:
   void MSM_test()
   {
     const int logn = 12;
-    const int batch = 3;
+    const int batch = 2;
     const int N = 1 << logn;
-    const int precompute_factor = 3;
-    const int c = std::max(logn, 8) - 1;
+    const int precompute_factor = 2;
+    int c = std::max(logn, 8) - 1;
+    if (scalar_t::NBITS % c == 0) { c++; }
     int hw_threads = std::thread::hardware_concurrency();
     if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
     const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
@@ -96,8 +98,10 @@ public:
       config.are_bases_shared = true;
       config.precompute_factor = precompute_factor;
 
+      config.are_results_on_device = true;
+
       ConfigExtension ext;
-      ext.set("n_threads", n_threads);
+      ext.set(CpuBackendConfig::CPU_NOF_THREADS, n_threads);
       config.ext = &ext;
 
       // Note: allocating the precompute_bases on device since CUDA backend assumes that.
@@ -105,6 +109,9 @@ public:
       A* precomp_bases = nullptr;
       ICICLE_CHECK(icicle_malloc((void**)&precomp_bases, N * precompute_factor * sizeof(A)));
       ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));
+
+      config.are_points_on_device = true;
+      config.are_results_on_device = false;
 
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {

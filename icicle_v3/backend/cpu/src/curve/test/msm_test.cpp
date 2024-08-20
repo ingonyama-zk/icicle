@@ -1,6 +1,7 @@
 #include "icicle/errors.h"
 #include "icicle/device.h"
 #include "icicle/config_extension.h"
+#include "icicle/curves/curve_config.h"
 #include <random>
 #include <cassert>
 #include "timer.cpp"
@@ -8,6 +9,16 @@
 // #define DUMMY_TYPES
 // #define DEBUG_PRINTS
 #define P_MACRO 1000
+
+#ifdef DUMMY_TYPES // for testing
+using A = DummyP;
+using P = DummyP;
+using scalar_t = DummyScalar;
+#else
+using A = curve_config::affine_t;
+using P = curve_config::projective_t;
+using scalar_t = curve_config::scalar_t;
+#endif
 
 class DummyScalar
 {
@@ -126,7 +137,7 @@ using namespace icicle;
 template <typename Point>
 std::vector<Point> msm_bucket_accumulator(
   const scalar_t* scalars,
-  const affine_t* bases,
+  const A* bases,
   const unsigned int c,
   const unsigned int num_bms,
   const unsigned int msm_size,
@@ -162,9 +173,8 @@ std::vector<Point> msm_bucket_accumulator(
     bool negate_p_and_s = scalar.get_scalar_digit(scalar_t::NBITS - 1, 1) > 0;
     if (negate_p_and_s) scalar = scalar_t::neg(scalar);
     for (int j = 0; j < precompute_factor; j++) {
-      affine_t point =
-        is_b_mont ? affine_t::from_montgomery(bases[precompute_factor * i + j]) : bases[precompute_factor * i + j];
-      if (negate_p_and_s) point = affine_t::neg(point);
+      A point = is_b_mont ? A::from_montgomery(bases[precompute_factor * i + j]) : bases[precompute_factor * i + j];
+      if (negate_p_and_s) point = A::neg(point);
       for (int k = 0; k < num_bms; k++) {
         // In case precompute_factor*c exceeds the scalar width
         if (num_bms * j + k > num_windows_m1) { break; }
@@ -193,7 +203,7 @@ std::vector<Point> msm_bucket_accumulator(
 #ifdef DEBUG_PRINTS
             int bkt_idx = num_bkts * k + ((-curr_coeff) & coeff_bit_mask);
             if (Point::is_zero(bkts[bkt_idx])) {
-              trace_f << '#' << bkt_idx << ":\tWrite free cell:\t" << affine_t::neg(point).x << '\n';
+              trace_f << '#' << bkt_idx << ":\tWrite free cell:\t" << A::neg(point).x << '\n';
             } else {
               trace_f << '#' << bkt_idx << ":\tRead for subtraction:\t" << Point::to_affine(bkts[bkt_idx]).x
                       << "\t(With new point:\t" << point.x << " = " << Point::to_affine(bkts[bkt_idx] - point).x
@@ -247,8 +257,8 @@ std::vector<Point> msm_bm_sum(std::vector<Point>& bkts, const unsigned int c, co
   // Calculate the weighted "triangle" sum by using two sums in series:
   // A partial sum holding the current line sum, and a total sum holding the sums of the lines (The triangle).
   for (int k = 0; k < num_bms; k++) {
-    bm_sums[k] = Point::copy(bkts[num_bkts * k]);        // Start with bucket zero that holds the weight @num_bkts
-    Point partial_sum = Point::copy(bkts[num_bkts * k]); // And the triangle and the line start with the same value
+    bm_sums[k] = bkts[num_bkts * k];        // Start with bucket zero that holds the weight @num_bkts
+    Point partial_sum = bkts[num_bkts * k]; // And the triangle and the line start with the same value
 
     for (int i = num_bkts - 1; i > 0; i--) {
       partial_sum = partial_sum + bkts[num_bkts * k + i];
@@ -281,7 +291,7 @@ Point msm_final_sum(std::vector<Point>& bm_sums, const unsigned int c, const uns
   for (int k = num_bms - 2; k >= 0; k--) {
     // Check if the current value is not zero before doing the c doubling below.
     if (Point::is_zero(result)) {
-      result = Point::copy(bm_sums[k]);
+      result = bm_sums[k];
     } else {
       // Every bm sum is 2^c times larger than the subsequent less significant bm-sum.
       // Double the current result c times before adding the next bm-sum.
@@ -297,12 +307,7 @@ Point msm_final_sum(std::vector<Point>& bm_sums, const unsigned int c, const uns
 // Pipenger
 template <typename Point>
 eIcicleError cpu_msm_single_thread(
-  const Device& device,
-  const scalar_t* scalars,
-  const affine_t* bases,
-  int msm_size,
-  const MSMConfig& config,
-  Point* results)
+  const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, Point* results)
 {
   auto t = Timer("total-msm-single-threaded");
   if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
@@ -327,19 +332,14 @@ eIcicleError cpu_msm_single_thread(
 // Most naive implementation as backup
 template <typename Point>
 eIcicleError cpu_msm_ref(
-  const Device& device,
-  const scalar_t* scalars,
-  const affine_t* bases,
-  int msm_size,
-  const MSMConfig& config,
-  Point* results)
+  const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, Point* results)
 {
   const unsigned int precompute_factor = config.precompute_factor;
   Point res = Point::zero();
   for (auto i = 0; i < msm_size; ++i) {
     scalar_t scalar = config.are_scalars_montgomery_form ? scalar_t::from_montgomery(scalars[i]) : scalars[i];
-    affine_t point = config.are_points_montgomery_form ? affine_t::from_montgomery(bases[precompute_factor * i])
-                                                       : bases[precompute_factor * i];
+    A point = config.are_points_montgomery_form ? A::from_montgomery(bases[precompute_factor * i])
+                                                : bases[precompute_factor * i];
     res = res + scalar * Point::from_affine(point);
   }
   // results[0] = config.are_points_montgomery_form? Point::to_montgomery(res) : res;
@@ -375,7 +375,7 @@ void store_inputs(T* arr, const int arr_size, const std::string fname)
   out_file.close();
 }
 
-void get_inputs(affine_t* bases, scalar_t* scalars, const int n, const int batch_size)
+void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
 {
   // Scalars
   std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n * batch_size) + ".dat";
@@ -386,10 +386,10 @@ void get_inputs(affine_t* bases, scalar_t* scalars, const int n, const int batch
   }
   // Bases
   std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
-  if (!read_inputs<affine_t>(bases, n, base_file)) {
+  if (!read_inputs<A>(bases, n, base_file)) {
     std::cout << "Generating bases.\n";
-    projective_t::rand_host_many(bases, n);
-    store_inputs<affine_t>(bases, n, base_file);
+    P::rand_host_many(bases, n);
+    store_inputs<A>(bases, n, base_file);
   }
 }
 
@@ -398,79 +398,76 @@ int main()
   // while (true)
   {
     // MSM config
-    const int logn = 7;
+    const int logn = 12;
     const int N = 1 << logn;
-    const int batch_size = 3;
+    const int batch_size = 4;
     bool conv_mont = true;
 
     auto scalars = std::make_unique<scalar_t[]>(N * batch_size);
-    auto bases = std::make_unique<affine_t[]>(N);
+    auto bases = std::make_unique<A[]>(N);
     get_inputs(bases.get(), scalars.get(), N, batch_size);
 
     if (conv_mont) {
       for (int i = 0; i < N; i++)
-        bases[i] = affine_t::to_montgomery(bases[i]);
+        bases[i] = A::to_montgomery(bases[i]);
     }
-    projective_t* result_cpu = new projective_t[batch_size];
-    projective_t* result_cpu_ref = new projective_t[batch_size];
-    std::fill_n(result_cpu, batch_size, projective_t::zero());
-    std::fill_n(result_cpu_ref, batch_size, projective_t::zero());
+    P* result_cpu = new P[batch_size];
+    P* result_cpu_ref = new P[batch_size];
+    std::fill_n(result_cpu, batch_size, P::zero());
+    std::fill_n(result_cpu_ref, batch_size, P::zero());
 
-    auto run =
-      [&](const char* dev_type, projective_t* result, const char* msg, bool measure, int iters, auto msm_func) {
-        const int log_p = 2;
-        const int c = std::max(logn, 8) - 1;
-        // const int c = 4;
-        const int pcf = 1 << log_p;
+    auto run = [&](const char* dev_type, P* result, const char* msg, bool measure, int iters, auto msm_func) {
+      const int log_p = 2;
+      const int c = std::max(logn, 8) - 1;
+      // const int c = 4;
+      const int pcf = 1 << log_p;
 
-        int hw_threads = std::thread::hardware_concurrency();
-        if (hw_threads <= 0) {
-          std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n";
-        }
-        const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
-        // const int n_threads = 1;
-        std::cout << "Num threads: " << n_threads << '\n';
-        // const int n_threads = 8;
+      int hw_threads = std::thread::hardware_concurrency();
+      if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
+      const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
+      // const int n_threads = 1;
+      std::cout << "Num threads: " << n_threads << '\n';
+      // const int n_threads = 8;
 
-        const int tasks_per_thread = 4;
+      const int tasks_per_thread = 4;
 
-        MSMConfig config = default_msm_config();
-        ConfigExtension ext;
-        ext.set("c", c);
-        ext.set("n_threads", n_threads);
-        ext.set("tasks_per_thread", tasks_per_thread);
+      MSMConfig config = default_msm_config();
+      ConfigExtension ext;
+      ext.set("c", c);
+      ext.set("n_threads", n_threads);
 
-        config.ext = &ext;
-        config.precompute_factor = pcf;
-        config.are_scalars_montgomery_form = false;
-        config.are_points_montgomery_form = conv_mont;
-        config.batch_size = batch_size;
+      config.c = c;
+      config.ext = &ext;
+      config.precompute_factor = pcf;
+      config.are_scalars_montgomery_form = false;
+      config.are_points_montgomery_form = conv_mont;
+      config.batch_size = batch_size;
 
-        auto precomp_bases = std::make_unique<affine_t[]>(N * pcf);
-        std::string precomp_fname =
-          "build/generated_data/precomp_N" + std::to_string(N) + "_pcf" + std::to_string(pcf) + ".dat";
-        if (!read_inputs<affine_t>(precomp_bases.get(), N * pcf, precomp_fname)) {
-          std::cout << "Precomputing bases.";
-          cpu_msm_precompute_bases<affine_t>("CPU", bases.get(), N, config, precomp_bases.get());
-          std::cout << " Storing.\n";
-          store_inputs<affine_t>(precomp_bases.get(), N * pcf, precomp_fname);
-        }
-        // START_TIMER(MSM_sync)
-        std::cout << "Starting msm (N=" << N << ", pcf=" << pcf << ")\n";
-        for (int i = 0; i < iters; ++i) {
-          msm_func("CPU", scalars.get(), precomp_bases.get(), N, config, result);
-        }
-        // END_TIMER(MSM_sync, msg, measure);
-      };
+      auto precomp_bases = std::make_unique<A[]>(N * pcf);
+      std::string precomp_fname =
+        "build/generated_data/precomp_N" + std::to_string(N) + "_pcf" + std::to_string(pcf) + ".dat";
+      if (!read_inputs<A>(precomp_bases.get(), N * pcf, precomp_fname)) {
+        std::cout << "Precomputing bases.";
+        cpu_msm_precompute_bases<A, P>("CPU", bases.get(), N, config, precomp_bases.get());
+        std::cout << " Storing.\n";
+        store_inputs<A>(precomp_bases.get(), N * pcf, precomp_fname);
+      }
+      // START_TIMER(MSM_sync)
+      std::cout << "Starting msm (N=" << N << ", pcf=" << pcf << ")\n";
+      for (int i = 0; i < iters; ++i) {
+        msm_func("CPU", scalars.get(), precomp_bases.get(), N, config, result);
+      }
+      // END_TIMER(MSM_sync, msg, measure);
+    };
 
     // run("CPU", &result_cpu_dbl_n_add, "CPU msm", false /*=measure*/, 1 /*=iters*/); // warmup
-    run("CPU_REF", result_cpu_ref, "CPU_REF msm", true /*=measure*/, 1 /*=iters*/, cpu_msm_single_thread<projective_t>);
-    run("CPU", result_cpu, "CPU msm", true /*=measure*/, 1 /*=iters*/, cpu_msm<projective_t>);
+    run("CPU_REF", result_cpu_ref, "CPU_REF msm", true /*=measure*/, 1 /*=iters*/, cpu_msm_single_thread<P>);
+    run("CPU", result_cpu, "CPU msm", true /*=measure*/, 1 /*=iters*/, cpu_msm<A, P>);
 
     for (int i = 0; i < batch_size; i++) {
       std::cout << "Batch no. " << i << ":\n";
-      std::cout << "CPU:\t\t" << projective_t::to_affine(result_cpu[i]) << std::endl;
-      std::cout << "CPU REF:\t" << projective_t::to_affine(result_cpu_ref[i]) << std::endl;
+      std::cout << "CPU:\t\t" << P::to_affine(result_cpu[i]) << std::endl;
+      std::cout << "CPU REF:\t" << P::to_affine(result_cpu_ref[i]) << std::endl;
       assert(result_cpu[i] == result_cpu_ref[i]);
     }
   }
