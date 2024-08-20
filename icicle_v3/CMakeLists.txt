@@ -19,17 +19,18 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# TODO Yuval remove those flags. Frontend will always have everything.
-# CUDA backend may do it for faster dev.
+# Build options
+option(BUILD_TESTS "Build unit tests. Default=OFF" OFF)
+option(CPU_BACKEND "Build CPU backend. Default=ON" ON)
+option(CUDA_BACKEND "Branch/commit to pull for CUDA backend or `local` if under icicle/backend/cuda. Default=OFF" OFF)
+
+# features that some fields/curves have and some don't.
+# By default, it is defined in [TODO Yuval]. Override the option manually to disable features.
 option(NTT "Build NTT" ON)
+option(ECNTT "Build ECNTT" ON)
 option(MSM "Build MSM" ON)
-option(EXT_FIELD "Build extension field" OFF)
-option(ECNTT "Build ECNTT" OFF)
-option(G2 "Build G2" OFF)
-# REMOVE END
-option(BUILD_TESTS "Build unit tests" OFF)
-option(CPU_BACKEND "Build CPU backend" ON)
-option(CUDA_BACKEND "Branch/commit to pull for CUDA backend, local path or OFF to disable pulling" OFF)
+option(G2 "Build G2 MSM" ON)
+option(EXT_FIELD "Build extension field" ON)
 
 # device API library
 add_library(icicle_device SHARED
@@ -62,11 +63,15 @@ endif()
 
 # curve is building the scalar field too
 if(CURVE)
-  check_curve()
-  setup_curve_target()
+  set(CURVE_INDEX -1)
+  set(FEATURES_STRING "")
+  check_curve(${CURVE} CURVE_INDEX FEATURES_STRING)    
+  setup_curve_target(${CURVE} ${CURVE_INDEX} ${FEATURES_STRING})
 elseif(FIELD)
-  check_field()
-  setup_field_target()
+  set(FIELD_INDEX -1)
+  set(FEATURES_STRING "")
+  check_field(${FIELD} FIELD_INDEX FEATURES_STRING)
+  setup_field_target(${FIELD} ${FIELD_INDEX} ${FEATURES_STRING})
 endif()
 
 if (CPU_BACKEND)

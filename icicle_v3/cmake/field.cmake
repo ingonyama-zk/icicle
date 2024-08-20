@@ -1,59 +1,67 @@
-function(check_field)
-  set(SUPPORTED_FIELDS babybear;stark252)
+include(cmake/fields_and_curves.cmake)
+include(cmake/target_editor.cmake)
 
+function(extract_field_names FIELD_NAMES_OUT)
+  set(FIELD_NAMES "")
+
+  foreach (ITEM ${ICICLE_FIELDS})
+    string(REPLACE ":" ";" ITEM_SPLIT ${ITEM})
+    list(GET ITEM_SPLIT 1 FIELD_NAME)
+    list(APPEND FIELD_NAMES ${FIELD_NAME})
+  endforeach()
+
+  # Output the list of field names
+  set(${FIELD_NAMES_OUT} "${FIELD_NAMES}" PARENT_SCOPE)
+endfunction()
+
+function(check_field FIELD FIELD_INDEX_OUT FEATURES_STRING_OUT)
   set(IS_FIELD_SUPPORTED FALSE)
-  set(I 1000)
-  foreach (SUPPORTED_FIELD ${SUPPORTED_FIELDS})
-    math(EXPR I "${I} + 1")
-    if (FIELD STREQUAL SUPPORTED_FIELD)
-      add_compile_definitions(FIELD_ID=${I})
+  foreach (ITEM ${ICICLE_FIELDS})
+    string(REPLACE ":" ";" ITEM_SPLIT ${ITEM})
+    list(GET ITEM_SPLIT 0 FIELD_INDEX)
+    list(GET ITEM_SPLIT 1 FIELD_NAME)
+    list(GET ITEM_SPLIT 2 FEATURES_STRING)
+
+    if (FIELD STREQUAL FIELD_NAME)
       set(IS_FIELD_SUPPORTED TRUE)
+      message(STATUS "building FIELD_NAME=${FIELD_NAME} ; FIELD_INDEX=${FIELD_INDEX} ; FEATURES=${FEATURES_STRING}")
+      # Output the FIELD_INDEX and FEATURES_STRING
+      set(${FIELD_INDEX_OUT} "${FIELD_INDEX}" PARENT_SCOPE)
+      set(${FEATURES_STRING_OUT} "${FEATURES_STRING}" PARENT_SCOPE)
+      break()
     endif ()
   endforeach()
 
   if (NOT IS_FIELD_SUPPORTED)
-    message( FATAL_ERROR "The value of FIELD variable: ${FIELD} is not one of the supported fields: ${SUPPORTED_FIELDS}" )
+    set(ALL_FIELDS "")
+    extract_field_names(ALL_FIELDS)
+    message(FATAL_ERROR "The value of FIELD variable: ${FIELD} is not supported: choose from [${ALL_FIELDS}]")
   endif ()
 endfunction()
 
-function(setup_field_target)
-    add_library(icicle_field SHARED
-      src/fields/ffi_extern.cpp
-      src/vec_ops.cpp
-      src/matrix_ops.cpp
-    )
-    # handle APIs that are for some curves only
-    add_ntt_sources_or_disable()
-    set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
-    target_link_libraries(icicle_field PUBLIC icicle_device pthread)
+function(setup_field_target FIELD_NAME FIELD_INDEX FEATURES_STRING)
+  add_library(icicle_field SHARED)
 
-    # Make sure FIELD is defined in the cache for backends to see
-    set(FIELD "${FIELD}" CACHE STRING "")
-    target_compile_definitions(icicle_field PUBLIC FIELD=${FIELD})
-    if (EXT_FIELD)
-      set(EXT_FIELD "${EXT_FIELD}" CACHE STRING "")
-      target_compile_definitions(icicle_field PUBLIC EXT_FIELD=${EXT_FIELD})
-    endif()
+  # Split FEATURES_STRING into a list using "," as the separator
+  string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})
 
-    install(TARGETS icicle_field
-      RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
-      LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
+  # customize the field lib to choose what to include
+  handle_field(icicle_field) # basic field methods, including vec ops
+  # Handle features
+  handle_ntt(icicle_field "${FEATURES_LIST}")
+  handle_ext_field(icicle_field "${FEATURES_LIST}")
+  # Add additional feature handling calls here
+
+  set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
+  target_link_libraries(icicle_field PUBLIC icicle_device pthread)
+
+  # Ensure FIELD is defined in the cache for backends to see
+  set(FIELD "${FIELD_NAME}" CACHE STRING "")
+  add_compile_definitions(FIELD=${FIELD} FIELD_ID=${FIELD_INDEX})
+
+  install(TARGETS icicle_field
+    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
 endfunction()
 
-function(add_ntt_sources_or_disable)
-  set(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
-
-  if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
-    add_compile_definitions(NTT_ENABLED)
-    target_sources(icicle_field PRIVATE  
-      src/ntt.cpp 
-      src/polynomials/polynomials.cpp 
-      src/polynomials/polynomials_c_api.cpp
-      src/polynomials/polynomials_abstract_factory.cpp
-    )
-  else()
-    set(NTT OFF CACHE BOOL "NTT not available for field" FORCE)
-  endif()
-
-endfunction()
