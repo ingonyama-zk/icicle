@@ -72,7 +72,7 @@ public:
     int c = std::max(logn, 8) - 1;
     if (scalar_t::NBITS % c == 0) { c++; }
     int hw_threads = std::thread::hardware_concurrency();
-    if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
+    if (hw_threads <= 0) { std::cerr << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
     const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
     const int total_nof_elemets = batch * N;
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);

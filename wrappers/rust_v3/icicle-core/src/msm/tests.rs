@@ -184,7 +184,6 @@ where
     let batch_sizes = [1, 3, 1 << 4];
     let rng = &mut thread_rng();
     for test_size in test_sizes {
-        let test_threshold = test_size >> 2;
         for batch_size in batch_sizes {
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 100);
             let mut scalars = vec![C::ScalarField::zero(); test_size * batch_size];
