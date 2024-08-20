@@ -304,6 +304,8 @@ Msm<A, P>::Msm(const MSMConfig& config, const int nof_threads)
 
       m_p3_threads(m_batch_size - 1)
 {
+  std::cout << "Parmas:\n#threads:\t" << nof_threads << "\nc:\t\t" << m_c << "\n#BMs:\t\t" << m_num_bms
+            << "\n#Buckets:\t" << m_num_bkts << "\nPrecompute:\t" << m_precompute_factor << '\n';
 }
 
 template <typename A, typename P>
@@ -574,17 +576,6 @@ void Msm<A, P>::phase3_thread(std::shared_ptr<std::vector<BmSumSegment>> segment
 // None class functions below:
 
 /**
- * @brief Function to check the MSM config is valid for calculating in CPU.
- * @return - status if the config is supported or not.
- */
-eIcicleError not_supported(const MSMConfig& conf)
-{
-  // Currently c mustn't divide scalar_t without remainder
-  if (scalar_t::NBITS % conf.c == 0) { return eIcicleError::INVALID_DEVICE; }
-  return eIcicleError::SUCCESS;
-}
-
-/**
  * @brief Super function that handles the Msm class to calculate a MSM.
  * @param device - Icicle API parameter stating the device being ran on. In this case - CPU.
  * @param scalars - Input scalars for MSM.
@@ -598,9 +589,11 @@ template <typename A, typename P>
 eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
-
-  const unsigned int c = config.c;
+  int c = config.c > 0 ? config.c : (int)(log2(msm_size));
+  if (scalar_t::NBITS % c == 0) {
+    std::cerr << "c dividing scalar width without remainder is currently not supported - incrementing c";
+    c++;
+  }
   const unsigned int precompute_factor = config.precompute_factor;
   const int num_bms = ((scalar_t::NBITS - 1) / (precompute_factor * c)) + 1;
 
