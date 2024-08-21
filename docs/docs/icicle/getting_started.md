@@ -117,8 +117,8 @@ cd wrappers/rust # or go to a specific field/curve 'cd wrappers/rust/icicle-fiel
 ```bash
 cargo build --release
 ```
-By default, all [supported features](./libraries.md#supported-curves-and-operations) are enabled. [See here for more details.](#features)
-To disable, use the following cargo features:
+By default, all [supported features are enabled](#features).
+Cargo features are used to disable features, rather than enable them, for the reason explained [here](#features):
 - `no_g2` to disable G2 MSM
 - `no_ecntt` to disable ECNTT
 
@@ -136,7 +136,7 @@ If you have access to cuda backend repo, it can be built along ICICLE frontend b
 
 3. **Run tests:**
 ```bash
-cargo test # optional:  --no-default-features
+cargo test # optional: --features=no_ecntt,no_g2,cuda_backend
 ```
 :::note
 Most tests assume a CUDA backend is installed and fail otherwise.
@@ -166,15 +166,13 @@ Can specify `branch = <branch-name>` or `tag = <tag-name>` or `rev = <commit-id>
 
 To disable features:
 ```bash
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git", default-features = false, features = ["g2"] }
-# or for g2 only
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git", default-features = false}
+icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git", features = ["no_g2"] }
 ```
 
-
 As explained above, the libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable for a custom install directory.
-:::note
-Make sure to install icicle libs when installing a library/application that depends on icicle.
+
+:::warning
+Make sure to install icicle libs when installing a library/application that depends on icicle such that it is located at runtime.
 :::
 
 ### Go: Build, Test, and Install (TODO)
