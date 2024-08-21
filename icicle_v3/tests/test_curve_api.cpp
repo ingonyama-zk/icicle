@@ -161,14 +161,17 @@ TEST_F(CurveApiTest, ecntt)
     icicle_set_device(dev);
 
     auto init_domain_config = default_ntt_init_domain_config();
-    ntt_init_domain(scalar_t::omega(logn), init_domain_config);
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(logn), init_domain_config));
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
     auto config = default_ntt_config<scalar_t>();
 
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i)
-      ntt(input.get(), N, NTTDir::kForward, config, out);
-    END_TIMER(NTT_sync, msg, measure);
+      ICICLE_CHECK(ntt(input.get(), N, NTTDir::kForward, config, out));    
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
     ntt_release_domain<scalar_t>();
   };
