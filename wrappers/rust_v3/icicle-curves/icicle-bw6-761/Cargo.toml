@@ -11,7 +11,6 @@ repository.workspace = true
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
-# criterion = "0.3"
 
 [dev-dependencies]
 criterion = "0.3"
@@ -22,7 +21,8 @@ cmake = "0.1.50"
 
 [features]
 default = []
-g2 = ["icicle-bls12-377/bw6-761-g2"]
+no_g2 = ["icicle-bls12-377/no_g2"]
+no_ecntt = ["icicle-bls12-377/no_ecntt"]
 cuda_backend = ["icicle-bls12-377/cuda_backend"]
 pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
 

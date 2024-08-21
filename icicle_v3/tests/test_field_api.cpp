@@ -294,7 +294,7 @@ TYPED_TEST(FieldApiTest, Slice)
   ASSERT_EQ(0, memcmp(elements_ref.get(), elements_out.get(), size * sizeof(TypeParam)));
 }
 
-#ifdef NTT_ENABLED
+#ifdef NTT
 TYPED_TEST(FieldApiTest, ntt)
 {
   srand(time(0));
@@ -383,7 +383,7 @@ TYPED_TEST(FieldApiTest, ntt)
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
-#endif // NTT_ENABLED
+#endif // NTT
 
 int main(int argc, char** argv)
 {

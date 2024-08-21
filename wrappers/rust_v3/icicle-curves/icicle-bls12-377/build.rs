@@ -29,18 +29,20 @@ fn main() {
         .define("CMAKE_BUILD_TYPE", "Release")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-    #[cfg(feature = "cuda_backend")]
-    config.define("CUDA_BACKEND", "local");
-
-    #[cfg(feature = "pull_cuda_backend")]
-    config.define("CUDA_BACKEND", "main");
-
-    // Optional Features
-    #[cfg(feature = "g2")]
-    config.define("G2", "ON");
-
-    #[cfg(feature = "ec_ntt")]
-    config.define("ECNTT", "ON");
+    // build (or pull and build) cuda backend if feature enabled.
+    // Note: this requires access to the repo
+    if cfg!(feature = "cuda_backend") {
+        config.define("CUDA_BACKEND", "local");
+    } else if cfg!(feature = "pull_cuda_backend") {
+        config.define("CUDA_BACKEND", "main");
+    }
+    // Optional Features that are default ON (so that default matches any backend)
+    if cfg!(feature = "no_g2") {
+        config.define("G2", "OFF");
+    }
+    if cfg!(feature = "no_ecntt") {
+        config.define("ECNTT", "OFF");
+    }
 
     // Build
     let _ = config
@@ -60,18 +62,21 @@ fn main() {
             .define("CMAKE_BUILD_TYPE", "Release")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-        #[cfg(feature = "cuda_backend")]
-        config_bw.define("CUDA_BACKEND", "local");
+        // build (or pull and build) cuda backend if feature enabled.
+        // Note: this requires access to the repo
+        if cfg!(feature = "cuda_backend") {
+            config_bw.define("CUDA_BACKEND", "local");
+        } else if cfg!(feature = "pull_cuda_backend") {
+            config_bw.define("CUDA_BACKEND", "main");
+        }
 
-        #[cfg(feature = "pull_cuda_backend")]
-        config_bw.define("CUDA_BACKEND", "main");
-
-        // Optional Features
-        #[cfg(feature = "bw6-761-g2")]
-        config_bw.define("G2", "ON");
-
-        #[cfg(feature = "ec_ntt")]
-        config_bw.define("ECNTT", "OFF");
+        // Optional Features that are default ON (so that default matches any backend)
+        if cfg!(feature = "no_g2") {
+            config_bw.define("G2", "OFF");
+        }
+        if cfg!(feature = "no_ecntt") {
+            config_bw.define("ECNTT", "OFF");
+        }
 
         // Build
         let _ = config_bw

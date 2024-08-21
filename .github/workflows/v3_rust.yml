@@ -76,7 +76,7 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # tests are split to phases since NTT domain is global but tests have conflicting requirements
       run: |
-        cargo build --release --verbose --features=g2,ec_ntt
-        cargo test --workspace --release --verbose --features=g2,ec_ntt,cuda_backend -- --skip phase
-        cargo test phase2 --workspace --release --verbose --features=g2,ec_ntt,cuda_backend
-        cargo test phase3 --workspace --release --verbose --features=g2,ec_ntt,cuda_backend
+        cargo build --workspace --release --features=cuda_backend
+        cargo test --workspace --release --verbose --features=cuda_backend -- --skip phase
+        cargo test phase2 --workspace --release --features=cuda_backend
+        cargo test phase3 --workspace --release --features=cuda_backend
