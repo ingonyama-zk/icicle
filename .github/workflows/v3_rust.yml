@@ -78,5 +78,5 @@ jobs:
       run: |
         cargo build --release --features=cuda_backend
         cargo test --workspace --release --verbose --features=cuda_backend -- --skip phase
-        cargo test phase2 --workspace --release --verbose --features=cuda_backend
-        cargo test phase3 --workspace --release --verbose --features=cuda_backend
+        cargo test phase2 --workspace --release --features=cuda_backend
+        cargo test phase3 --workspace --release --features=cuda_backend
