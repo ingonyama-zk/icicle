@@ -55,6 +55,7 @@ if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")  
 else
   echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
+  export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
   cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -S "${ICILE_DIR}" -B build/icicle  
 fi
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example

@@ -25,7 +25,6 @@ option(CPU_BACKEND "Build CPU backend. Default=ON" ON)
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend or `local` if under icicle/backend/cuda. Default=OFF" OFF)
 
 # features that some fields/curves have and some don't.
-# By default, it is defined in [TODO Yuval]. Override the option manually to disable features.
 option(NTT "Build NTT" ON)
 option(ECNTT "Build ECNTT" ON)
 option(MSM "Build MSM" ON)

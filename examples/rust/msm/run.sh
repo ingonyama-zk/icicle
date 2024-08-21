@@ -56,6 +56,6 @@ if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [
   cargo run --release --features=cuda -- --device-type "${DEVICE_TYPE}"
 else
   echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
-  export ICICLE_BACKEND_INSTALL_DIR="$ICICLE_BACKEND_INSTALL_DIR";
+  export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
   cargo run --release -- --device-type "${DEVICE_TYPE}"
 fi
