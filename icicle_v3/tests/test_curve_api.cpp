@@ -170,7 +170,7 @@ TEST_F(CurveApiTest, ecntt)
 
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i)
-      ICICLE_CHECK(ntt(input.get(), N, NTTDir::kForward, config, out));    
+      ICICLE_CHECK(ntt(input.get(), N, NTTDir::kForward, config, out));
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
     ntt_release_domain<scalar_t>();
