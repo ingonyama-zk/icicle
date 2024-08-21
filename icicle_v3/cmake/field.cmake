@@ -39,7 +39,7 @@ function(check_field FIELD FIELD_INDEX_OUT FEATURES_STRING_OUT)
   endif ()
 endfunction()
 
-function(setup_field_target FIELD_NAME FIELD_INDEX FEATURES_STRING)
+function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   add_library(icicle_field SHARED)
 
   # Split FEATURES_STRING into a list using "," as the separator
@@ -56,7 +56,7 @@ function(setup_field_target FIELD_NAME FIELD_INDEX FEATURES_STRING)
   target_link_libraries(icicle_field PUBLIC icicle_device pthread)
 
   # Ensure FIELD is defined in the cache for backends to see
-  set(FIELD "${FIELD_NAME}" CACHE STRING "")
+  set(FIELD "${FIELD}" CACHE STRING "")
   add_compile_definitions(FIELD=${FIELD} FIELD_ID=${FIELD_INDEX})
 
   install(TARGETS icicle_field

@@ -40,9 +40,9 @@ function(check_curve CURVE CURVE_INDEX_OUT FEATURES_STRING_OUT)
 endfunction()
 
 
-function(setup_curve_target CURVE_NAME CURVE_INDEX FEATURES_STRING)
+function(setup_curve_target CURVE CURVE_INDEX FEATURES_STRING)
   # the scalar field of the curve is built to a field library (like babybear is built)
-  setup_field_target(${CURVE_NAME} ${CURVE_INDEX} ${FEATURES_STRING})
+  setup_field_target(${CURVE} ${CURVE_INDEX} ${FEATURES_STRING})
 
   add_library(icicle_curve SHARED)
 
