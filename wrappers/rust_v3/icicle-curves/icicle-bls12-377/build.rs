@@ -65,17 +65,17 @@ fn main() {
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo
         if cfg!(feature = "cuda_backend") {
-            config.define("CUDA_BACKEND", "local");
+            config_bw.define("CUDA_BACKEND", "local");
         } else if cfg!(feature = "pull_cuda_backend") {
-            config.define("CUDA_BACKEND", "main");
+            config_bw.define("CUDA_BACKEND", "main");
         }
 
         // Optional Features that are default ON (so that default matches any backend)
         if cfg!(feature = "no_g2") {
-            config.define("G2", "OFF");
+            config_bw.define("G2", "OFF");
         }
         if cfg!(feature = "no_ecntt") {
-            config.define("ECNTT", "OFF");
+            config_bw.define("ECNTT", "OFF");
         }
 
         // Build
