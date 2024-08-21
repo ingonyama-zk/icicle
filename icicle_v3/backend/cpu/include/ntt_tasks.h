@@ -25,8 +25,8 @@ using namespace icicle;
 namespace ntt_cpu {
 
   constexpr uint32_t layers_sub_logn[31][3] = {
-    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {2, 2, 1},   {3, 2, 1},   {4, 3, 0},
-    // {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
+    // {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {1, 1, 1},   {2, 1, 1},   {2, 2, 1},   {3, 2, 1},   {4, 3, 0},
+    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
     {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
     {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
     {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
@@ -35,13 +35,13 @@ namespace ntt_cpu {
     int h1_layer_idx=0;
     int h1_subntt_idx=0;
     int h0_layer_idx=0;
-    int h0_subntt_idx=0;
     int h0_block_idx=0;
+    int h0_subntt_idx=0;
 
     // Comparison operators for map
     bool operator<(const NttTaskCordinates& other) const {
-      return std::tie(h1_layer_idx, h1_subntt_idx, h0_layer_idx, h0_subntt_idx, h0_block_idx) <
-        std::tie(other.h1_layer_idx, other.h1_subntt_idx, other.h0_layer_idx, other.h0_subntt_idx, other.h0_block_idx);
+      return std::tie(h1_layer_idx, h1_subntt_idx, h0_layer_idx, h0_block_idx, h0_subntt_idx) <
+        std::tie(other.h1_layer_idx, other.h1_subntt_idx, other.h0_layer_idx, other.h0_block_idx, other.h0_subntt_idx);
     }
   };
   
@@ -75,9 +75,9 @@ namespace ntt_cpu {
           std::end(layers_sub_logn[logn])
         ), {0, 0, 0}};
       }
-      ICICLE_LOG_DEBUG << "NttTaskInfo: h1_layers_sub_logn: " << h1_layers_sub_logn[0] << ", " << h1_layers_sub_logn[1] << ", " << h1_layers_sub_logn[2];
-      ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn[0]: " << h0_layers_sub_logn[0][0] << ", " << h0_layers_sub_logn[0][1] << ", " << h0_layers_sub_logn[0][2];
-      ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn[1]: " << h0_layers_sub_logn[1][0] << ", " << h0_layers_sub_logn[1][1] << ", " << h0_layers_sub_logn[1][2];
+      // ICICLE_LOG_DEBUG << "NttTaskInfo: h1_layers_sub_logn: " << h1_layers_sub_logn[0] << ", " << h1_layers_sub_logn[1] << ", " << h1_layers_sub_logn[2];
+      // ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn[0]: " << h0_layers_sub_logn[0][0] << ", " << h0_layers_sub_logn[0][1] << ", " << h0_layers_sub_logn[0][2];
+      // ICICLE_LOG_DEBUG << "NttTaskInfo: h0_layers_sub_logn[1]: " << h0_layers_sub_logn[1][0] << ", " << h0_layers_sub_logn[1][1] << ", " << h0_layers_sub_logn[1][2];
     }
   };
 
@@ -144,7 +144,6 @@ namespace ntt_cpu {
   };
 
   struct NttTaskStatus {
-    std::shared_ptr<int> counter; // Number of tasks that must be completed before this task can run
     bool done = false;         // True if the task has been completed
     bool reorder = false;      // Whether the task is to reorder
   };
@@ -174,8 +173,10 @@ namespace ntt_cpu {
     //   : ntt_cpu(ntt_cpu), input(input), ntt_task_cordinates(ntt_task_cordinates), reorder(reorder) {}
 
     void execute() {
+      auto thread_id = std::this_thread::get_id();  // Get the thread id
       if (reorder) {
         // if all h0_subntts are done, reorder the output
+        // ICICLE_LOG_DEBUG << "Thread " << thread_id << ": Executing reorder start: h0_layer_idx: " << ntt_task_cordinates.h0_layer_idx << ", h0_block_idx: " << ntt_task_cordinates.h0_block_idx << ", h0_subntt_idx: " << ntt_task_cordinates.h0_subntt_idx;
         if (ntt_cpu->config.columns_batch) {
           ntt_cpu->reorder_output(input, ntt_task_cordinates, false);
         } else {
@@ -183,10 +184,15 @@ namespace ntt_cpu {
             ntt_cpu->reorder_output(input + b * (1<<(ntt_cpu->ntt_sub_logn.logn)), ntt_task_cordinates, false);
           }
         }
-        // ntt_cpu->reorder_by_bit_reverse(ntt_task_cordinates, input, false);
+        // ICICLE_LOG_DEBUG << "Thread " << thread_id << ": Executing reorder done:  h0_layer_idx: " << ntt_task_cordinates.h0_layer_idx << ", h0_block_idx: " << ntt_task_cordinates.h0_block_idx << ", h0_subntt_idx: " << ntt_task_cordinates.h0_subntt_idx;
       } else {
       // Execute the h0_cpu_ntt using the provided NttCpu instance
+        // ICICLE_LOG_DEBUG << "Thread " << thread_id << ": Executing ntt start: h0_layer_idx: " << ntt_task_cordinates.h0_layer_idx << ", h0_block_idx: " << ntt_task_cordinates.h0_block_idx << ", h0_subntt_idx: " << ntt_task_cordinates.h0_subntt_idx;
         ntt_cpu->h0_cpu_ntt(input, ntt_task_cordinates);
+        // ICICLE_LOG_DEBUG << "Thread " << thread_id << ": Executing ntt done:  h0_layer_idx: " << ntt_task_cordinates.h0_layer_idx << ", h0_block_idx: " << ntt_task_cordinates.h0_block_idx << ", h0_subntt_idx: " << ntt_task_cordinates.h0_subntt_idx;
+        // for (int i = 0; i < 1<<ntt_cpu->ntt_sub_logn.logn; i++) {
+        //   ICICLE_LOG_DEBUG << "Thread " << thread_id << ": input[" << i << "]: " << input[i];
+        // }
       }
     }
 
@@ -224,13 +230,13 @@ namespace ntt_cpu {
       // ICICLE_LOG_DEBUG << "NttTasksManager constructor";
     }
     // Add a new task to the ntt_task_manager
-    bool push_task(NttCpu<S, E>* ntt_cpu, E* input, NttTaskCordinates task_c, bool reorder);
+    eIcicleError push_task(NttCpu<S, E>* ntt_cpu, E* input, NttTaskCordinates task_c, bool reorder);
 
     // Function to get an available task to run
     bool get_available_task_to_run(NttTask<S, E>* available_task, int h1_layer); //if no availble task- available_task=null. if not waiting to be ready - return false
 
     // Set a task as completed and update dependencies
-    eIcicleError set_task_as_completed(NttTask<S, E>& completed_task);
+    eIcicleError set_task_as_completed(NttTask<S, E>& completed_task, int nof_subntts_l2);
 
     int nof_available_tasks;
     int nof_waiting_tasks;
@@ -243,8 +249,9 @@ namespace ntt_cpu {
 
     std::vector<NttTasksStatus> tasks_status;  // Status of tasks by layer
     std::vector<TasksDependenciesCounters> counters;  // Dependencies counters by layer
-    // std::vector<NttTask<S, E>> task_list; // List of all tasks
-    std::vector<NttTaskParams<S, E>> task_params_list;
+    std::vector<NttTaskParams<S, E>> available_tasks_params_list;
+    // std::vector<NttTaskParams<S, E>> waiting_tasks_params_list;
+    std::map<NttTaskCordinates, NttTaskParams<S, E>> waiting_tasks_params_map;
 
   };
 
@@ -334,32 +341,24 @@ namespace ntt_cpu {
     
   }
 
-  bool TasksDependenciesCounters::decrement_counter(NttTaskCordinates ntt_task_cordinates) {
+  bool TasksDependenciesCounters::decrement_counter(NttTaskCordinates task_c) {
     if (nof_h0_layers==1){
       return false;
     }
-    if (ntt_task_cordinates.h0_layer_idx < nof_h0_layers-1) {
+    if (task_c.h0_layer_idx < nof_h0_layers-1) {
       // Extract the coordinates from the task
-      int h1_subntt_idx = ntt_task_cordinates.h1_subntt_idx;
-      int counter_h0_layer_idx = ntt_task_cordinates.h0_layer_idx + 1;
-      int counter_group_idx = counter_h0_layer_idx==1 ? ntt_task_cordinates.h0_block_idx :
-                            /*counter_h0_layer_idx==2*/ ntt_task_cordinates.h0_subntt_idx;
+      int counter_group_idx = task_c.h0_layer_idx==0 ? task_c.h0_block_idx :
+                            /*task_c.h0_layer_idx==1*/ task_c.h0_subntt_idx;
 
-      // Decrement the counter for the given h1_subntt_idx, h0_block_idx, h0_layer_idx
-        if(counter_h0_layer_idx==2 && (*h0_counters[h1_subntt_idx][counter_h0_layer_idx][counter_group_idx])==1){
-          // ICICLE_LOG_DEBUG << "decrement_counter: h0_counters["<<h1_subntt_idx<<"]["<<counter_h0_layer_idx<<"]["<<counter_group_idx<<"]: " << *h0_counters[h1_subntt_idx][counter_h0_layer_idx][counter_group_idx];
-        }
-        std::shared_ptr<int>& counter_ptr = h0_counters[h1_subntt_idx][counter_h0_layer_idx][counter_group_idx];
-        (*counter_ptr)--;
+      std::shared_ptr<int>& counter_ptr = h0_counters[task_c.h1_subntt_idx][task_c.h0_layer_idx + 1][counter_group_idx];
+      (*counter_ptr)--;
 
       if (*counter_ptr == 0) {
-        // ICICLE_LOG_DEBUG << "decrement_counter: h0_counters["<<h1_subntt_idx<<"]["<<counter_h0_layer_idx<<"]["<<counter_group_idx<<"] = " << *h0_counters[h1_subntt_idx][counter_h0_layer_idx][counter_group_idx];
-        // ICICLE_LOG_DEBUG << "decrement_counter: counter_ptr: " << counter_ptr;
         return true;
       }
     } else {
       // Decrement the counter for the given h1_subntt_idx
-      std::shared_ptr<int>& h1_counter_ptr = h1_counters[ntt_task_cordinates.h1_subntt_idx];
+      std::shared_ptr<int>& h1_counter_ptr = h1_counters[task_c.h1_subntt_idx];
       (*h1_counter_ptr)--;
 
       if (*h1_counter_ptr == 0) {
@@ -373,102 +372,97 @@ namespace ntt_cpu {
   //////////////////////////// NttTasksManager Implementation ////////////////////////////
   
   template<typename S, typename E>
-  bool NttTasksManager<S, E>::push_task(NttCpu<S, E>* ntt_cpu, E* input, NttTaskCordinates task_c, bool reorder) {
-    // Create a shared pointer to the relevant counter
-    auto counter_p = get_counter_p_for_task(task_c, reorder);
+  eIcicleError NttTasksManager<S, E>::push_task(NttCpu<S, E>* ntt_cpu, E* input, NttTaskCordinates task_c, bool reorder) {
 
     if (tasks_status[task_c.h1_layer_idx].find(task_c) == tasks_status[task_c.h1_layer_idx].end()) {
-      NttTaskStatus status = {counter_p, false, reorder};
+      NttTaskStatus status = {false, reorder};
       tasks_status[task_c.h1_layer_idx][task_c] = status;
-
-      // Add the task to the list using emplace_back
-      // task_list.emplace_back(ntt_cpu, input, task_c, reorder);
-      // NttTask<S, E> task(ntt_cpu, input, task_c, reorder);
-      // task_list.push_back(std::move(task));
-
-      // task_list.emplace_back(ntt_cpu, input, std::move(task_c), reorder);
         
-      // Create a new NttTaskParams and add it to the task_params_list
+      // Create a new NttTaskParams and add it to the available_tasks_params_list
       NttTaskParams<S, E> params = {ntt_cpu, input, task_c, reorder};
-      task_params_list.push_back(params);
-
-      if (*counter_p == 0) {
+      if (task_c.h0_layer_idx == 0) {
+        available_tasks_params_list.push_back(params);
         nof_available_tasks++;
       } else {
+        waiting_tasks_params_map[task_c] = params; // Add to map
         nof_waiting_tasks++;
       }
+      return eIcicleError::SUCCESS;
+    }
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  template<typename S, typename E>
+  bool NttTasksManager<S, E>::get_available_task_to_run(NttTask<S, E>* available_task, int h1_layer) {
+    if (!available_tasks_params_list.empty()) {
+      // Take the first task from the list
+      NttTaskParams<S, E> params = available_tasks_params_list.front();
+
+      // Assign the parameters to the available task
+      available_task->set_ntt_cpu(params.ntt_cpu);
+      available_task->set_input(params.input);
+      available_task->set_coordinates(params.task_c);
+      available_task->set_reorder(params.reorder);
+
+      // Remove the task from the list
+      available_tasks_params_list.erase(available_tasks_params_list.begin());
+      nof_available_tasks--;
+
       return true;
     }
     return false;
   }
 
-  // template<typename S, typename E>
-  // bool NttTasksManager<S, E>::get_available_task_to_run(NttTask<S, E>* available_task, int h1_layer) {
-  //   for (NttTask<S, E>& task : task_list) {
-  //     NttTaskStatus& status = tasks_status[h1_layer][task.get_coordinates()];
-  //     if (status.counter && *status.counter == 0 && !status.done) {
-  //       available_task = &task;
-  //       status.counter = nullptr;
-  //       return true;
-  //     }
-  //   }
-  //   return false;
-  // }
-
-  template<typename S, typename E>
-  bool NttTasksManager<S, E>::get_available_task_to_run(NttTask<S, E>* available_task, int h1_layer) {
-    for (const auto& params : task_params_list) {
-      NttTaskStatus& status = tasks_status[h1_layer][params.task_c];
-      if (status.counter && *status.counter == 0 && !status.done) {
-        available_task->set_ntt_cpu(params.ntt_cpu);
-        available_task->set_input(params.input);
-        available_task->set_coordinates(params.task_c);
-        available_task->set_reorder(params.reorder);
-        status.counter = nullptr;
-        nof_available_tasks--;
-        return true;
-      }
-    }
-    return false;
-  }
 
   // Function to set a task as completed and update dependencies
   template<typename S, typename E>
-  eIcicleError NttTasksManager<S, E>::set_task_as_completed(NttTask<S, E>& completed_task) {
-    ntt_cpu::NttTaskCordinates ntt_task_cordinates = completed_task.get_coordinates();
-    auto& status = tasks_status[ntt_task_cordinates.h1_layer_idx][ntt_task_cordinates];
+  eIcicleError NttTasksManager<S, E>::set_task_as_completed(NttTask<S, E>& completed_task, int nof_subntts_l2) {
+    ntt_cpu::NttTaskCordinates task_c = completed_task.get_coordinates();
+    auto& status = tasks_status[task_c.h1_layer_idx][task_c];
     status.done = true;
-    // ICICLE_LOG_DEBUG << "set_task_as_completed: ntt_task_cordinates: h1_layer_idx:" << ntt_task_cordinates.h1_layer_idx << ", h1_subntt_idx:" << ntt_task_cordinates.h1_subntt_idx << ", h0_layer_idx:" << ntt_task_cordinates.h0_layer_idx  << ", h0_block_idx:" << ntt_task_cordinates.h0_block_idx << ", h0_subntt_idx:" << ntt_task_cordinates.h0_subntt_idx;
+    // int h1_layer_idx = task_c.h1_layer_idx;
+    int nof_h0_layers = counters[task_c.h1_layer_idx].get_nof_h0_layers();
     // Update dependencies in counters
-    int h1_layer_idx = ntt_task_cordinates.h1_layer_idx;
-    if(counters[h1_layer_idx].decrement_counter(ntt_task_cordinates)){
-      // ICICLE_LOG_DEBUG << "set_task_as_completed: prev nof_available_tasks: " << nof_available_tasks;
-      // ICICLE_LOG_DEBUG << "set_task_as_completed: prev nof_waiting_tasks: " << nof_waiting_tasks;
-      int nof_pointing_to_counter = (ntt_task_cordinates.h0_layer_idx == counters[h1_layer_idx].get_nof_h0_layers()-1) ? 1
-                                    : counters[h1_layer_idx].get_nof_pointing_to_counter(ntt_task_cordinates.h0_layer_idx+1);
-      nof_available_tasks = nof_available_tasks + nof_pointing_to_counter;
-      nof_waiting_tasks   = nof_waiting_tasks   - nof_pointing_to_counter;
-      // ICICLE_LOG_DEBUG << "set_task_as_completed: new nof_available_tasks: " << nof_available_tasks;
-      // ICICLE_LOG_DEBUG << "set_task_as_completed: new nof_waiting_tasks: " << nof_waiting_tasks;
+    if(counters[task_c.h1_layer_idx].decrement_counter(task_c)){
+
+      if (task_c.h0_layer_idx < nof_h0_layers-1) {
+        int nof_pointing_to_counter = (task_c.h0_layer_idx == nof_h0_layers-1) ? 1
+                                      : counters[task_c.h1_layer_idx].get_nof_pointing_to_counter(task_c.h0_layer_idx+1);
+        int stride = nof_subntts_l2/nof_pointing_to_counter;
+        // int counter_group_idx = task_c.h0_layer_idx==0 ? task_c.h0_block_idx :
+        //                       /*task_c.h0_layer_idx==1*/ task_c.h0_subntt_idx;
+        for (int i = 0; i < nof_pointing_to_counter; i++) { // TODO - improve efficiency using make_move_iterator
+          NttTaskCordinates next_task_c = task_c.h0_layer_idx==0 ?  NttTaskCordinates{task_c.h1_layer_idx, task_c.h1_subntt_idx, task_c.h0_layer_idx+1, task_c.h0_block_idx, i}
+                                        /*task_c.h0_layer_idx==1*/: NttTaskCordinates{task_c.h1_layer_idx, task_c.h1_subntt_idx, task_c.h0_layer_idx+1, (task_c.h0_subntt_idx + stride*i), 0};
+                                        // /*task_c.h0_layer_idx==1*/: NttTaskCordinates{task_c.h1_layer_idx, task_c.h1_subntt_idx, task_c.h0_layer_idx+1, (task_c.h0_subntt_idx* nof_pointing_to_counter +i), 0};
+          if (waiting_tasks_params_map.find(next_task_c) != waiting_tasks_params_map.end()) {
+            available_tasks_params_list.push_back(waiting_tasks_params_map[next_task_c]);
+            waiting_tasks_params_map.erase(next_task_c);
+          }
+          else {
+            ICICLE_LOG_ERROR << "Task not found in waiting_tasks_params_map: h0_layer_idx: " << next_task_c.h0_layer_idx << ", h0_block_idx: " << next_task_c.h0_block_idx << ", h0_subntt_idx: " << next_task_c.h0_subntt_idx;
+          }
+        }
+          nof_available_tasks = nof_available_tasks + nof_pointing_to_counter;
+          nof_waiting_tasks   = nof_waiting_tasks   - nof_pointing_to_counter;
+
+      } else {
+        // Reorder the output
+        NttTaskCordinates next_task_c = {task_c.h1_layer_idx, task_c.h1_subntt_idx, nof_h0_layers, 0, 0};
+
+        if (waiting_tasks_params_map.find(next_task_c) != waiting_tasks_params_map.end()) {
+          available_tasks_params_list.push_back(waiting_tasks_params_map[next_task_c]);
+          nof_available_tasks++;
+          waiting_tasks_params_map.erase(next_task_c);
+          nof_waiting_tasks--;
+        }
+        else {
+          ICICLE_LOG_ERROR << "Task not found in waiting_tasks_params_map";
+        }      
+      }
     }
     return eIcicleError::SUCCESS;
   }
-
-  // template<typename S, typename E>
-  // bool NttTasksManager<S, E>::check_if_tasks_are_waiting(int h1_layer) {
-  //     return std::any_of(tasks_status[h1_layer].begin(), tasks_status[h1_layer].end(), 
-  //       [](const std::pair<NttTaskCordinates, NttTaskStatus>& task) {
-  //         return task.second.counter && *task.second.counter > 0 && !task.second.done;
-  //       });
-  //   }
-  
-  // template<typename S, typename E>
-  // bool NttTasksManager<S, E>::check_if_tasks_are_available(int h1_layer) {
-  //   return std::any_of(tasks_status[h1_layer].begin(), tasks_status[h1_layer].end(), 
-  //     [](const std::pair<NttTaskCordinates, NttTaskStatus>& task) {
-  //       return task.second.counter && *task.second.counter == 0 && !task.second.done;
-  //     });
-  // }
 
 
   //////////////////////////// NttCpu Implementation ////////////////////////////
@@ -792,12 +786,9 @@ namespace ntt_cpu {
     int nof_h0_subntts = (nof_h0_layers == 1) ? (1 << NttCpu<S, E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][1]) : 
                          (nof_h0_layers == 2) ? (1 << NttCpu<S, E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][0]) : 1;
     int nof_h0_blocks  = (nof_h0_layers != 3) ? (1 << NttCpu<S, E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][2]) : (1 << (NttCpu<S, E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][0]+NttCpu<S, E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][1]));
-    //slot for representing h1_subntt finished
-    // ntt_task_cordinates.h0_layer_idx = nof_h0_layers-1;
-    // ntt_task_cordinates.h0_subntt_idx = nof_h0_subntts;
-    // ntt_task_cordinates.h0_block_idx = nof_h0_blocks;
     if(nof_h0_layers>1){
       // ICICLE_LOG_DEBUG << "h1_cpu_ntt: PUSH REORDER TASK h0_layer_idx: " << ntt_task_cordinates.h0_layer_idx << ", h0_block_idx: " << ntt_task_cordinates.h0_block_idx << ", h0_subntt_idx: " << ntt_task_cordinates.h0_subntt_idx;
+      ntt_task_cordinates = {ntt_task_cordinates.h1_layer_idx, ntt_task_cordinates.h1_subntt_idx, nof_h0_layers, 0, 0};
       ntt_tasks_manager.push_task(this, input, ntt_task_cordinates, true); //reorder=true
       // ICICLE_LOG_DEBUG << "h1_cpu_ntt: PUSH REORDER TASK DONE";
     }
@@ -836,91 +827,37 @@ namespace ntt_cpu {
     return eIcicleError::SUCCESS;
   }
 
-template <typename S, typename E>
-eIcicleError NttCpu<S, E>::handle_pushed_tasks(TasksManager<NttTask<S, E>>* tasks_manager, NttTasksManager<S, E>& ntt_tasks_manager, int h1_layer_idx) {
-  NttTask<S, E>* task_slot = nullptr;
-  // ICICLE_LOG_DEBUG << "handle_pushed_tasks: nof_available_tasks: " << ntt_tasks_manager.nof_available_tasks;
-  // ICICLE_LOG_DEBUG << "handle_pushed_tasks: nof_waiting_tasks: " << ntt_tasks_manager.nof_waiting_tasks;
-  while (ntt_tasks_manager.nof_available_tasks > 0 || ntt_tasks_manager.nof_waiting_tasks > 0) {
-    if (ntt_tasks_manager.nof_available_tasks > 0){
-      task_slot = tasks_manager->get_idle_or_completed_task();
-      if (task_slot->is_completed()) {
-        ntt_tasks_manager.set_task_as_completed(*task_slot);
-      }
-      ntt_tasks_manager.get_available_task_to_run(task_slot, h1_layer_idx);
-      // ICICLE_LOG_DEBUG << "handle_pushed_tasks: h1_layer_idx: " << h1_layer_idx << ", h1_subntt_idx: " << task_slot->get_coordinates().h1_subntt_idx;
-      // ICICLE_LOG_DEBUG << "                     h0_layer_idx: " << task_slot->get_coordinates().h0_layer_idx << ", h0_block_idx: " << task_slot->get_coordinates().h0_block_idx << ", h0_subntt_idx: " << task_slot->get_coordinates().h0_subntt_idx;
-      // ICICLE_LOG_DEBUG << "                     reorder: " << task_slot->is_reorder();
-      // ICICLE_LOG_DEBUG << "                     task_slot: " << task_slot;
-      task_slot->dispatch();
-    } else {  // wait for available tasks
-      while (ntt_tasks_manager.nof_available_tasks == 0 && ntt_tasks_manager.nof_waiting_tasks > 0) {
-        task_slot = tasks_manager->get_completed_task();
-        ntt_tasks_manager.set_task_as_completed(*task_slot);
-        if (ntt_tasks_manager.nof_available_tasks > 0) {
-          ICICLE_ASSERT(ntt_tasks_manager.get_available_task_to_run(task_slot, h1_layer_idx));
-          // ICICLE_LOG_DEBUG << "handle_pushed_tasks: h1_layer_idx: " << h1_layer_idx << ", h1_subntt_idx: " << task_slot->get_coordinates().h1_subntt_idx;
-          // ICICLE_LOG_DEBUG << "                     h0_layer_idx: " << task_slot->get_coordinates().h0_layer_idx << ", h0_block_idx: " << task_slot->get_coordinates().h0_block_idx << ", h0_subntt_idx: " << task_slot->get_coordinates().h0_subntt_idx;
-          // ICICLE_LOG_DEBUG << "                     reorder: " << task_slot->is_reorder();
-          // ICICLE_LOG_DEBUG << "                     task_slot: " << task_slot;
-          task_slot->dispatch();
-        } else {
-          task_slot->set_idle();
+  template <typename S, typename E>
+  eIcicleError NttCpu<S, E>::handle_pushed_tasks(TasksManager<NttTask<S, E>>* tasks_manager, NttTasksManager<S, E>& ntt_tasks_manager, int h1_layer_idx) {
+    NttTask<S, E>* task_slot = nullptr;
+    int nof_subntts_l2 = 1 << ((this->ntt_sub_logn.h0_layers_sub_logn[h1_layer_idx][0]) + (this->ntt_sub_logn.h0_layers_sub_logn[h1_layer_idx][1]));
+    // ICICLE_LOG_DEBUG << "handle_pushed_tasks: nof_available_tasks: " << ntt_tasks_manager.nof_available_tasks;
+    // ICICLE_LOG_DEBUG << "handle_pushed_tasks: nof_waiting_tasks: " << ntt_tasks_manager.nof_waiting_tasks;
+    while (ntt_tasks_manager.nof_available_tasks > 0 || ntt_tasks_manager.nof_waiting_tasks > 0) {
+      if (ntt_tasks_manager.nof_available_tasks > 0){
+        task_slot = tasks_manager->get_idle_or_completed_task();
+        if (task_slot->is_completed()) {
+          ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l2);
+        }
+        ntt_tasks_manager.get_available_task_to_run(task_slot, h1_layer_idx);
+        task_slot->dispatch();
+      } else {  // wait for available tasks
+        while (ntt_tasks_manager.nof_available_tasks == 0 && ntt_tasks_manager.nof_waiting_tasks > 0) {
+          task_slot = tasks_manager->get_completed_task();
+          ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l2);
+          if (ntt_tasks_manager.nof_available_tasks > 0) {
+            ICICLE_ASSERT(ntt_tasks_manager.get_available_task_to_run(task_slot, h1_layer_idx));
+            task_slot->dispatch();
+          } else {
+            task_slot->set_idle();
+          }
         }
       }
     }
+    while ((task_slot = tasks_manager->get_completed_task()) != nullptr) { // clean all completed tasks
+      task_slot->set_idle();
+    }
+    return eIcicleError::SUCCESS;
   }
-  while ((task_slot = tasks_manager->get_completed_task()) != nullptr) { // clean all completed tasks
-    // ntt_tasks_manager.set_task_as_completed(*task_slot); // is it needed?
-    task_slot->set_idle();
-  }
-  return eIcicleError::SUCCESS;
-}
-// template <typename S, typename E>
-// eIcicleError NttCpu<S, E>::handle_pushed_tasks(TasksManager<NttTask<S, E>>* tasks_manager, NttTasksManager<S, E>& ntt_tasks_manager, int h1_layer_idx) {
-//     NttTask<S, E>* task_slot = nullptr;
-//     bool no_more_tasks = false;
-
-//     while (!no_more_tasks) {
-//         task_slot = tasks_manager->get_idle_or_completed_task();
-//         if ((task_slot!=nullptr) && task_slot->is_completed()) {
-//             ntt_tasks_manager.set_task_as_completed(*task_slot);
-//         }
-//         if (ntt_tasks_manager.get_available_task_to_run(task_slot, h1_layer_idx)) {
-//             ICICLE_LOG_DEBUG << "handle_pushed_tasks: h1_layer_idx: " << h1_layer_idx << ", h1_subntt_idx: " << task_slot->get_coordinates().h1_subntt_idx;
-//             ICICLE_LOG_DEBUG << "                     h0_layer_idx: " << task_slot->get_coordinates().h0_layer_idx << ", h0_block_idx: " << task_slot->get_coordinates().h0_block_idx << ", h0_subntt_idx: " << task_slot->get_coordinates().h0_subntt_idx;
-//             ICICLE_LOG_DEBUG << "                     reorder: " << task_slot->is_reorder();
-//             ICICLE_LOG_DEBUG << "                     task_slot: " << task_slot;
-//             task_slot->dispatch();
-//         } else {
-//             bool tasks_are_waiting = ntt_tasks_manager.check_if_tasks_are_waiting(h1_layer_idx);
-//             task_slot = tasks_manager->get_completed_task();
-//             if (tasks_are_waiting && (task_slot != nullptr)) {
-//                 ntt_tasks_manager.set_task_as_completed(*task_slot);
-//                 if (ntt_tasks_manager.get_available_task_to_run(task_slot, h1_layer_idx)) {
-//                     ICICLE_LOG_DEBUG << "handle_pushed_tasks: h1_layer_idx: " << h1_layer_idx << ", h1_subntt_idx: " << task_slot->get_coordinates().h1_subntt_idx;
-//                     ICICLE_LOG_DEBUG << "                   : h0_layer_idx: " << task_slot->get_coordinates().h0_layer_idx << ", h0_block_idx: " << task_slot->get_coordinates().h0_block_idx << ", h0_subntt_idx: " << task_slot->get_coordinates().h0_subntt_idx;
-//                     ICICLE_LOG_DEBUG << "                   : reorder: " << task_slot->is_reorder();
-//                     ICICLE_LOG_DEBUG << "                     task_slot: " << task_slot;
-//                     task_slot->dispatch();
-//                     continue;
-//                 }
-//             }
-
-//             if (!tasks_are_waiting) { 
-//                 no_more_tasks = true;
-//                 while ((task_slot = tasks_manager->get_completed_task()) != nullptr) {
-//                     ntt_tasks_manager.set_task_as_completed(*task_slot);
-//                     task_slot->set_idle();
-//                 }
-//             }
-//         }
-//     }
-
-//     return eIcicleError::SUCCESS;
-//   }
-
-
-
 
 } // namespace ntt_cpu

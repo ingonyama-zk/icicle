@@ -68,19 +68,18 @@ namespace ntt_cpu {
     NttTask<S, E>* task_slot;
     
     if (logn > 15) {
+      // ICICLE_LOG_DEBUG << "START NTTs logn: " << logn;
       ntt.reorder_input(output);
-      int log_nof_h1_subntts_todo_in_parallel = 15 - ntt.ntt_sub_logn.h1_layers_sub_logn[0] - int(log2(config.batch_size));
+      int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[0] + int(log2(config.batch_size));
+      int log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < 15? 15 - sunbtt_plus_batch_logn : 0;
       int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
       int log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
       int nof_subntts_chunks = 1 << log_nof_subntts_chunks;
       for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
-        // START_TIMER(timer)
         for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel; h1_subntt_idx_in_chunck++) {
           ntt_task_cordinates.h1_subntt_idx =  h1_subntts_chunck_idx*nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
           ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
         }
-        // END_TIMER(timer, oss.str().c_str(), measure);
-        ICICLE_LOG_DEBUG << "handle_pushed_tasks: h1_subntts_chunck_idx: " << h1_subntts_chunck_idx;
         ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
       }
 
@@ -88,7 +87,8 @@ namespace ntt_cpu {
       // ntt_tasks_manager.wait_for_all_tasks();
       ntt.refactor_and_reorder(output, twiddles);
       ntt_task_cordinates.h1_layer_idx = 1;
-      log_nof_h1_subntts_todo_in_parallel = 15 - ntt.ntt_sub_logn.h1_layers_sub_logn[1] - int(log2(config.batch_size));
+      sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[1] + int(log2(config.batch_size));
+      log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < 15? 15 - sunbtt_plus_batch_logn : 0;
       nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
       log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
       nof_subntts_chunks = 1 << log_nof_subntts_chunks;
@@ -111,6 +111,8 @@ namespace ntt_cpu {
       ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
     }
+    
+    delete tasks_manager;
 
     if (direction == NTTDir::kInverse) { // TODO SHANIE - do that in parallel
       S inv_size = S::inv_log_size(logn);
@@ -126,6 +128,7 @@ namespace ntt_cpu {
       ntt_task_cordinates = {0, 0, 0, 0, 0};
       ntt.reorder_by_bit_reverse(ntt_task_cordinates, output, true); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
     }
+
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu
