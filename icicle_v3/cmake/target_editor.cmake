@@ -19,18 +19,17 @@ endfunction()
 
 function(handle_ntt TARGET FEATURE_LIST)
   if(NTT AND "NTT" IN_LIST FEATURE_LIST)
-  target_compile_definitions(${TARGET} PUBLIC NTT=${NTT})
+    target_compile_definitions(${TARGET} PUBLIC NTT=${NTT})
     target_sources(${TARGET} PRIVATE
       src/ntt.cpp
       src/polynomials/polynomials.cpp
       src/polynomials/polynomials_c_api.cpp
       src/polynomials/polynomials_abstract_factory.cpp
     )
-      set(NTT ON CACHE BOOL "Enable NTT feature" FORCE)
-    else()
-      set(NTT OFF CACHE BOOL "NTT not available for this field" FORCE)
-      message(STATUS "NTT not available for this field")
-    endif()
+    set(NTT ON CACHE BOOL "Enable NTT feature" FORCE)
+  else()
+    set(NTT OFF CACHE BOOL "NTT not available for this field" FORCE)    
+  endif()
 endfunction()
 
 function(handle_ext_field TARGET FEATURE_LIST)

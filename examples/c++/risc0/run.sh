@@ -51,7 +51,7 @@ ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_SOURCE_DIR}" ]; then
   echo "Building icicle with CUDA backend"
-  cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DMSM=OFF -DG2=OFF -DECNTT=OFF -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")  
 else
   echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"

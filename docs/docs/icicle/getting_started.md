@@ -90,11 +90,8 @@ You can customize your ICICLE build with the following flags:
 
 #### Features
 
-By default, all [features](./libraries.md#supported-curves-and-operations) are enabled.
-
-:::note
-Installed backends may implement and register all APIs, therefore by default we include them in the frontend part too.
-:::
+By default, all [features](./libraries.md#supported-curves-and-operations) are enabled. 
+This is since installed backends may implement and register all APIs. Missing APIs in the frontend would cause linkage to fail due to missing symbols. Therefore by default we include them in the frontend part too.
 
 To disable features, add the following to the cmake command.
 - ntt: `-DNTT=OFF`
@@ -102,6 +99,10 @@ To disable features, add the following to the cmake command.
 - g2 msm: `-DG2=OFF`
 - ecntt: `-DECNTT=OFF`
 - extension field: `-DEXT_FIELD=OFF`
+
+:::tip
+Disabling features is useful when developing with a backend that is slow to compile (e.g. CUDA backend);
+:::
 
 ### Rust: Build, Test, and Install
 
@@ -116,19 +117,17 @@ cd wrappers/rust # or go to a specific field/curve 'cd wrappers/rust/icicle-fiel
 ```bash
 cargo build --release
 ```
-By default, all [features](./libraries.md#supported-curves-and-operations) are enabled.
-In rust we have the following features:
-- `g2` for G2 MSM
-- `ec_ntt` for ECNTT
+By default, all [supported features](./libraries.md#supported-curves-and-operations) are enabled. [See here for more details.](#features)
+To disable, use the following cargo features:
+- `no_g2` to disable G2 MSM
+- `no_ecntt` to disable ECNTT
 
-They can be disabled by
+They can be disabled as follows:
 ```bash
-cargo build --release --no-default-features # disable all features
-cargo build --release --no-default-features --features "ec_ntt" # disable all except ec_ntt
-cargo build --release --no-default-features --features "g2" # disable all except g2
+cargo build --release --no-default-features --features=no_ecntt,no_g2
 ```
 
-:::tip
+:::note
 If you have access to cuda backend repo, it can be built along ICICLE frontend by using the following cargo features:
 - `cuda_backend` : if the cuda backend resides in `icicle/backend/cuda`
 - `pull_cuda_backend` : to pull main branch and build it
