@@ -1,4 +1,3 @@
-#![cfg(feature = "ec_ntt")]
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 pub use crate::curve::Projective;
