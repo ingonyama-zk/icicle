@@ -91,7 +91,7 @@ if (CUDA_BACKEND)
     set(CUDA_BACKEND_URL "git@github.com:ingonyama-zk/icicle-cuda-backend.git")
 
     include(FetchContent)
-    message("-- Fetching cuda backend from ${CUDA_BACKEND_URL}:${CUDA_BACKEND}")
+    message(STATUS "Fetching cuda backend from ${CUDA_BACKEND_URL}:${CUDA_BACKEND}")
     FetchContent_Declare(
       cuda_backend
       GIT_REPOSITORY ${CUDA_BACKEND_URL}

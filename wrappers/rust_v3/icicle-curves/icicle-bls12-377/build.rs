@@ -35,12 +35,13 @@ fn main() {
     #[cfg(feature = "pull_cuda_backend")]
     config.define("CUDA_BACKEND", "main");
 
-    // Optional Features
-    #[cfg(feature = "g2")]
-    config.define("G2", "ON");
-
-    #[cfg(feature = "ec_ntt")]
-    config.define("ECNTT", "ON");
+    // Optional Features that are default ON (so that default matches any backend)
+    if !cfg!(feature = "g2") {
+        config.define("G2", "OFF");
+    }
+    if !cfg!(feature = "ec_ntt") {
+        config.define("ECNTT", "OFF");
+    }
 
     // Build
     let _ = config

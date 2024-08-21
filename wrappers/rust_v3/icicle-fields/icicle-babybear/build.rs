@@ -25,7 +25,6 @@ fn main() {
     };
     config
         .define("FIELD", "babybear")
-        .define("EXT_FIELD", "ON")
         .define("CMAKE_BUILD_TYPE", "Release")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 

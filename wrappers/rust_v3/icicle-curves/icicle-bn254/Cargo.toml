@@ -20,7 +20,7 @@ serial_test = "3.0.0"
 cmake = "0.1.50"
 
 [features]
-default = []
+default = ["g2", "ec_ntt"]
 g2 = ["icicle-core/g2"]
 ec_ntt = ["icicle-core/ec_ntt"]
 cuda_backend = ["icicle-runtime/cuda_backend"]
