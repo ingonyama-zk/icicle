@@ -1,5 +1,4 @@
 pub mod curve;
-#[cfg(not(feature = "no_ecntt"))]
 pub mod ecntt;
 pub mod field;
 pub mod msm;
