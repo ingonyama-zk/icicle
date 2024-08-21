@@ -14,34 +14,75 @@ where
     let test_size = 1 << 14;
 
     let mut a = F::Config::generate_random(test_size);
+    let mut a_clone = a.clone();
     let b = F::Config::generate_random(test_size);
     let ones = vec![F::one(); test_size];
     let mut result = vec![F::zero(); test_size];
     let mut result2 = vec![F::zero(); test_size];
     let mut result3 = vec![F::zero(); test_size];
     let a = HostSlice::from_mut_slice(&mut a);
+    let a_clone = HostSlice::from_mut_slice(&mut a_clone);
     let b = HostSlice::from_slice(&b);
     let ones = HostSlice::from_slice(&ones);
     let result = HostSlice::from_mut_slice(&mut result);
     let result2 = HostSlice::from_mut_slice(&mut result2);
     let result3 = HostSlice::from_mut_slice(&mut result3);
 
+    //--- on host ---
     let cfg = VecOpsConfig::default();
     add_scalars(a, b, result, &cfg).unwrap();
 
     sub_scalars(result, b, result2, &cfg).unwrap();
 
-    assert_eq!(a[0], result2[0]);
+    assert_eq!(a[1], result2[1]);
 
     mul_scalars(a, ones, result3, &cfg).unwrap();
 
-    assert_eq!(a[0], result3[0]);
+    assert_eq!(a[1], result3[1]);
 
-    add_scalars(a, b, result, &cfg).unwrap();
+    add_scalars(a, b, result, &cfg).unwrap(); // on host
 
-    accumulate_scalars(a, b, &cfg).unwrap();
+    accumulate_scalars(a, b, &cfg).unwrap(); // on host in-place
 
-    assert_eq!(a[0], result[0]);
+    assert_eq!(a[1], result[1]);
+
+    //--- on device ---
+    let cfg = VecOpsConfig::default();
+    let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
+
+    a_device.copy_from_host(a_clone).unwrap();
+
+    let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
+    b_device.copy_from_host(b).unwrap();
+
+    let mut result4_on_device = DeviceVec::cuda_malloc(test_size).unwrap();
+
+    add_scalars(&a_device[..], &b_device[..], &mut result4_on_device[..], &cfg).unwrap(); // on device
+
+    let mut result4_from_device = vec![F::zero(); test_size];
+    result4_on_device
+        .copy_to_host(HostSlice::from_mut_slice(&mut result4_from_device[..]))
+        .unwrap();
+
+    assert_eq!(result[1], result4_from_device[1]);
+
+    let cfg = VecOpsConfig::default();
+    let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
+
+    a_device.copy_from_host(a_clone).unwrap();
+
+    let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
+    b_device.copy_from_host(b).unwrap();
+
+    accumulate_scalars(&mut a_device[..], &b_device[..],  &cfg).unwrap(); // on device in-place
+
+    let mut a_from_device = vec![F::zero(); test_size];
+    a_device
+        .copy_to_host(HostSlice::from_mut_slice(&mut a_from_device[..]))
+        .unwrap();
+
+    assert_eq!(a[1], a_from_device[1]);
+
 }
 
 pub fn check_bit_reverse<F: FieldImpl>()
