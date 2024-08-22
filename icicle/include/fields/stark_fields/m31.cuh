@@ -94,7 +94,7 @@ namespace m31 {
     {
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];
       uint32_t tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 2^31-1 = 2^31
-      tmp = (xs.storage >> 31) + (xs.storage & modulus);          // max: 1 + 0 = 1
+      tmp = (tmp >> 31) + (tmp & modulus);                        // max: 1 + 0 = 1
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
@@ -207,9 +207,9 @@ namespace m31 {
     static constexpr storage_array<omegas_count, limbs_count> inv = {{{0x40000000}}};
 
     // nonresidue to generate the extension field
-    static constexpr uint32_t nonresidue = 11;
+    static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
-    static constexpr bool nonresidue_is_negative = false;
+    static constexpr bool nonresidue_is_negative = true;
   };
 
   /**
