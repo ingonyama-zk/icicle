@@ -26,6 +26,7 @@ if(CCACHE_PROGRAM)
     # Use ccache for C and C++ compilers
     set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    set(CMAKE_CUDA_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
 else()
     message(STATUS "ccache not found")
 endif()
