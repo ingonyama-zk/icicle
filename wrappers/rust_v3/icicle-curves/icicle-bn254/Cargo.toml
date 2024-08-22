@@ -21,8 +21,8 @@ cmake = "0.1.50"
 
 [features]
 default = []
-no_g2 = ["icicle-core/no_g2"]
-no_ecntt = ["icicle-core/no_ecntt"]
+no_g2 = []
+no_ecntt = []
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 

@@ -8,7 +8,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-icicle-core = { workspace = true, features=["no_ecntt","no_g2"] }
+icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 # criterion = "0.3"
 

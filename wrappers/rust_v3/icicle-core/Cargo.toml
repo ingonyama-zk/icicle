@@ -19,5 +19,4 @@ serial_test = "3.0.0"
 once_cell = "1.10.0"
 
 [features]
-no_g2 = []
-no_ecntt = []
+
