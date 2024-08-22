@@ -11,13 +11,6 @@ fn main() {
     // Construct the path to the deps directory
     let deps_dir = build_dir.join("deps");
 
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{}/icicle/lib", deps_dir.display()); // Add RPATH linker arguments
-
-    // default backends dir
-    if cfg!(feature = "cuda_backend") || cfg!(feature = "pull_cuda_backend") {
-        println!(
-            "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/icicle/lib/backend",
-            deps_dir.display()
-        );
-    }
+    // Add RPATH linker arguments
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}/icicle/lib", deps_dir.display());
 }

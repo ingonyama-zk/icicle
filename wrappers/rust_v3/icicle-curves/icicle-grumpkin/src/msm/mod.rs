@@ -1,6 +1,5 @@
 use crate::curve::CurveCfg;
-#[cfg(feature = "g2")]
-use crate::curve::G2CurveCfg;
+
 use icicle_core::{
     curve::{Affine, Curve, Projective},
     impl_msm,

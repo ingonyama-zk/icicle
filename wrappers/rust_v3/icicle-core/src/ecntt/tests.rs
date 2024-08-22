@@ -1,4 +1,3 @@
-#![cfg(feature = "ec_ntt")]
 use icicle_runtime::memory::HostSlice;
 
 use crate::curve::Curve;

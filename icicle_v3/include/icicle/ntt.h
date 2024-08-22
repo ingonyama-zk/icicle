@@ -152,7 +152,7 @@ namespace icicle {
    * @return S Root of unity.
    */
   template <typename S>
-  S get_root_of_unity(uint64_t max_size);
+  eIcicleError get_root_of_unity(uint64_t max_size, S* rou);
 
   /**
    * @brief Gets the root of unity from the NTT domain for a given logarithmic size.

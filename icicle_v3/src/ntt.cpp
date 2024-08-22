@@ -68,16 +68,21 @@ namespace icicle {
   }
 
   /*************************** GET ROOT OF UNITY ***************************/
-  extern "C" scalar_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint64_t max_size)
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, get_root_of_unity)(uint64_t max_size, scalar_t* rou)
   {
     const auto log_max_size = static_cast<uint32_t>(std::ceil(std::log2(max_size)));
-    return scalar_t::omega(log_max_size);
+    if (scalar_t::get_omegas_count() < log_max_size) {
+      ICICLE_LOG_ERROR << "no root-of-unity of order " << log_max_size << " in field " << typeid(scalar_t).name();
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    *rou = scalar_t::omega(log_max_size);
+    return eIcicleError::SUCCESS;
   }
 
   template <>
-  scalar_t get_root_of_unity(uint64_t max_size)
+  eIcicleError get_root_of_unity(uint64_t max_size, scalar_t* rou)
   {
-    return CONCAT_EXPAND(FIELD, get_root_of_unity)(max_size);
+    return CONCAT_EXPAND(FIELD, get_root_of_unity)(max_size, rou);
   }
 
   /*************************** GET ROOT OF UNITY FROM DOMAIN ***************************/
