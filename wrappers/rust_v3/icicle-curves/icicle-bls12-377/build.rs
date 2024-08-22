@@ -26,7 +26,6 @@ fn main() {
     config
         .define("CURVE", "bls12_377")
         .define("FIELD", "bls12_377")
-        .define("CMAKE_BUILD_TYPE", "Release")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.
@@ -59,7 +58,6 @@ fn main() {
         config_bw
             .define("CURVE", "bw6_761")
             .define("FIELD", "bw6_761")
-            .define("CMAKE_BUILD_TYPE", "Release")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
         // build (or pull and build) cuda backend if feature enabled.
@@ -71,12 +69,12 @@ fn main() {
         }
 
         // Optional Features that are default ON (so that default matches any backend)
-        if cfg!(feature = "no_g2") {
+        if cfg!(feature = "no_bw6_g2") {
             config_bw.define("G2", "OFF");
         }
-        if cfg!(feature = "no_ecntt") {
-            config_bw.define("ECNTT", "OFF");
-        }
+        // if cfg!(feature = "no_ecntt") {
+        config_bw.define("ECNTT", "OFF");
+        // }
 
         // Build
         let _ = config_bw
