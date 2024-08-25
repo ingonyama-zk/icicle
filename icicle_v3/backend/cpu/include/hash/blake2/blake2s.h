@@ -7,8 +7,6 @@
 using namespace icicle;
 namespace blake2s_cpu {
 
-#ifndef BLAKE2_H
-#define BLAKE2_H
   typedef unsigned char BYTE;
   typedef unsigned int WORD;
   typedef unsigned long long LONG;
@@ -114,6 +112,4 @@ namespace blake2s_cpu {
     uint64_t rotr64(uint64_t w, unsigned c) const;
     void secure_zero_memory(void* v, size_t n) const;
   };
-
-#endif
 } // namespace blake2s_cpu
