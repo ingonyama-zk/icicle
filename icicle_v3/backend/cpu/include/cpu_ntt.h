@@ -33,12 +33,16 @@ namespace ntt_cpu {
     }
     const int logn = int(log2(size));
     const int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
+    if (size > domain_max_size) {
+      ICICLE_LOG_ERROR << "Size is too large for domain. size = " << size << ", domain_max_size = " << domain_max_size;
+      return eIcicleError::INVALID_ARGUMENT;
+    }
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     NttCpu<S, E> ntt(logn, direction, config, domain_max_size, twiddles);
     NttTaskCordinates ntt_task_cordinates = {0, 0, 0, 0, 0};
     NttTasksManager <S, E> ntt_tasks_manager(logn);
     auto tasks_manager = new TasksManager<NttTask<S, E>>(std::thread::hardware_concurrency()-1);
-    // auto tasks_manager = new TasksManager<NttTask<S, E>>(1);
+    // auto tasks_manager = new TasksManager<NttTask<S, E>>(9);
 
 
     int coset_stride = 0;
@@ -83,8 +87,6 @@ namespace ntt_cpu {
         ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
       }
 
-      
-      // ntt_tasks_manager.wait_for_all_tasks();
       ntt.refactor_and_reorder(output, twiddles);
       ntt_task_cordinates.h1_layer_idx = 1;
       sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[1] + int(log2(config.batch_size));
