@@ -7,7 +7,7 @@ golang:
 rust:
   - wrappers/rust/**/*
   - '!wrappers/rust/README.md'
-  - .github/workflows/v3_rust.yml
+  - .github/workflows/rust.yml
 cpp:
   - icicle/**/*.cu
   - icicle/**/*.cuh
@@ -16,9 +16,8 @@ cpp:
   - icicle/**/*.c
   - icicle/**/*.h
   - icicle/CMakeLists.txt
-  - .github/workflows/v3.yml
-  - icicle/cmake/curve.cmake
-  - icicle/cmake/field.cmake
+  - icicle/cmake/**/*.cmake
+  - .github/workflows/cpp.yml
 examples:
   - examples/**/*
   - .github/workflows/examples.yml
