@@ -1,6 +1,8 @@
 pub mod curve;
-pub mod ecntt;
 pub mod msm;
 pub mod ntt;
 pub mod polynomials;
 pub mod vec_ops;
+
+#[cfg(not(feature = "no_ecntt"))]
+pub mod ecntt;

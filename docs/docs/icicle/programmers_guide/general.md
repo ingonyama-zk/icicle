@@ -1,13 +1,13 @@
 
 # Icicle Programmer's Guide
 
-## General Concepts
-
-### Compute APIs
+## Compute APIs
 
 Icicle offers a variety of compute APIs, including Number Theoretic Transforms (NTT), Multi Scalar Multiplication (MSM), vector operations, Elliptic Curve NTT (ECNTT), polynomials, and more. These APIs follow a consistent structure, making it straightforward to apply the same usage patterns across different operations.
 
-#### Common Structure of Compute APIs
+[Check out all details about compute APIs here](../primitives/overview.md).
+
+### Common Structure of Compute APIs
 
 Each compute API in Icicle typically involves the following components:
 
@@ -23,18 +23,14 @@ The configuration struct allows users to modify settings such as:
 - Adjusting the data layout for specific optimizations.
 - Passing custom options to the backend implementation through an extension mechanism, such as setting the number of CPU cores to use.
 
-#### Example (C++)
+### Example (C++)
 
 ```cpp
 #include "icicle/vec_ops.h"
 
-// vector_add is defined in vec_ops.h
-template <typename T>
-eIcicleError vector_add(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
-
 // Create config struct for vector add
 VecOpsConfig config = default_vec_ops_config();
-// optionally modify the config struct
+// optionally modify the config struct here
 
 // Call the API
 eIcicleError err = vector_add(vec_a, vec_b, size, config, vec_res);
@@ -48,34 +44,44 @@ struct VecOpsConfig {
     bool is_a_on_device;       /**< True if `a` is on the device, false if it is not. Default value: false. */
     bool is_b_on_device;       /**< True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
     bool is_result_on_device;  /**< If true, the output is preserved on the device, otherwise on the host. Default value: false. */
-    bool is_async;             /**< Whether to run the vector operations asynchronously. 
-                                    If set to `true`, the function will be non-blocking and synchronization 
-                                    must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
-                                    If set to `false`, the function will block the current CPU thread. */
+    bool is_async;             /**< Whether to run the vector operations asynchronously. */
     ConfigExtension* ext = nullptr; /**< Backend-specific extension. */
 };
 ```
 
 This pattern is consistent across most Icicle APIs, in C++/Rust/Go, providing flexibility while maintaining a familiar structure. For NTT, MSM, and other operations, include the corresponding header and call the template APIs.
 
-:::note
-High-level APIs, such as the polynomial API, further abstract these details, offering an even simpler interface for complex operations.
-:::
+### Config struct extension
+
+In special cases, where an application wants to specify backend specific options, this is achieved with a config-extension struct.
+For example the CPU backend has an option regarding how many threads to use for a vector addition looks as follows:
+```cpp
+#include "icicle/vec_ops.h"
+
+// Create config struct for vector add
+VecOpsConfig config = default_vec_ops_config();
+ConfigExtension ext;
+config.ext = &ext;
+ext.set("n_threads", 8); // tell the CPU backend to use 8 threads
+// Call the API
+eIcicleError err = vector_add(vec_a, vec_b, size, config, vec_res);
+```
 
 :::note
-Rather than using the template APIs, you can also use specialized APIs by including `icicle/api/babybear.h` (or any other) to avoid confusion when using multiple fields/curves.
+This is not device-agnostic behavior, meaning such code is aware of the backend.
+Having said that, it is not an error to pass options to a backend that is not aware of them.
 :::
 
-### Device Abstraction
+## Device Abstraction
 
 Icicle provides a device abstraction layer that allows you to interact with different compute devices such as CPUs and GPUs seamlessly. The device abstraction ensures that your code can work across multiple hardware platforms without modification.
 
-#### Device Management
+### Device Management
 
 - **Loading Backends**: Backends are loaded dynamically based on the environment configuration or a specified path.
 - **Setting Active Device**: The active device for a thread can be set, allowing for targeted computation on a specific device.
 
-### Streams
+## Streams
 
 Streams in Icicle allow for asynchronous execution and memory operations, enabling parallelism and non-blocking execution. Streams are associated with specific devices, and you can create, destroy, and synchronize streams to manage your workflow.
 

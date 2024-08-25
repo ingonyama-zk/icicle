@@ -14,13 +14,9 @@ The backend can be loaded from a specific path or from an environment variable. 
 ```rust
 use icicle_runtime::runtime;
 
-runtime::load_backend("/path/to/backend").unwrap();
-```
-
-To load the backend from an environment variable or default directory:
-
-```rust
 runtime::load_backend_from_env_or_default().unwrap();
+// or load from custom install dir
+runtime::load_backend("/path/to/backend/installdir").unwrap();
 ```
 
 ### Setting and Getting Active Device
@@ -66,7 +62,7 @@ Asynchronous memory operations can be performed using streams. This allows for n
 use icicle_runtime::stream::IcicleStream;
 use icicle_runtime::memory::DeviceVec;
 
-let mut stream = IcicleStream::create().unwrap(); // mutability is for the destory() method
+let mut stream = IcicleStream::create().unwrap(); // mutability is for the destroy() method
 
 // Allocate 1024 elements asynchronously on the device
 let mut device_memory: DeviceVec<u8> = DeviceVec::<u8>::device_malloc_async(1024, &stream).unwrap();
@@ -225,5 +221,4 @@ fn main() {
     .unwrap();
     println!("MSM result = {:?}", msm_results);
 }
-
 ```

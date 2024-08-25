@@ -13,7 +13,7 @@ use icicle_runtime::{
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 12;
-#[cfg(feature = "g2")]
+#[cfg(not(feature = "no_g2"))]
 pub(crate) const G2_BASE_LIMBS: usize = 24;
 
 impl_scalar_field!("bls12_377", bls12_377_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
@@ -34,9 +34,9 @@ impl_curve!(
     G1Projective
 );
 
-#[cfg(feature = "g2")]
+#[cfg(not(feature = "no_g2"))]
 impl_field!(G2_BASE_LIMBS, G2BaseField, G2BaseCfg);
-#[cfg(feature = "g2")]
+#[cfg(not(feature = "no_g2"))]
 impl_curve!(
     "bls12_377_g2",
     bls12_377_g2,
@@ -50,7 +50,7 @@ impl_curve!(
 #[cfg(test)]
 mod tests {
     use super::{CurveCfg, ScalarField, BASE_LIMBS};
-    #[cfg(feature = "g2")]
+    #[cfg(not(feature = "no_g2"))]
     use super::{G2CurveCfg, G2_BASE_LIMBS};
     use icicle_core::curve::Curve;
     use icicle_core::test_utilities;
@@ -60,7 +60,7 @@ mod tests {
 
     impl_field_tests!(ScalarField);
     impl_curve_tests!(BASE_LIMBS, CurveCfg);
-    #[cfg(feature = "g2")]
+    #[cfg(not(feature = "no_g2"))]
     mod g2 {
         use super::*;
         impl_curve_tests!(G2_BASE_LIMBS, G2CurveCfg);

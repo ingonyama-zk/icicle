@@ -326,7 +326,7 @@ macro_rules! impl_ntt {
                 fn release_ntt_domain() -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_get_root_of_unity")]
-                fn get_root_of_unity(max_size: u64) -> $field;
+                fn get_root_of_unity(max_size: u64, rou: *mut $field) -> eIcicleError;
             }
 
             impl NTTDomain<$field> for $field_config {
@@ -339,7 +339,11 @@ macro_rules! impl_ntt {
                 }
 
                 fn get_root_of_unity(max_size: u64) -> $field {
-                    unsafe { get_root_of_unity(max_size) }
+                    let mut rou = std::mem::MaybeUninit::<$field>::uninit(); // Prepare uninitialized memory for rou
+                    unsafe {
+                        get_root_of_unity(max_size, rou.as_mut_ptr());
+                        return rou.assume_init();
+                    }
                 }
             }
 

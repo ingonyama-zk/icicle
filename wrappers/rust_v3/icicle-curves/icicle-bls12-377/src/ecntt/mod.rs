@@ -1,4 +1,3 @@
-#![cfg(feature = "ec_ntt")]
 use crate::curve::{CurveCfg, ScalarCfg, ScalarField};
 use icicle_core::ecntt::Projective;
 use icicle_core::impl_ecntt;

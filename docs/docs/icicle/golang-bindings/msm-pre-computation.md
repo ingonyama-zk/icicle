@@ -1,5 +1,7 @@
 # MSM Pre computation
 
+TODO update for V3
+
 To understand the theory behind MSM pre computation technique refer to Niall Emmart's [talk](https://youtu.be/KAWlySN7Hm8?feature=shared&t=1734).
 
 ## Core package

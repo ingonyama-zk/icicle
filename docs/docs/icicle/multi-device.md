@@ -48,9 +48,7 @@ let device = icicle_runtime::Device::new("CUDA", 0 /* =device_id*/);
 icicle_runtime::set_device(&device).unwrap();
 ```
 
-### Go
-
-TODO
+### Go (TODO)
 
 ## Best Practices
 

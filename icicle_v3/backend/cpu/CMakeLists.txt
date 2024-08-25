@@ -7,20 +7,22 @@ target_sources(icicle_device PRIVATE src/cpu_device_api.cpp)
 # field API library
 if (FIELD)
     target_sources(icicle_field PRIVATE
-        src/field/cpu_vec_ops.cpp        
+        src/field/cpu_vec_ops.cpp
     )
     if (NTT)
         target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp src/polynomials/cpu_polynomial_backend.cpp)
-    endif()    
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 
 # curve API library
 if (CURVE)
-target_sources(icicle_curve PRIVATE
-        src/curve/cpu_msm.cpp
+    target_sources(icicle_curve PRIVATE
         src/curve/cpu_mont_conversion.cpp
     )
+    if (MSM)
+        target_sources(icicle_curve PRIVATE src/curve/cpu_msm.cpp)
+    endif()
     if (ECNTT)
         target_sources(icicle_curve PRIVATE src/curve/cpu_ecntt.cpp)
     endif()

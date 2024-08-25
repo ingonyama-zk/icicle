@@ -29,7 +29,7 @@ ICICLE has been successfully integrated and used by leading ZK companies such as
 
 ## Don't Have Access to a GPU?
 
-We understand that not all developers have access to GPUs, but this shouldn't limit your ability to develop with ICICLE. Here are some ways to gain access to GPUs: (TODO should we keep this part?)
+We understand that not all developers have access to GPUs, but this shouldn't limit your ability to develop with ICICLE. Here are some ways to gain access to GPUs.
 
 ### Grants
 
