@@ -1,16 +1,17 @@
-#ifndef BLAKE2_H
-#define BLAKE2_H
-
-typedef unsigned char BYTE;
-typedef unsigned int WORD;
-typedef unsigned long long LONG;
 
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
 #include "icicle/hash.h"
+
 using namespace icicle;
+namespace blake2s_cpu {
+
+#ifndef BLAKE2_H
+#define BLAKE2_H
+typedef unsigned char BYTE;
+typedef unsigned int WORD;
+typedef unsigned long long LONG;
 
 #if defined(_MSC_VER)
 #define BLAKE2_PACKED(x) __pragma(pack(push, 1)) x __pragma(pack(pop))
@@ -115,3 +116,4 @@ private:
 };
 
 #endif
+} //namespace blake2s_cpu
