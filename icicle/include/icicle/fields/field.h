@@ -283,7 +283,7 @@ public:
   add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
 #ifdef __CUDA_ARCH__
-    return add_sub_limbs_device<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
+    return add_sub_limbs_device<NLIMBS, false, CARRY_OUT>(xs, ys, rs); 
 #else
     return host_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
 #endif
