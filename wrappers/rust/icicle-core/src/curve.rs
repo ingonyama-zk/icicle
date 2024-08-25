@@ -1,16 +1,9 @@
-#[cfg(feature = "arkworks")]
-use crate::traits::ArkConvertible;
 use crate::traits::{FieldImpl, MontgomeryConvertible};
-#[cfg(feature = "arkworks")]
-use ark_ec::models::CurveConfig as ArkCurveConfig;
-#[cfg(feature = "arkworks")]
-use ark_ec::short_weierstrass::{Affine as ArkAffine, Projective as ArkProjective, SWCurveConfig};
-#[cfg(feature = "arkworks")]
-use ark_ec::AffineRepr;
-use icicle_cuda_runtime::device::check_device;
-use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
+use icicle_runtime::{
+    errors::eIcicleError,
+    memory::{DeviceSlice, HostOrDeviceSlice},
+    stream::IcicleStream,
+};
 use std::fmt::Debug;
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
@@ -30,18 +23,15 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         points: *mut Affine<Self>,
         len: usize,
         is_into: bool,
-        ctx: &DeviceContext,
-    ) -> CudaError;
+        stream: &IcicleStream,
+    ) -> eIcicleError;
     #[doc(hidden)]
     fn convert_projective_montgomery(
         points: *mut Projective<Self>,
         len: usize,
         is_into: bool,
-        ctx: &DeviceContext,
-    ) -> CudaError;
-
-    #[cfg(feature = "arkworks")]
-    type ArkSWConfig: SWCurveConfig;
+        stream: &IcicleStream,
+    ) -> eIcicleError;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -79,9 +69,6 @@ impl<C: Curve> Affine<C> {
     }
 
     pub fn to_projective(&self) -> Projective<C> {
-        if *self == Self::zero() {
-            return Projective::<C>::zero();
-        }
         Projective {
             x: self.x,
             y: self.y,
@@ -139,120 +126,35 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
     }
 }
 
-impl<'a, C: Curve> MontgomeryConvertible<'a> for Affine<C> {
-    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(ctx.device_id);
-        assert_eq!(
-            values
-                .device_id()
-                .unwrap(),
-            ctx.device_id,
-            "Device ids are different in slice and context"
-        );
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
+impl<C: Curve> MontgomeryConvertible for Affine<C> {
+    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        if !values.is_on_active_device() {
+            panic!("values not allocated on an inactive device");
+        }
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(ctx.device_id);
-        assert_eq!(
-            values
-                .device_id()
-                .unwrap(),
-            ctx.device_id,
-            "Device ids are different in slice and context"
-        );
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, ctx)
+    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        if !values.is_on_active_device() {
+            panic!("values not allocated on an inactive device");
+        }
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
     }
 }
 
-impl<'a, C: Curve> MontgomeryConvertible<'a> for Projective<C> {
-    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(ctx.device_id);
-        assert_eq!(
-            values
-                .device_id()
-                .unwrap(),
-            ctx.device_id,
-            "Device ids are different in slice and context"
-        );
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
-    }
-
-    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-        check_device(ctx.device_id);
-        assert_eq!(
-            values
-                .device_id()
-                .unwrap(),
-            ctx.device_id,
-            "Device ids are different in slice and context"
-        );
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, ctx)
-    }
-}
-
-#[cfg(feature = "arkworks")]
-impl<C: Curve> ArkConvertible for Affine<C>
-where
-    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
-{
-    type ArkEquivalent = ArkAffine<C::ArkSWConfig>;
-
-    fn to_ark(&self) -> Self::ArkEquivalent {
-        if *self == Self::zero() {
-            Self::ArkEquivalent::zero()
-        } else {
-            let ark_x = self
-                .x
-                .to_ark();
-            let ark_y = self
-                .y
-                .to_ark();
-            Self::ArkEquivalent::new_unchecked(ark_x, ark_y)
+impl<C: Curve> MontgomeryConvertible for Projective<C> {
+    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        if !values.is_on_active_device() {
+            panic!("values not allocated on an inactive device");
         }
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
-    fn from_ark(ark: Self::ArkEquivalent) -> Self {
-        Self {
-            x: C::BaseField::from_ark(ark.x),
-            y: C::BaseField::from_ark(ark.y),
+    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        if !values.is_on_active_device() {
+            panic!("values not allocated on an inactive device");
         }
-    }
-}
-
-#[cfg(feature = "arkworks")]
-impl<C: Curve> ArkConvertible for Projective<C>
-where
-    C::BaseField: ArkConvertible<ArkEquivalent = <C::ArkSWConfig as ArkCurveConfig>::BaseField>,
-{
-    type ArkEquivalent = ArkProjective<C::ArkSWConfig>;
-
-    fn to_ark(&self) -> Self::ArkEquivalent {
-        let proj_x = self
-            .x
-            .to_ark();
-        let proj_y = self
-            .y
-            .to_ark();
-        let proj_z = self
-            .z
-            .to_ark();
-
-        // conversion between projective used in icicle and Jacobian used in arkworks
-        let proj_x = proj_x * proj_z;
-        let proj_y = proj_y * proj_z * proj_z;
-        Self::ArkEquivalent::new_unchecked(proj_x, proj_y, proj_z)
-    }
-
-    fn from_ark(ark: Self::ArkEquivalent) -> Self {
-        // conversion between Jacobian used in arkworks and projective used in icicle
-        let proj_x = ark.x * ark.z;
-        let proj_z = ark.z * ark.z * ark.z;
-        Self {
-            x: C::BaseField::from_ark(proj_x),
-            y: C::BaseField::from_ark(ark.y),
-            z: C::BaseField::from_ark(proj_z),
-        }
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
     }
 }
 
@@ -264,7 +166,6 @@ macro_rules! impl_curve {
         $curve:ident,
         $scalar_field:ident,
         $base_field:ident,
-        $ark_config:ident,
         $affine_type:ident,
         $projective_type:ident
     ) => {
@@ -275,7 +176,7 @@ macro_rules! impl_curve {
         pub type $projective_type = Projective<$curve>;
 
         mod $curve_prefix_ident {
-            use super::{$affine_type, $projective_type, CudaError, DeviceContext};
+            use super::{eIcicleError, $affine_type, $projective_type, IcicleStream, VecOpsConfig};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_eq")]
@@ -288,18 +189,20 @@ macro_rules! impl_curve {
                 pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
-                    points: *mut $affine_type,
+                    input: *const $affine_type,
                     size: usize,
                     is_into: bool,
-                    ctx: *const DeviceContext,
-                ) -> CudaError;
+                    config: &VecOpsConfig,
+                    output: *mut $affine_type,
+                ) -> eIcicleError;
                 #[link_name = concat!($curve_prefix, "_projective_convert_montgomery")]
                 pub(crate) fn _convert_projective_montgomery(
-                    points: *mut $projective_type,
+                    input: *const $projective_type,
                     size: usize,
                     is_into: bool,
-                    ctx: *const DeviceContext,
-                ) -> CudaError;
+                    config: &VecOpsConfig,
+                    output: *mut $projective_type,
+                ) -> eIcicleError;
             }
         }
 
@@ -338,31 +241,29 @@ macro_rules! impl_curve {
                 points: *mut $affine_type,
                 len: usize,
                 is_into: bool,
-                ctx: &DeviceContext,
-            ) -> CudaError {
-                unsafe {
-                    $curve_prefix_ident::_convert_affine_montgomery(points, len, is_into, ctx as *const DeviceContext)
-                }
+                stream: &IcicleStream,
+            ) -> eIcicleError {
+                let mut config = VecOpsConfig::default();
+                config.is_a_on_device = true;
+                config.is_result_on_device = true;
+                config.is_async = false;
+                config.stream_handle = (&*stream).into();
+                unsafe { $curve_prefix_ident::_convert_affine_montgomery(points, len, is_into, &config, points) }
             }
 
             fn convert_projective_montgomery(
                 points: *mut $projective_type,
                 len: usize,
                 is_into: bool,
-                ctx: &DeviceContext,
-            ) -> CudaError {
-                unsafe {
-                    $curve_prefix_ident::_convert_projective_montgomery(
-                        points,
-                        len,
-                        is_into,
-                        ctx as *const DeviceContext,
-                    )
-                }
+                stream: &IcicleStream,
+            ) -> eIcicleError {
+                let mut config = VecOpsConfig::default();
+                config.is_a_on_device = true;
+                config.is_result_on_device = true;
+                config.is_async = false;
+                config.stream_handle = (&*stream).into();
+                unsafe { $curve_prefix_ident::_convert_projective_montgomery(points, len, is_into, &config, points) }
             }
-
-            #[cfg(feature = "arkworks")]
-            type ArkSWConfig = $ark_config;
         }
     };
 }
@@ -373,29 +274,30 @@ macro_rules! impl_curve_tests {
         $base_limbs:ident,
         $curve:ident
     ) => {
-        #[test]
-        fn test_affine_projective_convert() {
-            check_affine_projective_convert::<$curve>()
-        }
+        pub mod test_curve {
+            use super::*;
+            fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
 
-        #[test]
-        fn test_point_equality() {
-            check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as FieldImpl>::Config, $curve>()
-        }
+            #[test]
+            fn test_affine_projective_convert() {
+                initialize();
+                check_affine_projective_convert::<$curve>()
+            }
 
-        #[test]
-        fn test_ark_scalar_convert() {
-            check_ark_scalar_convert::<<$curve as Curve>::ScalarField>()
-        }
+            #[test]
+            fn test_point_equality() {
+                initialize();
+                check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as FieldImpl>::Config, $curve>()
+            }
 
-        #[test]
-        fn test_ark_point_convert() {
-            check_ark_point_convert::<$curve>()
-        }
-
-        #[test]
-        fn test_points_convert_montgomery() {
-            check_points_convert_montgomery::<$curve>()
+            #[test]
+            fn test_points_convert_montgomery() {
+                initialize();
+                check_points_convert_montgomery::<$curve>()
+            }
         }
     };
 }

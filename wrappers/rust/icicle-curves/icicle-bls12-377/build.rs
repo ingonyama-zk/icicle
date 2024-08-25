@@ -1,72 +1,98 @@
 use cmake::Config;
-use std::env;
+use std::{env, path::PathBuf};
 
 fn main() {
+    // Construct the path to the deps directory
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR is not set");
+    let build_dir = PathBuf::from(format!("{}/../../../", &out_dir));
+    let deps_dir = build_dir.join("deps");
+
+    // Construct the path to icicle source directory
+    let main_dir = env::current_dir().expect("Failed to get current directory");
+    let icicle_src_dir = PathBuf::from(format!("{}/../../../../icicle", main_dir.display()));
+
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
-    println!("cargo:rerun-if-changed=../../../../icicle");
+    println!("cargo:rerun-if-changed={}", icicle_src_dir.display());
 
     // Base config
-    let mut config = Config::new("../../../../icicle");
+    let mut config = Config::new(format!("{}", icicle_src_dir.display()));
+    // Check if ICICLE_INSTALL_DIR is defined
+    let icicle_install_dir = if let Ok(dir) = env::var("ICICLE_INSTALL_DIR") {
+        PathBuf::from(dir)
+    } else {
+        // Define the default install directory to be under the build directory
+        PathBuf::from(format!("{}/icicle/", deps_dir.display()))
+    };
     config
-        .define("BUILD_TESTS", "OFF")
         .define("CURVE", "bls12_377")
-        .define("CMAKE_BUILD_TYPE", "Release");
+        .define("FIELD", "bls12_377")
+        .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-    // Optional Features
-    #[cfg(feature = "g2")]
-    config.define("G2", "ON");
-
-    #[cfg(feature = "ec_ntt")]
-    config.define("ECNTT", "ON");
-
-    #[cfg(feature = "devmode")]
-    config.define("DEVMODE", "ON");
-
-    if let Ok(cuda_arch) = env::var("CUDA_ARCH") {
-        config.define("CUDA_ARCH", &cuda_arch);
+    // build (or pull and build) cuda backend if feature enabled.
+    // Note: this requires access to the repo
+    if cfg!(feature = "cuda_backend") {
+        config.define("CUDA_BACKEND", "local");
+    } else if cfg!(feature = "pull_cuda_backend") {
+        config.define("CUDA_BACKEND", "main");
+    }
+    // Optional Features that are default ON (so that default matches any backend)
+    if cfg!(feature = "no_g2") {
+        config.define("G2", "OFF");
+    }
+    if cfg!(feature = "no_ecntt") {
+        config.define("ECNTT", "OFF");
     }
 
     // Build
-    let out_dir = config
-        .build_target("icicle_curve")
+    let _ = config
+        .build_target("install")
         .build();
 
-    println!("cargo:rustc-link-search={}/build/lib", out_dir.display());
-
-    println!("cargo:rustc-link-lib=ingo_field_bls12_377");
-    println!("cargo:rustc-link-lib=ingo_curve_bls12_377");
+    println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
+    println!("cargo:rustc-link-lib=icicle_field_bls12_377");
+    println!("cargo:rustc-link-lib=icicle_curve_bls12_377");
 
     if cfg!(feature = "bw6-761") {
         // Base config
-        let mut config = Config::new("../../../../icicle");
-        config
+        let mut config_bw = Config::new(format!("{}", icicle_src_dir.display()));
+        config_bw
             .define("CURVE", "bw6_761")
-            .define("CMAKE_BUILD_TYPE", "Release");
+            .define("FIELD", "bw6_761")
+            .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-        // Optional Features
-        #[cfg(feature = "bw6-761-g2")]
-        config.define("G2", "ON");
-
-        #[cfg(feature = "ec_ntt")]
-        config.define("ECNTT", "OFF");
-
-        #[cfg(feature = "devmode")]
-        config.define("DEVMODE", "ON");
-
-        if let Ok(cuda_arch) = env::var("CUDA_ARCH") {
-            config.define("CUDA_ARCH", &cuda_arch);
+        // build (or pull and build) cuda backend if feature enabled.
+        // Note: this requires access to the repo
+        if cfg!(feature = "cuda_backend") {
+            config_bw.define("CUDA_BACKEND", "local");
+        } else if cfg!(feature = "pull_cuda_backend") {
+            config_bw.define("CUDA_BACKEND", "main");
         }
+
+        // Optional Features that are default ON (so that default matches any backend)
+        if cfg!(feature = "no_bw6_g2") {
+            config_bw.define("G2", "OFF");
+        }
+        // if cfg!(feature = "no_ecntt") {
+        config_bw.define("ECNTT", "OFF");
+        // }
+
         // Build
-        let out_dir = config
-            .build_target("icicle_curve")
+        let _ = config_bw
+            .build_target("install")
             .build();
 
-        println!("cargo:rustc-link-search={}/build/lib/", out_dir.display());
-
-        println!("cargo:rustc-link-lib=ingo_field_bw6_761");
-        println!("cargo:rustc-link-lib=ingo_curve_bw6_761");
+        println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
+        println!("cargo:rustc-link-lib=icicle_field_bw6_761");
+        println!("cargo:rustc-link-lib=icicle_curve_bw6_761");
     }
 
-    println!("cargo:rustc-link-lib=stdc++");
-    println!("cargo:rustc-link-lib=cudart");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
+
+    // default backends dir
+    if cfg!(feature = "cuda_backend") || cfg!(feature = "pull_cuda_backend") {
+        println!(
+            "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend",
+            icicle_install_dir.display()
+        );
+    }
 }

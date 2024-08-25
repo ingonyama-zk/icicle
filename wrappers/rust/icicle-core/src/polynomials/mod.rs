@@ -1,5 +1,5 @@
 use crate::traits::{FieldConfig, FieldImpl};
-use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::memory::HostOrDeviceSlice;
 
 pub trait UnivariatePolynomial
 where
@@ -42,7 +42,7 @@ macro_rules! impl_univariate_polynomial_api {
         $field_cfg:ident
     ) => {
         use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
-        use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
+        use icicle_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
         use std::{
             clone, cmp,
             ffi::c_void,
@@ -53,9 +53,6 @@ macro_rules! impl_univariate_polynomial_api {
         type PolynomialHandle = *const c_void;
 
         extern "C" {
-            #[link_name = concat!($field_prefix, "_polynomial_init_cuda_backend")]
-            fn init_cuda_backend() -> bool;
-
             #[link_name = concat!($field_prefix, "_polynomial_create_from_coefficients")]
             fn create_from_coeffs(coeffs: *const $field, size: usize) -> PolynomialHandle;
 
@@ -126,7 +123,7 @@ macro_rules! impl_univariate_polynomial_api {
             fn copy_coeffs(a: PolynomialHandle, host_coeffs: *mut $field, start_idx: u64, end_idx: u64) -> u64;
 
             #[link_name = concat!($field_prefix, "_polynomial_get_coeffs_raw_ptr")]
-            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64, device_id: *mut u64) -> *mut $field;
+            fn get_coeffs_ptr(a: PolynomialHandle, len: *mut u64) -> *mut $field;
         }
 
         pub struct DensePolynomial {
@@ -134,10 +131,6 @@ macro_rules! impl_univariate_polynomial_api {
         }
 
         impl DensePolynomial {
-            pub fn init_cuda_backend() -> bool {
-                unsafe { init_cuda_backend() }
-            }
-
             // TODO Yuval: implement Display trait
             pub fn print(&self) {
                 unsafe {
@@ -148,8 +141,7 @@ macro_rules! impl_univariate_polynomial_api {
             pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<$field> {
                 unsafe {
                     let mut len: u64 = 0;
-                    let mut device_id: u64 = 0;
-                    let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len, &mut device_id);
+                    let mut coeffs_mut = get_coeffs_ptr(self.handle, &mut len);
                     let s = slice::from_raw_parts_mut(coeffs_mut, len as usize);
                     DeviceSlice::from_mut_slice(s)
                 }
@@ -421,43 +413,40 @@ macro_rules! impl_polynomial_tests {
         $field:ident
     ) => {
         use super::*;
-        use icicle_core::ntt::{get_root_of_unity, initialize_domain, release_domain, NTTDomain};
+        use icicle_core::ntt::{
+            get_root_of_unity, initialize_domain, release_domain, NTTDomain, NTTInitDomainConfig,
+            CUDA_NTT_FAST_TWIDDLES_MODE,
+        };
+        use icicle_core::test_utilities;
         use icicle_core::vec_ops::{add_scalars, mul_scalars, sub_scalars, VecOps, VecOpsConfig};
-        use icicle_cuda_runtime::device_context::DeviceContext;
-        use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
+        use icicle_runtime::memory::{DeviceVec, HostSlice};
         use std::sync::Once;
 
         use icicle_core::traits::{FieldImpl, GenerateRandom};
 
         type Poly = DensePolynomial;
 
-        fn init_domain<F: FieldImpl>(max_size: u64, ctx: &DeviceContext, fast_twiddles_mode: bool)
+        pub fn init_domain<F: FieldImpl>(max_size: u64, fast_twiddles_mode: bool)
         where
             <F as FieldImpl>::Config: NTTDomain<F>,
         {
-            let rou: F = get_root_of_unity(max_size);
-            initialize_domain(rou, &ctx, fast_twiddles_mode).unwrap();
-        }
-
-        fn rel_domain<F: FieldImpl>(ctx: &DeviceContext)
-        where
-            <F as FieldImpl>::Config: NTTDomain<F>,
-        {
-            release_domain::<F>(&ctx).unwrap()
+            let config = NTTInitDomainConfig::default();
+            config
+                .ext
+                .set_bool(CUDA_NTT_FAST_TWIDDLES_MODE, fast_twiddles_mode);
+            let rou = get_root_of_unity::<F>(max_size);
+            initialize_domain(rou, &config).unwrap();
         }
 
         fn randomize_coeffs<F: FieldImpl>(size: usize) -> Vec<F>
         where
             <F as FieldImpl>::Config: GenerateRandom<F>,
         {
-            let coeffs = F::Config::generate_random(size);
-            coeffs
+            F::Config::generate_random(size)
         }
 
         fn rand() -> $field {
-            let r = randomize_coeffs::<$field>(1);
-            // let coeffs = $field::Config::generate_random(1);
-            r[0]
+            randomize_coeffs::<$field>(1)[0]
         }
 
         // Note: implementing field arithmetic (+,-,*) for fields via vec_ops since they are not implemented on host
@@ -511,30 +500,26 @@ macro_rules! impl_polynomial_tests {
 
         fn randomize_poly(size: usize) -> Poly {
             let coeffs = randomize_coeffs::<$field>(size);
-            let p = Poly::from_coeffs(HostSlice::from_slice(&coeffs), size);
-            p
+            Poly::from_coeffs(HostSlice::from_slice(&coeffs), size)
         }
 
         static INIT: Once = Once::new();
         pub fn setup() -> () {
-            INIT.call_once(|| {
-                let device_id: usize = 0;
-                // using logn=20 since babybear NTT tests is using it and I don't want order of tests to be a problem
-                let domain_max_size: u64 = 1 << 20; //
-                                                    // TODO Yuval: how to consolidate this with NTT tests and avoid releaseDomain being called too early???
-                let ctx = DeviceContext::default_for_device(device_id);
-                init_domain::<ScalarField>(domain_max_size, &ctx, false /*=fast twiddle */);
+            INIT.call_once(move || {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
 
-                Poly::init_cuda_backend();
+                let domain_max_size: u64 = 1 << 20;
+                init_domain::<$field>(domain_max_size, false /*=fast twiddle */);
             });
+            test_utilities::test_set_main_device();
         }
 
-        // Note: tests are marked with #[ignore] since they conflict with NTT tests domain. This is a (hopefully temporary) workaround.
-        //       The poly tests are executed via 'cargo test -- --ignored' as an additional step
+        // Note: tests are prefixed with 'phase3' since they conflict with NTT tests domain.
+        //       The poly tests are executed via 'cargo test phase3' as an additional step
 
         #[test]
-        #[ignore]
-        fn test_poly_eval() {
+        fn phase3_test_poly_eval() {
             setup();
 
             // testing correct evaluation of f(8) for f(x)=4x^2+2x+5
@@ -546,8 +531,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_clone() {
+        fn phase3_test_poly_clone() {
             setup();
 
             // testing that the clone g(x) is independent of f(x) and cloned correctly
@@ -566,8 +550,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_add_sub_mul() {
+        fn phase3_test_poly_add_sub_mul() {
             setup();
 
             // testing add/sub operations
@@ -601,8 +584,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_monomials() {
+        fn phase3_test_poly_monomials() {
             setup();
 
             // testing add/sub monomials inplace
@@ -627,8 +609,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_read_coeffs() {
+        fn phase3_test_poly_read_coeffs() {
             setup();
 
             let zero = $field::from_u32(0);
@@ -646,7 +627,7 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(host_mem, coeffs);
 
             // read coeffs to device memory
-            let mut device_mem = DeviceVec::<$field>::cuda_malloc(coeffs.len()).unwrap();
+            let mut device_mem = DeviceVec::<$field>::device_malloc(coeffs.len()).unwrap();
             f.copy_coeffs(0, &mut device_mem[..]);
             let mut host_coeffs_from_dev = vec![ScalarField::zero(); coeffs.len() as usize];
             device_mem
@@ -663,8 +644,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_division() {
+        fn phase3_test_poly_division() {
             setup();
 
             // divide f(x)/g(x), compute q(x), r(x) and check f(x)=q(x)*g(x)+r(x)
@@ -681,8 +661,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_divide_by_vanishing() {
+        fn phase3_test_poly_divide_by_vanishing() {
             setup();
 
             let zero = $field::from_u32(0);
@@ -708,8 +687,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_poly_eval_on_domain() {
+        fn phase3_test_poly_eval_on_domain() {
             setup();
 
             let one = $field::from_u32(1);
@@ -732,7 +710,7 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(f.eval(&three), host_evals[2]);
 
             // evaluate to device memory
-            let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(domain.len()).unwrap();
+            let mut device_evals = DeviceVec::<ScalarField>::device_malloc(domain.len()).unwrap();
             f.eval_on_domain(HostSlice::from_slice(&domain), &mut device_evals[..]);
             let mut host_evals_from_device = vec![ScalarField::zero(); domain.len()];
             device_evals
@@ -751,8 +729,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_eval_on_rou_domain() {
+        fn phase3_test_eval_on_rou_domain() {
             setup();
 
             let poly_log_size = 10;
@@ -760,7 +737,7 @@ macro_rules! impl_polynomial_tests {
             let f = randomize_poly(1 << poly_log_size);
 
             // evaluate f on rou domain of size 4n
-            let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(1 << domain_log_size).unwrap();
+            let mut device_evals = DeviceVec::<ScalarField>::device_malloc(1 << domain_log_size).unwrap();
             f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
 
             // construct g from f's evals and assert they are equal
@@ -770,8 +747,7 @@ macro_rules! impl_polynomial_tests {
         }
 
         #[test]
-        #[ignore]
-        fn test_odd_even_slicing() {
+        fn phase3_test_odd_even_slicing() {
             setup();
             let size = (1 << 10) - 3;
             // slicing even and odd parts and checking
@@ -808,8 +784,7 @@ macro_rules! impl_polynomial_tests {
         use icicle_core::ntt::{ntt, ntt_inplace, NTTConfig, NTTDir, Ordering};
 
         #[test]
-        #[ignore]
-        fn test_coeffs_slice() {
+        fn phase3_test_coeffs_slice() {
             setup();
 
             let size = 4;
@@ -831,7 +806,7 @@ macro_rules! impl_polynomial_tests {
             assert_eq!(coeffs_copied_from_slice, coeffs);
 
             // or can use the memory directly
-            let mut config: NTTConfig<'_, $field> = NTTConfig::default();
+            let mut config: NTTConfig<$field> = NTTConfig::default();
             let mut ntt_result = vec![$field::zero(); coeffs_slice_dev.len()];
             ntt(
                 coeffs_slice_dev,
