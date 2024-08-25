@@ -15,8 +15,8 @@ using A = DummyP;
 using P = DummyP;
 using scalar_t = DummyScalar;
 #else
-using A = curve_config::affine_t;
-using P = curve_config::projective_t;
+using A = curve_config::g2_affine_t;
+using P = curve_config::g2_projective_t;
 using scalar_t = curve_config::scalar_t;
 #endif
 
@@ -310,7 +310,6 @@ eIcicleError cpu_msm_single_thread(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, Point* results)
 {
   auto t = Timer("total-msm-single-threaded");
-  if (not_supported(config) != eIcicleError::SUCCESS) return not_supported(config);
 
   const unsigned int c = config.ext->get<int>("c");
   const unsigned int precompute_factor = config.precompute_factor;
@@ -398,9 +397,10 @@ int main()
   // while (true)
   {
     // MSM config
-    const int logn = 12;
+    const int logn = 0;
     const int N = 1 << logn;
-    const int batch_size = 4;
+    const int log_p = 0;
+    const int batch_size = 1;
     bool conv_mont = true;
 
     auto scalars = std::make_unique<scalar_t[]>(N * batch_size);
@@ -408,6 +408,7 @@ int main()
     get_inputs(bases.get(), scalars.get(), N, batch_size);
 
     if (conv_mont) {
+      std::cout << "Convertiting inputs to Montgomery form\n";
       for (int i = 0; i < N; i++)
         bases[i] = A::to_montgomery(bases[i]);
     }
@@ -417,8 +418,8 @@ int main()
     std::fill_n(result_cpu_ref, batch_size, P::zero());
 
     auto run = [&](const char* dev_type, P* result, const char* msg, bool measure, int iters, auto msm_func) {
-      const int log_p = 2;
       const int c = std::max(logn, 8) - 1;
+      std::cout << "c:\t" << c << '\n';
       // const int c = 4;
       const int pcf = 1 << log_p;
 

@@ -484,7 +484,7 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
 template <typename A, typename P>
 void Msm<A, P>::phase2_setup(std::vector<BmSumSegment>& segments)
 {
-  // Init values of partial (line) and total (triangle) sum
+  // Init values of partial (line) and total (triangle) sums
   for (int i = 0; i < m_num_bms; i++) {
     for (int j = 0; j < m_num_bm_segments - 1; j++) {
       BmSumSegment& segment = segments[m_num_bm_segments * i + j];
@@ -600,14 +600,13 @@ eIcicleError cpu_msm(
     c++;
   }
 
-  int nof_threads = 1;
-  if (config.ext == nullptr) {
-    int hw_threads = std::thread::hardware_concurrency();
-    if (hw_threads <= 0) { std::cerr << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
-    nof_threads = hw_threads > 0 ? hw_threads : 1;
-  } else {
-    if (config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) <= 0) { return eIcicleError::INVALID_ARGUMENT; }
+  int nof_threads = std::thread::hardware_concurrency();
+  if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
     nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
+  }
+  if (nof_threads <= 0) { 
+    ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+    nof_threads = 1;
   }
 
   Msm<A, P>* msm = new Msm<A, P>(config, c, nof_threads);
@@ -616,7 +615,7 @@ eIcicleError cpu_msm(
     msm->run_msm(&scalars[msm_size * i], bases, msm_size, i, &results[i]);
   }
   delete msm;
-  return eIcicleError::SUCCESS;
+  return eIcicleError::SUCCESS; 
 }
 
 /**
@@ -637,10 +636,17 @@ eIcicleError cpu_msm_precompute_bases(
   const MSMConfig& config,
   A* output_bases) // Pre assigned?
 {
+  int c = config.c;
+  if (c < 1) { c = std::max((int)std::log2(nof_bases) - 1, 8); }
+  if (scalar_t::NBITS % c == 0) {
+    ICICLE_LOG_ERROR << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
+      << ") without remainder.\n";
+  }
+  while (scalar_t::NBITS % c == 0) {
+    c++;
+  }
   int precompute_factor = config.precompute_factor;
   bool is_mont = config.are_points_montgomery_form;
-  // bool is_mont=false;
-  const unsigned int c = config.c;
   const unsigned int num_bms_no_precomp = (scalar_t::NBITS - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {
