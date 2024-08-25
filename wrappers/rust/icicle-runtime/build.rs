@@ -7,9 +7,8 @@ fn main() {
     let build_dir = PathBuf::from(format!("{}/../../../", &out_dir));
     let deps_dir = build_dir.join("deps");
 
-    // Construct the path to icicle source directory
     let main_dir = env::current_dir().expect("Failed to get current directory");
-    let icicle_src_dir = PathBuf::from(format!("{}/../../../../icicle", main_dir.display()));
+    let icicle_src_dir = PathBuf::from(format!("{}/../../../icicle", main_dir.display()));
 
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed={}", icicle_src_dir.display());
@@ -24,7 +23,7 @@ fn main() {
         PathBuf::from(format!("{}/icicle/", deps_dir.display()))
     };
     config
-        .define("CURVE", "bn254")
+        .define("CMAKE_BUILD_TYPE", "Release")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.
@@ -34,13 +33,6 @@ fn main() {
     } else if cfg!(feature = "pull_cuda_backend") {
         config.define("CUDA_BACKEND", "main");
     }
-    // Optional Features that are default ON (so that default matches any backend)
-    if cfg!(feature = "no_g2") {
-        config.define("G2", "OFF");
-    }
-    if cfg!(feature = "no_ecntt") {
-        config.define("ECNTT", "OFF");
-    }
 
     // Build
     let _ = config
@@ -48,8 +40,7 @@ fn main() {
         .build();
 
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
-    println!("cargo:rustc-link-lib=icicle_field_bn254");
-    println!("cargo:rustc-link-lib=icicle_curve_bn254");
+    println!("cargo:rustc-link-lib=icicle_device");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir

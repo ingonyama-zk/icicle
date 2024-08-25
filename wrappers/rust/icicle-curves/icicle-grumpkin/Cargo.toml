@@ -3,33 +3,26 @@ name = "icicle-grumpkin"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Rust wrapper for the CUDA implementation of Grumpkin elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of Grumpkin pairing friendly elliptic curve by Ingonyama"
 homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-criterion = "0.3"
 icicle-core = { workspace = true }
-icicle-cuda-runtime = { workspace = true }
-ark-grumpkin-test = { git = "https://github.com/ingonyama-zk/ark-grumpkin-test.git", optional = true}
+icicle-runtime = { workspace = true }
+# criterion = "0.3"
+
+[dev-dependencies]
+criterion = "0.3"
+serial_test = "3.0.0"
 
 [build-dependencies]
 cmake = "0.1.50"
 
-[dev-dependencies]
-criterion = "0.3"
-ark-std = "0.4.0"
-ark-ff = "0.4.0"
-ark-ec = "0.4.0"
-ark-poly = "0.4.0"
-icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
-icicle-grumpkin = { path = ".", features = ["arkworks"] }
-
 [features]
 default = []
-ec_ntt = ["icicle-core/ec_ntt"]
-devmode = ["icicle-core/devmode"]
-arkworks = ["ark-grumpkin-test", "icicle-core/arkworks"]
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 
 [[bench]]
 name = "msm"

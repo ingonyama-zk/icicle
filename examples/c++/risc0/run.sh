@@ -45,7 +45,7 @@ done
 mkdir -p build/example
 mkdir -p build/icicle
 
-ICILE_DIR=$(realpath "../../../icicle_v3/")
+ICILE_DIR=$(realpath "../../../icicle/")
 ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
 
 # Build Icicle and the example app that links to it

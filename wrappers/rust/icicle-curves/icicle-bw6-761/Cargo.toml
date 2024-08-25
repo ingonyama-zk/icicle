@@ -3,40 +3,27 @@ name = "icicle-bw6-761"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Rust wrapper for the CUDA implementation of BW6-761 pairing friendly elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of BW-761 pairing friendly elliptic curve by Ingonyama"
 homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
 icicle-core = { workspace = true }
-icicle-cuda-runtime = { workspace = true }
+icicle-runtime = { workspace = true }
 icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
-ark-bw6-761 = { version = "0.4.0", optional = true }
+
+[dev-dependencies]
 criterion = "0.3"
+serial_test = "3.0.0"
 
 [build-dependencies]
 cmake = "0.1.50"
 
-[dev-dependencies]
-criterion = "0.3"
-ark-bw6-761 = "0.4.0"
-ark-std = "0.4.0"
-ark-ff = "0.4.0"
-ark-ec = "0.4.0"
-ark-poly = "0.4.0"
-icicle-core = { path = "../../icicle-core", features = ["arkworks"] }
-icicle-bw6-761 = { path = ".", features = ["arkworks"] }
-serial_test = "3.0.0"
-
 [features]
 default = []
-g2 = ["icicle-bls12-377/bw6-761-g2"]
-devmode = ["icicle-core/devmode"]
-arkworks = ["ark-bw6-761", "icicle-core/arkworks", "icicle-bls12-377/arkworks"]
-
-# [[bench]]
-# name = "ecntt" #sane compilation times only with the devmode enabled
-# harness = false # Criterion provides own harness
+no_g2 = ["icicle-bls12-377/no_bw6_g2"]
+cuda_backend = ["icicle-bls12-377/cuda_backend"]
+pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
 
 [[bench]]
 name = "ntt"

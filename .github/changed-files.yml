@@ -5,20 +5,20 @@ golang:
   - go.mod
   - .github/workflows/golang.yml
 rust:
-  - wrappers/rust_v3/**/*
+  - wrappers/rust/**/*
   - '!wrappers/rust/README.md'
   - .github/workflows/v3_rust.yml
 cpp:
-  - icicle_v3/**/*.cu
-  - icicle_v3/**/*.cuh
-  - icicle_v3/**/*.cpp
-  - icicle_v3/**/*.hpp
-  - icicle_v3/**/*.c
-  - icicle_v3/**/*.h
-  - icicle_v3/CMakeLists.txt
+  - icicle/**/*.cu
+  - icicle/**/*.cuh
+  - icicle/**/*.cpp
+  - icicle/**/*.hpp
+  - icicle/**/*.c
+  - icicle/**/*.h
+  - icicle/CMakeLists.txt
   - .github/workflows/v3.yml
-  - icicle_v3/cmake/curve.cmake
-  - icicle_v3/cmake/field.cmake
+  - icicle/cmake/curve.cmake
+  - icicle/cmake/field.cmake
 examples:
   - examples/**/*
   - .github/workflows/examples.yml

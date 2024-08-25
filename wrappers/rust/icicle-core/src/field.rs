@@ -1,12 +1,8 @@
-#[cfg(feature = "arkworks")]
-use crate::traits::ArkConvertible;
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
-#[cfg(feature = "arkworks")]
-use ark_ff::{BigInteger, Field as ArkField, PrimeField};
 use hex::FromHex;
-use icicle_cuda_runtime::device_context::DeviceContext;
-use icicle_cuda_runtime::error::CudaError;
-use icicle_cuda_runtime::memory::DeviceSlice;
+use icicle_runtime::errors::eIcicleError;
+use icicle_runtime::memory::DeviceSlice;
+use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
@@ -105,42 +101,21 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 }
 
 #[doc(hidden)]
-pub trait MontgomeryConvertibleField<'a, F: FieldImpl> {
-    fn to_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
-    fn from_mont(values: &mut DeviceSlice<F>, ctx: &DeviceContext<'a>) -> CudaError;
+pub trait MontgomeryConvertibleField<F: FieldImpl> {
+    fn to_mont(values: &mut DeviceSlice<F>, stream: &IcicleStream) -> eIcicleError;
+    fn from_mont(values: &mut DeviceSlice<F>, stream: &IcicleStream) -> eIcicleError;
 }
 
-impl<'a, const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible<'a> for Field<NUM_LIMBS, F>
+impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
-    F: MontgomeryConvertibleField<'a, Self>,
+    F: MontgomeryConvertibleField<Self>,
 {
-    fn to_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-        F::to_mont(values, ctx)
+    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        F::to_mont(values, stream)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self>, ctx: &DeviceContext<'a>) -> CudaError {
-        F::from_mont(values, ctx)
-    }
-}
-
-#[cfg(feature = "arkworks")]
-impl<const NUM_LIMBS: usize, F: FieldConfig> ArkConvertible for Field<NUM_LIMBS, F> {
-    type ArkEquivalent = F::ArkField;
-
-    fn to_ark(&self) -> Self::ArkEquivalent {
-        F::ArkField::from_random_bytes(&self.to_bytes_le()).unwrap()
-    }
-
-    fn from_ark(ark: Self::ArkEquivalent) -> Self {
-        let ark_bytes: Vec<u8> = ark
-            .to_base_prime_field_elements()
-            .map(|x| {
-                x.into_bigint()
-                    .to_bytes_le()
-            })
-            .flatten()
-            .collect();
-        Self::from_bytes_le(&ark_bytes)
+    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+        F::from_mont(values, stream)
     }
 }
 
@@ -149,17 +124,13 @@ macro_rules! impl_field {
     (
         $num_limbs:ident,
         $field_name:ident,
-        $field_cfg:ident,
-        $ark_equiv:ident
+        $field_cfg:ident
     ) => {
         #[doc(hidden)]
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct $field_cfg {}
 
-        impl FieldConfig for $field_cfg {
-            #[cfg(feature = "arkworks")]
-            type ArkField = $ark_equiv;
-        }
+        impl FieldConfig for $field_cfg {}
         pub type $field_name = Field<$num_limbs, $field_cfg>;
     };
 }
@@ -171,13 +142,15 @@ macro_rules! impl_scalar_field {
         $field_prefix_ident:ident,
         $num_limbs:ident,
         $field_name:ident,
-        $field_cfg:ident,
-        $ark_equiv:ident
+        $field_cfg:ident
     ) => {
-        impl_field!($num_limbs, $field_name, $field_cfg, $ark_equiv);
+        impl_field!($num_limbs, $field_name, $field_cfg);
 
         mod $field_prefix_ident {
-            use super::{$field_name, CudaError, DeviceContext, HostOrDeviceSlice};
+            use super::{$field_name, HostOrDeviceSlice};
+            use icicle_core::vec_ops::VecOpsConfig;
+            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_generate_scalars")]
@@ -185,20 +158,26 @@ macro_rules! impl_scalar_field {
 
                 #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
                 fn _convert_scalars_montgomery(
-                    scalars: *mut $field_name,
-                    size: usize,
+                    scalars: *const $field_name,
+                    size: u64,
                     is_into: bool,
-                    ctx: *const DeviceContext,
-                ) -> CudaError;
+                    config: &VecOpsConfig,
+                    output: *mut $field_name,
+                ) -> eIcicleError;
             }
 
             pub(crate) fn convert_scalars_montgomery(
                 scalars: *mut $field_name,
                 len: usize,
                 is_into: bool,
-                ctx: &DeviceContext,
-            ) -> CudaError {
-                unsafe { _convert_scalars_montgomery(scalars, len, is_into, ctx as *const DeviceContext) }
+                stream: &IcicleStream,
+            ) -> eIcicleError {
+                let mut config = VecOpsConfig::default();
+                config.is_a_on_device = true;
+                config.is_result_on_device = true;
+                config.is_async = false;
+                config.stream_handle = (&*stream).into();
+                unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
             }
         }
 
@@ -210,33 +189,30 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        impl<'a> MontgomeryConvertibleField<'a, $field_name> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
-                check_device(ctx.device_id);
-                assert_eq!(
-                    values
-                        .device_id()
-                        .unwrap(),
-                    ctx.device_id,
-                    "Device ids are different in slice and context"
-                );
-                $field_prefix_ident::convert_scalars_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, ctx)
+        impl MontgomeryConvertibleField<$field_name> for $field_cfg {
+            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
+                // check device slice is on active device
+                if !values.is_on_active_device() {
+                    panic!("input not allocated on an inactive device");
+                }
+                $field_prefix_ident::convert_scalars_montgomery(
+                    unsafe { values.as_mut_ptr() },
+                    values.len(),
+                    true,
+                    stream,
+                )
             }
 
-            fn from_mont(values: &mut DeviceSlice<$field_name>, ctx: &DeviceContext<'a>) -> CudaError {
-                check_device(ctx.device_id);
-                assert_eq!(
-                    values
-                        .device_id()
-                        .unwrap(),
-                    ctx.device_id,
-                    "Device ids are different in slice and context"
-                );
+            fn from_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
+                // check device slice is on active device
+                if !values.is_on_active_device() {
+                    panic!("input not allocated on an inactive device");
+                }
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),
                     false,
-                    ctx,
+                    stream,
                 )
             }
         }
@@ -248,14 +224,26 @@ macro_rules! impl_field_tests {
     (
         $field_name:ident
     ) => {
-        #[test]
-        fn test_field_convert_montgomery() {
-            check_field_convert_montgomery::<$field_name>()
-        }
+        pub mod test_field {
+            use super::*;
+            use icicle_core::test_utilities;
 
-        #[test]
-        fn test_field_equality() {
-            check_field_equality::<$field_name>()
+            fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            fn test_field_convert_montgomery() {
+                initialize();
+                check_field_convert_montgomery::<$field_name>()
+            }
+
+            #[test]
+            fn test_field_equality() {
+                initialize();
+                check_field_equality::<$field_name>()
+            }
         }
     };
 }
