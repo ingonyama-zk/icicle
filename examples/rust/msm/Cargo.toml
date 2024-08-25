@@ -4,10 +4,10 @@ version = "1.2.0"
 edition = "2018"
 
 [dependencies]
-icicle-runtime = { path = "../../../wrappers/rust_v3/icicle-runtime" }
-icicle-core = { path = "../../../wrappers/rust_v3/icicle-core" }
-icicle-bn254 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bn254" }
-icicle-bls12-377 = { path = "../../../wrappers/rust_v3/icicle-curves/icicle-bls12-377" }
+icicle-runtime = { path = "../../../wrappers/rust/icicle-runtime" }
+icicle-core = { path = "../../../wrappers/rust/icicle-core" }
+icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254" }
+icicle-bls12-377 = { path = "../../../wrappers/rust/icicle-curves/icicle-bls12-377" }
 clap = { version = "<=4.4.12", features = ["derive"] }
 
 [features]
