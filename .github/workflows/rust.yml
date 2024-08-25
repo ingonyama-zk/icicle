@@ -25,7 +25,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Check rustfmt
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       working-directory: ./wrappers/rust
       # "-name target -prune" removes searching in any directory named "target"
       # Formatting by single file is necessary due to generated files not being present
@@ -73,7 +73,7 @@ jobs:
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Run tests
       working-directory: ./wrappers/rust
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       # tests are split to phases since NTT domain is global but tests have conflicting requirements
       run: |
         cargo build --workspace --release --features=cuda_backend
