@@ -3,10 +3,11 @@ name: Rust
 on:
   pull_request:
     branches:
-      - main      
+      - V3
+      - yshekel/V3     # TODO remove when merged to V3
   push:
     branches:
-      - main      
+      - V3
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,78 +34,49 @@ jobs:
       # causing rustfmt to fail.
       run: if [[ $(find . -path ./icicle-curves/icicle-curve-template -prune -o -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
 
-  build-linux:
-    name: Build on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format]
+  extract-cuda-backend-branch:
+    name: Extract cuda branch name
+    runs-on: ubuntu-22.04
+    outputs:
+      cuda-backend-branch: ${{ steps.extract.outputs.cuda-backend-branch }}
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Build
-      working-directory: ./wrappers/rust
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      # Building from the root workspace will build all members of the workspace by default
-      run: cargo build --release --verbose
-  
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Extract Private Branch from PR Description
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DESCRIPTION=$(gh pr view ${{ github.event.pull_request.number }} --json body -q '.body')
+          echo "PR Description: $DESCRIPTION"
+          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+') || true
+          if [ -z "$CUDA_BE_BRANCH" ]; then
+            CUDA_BE_BRANCH="main" # Default branch if not specified
+          fi
+          echo "Extracted CUDA Backend Branch: $CUDA_BE_BRANCH"
+          echo "::set-output name=cuda-backend-branch::$CUDA_BE_BRANCH"
+
   test-linux:
     name: Test on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, build-linux]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Run tests
       working-directory: ./wrappers/rust
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      # Running tests from the root workspace will run all workspace members' tests by default
-      # We need to limit the number of threads to avoid running out of memory on weaker machines
-      # ignored tests are polynomial tests. Since they conflict with NTT tests, they are executed separately
+      # tests are split to phases since NTT domain is global but tests have conflicting requirements
       run: |
-        cargo test --workspace --exclude icicle-babybear --exclude icicle-stark252 --exclude icicle-m31 --release --verbose --features=g2 -- --test-threads=2 --ignored
-        cargo test --workspace --exclude icicle-babybear --exclude icicle-stark252 --exclude icicle-m31 --release --verbose --features=g2 -- --test-threads=2
-
-    - name: Run baby bear tests
-      working-directory: ./wrappers/rust/icicle-fields/icicle-babybear
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: |
-        cargo test --release --verbose -- --ignored
-        cargo test --release --verbose
-
-    - name: Run stark252 tests
-      working-directory: ./wrappers/rust/icicle-fields/icicle-stark252
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: |
-        cargo test --release --verbose -- --ignored
-        cargo test --release --verbose
-
-    - name: Run m31 tests
-      working-directory: ./wrappers/rust/icicle-fields/icicle-m31
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-      run: |
-        cargo test --release --verbose -- --ignored
-        cargo test --release --verbose
-
-  # build-windows:
-  #   name: Build on Windows
-  #   runs-on: windows-2022
-  #   needs: check-changed-files
-  #   steps:     
-  #   - name: Checkout Repo
-  #     uses: actions/checkout@v4
-  #   - name: Download and Install Cuda
-  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-  #     id: cuda-toolkit
-  #     uses: Jimver/cuda-toolkit@v0.2.11
-  #     with:
-  #       cuda: '12.0.0'
-  #       method: 'network'
-  #       # https://docs.nvidia.com/cuda/archive/12.0.0/cuda-installation-guide-microsoft-windows/index.html
-  #       sub-packages: '["cudart", "nvcc", "thrust", "visual_studio_integration"]'
-  #   - name: Build targets
-  #     working-directory: ./wrappers/rust
-  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
-  #     env:
-  #       CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
-  #       CUDA_ARCH: 50 # Using CUDA_ARCH=50 env variable since the CI machines have no GPUs
-  #     # Building from the root workspace will build all members of the workspace by default
-  #     run: cargo build --release --verbose
+        cargo build --workspace --release --features=cuda_backend
+        cargo test --workspace --release --verbose --features=cuda_backend -- --skip phase
+        cargo test phase2 --workspace --release --features=cuda_backend
+        cargo test phase3 --workspace --release --features=cuda_backend

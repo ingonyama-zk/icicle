@@ -7,7 +7,7 @@ from itertools import chain
 from pathlib import Path
 from string import Template
 
-API_PATH = Path(__file__).resolve().parent.parent.joinpath("icicle_v3").joinpath("include").joinpath("icicle").joinpath("api")
+API_PATH = Path(__file__).resolve().parent.parent.joinpath("icicle").joinpath("include").joinpath("icicle").joinpath("api")
 TEMPLATES_PATH = API_PATH.joinpath("templates")
 
 """
