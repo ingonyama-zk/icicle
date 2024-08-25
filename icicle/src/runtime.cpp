@@ -275,7 +275,7 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
 
   auto load_library = [](const char* filePath) {
     ICICLE_LOG_DEBUG << "Attempting load: " << filePath;
-    void* handle = dlopen(filePath, RTLD_LAZY);
+    void* handle = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
     if (!handle) { ICICLE_LOG_ERROR << "Failed to load " << filePath << ": " << dlerror(); }
   };
 
