@@ -4,21 +4,11 @@
 #include "icicle/curves/curve_config.h"
 #include <random>
 #include <cassert>
-#include "timer.cpp"
+#include "timer.hpp"
 
 // #define DUMMY_TYPES
-// #define DEBUG_PRINTS
+#define DEBUG_PRINTS
 #define P_MACRO 1000
-
-#ifdef DUMMY_TYPES // for testing
-using A = DummyP;
-using P = DummyP;
-using scalar_t = DummyScalar;
-#else
-using A = curve_config::g2_affine_t;
-using P = curve_config::g2_projective_t;
-using scalar_t = curve_config::scalar_t;
-#endif
 
 class DummyScalar
 {
@@ -45,7 +35,9 @@ public:
 
   unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
   {
-    return (x >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
+    // if (digit_num * digit_width > 10) { std::cout << "Overflow output(" << digit_num << '*' << digit_width << "):\t" << ((x >> (digit_num * digit_width)) & ((1 << digit_width) - 1)) << "\t(" << this << ")\n";}
+    // else { std::cout << "Reg output(" << digit_num << "):\t" << ((x >> (digit_num * digit_width)) & ((1 << digit_width) - 1)) << '\n';}
+    return ((x%p) >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
   }
 
   friend DummyScalar operator+(DummyScalar p1, const DummyScalar& p2) { return {(p1.x + p2.x) % p1.p}; }
@@ -130,6 +122,16 @@ public:
       out[i] = to_affine(rand_host());
   }
 };
+
+#ifdef DUMMY_TYPES // for testing
+using A = DummyPoint;
+using P = DummyPoint;
+using scalar_t = DummyScalar;
+#else
+using A = curve_config::g2_affine_t;
+using P = curve_config::g2_projective_t;
+using scalar_t = curve_config::scalar_t;
+#endif
 
 #include "cpu_msm.hpp"
 using namespace icicle;
@@ -394,13 +396,13 @@ void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
 
 int main()
 {
-  // while (true)
+  while (true)
   {
     // MSM config
-    const int logn = 0;
+    const int logn = 17;
     const int N = 1 << logn;
-    const int log_p = 0;
-    const int batch_size = 1;
+    const int log_p = 2;
+    const int batch_size = 3;
     bool conv_mont = true;
 
     auto scalars = std::make_unique<scalar_t[]>(N * batch_size);
@@ -420,7 +422,6 @@ int main()
     auto run = [&](const char* dev_type, P* result, const char* msg, bool measure, int iters, auto msm_func) {
       const int c = std::max(logn, 8) - 1;
       std::cout << "c:\t" << c << '\n';
-      // const int c = 4;
       const int pcf = 1 << log_p;
 
       int hw_threads = std::thread::hardware_concurrency();
@@ -471,6 +472,9 @@ int main()
       std::cout << "CPU REF:\t" << P::to_affine(result_cpu_ref[i]) << std::endl;
       assert(result_cpu[i] == result_cpu_ref[i]);
     }
+
+    delete[] result_cpu;
+    delete[] result_cpu_ref;
   }
 
   return 0;
