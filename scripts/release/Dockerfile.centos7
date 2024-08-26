@@ -1,0 +1,11 @@
+# Use the official NVIDIA development runtime image for Centos 7
+FROM nvidia/cuda:12.2.0-devel-centos7
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \    
+    tar
+
+# Define the environment variable for the output tar file name
+ENV OUTPUT_TAR_NAME=icicle30-centos7-cuda122.tar.gz
