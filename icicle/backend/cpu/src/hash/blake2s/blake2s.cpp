@@ -302,7 +302,7 @@ namespace blake2s_cpu {
     limb_t* output_limbs,
     int nof_hashes,
     const HashConfig& config,
-    const limb_t* side_input_limbs) const
+    const limb_t* secondery_input_limbs) const
   {
     // Calculate the distance between each input in bytes
     size_t input_stride = m_total_input_limbs;
