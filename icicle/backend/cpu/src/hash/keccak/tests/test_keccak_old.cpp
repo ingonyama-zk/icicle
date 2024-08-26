@@ -24,7 +24,6 @@ int main(void)
   const uint8_t* test_string = (uint8_t*)test_string_char;
   HashConfig config; //= default_hash_config();
 
-
   // Test simple API
   Keccak keccak = Keccak(test_string_len / sizeof(limb_t), 8, SHA3_FLAGS_KECCAK);
   START_TIMER(keccak_ref)
@@ -40,7 +39,7 @@ int main(void)
 
     // Convert computed hash to a string
     char computed_hash_str[keccak.m_total_output_limbs * sizeof(limb_t) * 2 + 1]; // Two characters per byte + null
-                                                                                   // terminator
+                                                                                  // terminator
     for (size_t i = 0; i < keccak.m_total_output_limbs * sizeof(limb_t); i++) {
       sprintf(&computed_hash_str[i * 2], "%02x", hash[i]);
     }

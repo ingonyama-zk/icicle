@@ -38,7 +38,7 @@ int main(void)
 
     // Convert computed hash to a string
     char computed_hash_str[keccak_hash.m_total_output_limbs * sizeof(limb_t) * 2 + 1]; // Two characters per byte + null
-                                                                                     // terminator
+                                                                                       // terminator
     for (size_t i = 0; i < keccak_hash.m_total_output_limbs * sizeof(limb_t); i++) {
       sprintf(&computed_hash_str[i * 2], "%02x", hash[i]);
     }
