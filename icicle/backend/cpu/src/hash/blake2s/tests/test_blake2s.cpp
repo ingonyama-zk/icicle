@@ -13,7 +13,7 @@ using namespace blake2s_cpu;
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-// Ensure BLAKE2S_KEYBYTES, blake2s.total_output_limbs*sizeof(limb_t), and blake2s function are defined appropriately
+// Ensure BLAKE2S_KEYBYTES, blake2s.m_total_output_limbs*sizeof(limb_t), and blake2s function are defined appropriately
 
 int main(void)
 {
@@ -29,7 +29,7 @@ int main(void)
   Blake2s blake2s = Blake2s(test_string_len / sizeof(limb_t));
   START_TIMER(blake_ref)
   {
-    uint8_t hash[blake2s.total_output_limbs * sizeof(limb_t)];
+    uint8_t hash[blake2s.m_total_output_limbs * sizeof(limb_t)];
     // Pass the empty key with keylen = 0
     // virtual eIcicleError run_single_hash(const limb_t *input_limbs, limb_t *output_limbs, const HashConfig& config)
 
@@ -39,12 +39,12 @@ int main(void)
     const char* expected_hash_str = "0d74da2a1062445822cbc8ec7bf424714e09923b4c1eba0ca2170504f56c4331";
 
     // Convert computed hash to a string
-    char computed_hash_str[blake2s.total_output_limbs * sizeof(limb_t) * 2 + 1]; // Two characters per byte + null
-                                                                                 // terminator
-    for (size_t i = 0; i < blake2s.total_output_limbs * sizeof(limb_t); i++) {
+    char computed_hash_str[blake2s.m_total_output_limbs * sizeof(limb_t) * 2 + 1]; // Two characters per byte + null
+                                                                                   // terminator
+    for (size_t i = 0; i < blake2s.m_total_output_limbs * sizeof(limb_t); i++) {
       sprintf(&computed_hash_str[i * 2], "%02x", hash[i]);
     }
-    computed_hash_str[blake2s.total_output_limbs * sizeof(limb_t) * 2] = '\0'; // Null terminator
+    computed_hash_str[blake2s.m_total_output_limbs * sizeof(limb_t) * 2] = '\0'; // Null terminator
 
     // Print the computed and expected hash strings
     std::cout << "Computed hash: " << computed_hash_str << std::endl;

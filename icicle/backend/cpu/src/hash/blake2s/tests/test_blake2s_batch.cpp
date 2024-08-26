@@ -108,7 +108,7 @@ int main(int argc, char** argv)
   Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
 
   // Allocate memory for the output
-  WORD outlen = blake2s.total_output_limbs * sizeof(limb_t);
+  WORD outlen = blake2s.m_total_output_limbs * sizeof(limb_t);
   BYTE* output = (BYTE*)malloc(outlen * n_batch);
   if (!output) {
     perror("Failed to allocate memory for output");

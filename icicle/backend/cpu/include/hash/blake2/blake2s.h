@@ -33,16 +33,16 @@ namespace blake2s_cpu {
   class Blake2s : public Hash
   {
   public:
-    explicit Blake2s(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
+    explicit Blake2s(int m_total_input_limbs) : Hash(m_total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
 
     eIcicleError
-    run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config) const override;
+    run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config, const limb_t* secondery_input_limbs = nullptr) const override;
     eIcicleError run_multiple_hash(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
       const HashConfig& config,
-      const limb_t* side_input_limbs = nullptr) const override;
+      const limb_t* secondery_input_limbs = nullptr) const override;
 
   private:
     enum blake2s_constant {

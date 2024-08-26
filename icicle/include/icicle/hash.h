@@ -13,7 +13,7 @@ typedef uint32_t limb_t;
 /*************************** Frontend & Backend shared APIs ***************************/
 namespace icicle {
   /**
-   * @brief Configuration struct for the tree builder.
+   * @brief Configuration struct for the hash.
    */
   struct HashConfig {
     bool are_inputs_on_device = false;  ///< True if inputs are on device, false if on host. Default is false.
@@ -29,14 +29,14 @@ namespace icicle {
   class Hash
   {
   public:
-    const int total_input_limbs;      // Total number of regular input limbs
-    const int total_output_limbs;     // Total number of output limbs
-    const int total_side_input_limbs; // Total number of side input limbs
+    const int m_total_input_limbs;           // Total number of regular input limbs
+    const int m_total_output_limbs;          // Total number of output limbs
+    const int m_total_secondery_input_limbs; // Total number of secondery input limbs
 
     // Constructor
-    Hash(int total_input_limbs, int total_output_limbs, int total_side_input_limbs = 0)
-        : total_input_limbs(total_input_limbs), total_output_limbs(total_output_limbs),
-          total_side_input_limbs(total_side_input_limbs)
+    Hash(int total_input_limbs, int total_output_limbs, int total_secondery_input_limbs = 0)
+        : m_total_input_limbs(total_input_limbs), m_total_output_limbs(total_output_limbs),
+          m_total_secondery_input_limbs(total_secondery_input_limbs)
     {
     }
 
@@ -46,8 +46,11 @@ namespace icicle {
      * @param output_limbs Pointer to the output limbs.
      * @return Error code of type eIcicleError.
      */
-    virtual eIcicleError
-    run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config) const = 0;
+    virtual eIcicleError run_single_hash(
+      const limb_t* input_limbs,
+      limb_t* output_limbs,
+      const HashConfig& config,
+      const limb_t* secondery_input_limbs = nullptr) const = 0;
 
     /**
      * @brief Pure virtual function to run multiple hashes.
@@ -61,7 +64,7 @@ namespace icicle {
       limb_t* output_limbs,
       int nof_hashes,
       const HashConfig& config,
-      const limb_t* side_input_limbs = nullptr) const = 0;
+      const limb_t* secondery_input_limbs = nullptr) const = 0;
   };
 
-} // namespace icicle
+}; // namespace icicle
