@@ -25,7 +25,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Check clang-format
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]]; then echo "Please run clang-format"; exit 1; fi
 
   extract-cuda-backend-branch:
@@ -81,14 +81,14 @@ jobs:
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Build curve
       working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -DCUDA_BACKEND=local -S . -B build
         cmake --build build -j
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest
 
   test-linux-field:
@@ -115,12 +115,12 @@ jobs:
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Build field
       working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -DCUDA_BACKEND=local -S . -B build
         cmake --build build -j
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest
