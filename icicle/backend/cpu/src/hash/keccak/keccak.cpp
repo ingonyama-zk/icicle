@@ -82,7 +82,7 @@ namespace keccak_cpu {
     }
   }
 
-  /* *************************** Public Inteface ************************ */
+  /* *************************** Public Interface ************************ */
 
   /* For Init or Reset call these: */
   sha3_return_t Keccak::sha3_Init(sha3_context* priv, unsigned bitSize) const
