@@ -35,9 +35,10 @@ public:
 
   unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
   {
-    // if (digit_num * digit_width > 10) { std::cout << "Overflow output(" << digit_num << '*' << digit_width << "):\t" << ((x >> (digit_num * digit_width)) & ((1 << digit_width) - 1)) << "\t(" << this << ")\n";}
-    // else { std::cout << "Reg output(" << digit_num << "):\t" << ((x >> (digit_num * digit_width)) & ((1 << digit_width) - 1)) << '\n';}
-    return ((x%p) >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
+    // if (digit_num * digit_width > 10) { std::cout << "Overflow output(" << digit_num << '*' << digit_width << "):\t"
+    // << ((x >> (digit_num * digit_width)) & ((1 << digit_width) - 1)) << "\t(" << this << ")\n";} else { std::cout <<
+    // "Reg output(" << digit_num << "):\t" << ((x >> (digit_num * digit_width)) & ((1 << digit_width) - 1)) << '\n';}
+    return ((x % p) >> (digit_num * digit_width)) & ((1 << digit_width) - 1);
   }
 
   friend DummyScalar operator+(DummyScalar p1, const DummyScalar& p2) { return {(p1.x + p2.x) % p1.p}; }
@@ -396,8 +397,7 @@ void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
 
 int main()
 {
-  while (true)
-  {
+  while (true) {
     // MSM config
     const int logn = 17;
     const int N = 1 << logn;

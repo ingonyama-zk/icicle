@@ -29,10 +29,13 @@ class EcAddTask : public TaskBase
 public:
   /**
    * @brief constructor for the task ensuring points are zeros and other fields are init to invalid values (to avoid
-   * falsely handling a result at the start). The execution adds points m_point1,m_point2 and stores the result in 
+   * falsely handling a result at the start). The execution adds points m_point1,m_point2 and stores the result in
    * m_point1.
    */
-  EcAddTask() : TaskBase(), m_point1(P::zero()), m_point2(P::zero()), m_return_idx(-1), m_point2_opcode(ADD_P1_P2_BY_VALUE) {}
+  EcAddTask()
+      : TaskBase(), m_point1(P::zero()), m_point2(P::zero()), m_return_idx(-1), m_point2_opcode(ADD_P1_P2_BY_VALUE)
+  {
+  }
 
   /**
    * @brief Function to be executed by the tasks manager. It can be configured according to the value odf
@@ -129,7 +132,7 @@ public:
     dispatch();
   }
 
-  P m_point1;                 // One of the addends, and holds the addition result afterwards
+  P m_point1;             // One of the addends, and holds the addition result afterwards
   int m_return_idx;       // Idx allowing manager to figure out where the result belong to.
   bool m_is_line = false; // Indicator for phase 2 sums between line sum and triangle sum.
 
@@ -176,7 +179,7 @@ public:
   }
 
   /**
-   * @brief Main function to execute MSM computation. Launches the 3 phases implemented in the functions bellow 
+   * @brief Main function to execute MSM computation. Launches the 3 phases implemented in the functions below
    * (accumulation, bm sums, final accumulator).
    * @param scalars - Input scalars for MSM.
    * @param bases - EC P input, affine representation.
@@ -515,8 +518,7 @@ void Msm<A, P>::phase2_setup(std::vector<BmSumSegment>& segments)
 }
 
 template <typename A, typename P>
-void Msm<A, P>::phase3_final_accumulator(
-  std::vector<BmSumSegment>& segments, int idx_in_batch, P* result)
+void Msm<A, P>::phase3_final_accumulator(std::vector<BmSumSegment>& segments, int idx_in_batch, P* result)
 {
   // If it isn't the last MSM in the batch - run phase 3 on a separate thread to start utilizing the tasks manager on
   // the next phase 1.
@@ -601,7 +603,7 @@ eIcicleError cpu_msm(
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
     nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
   }
-  if (nof_threads <= 0) { 
+  if (nof_threads <= 0) {
     ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
     nof_threads = 1;
   }
@@ -612,7 +614,7 @@ eIcicleError cpu_msm(
     msm->run_msm(&scalars[msm_size * i], bases, msm_size, i, &results[i]);
   }
   delete msm;
-  return eIcicleError::SUCCESS; 
+  return eIcicleError::SUCCESS;
 }
 
 /**
@@ -637,7 +639,7 @@ eIcicleError cpu_msm_precompute_bases(
   if (c < 1) { c = std::max((int)std::log2(nof_bases) - 1, 8); }
   if (scalar_t::NBITS % c == 0) {
     ICICLE_LOG_ERROR << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-      << ") without remainder.\n";
+                     << ") without remainder.\n";
   }
   while (scalar_t::NBITS % c == 0) {
     c++;

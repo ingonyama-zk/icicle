@@ -73,8 +73,8 @@ public:
     int c = std::max(logn, 8) - 1;
     if (scalar_t::NBITS % c == 0) { c++; }
     int n_threads = std::thread::hardware_concurrency();
-    if (n_threads <= 0) { 
-      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n"; 
+    if (n_threads <= 0) {
+      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
       n_threads = 1;
     }
     const int total_nof_elemets = batch * N;
@@ -110,7 +110,7 @@ public:
       // TODO: fix CUDA backend to support host memory too.
       A* precomp_bases = nullptr;
       ICICLE_CHECK(icicle_malloc((void**)&precomp_bases, N * precompute_factor * sizeof(A)));
-      ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));      
+      ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));
 
       config.are_points_on_device = true;
       config.are_results_on_device = false;
