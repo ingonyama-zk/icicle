@@ -10,7 +10,7 @@ on:
         description: "Flag for if Rust files changed"
         value: ${{ jobs.check-changed-files.outputs.rust }}
       cpp:
-        description: "Flag for if C++/CUDA files changed"
+        description: "Flag for if C++ files changed"
         value: ${{ jobs.check-changed-files.outputs.cpp }}
       examples:
         description: "Flag for if example files changed"
