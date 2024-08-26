@@ -7,13 +7,6 @@
  * SHA3-256, SHA3-384, SHA-512 are implemented. SHA-224 can easily be added.
  *
  * Based on code from http://keccak.noekeon.org/ .
- *
- * I place the code that I wrote into public domain, free to use.
- *
- * I would appreciate if you give credits to this work if you used it to
- * write or test * your code.
- *
- * Aug 2015. Andrey Jivsov. crypto@brainhub.org
  * ---------------------------------------------------------------------- */
 
 #include <stdio.h>
