@@ -274,9 +274,27 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
   };
 
   auto load_library = [](const char* filePath) {
-    ICICLE_LOG_DEBUG << "Attempting load: " << filePath;
-    void* handle = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
-    if (!handle) { ICICLE_LOG_ERROR << "Failed to load " << filePath << ": " << dlerror(); }
+    // Convert the file path to a std::string for easier manipulation
+    std::string path(filePath);
+
+    // Extract the library name from the full path
+    std::string fileName = path.substr(path.find_last_of("/\\") + 1);
+
+    // Check if the library name contains "icicle" and if the path contains "/backend/"
+    if (fileName.find("icicle") == std::string::npos || path.find("/backend/") == std::string::npos) {
+      ICICLE_LOG_DEBUG << "Skipping: " << filePath << " - Not an Icicle backend library.";
+      return;
+    }
+
+    // Check if the library name contains "device". If yes, load it with GLOBAL visibility, otherwise LOCAL.
+    // The logic behind it is to avoid symbol conflicts by using LOCAL visibility but allow backends to expose symbols to the other backend libs.
+    // For example to reuse some device context or any initialization required by APIs that we want to do once.
+    int flags = (fileName.find("device") != std::string::npos) ? (RTLD_LAZY | RTLD_GLOBAL) : (RTLD_LAZY | RTLD_LOCAL);
+
+    // Attempt to load the library with the appropriate flags
+    ICICLE_LOG_DEBUG << "Attempting to load: " << filePath;
+    void* handle = dlopen(filePath, flags);
+    if (!handle) { ICICLE_LOG_DEBUG << "Failed to load " << filePath << ": " << dlerror(); }
   };
 
   if (is_directory(path)) {
