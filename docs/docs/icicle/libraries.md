@@ -14,7 +14,7 @@ See programmers guide for more details. [C++](./programmers_guide/cpp#device-man
 
 ICICLE Core is a template library written in C++ that implements fundamental cryptographic operations, including field and curve arithmetic, as well as higher-level APIs such as MSM and NTT.
 
-The Core can be [instantiated](./getting_started) for different fields, curves, and other cryptographic components, allowing you to tailor it to your specific needs. You can link your application to one or more ICICLE libraries, depending on the requirements of your project. For example, you might only need the babybear library or a combination of babybear and a Merkle tree builder.
+The Core can be [instantiated](./build_from_source) for different fields, curves, and other cryptographic components, allowing you to tailor it to your specific needs. You can link your application to one or more ICICLE libraries, depending on the requirements of your project. For example, you might only need the babybear library or a combination of babybear and a Merkle tree builder.
 
 
 ### Rust
