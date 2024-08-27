@@ -40,6 +40,12 @@ namespace vec_ops {
     return add<extension_t>(vec_a, vec_b, n, config, vec_a);
   }
 
+    extern "C" cudaError_t CONCAT_EXPAND(FIELD, extension_stwo_convert_cuda)(
+    uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, extension_t* result)
+  {
+    return  stwo_convert<extension_t>(vec_a, vec_b, vec_c, vec_d, n, result, true);
+  }
+
   /**
    * Extern version of [Sub](@ref Sub) function with the template parameter
    * `E` being the [extension field](@ref extension_t) of the base field given by `-DFIELD` env variable during build.

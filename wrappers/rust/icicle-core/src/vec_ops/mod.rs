@@ -89,6 +89,14 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
+    fn stwo_convert(
+        a: &(impl HostOrDeviceSlice<u32> + ?Sized),
+        b: &(impl HostOrDeviceSlice<u32> + ?Sized),
+        c: &(impl HostOrDeviceSlice<u32> + ?Sized),
+        d: &(impl HostOrDeviceSlice<u32> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    ) -> IcicleResult<()>;
+
     fn sub(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -213,6 +221,20 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::add(a, b, result, &cfg)
 }
 
+pub fn stwo_convert<F>(
+    a: &(impl HostOrDeviceSlice<u32> + ?Sized),
+    b: &(impl HostOrDeviceSlice<u32> + ?Sized),
+    c: &(impl HostOrDeviceSlice<u32> + ?Sized),
+    d: &(impl HostOrDeviceSlice<u32> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::stwo_convert(a, b, c, d, result)
+}
+
 pub fn accumulate_scalars<F>(
     a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -326,6 +348,18 @@ macro_rules! impl_vec_ops_field {
                     cfg: *const VecOpsConfig,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_stwo_convert_cuda")]
+                pub(crate) fn stwo_convert_cuda(
+                    a: *const u32,
+                    b: *const u32,
+                    c: *const u32,
+                    d: *const u32,
+                    size: u32,
+                    result: *mut u32,
+                    ctx: &DeviceContext,
+                    is_async: bool,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_sub_cuda")]
                 pub(crate) fn sub_scalars_cuda(
                     a: *const $field,
@@ -395,6 +429,28 @@ macro_rules! impl_vec_ops_field {
                         b.as_ptr(),
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
+                    )
+                    .wrap()
+                }
+            }
+
+            fn stwo_convert(
+                a: &(impl HostOrDeviceSlice<u32> + ?Sized),
+                b: &(impl HostOrDeviceSlice<u32> + ?Sized),
+                c: &(impl HostOrDeviceSlice<u32> + ?Sized),
+                d: &(impl HostOrDeviceSlice<u32> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::stwo_convert_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        c.as_ptr(),
+                        d.as_ptr(),
+                        a.len() as u32,
+                        result.as_mut_ptr() as *mut u32,
+                        &DeviceContext::default_for_device(0),
+                        true,
                     )
                     .wrap()
                 }

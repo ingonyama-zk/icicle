@@ -40,6 +40,16 @@ extern "C" cudaError_t m31_add_cuda(
 extern "C" cudaError_t m31_accumulate_cuda(
   m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
+extern "C" cudaError_t m31_stwo_convert_cuda(
+    uint32_t* vec_a,
+    uint32_t* vec_b,
+    uint32_t* vec_c,
+    uint32_t* vec_d,
+    int n,
+    uint32_t* result,
+    device_context::DeviceContext& ctx,
+    bool is_async);
+
 extern "C" cudaError_t m31_sub_cuda(
   m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
 
