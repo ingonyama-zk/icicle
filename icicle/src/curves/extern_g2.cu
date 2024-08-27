@@ -15,6 +15,16 @@ extern "C" bool CONCAT_EXPAND(CURVE, g2_eq)(g2_projective_t* point1, g2_projecti
            (point2->z == g2_point_field_t::zero()));
 }
 
+extern "C" void CONCAT_EXPAND(CURVE, g2_add)(g2_projective_t* point1, g2_projective_t* point2, g2_projective_t* result)
+{
+  *result = *point1 + *point2;
+}
+
+extern "C" void CONCAT_EXPAND(CURVE, g2_mul_scalar)(g2_projective_t* point1, scalar_t* scalar, g2_projective_t* result)
+{
+  *result = *point1 * *scalar;
+}
+
 extern "C" void CONCAT_EXPAND(CURVE, g2_to_affine)(g2_projective_t* point, g2_affine_t* point_out)
 {
   *point_out = g2_projective_t::to_affine(*point);
