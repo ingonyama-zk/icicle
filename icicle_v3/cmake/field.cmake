@@ -25,7 +25,7 @@ function(setup_field_target)
     # handle APIs that are for some curves only
     add_ntt_sources_or_disable()
     set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
-    target_link_libraries(icicle_field PUBLIC icicle_device)
+    target_link_libraries(icicle_field PUBLIC icicle_device pthread)
 
     # Make sure FIELD is defined in the cache for backends to see
     set(FIELD "${FIELD}" CACHE STRING "")

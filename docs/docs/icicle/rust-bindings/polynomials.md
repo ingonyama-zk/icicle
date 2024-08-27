@@ -110,8 +110,7 @@ These traits are implemented for references to DensePolynomial (i.e., &DensePoly
 In addition to the traits, the following methods are implemented:
 
 ```rust
-impl DensePolynomial {
-    pub fn init_cuda_backend() -> bool {...}
+impl DensePolynomial {    
     // Returns a mutable slice of the polynomial coefficients on the device
     pub fn coeffs_mut_slice(&mut self) -> &mut DeviceSlice<F> {...}
 }      
@@ -131,7 +130,7 @@ Functions within the DensePolynomial API that deal with polynomial coefficients 
 
 ```rust
 // Assume `coeffs` could either be in host memory or CUDA device memory
-let coeffs: DeviceSlice<F> = DeviceVec::<F>::cuda_malloc(coeffs_len).unwrap();
+let coeffs: DeviceSlice<F> = DeviceVec::<F>::device_malloc(coeffs_len).unwrap();
 let p_from_coeffs = PolynomialBabyBear::from_coeffs(&coeffs, coeffs.len());
 
 // Similarly for evaluations from roots of unity
@@ -152,8 +151,6 @@ First, choose the appropriate field implementation for your polynomial operation
 ```rust
 use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
 
-// Initialize the CUDA backend for polynomial operations
-PolynomialBabyBear::init_cuda_backend();
 let f = PolynomialBabyBear::from_coeffs(...);
 
 // now use f by calling the implemented traits
@@ -234,7 +231,7 @@ f.eval_on_domain(HostSlice::from_slice(&domain), HostSlice::from_mut_slice(&mut 
 
 // Evaluate on roots-of-unity-domain
 let domain_log_size = 4;
-let mut device_evals = DeviceVec::<ScalarField>::cuda_malloc(1 << domain_log_size).unwrap();
+let mut device_evals = DeviceVec::<ScalarField>::device_malloc(1 << domain_log_size).unwrap();
 f.eval_on_rou_domain(domain_log_size, &mut device_evals[..]);
 ```
 
@@ -246,7 +243,7 @@ Read or copy polynomial coefficients for further processing:
 let x_squared_coeff = f.get_coeff(2);  // Coefficient of x^2
 
 // Copy coefficients to a device-specific memory space
-let mut device_mem = DeviceVec::<Field>::cuda_malloc(coeffs.len()).unwrap();
+let mut device_mem = DeviceVec::<Field>::device_malloc(coeffs.len()).unwrap();
 f.copy_coeffs(0, &mut device_mem[..]);
 ```
 

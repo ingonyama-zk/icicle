@@ -26,7 +26,7 @@ function(setup_curve_target)
     src/curves/ffi_extern.cpp
     src/curves/montgomery_conversion.cpp
   )
-  target_link_libraries(icicle_curve PUBLIC icicle_device icicle_field)
+  target_link_libraries(icicle_curve PUBLIC icicle_device icicle_field pthread)
   set_target_properties(icicle_curve PROPERTIES OUTPUT_NAME "icicle_curve_${CURVE}")
 
   # Make sure CURVE is defined in the cache for backends to see

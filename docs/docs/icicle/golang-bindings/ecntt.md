@@ -1,5 +1,7 @@
 # ECNTT
 
+TODO update for V3
+
 ## ECNTT Method
 
 The `ECNtt[T any]()` function performs the Elliptic Curve Number Theoretic Transform (EC-NTT) on the input points slice, using the provided dir (direction), cfg (configuration), and stores the results in the results slice.

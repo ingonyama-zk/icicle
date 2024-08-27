@@ -39,18 +39,16 @@ public:
 #endif
     icicle_load_backend_from_env_or_default();
 
-    // check targets are loaded and choose main and reference targets
-    auto regsitered_devices = get_registered_devices_list();
-    ASSERT_GE(regsitered_devices.size(), 2);
-
     const bool is_cuda_registered = is_device_registered("CUDA");
-    const bool is_cpu_registered = is_device_registered("CPU");
-    const bool is_cpu_ref_registered = is_device_registered("CPU_REF");
-    // if cuda is available, want main="CUDA", ref="CPU", otherwise main="CPU", ref="CPU_REF".
+    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
+    s_reference_target = "CPU";
   }
-  static void TearDownTestSuite() {}
+  static void TearDownTestSuite()
+  {
+    // make sure to fail in CI if only have one device
+    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
+  }
 
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}

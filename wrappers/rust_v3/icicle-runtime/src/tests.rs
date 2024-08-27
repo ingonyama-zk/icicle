@@ -33,8 +33,7 @@ mod tests {
 
     fn initialize() {
         INIT.call_once(|| {
-            load_backend_from_env_or_default();
-            let _ = runtime::get_registered_devices().unwrap();
+            let _ = load_backend_from_env_or_default();
         });
     }
 
