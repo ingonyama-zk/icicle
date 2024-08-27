@@ -10,6 +10,4 @@ RUN yum -y update && \
     cmake \
     tar \
     && yum clean all
-
-# Define the environment variable for the output tar file name
-ENV OUTPUT_TAR_NAME=icicle30-centos7-cuda122.tar.gz
+    

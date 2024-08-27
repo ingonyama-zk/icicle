@@ -31,10 +31,11 @@ docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v ./release_output:/output     \
             -v ./scripts:/scripts           \
-            icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh
+            icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubuntu22 cuda122
 ```
 
 This command executes the `build_release_and_tar.sh` script inside the Docker container, which provides the build environment. It maps the source code and output directory to the container, ensuring the generated tar file is available on the host system.
 
 You can replace `icicle-release-ubuntu22-cuda122` with another Docker image tag to build in the corresponding environment (e.g., Ubuntu 20.04 or CentOS 7).
+Make sure to pass corresponding OS and CUDA version in the params `icicle30 ubuntu22 cuda122`. For example for centos7 it would be `icicle30 centos7 cuda122`.
 
