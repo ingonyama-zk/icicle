@@ -321,7 +321,7 @@ extern "C" eIcicleError icicle_load_backend_from_env_or_default()
   }
 
   // If not found or failed, fall back to the default directory
-  const std::string default_dir = "/opt/icicle/backend";
+  const std::string default_dir = "/opt/icicle/lib/backend";
   if (std::filesystem::exists(default_dir)) {
     eIcicleError result = icicle_load_backend(default_dir.c_str(), true /*=recursive*/);
     if (result == eIcicleError::SUCCESS) {

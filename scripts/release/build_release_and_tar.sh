@@ -4,7 +4,7 @@ set -e
 
 # List of fields and curves
 fields=("babybear" "stark252")
-curves=("bn254")
+curves=("bn254" "bls12_381" "bls12_377" "bw6_761" "grumpkin")
 
 cd /
 mkdir install_dir && mkdir install_dir/icicle # output dir that is tared

@@ -1,10 +1,13 @@
 # Use the official NVIDIA development runtime image for Ubuntu 20.04
 FROM nvidia/cuda:12.2.0-devel-ubuntu20.04
 
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install necessary packages
 RUN apt-get update && apt-get install -y \
     build-essential \
-    cmake \    
+    cmake \
     tar
 
 # Define the environment variable for the output tar file name
