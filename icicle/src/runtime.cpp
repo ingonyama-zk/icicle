@@ -287,8 +287,9 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
     }
 
     // Check if the library name contains "device". If yes, load it with GLOBAL visibility, otherwise LOCAL.
-    // The logic behind it is to avoid symbol conflicts by using LOCAL visibility but allow backends to expose symbols to the other backend libs.
-    // For example to reuse some device context or any initialization required by APIs that we want to do once.
+    // The logic behind it is to avoid symbol conflicts by using LOCAL visibility but allow backends to expose symbols
+    // to the other backend libs. For example to reuse some device context or any initialization required by APIs that
+    // we want to do once.
     int flags = (fileName.find("device") != std::string::npos) ? (RTLD_LAZY | RTLD_GLOBAL) : (RTLD_LAZY | RTLD_LOCAL);
 
     // Attempt to load the library with the appropriate flags

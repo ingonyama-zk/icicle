@@ -90,7 +90,7 @@ The Icicle library dynamically loads backend libraries at runtime. By default, i
 2. **Default Directory**: If the environment variable is not set, Icicle will search in the default directory `/opt/icicle/lib/backend`.
 
 :::warning
-Make sure to load a backend that is compatible to the frontend version. CUDA backend libs are forward compatible with newer frontends (e.g. CUDA-backend-3.0 works with ICICLE-3.2). The opposite is not guranteed.
+Make sure to load a backend that is compatible to the frontend version. CUDA backend libs are forward compatible with newer frontends (e.g. CUDA-backend-3.0 works with ICICLE-3.2). The opposite is not guaranteed.
 :::
 
 If you install in a custom dir, make sure to set `ICICLE_BACKEND_INSTALL_DIR`:
