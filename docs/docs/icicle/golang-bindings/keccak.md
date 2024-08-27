@@ -10,9 +10,9 @@ package main
 import (
 	"encoding/hex"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/hash/keccak"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v3/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/hash/keccak"
 )
 
 func createHostSliceFromHexString(hexString string) core.HostSlice[uint8] {

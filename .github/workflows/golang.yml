@@ -1,0 +1,143 @@
+name: GoLang
+
+on:
+  pull_request:
+    branches:
+      - V3
+      - yshekel/V3     # TODO remove when merged to V3
+  push:
+    branches:
+      - V3   
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-changed-files:
+    uses: ./.github/workflows/check-changed-files.yml
+
+  check-format:
+    name: Check Code Format
+    runs-on: ubuntu-22.04
+    needs: check-changed-files
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
+    - name: Check gofmt
+      if: needs.check-changed-files.outputs.golang == 'true'
+      run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
+
+  extract-cuda-backend-branch:
+    name: Extract cuda branch name
+    runs-on: ubuntu-22.04
+    outputs:
+      cuda-backend-branch: ${{ steps.extract.outputs.cuda-backend-branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Extract Private Branch from PR Description
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DESCRIPTION=$(gh pr view ${{ github.event.pull_request.number }} --json body -q '.body')
+          echo "PR Description: $DESCRIPTION"
+          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+') || true
+          if [ -z "$CUDA_BE_BRANCH" ]; then
+            CUDA_BE_BRANCH="main" # Default branch if not specified
+          fi
+          echo "Extracted CUDA Backend Branch: $CUDA_BE_BRANCH"
+          echo "::set-output name=cuda-backend-branch::$CUDA_BE_BRANCH"
+
+  build-curves-linux:
+    name: Build and test curves on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    strategy:
+      matrix:
+        curve: 
+          - name: bn254
+            build_args: -g2 -ecntt
+          - name: bls12_381
+            build_args: -g2 -ecntt
+          - name: bls12_377
+            build_args: -g2 -ecntt
+          - name: bw6_761
+            build_args: -g2 -ecntt
+          - name: grumpkin
+            build_args:
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
+    - name: Build
+      working-directory: ./wrappers/golang
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      # builds a single curve with the curve's specified build args
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../build/
+        ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -cuda_backend=local
+    - name: Test
+      working-directory: ./wrappers/golang/curves
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      run: |
+        CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export CPATH=$CPATH:/usr/local/cuda/include
+        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../../build/
+        go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
+ 
+  build-fields-linux:
+    name: Build and test fields on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    strategy:
+      matrix:
+        field:
+          - name: babybear
+            build_args: -field-ext
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
+    - name: Setup go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.20.0'
+    - name: Build
+      working-directory: ./wrappers/golang
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      # builds a single field with the fields specified build args
+      run:  |
+        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../build/
+        ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }} -cuda_backend=local
+    - name: Test
+      working-directory: ./wrappers/golang/fields
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
+      run: |
+        FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export CPATH=$CPATH:/usr/local/cuda/include
+        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../../build/
+        go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v

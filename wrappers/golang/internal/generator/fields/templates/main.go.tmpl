@@ -1,0 +1,4 @@
+package {{.PackageName}}
+
+// #cgo LDFLAGS: -L${SRCDIR}/../../../../build/lib  -licicle_field_{{.Field}} -lstdc++ -Wl,-rpath=${SRCDIR}/../../../../build/lib
+import "C"

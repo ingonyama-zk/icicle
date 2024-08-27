@@ -1,0 +1,36 @@
+package tests
+
+import (
+	"testing"
+
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	{{.Curve}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
+	ecntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ecntt"
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestECNtt(t *testing.T) {
+	cfg := ntt.GetDefaultNttConfig()
+	ext := runtime.CreateConfigExtension()
+	ext.SetInt(core.CUDA_NTT_ALGORITHM, int(core.Radix2))
+	cfg.Ext = ext.AsUnsafePointer()
+
+	points := {{.Curve}}.GenerateProjectivePoints(1 << largestTestSize)
+
+	for _, size := range []int{4, 5, 6, 7, 8} {
+		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+			runtime.SetDevice(&DEVICE)
+
+			testSize := 1 << size
+
+			pointsCopy := core.HostSliceFromElements[{{.Curve}}.Projective](points[:testSize])
+			cfg.Ordering = v
+
+			output := make(core.HostSlice[{{.Curve}}.Projective], testSize)
+			e := ecntt.ECNtt(pointsCopy, core.KForward, &cfg, output)
+			assert.Equal(t, runtime.Success, e, "ECNtt failed")
+		}
+	}
+}

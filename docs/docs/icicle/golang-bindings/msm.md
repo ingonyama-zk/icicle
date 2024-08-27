@@ -8,10 +8,10 @@ TODO update for V3
 package main
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	bn254_msm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	cr "github.com/ingonyama-zk/icicle/v3/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	bn254_msm "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
 )
 
 func main() {
@@ -166,7 +166,7 @@ Now you may import `g2` package of the specified curve.
 
 ```go
 import (
-    "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
+    "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/g2"
 )
 ```
 
@@ -176,9 +176,9 @@ This package include `G2Projective` and `G2Affine` points as well as a `G2Msm` m
 package main
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	g2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	g2 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/g2"
 )
 
 func main() {
