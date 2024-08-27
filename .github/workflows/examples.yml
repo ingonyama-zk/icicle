@@ -55,13 +55,13 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle_v3/backend/cuda
+        path: ./icicle/backend/cuda
         token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: c++ examples
       working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp_cuda == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do

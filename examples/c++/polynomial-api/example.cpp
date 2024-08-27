@@ -316,7 +316,7 @@ void example_device_memory_view()
   auto coset_evals = std::make_unique<scalar_t[]>(size);
   auto ntt_config = default_ntt_config<scalar_t>();
   ntt_config.are_inputs_on_device = true; // using the device data directly as a view
-  ntt_config.coset_gen = get_root_of_unity<scalar_t>(size * 2);
+  ICICLE_CHECK(get_root_of_unity<scalar_t>(size * 2, &ntt_config.coset_gen));
   ntt(d_coeffs.get(), size, NTTDir::kForward, ntt_config, coset_evals.get());
 }
 

@@ -45,17 +45,18 @@ done
 mkdir -p build/example
 mkdir -p build/icicle
 
-ICILE_DIR=$(realpath "../../../icicle_v3/")
+ICILE_DIR=$(realpath "../../../icicle/")
 ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
 
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_SOURCE_DIR}" ]; then
   echo "Building icicle with CUDA backend"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DG2=ON -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DECNTT=OFF -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")
 else
   echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DG2=ON -S "${ICILE_DIR}" -B build/icicle
+  export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
+  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICILE_DIR}" -B build/icicle
 fi
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 
