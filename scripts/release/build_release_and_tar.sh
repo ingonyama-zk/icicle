@@ -20,7 +20,7 @@ for field in "${fields[@]}"; do
 
     mkdir -p build && rm -rf build/*
     # Configure, build, and install
-    cmake -S icicle -B build -DFIELD=$field -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle
+    cmake -S icicle -B build -DFIELD=$field -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release
     cmake --build build -j  # build
     cmake --install build   # install
 done
@@ -31,7 +31,7 @@ for curve in "${curves[@]}"; do
 
     mkdir -p build && rm -rf build/*
     # Configure, build, and install
-    cmake -S icicle -B build -DCURVE=$curve -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle
+    cmake -S icicle -B build -DCURVE=$curve -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release
     cmake --build build -j  # build
     cmake --install build   # install
 done
