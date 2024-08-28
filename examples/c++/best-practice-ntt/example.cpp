@@ -116,8 +116,8 @@ int main(int argc, char* argv[])
   // Clean-up
   for (int i = 0; i < 2; i++) {
     ICICLE_CHECK(icicle_free(d_vec[i]));
-    delete[] (h_inp[i]);
-    delete[] (h_out[i]);
+    delete[](h_inp[i]);
+    delete[](h_out[i]);
   }
   ICICLE_CHECK(icicle_destroy_stream(stream_compute));
   ICICLE_CHECK(icicle_destroy_stream(stream_d2h));
