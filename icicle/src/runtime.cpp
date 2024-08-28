@@ -293,9 +293,9 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
     int flags = (fileName.find("device") != std::string::npos) ? (RTLD_LAZY | RTLD_GLOBAL) : (RTLD_LAZY | RTLD_LOCAL);
 
     // Attempt to load the library with the appropriate flags
-    ICICLE_LOG_DEBUG << "Attempting to load: " << filePath;
+    ICICLE_LOG_VERBOSE << "Attempting to load: " << filePath;
     void* handle = dlopen(filePath, flags);
-    if (!handle) { ICICLE_LOG_DEBUG << "Failed to load " << filePath << ": " << dlerror(); }
+    if (!handle) { ICICLE_LOG_VERBOSE << "Failed to load " << filePath << ": " << dlerror(); }
   };
 
   if (is_directory(path)) {
