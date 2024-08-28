@@ -3,6 +3,15 @@
 This section is describing how a release is generated, given the release sources.<br>
 We use docker to represent the target environment for the release. Each Docker image is tailored to a specific distribution and CUDA version. You first build the Docker image, which sets up the environment, and then use this Docker image to build the release tar file. This ensures that the build process is consistent and reproducible across different environments.
 
+## Build full release
+
+To build all tars:
+```bash
+# from icicle root dir
+mkdir -p release_output && rm -rf release_output/* # output dir where tars will be placed
+./scripts/release/build_all.sh release_output # release_output is the output dir where tar files will be generated to
+```
+
 ### Build Docker Image
 
 The Docker images represent the target environment for the release.
@@ -36,12 +45,3 @@ This command executes the `build_release_and_tar.sh` script inside the Docker co
 You can replace `icicle-release-ubuntu22-cuda122` with another Docker image tag to build in the corresponding environment.
 Make sure to pass corresponding OS and CUDA version in the params `icicle30 ubuntu22 cuda122`. For example for ubi9 it would be `icicle30 ubi9 cuda122`.
 See `build_all.sh` script for reference.
-
-
-## Build full release
-
-To build all tars:
-```bash
-cd ./scripts/release # from icicle root dir
-./build_all.sh # output is generated to release_output dir
-```
