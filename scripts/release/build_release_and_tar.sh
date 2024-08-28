@@ -8,7 +8,7 @@ ICICLE_OS=${2:-unknown_os}              # Default to "unknown_os" if not set
 ICICLE_CUDA_VERSION=${3:-cuda_unknown} # Default to "cuda_unknown" if not set
 
 # List of fields and curves
-fields=("babybear" "stark252")
+fields=("babybear" "stark252", "m31")
 curves=("bn254" "bls12_381" "bls12_377" "bw6_761" "grumpkin")
 
 cd /
