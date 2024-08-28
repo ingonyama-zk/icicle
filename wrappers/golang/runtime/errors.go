@@ -16,5 +16,7 @@ const (
 	StreamDestructionFailed                     // Stream destruction failed
 	ApiNotImplemented                           // The API is not implemented for a device
 	InvalidArgument                             // Invalid argument passed
+	BackendLoadFailed                           // Failed to load the backend
+	LicenseCheckError                           // Failed to check license or invalid license
 	UnknownError                                // An unknown error occurred
 )
