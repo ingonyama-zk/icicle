@@ -8,16 +8,16 @@
 
 namespace icicle {
 
-
-
-
   class Blake2s : public Hash
   {
   public:
     explicit Blake2s(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
 
-    eIcicleError
-    run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config, const limb_t* secondary_input_limbs = nullptr) const override;
+    eIcicleError run_single_hash(
+      const limb_t* input_limbs,
+      limb_t* output_limbs,
+      const HashConfig& config,
+      const limb_t* secondary_input_limbs = nullptr) const override;
     eIcicleError run_multiple_hash(
       const limb_t* input_limbs,
       limb_t* output_limbs,
@@ -26,13 +26,11 @@ namespace icicle {
       const limb_t* secondary_input_limbs = nullptr) const override;
 
   private:
-    
     static constexpr unsigned int BLAKE2S_BLOCKBYTES = 64; // input length in bytes
     static constexpr unsigned int BLAKE2S_OUTBYTES = 32;
     static constexpr unsigned int BLAKE2S_KEYBYTES = 32;
     static constexpr unsigned int BLAKE2S_SALTBYTES = 8;
     static constexpr unsigned int BLAKE2S_PERSONALBYTES = 8;
-    
 
     BLAKE2_PACKED(struct blake2s_param {
       uint8_t digest_length;                   /* 1 */
@@ -94,4 +92,4 @@ namespace icicle {
     uint64_t rotr64(uint64_t w, unsigned c) const;
     void secure_zero_memory(void* v, size_t n) const;
   };
-} // namespace blake2s_cpu
+} // namespace icicle

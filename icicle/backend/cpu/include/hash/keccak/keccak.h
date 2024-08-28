@@ -4,7 +4,6 @@
 #include <string.h>
 #include "icicle/hash.h"
 
-
 namespace icicle {
 
 #define SHA3_ASSERT(x)
@@ -88,7 +87,7 @@ namespace icicle {
     // Single-call hashing
     sha3_return_t sha3_hash_buffer(
       unsigned bit_size, // 256, 384, 512
-      SHA3_FLAGS flags, // SHA3_FLAGS_NONE or SHA3_FLAGS_KECCAK
+      SHA3_FLAGS flags,  // SHA3_FLAGS_NONE or SHA3_FLAGS_KECCAK
       const void* in,
       unsigned inBytes,
       void* out,
@@ -120,4 +119,4 @@ namespace icicle {
     Sha3_512(int total_input_limbs) : Keccak(total_input_limbs, 512 / (8 * sizeof(limb_t)), SHA3_FLAGS_SHA3) {}
   };
 
-} // namespace keccak_cpu
+} // namespace icicle

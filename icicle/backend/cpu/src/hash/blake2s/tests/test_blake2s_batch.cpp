@@ -87,8 +87,8 @@ int main(int argc, char** argv)
   }
 
   // Test parameters
-  unsigned int n_batch = test_strings.size();    // Number of different inputs to hash in parallel
-  size_t inlen = test_strings[0].size(); // Max length of the test strings
+  unsigned int n_batch = test_strings.size(); // Number of different inputs to hash in parallel
+  size_t inlen = test_strings[0].size();      // Max length of the test strings
 
   // Calculate total input length and allocate memory for the batched input
   size_t total_len = 0;

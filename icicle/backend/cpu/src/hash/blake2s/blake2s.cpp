@@ -20,7 +20,6 @@
 #include <stdint.h>
 #include "hash/blake2/blake2s.h"
 
-
 namespace icicle {
 
   const uint32_t Blake2s::blake2s_IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
@@ -439,4 +438,4 @@ namespace icicle {
     memset_v(v, 0, n);
   }
 
-} // namespace blake2s_cpu
+} // namespace icicle

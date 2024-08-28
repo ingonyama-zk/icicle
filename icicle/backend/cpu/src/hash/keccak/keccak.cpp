@@ -299,4 +299,4 @@ namespace icicle {
 
     return eIcicleError::SUCCESS;
   }
-} // namespace keccak_cpu
+} // namespace icicle
