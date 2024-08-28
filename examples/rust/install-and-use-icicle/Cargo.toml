@@ -1,0 +1,11 @@
+[package]
+name = "ntt"
+version = "1.2.0"
+edition = "2018"
+
+[dependencies]
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch="yshekel/V3" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch="yshekel/V3" }
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="yshekel/V3" }
+
+[features]

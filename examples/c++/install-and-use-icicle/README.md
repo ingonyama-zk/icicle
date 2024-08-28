@@ -2,6 +2,8 @@
 
 # Example: Install and use ICICLE
 
+This example shows how to install binaries and use them in C++ application.
+
 Download release binaries:
 - **Frontend** icicle30-ubuntu22.tar.gz
 - **Backend** icicle30-ubuntu22-cuda122.tar.gz
@@ -15,7 +17,7 @@ Name of the files is based on the release version. Make sure to update the tar f
 docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubuntu22-cuda122 bash
 ```
 
-This command is starting bash in the docker, with GPUs and mapping the example files to `/worksapce` in the docker.
+This command is starting bash in the docker, with GPUs and mapping the example files to `/workspace` in the docker.
 
 ### Building the docker image
 This image is based on nvidia's image for ubuntu22. built from the Dockerfile:

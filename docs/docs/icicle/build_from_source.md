@@ -156,9 +156,9 @@ In cargo.toml, specify the ICICLE libs to use:
 
 ```bash
 [dependencies]
-icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
-icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
 # add other ICICLE crates here if need additional fields/curves
 ```
 
