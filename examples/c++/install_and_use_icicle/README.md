@@ -72,7 +72,7 @@ tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /custom/path # OPTIONAL
 ```
 
 ### Build your app and link to ICICLE
-You will have to specify paths for include and libs so that the compiler linker and loader can find them at compile anbd runtime.
+You will have to specify paths for include and libs so that the compiler linker and loader can find them at compile anb runtime.
 You can add the following to cmake file to do so:
 ```cmake
 # Include directories
