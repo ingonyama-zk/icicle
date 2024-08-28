@@ -4,28 +4,13 @@
 #include <stdint.h>
 #include <string.h>
 #include "icicle/hash.h"
+#include "icicle/utils/modifiers.h"
 
 using namespace icicle;
 namespace blake2s_cpu {
 
 
-#if defined(_MSC_VER)
-#define BLAKE2_PACKED(x) __pragma(pack(push, 1)) x __pragma(pack(pop))
-#else
-#define BLAKE2_PACKED(x) x __attribute__((packed))
-#endif
 
-#if !defined(__cplusplus) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L)
-#if defined(_MSC_VER)
-#define BLAKE2_INLINE __inline
-#elif defined(__GNUC__)
-#define BLAKE2_INLINE __inline__
-#else
-#define BLAKE2_INLINE
-#endif
-#else
-#define BLAKE2_INLINE inline
-#endif
 
   class Blake2s : public Hash
   {
