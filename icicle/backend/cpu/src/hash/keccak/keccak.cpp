@@ -15,7 +15,7 @@
 
 #include "hash/keccak/keccak.h"
 
-namespace keccak_cpu {
+namespace icicle {
 
   const uint64_t Keccak::keccakf_rndc[24] = {
     SHA3_CONST(0x0000000000000001UL), SHA3_CONST(0x0000000000008082UL), SHA3_CONST(0x800000000000808aUL),
@@ -78,22 +78,22 @@ namespace keccak_cpu {
   /* *************************** Public Interface ************************ */
 
   /* For Init or Reset call these: */
-  sha3_return_t Keccak::sha3_Init(sha3_context* priv, unsigned bitSize) const
+  sha3_return_t Keccak::sha3_init(sha3_context* priv, unsigned bit_size) const
   {
     sha3_context* ctx = (sha3_context*)priv;
-    if (bitSize != 256 && bitSize != 384 && bitSize != 512) return SHA3_RETURN_BAD_PARAMS;
+    if (bit_size != 256 && bit_size != 384 && bit_size != 512) return SHA3_RETURN_BAD_PARAMS;
     memset(ctx, 0, sizeof(*ctx));
-    ctx->capacityWords = 2 * bitSize / (8 * sizeof(uint64_t));
+    ctx->capacityWords = 2 * bit_size / (8 * sizeof(uint64_t));
     return SHA3_RETURN_OK;
   }
 
-  void Keccak::sha3_Init256(sha3_context* priv) const { Keccak::sha3_Init(priv, 256); }
+  void Keccak::sha3_init256(sha3_context* priv) const { Keccak::sha3_init(priv, 256); }
 
-  void Keccak::sha3_Init384(sha3_context* priv) const { Keccak::sha3_Init(priv, 384); }
+  void Keccak::sha3_init384(sha3_context* priv) const { Keccak::sha3_init(priv, 384); }
 
-  void Keccak::sha3_Init512(sha3_context* priv) const { Keccak::sha3_Init(priv, 512); }
+  void Keccak::sha3_init512(sha3_context* priv) const { Keccak::sha3_init(priv, 512); }
 
-  enum SHA3_FLAGS Keccak::sha3_SetFlags(sha3_context* priv, enum SHA3_FLAGS flags) const
+  enum SHA3_FLAGS Keccak::sha3_set_flags(sha3_context* priv, enum SHA3_FLAGS flags) const
   {
     sha3_context* ctx = (sha3_context*)priv;
     flags = (enum SHA3_FLAGS)(flags & SHA3_FLAGS_KECCAK);
@@ -101,7 +101,7 @@ namespace keccak_cpu {
     return flags;
   }
 
-  void Keccak::sha3_Update(sha3_context* priv, void const* bufIn, size_t len) const
+  void Keccak::sha3_update(sha3_context* priv, void const* bufIn, size_t len) const
   {
     sha3_context* ctx = (sha3_context*)priv;
 
@@ -186,7 +186,7 @@ namespace keccak_cpu {
    * The padding block is 0x01 || 0x00* || 0x80. First 0x01 and last 0x80
    * bytes are always present, but they can be the same byte.
    */
-  void const* Keccak::sha3_Finalize(sha3_context* priv) const
+  void const* Keccak::sha3_finalize(sha3_context* priv) const
   {
     sha3_context* ctx = (sha3_context*)priv;
 
@@ -238,19 +238,19 @@ namespace keccak_cpu {
     return (ctx->u.sb);
   }
 
-  sha3_return_t Keccak::sha3_HashBuffer(
-    unsigned bitSize, enum SHA3_FLAGS flags, const void* in, unsigned inBytes, void* out, unsigned outBytes) const
+  sha3_return_t Keccak::sha3_hash_buffer(
+    unsigned bit_size, enum SHA3_FLAGS flags, const void* in, unsigned inBytes, void* out, unsigned outBytes) const
   {
     sha3_return_t err;
     sha3_context c;
 
-    err = sha3_Init(&c, bitSize);
+    err = sha3_init(&c, bit_size);
     if (err != SHA3_RETURN_OK) return err;
-    if (sha3_SetFlags(&c, flags) != flags) { return SHA3_RETURN_BAD_PARAMS; }
-    sha3_Update(&c, in, inBytes);
-    const void* h = sha3_Finalize(&c);
+    if (sha3_set_flags(&c, flags) != flags) { return SHA3_RETURN_BAD_PARAMS; }
+    sha3_update(&c, in, inBytes);
+    const void* h = sha3_finalize(&c);
 
-    if (outBytes > bitSize / 8) outBytes = bitSize / 8;
+    if (outBytes > bit_size / 8) outBytes = bit_size / 8;
     memcpy(out, h, outBytes);
     return SHA3_RETURN_OK;
   }
@@ -266,8 +266,8 @@ namespace keccak_cpu {
     // std::cout << "output len (bytes): " << m_total_output_limbs * sizeof(limb_t) << std::endl;
     // std::cout << "input len (bytes): " << m_total_input_limbs * sizeof(limb_t) << std::endl;
 
-    int result = sha3_HashBuffer(
-      this->bitSize, this->sha_flag, input_bytes, this->m_total_input_limbs * sizeof(limb_t), output_bytes,
+    int result = sha3_hash_buffer(
+      this->bit_size, this->sha_flag, input_bytes, this->m_total_input_limbs * sizeof(limb_t), output_bytes,
       this->m_total_output_limbs * sizeof(limb_t));
     if (result != 0) { throw std::runtime_error("Keccak hashing failed"); }
     return eIcicleError::SUCCESS;

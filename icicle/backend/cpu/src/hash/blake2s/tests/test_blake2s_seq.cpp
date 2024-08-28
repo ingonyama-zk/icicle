@@ -12,7 +12,7 @@
 #include <sstream>
 #include <vector>
 
-using namespace blake2s_cpu;
+using namespace icicle;
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \

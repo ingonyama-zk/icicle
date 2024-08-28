@@ -6,8 +6,7 @@
 #include "icicle/hash.h"
 #include "icicle/utils/modifiers.h"
 
-using namespace icicle;
-namespace blake2s_cpu {
+namespace icicle {
 
 
 

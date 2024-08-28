@@ -4,9 +4,8 @@
 #include <string.h>
 #include "icicle/hash.h"
 
-using namespace icicle;
 
-namespace keccak_cpu {
+namespace icicle {
 
 #define SHA3_ASSERT(x)
 #define SHA3_TRACE(format, ...)
@@ -44,7 +43,7 @@ namespace keccak_cpu {
         : Hash(total_input_limbs, total_output_limbs), sha_flag(flag)
     {
     }
-    const size_t bitSize = this->m_total_output_limbs * sizeof(limb_t) * 8;
+    const size_t bit_size = this->m_total_output_limbs * sizeof(limb_t) * 8;
     const enum SHA3_FLAGS sha_flag;
 
     eIcicleError run_single_hash(
@@ -77,23 +76,23 @@ namespace keccak_cpu {
     };
 
     // Functions
-    sha3_return_t sha3_Init(sha3_context* ctx, unsigned bitSize) const;
-    void sha3_Init256(sha3_context* ctx) const;
-    void sha3_Init384(sha3_context* ctx) const;
-    void sha3_Init512(sha3_context* ctx) const;
-    SHA3_FLAGS sha3_SetFlags(sha3_context* ctx, SHA3_FLAGS flags) const;
-    void sha3_Update(sha3_context* ctx, const void* bufIn, size_t len) const;
-    const void* sha3_Finalize(sha3_context* ctx) const;
+    sha3_return_t sha3_init(sha3_context* ctx, unsigned bit_size) const;
+    void sha3_init256(sha3_context* ctx) const;
+    void sha3_init384(sha3_context* ctx) const;
+    void sha3_init512(sha3_context* ctx) const;
+    SHA3_FLAGS sha3_set_flags(sha3_context* ctx, SHA3_FLAGS flags) const;
+    void sha3_update(sha3_context* ctx, const void* bufIn, size_t len) const;
+    const void* sha3_finalize(sha3_context* ctx) const;
     static void keccakf(uint64_t s[25]);
 
     // Single-call hashing
-    sha3_return_t sha3_HashBuffer(
-      unsigned bitSize, // 256, 384, 512
+    sha3_return_t sha3_hash_buffer(
+      unsigned bit_size, // 256, 384, 512
       SHA3_FLAGS flags, // SHA3_FLAGS_NONE or SHA3_FLAGS_KECCAK
       const void* in,
       unsigned inBytes,
       void* out,
-      unsigned outBytes // up to bitSize/8; truncation OK
+      unsigned outBytes // up to bit_size/8; truncation OK
     ) const;
   };
 

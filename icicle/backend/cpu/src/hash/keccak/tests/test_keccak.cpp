@@ -7,7 +7,7 @@
 #include "hash/keccak/keccak.h"
 #include <chrono>
 
-using namespace keccak_cpu;
+using namespace icicle;
 
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
