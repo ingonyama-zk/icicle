@@ -100,20 +100,18 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 	return scalarSlice
 }
 
-func convertScalarsMontgomery(scalars *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+func convertScalarsMontgomery(scalars core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
-	cValues, _, _, cCfg, cSize := core.VecOpCheck(*scalars, *scalars, *scalars, &defaultCfg)
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(scalars, scalars, scalars, &defaultCfg)
 	cErr := C.bw6_761_scalar_convert_montgomery((*C.scalar_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.scalar_t)(cValues))
 	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func ToMontgomery(scalars *core.DeviceSlice) runtime.EIcicleError {
-	scalars.CheckDevice()
+func ToMontgomery(scalars core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertScalarsMontgomery(scalars, true)
 }
 
-func FromMontgomery(scalars *core.DeviceSlice) runtime.EIcicleError {
-	scalars.CheckDevice()
+func FromMontgomery(scalars core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertScalarsMontgomery(scalars, false)
 }

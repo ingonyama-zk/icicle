@@ -107,14 +107,14 @@ func TestBabybear_extensionMongtomeryConversion(t *testing.T) {
 	var deviceScalars core.DeviceSlice
 	scalars.CopyToDevice(&deviceScalars, true)
 
-	babybear_extension.ToMontgomery(&deviceScalars)
+	babybear_extension.ToMontgomery(deviceScalars)
 
 	scalarsMontHost := make(core.HostSlice[babybear_extension.ExtensionField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)
 
-	babybear_extension.FromMontgomery(&deviceScalars)
+	babybear_extension.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)

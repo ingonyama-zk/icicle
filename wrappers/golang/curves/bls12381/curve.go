@@ -134,38 +134,34 @@ func GenerateAffinePoints(size int) core.HostSlice[Affine] {
 	return pointsSlice
 }
 
-func convertAffinePointsMontgomery(points *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+func convertAffinePointsMontgomery(points core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
-	cValues, _, _, cCfg, cSize := core.VecOpCheck(*points, *points, *points, &defaultCfg)
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(points, points, points, &defaultCfg)
 	cErr := C.bls12_381_affine_convert_montgomery((*C.affine_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.affine_t)(cValues))
 	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func AffineToMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func AffineToMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertAffinePointsMontgomery(points, true)
 }
 
-func AffineFromMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func AffineFromMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertAffinePointsMontgomery(points, false)
 }
 
-func convertProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+func convertProjectivePointsMontgomery(points core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
-	cValues, _, _, cCfg, cSize := core.VecOpCheck(*points, *points, *points, &defaultCfg)
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(points, points, points, &defaultCfg)
 	cErr := C.bls12_381_projective_convert_montgomery((*C.projective_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.projective_t)(cValues))
 	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func ProjectiveToMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func ProjectiveToMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertProjectivePointsMontgomery(points, true)
 }
 
-func ProjectiveFromMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func ProjectiveFromMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertProjectivePointsMontgomery(points, false)
 }

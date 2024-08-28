@@ -107,14 +107,14 @@ func TestGrumpkinMongtomeryConversion(t *testing.T) {
 	var deviceScalars core.DeviceSlice
 	scalars.CopyToDevice(&deviceScalars, true)
 
-	grumpkin.ToMontgomery(&deviceScalars)
+	grumpkin.ToMontgomery(deviceScalars)
 
 	scalarsMontHost := make(core.HostSlice[grumpkin.ScalarField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)
 
-	grumpkin.FromMontgomery(&deviceScalars)
+	grumpkin.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)

@@ -134,39 +134,35 @@ func {{.CurvePrefix}}GenerateAffinePoints(size int) core.HostSlice[{{.CurvePrefi
 	return pointsSlice
 }
 
-func convert{{.CurvePrefix}}AffinePointsMontgomery(points *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+func convert{{.CurvePrefix}}AffinePointsMontgomery(points core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
-	cValues, _, _, cCfg, cSize := core.VecOpCheck(*points, *points, *points, &defaultCfg)
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(points, points, points, &defaultCfg)
 	cErr := C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_affine_convert_montgomery((*C.{{toCName .CurvePrefix}}affine_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.{{toCName .CurvePrefix}}affine_t)(cValues))
 	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func {{.CurvePrefix}}AffineToMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func {{.CurvePrefix}}AffineToMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convert{{.CurvePrefix}}AffinePointsMontgomery(points, true)
 }
 
-func {{.CurvePrefix}}AffineFromMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func {{.CurvePrefix}}AffineFromMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convert{{.CurvePrefix}}AffinePointsMontgomery(points, false)
 }
 
-func convert{{.CurvePrefix}}ProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) runtime.EIcicleError {
+func convert{{.CurvePrefix}}ProjectivePointsMontgomery(points core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
-	cValues, _, _, cCfg, cSize := core.VecOpCheck(*points, *points, *points, &defaultCfg)
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(points, points, points, &defaultCfg)
 	cErr := C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_projective_convert_montgomery((*C.{{toCName .CurvePrefix}}projective_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.{{toCName .CurvePrefix}}projective_t)(cValues))
 	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func {{.CurvePrefix}}ProjectiveToMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func {{.CurvePrefix}}ProjectiveToMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convert{{.CurvePrefix}}ProjectivePointsMontgomery(points, true)
 }
 
-func {{.CurvePrefix}}ProjectiveFromMontgomery(points *core.DeviceSlice) runtime.EIcicleError {
-	points.CheckDevice()
+func {{.CurvePrefix}}ProjectiveFromMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convert{{.CurvePrefix}}ProjectivePointsMontgomery(points, false)
 }
 {{end}}

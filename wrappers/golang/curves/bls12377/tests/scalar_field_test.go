@@ -107,14 +107,14 @@ func TestBls12_377MongtomeryConversion(t *testing.T) {
 	var deviceScalars core.DeviceSlice
 	scalars.CopyToDevice(&deviceScalars, true)
 
-	bls12_377.ToMontgomery(&deviceScalars)
+	bls12_377.ToMontgomery(deviceScalars)
 
 	scalarsMontHost := make(core.HostSlice[bls12_377.ScalarField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)
 
-	bls12_377.FromMontgomery(&deviceScalars)
+	bls12_377.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)
