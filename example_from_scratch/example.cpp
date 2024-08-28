@@ -18,16 +18,9 @@ int main(int argc, char* argv[]) {
     icicle_load_backend_from_env_or_default();
 
     // Check if GPU is available
-    Device device_cpu = {"CPU", 0};
     const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_available("CUDA"));
-    Device device_gpu = {"CUDA",0};
-    if (is_cuda_device_available) {
-        ICICLE_LOG_INFO << "GPU is available";
-    } else { 
-        ICICLE_LOG_INFO << "GPU is not available, falling back to CPU only";
-        device_gpu = device_cpu;
-    }
-    
+    Device device_cpu = {"CPU", 0};
+    Device device_gpu = is_cuda_device_available ? Device{"CUDA", 0} : device_cpu;
 
     // Example input (on host memory) for NTT
     const unsigned log_ntt_size = 2;

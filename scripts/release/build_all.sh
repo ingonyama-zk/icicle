@@ -9,11 +9,11 @@ docker build -t icicle-release-ubuntu22-cuda122 -f Dockerfile.ubuntu22 .
 # Ubuntu 20.04, CUDA 12.2.2
 docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .
 # ubi7 (rhel compatible), CUDA 12.2.2
-docker build -t icicle-release-centos7-cuda122 -f Dockerfile.ubi7 .
+docker build -t icicle-release-ubi7-cuda122 -f Dockerfile.ubi7 .
 # ubi8 (rhel compatible), CUDA 12.2.2
-docker build -t icicle-release-centos7-cuda122 -f Dockerfile.ubi9 .
+docker build -t icicle-release-ubi8-cuda122 -f Dockerfile.ubi8 .
 # ubi7 (rhel compatible), CUDA 12.2.2
-docker build -t icicle-release-centos7-cuda122 -f Dockerfile.ubi9 .
+docker build -t icicle-release-ubi9-cuda122 -f Dockerfile.ubi9 .
 
 # compile and tar release in each
 
