@@ -29,13 +29,13 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
 
 (TODO update links to main branch when merged)
 
-1. **Extract the Tar Files**:
-   - Download (TODO link to latest release) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 7,8,9 for RHEL compatible binaries).
+1. **Extract and install the Tar Files**:
+   - Download (TODO link to latest release) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 8,9 for RHEL compatible binaries).
    - **Frontend libs and headers** should be installed in default search paths (such as `/usr/lib` and `usr/local/include`) for the compiler and linker to find.
    - **Backend libs** should be installed in `/opt`
    - Extract it to your desired location:
     ```bash
-    # install the frontend part (Can skip for Rust)     
+    # install the frontend part (Can skip for Rust)
     tar xzvf icicle30-ubuntu22.tar.gz
     cp -r ./icicle/lib/* /usr/lib/
     cp -r ./icicle/include/icicle/ /usr/local/include/ # copy C++ headers
@@ -44,9 +44,9 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
      ```
 
     :::note
+    Installing the frontend is optional. Rust is not using it.
     You may install to any directory but need to make sure it can be found by the linker at compile and runtime.
-    For example can extract the frontend to `/opt` too.
-    ::: 
+    :::
 
     :::tip
     You can install anywhere and use a link so that it can be easily found as if in the default directory.
@@ -65,8 +65,8 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
      g++ -o myapp myapp.cpp -I/custom/path/icicle/include -L/custom/path/icicle/lib -licicle_device -licicle_field_bn254 -licicle_curve_bn254 -Wl,-rpath,/custom/path/icicle/lib/
      ```
 
-    - Or via cmake
-    ```bash
+  - Or via cmake
+    ```cmake
     # Add the executable
     add_executable(example example.cpp)
     # Link the libraries
@@ -96,11 +96,11 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
 
   **Rust**
      - When building the icicle crates, icicle frontend libs are built from source, in addition to the rust bindings. They are installed to `target/<buildtype>/deps/icile` and cargo will link correctly. Note that you still need to install CUDA backend if you have a CUDA GPU.
-     - Simply use `cargo build` or `cargo run` and it should link to icicle libs.      
+     - Simply use `cargo build` or `cargo run` and it should link to icicle libs.
 
   **Go** - TODO
 
-:::warning when deploying an application (either C++, Rust or Go), you must make sure to either deploy the icicle libs (in Rust it's in `target/<buildtype>/deps/icile` or the preinstalled ones) along the application binaries (as tar, docker image, package manager installer or else) or make sure to install icicle (and the backend) on the target machine. Otherwise the target machine will have linkage issues.
+:::warning when deploying an application (either C++, Rust or Go), you must make sure to either deploy the icicle libs (that you download or build from source) along the application binaries (as tar, docker image, package manager installer or else) or make sure to install icicle (and the backend) on the target machine. Otherwise the target machine will have linkage issues.
 :::
 
 ## Backend Loading
