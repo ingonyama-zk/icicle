@@ -1,40 +1,44 @@
 #pragma once
-// #include "icicle/backend/ntt_backend.h"
-// #include "icicle/errors.h"
-// #include "icicle/runtime.h"
-// #include "icicle/utils/log.h"
-// #include "icicle/fields/field_config.h"
-// #include "icicle/vec_ops.h"
-#include "icicle/utils/log.h"
 #include "ntt_tasks.h"
 #include "ntt_tasks_ref.h"
-#include <iostream>
-
-// #include <thread>
-// #include <vector>
-// #include <chrono>
-// #include <algorithm>
-// #include <iostream>
-// #include <cmath>
-// #include <cstdint>
-// #include <memory>
-// #include <mutex>
 
 using namespace field_config;
 using namespace icicle;
 #define PARALLEL 0
 
+/**
+ * @brief Performs the Number Theoretic Transform (NTT) on the input data.
+ *
+ * This function executes the NTT or inverse NTT on the given input data, managing
+ * tasks and reordering elements as needed. It handles coset multiplications, task
+ * hierarchy, and memory management for efficient computation.
+ *
+ * The NTT problem is given at a specific size and is divided into subproblems to enable
+ * parallel solving of independent tasks, ensuring that the number of problems solved
+ * simultaneously does not exceed cache size. The original problem is divided into hierarchies
+ * of subproblems. Beyond a certain size, the problem is divided into two layers of sub-NTTs in
+ * hierarchy 1. Within hierarchy 1, the problem is further divided into 1-3 layers of sub-NTTs
+ * belonging to hierarchy 0. The division into hierarchies and the sizes of the sub-NTTs are
+ * determined by the original problem size.
+ *
+ * The sub-NTTs within hierarchy 0 are the units of work that are assigned to individual threads.
+ * The overall computation is executed in a multi-threaded fashion, with the degree of parallelism
+ * determined by the number of available hardware cores.
+ *
+ * @param device The device on which the NTT is being performed.
+ * @param input Pointer to the input data.
+ * @param size The size of the input data, must be a power of 2.
+ * @param direction The direction of the NTT (forward or inverse).
+ * @param config Configuration settings for the NTT operation.
+ * @param output Pointer to the output data.
+ *
+ * @return eIcicleError Status of the operation, indicating success or failure.
+ */
 namespace ntt_cpu {
-  // main
   template <typename S = scalar_t, typename E = scalar_t>
   eIcicleError
   cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>& config, E* output)
   {
-    // auto start_hierarchy1_push_tasks = std::chrono::high_resolution_clock::now();
-    // auto start_handle_pushed_tasks = std::chrono::high_resolution_clock::now();
-    // auto end_hierarchy1_push_tasks = std::chrono::high_resolution_clock::now();
-    // auto end_handle_pushed_tasks = std::chrono::high_resolution_clock::now();
-
     const int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
     if (size & (size - 1)) {
       ICICLE_LOG_ERROR << "Size must be a power of 2. size = " << size;
@@ -53,7 +57,6 @@ namespace ntt_cpu {
     NttTasksManager<S, E> ntt_tasks_manager(logn);
     const int nof_threads = std::thread::hardware_concurrency();
     auto tasks_manager = new TasksManager<NttTask<S, E>>(nof_threads - 1);
-    // auto tasks_manager = new TasksManager<NttTask<S, E>>(1);
     NttTask<S, E>* task_slot;
     std::unique_ptr<S[]> arbitrary_coset = nullptr;
     const int coset_stride = ntt.find_or_generate_coset(arbitrary_coset);
@@ -98,8 +101,8 @@ namespace ntt_cpu {
         ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 1);
       }
 
-      ntt_task_cordinates.h1_subntt_idx =
-        0; // reset so that reorder_and_refactor_if_needed will calculate the correct memory index
+      // reset h1_subntt_idx so that reorder_and_refactor_if_needed will calculate the correct memory index
+      ntt_task_cordinates.h1_subntt_idx = 0;
       if (config.columns_batch) {
         ntt.reorder_and_refactor_if_needed(output, ntt_task_cordinates, true);
       } else {
@@ -108,16 +111,12 @@ namespace ntt_cpu {
         }
       }
     } else {
-      // start_hierarchy1_push_tasks = std::chrono::high_resolution_clock::now();
       ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
-      // end_hierarchy1_push_tasks = std::chrono::high_resolution_clock::now();
 
-      // start_handle_pushed_tasks = std::chrono::high_resolution_clock::now();
       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
-      // end_handle_pushed_tasks = std::chrono::high_resolution_clock::now();
     }
 
-    if (direction == NTTDir::kInverse) { // TODO SHANIE - do that in parallel
+    if (direction == NTTDir::kInverse) {
       S inv_size = S::inv_log_size(logn);
       for (uint64_t i = 0; i < total_memory_size; ++i) {
         output[i] = output[i] * inv_size;
@@ -129,17 +128,6 @@ namespace ntt_cpu {
       ntt_task_cordinates = {0, 0, 0, 0, 0};
       ntt.reorder_by_bit_reverse(ntt_task_cordinates, output, true);
     }
-    // auto duration_hierarchy1_push_tasks = std::chrono::duration<double, std::milli>(end_hierarchy1_push_tasks -
-    // start_hierarchy1_push_tasks).count(); auto duration_handle_pushed_tasks = std::chrono::duration<double,
-    // std::milli>(end_handle_pushed_tasks - start_handle_pushed_tasks).count(); ICICLE_LOG_INFO << std::fixed <<
-    // std::setprecision(3)
-    //                  << "Time spent in hierarchy1_push_tasks: " << duration_hierarchy1_push_tasks << " ms";
-    // ICICLE_LOG_INFO << std::fixed << std::setprecision(3)
-    //                  << "Time spent in handle_pushed_tasks: " << duration_handle_pushed_tasks << " ms";
-    // std:std::cout << std::fixed << std::setprecision(3)
-    //                   << duration_handle_pushed_tasks << " \n";
-    // std::cout << std::fixed << std::setprecision(3) << ntt.duration_total/3072 << std::endl;
-
     delete tasks_manager;
     return eIcicleError::SUCCESS;
   }
@@ -185,9 +173,7 @@ namespace ntt_cpu {
     uint64_t total_memory_size = size * config.batch_size;
     std::copy(input, input + total_memory_size, output);
     if (config.ordering == Ordering::kRN || config.ordering == Ordering::kRR) {
-      ntt.reorder_by_bit_reverse(
-        ntt_task_cordinates, output,
-        true); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
+      ntt.reorder_by_bit_reverse(ntt_task_cordinates, output, true);
     }
 
     if (config.coset_gen != S::one() && direction == NTTDir::kForward) {
@@ -260,26 +246,5 @@ namespace ntt_cpu {
 
     return eIcicleError::SUCCESS;
   }
-
-  // template <typename S = scalar_t, typename E = scalar_t>
-  // eIcicleError cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>&
-  // config, E* output)
-  // {
-  //   // count only how much time it takes for the multiplications
-  //   const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
-  //   for (int layer = 0; layer < 3; layer++) {
-  //     for (int subntt_idx = 0; subntt_idx < 1024; subntt_idx++) {
-  //       for (int cooley_tukey_step = 0; cooley_tukey_step < 5; cooley_tukey_step++) {
-  //         for (int i = 0; i < 16; i++) {
-  //           E v = input[subntt_idx + i] * twiddles[i];
-  //           E u = input[subntt_idx + i + 16];
-  //           output[subntt_idx*1024 + i] = u + v;
-  //           output[subntt_idx*1024 + i + 16] = u - v;
-  //         }
-  //       }
-  //     }
-  //   }
-  //   return eIcicleError::SUCCESS;
-  // }
 
 } // namespace ntt_cpu

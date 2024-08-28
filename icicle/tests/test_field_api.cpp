@@ -48,7 +48,7 @@ public:
   static void TearDownTestSuite()
   {
     // make sure to fail in CI if only have one device
-    // ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
+    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
   }
 
   // SetUp/TearDown are called before and after each test
@@ -299,11 +299,11 @@ TYPED_TEST(FieldApiTest, Slice)
 TYPED_TEST(FieldApiTest, ntt)
 {
   int seed = time(0);
-  // srand(1724759132);
+  // srand(seed);
   // // Randomize config
   // const int logn = rand() % 16 + 3;
   // const uint64_t N = 1 << logn;
-  // const int log_ntt_domain_size = logn+1;
+  // const int log_ntt_domain_size = logn + 1;
   // const int log_batch_size = rand() % 4;
   // const int batch_size = 1 << log_batch_size;
   // const Ordering ordering = static_cast<Ordering>(rand() % 4);

@@ -30,7 +30,7 @@ namespace ntt_cpu {
   /**
    * @brief Defines the log sizes of sub-NTTs for different problem sizes.
    *
-   * `layers_sub_logn` specifies the log sizes for up to three layers (hierarcy1 or hierarcy0) in the NTT computation.
+   * `layers_sub_logn` specifies the log sizes for up to three layers (hierarchy1 or hierarchy0) in the NTT computation.
    * - The outer index represents the log size (`logn`) of the original NTT problem.
    * - Each inner array contains three integers corresponding to the log sizes for each hierarchical layer.
    *
@@ -282,6 +282,15 @@ namespace ntt_cpu {
     bool reorder;
   };
 
+  /**
+   * @brief Manages tasks for the NTT computation, handling task scheduling and dependency management.
+   *
+   * The NttTasksManager is responsible for adding tasks, updating task dependencies,
+   * and determining the readiness of tasks for execution. It maintains a list of available tasks
+   * and a map of tasks that are waiting for dependencies to be resolved.
+   *
+   */
+
   template <typename S = scalar_t, typename E = scalar_t>
   class NttTasksManager
   {
@@ -292,7 +301,7 @@ namespace ntt_cpu {
     eIcicleError push_task(NttCpu<S, E>* ntt_cpu, E* input, NttTaskCordinates task_c, bool reorder);
 
     // Set a task as completed and update dependencies
-    eIcicleError set_task_as_completed(NttTask<S, E>& completed_task, int nof_subntts_l2);
+    eIcicleError set_task_as_completed(NttTask<S, E>& completed_task, int nof_subntts_l1);
 
     bool tasks_to_do() { return !available_tasks_list.empty() || !waiting_tasks_map.empty(); }
 
@@ -307,20 +316,31 @@ namespace ntt_cpu {
     }
 
   private:
-    std::vector<TasksDependenciesCounters> counters; // Dependencies counters by layer
-    std::deque<NttTaskParams<S, E>> available_tasks_list;
-    std::unordered_map<NttTaskCordinates, NttTaskParams<S, E>> waiting_tasks_map;
+    std::vector<TasksDependenciesCounters> counters;      // Dependencies counters by layer
+    std::deque<NttTaskParams<S, E>> available_tasks_list; // List of tasks ready to run
+    std::unordered_map<NttTaskCordinates, NttTaskParams<S, E>>
+      waiting_tasks_map; // Map of tasks waiting for dependencies
   };
 
   //////////////////////////// TasksDependenciesCounters Implementation ////////////////////////////
 
+  /**
+   * @brief Initializes dependency counters for NTT task management.
+   *
+   * This constructor sets up the dependency counters for the different layers within a sub-NTT hierarchy.
+   * It configures the counters for hierarchy 0 layers based on the problem size and structure, and initializes
+   * counters for each sub-NTT in hierarchy 1. These counters are used to manage task dependencies, ensuring that
+   * tasks only execute when their prerequisites are complete.
+   *
+   * @param ntt_sub_logn The structure containing logarithmic sizes of sub-NTTs.
+   * @param h1_layer_idx The index of the current hierarchy 1 layer.
+   */
   TasksDependenciesCounters::TasksDependenciesCounters(NttSubLogn ntt_sub_logn, int h1_layer_idx)
       : h0_counters(
           1
           << ntt_sub_logn.h1_layers_sub_logn[1 - h1_layer_idx]), // nof_h1_subntts = h1_layers_sub_logn[1-h1_layer_idx].
         h1_counters(1 << ntt_sub_logn.h1_layers_sub_logn[1 - h1_layer_idx])
-  { // Initialize h1_counters with N0 * N1
-
+  {
     nof_h0_layers =
       ntt_sub_logn.h0_layers_sub_logn[h1_layer_idx][2] ? 3 : (ntt_sub_logn.h0_layers_sub_logn[h1_layer_idx][1] ? 2 : 1);
     nof_pointing_to_counter.resize(nof_h0_layers);
@@ -344,7 +364,7 @@ namespace ntt_cpu {
 
     for (int h1_subntt_idx = 0; h1_subntt_idx < (1 << ntt_sub_logn.h1_layers_sub_logn[1 - h1_layer_idx]);
          ++h1_subntt_idx) {
-      h0_counters[h1_subntt_idx].resize(3); // 3 layers (0, 1, 2)
+      h0_counters[h1_subntt_idx].resize(3); // 3 possible layers (0, 1, 2)
       // Initialize counters for layer 0 - 1 counter1 initialized with 0.
       h0_counters[h1_subntt_idx][0].resize(1);
       h0_counters[h1_subntt_idx][0][0] = std::make_shared<int>(0); //[h1_subntt_idx][h0_layer_idx][h0_counter_idx]
@@ -372,6 +392,16 @@ namespace ntt_cpu {
     }
   }
 
+  /**
+   * @brief Decrements the dependency counter for a given task and checks if the next task is ready to execute.
+   *
+   * This function decrements the counter associated with a task in hierarchy 0 or the global counter
+   * in hierarchy 1. If the counter reaches zero, it indicates that the dependent task is now ready
+   * to be executed.
+   *
+   * @param task_c The coordinates of the task whose counter is to be decremented.
+   * @return True if the dependent task is ready to execute, false otherwise.
+   */
   bool TasksDependenciesCounters::decrement_counter(NttTaskCordinates task_c)
   {
     if (nof_h0_layers == 1) { return false; }
@@ -396,6 +426,10 @@ namespace ntt_cpu {
 
   //////////////////////////// NttTasksManager Implementation ////////////////////////////
 
+  /**
+   * @brief Constructs the task manager for a given problem size.
+   * @param logn The log2(size) of the NTT problem.
+   */
   template <typename S, typename E>
   NttTasksManager<S, E>::NttTasksManager(int logn)
       : counters(logn > H1 ? 2 : 1, TasksDependenciesCounters(NttSubLogn(logn), 0))
@@ -403,6 +437,14 @@ namespace ntt_cpu {
     if (logn > H1) { counters[1] = TasksDependenciesCounters(NttSubLogn(logn), 1); }
   }
 
+  /**
+   * @brief Adds a new task to the task manager.
+   * @param ntt_cpu Pointer to the NTT CPU instance.
+   * @param input Pointer to the input data.
+   * @param task_c Task coordinates specifying the task's position in the hierarchy.
+   * @param reorder Flag indicating if the task requires reordering.
+   * @return Status indicating success or failure.
+   */
   template <typename S, typename E>
   eIcicleError NttTasksManager<S, E>::push_task(NttCpu<S, E>* ntt_cpu, E* input, NttTaskCordinates task_c, bool reorder)
   {
@@ -416,9 +458,14 @@ namespace ntt_cpu {
     return eIcicleError::SUCCESS;
   }
 
-  // Function to set a task as completed and update dependencies
+  /**
+   * @brief Marks a task as completed and updates dependencies.
+   * @param completed_task The completed task.
+   * @param nof_subntts_l1 Number of sub-NTTs in the second layer of hierarchy 1.
+   * @return Status indicating success or failure.
+   */
   template <typename S, typename E>
-  eIcicleError NttTasksManager<S, E>::set_task_as_completed(NttTask<S, E>& completed_task, int nof_subntts_l2)
+  eIcicleError NttTasksManager<S, E>::set_task_as_completed(NttTask<S, E>& completed_task, int nof_subntts_l1)
   {
     ntt_cpu::NttTaskCordinates task_c = completed_task.get_coordinates();
     int nof_h0_layers = counters[task_c.h1_layer_idx].get_nof_h0_layers();
@@ -429,7 +476,7 @@ namespace ntt_cpu {
           (task_c.h0_layer_idx == nof_h0_layers - 1)
             ? 1
             : counters[task_c.h1_layer_idx].get_nof_pointing_to_counter(task_c.h0_layer_idx + 1);
-        int stride = nof_subntts_l2 / nof_pointing_to_counter;
+        int stride = nof_subntts_l1 / nof_pointing_to_counter;
         for (int i = 0; i < nof_pointing_to_counter; i++) {
           NttTaskCordinates next_task_c =
             task_c.h0_layer_idx == 0
@@ -442,10 +489,6 @@ namespace ntt_cpu {
           if (it != waiting_tasks_map.end()) {
             available_tasks_list.push_back(it->second);
             waiting_tasks_map.erase(it);
-          } else {
-            ICICLE_LOG_ERROR << "Task not found in waiting_tasks_map: h0_layer_idx: " << next_task_c.h0_layer_idx
-                             << ", h0_block_idx: " << next_task_c.h0_block_idx
-                             << ", h0_subntt_idx: " << next_task_c.h0_subntt_idx;
           }
         }
       } else {
@@ -455,8 +498,6 @@ namespace ntt_cpu {
         if (it != waiting_tasks_map.end()) {
           available_tasks_list.push_back(it->second);
           waiting_tasks_map.erase(it);
-        } else {
-          ICICLE_LOG_ERROR << "Task not found in waiting_tasks_map";
         }
       }
     }
@@ -1050,14 +1091,6 @@ namespace ntt_cpu {
         }
       }
     }
-    // int nof_h0_subntts = (nof_h0_layers == 1) ? (1 << NttCpu<S,
-    // E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][1]) :
-    //                      (nof_h0_layers == 2) ? (1 << NttCpu<S,
-    //                      E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][0]) : 1;
-    // int nof_h0_blocks  = (nof_h0_layers != 3) ? (1 << NttCpu<S,
-    // E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][2]) : (1 << (NttCpu<S,
-    // E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][0]+NttCpu<S,
-    // E>::ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][1]));
     if (nof_h0_layers > 1) {
       ntt_task_cordinates = {ntt_task_cordinates.h1_layer_idx, ntt_task_cordinates.h1_subntt_idx, nof_h0_layers, 0, 0};
       ntt_tasks_manager.push_task(this, input, ntt_task_cordinates, true); // reorder=true
@@ -1079,7 +1112,6 @@ namespace ntt_cpu {
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::h0_cpu_ntt(E* input, NttTaskCordinates ntt_task_cordinates)
   {
-    // std::cout << "h0_cpu_ntt     - h1_subntt_idx:\t" << ntt_task_cordinates.h1_subntt_idx<< std::endl;
     const uint64_t subntt_size =
       (1 << NttCpu<S, E>::ntt_sub_logn
               .h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][ntt_task_cordinates.h0_layer_idx]);
@@ -1093,9 +1125,7 @@ namespace ntt_cpu {
                         << NttCpu<S, E>::ntt_sub_logn
                              .h1_layers_sub_logn[ntt_task_cordinates.h1_layer_idx]); // input + subntt_idx * subntt_size
 
-    this->reorder_by_bit_reverse(
-      ntt_task_cordinates, current_input,
-      false); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
+    this->reorder_by_bit_reverse(ntt_task_cordinates, current_input, false); // R --> N
 
     // NTT/INTT
     this->h0_dit_ntt(current_input, ntt_task_cordinates, twiddles); // R --> N
@@ -1129,7 +1159,7 @@ namespace ntt_cpu {
     NttTask<S, E>* task_slot = nullptr;
     NttTaskParams<S, E> params;
 
-    int nof_subntts_l2 = 1
+    int nof_subntts_l1 = 1
                          << ((this->ntt_sub_logn.h0_layers_sub_logn[h1_layer_idx][0]) +
                              (this->ntt_sub_logn.h0_layers_sub_logn[h1_layer_idx][1]));
     while (ntt_tasks_manager.tasks_to_do()) {
@@ -1138,7 +1168,7 @@ namespace ntt_cpu {
       if (ntt_tasks_manager.available_tasks()) {
         // Task is available to dispatch
         task_slot = tasks_manager->get_idle_or_completed_task();
-        if (task_slot->is_completed()) { ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l2); }
+        if (task_slot->is_completed()) { ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l1); }
         params = ntt_tasks_manager.get_available_task();
         task_slot->set_params(params);
         ntt_tasks_manager.erase_task_from_available_tasks_list();
@@ -1146,7 +1176,7 @@ namespace ntt_cpu {
       } else {
         // Wait for available tasks
         task_slot = tasks_manager->get_completed_task();
-        ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l2);
+        ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l1);
         if (ntt_tasks_manager.available_tasks()) {
           params = ntt_tasks_manager.get_available_task();
           task_slot->set_params(params);
@@ -1171,6 +1201,16 @@ namespace ntt_cpu {
 } // namespace ntt_cpu
 
 namespace std {
+
+  /**
+   * @brief Hash function for NttTaskCordinates.
+   *
+   * Combines the hash values of the struct's members to allow
+   * NttTaskCordinates to be used as a key in unordered containers.
+   *
+   * @param key The NttTaskCordinates to hash.
+   * @return A size_t hash value.
+   */
   template <>
   struct hash<ntt_cpu::NttTaskCordinates> {
     std::size_t operator()(const ntt_cpu::NttTaskCordinates& key) const

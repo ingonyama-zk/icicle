@@ -1,7 +1,6 @@
 #pragma once
 #include "icicle/backend/ntt_backend.h"
 #include "icicle/errors.h"
-#include "icicle/utils/log.h"
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
 #include "icicle/fields/field_config.h"
