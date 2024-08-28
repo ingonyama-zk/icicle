@@ -27,11 +27,19 @@ To build the Icicle libraries inside a Docker container and output the tar file 
 
 ```bash
 mkdir -p release_output
+# ubuntu 22
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v ./release_output:/output     \
             -v ./scripts:/scripts           \
             icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubuntu22 cuda122
+
+# ubuntu 20
+docker run --rm --gpus all                  \
+            -v ./icicle:/icicle             \
+            -v ./release_output:/output     \
+            -v ./scripts:/scripts           \
+            icicle-release-ubuntu20-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubuntu20 cuda122
 ```
 
 This command executes the `build_release_and_tar.sh` script inside the Docker container, which provides the build environment. It maps the source code and output directory to the container, ensuring the generated tar file is available on the host system.

@@ -1,4 +1,4 @@
-# Use the official NVIDIA development runtime image for Ubuntu 20.04
+# Use the official NVIDIA CUDA development image for Ubuntu 20.04
 FROM nvidia/cuda:12.2.0-devel-ubuntu20.04
 
 # Prevent interactive prompts during package installation
@@ -7,5 +7,23 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install necessary packages
 RUN apt-get update && apt-get install -y \
     build-essential \
-    cmake \
-    tar
+    wget \
+    tar \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libarchive-dev \
+    zlib1g-dev
+
+# Install the latest stable version of CMake from source
+RUN CMAKE_VERSION=3.27.4 \
+    && wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}.tar.gz \
+    && tar -zxvf cmake-${CMAKE_VERSION}.tar.gz \
+    && cd cmake-${CMAKE_VERSION} \
+    && ./bootstrap \
+    && make -j$(nproc) \
+    && make install \
+    && cd .. \
+    && rm -rf cmake-${CMAKE_VERSION} cmake-${CMAKE_VERSION}.tar.gz
+
+# Set CMake as the default version
+RUN ln -sf /usr/local/bin/cmake /usr/bin/cmake
