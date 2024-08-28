@@ -344,6 +344,7 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
       // Handle required preprocess of base P
       A base =
         m_are_points_mont ? A::from_montgomery(bases[m_precompute_factor * i + j]) : bases[m_precompute_factor * i + j];
+      if (base == A::zero()) { continue; }
       if (negate_p_and_s) { base = A::neg(base); }
 
       for (int k = 0; k < m_num_bms; k++) {
@@ -611,7 +612,9 @@ eIcicleError cpu_msm(
   Msm<A, P>* msm = new Msm<A, P>(config, c, nof_threads);
 
   for (int i = 0; i < config.batch_size; i++) {
-    msm->run_msm(&scalars[msm_size * i], bases, msm_size, i, &results[i]);
+    int batch_start_idx = msm_size * i;
+    int bases_start_idx = config.are_bases_shared ? 0 : batch_start_idx;
+    msm->run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
   }
   delete msm;
   return eIcicleError::SUCCESS;
