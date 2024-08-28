@@ -27,13 +27,13 @@ namespace blake2s_cpu {
       const limb_t* secondary_input_limbs = nullptr) const override;
 
   private:
-    enum blake2s_constant {
-      BLAKE2S_BLOCKBYTES = 64, // input length in bytes
-      BLAKE2S_OUTBYTES = 32,
-      BLAKE2S_KEYBYTES = 32,
-      BLAKE2S_SALTBYTES = 8,
-      BLAKE2S_PERSONALBYTES = 8
-    };
+    
+    static constexpr unsigned int BLAKE2S_BLOCKBYTES = 64; // input length in bytes
+    static constexpr unsigned int BLAKE2S_OUTBYTES = 32;
+    static constexpr unsigned int BLAKE2S_KEYBYTES = 32;
+    static constexpr unsigned int BLAKE2S_SALTBYTES = 8;
+    static constexpr unsigned int BLAKE2S_PERSONALBYTES = 8;
+    
 
     BLAKE2_PACKED(struct blake2s_param {
       uint8_t digest_length;                   /* 1 */
