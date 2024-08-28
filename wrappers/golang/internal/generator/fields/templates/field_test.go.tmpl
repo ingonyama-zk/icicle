@@ -1,12 +1,12 @@
 package tests
 
 import (
-  	{{- if .IsScalar}}
+	"testing"
+  	{{if .IsScalar}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"{{end}}
 	{{if ne .FieldPrefix "G2"}}{{.Field}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}{{if eq .FieldPrefix "G2"}}/g2{{end}}"
   	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
  const (

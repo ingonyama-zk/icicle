@@ -26,7 +26,7 @@ func TestMSM(t *testing.T) {
 		stream, _ := runtime.CreateStream()
 		var p icicleGrumpkin.Projective
 		var out core.DeviceSlice
-		_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+		_, e := out.MallocAsync(p.Size(), 1, stream)
 		assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
 		cfg.StreamHandle = stream
 
@@ -41,55 +41,6 @@ func TestMSM(t *testing.T) {
 	}
 }
 
-// func TestMSMPinnedHostMemory(t *testing.T) {
-// 	cfg := msm.GetDefaultMSMConfig()
-// 	for _, power := range []int{10} {
-// 		size := 1 << power
-//
-// 		scalars := icicleGrumpkin.GenerateScalars(size)
-// 		points := icicleGrumpkin.GenerateAffinePoints(size)
-//
-// 		pinnable := cr.GetDeviceAttribute(cr.CudaDevAttrHostRegisterSupported, 0)
-// 		lockable := cr.GetDeviceAttribute(cr.CudaDevAttrPageableMemoryAccessUsesHostPageTables, 0)
-//
-// 		pinnableAndLockable := pinnable == 1 && lockable == 0
-//
-// 		var pinnedPoints core.HostSlice[icicleGrumpkin.Affine]
-// 		if pinnableAndLockable {
-// 			points.Pin(cr.CudaHostRegisterDefault)
-// 			pinnedPoints, _ = points.AllocPinned(cr.CudaHostAllocDefault)
-// 			assert.Equal(t, points, pinnedPoints, "Allocating newly pinned memory resulted in bad points")
-// 		}
-//
-// 		var p icicleGrumpkin.Projective
-// 		var out core.DeviceSlice
-// 		_, e := out.Malloc(p.Size(), p.Size())
-// 		assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
-// 		outHost := make(core.HostSlice[icicleGrumpkin.Projective], 1)
-//
-// 		e = msm.Msm(scalars, points, &cfg, out)
-// 		assert.Equal(t, e, runtime.Success, "Msm allocated pinned host mem failed")
-//
-// 		outHost.CopyFromDevice(&out)
-//
-//
-// 		if pinnableAndLockable {
-// 		e = msm.Msm(scalars, pinnedPoints, &cfg, out)
-// 			assert.Equal(t, e, runtime.Success, "Msm registered pinned host mem failed")
-//
-// 			outHost.CopyFromDevice(&out)
-//
-// 		}
-//
-// 		out.Free()
-//
-// 		if pinnableAndLockable {
-// 			points.Unpin()
-// 			pinnedPoints.FreePinned()
-// 		}
-// 	}
-// }
-
 func TestMSMBatch(t *testing.T) {
 	cfg := msm.GetDefaultMSMConfig()
 	for _, power := range []int{5, 6} {
@@ -102,7 +53,7 @@ func TestMSMBatch(t *testing.T) {
 
 			var p icicleGrumpkin.Projective
 			var out core.DeviceSlice
-			_, e := out.Malloc(batchSize*p.Size(), p.Size())
+			_, e := out.Malloc(p.Size(), batchSize)
 			assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
 
 			e = msm.Msm(scalars, points, &cfg, out)
@@ -133,7 +84,7 @@ func TestPrecomputePoints(t *testing.T) {
 			points := icicleGrumpkin.GenerateAffinePoints(totalSize)
 
 			var precomputeOut core.DeviceSlice
-			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+			_, e := precomputeOut.Malloc(points[0].Size(), points.Len()*int(precomputeFactor))
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
 
 			cfg.BatchSize = int32(batchSize)
@@ -143,7 +94,7 @@ func TestPrecomputePoints(t *testing.T) {
 
 			var p icicleGrumpkin.Projective
 			var out core.DeviceSlice
-			_, e = out.Malloc(batchSize*p.Size(), p.Size())
+			_, e = out.Malloc(p.Size(), batchSize)
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for Projective results failed")
 
 			e = msm.Msm(scalars, precomputeOut, &cfg, out)
@@ -172,7 +123,7 @@ func TestPrecomputePointsSharedBases(t *testing.T) {
 			points := icicleGrumpkin.GenerateAffinePoints(size)
 
 			var precomputeOut core.DeviceSlice
-			_, e := precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+			_, e := precomputeOut.Malloc(points[0].Size(), points.Len()*int(precomputeFactor))
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
 
 			e = msm.PrecomputeBases(points, &cfg, precomputeOut)
@@ -180,7 +131,7 @@ func TestPrecomputePointsSharedBases(t *testing.T) {
 
 			var p icicleGrumpkin.Projective
 			var out core.DeviceSlice
-			_, e = out.Malloc(batchSize*p.Size(), p.Size())
+			_, e = out.Malloc(p.Size(), batchSize)
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for Projective results failed")
 
 			e = msm.Msm(scalars, precomputeOut, &cfg, out)
@@ -212,7 +163,7 @@ func TestMSMSkewedDistribution(t *testing.T) {
 
 		var p icicleGrumpkin.Projective
 		var out core.DeviceSlice
-		_, e := out.Malloc(p.Size(), p.Size())
+		_, e := out.Malloc(p.Size(), 1)
 		assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
 
 		e = msm.Msm(scalars, points, &cfg, out)
@@ -247,7 +198,7 @@ func TestMSMMultiDevice(t *testing.T) {
 				stream, _ := runtime.CreateStream()
 				var p icicleGrumpkin.Projective
 				var out core.DeviceSlice
-				_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+				_, e := out.MallocAsync(p.Size(), 1, stream)
 				assert.Equal(t, e, runtime.Success, "Allocating bytes on device for Projective results failed")
 				cfg.StreamHandle = stream
 

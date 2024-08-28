@@ -8,12 +8,13 @@ import (
 	ecntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/ecntt"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime/config_extension"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestECNtt(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
-	ext := runtime.CreateConfigExtension()
+	ext := config_extension.CreateConfigExtension()
 	ext.SetInt(core.CUDA_NTT_ALGORITHM, int(core.Radix2))
 	cfg.Ext = ext.AsUnsafePointer()
 

@@ -1,10 +1,11 @@
 package tests
 
 import (
+	"testing"
+
 	{{if ne .CurvePrefix "G2"}}{{.Curve}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test{{.CurvePrefix}}AffineZero(t *testing.T) {
