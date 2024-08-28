@@ -449,7 +449,7 @@ macro_rules! impl_vec_ops_field {
                         d.as_ptr(),
                         a.len() as u32,
                         result.as_mut_ptr() as *mut u32,
-                        &DeviceContext::default_for_device(0),
+                        &DeviceContext::default(),
                         true,
                     )
                     .wrap()
@@ -600,87 +600,75 @@ macro_rules! impl_vec_ops_bench {
             group.sampling_mode(SamplingMode::Flat);
             group.sample_size(10);
 
-            const MAX_LOG2: u32 = 28; // max length = 2 ^ MAX_LOG2
+            const MAX_LOG2: u32 = 28;
 
             let max_log2 = env::var("MAX_LOG2")
                 .unwrap_or_else(|_| MAX_LOG2.to_string())
                 .parse::<u32>()
                 .unwrap_or(MAX_LOG2);
 
-            // for test_size_log2 in [28] {
-                let test_size = 1 << max_log2;
+            let test_size = 1 << max_log2;
 
-                // if test_size > 1 << max_log2 {
-                //     continue;
-                // }
+            use icicle_core::traits::GenerateRandom;
+            use icicle_core::vec_ops::{accumulate_scalars, VecOpsConfig};
+            use icicle_cuda_runtime::memory::{HostSlice, DeviceSlice, DeviceVec};
+            use icicle_core::vec_ops::BitReverseConfig;
+            use icicle_core::vec_ops::bit_reverse_inplace;
 
-                use icicle_core::traits::GenerateRandom;
-                use icicle_core::vec_ops::{accumulate_scalars, VecOpsConfig};
-                use icicle_cuda_runtime::memory::{HostSlice, DeviceSlice, DeviceVec};
-                use icicle_core::vec_ops::BitReverseConfig;
-                use icicle_core::vec_ops::bit_reverse_inplace;
+            let mut a = F::Config::generate_random(test_size);
 
-                let mut a = F::Config::generate_random(test_size);
 
-                // for i in (test_size-10)..test_size {
-                //     print!("{:?}, ", a[i]);
-                //     // assert_eq!(a[i]., i
-                // }
-                // println!();
+            let b = F::Config::generate_random(test_size);
 
-                let b = F::Config::generate_random(test_size);
+            let a_host = HostSlice::from_mut_slice(&mut a);
+            let b_host = HostSlice::from_slice(&b);
 
-                let a_host = HostSlice::from_mut_slice(&mut a);
-                let b_host = HostSlice::from_slice(&b);
+            let cfg = BitReverseConfig::default();
 
-                let cfg = BitReverseConfig::default();
+            let bench_descr = format!(" bit_reverse_inplace - data on host 2^{}", max_log2);
+            group.bench_function(&bench_descr, |bb| {
+                bb.iter(|| {
+                    bit_reverse_inplace(a_host, &cfg).unwrap();
+                })
+            });
 
-                let bench_descr = format!(" bit_reverse_inplace - data on host 2^{}", max_log2);
-                group.bench_function(&bench_descr, |bb| {
-                    bb.iter(|| {
-                        bit_reverse_inplace(a_host, &cfg).unwrap();
-                    })
-                });
+            let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
+            a_device
+                .copy_from_host(HostSlice::from_slice(&b.clone()))
+                .unwrap();
 
-                let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
-                a_device
-                    .copy_from_host(HostSlice::from_slice(&b.clone()))
-                    .unwrap();
+            let bench_descr = format!(" bit_reverse_inplace - data on device 2^{}", max_log2);
+            group.bench_function(&bench_descr, |bb| {
+                bb.iter(|| {
+                    bit_reverse_inplace(&mut a_device[..], &cfg).unwrap();
+                })
+            });
 
-                let bench_descr = format!(" bit_reverse_inplace - data on device 2^{}", max_log2);
-                group.bench_function(&bench_descr, |bb| {
-                    bb.iter(|| {
-                        bit_reverse_inplace(&mut a_device[..], &cfg).unwrap();
-                    })
-                });
-            //*
-                let cfg = VecOpsConfig::default();
+            let cfg = VecOpsConfig::default();
 
-                let bench_descr = format!(" accumulate - data on host 2^{}", max_log2);
-                group.bench_function(&bench_descr, |bb| {
-                    bb.iter(|| {
-                        accumulate_scalars(a_host, b_host, &cfg).unwrap();
-                    })
-                });
+            let bench_descr = format!(" accumulate - data on host 2^{}", max_log2);
+            group.bench_function(&bench_descr, |bb| {
+                bb.iter(|| {
+                    accumulate_scalars(a_host, b_host, &cfg).unwrap();
+                })
+            });
 
-                let cfg = VecOpsConfig::default();
-                let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
-                a_device
-                    .copy_from_host(HostSlice::from_slice(&a))
-                    .unwrap();
-                let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
-                b_device
-                    .copy_from_host(HostSlice::from_slice(&b))
-                    .unwrap();
+            let cfg = VecOpsConfig::default();
+            let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
+            a_device
+                .copy_from_host(HostSlice::from_slice(&a))
+                .unwrap();
+            let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
+            b_device
+                .copy_from_host(HostSlice::from_slice(&b))
+                .unwrap();
 
-                let bench_descr = format!(" accumulate - data on device 2^{}", max_log2);
-                group.bench_function(&bench_descr, |bb| {
-                    bb.iter(|| {
-                        accumulate_scalars(&mut a_device[..], &b_device[..], &cfg).unwrap();
-                    })
-                });
-            //*/
-            // }
+            let bench_descr = format!(" accumulate - data on device 2^{}", max_log2);
+            group.bench_function(&bench_descr, |bb| {
+                bb.iter(|| {
+                    accumulate_scalars(&mut a_device[..], &b_device[..], &cfg).unwrap();
+                })
+            });
             group.finish();
         }
 

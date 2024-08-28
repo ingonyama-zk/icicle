@@ -154,14 +154,8 @@ namespace vec_ops {
   }
 
   template <typename E>
-  cudaError_t stwo_convert(
-    uint32_t* vec_a,
-    uint32_t* vec_b,
-    uint32_t* vec_c,
-    uint32_t* vec_d,
-    int n,
-    E* result,
-    bool is_async)
+  cudaError_t
+  stwo_convert(uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, E* result, bool is_async)
   {
     CHK_INIT_IF_RETURN();
     device_context::DeviceContext ctx = device_context::get_default_device_context();
@@ -170,55 +164,38 @@ namespace vec_ops {
     uint32_t* d_allocated_output = (uint32_t*)result;
 
     int size_n = n * sizeof(uint32_t);
+    cudaStream_t stream1, stream2, stream3, stream4;
+    CHK_IF_RETURN(cudaStreamCreate(&stream1));
+    CHK_IF_RETURN(cudaStreamCreate(&stream2));
+    CHK_IF_RETURN(cudaStreamCreate(&stream3));
+    CHK_IF_RETURN(cudaStreamCreate(&stream4));
 
-    CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, 4 * size_n, ctx.stream));
-    // CHK_IF_RETURN(cudaMallocAsync(&d_allocated_output, 4 * size_n, ctx.stream));
-    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input, vec_a, size_n, cudaMemcpyHostToDevice, ctx.stream));
-    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + n, vec_b, size_n, cudaMemcpyHostToDevice, ctx.stream));
-    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + 2 * n, vec_c, size_n, cudaMemcpyHostToDevice, ctx.stream));
-    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + 3 * n, vec_d, size_n, cudaMemcpyHostToDevice, ctx.stream));
+    CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, 4 * size_n, stream1));
+    // CHK_IF_RETURN(cudaStreamSynchronize(stream1));
+
+    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input, vec_a, size_n, cudaMemcpyHostToDevice, stream1));
+    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + n, vec_b, size_n, cudaMemcpyHostToDevice, stream2));
+    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + 2 * n, vec_c, size_n, cudaMemcpyHostToDevice, stream3));
+    CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + 3 * n, vec_d, size_n, cudaMemcpyHostToDevice, stream4));
+
+    CHK_IF_RETURN(cudaStreamSynchronize(stream1));
+    CHK_IF_RETURN(cudaStreamSynchronize(stream2));
+    CHK_IF_RETURN(cudaStreamSynchronize(stream3));
+    CHK_IF_RETURN(cudaStreamSynchronize(stream4));
+    
+    CHK_IF_RETURN(cudaStreamDestroy(stream1));
+    CHK_IF_RETURN(cudaStreamDestroy(stream2));
+    CHK_IF_RETURN(cudaStreamDestroy(stream3));
+    CHK_IF_RETURN(cudaStreamDestroy(stream4));
 
     // TODO: transpose is sup ineficient :(
-
     CHK_IF_RETURN(transpose_matrix<uint32_t>(d_allocated_input, d_allocated_output, n, 4, ctx, true, true));
+
+    CHK_IF_RETURN(cudaFreeAsync(d_allocated_input, ctx.stream));
     if (!is_async) return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
 
     return CHK_LAST();
   }
-
-  // cudaError_t stwo_convert_back(
-  //   uint32_t* vec_a,
-  //   uint32_t* vec_b,
-  //   uint32_t* vec_c,
-  //   uint32_t* vec_d,
-  //   int n,
-  //   uint32_t* result,
-  //   device_context::DeviceContext& ctx,
-  //   bool is_async)
-  // {
-  //   CHK_INIT_IF_RETURN();
-
-  //   uint32_t* d_allocated_input = nullptr;
-  //   uint32_t* d_allocated_output = nullptr;
-
-  //   int size_n = n * sizeof(uint32_t);
-
-  //   CHK_IF_RETURN(cudaMallocAsync(&d_allocated_input, 4 * size_n, ctx.stream));
-  //   CHK_IF_RETURN(cudaMallocAsync(&d_allocated_output, 4 * size_n, ctx.stream));
-  //   CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input, vec_a, size_n, cudaMemcpyHostToDevice, ctx.stream));
-  //   CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + size_n, vec_b, size_n, cudaMemcpyHostToDevice, ctx.stream));
-  //   CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + 2 * size_n, vec_c, size_n, cudaMemcpyHostToDevice,
-  //   ctx.stream)); CHK_IF_RETURN(cudaMemcpyAsync(d_allocated_input + 3 * size_n, vec_d, size_n,
-  //   cudaMemcpyHostToDevice, ctx.stream));
-
-  //   // TODO: transpose is sup ineficient :(
-
-  //   CHK_IF_RETURN(transpose_matrix<uint32_t>(d_allocated_input, d_allocated_output, 4, n, ctx, true, true));
-  //   result = d_allocated_output;
-  //   if (!is_async) return CHK_STICKY(cudaStreamSynchronize(ctx.stream));
-
-  //   return CHK_LAST();
-  // }
 
   template <typename E>
   cudaError_t sub(E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)

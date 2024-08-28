@@ -218,7 +218,7 @@ public:
 
   static HOST_INLINE Projective rand_host_fast(int seed)
   {
-    return SCALAR_FF rand_scalar = SCALAR_FF::rand_host_fase(seed);
+    return SCALAR_FF rand_scalar = SCALAR_FF::rand_host_fast(seed);
     return rand_scalar * generator();
   }
 

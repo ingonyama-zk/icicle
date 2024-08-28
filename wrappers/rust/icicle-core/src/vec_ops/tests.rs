@@ -50,10 +50,14 @@ where
     let cfg = VecOpsConfig::default();
     let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
 
-    a_device.copy_from_host(a_clone).unwrap();
+    a_device
+        .copy_from_host(a_clone)
+        .unwrap();
 
     let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
-    b_device.copy_from_host(b).unwrap();
+    b_device
+        .copy_from_host(b)
+        .unwrap();
 
     let mut result4_on_device = DeviceVec::cuda_malloc(test_size).unwrap();
 
@@ -69,12 +73,16 @@ where
     let cfg = VecOpsConfig::default();
     let mut a_device = DeviceVec::cuda_malloc(test_size).unwrap();
 
-    a_device.copy_from_host(a_clone).unwrap();
+    a_device
+        .copy_from_host(a_clone)
+        .unwrap();
 
     let mut b_device = DeviceVec::cuda_malloc(test_size).unwrap();
-    b_device.copy_from_host(b).unwrap();
+    b_device
+        .copy_from_host(b)
+        .unwrap();
 
-    accumulate_scalars(&mut a_device[..], &b_device[..],  &cfg).unwrap(); // on device in-place
+    accumulate_scalars(&mut a_device[..], &b_device[..], &cfg).unwrap(); // on device in-place
 
     let mut a_from_device = vec![F::zero(); test_size];
     a_device
@@ -82,7 +90,6 @@ where
         .unwrap();
 
     assert_eq!(a[1], a_from_device[1]);
-
 }
 
 pub fn check_bit_reverse<F: FieldImpl>()
