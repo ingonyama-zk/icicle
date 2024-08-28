@@ -24,18 +24,20 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
 
 ## installing and using icicle
 
+Full C++ example here: https://github.com/ingonyama-zk/icicle/tree/yshekel/V3_release_and_install/examples/c%2B%2B/install_and_use_icicle
+
 1. **Extract the Tar Files**:
    - Download (TODO link to latest release) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 7,8,9 for RHEL compatible binaries).
-   - **Frontend libs and headers** should be installed in default search paths (such as `/usr/local/lib` and `usr/local/include`) for the compiler and linker to find.
+   - **Frontend libs and headers** should be installed in default search paths (such as `/usr/lib` and `usr/local/include`) for the compiler and linker to find.
    - **Backend libs** should be installed in `/opt`
    - Extract it to your desired location:
      ```bash
      # install the frontend part (Can skip for Rust)     
-     tar -xzvf icicle30-<distribution>.tar.gz -C /path/to/extract/
-     cp -r /path/to/extract/icicle/include /usr/local/include/icicle # or any other
-     cp -r /path/to/extract/icicle/lib /usr/local/lib # or any other
-     # install CUDA backend (Required for all programming-languages that want to use CUDA backend)
-     tar -xzvf icicle30-<distribution>-cuda122.tar.gz -C /opt/ # or other non-default install directory
+    tar xzvf icicle30-ubuntu22.tar.gz
+    cp -r ./icicle/lib/* /usr/lib/
+    cp -r ./icicle/include/icicle/ /usr/local/include/ # copy C++ headers
+    # extract CUDA backend (OPTIONAL)
+    tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /opt
      ```
 
     :::note
@@ -56,8 +58,8 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
      ```bash
      g++ -o myapp myapp.cpp -licicle_device -licicle_field_bn254 -licicle_curve_bn254
 
-     # if not installed in standard dirs, for example /opt, need to specify it
-     g++ -o myapp myapp.cpp -I/opt/icicle/include -L/opt/icicle/lib -licicle_device -licicle_field_bn254 -licicle_curve_bn254 -Wl,-rpath,/opt/icicle/lib/
+     # if not installed in standard dirs, for example /custom/path/, need to specify it
+     g++ -o myapp myapp.cpp -I/custom/path/icicle/include -L/custom/path/icicle/lib -licicle_device -licicle_field_bn254 -licicle_curve_bn254 -Wl,-rpath,/custom/path/icicle/lib/
      ```
 
     - Or via cmake
@@ -68,21 +70,25 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
     target_link_libraries(example icicle_device icicle_field_bn254 icicle_curve_bn254)
 
     # OPTIONAL (if not installed in default location)
+
+    # The following is setting compile and runtime paths for headers and libs assuming
+    #   - headers in /custom/path/icicle/include
+    #   - libs in/custom/path/icicle/lib
+
     # Include directories
-    include_directories(/path/to/install/dir/icicle/include)
+    target_include_directories(example PUBLIC /custom/path/icicle/include)
     # Library directories
-    link_directories(/path/to/install/dir/icicle/lib/)    
-    
+    target_link_directories(example PUBLIC /custom/path/icicle/lib/)
     # Set the RPATH so linker finds icicle libs at runtime
     set_target_properties(example PROPERTIES
-        BUILD_RPATH /path/to/install/dir/icicle/lib/
-        INSTALL_RPATH /path/to/install/dir/icicle/lib/)
+                          BUILD_RPATH /custom/path/icicle/lib/
+                          INSTALL_RPATH /custom/path/icicle/lib/)
     ```
 
     :::tip
-    If you face linkage issues, try `ldd myapp` to see the runtime deps. If ICICLE libs are not found, you need to add the install directory to the search path of the linker. In a development env you can do that using the env variable `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/icicle/lib` or similar (for non linux). For deployment, make sure it can be found and avoid `LD_LIBRARY_PATH`.
+    If you face linkage issues, try `ldd myapp` to see the runtime deps. If ICICLE libs are not found, you need to add the install directory to the search path of the linker. In a development env you can do that using the env variable `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/custom/path/icicle/lib` or similar (for non linux). For deployment, make sure it can be found and avoid `LD_LIBRARY_PATH`.
 
-    Alternatively you can embed the search path on the app as an `rpath` by adding `-Wl,-rpath,/path/to/icicle/lib/`. This is what is demonstrated above.
+    Alternatively you can embed the search path on the app as an `rpath` by adding `-Wl,-rpath,/custom/path/icicle/lib/`. This is what is demonstrated above.
     :::
 
   **Rust**
