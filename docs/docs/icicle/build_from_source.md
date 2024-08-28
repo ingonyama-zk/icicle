@@ -124,7 +124,7 @@ Cargo features are used to disable features, rather than enable them, for the re
 
 They can be disabled as follows:
 ```bash
-cargo build --release --no-default-features --features=no_ecntt,no_g2
+cargo build --release --features=no_ecntt,no_g2
 ```
 
 :::note
@@ -144,12 +144,10 @@ Most tests assume a CUDA backend is installed and fail otherwise.
 
 4. **Install the library:**
 
-By default, the libraries are installed to the `target/<buildmode>/deps/icicle` dir. For custom install dir. define the env variable:
+By default, the libraries are installed to the `target/<buildmode>/deps/icicle` dir. If you want them installed elsewhere, define the env variable:
 ```bash
 export ICICLE_INSTALL_DIR=/path/to/install/dir
 ```
-
-(TODO: cargo install ?)
 
 #### Use as cargo dependency
 In cargo.toml, specify the ICICLE libs to use:

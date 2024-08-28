@@ -34,8 +34,8 @@ Each Icicle release includes a tar file, named `icicle30-<distribution>.tar.gz`,
    - **Frontend libs and headers** should be installed in default search paths (such as `/usr/lib` and `usr/local/include`) for the compiler and linker to find.
    - **Backend libs** should be installed in `/opt`
    - Extract it to your desired location:
-     ```bash
-     # install the frontend part (Can skip for Rust)     
+    ```bash
+    # install the frontend part (Can skip for Rust)     
     tar xzvf icicle30-ubuntu22.tar.gz
     cp -r ./icicle/lib/* /usr/lib/
     cp -r ./icicle/include/icicle/ /usr/local/include/ # copy C++ headers
