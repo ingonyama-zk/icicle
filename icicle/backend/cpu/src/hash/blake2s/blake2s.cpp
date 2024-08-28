@@ -278,10 +278,10 @@ namespace blake2s_cpu {
     const limb_t* input_limbs,
     limb_t* output_limbs,
     const HashConfig& config,
-    const limb_t* secondery_input_limbs) const
+    const limb_t* secondary_input_limbs) const
   {
-    const BYTE* input_bytes = reinterpret_cast<const BYTE*>(input_limbs);
-    BYTE* output_bytes = reinterpret_cast<BYTE*>(output_limbs);
+    const uint8_t* input_bytes = reinterpret_cast<const uint8_t*>(input_limbs);
+    uint8_t* output_bytes = reinterpret_cast<uint8_t*>(output_limbs);
     // std::cout << "output len (bytes): " << m_total_output_limbs * sizeof(limb_t) << std::endl;
     // std::cout << "input len (bytes): " << m_total_input_limbs * sizeof(limb_t) << std::endl;
 
@@ -302,7 +302,7 @@ namespace blake2s_cpu {
     limb_t* output_limbs,
     int nof_hashes,
     const HashConfig& config,
-    const limb_t* secondery_input_limbs) const
+    const limb_t* secondary_input_limbs) const
   {
     // Calculate the distance between each input in bytes
     size_t input_stride = m_total_input_limbs;

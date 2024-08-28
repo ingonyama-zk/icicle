@@ -31,12 +31,12 @@ namespace icicle {
   public:
     const int m_total_input_limbs;           // Total number of regular input limbs
     const int m_total_output_limbs;          // Total number of output limbs
-    const int m_total_secondery_input_limbs; // Total number of secondery input limbs
+    const int m_total_secondary_input_limbs; // Total number of secondary input limbs
 
     // Constructor
-    Hash(int total_input_limbs, int total_output_limbs, int total_secondery_input_limbs = 0)
+    Hash(int total_input_limbs, int total_output_limbs, int total_secondary_input_limbs = 0)
         : m_total_input_limbs(total_input_limbs), m_total_output_limbs(total_output_limbs),
-          m_total_secondery_input_limbs(total_secondery_input_limbs)
+          m_total_secondary_input_limbs(total_secondary_input_limbs)
     {
     }
 
@@ -50,7 +50,7 @@ namespace icicle {
       const limb_t* input_limbs,
       limb_t* output_limbs,
       const HashConfig& config,
-      const limb_t* secondery_input_limbs = nullptr) const = 0;
+      const limb_t* secondary_input_limbs = nullptr) const = 0;
 
     /**
      * @brief Pure virtual function to run multiple hashes.
@@ -64,7 +64,7 @@ namespace icicle {
       limb_t* output_limbs,
       int nof_hashes,
       const HashConfig& config,
-      const limb_t* secondery_input_limbs = nullptr) const = 0;
+      const limb_t* secondary_input_limbs = nullptr) const = 0;
   };
 
 }; // namespace icicle

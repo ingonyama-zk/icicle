@@ -8,9 +8,6 @@
 using namespace icicle;
 namespace blake2s_cpu {
 
-  typedef unsigned char BYTE;
-  typedef unsigned int WORD;
-  typedef unsigned long long LONG;
 
 #if defined(_MSC_VER)
 #define BLAKE2_PACKED(x) __pragma(pack(push, 1)) x __pragma(pack(pop))
@@ -36,13 +33,13 @@ namespace blake2s_cpu {
     explicit Blake2s(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
 
     eIcicleError
-    run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config, const limb_t* secondery_input_limbs = nullptr) const override;
+    run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config, const limb_t* secondary_input_limbs = nullptr) const override;
     eIcicleError run_multiple_hash(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
       const HashConfig& config,
-      const limb_t* secondery_input_limbs = nullptr) const override;
+      const limb_t* secondary_input_limbs = nullptr) const override;
 
   private:
     enum blake2s_constant {

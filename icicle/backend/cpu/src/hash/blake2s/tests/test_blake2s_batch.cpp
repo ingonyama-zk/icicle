@@ -19,9 +19,9 @@ using namespace blake2s_cpu;
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-void print_hash(BYTE* hash, WORD len)
+void print_hash(uint8_t* hash, unsigned int len)
 {
-  for (WORD i = 0; i < len; i++) {
+  for (unsigned int i = 0; i < len; i++) {
     printf("%02x", hash[i]);
   }
   printf("\n");
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
   }
 
   // Test parameters
-  WORD n_batch = test_strings.size();    // Number of different inputs to hash in parallel
+  unsigned int n_batch = test_strings.size();    // Number of different inputs to hash in parallel
   size_t inlen = test_strings[0].size(); // Max length of the test strings
 
   // Calculate total input length and allocate memory for the batched input
@@ -95,12 +95,12 @@ int main(int argc, char** argv)
   for (const auto& str : test_strings) {
     total_len += str.size();
   }
-  BYTE* batched_input = (BYTE*)malloc(total_len);
-  WORD* in_lengths = (WORD*)malloc(n_batch * sizeof(WORD));
+  uint8_t* batched_input = (uint8_t*)malloc(total_len);
+  unsigned int* in_lengths = (unsigned int*)malloc(n_batch * sizeof(unsigned int));
 
   // Copy test strings to batched input
-  BYTE* current_position = batched_input;
-  for (WORD i = 0; i < n_batch; ++i) {
+  uint8_t* current_position = batched_input;
+  for (unsigned int i = 0; i < n_batch; ++i) {
     memcpy(current_position, test_strings[i].c_str(), test_strings[i].size());
     current_position += test_strings[i].size();
   }
@@ -108,8 +108,8 @@ int main(int argc, char** argv)
   Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
 
   // Allocate memory for the output
-  WORD outlen = blake2s.m_total_output_limbs * sizeof(limb_t);
-  BYTE* output = (BYTE*)malloc(outlen * n_batch);
+  unsigned int outlen = blake2s.m_total_output_limbs * sizeof(limb_t);
+  uint8_t* output = (uint8_t*)malloc(outlen * n_batch);
   if (!output) {
     perror("Failed to allocate memory for output");
     free(batched_input);
@@ -126,14 +126,14 @@ int main(int argc, char** argv)
 
   // Print and compare the results
   printf("BLAKE2S hash (batch size = %d):\n", n_batch);
-  for (WORD i = 0; i < n_batch; i++) {
+  for (unsigned int i = 0; i < n_batch; i++) {
     // printf("String: %s\n", test_strings[i].c_str());
     // printf("Computed Hash %d: ", i + 1);
     // print_hash(output + i * outlen, outlen);
     // std::cout << "Expected Hash " << i + 1 << ": " << expected_hashes[i] << std::endl;
 
     std::string computed_hash;
-    for (WORD j = 0; j < outlen; ++j) {
+    for (unsigned int j = 0; j < outlen; ++j) {
       char buffer[3];
       snprintf(buffer, sizeof(buffer), "%02x", output[i * outlen + j]);
       computed_hash += buffer;

@@ -51,13 +51,13 @@ namespace keccak_cpu {
       const limb_t* input_limbs,
       limb_t* output_limbs,
       const HashConfig& config,
-      const limb_t* secondery_input_limbs = nullptr) const override;
+      const limb_t* secondary_input_limbs = nullptr) const override;
     eIcicleError run_multiple_hash(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
       const HashConfig& config,
-      const limb_t* secondery_input_limbs = nullptr) const override;
+      const limb_t* secondary_input_limbs = nullptr) const override;
 
   private:
     static const uint64_t keccakf_rndc[24];

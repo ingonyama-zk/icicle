@@ -23,7 +23,7 @@ int main(void)
   // The string to hash
   char* test_string_char = "01234567";
   size_t test_string_len = strlen(test_string_char);
-  const BYTE* test_string = (BYTE*)test_string_char;
+  const uint8_t* test_string = (uint8_t*)test_string_char;
   HashConfig config; //= default_hash_config();
   // Test simple API
   Blake2s blake2s = Blake2s(test_string_len / sizeof(limb_t));

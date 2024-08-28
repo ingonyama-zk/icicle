@@ -259,7 +259,7 @@ namespace keccak_cpu {
     const limb_t* input_limbs,
     limb_t* output_limbs,
     const HashConfig& config,
-    const limb_t* secondery_input_limbs) const
+    const limb_t* secondary_input_limbs) const
   {
     const uint8_t* input_bytes = reinterpret_cast<const uint8_t*>(input_limbs);
     uint8_t* output_bytes = reinterpret_cast<uint8_t*>(output_limbs);
@@ -278,7 +278,7 @@ namespace keccak_cpu {
     limb_t* output_limbs,
     int nof_hashes,
     const HashConfig& config,
-    const limb_t* secondery_input_limbs) const
+    const limb_t* secondary_input_limbs) const
   {
     // Calculate the distance between each input in bytes
     size_t input_stride = m_total_input_limbs;

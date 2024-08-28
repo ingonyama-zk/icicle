@@ -18,20 +18,20 @@ using namespace blake2s_cpu;
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-void print_hash(BYTE* hash, WORD len)
+void print_hash(uint8_t* hash, unsigned int len)
 {
   printf("Hash Len: %d \n", len);
   printf("BLAKE2S hash:\n");
-  for (WORD i = 0; i < len; i++) {
+  for (unsigned int i = 0; i < len; i++) {
     printf("%02x", hash[i]);
   }
   printf("\n");
 }
 
-std::string byte_to_hex(BYTE* data, WORD len)
+std::string byte_to_hex(uint8_t* data, unsigned int len)
 {
   std::stringstream ss;
-  for (WORD i = 0; i < len; i++) {
+  for (unsigned int i = 0; i < len; i++) {
     ss << std::hex << std::setw(2) << std::setfill('0') << (int)data[i];
   }
   return ss.str();
@@ -73,13 +73,13 @@ int main(int argc, char** argv)
     const std::string& input_str = test_data[i].first;
     const std::string& expected_hash = test_data[i].second;
 
-    BYTE* input = (BYTE*)input_str.c_str();
+    uint8_t* input = (uint8_t*)input_str.c_str();
     size_t inlen = input_str.size();
 
     Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
 
-    WORD outlen = blake2s.total_output_limbs * sizeof(limb_t); // Output length in bytes (32)
-    BYTE* output = (BYTE*)malloc(outlen);
+    unsigned int outlen = blake2s.m_total_output_limbs * sizeof(limb_t); // Output length in bytes (32)
+    uint8_t* output = (uint8_t*)malloc(outlen);
     if (!output) {
       perror("Failed to allocate memory for output");
       return EXIT_FAILURE;
