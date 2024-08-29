@@ -19,16 +19,17 @@ The CUDA backend requires a valid license to function. There are two CUDA backen
 :::note
 As for now CUDA backend can be accessed without purchasing a license. Ingonyama is hosting a license server that will allow access to anyone.
 By default CUDA backend will try to access this server if no other license is available.
-TO manually specify it, set `export ICICLE_LICENSE=5053@ec2-50-16-150-188.compute-1.amazonaws.com`.
+To manually specify it, set `export ICICLE_LICENSE=5053@ec2-50-16-150-188.compute-1.amazonaws.com`.
 :::
 
 Licenses are available for purchase [here TODO](#) . After purchasing, you will receive a license key that must be installed on the license-server or node-locked machine.
 For license-server, you will have to tell the application that is using ICICLE, where the server is.
 
-**Specify the license server address:**
+**Specify the license server address or filepath:**
 
 ```
-export ICICLE_LICENSE=port@ip
+export ICICLE_LICENSE=port@ip # for license server
+export ICICLE_LICENSE=/path/to/license # for node locked license
 ```
 
 For further assist , contact our support team for assistance. `support@ingonyama.com` (TODO make sure this exists).

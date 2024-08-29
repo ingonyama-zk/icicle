@@ -1,4 +1,4 @@
-# FAQ and troubleshooting (TODO)
+# FAQ and troubleshooting
 
 ## Frequently asked questions
 

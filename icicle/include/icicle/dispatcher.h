@@ -117,7 +117,7 @@ public:
   using dispatcher_class_name = tIcicleObjectDispatcher<type, ST_name_##api_name>;                                     \
   void register_##api_name(const std::string& deviceType, std::shared_ptr<type> factory)                               \
   {                                                                                                                    \
-    ICICLE_LOG_DEBUG << " Registering API: device=" << deviceType << ", api=" << #api_name << "<"                      \
-                     << demangle<type> << ">";                                                                         \
+    ICICLE_LOG_VERBOSE << " Registering API: device=" << deviceType << ", api=" << #api_name << "<"                    \
+                       << demangle<type> << ">";                                                                       \
     dispatcher_class_name::Global()._register(deviceType, factory);                                                    \
   }
