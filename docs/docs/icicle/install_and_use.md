@@ -1,4 +1,3 @@
-
 # Install and use ICICLE
 
 ## Overview

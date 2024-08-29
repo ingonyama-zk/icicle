@@ -12,6 +12,7 @@ Name of the files is based on the release version. Make sure to update the tar f
 :::
 
 ## Optional: This example is demonstrated in an ubuntu22 docker but this is not mandatory.
+
 ```bash
 docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubuntu22-cuda122 bash
 ```
@@ -19,6 +20,7 @@ docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubu
 This command is starting bash in the docker, with GPUs and mapping the example files to `/workspace` in the docker.
 
 ### Building the docker image
+
 This image is based on nvidia's image for ubuntu22. built from the Dockerfile:
 ```dockerfile
 # Use the official NVIDIA development runtime image for Ubuntu 22.04
@@ -58,14 +60,16 @@ cargo build --release
 ```
 
 ## Launch the executable
+
 ```bash
 cargo run --release
 ```
 
 ### CUDA license
+
 If using CUDA backend, make sure to have a CUDA backend license:
-- For license server, specify address: `export ICICLE_LICENSE_SERVER_ADDR=port@ip`.
-- For local license, specify path to license: `export ICICLE_LICENSE_SERVER_ADDR=path/to/license`. (TODO rename env variable)
+- For license server, specify address: `export ICICLE_LICENSE_ADDR=port@ip`.
+- For local license, specify path to license: `export ICICLE_LICENSE_ADDR=path/to/license`. (TODO rename env variable)
 
 ## Install in custom location
 

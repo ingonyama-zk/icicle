@@ -4,7 +4,7 @@
 namespace CpuBackendConfig {
   // Backend-specific configuration flags as constexpr strings
   constexpr const char* CPU_NOF_THREADS = "n_threads";
-}
+} // namespace CpuBackendConfig
 /********* CUDA Backend Configurations *********/
 
 namespace CudaBackendConfig {

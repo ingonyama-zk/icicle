@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y \
 by `docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .`
 
 ## Extract tars and install
+
 ```bash
 cd release
 # extract frontend part
@@ -47,6 +48,7 @@ rm -rf icicle # remove the extracted dir
 ```
 
 ## Compile and link C++ example to icicle
+
 ```bash
 cd ..
 mkdir build
@@ -54,14 +56,16 @@ cmake -S . -B build && cmake --build build
 ```
 
 ## Launch the executable
+
 ```bash
 ./build/example
 ```
 
 ### CUDA license
+
 If using CUDA backend, make sure to have a CUDA backend license:
-- For license server, specify address: `export ICICLE_LICENSE_SERVER_ADDR=port@ip`.
-- For local license, specify path to license: `export ICICLE_LICENSE_SERVER_ADDR=path/to/license`. (TODO rename env variable)
+- For license server, specify address: `export ICICLE_LICENSE=port@ip`.
+- For local license, specify path to license: `export ICICLE_LICENSE=path/to/license`.
 
 ## Install in custom location
 
@@ -74,6 +78,7 @@ tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /custom/path # OPTIONAL
 ```
 
 ### Build your app and link to ICICLE
+
 You will have to specify paths for include and libs so that the compiler linker and loader can find them at compile anb runtime.
 You can add the following to cmake file to do so:
 ```cmake
