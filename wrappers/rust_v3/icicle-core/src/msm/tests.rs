@@ -99,7 +99,7 @@ where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
     let test_sizes = [1000, 1 << 16];
-    let batch_sizes = [1, 3, 1 << 4];
+    let batch_sizes = [1, 3, 1 << 4];    
     let mut stream = IcicleStream::create().unwrap();
     let precompute_factor = 8;
     let mut cfg = MSMConfig::default();

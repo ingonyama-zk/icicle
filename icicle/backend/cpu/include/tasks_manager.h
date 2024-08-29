@@ -1,7 +1,6 @@
 #pragma once
 #include <atomic>
 #include <thread>
-#include <stdexcept>
 #include <cassert>
 
 #define LOG_TASKS_PER_THREAD 3
@@ -13,7 +12,8 @@
 /**
  * @class TaskBase
  * @brief abstract base for a task supported by `TasksManager`.
- * Important
+ * Important - the user does not manually create these tasks - they are part of the manager and are accessed by the
+ * various get_task functions.
  */
 class TaskBase
 {
@@ -92,11 +92,18 @@ public:
   Task* get_idle_or_completed_task();
 
   /**
+   * @brief Get idle task to be dispatched without handling previous results (As it holds no previous result). This is
+   * not a blocking function,
+   * @return Task* - pointer to an idle task. nullptr if no task is available (All are either running or completed).
+   */
+  Task* get_idle_task();
+
+  /**
    * @brief Get task that holds previous result to be handled by the user. This function blocks the code until a
    * completed task is found or all tasks are idle with no result.
    * @return Task* - pointer to a completed task. nullptr if no task is available (all are idle without results).
    * NOTE: The task's status should be updated if new tasks are to be assigned / other completed tasks are requested.
-   * Use dispatch
+   * Use dispatch if setting a new task, or set_idle if to just mark the task result as handled.
    */
   Task* get_completed_task();
 
@@ -141,8 +148,15 @@ private:
     Task* get_idle_or_completed_task();
 
     /**
+     * @brief Get idle task to be dispatched without handling previous results (As it holds no previous result). This
+     * isn't a blocking function - it checks all worker's tasks and returns.
+     * @return Task* - pointer to an idle task. nullptr if no task is available.
+     */
+    Task* get_idle_task();
+
+    /**
      * @brief Get task that holds previous result to be handled by the user. This isn't a blocking function - it checks
-     * all worker's tasks and if no completed one is found a nullptr is returned.
+     * all worker's tasks and returns.
      * @param is_idle - boolean flag indicating if all worker's tasks are idle.
      * @return Task* - pointer to a completed task. nullptr if no task is available.
      * NOTE: if using completed_task to assign additional tasks, the existing result must be handled before hand.
@@ -214,6 +228,17 @@ Task* TasksManager<Task>::Worker::get_idle_or_completed_task()
 }
 
 template <class Task>
+Task* TasksManager<Task>::Worker::get_idle_task()
+{
+  for (int i = 0; i < m_tasks.size(); i++) {
+    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK;
+
+    if (m_tasks[m_next_task_idx].is_idle()) { return &m_tasks[m_next_task_idx]; }
+  }
+  return nullptr;
+}
+
+template <class Task>
 Task* TasksManager<Task>::Worker::get_completed_task(bool& is_idle)
 {
   for (int i = 0; i < m_tasks.size(); i++) {
@@ -253,6 +278,20 @@ Task* TasksManager<Task>::get_idle_or_completed_task()
     }
     std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
   }
+}
+
+template <class Task>
+Task* TasksManager<Task>::get_idle_task()
+{
+  Task* idle_task = nullptr;
+  for (int i = 0; i < m_workers.size(); i++) {
+    m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1) ? m_next_worker_idx + 1 : 0;
+
+    idle_task = m_workers[m_next_worker_idx].get_idle_task();
+    if (idle_task != nullptr) { return idle_task; }
+  }
+  // No completed tasks were found in the loop - return null.
+  return nullptr;
 }
 
 template <class Task>
