@@ -282,7 +282,7 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
 
     // Check if the library name contains "icicle" and if the path contains "/backend/"
     if (fileName.find("icicle") == std::string::npos || path.find("/backend/") == std::string::npos) {
-      ICICLE_LOG_DEBUG << "Skipping: " << filePath << " - Not an Icicle backend library.";
+      ICICLE_LOG_VERBOSE << "Skipping: " << filePath << " - Not an Icicle backend library.";
       return;
     }
 
