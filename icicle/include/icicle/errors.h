@@ -24,7 +24,7 @@ namespace icicle {
     API_NOT_IMPLEMENTED,       ///< The API is not implemented for a device
     INVALID_ARGUMENT,          ///< Invalid argument passed
     BACKEND_LOAD_FAILED,       ///< Failed to load the backend
-    LICNESE_CHECK_ERROR,       ////< Failed to check license or invalid license
+    LICENSE_CHECK_ERROR,       ////< Failed to check license or invalid license
     UNKNOWN_ERROR,             ///< An unknown error occurred
   };
 
@@ -63,8 +63,8 @@ namespace icicle {
       return "eIcicleError::INVALID_ARGUMENT";
     case eIcicleError::BACKEND_LOAD_FAILED:
       return "eIcicleError::BACKEND_LOAD_FAILED";
-    case eIcicleError::LICNESE_CHECK_ERROR:
-      return "eIcicleError::LICNESE_CHECK_ERROR";
+    case eIcicleError::LICENSE_CHECK_ERROR:
+      return "eIcicleError::LICENSE_CHECK_ERROR";
     case eIcicleError::UNKNOWN_ERROR:
     default:
       return "eIcicleError::UNKNOWN_ERROR";
