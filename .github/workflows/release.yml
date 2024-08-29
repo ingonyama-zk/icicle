@@ -46,5 +46,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mkdir -p release_output && rm -rf ./release_output/*
+          ./scripts/release/build_all.sh ./release_output
           LATEST_TAG=$(git describe --tags --abbrev=0)
           gh release create $LATEST_TAG --generate-notes -d --verify-tag -t "Release $LATEST_TAG"
+      - name: Upload release tars
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          for file in ./release_output/*.tar.gz; do
+            gh release upload $LATEST_TAG "$file"
+          done
