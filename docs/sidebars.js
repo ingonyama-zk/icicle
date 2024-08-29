@@ -50,7 +50,7 @@ module.exports = {
           label: "Getting started",
           link: {
             type: `doc`,
-            id: "icicle/install_and_use",
+            id: "icicle/getting_started",
           },
           collapsed: false,
           items: [

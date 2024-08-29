@@ -33,10 +33,9 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
 
 ## installing and using icicle
 
-- Full C++ example here: https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c++/install-and-use-icicle
-- Full Rust example here: https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle
-
-(TODO update links to main branch when merged)
+- [Full C++ example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c++/install-and-use-icicle)
+- [Full Rust example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle)
+- (TODO update links to main branch when merged)
 
 1. **Extract and install the Tar Files**:
    - [Download](https://github.com/ingonyama-zk/icicle/releases) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 8,9 for RHEL compatible binaries).
@@ -69,13 +68,12 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
    - When compiling your C++ application, link against the ICICLE libraries:
      ```bash
      g++ -o myapp myapp.cpp -licicle_device -licicle_field_bn254 -licicle_curve_bn254
-
      # if not installed in standard dirs, for example /custom/path/, need to specify it
      g++ -o myapp myapp.cpp -I/custom/path/icicle/include -L/custom/path/icicle/lib -licicle_device -licicle_field_bn254 -licicle_curve_bn254 -Wl,-rpath,/custom/path/icicle/lib/
      ```
 
    - Or via cmake
-    ```cmake
+    ```bash
     # Add the executable
     add_executable(example example.cpp)
     # Link the libraries
@@ -98,9 +96,9 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
     ```
 
   :::tip
-  If you face linkage issues, try ldd myapp to see the runtime dependencies. If ICICLE libs are not found, you need to add the install directory to the search path of the linker. In a development environment, you can do that using the environment variable export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/custom/path/icicle/lib or similar (for non-Linux). For deployment, make sure it can be found and avoid using LD_LIBRARY_PATH.
+  If you face linkage issues, try `ldd myapp` to see the runtime dependencies. If ICICLE libs are not found, you need to add the install directory to the search path of the linker. In a development environment, you can do that using the environment variable export `LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/custom/path/icicle/lib` or similar (for non-Linux). For deployment, make sure it can be found and avoid using LD_LIBRARY_PATH.
 
-  Alternatively, you can embed the search path in the app as an rpath by adding -Wl,-rpath,/custom/path/icicle/lib/. This is demonstrated above.
+  Alternatively, you can embed the search path in the app as an rpath by adding `-Wl,-rpath,/custom/path/icicle/lib/`. This is demonstrated above.
   :::
 
   **Rust**
