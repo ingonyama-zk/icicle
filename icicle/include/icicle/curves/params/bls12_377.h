@@ -3,7 +3,7 @@
 #include "icicle/curves/projective.h"
 #include "icicle/fields/snark_fields/bls12_377_base.h"
 #include "icicle/fields/snark_fields/bls12_377_scalar.h"
-#include "icicle/fields/quadratic_extension.h"
+#include "icicle/fields/complex_extension.h"
 
 namespace bls12_377 {
   struct G1;
@@ -12,7 +12,7 @@ namespace bls12_377 {
   typedef Affine<point_field_t> affine_t;
 
   struct G2;
-  typedef ExtensionField<fq_config, point_field_t> g2_point_field_t;
+  typedef ComplexExtensionField<fq_config, point_field_t> g2_point_field_t;
   typedef Projective<g2_point_field_t, scalar_t, G2> g2_projective_t;
   typedef Affine<g2_point_field_t> g2_affine_t;
 
