@@ -10,6 +10,7 @@ Download release binaries:
 > Name of the files is based on the release version. Make sure to update the tar file names in the example if you're using a different release.
 
 ## Optional: This example is demonstrated in an ubuntu22 docker but this is not mandatory.
+
 ```bash
 docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubuntu22-cuda122 bash
 ```
