@@ -1,4 +1,4 @@
-## Build the release
+# Build the release
 
 This section is describing how a release is generated, given the release sources.<br>
 We use docker to represent the target environment for the release. Each Docker image is tailored to a specific distribution and CUDA version. You first build the Docker image, which sets up the environment, and then use this Docker image to build the release tar file. This ensures that the build process is consistent and reproducible across different environments.
