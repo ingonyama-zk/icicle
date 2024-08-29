@@ -1,5 +1,3 @@
-
-
 # Example: Install and use ICICLE
 
 This example shows how to install binaries and use them in C++ application.
