@@ -7,7 +7,7 @@ The CUDA backend in ICICLE V3 is a high-performance, closed-source component des
 
 ## Installation
 
-The CUDA backend is a closed-source component that requires a license. [To install the CUDA backend, see here](./install_and_use#installing-and-using-icicle).
+The CUDA backend is a closed-source component that requires a license. [To install the CUDA backend, see here](./getting_started#installing-and-using-icicle).
 
 ### Licensing 
 
