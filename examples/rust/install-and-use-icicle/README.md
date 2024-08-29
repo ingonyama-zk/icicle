@@ -70,8 +70,8 @@ cargo run --release
 ### CUDA license
 
 If using CUDA backend, make sure to have a CUDA backend license:
-- For license server, specify address: `export ICICLE_LICENSE_ADDR=port@ip`.
-- For local license, specify path to license: `export ICICLE_LICENSE_ADDR=path/to/license`. (TODO rename env variable)
+- For license server, specify address: `export ICICLE_LICENSE=port@ip`.
+- For local license, specify path to license: `export ICICLE_LICENSE=path/to/license`. (TODO rename env variable)
 
 ## Install in custom location
 
