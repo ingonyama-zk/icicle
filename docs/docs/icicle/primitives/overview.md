@@ -8,7 +8,4 @@ This section of the documentation is dedicated to the main APIs provided by ICIC
 - [NTT](./ntt.md)
 - [Vector Operations](./vec_ops.md)
 - [Polynomials](../polynomials/overview.md)
-- [Keccak Hash](./keccak.md)
-- [Poseidon Hash](./poseidon.md)
-- [Poseidon2 Hash](./poseidon2.md)
-- [Merkle tree builder](./merkle.md)
+- Hashing and commitment schemes coming soon
