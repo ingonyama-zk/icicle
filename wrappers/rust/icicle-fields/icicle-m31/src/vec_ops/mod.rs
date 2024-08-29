@@ -22,4 +22,3 @@ pub(crate) mod tests {
         impl_vec_ops_tests!(ExtensionField);
     }
 }
-

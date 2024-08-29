@@ -9,7 +9,7 @@ fn main() {
 
     // Construct the path to icicle source directory
     let main_dir = env::current_dir().expect("Failed to get current directory");
-    let icicle_src_dir = PathBuf::from(format!("{}/../../../../icicle_v3", main_dir.display()));
+    let icicle_src_dir = PathBuf::from(format!("{}/../../../../icicle", main_dir.display()));
 
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed={}", icicle_src_dir.display());
