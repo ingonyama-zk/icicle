@@ -24,7 +24,6 @@ cd ./scripts/release
 docker build -t icicle-release-ubuntu22-cuda122 -f Dockerfile.ubuntu22 .
 ```
 
-
 ## Build Libraries Inside the Docker
 
 To build the Icicle libraries inside a Docker container and output the tar file to the `release_output` directory:
