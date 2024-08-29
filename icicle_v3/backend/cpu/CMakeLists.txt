@@ -7,7 +7,8 @@ target_sources(icicle_device PRIVATE src/cpu_device_api.cpp)
 # field API library
 if (FIELD)
     target_sources(icicle_field PRIVATE
-        src/field/cpu_vec_ops.cpp
+        src/field/cpu_vec_ops.cpp        
+        src/hash/poseidon/cpu_poseidon.cpp
     )
     if (NTT)
         target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp src/polynomials/cpu_polynomial_backend.cpp)
