@@ -18,7 +18,9 @@ docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubu
 This command is starting bash in the docker, with GPUs and mapping the example files to `/workspace` in the docker.
 
 ### Building the docker image
+
 This image is based on nvidia's image for ubuntu22. built from the Dockerfile:
+
 ```dockerfile
 # Use the official NVIDIA development runtime image for Ubuntu 22.04
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
