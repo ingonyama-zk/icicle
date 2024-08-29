@@ -6,8 +6,8 @@ Download release binaries:
 - **Frontend** icicle30-ubuntu22.tar.gz
 - **Backend** icicle30-ubuntu22-cuda122.tar.gz
 
-> [!NOTE]
-> Name of the files is based on the release version. Make sure to update the tar file names in the example if you're using a different release.
+[!NOTE]
+Name of the files is based on the release version. Make sure to update the tar file names in the example if you're using a different release.
 
 ## Optional: This example is demonstrated in an ubuntu22 docker but this is not mandatory.
 

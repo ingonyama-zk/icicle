@@ -5,11 +5,12 @@
 This example shows how to install CUDA backend and use it in Rust application.
 
 Download release binaries for CUDA backend:
+
 - **Backend** icicle30-ubuntu22-cuda122.tar.gz
 
-:::note
+[!NOTE]
 Name of the files is based on the release version. Make sure to update the tar file names in the example if using different release.
-:::
+
 
 ## Optional: This example is demonstrated in an ubuntu22 docker but this is not mandatory.
 
@@ -38,6 +39,7 @@ RUN apt install cargo -y
 by `docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .`
 
 ## Extract tars and install
+
 ```bash
 cd release
 # extract CUDA backend (OPTIONAL)
