@@ -276,12 +276,6 @@ macro_rules! impl_msm_tests {
         }
 
         #[test]
-        fn test_msm_batch() {
-            initialize();
-            check_msm_batch::<$curve>()
-        }
-
-        #[test]
         fn test_msm_batch_shared() {
             initialize();
             check_msm_batch_shared::<$curve>()

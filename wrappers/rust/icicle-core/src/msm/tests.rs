@@ -95,7 +95,7 @@ where
         });
 }
 
-pub fn check_msm_batch<C: Curve + MSM<C>>()
+pub fn check_msm_batch_shared<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
@@ -123,94 +123,6 @@ where
         precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
             let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
-            // a version of batched msm without using `cfg.points_size`, requires copying bases
-            let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
-                .take(batch_size)
-                .flatten()
-                .collect();
-            let scalars_h = HostSlice::from_slice(&scalars);
-
-            let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut msm_results_2 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
-            let mut points_d = DeviceVec::<Affine<C>>::device_malloc(test_size * batch_size).unwrap();
-            points_d
-                .copy_from_host_async(HostSlice::from_slice(&points_cloned), &stream)
-                .unwrap();
-
-            cfg.precompute_factor = precompute_factor;
-            msm(scalars_h, &precomputed_points_d[..], &cfg, &mut msm_results_1[..]).unwrap();
-            cfg.precompute_factor = 1;
-            msm(scalars_h, &points_d[..], &cfg, &mut msm_results_2[..]).unwrap();
-
-            let mut msm_host_result_1 = vec![Projective::<C>::zero(); batch_size];
-            let mut msm_host_result_2 = vec![Projective::<C>::zero(); batch_size];
-            msm_results_1
-                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_1), &stream)
-                .unwrap();
-            msm_results_2
-                .copy_to_host_async(HostSlice::from_mut_slice(&mut msm_host_result_2), &stream)
-                .unwrap();
-            stream
-                .synchronize()
-                .unwrap();
-
-            // (2) compute on ref device and compare to both cases (with or w/o precompute)
-            test_utilities::test_set_ref_device();
-            let mut msm_ref_result = vec![Projective::<C>::zero(); batch_size];
-            let mut ref_msm_config = MSMConfig::default();
-            ref_msm_config.c = 4;
-            msm(
-                scalars_h,
-                HostSlice::from_slice(&points),
-                &MSMConfig::default(),
-                HostSlice::from_mut_slice(&mut msm_ref_result),
-            )
-            .unwrap();
-
-            assert_eq!(msm_host_result_1, msm_ref_result);
-            assert_eq!(msm_host_result_2, msm_ref_result);
-        }
-    }
-    stream
-        .destroy()
-        .unwrap();
-}
-
-pub fn check_msm_batch_shared<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
-{
-    // let test_sizes = [1000, 1 << 16]; //TODO - uncomment this line after implementing fast msm
-    let test_sizes = [100];
-    // let batch_sizes = [1, 3, 1 << 4];
-    let batch_sizes = [1, 3]; //TODO - uncomment this line after implementing fast msm
-    let mut stream = IcicleStream::create().unwrap();
-    let precompute_factor = 8;
-    let mut cfg = MSMConfig::default();
-    cfg.stream_handle = *stream;
-    cfg.is_async = true;
-    cfg.ext
-        .set_int(CUDA_MSM_LARGE_BUCKET_FACTOR, 5);
-    cfg.c = 4;
-    runtime::warmup(&stream).unwrap();
-    stream
-        .synchronize()
-        .unwrap();
-    for test_size in test_sizes {
-        // (1) compute MSM with and w/o precompute on main device
-        test_utilities::test_set_main_device();
-        cfg.precompute_factor = precompute_factor;
-        let points = generate_random_affine_points_with_zeroes::<C>(test_size, 10);
-        let mut precomputed_points_d =
-            DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
-        precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
-        for batch_size in batch_sizes {
-            let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
-            // a version of batched msm without using `cfg.points_size`, requires copying bases
-            // let points_cloned: Vec<Affine<C>> = std::iter::repeat(points.clone())
-            //     .take(batch_size)
-            //     .flatten()
-            //     .collect();
             let scalars_h = HostSlice::from_slice(&scalars);
 
             let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
@@ -263,10 +175,8 @@ pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    // let test_sizes = [1000, 1 << 16]; //TODO - uncomment this line after implementing fast msm
-    let test_sizes = [100];
-    // let batch_sizes = [1, 3, 1 << 4];
-    let batch_sizes = [3, 5]; //TODO - uncomment this line after implementing fast msm
+    let test_sizes = [1000, 1 << 16];
+    let batch_sizes = [1, 3, 1 << 4];
     let mut stream = IcicleStream::create().unwrap();
     let precompute_factor = 8;
     let mut cfg = MSMConfig::default();
