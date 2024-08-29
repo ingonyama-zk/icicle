@@ -139,7 +139,6 @@ namespace ntt_cpu {
     const NTTConfig<S>& config;
     int domain_max_size;
     const S* twiddles;
-    // double duration_total=0;
 
     NttCpu(int logn, NTTDir direction, const NTTConfig<S>& config, int domain_max_size, const S* twiddles)
         : ntt_sub_logn(logn), direction(direction), config(config), domain_max_size(domain_max_size), twiddles(twiddles)
@@ -148,10 +147,9 @@ namespace ntt_cpu {
 
     eIcicleError reorder_by_bit_reverse(NttTaskCordinates ntt_task_cordinates, E* elements, bool is_top_hirarchy);
     eIcicleError copy_and_reorder_if_needed(const E* input, E* output);
-    void h0_dit_ntt(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles);
-    void dif_ntt(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles);
-    eIcicleError
-    coset_mul(E* elements, const S* twiddles, int coset_stride, const std::unique_ptr<S[]>& arbitrary_coset);
+    void h0_dit_ntt(E* elements, NttTaskCordinates ntt_task_cordinates);
+    void h0_dif_ntt(E* elements, NttTaskCordinates ntt_task_cordinates);
+    eIcicleError coset_mul(E* elements, int coset_stride, const std::unique_ptr<S[]>& arbitrary_coset);
     int find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset);
     void h1_reorder(E* elements);
     eIcicleError
@@ -165,7 +163,7 @@ namespace ntt_cpu {
   private:
     uint64_t bit_reverse(uint64_t n, int logn);
     uint64_t idx_in_mem(NttTaskCordinates ntt_task_cordinates, int element);
-    void refactor_output_h0(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles);
+    void refactor_output_h0(E* elements, NttTaskCordinates ntt_task_cordinates);
   }; // class NttCpu
 
   /**
@@ -687,11 +685,10 @@ namespace ntt_cpu {
    *
    * @param elements The array of elements on which to perform the DIT NTT.
    * @param ntt_task_cordinates The coordinates specifying the current task within the NTT hierarchy.
-   * @param twiddles The array of precomputed twiddle factors used in the NTT transformation.
    */
 
   template <typename S, typename E>
-  void NttCpu<S, E>::h0_dit_ntt(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles) // R --> N
+  void NttCpu<S, E>::h0_dit_ntt(E* elements, NttTaskCordinates ntt_task_cordinates) // R --> N
   {
     const int subntt_size_log =
       this->ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][ntt_task_cordinates.h0_layer_idx];
@@ -709,7 +706,7 @@ namespace ntt_cpu {
             uint64_t u_mem_idx = stride * idx_in_mem(ntt_task_cordinates, i + j);
             uint64_t v_mem_idx = stride * idx_in_mem(ntt_task_cordinates, i + j + half_len);
             E u = current_elements[u_mem_idx];
-            E v = current_elements[v_mem_idx] * twiddles[tw_idx];
+            E v = current_elements[v_mem_idx] * this->twiddles[tw_idx];
             current_elements[u_mem_idx] = u + v;
             current_elements[v_mem_idx] = u - v;
           }
@@ -728,11 +725,10 @@ namespace ntt_cpu {
    *
    * @param elements The array of elements on which to perform the DIF NTT.
    * @param ntt_task_cordinates The coordinates specifying the current task within the NTT hierarchy.
-   * @param twiddles The array of precomputed twiddle factors used in the NTT transformation.
    */
 
   template <typename S, typename E>
-  void NttCpu<S, E>::dif_ntt(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles)
+  void NttCpu<S, E>::h0_dif_ntt(E* elements, NttTaskCordinates ntt_task_cordinates) // N --> R
   {
     uint64_t subntt_size =
       1 << this->ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][ntt_task_cordinates.h0_layer_idx];
@@ -751,7 +747,7 @@ namespace ntt_cpu {
             E u = current_elements[u_mem_idx];
             E v = current_elements[v_mem_idx];
             current_elements[u_mem_idx] = u + v;
-            current_elements[v_mem_idx] = (u - v) * twiddles[tw_idx];
+            current_elements[v_mem_idx] = (u - v) * this->twiddles[tw_idx];
           }
         }
       }
@@ -767,7 +763,6 @@ namespace ntt_cpu {
    * different reordering schemes and ensures the correct indices are used for multiplication.
    *
    * @param elements The array of elements to which the coset multiplication will be applied.
-   * @param twiddles A pointer to the twiddle factors used for multiplication if `arbitrary_coset` is not provided.
    * @param coset_stride The stride used to select the appropriate twiddle factor. This is computed based on the coset
    * generator.
    * @param arbitrary_coset A unique pointer to an array of arbitrary coset values generated if the coset generator is
@@ -781,13 +776,11 @@ namespace ntt_cpu {
    *       an `arbitrary_coset` is used.
    */
   template <typename S, typename E>
-  eIcicleError
-  NttCpu<S, E>::coset_mul(E* elements, const S* twiddles, int coset_stride, const std::unique_ptr<S[]>& arbitrary_coset)
+  eIcicleError NttCpu<S, E>::coset_mul(E* elements, int coset_stride, const std::unique_ptr<S[]>& arbitrary_coset)
   {
     uint64_t size = this->ntt_sub_logn.size;
     int batch_stride = this->config.columns_batch ? this->config.batch_size : 1;
-    const int logn = static_cast<int>(std::log2(size));
-    const bool needs_reorder_input = this->direction == NTTDir::kForward && (logn > H1);
+    const bool needs_reorder_input = this->direction == NTTDir::kForward && (this->ntt_sub_logn.logn > H1);
 
     for (int batch = 0; batch < this->config.batch_size; ++batch) {
       E* current_elements = this->config.columns_batch ? elements + batch : elements + batch * size;
@@ -810,7 +803,7 @@ namespace ntt_cpu {
         } else if (coset_stride != 0) {
           int twiddle_idx = coset_stride * idx;
           twiddle_idx = this->direction == NTTDir::kForward ? twiddle_idx : this->domain_max_size - twiddle_idx;
-          current_elements[batch_stride * i] = current_elements[batch_stride * i] * twiddles[twiddle_idx];
+          current_elements[batch_stride * i] = current_elements[batch_stride * i] * this->twiddles[twiddle_idx];
         }
       }
     }
@@ -839,7 +832,7 @@ namespace ntt_cpu {
     if (config.coset_gen != S::one()) {
       try {
         coset_stride =
-          CpuNttDomain<S>::s_ntt_domain.coset_index.at(config.coset_gen); // Coset generator found in twiddles
+          CpuNttDomain<S>::s_ntt_domain.get_coset_stride(config.coset_gen); // Coset generator found in twiddles
       } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
         arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
         arbitrary_coset[0] = S::one();
@@ -858,7 +851,6 @@ namespace ntt_cpu {
    * @brief Reorders elements between layers of hierarchy 1, based on sub-NTT structure.
    *
    * @param elements The array of elements to be reordered and refactored.
-   * @param twiddles A pointer to the twiddle factors array.
    */
   template <typename S, typename E>
   void NttCpu<S, E>::h1_reorder(E* elements)
@@ -875,15 +867,6 @@ namespace ntt_cpu {
                                                         : temp_elements.get() + batch * this->ntt_sub_logn.size;
       for (int sntt_idx = 0; sntt_idx < nof_sntts; sntt_idx++) {
         for (int elem = 0; elem < sntt_size; elem++) {
-          // uint64_t tw_idx = (this->direction == NTTDir::kForward)
-          //                     ? ((this->domain_max_size >> this->ntt_sub_logn.logn) * sntt_idx * elem)
-          //                     : this->domain_max_size - ((this->domain_max_size >> this->ntt_sub_logn.logn) *
-          //                     sntt_idx * elem);
-          // std::cout << "h1_subntt_idx=\t" << elem << std::endl;
-          // std::cout << "cur_layer_output[" << stride * (elem * nof_sntts + sntt_idx) << "] = " <<
-          // cur_layer_output[stride * (elem * nof_sntts + sntt_idx)] << std::endl; std::cout << "twiddles[" << tw_idx
-          // << "] = " << twiddles[tw_idx] << std::endl; cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =
-          // cur_layer_output[stride * (elem * nof_sntts + sntt_idx)] * twiddles[tw_idx];
           cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =
             cur_layer_output[stride * (elem * nof_sntts + sntt_idx)];
         }
@@ -985,11 +968,10 @@ namespace ntt_cpu {
    *
    * @param elements The array of elements that have been transformed by the NTT.
    * @param ntt_task_cordinates The coordinates specifying the sub-NTT within the NTT hierarchy.
-   * @param twiddles The array of precomputed twiddle factors used for the refactoring.
    */
 
   template <typename S, typename E>
-  void NttCpu<S, E>::refactor_output_h0(E* elements, NttTaskCordinates ntt_task_cordinates, const S* twiddles)
+  void NttCpu<S, E>::refactor_output_h0(E* elements, NttTaskCordinates ntt_task_cordinates)
   {
     int h0_subntt_size = 1 << NttCpu<S, E>::ntt_sub_logn
                                 .h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][ntt_task_cordinates.h0_layer_idx];
@@ -1022,7 +1004,7 @@ namespace ntt_cpu {
         uint64_t tw_idx = (this->direction == NTTDir::kForward)
                             ? ((this->domain_max_size / ntt_size) * j * i)
                             : this->domain_max_size - ((this->domain_max_size / ntt_size) * j * i);
-        elements_of_current_batch[elem_mem_idx] = elements_of_current_batch[elem_mem_idx] * twiddles[tw_idx];
+        elements_of_current_batch[elem_mem_idx] = elements_of_current_batch[elem_mem_idx] * this->twiddles[tw_idx];
       }
     }
   }
@@ -1128,13 +1110,13 @@ namespace ntt_cpu {
     this->reorder_by_bit_reverse(ntt_task_cordinates, current_input, false); // R --> N
 
     // NTT/INTT
-    this->h0_dit_ntt(current_input, ntt_task_cordinates, twiddles); // R --> N
+    this->h0_dit_ntt(current_input, ntt_task_cordinates); // R --> N
 
     if (
       ntt_task_cordinates.h0_layer_idx != 2 &&
       this->ntt_sub_logn.h0_layers_sub_logn[ntt_task_cordinates.h1_layer_idx][ntt_task_cordinates.h0_layer_idx + 1] !=
         0) {
-      this->refactor_output_h0(input, ntt_task_cordinates, twiddles);
+      this->refactor_output_h0(input, ntt_task_cordinates);
     }
     return eIcicleError::SUCCESS;
   }

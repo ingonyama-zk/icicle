@@ -27,10 +27,9 @@ namespace ntt_cpu {
     int max_log_size = 0;
     std::unique_ptr<S[]> twiddles;
     std::mutex domain_mutex;
-
-  public:
     std::unordered_map<S, int> coset_index = {};
 
+  public:
     static eIcicleError
     cpu_ntt_init_domain(const Device& device, const S& primitive_root, const NTTInitDomainConfig& config);
     static eIcicleError cpu_ntt_release_domain(const Device& device);
@@ -46,7 +45,7 @@ namespace ntt_cpu {
 
     const S* get_twiddles() const { return twiddles.get(); }
     const int get_max_size() const { return max_size; }
-
+    const uint64_t get_coset_stride(const S& key) const { return coset_index.at(key); }
     static inline CpuNttDomain<S> s_ntt_domain;
   };
 
@@ -109,6 +108,7 @@ namespace ntt_cpu {
     s_ntt_domain.twiddles.reset(); // Set twiddles to nullptr
     s_ntt_domain.max_size = 0;
     s_ntt_domain.max_log_size = 0;
+    s_ntt_domain.coset_index.clear();
     return eIcicleError::SUCCESS;
   }
 

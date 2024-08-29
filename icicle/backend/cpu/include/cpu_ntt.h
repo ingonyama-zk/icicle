@@ -63,7 +63,7 @@ namespace ntt_cpu {
 
     ntt.copy_and_reorder_if_needed(input, output);
     if (config.coset_gen != S::one() && direction == NTTDir::kForward) {
-      ntt.coset_mul(output, twiddles, coset_stride, arbitrary_coset);
+      ntt.coset_mul(output, coset_stride, arbitrary_coset);
     }
 
     if (logn > H1) {
@@ -121,7 +121,7 @@ namespace ntt_cpu {
       for (uint64_t i = 0; i < total_memory_size; ++i) {
         output[i] = output[i] * inv_size;
       }
-      if (config.coset_gen != S::one()) { ntt.coset_mul(output, twiddles, coset_stride, arbitrary_coset); }
+      if (config.coset_gen != S::one()) { ntt.coset_mul(output, coset_stride, arbitrary_coset); }
     }
 
     if (config.ordering == Ordering::kNR || config.ordering == Ordering::kRR) {
@@ -159,7 +159,7 @@ namespace ntt_cpu {
     if (config.coset_gen != S::one()) {
       try {
         coset_stride =
-          CpuNttDomain<S>::s_ntt_domain.coset_index.at(config.coset_gen); // Coset generator found in twiddles
+          CpuNttDomain<S>::s_ntt_domain.get_coset_stride(config.coset_gen); // Coset generator found in twiddles
       } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
         arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
         arbitrary_coset[0] = S::one();

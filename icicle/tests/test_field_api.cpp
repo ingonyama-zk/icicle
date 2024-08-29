@@ -295,10 +295,12 @@ TYPED_TEST(FieldApiTest, Slice)
   ASSERT_EQ(0, memcmp(elements_ref.get(), elements_out.get(), size * sizeof(TypeParam)));
 }
 
-// #ifdef NTT
+#ifdef NTT
+
 TYPED_TEST(FieldApiTest, ntt)
 {
-  int seed = time(0);
+  // for (int i = 0; i < 1000; i++) {
+  // int seed = time(0) + i;
   // srand(seed);
   // // Randomize config
   // const int logn = rand() % 16 + 3;
@@ -392,16 +394,17 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(icicle_destroy_stream(stream));
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 20 /*=iters*/); // warmup
-  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // for (int i = 0; i < 10; i++) {
   //   ICICLE_LOG_INFO << "out_main[" << i << "]=\t" << out_main[i];
   //   ICICLE_LOG_INFO << "out_ref[" << i << "]=\t" << out_ref[i] << "\n";
   // }
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  // }//for loop
 }
-// #endif // NTT
+#endif // NTT
 
 int main(int argc, char** argv)
 {
