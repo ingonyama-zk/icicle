@@ -1,6 +1,7 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <fstream>
 #include <list>
 #include "dlfcn.h"
 
@@ -10,6 +11,7 @@
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
+#include "icicle/backend/msm_config.h"
 
 using namespace curve_config;
 using namespace icicle;
@@ -63,9 +65,18 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 8;
-    const int batch = 3;
+    const int logn = 12;
+    const int batch = 2;
     const int N = 1 << logn;
+    const int precompute_factor = 2;
+    const bool points_montgomery = false;
+    int c = std::max(logn, 8) - 1;
+    if (scalar_t::NBITS % c == 0) { c++; }
+    int n_threads = std::thread::hardware_concurrency();
+    if (n_threads <= 0) {
+      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+      n_threads = 1;
+    }
     const int total_nof_elemets = batch * N;
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
@@ -84,18 +95,39 @@ public:
       oss << dev_type << " " << msg;
 
       auto config = default_msm_config();
+      config.c = c;
       config.batch_size = batch;
+      config.are_bases_shared = true;
+      config.precompute_factor = precompute_factor;
+
+      config.are_results_on_device = true;
+
+      ConfigExtension ext;
+      ext.set(CpuBackendConfig::CPU_NOF_THREADS, n_threads);
+      config.ext = &ext;
+
+      // Note: allocating the precompute_bases on device since CUDA backend assumes that.
+      // TODO: fix CUDA backend to support host memory too.
+      A* precomp_bases = nullptr;
+      ICICLE_CHECK(icicle_malloc((void**)&precomp_bases, N * precompute_factor * sizeof(A)));
+      ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases));
+
+      config.are_points_on_device = true;
+      config.are_results_on_device = false;
+
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
-        msm(scalars.get(), bases.get(), N, config, result);
+        ICICLE_CHECK(msm(scalars.get(), precomp_bases, N, config, result));
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
+      ICICLE_CHECK(icicle_free(precomp_bases));
     };
 
     run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    // Note: avoid memcmp here because projective points may have different z but be equivalent
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
+      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
+      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
