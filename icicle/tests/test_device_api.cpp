@@ -134,7 +134,7 @@ TEST_F(DeviceApiTest, ApiError)
 TEST_F(DeviceApiTest, AvailableMemory)
 {
   icicle::Device dev = {"CUDA", 0};
-  const bool is_cuda_registered = eIcicleError::SUCCESS == icicle_is_device_avialable(dev);
+  const bool is_cuda_registered = eIcicleError::SUCCESS == icicle_is_device_available(dev);
   if (!is_cuda_registered) { return; } // TODO implement for CPU too
 
   icicle_set_device(dev);

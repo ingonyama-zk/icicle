@@ -230,7 +230,7 @@ extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& propertie
   return DeviceAPI::get_thread_local_deviceAPI()->get_device_properties(properties);
 }
 
-extern "C" eIcicleError icicle_is_device_avialable(const Device& dev)
+extern "C" eIcicleError icicle_is_device_available(const Device& dev)
 {
   return is_device_registered(dev.type) ? eIcicleError::SUCCESS : eIcicleError::INVALID_DEVICE;
 }
@@ -274,9 +274,28 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
   };
 
   auto load_library = [](const char* filePath) {
-    ICICLE_LOG_DEBUG << "Attempting load: " << filePath;
-    void* handle = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
-    if (!handle) { ICICLE_LOG_ERROR << "Failed to load " << filePath << ": " << dlerror(); }
+    // Convert the file path to a std::string for easier manipulation
+    std::string path(filePath);
+
+    // Extract the library name from the full path
+    std::string fileName = path.substr(path.find_last_of("/\\") + 1);
+
+    // Check if the library name contains "icicle" and if the path contains "/backend/"
+    if (fileName.find("icicle") == std::string::npos || path.find("/backend/") == std::string::npos) {
+      ICICLE_LOG_VERBOSE << "Skipping: " << filePath << " - Not an Icicle backend library.";
+      return;
+    }
+
+    // Check if the library name contains "device". If yes, load it with GLOBAL visibility, otherwise LOCAL.
+    // The logic behind it is to avoid symbol conflicts by using LOCAL visibility but allow backends to expose symbols
+    // to the other backend libs. For example to reuse some device context or any initialization required by APIs that
+    // we want to do once.
+    int flags = (fileName.find("device") != std::string::npos) ? (RTLD_LAZY | RTLD_GLOBAL) : (RTLD_LAZY | RTLD_LOCAL);
+
+    // Attempt to load the library with the appropriate flags
+    ICICLE_LOG_VERBOSE << "Attempting to load: " << filePath;
+    void* handle = dlopen(filePath, flags);
+    if (!handle) { ICICLE_LOG_VERBOSE << "Failed to load " << filePath << ": " << dlerror(); }
   };
 
   if (is_directory(path)) {
@@ -321,7 +340,7 @@ extern "C" eIcicleError icicle_load_backend_from_env_or_default()
   }
 
   // If not found or failed, fall back to the default directory
-  const std::string default_dir = "/opt/icicle/backend";
+  const std::string default_dir = "/opt/icicle/lib/backend";
   if (std::filesystem::exists(default_dir)) {
     eIcicleError result = icicle_load_backend(default_dir.c_str(), true /*=recursive*/);
     if (result == eIcicleError::SUCCESS) {

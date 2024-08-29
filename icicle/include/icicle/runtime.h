@@ -260,7 +260,7 @@ extern "C" eIcicleError icicle_get_device_properties(DeviceProperties& propertie
  *         - `SUCCESS` if the device is available.
  *         - `INVALID_DEVICE` if the device is not available.
  */
-extern "C" eIcicleError icicle_is_device_avialable(const Device& dev);
+extern "C" eIcicleError icicle_is_device_available(const Device& dev);
 
 /**
  * @brief Retrieves the registered devices in comma-separated string.

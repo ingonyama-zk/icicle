@@ -62,7 +62,7 @@ icicle_runtime::set_device(&device).unwrap();
  *         - `SUCCESS` if the device is available.
  *         - `INVALID_DEVICE` if the device is not available.
  */
-extern "C" eIcicleError icicle_is_device_avialable(const Device& dev);
+extern "C" eIcicleError icicle_is_device_available(const Device& dev);
 
   /**
  * @brief Get number of available devices active device for thread

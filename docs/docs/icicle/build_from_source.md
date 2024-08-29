@@ -1,5 +1,5 @@
 
-# Getting Started with ICICLE V3
+# Build ICICLE from source
 
 This guide will help you get started with building, testing, and installing ICICLE, whether you're using C++, Rust, or Go. It also covers installation of the CUDA backend and important build options.
 
@@ -48,7 +48,7 @@ target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
 ```
 
 5. **Installation (optional):**
-To install the libs, specify the install prefix in the [cmake command](./getting_started.md#build-commands)
+To install the libs, specify the install prefix in the [cmake command](./build_from_source.md#build-commands)
 `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path on linux is `/usr/local` if not specified. For other systems it may differ. The cmake command will print it to the log
 ```
 -- CMAKE_INSTALL_PREFIX=/install/dir/for/cmake/install
@@ -61,7 +61,7 @@ cmake --install build # install icicle to /path/to/install/dir/
 ```
 
 6. **Run tests (optional):**
-Add `-DBUILD_TESTS=ON` to the [cmake command](./getting_started.md#build-commands) and build.
+Add `-DBUILD_TESTS=ON` to the [cmake command](./build_from_source.md#build-commands) and build.
 Execute all tests
 ```bash
 cmake -S icicle -B build -DFIELD=babybear -DBUILD_TESTS=ON
@@ -124,7 +124,7 @@ Cargo features are used to disable features, rather than enable them, for the re
 
 They can be disabled as follows:
 ```bash
-cargo build --release --no-default-features --features=no_ecntt,no_g2
+cargo build --release --features=no_ecntt,no_g2
 ```
 
 :::note
@@ -144,21 +144,19 @@ Most tests assume a CUDA backend is installed and fail otherwise.
 
 4. **Install the library:**
 
-By default, the libraries are installed to the `target/<buildmode>/deps/icicle` dir. For custom install dir. define the env variable:
+By default, the libraries are installed to the `target/<buildmode>/deps/icicle` dir. If you want them installed elsewhere, define the env variable:
 ```bash
 export ICICLE_INSTALL_DIR=/path/to/install/dir
 ```
-
-(TODO: cargo install ?)
 
 #### Use as cargo dependency
 In cargo.toml, specify the ICICLE libs to use:
 
 ```bash
 [dependencies]
-icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
-icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
 # add other ICICLE crates here if need additional fields/curves
 ```
 

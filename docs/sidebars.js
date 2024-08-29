@@ -46,9 +46,20 @@ module.exports = {
           id: "icicle/libraries",
         },
         {
-          type: "doc",
+          type: "category",
           label: "Getting started",
-          id: "icicle/getting_started"
+          link: {
+            type: `doc`,
+            id: "icicle/install_and_use",
+          },
+          collapsed: false,
+          items: [
+            {
+              type: "doc",
+              label: "Build ICICLE from source",
+              id: "icicle/build_from_source",
+            },
+          ],
         },
         {
           type: "category",

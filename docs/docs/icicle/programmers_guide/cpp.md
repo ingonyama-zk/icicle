@@ -144,7 +144,7 @@ Check if a device is available and retrieve a list of registered devices:
 
 ```cpp
 icicle::Device dev;
-eIcicleError result = icicle_is_device_avialable(dev);
+eIcicleError result = icicle_is_device_available(dev);
 ```
 
 ### Querying Device Properties
@@ -185,7 +185,7 @@ int main()
   icicle_load_backend_from_env_or_default();
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
-  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
+  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_available("CUDA"));
   if (is_cuda_device_available) {
     Device device = {"CUDA", 0};             // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the api call returns eIcicleError::SUCCESS
@@ -259,7 +259,7 @@ int main()
   icicle_load_backend_from_env_or_default();
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
-  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
+  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_available("CUDA"));
   if (is_cuda_device_available) {
     Device device = {"CUDA", 0};             // GPU-0
     ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the API call returns eIcicleError::SUCCESS

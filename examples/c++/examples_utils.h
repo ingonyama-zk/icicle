@@ -22,7 +22,7 @@ void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
   }
 
   // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
-  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_avialable("CUDA"));
+  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_available("CUDA"));
   if (is_cuda_device_available) {
     Device device = {"CUDA", 0}; // GPU-0
     ICICLE_LOG_INFO << "setting " << device;
