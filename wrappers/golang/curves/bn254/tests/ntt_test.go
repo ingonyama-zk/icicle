@@ -129,18 +129,18 @@ func TestNttDeviceAsync(t *testing.T) {
 				runtime.SetDevice(&DEVICE)
 
 				testSize := 1 << size
-				scalarsCopy := core.HostSliceFromElements[bn254.ScalarField](scalars[:testSize])
+				scalarsCopy := core.HostSliceFromElements(scalars[:testSize])
 
 				stream, _ := runtime.CreateStream()
 
-				cfg.Ordering = v
-				cfg.IsAsync = true
 				cfg.StreamHandle = stream
+				cfg.IsAsync = true
+				cfg.Ordering = v
 
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
+				deviceOutput.MallocAsync(scalarsCopy.SizeOfElement(), testSize, stream)
 
 				// run ntt
 				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)

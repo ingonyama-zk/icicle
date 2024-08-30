@@ -69,7 +69,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
+				deviceOutput.MallocAsync(scalarsCopy.SizeOfElement(), testSize, stream)
 
 				// run ntt
 				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)

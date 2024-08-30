@@ -15,6 +15,8 @@ func TestNttNoDomain(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 
 			scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
@@ -34,6 +36,8 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+				runtime.SetDevice(&DEVICE)
+
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
 
@@ -46,7 +50,7 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
+				deviceOutput.MallocAsync(scalarsCopy.SizeOfElement(), testSize, stream)
 
 				// run ntt
 				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
@@ -67,6 +71,8 @@ func TestNttBatchNoDomain(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{2, 16, largestBatchSize} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 
