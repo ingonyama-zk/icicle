@@ -33,7 +33,7 @@ struct MSMConfig {
   int c;
   int bitsize;
   int batch_size;
-  bool are_bases_shared;
+  bool are_points_shared_in_batch;
   bool are_scalars_on_device;
   bool are_scalars_montgomery_form;
   bool are_points_on_device;
@@ -57,7 +57,7 @@ You can obtain a default `MSMConfig` using:
       0,       // c
       0,       // bitsize
       1,       // batch_size
-      true,    // are_bases_shared
+      true,    // are_points_shared_in_batch
       false,   // are_scalars_on_device
       false,   // are_scalars_montgomery_form
       false,   // are_points_on_device
@@ -87,7 +87,7 @@ The API is template and can work with all ICICLE curves (if corresponding lib is
 
 The MSM supports batch mode - running multiple MSMs in parallel. It's always better to use the batch mode instead of running single msms in serial as long as there is enough memory available. We support running a batch of MSMs that share the same points as well as a batch of MSMs that use different points.
 
-Config fields `are_bases_shared` and `batch_size` are used to configure msm for batch mode.
+Config fields `are_points_shared_in_batch` and `batch_size` are used to configure msm for batch mode.
 
 ### G2 MSM
 
