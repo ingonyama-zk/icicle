@@ -78,7 +78,7 @@ where
             test_utilities::test_set_main_device();
             ntt_inplace(
                 HostSlice::from_mut_slice(&mut ntt_result_main),
-                NTTDir::kForward,
+                NTTDir::kInverse,
                 &config,
             )
             .unwrap();
@@ -86,7 +86,7 @@ where
             test_utilities::test_set_ref_device();
             ntt_inplace(
                 HostSlice::from_mut_slice(&mut ntt_result_ref),
-                NTTDir::kForward,
+                NTTDir::kInverse,
                 &config,
             )
             .unwrap();

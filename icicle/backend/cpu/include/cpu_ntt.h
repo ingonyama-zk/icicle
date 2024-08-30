@@ -4,7 +4,6 @@
 
 using namespace field_config;
 using namespace icicle;
-#define PARALLEL 0
 
 /**
  * @brief Performs the Number Theoretic Transform (NTT) on the input data.

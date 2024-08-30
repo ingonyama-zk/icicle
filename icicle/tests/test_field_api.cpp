@@ -300,55 +300,59 @@ TYPED_TEST(FieldApiTest, Slice)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // for (int i = 0; i < 1000; i++) {
-  // int seed = time(0) + i;
-  // srand(seed);
-  // // Randomize config
-  // const int logn = rand() % 16 + 3;
-  // const uint64_t N = 1 << logn;
-  // const int log_ntt_domain_size = logn + 1;
-  // const int log_batch_size = rand() % 4;
-  // const int batch_size = 1 << log_batch_size;
-  // const Ordering ordering = static_cast<Ordering>(rand() % 4);
-  // bool columns_batch;
-  // if (logn == 7 || logn < 4) {
-  //   columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
-  // } else {
-  //   columns_batch = rand() % 2;
-  // }
-  // const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
-  // const int log_coset_stride = rand() % 3;
-  // scalar_t coset_gen;
-  // if (log_coset_stride) {
-  //   coset_gen = scalar_t::omega(logn + log_coset_stride);
-  // } else {
-  //   coset_gen = scalar_t::one();
-  // }
+  // Randomize config
 
-  // Constant config
-  const int logn = 15;
+  int seed = time(0);
+  srand(seed);
+  const bool inplace = rand() % 2;
+  const int logn = rand() % 15 + 3;
   const uint64_t N = 1 << logn;
-  const int log_ntt_domain_size = logn;
-  const int log_batch_size = 0;
+  const int log_ntt_domain_size = logn + 1;
+  const int log_batch_size = rand() % 3;
   const int batch_size = 1 << log_batch_size;
-  const Ordering ordering = static_cast<Ordering>(0); // 0: kNN, 1: kNR, 2: kRN, 3: kRR, 4: kNM, 5: kMN
-  // const Ordering ordering = Ordering::kRN; // 0: kNN, 1: kNR, 2: kRN, 3: kRR, 4: kNM, 5: kMN
-  bool columns_batch = 0;
-  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
-  scalar_t coset_gen = scalar_t::one();
-  // scalar_t coset_gen = scalar_t::omega(logn + 2);
+  const Ordering ordering = static_cast<Ordering>(rand() % 4);
+  bool columns_batch;
+  if (logn == 7 || logn < 4) {
+    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  } else {
+    columns_batch = rand() % 2;
+  }
+  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
+  const int log_coset_stride = rand() % 3;
+  scalar_t coset_gen;
+  if (log_coset_stride) {
+    coset_gen = scalar_t::omega(logn + log_coset_stride);
+  } else {
+    coset_gen = scalar_t::one();
+  }
+
+  // // Constant config
+  // const bool inplace = false;
+  // const int logn = 15;
+  // const uint64_t N = 1 << logn;
+  // const int log_ntt_domain_size = logn;
+  // const int log_batch_size = 0;
+  // const int batch_size = 1 << log_batch_size;
+  // const Ordering ordering = static_cast<Ordering>(0); // 0: kNN, 1: kNR, 2: kRN, 3: kRR, 4: kNM, 5: kMN
+  // // const Ordering ordering = Ordering::kRN; // 0: kNN, 1: kNR, 2: kRN, 3: kRR, 4: kNM, 5: kMN
+  // bool columns_batch = 0;
+  // const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  // scalar_t coset_gen = scalar_t::one();
+  // // scalar_t coset_gen = scalar_t::omega(logn + 2);
   // TODO Yuval : remove those once the bug is fixed
   ICICLE_LOG_INFO << "NTT test: seed=" << seed;
+  ICICLE_LOG_INFO << "NTT test: inplace=" << inplace;
   ICICLE_LOG_INFO << "NTT test: logn=" << logn;
   ICICLE_LOG_INFO << "NTT test: log_ntt_domain_size=" << log_ntt_domain_size;
   ICICLE_LOG_INFO << "NTT test: log_batch_size=" << log_batch_size;
   ICICLE_LOG_INFO << "NTT test: columns_batch=" << columns_batch;
   ICICLE_LOG_INFO << "NTT test: ordering=" << int(ordering);
   ICICLE_LOG_INFO << "NTT test: dir=" << (dir == NTTDir::kForward ? "forward" : "inverse");
-  // ICICLE_LOG_INFO << "NTT test: log_coset_stride=" << log_coset_stride;
+  ICICLE_LOG_INFO << "NTT test: log_coset_stride=" << log_coset_stride;
   ICICLE_LOG_INFO << "NTT test: coset_gen=" << coset_gen;
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
-  // FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
+  FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
   // for (uint64_t i = 0; i < total_size; i++) {
   //   scalars[i] = TypeParam::from(i);
   // }
@@ -383,11 +387,19 @@ TYPED_TEST(FieldApiTest, ntt)
     oss << dev_type << " " << msg;
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      if (inplace) {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_in));
+      } else {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      }
     }
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    if (inplace) {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
+    } else {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    }
     ICICLE_CHECK(icicle_free_async(d_in, config.stream));
     ICICLE_CHECK(icicle_free_async(d_out, config.stream));
     ICICLE_CHECK(icicle_stream_synchronize(config.stream));
@@ -395,12 +407,15 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
   run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   // for (int i = 0; i < 10; i++) {
   //   ICICLE_LOG_INFO << "out_main[" << i << "]=\t" << out_main[i];
   //   ICICLE_LOG_INFO << "out_ref[" << i << "]=\t" << out_ref[i] << "\n";
   // }
+  // std::cout << "left:\t["; for (int i = 0; i < total_size-1; i++) { std::cout << out_main[i] << ", "; } std::cout
+  // <<out_main[total_size-1]<<"]"<< std::endl; std::cout << "right:\t["; for (int i = 0; i < total_size-1; i++) {
+  // std::cout << out_ref[i] << ", "; } std::cout <<out_ref[total_size-1]<<"]"<< std::endl;
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
   // }//for loop
 }

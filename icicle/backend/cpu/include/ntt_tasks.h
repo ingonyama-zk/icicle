@@ -638,6 +638,15 @@ namespace ntt_cpu {
     const int logn = static_cast<int>(std::log2(this->ntt_sub_logn.size));
     const bool bit_rev = config.ordering == Ordering::kRN || config.ordering == Ordering::kRR;
 
+    // Check if input and output point to the same memory location
+    E* temp_output = output;
+    std::unique_ptr<E[]> temp_storage;
+    if (input == output) {
+      // Allocate temporary storage to handle in-place reordering
+      temp_storage = std::make_unique<E[]>(total_memory_size);
+      temp_output = temp_storage.get();
+    }
+
     if (logn > H1) {
       // Apply input's reorder logic depending on the configuration
       int cur_ntt_log_size = this->ntt_sub_logn.h1_layers_sub_logn[0];
@@ -645,7 +654,8 @@ namespace ntt_cpu {
 
       for (int batch = 0; batch < config.batch_size; ++batch) {
         const E* input_batch = config.columns_batch ? (input + batch) : (input + batch * this->ntt_sub_logn.size);
-        E* output_batch = config.columns_batch ? (output + batch) : (output + batch * this->ntt_sub_logn.size);
+        E* output_batch =
+          config.columns_batch ? (temp_output + batch) : (temp_output + batch * this->ntt_sub_logn.size);
 
         for (uint64_t i = 0; i < this->ntt_sub_logn.size; ++i) {
           int subntt_idx = i >> cur_ntt_log_size;
@@ -660,7 +670,8 @@ namespace ntt_cpu {
       // Only bit-reverse reordering needed
       for (int batch = 0; batch < config.batch_size; ++batch) {
         const E* input_batch = config.columns_batch ? (input + batch) : (input + batch * this->ntt_sub_logn.size);
-        E* output_batch = config.columns_batch ? (output + batch) : (output + batch * this->ntt_sub_logn.size);
+        E* output_batch =
+          config.columns_batch ? (temp_output + batch) : (temp_output + batch * this->ntt_sub_logn.size);
 
         for (uint64_t i = 0; i < this->ntt_sub_logn.size; ++i) {
           uint64_t rev = bit_reverse(i, logn);
@@ -670,6 +681,11 @@ namespace ntt_cpu {
     } else {
       // Just copy, no reordering needed
       std::copy(input, input + total_memory_size, output);
+    }
+
+    if (input == output && (logn > H1 || bit_rev)) {
+      // Copy the reordered elements from the temporary storage back to the output
+      std::copy(temp_output, temp_output + total_memory_size, output);
     }
 
     return eIcicleError::SUCCESS;
