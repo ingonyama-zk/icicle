@@ -97,7 +97,7 @@ public:
       auto config = default_msm_config();
       config.c = c;
       config.batch_size = batch;
-      config.are_bases_shared = true;
+      config.are_points_shared_in_batch = true;
       config.precompute_factor = precompute_factor;
 
       config.are_results_on_device = true;

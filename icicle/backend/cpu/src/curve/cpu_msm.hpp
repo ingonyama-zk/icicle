@@ -613,7 +613,7 @@ eIcicleError cpu_msm(
 
   for (int i = 0; i < config.batch_size; i++) {
     int batch_start_idx = msm_size * i;
-    int bases_start_idx = config.are_bases_shared ? 0 : batch_start_idx;
+    int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
     msm->run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
   }
   delete msm;
