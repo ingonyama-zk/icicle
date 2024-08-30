@@ -34,7 +34,8 @@ namespace icicle {
                      *   Default value: 0 (set to the bitsize of scalar field). */
     int batch_size; /**< Number of MSMs to compute. Default value: 1. */
     bool are_points_shared_in_batch; /**< Bases are shared for batch. Set to true if all MSMs use the same bases.
-                              Otherwise expecting #bases==#scalars. Default value: true. */
+                             Otherwise, the number of bases and number of scalars are expected to be equal. Default
+                             value: true. */
     bool are_scalars_on_device; /**< True if scalars are on device, false if they're on host. Default value: false. */
     bool
       are_scalars_montgomery_form; /**< True if scalars are in Montgomery form, false otherwise. Default value: true. */
