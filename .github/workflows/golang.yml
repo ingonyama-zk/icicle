@@ -70,7 +70,7 @@ jobs:
           - name: bw6_761
             build_args:
           - name: grumpkin
-            build_args: -g2=OFF -ecntt=OFF
+            build_args:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4

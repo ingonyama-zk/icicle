@@ -30,36 +30,24 @@ if [[ $1 == "-help" ]]; then
   echo "  -curve=<curve_name>       Specifies the curve to be built. If \"all\" is supplied,"
   echo "                            all curves will be built with any additional curve options."
   echo ""
-  echo "  -msm=<ON|OFF>             Builds the curve library with MSM (multi-scalar multiplication) enabled."
-  echo "                            Use \"ON\" to enable or \"OFF\" to disable."
-  echo "                            Default: \"ON\""
+  echo "  -skip_msm                 Builds the curve library with MSM (multi-scalar multiplication) disabled."
   echo ""
-  echo "  -ntt=<ON|OFF>             Builds the curve library with NTT (number theoretic transform) enabled."
-  echo "                            Use \"ON\" to enable or \"OFF\" to disable."
-  echo "                            Default: \"ON\""
+  echo "  -skip_ntt                 Builds the curve library with NTT (number theoretic transform) disabled."
   echo ""
-  echo "  -g2=<ON|OFF>              Builds the curve library with G2 (a secondary group) enabled."
-  echo "                            Use \"ON\" to enable or \"OFF\" to disable."
-  echo "                            Default: \"ON\""
+  echo "  -skip_g2              Builds the curve library with G2 (a secondary group) disabled."
   echo ""
-  echo "  -ecntt=<ON|OFF>           Builds the curve library with ECNTT (elliptic curve NTT) enabled."
-  echo "                            Use \"ON\" to enable or \"OFF\" to disable."
-  echo "                            Default: \"ON\""
+  echo "  -skip_ecntt           Builds the curve library with ECNTT (elliptic curve NTT) disabled."
   echo ""
   echo "  -field=<field_name>       Specifies the field to be built. If \"all\" is supplied,"
   echo "                            all fields will be built with any additional field options."
   echo ""
-  echo "  -field-ext=<ON|OFF>       Builds the field library with the extension field enabled."
-  echo "                            Use \"ON\" to enable or \"OFF\" to disable."
-  echo "                            Default: \"ON\""
+  echo "  -skip_fieldext       Builds the field library with the extension field disabled."
   echo ""
   echo "  -install_dir=<path>       Specifies the path to the folder where libraries will be installed."
   echo ""
   echo "  -cuda_backend=<option>    Specifies the branch/commit to pull for CUDA backend, or \"local\" if it's"
   echo "                            located under icicle/backend/cuda."
   echo "                            Default: \"OFF\""
-  echo ""
-  echo "  -devmode                  Enables development mode for debugging and faster build times."
   echo ""
   echo "  -cuda_version=<version>   Specifies the version of CUDA to use for compilation."
   echo ""
@@ -80,17 +68,17 @@ do
         -install_dir=*)
             ICICLE_BACKEND_INSTALL_DIR=$(echo "$arg_lower" | cut -d'=' -f2)
             ;;
-        -msm=*)
-            MSM_DEFINED=$(echo "$arg_lower" | cut -d'=' -f2)
+        -skip_msm)
+            MSM_DEFINED=OFF
             ;;
-        -ntt=*)
-            NTT_DEFINED=$(echo "$arg_lower" | cut -d'=' -f2)
+        -skip_ntt)
+            NTT_DEFINED=OFF
             ;;
-        -ecntt)
-            ECNTT_DEFINED=$(echo "$arg_lower" | cut -d'=' -f2)
+        -skip_ecntt)
+            ECNTT_DEFINED=OFF
             ;;
-        -g2)
-            G2_DEFINED=$(echo "$arg_lower" | cut -d'=' -f2)
+        -skip_g2)
+            G2_DEFINED=OFF
             ;;
         -curve=*)
             curve=$(echo "$arg_lower" | cut -d'=' -f2)
@@ -110,11 +98,8 @@ do
               BUILD_FIELDS=( $field )
             fi
             ;;
-        -field-ext=*)
-            EXT_FIELD=$(echo "$arg_lower" | cut -d'=' -f2)
-            ;;
-        -devmode)
-            DEVMODE=ON
+        -skip_fieldext)
+            EXT_FIELD=OFF
             ;;
         *)
             echo "Unknown argument: $arg"
@@ -136,7 +121,7 @@ do
   echo "G2=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$ICICLE_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$ICICLE_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done
 
@@ -151,6 +136,6 @@ do
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "EXT_FIELD=${EXT_FIELD}" >> build_config.txt
   echo "ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$ICICLE_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$ICICLE_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done

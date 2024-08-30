@@ -18,8 +18,9 @@ package main
 
 import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v3/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
@@ -30,8 +31,8 @@ func main() {
 	cfg := core.DefaultVecOpsConfig()
 
 	// Perform vector multiplication
-	err := bn254.VecOp(a, b, out, cfg, core.Add)
-	if err != cr.CudaSuccess {
+	err := vecOps.VecOp(a, b, out, cfg, core.Add)
+	if err != runtime.Success {
 		panic("Vector addition failed")
 	}
 }
@@ -44,8 +45,9 @@ package main
 
 import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v3/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
@@ -56,8 +58,8 @@ func main() {
 	cfg := core.DefaultVecOpsConfig()
 
 	// Perform vector multiplication
-	err := bn254.VecOp(a, b, out, cfg, core.Sub)
-	if err != cr.CudaSuccess {
+	err := vecOps.VecOp(a, b, out, cfg, core.Sub)
+	if err != runtime.Success {
 		panic("Vector subtraction failed")
 	}
 }
@@ -70,8 +72,9 @@ package main
 
 import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v3/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
@@ -82,8 +85,8 @@ func main() {
 	cfg := core.DefaultVecOpsConfig()
 
 	// Perform vector multiplication
-	err := bn254.VecOp(a, b, out, cfg, core.Mul)
-	if err != cr.CudaSuccess {
+	err := vecOps.VecOp(a, b, out, cfg, core.Mul)
+	if err != runtime.Success {
 		panic("Vector multiplication failed")
 	}
 }
@@ -92,7 +95,7 @@ func main() {
 ### VecOps Method
 
 ```go
-func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret cr.CudaError)
+func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret runtime.EIcicleError)
 ```
 
 #### Parameters
@@ -105,7 +108,7 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 
 #### Return Value
 
-- **`CudaError`**: Returns a CUDA error code indicating the success or failure of the vector operation.
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the operation was successful, or an error if something went wrong.
 
 ### VecOpsConfig
 
@@ -113,21 +116,23 @@ The `VecOpsConfig` structure holds configuration parameters for the vector opera
 
 ```go
 type VecOpsConfig struct {
-    Ctx cr.DeviceContext
-    isAOnDevice bool
-    isBOnDevice bool
-    isResultOnDevice bool
-    IsAsync bool
+	StreamHandle     runtime.Stream
+	isAOnDevice      bool
+	isBOnDevice      bool
+	isResultOnDevice bool
+	IsAsync          bool
+	Ext              config_extension.ConfigExtensionHandler
 }
 ```
 
 #### Fields
 
-- **Ctx**: Device context containing details like device ID and stream ID.
-- **isAOnDevice**: Indicates if vector `a` is located on the device.
-- **isBOnDevice**: Indicates if vector `b` is located on the device.
-- **isResultOnDevice**: Specifies where the result vector should be stored (device or host memory).
-- **IsAsync**: Controls whether the vector operation runs asynchronously.
+- **`StreamHandle`**: Specifies the stream (queue) to use for async execution.
+- **`isAOnDevice`**: Indicates if vector `a` is located on the device.
+- **`isBOnDevice`**: Indicates if vector `b` is located on the device.
+- **`isResultOnDevice`**: Specifies where the result vector should be stored (device or host memory).
+- **`IsAsync`**: Controls whether the vector operation runs asynchronously.
+- **`Ext`**: Extended configuration for backend.
 
 #### Default Configuration
 
@@ -146,7 +151,7 @@ The function takes a matrix represented as a 1D slice and transposes it, storing
 ### Function
 
 ```go
-func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ctx cr.DeviceContext, onDevice, isAsync bool) (ret core.IcicleError)
+func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, config core.VecOpsConfig) runtime.EIcicleError
 ```
 
 ## Parameters
@@ -155,13 +160,11 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, ct
 - **`out`**: The output matrix is a `core.HostOrDeviceSlice`, which will be the transpose of the input matrix, stored as a 1D slice.
 - **`columnSize`**: The number of columns in the input matrix.
 - **`rowSize`**: The number of rows in the input matrix.
-- **`ctx`**: The device context `cr.DeviceContext` to be used for the matrix transpose operation.
-- **`onDevice`**: Indicates whether the input and output slices are stored on the device (GPU) or the host (CPU).
-- **`isAsync`**: Indicates whether the matrix transpose operation should be executed asynchronously.
+- **`config`**: A `VecOpsConfig` object containing various configuration options for the vector operations.
 
 ## Return Value
 
-The function returns a `core.IcicleError` value, which represents the result of the matrix transpose operation. If the operation is successful, the returned value will be `0`.
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the operation was successful, or an error if something went wrong.
 
 ## Example Usage
 
@@ -173,11 +176,11 @@ var output = make(core.HostSlice[ScalarField], 20)
 // ...
 
 // Get device context
-ctx, _ := cr.GetDefaultDeviceContext()
+cfg, _ := runtime.GetDefaultDeviceContext()
 
 // Transpose the matrix
-err := TransposeMatrix(input, output, 5, 4, ctx, false, false)
-if err.IcicleErrorCode != core.IcicleErrorCode(0) {
+err := TransposeMatrix(input, output, 5, 4, cfg)
+if err != runtime.Success {
     // Handle the error
 }
 

@@ -17,16 +17,17 @@ const (
 )
 
 type VecOpsConfig struct {
+	/// Specifies the stream (queue) to use for async execution.
 	StreamHandle runtime.Stream
-	/* True if `a` is on device and false if it is not. Default value: false. */
+	/// True if `a` is on device and false if it is not. Default value: false.
 	isAOnDevice bool
-	/* True if `b` is on device and false if it is not. Default value: false. */
+	/// True if `b` is on device and false if it is not. Default value: false.
 	isBOnDevice bool
-	/* If true, output is preserved on device, otherwise on host. Default value: false. */
+	/// If true, output is preserved on device, otherwise on host. Default value: false.
 	isResultOnDevice bool
-	/* Whether to run the vector operations asynchronously. If set to `true`, the function will be
-	*  non-blocking and you'll need to synchronize it explicitly by calling
-	*  `SynchronizeStream`. If set to false, the function will block the current CPU thread. */
+	/// Whether to run the vector operations asynchronously. If set to `true`, the function will be
+	/// non-blocking and you'll need to synchronize it explicitly by calling
+	/// `SynchronizeStream`. If set to false, the function will block the current CPU thread.
 	IsAsync bool
 	Ext     config_extension.ConfigExtensionHandler
 }

@@ -1,7 +1,5 @@
 # Multi GPU APIs
 
-TODO update for V3
-
 To learn more about the theory of Multi GPU programming refer to [this part](../multi-gpu.md) of documentation.
 
 Here we will cover the core multi GPU apis and an [example](#a-multi-gpu-example)
@@ -22,47 +20,63 @@ import (
 	"sync"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v3/wrappers/golang/cuda_runtime"
 	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
-	numDevices, _ := cr.GetDeviceCount()
+	// Load backend using env path
+	runtime.LoadBackendFromEnvOrDefault()
+
+	device := runtime.CreateDevice("CUDA", 0)
+	err := runtime.SetDevice(&device)
+	numDevices, _ := runtime.GetDeviceCount()
 	fmt.Println("There are ", numDevices, " devices available")
+
+	if err != runtime.Success {
+		panic(err)
+	}
 	wg := sync.WaitGroup{}
 
 	for i := 0; i < numDevices; i++ {
+		internalDevice := runtime.Device{DeviceType: device.DeviceType, Id: int32(i)}
 		wg.Add(1)
-		// RunOnDevice makes sure each MSM runs on a single thread
-		cr.RunOnDevice(i, func(args ...any) {
+		runtime.RunOnDevice(&internalDevice, func(args ...any) {
 			defer wg.Done()
-			cfg := bn254.GetDefaultMSMConfig()
-			cfg.IsAsync = true
-			for _, power := range []int{10, 18} {
-				size := 1 << power // 2^pwr
-
-				// generate random scalars
-				scalars := bn254.GenerateScalars(size)
-				points := bn254.GenerateAffinePoints(size)
-
-				// create a stream and allocate result pointer
-				stream, _ := cr.CreateStream()
-				var p bn254.Projective
-				var out core.DeviceSlice
-				out.MallocAsync(p.Size(), p.Size(), stream)
-				// assign stream to device context
-				cfg.Ctx.Stream = &stream
-
-				// execute MSM
-				bn254.Msm(scalars, points, &cfg, out)
-				// read result from device
-				outHost := make(core.HostSlice[bn254.Projective], 1)
-				outHost.CopyFromDeviceAsync(&out, stream)
-				out.FreeAsync(stream)
-
-				// sync the stream
-				cr.SynchronizeStream(&stream)
+			currentDevice, err := runtime.GetActiveDevice()
+			if err != runtime.Success {
+				panic("Failed to get current device")
 			}
+
+			fmt.Println("Running on ", currentDevice.GetDeviceType(), " ", currentDevice.Id, " device")
+
+			cfg := msm.GetDefaultMSMConfig()
+			cfg.IsAsync = true
+			size := 1 << 10
+			scalars := bn254.GenerateScalars(size)
+			points := bn254.GenerateAffinePoints(size)
+
+			stream, _ := runtime.CreateStream()
+			var p bn254.Projective
+			var out core.DeviceSlice
+			_, err = out.MallocAsync(p.Size(), 1, stream)
+			if err != runtime.Success {
+				panic("Allocating bytes on device for Projective results failed")
+			}
+			cfg.StreamHandle = stream
+
+			err = msm.Msm(scalars, points, &cfg, out)
+			if err != runtime.Success {
+				panic("Msm failed")
+			}
+			outHost := make(core.HostSlice[bn254.Projective], 1)
+			outHost.CopyFromDeviceAsync(&out, stream)
+			out.FreeAsync(stream)
+
+			runtime.SynchronizeStream(stream)
+			runtime.DestroyStream(stream)
+			// Check with gnark-crypto
 		})
 	}
 	wg.Wait()
@@ -73,7 +87,7 @@ This example demonstrates a basic pattern for distributing tasks across multiple
 
 ## Device Management API
 
-To streamline device management we offer as part of `cuda_runtime` package methods for dealing with devices.
+To streamline device management we offer as part of `runtime` package methods for dealing with devices.
 
 ### `RunOnDevice`
 
@@ -89,7 +103,7 @@ While the goroutine is locked to the host thread, the Go runtime will not assign
 
 **Parameters:**
 
-- **`deviceId int`**: The ID of the device on which to run the provided function. Device IDs start from 0.
+- **`device *Device`**: A pointer to the `Device` instanse to be used to run code.
 - **`funcToRun func(args ...any)`**: The function to be executed on the specified device.
 - **`args ...any`**: Arguments to be passed to `funcToRun`.
 
@@ -104,7 +118,8 @@ Any goroutines launched within `funcToRun` are not automatically bound to the sa
 **Example:**
 
 ```go
-RunOnDevice(0, func(args ...any) {
+device := runtime.CreateDevice("CUDA", 0)
+RunOnDevice(&device, func(args ...any) {
 	fmt.Println("This runs on GPU 0")
 	// CUDA-related operations here will target GPU 0
 }, nil)
@@ -112,7 +127,7 @@ RunOnDevice(0, func(args ...any) {
 
 ### `SetDevice`
 
-Sets the active device for the current host thread. All subsequent CUDA calls made from this thread will target the specified device.
+Sets the active device for the current host thread. All subsequent calls made from this thread will target the specified device.
 
 :::warning
 This function should not be used directly in conjunction with goroutines. If you want to run multi-gpu scenarios with goroutines you should use [RunOnDevice](#runondevice)
@@ -120,38 +135,27 @@ This function should not be used directly in conjunction with goroutines. If you
 
 **Parameters:**
 
-- **`device int`**: The ID of the device to set as the current device.
+- **`device *Device`**: A pointer to the `Device` instanse to be used to run code.
 
 **Returns:**
 
-- **`CudaError`**: Error code indicating the success or failure of the operation.
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the operation was successful, or an error if something went wrong.
 
 ### `GetDeviceCount`
 
-Retrieves the number of CUDA-capable devices available on the host.
+Retrieves the number of devices available on the host.
 
 **Returns:**
 
-- **`(int, CudaError)`**: The number of devices and an error code indicating the success or failure of the operation.
+- **`(int, EIcicleError)`**: The number of devices and an error code indicating the success or failure of the operation.
 
-### `GetDevice`
+### `GetActiveDevice`
 
-Gets the ID of the currently active device for the calling host thread.
-
-**Returns:**
-
-- **`(int, CudaError)`**: The ID of the current device and an error code indicating the success or failure of the operation.
-
-### `GetDeviceFromPointer`
-
-Retrieves the device associated with a given pointer.
-
-**Parameters:**
-
-- **`ptr unsafe.Pointer`**: Pointer to query.
+Gets the device of the currently active device for the calling host thread.
 
 **Returns:**
 
-- **`int`**: The device ID associated with the memory pointed to by `ptr`.
+- **`(*Device, EIcicleError)`**: The device pointer and an error code indicating the success or failure of the operation.
 
-This documentation should provide a clear understanding of how to effectively manage multiple GPUs in Go applications using CUDA, with a particular emphasis on the `RunOnDevice` function for executing tasks on specific GPUs.
+
+This documentation should provide a clear understanding of how to effectively manage multiple GPUs in Go applications using CUDA and other backends, with a particular emphasis on the `RunOnDevice` function for executing tasks on specific GPUs.

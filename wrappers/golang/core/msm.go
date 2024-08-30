@@ -12,6 +12,7 @@ const CUDA_MSM_LARGE_BUCKET_FACTOR = "large_bucket_factor"
 const CUDA_MSM_IS_BIG_TRIANGLE = "is_big_triangle"
 
 type MSMConfig struct {
+	/// Specifies the stream (queue) to use for async execution.
 	StreamHandle runtime.Stream
 	/// The number of extra bases to pre-compute for each point. See the `precompute_bases` function, `precompute_factor` passed
 	/// there needs to be equal to the one used here. Larger values decrease the number of computations

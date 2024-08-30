@@ -38,11 +38,11 @@ const CUDA_NTT_FAST_TWIDDLES_MODE = "fast_twiddles"
 const CUDA_NTT_ALGORITHM = "ntt_algorithm"
 
 type NTTConfig[T any] struct {
-	/// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
+	/// Specifies the stream (queue) to use for async execution.
 	StreamHandle runtime.Stream
-	/// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
+	/// Coset generator. Used to perform coset (i)NTTs.
 	CosetGen T
-	/// The number of NTTs to compute. Default value: 1.
+	/// The number of NTTs to compute in one operation, defaulting to 1.
 	BatchSize int32
 	/// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
 	ColumnsBatch bool
@@ -50,10 +50,12 @@ type NTTConfig[T any] struct {
 	Ordering           Ordering
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
-	/// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
-	/// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
+	/// Whether to run the vector operations asynchronously. If set to `true`, the function will be
+	/// non-blocking and you'll need to synchronize it explicitly by calling
+	/// `SynchronizeStream`. If set to false, the function will block the current CPU thread.
 	IsAsync bool
-	Ext     config_extension.ConfigExtensionHandler
+	/// Extended configuration for backend.
+	Ext config_extension.ConfigExtensionHandler
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
