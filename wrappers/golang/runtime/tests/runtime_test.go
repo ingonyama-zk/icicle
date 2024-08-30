@@ -37,6 +37,7 @@ func TestDeviceProperties(t *testing.T) {
 }
 
 func TestActiveDevice(t *testing.T) {
+	runtime.SetDevice(&DEVICE)
 	activeDevice, err := runtime.GetActiveDevice()
 	assert.Equal(t, runtime.Success, err)
 	assert.Equal(t, DEVICE, *activeDevice)

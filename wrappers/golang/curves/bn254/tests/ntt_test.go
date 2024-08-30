@@ -129,13 +129,13 @@ func TestNttDeviceAsync(t *testing.T) {
 				runtime.SetDevice(&DEVICE)
 
 				testSize := 1 << size
-				scalarsCopy := core.HostSliceFromElements(scalars[:testSize])
+				scalarsCopy := core.HostSliceFromElements[bn254.ScalarField](scalars[:testSize])
 
 				stream, _ := runtime.CreateStream()
 
-				cfg.StreamHandle = stream
-				cfg.IsAsync = true
 				cfg.Ordering = v
+				cfg.IsAsync = true
+				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
@@ -148,6 +148,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 				// Compare with gnark-crypto
 				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)
 			}

@@ -16,7 +16,7 @@ const (
 
 var DEVICE runtime.Device
 
-func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
+func initDomain(cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	rouIcicle := babybear.ScalarField{}
 	rouIcicle.FromUint32(1461624142)
 	e := ntt.InitDomain(rouIcicle, cfg)
@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 
 		// setup domain
 		cfg := core.GetDefaultNTTInitDomainConfig()
-		e = initDomain(largestTestSize, cfg)
+		e = initDomain(cfg)
 		if e != runtime.Success {
 			if e != runtime.ApiNotImplemented {
 				fmt.Println("initDomain is not implemented for ", deviceType, " device type")

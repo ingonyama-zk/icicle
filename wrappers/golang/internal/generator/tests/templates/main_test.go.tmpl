@@ -22,7 +22,7 @@ const (
 var DEVICE runtime.Device
 
 {{if or .SupportsNTT .SupportsPoly -}}
-func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
+func initDomain({{if ne .GnarkImport "" -}}largestTestSize int, {{end -}}cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	{{if ne .GnarkImport "" -}}
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 
 		{{if or .SupportsNTT .SupportsPoly -}}// setup domain
 		cfg := core.GetDefaultNTTInitDomainConfig()
-		e = initDomain(largestTestSize, cfg)
+		e = initDomain({{if ne .GnarkImport "" -}}largestTestSize, {{end -}}cfg)
 		if e != runtime.Success {
 			if e != runtime.ApiNotImplemented {
 				fmt.Println("initDomain is not implemented for ", deviceType, " device type")

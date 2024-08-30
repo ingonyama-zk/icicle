@@ -34,7 +34,7 @@ type MSMConfig struct {
 
 	/// Bases are shared for batch. Set to true if all MSMs use the same bases. Otherwise, the number
 	/// of bases and number of scalars are expected to be equal. Default value: true.
-	AreBasesShared           bool
+	ArePointsSharedInBatch   bool
 	areScalarsOnDevice       bool
 	AreScalarsMontgomeryForm bool
 	areBasesOnDevice         bool
@@ -55,7 +55,7 @@ func GetDefaultMSMConfig() MSMConfig {
 		C:                        0,
 		Bitsize:                  0,
 		BatchSize:                1,
-		AreBasesShared:           true,
+		ArePointsSharedInBatch:   true,
 		areScalarsOnDevice:       false,
 		AreScalarsMontgomeryForm: false,
 		areBasesOnDevice:         false,
@@ -94,7 +94,7 @@ func MsmCheck(scalars HostOrDeviceSlice, bases HostOrDeviceSlice, cfg *MSMConfig
 	}
 
 	// cfg.basesSize = int32(basesLength)
-	cfg.AreBasesShared = basesLength < scalarsLength
+	cfg.ArePointsSharedInBatch = basesLength < scalarsLength
 	cfg.BatchSize = int32(resultsLength)
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()
 	cfg.areBasesOnDevice = bases.IsOnDevice()

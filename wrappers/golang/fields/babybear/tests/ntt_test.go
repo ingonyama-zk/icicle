@@ -24,7 +24,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 func TestInitDomain(t *testing.T) {
 	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
 	cfg := core.GetDefaultNTTInitDomainConfig()
-	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
+	assert.NotPanics(t, func() { initDomain(cfg) })
 }
 
 func TestNtt(t *testing.T) {
@@ -77,6 +77,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 			}
 		}
 	}

@@ -58,6 +58,7 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 			}
 		}
 	}

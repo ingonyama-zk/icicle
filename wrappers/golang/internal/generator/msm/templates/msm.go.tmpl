@@ -34,7 +34,7 @@ func {{.CurvePrefix}}PrecomputeBases(bases core.HostOrDeviceSlice, cfg *core.MSM
 
 	cBases := (*C.{{toCName .CurvePrefix}}affine_t)(basesPointer)
 	var cBasesLen C.int
-	if cfg.AreBasesShared {
+	if cfg.ArePointsSharedInBatch {
 		cBasesLen = (C.int)(bases.Len())
 	} else {
 		cBasesLen = (C.int)(bases.Len() / int(cfg.BatchSize))

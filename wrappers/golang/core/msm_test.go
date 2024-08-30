@@ -16,7 +16,7 @@ func TestMSMDefaultConfig(t *testing.T) {
 		C:                        0,
 		Bitsize:                  0,
 		BatchSize:                1,
-		AreBasesShared:           true,
+		ArePointsSharedInBatch:   true,
 		areScalarsOnDevice:       false,
 		AreScalarsMontgomeryForm: false,
 		areBasesOnDevice:         false,

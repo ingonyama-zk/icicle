@@ -73,7 +73,7 @@ func TestNTTGetDefaultConfig(t *testing.T) {
 func TestInitDomain(t *testing.T) {
 	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
 	cfg := core.GetDefaultNTTInitDomainConfig()
-	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
+	assert.NotPanics(t, func() { initDomain({{if ne .GnarkImport "" -}}largestTestSize, {{end -}}cfg) })
 }
 
 func TestNtt(t *testing.T) {
@@ -150,7 +150,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
+				deviceOutput.MallocAsync(scalarsCopy.SizeOfElement(), testSize, stream)
 
 				// run ntt
 				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
@@ -158,6 +158,7 @@ func TestNttDeviceAsync(t *testing.T) {
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 				{{if ne .GnarkImport "" -}}
 				// Compare with gnark-crypto
 				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)

@@ -37,6 +37,7 @@ func TestMSM(t *testing.T) {
 		out.FreeAsync(stream)
 
 		runtime.SynchronizeStream(stream)
+		runtime.DestroyStream(stream)
 
 	}
 }
@@ -88,7 +89,7 @@ func TestPrecomputePoints(t *testing.T) {
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
 
 			cfg.BatchSize = int32(batchSize)
-			cfg.AreBasesShared = false
+			cfg.ArePointsSharedInBatch = false
 			e = msm.PrecomputeBases(points, &cfg, precomputeOut)
 			assert.Equal(t, runtime.Success, e, "PrecomputeBases failed")
 
@@ -209,6 +210,7 @@ func TestMSMMultiDevice(t *testing.T) {
 				out.FreeAsync(stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 
 			}
 		})

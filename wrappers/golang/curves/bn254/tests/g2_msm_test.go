@@ -143,6 +143,7 @@ func TestMSMG2(t *testing.T) {
 		out.FreeAsync(stream)
 
 		runtime.SynchronizeStream(stream)
+		runtime.DestroyStream(stream)
 		// Check with gnark-crypto
 		testAgainstGnarkCryptoMsmG2(t, scalars, points, outHost[0])
 	}
@@ -236,7 +237,7 @@ func TestPrecomputePointsG2(t *testing.T) {
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
 
 			cfg.BatchSize = int32(batchSize)
-			cfg.AreBasesShared = false
+			cfg.ArePointsSharedInBatch = false
 			e = g2.G2PrecomputeBases(points, &cfg, precomputeOut)
 			assert.Equal(t, runtime.Success, e, "PrecomputeBases failed")
 
@@ -370,6 +371,7 @@ func TestMSMG2MultiDevice(t *testing.T) {
 				out.FreeAsync(stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 				// Check with gnark-crypto
 				testAgainstGnarkCryptoMsmG2(t, scalars, points, outHost[0])
 			}

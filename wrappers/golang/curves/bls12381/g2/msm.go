@@ -34,7 +34,7 @@ func G2PrecomputeBases(bases core.HostOrDeviceSlice, cfg *core.MSMConfig, output
 
 	cBases := (*C.g2_affine_t)(basesPointer)
 	var cBasesLen C.int
-	if cfg.AreBasesShared {
+	if cfg.ArePointsSharedInBatch {
 		cBasesLen = (C.int)(bases.Len())
 	} else {
 		cBasesLen = (C.int)(bases.Len() / int(cfg.BatchSize))

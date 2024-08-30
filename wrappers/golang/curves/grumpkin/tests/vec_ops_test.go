@@ -53,8 +53,8 @@ func TestGrumpkinTranspose(t *testing.T) {
 	var dMatrix, dOut, dOut2 core.DeviceSlice
 
 	matrix.CopyToDevice(&dMatrix, true)
-	dOut.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
-	dOut2.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
+	dOut.Malloc(matrix.SizeOfElement(), columnSize*rowSize)
+	dOut2.Malloc(matrix.SizeOfElement(), columnSize*rowSize)
 
 	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, cfg)
 	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, cfg)

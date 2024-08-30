@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark-crypto/ecc/bw6-761"
+	bw6761 "github.com/consensys/gnark-crypto/ecc/bw6-761"
 	"github.com/consensys/gnark-crypto/ecc/bw6-761/fp"
 	"github.com/consensys/gnark-crypto/ecc/bw6-761/fr"
 
@@ -103,6 +103,7 @@ func TestMSM(t *testing.T) {
 		out.FreeAsync(stream)
 
 		runtime.SynchronizeStream(stream)
+		runtime.DestroyStream(stream)
 		// Check with gnark-crypto
 		testAgainstGnarkCryptoMsm(t, scalars, points, outHost[0])
 	}
@@ -196,7 +197,7 @@ func TestPrecomputePoints(t *testing.T) {
 			assert.Equal(t, runtime.Success, e, "Allocating bytes on device for PrecomputeBases results failed")
 
 			cfg.BatchSize = int32(batchSize)
-			cfg.AreBasesShared = false
+			cfg.ArePointsSharedInBatch = false
 			e = msm.PrecomputeBases(points, &cfg, precomputeOut)
 			assert.Equal(t, runtime.Success, e, "PrecomputeBases failed")
 
@@ -330,6 +331,7 @@ func TestMSMMultiDevice(t *testing.T) {
 				out.FreeAsync(stream)
 
 				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 				// Check with gnark-crypto
 				testAgainstGnarkCryptoMsm(t, scalars, points, outHost[0])
 			}
