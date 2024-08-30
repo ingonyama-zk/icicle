@@ -103,7 +103,7 @@ While the goroutine is locked to the host thread, the Go runtime will not assign
 
 **Parameters:**
 
-- **`device *Device`**: A pointer to the `Device` instanse to be used to run code.
+- **`device *Device`**: A pointer to the `Device` instance to be used to run code.
 - **`funcToRun func(args ...any)`**: The function to be executed on the specified device.
 - **`args ...any`**: Arguments to be passed to `funcToRun`.
 
@@ -135,7 +135,7 @@ This function should not be used directly in conjunction with goroutines. If you
 
 **Parameters:**
 
-- **`device *Device`**: A pointer to the `Device` instanse to be used to run code.
+- **`device *Device`**: A pointer to the `Device` instance to be used to run code.
 
 **Returns:**
 
