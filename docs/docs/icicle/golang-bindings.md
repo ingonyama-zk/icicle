@@ -9,7 +9,7 @@ The Golang bindings are comprised of multiple packages.
 
 [`core`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/core) which defines all shared methods and structures, such as configuration structures, or memory slices.
 
-[`untime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/runtime) which defines abstractions for ICICLE methods for allocating memory, initializing and managing streams, and `Device` which enables users to define and keep track of devices.
+[`runtime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/runtime) which defines abstractions for ICICLE methods for allocating memory, initializing and managing streams, and `Device` which enables users to define and keep track of devices.
 
 Each supported curve, field, and hash has its own package which you can find in the respective directories [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang). If your project uses BN254 you only need to import that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
 
