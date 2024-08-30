@@ -202,7 +202,7 @@ where
             let mut precomputed_points_d =
                 DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size * batch_size).unwrap();
             cfg.batch_size = batch_size as i32;
-            cfg.are_bases_shared = false;
+            cfg.are_points_shared_in_batch = false;
             precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
             println!("precomputed points len: {}", (precomputed_points_d).len());
 
