@@ -39,11 +39,11 @@ public:
     icicle_load_backend_from_env_or_default();
 
     const bool is_cuda_registered = is_device_registered("CUDA");
-    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU_REF"; }
-    // if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
+    // if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU_REF"; }
+    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
-    // s_reference_target = "CPU";
+    // s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
+    s_reference_target = "CPU";
   }
   static void TearDownTestSuite()
   {
