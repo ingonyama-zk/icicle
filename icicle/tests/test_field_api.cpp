@@ -305,7 +305,7 @@ TYPED_TEST(FieldApiTest, ntt)
   int seed = time(0);
   srand(seed);
   const bool inplace = rand() % 2;
-  const int logn = rand() % 15 + 3;
+  const int logn = rand() % 16 + 4;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
   const int log_batch_size = rand() % 3;

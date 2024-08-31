@@ -65,17 +65,19 @@ namespace ntt_cpu {
       ntt.coset_mul(output, coset_stride, arbitrary_coset);
     }
 
-    if (logn > H1) {
-      int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[0] + int(log2(config.batch_size));
-      int log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < H1 ? H1 - sunbtt_plus_batch_logn : 0;
+    if (logn > HIERARCHY_1) {
+      int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] + int(log2(config.batch_size));
+      int log_nof_h1_subntts_todo_in_parallel =
+        sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
       int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-      int log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
+      int log_nof_subntts_chunks =
+        ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
       int nof_subntts_chunks = 1 << log_nof_subntts_chunks;
 
       for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
         for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
              h1_subntt_idx_in_chunck++) {
-          ntt_task_cordinates.h1_subntt_idx =
+          ntt_task_cordinates.hierarchy_1_subntt_idx =
             h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
           ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
         }
@@ -83,25 +85,26 @@ namespace ntt_cpu {
       }
 
       ntt.h1_reorder(output);
-      ntt_task_cordinates.h1_layer_idx = 1;
-      sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[1] + int(log2(config.batch_size));
-      log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < H1 ? H1 - sunbtt_plus_batch_logn : 0;
+      ntt_task_cordinates.hierarchy_1_layer_idx = 1;
+      sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] + int(log2(config.batch_size));
+      log_nof_h1_subntts_todo_in_parallel =
+        sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
       nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-      log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
+      log_nof_subntts_chunks = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
       nof_subntts_chunks = 1 << log_nof_subntts_chunks;
 
       for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
         for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
              h1_subntt_idx_in_chunck++) {
-          ntt_task_cordinates.h1_subntt_idx =
+          ntt_task_cordinates.hierarchy_1_subntt_idx =
             h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
           ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
         }
         ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 1);
       }
 
-      // reset h1_subntt_idx so that reorder_and_refactor_if_needed will calculate the correct memory index
-      ntt_task_cordinates.h1_subntt_idx = 0;
+      // reset hierarchy_1_subntt_idx so that reorder_and_refactor_if_needed will calculate the correct memory index
+      ntt_task_cordinates.hierarchy_1_subntt_idx = 0;
       if (config.columns_batch) {
         ntt.reorder_and_refactor_if_needed(output, ntt_task_cordinates, true);
       } else {
@@ -142,8 +145,8 @@ namespace ntt_cpu {
   //   const int logn = int(log2(size));
   //   const int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
   //   if (size > domain_max_size) {
-  //     ICICLE_LOG_ERROR << "Size is too large for domain. size = " << size << ", domain_max_size = " << domain_max_size;
-  //     return eIcicleError::INVALID_ARGUMENT;
+  //     ICICLE_LOG_ERROR << "Size is too large for domain. size = " << size << ", domain_max_size = " <<
+  //     domain_max_size; return eIcicleError::INVALID_ARGUMENT;
   //   }
   //   const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
   //   NttCpuRef<S, E> ntt(logn, direction, config, domain_max_size, twiddles);
@@ -182,15 +185,15 @@ namespace ntt_cpu {
 
   //   if (logn > 15) {
   //     ntt.reorder_input(output);
-  //     int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[0] + int(log2(config.batch_size));
+  //     int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] + int(log2(config.batch_size));
   //     int log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < 15 ? 15 - sunbtt_plus_batch_logn : 0;
   //     int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-  //     int log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
-  //     int nof_subntts_chunks = 1 << log_nof_subntts_chunks;
-  //     for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
+  //     int log_nof_subntts_chunks = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] -
+  //     log_nof_h1_subntts_todo_in_parallel; int nof_subntts_chunks = 1 << log_nof_subntts_chunks; for (int
+  //     h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
   //       for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
   //            h1_subntt_idx_in_chunck++) {
-  //         ntt_task_cordinates.h1_subntt_idx =
+  //         ntt_task_cordinates.hierarchy_1_subntt_idx =
   //           h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
   //         ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
   //       }
@@ -198,23 +201,23 @@ namespace ntt_cpu {
   //     }
 
   //     ntt.refactor_and_reorder(output, twiddles);
-  //     ntt_task_cordinates.h1_layer_idx = 1;
-  //     sunbtt_plus_batch_logn = ntt.ntt_sub_logn.h1_layers_sub_logn[1] + int(log2(config.batch_size));
+  //     ntt_task_cordinates.hierarchy_1_layer_idx = 1;
+  //     sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] + int(log2(config.batch_size));
   //     log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < 15 ? 15 - sunbtt_plus_batch_logn : 0;
   //     nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-  //     log_nof_subntts_chunks = ntt.ntt_sub_logn.h1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
+  //     log_nof_subntts_chunks = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
   //     nof_subntts_chunks = 1 << log_nof_subntts_chunks;
   //     for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
   //       for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
   //            h1_subntt_idx_in_chunck++) {
-  //         ntt_task_cordinates.h1_subntt_idx =
+  //         ntt_task_cordinates.hierarchy_1_subntt_idx =
   //           h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
   //         ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
   //       }
   //       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 1);
   //     }
-  //     ntt_task_cordinates.h1_subntt_idx = 0; // reset so that reorder_output will calculate the correct memory index
-  //     if (config.columns_batch) {
+  //     ntt_task_cordinates.hierarchy_1_subntt_idx = 0; // reset so that reorder_output will calculate the correct
+  //     memory index if (config.columns_batch) {
   //       ntt.reorder_output(output, ntt_task_cordinates, true);
   //     } else {
   //       for (int b = 0; b < config.batch_size; b++) {
