@@ -1,5 +1,4 @@
-// #include "/home/administrator/users/danny/github/icicle/icicle_v3/include/icicle/fields/field.h"    // Miki: fix path - dont know how.
-#include "icicle_v3/include/icicle/fields/field.h"    // Miki: fix path - dont know how.
+#include "/home/administrator/users/danny/github/icicle/icicle_v3/include/icicle/fields/field.h"    // Miki: fix path - dont succeed to fix it.
 #include "hash.h"
 #include "icicle/fields/field_config.h"
 
