@@ -385,6 +385,11 @@ TYPED_TEST(FieldApiTest, ntt)
 }
 #endif // NTT
 
+#include "backend/cpu/src/hash/poseidon/cpu_poseidon.h"
+TYPED_TEST(FieldApiTest, poseidon) {
+  std::cout << "my Poseidon hash test";
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

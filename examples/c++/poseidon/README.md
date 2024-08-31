@@ -1,72 +1,40 @@
-# Icicle example: build a Merkle tree using Poseidon hash
-
-## Best-Practices
-
-We recommend to run our examples in [ZK-containers](../../ZK-containers.md) to save your time and mental energy.
+# Icicle example: Number-Theoretical Transform (NTT)
 
 ## Key-Takeaway
 
-`Icicle` provides CUDA C++ template `poseidon_hash` to accelerate the popular [Poseidon hash function](https://www.poseidon-hash.info/).
+`Icicle` provides CUDA C++ template function NTT for [Number Theoretical Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md), also known as Discrete Fourier Transform.
 
 ## Concise Usage Explanation
 
+1. Include the curve api
+2. Init NTT domain
+3. Call ntt api
+
 ```c++
-#include "appUtils/poseidon/poseidon.cu"
+#include "icicle/api/bn254.h"
 ...
-poseidon_hash<scalar_t, arity+1>(input, output, n, constants, config);
+auto ntt_init_domain_cfg = default_ntt_init_domain_config();
+...
+bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg);
+NTTConfig<scalar_t> config = default_ntt_config<scalar_t>();
+...
+bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get())
 ```
 
-**Parameters:**
 
-- **`scalar_t`:** a scalar field of the selected curve.
-You can think of field's elements as 32-byte integers modulo `p`, where `p` is a prime number, specific to this field.
+## Running the example
 
-- **arity:** number of elements in a hashed block.
-
-- **n:** number of blocks we hash in parallel.
-
-- **input, output:** `scalar_t` arrays of size $arity*n$ and $n$ respectively.
-
-- **constants:** are defined as below
-
-```c++
-device_context::DeviceContext ctx= device_context::get_default_device_context();
-PoseidonConstants<scalar_t> constants;
-init_optimized_poseidon_constants<scalar_t>(ctx, &constants);
+```sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
 ```
 
 ## What's in the example
 
-1. Define the size of the example: the height of the full binary Merkle tree. 
-2. Hash blocks in parallel. The tree width determines the number of blocks to hash.
-3. Build a Merkle tree from the hashes.
-4. Use the tree to generate a membership proof for one of computed hashes.
-5. Validate the hash membership.
-6. Tamper the hash.
-7. Invalidate the membership of the tempered hash.
-
-## Details
-
-### Merkle tree structure
-
-Our Merkle tree is a **full binary tree** stored in a 1D array.
-The tree nodes are stored following a level-first traversal of the binary tree.
-For a given level, we use offset to number elements from left to right. The node numbers on the figure below correspond to their locations in the array.
-
-```text
-        Tree        Level
-          0         0 
-        /   \
-       1     2      1
-      / \   / \
-     3   4 5   6    2
-
-1D array representation: {0, 1, 2, 3, 4, 5, 6}
-```
-
-### Membership proof structure
-
-We use two arrays:
-
-- position (left/right) of the node along the path toward the root
-- hash of a second node with the same parent
+1. Define the size of the example
+2. Initialize input
+3. Run Radix2 NTT
+4. Run MixedRadix NTT
+5. Validate the data output
