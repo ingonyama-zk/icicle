@@ -33,26 +33,9 @@ jobs:
       run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
 
   extract-cuda-backend-branch:
-    name: Extract cuda branch name
-    runs-on: ubuntu-22.04
-    outputs:
-      cuda-backend-branch: ${{ steps.extract.outputs.cuda-backend-branch }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Extract Private Branch from PR Description
-        id: extract
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          DESCRIPTION=$(gh pr view ${{ github.event.pull_request.number }} --json body -q '.body')
-          echo "PR Description: $DESCRIPTION"
-          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+') || true
-          if [ -z "$CUDA_BE_BRANCH" ]; then
-            CUDA_BE_BRANCH="main" # Default branch if not specified
-          fi
-          echo "Extracted CUDA Backend Branch: $CUDA_BE_BRANCH"
-          echo "::set-output name=cuda-backend-branch::$CUDA_BE_BRANCH"
+    uses: ./.github/workflows/extract-backends.yml
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
 
   build-curves-linux:
     name: Build and test curves on Linux
