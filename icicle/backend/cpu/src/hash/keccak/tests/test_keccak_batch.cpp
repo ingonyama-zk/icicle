@@ -157,7 +157,7 @@ int main(int argc, char** argv)
   if (all_ok) {
     printf("ok\n");
   } else {
-    printf("Error!\n");
+    printf("error!\n");
   }
   // Clean up
   free(output);

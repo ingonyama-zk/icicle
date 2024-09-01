@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 {
   using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
   using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
-
+  bool all_ok = true;
   const char* csv_filename = "tests/test_vectors_variable_length.csv"; // Replace with your actual CSV file name
   std::vector<std::pair<std::string, std::string>> test_data = load_csv(csv_filename);
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     uint8_t* input = (uint8_t*)input_str.c_str();
     size_t inlen = input_str.size();
 
-    Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
+    Blake2s_cpu blake2s = Blake2s_cpu(inlen / sizeof(limb_t));
 
     unsigned int outlen = blake2s.m_total_output_limbs * sizeof(limb_t); // Output length in bytes (32)
     uint8_t* output = (uint8_t*)malloc(outlen);
@@ -100,10 +100,15 @@ int main(int argc, char** argv)
       std::cout << "Test " << i << " failed." << std::endl;
       std::cout << "Expected: " << expected_hash << std::endl;
       std::cout << "Got:      " << computed_hash << std::endl;
+      all_ok = false;
     }
 
     free(output);
   }
-
+  if (all_ok) {
+    printf("ok\n");
+  } else {
+    printf("error!\n");
+  }
   return 0;
 }

@@ -8,10 +8,10 @@
 
 namespace icicle {
 
-  class Blake2s : public Hash
+  class Blake2s_cpu : public Hash
   {
   public:
-    explicit Blake2s(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
+    explicit Blake2s_cpu(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
 
     eIcicleError run_single_hash(
       const limb_t* input_limbs,

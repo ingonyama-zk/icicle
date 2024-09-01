@@ -22,10 +22,10 @@
 
 namespace icicle {
 
-  const uint32_t Blake2s::blake2s_IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
+  const uint32_t Blake2s_cpu::blake2s_IV[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
                                            0x510E527FUL, 0x9B05688CUL, 0x1F83D9ABUL, 0x5BE0CD19UL};
 
-  const uint8_t Blake2s::blake2s_sigma[10][16] = {
+  const uint8_t Blake2s_cpu::blake2s_sigma[10][16] = {
     {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, {14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3},
     {11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4}, {7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8},
     {9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13}, {2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9},
@@ -33,25 +33,25 @@ namespace icicle {
     {6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5}, {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0},
   };
 
-  void Blake2s::blake2s_set_lastnode(blake2s_state* S) const { S->f[1] = (uint32_t)-1; }
+  void Blake2s_cpu::blake2s_set_lastnode(blake2s_state* S) const { S->f[1] = (uint32_t)-1; }
 
   /* Some helper functions, not necessarily useful */
-  int Blake2s::blake2s_is_lastblock(const blake2s_state* S) const { return S->f[0] != 0; }
+  int Blake2s_cpu::blake2s_is_lastblock(const blake2s_state* S) const { return S->f[0] != 0; }
 
-  void Blake2s::blake2s_set_lastblock(blake2s_state* S) const
+  void Blake2s_cpu::blake2s_set_lastblock(blake2s_state* S) const
   {
     if (S->last_node) blake2s_set_lastnode(S);
 
     S->f[0] = (uint32_t)-1;
   }
 
-  void Blake2s::blake2s_increment_counter(blake2s_state* S, const uint32_t inc) const
+  void Blake2s_cpu::blake2s_increment_counter(blake2s_state* S, const uint32_t inc) const
   {
     S->t[0] += inc;
     S->t[1] += (S->t[0] < inc);
   }
 
-  void Blake2s::blake2s_init0(blake2s_state* S) const
+  void Blake2s_cpu::blake2s_init0(blake2s_state* S) const
   {
     size_t i;
     memset(S, 0, sizeof(blake2s_state));
@@ -61,7 +61,7 @@ namespace icicle {
   }
 
   /* init2 xors IV with input parameter block */
-  int Blake2s::blake2s_init_param(blake2s_state* S, const blake2s_param* P) const
+  int Blake2s_cpu::blake2s_init_param(blake2s_state* S, const blake2s_param* P) const
   {
     const unsigned char* p = (const unsigned char*)(P);
     size_t i;
@@ -77,7 +77,7 @@ namespace icicle {
   }
 
   /* Sequential blake2s initialization */
-  int Blake2s::blake2s_init(blake2s_state* S, size_t outlen) const
+  int Blake2s_cpu::blake2s_init(blake2s_state* S, size_t outlen) const
   {
     blake2s_param P[1];
 
@@ -99,7 +99,7 @@ namespace icicle {
     return blake2s_init_param(S, P);
   }
 
-  int Blake2s::blake2s_init_key(blake2s_state* S, size_t outlen, const void* key, size_t keylen) const
+  int Blake2s_cpu::blake2s_init_key(blake2s_state* S, size_t outlen, const void* key, size_t keylen) const
   {
     blake2s_param P[1];
 
@@ -156,7 +156,7 @@ namespace icicle {
     G(r, 7, v[3], v[4], v[9], v[14]);                                                                                  \
   } while (0)
 
-  void Blake2s::blake2s_compress(blake2s_state* S, const uint8_t in[BLAKE2S_BLOCKBYTES]) const
+  void Blake2s_cpu::blake2s_compress(blake2s_state* S, const uint8_t in[BLAKE2S_BLOCKBYTES]) const
   {
     uint32_t m[16];
     uint32_t v[16];
@@ -198,7 +198,7 @@ namespace icicle {
 #undef G
 #undef ROUND
 
-  int Blake2s::blake2s_update(blake2s_state* S, const void* pin, size_t inlen) const
+  int Blake2s_cpu::blake2s_update(blake2s_state* S, const void* pin, size_t inlen) const
   {
     const unsigned char* in = (const unsigned char*)pin;
     if (inlen > 0) {
@@ -224,7 +224,7 @@ namespace icicle {
     return 0;
   }
 
-  int Blake2s::blake2s_final(blake2s_state* S, void* out, size_t outlen) const
+  int Blake2s_cpu::blake2s_final(blake2s_state* S, void* out, size_t outlen) const
   {
     uint8_t buffer[BLAKE2S_OUTBYTES] = {0};
     size_t i;
@@ -246,7 +246,7 @@ namespace icicle {
     return 0;
   }
 
-  int Blake2s::blake2s(void* out, size_t outlen, const void* in, size_t inlen, const void* key, size_t keylen) const
+  int Blake2s_cpu::blake2s(void* out, size_t outlen, const void* in, size_t inlen, const void* key, size_t keylen) const
   {
     blake2s_state S[1];
 
@@ -272,7 +272,7 @@ namespace icicle {
     return 0;
   }
 
-  eIcicleError Blake2s::run_single_hash(
+  eIcicleError Blake2s_cpu::run_single_hash(
     const limb_t* input_limbs,
     limb_t* output_limbs,
     const HashConfig& config,
@@ -291,11 +291,11 @@ namespace icicle {
       0                                                    // Key length is 0
     );
 
-    if (result != 0) { throw std::runtime_error("Blake2s hashing failed"); }
+    if (result != 0) { throw std::runtime_error("Blake2s_cpu hashing failed"); }
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError Blake2s::run_multiple_hash( // Dummy implementation running in a loop
+  eIcicleError Blake2s_cpu::run_multiple_hash( // Dummy implementation running in a loop
     const limb_t* input_limbs,
     limb_t* output_limbs,
     int nof_hashes,
@@ -324,7 +324,7 @@ namespace icicle {
 
   /* Helper functions */
 
-  BLAKE2_INLINE uint32_t Blake2s::load32(const void* src) const
+  BLAKE2_INLINE uint32_t Blake2s_cpu::load32(const void* src) const
   {
 #if defined(NATIVE_LITTLE_ENDIAN)
     uint32_t w;
@@ -336,7 +336,7 @@ namespace icicle {
 #endif
   }
 
-  BLAKE2_INLINE uint64_t Blake2s::load64(const void* src) const
+  BLAKE2_INLINE uint64_t Blake2s_cpu::load64(const void* src) const
   {
 #if defined(NATIVE_LITTLE_ENDIAN)
     uint64_t w;
@@ -349,7 +349,7 @@ namespace icicle {
 #endif
   }
 
-  BLAKE2_INLINE uint16_t Blake2s::load16(const void* src) const
+  BLAKE2_INLINE uint16_t Blake2s_cpu::load16(const void* src) const
   {
 #if defined(NATIVE_LITTLE_ENDIAN)
     uint16_t w;
@@ -361,7 +361,7 @@ namespace icicle {
 #endif
   }
 
-  BLAKE2_INLINE void Blake2s::store16(void* dst, uint16_t w) const
+  BLAKE2_INLINE void Blake2s_cpu::store16(void* dst, uint16_t w) const
   {
 #if defined(NATIVE_LITTLE_ENDIAN)
     memcpy(dst, &w, sizeof w);
@@ -373,7 +373,7 @@ namespace icicle {
 #endif
   }
 
-  BLAKE2_INLINE void Blake2s::store32(void* dst, uint32_t w) const
+  BLAKE2_INLINE void Blake2s_cpu::store32(void* dst, uint32_t w) const
   {
 #if defined(NATIVE_LITTLE_ENDIAN)
     memcpy(dst, &w, sizeof w);
@@ -386,7 +386,7 @@ namespace icicle {
 #endif
   }
 
-  BLAKE2_INLINE void Blake2s::store64(void* dst, uint64_t w) const
+  BLAKE2_INLINE void Blake2s_cpu::store64(void* dst, uint64_t w) const
   {
 #if defined(NATIVE_LITTLE_ENDIAN)
     memcpy(dst, &w, sizeof w);
@@ -403,14 +403,14 @@ namespace icicle {
 #endif
   }
 
-  BLAKE2_INLINE uint64_t Blake2s::load48(const void* src) const
+  BLAKE2_INLINE uint64_t Blake2s_cpu::load48(const void* src) const
   {
     const uint8_t* p = (const uint8_t*)src;
     return ((uint64_t)(p[0]) << 0) | ((uint64_t)(p[1]) << 8) | ((uint64_t)(p[2]) << 16) | ((uint64_t)(p[3]) << 24) |
            ((uint64_t)(p[4]) << 32) | ((uint64_t)(p[5]) << 40);
   }
 
-  BLAKE2_INLINE void Blake2s::store48(void* dst, uint64_t w) const
+  BLAKE2_INLINE void Blake2s_cpu::store48(void* dst, uint64_t w) const
   {
     uint8_t* p = (uint8_t*)dst;
     p[0] = (uint8_t)(w >> 0);
@@ -421,18 +421,18 @@ namespace icicle {
     p[5] = (uint8_t)(w >> 40);
   }
 
-  BLAKE2_INLINE uint32_t Blake2s::rotr32(const uint32_t w, const unsigned c) const
+  BLAKE2_INLINE uint32_t Blake2s_cpu::rotr32(const uint32_t w, const unsigned c) const
   {
     return (w >> c) | (w << (32 - c));
   }
 
-  BLAKE2_INLINE uint64_t Blake2s::rotr64(const uint64_t w, const unsigned c) const
+  BLAKE2_INLINE uint64_t Blake2s_cpu::rotr64(const uint64_t w, const unsigned c) const
   {
     return (w >> c) | (w << (64 - c));
   }
 
   /* prevents compiler optimizing out memset() */
-  BLAKE2_INLINE void Blake2s::secure_zero_memory(void* v, size_t n) const
+  BLAKE2_INLINE void Blake2s_cpu::secure_zero_memory(void* v, size_t n) const
   {
     static void* (*const volatile memset_v)(void*, int, size_t) = &memset;
     memset_v(v, 0, n);

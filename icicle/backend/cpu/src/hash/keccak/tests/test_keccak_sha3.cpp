@@ -95,7 +95,7 @@ int main(void)
     puts("ok");
     return 0;
   } else {
-    puts("error");
+    puts("error!");
     return -1;
   }
 }

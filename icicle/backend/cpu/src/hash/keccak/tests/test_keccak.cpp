@@ -58,6 +58,6 @@ int main(void)
   puts("ok");
   return 0;
 fail:
-  puts("error");
+  puts("error!");
   return -1;
 }

@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 {
   using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
   using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
-
+  bool all_ok = true;
   if (argc < 2) {
     fprintf(stderr, "Usage: %s <strings and hashes CSV file>\n", argv[0]);
     return EXIT_FAILURE;
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
     current_position += test_strings[i].size();
   }
   // init blake2s
-  Blake2s blake2s = Blake2s(inlen / sizeof(limb_t));
+  Blake2s_cpu blake2s = Blake2s_cpu(inlen / sizeof(limb_t));
 
   // Allocate memory for the output
   unsigned int outlen = blake2s.m_total_output_limbs * sizeof(limb_t);
@@ -143,11 +143,17 @@ int main(int argc, char** argv)
       printf(" (Match)\n");
     } else {
       printf(" (Mismatch)\n");
+      all_ok = false;
     }
   }
   // Clean up
   free(output);
   free(batched_input);
   free(in_lengths);
+  if (all_ok) {
+    printf("ok\n");
+  } else {
+    printf("error!\n");
+  }
   return 0;
 }
