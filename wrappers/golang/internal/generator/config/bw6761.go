@@ -5,8 +5,6 @@ func init() {
 		PackageName:         "bw6761",
 		Curve:               "bw6_761",
 		GnarkImport:         "bw6-761",
-		SupportsPoly:        true,
-		SupportsPoseidon:    true,
 		SupportsNTT:         true,
 		SupportsECNTT:       true,
 		SupportsG2:          true,

@@ -40,13 +40,10 @@ func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
 }
 
 func (p *Projective) FromAffine(a Affine) Projective {
-	z := BaseField{}
-	z.One()
 
-	p.X = a.X
-	p.Y = a.Y
-	p.Z = z
-
+	cA := (*C.affine_t)(unsafe.Pointer(&a))
+	cP := (*C.projective_t)(unsafe.Pointer(p))
+	C.bw6_761_from_affine(cA, cP)
 	return *p
 }
 
@@ -57,11 +54,11 @@ func (p Projective) ProjectiveEq(p2 *Projective) bool {
 	return __ret == (C._Bool)(true)
 }
 
-func (p *Projective) ProjectiveToAffine() Affine {
+func (p *Projective) ToAffine() Affine {
 	var a Affine
 
 	cA := (*C.affine_t)(unsafe.Pointer(&a))
-	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	cP := (*C.projective_t)(unsafe.Pointer(p))
 	C.bw6_761_to_affine(cP, cA)
 	return a
 }
@@ -107,13 +104,12 @@ func (a *Affine) FromLimbs(x, y []uint32) Affine {
 }
 
 func (a Affine) ToProjective() Projective {
-	var z BaseField
+	var p Projective
 
-	return Projective{
-		X: a.X,
-		Y: a.Y,
-		Z: z.One(),
-	}
+	cA := (*C.affine_t)(unsafe.Pointer(&a))
+	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	C.bw6_761_from_affine(cA, cP)
+	return p
 }
 
 func AffineFromProjective(p *Projective) Affine {

@@ -47,6 +47,18 @@ func FreeAsync(devicePtr unsafe.Pointer, stream Stream) EIcicleError {
 	return err
 }
 
+func MemSet(devicePtr unsafe.Pointer, value int, size uint) EIcicleError {
+	ret := C.icicle_memset(devicePtr, (C.int)(value), (C.size_t)(size))
+	err := EIcicleError(ret)
+	return err
+}
+
+func MemSetAsync(devicePtr unsafe.Pointer, value int, size uint, stream Stream) EIcicleError {
+	ret := C.icicle_memset_async(devicePtr, (C.int)(value), (C.size_t)(size), stream)
+	err := EIcicleError(ret)
+	return err
+}
+
 func CopyFromDevice(hostDst, deviceSrc unsafe.Pointer, size uint) (unsafe.Pointer, EIcicleError) {
 	cSize := (C.size_t)(size)
 	ret := C.icicle_copy_to_host(hostDst, deviceSrc, cSize)

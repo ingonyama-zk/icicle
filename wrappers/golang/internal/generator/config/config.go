@@ -8,22 +8,13 @@ type FieldData struct {
 	SupportsExtension bool
 	ExtensionLimbsNum int
 	SupportsNTT       bool
-	SupportsPoseidon  bool
-	SupportsPoly      bool
 	ROU               int
-}
-
-type HashData struct {
-	PackageName string
-	Hash        string
 }
 
 type CurveData struct {
 	PackageName         string
 	Curve               string
 	GnarkImport         string
-	SupportsPoly        bool
-	SupportsPoseidon    bool
 	SupportsNTT         bool
 	SupportsECNTT       bool
 	SupportsG2          bool
@@ -34,7 +25,6 @@ type CurveData struct {
 
 var Curves []CurveData
 var Fields []FieldData
-var Hashes []HashData
 
 func addCurve(curve CurveData) {
 	Curves = append(Curves, curve)
@@ -42,8 +32,4 @@ func addCurve(curve CurveData) {
 
 func addField(field FieldData) {
 	Fields = append(Fields, field)
-}
-
-func addHash(hash HashData) {
-	Hashes = append(Hashes, hash)
 }

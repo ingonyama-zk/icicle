@@ -94,7 +94,6 @@ func MsmCheck(scalars HostOrDeviceSlice, bases HostOrDeviceSlice, cfg *MSMConfig
 		panic(errorString)
 	}
 
-	// cfg.basesSize = int32(basesLength)
 	cfg.ArePointsSharedInBatch = basesLength < scalarsLength
 	cfg.BatchSize = int32(resultsLength)
 	cfg.areScalarsOnDevice = scalars.IsOnDevice()

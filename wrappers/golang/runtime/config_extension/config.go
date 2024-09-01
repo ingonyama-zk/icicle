@@ -13,12 +13,12 @@ type ConfigExtension struct {
 	handler ConfigExtensionHandler
 }
 
-func CreateConfigExtension() *ConfigExtension {
+func Create() *ConfigExtension {
 	ext := &ConfigExtension{handler: C.create_config_extension()}
 	return ext
 }
 
-func DeleteConfigExtension(ext *ConfigExtension) {
+func Delete(ext *ConfigExtension) {
 	C.destroy_config_extension(ext.handler)
 }
 

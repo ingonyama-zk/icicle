@@ -2,7 +2,7 @@ package tests
 
 import (
 	"testing"	
-	{{if or .SupportsNTT .SupportsPoly -}}
+	{{if .SupportsNTT -}}
 	"fmt"
 	
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
@@ -21,7 +21,7 @@ const (
 )
 var DEVICE runtime.Device
 
-{{if or .SupportsNTT .SupportsPoly -}}
+{{if .SupportsNTT -}}
 func initDomain({{if ne .GnarkImport "" -}}largestTestSize int, {{end -}}cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	{{if ne .GnarkImport "" -}}
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 		DEVICE = runtime.CreateDevice(deviceType, 0)
 		runtime.SetDevice(&DEVICE)
 
-		{{if or .SupportsNTT .SupportsPoly -}}// setup domain
+		{{if .SupportsNTT -}}// setup domain
 		cfg := core.GetDefaultNTTInitDomainConfig()
 		e = initDomain({{if ne .GnarkImport "" -}}largestTestSize, {{end -}}cfg)
 		if e != runtime.Success {
@@ -62,7 +62,7 @@ func TestMain(m *testing.M) {
 		// execute tests
 		m.Run()
 
-		{{if or .SupportsNTT .SupportsPoly -}}// release domain
+		{{if .SupportsNTT -}}// release domain
 		e = ntt.ReleaseDomain()
 		if e != runtime.Success {
 			if e != runtime.ApiNotImplemented {

@@ -96,11 +96,7 @@ func DeviceSynchronize() EIcicleError {
 }
 
 func GetDeviceProperties() (*DeviceProperties, EIcicleError) {
-	properties := DeviceProperties{
-		UsingHostMemory:      false,
-		NumMemoryRegions:     0,
-		SupportsPinnedMemory: false,
-	}
+	var properties DeviceProperties
 	cProperties := (*C.DeviceProperties)(unsafe.Pointer(&properties))
 	cErr := C.icicle_get_device_properties(cProperties)
 	err := EIcicleError(cErr)

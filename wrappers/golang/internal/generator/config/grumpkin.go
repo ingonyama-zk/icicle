@@ -5,8 +5,6 @@ func init() {
 		PackageName:         "grumpkin",
 		Curve:               "grumpkin",
 		GnarkImport:         "",
-		SupportsPoly:        false,
-		SupportsPoseidon:    true,
 		SupportsNTT:         false,
 		SupportsECNTT:       false,
 		SupportsG2:          false,

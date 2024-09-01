@@ -9,10 +9,13 @@ import (
 )
 
 func TestGetDeviceType(t *testing.T) {
-	config := runtime.CreateDevice("test", 0)
-	assert.Equal(t, config.GetDeviceType(), "test")
-	configLargeName := runtime.CreateDevice("testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttest", 1)
-	assert.Equal(t, configLargeName.GetDeviceType(), "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttes")
+	expectedDeviceName := "test"
+	config := runtime.CreateDevice(expectedDeviceName, 0)
+	assert.Equal(t, expectedDeviceName, config.GetDeviceType())
+
+	expectedDeviceNameLong := "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttest"
+	configLargeName := runtime.CreateDevice(expectedDeviceNameLong, 1)
+	assert.NotEqual(t, expectedDeviceNameLong, configLargeName.GetDeviceType())
 }
 
 func TestIsDeviceAvailable(t *testing.T) {
@@ -22,6 +25,7 @@ func TestIsDeviceAvailable(t *testing.T) {
 	res, err := runtime.GetDeviceCount()
 	assert.Equal(t, runtime.Success, err)
 	assert.Equal(t, res, 2)
+
 	err = runtime.LoadBackendFromEnvOrDefault()
 	assert.Equal(t, runtime.Success, err)
 	devCuda := runtime.CreateDevice("CUDA", 0)
