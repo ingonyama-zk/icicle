@@ -16,6 +16,22 @@ module.exports = {
       items: [
         {
           type: "category",
+          label: "Getting started",
+          link: {
+            type: `doc`,
+            id: "icicle/getting_started",
+          },
+          collapsed: false,
+          items: [
+            {
+              type: "doc",
+              label: "Build ICICLE from source",
+              id: "icicle/build_from_source",
+            },
+          ],
+        },
+        {
+          type: "category",
           label: "Architecture overview",
           link: {
             type: `doc`,
@@ -44,22 +60,6 @@ module.exports = {
           type: "doc",
           label: "ICICLE libraries",
           id: "icicle/libraries",
-        },
-        {
-          type: "category",
-          label: "Getting started",
-          link: {
-            type: `doc`,
-            id: "icicle/getting_started",
-          },
-          collapsed: false,
-          items: [
-            {
-              type: "doc",
-              label: "Build ICICLE from source",
-              id: "icicle/build_from_source",
-            },
-          ],
         },
         {
           type: "category",
@@ -297,4 +297,6 @@ module.exports = {
       ]
     }
   ],
+};
+
 };
