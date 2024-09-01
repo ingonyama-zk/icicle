@@ -87,7 +87,7 @@ namespace icicle {
     // Single-call hashing
     sha3_return_t sha3_hash_buffer(
       unsigned bit_size, // 256, 384, 512
-      SHA3_FLAGS flags,  // SHA3_FLAGS_NONE or SHA3_FLAGS_KECCAK
+      SHA3_FLAGS flags,  // SHA3_FLAGS_SHA3 or SHA3_FLAGS_KECCAK
       const void* in,
       unsigned inBytes,
       void* out,
