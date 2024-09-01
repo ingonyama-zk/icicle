@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 #define LIMBS_ALIGNMENT(x) ((x) % 4 == 0 ? 16 : ((x) % 2 == 0 ? 8 : 4))
 
@@ -39,15 +40,22 @@ template <unsigned LIMBS_COUNT>
 struct
 #ifdef __CUDA_ARCH__
   __align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
+// #else  //did not work
+  // alignas(LIMBS_ALIGNMENT(LIMBS_COUNT))
+  // alignas(16)
 #endif
     storage
 {
   static_assert(LIMBS_COUNT % 2 == 0, "odd number of limbs is not supported\n");
   static constexpr unsigned LC = LIMBS_COUNT;
-  union { // works only with even LIMBS_COUNT
+  // union { // works only with even LIMBS_COUNT
+  #ifdef __CUDA_ARCH__
     uint32_t limbs[LIMBS_COUNT];
-    uint64_t limbs64[LIMBS_COUNT / 2];
-  };
+  #else
+    std::byte bytes[LIMBS_COUNT];
+  #endif
+    // uint64_t limbs64[LIMBS_COUNT / 2];
+  // };
 };
 
 template <unsigned OMEGAS_COUNT, unsigned LIMBS_COUNT>

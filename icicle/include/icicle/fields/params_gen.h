@@ -49,7 +49,7 @@ namespace params_gen {
     return rs;
   }
 
-  constexpr unsigned floorlog2(uint32_t x) { return x == 1 ? 0 : 1 + floorlog2(x >> 1); }
+  constexpr unsigned floorlog2(std::byte x) { return x == std::byte{1} ? 0 : 1 + floorlog2(x >> 1); }
 
   template <unsigned NLIMBS, unsigned NBITS>
   constexpr unsigned num_of_reductions(const storage<NLIMBS>& modulus, const storage<NLIMBS>& m)
@@ -98,9 +98,9 @@ namespace params_gen {
 #define PARAMS(modulus)                                                                                                \
   static constexpr unsigned limbs_count = modulus.LC;                                                                  \
   static constexpr unsigned modulus_bit_count =                                                                        \
-    32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;                                \
+    8 * (limbs_count - 1) + params_gen::floorlog2(modulus.bytes[limbs_count - 1]) + 1;                                \
   static constexpr storage<limbs_count> zero = {};                                                                     \
-  static constexpr storage<limbs_count> one = {1};                                                                     \
+  static constexpr storage<limbs_count> one = {std::byte{1}};                                                                     \
   static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
   static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);         \
   static constexpr storage<limbs_count> neg_modulus =                                                                  \

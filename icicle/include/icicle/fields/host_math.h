@@ -1,7 +1,7 @@
 // Note: this optimization generates invalid code (using gcc) when storage class has a union for both u32 and u64 so disabling it.
-#if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
-  #pragma GCC optimize("no-strict-aliasing")
-#endif
+// #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
+//   #pragma GCC optimize("no-strict-aliasing")
+// #endif
 
 #pragma once
 
@@ -157,9 +157,9 @@ namespace host_math {
   add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
     if constexpr (USE_32 || NLIMBS < 2) {
-      const uint32_t* x = xs.limbs;
-      const uint32_t* y = ys.limbs;
-      uint32_t* r = rs.limbs;
+      const uint32_t* a = reinterpret_cast<const uint32_t*>(xs.bytes);
+      const uint32_t* b = reinterpret_cast<const uint32_t*>(ys.bytes);
+      uint32_t* r = reinterpret_cast<uint32_t*>(rs.bytes);
       return add_sub_limbs_32<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
     } else {
       const uint64_t* x = xs.limbs64;
@@ -202,9 +202,12 @@ namespace host_math {
   static HOST_INLINE void
   multiply_raw_64(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
-    const uint64_t* a = as.limbs64;
-    const uint64_t* b = bs.limbs64;
-    uint64_t* r = rs.limbs64;
+    // const uint64_t* a = as.limbs64;
+    // const uint64_t* b = bs.limbs64;
+    // uint64_t* r = rs.limbs64;
+    const uint64_t* a = reinterpret_cast<const uint64_t*>(as.bytes);
+    const uint64_t* b = reinterpret_cast<const uint64_t*>(bs.bytes);
+    uint64_t* r = reinterpret_cast<uint64_t*>(rs.bytes);
     multiply_raw_64<NLIMBS_A, NLIMBS_B>(a, b, r);
   }
 
@@ -243,13 +246,15 @@ namespace host_math {
     if constexpr (BITS == 0)
       return xs;
     else {
-      constexpr unsigned BITS32 = BITS % 32;
-      constexpr unsigned LIMBS_GAP = BITS / 32;
+      constexpr unsigned BITS8 = BITS % 8;
+      constexpr unsigned LIMBS_GAP = BITS / 8;
       storage<NLIMBS> out{};
+      // const uint32_t* xs_limbs32 = reinterpret_cast<const uint32_t*>(xs.bytes);
+      // uint32_t* out_limbs32 = reinterpret_cast<uint32_t*>(out.bytes);
       if constexpr (LIMBS_GAP < NLIMBS) {
-        out.limbs[LIMBS_GAP] = xs.limbs[0] << BITS32;
+        out.bytes[LIMBS_GAP] = xs.bytes[0] << BITS8;
         for (unsigned i = 1; i < NLIMBS - LIMBS_GAP; i++)
-          out.limbs[i + LIMBS_GAP] = (xs.limbs[i] << BITS32) + (xs.limbs[i - 1] >> (32 - BITS32));
+          out.bytes[i + LIMBS_GAP] = (xs.bytes[i] << BITS8) | (xs.bytes[i - 1] >> (8 - BITS8));
       }
       return out;
     }
@@ -261,14 +266,14 @@ namespace host_math {
     if constexpr (BITS == 0)
       return xs;
     else {
-      constexpr unsigned BITS32 = BITS % 32;
-      constexpr unsigned LIMBS_GAP = BITS / 32;
+      constexpr unsigned BITS8 = BITS % 8;
+      constexpr unsigned LIMBS_GAP = BITS / 8;
       storage<NLIMBS> out{};
       if constexpr (LIMBS_GAP < NLIMBS - 1) {
         for (unsigned i = 0; i < NLIMBS - LIMBS_GAP - 1; i++)
-          out.limbs[i] = (xs.limbs[i + LIMBS_GAP] >> BITS32) + (xs.limbs[i + LIMBS_GAP + 1] << (32 - BITS32));
+          out.bytes[i] = (xs.bytes[i + LIMBS_GAP] >> BITS8) | (xs.bytes[i + LIMBS_GAP + 1] << (8 - BITS8));
       }
-      if constexpr (LIMBS_GAP < NLIMBS) out.limbs[NLIMBS - LIMBS_GAP - 1] = (xs.limbs[NLIMBS - 1] >> BITS32);
+      if constexpr (LIMBS_GAP < NLIMBS) out.bytes[NLIMBS - LIMBS_GAP - 1] = (xs.bytes[NLIMBS - 1] >> BITS8);
       return out;
     }
   }
@@ -296,6 +301,6 @@ namespace host_math {
   }
 } // namespace host_math
 
-#if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
-  #pragma GCC reset_options
-#endif
+// #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
+//   #pragma GCC reset_options
+// #endif
