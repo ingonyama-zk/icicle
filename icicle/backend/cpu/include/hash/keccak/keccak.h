@@ -11,7 +11,7 @@ namespace icicle {
 #define SHA3_TRACE_BUF(format, buf, l)
 
 /*
- * This flag is used to configure "pure" Keccak, as opposed to NIST SHA3.
+ * This flag is used to configure "pure" Keccak_cpu, as opposed to NIST SHA3.
  */
 #define SHA3_USE_KECCAK_FLAG 0x80000000
 #define SHA3_CW(x)           ((x) & (~SHA3_USE_KECCAK_FLAG))
@@ -34,11 +34,11 @@ namespace icicle {
   enum SHA3_RETURN { SHA3_RETURN_OK = 0, SHA3_RETURN_BAD_PARAMS = 1 };
   typedef enum SHA3_RETURN sha3_return_t;
 
-  class Keccak : public Hash
+  class Keccak_cpu : public Hash
   {
   public:
     // Constructor
-    explicit Keccak(int total_input_limbs, int total_output_limbs, enum SHA3_FLAGS flag)
+    explicit Keccak_cpu(int total_input_limbs, int total_output_limbs, enum SHA3_FLAGS flag)
         : Hash(total_input_limbs, total_output_limbs), sha_flag(flag)
     {
     }
@@ -65,7 +65,7 @@ namespace icicle {
     // SHA-3 context structure
     struct sha3_context {
       uint64_t saved; // the portion of the input message that we didn't consume yet
-      union {         // Keccak's state
+      union {         // Keccak_cpu's state
         uint64_t s[SHA3_KECCAK_SPONGE_WORDS];
         uint8_t sb[SHA3_KECCAK_SPONGE_WORDS * 8];
       } u;
@@ -95,28 +95,32 @@ namespace icicle {
     ) const;
   };
 
-  class Keccak256 : public Keccak
+  class Keccak256_cpu : public Keccak_cpu
   {
   public:
-    Keccak256(int total_input_limbs) : Keccak(total_input_limbs, 256 / (8 * sizeof(limb_t)), SHA3_FLAGS_KECCAK) {}
+    Keccak256_cpu(int total_input_limbs) : Keccak_cpu(total_input_limbs, 256 / (8 * sizeof(limb_t)), SHA3_FLAGS_KECCAK)
+    {
+    }
   };
 
-  class Keccak512 : public Keccak
+  class Keccak512_cpu : public Keccak_cpu
   {
   public:
-    Keccak512(int total_input_limbs) : Keccak(total_input_limbs, 512 / (8 * sizeof(limb_t)), SHA3_FLAGS_KECCAK) {}
+    Keccak512_cpu(int total_input_limbs) : Keccak_cpu(total_input_limbs, 512 / (8 * sizeof(limb_t)), SHA3_FLAGS_KECCAK)
+    {
+    }
   };
 
-  class Sha3_256 : public Keccak
+  class Sha3_256_cpu : public Keccak_cpu
   {
   public:
-    Sha3_256(int total_input_limbs) : Keccak(total_input_limbs, 256 / (8 * sizeof(limb_t)), SHA3_FLAGS_SHA3) {}
+    Sha3_256_cpu(int total_input_limbs) : Keccak_cpu(total_input_limbs, 256 / (8 * sizeof(limb_t)), SHA3_FLAGS_SHA3) {}
   };
 
-  class Sha3_512 : public Keccak
+  class Sha3_512_cpu : public Keccak_cpu
   {
   public:
-    Sha3_512(int total_input_limbs) : Keccak(total_input_limbs, 512 / (8 * sizeof(limb_t)), SHA3_FLAGS_SHA3) {}
+    Sha3_512_cpu(int total_input_limbs) : Keccak_cpu(total_input_limbs, 512 / (8 * sizeof(limb_t)), SHA3_FLAGS_SHA3) {}
   };
 
 } // namespace icicle

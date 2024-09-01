@@ -11,7 +11,7 @@ using namespace icicle;
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
 int run_keccak_test(
-  const Keccak& keccak_hash, const uint8_t* test_string, size_t test_string_len, const char* expected_hash_str)
+  const Keccak_cpu& keccak_hash, const uint8_t* test_string, size_t test_string_len, const char* expected_hash_str)
 {
   HashConfig config;
   uint8_t hash[keccak_hash.m_total_output_limbs * sizeof(limb_t)];
@@ -56,8 +56,8 @@ int main(void)
   printf("Testing Keccak256\n");
   START_TIMER(keccak_256)
   {
-    Keccak256 keccak256(test_string_len / sizeof(limb_t));
-    if (run_keccak_test(keccak256, test_string, test_string_len, expected_hash_keccak256) != 0) { success = false; }
+    Keccak_cpu keccak = Keccak256_cpu(test_string_len / sizeof(limb_t));
+    if (run_keccak_test(keccak, test_string, test_string_len, expected_hash_keccak256) != 0) { success = false; }
   }
   END_TIMER(keccak_256, "Keccak-256 Timer")
 
@@ -65,8 +65,8 @@ int main(void)
     printf("Testing Keccak512\n");
     START_TIMER(keccak_512)
     {
-      Keccak512 keccak512(test_string_len / sizeof(limb_t));
-      if (run_keccak_test(keccak512, test_string, test_string_len, expected_hash_keccak512) != 0) { success = false; }
+      Keccak_cpu keccak = Keccak512_cpu(test_string_len / sizeof(limb_t));
+      if (run_keccak_test(keccak, test_string, test_string_len, expected_hash_keccak512) != 0) { success = false; }
     }
     END_TIMER(keccak_512, "Keccak-512 Timer")
   }
@@ -75,8 +75,8 @@ int main(void)
     printf("Testing SHA3_256\n");
     START_TIMER(sha3_256)
     {
-      Sha3_256 sha3_256(test_string_len / sizeof(limb_t));
-      if (run_keccak_test(sha3_256, test_string, test_string_len, expected_hash_sha3_256) != 0) { success = false; }
+      Keccak_cpu keccak = Sha3_256_cpu(test_string_len / sizeof(limb_t));
+      if (run_keccak_test(keccak, test_string, test_string_len, expected_hash_sha3_256) != 0) { success = false; }
     }
     END_TIMER(sha3_256, "SHA3-256 Timer")
   }
@@ -85,8 +85,8 @@ int main(void)
     printf("Testing SHA3_512\n");
     START_TIMER(sha3_512)
     {
-      Sha3_512 sha3_512(test_string_len / sizeof(limb_t));
-      if (run_keccak_test(sha3_512, test_string, test_string_len, expected_hash_sha3_512) != 0) { success = false; }
+      Keccak_cpu keccak = Sha3_512_cpu(test_string_len / sizeof(limb_t));
+      if (run_keccak_test(keccak, test_string, test_string_len, expected_hash_sha3_512) != 0) { success = false; }
     }
     END_TIMER(sha3_512, "SHA3-512 Timer")
   }
