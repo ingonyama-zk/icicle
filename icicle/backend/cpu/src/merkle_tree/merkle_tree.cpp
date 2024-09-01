@@ -17,11 +17,10 @@ MerkleTree::MerkleTree(
     m_layers(nof_layers),                         // vectors of LayerDB per tree layer
     m_leaf_element_size_in_limbs(leaf_element_size_in_limbs),       
     m_output_store_min_layer(output_store_min_layer){
-
   ICICLE_ASSERT(output_store_min_layer < nof_layers) << "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree.";
 
   // update layers data base with the hashes
-  m_path_size_in_limbs = m_layers[nof_layers - 1].m_hash->m_total_output_limbs; // include the root at the path
+  m_path_size_in_limbs = layer_hashes[nof_layers - 1].m_total_output_limbs; // include the root at the path
   for (int layer_idx = nof_layers-1; layer_idx >= 0; --layer_idx) {
     ICICLE_ASSERT(layer_idx == nof_layers-1 || 
                   layer_hashes[layer_idx+1].m_total_input_limbs % layer_hashes[layer_idx].m_total_output_limbs ==0)
@@ -45,7 +44,6 @@ eIcicleError MerkleTree::build(const limb_t *leaves, const MerkleTreeConfig& con
   uint64_t l0_segment_idx = 0;
   init_layers_db();
   const uint64_t nof_segments_at_l0 = (m_layers[0].m_nof_hashes+NOF_OPERATIONS_PER_TASK-1)/NOF_OPERATIONS_PER_TASK;
-  uint nof_segments
   
   build_hash_config_from_merkle_config(config);
 
@@ -79,7 +77,8 @@ eIcicleError MerkleTree::build(const limb_t *leaves, const MerkleTreeConfig& con
 
       // check if cur segment is ready to be executed
       const Hash* cur_hash = m_layers[cur_layer_idx].m_hash;
-      const uint64_t nof_hashes_in_seg = std::min(cur_segment * NOF_OPERATIONS_PER_TASK - nof_segments, NOF_OPERATIONS_PER_TASK);
+      const uint64_t nof_hashes_in_seg = std::min(m_layers[cur_layer_idx].m_nof_hashes - cur_segment_idx * NOF_OPERATIONS_PER_TASK, uint64_t(NOF_OPERATIONS_PER_TASK));
+      ICICLE_ASSERT(nof_hashes_in_seg > 0) << "Edge case negative number of hashes";
       if (cur_segment_iter->second.m_nof_inputs_ready >= cur_hash->m_total_input_limbs * nof_hashes_in_seg) {
         const limb_t* task_input = (completed_layer_idx < m_output_store_min_layer) ? cur_segment_iter->second.m_inputs_limbs : &(m_layers[completed_layer_idx].m_results[0]);
         dispatch_task(task, cur_layer_idx, cur_segment_idx, task_input, secondary_leaves);
@@ -159,10 +158,9 @@ eIcicleError MerkleTree::get_path(const limb_t *leaves, uint64_t element_idx, li
   return eIcicleError::SUCCESS; 
 }
 
-eIcicleError MerkleTree::verify(const limb_t *path, unsigned int element_idx, bool& 
-
-
- /*OUT*/, const MerkleTreeConfig& config) {
+eIcicleError MerkleTree::verify(
+  const limb_t *path, unsigned int element_idx, bool& verification_valid /*OUT*/, const MerkleTreeConfig& config) 
+{
   build_hash_config_from_merkle_config(config);
   uint64_t element_limb_start = element_idx * m_leaf_element_size_in_limbs;
   for (int layer_idx = 0; layer_idx < m_nof_layers; layer_idx++) {

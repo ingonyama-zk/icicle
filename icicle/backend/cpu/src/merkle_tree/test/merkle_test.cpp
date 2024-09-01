@@ -43,7 +43,7 @@ public:
 };
 
 void assert_valid_tree(
-  const MerkleTree& tree,
+  const MerkleTree* tree,
   const int nof_layers,
   int nof_inputs,
   const limb_t* inputs,
@@ -72,10 +72,9 @@ void assert_valid_tree(
     
     if (i >= output_store_min_layer) {
       for (int j = 0; j < nof_hashes; j++) { 
-        // TODO ensure what happens if a node isn't stored
         const limb_t* result = nullptr;
-        tree.get_hash_result(i, j, result);
-        assert(layer_out[i] == *result);
+        tree->get_hash_result(i, j, result);
+        assert(layer_out[j] == *result);
       }
     }
 
@@ -87,7 +86,7 @@ void assert_valid_tree(
 
   // Assert final root
   const limb_t* root;
-  tree.get_root(root);
+  tree->get_root(root);
   for (int i = 0; i < hashes[nof_layers-1].m_total_output_limbs; i++) { assert(root[i] == layer_out[i]); }
 
   delete[] layer_in;
@@ -107,7 +106,7 @@ void assert_valid_path(
     output_offset += hashes[i].m_total_input_limbs;
     hashes[i].run_single_hash(&path[input_offset], hash_results, HashConfig());
     // Compare calculated results with the path
-    for (int i = 0; i < hashes[i].m_total_output_limbs; i++) { assert(hash_results[i] == path[output_offset + i]); }
+    for (int j = 0; j < hashes[i].m_total_output_limbs; j++) { assert(hash_results[j] == path[output_offset + j]); }
     
     input_offset = output_offset;
     delete[] hash_results;
@@ -118,13 +117,14 @@ int main()
 {
   int nof_layers = 4;
   int leaf_size = 1;
-  int output_store_min_layer = 3; // Only top currently
+  int output_store_min_layer = 0; // Only top currently
   MerkleTreeConfig config;
 
   SimpleHash* hashes = new SimpleHash[nof_layers];
   const int num_inputs = 16;
   limb_t* inputs = new limb_t[num_inputs];
-  for (size_t i = 0; i < num_inputs; i++) { inputs[i] = i; }
+  for (size_t i = 0; i < num_inputs; i++) { inputs[i] = i; std::cout << inputs[i] << '\t'; }
+  std::cout << '\n';
 
   int num_side_inputs = 0;
   int num_hashes_in_layer = num_inputs;
@@ -137,9 +137,9 @@ int main()
   limb_t* side_ins = num_side_inputs > 0? new limb_t[num_side_inputs] : nullptr;
   for (size_t i = 0; i < num_side_inputs; i++) { side_ins[i] = i; }
 
-  MerkleTree tree = MerkleTree(nof_layers, hashes, leaf_size, output_store_min_layer);
-  tree.build(inputs, MerkleTreeConfig(), side_ins);
-  tree.print_tree();
+  MerkleTree* tree = new MerkleTree(nof_layers, hashes, leaf_size, output_store_min_layer);
+  tree->build(inputs, MerkleTreeConfig(), side_ins);
+  tree->print_tree();
 
   // Check valid tree calc
   assert_valid_tree(tree, nof_layers, num_inputs, inputs, side_ins, hashes, output_store_min_layer);
@@ -149,15 +149,19 @@ int main()
   for (size_t i = 0; i < nof_layers; i++) { nof_limbs_in_path += hashes[i].m_total_output_limbs; }
 
   limb_t* path;
-  assert(tree.allocate_path(path, nof_limbs_in_path) == eIcicleError::SUCCESS);
-  assert(tree.get_path(inputs, 0, path, MerkleTreeConfig()) == eIcicleError::SUCCESS);
+  assert(tree->allocate_path(path, nof_limbs_in_path) == eIcicleError::SUCCESS);
+  assert(tree->get_path(inputs, 0, path, MerkleTreeConfig()) == eIcicleError::SUCCESS);
 
   bool verification_valid = false;
-  assert(tree.verify(path, 0, verification_valid, MerkleTreeConfig()) == eIcicleError::SUCCESS);
+  assert(tree->verify(path, 0, verification_valid, MerkleTreeConfig()) == eIcicleError::SUCCESS);
   assert(verification_valid);
-  tree.print_path(path);
+  tree->print_path(path);
+
+  assert_valid_path(path, nof_layers, hashes);
+
 
   delete[] hashes;
   delete[] inputs;
+  delete tree;
   if (num_side_inputs > 0) { delete[] side_ins; }
 }
