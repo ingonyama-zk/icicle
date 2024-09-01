@@ -35,7 +35,9 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
 
 - [Full C++ example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c++/install-and-use-icicle)
 - [Full Rust example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle)
-- (TODO update links to main branch when merged)
+- Full GO example (TODO)
+
+*(TODO update links to main branch when merged)
 
 1. **Extract and install the Tar Files**:
    - [Download](https://github.com/ingonyama-zk/icicle/releases) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 8,9 for RHEL compatible binaries).

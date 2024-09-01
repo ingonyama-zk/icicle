@@ -4,25 +4,24 @@
 
 This example shows how to install CUDA backend and use it in Rust application.
 
-Download release binaries for CUDA backend:
-
+Download release binaries from our [github release page](https://github.com/ingonyama-zk/icicle/releases):
 - **Backend** icicle30-ubuntu22-cuda122.tar.gz
 
 > [!NOTE]
-> Name of the files is based on the release version. Make sure to update the tar file names in the example if using different release.
+> The names of the files are based on the release version. Ensure you update the tar file names in the example if you are using a different release.
 
+## Optional: Using Docker with Ubuntu 22
 
-## Optional: This example is demonstrated in an ubuntu22 docker but this is not mandatory.
-
+While not mandatory, this example can be demonstrated in an Ubuntu 22 Docker container.
 ```bash
 docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubuntu22-cuda122 bash
 ```
 
-This command is starting bash in the docker, with GPUs and mapping the example files to `/workspace` in the docker.
+This command starts a bash session in the Docker container with GPUs enabled and the example files mapped to /workspace in the container.
 
 ### Building the docker image
 
-This image is based on nvidia's image for ubuntu22. built from the Dockerfile:
+The Docker image is based on NVIDIA’s image for Ubuntu 22.04 and can be built from the following Dockerfile:
 ```dockerfile
 # Use the official NVIDIA development runtime image for Ubuntu 22.04
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
@@ -36,49 +35,51 @@ RUN apt-get update && apt-get install -y \
 RUN apt install cargo -y
 ```
 
-by `docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .`
+Build the Docker image with the following command:
+```bash
+docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .
+```
 
-## Extract tars and install
+## Extract and Install the CUDA Backend
 
 ```bash
 cd release
-# extract CUDA backend (OPTIONAL)
+# extract CUDA backend
 tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /opt
 ```
 
-## Build application
+## Build the Rust Application and Execute
 
-Define ICICLE deps in cargo:
+Add the following dependencies to your Cargo.toml file:
+
 ```cargo
 [dependencies]
-icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch="yshekel/V3" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch="yshekel/V3" }
-icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="yshekel/V3" }
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
 ```
 
-Then build
-```bash
-cargo build --release
-```
-
-## Launch the executable
+Build and Run the Application
 
 ```bash
 cargo run --release
 ```
 
-### CUDA license
+## Install in a Custom Location
+If you prefer to install the CUDA backend in a custom location such as /custom/path, follow these steps:
 
-If using CUDA backend, make sure to have a CUDA backend license:
-- For license server, specify address: `export ICICLE_LICENSE=port@ip`.
-- For local license, specify path to license: `export ICICLE_LICENSE=path/to/license`.
-
-## Install in custom location
-
-If installing in a custom location such as /custom/path:
 ```bash
 mkdir -p /custom/path
 tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /custom/path
 ```
 
-define `ICICLE_BACKEND_INSTALL_DIR=/custom/path/icicle/lib/backend` or use `pub fn load_backend(path: &str) -> Result<(), eIcicleError>`
+If installed in a custom location, you need to define the environment variable:
+
+```bash
+export ICICLE_BACKEND_INSTALL_DIR=/custom/path/icicle/lib/backend
+```
+
+Alternatively, you can load the backend programmatically in your Rust code using:
+```bash
+pub fn load_backend(path: &str) -> Result<(), eIcicleError>
+```

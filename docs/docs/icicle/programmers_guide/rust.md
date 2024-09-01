@@ -3,7 +3,30 @@
 
 ## Overview
 
-This guide covers the usage of Icicle's Rust API, including device management, memory operations, data transfer, synchronization, and compute APIs.
+This guide covers the usage of Icicle’s Rust API, including device management, memory operations, data transfer, synchronization, and compute APIs.
+
+## Build the Rust Application and Execute
+
+To successfully build and execute the Rust application using ICICLE, you need to define the ICICLE dependencies in your Cargo.toml file:
+
+```bash
+[dependencies]
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="main" }
+# add other ICICLE crates here as needed
+```
+
+Once the dependencies are defined, you can build and run your application using the following command:
+```bash
+cargo run --release
+```
+
+This will compile your Rust application with optimizations and execute it.
+
+:::note
+The icicle-runtime crate is used to load backends, select a device, and interact with the device in an abstract way when managing memory, streams, and other resources, as explained in this guide.
+:::
 
 ## Device Management
 
