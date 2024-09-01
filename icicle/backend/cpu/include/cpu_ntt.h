@@ -1,6 +1,5 @@
 #pragma once
 #include "ntt_tasks.h"
-#include "ntt_tasks_ref.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -49,7 +48,7 @@ namespace ntt_cpu {
     }
 
     const int logn = int(log2(size));
-    const uint64_t total_memory_size = size * config.batch_size;
+    const uint64_t total_input_size = size * config.batch_size;
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     NttCpu<S, E> ntt(logn, direction, config, domain_max_size, twiddles);
     NttTaskCordinates ntt_task_cordinates = {0, 0, 0, 0, 0};
@@ -65,44 +64,39 @@ namespace ntt_cpu {
       ntt.coset_mul(output, coset_stride, arbitrary_coset);
     }
 
+    int sunbtt_plus_batch_logn;
+    int log_nof_hierarchy_1_subntts_todo_in_parallel;
+    int nof_hierarchy_1_subntts_todo_in_parallel;
+    int log_nof_subntts_chunks;
+    int nof_subntts_chunks;
+
     if (logn > HIERARCHY_1) {
-      int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] + int(log2(config.batch_size));
-      int log_nof_h1_subntts_todo_in_parallel =
-        sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
-      int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-      int log_nof_subntts_chunks =
-        ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] - log_nof_h1_subntts_todo_in_parallel;
-      int nof_subntts_chunks = 1 << log_nof_subntts_chunks;
-
-      for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
-        for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
-             h1_subntt_idx_in_chunck++) {
-          ntt_task_cordinates.hierarchy_1_subntt_idx =
-            h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
-          ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
+      for (ntt_task_cordinates.hierarchy_1_layer_idx = 0; ntt_task_cordinates.hierarchy_1_layer_idx < 2;
+           ntt_task_cordinates.hierarchy_1_layer_idx++) {
+        sunbtt_plus_batch_logn =
+          ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[ntt_task_cordinates.hierarchy_1_layer_idx] +
+          int(log2(config.batch_size));
+        log_nof_hierarchy_1_subntts_todo_in_parallel =
+          sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
+        nof_hierarchy_1_subntts_todo_in_parallel = 1 << log_nof_hierarchy_1_subntts_todo_in_parallel;
+        log_nof_subntts_chunks =
+          ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - ntt_task_cordinates.hierarchy_1_layer_idx] -
+          log_nof_hierarchy_1_subntts_todo_in_parallel;
+        nof_subntts_chunks = 1 << log_nof_subntts_chunks;
+        for (int hierarchy_1_subntts_chunck_idx = 0; hierarchy_1_subntts_chunck_idx < nof_subntts_chunks;
+             hierarchy_1_subntts_chunck_idx++) {
+          for (int hierarchy_1_subntt_idx_in_chunck = 0;
+               hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel;
+               hierarchy_1_subntt_idx_in_chunck++) {
+            ntt_task_cordinates.hierarchy_1_subntt_idx =
+              hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel +
+              hierarchy_1_subntt_idx_in_chunck;
+            ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
+          }
+          ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, ntt_task_cordinates.hierarchy_1_layer_idx);
         }
-        ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
+        if (ntt_task_cordinates.hierarchy_1_layer_idx == 0) { ntt.hierarchy_1_reorder(output); }
       }
-
-      ntt.h1_reorder(output);
-      ntt_task_cordinates.hierarchy_1_layer_idx = 1;
-      sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] + int(log2(config.batch_size));
-      log_nof_h1_subntts_todo_in_parallel =
-        sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
-      nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-      log_nof_subntts_chunks = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
-      nof_subntts_chunks = 1 << log_nof_subntts_chunks;
-
-      for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
-        for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
-             h1_subntt_idx_in_chunck++) {
-          ntt_task_cordinates.hierarchy_1_subntt_idx =
-            h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
-          ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
-        }
-        ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 1);
-      }
-
       // reset hierarchy_1_subntt_idx so that reorder_and_refactor_if_needed will calculate the correct memory index
       ntt_task_cordinates.hierarchy_1_subntt_idx = 0;
       if (config.columns_batch) {
@@ -114,13 +108,12 @@ namespace ntt_cpu {
       }
     } else {
       ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
-
       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
     }
 
     if (direction == NTTDir::kInverse) {
       S inv_size = S::inv_log_size(logn);
-      for (uint64_t i = 0; i < total_memory_size; ++i) {
+      for (uint64_t i = 0; i < total_input_size; ++i) {
         output[i] = output[i] * inv_size;
       }
       if (config.coset_gen != S::one()) { ntt.coset_mul(output, coset_stride, arbitrary_coset); }
@@ -133,120 +126,4 @@ namespace ntt_cpu {
     delete tasks_manager;
     return eIcicleError::SUCCESS;
   }
-
-  // template <typename S = scalar_t, typename E = scalar_t>
-  // eIcicleError cpu_ntt_ref(
-  //   const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>& config, E* output)
-  // {
-  //   if (size & (size - 1)) {
-  //     ICICLE_LOG_ERROR << "Size must be a power of 2. size = " << size;
-  //     return eIcicleError::INVALID_ARGUMENT;
-  //   }
-  //   const int logn = int(log2(size));
-  //   const int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
-  //   if (size > domain_max_size) {
-  //     ICICLE_LOG_ERROR << "Size is too large for domain. size = " << size << ", domain_max_size = " <<
-  //     domain_max_size; return eIcicleError::INVALID_ARGUMENT;
-  //   }
-  //   const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
-  //   NttCpuRef<S, E> ntt(logn, direction, config, domain_max_size, twiddles);
-  //   NttTaskCordinatesRef ntt_task_cordinates = {0, 0, 0, 0, 0};
-  //   NttTasksManagerRef<S, E> ntt_tasks_manager(logn);
-  //   int nof_threads = std::thread::hardware_concurrency();
-  //   auto tasks_manager = new TasksManager<NttTaskRef<S, E>>(nof_threads - 1);
-  //   // auto tasks_manager = new TasksManager<NttTaskRef<S, E>>(1);
-
-  //   int coset_stride = 0;
-  //   std::unique_ptr<S[]> arbitrary_coset = nullptr;
-  //   if (config.coset_gen != S::one()) {
-  //     try {
-  //       coset_stride =
-  //         CpuNttDomain<S>::s_ntt_domain.get_coset_stride(config.coset_gen); // Coset generator found in twiddles
-  //     } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
-  //       arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
-  //       arbitrary_coset[0] = S::one();
-  //       S coset_gen =
-  //         direction == NTTDir::kForward ? config.coset_gen : S::inverse(config.coset_gen); // inverse for INTT
-  //       for (int i = 1; i <= domain_max_size; i++) {
-  //         arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
-  //       }
-  //     }
-  //   }
-  //   uint64_t total_memory_size = size * config.batch_size;
-  //   std::copy(input, input + total_memory_size, output);
-  //   if (config.ordering == Ordering::kRN || config.ordering == Ordering::kRR) {
-  //     ntt.reorder_by_bit_reverse(ntt_task_cordinates, output, true);
-  //   }
-
-  //   if (config.coset_gen != S::one() && direction == NTTDir::kForward) {
-  //     ntt.coset_mul(output, twiddles, coset_stride, arbitrary_coset);
-  //   }
-  //   NttTaskRef<S, E>* task_slot;
-
-  //   if (logn > 15) {
-  //     ntt.reorder_input(output);
-  //     int sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] + int(log2(config.batch_size));
-  //     int log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < 15 ? 15 - sunbtt_plus_batch_logn : 0;
-  //     int nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-  //     int log_nof_subntts_chunks = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] -
-  //     log_nof_h1_subntts_todo_in_parallel; int nof_subntts_chunks = 1 << log_nof_subntts_chunks; for (int
-  //     h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
-  //       for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
-  //            h1_subntt_idx_in_chunck++) {
-  //         ntt_task_cordinates.hierarchy_1_subntt_idx =
-  //           h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
-  //         ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
-  //       }
-  //       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
-  //     }
-
-  //     ntt.refactor_and_reorder(output, twiddles);
-  //     ntt_task_cordinates.hierarchy_1_layer_idx = 1;
-  //     sunbtt_plus_batch_logn = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1] + int(log2(config.batch_size));
-  //     log_nof_h1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < 15 ? 15 - sunbtt_plus_batch_logn : 0;
-  //     nof_h1_subntts_todo_in_parallel = 1 << log_nof_h1_subntts_todo_in_parallel;
-  //     log_nof_subntts_chunks = ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[0] - log_nof_h1_subntts_todo_in_parallel;
-  //     nof_subntts_chunks = 1 << log_nof_subntts_chunks;
-  //     for (int h1_subntts_chunck_idx = 0; h1_subntts_chunck_idx < nof_subntts_chunks; h1_subntts_chunck_idx++) {
-  //       for (int h1_subntt_idx_in_chunck = 0; h1_subntt_idx_in_chunck < nof_h1_subntts_todo_in_parallel;
-  //            h1_subntt_idx_in_chunck++) {
-  //         ntt_task_cordinates.hierarchy_1_subntt_idx =
-  //           h1_subntts_chunck_idx * nof_h1_subntts_todo_in_parallel + h1_subntt_idx_in_chunck;
-  //         ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
-  //       }
-  //       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 1);
-  //     }
-  //     ntt_task_cordinates.hierarchy_1_subntt_idx = 0; // reset so that reorder_output will calculate the correct
-  //     memory index if (config.columns_batch) {
-  //       ntt.reorder_output(output, ntt_task_cordinates, true);
-  //     } else {
-  //       for (int b = 0; b < config.batch_size; b++) {
-  //         ntt.reorder_output(output + b * size, ntt_task_cordinates, true);
-  //       }
-  //     }
-  //   } else {
-  //     ntt.h1_cpu_ntt(output, ntt_task_cordinates, ntt_tasks_manager);
-  //     ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
-  //   }
-
-  //   delete tasks_manager;
-
-  //   if (direction == NTTDir::kInverse) { // TODO SHANIE - do that in parallel
-  //     S inv_size = S::inv_log_size(logn);
-  //     for (uint64_t i = 0; i < total_memory_size; ++i) {
-  //       output[i] = output[i] * inv_size;
-  //     }
-  //     if (config.coset_gen != S::one()) { ntt.coset_mul(output, twiddles, coset_stride, arbitrary_coset); }
-  //   }
-
-  //   if (config.ordering == Ordering::kNR || config.ordering == Ordering::kRR) {
-  //     ntt_task_cordinates = {0, 0, 0, 0, 0};
-  //     ntt.reorder_by_bit_reverse(
-  //       ntt_task_cordinates, output,
-  //       true); // TODO - check if access the fixed indexes instead of reordering may be more efficient?
-  //   }
-
-  //   return eIcicleError::SUCCESS;
-  // }
-
 } // namespace ntt_cpu
