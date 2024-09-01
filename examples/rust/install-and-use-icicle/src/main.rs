@@ -3,7 +3,7 @@ use icicle_core::{
     ntt::{self, get_root_of_unity, initialize_domain, ntt, NTTConfig},
     traits::{FieldImpl, GenerateRandom},
 };
-use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{self, Device};
 
 fn main() {
@@ -30,7 +30,7 @@ fn main() {
     // Allocate output on host memory
     let mut output_cpu = vec![ScalarField::zero(); ntt_size];
     let root_of_unity = get_root_of_unity::<ScalarField>(ntt_size as u64);
-    let mut ntt_config = NTTConfig::<ScalarField>::default();
+    let ntt_config = NTTConfig::<ScalarField>::default();
 
     // Part 1: Running NTT on CPU
     println!("Part 1: compute on CPU: ");
