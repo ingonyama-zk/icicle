@@ -1,25 +1,26 @@
-# Example: Install and use ICICLE
+# Example: Install and use ICICLE (C++)
 
-This example shows how to install binaries and use them in C++ application.
+This example demonstrates how to install ICICLE binaries and use them in a C++ application.
 
-Download release binaries:
+Download release binaries from our [github release page](https://github.com/ingonyama-zk/icicle/releases):
 - **Frontend** icicle30-ubuntu22.tar.gz
 - **Backend** icicle30-ubuntu22-cuda122.tar.gz
 
 > [!NOTE]
-> Name of the files is based on the release version. Make sure to update the tar file names in the example if you're using a different release.
+> The names of the files are based on the release version. Ensure you update the tar file names in the example if you’re using a different release.
 
-## Optional: This example is demonstrated in an ubuntu22 docker but this is not mandatory.
+## Optional: Using Docker
 
+While not mandatory, this example can be demonstrated in an Ubuntu 22 Docker container.
 ```bash
 docker run -it --rm --gpus all -v ./:/workspace -w /workspace icicle-release-ubuntu22-cuda122 bash
 ```
 
-This command is starting bash in the docker, with GPUs and mapping the example files to `/workspace` in the docker.
+This command starts a bash session in the Docker container, with GPUs enabled and the example files mapped to /workspace in the container.
 
 ### Building the docker image
 
-This image is based on nvidia's image for ubuntu22. built from the Dockerfile:
+The Docker image is based on NVIDIA’s image for Ubuntu 22.04 and can be built from the following Dockerfile:
 
 ```dockerfile
 # Use the official NVIDIA development runtime image for Ubuntu 22.04
@@ -32,22 +33,31 @@ RUN apt-get update && apt-get install -y \
     tar
 ```
 
-by `docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .`
+Build the Docker image with the following command:
+```bash
+docker build -t icicle-release-ubuntu20-cuda122 -f Dockerfile.ubuntu20 .`
+```
 
-## Extract tars and install
+## Extract tars and install ICICLE
 
+Extracting and Installing the Frontend
 ```bash
 cd release
 # extract frontend part
 tar xzvf icicle30-ubuntu22.tar.gz
 cp -r ./icicle/lib/* /usr/lib/
 cp -r ./icicle/include/icicle/ /usr/local/include/ # copy C++ headers
+```
+
+Extracting and Installing the CUDA Backend (Optional)
+
+```bash
 # extract CUDA backend (OPTIONAL)
 tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /opt
 rm -rf icicle # remove the extracted dir
 ```
 
-## Compile and link C++ example to icicle
+## Compile and Link the C++ Example with ICICLE
 
 ```bash
 cd ..
@@ -61,13 +71,7 @@ cmake -S . -B build && cmake --build build
 ./build/example
 ```
 
-### CUDA license
-
-If using CUDA backend, make sure to have a CUDA backend license:
-- For license server, specify address: `export ICICLE_LICENSE=port@ip`.
-- For local license, specify path to license: `export ICICLE_LICENSE=path/to/license`.
-
-## Install in custom location
+## Install ICICLE in a Custom Location
 
 If installing in a custom location such as /custom/path:
 ```bash
@@ -79,8 +83,7 @@ tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /custom/path # OPTIONAL
 
 ### Build your app and link to ICICLE
 
-You will have to specify paths for include and libs so that the compiler linker and loader can find them at compile anb runtime.
-You can add the following to cmake file to do so:
+When installing ICICLE in a custom location, you need to specify the paths for the include and library directories so that the compiler, linker, and loader can find them during compile and runtime. Add the following to your CMake file:
 ```cmake
 # Include directories
 target_include_directories(example PUBLIC /custom/path/icicle/include)
@@ -92,6 +95,7 @@ set_target_properties(example PROPERTIES
                       INSTALL_RPATH /custom/path/icicle/lib/)
 ```
 
+Compile and Launch the Executable
 
 ```bash
 cd ..
@@ -107,7 +111,7 @@ export ICICLE_BACKEND_INSTALL_DIR=/custom/path/icicle/lib/backend
 ./build/example
 ```
 
-Alternatively, the example code can use the foolowing API instead:
+Alternatively, you can use the following API in your code:
 ```cpp
 extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive);
 ```

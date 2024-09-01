@@ -593,8 +593,8 @@ eIcicleError cpu_msm(
   int c = config.c;
   if (c < 1) { c = std::max((int)std::log2(msm_size) - 1, 8); }
   if (scalar_t::NBITS % c == 0) {
-    std::cerr << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-              << ") without remainder.\n";
+    ICICLE_LOG_DEBUG << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
+                     << ") without remainder.\n";
   }
   while (scalar_t::NBITS % c == 0) {
     c++;
@@ -609,14 +609,13 @@ eIcicleError cpu_msm(
     nof_threads = 1;
   }
 
-  Msm<A, P>* msm = new Msm<A, P>(config, c, nof_threads);
+  auto msm = Msm<A, P>{config, c, nof_threads};
 
   for (int i = 0; i < config.batch_size; i++) {
     int batch_start_idx = msm_size * i;
     int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
-    msm->run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
+    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
   }
-  delete msm;
   return eIcicleError::SUCCESS;
 }
 

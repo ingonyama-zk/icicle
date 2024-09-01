@@ -3,33 +3,28 @@
 
 ## Overview
 
-The CUDA backend in ICICLE V3 is a high-performance, closed-source component designed to accelerate cryptographic computations using NVIDIA GPUs. This backend includes a set of specialized libraries optimized for different cryptographic fields and curves, providing significant speedups for operations such as MSM, NTT, and elliptic curve operations.
+The CUDA backend in ICICLE V3 is a high-performance, closed-source component designed to accelerate cryptographic computations using NVIDIA GPUs. This backend includes specialized libraries optimized for various cryptographic fields and curves, providing significant speedups for operations such as MSM, NTT, and elliptic curve operations.
 
 ## Installation
 
 The CUDA backend is a closed-source component that requires a license. [To install the CUDA backend, see here](./getting_started#installing-and-using-icicle).
 
-### Licensing 
-
-The CUDA backend requires a valid license to function. There are two CUDA backend license types:
-
-   1. **Floating license**: In this mode, you will host a license-server that is supplied as binary. This license is limited to N concurrent gpus but can be distributed however the user needs between his machines. N is decremented by 1 for every GPU that is using ICICLE, per process. Once the process is terminated (or crashes), the licenses are released.
-   2. **Node locked license**: in this mode, you will get a license for a specific machine. It is accepted by the CUDA backend only if used on the licensed machine.
+### Licensing
 
 :::note
-As for now CUDA backend can be accessed without purchasing a license. Ingonyama is hosting a license server that will allow access to anyone.
-By default CUDA backend will try to access this server if no other license is available.
-To manually specify it, set `export ICICLE_LICENSE=5053@ec2-50-16-150-188.compute-1.amazonaws.com`.
+Currently, the CUDA backend is free to use via Ingonyama’s icicle-cuda-backend-license server. By default, the CUDA backend will attempt to access this server. For more details, please contact support@ingonyama.com.
 :::
 
-Licenses are available for purchase [here TODO](#) . After purchasing, you will receive a license key that must be installed on the license-server or node-locked machine.
-For license-server, you will have to tell the application that is using ICICLE, where the server is.
+The CUDA backend requires a valid license to function. There are two types of CUDA backend licenses:
 
-**Specify the license server address or filepath:**
+   1. **Floating license**: In this mode, you host a license server, provided as a binary. This license supports a limited number of concurrent GPUs (N), which can be distributed across your machines as needed. N is decremented by 1 for each GPU using ICICLE per process. Once the process terminates (or crashes), the licenses are released.
+   2. **Node locked license**:  In this mode, the license is tied to a specific machine. The CUDA backend will accept the license only if it is used on the licensed machine.
+
+**To specify the license server address or file path::**
 
 ```
-export ICICLE_LICENSE=port@ip # for license server
-export ICICLE_LICENSE=/path/to/license # for node locked license
+export ICICLE_LICENSE=port@ip            # For license server
+export ICICLE_LICENSE=/path/to/license   # For node-locked license
 ```
 
-For further assist , contact our support team for assistance. `support@ingonyama.com` (TODO make sure this exists).
+For further assist , contact our support team for assistance support@ingonyama.com

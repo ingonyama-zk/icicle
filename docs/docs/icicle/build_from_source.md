@@ -164,7 +164,7 @@ Can specify `branch = <branch-name>` or `tag = <tag-name>` or `rev = <commit-id>
 
 To disable features:
 ```bash
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git", features = ["no_g2"] }
+icicle-bls12-377 = { git = "https://github.com/ingonyama-zk/icicle.git", features = ["no_g2"] }
 ```
 
 As explained above, the libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable for a custom install directory.

@@ -1,19 +1,23 @@
 
 # Migration from Icicle V2 to V3
 
-Icicle V3 introduces a unified interface for high-performance computing across various devices, extending the functionality that was previously limited to GPUs in Icicle V2. This guide will help you transition from Icicle V2 to V3 by highlighting the key changes and providing examples for both C++ and Rust.
+Icicle V3 introduces a unified interface for high-performance computing across various devices, extending the functionality that was previously limited to GPUs in Icicle V2. This guide will assist you in transitioning from Icicle V2 to V3 by highlighting the key changes and providing examples for both C++ and Rust.
 
 ## Key Conceptual Changes
 
-- **Device Independence**: In V2, Icicle was primarily designed for GPU computation, utilizing CUDA APIs directly. In V3, Icicle has evolved to support any computational device, including CPUs, GPUs, and other accelerators. This means the CUDA APIs have been replaced with device-agnostic Icicle APIs.
+- **Device Independence**: n V2, Icicle was primarily designed for GPU computation, directly utilizing CUDA APIs. In V3, Icicle has evolved to support a broader range of computational devices, including CPUs, GPUs, and other accelerators. As a result, CUDA APIs have been replaced with device-agnostic Icicle APIs.
   
-- **Unified API**: The APIs are now standardized across all devices, ensuring consistency in usage and reducing the complexity of handling different hardware backends.
+- **Unified API**: The APIs are now standardized across all devices, ensuring consistent usage and reducing the complexity of managing different hardware backends.
+
+:::warning
+When migrating from V2 to V3, it is important to note that, by default, your code now executes on the CPU. This contrasts with V2, which was exclusively a CUDA library. For details on installing and using CUDA GPUs, refer to the [CUDA backend guide](./install_cuda_backend.md).
+:::
 
 ## Migration Guide for C++
 
 ### Replacing CUDA APIs with Icicle APIs
 
-In Icicle V3, CUDA-specific APIs have been replaced with Icicle APIs, which are designed to be backend-agnostic. This change allows your code to run on different devices without modification.
+In Icicle V3, CUDA-specific APIs have been replaced with Icicle APIs that are designed to be backend-agnostic. This allows your code to run on different devices without requiring modifications.
 
 - **Device Management**: Use Icicle's device management APIs instead of CUDA-specific functions. For example, instead of `cudaSetDevice()`, you would use `icicle_set_device()`.
 
@@ -83,11 +87,7 @@ stream.synchronize().unwrap();
 
 ### Other Considerations
 
-- **API Names**: While most API names remain consistent, they are now part of a more generalized runtime that can support multiple devices. Ensure you update the crate imports and function calls accordingly.
-- **Backend Loading**: Ensure that you are loading the appropriate backend using the `load_backend_from_env_or_default` function, which is essential for setting up the runtime environment.
+- **API Names**: While most API names remain consistent, they are now part of a more generalized runtime that can support multiple devices. Ensure that you update the crate imports and function calls accordingly.
+- **Backend Loading**: Ensure that you are loading the appropriate backend using the `load_backend_from_env_or_default()` function, which is essential for setting up the runtime environment.
 
-For further details and examples, refer to the [Icicle Rust Programmer's Guide](#).
-
----
-
-This migration guide should help you transition your existing Icicle V2 projects to V3 smoothly, ensuring that you can take full advantage of the new device-agnostic framework.
+For further details and examples, refer to the [Programmer's Guide](./programmers_guide/general.md).
