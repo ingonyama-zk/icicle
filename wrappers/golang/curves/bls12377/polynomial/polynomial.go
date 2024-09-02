@@ -44,7 +44,6 @@ func (up *DensePolynomial) Clone() DensePolynomial {
 	}
 }
 
-// TODO @jeremyfelder: Maybe this should be in a SetFinalizer that is set on Create functions?
 func (up *DensePolynomial) Delete() {
 	C.bls12_377_polynomial_delete(up.handle)
 }

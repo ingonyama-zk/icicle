@@ -17,7 +17,6 @@ SUPPORTED_FIELDS=("babybear")
 CUDA_BACKEND=OFF
 
 BUILD_DIR="${ICICLE_BUILD_DIR:-$(realpath "$PWD/../../icicle/build")}"
-ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR:="/usr/local/"}"
 
 if [[ $1 == "-help" ]]; then
   echo "Build script for building ICICLE cpp libraries"
@@ -43,8 +42,6 @@ if [[ $1 == "-help" ]]; then
   echo ""
   echo "  -skip_fieldext            Builds the field library with the extension field disabled."
   echo ""
-  echo "  -install_dir=<path>       Specifies the path to the folder where libraries will be installed."
-  echo ""
   echo "  -cuda_backend=<option>    Specifies the branch/commit to pull for CUDA backend, or \"local\" if it's"
   echo "                            located under icicle/backend/cuda."
   echo "                            Default: \"OFF\""
@@ -64,9 +61,6 @@ do
             ;;
         -cuda_backend=*)
             CUDA_BACKEND=$(echo "$arg_lower" | cut -d'=' -f2)
-            ;;
-        -install_dir=*)
-            ICICLE_BACKEND_INSTALL_DIR=$(echo "$arg_lower" | cut -d'=' -f2)
             ;;
         -skip_msm)
             MSM_DEFINED=OFF
@@ -120,8 +114,7 @@ do
   echo "ECNTT=${ECNTT_DEFINED}" >> build_config.txt
   echo "G2=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
-  echo "ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$ICICLE_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done
 
@@ -135,7 +128,7 @@ do
   echo "NTT=${NTT_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "EXT_FIELD=${EXT_FIELD}" >> build_config.txt
-  echo "ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCMAKE_INSTALL_PREFIX=$ICICLE_BACKEND_INSTALL_DIR -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DCMAKE_BUILD_TYPE=Release -S . -B build
+  echo "ICICLE_INSTALL_DIR=${ICICLE_INSTALL_DIR}" >> build_config.txt
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done

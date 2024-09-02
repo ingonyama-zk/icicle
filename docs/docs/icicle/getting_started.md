@@ -36,7 +36,7 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
 
 - [Full C++ example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c++/install-and-use-icicle)
 - [Full Rust example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle)
-- Full GO example (TODO)
+- [Full Go example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/golang/install-and-use-icicle)
 
 *(TODO update links to main branch when merged)
 

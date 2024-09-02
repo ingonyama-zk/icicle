@@ -9,7 +9,7 @@ The Golang bindings are comprised of multiple packages.
 
 [`runtime`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/runtime) which defines abstractions for ICICLE methods for allocating memory, initializing and managing streams, and `Device` which enables users to define and keep track of devices.
 
-Each supported curve, field, and hash has its own package which you can find in the respective directories [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang). If your project uses BN254 you only need to import that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
+Each supported curve and field has its own package which you can find in the respective directories [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang). If your project uses BN254 you only need to import that single package named [`bn254`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/curves/bn254).
 
 ## Using ICICLE Golang bindings in your project
 
@@ -31,7 +31,9 @@ For a specific commit
 go get github.com/ingonyama-zk/icicle/v3@<commit_id>
 ```
 
-To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/build.sh) script:
+### Building from source
+
+To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/build.sh) script inside the downloaded go dependency:
 
 ```sh
 ./build.sh [-curve=<curve>] [-field=<field>] [-cuda_version=<version>] [-skip_msm] [-skip_ntt] [-skip_g2] [-skip_ecntt] [-skip_fieldext]
@@ -72,6 +74,18 @@ import (
     "github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 ...
+```
+
+### Building with precompiled libs
+
+Download the frontend release binaries from our [github release page](https://github.com/ingonyama-zk/icicle/releases), for example: icicle30-ubuntu22.tar.gz for ICICLE v3 on ubuntu 22.04
+
+Extract the libs and move them to the downloaded go dependency in your GOMODCACHE
+
+```sh
+# extract frontend part
+tar xzvf icicle30-ubuntu22.tar.gz
+cp -r ./icicle/lib/* $(go env GOMODCACHE)/github.com/ingonyama-zk/icicle/v3@<version>/build/lib/
 ```
 
 ## Running tests

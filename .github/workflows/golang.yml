@@ -74,14 +74,12 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # builds a single curve with the curve's specified build args
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../build/
         ./build.sh -curve=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -cuda_backend=local
     - name: Test
       working-directory: ./wrappers/golang/curves
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-        export CPATH=$CPATH:/usr/local/cuda/include
         export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../../build/
         go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
  
@@ -114,13 +112,11 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       # builds a single field with the fields specified build args
       run:  |
-        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../build/
         ./build.sh -field=${{ matrix.field.name }} ${{ matrix.field.build_args }} -cuda_backend=local
     - name: Test
       working-directory: ./wrappers/golang/fields
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
-        export CPATH=$CPATH:/usr/local/cuda/include
         export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../../build/
         go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v

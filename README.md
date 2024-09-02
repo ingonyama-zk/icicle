@@ -96,13 +96,42 @@ cargo build --release
 
 ### Go
 
+There are two ways to build from source in Go:
+
+1. Clone the repo, update your go.mod to point to the local clone, and build ICICLE within the clone
+
+```sh
+git clone https://github.com/ingonyama-zk/icicle.git
+```
+
 Add ICICLE v3 to your go.mod file:
+
+```go
+require github.com/ingonyama-zk/icicle/v3 v3.0.0
+
+replace github.com/ingonyama-zk/icicle/v3 => ../path/to/cloned/icicle
+```
+
+Navigate to the cloned repo's golang bindings and build the library using the supplied [build script][ICICLE-GO-BUILD-SCRIPT]
+
+```sh
+cd icicle/wrappers/golang
+chmod +x build.sh
+./build.sh -curve=bn254
+```
+
+2. Update your go.mod to include ICICLE as a dependency, navigate to the dependency in your GOMODCACHE and build ICICLE there
 
 ```sh
 go get github.com/ingonyama-zk/icicle/v3
+cd $(go env GOMODCACHE)/github.com/ingonyama-zk/icicle/v3@<version>/wrappers/golang
+chmod +x build.sh
+./build.sh -curve=bn254
 ```
 
-Before you can use ICICLE in your project you will need to build it using the provided [build script][ICICLE-GO-BUILD-SCRIPT].
+> [!NOTE]
+> To specify the field, use the flag -field=<field>, where <field> can be one of the following: babybear, stark252, m31.
+> To specify a curve, use the flag -curve=<curve>, where <curve> can be one of the following: bn254, bls12_377, bls12_381, bw6_761, grumpkin.
 
 Once ICICLE has been built, you can add specific packages when you need them in your application:
 

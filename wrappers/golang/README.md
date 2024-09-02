@@ -87,21 +87,3 @@ func main() {
 ```
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
-
-## Common issues
-
-### cuda_runtime.h: No such file or directory
-
-```sh
-In file included from wrappers/golang_v3/curves/bls12381/curve.go:5:
-wrappers/golang_v3/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
-    1 | #include <cuda_runtime.h>
-      |          ^~~~~~~~~~~~~~~~
-compilation terminated.
-```
-
-Our golang bindings rely on cuda headers and require that they can be found as system headers. Make sure to add the `cuda/include` of your cuda installation to your CPATH
-
-```sh
-export CPATH=$CPATH:<path/to/cuda/include>
-```
