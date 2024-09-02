@@ -8,31 +8,31 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(NttDispatcher, ntt, NttImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(
-    const scalar_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, scalar_t* output)
+    const scalar_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>* config, scalar_t* output)
   {
-    return NttDispatcher::execute(input, size, dir, config, output);
+    return NttDispatcher::execute(input, size, dir, *config, output);
   }
 
   template <>
   eIcicleError ntt(const scalar_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, ntt)(input, size, dir, config, output);
+    return CONCAT_EXPAND(FIELD, ntt)(input, size, dir, &config, output);
   }
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(NttExtFieldDispatcher, extension_ntt, NttExtFieldImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_ntt)(
-    const extension_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, extension_t* output)
+    const extension_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>* config, extension_t* output)
   {
-    return NttExtFieldDispatcher::execute(input, size, dir, config, output);
+    return NttExtFieldDispatcher::execute(input, size, dir, *config, output);
   }
 
   template <>
   eIcicleError
   ntt(const extension_t* input, int size, NTTDir dir, const NTTConfig<scalar_t>& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_ntt)(input, size, dir, config, output);
+    return CONCAT_EXPAND(FIELD, extension_ntt)(input, size, dir, &config, output);
   }
 #endif // EXT_FIELD
 
@@ -40,15 +40,15 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(NttInitDomainDispatcher, ntt_init_domain, NttInitDomainImpl);
 
   extern "C" eIcicleError
-  CONCAT_EXPAND(FIELD, ntt_init_domain)(const scalar_t& primitive_root, const NTTInitDomainConfig& config)
+  CONCAT_EXPAND(FIELD, ntt_init_domain)(const scalar_t* primitive_root, const NTTInitDomainConfig* config)
   {
-    return NttInitDomainDispatcher::execute(primitive_root, config);
+    return NttInitDomainDispatcher::execute(*primitive_root, *config);
   }
 
   template <>
   eIcicleError ntt_init_domain(const scalar_t& primitive_root, const NTTInitDomainConfig& config)
   {
-    return CONCAT_EXPAND(FIELD, ntt_init_domain)(primitive_root, config);
+    return CONCAT_EXPAND(FIELD, ntt_init_domain)(&primitive_root, &config);
   }
 
   /*************************** RELEASE DOMAIN ***************************/

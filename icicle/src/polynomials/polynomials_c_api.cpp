@@ -84,9 +84,9 @@ namespace icicle {
   // a: Pointer to the polynomial instance.
   // scalar: Scalar to multiply by.
   // Returns a pointer to the resulting polynomial instance.
-  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_multiply_by_scalar)(const PolynomialInst* a, const scalar_t& scalar)
+  PolynomialInst* CONCAT_EXPAND(FIELD, polynomial_multiply_by_scalar)(const PolynomialInst* a, const scalar_t* scalar)
   {
-    auto result = new PolynomialInst(std::move(*a * scalar));
+    auto result = new PolynomialInst(std::move(*a * (*scalar)));
     return result;
   }
 
@@ -137,9 +137,9 @@ namespace icicle {
   // monomial_coeff: Coefficient of the monomial to add.
   // monomial: Degree of the monomial to add.
   void CONCAT_EXPAND(FIELD, polynomial_add_monomial_inplace)(
-    PolynomialInst* p, const scalar_t& monomial_coeff, uint64_t monomial)
+    PolynomialInst* p, const scalar_t* monomial_coeff, uint64_t monomial)
   {
-    p->add_monomial_inplace(monomial_coeff, monomial);
+    p->add_monomial_inplace(*monomial_coeff, monomial);
   }
 
   // Subtracts a monomial from a polynomial in place.
@@ -147,9 +147,9 @@ namespace icicle {
   // monomial_coeff: Coefficient of the monomial to subtract.
   // monomial: Degree of the monomial to subtract.
   void CONCAT_EXPAND(FIELD, polynomial_sub_monomial_inplace)(
-    PolynomialInst* p, const scalar_t& monomial_coeff, uint64_t monomial)
+    PolynomialInst* p, const scalar_t* monomial_coeff, uint64_t monomial)
   {
-    p->sub_monomial_inplace(monomial_coeff, monomial);
+    p->sub_monomial_inplace(*monomial_coeff, monomial);
   }
 
   // Creates a new polynomial instance by slicing an existing polynomial.
