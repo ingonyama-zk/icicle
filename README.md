@@ -18,10 +18,15 @@
   <a href="https://www.linkedin.com/company/ingonyama">
     <img src="https://img.shields.io/badge/follow-LinkedIn-blue?style=flat&logo=linkedin&labelColor=black" alt="Follow us on LinkedIn">
   </a>
+  <a href="https://x.com/Ingo_zk">
+    <img src="https://img.shields.io/badge/follow-Twitter-blue?style=flat&logo=x&labelColor=black" alt="Follow us on Twitter">
+  </a>
   <a href="https://github.com/ingonyama-zk/icicle/releases">
     <img src="https://img.shields.io/github/v/release/ingonyama-zk/icicle?style=flat&labelColor=black&color=lightblue" alt="GitHub Release">
   </a>
 </p>
+
+
 
 ## Background
 
