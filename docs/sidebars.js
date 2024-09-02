@@ -298,5 +298,3 @@ module.exports = {
     }
   ],
 };
-
-};
