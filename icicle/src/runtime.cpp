@@ -337,7 +337,8 @@ extern "C" eIcicleError icicle_load_backend_from_env_or_default()
       ICICLE_LOG_INFO << "ICICLE backend loaded from $ICICLE_BACKEND_INSTALL_DIR=" << env_dir;
       return result;
     } else {
-      ICICLE_LOG_WARNING << "Loading ICICLE backend from $ICICLE_BACKEND_INSTALL_DIR=" << env_dir << " resulted in an error";
+      ICICLE_LOG_WARNING << "Loading ICICLE backend from $ICICLE_BACKEND_INSTALL_DIR=" << env_dir
+                         << " resulted in an error";
     }
   }
 
