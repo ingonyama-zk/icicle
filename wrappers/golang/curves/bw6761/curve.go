@@ -113,7 +113,7 @@ func (a Affine) ToProjective() Projective {
 }
 
 func AffineFromProjective(p *Projective) Affine {
-	return p.ProjectiveToAffine()
+	return p.ToAffine()
 }
 
 func GenerateAffinePoints(size int) core.HostSlice[Affine] {

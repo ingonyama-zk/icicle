@@ -113,7 +113,7 @@ func (a G2Affine) ToProjective() G2Projective {
 }
 
 func G2AffineFromProjective(p *G2Projective) G2Affine {
-	return p.ProjectiveToAffine()
+	return p.ToAffine()
 }
 
 func G2GenerateAffinePoints(size int) core.HostSlice[G2Affine] {

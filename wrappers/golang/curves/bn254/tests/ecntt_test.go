@@ -14,7 +14,7 @@ import (
 
 func TestECNtt(t *testing.T) {
 	cfg := ntt.GetDefaultNttConfig()
-	ext := config_extension.CreateConfigExtension()
+	ext := config_extension.Create()
 	ext.SetInt(core.CUDA_NTT_ALGORITHM, int(core.Radix2))
 	cfg.Ext = ext.AsUnsafePointer()
 

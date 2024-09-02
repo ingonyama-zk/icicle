@@ -115,7 +115,7 @@ func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
 }
 
 func {{.CurvePrefix}}AffineFromProjective(p *{{.CurvePrefix}}Projective) {{.CurvePrefix}}Affine {
-	return p.ProjectiveToAffine()
+	return p.ToAffine()
 }
 
 func {{.CurvePrefix}}GenerateAffinePoints(size int) core.HostSlice[{{.CurvePrefix}}Affine] {
