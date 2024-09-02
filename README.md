@@ -1,11 +1,17 @@
 # ICICLE
 
-<div align="center">ICICLE is a high-performance cryptographic acceleration library designed to optimize cryptographic computations across various hardware platforms, including CPUs, GPUs, and other accelerators.</div>
+<div align="center">
+  ICICLE is a high-performance cryptographic acceleration library designed to optimize cryptographic computations across various hardware platforms, including CPUs, GPUs, and other accelerators.
+</div>
 
 <p align="center">
-  <img alt="ICICLE" width="300" height="300" src="https://user-images.githubusercontent.com/2446179/223707486-ed8eb5ab-0616-4601-8557-12050df8ccf7.png"/>
+  <br>
+  <img alt="ICICLE" width="300" height="300" src="McPaw.gif"/>
 </p>
+
 <p align="center">
+  <br>
+  <br>
   <a href="https://discord.gg/EVVXTdt6DF">
     <img src="https://img.shields.io/discord/1063033227788423299?logo=discord&style=flat&labelColor=black" alt="Chat with us on Discord">
   </a>
