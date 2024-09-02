@@ -33,10 +33,10 @@ We believe that ICICLE will be a cornerstone in the acceleration of ZKPs:
 ICICLE is a versatile cryptographic acceleration library with support for multiple platforms. This guide will help you get started with ICICLE in C++, Rust, and Go.
 
 > [!NOTE]
-> Developers: We highly recommend reading our [documentation](https://dev.ingonyama.com/) for a comprehensive understanding of ICICLE’s capabilities.
+> Developers: We highly recommend reading our [documentation](https://dev.ingonyama.com/) for a comprehensive explanation of ICICLE’s capabilities.
 
 > [!TIP]
-> Try out ICICLE by running some [examples](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples) available in C++, Rust, and Go bindings. Check out our install-and-use examples in [C++](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c%2B%2B/install-and-use-icicle), [Rust](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle) and [Go](TODO)
+> Try out ICICLE by running some [examples] available in C++, Rust, and Go bindings. Check out our install-and-use examples in [C++](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c%2B%2B/install-and-use-icicle), [Rust](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle) and [Go](TODO)
 
 ### Prerequisites
 
@@ -86,7 +86,24 @@ cargo build --release
 
 ### Go
 
-TODO
+Add ICICLE V3 to your go.mod file:
+
+```sh
+go get github.com/ingonyama-zk/icicle/v3
+```
+
+Before you can use ICICLE in your project you will need to build it using the provided [build script][ICICLE-GO-BUILD-SCRIPT].
+
+Once ICICLE has been built, you can add specific packages when you need them in your application:
+
+```go
+import (
+  runtime "github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+  core "github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+  bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+  bn254MSM "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
+)
+```
 
 ### C++
 
@@ -125,7 +142,8 @@ target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
 **Install (optional):**
 
 To install the libs, specify the install prefix `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Then after building, use cmake to install the libraries:
-```
+
+```sh
 cmake -S icicle -B build -DFIELD=babybear -DCMAKE_INSTALL_PREFIX=/path/to/install/dir/
 cmake --build build -j # build
 cmake --install build # install icicle to /path/to/install/dir/
@@ -134,20 +152,23 @@ cmake --install build # install icicle to /path/to/install/dir/
 **Run tests (optional):**
 
 Add `-DBUILD_TESTS=ON` to the cmake command, build and execute tests:
+
 ```bash
 cmake -S icicle -B build -DFIELD=babybear -DBUILD_TESTS=ON
 cmake --build build -j
 cd build/tests
 ctest
 ```
+
 or choose the test-suite
+
 ```bash
 ./build/tests/test_field_api # or another test suite
 # can specify tests using regex. For example for tests with ntt in the name:
 ./build/tests/test_field_api --gtest_filter="*ntt*"
 ```
 
->  [!NOTE]
+> [!NOTE]
 > Most tests assume a CUDA backend exists and will fail otherwise if a CUDA device is not found.
 
 **Build Flags:**
@@ -202,10 +223,22 @@ icicle_runtime::set_device(&device).unwrap();
 
 Go:
 
-TODO
+```go
+import(
+  "github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+)
 
+result := runtime.LoadBackendFromEnvOrDefault()
+// or load from custom install dir
+result := runtime.LoadBackend("/path/to/backend/installdir", true)
+// Select CUDA device
+device := runtime.CreateDevice("CUDA", 0) // or other
+result := runtime.SetDevice(device)
 
-Full details can be found in our [docs](https://dev.ingonyama.com/icicle/https://dev.ingonyama.com/icicle/getting_started)
+// Any call will now execute on GPU-0
+```
+
+Full details can be found in our [getting started docs](https://dev.ingonyama.com/icicle/https://dev.ingonyama.com/icicle/getting_started)
 
 ## Contributions
 
@@ -241,7 +274,7 @@ This will ensure our custom hooks are run and will make it easier to follow our 
 
 ## Help & Support
 
-For help and support talk to our devs in our discord channel ["ICICLE"](https://discord.gg/EVVXTdt6DF) or contact us at support@ingonyama.com.
+For help and support talk to our devs in our discord channel ["ICICLE"](https://discord.gg/EVVXTdt6DF) or contact us at <support@ingonyama.com>.
 
 ## License
 
@@ -271,6 +304,7 @@ See [LICENSE-MIT][LMIT] for details.
 [ICICLE-CORE]: ./icicle/
 [ICICLE-RUST]: ./wrappers/rust/
 [ICICLE-GO]: ./wrappers/golang/
+[ICICLE-GO-BUILD-SCRIPT]: ./wrappers/golang/build.sh
 [ICICLE-CORE-README]: ./icicle/README.md
 [ICICLE-RUST-README]: ./wrappers/rust/README.md
 [ICICLE-GO-README]: ./wrappers/golang/README.md
