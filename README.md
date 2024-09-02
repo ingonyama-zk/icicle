@@ -19,7 +19,7 @@
     <img src="https://img.shields.io/badge/follow-LinkedIn-blue?style=flat&logo=linkedin&labelColor=black" alt="Follow us on LinkedIn">
   </a>
   <a href="https://github.com/ingonyama-zk/icicle/releases">
-    <img src="https://img.shields.io/badge/release-v2.8.0-lightblue?style=flat&labelColor=black" alt="GitHub Release">
+    <img src="https://img.shields.io/github/v/release/ingonyama-zk/icicle?style=flat&labelColor=black&color=lightblue" alt="GitHub Release">
   </a>
 </p>
 
