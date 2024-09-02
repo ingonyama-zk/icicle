@@ -1,7 +1,5 @@
 # Golang bindings
 
-TODO update for V3
-
 Golang bindings allow you to use ICICLE as a golang library.
 The source code for all Golang packages can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang).
 
@@ -18,25 +16,25 @@ Each supported curve, field, and hash has its own package which you can find in 
 To add ICICLE to your `go.mod` file.
 
 ```bash
-go get github.com/ingonyama-zk/icicle
+go get github.com/ingonyama-zk/icicle/v3
 ```
 
 If you want to specify a specific branch
 
 ```bash
-go get github.com/ingonyama-zk/icicle@<branch_name>
+go get github.com/ingonyama-zk/icicle/v3@<branch_name>
 ```
 
 For a specific commit
 
 ```bash
-go get github.com/ingonyama-zk/icicle@<commit_id>
+go get github.com/ingonyama-zk/icicle/v3@<commit_id>
 ```
 
 To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/build.sh) script:
 
 ```sh
-./build.sh [-curve=<curve>] [-field=<field>] [-hash=<hash>] [-cuda_version=<version>] [-skip_msm] [-skip_ntt] [-skip_g2] [-skip_ecntt] [-skip_fieldext]
+./build.sh [-curve=<curve>] [-field=<field>] [-cuda_version=<version>] [-skip_msm] [-skip_ntt] [-skip_g2] [-skip_ecntt] [-skip_fieldext]
 
 curve - The name of the curve to build or "all" to build all supported curves
 field - The name of the field to build or "all" to build all supported fields
@@ -54,13 +52,13 @@ If more than one curve or more than one field is supplied, the last one supplied
 
 :::
 
-To build ICICLE libraries for all supported curves without G2 and ECNTT enabled.
+To build ICICLE libraries for all supported curves without certain features, you can use their -skip_<feature> flags. For example, for disabling G2 and ECNTT:
 
 ```bash
 ./build.sh -curve=all -skip_g2 -skip_ecntt
 ```
 
-If you wish to build for a specific curve, for example bn254, with G2 or ECNTT enabled.
+By default, all features are enabled. To build for a specific field or curve, you can pass the `-field=<field_name>` or `-curve=<curve_name>` flags:
 
 ``` bash
 ./build.sh -curve=bn254
@@ -84,17 +82,17 @@ To run all tests, for all curves:
 go test ./... -count=1
 ```
 
-If you wish to run test for a specific curve:
+If you wish to run test for a specific curve or field:
 
 ```bash
-go test <path_to_curve> -count=1
+go test <path_to_curve_or_field> -count=1
 ```
 
 ## How do Golang bindings work?
 
-The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
+The golang packages are binded to the libraries produced from compiling ICICLE using cgo.
 
-1. These libraries (named `libicicle_curve_<curve>.a` and `libicicle_field_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+1. These libraries (named `libicicle_curve_<curve>.a` and `libicicle_field_<curve>.a`) can be imported in your Go project to leverage the accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 

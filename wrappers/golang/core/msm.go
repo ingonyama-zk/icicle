@@ -8,8 +8,11 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime/config_extension"
 )
 
-const CUDA_MSM_LARGE_BUCKET_FACTOR = "large_bucket_factor"
-const CUDA_MSM_IS_BIG_TRIANGLE = "is_big_triangle"
+const (
+	CUDA_MSM_LARGE_BUCKET_FACTOR = "large_bucket_factor"
+	CUDA_MSM_IS_BIG_TRIANGLE = "is_big_triangle"
+	CUDA_MSM_NOF_CHUNKS = "nof_chunks";
+)
 
 type MSMConfig struct {
 	/// Specifies the stream (queue) to use for async execution.
