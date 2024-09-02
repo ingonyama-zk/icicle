@@ -12,7 +12,7 @@ namespace icicle {
   extern "C" eIcicleError CONCAT_EXPAND(CURVE, msm)(
     const scalar_t* scalars, const affine_t* bases, int msm_size, const MSMConfig* config, projective_t* results)
   {
-    return MsmDispatcher::execute(scalars, bases, msm_size, config, results);
+    return MsmDispatcher::execute(scalars, bases, msm_size, *config, results);
   }
 
   template <>
