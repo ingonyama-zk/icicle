@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 #include <iostream>
 #include "dlfcn.h"
@@ -295,26 +294,28 @@ TYPED_TEST(FieldApiTest, Slice)
 }
 
 #ifdef NTT
+
 TYPED_TEST(FieldApiTest, ntt)
 {
-  srand(time(0));
+  // Randomize configuration
 
-  // Randomize config
-  const int logn = rand() % 10 + 3;
+  int seed = time(0);
+  srand(seed);
+  const bool inplace = rand() % 2;
+  const int logn = rand() % 16 + 3;
   const uint64_t N = 1 << logn;
-  const int log_ntt_domain_size = 17;
-  const int log_batch_size = rand() % 10 + 3;
+  const int log_ntt_domain_size = logn + 1;
+  const int log_batch_size = rand() % 3;
   const int batch_size = 1 << log_batch_size;
   const Ordering ordering = static_cast<Ordering>(rand() % 4);
   bool columns_batch;
   if (logn == 7 || logn < 4) {
-    columns_batch = false; // currently not supported (icicle/backend/cuda/src/ntt/ntt.cuh line 578)
+    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
   } else {
     columns_batch = rand() % 2;
   }
-
   const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
-  const int log_coset_stride = rand() % 4;
+  const int log_coset_stride = rand() % 3;
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
@@ -327,21 +328,17 @@ TYPED_TEST(FieldApiTest, ntt)
   FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
-
   auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
-
     icicleStreamHandle stream = nullptr;
     ICICLE_CHECK(icicle_create_stream(&stream));
-
     auto init_domain_config = default_ntt_init_domain_config();
     init_domain_config.stream = stream;
     init_domain_config.is_async = false;
     ConfigExtension ext;
     ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
-
     auto config = default_ntt_config<scalar_t>();
     config.stream = stream;
     config.coset_gen = coset_gen;
@@ -352,35 +349,36 @@ TYPED_TEST(FieldApiTest, ntt)
     config.are_outputs_on_device = true;
     config.is_async = false;
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
-
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream));
-
     std::ostringstream oss;
     oss << dev_type << " " << msg;
-
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      if (inplace) {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_in));
+      } else {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      }
     }
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    if (inplace) {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
+    } else {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    }
     ICICLE_CHECK(icicle_free_async(d_in, config.stream));
     ICICLE_CHECK(icicle_free_async(d_out, config.stream));
     ICICLE_CHECK(icicle_stream_synchronize(config.stream));
     ICICLE_CHECK(icicle_destroy_stream(stream));
-
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-
   run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
-
-  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-
+  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT
