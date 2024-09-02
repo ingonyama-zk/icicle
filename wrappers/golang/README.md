@@ -67,9 +67,9 @@ go test ./... -count=1 -v
 
 ## How do Golang bindings work?
 
-The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
+The libraries produced from the code compilation are used to bind Golang to ICICLE's code.
 
-1. These libraries (named `libingo_curve_<curve>.a` and `libingo_field_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+1. These libraries (named `libicicle_curve_<curve>.so` and `libicicle_field_<field>.so`) can be imported in your Go project to leverage the accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 

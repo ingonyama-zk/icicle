@@ -149,73 +149,65 @@ type DeviceProperties struct {
 }
 ```
 
-
-TODO
-
-
-
-
 ## Compute APIs
 
 ### Multi-Scalar Multiplication (MSM) Example
 
 Icicle provides high-performance compute APIs such as the Multi-Scalar Multiplication (MSM) for cryptographic operations. Here's a simple example of how to use the MSM API.
 
-```cpp
-#include <iostream>
-#include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
+```go
+package main
 
-using namespace bn254;
+import (
+	"fmt"
 
-int main()
-{
-  // Load installed backends
-  icicle_load_backend_from_env_or_default();
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
-  // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
-  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_available("CUDA"));
-  if (is_cuda_device_available) {
-    Device device = {"CUDA", 0};             // GPU-0
-    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the api call returns eIcicleError::SUCCESS
-  } // else we stay on CPU backend
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	bn254Msm "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
+)
 
-  // Setup inputs
-  int msm_size = 1024;
-  auto scalars = std::make_unique<scalar_t[]>(msm_size);
-  auto points = std::make_unique<affine_t[]>(msm_size);
-  projective_t result;
+func main() {
 
-  // Generate random inputs
-  scalar_t::rand_host_many(scalars.get(), msm_size);
-  projective_t::rand_host_many(points.get(), msm_size);
+	// Load installed backends
+	runtime.LoadBackendFromEnvOrDefault()
 
-  // (optional) copy scalars to device memory explicitly
-  scalar_t* scalars_d = nullptr;
-  auto err = icicle_malloc((void**)&scalars_d, sizeof(scalar_t) * msm_size);
-  // Note: need to test err and make sure no errors occurred
-  err = icicle_copy(scalars_d, scalars.get(), sizeof(scalar_t) * msm_size);
+	// trying to choose CUDA if available, or fallback to CPU otherwise (default device)
+	deviceCuda := runtime.CreateDevice("CUDA", 0) // GPU-0
+	if runtime.IsDeviceAvailable(&deviceCuda) {
+		runtime.SetDevice(&deviceCuda)
+	} // else we stay on CPU backend
 
-  // MSM configuration
-  MSMConfig config = default_msm_config();
-  // tell icicle that the scalars are on device. Note that EC points and result are on host memory in this example.
-  config.are_scalars_on_device = true;
+	// Setup inputs
+	const size = 1 << 18
 
-  // Execute the MSM kernel (on the current device)
-  eIcicleError result_code = msm(scalars_d, points.get(), msm_size, config, &result);
-  // OR call bn254_msm(scalars_d, points.get(), msm_size, config, &result);
+	// Generate random inputs
+	scalars := bn254.GenerateScalars(size)
+	points := bn254.GenerateAffinePoints(size)
 
-  // Free the device memory
-  icicle_free(scalars_d);
+	// (optional) copy scalars to device memory explicitly
+	var scalarsDevice core.DeviceSlice
+	scalars.CopyToDevice(&scalarsDevice, true)
 
-  // Check for errors
-  if (result_code == eIcicleError::SUCCESS) {
-    std::cout << "MSM result: " << projective_t::to_affine(result) << std::endl;
-  } else {
-    std::cerr << "MSM computation failed with error: " << get_error_string(result_code) << std::endl;
-  }
+	// MSM configuration
+	cfgBn254 := core.GetDefaultMSMConfig()
 
-  return 0;
+	// allocate memory for the result
+	result := make(core.HostSlice[bn254.Projective], 1)
+
+	// execute bn254 MSM on device
+	err := bn254Msm.Msm(scalarsDevice, points, &cfgBn254, result)
+
+	// Check for errors
+	if err != runtime.Success {
+		errorString := fmt.Sprint(
+			"bn254 Msm failed: ", err)
+		panic(errorString)
+	}
+
+	// free explicitly allocated device memory
+	scalarsDevice.Free()
 }
 ```
 
@@ -223,52 +215,67 @@ int main()
 
 Here's another example demonstrating polynomial operations using Icicle:
 
-```cpp
-#include <iostream>
-#include "icicle/runtime.h"
-#include "icicle/polynomials/polynomials.h"
-#include "icicle/api/bn254.h"
+```go
+package main
 
-using namespace bn254;
+import (
+	"fmt"
 
-// define bn254Poly to be a polynomial over the scalar field of bn254
-using bn254Poly = Polynomial<scalar_t>;
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
-static bn254Poly randomize_polynomial(uint32_t size)
-{
-  auto coeff = std::make_unique<scalar_t[]>(size);
-  for (int i = 0; i < size; i++)
-    coeff[i] = scalar_t::rand_host();
-  return bn254Poly::from_rou_evaluations(coeff.get(), size);
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/polynomial"
+)
+
+func initBabybearDomain() runtime.EIcicleError {
+	cfgInitDomain := core.GetDefaultNTTInitDomainConfig()
+	rouIcicle := babybear.ScalarField{}
+	rouIcicle.FromUint32(1461624142)
+	return ntt.InitDomain(rouIcicle, cfgInitDomain)
 }
 
-int main()
-{
-  // Load backend and set device
-  icicle_load_backend_from_env_or_default();
+func init() {
+	// Load installed backends
+	runtime.LoadBackendFromEnvOrDefault()
 
-  // trying to choose CUDA if available, or fallback to CPU otherwise (default device)
-  const bool is_cuda_device_available = (eIcicleError::SUCCESS == icicle_is_device_available("CUDA"));
-  if (is_cuda_device_available) {
-    Device device = {"CUDA", 0};             // GPU-0
-    ICICLE_CHECK(icicle_set_device(device)); // ICICLE_CHECK asserts that the API call returns eIcicleError::SUCCESS
-  } // else we stay on CPU backend
+	// trying to choose CUDA if available, or fallback to CPU otherwise (default device)
+	deviceCuda := runtime.CreateDevice("CUDA", 0) // GPU-0
+	if runtime.IsDeviceAvailable(&deviceCuda) {
+		runtime.SetDevice(&deviceCuda)
+	} // else we stay on CPU backend
 
-  int poly_size = 1024;
+	// build domain for ntt is required for some polynomial ops that rely on ntt
+	err := initBabybearDomain()
+	if err != runtime.Success {
+		errorString := fmt.Sprint(
+			"Babybear Domain initialization failed: ", err)
+		panic(errorString)
+	}
+}
 
-  // build domain for ntt is required for some polynomial ops that rely on ntt
-  ntt_init_domain(scalar_t::omega(12), default_ntt_init_domain_config());
+func main() {
 
-  // randomize polynomials f(x),g(x) over the scalar field of bn254
-  bn254Poly f = randomize_polynomial(poly_size);
-  bn254Poly g = randomize_polynomial(poly_size);
+	// Setup inputs
+	const polySize = 1 << 10
 
-  // Perform polynomial multiplication
-  auto result = f * g; // Executes on the current device
+	// randomize two polynomials over babybear field
+	var fBabybear polynomial.DensePolynomial
+	defer fBabybear.Delete()
+	var gBabybear polynomial.DensePolynomial
+	defer gBabybear.Delete()
+	fBabybear.CreateFromCoeffecitients(babybear.GenerateScalars(polySize))
+	gBabybear.CreateFromCoeffecitients(babybear.GenerateScalars(polySize / 2))
 
-  ICICLE_LOG_INFO << "Done";
+	// Perform polynomial multiplication
+	rBabybear := fBabybear.Multiply(&gBabybear) // Executes on the current device
+	defer rBabybear.Delete()
+	rDegree := rBabybear.Degree()
 
-  return 0;
+	fmt.Println("f Degree: ", fBabybear.Degree())
+	fmt.Println("g Degree: ", gBabybear.Degree())
+	fmt.Println("r Degree: ", rDegree)
 }
 ```
 
@@ -278,10 +285,10 @@ In this example, the polynomial multiplication is used to perform polynomial mul
 
 ### Checking for Errors
 
-Icicle APIs return an `eIcicleError` enumeration value. Always check the returned value to ensure that operations were successful.
+Icicle APIs return an `EIcicleError` enumeration value. Always check the returned value to ensure that operations were successful.
 
-```cpp
-if (result != eIcicleError::SUCCESS) {
+```go
+if result != runtime.SUCCESS {
     // Handle error
 }
 ```
