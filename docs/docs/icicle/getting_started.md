@@ -2,7 +2,8 @@
 
 ## Overview
 
-This guide explains how to start using ICICLE, including installation steps. The typical workflow for a user is:
+This guide will walk you through the entire process of building, testing, and installing ICICLE using your preferred programming language—C++, Rust, or Go. Whether you're deploying on a CPU or leveraging CUDA for accelerated performance, this guide provides comprehensive instructions to get you started. It also outlines the typical workflow for a user, including key installation steps:
+
 
 1. **Install ICICLE or build it from source**: This is explained in this guide. For building from source, refer to the [Build from Source page](./build_from_source.md).
 2. **Follow the [Programmer’s Guide](./programmers_guide/general.md)**: Learn how to use ICICLE APIs.  

@@ -23,14 +23,6 @@
   </a>
 </p>
 
-
-
-
-
-
-
-
-
 ## Background
 
 Zero Knowledge Proofs (ZKPs) are considered one of the greatest achievements of modern cryptography. Accordingly, ZKPs are expected to disrupt a number of industries and will usher in an era of trustless and privacy preserving services and infrastructure.
@@ -59,6 +51,7 @@ This guide will help you get started with ICICLE in C++, Rust, and Go.
 
 > [!NOTE]
 > For older GPUs that only support CUDA 11, ICICLE may still function, but official support is for CUDA 12 onwards.
+
 
 ### Accessing Hardware
 
