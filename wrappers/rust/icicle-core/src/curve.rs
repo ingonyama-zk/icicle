@@ -54,6 +54,11 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         point1: Projective<Self>,
         scalar: Self::ScalarField,
     ) -> Projective<Self>;
+    #[doc(hidden)]
+    fn mul_two_scalar(
+        scalar1: Self::ScalarField,
+        scalar2: Self::ScalarField,
+    ) -> Self::ScalarField;
 
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -315,9 +320,15 @@ macro_rules! impl_curve {
                 );
                 #[link_name = concat!($curve_prefix, "_mul_scalar")]
                 pub(crate) fn mul_scalar(
-                    point1: $projective_type,
-                    scalar: $scalar_field, 
+                    point1: *const $projective_type,
+                    scalar: *const $scalar_field, 
                     result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_mul_two_scalar")]
+                pub(crate) fn mul_two_scalar(
+                    scalar1: *const $scalar_field,
+                    scalar2: *const $scalar_field, 
+                    result: *mut $scalar_field,
                 );
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
@@ -381,9 +392,23 @@ macro_rules! impl_curve {
 
                 unsafe {
                     $curve_prefix_ident::mul_scalar(
-                        point1,
-                        scalar,
+                        &point1 as *const $projective_type,
+                        &scalar as *const $scalar_field,
                         &mut result as *mut _ as *mut $projective_type
+                    );
+                };
+
+                result
+            }
+
+            fn mul_two_scalar(scalar1: $scalar_field, scalar2: $scalar_field) -> $scalar_field {
+                let mut result = $scalar_field::zero();
+
+                unsafe {
+                    $curve_prefix_ident::mul_two_scalar(
+                        &scalar1 as *const $scalar_field,
+                        &scalar2 as *const $scalar_field,
+                        &mut result as *mut _ as *mut $scalar_field
                     );
                 };
 

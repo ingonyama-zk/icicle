@@ -30,6 +30,11 @@ extern "C" void CONCAT_EXPAND(CURVE, mul_scalar)(projective_t* point1, scalar_t*
   *result = *point1 * *scalar;
 }
 
+extern "C" void CONCAT_EXPAND(CURVE, mul_two_scalar)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
+{
+  *result = *scalar1 * *scalar2;
+}
+
 extern "C" void CONCAT_EXPAND(CURVE, to_affine)(projective_t* point, affine_t* point_out)
 {
   *point_out = projective_t::to_affine(*point);

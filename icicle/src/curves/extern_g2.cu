@@ -30,6 +30,11 @@ extern "C" void CONCAT_EXPAND(CURVE, g2_to_affine)(g2_projective_t* point, g2_af
   *point_out = g2_projective_t::to_affine(*point);
 }
 
+extern "C" void CONCAT_EXPAND(CURVE, g2_mul_two_scalar)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
+{
+  *result = *scalar1 * *scalar2;
+}
+
 extern "C" void CONCAT_EXPAND(CURVE, g2_generate_projective_points)(g2_projective_t* points, int size)
 {
   g2_projective_t::rand_host_many(points, size);
