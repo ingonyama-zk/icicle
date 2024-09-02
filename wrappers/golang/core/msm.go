@@ -10,8 +10,8 @@ import (
 
 const (
 	CUDA_MSM_LARGE_BUCKET_FACTOR = "large_bucket_factor"
-	CUDA_MSM_IS_BIG_TRIANGLE = "is_big_triangle"
-	CUDA_MSM_NOF_CHUNKS = "nof_chunks";
+	CUDA_MSM_IS_BIG_TRIANGLE     = "is_big_triangle"
+	CUDA_MSM_NOF_CHUNKS          = "nof_chunks"
 )
 
 type MSMConfig struct {
