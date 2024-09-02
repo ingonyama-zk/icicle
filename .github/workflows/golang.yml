@@ -64,7 +64,7 @@ jobs:
         path: ./icicle/backend/cuda
         token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Setup go
       uses: actions/setup-go@v5
       with:
@@ -104,7 +104,7 @@ jobs:
         path: ./icicle/backend/cuda
         token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-branch.outputs.cuda-backend-branch }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Setup go
       uses: actions/setup-go@v5
       with:
