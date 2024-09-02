@@ -35,6 +35,7 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
+    Log::set_min_log_level(Log::eLogLevel::Verbose);
 #ifdef BACKEND_BUILD_DIR
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif

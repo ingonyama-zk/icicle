@@ -37,7 +37,8 @@ int main(int argc, char** argv)
 
   // init domain
   scalar_t basic_root = scalar_t::omega(NTT_LOG_SIZE);
-  bn254_ntt_init_domain(&basic_root, &default_ntt_init_domain_config());
+  auto config = default_ntt_init_domain_config();
+  bn254_ntt_init_domain(&basic_root, &config);
 
   // (1) cpu allocation
   auto polyA = std::make_unique<scalar_t[]>(NTT_SIZE);
