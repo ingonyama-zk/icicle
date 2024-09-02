@@ -82,7 +82,7 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
   ASSERT_EQ(b * b_inv, TypeParam::one());
-  ASSERT_EQ(a * scalar_t::from(2), a + a);
+  ASSERT_EQ(a * scalar_t::from(2), a + a); 
 }
 
 TYPED_TEST(FieldApiTest, vectorOps)
