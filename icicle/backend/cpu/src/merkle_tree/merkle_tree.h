@@ -3,7 +3,6 @@
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "hash.h"
-//#include "tasks_manager.h"
 #include "tasks_manager.h"
 #include "icicle/utils/utils.h"
 
@@ -146,7 +145,7 @@ class MerkleTree {
     
     // Map from in hash-segment-id to the number of limbs available for process
     // If this segment is not stored in the tree then SegmentDB also contains the input limbs for that segment 
-    std::unordered_map< uint64_t, SegmentDB>  m_map_segment_id_2_inputs;
+    std::unordered_map< uint64_t, SegmentDB*>  m_map_segment_id_2_inputs;
     
     // config when calling hash function
     HashConfig                                    m_hash_config;

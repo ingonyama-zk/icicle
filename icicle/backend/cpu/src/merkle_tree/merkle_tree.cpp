@@ -17,13 +17,14 @@ MerkleTree::MerkleTree(
     m_layers(nof_layers),                         // vectors of LayerDB per tree layer
     m_leaf_element_size_in_limbs(leaf_element_size_in_limbs),       
     m_output_store_min_layer(output_store_min_layer){
+
   ICICLE_ASSERT(output_store_min_layer < nof_layers) << "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree.";
 
   // update layers data base with the hashes
   m_path_size_in_limbs = layer_hashes[nof_layers - 1].m_total_output_limbs; // include the root at the path
   for (int layer_idx = nof_layers-1; layer_idx >= 0; --layer_idx) {
     ICICLE_ASSERT(layer_idx == nof_layers-1 || 
-                  layer_hashes[layer_idx+1].m_total_input_limbs % layer_hashes[layer_idx].m_total_output_limbs ==0)
+                  layer_hashes[layer_idx+1].m_total_input_limbs % layer_hashes[layer_idx].m_total_output_limbs ==0) 
                   << "Each layer output size must divide the above layer input size. Otherwise its not a tree.\n"
                   << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx+1].m_total_input_limbs << "\n"
                   << "Layer " << layer_idx+1 << " output size = " << layer_hashes[layer_idx].m_total_output_limbs << "\n";
@@ -52,7 +53,7 @@ eIcicleError MerkleTree::build(const limb_t *leaves, const MerkleTreeConfig& con
     HashTask* task = (l0_segment_idx < nof_segments_at_l0) ?        // If there are tasks from layer 0 to send
         task_manager.get_idle_or_completed_task() :                 // get any task slot to assign
         task_manager.get_completed_task();                          // else, only completed tasks are interesting.
-  
+    
 
     // hanlde completed task
     if (task->is_completed()) {
@@ -63,7 +64,7 @@ eIcicleError MerkleTree::build(const limb_t *leaves, const MerkleTreeConfig& con
       const uint64_t completed_segment_idx = task->m_segment_idx;
 
       // delete completed_segment_id from the map
-      const uint64_t completed_segment_id = completed_segment_idx ^ (completed_layer_idx << 56); // COMMENT maybe assert nof layers less than 256
+      const uint64_t completed_segment_id = completed_segment_idx ^ (completed_layer_idx << 56);
       m_map_segment_id_2_inputs.erase(completed_segment_id);
 
       // Calculate Current-Segment-ID. The completed task generated inputs for Current-Segment
@@ -73,14 +74,14 @@ eIcicleError MerkleTree::build(const limb_t *leaves, const MerkleTreeConfig& con
 
       // update m_map_segment_id_2_inputs with the limbs that are ready for process
       auto cur_segment_iter = m_map_segment_id_2_inputs.find(cur_segment_id);
-      cur_segment_iter->second.m_nof_inputs_ready += m_layers[completed_layer_idx].m_hash->m_total_output_limbs * task->m_nof_hashes;
+      cur_segment_iter->second->m_nof_inputs_ready += m_layers[completed_layer_idx].m_hash->m_total_output_limbs * task->m_nof_hashes;
 
       // check if cur segment is ready to be executed
       const Hash* cur_hash = m_layers[cur_layer_idx].m_hash;
       const uint64_t nof_hashes_in_seg = std::min(m_layers[cur_layer_idx].m_nof_hashes - cur_segment_idx * NOF_OPERATIONS_PER_TASK, uint64_t(NOF_OPERATIONS_PER_TASK));
       ICICLE_ASSERT(nof_hashes_in_seg > 0) << "Edge case negative number of hashes";
-      if (cur_segment_iter->second.m_nof_inputs_ready >= cur_hash->m_total_input_limbs * nof_hashes_in_seg) {
-        const limb_t* task_input = (completed_layer_idx < m_output_store_min_layer) ? cur_segment_iter->second.m_inputs_limbs : &(m_layers[completed_layer_idx].m_results[0]);
+      if (cur_segment_iter->second->m_nof_inputs_ready >= cur_hash->m_total_input_limbs * nof_hashes_in_seg) {
+        const limb_t* task_input = (completed_layer_idx < m_output_store_min_layer) ? cur_segment_iter->second->m_inputs_limbs : &(m_layers[completed_layer_idx].m_results[0]);
         dispatch_task(task, cur_layer_idx, cur_segment_idx, task_input, secondary_leaves);
         continue;
       }
@@ -158,9 +159,7 @@ eIcicleError MerkleTree::get_path(const limb_t *leaves, uint64_t element_idx, li
   return eIcicleError::SUCCESS; 
 }
 
-eIcicleError MerkleTree::verify(
-  const limb_t *path, unsigned int element_idx, bool& verification_valid /*OUT*/, const MerkleTreeConfig& config) 
-{
+eIcicleError MerkleTree::verify(const limb_t *path, unsigned int element_idx, bool& verification_valid /*OUT*/, const MerkleTreeConfig& config) {
   build_hash_config_from_merkle_config(config);
   uint64_t element_limb_start = element_idx * m_leaf_element_size_in_limbs;
   for (int layer_idx = 0; layer_idx < m_nof_layers; layer_idx++) {
@@ -230,7 +229,7 @@ MerkleTree::SegmentDB::SegmentDB(int nof_limbs_to_allocate) : m_nof_inputs_ready
 }
 MerkleTree::SegmentDB::~SegmentDB() {
   if (m_inputs_limbs) {
-//    delete[] m_inputs_limbs;
+    delete[] m_inputs_limbs;
   }
 }
 
@@ -324,14 +323,14 @@ void MerkleTree::dispatch_task(HashTask* task, const int cur_layer_idx, const ui
   auto next_segment_it = m_map_segment_id_2_inputs.find(next_segment_id);
   if (next_segment_it == m_map_segment_id_2_inputs.end()) {
     const int nof_limbs_to_allocate = (cur_layer_idx < m_output_store_min_layer) ? NOF_OPERATIONS_PER_TASK*next_input_limbs : 0;
-    const auto result = m_map_segment_id_2_inputs.emplace(next_segment_id, SegmentDB(nof_limbs_to_allocate));
+    const auto result = m_map_segment_id_2_inputs.emplace(next_segment_id, new SegmentDB(nof_limbs_to_allocate));
     next_segment_it = result.first;
   }
 
   // calc task_output
   const uint64_t task_output_offset = cur_segment_idx*NOF_OPERATIONS_PER_TASK*cur_hash->m_total_output_limbs;
   task->m_output = (cur_layer_idx < m_output_store_min_layer) ? 
-      &(next_segment_it->second.m_inputs_limbs[task_output_offset % (NOF_OPERATIONS_PER_TASK*next_input_limbs)]) :
+      &(next_segment_it->second->m_inputs_limbs[task_output_offset % (NOF_OPERATIONS_PER_TASK*next_input_limbs)]) :
       &(m_layers[cur_layer_idx].m_results[task_output_offset]);
 
   // calc task_nof_hashes
