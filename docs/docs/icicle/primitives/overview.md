@@ -8,4 +8,4 @@ This section of the documentation is dedicated to the main APIs provided by ICIC
 - [NTT](./ntt.md)
 - [Vector Operations](./vec_ops.md)
 - [Polynomials](../polynomials/overview.md)
-- Hashing and commitment schemes coming soon
+- _Hashing and commitment schemes coming soon_
