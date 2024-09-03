@@ -3,7 +3,7 @@
 
 ## Compute APIs
 
-Icicle offers a variety of compute APIs, including Number Theoretic Transforms (NTT), Multi Scalar Multiplication (MSM), vector operations, Elliptic Curve NTT (ECNTT), polynomials, and more. These APIs follow a consistent structure, making it straightforward to apply the same usage patterns across different operations.
+ICICLE offers a variety of compute APIs, including Number Theoretic Transforms (NTT), Multi Scalar Multiplication (MSM), vector operations, Elliptic Curve NTT (ECNTT), polynomials, and more. These APIs follow a consistent structure, making it straightforward to apply the same usage patterns across different operations.
 
 [Check out all details about compute APIs here](../primitives/overview.md).
 
@@ -74,7 +74,7 @@ Having said that, it is not an error to pass options to a backend that is not aw
 
 ## Device Abstraction
 
-Icicle provides a device abstraction layer that allows you to interact with different compute devices such as CPUs and GPUs seamlessly. The device abstraction ensures that your code can work across multiple hardware platforms without modification.
+ICICLE provides a device abstraction layer that allows you to interact with different compute devices such as CPUs and GPUs seamlessly. The device abstraction ensures that your code can work across multiple hardware platforms without modification.
 
 ### Device Management
 
@@ -83,7 +83,7 @@ Icicle provides a device abstraction layer that allows you to interact with diff
 
 ## Streams
 
-Streams in Icicle allow for asynchronous execution and memory operations, enabling parallelism and non-blocking execution. Streams are associated with specific devices, and you can create, destroy, and synchronize streams to manage your workflow.
+Streams in ICICLE allow for asynchronous execution and memory operations, enabling parallelism and non-blocking execution. Streams are associated with specific devices, and you can create, destroy, and synchronize streams to manage your workflow.
 
 :::note
 For compute APIs, streams go into the `config.stream` field along with the `is_async=true` config flag.
