@@ -37,7 +37,8 @@ int main(int argc, char** argv)
 
   // init domain
   scalar_t basic_root = scalar_t::omega(NTT_LOG_SIZE);
-  bn254_ntt_init_domain(&basic_root, default_ntt_init_domain_config());
+  auto config = default_ntt_init_domain_config();
+  bn254_ntt_init_domain(&basic_root, &config);
 
   // (1) cpu allocation
   auto polyA = std::make_unique<scalar_t[]>(NTT_SIZE);
@@ -64,8 +65,8 @@ int main(int argc, char** argv)
     ntt_config.are_inputs_on_device = false;
     ntt_config.are_outputs_on_device = true;
     ntt_config.ordering = Ordering::kNM;
-    ICICLE_CHECK(bn254_ntt(polyA.get(), NTT_SIZE, NTTDir::kForward, ntt_config, d_polyA));
-    ICICLE_CHECK(bn254_ntt(polyB.get(), NTT_SIZE, NTTDir::kForward, ntt_config, d_polyB));
+    ICICLE_CHECK(bn254_ntt(polyA.get(), NTT_SIZE, NTTDir::kForward, &ntt_config, d_polyA));
+    ICICLE_CHECK(bn254_ntt(polyB.get(), NTT_SIZE, NTTDir::kForward, &ntt_config, d_polyB));
 
     // (4) multiply A,B
     VecOpsConfig config{
@@ -76,13 +77,13 @@ int main(int argc, char** argv)
       false,  // is_async
       nullptr // ext
     };
-    ICICLE_CHECK(bn254_vector_mul(d_polyA, d_polyB, NTT_SIZE, config, d_polyRes));
+    ICICLE_CHECK(bn254_vector_mul(d_polyA, d_polyB, NTT_SIZE, &config, d_polyRes));
 
     // (5) INTT (in place)
     ntt_config.are_inputs_on_device = true;
     ntt_config.are_outputs_on_device = true;
     ntt_config.ordering = Ordering::kMN;
-    ICICLE_CHECK(bn254_ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, ntt_config, d_polyRes));
+    ICICLE_CHECK(bn254_ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, &ntt_config, d_polyRes));
 
     if (print) { END_TIMER(poly_multiply, "polynomial multiplication took"); }
 
