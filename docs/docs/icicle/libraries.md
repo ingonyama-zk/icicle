@@ -8,7 +8,7 @@ ICICLE is composed of two main logical parts:
 
 The ICICLE device library serves as an abstraction layer for interacting with various hardware devices. It provides a comprehensive interface for tasks such as setting the active device, querying device-specific information like free and total memory, determining the number of available devices, and managing memory allocation. Additionally, it offers functionality for copying data to and from devices, managing task queues (streams) for efficient device utilization, and abstracting the complexities of device management away from the user. 
 
-See programmers guide for more details. [C++](./programmers_guide/cpp#device-management), [Rust](./programmers_guide/rust#device-management), [Go TODO](./programmers_guide/go)
+See programmers guide for more details. [C++](./programmers_guide/cpp#device-management), [Rust](./programmers_guide/rust#device-management), [Go](./programmers_guide/go)
 
 ## ICICLE Core
 

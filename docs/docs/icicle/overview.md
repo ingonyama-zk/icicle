@@ -5,7 +5,13 @@ title: ICICLE Overview
 
 # ICICLE Overview
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/794c306a-b5fc-425c-8b1b-60b87aa12200" alt="Untitled design (29)" width="500"/>
+</p>
+
+
 ## What is ICICLE?
+
 
 [![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
 
@@ -19,9 +25,9 @@ title: ICICLE Overview
 - **Backend Agnosticism:** Develop on CPU and deploy on various backends, including GPUs, specialized hardware, and other emerging platforms, depending on your project's needs.
 - **Extensibility:** Designed for easy integration and extension, allowing you to build and deploy custom backends and cryptographic primitives.
 
-## Evolution from V2 to V3
+## Evolution from v2 to v3
 
-Originally, ICICLE was focused solely on GPU acceleration. With the release of V3, ICICLE now supports multiple backends, making it more versatile and adaptable to different hardware environments. Whether you're leveraging the power of GPUs or exploring other compute platforms, ICICLE V3 is designed to fit your needs.
+Originally, ICICLE was focused solely on GPU acceleration. With the release of v3, ICICLE now supports multiple backends, making it more versatile and adaptable to different hardware environments. Whether you're leveraging the power of GPUs or exploring other compute platforms, ICICLE v3 is designed to fit your needs.
 
 ## Who Uses ICICLE?
 
@@ -69,9 +75,9 @@ ICICLE is also well-suited for prototyping and developing small-scale projects. 
 
 ## Get Started with ICICLE
 
-Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md), [Getting Started Guide](./getting_started.md) and the [programmers guide](./programmers_guide/general.md) to learn how to integrate, deploy, and extend ICICLE across different backends.
+Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md), [Getting Started Guide](./getting_started.md) and the [Programmer's Guide](./programmers_guide/general.md) to learn how to integrate, deploy, and extend ICICLE across different backends.
 
-If you have any questions or need support, feel free to reach out on [Discord] or [GitHub](https://github.com/ingonyama-zk). We're here to help you accelerate your ZK development with ICICLE.
+If you have any questions or need support, feel free to reach out on [Discord], [GitHub](https://github.com/ingonyama-zk) or <support@ingonyama.com>. We're here to help you accelerate your ZK development with ICICLE.
 
 [ICICLE-OVERVIEW]: ./icicle/overview.md
 [Discord]: https://discord.gg/6vYrE7waPj

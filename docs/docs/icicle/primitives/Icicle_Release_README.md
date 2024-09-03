@@ -19,8 +19,6 @@ Each Icicle release includes a tar file containing the build artifacts for a spe
 
 Currently, the CUDA backend is included in every installation tar file, even on machines without a GPU. This ensures consistency across installations but results in additional files being installed that may not be used. 
 
-**TODO**: Consider splitting the release into two separate tar files—one with the CUDA backend and one without—depending on the target machine’s hardware capabilities.
-
 ## Build Docker Image
 
 To build the Docker images for each distribution and CUDA version, use the following commands:

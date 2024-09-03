@@ -3,7 +3,7 @@
 
 ## Overview
 
-This guide covers the usage of Icicle’s Rust API, including device management, memory operations, data transfer, synchronization, and compute APIs.
+This guide covers the usage of ICICLE’s Rust API, including device management, memory operations, data transfer, synchronization, and compute APIs.
 
 ## Build the Rust Application and Execute
 
