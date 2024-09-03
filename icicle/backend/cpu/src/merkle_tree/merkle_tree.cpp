@@ -9,31 +9,32 @@
 // Constructor
 MerkleTree::MerkleTree(
   const unsigned int nof_layers, 
-  const Hash         *layer_hashes,
+  const Hash**       layer_hashes,
   const unsigned int leaf_element_size_in_limbs,
   const unsigned int output_store_min_layer)
   : m_tree_already_built(false),
     m_nof_layers(nof_layers),
     m_layers(nof_layers),                         // vectors of LayerDB per tree layer
+    m_hashes(layer_hashes),
     m_leaf_element_size_in_limbs(leaf_element_size_in_limbs),       
     m_output_store_min_layer(output_store_min_layer){
 
   ICICLE_ASSERT(output_store_min_layer < nof_layers) << "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree.";
 
   // update layers data base with the hashes
-  m_path_size_in_limbs = layer_hashes[nof_layers - 1].m_total_output_limbs; // include the root at the path
+  m_path_size_in_limbs = layer_hashes[nof_layers - 1]->m_total_output_limbs; // include the root at the path
   for (int layer_idx = nof_layers-1; layer_idx >= 0; --layer_idx) {
     ICICLE_ASSERT(layer_idx == nof_layers-1 || 
-                  layer_hashes[layer_idx+1].m_total_input_limbs % layer_hashes[layer_idx].m_total_output_limbs ==0) 
+                  layer_hashes[layer_idx+1]->m_total_input_limbs % layer_hashes[layer_idx]->m_total_output_limbs ==0) 
                   << "Each layer output size must divide the above layer input size. Otherwise its not a tree.\n"
-                  << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx+1].m_total_input_limbs << "\n"
-                  << "Layer " << layer_idx+1 << " output size = " << layer_hashes[layer_idx].m_total_output_limbs << "\n";
+                  << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx+1]->m_total_input_limbs << "\n"
+                  << "Layer " << layer_idx+1 << " output size = " << layer_hashes[layer_idx]->m_total_output_limbs << "\n";
 
     // initialize m_layers with hashes
-    m_layers[layer_idx].m_hash = &layer_hashes[layer_idx];
+    m_layers[layer_idx].m_hash = layer_hashes[layer_idx];
     
     // Caculate m_path_size_in_limbs
-    m_path_size_in_limbs += layer_hashes[layer_idx].m_total_input_limbs;
+    m_path_size_in_limbs += layer_hashes[layer_idx]->m_total_input_limbs;
   }
 }
 
@@ -126,7 +127,7 @@ eIcicleError MerkleTree::get_path(const limb_t *leaves, uint64_t element_idx, li
   }
   else {  // not all leaves store, 
     // Define a new tree tree to retrieve the forgotten hash results
-    MerkleTree sub_tree (m_output_store_min_layer+1, m_layers[0].m_hash, m_leaf_element_size_in_limbs, 0);
+    MerkleTree sub_tree (m_output_store_min_layer+1, m_hashes, m_leaf_element_size_in_limbs, 0);
     
     // build the sub tree
     const uint64_t sub_tree_leaves_size = l0_total_input_limb * m_layers[0].m_nof_hashes / m_layers[m_output_store_min_layer].m_nof_hashes;
@@ -259,13 +260,13 @@ void MerkleTree::init_layers_db() {
     }
 
     // update nof_hashes to the next layer (below)
-    const u_int64_t next_layer_total_output_limbs = (layer_idx > 0) ? m_layers[layer_idx-1].m_hash->m_total_output_limbs : 0;
+    const u_int64_t next_layer_total_output_limbs = (layer_idx > 0) ? m_layers[layer_idx-1].m_hash->m_total_output_limbs : 1;
     nof_hashes = nof_hashes * cur_layer.m_hash->m_total_input_limbs / next_layer_total_output_limbs;
   }
 
   // run over all layers and update m_secondary_input_offset
-  uint64_t secondary_input_offset = 0;
-  for (auto layer : m_layers) {
+  uint64_t secondary_input_offset = 1;
+  for (auto& layer : m_layers) {
     layer.m_secondary_input_offset = secondary_input_offset;
     secondary_input_offset += layer.m_nof_hashes * layer.m_hash->m_total_secondary_input_limbs;
   }

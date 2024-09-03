@@ -11,6 +11,7 @@
 
 
 namespace icicle {
+// TODO destructor
 
 /**
  * @brief Configuration struct for the merkle tree.
@@ -36,7 +37,7 @@ class MerkleTree {
      */
     MerkleTree(
       const unsigned int nof_layers,
-      const Hash         *layer_hashes,
+      const Hash**       layer_hashes,
       const unsigned int leaf_element_size_in_limbs,
       const unsigned int output_store_min_layer = 0);
 
@@ -142,6 +143,7 @@ class MerkleTree {
 
     // Data base per layer
     std::vector < LayerDB >                       m_layers;
+    const Hash**                                  m_hashes;
     
     // Map from in hash-segment-id to the number of limbs available for process
     // If this segment is not stored in the tree then SegmentDB also contains the input limbs for that segment 
