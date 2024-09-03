@@ -7,7 +7,7 @@ This guide covers the usage of ICICLE's Golang API, including device management,
 ## Device Management
 
 :::note
-See all ICICLE runtime APIs in [runtime.go](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/wrappers/golang/runtime/runtime.go)
+See all ICICLE runtime APIs in [runtime.go](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/golang/runtime/runtime.go)
 :::
 
 ### Loading a Backend

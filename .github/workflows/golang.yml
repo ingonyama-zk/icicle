@@ -4,10 +4,11 @@ on:
   pull_request:
     branches:
       - V3
-      - yshekel/V3     # TODO remove when merged to V3
+      - main
   push:
     branches:
-      - V3   
+      - V3
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,7 +44,7 @@ jobs:
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     strategy:
       matrix:
-        curve: 
+        curve:
           - name: bn254
             build_args:
           - name: bls12_381
@@ -82,7 +83,7 @@ jobs:
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
         go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
- 
+
   build-fields-linux:
     name: Build and test fields on Linux
     runs-on: [self-hosted, Linux, X64, icicle]

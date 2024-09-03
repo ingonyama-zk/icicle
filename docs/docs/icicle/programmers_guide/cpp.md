@@ -7,7 +7,7 @@ This guide covers the usage of ICICLE's C++ API, including device management, me
 ## Device Management
 
 :::note
-See all ICICLE runtime APIs in [runtime.h](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle/include/icicle/runtime.h)
+See all ICICLE runtime APIs in [runtime.h](https://github.com/ingonyama-zk/icicle/blob/main/icicle/include/icicle/runtime.h)
 :::
 
 ### Loading a Backend
