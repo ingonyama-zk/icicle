@@ -80,7 +80,7 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../../build/
+        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
         go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
  
   build-fields-linux:
@@ -118,5 +118,5 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp_cuda == 'true'
       run: |
         FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=$PWD/../../../build/
+        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
         go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v
