@@ -77,7 +77,7 @@ ICICLE is also well-suited for prototyping and developing small-scale projects. 
 
 Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md), [Getting Started Guide](./getting_started.md) and the [Programmer's Guide](./programmers_guide/general.md) to learn how to integrate, deploy, and extend ICICLE across different backends.
 
-If you have any questions or need support, feel free to reach out on [Discord], [GitHub](https://github.com/ingonyama-zk) or [support@ingonyama.com](support@ingonyama.com). We're here to help you accelerate your ZK development with ICICLE.
+If you have any questions or need support, feel free to reach out on [Discord], [GitHub](https://github.com/ingonyama-zk) or <support@ingonyama.com>. We're here to help you accelerate your ZK development with ICICLE.
 
 [ICICLE-OVERVIEW]: ./icicle/overview.md
 [Discord]: https://discord.gg/6vYrE7waPj
