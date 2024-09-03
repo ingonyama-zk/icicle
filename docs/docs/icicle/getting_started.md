@@ -38,8 +38,6 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
 - [Full Rust example](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/install-and-use-icicle)
 - [Full Go example](https://github.com/ingonyama-zk/icicle/tree/main/examples/golang/install-and-use-icicle)
 
-*(TODO update links to main branch when merged)
-
 1. **Extract and install the Tar Files**:
    - [Download](https://github.com/ingonyama-zk/icicle/releases) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 8,9 for RHEL compatible binaries).
    - **Frontend libs and headers** should be installed in default search paths (such as `/usr/lib` and `usr/local/include`) for the compiler and linker to find.
