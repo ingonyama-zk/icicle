@@ -159,9 +159,6 @@ const config = {
         backgroundColor: '#ADD8E6', // Fallback light blue background color.
         textColor: '#000000', // Black text color.
         isCloseable: true, // Defaults to `true`.
-        style: {
-          backgroundImage: 'linear-gradient(45deg, #64f5ef 25%, #ce2aaf 25%, #ce2aaf 50%, #64f5ef 50%, #64f5ef 75%, #ce2aaf 75%, #ce2aaf 100%)',
-          backgroundSize: '56.57px 56.57px',
         },
       },
     }),
