@@ -82,7 +82,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Go (TODO)",
+              label: "Go",
               id: "icicle/programmers_guide/go",
             }
           ],
@@ -133,7 +133,7 @@ module.exports = {
             // },
             {
               type: "category",
-              label: "Golang bindings (TODO)",
+              label: "Golang bindings",
               link: {
                 type: `doc`,
                 id: "icicle/golang-bindings",
@@ -170,11 +170,6 @@ module.exports = {
                   type: "doc",
                   label: "Vector operations",
                   id: "icicle/golang-bindings/vec-ops",
-                },
-                {
-                  type: "doc",
-                  label: "Keccak Hash",
-                  id: "icicle/golang-bindings/keccak",
                 },
                 {
                   type: "doc",

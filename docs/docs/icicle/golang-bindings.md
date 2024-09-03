@@ -54,7 +54,7 @@ If more than one curve or more than one field is supplied, the last one supplied
 
 :::
 
-To build ICICLE libraries for all supported curves without certain features, you can use their -skip_<feature> flags. For example, for disabling G2 and ECNTT:
+To build ICICLE libraries for all supported curves without certain features, you can use their -skip_<feature\> flags. For example, for disabling G2 and ECNTT:
 
 ```bash
 ./build.sh -curve=all -skip_g2 -skip_ecntt
