@@ -1,5 +1,3 @@
-#include <cuda_runtime.h>
-
 #ifndef _BN254_ECNTT_H
 #define _BN254_ECNTT_H
 
