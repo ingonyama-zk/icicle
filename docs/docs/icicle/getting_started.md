@@ -24,15 +24,15 @@ Future releases will also include support for macOS and other systems.
 
 Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, where `icicle30` indicates version 3.0. This tar file contains ICICLE frontend build artifacts and headers for a specific distribution. The tar file structure includes:
 
-- **`./icicle/include/`**: This directory contains all the necessary header files for using the Icicle library from C++.
+- **`./icicle/include/`**: This directory contains all the necessary header files for using the ICICLE library from C++.
 - **`./icicle/lib/`**:
-  - **Icicle Libraries**: All the core Icicle libraries are located in this directory. Applications linking to Icicle will use these libraries.
+  - **Icicle Libraries**: All the core ICICLE libraries are located in this directory. Applications linking to ICICLE will use these libraries.
   - **Backends**: The `./icicle/lib/backend/` directory houses backend libraries, including the CUDA backend (not included in this tar).
 
 - **CUDA backend** comes as separate tar `icicle30-<distribution>-cuda122.tar.gz`
-  - per distribution, for icicle-frontend V3.0 and CUDA 12.2.
+  - per distribution, for ICICLE-frontend v3.0 and CUDA 12.2.
 
-## installing and using icicle
+## Installing and using ICICLE
 
 - [Full C++ example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c++/install-and-use-icicle)
 - [Full Rust example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle)
@@ -106,7 +106,7 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
 
   **Rust**
      - When building the ICICLE crates, ICICLE frontend libs are built from source, along with the Rust bindings. They are installed to `target/<buildtype>/deps/icicle`, and Cargo will link them correctly. Note that you still need to install the CUDA backend if you have a CUDA GPU.
-     - Simply use `cargo build` or `cargo run` and it should link to icicle libs.
+     - Simply use `cargo build` or `cargo run` and it should link to ICICLE libs.
 
   **Go** - TODO
 
