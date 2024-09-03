@@ -20,6 +20,11 @@ extern "C" void CONCAT_EXPAND(CURVE, to_affine)(projective_t* point, affine_t* p
   *point_out = projective_t::to_affine(*point);
 }
 
+extern "C" void CONCAT_EXPAND(CURVE, from_affine)(affine_t* point, projective_t* point_out)
+{
+  *point_out = projective_t::from_affine(*point);
+}
+
 extern "C" void CONCAT_EXPAND(CURVE, generate_projective_points)(projective_t* points, int size)
 {
   projective_t::rand_host_many(points, size);
@@ -44,6 +49,11 @@ extern "C" bool CONCAT_EXPAND(CURVE, g2_eq)(g2_projective_t* point1, g2_projecti
 extern "C" void CONCAT_EXPAND(CURVE, g2_to_affine)(g2_projective_t* point, g2_affine_t* point_out)
 {
   *point_out = g2_projective_t::to_affine(*point);
+}
+
+extern "C" void CONCAT_EXPAND(CURVE, g2_from_affine)(g2_affine_t* point, g2_projective_t* point_out)
+{
+  *point_out = g2_projective_t::from_affine(*point);
 }
 
 extern "C" void CONCAT_EXPAND(CURVE, g2_generate_projective_points)(g2_projective_t* points, int size)

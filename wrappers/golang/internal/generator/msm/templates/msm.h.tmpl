@@ -1,0 +1,22 @@
+#include <stdbool.h>
+
+#ifndef _{{toUpper .Curve}}_{{.CurvePrefix}}MSM_H
+#define _{{toUpper .Curve}}_{{.CurvePrefix}}MSM_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct scalar_t scalar_t;
+typedef struct {{toCName .CurvePrefix}}projective_t {{toCName .CurvePrefix}}projective_t;
+typedef struct {{toCName .CurvePrefix}}affine_t {{toCName .CurvePrefix}}affine_t;
+typedef struct MSMConfig MSMConfig;
+
+int {{.Curve}}{{toCNameBackwards .CurvePrefix}}_msm(const scalar_t* scalars, const {{toCName .CurvePrefix}}affine_t* points, int count, MSMConfig* config, {{toCName .CurvePrefix}}projective_t* out);
+int {{.Curve}}{{toCNameBackwards .CurvePrefix}}_msm_precompute_bases({{toCName .CurvePrefix}}affine_t* input_bases, int bases_size, MSMConfig* config, {{toCName .CurvePrefix}}affine_t* output_bases);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

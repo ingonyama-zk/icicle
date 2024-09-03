@@ -1,13 +1,11 @@
 # ECNTT
 
-TODO update for V3
-
 ## ECNTT Method
 
 The `ECNtt[T any]()` function performs the Elliptic Curve Number Theoretic Transform (EC-NTT) on the input points slice, using the provided dir (direction), cfg (configuration), and stores the results in the results slice.
 
 ```go
-func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError
+func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError
 ```
 
 ### Parameters
@@ -19,7 +17,7 @@ func ECNtt[T any](points core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTC
 
 ### Return Value
 
-- **`CudaError`**: A `core.IcicleError` value, which will be `core.IcicleErrorCode(0)` if the EC-NTT operation was successful, or an error if something went wrong.
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the EC-NTT operation was successful, or an error if something went wrong.
 
 ## NTT Configuration (NTTConfig)
 
@@ -27,29 +25,29 @@ The `NTTConfig` structure holds configuration parameters for the NTT operation, 
 
 ```go
 type NTTConfig[T any] struct {
-    Ctx cr.DeviceContext
-    CosetGen T
-    BatchSize int32
-    ColumnsBatch bool
-    Ordering Ordering
-    areInputsOnDevice  bool
-    areOutputsOnDevice bool
-    IsAsync bool
-    NttAlgorithm NttAlgorithm
+	StreamHandle       runtime.Stream
+	CosetGen           T
+	BatchSize          int32
+	ColumnsBatch       bool
+	Ordering           Ordering
+	areInputsOnDevice  bool
+	areOutputsOnDevice bool
+	IsAsync            bool
+	Ext                config_extension.ConfigExtensionHandler
 }
 ```
 
 ### Fields
 
-- **`Ctx`**: Device context containing details like device ID and stream ID.
-- **`CosetGen`**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
+- **`StreamHandle`**: Specifies the stream (queue) to use for async execution.
+- **`CosetGen`**: Coset generator. Used to perform coset (i)NTTs.
 - **`BatchSize`**: The number of NTTs to compute in one operation, defaulting to 1.
-- **`ColumnsBatch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
+- **`ColumnsBatch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
 - **`Ordering`**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`), affecting how data is arranged.
 - **`areInputsOnDevice`**: Indicates if input scalars are located on the device.
 - **`areOutputsOnDevice`**: Indicates if results are stored on the device.
 - **`IsAsync`**: Controls whether the NTT operation runs asynchronously.
-- **`NttAlgorithm`**: Explicitly select the NTT algorithm. ECNTT supports running on `Radix2` algoruithm.
+- **`Ext`**: Extended configuration for backend.
 
 ### Default Configuration
 
@@ -65,30 +63,38 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T]
 package main
 
 import (
-    "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-    cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ecntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func Main() {
-    // Obtain the default NTT configuration with a predefined coset generator.
-    cfg := GetDefaultNttConfig()
-    
-    // Define the size of the input scalars.
-    size := 1 << 18
+	// Load backend using env path
+	runtime.LoadBackendFromEnvOrDefault()
+	// Set Cuda device to perform
+	device := runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&device)
+	// Obtain the default NTT configuration with a predefined coset generator.
+	cfg := ntt.GetDefaultNttConfig()
 
-    // Generate Points for the ECNTT operation.
-    points := GenerateProjectivePoints(size)
-    
-    // Set the direction of the NTT (forward or inverse).
-    dir := core.KForward
+	// Define the size of the input scalars.
+	size := 1 << 18
 
-    // Allocate memory for the results of the NTT operation.
-    results := make(core.HostSlice[Projective], size)
+	// Generate Points for the ECNTT operation.
+	points := bn254.GenerateProjectivePoints(size)
 
-    // Perform the NTT operation.
-    err := ECNtt(points, dir, &cfg, results)
-    if err != cr.CudaSuccess {
-        panic("ECNTT operation failed")
-    }
+	// Set the direction of the NTT (forward or inverse).
+	dir := core.KForward
+
+	// Allocate memory for the results of the NTT operation.
+	results := make(core.HostSlice[bn254.Projective], size)
+
+	// Perform the NTT operation.
+	err := ecntt.ECNtt(points, dir, &cfg, results)
+	if err != runtime.Success {
+		panic("ECNTT operation failed")
+	}
 }
 ```
