@@ -3,7 +3,7 @@
 
 ## Overview
 
-The CUDA backend in ICICLE V3 is a high-performance, closed-source component designed to accelerate cryptographic computations using NVIDIA GPUs. This backend includes specialized libraries optimized for various cryptographic fields and curves, providing significant speedups for operations such as MSM, NTT, and elliptic curve operations.
+The CUDA backend in ICICLE v3 is a high-performance, closed-source component designed to accelerate cryptographic computations using NVIDIA GPUs. This backend includes specialized libraries optimized for various cryptographic fields and curves, providing significant speedups for operations such as MSM, NTT, and elliptic curve operations.
 
 ## Installation
 
@@ -12,7 +12,7 @@ The CUDA backend is a closed-source component that requires a license. [To insta
 ### Licensing
 
 :::note
-Currently, the CUDA backend is free to use via Ingonyama’s icicle-cuda-backend-license server. By default, the CUDA backend will attempt to access this server. For more details, please contact support@ingonyama.com.
+Currently, the CUDA backend is free to use via Ingonyama’s ICICLE-CUDA-backend-license server. By default, the CUDA backend will attempt to access this server. For more details, please contact support@ingonyama.com.
 :::
 
 The CUDA backend requires a valid license to function. There are two types of CUDA backend licenses:
