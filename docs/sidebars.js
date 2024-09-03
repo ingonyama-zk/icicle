@@ -46,7 +46,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Multi Device Support",
+              label: "Multi-Device Support",
               id: "icicle/multi-device",
             },
             {
