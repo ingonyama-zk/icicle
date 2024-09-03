@@ -4,7 +4,8 @@ on:
   pull_request:
     branches:
       - main
-      - V2
+      - V3
+      - yshekel/V3
 
 jobs:
   spelling-checker:
@@ -15,6 +16,6 @@ jobs:
       - uses: codespell-project/actions-codespell@v2
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
-          skip: ./**/target,./**/build,./docs/*.js,./docs/*.json
+          skip: ./**/target,./**/build,./docs/*.js,./docs/*.json,./*.svg
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-ignore_words_file
           ignore_words_file: .codespellignore

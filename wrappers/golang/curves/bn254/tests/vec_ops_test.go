@@ -3,10 +3,9 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,30 +37,27 @@ func TestBn254VecOps(t *testing.T) {
 func TestBn254Transpose(t *testing.T) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
-	onDevice := false
-	isAsync := false
 
 	matrix := bn254.GenerateScalars(rowSize * columnSize)
 
 	out := make(core.HostSlice[bn254.ScalarField], rowSize*columnSize)
 	out2 := make(core.HostSlice[bn254.ScalarField], rowSize*columnSize)
 
-	ctx, _ := cr.GetDefaultDeviceContext()
+	cfg := core.DefaultVecOpsConfig()
 
-	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, ctx, onDevice, isAsync)
-	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, cfg)
+	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, cfg)
 
 	assert.Equal(t, matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice
-	onDevice = true
 
 	matrix.CopyToDevice(&dMatrix, true)
-	dOut.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
-	dOut2.Malloc(columnSize*rowSize*matrix.SizeOfElement(), matrix.SizeOfElement())
+	dOut.Malloc(matrix.SizeOfElement(), columnSize*rowSize)
+	dOut2.Malloc(matrix.SizeOfElement(), columnSize*rowSize)
 
-	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, ctx, onDevice, isAsync)
-	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, ctx, onDevice, isAsync)
+	vecOps.TransposeMatrix(dMatrix, dOut, columnSize, rowSize, cfg)
+	vecOps.TransposeMatrix(dOut, dOut2, rowSize, columnSize, cfg)
 	output := make(core.HostSlice[bn254.ScalarField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 

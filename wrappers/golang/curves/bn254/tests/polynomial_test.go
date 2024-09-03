@@ -3,11 +3,12 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	// "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/ntt"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/polynomial"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+
+	// "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/polynomial"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -134,7 +135,7 @@ func TestPolyReadCoeffs(t *testing.T) {
 	assert.ElementsMatch(t, coeffs, coeffsCopied)
 
 	var coeffsDevice core.DeviceSlice
-	coeffsDevice.Malloc(coeffs.Len()*one.Size(), one.Size())
+	coeffsDevice.Malloc(one.Size(), coeffs.Len())
 	_, _ = f.CopyCoeffsRange(0, coeffs.Len()-1, coeffsDevice)
 	coeffsHost := make(core.HostSlice[bn254.ScalarField], coeffs.Len())
 	coeffsHost.CopyFromDevice(&coeffsDevice)

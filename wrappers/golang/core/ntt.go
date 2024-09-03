@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime/config_extension"
 )
 
 type NTTDir int8
@@ -33,12 +34,15 @@ const (
 	MixedRadix
 )
 
+const CUDA_NTT_FAST_TWIDDLES_MODE = "fast_twiddles"
+const CUDA_NTT_ALGORITHM = "ntt_algorithm"
+
 type NTTConfig[T any] struct {
-	/// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
-	Ctx cr.DeviceContext
-	/// Coset generator. Used to perform coset (i)NTTs. Default value: `S::one()` (corresponding to no coset being used).
+	/// Specifies the stream (queue) to use for async execution.
+	StreamHandle runtime.Stream
+	/// Coset generator. Used to perform coset (i)NTTs.
 	CosetGen T
-	/// The number of NTTs to compute. Default value: 1.
+	/// The number of NTTs to compute in one operation, defaulting to 1.
 	BatchSize int32
 	/// If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
 	ColumnsBatch bool
@@ -46,17 +50,17 @@ type NTTConfig[T any] struct {
 	Ordering           Ordering
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
-	/// Whether to run the NTT asynchronously. If set to `true`, the NTT function will be non-blocking and you'd need to synchronize
-	/// it explicitly by running `stream.synchronize()`. If set to false, the NTT function will block the current CPU thread.
-	IsAsync      bool
-	NttAlgorithm NttAlgorithm /**< Explicitly select the NTT algorithm. Default value: Auto (the implementation
-	selects radix-2 or mixed-radix algorithm based on heuristics). */
+	/// Whether to run the vector operations asynchronously. If set to `true`, the function will be
+	/// non-blocking and you'll need to synchronize it explicitly by calling
+	/// `SynchronizeStream`. If set to false, the function will block the current CPU thread.
+	IsAsync bool
+	/// Extended configuration for backend.
+	Ext config_extension.ConfigExtensionHandler
 }
 
 func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
-	ctx, _ := cr.GetDefaultDeviceContext()
 	return NTTConfig[T]{
-		ctx,      // Ctx
+		nil,      // StreamHandle
 		cosetGen, // CosetGen
 		1,        // BatchSize
 		false,    // ColumnsBatch
@@ -64,7 +68,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T] {
 		false,    // areInputsOnDevice
 		false,    // areOutputsOnDevice
 		false,    // IsAsync
-		Auto,
+		nil,      // Ext
 	}
 }
 
@@ -93,4 +97,18 @@ func NttCheck[T any](input HostOrDeviceSlice, cfg *NTTConfig[T], output HostOrDe
 	cfgPointer := unsafe.Pointer(cfg)
 
 	return input.AsUnsafePointer(), output.AsUnsafePointer(), size, cfgPointer
+}
+
+type NTTInitDomainConfig struct {
+	StreamHandle runtime.Stream
+	IsAsync      bool
+	Ext          config_extension.ConfigExtensionHandler
+}
+
+func GetDefaultNTTInitDomainConfig() NTTInitDomainConfig {
+	return NTTInitDomainConfig{
+		nil,   // StreamHandle
+		false, // IsAsync
+		nil,   // Ext
+	}
 }

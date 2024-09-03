@@ -4,9 +4,9 @@ To understand the theory behind MSM pre computation technique refer to Niall Emm
 
 ## Core package
 
-### MSM PrecomputePoints
+### MSM PrecomputeBases
 
-`PrecomputePoints` and `G2PrecomputePoints` exists for all supported curves.
+`PrecomputeBases` and `G2PrecomputeBases` exists for all supported curves.
 
 #### Description
 
@@ -14,18 +14,17 @@ This function extends each provided base point $(P)$ with its multiples $(2^lP, 
 
 The precomputation process is crucial for optimizing MSM operations, especially when dealing with large sets of points and scalars. By precomputing and storing multiples of the base points, the MSM function can more efficiently compute the scalar-point multiplications.
 
-#### `PrecomputePoints`
+#### `PrecomputeBases`
 
 Precomputes points for MSM by extending each base point with its multiples.
 
 ```go
-func PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError
+func PrecomputeBases(bases core.HostOrDeviceSlice, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError
 ```
 
 ##### Parameters
 
-- **`points`**: A slice of the original affine points to be extended with their multiples.
-- **`msmSize`**: The size of a single msm in order to determine optimal parameters.
+- **`bases`**: A slice of the original affine points to be extended with their multiples.
 - **`cfg`**: The MSM configuration parameters.
 - **`outputBases`**: The device slice allocated for storing the extended points.
 
@@ -37,37 +36,43 @@ package main
 import (
 	"log"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
-	cfg := bn254.GetDefaultMSMConfig()
-	points := bn254.GenerateAffinePoints(1024)
-	var precomputeFactor int32 = 8
-	var precomputeOut core.DeviceSlice
-	precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+	// Load backend using env path
+	runtime.LoadBackendFromEnvOrDefault()
+	// Set Cuda device to perform
+	device := runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&device)
 
-	err := bn254.PrecomputePoints(points, 1024, &cfg, precomputeOut)
-	if err != cr.CudaSuccess {
+	cfg := core.GetDefaultMSMConfig()
+	points := bn254.GenerateAffinePoints(1024)
+	cfg.PrecomputeFactor = 8
+	var precomputeOut core.DeviceSlice
+	precomputeOut.Malloc(points[0].Size(), points.Len()*int(cfg.PrecomputeFactor))
+
+	err := msm.PrecomputeBases(points, &cfg, precomputeOut)
+	if err != runtime.Success {
 		log.Fatalf("PrecomputeBases failed: %v", err)
 	}
 }
 ```
 
-#### `G2PrecomputePoints`
+#### `G2PrecomputeBases`
 
 This method is the same as `PrecomputePoints` but for G2 points. Extends each G2 curve base point with its multiples for optimized MSM computations.
 
 ```go
-func G2PrecomputePoints(points core.HostOrDeviceSlice, msmSize int, cfg *core.MSMConfig, outputBases core.DeviceSlice) cr.CudaError
+func G2PrecomputeBases(bases core.HostOrDeviceSlice, cfg *core.MSMConfig, outputBases core.DeviceSlice) runtime.EIcicleError
 ```
 
 ##### Parameters
 
-- **`points`**: A slice of the original affine points to be extended with their multiples.
-- **`msmSize`**: The size of a single msm in order to determine optimal parameters.
+- **`bases`**: A slice of the original affine points to be extended with their multiples.
 - **`cfg`**: The MSM configuration parameters.
 - **`outputBases`**: The device slice allocated for storing the extended points.
 
@@ -79,20 +84,26 @@ package main
 import (
 	"log"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	g2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/g2"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
-	cfg := g2.G2GetDefaultMSMConfig()
-	points := g2.G2GenerateAffinePoints(1024)
-	var precomputeFactor int32 = 8
-	var precomputeOut core.DeviceSlice
-	precomputeOut.Malloc(points[0].Size()*points.Len()*int(precomputeFactor), points[0].Size())
+	// Load backend using env path
+	runtime.LoadBackendFromEnvOrDefault()
+	// Set Cuda device to perform
+	device := runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&device)
 
-	err := g2.G2PrecomputePoints(points, 1024, 0, &cfg, precomputeOut)
-	if err != cr.CudaSuccess {
+	cfg := core.GetDefaultMSMConfig()
+	points := g2.G2GenerateAffinePoints(1024)
+	cfg.PrecomputeFactor = 8
+	var precomputeOut core.DeviceSlice
+	precomputeOut.Malloc(points[0].Size(), points.Len()*int(cfg.PrecomputeFactor))
+
+	err := g2.G2PrecomputeBases(points, &cfg, precomputeOut)
+	if err != runtime.Success {
 		log.Fatalf("PrecomputeBases failed: %v", err)
 	}
 }

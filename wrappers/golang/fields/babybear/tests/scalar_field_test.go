@@ -1,11 +1,12 @@
 package tests
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	babybear "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -100,20 +101,20 @@ func TestBabybearGenerateScalars(t *testing.T) {
 }
 
 func TestBabybearMongtomeryConversion(t *testing.T) {
-	size := 1 << 15
+	size := 1 << 20
 	scalars := babybear.GenerateScalars(size)
 
 	var deviceScalars core.DeviceSlice
 	scalars.CopyToDevice(&deviceScalars, true)
 
-	babybear.ToMontgomery(&deviceScalars)
+	babybear.ToMontgomery(deviceScalars)
 
-	scalarsMontHost := babybear.GenerateScalars(size)
+	scalarsMontHost := make(core.HostSlice[babybear.ScalarField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)
 
-	babybear.FromMontgomery(&deviceScalars)
+	babybear.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)

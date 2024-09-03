@@ -5,11 +5,11 @@ package ntt
 import "C"
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
-func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError {
 	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
@@ -18,7 +18,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 
-	__ret := C.babybear_extension_ntt_cuda(cScalars, cSize, cDir, cCfg, cResults)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+	__ret := C.babybear_extension_ntt(cScalars, cSize, cDir, cCfg, cResults)
+	err := runtime.EIcicleError(__ret)
+	return err
 }

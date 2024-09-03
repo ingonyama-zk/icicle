@@ -1,16 +1,15 @@
 package tests
 
 import (
-	"os"
-	"testing"
-	
-	{{if or .SupportsNTT .SupportsPoly -}}
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	{{.Field}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	"testing"	
 	{{if .SupportsNTT -}}
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
-	{{if .SupportsPoly -}}
-	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}/polynomial"{{end}}
+	"fmt"
+	
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	{{if .SupportsNTT -}}
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
 	{{if ne .GnarkImport "" -}}
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
@@ -20,8 +19,10 @@ import (
 const (
 	largestTestSize = 20
 )
-{{if or .SupportsNTT .SupportsPoly -}}
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
+var DEVICE runtime.Device
+
+{{if .SupportsNTT -}}
+func initDomain({{if ne .GnarkImport "" -}}largestTestSize int, {{end -}}cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	{{if ne .GnarkImport "" -}}
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
@@ -33,26 +34,42 @@ func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleEr
 	rouIcicle := {{.Field}}.{{.FieldPrefix}}Field{}
 	rouIcicle.FromUint32({{.ROU}})
 	{{end -}}
-	e := ntt.InitDomain(rouIcicle, cfg.Ctx, false)
+	e := ntt.InitDomain(rouIcicle, cfg)
 	return e
 }{{end}}
 
 func TestMain(m *testing.M) {
-	{{if .SupportsPoly -}}poly.InitPolyBackend(){{end}}
+	runtime.LoadBackendFromEnvOrDefault()
+	devices, e := runtime.GetRegisteredDevices()
+	if e != runtime.Success {
+		panic("Failed to load registered devices")
+	}
+	for _, deviceType := range devices {
+		DEVICE = runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&DEVICE)
 
-	{{if or .SupportsNTT .SupportsPoly -}}// setup domain
-	cfg := ntt.GetDefaultNttConfig()
-	e := initDomain(largestTestSize, cfg)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("initDomain failed")
-	}{{end}}
+		{{if .SupportsNTT -}}// setup domain
+		cfg := core.GetDefaultNTTInitDomainConfig()
+		e = initDomain({{if ne .GnarkImport "" -}}largestTestSize, {{end -}}cfg)
+		if e != runtime.Success {
+			if e != runtime.ApiNotImplemented {
+				fmt.Println("initDomain is not implemented for ", deviceType, " device type")
+			} else {
+				panic("initDomain failed")
+			}
+		}{{end}}
 
-	// execute tests
-	os.Exit(m.Run())
+		// execute tests
+		m.Run()
 
-	{{if or .SupportsNTT .SupportsPoly -}}// release domain
-	e = ntt.ReleaseDomain(cfg.Ctx)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("ReleaseDomain failed")
-	}{{end}}
+		{{if .SupportsNTT -}}// release domain
+		e = ntt.ReleaseDomain()
+		if e != runtime.Success {
+			if e != runtime.ApiNotImplemented {
+				fmt.Println("ReleaseDomain is not implemented for ", deviceType, " device type")
+			} else {
+				panic("ReleaseDomain failed")
+			}
+		}{{end}}
+	}
 }

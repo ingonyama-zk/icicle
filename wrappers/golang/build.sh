@@ -1,17 +1,22 @@
 #!/bin/bash
 
-G2_DEFINED=OFF
-ECNTT_DEFINED=OFF
+MSM_DEFINED=ON
+NTT_DEFINED=ON
+G2_DEFINED=ON
+ECNTT_DEFINED=ON
+EXT_FIELD=ON
+
 CUDA_COMPILER_PATH=/usr/local/cuda/bin/nvcc
+
 DEVMODE=OFF
-EXT_FIELD=OFF
 BUILD_CURVES=( )
 BUILD_FIELDS=( )
-BUILD_HASHES=( )
 
 SUPPORTED_CURVES=("bn254" "bls12_377" "bls12_381" "bw6_761", "grumpkin")
 SUPPORTED_FIELDS=("babybear")
-SUPPORTED_HASHES=("keccak")
+CUDA_BACKEND=OFF
+
+BUILD_DIR="${ICICLE_BUILD_DIR:-$(realpath "$PWD/../../icicle/build")}"
 
 if [[ $1 == "-help" ]]; then
   echo "Build script for building ICICLE cpp libraries"
@@ -21,15 +26,27 @@ if [[ $1 == "-help" ]]; then
   echo "USAGE: ./build.sh [OPTION...]"
   echo ""
   echo "OPTIONS:"
-  echo "  -curve=<curve_name>       The curve that should be built. If \"all\" is supplied,"
-  echo "                            all curves will be built with any other supplied curve options"
-  echo "  -g2                       Builds the curve lib with G2 enabled"
-  echo "  -ecntt                    Builds the curve lib with ECNTT enabled"
-  echo "  -field=<field_name>       The field that should be built. If \"all\" is supplied,"
-  echo "                            all fields will be built with any other supplied field options"
-  echo "  -field-ext                Builds the field lib with the extension field enabled"
-  echo "  -devmode                  Enables devmode debugging and fast build times"
-  echo "  -cuda_version=<version>   The version of cuda to use for compiling"
+  echo "  -curve=<curve_name>       Specifies the curve to be built. If \"all\" is supplied,"
+  echo "                            all curves will be built with any additional curve options."
+  echo ""
+  echo "  -skip_msm                 Builds the curve library with MSM (multi-scalar multiplication) disabled."
+  echo ""
+  echo "  -skip_ntt                 Builds the curve/field library with NTT (number theoretic transform) disabled."
+  echo ""
+  echo "  -skip_g2                  Builds the curve library with G2 (a secondary group) disabled."
+  echo ""
+  echo "  -skip_ecntt               Builds the curve library with ECNTT (elliptic curve NTT) disabled."
+  echo ""
+  echo "  -field=<field_name>       Specifies the field to be built. If \"all\" is supplied,"
+  echo "                            all fields will be built with any additional field options."
+  echo ""
+  echo "  -skip_fieldext            Builds the field library with the extension field disabled."
+  echo ""
+  echo "  -cuda_backend=<option>    Specifies the branch/commit to pull for CUDA backend, or \"local\" if it's"
+  echo "                            located under icicle/backend/cuda."
+  echo "                            Default: \"OFF\""
+  echo ""
+  echo "  -cuda_version=<version>   Specifies the version of CUDA to use for compilation."
   echo ""
   exit 0
 fi
@@ -42,11 +59,20 @@ do
             cuda_version=$(echo "$arg" | cut -d'=' -f2)
             CUDA_COMPILER_PATH=/usr/local/cuda-$cuda_version/bin/nvcc
             ;;
-        -ecntt)
-            ECNTT_DEFINED=ON
+        -cuda_backend=*)
+            CUDA_BACKEND=$(echo "$arg_lower" | cut -d'=' -f2)
             ;;
-        -g2)
-            G2_DEFINED=ON
+        -skip_msm)
+            MSM_DEFINED=OFF
+            ;;
+        -skip_ntt)
+            NTT_DEFINED=OFF
+            ;;
+        -skip_ecntt)
+            ECNTT_DEFINED=OFF
+            ;;
+        -skip_g2)
+            G2_DEFINED=OFF
             ;;
         -curve=*)
             curve=$(echo "$arg_lower" | cut -d'=' -f2)
@@ -66,20 +92,8 @@ do
               BUILD_FIELDS=( $field )
             fi
             ;;
-        -field-ext)
-            EXT_FIELD=ON
-            ;;
-        -hash*)
-            hash=$(echo "$arg_lower" | cut -d'=' -f2)
-            if [[ $hash == "all" ]]
-            then
-              BUILD_HASHES=("${SUPPORTED_HASHES[@]}")
-            else
-              BUILD_HASHES=( $hash )
-            fi
-            ;;
-        -devmode)
-            DEVMODE=ON
+        -skip_fieldext)
+            EXT_FIELD=OFF
             ;;
         *)
             echo "Unknown argument: $arg"
@@ -88,8 +102,6 @@ do
     esac
 done
 
-BUILD_DIR=$(realpath "$PWD/../../icicle/build")
-
 cd ../../icicle
 mkdir -p build
 rm -f "$BUILD_DIR/CMakeCache.txt"
@@ -97,11 +109,13 @@ rm -f "$BUILD_DIR/CMakeCache.txt"
 for CURVE in "${BUILD_CURVES[@]}"
 do
   echo "CURVE=${CURVE}" > build_config.txt
+  echo "MSM=${MSM_DEFINED}" >> build_config.txt
+  echo "NTT=${NTT_DEFINED}" >> build_config.txt
   echo "ECNTT=${ECNTT_DEFINED}" >> build_config.txt
   echo "G2=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCURVE=$CURVE -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build -j8 && rm build_config.txt
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake --build build --target install -j8 && rm build_config.txt
 done
 
 # Needs to remove the CMakeCache.txt file to allow building fields after curves
@@ -111,15 +125,9 @@ rm -f "$BUILD_DIR/CMakeCache.txt"
 for FIELD in "${BUILD_FIELDS[@]}"
 do
   echo "FIELD=${FIELD}" > build_config.txt
+  echo "NTT=${NTT_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DFIELD=$FIELD -DEXT_FIELD=$EXT_FIELD -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build -j8 && rm build_config.txt
-done
-
-for HASH in "${BUILD_HASHES[@]}"
-do
-  echo "HASH=${HASH_DEFINED}" > build_config.txt
-  echo "DEVMODE=${DEVMODE}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DBUILD_HASH=$HASH -DDEVMODE=$DEVMODE -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build -j8 && rm build_config.txt
+  echo "EXT_FIELD=${EXT_FIELD}" >> build_config.txt
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake --build build --target install -j8 && rm build_config.txt
 done

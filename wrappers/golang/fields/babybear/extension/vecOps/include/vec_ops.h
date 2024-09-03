@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BABYBEAR_EXTENSION_VEC_OPS_H
@@ -12,7 +11,7 @@ typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
 
-cudaError_t babybear_extension_mul_cuda(
+int babybear_extension_vector_mul(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -20,7 +19,7 @@ cudaError_t babybear_extension_mul_cuda(
   scalar_t* result
 );
 
-cudaError_t babybear_extension_add_cuda(
+int babybear_extension_vector_add(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -28,7 +27,7 @@ cudaError_t babybear_extension_add_cuda(
   scalar_t* result
 );
 
-cudaError_t babybear_extension_sub_cuda(
+int babybear_extension_vector_sub(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,
@@ -36,14 +35,12 @@ cudaError_t babybear_extension_sub_cuda(
   scalar_t* result
 );
 
-cudaError_t babybear_extension_transpose_matrix_cuda(
+int babybear_extension_matrix_transpose(
   scalar_t* mat_in,
   int row_size,
   int column_size,
-  scalar_t* mat_out,
-  DeviceContext* ctx,
-  bool on_device,
-  bool is_async
+  VecOpsConfig* config,
+  scalar_t* mat_out
 );
 
 #ifdef __cplusplus

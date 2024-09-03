@@ -1,4 +1,4 @@
 package bn254
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/lib -lingo_curve_bn254 -lingo_field_bn254 -lstdc++ -lm
+// #cgo LDFLAGS: -L/usr/local/lib -licicle_field_bn254 -licicle_curve_bn254 -lstdc++ -Wl,-rpath=/usr/local/lib
 import "C"

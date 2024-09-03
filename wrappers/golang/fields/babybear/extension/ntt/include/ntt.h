@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BABYBEAR_EXTENSION_NTT_H
@@ -12,7 +11,7 @@ typedef struct scalar_t scalar_t;
 typedef struct NTTConfig NTTConfig;
 
 
-cudaError_t babybear_extension_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+int babybear_extension_ntt(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
 
 
 #ifdef __cplusplus

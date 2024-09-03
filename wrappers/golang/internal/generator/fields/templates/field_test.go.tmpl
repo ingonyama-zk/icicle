@@ -1,12 +1,12 @@
 package tests
 
 import (
-  {{- if .IsScalar}}
-  "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"{{end}}
-	{{if ne .FieldPrefix "G2"}}{{.Field}}{{end}} "github.com/ingonyama-zk/icicle/v2/wrappers/golang/{{.BaseImportPath}}{{if eq .FieldPrefix "G2"}}/g2{{end}}"
-  "github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
 	"testing"
+  	{{if .IsScalar}}
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"{{end}}
+	{{if ne .FieldPrefix "G2"}}{{.Field}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}{{if eq .FieldPrefix "G2"}}/g2{{end}}"
+  	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/stretchr/testify/assert"
 )
 
  const (
@@ -101,20 +101,20 @@ func Test{{capitalize .Field}}GenerateScalars(t *testing.T) {
 }
 
 func Test{{capitalize .Field}}MongtomeryConversion(t *testing.T) {
-	size := 1 << 15
+	size := 1 << 20
 	scalars := {{.Field}}.GenerateScalars(size)
 
 	var deviceScalars core.DeviceSlice
 	scalars.CopyToDevice(&deviceScalars, true)
 
-	{{.Field}}.ToMontgomery(&deviceScalars)
+	{{.Field}}.ToMontgomery(deviceScalars)
 
-	scalarsMontHost := {{.Field}}.GenerateScalars(size)
+	scalarsMontHost := make(core.HostSlice[{{.Field}}.{{.FieldPrefix}}Field], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.NotEqual(t, scalars, scalarsMontHost)
 
-	{{.Field}}.FromMontgomery(&deviceScalars)
+	{{.Field}}.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	assert.Equal(t, scalars, scalarsMontHost)

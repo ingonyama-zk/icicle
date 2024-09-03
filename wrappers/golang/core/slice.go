@@ -3,7 +3,7 @@ package core
 import (
 	"unsafe"
 
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 type HostOrDeviceSlice interface {
@@ -44,13 +44,9 @@ func (d DeviceSlice) IsOnDevice() bool {
 	return true
 }
 
-func (d DeviceSlice) GetDeviceId() int {
-	return cr.GetDeviceFromPointer(d.inner)
-}
-
 // CheckDevice is used to ensure that the DeviceSlice about to be used resides on the currently set device
 func (d DeviceSlice) CheckDevice() {
-	if currentDeviceId, err := cr.GetDevice(); err != cr.CudaSuccess || d.GetDeviceId() != currentDeviceId {
+	if !runtime.IsActiveDeviceMemory(d.AsUnsafePointer()) {
 		panic("Attempt to use DeviceSlice on a different device")
 	}
 }
@@ -60,7 +56,7 @@ func (d *DeviceSlice) Range(start, end int, endInclusive bool) DeviceSlice {
 		panic("Cannot have negative or zero size slices")
 	}
 
-	if end >= d.length {
+	if (endInclusive && end >= d.length) || (!endInclusive && end > d.length) {
 		panic("Cannot increase slice size from Range")
 	}
 
@@ -82,7 +78,7 @@ func (d *DeviceSlice) RangeTo(end int, inclusive bool) DeviceSlice {
 		panic("Cannot have negative or zero size slices")
 	}
 
-	if end >= d.length {
+	if (inclusive && end >= d.length) || (!inclusive && end > d.length) {
 		panic("Cannot increase slice size from Range")
 	}
 
@@ -116,38 +112,36 @@ func (d *DeviceSlice) RangeFrom(start int) DeviceSlice {
 	return newSlice
 }
 
-// TODO: change signature to be Malloc(element, numElements)
-// calc size internally
-func (d *DeviceSlice) Malloc(size, sizeOfElement int) (DeviceSlice, cr.CudaError) {
-	dp, err := cr.Malloc(uint(size))
+func (d *DeviceSlice) Malloc(elementSize, numElements int) (DeviceSlice, runtime.EIcicleError) {
+	dp, err := runtime.Malloc(uint(elementSize * numElements))
 	d.inner = dp
-	d.capacity = size
-	d.length = size / sizeOfElement
+	d.capacity = elementSize * numElements
+	d.length = numElements
 	return *d, err
 }
 
-func (d *DeviceSlice) MallocAsync(size, sizeOfElement int, stream cr.CudaStream) (DeviceSlice, cr.CudaError) {
-	dp, err := cr.MallocAsync(uint(size), stream)
+func (d *DeviceSlice) MallocAsync(elementSize, numElements int, stream runtime.Stream) (DeviceSlice, runtime.EIcicleError) {
+	dp, err := runtime.MallocAsync(uint(elementSize*numElements), stream)
 	d.inner = dp
-	d.capacity = size
-	d.length = size / sizeOfElement
+	d.capacity = elementSize * numElements
+	d.length = numElements
 	return *d, err
 }
 
-func (d *DeviceSlice) Free() cr.CudaError {
+func (d *DeviceSlice) Free() runtime.EIcicleError {
 	d.CheckDevice()
-	err := cr.Free(d.inner)
-	if err == cr.CudaSuccess {
+	err := runtime.Free(d.inner)
+	if err == runtime.Success {
 		d.length, d.capacity = 0, 0
 		d.inner = nil
 	}
 	return err
 }
 
-func (d *DeviceSlice) FreeAsync(stream cr.Stream) cr.CudaError {
+func (d *DeviceSlice) FreeAsync(stream runtime.Stream) runtime.EIcicleError {
 	d.CheckDevice()
-	err := cr.FreeAsync(d.inner, stream)
-	if err == cr.CudaSuccess {
+	err := runtime.FreeAsync(d.inner, stream)
+	if err == runtime.Success {
 		d.length, d.capacity = 0, 0
 		d.inner = nil
 	}
@@ -197,61 +191,32 @@ func (h HostSlice[T]) AsUnsafePointer() unsafe.Pointer {
 	return unsafe.Pointer(&h[0])
 }
 
-// Registers host memory as pinned, allowing the GPU to read data from the host quicker and save GPU memory space.
-// Memory pinned using this function should be unpinned using [Unpin]
-func (h HostSlice[T]) Pin(flags cr.RegisterPinnedFlags) cr.CudaError {
-	_, err := cr.RegisterPinned(h.AsUnsafePointer(), h.SizeOfElement()*h.Len(), flags)
-	return err
-}
-
-// Unregisters host memory as pinned
-func (h HostSlice[T]) Unpin() cr.CudaError {
-	return cr.FreeRegisteredPinned(h.AsUnsafePointer())
-}
-
-// Allocates new host memory as pinned and copies the HostSlice data to the newly allocated area
-// Memory pinned using this function should be unpinned using [FreePinned]
-func (h HostSlice[T]) AllocPinned(flags cr.AllocPinnedFlags) (HostSlice[T], cr.CudaError) {
-	pinnedMemPointer, err := cr.AllocPinned(h.SizeOfElement()*h.Len(), flags)
-	if err != cr.CudaSuccess {
-		return nil, err
-	}
-	pinnedMem := unsafe.Slice((*T)(pinnedMemPointer), h.Len())
-	copy(pinnedMem, h)
-	return pinnedMem, cr.CudaSuccess
-}
-
-// Unpins host memory that was pinned using [AllocPinned]
-func (h HostSlice[T]) FreePinned() cr.CudaError {
-	return cr.FreeAllocPinned(h.AsUnsafePointer())
-}
-
 func (h HostSlice[T]) CopyToDevice(dst *DeviceSlice, shouldAllocate bool) *DeviceSlice {
 	size := h.Len() * h.SizeOfElement()
 	if shouldAllocate {
-		dst.Malloc(size, h.SizeOfElement())
+		dst.Malloc(h.SizeOfElement(), h.Len())
 	}
 	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	cr.CopyToDevice(dst.inner, h.AsUnsafePointer(), uint(size))
+	runtime.CopyToDevice(dst.inner, h.AsUnsafePointer(), uint(size))
 	dst.length = h.Len()
 	return dst
 }
 
-func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream cr.CudaStream, shouldAllocate bool) *DeviceSlice {
+func (h HostSlice[T]) CopyToDeviceAsync(dst *DeviceSlice, stream runtime.Stream, shouldAllocate bool) *DeviceSlice {
 	size := h.Len() * h.SizeOfElement()
 	if shouldAllocate {
-		dst.MallocAsync(size, h.SizeOfElement(), stream)
+		dst.MallocAsync(h.SizeOfElement(), h.Len(), stream)
 	}
 	dst.CheckDevice()
 	if size > dst.Cap() {
 		panic("Number of bytes to copy is too large for destination")
 	}
 
-	cr.CopyToDeviceAsync(dst.inner, h.AsUnsafePointer(), uint(size), stream)
+	runtime.CopyToDeviceAsync(dst.inner, h.AsUnsafePointer(), uint(size), stream)
 	dst.length = h.Len()
 	return dst
 }
@@ -262,14 +227,14 @@ func (h HostSlice[T]) CopyFromDevice(src *DeviceSlice) {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cr.CopyFromDevice(h.AsUnsafePointer(), src.inner, uint(bytesSize))
+	runtime.CopyFromDevice(h.AsUnsafePointer(), src.inner, uint(bytesSize))
 }
 
-func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream cr.Stream) {
+func (h HostSlice[T]) CopyFromDeviceAsync(src *DeviceSlice, stream runtime.Stream) {
 	src.CheckDevice()
 	if h.Len() != src.Len() {
 		panic("destination and source slices have different lengths")
 	}
 	bytesSize := src.Len() * h.SizeOfElement()
-	cr.CopyFromDeviceAsync(h.AsUnsafePointer(), src.inner, uint(bytesSize), stream)
+	runtime.CopyFromDeviceAsync(h.AsUnsafePointer(), src.inner, uint(bytesSize), stream)
 }

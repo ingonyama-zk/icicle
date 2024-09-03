@@ -2,9 +2,9 @@ package core
 
 import (
 	"testing"
+	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core/internal"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,20 +13,19 @@ func TestNTTDefaultConfig(t *testing.T) {
 	cosetGenField.One()
 	var cosetGen [1]uint32
 	copy(cosetGen[:], cosetGenField.GetLimbs())
-	ctx, _ := cr.GetDefaultDeviceContext()
-	expected := NTTConfig[[1]uint32]{
-		ctx,      // Ctx
-		cosetGen, // CosetGen
-		1,        // BatchSize
-		false,    // ColumnsBatch
-		KNN,      // Ordering
-		false,    // areInputsOnDevice
-		false,    // areOutputsOnDevice
-		false,    // IsAsync
-		Auto,     // NttAlgorithm
-	}
 
 	actual := GetDefaultNTTConfig(cosetGen)
+	expected := NTTConfig[[1]uint32]{
+		unsafe.Pointer(nil), // Ctx
+		cosetGen,            // CosetGen
+		1,                   // BatchSize
+		false,               // ColumnsBatch
+		KNN,                 // Ordering
+		false,               // areInputsOnDevice
+		false,               // areOutputsOnDevice
+		false,               // IsAsync
+		actual.Ext,          // ExtensionConfig
+	}
 
 	assert.Equal(t, expected, actual)
 }
@@ -79,14 +78,14 @@ func TestNTTCheckDeviceScalars(t *testing.T) {
 
 	fieldBytesSize := hostElements.SizeOfElement()
 	var output DeviceSlice
-	output.Malloc(numFields*fieldBytesSize, fieldBytesSize)
+	output.Malloc(fieldBytesSize, numFields)
 
 	assert.NotPanics(t, func() { NttCheck(input, &cfg, output) })
 	assert.True(t, cfg.areInputsOnDevice)
 	assert.True(t, cfg.areOutputsOnDevice)
 
 	var output2 DeviceSlice
-	output2.Malloc((numFields+1)*fieldBytesSize, fieldBytesSize)
+	output2.Malloc(fieldBytesSize, numFields+1)
 	assert.Panics(t, func() { NttCheck(input, &cfg, output2) })
 }
 

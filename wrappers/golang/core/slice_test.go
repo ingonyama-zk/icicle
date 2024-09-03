@@ -5,8 +5,8 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core/internal"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core/internal"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -115,7 +115,7 @@ func TestDeviceSlice(t *testing.T) {
 	assert.Equal(t, 0, emptyDeviceSlice.Cap())
 	assert.Equal(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
 
-	emptyDeviceSlice.Malloc(numFields*fieldBytesSize, fieldBytesSize)
+	emptyDeviceSlice.Malloc(fieldBytesSize, numFields)
 	assert.Equal(t, numFields, emptyDeviceSlice.Len())
 	assert.Equal(t, numFields*fieldBytesSize, emptyDeviceSlice.Cap())
 	assert.NotEqual(t, unsafe.Pointer(nil), emptyDeviceSlice.AsUnsafePointer())
@@ -130,8 +130,7 @@ func TestDeviceSliceIsEmpty(t *testing.T) {
 	var emptyDeviceSlice DeviceSlice
 	assert.True(t, emptyDeviceSlice.IsEmpty())
 
-	const bytes = numFields * fieldBytesSize
-	emptyDeviceSlice.Malloc(bytes, fieldBytesSize)
+	emptyDeviceSlice.Malloc(fieldBytesSize, numFields)
 
 	randFields := randomFields(numFields, fieldSize)
 	hostSlice := HostSliceFromElements(randFields)
@@ -162,6 +161,9 @@ func TestCopyToFromHostDeviceField(t *testing.T) {
 }
 
 func TestCopyToFromHostDeviceAffinePoints(t *testing.T) {
+	runtime.LoadBackendFromEnvOrDefault()
+	runtime.CreateDevice("CUDA", 0)
+
 	var emptyDeviceSlice DeviceSlice
 
 	numPoints := 1 << 10
@@ -175,7 +177,6 @@ func TestCopyToFromHostDeviceAffinePoints(t *testing.T) {
 	assert.NotEqual(t, hostSlice, hostSlice2)
 	hostSlice2.CopyFromDevice(&emptyDeviceSlice)
 	emptyDeviceSlice.Free()
-
 	assert.Equal(t, hostSlice, hostSlice2)
 }
 
@@ -222,27 +223,4 @@ func TestSliceRanges(t *testing.T) {
 	deviceSliceRange := deviceSlice.Range(2, numPoints-3, true)
 	hostSliceRange.CopyFromDevice(&deviceSliceRange)
 	assert.Equal(t, hostSlice[2:6], hostSliceRange)
-}
-
-func TestHostSlicePinning(t *testing.T) {
-	data := []int{1, 2, 3, 4, 5, 7, 8, 9}
-	dataHostSlice := HostSliceFromElements(data)
-	err := dataHostSlice.Pin(cuda_runtime.CudaHostRegisterDefault)
-	assert.Equal(t, cuda_runtime.CudaSuccess, err)
-	err = dataHostSlice.Pin(cuda_runtime.CudaHostRegisterDefault)
-	assert.Equal(t, cuda_runtime.CudaErrorHostMemoryAlreadyRegistered, err)
-
-	err = dataHostSlice.Unpin()
-	assert.Equal(t, cuda_runtime.CudaSuccess, err)
-	err = dataHostSlice.Unpin()
-	assert.Equal(t, cuda_runtime.CudaErrorHostMemoryNotRegistered, err)
-
-	pinnedMem, err := dataHostSlice.AllocPinned(cuda_runtime.CudaHostAllocDefault)
-	assert.Equal(t, cuda_runtime.CudaSuccess, err)
-	assert.ElementsMatch(t, dataHostSlice, pinnedMem)
-
-	err = pinnedMem.FreePinned()
-	assert.Equal(t, cuda_runtime.CudaSuccess, err)
-	err = pinnedMem.FreePinned()
-	assert.Equal(t, cuda_runtime.CudaErrorInvalidValue, err)
 }

@@ -5,16 +5,14 @@ package ntt
 import "C"
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	bls12_381 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381"
-)
-
-import (
 	"unsafe"
+
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
-func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError {
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError {
 	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
 
 	cScalars := (*C.scalar_t)(scalarsPointer)
@@ -23,9 +21,9 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 	cCfg := (*C.NTTConfig)(cfgPointer)
 	cResults := (*C.scalar_t)(resultsPointer)
 
-	__ret := C.bls12_381_ntt_cuda(cScalars, cSize, cDir, cCfg, cResults)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+	__ret := C.bls12_381_ntt(cScalars, cSize, cDir, cCfg, cResults)
+	err := runtime.EIcicleError(__ret)
+	return err
 }
 
 func GetDefaultNttConfig() core.NTTConfig[[bls12_381.SCALAR_LIMBS]uint32] {
@@ -39,18 +37,23 @@ func GetDefaultNttConfig() core.NTTConfig[[bls12_381.SCALAR_LIMBS]uint32] {
 	return core.GetDefaultNTTConfig(cosetGen)
 }
 
-func InitDomain(primitiveRoot bls12_381.ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError {
-	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	cFastTwiddles := (C._Bool)(fastTwiddles)
-	__ret := C.bls12_381_initialize_domain(cPrimitiveRoot, cCtx, cFastTwiddles)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+func GetRootOfUnity(size uint64) bls12_381.ScalarField {
+	cRes := C.bls12_381_get_root_of_unity((C.size_t)(size))
+	var res bls12_381.ScalarField
+	res.FromLimbs(*(*[]uint32)(unsafe.Pointer(cRes)))
+	return res
 }
 
-func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError {
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&ctx))
-	__ret := C.bls12_381_release_domain(cCtx)
-	err := (cr.CudaError)(__ret)
-	return core.FromCudaError(err)
+func InitDomain(primitiveRoot bls12_381.ScalarField, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
+	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
+	cCfg := (*C.NTTInitDomainConfig)(unsafe.Pointer(&cfg))
+	__ret := C.bls12_381_ntt_init_domain(cPrimitiveRoot, cCfg)
+	err := runtime.EIcicleError(__ret)
+	return err
+}
+
+func ReleaseDomain() runtime.EIcicleError {
+	__ret := C.bls12_381_ntt_release_domain()
+	err := runtime.EIcicleError(__ret)
+	return err
 }

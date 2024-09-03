@@ -1,12 +1,11 @@
-# ICICLE Primitives
+# ICICLE Compute APIs
 
-This section of the documentation is dedicated to the ICICLE primitives, we will cover the usage and internal details of our primitives such as hashing algorithms, MSM and NTT.
-
+This section of the documentation is dedicated to the main APIs provided by ICICLE. We will cover the usage and internal details of our core primitives, such as Multi-Scalar Multiplication (MSM), Number Theoretic Transform (NTT), and various hashing algorithms. Each primitive has its own dedicated page with examples and explanations for C++, Rust, and Go.
 
 ## Supported primitives
 
-
 - [MSM](./msm.md)
 - [NTT](./ntt.md)
-- [Keccak Hash](./keccak.md)
-- [Poseidon Hash](./poseidon.md)
+- [Vector Operations](./vec_ops.md)
+- [Polynomials](../polynomials/overview.md)
+- Hashing and commitment schemes coming soon

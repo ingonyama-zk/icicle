@@ -1,4 +1,4 @@
 package {{.PackageName}}
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../{{.UpDirs}}icicle/build/lib -lingo_curve_{{.Field}} -lingo_field_{{.Field}} -lstdc++ -lm
+// #cgo LDFLAGS: -L/usr/local/lib -licicle_field_{{.Field}} -licicle_curve_{{.Field}} -lstdc++ -Wl,-rpath=/usr/local/lib
 import "C"

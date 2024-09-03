@@ -3,10 +3,10 @@ package tests
 import (
 	"path"
 
-	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
+	generator "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/generator_utils"
 )
 
-func Generate(baseDir, field, fieldPrefix, gnarkImport string, rou int, supportsNTT, supportsPoly bool) {
+func Generate(baseDir, field, fieldPrefix, gnarkImport string, rou int, supportsNTT bool) {
 	data := struct {
 		Field          string
 		FieldPrefix    string
@@ -14,7 +14,6 @@ func Generate(baseDir, field, fieldPrefix, gnarkImport string, rou int, supports
 		GnarkImport    string
 		ROU            int
 		SupportsNTT    bool
-		SupportsPoly   bool
 	}{
 		field,
 		fieldPrefix,
@@ -22,7 +21,6 @@ func Generate(baseDir, field, fieldPrefix, gnarkImport string, rou int, supports
 		gnarkImport,
 		rou,
 		supportsNTT,
-		supportsPoly,
 	}
 
 	generator.GenerateFile("tests/templates/main_test.go.tmpl", path.Join(baseDir, "tests"), "", "", data)

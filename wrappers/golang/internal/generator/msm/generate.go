@@ -4,7 +4,7 @@ import (
 	"path"
 	"path/filepath"
 
-	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
+	generator "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/generator_utils"
 )
 
 var msmTemplates = map[string]string{

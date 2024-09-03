@@ -3,7 +3,7 @@ package lib_linker
 import (
 	"strings"
 
-	generator "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/generator_utils"
+	generator "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/generator_utils"
 )
 
 type MainTemplateType string

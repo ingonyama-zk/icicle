@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BN254_FIELD_H
@@ -9,10 +8,10 @@ extern "C" {
 #endif
 
 typedef struct scalar_t scalar_t;
-typedef struct DeviceContext DeviceContext;
+typedef struct VecOpsConfig VecOpsConfig;
 
 void bn254_generate_scalars(scalar_t* scalars, int size);
-cudaError_t bn254_scalar_convert_montgomery(scalar_t* d_inout, size_t n, bool is_into, DeviceContext* ctx);
+int bn254_scalar_convert_montgomery(const scalar_t* d_in, size_t n, bool is_into, const VecOpsConfig* ctx, scalar_t* d_out);
 
 #ifdef __cplusplus
 }

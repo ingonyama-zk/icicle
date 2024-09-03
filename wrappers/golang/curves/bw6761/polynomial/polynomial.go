@@ -7,18 +7,14 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bw6_761 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bw6_761 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761"
 )
 
 type PolynomialHandle = C.struct_PolynomialInst
 
 type DensePolynomial struct {
 	handle *PolynomialHandle
-}
-
-func InitPolyBackend() bool {
-	return (bool)(C.bw6_761_polynomial_init_cuda_backend())
 }
 
 func (up *DensePolynomial) Print() {
@@ -48,7 +44,6 @@ func (up *DensePolynomial) Clone() DensePolynomial {
 	}
 }
 
-// TODO @jeremyfelder: Maybe this should be in a SetFinalizer that is set on Create functions?
 func (up *DensePolynomial) Delete() {
 	C.bw6_761_polynomial_delete(up.handle)
 }

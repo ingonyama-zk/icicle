@@ -1,10 +1,11 @@
 package tests
 
 import (
-	bw6_761 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bw6761/g2"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	bw6_761 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761/g2"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

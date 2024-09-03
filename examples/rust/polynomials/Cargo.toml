@@ -4,11 +4,18 @@ version = "1.2.0"
 edition = "2018"
 
 [dependencies]
-icicle-cuda-runtime = { path = "../../../wrappers/rust/icicle-cuda-runtime" }
+icicle-runtime = { path = "../../../wrappers/rust/icicle-runtime" }
 icicle-core = { path = "../../../wrappers/rust/icicle-core" }
 icicle-bn254 = { path = "../../../wrappers/rust/icicle-curves/icicle-bn254" }
 icicle-babybear = { path = "../../../wrappers/rust/icicle-fields/icicle-babybear" }
+
 clap = { version = "<=4.4.12", features = ["derive"] }
 
 [features]
-profile = []
+cuda = ["icicle-runtime/cuda_backend",
+        "icicle-bn254/cuda_backend",
+        "icicle-babybear/cuda_backend",
+        "icicle-bn254/no_ecntt",
+        "icicle-bn254/no_g2",
+]
+

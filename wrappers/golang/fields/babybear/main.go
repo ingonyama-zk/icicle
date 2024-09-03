@@ -1,4 +1,4 @@
 package babybear
 
-// #cgo LDFLAGS: -L${SRCDIR}/../../../../icicle/build/lib -lingo_field_babybear -lstdc++ -lm
+// #cgo LDFLAGS: -L/usr/local/lib  -licicle_field_babybear -lstdc++ -Wl,-rpath=/usr/local/lib
 import "C"

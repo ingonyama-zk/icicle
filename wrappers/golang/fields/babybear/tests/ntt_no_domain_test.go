@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	babybear_extension "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/extension"
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/fields/babybear/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	babybear_extension "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/extension"
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func TestNttNoDomain(t *testing.T) {
@@ -15,6 +15,8 @@ func TestNttNoDomain(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 
 			scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
@@ -34,26 +36,29 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+				runtime.SetDevice(&DEVICE)
+
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[babybear_extension.ExtensionField](scalars[:testSize])
 
-				stream, _ := cr.CreateStream()
+				stream, _ := runtime.CreateStream()
 
 				cfg.Ordering = v
 				cfg.IsAsync = true
-				cfg.Ctx.Stream = &stream
+				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
 				scalarsCopy.CopyToDeviceAsync(&deviceInput, stream, true)
 				var deviceOutput core.DeviceSlice
-				deviceOutput.MallocAsync(testSize*scalarsCopy.SizeOfElement(), scalarsCopy.SizeOfElement(), stream)
+				deviceOutput.MallocAsync(scalarsCopy.SizeOfElement(), testSize, stream)
 
 				// run ntt
 				ntt.Ntt(deviceInput, direction, &cfg, deviceOutput)
 				output := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
 				output.CopyFromDeviceAsync(&deviceOutput, stream)
 
-				cr.SynchronizeStream(&stream)
+				runtime.SynchronizeStream(stream)
+				runtime.DestroyStream(stream)
 			}
 		}
 	}
@@ -67,6 +72,8 @@ func TestNttBatchNoDomain(t *testing.T) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{2, 16, largestBatchSize} {
+			runtime.SetDevice(&DEVICE)
+
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 

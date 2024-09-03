@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime/config_extension"
 )
 
 type VecOps int
@@ -16,18 +17,19 @@ const (
 )
 
 type VecOpsConfig struct {
-	/*Details related to the device such as its id and stream. */
-	Ctx cr.DeviceContext
-	/* True if `a` is on device and false if it is not. Default value: false. */
+	/// Specifies the stream (queue) to use for async execution.
+	StreamHandle runtime.Stream
+	/// True if `a` is on device and false if it is not. Default value: false.
 	isAOnDevice bool
-	/* True if `b` is on device and false if it is not. Default value: false. */
+	/// True if `b` is on device and false if it is not. Default value: false.
 	isBOnDevice bool
-	/* If true, output is preserved on device, otherwise on host. Default value: false. */
+	/// If true, output is preserved on device, otherwise on host. Default value: false.
 	isResultOnDevice bool
-	/* Whether to run the vector operations asynchronously. If set to `true`, the function will be
-	*  non-blocking and you'll need to synchronize it explicitly by calling
-	*  `SynchronizeStream`. If set to false, the function will block the current CPU thread. */
+	/// Whether to run the vector operations asynchronously. If set to `true`, the function will be
+	/// non-blocking and you'll need to synchronize it explicitly by calling
+	/// `SynchronizeStream`. If set to false, the function will block the current CPU thread.
 	IsAsync bool
+	Ext     config_extension.ConfigExtensionHandler
 }
 
 /**
@@ -35,13 +37,13 @@ type VecOpsConfig struct {
  * @return Default value of [VecOpsConfig](@ref VecOpsConfig).
  */
 func DefaultVecOpsConfig() VecOpsConfig {
-	ctx, _ := cr.GetDefaultDeviceContext()
 	config := VecOpsConfig{
-		ctx,   // ctx
+		nil,   // StreamHandle
 		false, // isAOnDevice
 		false, // isBOnDevice
 		false, // isResultOnDevice
 		false, // IsAsync
+		nil,   // Ext
 	}
 
 	return config

@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _{{if .WithDomain}}{{toUpper .Field}}{{else}}{{toUpper .FieldNoDomain}}{{end}}_NTT_H
@@ -10,12 +9,13 @@ extern "C" {
 
 typedef struct scalar_t scalar_t;
 typedef struct NTTConfig NTTConfig;
-{{if .WithDomain}}typedef struct DeviceContext DeviceContext;{{end}}
+{{if .WithDomain}}typedef struct NTTInitDomainConfig NTTInitDomainConfig;{{end}}
 
-cudaError_t {{if .WithDomain}}{{.Field}}{{else}}{{.FieldNoDomain}}{{end}}_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+int {{if .WithDomain}}{{.Field}}{{else}}{{.FieldNoDomain}}{{end}}_ntt(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
 {{if .WithDomain -}}
-cudaError_t {{.Field}}_initialize_domain(scalar_t* primitive_root, DeviceContext* ctx, bool fast_twiddles);
-cudaError_t {{.Field}}_release_domain(DeviceContext* ctx);{{end}}
+int {{.Field}}_ntt_init_domain(scalar_t* primitive_root, NTTInitDomainConfig* ctx);
+int {{.Field}}_ntt_release_domain();
+int* {{.Field}}_get_root_of_unity(size_t size);{{end}}
 
 #ifdef __cplusplus
 }

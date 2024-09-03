@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BW6_761_POLY_H
@@ -12,7 +11,6 @@ typedef struct scalar_t scalar_t;
 typedef struct PolynomialInst PolynomialInst;
 typedef struct IntegrityPointer IntegrityPointer;
 
-bool bw6_761_polynomial_init_cuda_backend();
 PolynomialInst* bw6_761_polynomial_create_from_coefficients(scalar_t* coeffs, size_t size);
 PolynomialInst* bw6_761_polynomial_create_from_rou_evaluations(scalar_t* evals, size_t size);
 PolynomialInst* bw6_761_polynomial_clone(const PolynomialInst* p);

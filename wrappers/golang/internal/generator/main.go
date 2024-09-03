@@ -6,18 +6,17 @@ import (
 	"os/exec"
 	"path"
 
-	config "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/config"
-	curves "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/curves"
-	ecntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/ecntt"
-	fields "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/fields"
-	lib_linker "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/lib_linker"
-	mock "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/mock"
-	msm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/msm"
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/ntt"
-	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/polynomial"
-	poseidon "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/poseidon"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/tests"
-	vecops "github.com/ingonyama-zk/icicle/v2/wrappers/golang/internal/generator/vecOps"
+	config "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/config"
+	curves "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/curves"
+	ecntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/ecntt"
+	fields "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/fields"
+	lib_linker "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/lib_linker"
+	mock "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/mock"
+	msm "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/msm"
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/ntt"
+	poly "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/polynomial"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/tests"
+	vecops "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/vecOps"
 )
 
 func generateFiles() {
@@ -30,13 +29,12 @@ func generateFiles() {
 		fields.Generate(curveDir, curve.PackageName, curve.Curve, "Base", false, curve.BaseFieldNumLimbs)
 		curves.Generate(curveDir, curve.PackageName, curve.Curve, "")
 		vecops.Generate(curveDir, curve.Curve, scalarFieldPrefix)
-		if curve.SupportsPoly {
-			poly.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport)
-		}
+
 		lib_linker.Generate(curveDir, curve.PackageName, curve.Curve, lib_linker.CURVE, 0)
 
 		if curve.SupportsNTT {
 			ntt.Generate(curveDir, "", curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, true, "", "")
+			poly.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport)
 		}
 
 		if curve.SupportsECNTT {
@@ -44,7 +42,6 @@ func generateFiles() {
 		}
 
 		msm.Generate(curveDir, "msm", curve.Curve, "", curve.GnarkImport)
-		poseidon.Generate(curveDir, "", curve.Curve, scalarFieldPrefix)
 		if curve.SupportsG2 {
 			g2BaseDir := path.Join(curveDir, "g2")
 			packageName := "g2"
@@ -53,7 +50,7 @@ func generateFiles() {
 			msm.Generate(curveDir, "g2", curve.Curve, "G2", curve.GnarkImport)
 		}
 
-		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, curve.SupportsNTT, curve.SupportsPoly)
+		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, curve.SupportsNTT)
 	}
 
 	for _, field := range config.Fields {
@@ -61,10 +58,10 @@ func generateFiles() {
 		scalarFieldPrefix := "Scalar"
 		fields.Generate(fieldDir, field.PackageName, field.Field, scalarFieldPrefix, true, field.LimbsNum)
 		vecops.Generate(fieldDir, field.Field, scalarFieldPrefix)
-		if field.SupportsPoly {
+		if field.SupportsNTT {
+			ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, true, "", "")
 			poly.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport)
 		}
-		ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, true, "", "")
 		lib_linker.Generate(fieldDir, field.PackageName, field.Field, lib_linker.FIELD, 0)
 
 		if field.SupportsExtension {
@@ -74,10 +71,9 @@ func generateFiles() {
 			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
 			vecops.Generate(extensionsDir, extensionField, extensionFieldPrefix)
 			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
-			lib_linker.Generate(extensionsDir, "extension", field.Field, lib_linker.FIELD, 1)
 		}
 
-		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, field.SupportsNTT, field.SupportsPoly)
+		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, field.SupportsNTT)
 	}
 
 	// Mock field and curve files for core

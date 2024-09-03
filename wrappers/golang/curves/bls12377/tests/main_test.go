@@ -1,13 +1,13 @@
 package tests
 
 import (
-	"os"
+	"fmt"
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bls12_377 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377"
-	ntt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377/ntt"
-	poly "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12377/polynomial"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bls12_377 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12377"
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12377/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
 )
@@ -16,33 +16,51 @@ const (
 	largestTestSize = 20
 )
 
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
+var DEVICE runtime.Device
+
+func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
 	rou := rouMont.Bits()
 	rouIcicle := bls12_377.ScalarField{}
 	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
 
 	rouIcicle.FromLimbs(limbs)
-	e := ntt.InitDomain(rouIcicle, cfg.Ctx, false)
+	e := ntt.InitDomain(rouIcicle, cfg)
 	return e
 }
 
 func TestMain(m *testing.M) {
-	poly.InitPolyBackend()
-
-	// setup domain
-	cfg := ntt.GetDefaultNttConfig()
-	e := initDomain(largestTestSize, cfg)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("initDomain failed")
+	runtime.LoadBackendFromEnvOrDefault()
+	devices, e := runtime.GetRegisteredDevices()
+	if e != runtime.Success {
+		panic("Failed to load registered devices")
 	}
+	for _, deviceType := range devices {
+		DEVICE = runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&DEVICE)
 
-	// execute tests
-	os.Exit(m.Run())
+		// setup domain
+		cfg := core.GetDefaultNTTInitDomainConfig()
+		e = initDomain(largestTestSize, cfg)
+		if e != runtime.Success {
+			if e != runtime.ApiNotImplemented {
+				fmt.Println("initDomain is not implemented for ", deviceType, " device type")
+			} else {
+				panic("initDomain failed")
+			}
+		}
 
-	// release domain
-	e = ntt.ReleaseDomain(cfg.Ctx)
-	if e.IcicleErrorCode != core.IcicleErrorCode(0) {
-		panic("ReleaseDomain failed")
+		// execute tests
+		m.Run()
+
+		// release domain
+		e = ntt.ReleaseDomain()
+		if e != runtime.Success {
+			if e != runtime.ApiNotImplemented {
+				fmt.Println("ReleaseDomain is not implemented for ", deviceType, " device type")
+			} else {
+				panic("ReleaseDomain failed")
+			}
+		}
 	}
 }

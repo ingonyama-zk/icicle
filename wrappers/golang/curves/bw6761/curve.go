@@ -7,8 +7,8 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 type Projective struct {
@@ -40,17 +40,10 @@ func (p *Projective) FromLimbs(x, y, z []uint32) Projective {
 }
 
 func (p *Projective) FromAffine(a Affine) Projective {
-	z := BaseField{}
-	z.One()
 
-	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		p.Zero()
-	} else {
-		p.X = a.X
-		p.Y = a.Y
-		p.Z = z.One()
-	}
-
+	cA := (*C.affine_t)(unsafe.Pointer(&a))
+	cP := (*C.projective_t)(unsafe.Pointer(p))
+	C.bw6_761_from_affine(cA, cP)
 	return *p
 }
 
@@ -61,11 +54,11 @@ func (p Projective) ProjectiveEq(p2 *Projective) bool {
 	return __ret == (C._Bool)(true)
 }
 
-func (p *Projective) ProjectiveToAffine() Affine {
+func (p *Projective) ToAffine() Affine {
 	var a Affine
 
 	cA := (*C.affine_t)(unsafe.Pointer(&a))
-	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	cP := (*C.projective_t)(unsafe.Pointer(p))
 	C.bw6_761_to_affine(cP, cA)
 	return a
 }
@@ -111,22 +104,16 @@ func (a *Affine) FromLimbs(x, y []uint32) Affine {
 }
 
 func (a Affine) ToProjective() Projective {
-	var z BaseField
+	var p Projective
 
-	if (a.X == z.Zero()) && (a.Y == z.Zero()) {
-		var p Projective
-		return p.Zero()
-	}
-
-	return Projective{
-		X: a.X,
-		Y: a.Y,
-		Z: z.One(),
-	}
+	cA := (*C.affine_t)(unsafe.Pointer(&a))
+	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	C.bw6_761_from_affine(cA, cP)
+	return p
 }
 
 func AffineFromProjective(p *Projective) Affine {
-	return p.ProjectiveToAffine()
+	return p.ToAffine()
 }
 
 func GenerateAffinePoints(size int) core.HostSlice[Affine] {
@@ -143,44 +130,34 @@ func GenerateAffinePoints(size int) core.HostSlice[Affine] {
 	return pointsSlice
 }
 
-func convertAffinePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.affine_t)(points.AsUnsafePointer())
-	cSize := (C.size_t)(points.Len())
-	cIsInto := (C._Bool)(isInto)
-	defaultCtx, _ := cr.GetDefaultDeviceContext()
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761_affine_convert_montgomery(cValues, cSize, cIsInto, cCtx)
-	err := (cr.CudaError)(__ret)
+func convertAffinePointsMontgomery(points core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
+	defaultCfg := core.DefaultVecOpsConfig()
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(points, points, points, &defaultCfg)
+	cErr := C.bw6_761_affine_convert_montgomery((*C.affine_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.affine_t)(cValues))
+	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func AffineToMontgomery(points *core.DeviceSlice) cr.CudaError {
-	points.CheckDevice()
+func AffineToMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertAffinePointsMontgomery(points, true)
 }
 
-func AffineFromMontgomery(points *core.DeviceSlice) cr.CudaError {
-	points.CheckDevice()
+func AffineFromMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertAffinePointsMontgomery(points, false)
 }
 
-func convertProjectivePointsMontgomery(points *core.DeviceSlice, isInto bool) cr.CudaError {
-	cValues := (*C.projective_t)(points.AsUnsafePointer())
-	cSize := (C.size_t)(points.Len())
-	cIsInto := (C._Bool)(isInto)
-	defaultCtx, _ := cr.GetDefaultDeviceContext()
-	cCtx := (*C.DeviceContext)(unsafe.Pointer(&defaultCtx))
-	__ret := C.bw6_761_projective_convert_montgomery(cValues, cSize, cIsInto, cCtx)
-	err := (cr.CudaError)(__ret)
+func convertProjectivePointsMontgomery(points core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
+	defaultCfg := core.DefaultVecOpsConfig()
+	cValues, _, _, cCfg, cSize := core.VecOpCheck(points, points, points, &defaultCfg)
+	cErr := C.bw6_761_projective_convert_montgomery((*C.projective_t)(cValues), (C.size_t)(cSize), (C._Bool)(isInto), (*C.VecOpsConfig)(cCfg), (*C.projective_t)(cValues))
+	err := runtime.EIcicleError(cErr)
 	return err
 }
 
-func ProjectiveToMontgomery(points *core.DeviceSlice) cr.CudaError {
-	points.CheckDevice()
+func ProjectiveToMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertProjectivePointsMontgomery(points, true)
 }
 
-func ProjectiveFromMontgomery(points *core.DeviceSlice) cr.CudaError {
-	points.CheckDevice()
+func ProjectiveFromMontgomery(points core.HostOrDeviceSlice) runtime.EIcicleError {
 	return convertProjectivePointsMontgomery(points, false)
 }

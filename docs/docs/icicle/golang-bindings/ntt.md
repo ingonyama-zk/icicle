@@ -6,56 +6,66 @@
 package main
 
 import (
-  "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-  cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-  bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
-  "github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 )
 
 func init() {
-  cfg := bn254.GetDefaultNttConfig()
-  initDomain(18, cfg)
+  // Load backend using env path
+	runtime.LoadBackendFromEnvOrDefault()
+	// Set Cuda device to perform
+	device := runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&device)
+
+	cfg := core.GetDefaultNTTInitDomainConfig()
+	initDomain(18, cfg)
 }
 
-func initDomain[T any](largestTestSize int, cfg core.NTTConfig[T]) core.IcicleError {
-  rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
-  rou := rouMont.Bits()
-  rouIcicle := bn254.ScalarField{}
+func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
+	rouMont, _ := fft.Generator(uint64(1 << largestTestSize))
+	rou := rouMont.Bits()
+	rouIcicle := bn254.ScalarField{}
+	limbs := core.ConvertUint64ArrToUint32Arr(rou[:])
 
-  rouIcicle.FromLimbs(rou[:])
-  e := bn254.InitDomain(rouIcicle, cfg.Ctx, false)
-  return e
+	rouIcicle.FromLimbs(limbs)
+	e := ntt.InitDomain(rouIcicle, cfg)
+	return e
 }
 
 func main() {
-  // Obtain the default NTT configuration with a predefined coset generator.
-  cfg := bn254.GetDefaultNttConfig()
+	// Obtain the default NTT configuration with a predefined coset generator.
+	cfg := ntt.GetDefaultNttConfig()
 
-  // Define the size of the input scalars.
-  size := 1 << 18
+	// Define the size of the input scalars.
+	size := 1 << 18
 
-  // Generate scalars for the NTT operation.
-  scalars := bn254.GenerateScalars(size)
+	// Generate scalars for the NTT operation.
+	scalars := bn254.GenerateScalars(size)
 
-  // Set the direction of the NTT (forward or inverse).
-  dir := core.KForward
+	// Set the direction of the NTT (forward or inverse).
+	dir := core.KForward
 
-  // Allocate memory for the results of the NTT operation.
-  results := make(core.HostSlice[bn254.ScalarField], size)
+	// Allocate memory for the results of the NTT operation.
+	results := make(core.HostSlice[bn254.ScalarField], size)
 
-  // Perform the NTT operation.
-  err := bn254.Ntt(scalars, dir, &cfg, results)
-  if err.CudaErrorCode != cr.CudaSuccess {
-    panic("NTT operation failed")
-  }
+	// Perform the NTT operation.
+	err := ntt.Ntt(scalars, dir, &cfg, results)
+	if err != runtime.Success {
+		panic("NTT operation failed")
+	}
+
+	ntt.ReleaseDomain()
 }
 ```
 
 ## NTT Method
 
 ```go
-func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) core.IcicleError
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError
 ```
 
 ### Parameters
@@ -67,7 +77,7 @@ func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTCo
 
 ### Return Value
 
-- **`CudaError`**: Returns a CUDA error code indicating the success or failure of the NTT operation.
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the operation was successful, or an error if something went wrong.
 
 ## NTT Configuration (NTTConfig)
 
@@ -75,29 +85,29 @@ The `NTTConfig` structure holds configuration parameters for the NTT operation, 
 
 ```go
 type NTTConfig[T any] struct {
-    Ctx cr.DeviceContext
-    CosetGen T
-    BatchSize int32
-    ColumnsBatch bool
-    Ordering Ordering
-    areInputsOnDevice  bool
-    areOutputsOnDevice bool
-    IsAsync bool
-    NttAlgorithm NttAlgorithm
+	StreamHandle       runtime.Stream
+	CosetGen           T
+	BatchSize          int32
+	ColumnsBatch       bool
+	Ordering           Ordering
+	areInputsOnDevice  bool
+	areOutputsOnDevice bool
+	IsAsync            bool
+	Ext                config_extension.ConfigExtensionHandler
 }
 ```
 
 ### Fields
 
-- **`Ctx`**: Device context containing details like device ID and stream ID.
-- **`CosetGen`**: Coset generator used for coset (i)NTTs, defaulting to no coset being used.
+- **`StreamHandle`**: Specifies the stream (queue) to use for async execution.
+- **`CosetGen`**: Coset generator. Used to perform coset (i)NTTs.
 - **`BatchSize`**: The number of NTTs to compute in one operation, defaulting to 1.
-- **`ColumnsBatch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows. Defaults to `false`.
-- **`Ordering`**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`, `KMN`, `KNM`), affecting how data is arranged.
+- **`ColumnsBatch`**: If true the function will compute the NTTs over the columns of the input matrix and not over the rows.
+- **`Ordering`**: Ordering of inputs and outputs (`KNN`, `KNR`, `KRN`, `KRR`), affecting how data is arranged.
 - **`areInputsOnDevice`**: Indicates if input scalars are located on the device.
 - **`areOutputsOnDevice`**: Indicates if results are stored on the device.
 - **`IsAsync`**: Controls whether the NTT operation runs asynchronously.
-- **`NttAlgorithm`**: Explicitly select the NTT algorithm. Default value: Auto (the implementation selects radix-2 or mixed-radix algorithm based on heuristics).
+- **`Ext`**: Extended configuration for backend.
 
 ### Default Configuration
 
@@ -112,7 +122,7 @@ func GetDefaultNTTConfig[T any](cosetGen T) NTTConfig[T]
 Before performing NTT operations, it's necessary to initialize the NTT domain; it only needs to be called once per GPU since the twiddles are cached.
 
 ```go
-func InitDomain(primitiveRoot ScalarField, ctx cr.DeviceContext, fastTwiddles bool) core.IcicleError
+func InitDomain(primitiveRoot bn254.ScalarField, cfg core.NTTInitDomainConfig) runtime.EIcicleError
 ```
 
 This function initializes the domain with a given primitive root, optionally using fast twiddle factors to optimize the computation.
@@ -122,30 +132,9 @@ This function initializes the domain with a given primitive root, optionally usi
 The `ReleaseDomain` function is responsible for releasing the resources associated with a specific domain in the CUDA device context.
 
 ```go
-func ReleaseDomain(ctx cr.DeviceContext) core.IcicleError
+func ReleaseDomain() runtime.EIcicleError
 ```
-
-### Parameters
-
-- **`ctx`**: a reference to the `DeviceContext` object, which represents the CUDA device context.
 
 ### Return Value
 
-The function returns a `core.IcicleError`, which represents the result of the operation. If the operation is successful, the function returns `core.IcicleErrorCode(0)`.
-
-### Example
-
-```go
-import (
-    "github.com/icicle-crypto/icicle-core/cr"
-    "github.com/icicle-crypto/icicle-core/core"
-)
-
-func example() {
-  cfg := GetDefaultNttConfig()
-  err := ReleaseDomain(cfg.Ctx)
-  if err != nil {
-      // Handle the error
-  }
-}
-```
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the operation was successful, or an error if something went wrong.

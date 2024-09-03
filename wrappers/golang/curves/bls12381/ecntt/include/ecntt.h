@@ -1,5 +1,3 @@
-#include <cuda_runtime.h>
-
 #ifndef _BLS12_381_ECNTT_H
 #define _BLS12_381_ECNTT_H
 
@@ -10,7 +8,7 @@ extern "C" {
 typedef struct NTTConfig NTTConfig;
 typedef struct projective_t projective_t;
 
-cudaError_t bls12_381_ecntt_cuda(const projective_t* input, int size, int dir, NTTConfig* config, projective_t* output);
+int bls12_381_ecntt(const projective_t* input, int size, int dir, NTTConfig* config, projective_t* output);
 
 #ifdef __cplusplus
 }

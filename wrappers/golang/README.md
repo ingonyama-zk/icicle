@@ -4,26 +4,29 @@ In order to build the underlying ICICLE libraries you should run the build scrip
 
 Build script USAGE
 
-```bash
-./build.sh [-curve=<curve> | -field=<field>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
+```sh
+./build.sh [-curve=<curve>] [-field=<field>] [-hash=<hash>] [-cuda_version=<version>] [-skip_msm] [-skip_ntt] [-skip_g2] [-skip_ecntt] [-skip_fieldext]
 
-curve - The name of the curve to build or "all" to build all curves
-field - The name of the field to build or "all" to build all fields
--g2 - Optional - build with G2 enabled 
--ecntt - Optional - build with ECNTT enabled
--devmode - Optional - build in devmode
+curve - The name of the curve to build or "all" to build all supported curves
+field - The name of the field to build or "all" to build all supported fields
+-skip_msm - Optional - build with MSM disabled
+-skip_ntt - Optional - build with NTT disabled
+-skip_g2 - Optional - build with G2 disabled 
+-skip_ecntt - Optional - build with ECNTT disabled
+-skip_fieldext - Optional - build without field extension
+-help - Optional - Displays usage information
 ```
 
 To build ICICLE libraries for all supported curves with G2 and ECNTT enabled.
 
 ```sh
-./build.sh -curve=all -g2 -ecntt
+./build.sh -curve=all
 ```
 
 If you wish to build for a specific curve, for example bn254, without G2 or ECNTT enabled.
 
 ```sh
-./build.sh -curve=bn254
+./build.sh -curve=bn254 -skip_g2 -skip_ecntt
 ```
 
 ## Supported curves, fields and operations
@@ -53,7 +56,7 @@ If you wish to build for a specific curve, for example bn254, without G2 or ECNT
 To run the tests for curve bn254.
 
 ```sh
-go test ./wrappers/golang/curves/bn254/tests -count=1 -v
+go test ./wrappers/golang_v3/curves/bn254/tests -count=1 -v
 ```
 
 To run all the tests in the golang bindings
@@ -64,15 +67,15 @@ go test ./... -count=1 -v
 
 ## How do Golang bindings work?
 
-The libraries produced from the CUDA code compilation are used to bind Golang to ICICLE's CUDA code.
+The libraries produced from the code compilation are used to bind Golang to ICICLE's code.
 
-1. These libraries (named `libingo_curve_<curve>.a` and `libingo_field_<curve>.a`) can be imported in your Go project to leverage the GPU accelerated functionalities provided by ICICLE.
+1. These libraries (named `libicicle_curve_<curve>.so` and `libicicle_field_<field>.so`) can be imported in your Go project to leverage the accelerated functionalities provided by ICICLE.
 
 2. In your Go project, you can use `cgo` to link these libraries. Here's a basic example on how you can use `cgo` to link these libraries:
 
 ```go
 /*
-#cgo LDFLAGS: -L$/path/to/shared/libs -lingo_curve_bn254 -L$/path/to/shared/libs -lingo_field_bn254 -lstdc++ -lm
+#cgo LDFLAGS: -L/path/to/shared/libs -licicle_device -lstdc++ -lm -Wl,-rpath=/path/to/shared/libs
 #include "icicle.h" // make sure you use the correct header file(s)
 */
 import "C"
@@ -84,38 +87,3 @@ func main() {
 ```
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
-
-## Common issues
-
-### Cannot find shared library
-
-In some cases you may encounter the following error, despite exporting the correct `LD_LIBRARY_PATH`.
-
-```sh
-/usr/local/go/pkg/tool/linux_amd64/link: running gcc failed: exit status 1
-/usr/bin/ld: cannot find -lbn254: No such file or directory
-/usr/bin/ld: cannot find -lbn254: No such file or directory
-/usr/bin/ld: cannot find -lbn254: No such file or directory
-/usr/bin/ld: cannot find -lbn254: No such file or directory
-/usr/bin/ld: cannot find -lbn254: No such file or directory
-collect2: error: ld returned 1 exit status
-```
-
-This is normally fixed by exporting the path to the shared library location in the following way: `export CGO_LDFLAGS="-L/<path_to_shared_lib>/"`
-
-### cuda_runtime.h: No such file or directory
-
-```sh
-# github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bls12381
-In file included from wrappers/golang/curves/bls12381/curve.go:5:
-wrappers/golang/curves/bls12381/include/curve.h:1:10: fatal error: cuda_runtime.h: No such file or directory
-    1 | #include <cuda_runtime.h>
-      |          ^~~~~~~~~~~~~~~~
-compilation terminated.
-```
-
-Our golang bindings rely on cuda headers and require that they can be found as system headers. Make sure to add the `cuda/include` of your cuda installation to your CPATH
-
-```sh
-export CPATH=$CPATH:<path/to/cuda/include>
-```

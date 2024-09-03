@@ -3,34 +3,30 @@ package core
 import (
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core/internal"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core/internal"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMSMDefaultConfig(t *testing.T) {
-	ctx, _ := cr.GetDefaultDeviceContext()
-	expected := MSMConfig{
-		ctx,   // Ctx
-		0,     // pointsSize
-		1,     // PrecomputeFactor
-		0,     // C
-		0,     // Bitsize
-		10,    // LargeBucketFactor
-		1,     // batchSize
-		false, // areScalarsOnDevice
-		false, // AreScalarsMontgomeryForm
-		false, // arePointsOnDevice
-		false, // ArePointsMontgomeryForm
-		false, // areResultsOnDevice
-		false, // IsBigTriangle
-		false, // IsAsync
-	}
-
 	actual := GetDefaultMSMConfig()
 
-	assert.Equal(t, expected, actual)
+	expected := MSMConfig{
+		StreamHandle:             nil,
+		PrecomputeFactor:         1,
+		C:                        0,
+		Bitsize:                  0,
+		BatchSize:                1,
+		ArePointsSharedInBatch:   true,
+		areScalarsOnDevice:       false,
+		AreScalarsMontgomeryForm: false,
+		areBasesOnDevice:         false,
+		AreBasesMontgomeryForm:   false,
+		areResultsOnDevice:       false,
+		IsAsync:                  false,
+		Ext:                      actual.Ext,
+	}
+
+	assert.EqualValues(t, expected, actual)
 }
 
 func TestMSMCheckHostSlices(t *testing.T) {
@@ -58,9 +54,9 @@ func TestMSMCheckHostSlices(t *testing.T) {
 	output := make(HostSlice[internal.MockProjective], 1)
 	assert.NotPanics(t, func() { MsmCheck(scalars, points, &cfg, output) })
 	assert.False(t, cfg.areScalarsOnDevice)
-	assert.False(t, cfg.arePointsOnDevice)
+	assert.False(t, cfg.areBasesOnDevice)
 	assert.False(t, cfg.areResultsOnDevice)
-	assert.Equal(t, int32(1), cfg.batchSize)
+	assert.Equal(t, int32(1), cfg.BatchSize)
 
 	output2 := make(HostSlice[internal.MockProjective], 3)
 	assert.Panics(t, func() { MsmCheck(scalars, points, &cfg, output2) })
@@ -95,12 +91,10 @@ func TestMSMCheckDeviceSlices(t *testing.T) {
 	output := make(HostSlice[internal.MockProjective], 1)
 	assert.NotPanics(t, func() { MsmCheck(scalarsOnDevice, pointsOnDevice, &cfg, output) })
 	assert.True(t, cfg.areScalarsOnDevice)
-	assert.True(t, cfg.arePointsOnDevice)
+	assert.True(t, cfg.areBasesOnDevice)
 	assert.False(t, cfg.areResultsOnDevice)
-	assert.Equal(t, int32(1), cfg.batchSize)
+	assert.Equal(t, int32(1), cfg.BatchSize)
 
 	output2 := make(HostSlice[internal.MockProjective], 3)
 	assert.Panics(t, func() { MsmCheck(scalarsOnDevice, pointsOnDevice, &cfg, output2) })
 }
-
-// TODO add check for batches and batchSize

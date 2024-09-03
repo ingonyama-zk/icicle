@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <stdbool.h>
 
 #ifndef _BW6_761_NTT_H
@@ -10,11 +9,12 @@ extern "C" {
 
 typedef struct scalar_t scalar_t;
 typedef struct NTTConfig NTTConfig;
-typedef struct DeviceContext DeviceContext;
+typedef struct NTTInitDomainConfig NTTInitDomainConfig;
 
-cudaError_t bw6_761_ntt_cuda(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
-cudaError_t bw6_761_initialize_domain(scalar_t* primitive_root, DeviceContext* ctx, bool fast_twiddles);
-cudaError_t bw6_761_release_domain(DeviceContext* ctx);
+int bw6_761_ntt(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
+int bw6_761_ntt_init_domain(scalar_t* primitive_root, NTTInitDomainConfig* ctx);
+int bw6_761_ntt_release_domain();
+int* bw6_761_get_root_of_unity(size_t size);
 
 #ifdef __cplusplus
 }
