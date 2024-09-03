@@ -172,7 +172,7 @@ cmake -S icicle -B build -DFIELD=babybear
 cmake --build build -j # -j is for multi-core compilation
 ```
 
-**Link you application (or library) to ICICLE:**
+**Link your application (or library) to ICICLE:**
 
 ```cmake
 target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
