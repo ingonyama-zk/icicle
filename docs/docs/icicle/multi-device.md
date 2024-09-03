@@ -17,7 +17,9 @@ There are many [different strategies](https://github.com/NVIDIA/multi-gpu-progra
 
 This approach typically involves a single or multiple CPUs managing threads that read from and write to multiple devices, such as GPUs, CPUs, or accelerators. You can think of it as a scaled-up HOST-Device model.
 
-![Multi-Device Server Approach](image.png)
+<p align="center">
+  <img src="image.png" alt="Multi-Device Server Approach">
+</p>
 
 This approach doesn't necessarily allow for tackling larger computation sizes, but it does enable the simultaneous computation of tasks that wouldn't fit on a single device.
 
@@ -33,7 +35,7 @@ This approach requires redesigning the algorithm at the software level to be com
 
 Currently, ICICLE adopts a Device Server approach, where we assume you have a machine with multiple devices (GPUs, CPUs, etc.) and wish to run computations on each device.
 
-Each thread needs to set a device. Following api calls (including memory management and compute apis) will execute on that device, for this thread.
+Each thread needs to set a device. Following API calls (including memory management and compute APIs) will execute on that device, for this thread.
 
 ### C++
 ```cpp
