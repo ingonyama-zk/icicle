@@ -16,7 +16,7 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, icicle]    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
