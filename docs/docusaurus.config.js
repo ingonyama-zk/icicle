@@ -155,13 +155,13 @@ const config = {
       announcementBar: {
         id: 'announcement', // Any value that will identify this message.
         content:
-          '<strong>🎉 New Release! ICICLE v3! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/1c9cc2f94402">Click here to read article</a> 🎉</strong>',
-        backgroundColor: '#ADD8E6', // Fallback light blue background color.
+          '<strong>❄️🎉 New Release! ICICLE v3! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/1c9cc2f94402">Click here to read article</a> 🎉❄️</strong>',
+        backgroundColor: '#64f5ef', // Light blue background color.
         textColor: '#000000', // Black text color.
         isCloseable: true, // Defaults to `true`.
-        },
       },
     }),
 };
 
 module.exports = config;
+
