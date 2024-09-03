@@ -83,30 +83,16 @@ const config = {
         respectPrefersColorScheme: false,
       },
       algolia: {
-        // The application ID provided by Algolia
         appId: 'PZY4KJBBBK',
-  
-        // Public API key: it is safe to commit it
         apiKey: '2cc940a6e0ef5c117f4f44e7f4e6e20b',
-  
         indexName: 'ingonyama',
-  
-        // Optional: see doc section below
         contextualSearch: true,
-  
-        // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
         externalUrlRegex: 'external\\.com|domain\\.com',
-  
-        // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
         replaceSearchResultPathname: {
-          from: '/docs/', // or as RegExp: /\/docs\//
+          from: '/docs/',
           to: '/',
         },
-  
-        // Optional: Algolia search parameters
         searchParameters: {},
-  
-        // Optional: path for search page that enabled by default (`false` to disable it)
         searchPagePath: 'search',
       },
       navbar: {
@@ -166,18 +152,18 @@ const config = {
         additionalLanguages: ['rust', 'go'],
       },
       image: 'img/logo.png',
-announcementBar: {
-  id: 'announcement', // Any value that will identify this message.
-  content:
-    '<strong>🎉 New Release! ICICLE v3! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/1c9cc2f94402">Click here to read article</a> 🎉</strong>',
-  backgroundColor: '#ADD8E6', // Fallback light blue background color.
-  textColor: '#000000', // Black text color.
-  isCloseable: true, // Defaults to `true`.
-  style: {
-    backgroundImage: 'linear-gradient(45deg, #64f5ef 25%, #ce2aaf 25%, #ce2aaf 50%, #64f5ef 50%, #64f5ef 75%, #ce2aaf 75%, #ce2aaf 100%)',
-    backgroundSize: '56.57px 56.57px',
-  },
-},
+      announcementBar: {
+        id: 'announcement', // Any value that will identify this message.
+        content:
+          '<strong>🎉 New Release! ICICLE v3! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/1c9cc2f94402">Click here to read article</a> 🎉</strong>',
+        backgroundColor: '#ADD8E6', // Fallback light blue background color.
+        textColor: '#000000', // Black text color.
+        isCloseable: true, // Defaults to `true`.
+        style: {
+          backgroundImage: 'linear-gradient(45deg, #64f5ef 25%, #ce2aaf 25%, #ce2aaf 50%, #64f5ef 50%, #64f5ef 75%, #ce2aaf 75%, #ce2aaf 100%)',
+          backgroundSize: '56.57px 56.57px',
+        },
+      },
     }),
 };
 
