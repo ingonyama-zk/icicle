@@ -116,21 +116,6 @@ module.exports = {
               label: "Polynomials",
               id: "icicle/polynomials/overview",
             },
-            // {
-            //   type: "doc",
-            //   label: "Keccak Hash (TODO)",
-            //   id: "icicle/primitives/keccak",
-            // },
-            // {
-            //   type: "doc",
-            //   label: "Poseidon Hash (TODO)",
-            //   id: "icicle/primitives/poseidon",
-            // },
-            // {
-            //   type: "doc",
-            //   label: "Poseidon2 Hash (TODO)",
-            //   id: "icicle/primitives/poseidon2",
-            // },
             {
               type: "category",
               label: "Golang bindings",
@@ -212,11 +197,6 @@ module.exports = {
                   label: "Polynomials",
                   id: "icicle/rust-bindings/polynomials",
                 },
-                // {
-                //   type: "doc",
-                //   label: "Keccak Hash (TODO)",
-                //   id: "icicle/rust-bindings/keccak",
-                // },
                 {
                   type: "doc",
                   label: "Multi GPU Support (TODO)",
