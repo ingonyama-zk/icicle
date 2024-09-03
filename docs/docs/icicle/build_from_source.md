@@ -175,4 +175,4 @@ Make sure to install icicle libs when installing a library/application that depe
 
 ### Go: Build, Test, and Install (TODO)
 
-## [Install cuda backend](./install_cuda_backend.md#installation)
+## [Install CUDA backend & License](./install_cuda_backend.md#installation)
