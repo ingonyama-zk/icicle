@@ -2,12 +2,12 @@
 
 ## Overview
 
-This guide covers the usage of Icicle's C++ API, including device management, memory operations, data transfer, synchronization, and compute APIs.
+This guide covers the usage of ICICLE's C++ API, including device management, memory operations, data transfer, synchronization, and compute APIs.
 
 ## Device Management
 
 :::note
-See all icicle runtime APIs in [runtime.h](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle/include/icicle/runtime.h)
+See all ICICLE runtime APIs in [runtime.h](https://github.com/ingonyama-zk/icicle/blob/yshekel/V3/icicle/include/icicle/runtime.h)
 :::
 
 ### Loading a Backend
