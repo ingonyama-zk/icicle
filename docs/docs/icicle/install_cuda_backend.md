@@ -12,7 +12,7 @@ The CUDA backend is a closed-source component that requires a license. [To insta
 ### Licensing
 
 :::note
-Currently, the CUDA backend is free to use via Ingonyama’s ICICLE-CUDA-backend-license server. By default, the CUDA backend will attempt to access this server. For more details, please contact support@ingonyama.com.
+Currently, the CUDA backend is free to use via Ingonyama’s backend license server. By default, the CUDA backend will attempt to access this server. For more details, please contact support@ingonyama.com.
 :::
 
 The CUDA backend requires a valid license to function. There are two types of CUDA backend licenses:
