@@ -28,6 +28,32 @@ module.exports = {
               label: "Build ICICLE from source",
               id: "icicle/build_from_source",
             },
+            {
+              type: "category",
+              label: "Programmers guide",
+              link: {
+                type: `doc`,
+                id: "icicle/programmers_guide/general",
+              },
+              collapsed: false,
+              items: [
+                {
+                  type: "doc",
+                  label: "C++",
+                  id: "icicle/programmers_guide/cpp",
+                },
+                {
+                  type: "doc",
+                  label: "Rust",
+                  id: "icicle/programmers_guide/rust",
+                },
+                {
+                  type: "doc",
+                  label: "Go",
+                  id: "icicle/programmers_guide/go",
+                }
+              ],
+            },
           ],
         },
         {
@@ -60,32 +86,6 @@ module.exports = {
           type: "doc",
           label: "ICICLE libraries",
           id: "icicle/libraries",
-        },
-        {
-          type: "category",
-          label: "Programmers guide",
-          link: {
-            type: `doc`,
-            id: "icicle/programmers_guide/general",
-          },
-          collapsed: false,
-          items: [
-            {
-              type: "doc",
-              label: "C++",
-              id: "icicle/programmers_guide/cpp",
-            },
-            {
-              type: "doc",
-              label: "Rust",
-              id: "icicle/programmers_guide/rust",
-            },
-            {
-              type: "doc",
-              label: "Go",
-              id: "icicle/programmers_guide/go",
-            }
-          ],
         },
         {
           type: "category",
