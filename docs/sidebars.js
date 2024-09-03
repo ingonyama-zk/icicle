@@ -208,7 +208,7 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Migrate from ICICLE V2",
+          label: "Migrate from ICICLE v2",
           id: "icicle/migrate_from_v2",
         },
         {
