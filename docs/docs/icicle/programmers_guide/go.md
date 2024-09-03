@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers the usage of Icicle's Golang API, including device management, memory operations, data transfer, synchronization, and compute APIs.
+This guide covers the usage of ICICLE's Golang API, including device management, memory operations, data transfer, synchronization, and compute APIs.
 
 ## Device Management
 
