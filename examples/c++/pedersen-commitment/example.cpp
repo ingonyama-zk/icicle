@@ -150,7 +150,7 @@ int main(int argc, char** argv)
   std::cout << "Executing MSM" << std::endl;
   auto config = default_msm_config();
   START_TIMER(msm);
-  bn254_msm(scalars, points, N + 1, config, &result);
+  bn254_msm(scalars, points, N + 1, &config, &result);
   END_TIMER(msm, "Time to execute MSM");
 
   std::cout << "Computed commitment: " << result << std::endl;

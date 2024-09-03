@@ -4,7 +4,6 @@
 
 #include "icicle/fields/storage.h"
 #include "icicle/fields/field.h"
-#include "icicle/fields/quadratic_extension.h"
 #include "icicle/fields/snark_fields/bls12_377_base.h"
 
 namespace bw6_761 {
