@@ -128,7 +128,6 @@ do
   echo "NTT=${NTT_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "EXT_FIELD=${EXT_FIELD}" >> build_config.txt
-  echo "ICICLE_INSTALL_DIR=${ICICLE_INSTALL_DIR}" >> build_config.txt
   cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done
