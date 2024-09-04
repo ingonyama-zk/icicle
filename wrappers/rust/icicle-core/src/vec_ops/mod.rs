@@ -450,7 +450,7 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         result.as_mut_ptr() as *mut u32,
                         &DeviceContext::default(),
-                        true,
+                        false,
                     )
                     .wrap()
                 }
