@@ -33,6 +33,7 @@ endif()
 if (HASH)
     target_sources(icicle_hash PRIVATE
         src/hash/cpu_keccak.cpp
+        src/hash/cpu_merkle_tree.cpp
     )
 endif()
 

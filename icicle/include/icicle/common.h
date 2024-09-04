@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace icicle {
 
   // Define limb type for hashing
