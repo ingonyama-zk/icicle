@@ -3,11 +3,9 @@ name: GoLang
 on:
   pull_request:
     branches:
-      - V3
       - main
   push:
     branches:
-      - V3
       - main
 
 concurrency:
@@ -63,7 +61,6 @@ jobs:
       with:
         repository: ingonyama-zk/icicle-cuda-backend
         path: ./icicle/backend/cuda
-        token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Setup go
