@@ -1,5 +1,6 @@
 #pragma once
 
+#include "icicle/runtime.h"
 #include "icicle/config_extension.h"
 
 namespace icicle {
@@ -12,11 +13,24 @@ namespace icicle {
    * whether the hash operation should run asynchronously, and any backend-specific extensions.
    */
   struct HashConfig {
-    bool are_inputs_on_device = false;  ///< True if inputs are on the device, false if on the host. Default is false.
-    bool are_outputs_on_device = false; ///< True if outputs are on the device, false if on the host. Default is false.
-    bool is_async = false; ///< True to run the hash asynchronously, false to run it synchronously. Default is false.
+    icicleStreamHandle stream;  /**< Stream for asynchronous execution. */
+    bool are_inputs_on_device;  ///< True if inputs are on the device, false if on the host. Default is false.
+    bool are_outputs_on_device; ///< True if outputs are on the device, false if on the host. Default is false.
+    bool is_async; ///< True to run the hash asynchronously, false to run it synchronously. Default is false.
     ConfigExtension* ext =
       nullptr; ///< Backend-specific extensions. This allows customization for specific device backends.
   };
+
+  static HashConfig default_hash_config()
+  {
+    HashConfig config = {
+      nullptr, // stream
+      false,   // are_inputs_on_device
+      false,   // are_outputs_on_device
+      false,   // is_async
+      nullptr  // ext
+    };
+    return config;
+  }
 
 } // namespace icicle

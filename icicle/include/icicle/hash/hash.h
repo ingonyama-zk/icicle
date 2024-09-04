@@ -3,7 +3,7 @@
 #include <memory>
 #include "icicle/common.h" // for limb
 #include "icicle/hash/hash_config.h"
-#include "icicle/hash/hash_backend.h"
+#include "icicle/backend/hash/hash_backend.h"
 
 namespace icicle {
 

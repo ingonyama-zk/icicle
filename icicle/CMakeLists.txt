@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
+include(cmake/hash.cmake)
 
 # Set the default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
@@ -22,7 +23,7 @@ find_program(CCACHE_PROGRAM ccache)
 # If ccache is found, use it as the compiler launcher
 if(CCACHE_PROGRAM)
     message(STATUS "ccache found: ${CCACHE_PROGRAM}")
-    
+
     # Use ccache for C and C++ compilers
     set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
@@ -79,13 +80,17 @@ endif()
 if(CURVE)
   set(CURVE_INDEX -1)
   set(FEATURES_STRING "")
-  check_curve(${CURVE} CURVE_INDEX FEATURES_STRING)    
+  check_curve(${CURVE} CURVE_INDEX FEATURES_STRING)
   setup_curve_target(${CURVE} ${CURVE_INDEX} ${FEATURES_STRING})
 elseif(FIELD)
   set(FIELD_INDEX -1)
   set(FEATURES_STRING "")
   check_field(${FIELD} FIELD_INDEX FEATURES_STRING)
   setup_field_target(${FIELD} ${FIELD_INDEX} ${FEATURES_STRING})
+endif()
+
+if (HASH)
+  setup_hash_target()
 endif()
 
 if (CPU_BACKEND)
@@ -95,7 +100,7 @@ endif()
 if (CUDA_BACKEND)
   string(TOLOWER "${CUDA_BACKEND}" CUDA_BACKEND_LOWER)
   if (CUDA_BACKEND_LOWER STREQUAL "local")
-    # CUDA backend is local, no need to pull    
+    # CUDA backend is local, no need to pull
     message(STATUS "Adding CUDA backend from local path: icicle/backend/cuda")
     add_subdirectory(backend/cuda)
 

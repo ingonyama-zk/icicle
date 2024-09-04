@@ -5,6 +5,7 @@
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
 #include "icicle/hash/hash.h"
+#include "icicle/hash/keccak.h"
 
 // using namespace field_config;
 using namespace icicle;
@@ -45,10 +46,85 @@ public:
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}
   void TearDown() override {}
+
+  void randomize(uint32_t* arr, uint64_t size)
+  {
+    // Create a random number generator
+    std::random_device rd;                                       // Non-deterministic random number generator
+    std::mt19937 gen(rd());                                      // Mersenne Twister engine seeded with rd()
+    std::uniform_int_distribution<uint32_t> dist(0, UINT32_MAX); // Range of random numbers
+
+    // Fill the array with random values
+    for (uint64_t i = 0; i < size; ++i) {
+      arr[i] = dist(gen);
+    }
+  }
 };
 
-TEST_F(HashApiTest, TodoRename) {
+TEST_F(HashApiTest, Keccak256)
+{
+  const uint64_t nof_input_limbs = 16; // Number of input limbs
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
+  auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
+  // Randomize the input array
+  randomize(input.get(), nof_input_limbs);
 
-    ICICLE_LOG_INFO << "hello world from hash test";
+  auto config = default_hash_config();
+  // Create Keccak-256 hash object
+  auto keccak256 = create_keccak_256_hash(nof_input_limbs);
+  // Run single hash operation
+  ICICLE_CHECK(keccak256.hash_single(input.get(), output.get(), config));
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
 
+TEST_F(HashApiTest, Keccak512)
+{
+  const uint64_t nof_input_limbs = 16; // Number of input limbs
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
+  auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
+  // Randomize the input array
+  randomize(input.get(), nof_input_limbs);
+
+  auto config = default_hash_config();
+  // Create Keccak-512 hash object
+  auto keccak512 = create_keccak_512_hash(nof_input_limbs);
+  // Run single hash operation
+  ICICLE_CHECK(keccak512.hash_single(input.get(), output.get(), config));
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
+
+TEST_F(HashApiTest, sha3_256)
+{
+  const uint64_t nof_input_limbs = 16; // Number of input limbs
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
+  auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
+  // Randomize the input array
+  randomize(input.get(), nof_input_limbs);
+
+  auto config = default_hash_config();
+  // Create sha3-256 hash object
+  auto sha3_256 = create_keccak_256_hash(nof_input_limbs);
+  // Run single hash operation
+  ICICLE_CHECK(sha3_256.hash_single(input.get(), output.get(), config));
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
+
+TEST_F(HashApiTest, sha3_512)
+{
+  const uint64_t nof_input_limbs = 16; // Number of input limbs
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
+  auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
+  // Randomize the input array
+  randomize(input.get(), nof_input_limbs);
+
+  auto config = default_hash_config();
+  // Create sha3-512 hash object
+  auto sha3_512 = create_keccak_512_hash(nof_input_limbs);
+  // Run single hash operation
+  ICICLE_CHECK(sha3_512.hash_single(input.get(), output.get(), config));
+  // TODO: Verify output (e.g., check CPU against CUDA)
 }
