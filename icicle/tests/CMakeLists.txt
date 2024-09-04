@@ -55,4 +55,10 @@ if (CURVE)
     endif()
 endif()
 
-
+#hash API test
+if (HASH)
+    add_executable(test_hash_api test_hash_api.cpp)
+    target_include_directories(test_hash_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
+    target_link_libraries(test_hash_api PRIVATE GTest::gtest_main icicle_device) # icicle_hash
+    gtest_discover_tests(test_hash_api)
+endif()

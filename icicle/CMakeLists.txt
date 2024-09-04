@@ -44,6 +44,7 @@ option(ECNTT "Build ECNTT" ON)
 option(MSM "Build MSM" ON)
 option(G2 "Build G2 MSM" ON)
 option(EXT_FIELD "Build extension field" ON)
+option(HASH "Build hashes and tree builders" ON)
 
 # device API library
 add_library(icicle_device SHARED
