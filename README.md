@@ -69,7 +69,7 @@ If you require more compute and have an interesting research project, we have [b
 
 ## Building ICICLE from source
 
-ICICLE provides build systems for C++, Rust, and Go. Each build system incorporates the core ICICLE library, which contains the essential cryptographic primitives. Refer to the [Getting started page](https://dev.ingonyama.com/icicle/introduction) for full details about building and using ICICLE.
+ICICLE provides build systems for C++, Rust, and Go. Each build system incorporates the core ICICLE library, which contains the essential cryptographic primitives. Refer to the [Getting started page](https://dev.ingonyama.com/icicle/build_from_source) for full details about building and using ICICLE.
 
 > [!WARNING]
 > Ensure ICICLE libraries are installed correctly when building or installing a library/application that depends on ICICLE so that they can be located at runtime.
@@ -172,7 +172,7 @@ cmake -S icicle -B build -DFIELD=babybear
 cmake --build build -j # -j is for multi-core compilation
 ```
 
-**Link you application (or library) to ICICLE:**
+**Link your application (or library) to ICICLE:**
 
 ```cmake
 target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
