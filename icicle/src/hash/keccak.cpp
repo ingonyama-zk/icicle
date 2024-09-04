@@ -67,4 +67,6 @@ namespace icicle {
     return new Hash(create_sha3_512_hash(total_input_limbs));
   }
 
+  // TODO Yuval : need to expose one deleter from C++. This will be used to drop any object
+
 } // namespace icicle

@@ -67,4 +67,7 @@ namespace icicle {
     std::shared_ptr<MerkleTreeBackend> m_backend; ///< Shared pointer to the Merkle tree backend.
   };
 
+  MerkleTree create_merkle_tree(
+    const std::vector<Hash>& layer_hashes, uint64_t leaf_element_size_in_limbs, uint64_t output_store_min_layer);
+
 } // namespace icicle

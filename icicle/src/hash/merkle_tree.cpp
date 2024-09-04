@@ -17,4 +17,12 @@ namespace icicle {
     return merkle_tree;
   }
 
+  /*************************** C API ***************************/
+
+  MerkleTree* create_merkle_tree_c_api(
+    const std::vector<Hash>& layer_hashes, uint64_t leaf_element_size_in_limbs, uint64_t output_store_min_layer)
+  {
+    return new MerkleTree(create_merkle_tree(layer_hashes, leaf_element_size_in_limbs, output_store_min_layer));
+  }
+
 } // namespace icicle
