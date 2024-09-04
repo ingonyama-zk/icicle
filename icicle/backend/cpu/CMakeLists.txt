@@ -30,4 +30,9 @@ if (CURVE)
     target_include_directories(icicle_curve PUBLIC include)
 endif()
 
+if (HASH)
+    target_sources(icicle_hash PRIVATE
+        src/hash/cpu_keccak.cpp
+    )
+endif()
 
