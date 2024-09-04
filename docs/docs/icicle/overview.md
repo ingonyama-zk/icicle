@@ -6,8 +6,9 @@ title: ICICLE Overview
 # ICICLE Overview
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/794c306a-b5fc-425c-8b1b-60b87aa12200" alt="Untitled design (29)" width="500"/>
+  <img src="https://github.com/user-attachments/assets/9073492a-beca-450c-b3eb-c500f57537de" alt="Untitled design (29)" width="500"/>
 </p>
+
 
 
 ## What is ICICLE?
