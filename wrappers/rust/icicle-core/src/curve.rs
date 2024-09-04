@@ -61,7 +61,11 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         scalar1: Self::ScalarField,
         scalar2: Self::ScalarField,
     ) -> Self::ScalarField;
-
+    #[doc(hidden)]
+    fn add_two_scalar(
+        scalar1: Self::ScalarField,
+        scalar2: Self::ScalarField,
+    ) -> Self::ScalarField;
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
 }
@@ -323,6 +327,12 @@ macro_rules! impl_curve {
                     scalar2: *const $scalar_field, 
                     result: *mut $scalar_field,
                 );
+                #[link_name = concat!($curve_prefix, "_add_two_scalar")]
+                pub(crate) fn add_two_scalar(
+                    scalar1: *const $scalar_field,
+                    scalar2: *const $scalar_field, 
+                    result: *mut $scalar_field,
+                );
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
                     points: *mut $affine_type,
@@ -403,6 +413,20 @@ macro_rules! impl_curve {
 
                 unsafe {
                     $curve_prefix_ident::mul_two_scalar(
+                        &scalar1 as *const $scalar_field,
+                        &scalar2 as *const $scalar_field,
+                        &mut result as *mut _ as *mut $scalar_field
+                    );
+                };
+
+                result
+            }
+
+            fn add_two_scalar(scalar1: $scalar_field, scalar2: $scalar_field) -> $scalar_field {
+                let mut result = $scalar_field::zero();
+
+                unsafe {
+                    $curve_prefix_ident::add_two_scalar(
                         &scalar1 as *const $scalar_field,
                         &scalar2 as *const $scalar_field,
                         &mut result as *mut _ as *mut $scalar_field
