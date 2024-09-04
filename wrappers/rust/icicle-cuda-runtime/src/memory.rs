@@ -120,6 +120,10 @@ impl<T> HostSlice<T> {
 }
 
 impl<T> DeviceSlice<T> {
+    pub fn cuda_free(&mut self) -> CudaResult<()> {
+        unsafe { cudaFree(self.as_mut_ptr() as _).wrap() }
+    }
+
     pub unsafe fn from_slice(slice: &[T]) -> &Self {
         &*(slice as *const [T] as *const Self)
     }
