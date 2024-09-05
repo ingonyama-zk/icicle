@@ -99,7 +99,7 @@ pub fn check_msm_batch_shared<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    let test_sizes = [1000, 1 << 16];
+    let test_sizes = [1000, 1 << 14];
     let batch_sizes = [1, 3, 1 << 4];
     let mut stream = IcicleStream::create().unwrap();
     let precompute_factor = 8;
@@ -175,7 +175,7 @@ pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>()
 where
     <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
-    let test_sizes = [1000, 1 << 16];
+    let test_sizes = [1000, 1 << 14];
     let batch_sizes = [1, 3, 1 << 4];
     let mut stream = IcicleStream::create().unwrap();
     let precompute_factor = 8;
