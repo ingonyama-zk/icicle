@@ -201,7 +201,7 @@ public:
       return rs;
     }
 
-    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
+    friend HOST_DEVICE Wide operator+(Wide xs, const Wide& ys)
     {
       Wide rs = {};
       add_limbs<2 * TLC, false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
@@ -730,14 +730,14 @@ public:
     return os;
   }
 
-  friend HOST_DEVICE_INLINE Field operator+(Field xs, const Field& ys)
+  friend HOST_DEVICE Field operator+(Field xs, const Field& ys)
   {
     Field rs = {};
     add_limbs<TLC, false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return sub_modulus<1>(rs);
   }
 
-  friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys)
+  friend HOST_DEVICE Field operator-(Field xs, const Field& ys)
   {
     Field rs = {};
     uint32_t carry = sub_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
@@ -802,7 +802,7 @@ public:
     return r;
   }
 
-  HOST_DEVICE_INLINE Field& operator=(Field const& other)
+  HOST_DEVICE Field& operator=(Field const& other)
   {
     for (int i = 0; i < TLC; i++) {
       this->limbs_storage.limbs[i] = other.limbs_storage.limbs[i];
@@ -810,13 +810,13 @@ public:
     return *this;
   }
 
-  friend HOST_DEVICE_INLINE Field operator*(const Field& xs, const Field& ys)
+  friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
     return reduce(xy);          // reduce mod p
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Field& xs, const Field& ys)
+  friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
   {
 #ifdef __CUDA_ARCH__
     const uint32_t* x = xs.limbs_storage.limbs;
@@ -833,7 +833,7 @@ public:
 #endif
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
+  friend HOST_DEVICE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
 
   template <const Field& multiplier>
   static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
@@ -892,7 +892,7 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Field neg(const Field& xs)
+  static constexpr HOST_DEVICE Field neg(const Field& xs)
   {
     const ff_storage modulus = get_modulus<MODULUS_MULTIPLE>();
     Field rs = {};
@@ -934,7 +934,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE bool is_even(const Field& xs) { return ~xs.limbs_storage.limbs[0] & 1; }
 
-  static constexpr HOST_DEVICE_INLINE Field inverse(const Field& xs)
+  static constexpr HOST_DEVICE Field inverse(const Field& xs)
   {
     if (xs == zero()) return zero();
     constexpr Field one = Field{CONFIG::one};
@@ -965,7 +965,7 @@ public:
     return (u == one) ? b : c;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field pow(Field base, int exp)
+  static constexpr HOST_DEVICE Field pow(Field base, int exp)
   {
     Field res = one();
     while (exp > 0) {

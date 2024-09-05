@@ -14,12 +14,14 @@
 
 #define HOST_INLINE        __host__ INLINE_MACRO
 #define DEVICE_INLINE      __device__ INLINE_MACRO
-#define HOST_DEVICE_INLINE __host__ __device__ INLINE_MACRO
+#define HOST_DEVICE __host__ __device__
+#define HOST_DEVICE_INLINE HOST_DEVICE INLINE_MACRO
 #else // not CUDA
 #define INLINE_MACRO
 #define UNROLL
 #define HOST_INLINE
 #define DEVICE_INLINE
+#define HOST_DEVICE
 #define HOST_DEVICE_INLINE
 #define __host__
 #define __device__
