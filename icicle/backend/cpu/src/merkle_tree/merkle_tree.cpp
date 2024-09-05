@@ -19,7 +19,12 @@ MerkleTree::MerkleTree(
     m_leaf_element_size_in_limbs(leaf_element_size_in_limbs),       
     m_output_store_min_layer(output_store_min_layer){
 
-  ICICLE_ASSERT(output_store_min_layer < nof_layers) << "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree.";
+  ICICLE_ASSERT(output_store_min_layer < nof_layers) << 
+    "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree. (nof_layers=" 
+    << nof_layers << ", output_store_min_layer=" << output_store_min_layer << ")\n";
+
+  ICICLE_ASSERT(layer_hashes[0]->m_total_input_limbs % leaf_element_size_in_limbs == 0) << 
+    "A whole number of leaves must be fitted into the hashes of the first layer.\n";
 
   // update layers data base with the hashes
   m_path_size_in_limbs = layer_hashes[nof_layers - 1]->m_total_output_limbs; // include the root at the path
@@ -106,6 +111,13 @@ eIcicleError MerkleTree::get_root(const limb_t* &root) const {
 
 // allocate tree results array based on the size of the tree
 eIcicleError MerkleTree::allocate_path(limb_t* &path, unsigned int& path_size) {
+  // Check support
+  for (int layer_idx = 0; layer_idx < m_nof_layers; layer_idx++)
+  {
+    ICICLE_ASSERT(m_hashes[layer_idx]->m_total_secondary_input_limbs == 0) << 
+      "Currently path generation is not supported for tree with side / secondary inputs.\n";
+  }
+  
   // Path size allready calculates at the constructor.
   path_size = m_path_size_in_limbs;
   path = new limb_t[m_path_size_in_limbs];
@@ -121,7 +133,7 @@ eIcicleError MerkleTree::get_path(const limb_t *leaves, uint64_t element_idx, li
 
   // if all tree layers stored then copy the leave to the path
   if (m_output_store_min_layer == 0) {
-    // round element_offset_in_limbs to the start of l0 hash inputs 
+    // round element_offset_in_limbs to the start of l0 hash inputs
     std::memcpy(path, &leaves[leaves_offset], l0_total_input_limb*sizeof(limb_t));
     path += l0_total_input_limb;
   }
@@ -139,14 +151,14 @@ eIcicleError MerkleTree::get_path(const limb_t *leaves, uint64_t element_idx, li
     const uint64_t sub_tree_nof_elements = sub_tree_leaves_size / m_leaf_element_size_in_limbs;
     const uint64_t sub_tree_element_idx  = element_idx % sub_tree_nof_elements;
     sub_tree.get_path(sub_tree_leaves, sub_tree_element_idx, path, config); 
-    path += sub_tree.m_path_size_in_limbs - 1;
+    path += sub_tree.m_path_size_in_limbs - m_layers[m_output_store_min_layer].m_hash->m_total_output_limbs;
   }
   
   // Copy the rest of the path from the stored hash results
-  const u_int64_t total_input_elements = m_layers[0].m_nof_hashes * m_layers[0].m_hash->m_total_input_limbs / m_leaf_element_size_in_limbs;
+  const u_int64_t total_input_limbs = m_layers[0].m_nof_hashes * m_layers[0].m_hash->m_total_input_limbs;
   for (int layer_idx = m_output_store_min_layer; layer_idx < m_nof_layers-1; layer_idx++) {
     uint64_t copy_range_size  =  m_layers[layer_idx+1].m_hash->m_total_input_limbs;  
-    uint64_t element_start    =  leaves_offset * m_layers[layer_idx].m_nof_hashes * m_layers[layer_idx].m_hash->m_total_output_limbs / total_input_elements;
+    uint64_t element_start    =  leaves_offset * m_layers[layer_idx].m_nof_hashes * m_layers[layer_idx].m_hash->m_total_output_limbs / total_input_limbs;
     uint64_t copy_range_start =  (element_start / copy_range_size) * copy_range_size;
     auto& cur_layer_result =  m_layers[layer_idx].m_results;
 
@@ -265,7 +277,7 @@ void MerkleTree::init_layers_db() {
   }
 
   // run over all layers and update m_secondary_input_offset
-  uint64_t secondary_input_offset = 1;
+  uint64_t secondary_input_offset = 0;
   for (auto& layer : m_layers) {
     layer.m_secondary_input_offset = secondary_input_offset;
     secondary_input_offset += layer.m_nof_hashes * layer.m_hash->m_total_secondary_input_limbs;
@@ -336,7 +348,7 @@ void MerkleTree::dispatch_task(HashTask* task, const int cur_layer_idx, const ui
 
   // calc task_nof_hashes
   const uint64_t nof_hashes_left = m_layers[cur_layer_idx].m_nof_hashes - next_segment_idx*NOF_OPERATIONS_PER_TASK;
-  task->m_nof_hashes = std::min(uint64_t(NOF_OPERATIONS_PER_TASK), nof_hashes_left);
+  task->m_nof_hashes = std::min(m_layers[cur_layer_idx].m_nof_hashes - cur_segment_idx * NOF_OPERATIONS_PER_TASK, uint64_t(NOF_OPERATIONS_PER_TASK));
 
   // Set task next segment to handle return data 
   task->m_next_segment_idx = next_segment_idx;
@@ -347,4 +359,4 @@ void MerkleTree::dispatch_task(HashTask* task, const int cur_layer_idx, const ui
 
 
 // TODO
-// destructor 
+// destructor freeing up layerDB data

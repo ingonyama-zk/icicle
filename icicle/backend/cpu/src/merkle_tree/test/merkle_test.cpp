@@ -6,6 +6,8 @@
 #include "merkle_tree.h"
 
 #include <cassert>
+#include <cstdlib>
+#include <ctime>
 
 // TODO test with side limbs
 
@@ -68,7 +70,12 @@ void assert_valid_path(
   const limb_t* path, int limb_idx, const int nof_layers, const Hash** hashes
 )
 {
-  // COMMENT Currently does not support hashes with side inputs
+
+  for (int i = 0; i < nof_layers; i++)
+  {
+    ICICLE_ASSERT(hashes[i]->m_total_secondary_input_limbs == 0) << "Path generation with side inputs currently cannot be validated\n";
+  }
+  
   int curr_offset = 0;
   int next_offset = 0;
   for (int i = 0; i < nof_layers - 1; i++)
@@ -101,74 +108,110 @@ void assert_valid_path(
   delete[] hash_results;
 }
 
-int main()
+int random(int low, int high)
 {
-  const int nof_layers = 4;
-  const int leaf_size = 1;
-  const int output_store_min_layer = 0;
-  const int path_element_idx = 1;
-  MerkleTreeConfig config = MerkleTreeConfig();
+  return low + (rand() % (high - low));
+}
 
-  Add6to2OutputsHash* tri_hash =      new Add6to2OutputsHash();
-  AddHash* two_hash =                 new AddHash();
-  Add2HashWithSideInput* side_hash =  new Add2HashWithSideInput();
-  // const Hash* hashes[nof_layers] = {side_hash, tri_hash, tri_hash, two_hash};
-  const Hash* hashes[nof_layers] = {two_hash, two_hash, two_hash, tri_hash};
+eIcicleError tree_test(bool with_side_inputs)
+{
+  srand(time(0));
+  const int num_layers = random(1, 5);
 
+  Hash** hashes = new Hash*[num_layers];
+  if (!hashes) { return eIcicleError::ALLOCATION_FAILED; }
+
+  const int min_layer_stored = random(0, num_layers);
+  std::cout << "Tree has " << num_layers << " Layers with the following hash layout (Min stored layer: " << min_layer_stored << "):\n";
+  int num_outputs = 1;
   int num_inputs = 1;
-  for (int i = nof_layers - 1; i >= 0; i--)
-  {
-    const u_int64_t lower_layer_out_limbs = (i > 0) ? hashes[i-1]->m_total_output_limbs : 1;
-    num_inputs *= hashes[i]->m_total_input_limbs / lower_layer_out_limbs;
-  }
-  
-  std::cout << "Building a tree from the following " << num_inputs << " leaves:\n";
-  limb_t* inputs = new limb_t[num_inputs];
-  for (size_t i = 0; i < num_inputs; i++) { inputs[i] = i; std::cout << inputs[i] << '\t'; }
-
   int num_side_inputs = 0;
-  int num_hashes_in_layer = 1;
-  for (int i = nof_layers - 1; i >= 0; i--)
+  for (int i = 0; i < num_layers; i++)
   {
-    num_side_inputs += hashes[i]->m_total_secondary_input_limbs * num_hashes_in_layer;
-    const u_int64_t lower_layer_out_limbs = (i > 0) ? hashes[i-1]->m_total_output_limbs : 1;
-    num_hashes_in_layer *= hashes[i]->m_total_input_limbs / lower_layer_out_limbs;
+    num_inputs =  random(1,5) * num_outputs; // Ensuring outputs of layer i divide inputs of layer i+1
+    num_outputs = random(1, num_inputs + 1);
+    if (with_side_inputs) { num_side_inputs = random(0, 5); }
+    hashes[i] = new SimpleHash(num_inputs, num_outputs, num_side_inputs);
+    if (!hashes[i]) { return eIcicleError::ALLOCATION_FAILED; }
+
+    std::cout << "IN=" << num_inputs << "\tOUT=" << num_outputs << "\tSIDE=" << num_side_inputs << '\n';
   }
 
-  limb_t* side_ins = num_side_inputs > 0? new limb_t[num_side_inputs] : nullptr;
-  if (num_side_inputs > 0) { std::cout << "\nSide inputs:\n"; }
-  for (size_t i = 0; i < num_side_inputs; i++) { side_ins[i] = i; std::cout << side_ins[i] << '\t'; }
+  int num_hashes_in_layer = 1;
+  int total_side_limbs_in_tree = 0;
+  for (int i = num_layers - 1; i > 0; i--)
+  {
+    total_side_limbs_in_tree += num_hashes_in_layer * hashes[i]->m_total_secondary_input_limbs;
+    num_hashes_in_layer *= hashes[i]->m_total_input_limbs / hashes[i - 1]->m_total_output_limbs;
+  }
+  total_side_limbs_in_tree += num_hashes_in_layer * hashes[0]->m_total_secondary_input_limbs;
 
-  MerkleTree* tree = new MerkleTree(nof_layers, hashes, leaf_size, output_store_min_layer);
-  std::cout << "\n\nTree:\n";
-  tree->build(inputs, config, side_ins);
-  tree->print_tree();
+  int total_input_limbs = num_hashes_in_layer * hashes[0]->m_total_input_limbs;
 
-  // Check valid tree calc
-  std::cout << "Checking the tree was correctly built - ";
-  assert_valid_tree(tree, nof_layers, num_inputs, inputs, side_ins, hashes, output_store_min_layer);
-  std::cout << "V\n\nGetting path of the following index: " << path_element_idx << '\n';
+  int leaf_size = total_input_limbs + 1;
+  while (total_input_limbs % leaf_size != 0 || hashes[0]->m_total_input_limbs % leaf_size != 0) {
+    leaf_size = random(1, total_input_limbs + 1);
+  }
 
-  // Check path
-  unsigned nof_limbs_in_path = num_inputs;
-  for (size_t i = 0; i < nof_layers; i++) { nof_limbs_in_path += hashes[i]->m_total_output_limbs; }
+  MerkleTree tree = MerkleTree(num_layers, (const Hash**) hashes, leaf_size, min_layer_stored);
+  std::cout << "leaf size:\t" << leaf_size << '\n';
+  std::cout << "Building a tree from the following " << (total_input_limbs / leaf_size) << " leaves:\n";  
+  limb_t* inputs = new limb_t[total_input_limbs];
+  for (size_t i = 0; i < total_input_limbs; i++) { 
+    inputs[i] = random(0, (1 << 10) - 1); std::cout << inputs[i] << '\t'; 
+  }
 
-  limb_t* path;
-  assert(tree->allocate_path(path, nof_limbs_in_path) == eIcicleError::SUCCESS);
-  assert(tree->get_path(inputs, path_element_idx, path, config) == eIcicleError::SUCCESS);
-  tree->print_path(path);
+  limb_t* side_inputs = nullptr;
+  if (with_side_inputs) {
+    std::cout << "\n\nAnd the following " << total_side_limbs_in_tree << " side inputs:\n";
+    side_inputs = new limb_t[total_side_limbs_in_tree];
+    for (size_t i = 0; i < total_side_limbs_in_tree; i++) { 
+      side_inputs[i] = random(0, (1 << 10) - 1); std::cout << side_inputs[i] << '\t'; 
+    }
+  }
 
-  std::cout << "Validating path (both library validation and naive validation) - ";
-  bool verification_valid = false;
-  assert(tree->verify(path, path_element_idx, verification_valid, config) == eIcicleError::SUCCESS);
-  assert(verification_valid);
+  std::cout << "\n\n\nTree:\n";
+  tree.build(inputs, MerkleTreeConfig(), side_inputs);
+  tree.print_tree();
+  std::cout << "Validating tree build - ";
+  assert_valid_tree(&tree, num_layers, total_input_limbs, inputs, side_inputs, (const Hash**) hashes, min_layer_stored);
+  std::cout << "V\n\n";
 
-  assert_valid_path(path, path_element_idx * leaf_size, nof_layers, hashes);
-  std::cout << "V\n";
+  if (!with_side_inputs) {
+    const int path_element_idx = random(0, total_input_limbs / leaf_size);
+
+    std::cout << "V\n\nGetting path of the following index: " << path_element_idx << '\n';
+
+    // Check path
+    unsigned num_limbs_in_path = hashes[num_layers-1]->m_total_output_limbs;
+    for (size_t i = 0; i < num_layers; i++) { num_limbs_in_path += hashes[i]->m_total_input_limbs; }
+
+    limb_t* path;
+    if (tree.allocate_path(path, num_limbs_in_path) != eIcicleError::SUCCESS) { return eIcicleError::ALLOCATION_FAILED; }
+    std::cout << "Path size: " << num_limbs_in_path << '\n';
+    ICICLE_ASSERT(tree.get_path(inputs, path_element_idx, path, MerkleTreeConfig()) == eIcicleError::SUCCESS) 
+      << "Couldn't get path\n";
+    tree.print_path(path);
+
+    std::cout << "Validating path (both library validation and naive validation) - ";
+    bool verification_valid = false;
+    ICICLE_ASSERT(tree.verify(path, path_element_idx, verification_valid, MerkleTreeConfig()) == eIcicleError::SUCCESS)
+      << "Couldn't verify\n";
+    ICICLE_ASSERT(verification_valid) << "Verification failed.\n";
+
+    assert_valid_path(path, path_element_idx * leaf_size, num_layers, (const Hash**) hashes);
+    std::cout << "V\n";
+  }
 
   delete[] inputs;
-  delete tri_hash;
-  delete two_hash;
-  delete tree;
-  if (num_side_inputs > 0) { delete[] side_ins; }
+  delete[] side_inputs;
+  for (int i = 0; i < num_layers; i++) { delete hashes[i]; }
+  delete[] hashes;
+
+  return eIcicleError::SUCCESS;
+}
+
+int main()
+{
+  while(1) assert(tree_test(1) == eIcicleError::SUCCESS);
 }

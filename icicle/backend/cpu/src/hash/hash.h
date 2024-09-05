@@ -39,6 +39,8 @@ namespace icicle {
           m_total_secondary_input_limbs(total_secondary_input_limbs) {
     }
 
+    virtual ~Hash() = default;
+
     /**
      * @brief Pure virtual function to run a single hash.
      * @param input_limbs Pointer to the input limbs.
