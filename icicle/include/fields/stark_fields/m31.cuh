@@ -3,6 +3,7 @@
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
 #include "fields/quartic_extension.cuh"
+#include "fields/quadratic_extension.cuh"
 
 #include <thread>
 #include <vector>
@@ -256,4 +257,5 @@ namespace m31 {
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef ExtensionField<fp_config, scalar_t> extension_t;
+  typedef CExtensionField<fp_config, scalar_t> cextension_t;
 } // namespace m31

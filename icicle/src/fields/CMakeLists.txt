@@ -16,10 +16,12 @@ list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern_mmcs.cu)
 
 if(EXT_FIELD)
   list(APPEND FIELD_SOURCE ${SRC}/fields/extern_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_cextension.cu)
   if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
     list(APPEND FIELD_SOURCE ${SRC}/ntt/extern_extension.cu)
   endif()
   list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_cextension.cu)
 endif()
 
 set(POLYNOMIAL_SOURCE_FILES 
