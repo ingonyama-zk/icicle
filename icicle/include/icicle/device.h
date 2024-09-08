@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstring>
+#include <string>
+#include <iostream>
 
 namespace icicle {
 
