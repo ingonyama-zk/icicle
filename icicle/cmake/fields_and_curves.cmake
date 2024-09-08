@@ -4,6 +4,7 @@
 set(ICICLE_FIELDS
   1001:babybear:NTT,EXT_FIELD
   1002:stark252:NTT
+  1003:m31:EXT_FIELD
 )
 
 # Define available curves with an index and their supported features

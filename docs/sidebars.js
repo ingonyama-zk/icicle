@@ -16,6 +16,22 @@ module.exports = {
       items: [
         {
           type: "category",
+          label: "Getting started",
+          link: {
+            type: `doc`,
+            id: "icicle/getting_started",
+          },
+          collapsed: false,
+          items: [
+            {
+              type: "doc",
+              label: "Build ICICLE from source",
+              id: "icicle/build_from_source",
+            },
+          ],
+        },
+        {
+          type: "category",
           label: "Architecture overview",
           link: {
             type: `doc`,
@@ -25,7 +41,7 @@ module.exports = {
           items: [
             {
               type: "doc",
-              label: "CUDA Backend (TODO finalize)",
+              label: "CUDA Backend",
               id: "icicle/install_cuda_backend"
             },
             {
@@ -35,7 +51,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Build Your Own Backend (TODO)",
+              label: "Build Your Own Backend",
               id: "icicle/build_your_own_backend"
             },
           ]
@@ -44,11 +60,6 @@ module.exports = {
           type: "doc",
           label: "ICICLE libraries",
           id: "icicle/libraries",
-        },
-        {
-          type: "doc",
-          label: "Getting started",
-          id: "icicle/getting_started"
         },
         {
           type: "category",
@@ -71,7 +82,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Go (TODO)",
+              label: "Go",
               id: "icicle/programmers_guide/go",
             }
           ],
@@ -106,23 +117,8 @@ module.exports = {
               id: "icicle/polynomials/overview",
             },
             {
-              type: "doc",
-              label: "Keccak Hash (TODO)",
-              id: "icicle/primitives/keccak",
-            },
-            {
-              type: "doc",
-              label: "Poseidon Hash (TODO)",
-              id: "icicle/primitives/poseidon",
-            },
-            {
-              type: "doc",
-              label: "Poseidon2 Hash (TODO)",
-              id: "icicle/primitives/poseidon2",
-            },
-            {
               type: "category",
-              label: "Golang bindings (TODO)",
+              label: "Golang bindings",
               link: {
                 type: `doc`,
                 id: "icicle/golang-bindings",
@@ -159,11 +155,6 @@ module.exports = {
                   type: "doc",
                   label: "Vector operations",
                   id: "icicle/golang-bindings/vec-ops",
-                },
-                {
-                  type: "doc",
-                  label: "Keccak Hash",
-                  id: "icicle/golang-bindings/keccak",
                 },
                 {
                   type: "doc",
@@ -208,11 +199,6 @@ module.exports = {
                 },
                 {
                   type: "doc",
-                  label: "Keccak Hash (TODO)",
-                  id: "icicle/rust-bindings/keccak",
-                },
-                {
-                  type: "doc",
                   label: "Multi GPU Support (TODO)",
                   id: "icicle/rust-bindings/multi-gpu",
                 },
@@ -227,12 +213,12 @@ module.exports = {
         },
         {
           type: "doc",
-          label: "Benchmarks (TODO)",
+          label: "Benchmarks",
           id: "icicle/benchmarks",
         },
         {
           type: "doc",
-          label: "FAQ and Troubleshooting (TODO)",
+          label: "FAQ and Troubleshooting",
           id: "icicle/faq_and_troubleshooting",
         },
         {

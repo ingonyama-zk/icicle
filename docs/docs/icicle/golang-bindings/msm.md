@@ -1,20 +1,24 @@
 # MSM
 
-TODO update for V3
-
 ## MSM Example
 
 ```go
 package main
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	cr "github.com/ingonyama-zk/icicle/v2/wrappers/golang/cuda_runtime"
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	bn254_msm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
+	// Load backend using env path
+	runtime.LoadBackendFromEnvOrDefault()
+	// Set Cuda device to perform
+	device := runtime.CreateDevice("CUDA", 0)
+	runtime.SetDevice(&device)
+
 	// Obtain the default MSM configuration.
 	cfg := core.GetDefaultMSMConfig()
 
@@ -26,43 +30,43 @@ func main() {
 	points := bn254.GenerateAffinePoints(size)
 
 	// Create a CUDA stream for asynchronous operations.
-	stream, _ := cr.CreateStream()
+	stream, _ := runtime.CreateStream()
 	var p bn254.Projective
 
 	// Allocate memory on the device for the result of the MSM operation.
 	var out core.DeviceSlice
-	_, e := out.MallocAsync(p.Size(), p.Size(), stream)
+	_, e := out.MallocAsync(p.Size(), 1, stream)
 
-	if e != cr.CudaSuccess {
+	if e != runtime.Success {
 		panic(e)
 	}
 
 	// Set the CUDA stream in the MSM configuration.
-	cfg.Ctx.Stream = &stream
+	cfg.StreamHandle = stream
 	cfg.IsAsync = true
 
 	// Perform the MSM operation.
-	e = bn254_msm.Msm(scalars, points, &cfg, out)
+	e = msm.Msm(scalars, points, &cfg, out)
 
-	if e != cr.CudaSuccess {
+	if e != runtime.Success {
 		panic(e)
 	}
 
 	// Allocate host memory for the results and copy the results from the device.
 	outHost := make(core.HostSlice[bn254.Projective], 1)
-	cr.SynchronizeStream(&stream)
+	runtime.SynchronizeStream(stream)
+	runtime.DestroyStream(stream)
 	outHost.CopyFromDevice(&out)
 
 	// Free the device memory allocated for the results.
 	out.Free()
 }
-
 ```
 
 ## MSM Method
 
 ```go
-func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) cr.CudaError
+func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *core.MSMConfig, results core.HostOrDeviceSlice) runtime.EIcicleError
 ```
 
 ### Parameters
@@ -74,7 +78,7 @@ func Msm(scalars core.HostOrDeviceSlice, points core.HostOrDeviceSlice, cfg *cor
 
 ### Return Value
 
-- **`CudaError`**: Returns a CUDA error code indicating the success or failure of the MSM operation.
+- **`EIcicleError`**: A `runtime.EIcicleError` value, which will be `runtime.Success` if the operation was successful, or an error if something went wrong.
 
 ## MSMConfig
 
@@ -82,37 +86,37 @@ The `MSMConfig` structure holds configuration parameters for the MSM operation, 
 
 ```go
 type MSMConfig struct {
-    Ctx cr.DeviceContext
-    PrecomputeFactor int32
-    C int32
-    Bitsize int32
-    LargeBucketFactor int32
-    batchSize int32
-    areScalarsOnDevice bool
-    AreScalarsMontgomeryForm bool
-    arePointsOnDevice bool
-    ArePointsMontgomeryForm bool
-    areResultsOnDevice bool
-    IsBigTriangle bool
-    IsAsync bool
+	StreamHandle             runtime.Stream
+	PrecomputeFactor         int32
+	C                        int32
+	Bitsize                  int32
+	BatchSize                int32
+	ArePointsSharedInBatch   bool
+	areScalarsOnDevice       bool
+	AreScalarsMontgomeryForm bool
+	areBasesOnDevice         bool
+	AreBasesMontgomeryForm   bool
+	areResultsOnDevice       bool
+	IsAsync                  bool
+	Ext                      config_extension.ConfigExtensionHandler
 }
 ```
 
 ### Fields
 
-- **`Ctx`**: Device context containing details like device id and stream.
+- **`StreamHandle`**: Specifies the stream (queue) to use for async execution.
 - **`PrecomputeFactor`**: Controls the number of extra points to pre-compute.
 - **`C`**: Window bitsize, a key parameter in the "bucket method" for MSM.
 - **`Bitsize`**: Number of bits of the largest scalar.
-- **`LargeBucketFactor`**: Sensitivity to frequently occurring buckets.
-- **`batchSize`**: Number of results to compute in one batch.
+- **`BatchSize`**: Number of results to compute in one batch.
+- **`ArePointsSharedInBatch`**: Bases are shared for batch. Set to true if all MSMs use the same bases. Otherwise, the number of bases and number of scalars are expected to be equal.
 - **`areScalarsOnDevice`**: Indicates if scalars are located on the device.
 - **`AreScalarsMontgomeryForm`**: True if scalars are in Montgomery form.
-- **`arePointsOnDevice`**: Indicates if points are located on the device.
-- **`ArePointsMontgomeryForm`**: True if point coordinates are in Montgomery form.
+- **`areBasesOnDevice`**: Indicates if bases are located on the device.
+- **`AreBasesMontgomeryForm`**: True if point coordinates are in Montgomery form.
 - **`areResultsOnDevice`**: Indicates if results are stored on the device.
-- **`IsBigTriangle`**: If `true` MSM will run in Large triangle accumulation if `false` Bucket accumulation will be chosen. Default value: false.
 - **`IsAsync`**: If true, runs MSM asynchronously.
+- **`Ext`**: Extended configuration for backend.
 
 ### Default Configuration
 
@@ -122,9 +126,9 @@ Use `GetDefaultMSMConfig` to obtain a default configuration, which can then be c
 func GetDefaultMSMConfig() MSMConfig
 ```
 
-## How do I toggle between the supported algorithms?
+## Batched msm
 
-When creating your MSM Config you may state which algorithm you wish to use. `cfg.Ctx.IsBigTriangle = true` will activate Large triangle reduction and `cfg.Ctx.IsBigTriangle = false` will activate iterative reduction.
+For batch msm, simply allocate the results array with size corresponding to batch size and set the `ArePointsSharedInBatch` flag in config struct.
 
 ```go
 ...
@@ -149,7 +153,7 @@ The number of results is interpreted from the size of `var out core.DeviceSlice`
 batchSize := 3
 var p G2Projective
 var out core.DeviceSlice
-out.Malloc(batchSize*p.Size(), p.Size())
+out.Malloc(p.Size(), batchSize)
 
 ...
 ```
@@ -166,7 +170,7 @@ Now you may import `g2` package of the specified curve.
 
 ```go
 import (
-    "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
+    "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/g2"
 )
 ```
 
@@ -176,25 +180,26 @@ This package include `G2Projective` and `G2Affine` points as well as a `G2Msm` m
 package main
 
 import (
-	"github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	bn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
-	g2 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/g2"
+	"log"
+
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/msm"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 func main() {
 	cfg := core.GetDefaultMSMConfig()
-	size := 1 << 12
-	batchSize := 3
-	totalSize := size * batchSize
-	scalars := bn254.GenerateScalars(totalSize)
-	points := g2.G2GenerateAffinePoints(totalSize)
+	points := bn254.GenerateAffinePoints(1024)
+	var precomputeFactor int32 = 8
+	var precomputeOut core.DeviceSlice
+	precomputeOut.Malloc(points[0].Size(), points.Len()*int(precomputeFactor))
 
-	var p g2.G2Projective
-	var out core.DeviceSlice
-	out.Malloc(batchSize*p.Size(), p.Size())
-	g2.G2Msm(scalars, points, &cfg, out)
+	err := msm.PrecomputeBases(points, &cfg, precomputeOut)
+	if err != runtime.Success {
+		log.Fatalf("PrecomputeBases failed: %v", err)
+	}
 }
-
 ```
 
 `G2Msm` works the same way as normal MSM, the difference is that it uses G2 Points.

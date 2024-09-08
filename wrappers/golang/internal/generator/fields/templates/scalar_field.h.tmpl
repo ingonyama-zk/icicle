@@ -1,0 +1,20 @@
+#include <stdbool.h>
+
+#ifndef _{{toUpper .Field}}_FIELD_H
+#define _{{toUpper .Field}}_FIELD_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct scalar_t scalar_t;
+typedef struct VecOpsConfig VecOpsConfig;
+
+void {{.Field}}_generate_scalars(scalar_t* scalars, int size);
+int {{.Field}}_scalar_convert_montgomery(const scalar_t* d_in, size_t n, bool is_into, const VecOpsConfig* ctx, scalar_t* d_out);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

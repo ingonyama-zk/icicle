@@ -32,6 +32,14 @@ cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, const N
   return err;
 }
 
+// template <typename S, typename E>
+// eIcicleError
+// cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, const NTTConfig<S>& config, E* output)
+// {
+//   auto err = ntt_cpu::cpu_ntt_ref<S, E>(device, input, size, dir, config, output);
+//   return err;
+// }
+
 REGISTER_NTT_INIT_DOMAIN_BACKEND("CPU", (cpu_ntt_init_domain));
 REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU", cpu_ntt_release_domain<scalar_t>);
 REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND("CPU", cpu_get_root_of_unity_from_domain<scalar_t>);

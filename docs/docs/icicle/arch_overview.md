@@ -12,7 +12,7 @@ ICICLE V3 is designed with flexibility and extensibility in mind, offering a rob
 ## Closed CUDA Backend
 
 - **CUDA Backend:** ICICLE also includes a high-performance CUDA backend that is closed-source. This backend is optimized for NVIDIA GPUs and provides significant acceleration for cryptographic operations. 
-- **Installation and Licensing:** The CUDA backend requires a valid license for deployment. For detailed instructions on installing and licensing the CUDA backend, refer to the [installation guide](./install_cuda_backend.md).
+- **Installation and Licensing:** The CUDA backend needs to be downloaded and installed. Refer to the [installation guide](./install_cuda_backend.md) for detailed instructions.
 
 ## Extensible Design
 

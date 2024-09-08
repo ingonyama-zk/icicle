@@ -528,7 +528,7 @@ TEST_F(PolynomialTest, slicing)
   body((1 << 10) - 1); // test odd size
 }
 
-#ifdef CURVE
+#ifdef MSM
 #include "icicle/msm.h"
 #include "icicle/curves/curve_config.h"
 using curve_config::affine_t;
@@ -577,7 +577,7 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 } // namespace icicle
-#endif // CURVE
+#endif // MSM
 
 // Following examples are randomizing N private numbers and proving that I know N numbers such that their product is
 // equal to 'out'.
@@ -683,7 +683,7 @@ public:
   const int nof_constraints;
   std::vector<Polynomial_t> L_QAP, R_QAP, O_QAP;
 
-#ifdef CURVE
+#ifdef MSM
   /******** SETUP *********/
   // https://static.wixstatic.com/media/935a00_cd68860dafbb4ebe8f166de5cc8cc50c~mv2.png
   struct ToxicWaste {
@@ -894,7 +894,7 @@ public:
 
   ProvingKey pk;
   VerifyingKey vk;
-#endif // CURVE
+#endif // MSM
 };
 
 TEST_F(PolynomialTest, QAP)
@@ -944,7 +944,7 @@ TEST_F(PolynomialTest, QAP)
   }
 }
 
-#ifdef CURVE
+#ifdef MSM
 TEST_F(PolynomialTest, commitMSM)
 {
   const int size = 1 << 6;
@@ -1002,7 +1002,7 @@ TEST_F(PolynomialTest, Groth16)
 }
 #endif // G2
 
-#endif // CURVE
+#endif // MSM
 
 int main(int argc, char** argv)
 {

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 
+#define ICICLE_LOG_VERBOSE Log(Log::Verbose)
 #define ICICLE_LOG_DEBUG   Log(Log::Debug)
 #define ICICLE_LOG_INFO    Log(Log::Info)
 #define ICICLE_LOG_WARNING Log(Log::Warning)
@@ -11,7 +12,7 @@
 class Log
 {
 public:
-  enum eLogLevel { Debug, Info, Warning, Error };
+  enum eLogLevel { Verbose, Debug, Info, Warning, Error };
 
   Log(eLogLevel level) : level{level}
   {
@@ -41,6 +42,8 @@ private:
   const char* logLevelToString(eLogLevel level) const
   {
     switch (level) {
+    case Verbose:
+      return "DEBUG";
     case Debug:
       return "DEBUG";
     case Info:
@@ -60,4 +63,6 @@ private:
 #else
   static inline eLogLevel s_min_log_level = eLogLevel::Debug;
 #endif
+
+  // Note: for verbose, need to explicitly call `set_min_log_level(eLogLevel::Verbose)`
 };

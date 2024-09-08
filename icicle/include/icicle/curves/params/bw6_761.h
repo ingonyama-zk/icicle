@@ -3,7 +3,6 @@
 #include "icicle/curves/projective.h"
 #include "icicle/fields/snark_fields/bw6_761_base.h"
 #include "icicle/fields/snark_fields/bw6_761_scalar.h"
-#include "icicle/fields/quadratic_extension.h"
 
 namespace bw6_761 {
   struct G1;
@@ -12,7 +11,7 @@ namespace bw6_761 {
   typedef Affine<point_field_t> affine_t;
 
   struct G2;
-  typedef point_field_t g2_point_field_t;
+  typedef Field<fq_config_g2> g2_point_field_t;
   typedef Projective<g2_point_field_t, scalar_t, G2> g2_projective_t;
   typedef Affine<g2_point_field_t> g2_affine_t;
 
@@ -33,20 +32,17 @@ namespace bw6_761 {
   };
 
   struct G2 {
-    static constexpr point_field_t gen_x = {0xcd025f1c, 0xa830c194, 0xe1bf995b, 0x6410cf4f, 0xc2ad54b0, 0x00e96efb,
-                                            0x3cd208d7, 0xce6948cb, 0x00e1b6ba, 0x963317a3, 0xac70e7c7, 0xc5bbcae9,
-                                            0xf09feb58, 0x734ec3f1, 0xab3da268, 0x26b41c5d, 0x13890f6d, 0x4c062010,
-                                            0xc5a7115f, 0xd61053aa, 0x69d660f9, 0xc852a82e, 0x41d9b816, 0x01101332};
-    static constexpr point_field_t gen_y = {0x28c73b61, 0xeb70a167, 0xf9eac689, 0x91ec0594, 0x3c5a02a5, 0x58aa2d3a,
-                                            0x504affc7, 0x3ea96fcd, 0xffa82300, 0x8906c170, 0xd2c712b8, 0x64f293db,
-                                            0x33293fef, 0x94c97eb7, 0x0b95a59c, 0x0a1d86c8, 0x53ffe316, 0x81a78e27,
-                                            0xcec2181c, 0x26b7cf9a, 0xe4b6d2dc, 0x8179eb10, 0x7761369f, 0x0017c335};
-    static constexpr point_field_t weierstrass_b = {
+    static constexpr g2_point_field_t gen_x = {0xcd025f1c, 0xa830c194, 0xe1bf995b, 0x6410cf4f, 0xc2ad54b0, 0x00e96efb,
+                                               0x3cd208d7, 0xce6948cb, 0x00e1b6ba, 0x963317a3, 0xac70e7c7, 0xc5bbcae9,
+                                               0xf09feb58, 0x734ec3f1, 0xab3da268, 0x26b41c5d, 0x13890f6d, 0x4c062010,
+                                               0xc5a7115f, 0xd61053aa, 0x69d660f9, 0xc852a82e, 0x41d9b816, 0x01101332};
+    static constexpr g2_point_field_t gen_y = {0x28c73b61, 0xeb70a167, 0xf9eac689, 0x91ec0594, 0x3c5a02a5, 0x58aa2d3a,
+                                               0x504affc7, 0x3ea96fcd, 0xffa82300, 0x8906c170, 0xd2c712b8, 0x64f293db,
+                                               0x33293fef, 0x94c97eb7, 0x0b95a59c, 0x0a1d86c8, 0x53ffe316, 0x81a78e27,
+                                               0xcec2181c, 0x26b7cf9a, 0xe4b6d2dc, 0x8179eb10, 0x7761369f, 0x0017c335};
+    static constexpr g2_point_field_t weierstrass_b = {
       0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
       0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
   };
-
-// used to avoid template specialization for G2 affine type
-#define G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
 } // namespace bw6_761

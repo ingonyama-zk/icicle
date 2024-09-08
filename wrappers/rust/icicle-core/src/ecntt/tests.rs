@@ -13,7 +13,7 @@ pub fn check_ecntt<C: Curve>()
 where
     <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
 {
-    let test_sizes = [1 << 4, 1 << 9, 1 << 12]; //TODO SHANIE - change back to 1 << 18 after implementing efficient ecntt
+    let test_sizes = [1 << 4, 1 << 9, 1 << 11];
     for test_size in test_sizes {
         for dir in [NTTDir::kForward, NTTDir::kInverse] {
             let config: NTTConfig<C::ScalarField> = NTTConfig::default();

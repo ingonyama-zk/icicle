@@ -78,7 +78,7 @@ where
             test_utilities::test_set_main_device();
             ntt_inplace(
                 HostSlice::from_mut_slice(&mut ntt_result_main),
-                NTTDir::kForward,
+                NTTDir::kInverse,
                 &config,
             )
             .unwrap();
@@ -86,7 +86,7 @@ where
             test_utilities::test_set_ref_device();
             ntt_inplace(
                 HostSlice::from_mut_slice(&mut ntt_result_ref),
-                NTTDir::kForward,
+                NTTDir::kInverse,
                 &config,
             )
             .unwrap();
@@ -167,7 +167,6 @@ where
 }
 
 // This test is interpolating a coset, given evaluations on rou, and compares main to ref device.
-//TODO SHANIE - mixed radix not implemented in icicle-cpu-ntt
 pub fn check_ntt_coset_interpolation_nm<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,

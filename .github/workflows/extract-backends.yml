@@ -1,0 +1,36 @@
+name: Extract Icicle Backend Branch
+
+on:
+  workflow_call:
+    inputs:
+      pr-number:
+        description: 'The PR number to fetch the description for'
+        required: true
+        type: number
+    outputs:
+      cuda-backend-branch:
+        description: "Branch name for cuda backend"
+        value: ${{ jobs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+
+jobs:
+  extract-cuda-backend-branch:
+    name: Extract cuda branch name
+    runs-on: ubuntu-22.04
+    outputs:
+      cuda-backend-branch: ${{ steps.extract.outputs.cuda-backend-branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Extract Private Branch from PR Description
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DESCRIPTION=$(gh pr view ${{ inputs.pr-number }} --json body -q '.body')
+          echo "PR Description: $DESCRIPTION"
+          CUDA_BE_BRANCH=$(echo "$DESCRIPTION" | grep -oP 'cuda-backend-branch:\s*\K[^\s]+') || true
+          if [ -z "$CUDA_BE_BRANCH" ]; then
+            CUDA_BE_BRANCH="main" # Default branch if not specified
+          fi
+          echo "Extracted CUDA Backend Branch: $CUDA_BE_BRANCH"
+          echo "cuda-backend-branch=$CUDA_BE_BRANCH" >> "$GITHUB_OUTPUT"

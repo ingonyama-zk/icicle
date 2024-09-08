@@ -1,182 +1,170 @@
+# Getting started Guide
 
-# Getting Started with ICICLE V3
+## Overview
 
-This guide will help you get started with building, testing, and installing ICICLE, whether you're using C++, Rust, or Go. It also covers installation of the CUDA backend and important build options.
+This guide will walk you through the entire process of building, testing, and installing ICICLE using your preferred programming language—C++, Rust, or Go. Whether you're deploying on a CPU or leveraging CUDA for accelerated performance, this guide provides comprehensive instructions to get you started. It also outlines the typical workflow for a user, including key installation steps:
 
-## Building and Testing ICICLE frontend
 
-### C++: Build, Test, and Install (Frontend)
+1. **Install ICICLE or build it from source**: This is explained in this guide. For building from source, refer to the [Build from Source page](./build_from_source.md).
+2. **Follow the [Programmer’s Guide](./programmers_guide/general.md)**: Learn how to use ICICLE APIs.  
+3. **Start using ICICLE APIs on your CPU**: Your application will now use ICICLE on the CPU.
+4. **Accelerate your application on a GPU**: [install the CUDA backend](./install_cuda_backend.md),  load it, and select it in your application ([C++](./programmers_guide/cpp.md#loading-a-backend),[Rust](./programmers_guide/rust.md#loading-a-backend), [Go](./programmers_guide/go.md#loading-a-backend)).
+5. **Run on the GPU**: Once the GPU backend is selected, all subsequent API calls will execute on the GPU.
+6. **Optimize for multi-GPU environments**: Refer to the [Multi-GPU](./multi-device.md) Guide to fully utilize your system’s capabilities.  
+7. **Review memory management**: Revisit the [Memory Management section](./programmers_guide/general.md#device-abstraction) to allocate memory on the device efficiently and try to keep data on the GPU as long as possible.  
+   
 
-ICICLE can be built and tested in C++ using CMake. The build process is straightforward, but there are several flags you can use to customize the build for your needs.
-
-#### Build Commands
-
-1. **Clone the ICICLE repository:**
-   ```bash
-   git clone https://github.com/ingonyama-zk/icicle.git
-   cd icicle
-   ```
-
-2. **Configure the build:**
-   ```bash
-   mkdir -p build && rm -rf build/*
-   cmake -S icicle -B build -DFIELD=babybear
-   ```
-
-:::info
-To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252, m31.
-
-To specify a curve, use the flag -DCURVE=curve, where curve can be one of the following: bn254, bls12_377, bls12_381, bw6_761, grumpkin.
-:::
-
-:::tip
-If you have access to cuda backend repo, it can be built along ICICLE frontend by adding the following to the cmake command
-- `-DCUDA_BACKEND=local` # if you have it locally
-- `-DCUDA_BACKEND=<commit|branch>` # to pull CUDA backend, given you have access
-:::
-
-3. **Build the project:**
-   ```bash
-   cmake --build build -j
-   ```
-   This is building the [libicicle_device](./libraries.md#icicle-device) and the [libicicle_field_babybear](./libraries.md#icicle-core) frontend lib that correspond to the field or curve.
-
-4. **Link:**
-Link you application (or library) to ICICLE:
-```cmake
-target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
-```
-
-5. **Installation (optional):**
-To install the libs, specify the install prefix in the [cmake command](./getting_started.md#build-commands)
-`-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path on linux is `/usr/local` if not specified. For other systems it may differ. The cmake command will print it to the log
-```
--- CMAKE_INSTALL_PREFIX=/install/dir/for/cmake/install
-```
-Then after building, use cmake to install the libraries:
-```
-cmake -S icicle -B build -DFIELD=babybear -DCMAKE_INSTALL_PREFIX=/path/to/install/dir/
-cmake --build build -j # build
-cmake --install build # install icicle to /path/to/install/dir/
-```
-
-6. **Run tests (optional):**
-Add `-DBUILD_TESTS=ON` to the [cmake command](./getting_started.md#build-commands) and build.
-Execute all tests
-```bash
-cmake -S icicle -B build -DFIELD=babybear -DBUILD_TESTS=ON
-cmake --build build -j
-cd build/tests
-ctest
-```
-or choose the test-suite
-```bash
-./build/tests/test_field_api # or another test suite
-# can specify tests using regex. For example for tests with ntt in the name:
-./build/tests/test_field_api --gtest_filter="*ntt*"
-```
-:::note
-Most tests assume a cuda backend exists and will fail otherwise if cannot find a CUDA device.
-:::
-
-#### Build Flags
-
-You can customize your ICICLE build with the following flags:
-
-- `-DCPU_BACKEND=ON/OFF`: Enable or disable built-in CPU backend. `default=ON`.
-- `-DCMAKE_INSTALL_PREFIX=/install/dir`: Specify install directory. `default=/usr/local`.
-- `-DBUILD_TESTS=ON/OFF`: Enable or disable tests. `default=OFF`.
-- `-DBUILD_BENCHMARKS=ON/OFF`: Enable or disable benchmarks. `default=OFF`.
-
-#### Features
-
-By default, all [features](./libraries.md#supported-curves-and-operations) are enabled. 
-This is since installed backends may implement and register all APIs. Missing APIs in the frontend would cause linkage to fail due to missing symbols. Therefore by default we include them in the frontend part too.
-
-To disable features, add the following to the cmake command.
-- ntt: `-DNTT=OFF`
-- msm: `-DMSM=OFF`
-- g2 msm: `-DG2=OFF`
-- ecntt: `-DECNTT=OFF`
-- extension field: `-DEXT_FIELD=OFF`
-
-:::tip
-Disabling features is useful when developing with a backend that is slow to compile (e.g. CUDA backend);
-:::
-
-### Rust: Build, Test, and Install
-
-To build and test ICICLE in Rust, follow these steps:
-
-1. **Navigate to the Rust bindings directory:**
-```bash
-cd wrappers/rust # or go to a specific field/curve 'cd wrappers/rust/icicle-fields/icicle-babybear'
-```
-
-2. **Build the Rust project:**
-```bash
-cargo build --release
-```
-By default, all [supported features are enabled](#features).
-Cargo features are used to disable features, rather than enable them, for the reason explained [here](#features):
-- `no_g2` to disable G2 MSM
-- `no_ecntt` to disable ECNTT
-
-They can be disabled as follows:
-```bash
-cargo build --release --no-default-features --features=no_ecntt,no_g2
-```
+The rest of this page details the content of a release, how to install it, and how to use it. ICICLE binaries are released for multiple Linux distributions, including Ubuntu 20.04, Ubuntu 22.04, RHEL 8, and RHEL 9.
 
 :::note
-If you have access to cuda backend repo, it can be built along ICICLE frontend by using the following cargo features:
-- `cuda_backend` : if the cuda backend resides in `icicle/backend/cuda`
-- `pull_cuda_backend` : to pull main branch and build it
+Future releases will also include support for macOS and other systems.
 :::
 
+## Content of a Release
 
-3. **Run tests:**
-```bash
-cargo test # optional: --features=no_ecntt,no_g2,cuda_backend
-```
-:::note
-Most tests assume a CUDA backend is installed and fail otherwise.
-:::
+Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, where `icicle30` indicates version 3.0. This tar file contains ICICLE frontend build artifacts and headers for a specific distribution. The tar file structure includes:
 
-4. **Install the library:**
+- **`./icicle/include/`**: This directory contains all the necessary header files for using the Icicle library from C++.
+- **`./icicle/lib/`**:
+  - **Icicle Libraries**: All the core Icicle libraries are located in this directory. Applications linking to Icicle will use these libraries.
+  - **Backends**: The `./icicle/lib/backend/` directory houses backend libraries, including the CUDA backend (not included in this tar).
 
-By default, the libraries are installed to the `target/<buildmode>/deps/icicle` dir. For custom install dir. define the env variable:
-```bash
-export ICICLE_INSTALL_DIR=/path/to/install/dir
-```
+- **CUDA backend** comes as separate tar `icicle30-<distribution>-cuda122.tar.gz`
+  - per distribution, for icicle-frontend V3.0 and CUDA 12.2.
 
-(TODO: cargo install ?)
+## installing and using icicle
 
-#### Use as cargo dependency
-In cargo.toml, specify the ICICLE libs to use:
+- [Full C++ example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/c++/install-and-use-icicle)
+- [Full Rust example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/rust/install-and-use-icicle)
+- [Full Go example](https://github.com/ingonyama-zk/icicle/tree/yshekel/V3/examples/golang/install-and-use-icicle)
 
-```bash
-[dependencies]
-icicle-runtime = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
-icicle-core = { path = "git = "https://github.com/ingonyama-zk/icicle.git"" }
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git" }
-# add other ICICLE crates here if need additional fields/curves
-```
+*(TODO update links to main branch when merged)
 
-Can specify `branch = <branch-name>` or `tag = <tag-name>` or `rev = <commit-id>`.
+1. **Extract and install the Tar Files**:
+   - [Download](https://github.com/ingonyama-zk/icicle/releases) the appropriate tar files for your distribution (Ubuntu 20.04, Ubuntu 22.04, or UBI 8,9 for RHEL compatible binaries).
+   - **Frontend libs and headers** should be installed in default search paths (such as `/usr/lib` and `usr/local/include`) for the compiler and linker to find.
+   - **Backend libs** should be installed in `/opt`
+   - Extract it to your desired location:
+    ```bash
+    # install the frontend part (Can skip for Rust)
+    tar xzvf icicle30-ubuntu22.tar.gz
+    cp -r ./icicle/lib/* /usr/lib/
+    cp -r ./icicle/include/icicle/ /usr/local/include/ # copy C++ headers
+    # extract CUDA backend (OPTIONAL)
+    tar xzvf icicle30-ubuntu22-cuda122.tar.gz -C /opt
+     ```
 
-To disable features:
-```bash
-icicle-bls12-377 = { path = "git = "https://github.com/ingonyama-zk/icicle.git", features = ["no_g2"] }
-```
+    :::note
+    Installing the frontend is optional for Rust. Rust does not use it.    
+    :::
 
-As explained above, the libs will be built and installed to `target/<buildmode>/deps/icicle` so you can easily link to them. Alternatively you can set `ICICLE_INSTALL_DIR` env variable for a custom install directory.
+    :::tip
+    You may install to any directory, but you need to ensure it can be found by the linker at compile and runtime.
+    You can install anywhere and use a symlink to ensure it can be easily found as if it were in the default directory.
+    :::
+
+2. **Linking Your Application**:
+
+  Applications need to link to the ICICLE device library and to every field and/or curve library. The backend libraries are dynamically loaded at runtime, so there is no need to link to them.
+
+  **C++**
+   - When compiling your C++ application, link against the ICICLE libraries:
+     ```bash
+     g++ -o myapp myapp.cpp -licicle_device -licicle_field_bn254 -licicle_curve_bn254
+     # if not installed in standard dirs, for example /custom/path/, need to specify it
+     g++ -o myapp myapp.cpp -I/custom/path/icicle/include -L/custom/path/icicle/lib -licicle_device -licicle_field_bn254 -licicle_curve_bn254 -Wl,-rpath,/custom/path/icicle/lib/
+     ```
+
+   - Or via cmake
+    ```bash
+    # Add the executable
+    add_executable(example example.cpp)
+    # Link the libraries
+    target_link_libraries(example icicle_device icicle_field_bn254 icicle_curve_bn254)
+
+    # OPTIONAL (if not installed in default location)
+
+    # The following is setting compile and runtime paths for headers and libs assuming
+    #   - headers in /custom/path/icicle/include
+    #   - libs in/custom/path/icicle/lib
+
+    # Include directories
+    target_include_directories(example PUBLIC /custom/path/icicle/include)
+    # Library directories
+    target_link_directories(example PUBLIC /custom/path/icicle/lib/)
+    # Set the RPATH so linker finds icicle libs at runtime
+    set_target_properties(example PROPERTIES
+                          BUILD_RPATH /custom/path/icicle/lib/
+                          INSTALL_RPATH /custom/path/icicle/lib/)
+    ```
+
+  :::tip
+  If you face linkage issues, try `ldd myapp` to see the runtime dependencies. If ICICLE libs are not found, you need to add the install directory to the search path of the linker. In a development environment, you can do that using the environment variable export `LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/custom/path/icicle/lib` or similar (for non-Linux). For deployment, make sure it can be found and avoid using LD_LIBRARY_PATH.
+
+  Alternatively, you can embed the search path in the app as an rpath by adding `-Wl,-rpath,/custom/path/icicle/lib/`. This is demonstrated above.
+  :::
+
+  **Rust**
+     - When building the ICICLE crates, ICICLE frontend libs are built from source, along with the Rust bindings. They are installed to `target/<buildtype>/deps/icicle`, and Cargo will link them correctly. Note that you still need to install the CUDA backend if you have a CUDA GPU.
+     - Simply use `cargo build` or `cargo run` and it should link to icicle libs.
+
+  **Go** - TODO
 
 :::warning
-Make sure to install icicle libs when installing a library/application that depends on icicle such that it is located at runtime.
+When deploying an application (whether in C++, Rust, or Go), you must make sure to either deploy the ICICLE libs (that you download or build from source) along with the application binaries (as tar, Docker image, package manager installer, or otherwise) or make sure to install ICICLE (and the backend) on the target machine. Otherwise, the target machine will have linkage issues.
 :::
 
-### Go: Build, Test, and Install (TODO)
+## Backend Loading
 
-## Install cuda backend
+The ICICLE library dynamically loads backend libraries at runtime. By default, it searches for backends in the following order:
 
-[Install CUDA Backend (and License)](./install_cuda_backend.md#installation)
+1. **Environment Variable**: If the `ICICLE_BACKEND_INSTALL_DIR` environment variable is defined, ICICLE will prioritize this location.
+2. **Default Directory**: If the environment variable is not set, Icicle will search in the default directory `/opt/icicle/lib/backend`.
+
+:::warning
+If building ICICLE frontend from source, make sure to load a backend that is compatible with the frontend version. CUDA backend libs are forward compatible with newer frontends (e.g., CUDA-backend-3.0 works with ICICLE-3.2). The opposite is not guaranteed.
+:::
+
+If you install in a custom dir, make sure to set `ICICLE_BACKEND_INSTALL_DIR`:
+```bash
+ICICLE_BACKEND_INSTALL_DIR=path/to/icicle/lib/backend/ myapp # for an executable myapp
+ICICLE_BACKEND_INSTALL_DIR=path/to/icicle/lib/backend/ cargo run # when using cargo
+```
+
+Then to load backend from ICICLE_BACKEND_INSTALL_DIR or `/opt/icicle/lib/backend` in your application:
+
+**C++**
+```cpp
+extern "C" eIcicleError icicle_load_backend_from_env_or_default();
+```
+**Rust**
+```rust
+pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
+```
+**Go**
+```go
+TODO
+```
+
+### Custom Backend Loading
+
+If you need to load a backend from a custom location at any point during runtime, you can call the following function:
+
+**C++**
+```cpp
+extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive);
+```
+- **`path`**: The directory where the backend libraries are located.
+- **`is_recursive`**: If `true`, the function will search for backend libraries recursively within the specified path.
+
+**Rust**
+```rust
+  pub fn load_backend(path: &str) -> Result<(), eIcicleError>; // OR
+  pub fn load_backend_non_recursive(path: &str) -> Result<(), eIcicleError>;
+```
+- **`path`**: The directory where the backend libraries are located.
+
+**Go**
+```go
+TODO
+```

@@ -3,55 +3,28 @@
 
 ## Overview
 
-The CUDA backend in ICICLE V3 is a high-performance, closed-source component designed to accelerate cryptographic computations using NVIDIA GPUs. This backend includes a set of specialized libraries optimized for different cryptographic fields and curves, providing significant speedups for operations such as MSM, NTT, and elliptic curve operations.
+The CUDA backend in ICICLE V3 is a high-performance, closed-source component designed to accelerate cryptographic computations using NVIDIA GPUs. This backend includes specialized libraries optimized for various cryptographic fields and curves, providing significant speedups for operations such as MSM, NTT, and elliptic curve operations.
 
 ## Installation
 
-The CUDA backend is a closed-source component that requires a license. To install the CUDA backend:
+The CUDA backend is a closed-source component that requires a license. [To install the CUDA backend, see here](./getting_started#installing-and-using-icicle).
 
-1. **Download the CUDA backend package** from the [ICICLE website](#). TODO fix link.
+### Licensing
 
-2. **Install to the default path:**
-   ```bash
-   sudo tar -xzf icicle-cuda-backend.tar.gz -C /opt/icicle/backend/
-   ```
+:::note
+Currently, the CUDA backend is free to use via Ingonyama’s icicle-cuda-backend-license server. By default, the CUDA backend will attempt to access this server. For more details, please contact support@ingonyama.com.
+:::
 
-3. **Set up the environment variable if you installed it in a custom location:**
-   ```bash
-   export ICICLE_BACKEND_INSTALL_DIR=/custom/path/to/icicle/backend
-   # OR symlink
-   sudo ln -s /custom/path/to/icicle/backend /opt/icicle/backend
-   ```
+The CUDA backend requires a valid license to function. There are two types of CUDA backend licenses:
 
-4. **Load the backend in your application:**
-   ```cpp
-   extern "C" eIcicleError icicle_load_backend_from_env_or_default();
-   // OR
-   extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive);
-   ```
-   Rust:
-    ```rust
-    pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
-    pub fn load_backend(path: &str) -> Result<(), eIcicleError>;
-    ```
-    Go:
-    ```
-    TODO
-    ```
+   1. **Floating license**: In this mode, you host a license server, provided as a binary. This license supports a limited number of concurrent GPUs (N), which can be distributed across your machines as needed. N is decremented by 1 for each GPU using ICICLE per process. Once the process terminates (or crashes), the licenses are released.
+   2. **Node locked license**:  In this mode, the license is tied to a specific machine. The CUDA backend will accept the license only if it is used on the licensed machine.
 
-5. **Acquire a license key** from the [ICICLE website](#) and follow the provided instructions to activate it.
+**To specify the license server address or file path::**
 
-
-
-### Licensing (TODO fix link)
-
-The CUDA backend requires a valid license to function. Licenses are available for purchase [here](#). After purchasing, you will receive a license key that must be installed. **Specify the license server address:**
 ```
-export ICICLE_LICNSE_SERVER_PATH=port@ip
+export ICICLE_LICENSE=port@ip            # For license server
+export ICICLE_LICENSE=/path/to/license   # For node-locked license
 ```
 
-For licensing instructions and detailed information, refer to the licensing documentation provided with your purchase or contact our support team for assistance.
-
-TODO update section and the link in license part above.
-
-
+For further assist , contact our support team for assistance support@ingonyama.com

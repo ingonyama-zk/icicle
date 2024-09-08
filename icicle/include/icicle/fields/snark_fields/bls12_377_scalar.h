@@ -2,7 +2,6 @@
 
 #include "icicle/fields/storage.h"
 #include "icicle/fields/field.h"
-#include "icicle/fields/quadratic_extension.h"
 #include "icicle/fields/params_gen.h"
 
 namespace bls12_377 {

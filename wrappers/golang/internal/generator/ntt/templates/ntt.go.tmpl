@@ -1,0 +1,61 @@
+package {{.PackageName}}
+
+// #cgo CFLAGS: -I./include/
+// #include "ntt.h"
+import "C"
+
+import (
+	{{if .WithDomain}}
+	"unsafe"
+
+	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+)
+
+func Ntt[T any](scalars core.HostOrDeviceSlice, dir core.NTTDir, cfg *core.NTTConfig[T], results core.HostOrDeviceSlice) runtime.EIcicleError {
+	scalarsPointer, resultsPointer, size, cfgPointer := core.NttCheck[T](scalars, cfg, results)
+
+	cScalars := (*C.scalar_t)(scalarsPointer)
+	cSize := (C.int)(size)
+	cDir := (C.int)(dir)
+	cCfg := (*C.NTTConfig)(cfgPointer)
+	cResults := (*C.scalar_t)(resultsPointer)
+
+	__ret := C.{{if .WithDomain}}{{.Field}}{{else}}{{.FieldNoDomain}}{{end}}_ntt(cScalars, cSize, cDir, cCfg, cResults)
+	err := runtime.EIcicleError(__ret)
+	return err
+}
+{{if .WithDomain}}
+func GetDefaultNttConfig() core.NTTConfig[[{{.Field}}.{{toConst .FieldPrefix}}LIMBS]uint32] {
+	cosetGenField := {{.Field}}.{{.FieldPrefix}}Field{}
+	cosetGenField.One()
+	var cosetGen [{{.Field}}.{{toConst .FieldPrefix}}LIMBS]uint32
+	for i, v := range cosetGenField.GetLimbs() {
+		cosetGen[i] = v
+	}
+
+	return core.GetDefaultNTTConfig(cosetGen)
+}
+
+func GetRootOfUnity(size uint64) {{.Field}}.{{.FieldPrefix}}Field {
+	cRes := C.{{.Field}}_get_root_of_unity((C.size_t)(size))
+	var res {{.Field}}.{{.FieldPrefix}}Field
+	res.FromLimbs(*(*[]uint32)(unsafe.Pointer(cRes)))
+	return res
+}
+
+func InitDomain(primitiveRoot {{.Field}}.{{.FieldPrefix}}Field, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
+	cPrimitiveRoot := (*C.scalar_t)(unsafe.Pointer(primitiveRoot.AsPointer()))
+	cCfg := (*C.NTTInitDomainConfig)(unsafe.Pointer(&cfg))
+	__ret := C.{{.Field}}_ntt_init_domain(cPrimitiveRoot, cCfg)
+	err := runtime.EIcicleError(__ret)
+	return err
+}
+
+func ReleaseDomain() runtime.EIcicleError {
+	__ret := C.{{.Field}}_ntt_release_domain()
+	err := runtime.EIcicleError(__ret)
+	return err
+}
+{{end}}
