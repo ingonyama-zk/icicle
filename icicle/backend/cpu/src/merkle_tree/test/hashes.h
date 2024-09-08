@@ -43,7 +43,7 @@ public:
   {
     for (int i = 0; i < nof_hashes; i++)
     {
-      run_single_hash(&input_limbs[i*m_total_input_limbs], &output_limbs[i*m_total_output_limbs], config, side_input_limbs);
+      run_single_hash(&input_limbs[i*m_total_input_limbs], &output_limbs[i*m_total_output_limbs], config, &side_input_limbs[i*m_total_secondary_input_limbs]);
     }
     return eIcicleError::SUCCESS;
   }

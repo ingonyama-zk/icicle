@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <ctime>
 
-// TODO test with side limbs
 
 void assert_valid_tree(
   const MerkleTree* tree,
@@ -45,8 +44,8 @@ void assert_valid_tree(
         const int num_outputs = hashes[i]->m_total_output_limbs;
         for (int k = 0; k < num_outputs; k++)
         {
-          ICICLE_ASSERT(layer_out[num_outputs*j + k] == *(result+k)) << 
-            "\n(" << i << ',' << j << "):\t" << *(result+k) << "\t=\\=\t" << layer_out[num_outputs*j + k] << '\n';
+          ICICLE_ASSERT(layer_out[num_outputs*j + k] == result[k]) << 
+            "\n(" << i << ',' << j << "):\t" << result[k] << "\t=\\=\t" << layer_out[num_outputs*j + k] << '\n';
         }
       }
     }
@@ -116,7 +115,7 @@ int random(int low, int high)
 eIcicleError tree_test(bool with_side_inputs)
 {
   srand(time(0));
-  const int num_layers = random(1, 5);
+  const int num_layers = random(1, 10);
 
   Hash** hashes = new Hash*[num_layers];
   if (!hashes) { return eIcicleError::ALLOCATION_FAILED; }
@@ -213,5 +212,8 @@ eIcicleError tree_test(bool with_side_inputs)
 
 int main()
 {
-  while(1) assert(tree_test(1) == eIcicleError::SUCCESS);
+  bool with_sides = false;
+  while(1) { 
+    assert(tree_test(with_sides) == eIcicleError::SUCCESS);
+  }
 }
