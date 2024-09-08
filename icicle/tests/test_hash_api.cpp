@@ -61,15 +61,16 @@ public:
       arr[i] = dist(gen);
     }
   }
-};
-
-
 
 eIcicleError run_keccak_test(
-  const std::function<Hash(uint64_t)>& create_hash_function,
-  const uint32_t* test_string, const uint64_t nof_input_limbs, const uint64_t nof_output_limbs)
+  const std::function<Hash(uint64_t)>& create_hash_function, const uint64_t nof_input_limbs)
 {
   HashConfig config;
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
+  // Randomize the input array
+  randomize(input.get(), nof_input_limbs);
+  const uint32_t* test_string = input.get();
 
   // Initialize devices
   Device main_device = {s_main_target, 0};
@@ -78,25 +79,25 @@ eIcicleError run_keccak_test(
   // Set device to main target and create the main target hash
   icicle_set_device(main_device);
   Hash keccak_cpu_hash = create_hash_function(nof_input_limbs);
-  uint8_t cpu_hash[nof_output_limbs * sizeof(limb_t)];
+  uint8_t cpu_hash[keccak_cpu_hash.total_output_limbs() * sizeof(limb_t)];
   ICICLE_CHECK(keccak_cpu_hash.hash_single(reinterpret_cast<const limb_t*>(test_string), reinterpret_cast<limb_t*>(cpu_hash), config));
 
   // Set device to reference target and create the reference target hash
   icicle_set_device(reference_device);
   Hash keccak_cuda_hash = create_hash_function(nof_input_limbs);
-  uint8_t cuda_hash[nof_output_limbs * sizeof(limb_t)];
+  uint8_t cuda_hash[keccak_cuda_hash.total_output_limbs() * sizeof(limb_t)];
   ICICLE_CHECK(keccak_cuda_hash.hash_single(reinterpret_cast<const limb_t*>(test_string), reinterpret_cast<limb_t*>(cuda_hash), config));
 
   // Convert the hashes to strings for comparison
-  char computed_cpu_hash_str[nof_output_limbs * sizeof(limb_t) * 2 + 1];
-  char computed_cuda_hash_str[nof_output_limbs * sizeof(limb_t) * 2 + 1];
+  char computed_cpu_hash_str[keccak_cpu_hash.total_output_limbs() * sizeof(limb_t) * 2 + 1];
+  char computed_cuda_hash_str[keccak_cuda_hash.total_output_limbs() * sizeof(limb_t) * 2 + 1];
 
-  for (size_t i = 0; i < nof_output_limbs * sizeof(limb_t); i++) {
+  for (size_t i = 0; i < keccak_cpu_hash.total_output_limbs() * sizeof(limb_t); i++) {
     sprintf(&computed_cpu_hash_str[i * 2], "%02x", cpu_hash[i]);
     sprintf(&computed_cuda_hash_str[i * 2], "%02x", cuda_hash[i]);
   }
-  computed_cpu_hash_str[nof_output_limbs * sizeof(limb_t) * 2] = '\0';
-  computed_cuda_hash_str[nof_output_limbs * sizeof(limb_t) * 2] = '\0';
+  computed_cpu_hash_str[keccak_cpu_hash.total_output_limbs() * sizeof(limb_t) * 2] = '\0';
+  computed_cuda_hash_str[keccak_cuda_hash.total_output_limbs() * sizeof(limb_t) * 2] = '\0';
 
   // Print the computed hashes
   // std::cout << "Computed CPU hash:  " << computed_cpu_hash_str << std::endl;
@@ -113,58 +114,34 @@ eIcicleError run_keccak_test(
 }
 
 
+};
+
+
 
 TEST_F(HashApiTest, Keccak256)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-  const uint64_t nof_output_limbs = 256 / (8 * sizeof(limb_t));
-
-  // Create unique pointers for input and output arrays
-  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // Randomize the input array
-  randomize(input.get(), nof_input_limbs);
-  ICICLE_CHECK(run_keccak_test(create_keccak_256_hash, input.get(), nof_input_limbs, nof_output_limbs));
+  ICICLE_CHECK(run_keccak_test(create_keccak_256_hash, nof_input_limbs));
 
 }
 
 TEST_F(HashApiTest, Keccak512)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-  const uint64_t nof_output_limbs = 512 / (8 * sizeof(limb_t));
-  // Create unique pointers for input and output arrays
-  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // Randomize the input array
-  randomize(input.get(), nof_input_limbs);
-  ICICLE_CHECK(run_keccak_test(create_keccak_512_hash, input.get(), nof_input_limbs, nof_output_limbs));
+  ICICLE_CHECK(run_keccak_test(create_keccak_512_hash, nof_input_limbs));
 }
 
 TEST_F(HashApiTest, sha3_256)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-    const uint64_t nof_output_limbs = 256 / (8 * sizeof(limb_t));
-
-  // Create unique pointers for input and output arrays
-  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // Randomize the input array
-  randomize(input.get(), nof_input_limbs);
-  ICICLE_CHECK(run_keccak_test(create_sha3_256_hash, input.get(), nof_input_limbs, nof_output_limbs));
+  ICICLE_CHECK(run_keccak_test(create_sha3_256_hash, nof_input_limbs));
 
 }
 
 TEST_F(HashApiTest, sha3_512)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-    const uint64_t nof_output_limbs = 512 / (8 * sizeof(limb_t));
-
-  // Create unique pointers for input and output arrays
-  auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
-  // Randomize the input array
-  randomize(input.get(), nof_input_limbs);
-
-  ICICLE_CHECK(run_keccak_test(create_sha3_512_hash, input.get(), nof_input_limbs, nof_output_limbs));
+  ICICLE_CHECK(run_keccak_test(create_sha3_512_hash, nof_input_limbs));
 
 }
 
