@@ -7,6 +7,7 @@
 #include "icicle/utils/log.h"
 #include "icicle/hash/hash.h"
 #include "icicle/hash/keccak.h"
+#include "icicle/hash/blake2s.h"
 #include "icicle/hash/merkle_tree.h"
 
 using namespace icicle;
@@ -62,7 +63,7 @@ public:
     }
   }
 
-eIcicleError run_keccak_test(
+eIcicleError run_hash_test(
   const std::function<Hash(uint64_t)>& create_hash_function, const uint64_t nof_input_limbs)
 {
   HashConfig config;
@@ -121,27 +122,34 @@ eIcicleError run_keccak_test(
 TEST_F(HashApiTest, Keccak256)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-  ICICLE_CHECK(run_keccak_test(create_keccak_256_hash, nof_input_limbs));
+  ICICLE_CHECK(run_hash_test(create_keccak_256_hash, nof_input_limbs));
 
 }
 
 TEST_F(HashApiTest, Keccak512)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-  ICICLE_CHECK(run_keccak_test(create_keccak_512_hash, nof_input_limbs));
+  ICICLE_CHECK(run_hash_test(create_keccak_512_hash, nof_input_limbs));
 }
 
 TEST_F(HashApiTest, sha3_256)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-  ICICLE_CHECK(run_keccak_test(create_sha3_256_hash, nof_input_limbs));
+  ICICLE_CHECK(run_hash_test(create_sha3_256_hash, nof_input_limbs));
 
 }
 
 TEST_F(HashApiTest, sha3_512)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
-  ICICLE_CHECK(run_keccak_test(create_sha3_512_hash, nof_input_limbs));
+  ICICLE_CHECK(run_hash_test(create_sha3_512_hash, nof_input_limbs));
+
+}
+
+TEST_F(HashApiTest, blake2s)
+{
+  const uint64_t nof_input_limbs = 16; // Number of input limbs
+  ICICLE_CHECK(run_hash_test(create_blake2s_hash, nof_input_limbs));
 
 }
 

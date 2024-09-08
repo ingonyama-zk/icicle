@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "hash/blake2/blake2s.h"
+#include "hash/blake2/cpu_blake2s.h"
 
 namespace icicle {
 
@@ -272,12 +272,14 @@ namespace icicle {
     return 0;
   }
 
-  eIcicleError Blake2s_cpu::run_single_hash(
+  eIcicleError Blake2s_cpu::hash_single(
     const limb_t* input_limbs,
     limb_t* output_limbs,
     const HashConfig& config,
     const limb_t* secondary_input_limbs) const
   {
+    ICICLE_LOG_INFO << "Blake2s CPU hash_single() called";
+
     const uint8_t* input_bytes = reinterpret_cast<const uint8_t*>(input_limbs);
     uint8_t* output_bytes = reinterpret_cast<uint8_t*>(output_limbs);
     // std::cout << "output len (bytes): " << m_total_output_limbs * sizeof(limb_t) << std::endl;
@@ -295,13 +297,15 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError Blake2s_cpu::run_multiple_hash( // Dummy implementation running in a loop
+  eIcicleError Blake2s_cpu::hash_many( // Dummy implementation running in a loop
     const limb_t* input_limbs,
     limb_t* output_limbs,
     int nof_hashes,
     const HashConfig& config,
     const limb_t* secondary_input_limbs) const
   {
+    ICICLE_LOG_INFO << "Blake2s CPU hash_many() called";
+
     // Calculate the distance between each input in bytes
     size_t input_stride = m_total_input_limbs;
     size_t output_stride = m_total_output_limbs;
@@ -312,7 +316,7 @@ namespace icicle {
       limb_t* current_output = output_limbs + i * output_stride;
 
       // Call the single hash function for each hash
-      eIcicleError result = run_single_hash(current_input, current_output, config);
+      eIcicleError result = hash_single(current_input, current_output, config);
 
       if (result != eIcicleError::SUCCESS) {
         return result; // Return the error if hashing fails
@@ -437,5 +441,16 @@ namespace icicle {
     static void* (*const volatile memset_v)(void*, int, size_t) = &memset;
     memset_v(v, 0, n);
   }
+
+  /************************ Blake2s registration ************************/
+  static eIcicleError create_blake2s_hash_backend(
+    const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
+  {
+    backend = std::make_shared<Blake2s_cpu>(total_input_limbs);
+    return eIcicleError::SUCCESS;
+  }
+
+  REGISTER_BLAKE2S_FACTORY_BACKEND("CPU", create_blake2s_hash_backend);
+
 
 } // namespace icicle

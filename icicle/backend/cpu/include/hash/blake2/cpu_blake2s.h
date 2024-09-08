@@ -3,22 +3,23 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include "icicle/hash.h"
+#include "icicle/backend/hash/hash_backend.h"
+#include "icicle/backend/hash/blake2s_backend.h"
 #include "icicle/utils/modifiers.h"
 
 namespace icicle {
 
-  class Blake2s_cpu : public Hash
+  class Blake2s_cpu : public HashBackend
   {
   public:
-    explicit Blake2s_cpu(int total_input_limbs) : Hash(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
+    explicit Blake2s_cpu(int total_input_limbs) : HashBackend(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
 
-    eIcicleError run_single_hash(
+    eIcicleError hash_single(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       const HashConfig& config,
       const limb_t* secondary_input_limbs = nullptr) const override;
-    eIcicleError run_multiple_hash(
+    eIcicleError hash_many(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
