@@ -20,7 +20,7 @@ For example, for Poseidon2 of width 16, input rate 8, output elements 8 and inpu
 
 Poseidon2 is also extremely customizable and using different constants will produce different hashes, security levels and performance results.
 
-We support pre-calculated constants for each of the [supported curves](../core#supported-curves-and-operations). The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon2/constants) and are labeled clearly per curve `<curve_name>_poseidon2.h`.
+We support pre-calculated constants for each of the [supported curves](../libraries#supported-curves-and-operations). The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon2/constants) and are labeled clearly per curve `<curve_name>_poseidon2.h`.
 
 You can also use your own set of constants as shown [here](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-fields/icicle-babybear/src/poseidon2/mod.rs#L290)
 

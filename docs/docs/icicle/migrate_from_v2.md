@@ -1,7 +1,7 @@
 
-# Migration from Icicle V2 to V3
+# Migration from ICICLE v2 to v3
 
-Icicle V3 introduces a unified interface for high-performance computing across various devices, extending the functionality that was previously limited to GPUs in Icicle V2. This guide will assist you in transitioning from Icicle V2 to V3 by highlighting the key changes and providing examples for both C++ and Rust.
+ICICLE v3 introduces a unified interface for high-performance computing across various devices, extending the functionality that was previously limited to GPUs in Icicle V2. This guide will assist you in transitioning from ICICLE v2 to v3 by highlighting the key changes and providing examples for both C++ and Rust.
 
 ## Key Conceptual Changes
 
@@ -10,20 +10,20 @@ Icicle V3 introduces a unified interface for high-performance computing across v
 - **Unified API**: The APIs are now standardized across all devices, ensuring consistent usage and reducing the complexity of managing different hardware backends.
 
 :::warning
-When migrating from V2 to V3, it is important to note that, by default, your code now executes on the CPU. This contrasts with V2, which was exclusively a CUDA library. For details on installing and using CUDA GPUs, refer to the [CUDA backend guide](./install_cuda_backend.md).
+When migrating from v2 to v3, it is important to note that, by default, your code now executes on the CPU. This contrasts with V2, which was exclusively a CUDA library. For details on installing and using CUDA GPUs, refer to the [CUDA backend guide](./install_cuda_backend.md).
 :::
 
 ## Migration Guide for C++
 
 ### Replacing CUDA APIs with Icicle APIs
 
-In Icicle V3, CUDA-specific APIs have been replaced with Icicle APIs that are designed to be backend-agnostic. This allows your code to run on different devices without requiring modifications.
+In ICICLE v3, CUDA-specific APIs have been replaced with Icicle APIs that are designed to be backend-agnostic. This allows your code to run on different devices without requiring modifications.
 
-- **Device Management**: Use Icicle's device management APIs instead of CUDA-specific functions. For example, instead of `cudaSetDevice()`, you would use `icicle_set_device()`.
+- **Device Management**: Use ICICLE's device management APIs instead of CUDA-specific functions. For example, instead of `cudaSetDevice()`, you would use `icicle_set_device()`.
 
-- **Memory Management**: Replace CUDA memory management functions such as `cudaMalloc()` and `cudaFree()` with Icicle's `icicle_malloc()` and `icicle_free()`.
+- **Memory Management**: Replace CUDA memory management functions such as `cudaMalloc()` and `cudaFree()` with ICICLE's `icicle_malloc()` and `icicle_free()`.
 
-- **Stream Management**: Replace `cudaStream_t` with `icicleStreamHandle` and use Icicle's stream management functions.
+- **Stream Management**: Replace `cudaStream_t` with `icicleStreamHandle` and use ICICLE's stream management functions.
 
 For a detailed overview and examples, please refer to the [Icicle C++ Programmer's Guide](./programmers_guide/cpp.md) for full API details.
 
@@ -55,7 +55,7 @@ icicle_free(device_ptr);
 
 ### Replacing `icicle_cuda_runtime` with `icicle_runtime`
 
-In Icicle V3, the `icicle_cuda_runtime` crate is replaced with the `icicle_runtime` crate. This change reflects the broader support for different devices beyond just CUDA-enabled GPUs.
+In ICICLE v3, the `icicle_cuda_runtime` crate is replaced with the `icicle_runtime` crate. This change reflects the broader support for different devices beyond just CUDA-enabled GPUs.
 
 - **Device Management**: Use `icicle_runtime`'s device management functions instead of those in `icicle_cuda_runtime`. The `Device` struct remains central, but it's now part of a more generalized runtime.
 

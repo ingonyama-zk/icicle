@@ -28,6 +28,32 @@ module.exports = {
               label: "Build ICICLE from source",
               id: "icicle/build_from_source",
             },
+            {
+              type: "category",
+              label: "Programmers guide",
+              link: {
+                type: `doc`,
+                id: "icicle/programmers_guide/general",
+              },
+              collapsed: false,
+              items: [
+                {
+                  type: "doc",
+                  label: "C++",
+                  id: "icicle/programmers_guide/cpp",
+                },
+                {
+                  type: "doc",
+                  label: "Rust",
+                  id: "icicle/programmers_guide/rust",
+                },
+                {
+                  type: "doc",
+                  label: "Go",
+                  id: "icicle/programmers_guide/go",
+                }
+              ],
+            },
           ],
         },
         {
@@ -46,7 +72,7 @@ module.exports = {
             },
             {
               type: "doc",
-              label: "Multi Device Support",
+              label: "Multi-Device Support",
               id: "icicle/multi-device",
             },
             {
@@ -60,32 +86,6 @@ module.exports = {
           type: "doc",
           label: "ICICLE libraries",
           id: "icicle/libraries",
-        },
-        {
-          type: "category",
-          label: "Programmers guide",
-          link: {
-            type: `doc`,
-            id: "icicle/programmers_guide/general",
-          },
-          collapsed: false,
-          items: [
-            {
-              type: "doc",
-              label: "C++",
-              id: "icicle/programmers_guide/cpp",
-            },
-            {
-              type: "doc",
-              label: "Rust",
-              id: "icicle/programmers_guide/rust",
-            },
-            {
-              type: "doc",
-              label: "Go",
-              id: "icicle/programmers_guide/go",
-            }
-          ],
         },
         {
           type: "category",
@@ -197,18 +197,18 @@ module.exports = {
                   label: "Polynomials",
                   id: "icicle/rust-bindings/polynomials",
                 },
-                {
-                  type: "doc",
-                  label: "Multi GPU Support (TODO)",
-                  id: "icicle/rust-bindings/multi-gpu",
-                },
+                // {
+                //   type: "doc",
+                //   label: "Multi GPU Support (TODO)",
+                //   id: "icicle/rust-bindings/multi-gpu",
+                // },
               ],
             },
           ],
         },
         {
           type: "doc",
-          label: "Migrate from ICICLE V2",
+          label: "Migrate from ICICLE v2",
           id: "icicle/migrate_from_v2",
         },
         {

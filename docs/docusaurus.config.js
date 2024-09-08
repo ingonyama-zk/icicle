@@ -83,30 +83,16 @@ const config = {
         respectPrefersColorScheme: false,
       },
       algolia: {
-        // The application ID provided by Algolia
         appId: 'PZY4KJBBBK',
-  
-        // Public API key: it is safe to commit it
         apiKey: '2cc940a6e0ef5c117f4f44e7f4e6e20b',
-  
         indexName: 'ingonyama',
-  
-        // Optional: see doc section below
         contextualSearch: true,
-  
-        // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
         externalUrlRegex: 'external\\.com|domain\\.com',
-  
-        // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
         replaceSearchResultPathname: {
-          from: '/docs/', // or as RegExp: /\/docs\//
+          from: '/docs/',
           to: '/',
         },
-  
-        // Optional: Algolia search parameters
         searchParameters: {},
-  
-        // Optional: path for search page that enabled by default (`false` to disable it)
         searchPagePath: 'search',
       },
       navbar: {
@@ -169,8 +155,8 @@ const config = {
       announcementBar: {
         id: 'announcement', // Any value that will identify this message.
         content:
-          '<strong>🎉 Read our paper on the Polynomials API in ICICLE v2 by clicking <a target="_blank" rel="noopener noreferrer" href="https://eprint.iacr.org/2024/973">here</a>! 🎉</strong>',
-        backgroundColor: '#ADD8E6', // Light blue background color.
+          '<strong>❄️🎉 New Release! ICICLE v3! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/1c9cc2f94402">Click here to read article</a> 🎉❄️</strong>',
+        backgroundColor: '#64f5ef', // Light blue background color.
         textColor: '#000000', // Black text color.
         isCloseable: true, // Defaults to `true`.
       },
@@ -178,3 +164,4 @@ const config = {
 };
 
 module.exports = config;
+

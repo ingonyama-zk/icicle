@@ -2,7 +2,7 @@
 
 TODO update for V3
 
-To learn more about the theory of Multi GPU programming refer to [this part](../multi-gpu.md) of documentation.
+To learn more about the theory of Multi GPU programming refer to [this part](../multi-device.md) of documentation.
 
 Here we will cover the core multi GPU apis and a [example](#a-multi-gpu-example)
 
