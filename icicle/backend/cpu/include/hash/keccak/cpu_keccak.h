@@ -2,7 +2,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include "icicle/hash.h"
+#include "icicle/backend/hash/hash_backend.h"
+#include "icicle/backend/hash/keccak_backend.h"
+
 
 namespace icicle {
 
@@ -34,23 +36,23 @@ namespace icicle {
   enum SHA3_RETURN { SHA3_RETURN_OK = 0, SHA3_RETURN_BAD_PARAMS = 1 };
   typedef enum SHA3_RETURN sha3_return_t;
 
-  class Keccak_cpu : public Hash
+  class Keccak_cpu : public HashBackend
   {
   public:
     // Constructor
     explicit Keccak_cpu(int total_input_limbs, int total_output_limbs, enum SHA3_FLAGS flag)
-        : Hash(total_input_limbs, total_output_limbs), sha_flag(flag)
+        : HashBackend(total_input_limbs, total_output_limbs), sha_flag(flag)
     {
     }
     const size_t bit_size = this->m_total_output_limbs * sizeof(limb_t) * 8;
     const enum SHA3_FLAGS sha_flag;
 
-    eIcicleError run_single_hash(
+    eIcicleError hash_single(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       const HashConfig& config,
       const limb_t* secondary_input_limbs = nullptr) const override;
-    eIcicleError run_multiple_hash(
+    eIcicleError hash_many(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
@@ -122,5 +124,45 @@ namespace icicle {
   public:
     Sha3_512_cpu(int total_input_limbs) : Keccak_cpu(total_input_limbs, 512 / (8 * sizeof(limb_t)), SHA3_FLAGS_SHA3) {}
   };
+
+  /************************ Keccak 256 registration ************************/
+  eIcicleError create_keccak_256_hash_backend(
+    const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
+  {
+    backend = std::make_shared<Keccak256_cpu>(total_input_limbs);
+    return eIcicleError::SUCCESS;
+  }
+
+  REGISTER_KECCAK_256_FACTORY_BACKEND("CPU", create_keccak_256_hash_backend);
+
+  /************************ Keccak 512 registration ************************/
+  eIcicleError create_keccak_512_hash_backend(
+    const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
+  {
+    backend = std::make_shared<Keccak512_cpu>(total_input_limbs);
+    return eIcicleError::SUCCESS;
+  }
+
+  REGISTER_KECCAK_512_FACTORY_BACKEND("CPU", create_keccak_512_hash_backend);
+
+  /************************ SHA3 256 registration ************************/
+  eIcicleError
+  create_sha3_256_hash_backend(const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
+  {
+    backend = std::make_shared<Sha3_256_cpu>(total_input_limbs);
+    return eIcicleError::SUCCESS;
+  }
+
+  REGISTER_SHA3_256_FACTORY_BACKEND("CPU", create_sha3_256_hash_backend);
+
+  /************************ SHA3 512 registration ************************/
+  eIcicleError
+  create_sha3_512_hash_backend(const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
+  {
+    backend = std::make_shared<Sha3_512_cpu>(total_input_limbs);
+    return eIcicleError::SUCCESS;
+  }
+
+  REGISTER_SHA3_512_FACTORY_BACKEND("CPU", create_sha3_512_hash_backend);
 
 } // namespace icicle

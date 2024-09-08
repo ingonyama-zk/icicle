@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <random>
+#include <functional>
 
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
@@ -36,6 +37,7 @@ public:
     if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
+    std::cout << "Main Target:" << s_main_target << std::endl;
   }
   static void TearDownTestSuite()
   {
@@ -61,6 +63,92 @@ public:
   }
 };
 
+// int run_keccak_test(
+//   const Hash& keccak_cpu_hash, const Hash& keccak_cuda_hash, const uint32_t* test_string, const uint64_t nof_input_limbs, const uint64_t nof_output_limbs)
+// {
+//   HashConfig config;
+//   size_t test_string_len = nof_input_limbs*sizeof(limb_t);
+//   // const uint8_t* input_bytes = reinterpret_cast<const uint8_t*>(test_string);
+//   // printf("Test Input: %.*s\n", static_cast<int>(test_string_len), input_bytes);
+
+//   uint8_t cpu_hash[nof_output_limbs * sizeof(limb_t)];
+//   uint8_t cuda_hash[nof_output_limbs * sizeof(limb_t)];
+
+//   keccak_cpu_hash.hash_single((limb_t*)test_string, (limb_t*)cpu_hash, config);
+//   keccak_cuda_hash.hash_single((limb_t*)test_string, (limb_t*)cuda_hash, config);
+
+//   char computed_cpu_hash_str[nof_output_limbs * sizeof(limb_t) * 2 + 1];
+//   char computed_cuda_hash_str[nof_output_limbs * sizeof(limb_t) * 2 + 1];
+
+//   for (size_t i = 0; i < nof_output_limbs * sizeof(limb_t); i++) {
+//     sprintf(&computed_cpu_hash_str[i * 2], "%02x", cpu_hash[i]);
+//     sprintf(&computed_cuda_hash_str[i * 2], "%02x", cuda_hash[i]);
+//   }
+//   computed_cpu_hash_str[nof_output_limbs * sizeof(limb_t) * 2] = '\0';
+//   computed_cuda_hash_str[nof_output_limbs * sizeof(limb_t) * 2] = '\0';
+
+//   std::cout << "Computed CPU hash:  " << computed_cpu_hash_str << std::endl;
+//   std::cout << "Computed CUDA hash: " << computed_cuda_hash_str << std::endl;
+
+//   if (strcmp(computed_cpu_hash_str, computed_cuda_hash_str) != 0) {
+//     std::cerr << "CPU and CUDA Hashes do not match!" << std::endl;
+//     return -1;
+//   }
+
+//   return 0;
+// }
+
+
+
+int run_keccak_test(
+  const std::function<Hash(uint64_t)>& create_hash_function,
+  const uint32_t* test_string, const uint64_t nof_input_limbs, const uint64_t nof_output_limbs)
+{
+  HashConfig config;
+
+  // Initialize devices
+  Device main_device = {s_main_target, 0};
+  Device reference_device = {s_reference_target, 0};
+
+  // Set device to main target and create the main target hash
+  icicle_set_device(main_device);
+  Hash keccak_cpu_hash = create_hash_function(nof_input_limbs);
+  uint8_t cpu_hash[nof_output_limbs * sizeof(limb_t)];
+  ICICLE_CHECK(keccak_cpu_hash.hash_single(reinterpret_cast<const limb_t*>(test_string), reinterpret_cast<limb_t*>(cpu_hash), config));
+
+  // Set device to reference target and create the reference target hash
+  icicle_set_device(reference_device);
+  Hash keccak_cuda_hash = create_hash_function(nof_input_limbs);
+  uint8_t cuda_hash[nof_output_limbs * sizeof(limb_t)];
+  ICICLE_CHECK(keccak_cuda_hash.hash_single(reinterpret_cast<const limb_t*>(test_string), reinterpret_cast<limb_t*>(cuda_hash), config));
+
+  // Convert the hashes to strings for comparison
+  char computed_cpu_hash_str[nof_output_limbs * sizeof(limb_t) * 2 + 1];
+  char computed_cuda_hash_str[nof_output_limbs * sizeof(limb_t) * 2 + 1];
+
+  for (size_t i = 0; i < nof_output_limbs * sizeof(limb_t); i++) {
+    sprintf(&computed_cpu_hash_str[i * 2], "%02x", cpu_hash[i]);
+    sprintf(&computed_cuda_hash_str[i * 2], "%02x", cuda_hash[i]);
+  }
+  computed_cpu_hash_str[nof_output_limbs * sizeof(limb_t) * 2] = '\0';
+  computed_cuda_hash_str[nof_output_limbs * sizeof(limb_t) * 2] = '\0';
+
+  // Print the computed hashes
+  std::cout << "Computed CPU hash:  " << computed_cpu_hash_str << std::endl;
+  std::cout << "Computed CUDA hash: " << computed_cuda_hash_str << std::endl;
+  icicle_set_device(reference_device);
+
+  // Check if hashes match
+  if (strcmp(computed_cpu_hash_str, computed_cuda_hash_str) != 0) {
+    std::cerr << "CPU and CUDA Hashes do not match!" << std::endl;
+    return -1;
+  }
+
+  return 0;
+}
+
+
+
 TEST_F(HashApiTest, Keccak256)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
@@ -75,24 +163,27 @@ TEST_F(HashApiTest, Keccak256)
   auto keccak256 = create_keccak_256_hash(nof_input_limbs);
   // Run single hash operation
   ICICLE_CHECK(keccak256.hash_single(input.get(), output.get(), config));
-  // TODO: Verify output (e.g., check CPU against CUDA)
+  // TODO: Verify output (e.g., check CPU against CUDA)  
 }
 
 TEST_F(HashApiTest, Keccak512)
 {
   const uint64_t nof_input_limbs = 16; // Number of input limbs
+  const uint64_t nof_output_limbs = 512 / (8 * sizeof(limb_t));
   // Create unique pointers for input and output arrays
   auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
   auto output = std::make_unique<uint32_t[]>(nof_input_limbs);
   // Randomize the input array
   randomize(input.get(), nof_input_limbs);
 
-  auto config = default_hash_config();
+  // auto config = default_hash_config();
   // Create Keccak-512 hash object
-  auto keccak512 = create_keccak_512_hash(nof_input_limbs);
+  // auto keccak512 = create_keccak_512_hash(nof_input_limbs);
   // Run single hash operation
-  ICICLE_CHECK(keccak512.hash_single(input.get(), output.get(), config));
+  // ICICLE_CHECK(keccak512.hash_single(input.get(), output.get(), config));
+  // run_keccak_test(keccak512, keccak512, input.get(), nof_input_limbs, nof_output_limbs);
   // TODO: Verify output (e.g., check CPU against CUDA)
+  run_keccak_test(create_keccak_512_hash, input.get(), nof_input_limbs, nof_output_limbs);
 }
 
 TEST_F(HashApiTest, sha3_256)

@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "hash/keccak/keccak.h"
+#include "hash/keccak/cpu_keccak.h"
 
 namespace icicle {
 
@@ -255,12 +255,14 @@ namespace icicle {
     return SHA3_RETURN_OK;
   }
 
-  eIcicleError Keccak_cpu::run_single_hash(
+  eIcicleError Keccak_cpu::hash_single(
     const limb_t* input_limbs,
     limb_t* output_limbs,
     const HashConfig& config,
     const limb_t* secondary_input_limbs) const
   {
+    ICICLE_LOG_INFO << "Keccak CPU hash_single() called";
+
     const uint8_t* input_bytes = reinterpret_cast<const uint8_t*>(input_limbs);
     uint8_t* output_bytes = reinterpret_cast<uint8_t*>(output_limbs);
     // std::cout << "output len (bytes): " << m_total_output_limbs * sizeof(limb_t) << std::endl;
@@ -273,13 +275,14 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError Keccak_cpu::run_multiple_hash( // Dummy implementation running in a loop
+  eIcicleError Keccak_cpu::hash_many( // Dummy implementation running in a loop
     const limb_t* input_limbs,
     limb_t* output_limbs,
     int nof_hashes,
     const HashConfig& config,
     const limb_t* secondary_input_limbs) const
   {
+    ICICLE_LOG_INFO << "Keccak CPU hash_many() called";
     // Calculate the distance between each input in bytes
     size_t input_stride = m_total_input_limbs;
     size_t output_stride = m_total_output_limbs;
@@ -290,7 +293,7 @@ namespace icicle {
       limb_t* current_output = output_limbs + i * output_stride;
 
       // Call the single hash function for each hash
-      eIcicleError result = run_single_hash(current_input, current_output, config);
+      eIcicleError result = hash_single(current_input, current_output, config);
 
       if (result != eIcicleError::SUCCESS) {
         return result; // Return the error if hashing fails
