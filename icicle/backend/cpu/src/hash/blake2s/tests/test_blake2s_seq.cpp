@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     uint8_t* input = (uint8_t*)input_str.c_str();
     size_t inlen = input_str.size();
 
-    Blake2s_cpu blake2s = Blake2s_cpu(inlen / sizeof(limb_t));
+    Blake2sCpu blake2s = Blake2sCpu(inlen / sizeof(limb_t));
 
     unsigned int outlen = blake2s.m_total_output_limbs * sizeof(limb_t); // Output length in bytes (32)
     uint8_t* output = (uint8_t*)malloc(outlen);

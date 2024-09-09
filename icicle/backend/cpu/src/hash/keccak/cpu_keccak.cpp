@@ -17,7 +17,7 @@
 
 namespace icicle {
 
-  const uint64_t Keccak_cpu::keccakf_rndc[24] = {
+  const uint64_t KeccakCpu::keccakf_rndc[24] = {
     SHA3_CONST(0x0000000000000001UL), SHA3_CONST(0x0000000000008082UL), SHA3_CONST(0x800000000000808aUL),
     SHA3_CONST(0x8000000080008000UL), SHA3_CONST(0x000000000000808bUL), SHA3_CONST(0x0000000080000001UL),
     SHA3_CONST(0x8000000080008081UL), SHA3_CONST(0x8000000000008009UL), SHA3_CONST(0x000000000000008aUL),
@@ -27,16 +27,16 @@ namespace icicle {
     SHA3_CONST(0x000000000000800aUL), SHA3_CONST(0x800000008000000aUL), SHA3_CONST(0x8000000080008081UL),
     SHA3_CONST(0x8000000000008080UL), SHA3_CONST(0x0000000080000001UL), SHA3_CONST(0x8000000080008008UL)};
 
-  const unsigned Keccak_cpu::keccakf_rotc[24] = {1,  3,  6,  10, 15, 21, 28, 36, 45, 55, 2,  14,
+  const unsigned KeccakCpu::keccakf_rotc[24] = {1,  3,  6,  10, 15, 21, 28, 36, 45, 55, 2,  14,
                                                  27, 41, 56, 8,  25, 43, 62, 18, 39, 61, 20, 44};
 
-  const unsigned Keccak_cpu::keccakf_piln[24] = {10, 7,  11, 17, 18, 3, 5,  16, 8,  21, 24, 4,
+  const unsigned KeccakCpu::keccakf_piln[24] = {10, 7,  11, 17, 18, 3, 5,  16, 8,  21, 24, 4,
                                                  15, 23, 19, 13, 12, 2, 20, 14, 22, 9,  6,  1};
 
   /* generally called after SHA3_KECCAK_SPONGE_WORDS-ctx->capacityWords words
    * are XORed into the state s
    */
-  void Keccak_cpu::keccakf(uint64_t s[25])
+  void KeccakCpu::keccakf(uint64_t s[25])
   {
     int i, j, round;
     uint64_t t, bc[5];
@@ -78,7 +78,7 @@ namespace icicle {
   /* *************************** Public Interface ************************ */
 
   /* For Init or Reset call these: */
-  sha3_return_t Keccak_cpu::sha3_init(sha3_context* priv, unsigned bit_size) const
+  sha3_return_t KeccakCpu::sha3_init(sha3_context* priv, unsigned bit_size) const
   {
     sha3_context* ctx = (sha3_context*)priv;
     if (bit_size != 256 && bit_size != 384 && bit_size != 512) return SHA3_RETURN_BAD_PARAMS;
@@ -87,13 +87,13 @@ namespace icicle {
     return SHA3_RETURN_OK;
   }
 
-  void Keccak_cpu::sha3_init256(sha3_context* priv) const { Keccak_cpu::sha3_init(priv, 256); }
+  void KeccakCpu::sha3_init256(sha3_context* priv) const { KeccakCpu::sha3_init(priv, 256); }
 
-  void Keccak_cpu::sha3_init384(sha3_context* priv) const { Keccak_cpu::sha3_init(priv, 384); }
+  void KeccakCpu::sha3_init384(sha3_context* priv) const { KeccakCpu::sha3_init(priv, 384); }
 
-  void Keccak_cpu::sha3_init512(sha3_context* priv) const { Keccak_cpu::sha3_init(priv, 512); }
+  void KeccakCpu::sha3_init512(sha3_context* priv) const { KeccakCpu::sha3_init(priv, 512); }
 
-  enum SHA3_FLAGS Keccak_cpu::sha3_set_flags(sha3_context* priv, enum SHA3_FLAGS flags) const
+  enum SHA3_FLAGS KeccakCpu::sha3_set_flags(sha3_context* priv, enum SHA3_FLAGS flags) const
   {
     sha3_context* ctx = (sha3_context*)priv;
     flags = (enum SHA3_FLAGS)(flags & SHA3_FLAGS_KECCAK);
@@ -101,7 +101,7 @@ namespace icicle {
     return flags;
   }
 
-  void Keccak_cpu::sha3_update(sha3_context* priv, void const* bufIn, size_t len) const
+  void KeccakCpu::sha3_update(sha3_context* priv, void const* bufIn, size_t len) const
   {
     sha3_context* ctx = (sha3_context*)priv;
 
@@ -186,7 +186,7 @@ namespace icicle {
    * The padding block is 0x01 || 0x00* || 0x80. First 0x01 and last 0x80
    * bytes are always present, but they can be the same byte.
    */
-  void const* Keccak_cpu::sha3_finalize(sha3_context* priv) const
+  void const* KeccakCpu::sha3_finalize(sha3_context* priv) const
   {
     sha3_context* ctx = (sha3_context*)priv;
 
@@ -200,7 +200,7 @@ namespace icicle {
     uint64_t t;
 
     if (ctx->capacityWords & SHA3_USE_KECCAK_FLAG) {
-      /* Keccak_cpu version */
+      /* KeccakCpu version */
       t = (uint64_t)(((uint64_t)1) << (ctx->byteIndex * 8));
     } else {
       /* SHA3 version */
@@ -238,7 +238,7 @@ namespace icicle {
     return (ctx->u.sb);
   }
 
-  sha3_return_t Keccak_cpu::sha3_hash_buffer(
+  sha3_return_t KeccakCpu::sha3_hash_buffer(
     unsigned bit_size, enum SHA3_FLAGS flags, const void* in, unsigned inBytes, void* out, unsigned outBytes) const
   {
     sha3_return_t err;
@@ -255,7 +255,7 @@ namespace icicle {
     return SHA3_RETURN_OK;
   }
 
-  eIcicleError Keccak_cpu::hash_single(
+  eIcicleError KeccakCpu::hash_single(
     const limb_t* input_limbs,
     limb_t* output_limbs,
     const HashConfig& config,
@@ -271,11 +271,11 @@ namespace icicle {
     int result = sha3_hash_buffer(
       this->bit_size, this->sha_flag, input_bytes, this->m_total_input_limbs * sizeof(limb_t), output_bytes,
       this->m_total_output_limbs * sizeof(limb_t));
-    if (result != 0) { throw std::runtime_error("Keccak_cpu hashing failed"); }
+    if (result != 0) { throw std::runtime_error("KeccakCpu hashing failed"); }
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError Keccak_cpu::hash_many( // Dummy implementation running in a loop
+  eIcicleError KeccakCpu::hash_many( // Dummy implementation running in a loop
     const limb_t* input_limbs,
     limb_t* output_limbs,
     int nof_hashes,
@@ -307,7 +307,7 @@ namespace icicle {
   static eIcicleError create_keccak_256_hash_backend(
     const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
   {
-    backend = std::make_shared<Keccak256_cpu>(total_input_limbs);
+    backend = std::make_shared<Keccak256Cpu>(total_input_limbs);
     return eIcicleError::SUCCESS;
   }
 
@@ -317,7 +317,7 @@ namespace icicle {
   static eIcicleError create_keccak_512_hash_backend(
     const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
   {
-    backend = std::make_shared<Keccak512_cpu>(total_input_limbs);
+    backend = std::make_shared<Keccak512Cpu>(total_input_limbs);
     return eIcicleError::SUCCESS;
   }
 
@@ -327,7 +327,7 @@ namespace icicle {
   static eIcicleError
   create_sha3_256_hash_backend(const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
   {
-    backend = std::make_shared<Sha3_256_cpu>(total_input_limbs);
+    backend = std::make_shared<Sha3_256Cpu>(total_input_limbs);
     return eIcicleError::SUCCESS;
   }
 
@@ -337,7 +337,7 @@ namespace icicle {
   static eIcicleError
   create_sha3_512_hash_backend(const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend)
   {
-    backend = std::make_shared<Sha3_512_cpu>(total_input_limbs);
+    backend = std::make_shared<Sha3_512Cpu>(total_input_limbs);
     return eIcicleError::SUCCESS;
   }
 

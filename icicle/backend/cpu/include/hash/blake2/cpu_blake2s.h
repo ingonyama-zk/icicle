@@ -9,10 +9,10 @@
 
 namespace icicle {
 
-  class Blake2s_cpu : public HashBackend
+  class Blake2sCpu : public HashBackend
   {
   public:
-    explicit Blake2s_cpu(int total_input_limbs) : HashBackend(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
+    explicit Blake2sCpu(int total_input_limbs) : HashBackend(total_input_limbs, BLAKE2S_OUTBYTES / sizeof(limb_t)) {}
 
     eIcicleError hash_single(
       const limb_t* input_limbs,

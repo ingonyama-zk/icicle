@@ -105,7 +105,7 @@ int main(int argc, char** argv)
     current_position += test_strings[i].size();
   }
   // init blake2s
-  Blake2s_cpu blake2s = Blake2s_cpu(inlen / sizeof(limb_t));
+  Blake2sCpu blake2s = Blake2sCpu(inlen / sizeof(limb_t));
 
   // Allocate memory for the output
   unsigned int outlen = blake2s.m_total_output_limbs * sizeof(limb_t);

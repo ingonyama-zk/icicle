@@ -24,7 +24,7 @@ int main(void)
   const uint8_t* test_string = (uint8_t*)test_string_char;
   HashConfig config; //= default_hash_config();
   // Test simple API
-  Keccak_cpu keccak_hash = Keccak256_cpu(test_string_len / sizeof(limb_t));
+  KeccakCpu keccak_hash = Keccak256Cpu(test_string_len / sizeof(limb_t));
   START_TIMER(keccak_ref)
   {
     uint8_t hash[keccak_hash.m_total_output_limbs * sizeof(limb_t)];

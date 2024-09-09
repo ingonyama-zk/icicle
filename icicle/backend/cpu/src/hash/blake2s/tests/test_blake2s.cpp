@@ -26,7 +26,7 @@ int main(void)
   const uint8_t* test_string = (uint8_t*)test_string_char;
   HashConfig config; //= default_hash_config();
   // Test simple API
-  Blake2s_cpu blake2s = Blake2s_cpu(test_string_len / sizeof(limb_t));
+  Blake2sCpu blake2s = Blake2sCpu(test_string_len / sizeof(limb_t));
   START_TIMER(blake_ref)
   {
     uint8_t hash[blake2s.m_total_output_limbs * sizeof(limb_t)];

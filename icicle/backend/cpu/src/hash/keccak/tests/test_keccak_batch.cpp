@@ -106,13 +106,13 @@ int main(int argc, char** argv)
   // init keccak
 
 #ifdef KECCAK256
-  Keccak_cpu keccak = Keccak256_cpu(inlen / sizeof(limb_t));
+  KeccakCpu keccak = Keccak256Cpu(inlen / sizeof(limb_t));
 #elif defined(KECCAK512)
-  Keccak_cpu keccak = Keccak512_cpu(inlen / sizeof(limb_t));
+  KeccakCpu keccak = Keccak512Cpu(inlen / sizeof(limb_t));
 #elif defined(SHA3_256)
-  Keccak_cpu keccak = Sha3_256_cpu(inlen / sizeof(limb_t));
+  KeccakCpu keccak = Sha3_256Cpu(inlen / sizeof(limb_t));
 #elif defined(SHA3_512)
-  Keccak_cpu keccak = Sha3_512_cpu(inlen / sizeof(limb_t));
+  KeccakCpu keccak = Sha3_512Cpu(inlen / sizeof(limb_t));
 #else
 #error "No valid hash function version specified"
 #endif
