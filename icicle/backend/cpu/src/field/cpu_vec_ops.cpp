@@ -168,20 +168,20 @@ private:
     }
   }
   // Single worker functionality to execute conversion from barret to montgomery
-  void convert_to_montgomery()
-  {
-    for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = T::to_montgomery(m_op_a[i]);
-    }
-  }
+  // void convert_to_montgomery()
+  // {
+  //   for (uint64_t i = 0; i < m_nof_operations; ++i) {
+  //     m_output[i] = T::to_montgomery(m_op_a[i]);
+  //   }
+  // }
 
   // Single worker functionality to execute conversion from montgomery to barret
-  void convert_from_montgomery()
-  {
-    for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = T::from_montgomery(m_op_a[i]);
-    }
-  }
+  // void convert_from_montgomery()
+  // {
+  //   for (uint64_t i = 0; i < m_nof_operations; ++i) {
+  //     m_output[i] = T::from_montgomery(m_op_a[i]);
+  //   }
+  // }
   // Single worker functionality to execute bit reverse reorder
   void bit_reverse()
   {
@@ -228,8 +228,8 @@ private:
     &VectorOpTask::scalar_add_vec,          // SCALAR_ADD_VEC,
     &VectorOpTask::scalar_sub_vec,          // SCALAR_SUB_VEC,
     &VectorOpTask::scalar_mul_vec,          // SCALAR_MUL_VEC,
-    &VectorOpTask::convert_to_montgomery,   // CONVERT_TO_MONTGOMERY,
-    &VectorOpTask::convert_from_montgomery, // CONVERT_FROM_MONTGOMERY,
+    // &VectorOpTask::convert_to_montgomery,   // CONVERT_TO_MONTGOMERY,
+    // &VectorOpTask::convert_from_montgomery, // CONVERT_FROM_MONTGOMERY,
     &VectorOpTask::bit_reverse,             // BIT_REVERSE
     &VectorOpTask::slice                    // SLICE
   };

@@ -6,6 +6,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring> 
+#include <bit>
 #include "icicle/utils/modifiers.h"
 #include "icicle/fields/storage.h"
 namespace host_math {
@@ -19,14 +21,14 @@ namespace host_math {
 
   // return x + y + carry with T operands
   template <typename T>
-  static constexpr __host__ T addc(const T x, const T y, const T carry)
+  static constexpr __host__ T addc(const T x, const T y, const bool carry)
   {
-    return x + y + carry;
+    return x + y + (carry? 1 : 0);
   }
 
   // return x + y and carry out with T operands
   template <typename T>
-  static constexpr __host__ T add_cc(const T x, const T y, T& carry)
+  static constexpr __host__ T add_cc(const T x, const T y, bool& carry)
   {
     T result = x + y;
     carry = x > result;
@@ -35,9 +37,9 @@ namespace host_math {
 
   // return x + y + carry and carry out  with T operands
   template <typename T>
-  static constexpr __host__ T addc_cc(const T x, const T y, T& carry)
+  static constexpr __host__ T addc_cc(const T x, const T y, bool& carry)
   {
-    const T result = x + y + carry;
+    const T result = x + y + (carry? 1 : 0);
     carry = carry && x >= result || !carry && x > result;
     return result;
   }
@@ -51,14 +53,14 @@ namespace host_math {
 
   //    return x - y - borrow with T operands
   template <typename T>
-  static constexpr __host__ T subc(const T x, const T y, const T borrow)
+  static constexpr __host__ T subc(const T x, const T y, const bool borrow)
   {
-    return x - y - borrow;
+    return x - y - (borrow? 1 : 0);
   }
 
   //    return x - y and borrow out with T operands
   template <typename T>
-  static constexpr __host__ T sub_cc(const T x, const T y, T& borrow)
+  static constexpr __host__ T sub_cc(const T x, const T y, bool& borrow)
   {
     T result = x - y;
     borrow = x < result;
@@ -67,9 +69,9 @@ namespace host_math {
 
   //    return x - y - borrow and borrow out with T operands
   template <typename T>
-  static constexpr __host__ T subc_cc(const T x, const T y, T& borrow)
+  static constexpr __host__ T subc_cc(const T x, const T y, bool& borrow)
   {
-    const T result = x - y - borrow;
+    const T result = x - y - (borrow? 1 : 0);
     borrow = borrow && x <= result || !borrow && x < result;
     return result;
   }
@@ -98,7 +100,7 @@ namespace host_math {
     constexpr HOST_INLINE carry_chain() : index(0) {}
 
     template <typename T>
-    constexpr HOST_INLINE T add(const T x, const T y, T& carry)
+    constexpr HOST_INLINE T add(const T x, const T y, bool& carry)
     {
       index++;
       if (index == 1 && OPS_COUNT == 1 && !CARRY_IN && !CARRY_OUT)
@@ -112,7 +114,7 @@ namespace host_math {
     }
 
     template <typename T>
-    constexpr HOST_INLINE T sub(const T x, const T y, T& carry)
+    constexpr HOST_INLINE T sub(const T x, const T y, bool& carry)
     {
       index++;
       if (index == 1 && OPS_COUNT == 1 && !CARRY_IN && !CARRY_OUT)
@@ -127,19 +129,22 @@ namespace host_math {
   };
 
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr HOST_INLINE uint32_t add_sub_limbs_32(const uint32_t* x, const uint32_t* y, uint32_t* r)
+  static constexpr HOST_INLINE bool add_sub_limbs_32(const uint32_t* x, const uint32_t* y, uint32_t* r)
   {
-    uint32_t carry = 0;
+    // printf("NLIMBS %u\n", NLIMBS);
+    bool carry = false;
     carry_chain<NLIMBS, false, CARRY_OUT> chain;
     for (unsigned i = 0; i < NLIMBS; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
-    return CARRY_OUT ? carry : 0;
+      // printf("i %u xi %u yi %u r %u\n", i, x[i],y[i],r[i]);}
+    // printf("carry %d\n",carry);
+    return CARRY_OUT ? carry : false;
   }
 
   template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr HOST_INLINE uint64_t add_sub_limbs_64(const uint64_t* x, const uint64_t* y, uint64_t* r)
+  static constexpr HOST_INLINE bool add_sub_limbs_64(const uint64_t* x, const uint64_t* y, uint64_t* r)
   {
-    uint64_t carry = 0;
+    bool carry = 0;
     carry_chain<NLIMBS, false, CARRY_OUT> chain;
     for (unsigned i = 0; i < NLIMBS / 2; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
@@ -153,20 +158,34 @@ namespace host_math {
     bool USE_32 = true> // for now we use only the 32 add/sub because the casting of the carry causes problems when
                         // compiling in release. to solve this we need to entirely split the field functions between a
                         // host version and a device version.
-  static constexpr HOST_INLINE uint32_t // 32 is enough for the carry
+  static constexpr HOST_INLINE bool // 32 is enough for the carry
   add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
     if constexpr (USE_32 || NLIMBS < 2) {
-      const uint32_t* a = reinterpret_cast<const uint32_t*>(xs.bytes);
-      const uint32_t* b = reinterpret_cast<const uint32_t*>(ys.bytes);
-      uint32_t* r = reinterpret_cast<uint32_t*>(rs.bytes);
-      return add_sub_limbs_32<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
+      // uint32_t x[NLIMBS/4];
+      // uint32_t y[NLIMBS/4];
+      // uint32_t r[NLIMBS/4];
+      // std::memcpy(x, xs.bytes, sizeof(xs.bytes));
+      // std::memcpy(y, ys.bytes, sizeof(ys.bytes));
+      // std::memcpy(r, rs.bytes, sizeof(rs.bytes));
+      // const uint32_t* x = reinterpret_cast<const uint32_t*>(xs.bytes);
+      // const uint32_t* y = reinterpret_cast<const uint32_t*>(ys.bytes);
+      // uint32_t* r = reinterpret_cast<uint32_t*>(rs.bytes);
+      // const uint32_t* x = std::bit_cast<const uint32_t*>(xs.bytes);
+      // const uint32_t* y = bit_cast<const uint32_t*>(ys.bytes);
+      // uint32_t* r = std::bit_cast<uint32_t*>(rs.bytes);
+      return add_sub_limbs_32<NLIMBS/4, SUBTRACT, CARRY_OUT>(reinterpret_cast<const uint32_t*>(xs.bytes),
+      reinterpret_cast<const uint32_t*>(ys.bytes), reinterpret_cast<uint32_t*>(rs.bytes));
+      // return add_sub_limbs_32<NLIMBS/4, SUBTRACT, CARRY_OUT>(x, y, r);
+      // bool carry = add_sub_limbs_32<NLIMBS/4, SUBTRACT, CARRY_OUT>(x, y, r);
+      // std::memcpy(rs.bytes, r, sizeof(rs.bytes));
+      // return carry;
     } else {
       const uint64_t* x = xs.limbs64;
       const uint64_t* y = ys.limbs64;
       uint64_t* r = rs.limbs64;
       // Note: returns uint64 but uint 32 is enough.
-      uint64_t result = add_sub_limbs_64<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
+      uint64_t result = add_sub_limbs_64<NLIMBS/4, SUBTRACT, CARRY_OUT>(x, y, r);
       uint32_t carry = result == 1;
       return carry;
     }
@@ -174,17 +193,27 @@ namespace host_math {
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static constexpr HOST_INLINE void
-  multiply_raw_32(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
+  multiply_raw_32(const storage<NLIMBS_A*4>& as, const storage<NLIMBS_B*4>& bs, storage<NLIMBS_A*4 + NLIMBS_B*4>& rs)
   {
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
-    uint32_t* r = rs.limbs;
+    // printf("NLIMBS_A %u\n", NLIMBS_A);
+    // printf("NLIMBS_B %u\n", NLIMBS_B);
+    const uint32_t* a = reinterpret_cast<const uint32_t*>(as.bytes);
+    const uint32_t* b = reinterpret_cast<const uint32_t*>(bs.bytes);
+    uint32_t* r = reinterpret_cast<uint32_t*>(rs.bytes);
+    // uint32_t a[NLIMBS_A];
+    // uint32_t b[NLIMBS_B];
+    // uint32_t r[NLIMBS_A+NLIMBS_B];
+    // std::memcpy(a, as.bytes, sizeof(as.bytes));
+    // std::memcpy(b, bs.bytes, sizeof(bs.bytes));
+    // std::memcpy(r, rs.bytes, sizeof(rs.bytes));
     for (unsigned i = 0; i < NLIMBS_B; i++) {
       uint32_t carry = 0;
       for (unsigned j = 0; j < NLIMBS_A; j++)
         r[j + i] = host_math::madc_cc(a[j], b[i], r[j + i], carry);
+        // printf("i %u ai %u bi %u ri %u\n", i, a[i],b[i],r[i+j]);}
       r[NLIMBS_A + i] = carry;
     }
+    // std::memcpy(rs.bytes, r, sizeof(rs.bytes));
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
@@ -200,15 +229,23 @@ namespace host_math {
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static HOST_INLINE void
-  multiply_raw_64(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
+  multiply_raw_64(const storage<NLIMBS_A*4>& as, const storage<NLIMBS_B*4>& bs, storage<NLIMBS_A*4 + NLIMBS_B*4>& rs)
   {
     // const uint64_t* a = as.limbs64;
     // const uint64_t* b = bs.limbs64;
     // uint64_t* r = rs.limbs64;
-    const uint64_t* a = reinterpret_cast<const uint64_t*>(as.bytes);
-    const uint64_t* b = reinterpret_cast<const uint64_t*>(bs.bytes);
-    uint64_t* r = reinterpret_cast<uint64_t*>(rs.bytes);
-    multiply_raw_64<NLIMBS_A, NLIMBS_B>(a, b, r);
+    // const uint64_t* a = reinterpret_cast<const uint64_t*>(as.bytes);
+    // const uint64_t* b = reinterpret_cast<const uint64_t*>(bs.bytes);
+    // uint64_t* r = reinterpret_cast<uint64_t*>(rs.bytes);
+    // uint64_t a[NLIMBS_A/2];
+    // uint64_t b[NLIMBS_B/2];
+    // uint64_t r[(NLIMBS_A+NLIMBS_B)/2];
+    // std::memcpy(a, as.bytes, sizeof(as.bytes));
+    // std::memcpy(b, bs.bytes, sizeof(bs.bytes));
+    // std::memcpy(r, rs.bytes, sizeof(rs.bytes));
+    multiply_raw_64<NLIMBS_A, NLIMBS_B>(reinterpret_cast<const uint64_t*>(as.bytes), reinterpret_cast<const uint64_t*>(bs.bytes), reinterpret_cast<uint64_t*>(rs.bytes));
+    // multiply_raw_64<NLIMBS_A, NLIMBS_B>(a, b, r);
+    // std::memcpy(rs.bytes, r, sizeof(rs.bytes));
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
@@ -216,19 +253,19 @@ namespace host_math {
   multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
     static_assert(
-      (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
+      ((NLIMBS_A/4) % 2 == 0 || (NLIMBS_A/4) == 1) && ((NLIMBS_B/4) % 2 == 0 || (NLIMBS_B/4) == 1),
       "odd number of limbs is not supported\n");
     if constexpr (USE_32) {
-      multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
+      multiply_raw_32<(NLIMBS_A/4), (NLIMBS_B/4)>(as, bs, rs);
       return;
-    } else if constexpr ((NLIMBS_A == 1 && NLIMBS_B == 2) || (NLIMBS_A == 2 && NLIMBS_B == 1)) {
-      multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
+    } else if constexpr (((NLIMBS_A/4) == 1 && (NLIMBS_B/4) == 2) || ((NLIMBS_A/4) == 2 && (NLIMBS_B/4) == 1)) {
+      multiply_raw_32<(NLIMBS_A/4), (NLIMBS_B/4)>(as, bs, rs);
       return;
-    } else if constexpr (NLIMBS_A == 1 && NLIMBS_B == 1) {
+    } else if constexpr ((NLIMBS_A/4) == 1 && (NLIMBS_B/4) == 1) {
       rs.limbs[1] = 0;
       rs.limbs[0] = host_math::madc_cc(as.limbs[0], bs.limbs[0], 0, rs.limbs[1]);
       return;
-    } else if constexpr (NLIMBS_A == 2 && NLIMBS_B == 2) {
+    } else if constexpr ((NLIMBS_A/4) == 2 && (NLIMBS_B/4) == 2) {
       const uint64_t* a = as.limbs64; // nof limbs should be even
       const uint64_t* b = bs.limbs64;
       uint64_t* r = rs.limbs64;
@@ -236,7 +273,7 @@ namespace host_math {
       r[0] = host_math::madc_cc_64(a[0], b[0], 0, r[1]);
       return;
     } else {
-      multiply_raw_64<NLIMBS_A, NLIMBS_B>(as, bs, rs);
+      multiply_raw_64<(NLIMBS_A/4), (NLIMBS_B/4)>(as, bs, rs);
     }
   }
 
@@ -291,7 +328,7 @@ namespace host_math {
       for (int bit_idx = 31; bit_idx >= 0; bit_idx--) {
         r = left_shift<NLIMBS_DENOM, 1>(r);
         r.limbs[0] |= ((num.limbs[limb_idx] >> bit_idx) & 1);
-        uint32_t c = add_sub_limbs<NLIMBS_DENOM, true, true, USE_32>(r, denom, temp);
+        bool c = add_sub_limbs<NLIMBS_DENOM, true, true, USE_32>(r, denom, temp);
         if (limb_idx < NLIMBS_Q & !c) {
           r = temp;
           q.limbs[limb_idx] |= 1 << bit_idx;

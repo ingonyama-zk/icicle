@@ -46,15 +46,15 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field one() { return Field{CONFIG::one}; }
 
-  static constexpr HOST_DEVICE_INLINE Field from(uint32_t value)
-  {
-    storage<TLC> scalar{};
-    scalar.limbs[0] = value;
-    for (int i = 1; i < TLC; i++) {
-      scalar.limbs[i] = 0;
-    }
-    return Field{scalar};
-  }
+  // static constexpr HOST_DEVICE_INLINE Field from(uint32_t value)
+  // {
+  //   storage<TLC> scalar{};
+  //   scalar.limbs[0] = value;
+  //   for (int i = 1; i < TLC; i++) {
+  //     scalar.limbs[i] = 0;
+  //   }
+  //   return Field{scalar};
+  // }
 
   static HOST_INLINE Field omega(uint32_t logn)
   {
@@ -127,7 +127,7 @@ public:
    */
   static constexpr HOST_DEVICE_INLINE unsigned num_of_reductions() { return CONFIG::num_of_reductions; }
 
-  static constexpr unsigned slack_bits = 32 * TLC - NBITS;
+  static constexpr unsigned slack_bits = 8 * TLC - NBITS;
 
   struct Wide {
     ff_wide_storage limbs_storage;
@@ -139,7 +139,7 @@ public:
       UNROLL
 #endif
       for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
+        out.limbs_storage.bytes[i] = xs.limbs_storage.bytes[i];
       return out;
     }
 
@@ -150,7 +150,7 @@ public:
       UNROLL
 #endif
       for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
+        out.limbs_storage.bytes[i] = xs.limbs_storage.bytes[i];
       return out;
     }
 
@@ -161,7 +161,7 @@ public:
       UNROLL
 #endif
       for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
+        out.limbs_storage.bytes[i] = xs.limbs_storage.bytes[i + TLC];
       return out;
     }
 
@@ -176,8 +176,8 @@ public:
         out.limbs_storage.limbs[i] =
           __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], 2 * slack_bits);
 #else
-        out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << 2 * slack_bits) +
-                                     (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - 2 * slack_bits));
+        out.limbs_storage.bytes[i] = (xs.limbs_storage.bytes[i + TLC] << 2 * slack_bits) |
+                                     (xs.limbs_storage.bytes[i + TLC - 1] >> (8 - 2 * slack_bits));
 #endif
       }
       return out;
@@ -211,8 +211,8 @@ public:
     friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
     {
       Wide rs = {};
-      uint32_t carry = sub_limbs<2 * TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      if (carry == 0) return rs;
+      bool carry = sub_limbs<2 * TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      if (!carry) return rs;
       const ff_wide_storage modulus = get_modulus_squared<1>();
       add_limbs<2 * TLC, false>(rs.limbs_storage, modulus, rs.limbs_storage);
       return rs;
@@ -279,7 +279,7 @@ public:
   }
 #endif // __CUDACC__
   template <unsigned NLIMBS, bool CARRY_OUT>
-  static constexpr HOST_DEVICE_INLINE uint32_t
+  static constexpr HOST_DEVICE_INLINE bool
   add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
 #ifdef __CUDA_ARCH__
@@ -290,7 +290,7 @@ public:
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
-  static constexpr HOST_DEVICE_INLINE uint32_t
+  static constexpr HOST_DEVICE_INLINE bool
   sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
 #ifdef __CUDA_ARCH__
@@ -696,7 +696,8 @@ public:
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
-      value.limbs_storage.limbs[i] = distribution(generator);
+      value.limbs_storage.bytes[i] = static_cast<std::byte>(distribution(generator) & 0xFF);
+    // std::cout << lt(Field{get_modulus()}, value) << std::endl;
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
     return value;
@@ -723,7 +724,7 @@ public:
     hex_string << std::hex << std::setfill('0');
 
     for (int i = 0; i < TLC; i++) {
-      hex_string << std::setw(8) << xs.limbs_storage.limbs[TLC - i - 1];
+      hex_string << std::hex << std::setw(2) << std::to_integer<unsigned int>(xs.limbs_storage.bytes[TLC - i - 1]);
     }
 
     os << "0x" << hex_string.str();
@@ -740,8 +741,8 @@ public:
   friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys)
   {
     Field rs = {};
-    uint32_t carry = sub_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-    if (carry == 0) return rs;
+    bool carry = sub_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    if (!carry) return rs;
     const ff_storage modulus = get_modulus<1>();
     add_limbs<TLC, false>(rs.limbs_storage, modulus, rs.limbs_storage);
     return rs;
@@ -790,14 +791,14 @@ public:
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
     multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
     ff_storage r_reduced = {};
-    uint32_t carry = 0;
+    bool carry = false;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if (num_of_reductions() == 2) {
       carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
-      if (carry == 0) r = Field{r_reduced};
+      if (!carry) r = Field{r_reduced};
     }
     carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (carry == 0) r = Field{r_reduced};
+    if (!carry) r = Field{r_reduced};
 
     return r;
   }
@@ -805,7 +806,7 @@ public:
   HOST_DEVICE_INLINE Field& operator=(Field const& other)
   {
     for (int i = 0; i < TLC; i++) {
-      this->limbs_storage.limbs[i] = other.limbs_storage.limbs[i];
+      this->limbs_storage.bytes[i] = other.limbs_storage.bytes[i];
     }
     return *this;
   }
@@ -828,7 +829,7 @@ public:
     return limbs_or == 0;
 #else
     for (unsigned i = 0; i < TLC; i++)
-      if (xs.limbs_storage.limbs[i] != ys.limbs_storage.limbs[i]) return false;
+      if (xs.limbs_storage.bytes[i] != ys.limbs_storage.bytes[i]) return false;
     return true;
 #endif
   }
@@ -884,12 +885,12 @@ public:
     return xs * xs;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+  // static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
 
-  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
-  {
-    return xs * Field{CONFIG::montgomery_r_inv};
-  }
+  // static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
+  // {
+  //   return xs * Field{CONFIG::montgomery_r_inv};
+  // }
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field neg(const Field& xs)
@@ -904,14 +905,14 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field div2(const Field& xs)
   {
-    const uint32_t* x = xs.limbs_storage.limbs;
+    const uint32_t* x = reinterpret_cast<const uint32_t*>(xs.limbs_storage.bytes);
     Field rs = {};
-    uint32_t* r = rs.limbs_storage.limbs;
-    if constexpr (TLC > 1) {
+    uint32_t* r = reinterpret_cast<uint32_t*>(rs.limbs_storage.bytes);
+    if constexpr (TLC/4 > 1) {
 #ifdef __CUDA_ARCH__
       UNROLL
 #endif
-      for (unsigned i = 0; i < TLC - 1; i++) {
+      for (unsigned i = 0; i < TLC/4 - 1; i++) {
 #ifdef __CUDA_ARCH__
         r[i] = __funnelshift_rc(x[i], x[i + 1], 1);
 #else
@@ -919,20 +920,20 @@ public:
 #endif
       }
     }
-    r[TLC - 1] = x[TLC - 1] >> 1;
+    r[TLC/4 - 1] = x[TLC/4 - 1] >> 1;
     return sub_modulus<MODULUS_MULTIPLE>(rs);
   }
 
   static constexpr HOST_DEVICE_INLINE bool lt(const Field& xs, const Field& ys)
   {
     ff_storage dummy = {};
-    uint32_t carry = sub_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, dummy);
+    bool carry = sub_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, dummy);
     return carry;
   }
 
-  static constexpr HOST_DEVICE_INLINE bool is_odd(const Field& xs) { return xs.limbs_storage.limbs[0] & 1; }
+  static constexpr HOST_DEVICE_INLINE bool is_odd(const Field& xs) { return static_cast<uint8_t>(xs.limbs_storage.bytes[0]) & 1; }
 
-  static constexpr HOST_DEVICE_INLINE bool is_even(const Field& xs) { return ~xs.limbs_storage.limbs[0] & 1; }
+  static constexpr HOST_DEVICE_INLINE bool is_even(const Field& xs) { return ~static_cast<uint8_t>(xs.limbs_storage.bytes[0]) & 1; }
 
   static constexpr HOST_DEVICE_INLINE Field inverse(const Field& xs)
   {

@@ -74,7 +74,7 @@ namespace params_gen {
   {
     unsigned two_adicity = 1;
     storage<NLIMBS> temp = host_math::template right_shift<NLIMBS, 1>(modulus);
-    while (!(temp.limbs[0] & 1)) {
+    while (!(static_cast<int>(temp.bytes[0]) & 1)) {
       temp = host_math::template right_shift<NLIMBS, 1>(temp);
       two_adicity++;
     }
@@ -85,9 +85,9 @@ namespace params_gen {
   constexpr storage_array<TWO_ADICITY, NLIMBS> get_invs(const storage<NLIMBS>& modulus)
   {
     storage_array<TWO_ADICITY, NLIMBS> invs = {};
-    storage<NLIMBS> rs = {1};
+    storage<NLIMBS> rs = {std::byte{1}};
     for (int i = 0; i < TWO_ADICITY; i++) {
-      if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
+      if (static_cast<int>(rs.bytes[0]) & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
       rs = host_math::template right_shift<NLIMBS, 1>(rs);
       invs.storages[i] = rs;
     }
@@ -99,9 +99,14 @@ namespace params_gen {
   static constexpr unsigned limbs_count = modulus.LC;                                                                  \
   static constexpr unsigned modulus_bit_count =                                                                        \
     8 * (limbs_count - 1) + params_gen::floorlog2(modulus.bytes[limbs_count - 1]) + 1;                                \
-  static constexpr storage<limbs_count> zero = {};                                                                     \
-  static constexpr storage<limbs_count> one = {std::byte{1}};                                                                     \
-  static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
+  static constexpr storage<limbs_count> zero = {std::byte{0}};                                                                     \
+  static constexpr storage<limbs_count> one = {std::byte{1}};                                                           \
+  // static constexpr unsigned num_of_reductions =                                                                        \
+  //   params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);                             \
+  // static constexpr storage<limbs_count> montgomery_r =                                                                 \
+  //   params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
+  // static constexpr storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus);   \
+  /*static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
   static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);         \
   static constexpr storage<limbs_count> neg_modulus =                                                                  \
     params_gen::template get_difference_no_carry<limbs_count>(zero, modulus);                                          \
@@ -111,15 +116,10 @@ namespace params_gen {
     host_math::template left_shift<2 * limbs_count, 1>(modulus_squared);                                               \
   static constexpr storage<2 * limbs_count> modulus_squared_4 =                                                        \
     host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2);                                             \
-  static constexpr storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus);   \
-  static constexpr storage<limbs_count> montgomery_r =                                                                 \
-    params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
   static constexpr storage<limbs_count> montgomery_r_inv =                                                             \
-    params_gen::template get_montgomery_constant<limbs_count, true>(modulus);                                          \
-  static constexpr unsigned num_of_reductions =                                                                        \
-    params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
+    params_gen::template get_montgomery_constant<limbs_count, true>(modulus);                                          \*/
 
 #define TWIDDLES(modulus, rou)                                                                                         \
-  static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
-  static constexpr storage_array<omegas_count, limbs_count> inv =                                                      \
-    params_gen::template get_invs<limbs_count, omegas_count>(modulus);
+  // static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
+  // static constexpr storage_array<omegas_count, limbs_count> inv =                                                      \
+    // params_gen::template get_invs<limbs_count, omegas_count>(modulus);

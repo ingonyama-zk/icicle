@@ -74,16 +74,52 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  auto b_inv = TypeParam::inverse(b);
+  auto b_inv = TypeParam::inverse(b); //probably has bug
+  std::cout << "b: " << b << '\n';
+  std::cout << "b_inv: " << b_inv << '\n';
   auto a_neg = TypeParam::neg(a);
+  // auto modulus = TypeParam{TypeParam::template get_modulus<1>()};
+  std::cout << "modulus: " << TypeParam{TypeParam::template get_modulus<1>()} << '\n';
+  std::cout << "modulus2: " << TypeParam{TypeParam::template get_modulus<2>()} << '\n';
+  std::cout << "modulus4: " << TypeParam{TypeParam::template get_modulus<4>()} << '\n';
+  std::cout << "m: " << TypeParam{TypeParam::get_m()} << '\n';
+  // std::cout << "num_of_reductions: " << TypeParam{TypeParam::num_of_reductions()} << '\n';
+  std::cout << "neg_modulus: " << TypeParam{TypeParam::get_neg_modulus()} << '\n';
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(b * a * b_inv, a);
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
   ASSERT_EQ(b * b_inv, TypeParam::one());
-  ASSERT_EQ(a * scalar_t::from(2), a + a);
+  // ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
+
+#ifndef EXT_FIELD
+TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
+{
+  std::cout << "__cplusplus: " << __cplusplus << std::endl;
+  auto a = TypeParam::rand_host();
+  auto b = a;
+  std::ostringstream oss;
+  std::cout << a << std::endl;
+  START_TIMER(MULT_sync)
+  for (int i = 0; i < 100000; i++) {
+    typename TypeParam::Wide r_wide = {};
+    // typename TypeParam::Wide r2_wide = {};
+    host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, false>(a.limbs_storage, a.limbs_storage, r_wide.limbs_storage);
+    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, true>(b.limbs_storage, b.limbs_storage, r2_wide.limbs_storage);
+    // host_math::template add_sub_limbs<TypeParam::TLC, false, false, false>(a.limbs_storage, a.limbs_storage, a.limbs_storage);
+    // host_math::template add_sub_limbs<TypeParam::TLC, false, false, true>(b.limbs_storage, b.limbs_storage, b.limbs_storage);
+    a = TypeParam::Wide::get_lower(r_wide);
+    // b = TypeParam::Wide::get_lower(r2_wide);
+    // a = a + a;
+    // a = a * a;
+  }
+  END_TIMER(MULT_sync, oss.str().c_str(), true);
+  ASSERT_EQ(a, b);
+}
+#endif
+
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
