@@ -66,7 +66,7 @@ public:
 eIcicleError run_hash_test(
   const std::function<Hash(uint64_t)>& create_hash_function, const uint64_t nof_input_limbs)
 {
-  HashConfig config;
+  HashConfig config = default_hash_config();
   // Create unique pointers for input and output arrays
   auto input = std::make_unique<uint32_t[]>(nof_input_limbs);
   // Randomize the input array
