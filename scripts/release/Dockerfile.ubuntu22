@@ -5,6 +5,7 @@ FROM nvidia/cuda:12.2.2-devel-ubuntu22.04
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
-    tar
+    tar \
+    ninja-build
 
 RUN apt install cargo -y

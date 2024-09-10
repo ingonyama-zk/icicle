@@ -50,7 +50,7 @@ public:
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
 
-  static HOST_DEVICE_INLINE Projective dbl(const Projective& point)
+  static HOST_DEVICE Projective dbl(const Projective& point)
   {
     const FF X = point.x;
     const FF Y = point.y;
@@ -78,7 +78,7 @@ public:
     return {X3, Y3, Z3};
   }
 
-  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Projective& p2)
+  friend HOST_DEVICE Projective operator+(Projective p1, const Projective& p2)
   {
     const FF X1 = p1.x;       //                   < 2
     const FF Y1 = p1.y;       //                   < 2
@@ -126,7 +126,7 @@ public:
 
   friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) { return p1 + neg(p2); }
 
-  friend HOST_DEVICE_INLINE Projective operator+(Projective p1, const Affine<FF>& p2)
+  friend HOST_DEVICE Projective operator+(Projective p1, const Affine<FF>& p2)
   {
     const FF X1 = p1.x;            //                   < 2
     const FF Y1 = p1.y;            //                   < 2
@@ -176,7 +176,7 @@ public:
     return p1 + Affine<FF>::neg(p2);
   }
 
-  friend HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar, const Projective& point)
+  friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point)
   {
     Projective res = zero();
 #ifdef __CUDA_ARCH__

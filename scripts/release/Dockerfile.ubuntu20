@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libcurl4-openssl-dev \
     libarchive-dev \
-    zlib1g-dev
+    zlib1g-dev \
+    ninja-build
 
 # Install the latest stable version of CMake from source
 RUN CMAKE_VERSION=3.27.4 \

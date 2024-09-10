@@ -190,6 +190,9 @@ cmake --install build # install icicle to /path/to/install/dir/
 
 **Run tests (optional):**
 
+> [!CAUTION]
+> Most tests assume a CUDA backend exists and will fail otherwise, if a CUDA device is not found.
+
 Add `-DBUILD_TESTS=ON` to the cmake command, build and execute tests:
 
 ```bash
@@ -206,9 +209,6 @@ or choose the test-suite
 # can specify tests using regex. For example for tests with ntt in the name:
 ./build/tests/test_field_api --gtest_filter="*ntt*"
 ```
-
-> [!NOTE]
-> Most tests assume a CUDA backend exists and will fail otherwise, if a CUDA device is not found.
 
 **Build Flags:**
 
