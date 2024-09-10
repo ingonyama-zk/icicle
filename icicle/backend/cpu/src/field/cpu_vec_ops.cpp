@@ -362,8 +362,7 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
   return eIcicleError::SUCCESS;
 }
 
-// Once backend will support - uncomment the following line
-// REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
+REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
 /*********************************** SUM ***********************************/
 template <typename T>
 eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
@@ -387,8 +386,7 @@ eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n
   return eIcicleError::SUCCESS;
 }
 
-// Once backend will support - uncomment the following line
-// REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
+REGISTER_VECTOR_PRODUCT_BACKEND("CPU", cpu_vector_product<scalar_t>);
 
 /*********************************** MUL BY SCALAR***********************************/
 template <typename T>

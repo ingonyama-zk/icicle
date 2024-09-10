@@ -46,6 +46,15 @@ namespace icicle {
     return config;
   }
 
+  // Reduction operations
+
+  template <typename T>
+  eIcicleError vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+
+  template <typename T>
+  eIcicleError vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+
+
   // Element-wise vector operations
 
   /**
