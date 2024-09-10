@@ -39,9 +39,11 @@ public:
     icicle_load_backend_from_env_or_default();
 
     const bool is_cuda_registered = is_device_registered("CUDA");
-    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
+    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU_REF"; }
+    // if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_reference_target = "CPU";
+    s_reference_target = is_cuda_registered ? "CPU" : "CPU_REF";
+    // s_reference_target = "CPU";
   }
   static void TearDownTestSuite()
   {
@@ -297,9 +299,10 @@ TYPED_TEST(FieldApiTest, Slice)
 
 TYPED_TEST(FieldApiTest, ntt)
 {
+  for (int i = 0; i < 10; ++i) {
   // Randomize configuration
 
-  int seed = time(0);
+  int seed = time(0) + i;
   srand(seed);
   const bool inplace = rand() % 2;
   const int logn = rand() % 16 + 3;
@@ -322,6 +325,39 @@ TYPED_TEST(FieldApiTest, ntt)
   } else {
     coset_gen = scalar_t::one();
   }
+
+
+  // const bool inplace = false;
+  // const int logn = 6;
+  // const uint64_t N = 1 << logn;
+  // const int log_ntt_domain_size = logn;
+  // const int log_batch_size = 10;
+  // const int batch_size = 1 << log_batch_size;
+  // const Ordering ordering = static_cast<Ordering>(0);
+  // bool columns_batch = false;
+  // const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  // const int log_coset_stride = 0;
+  // scalar_t coset_gen;
+  // if (log_coset_stride) {
+  //   coset_gen = scalar_t::omega(logn + log_coset_stride);
+  // } else {
+  //   coset_gen = scalar_t::one();
+  // }
+
+// TODO shanie : remove those once the bug is fixed
+  ICICLE_LOG_INFO << "NTT test: omega=" << scalar_t::omega(logn);
+  ICICLE_LOG_INFO << "NTT test: seed=" << seed;
+  ICICLE_LOG_INFO << "NTT test: inplace=" << inplace;
+  ICICLE_LOG_INFO << "NTT test: logn=" << logn;
+  ICICLE_LOG_INFO << "NTT test: log_ntt_domain_size=" << log_ntt_domain_size;
+  ICICLE_LOG_INFO << "NTT test: log_batch_size=" << log_batch_size;
+  ICICLE_LOG_INFO << "NTT test: columns_batch=" << columns_batch;
+  ICICLE_LOG_INFO << "NTT test: ordering=" << int(ordering);
+  ICICLE_LOG_INFO << "NTT test: dir=" << (dir == NTTDir::kForward ? "forward" : "inverse");
+  ICICLE_LOG_INFO << "NTT test: log_coset_stride=" << log_coset_stride;
+  ICICLE_LOG_INFO << "NTT test: coset_gen=" << coset_gen;
+
+
 
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
@@ -376,10 +412,14 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(icicle_destroy_stream(stream));
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  // run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 0 /*=iters*/); // warmup
+  run(s_reference_target, out_ref.get(), "V3ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  // std::cout << "left:\t["; for (int i = 0; i < total_size-1; i++) { std::cout << out_main[i] << ", "; } std::cout <<out_main[total_size-1]<<"]"<< std::endl;
+  // std::cout << "right:\t["; for (int i = 0; i < total_size-1; i++) { std::cout << out_ref[i] << ", "; } std::cout <<out_ref[total_size-1]<<"]"<< std::endl;
+
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+}
 }
 #endif // NTT
 
