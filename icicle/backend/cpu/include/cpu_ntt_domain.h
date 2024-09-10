@@ -41,14 +41,6 @@ namespace ntt_cpu {
     static eIcicleError cpu_ntt_release_domain(const Device& device);
     static eIcicleError get_root_of_unity_from_domain(const Device& device, uint64_t logn, S* rou /*OUT*/);
 
-    // template <typename U, typename E> - MIKI remove?
-    // eIcicleError
-    // cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
-
-    // template <typename U, typename E>
-    // eIcicleError
-    // cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir dir, NTTConfig<S>& config, E* output);
-
     const inline S* get_twiddles() const { return twiddles.get(); }
     const inline S* get_winograd8_twiddles() const { return winograd8_twiddles.get(); }
     const inline S* get_winograd8_twiddles_inv() const { return winograd8_twiddles_inv.get(); }
