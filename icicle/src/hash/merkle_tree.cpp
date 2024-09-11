@@ -1,6 +1,6 @@
 #include "icicle/errors.h"
-#include "icicle/hash/merkle_tree.h"
-#include "icicle/backend/hash/merkle_tree_backend.h"
+#include "icicle/merkle/merkle_tree.h"
+#include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/dispatcher.h"
 
 namespace icicle {

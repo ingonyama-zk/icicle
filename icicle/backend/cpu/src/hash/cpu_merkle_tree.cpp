@@ -1,4 +1,4 @@
-#include "icicle/backend/hash/merkle_tree_backend.h"
+#include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/errors.h"
 
 namespace icicle {

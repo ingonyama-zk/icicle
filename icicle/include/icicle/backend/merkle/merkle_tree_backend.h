@@ -4,7 +4,7 @@
 
 #include "icicle/common.h"
 #include "icicle/hash/hash.h"
-#include "icicle/hash/merkle_tree_config.h"
+#include "icicle/merkle/merkle_tree_config.h"
 
 namespace icicle {
 

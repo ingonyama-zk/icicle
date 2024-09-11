@@ -2,8 +2,8 @@
 
 #include <memory>
 #include "icicle/common.h" // For limb and stream types
-#include "icicle/backend/hash/merkle_tree_backend.h"
-#include "icicle/hash/merkle_tree_config.h"
+#include "icicle/backend/merkle/merkle_tree_backend.h"
+#include "icicle/merkle/merkle_tree_config.h"
 
 namespace icicle {
 

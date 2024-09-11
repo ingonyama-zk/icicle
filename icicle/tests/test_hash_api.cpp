@@ -6,7 +6,7 @@
 #include "icicle/utils/log.h"
 #include "icicle/hash/hash.h"
 #include "icicle/hash/keccak.h"
-#include "icicle/hash/merkle_tree.h"
+#include "icicle/merkle/merkle_tree.h"
 
 using namespace icicle;
 
