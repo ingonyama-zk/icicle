@@ -36,9 +36,15 @@ public:
   FF real;
   FF imaginary;
 
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField zero() { return ComplexExtensionField{FF::zero(), FF::zero()}; }
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField zero()
+  {
+    return ComplexExtensionField{FF::zero(), FF::zero()};
+  }
 
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField one() { return ComplexExtensionField{FF::one(), FF::zero()}; }
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField one()
+  {
+    return ComplexExtensionField{FF::one(), FF::zero()};
+  }
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
   {
@@ -50,7 +56,10 @@ public:
     return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
   }
 
-  static HOST_INLINE ComplexExtensionField rand_host() { return ComplexExtensionField{FF::rand_host(), FF::rand_host()}; }
+  static HOST_INLINE ComplexExtensionField rand_host()
+  {
+    return ComplexExtensionField{FF::rand_host(), FF::rand_host()};
+  }
 
   static void rand_host_many(ComplexExtensionField* out, int size)
   {
@@ -61,7 +70,8 @@ public:
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.imaginary)};
+    return ComplexExtensionField{
+      FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.imaginary)};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const ComplexExtensionField& xs)
@@ -101,7 +111,8 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide
+  mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     FWide real_prod = FF::mul_wide(xs.real, ys.real);
     FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
@@ -142,7 +153,10 @@ public:
     return (xs.real == ys.real) && (xs.imaginary == ys.imaginary);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys) { return !(xs == ys); }
+  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  {
+    return !(xs == ys);
+  }
 
   template <const ComplexExtensionField& multiplier>
   static HOST_DEVICE_INLINE ComplexExtensionField mul_const(const ComplexExtensionField& xs)

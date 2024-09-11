@@ -119,7 +119,8 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide
+  mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
     if (CONFIG::nonresidue_is_negative)
       return ExtensionWide{
@@ -179,7 +180,10 @@ public:
     return (xs.real == ys.real) && (xs.im1 == ys.im1) && (xs.im2 == ys.im2) && (xs.im3 == ys.im3);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const QuarticExtensionField& xs, const QuarticExtensionField& ys) { return !(xs == ys); }
+  friend HOST_DEVICE_INLINE bool operator!=(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  {
+    return !(xs == ys);
+  }
 
   template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField mul_unsigned(const QuarticExtensionField& xs)
