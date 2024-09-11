@@ -14,8 +14,7 @@ namespace icicle {
     eIcicleError hash_single(
       const limb_t* input_limbs,
       limb_t* output_limbs,
-      const HashConfig& config,
-      const limb_t* secondary_input_limbs = nullptr) const override
+      const HashConfig& config) const override
     {
       ICICLE_LOG_INFO << "Keccak CPU hash_single() called";
       // TODO implement
@@ -26,8 +25,7 @@ namespace icicle {
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
-      const HashConfig& config,
-      const limb_t* secondary_input_limbs = nullptr) const override
+      const HashConfig& config) const override
     {
       ICICLE_LOG_INFO << "Keccak CPU hash_many() called";
       // TODO implement

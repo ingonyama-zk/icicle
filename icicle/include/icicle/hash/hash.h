@@ -31,17 +31,15 @@ namespace icicle {
      *
      * @param input_limbs Pointer to the input data in limbs.
      * @param output_limbs Pointer to the output data in limbs.
-     * @param config Configuration options for the hash operation.
-     * @param secondary_input_limbs Optional pointer to secondary input data.
+     * @param config Configuration options for the hash operation.     
      * @return An error code of type eIcicleError indicating success or failure.
      */
     eIcicleError hash_single(
       const limb_t* input_limbs,
       limb_t* output_limbs,
-      const HashConfig& config,
-      const limb_t* secondary_input_limbs = nullptr) const
+      const HashConfig& config) const
     {
-      return m_backend->hash_single(input_limbs, output_limbs, config, secondary_input_limbs);
+      return m_backend->hash_single(input_limbs, output_limbs, config);
     }
 
     /**
@@ -52,18 +50,16 @@ namespace icicle {
      * @param input_limbs Pointer to the input data in limbs.
      * @param output_limbs Pointer to the output data in limbs.
      * @param nof_hashes Number of hashes to perform.
-     * @param config Configuration options for the hash operation.
-     * @param secondary_input_limbs Optional pointer to secondary input data.
+     * @param config Configuration options for the hash operation.     
      * @return An error code of type eIcicleError indicating success or failure.
      */
     eIcicleError hash_many(
       const limb_t* input_limbs,
       limb_t* output_limbs,
       int nof_hashes,
-      const HashConfig& config,
-      const limb_t* secondary_input_limbs = nullptr) const
+      const HashConfig& config) const
     {
-      return m_backend->hash_many(input_limbs, output_limbs, nof_hashes, config, secondary_input_limbs);
+      return m_backend->hash_many(input_limbs, output_limbs, nof_hashes, config);
     }
 
     /**
@@ -76,13 +72,7 @@ namespace icicle {
      * @brief Get the total number of output limbs.
      * @return The total number of output limbs as uint64_t.
      */
-    uint64_t total_output_limbs() const { return m_backend->total_output_limbs(); }
-
-    /**
-     * @brief Get the total number of secondary input limbs.
-     * @return The total number of secondary input limbs as uint64_t.
-     */
-    uint64_t total_secondary_input_limbs() const { return m_backend->total_secondary_input_limbs(); }
+    uint64_t total_output_limbs() const { return m_backend->total_output_limbs(); }    
 
   private:
     std::shared_ptr<HashBackend> m_backend; ///< Pointer to the backend that performs the actual hash operation.

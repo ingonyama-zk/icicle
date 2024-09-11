@@ -133,16 +133,15 @@ TEST_F(HashApiTest, sha3_512)
 class HashSumBackend : public HashBackend
 {
 public:
-  HashSumBackend(uint64_t total_input_limbs, uint64_t total_output_limbs, uint64_t total_secondary_input_limbs = 0)
-      : HashBackend(total_input_limbs, total_output_limbs, total_secondary_input_limbs)
+  HashSumBackend(uint64_t total_input_limbs, uint64_t total_output_limbs)
+      : HashBackend(total_input_limbs, total_output_limbs)
   {
   }
 
   virtual eIcicleError hash_single(
     const limb_t* input_limbs,
     limb_t* output_limbs,
-    const HashConfig& config,
-    const limb_t* secondary_input_limbs = nullptr) const
+    const HashConfig& config) const
   {
     output_limbs[0] = 0;
     for (int i = 0; i < m_total_input_limbs; ++i) {
@@ -158,22 +157,20 @@ public:
     const limb_t* input_limbs,
     limb_t* output_limbs,
     int nof_hashes,
-    const HashConfig& config,
-    const limb_t* secondary_input_limbs = nullptr) const
+    const HashConfig& config) const
   {
     for (int i = 0; i < nof_hashes; ++i) {
-      hash_single(input_limbs, output_limbs, config, secondary_input_limbs);
+      hash_single(input_limbs, output_limbs, config);
       input_limbs += m_total_input_limbs;
-      output_limbs += m_total_output_limbs;
-      secondary_input_limbs += m_total_secondary_input_limbs;
+      output_limbs += m_total_output_limbs;      
     }
     return eIcicleError::SUCCESS;
   }
 };
 
-Hash create_hash_sum(uint64_t total_input_limbs, uint64_t total_output_limbs, uint64_t total_secondary_input_limbs = 0)
+Hash create_hash_sum(uint64_t total_input_limbs, uint64_t total_output_limbs)
 {
-  auto backend = std::make_shared<HashSumBackend>(total_input_limbs, total_output_limbs, total_secondary_input_limbs);
+  auto backend = std::make_shared<HashSumBackend>(total_input_limbs, total_output_limbs);
   return Hash(backend);
 }
 
