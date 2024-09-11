@@ -1,7 +1,7 @@
-#!/bin/bash -v
+#!/bin/bash
 
 # Exit immediately if a command exits with a non-zero status
-set -e
+# set -e
 
 # Function to display usage information
 show_help() {
@@ -56,9 +56,12 @@ if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [
 else
   echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICILE_DIR}" -B build/icicle
+  #cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICILE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Debug -DCURVE=bn254 -S "${ICILE_DIR}" -B build/icicle
 fi
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/example
+# Use the following line for debug.
+# cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build/example
 
 cmake --build build/icicle -j
 cmake --build build/example -j

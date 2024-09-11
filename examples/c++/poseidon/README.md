@@ -2,23 +2,25 @@
 
 ## Key-Takeaway
 
-`Icicle` provides CUDA C++ template function NTT for [Number Theoretical Transform](https://github.com/ingonyama-zk/ingopedia/blob/master/src/fft.md), also known as Discrete Fourier Transform.
+`Icicle` provides CUDA C++ template function of the Poseidon hash (single hash and multiple hashes).
 
 ## Concise Usage Explanation
 
 1. Include the curve api
-2. Init NTT domain
-3. Call ntt api
+2. Prepare input, round constants and all the needed matrices (in this example they are loaded from a separate file).
+3. Intantiate Poseidon class constructor
+4. Call poseidon api (either signle hash or multiple hashes)
 
 ```c++
 #include "icicle/api/bn254.h"
 ...
-auto ntt_init_domain_cfg = default_ntt_init_domain_config();
+#include "run_single_hash.in_params.h"
 ...
-bn254_ntt_init_domain(&basic_root, ntt_init_domain_cfg);
-NTTConfig<scalar_t> config = default_ntt_config<scalar_t>();
+icicle::Poseidon<scalar_t> poseidon(arity, alpha, nof_partial_rounds, nof_upper_full_rounds, nof_end_full_rounds, rounds_constants, mds_matrix, pre_matrix, sparse_matrices);
 ...
-bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get())
+poseidon.run_single_hash(pre_round_input_state, single_hash_out_limbs, config);
+or
+poseidon.run_multiple_hash(multiple_hash_in_limbs, multiple_hash_out_limbs, nof_hashes, config));
 ```
 
 
@@ -34,7 +36,6 @@ bn254_ntt(input.get(), ntt_size, NTTDir::kForward, config, output.get())
 ## What's in the example
 
 1. Define the size of the example
-2. Initialize input
-3. Run Radix2 NTT
-4. Run MixedRadix NTT
-5. Validate the data output
+2. Initialize input and constants
+3. Run either single hash or multiple hashes
+4. Validate the data output
