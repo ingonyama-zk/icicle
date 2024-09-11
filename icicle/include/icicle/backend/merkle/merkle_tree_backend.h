@@ -1,18 +1,19 @@
 #pragma once
 
 #include <functional>
-
-#include "icicle/common.h"
+#include <memory>
+#include <vector>
 #include "icicle/hash/hash.h"
 #include "icicle/merkle/merkle_tree_config.h"
 
 namespace icicle {
 
   /**
-   * @brief Abstract class representing a backend for Merkle tree operations.
+   * @brief Abstract base class for Merkle tree backend implementations.
    *
-   * This backend will handle the actual logic for building, verifying, and retrieving
-   * elements in the Merkle tree. Specific device implementations (e.g., CPU, GPU) will derive from this class.
+   * This backend handles the core logic for Merkle tree operations such as building the tree,
+   * retrieving the root, computing Merkle paths, and verifying elements. Derived classes
+   * will provide specific implementations for various devices (e.g., CPU, GPU).
    */
   class MerkleTreeBackend
   {
@@ -20,65 +21,110 @@ namespace icicle {
     /**
      * @brief Constructor for the MerkleTreeBackend class.
      *
-     * @param layer_hashes Vector of Hash objects representing the hashes for each layer.
-     * @param leaf_element_size_in_limbs The size of each leaf element in limbs.
-     * @param output_store_min_layer Minimum layer index to store in the output.
+     * @param layer_hashes Vector of Hash objects representing the hash function for each layer.
+     * @param leaf_element_size Size of each leaf element in bytes.
+     * @param output_store_min_layer Minimum layer index to store in the output (default is 0).
      */
     MerkleTreeBackend(
-      const std::vector<Hash>& layer_hashes, uint64_t leaf_element_size_in_limbs, uint64_t output_store_min_layer = 0)
-        : m_layer_hashes(layer_hashes), m_leaf_element_size_in_limbs(leaf_element_size_in_limbs),
+      const std::vector<Hash>& layer_hashes, uint64_t leaf_element_size, uint64_t output_store_min_layer = 0)
+        : m_layer_hashes(layer_hashes), m_leaf_element_size(leaf_element_size),
           m_output_store_min_layer(output_store_min_layer)
     {
     }
 
     virtual ~MerkleTreeBackend() = default;
 
-    // Pure virtual methods to be implemented by derived classes
-    virtual eIcicleError
-    build(const limb_t* leaves, const MerkleTreeConfig& config, const limb_t* secondary_leaves = nullptr) = 0;
-    virtual eIcicleError get_root(const limb_t*& root) const = 0;
-    virtual eIcicleError
-    get_path(const limb_t* leaves, uint64_t element_idx, limb_t* path, const MerkleTreeConfig& config) const = 0;
-    virtual eIcicleError
-    verify(const limb_t* path, uint64_t element_idx, bool& verification_valid, const MerkleTreeConfig& config) = 0;
+    /**
+     * @brief Build the Merkle tree from the provided leaves.
+     *
+     * @param leaves Pointer to the input leaves (data) of the tree.
+     * @param config Configuration for the Merkle tree.
+     * @return An error code of type eIcicleError indicating success or failure.
+     */
+    virtual eIcicleError build(const std::byte* leaves, const MerkleTreeConfig& config) = 0;
 
     /**
-     * @brief Get the hashes used in each layer of the Merkle tree.
+     * @brief Retrieve the root of the Merkle tree.
      *
-     * @return The vector of Hash objects for each layer.
+     * @param root Output parameter for the root of the tree.
+     * @return An error code of type eIcicleError indicating success or failure.
+     */
+    virtual eIcicleError get_root(const std::byte*& root) const = 0;
+
+    /**
+     * @brief Retrieve the Merkle path for a specific element.
+     *
+     * @param leaves Pointer to the leaves of the tree.
+     * @param element_idx Index of the element whose path is to be retrieved.
+     * @param path Output parameter for the Merkle path.
+     * @param config Configuration for the Merkle tree.
+     * @return An error code of type eIcicleError indicating success or failure.
+     */
+    virtual eIcicleError
+    get_path(const std::byte* leaves, uint64_t element_idx, std::byte* path, const MerkleTreeConfig& config) const = 0;
+
+    /**
+     * @brief Verify an element against its Merkle path.
+     *
+     * @param path Pointer to the Merkle path.
+     * @param element_idx Index of the element being verified.
+     * @param verification_valid Output parameter indicating if the verification succeeded.
+     * @param config Configuration for the Merkle tree.
+     * @return An error code of type eIcicleError indicating success or failure.
+     */
+    virtual eIcicleError
+    verify(const std::byte* path, uint64_t element_idx, bool& verification_valid, const MerkleTreeConfig& config) = 0;
+
+    /**
+     * @brief Get the hash functions used for each layer of the Merkle tree.
+     *
+     * @return A vector of Hash objects representing the hash function for each layer.
      */
     const std::vector<Hash>& get_layer_hashes() const { return m_layer_hashes; }
 
     /**
-     * @brief Get the size of the leaf elements in limbs.
+     * @brief Get the size of each leaf element in bytes.
      *
-     * @return The size of each leaf element in limbs.
+     * @return Size of each leaf element in bytes.
      */
-    uint64_t get_leaf_element_size_in_limbs() const { return m_leaf_element_size_in_limbs; }
+    uint64_t get_leaf_element_size() const { return m_leaf_element_size; }
 
     /**
      * @brief Get the minimum layer index to store in the output.
      *
-     * @return The minimum layer index to store in the output.
+     * @return Minimum layer index to store in the output.
      */
     uint64_t get_output_store_min_layer() const { return m_output_store_min_layer; }
 
   private:
-    std::vector<Hash> m_layer_hashes;      ///< Vector of hashes for each layer.
-    uint64_t m_leaf_element_size_in_limbs; ///< Size of each leaf element in limbs.
-    uint64_t m_output_store_min_layer;     ///< Minimum layer index to store in the output.
+    std::vector<Hash> m_layer_hashes;  ///< Vector of hash functions for each layer.
+    uint64_t m_leaf_element_size;      ///< Size of each leaf element in bytes.
+    uint64_t m_output_store_min_layer; ///< Minimum layer index to store in the output.
   };
 
-  /*************************** Backend registration ***************************/
+  /*************************** Backend Factory Registration ***************************/
+
   using MerkleTreeFactoryImpl = std::function<eIcicleError(
     const Device& device,
     const std::vector<Hash>& layer_hashes,
-    uint64_t leaf_element_size_in_limbs,
+    uint64_t leaf_element_size,
     uint64_t output_store_min_layer,
     std::shared_ptr<MerkleTreeBackend>& backend /*OUT*/)>;
 
+  /**
+   * @brief Register a MerkleTree backend factory for a specific device type.
+   *
+   * @param deviceType String identifier for the device type.
+   * @param impl Factory function that creates the MerkleTreeBackend.
+   */
   void register_merkle_tree_factory(const std::string& deviceType, MerkleTreeFactoryImpl impl);
 
+  /**
+   * @brief Macro to register a MerkleTree backend factory.
+   *
+   * This macro registers a factory function for a specific backend by calling
+   * `register_merkle_tree_factory` at runtime.
+   */
 #define REGISTER_MERKLE_TREE_FACTORY_BACKEND(DEVICE_TYPE, FUNC)                                                        \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_merkle_tree) = []() -> bool {                                                              \

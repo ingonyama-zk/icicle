@@ -6,42 +6,34 @@
 namespace icicle {
 
   /**
-   * @brief Configuration struct for the Merkle tree.
+   * @brief Configuration structure for Merkle tree operations.
    *
-   * This struct is used to configure the execution of Merkle tree operations, such as building the tree,
-   * computing paths, and verifying paths. It supports device-specific configurations for asynchronous
-   * operations and handling data either on the device (GPU) or the host (CPU).
+   * This structure holds the configuration options for Merkle tree operations, including tree construction,
+   * path computation, and verification. It allows specifying whether the data (leaves, tree, and paths)
+   * reside on the device (e.g., GPU) or the host (e.g., CPU), and supports both synchronous and asynchronous
+   * execution modes, as well as backend-specific extensions.
    */
   struct MerkleTreeConfig {
-    icicleStreamHandle stream; /**< Stream for asynchronous execution. Null by default for synchronous execution. */
-    bool
-      are_leaves_on_device; ///< True if leaves are on the device (GPU), false if on the host (CPU). Default is false.
-    bool are_tree_results_on_device; ///< True if tree results are on the device (GPU), false if on the host (CPU).
-                                     ///< Default is false.
-    bool is_path_on_device; ///< True if the path is stored on the device, false if on the host. Default is false.
-    bool is_async; ///< True to run the Merkle tree builder asynchronously, false to run it synchronously. Default is
-                   ///< false.
-    ConfigExtension* ext = nullptr; ///< Backend-specific extensions for advanced configurations. Default is null.
+    icicleStreamHandle stream =
+      nullptr; /**< Stream for asynchronous execution. Default is nullptr for synchronous execution. */
+    bool are_leaves_on_device =
+      false; /**< True if leaves are on the device (GPU), false if on the host (CPU). Default is false. */
+    bool are_tree_results_on_device =
+      false; /**< True if tree results are on the device (GPU), false if on the host (CPU). Default is false. */
+    bool is_path_on_device =
+      false; /**< True if the Merkle path is stored on the device, false if on the host. Default is false. */
+    bool is_async = false;          /**< True for asynchronous execution, false for synchronous. Default is false. */
+    ConfigExtension* ext = nullptr; /**< Backend-specific extensions for advanced configurations. Default is nullptr. */
   };
 
   /**
-   * @brief Generates a default configuration for the Merkle tree.
+   * @brief Generates a default configuration for Merkle tree operations.
    *
-   * This function provides a default configuration for Merkle tree operations where the inputs, results,
-   * and paths are assumed to be on the host (CPU), and the execution is synchronous by default.
+   * This function provides a default configuration for Merkle tree operations with synchronous execution
+   * and all data (leaves, tree results, and paths) residing on the host (CPU).
    *
-   * @return A default MerkleTreeConfig with synchronous execution and host-based data handling.
+   * @return A default MerkleTreeConfig with host-based execution and no backend-specific extensions.
    */
-  static MerkleTreeConfig default_merkle_tree_config()
-  {
-    MerkleTreeConfig config = {
-      nullptr, // stream (null for synchronous execution)
-      false,   // are_leaves_on_device (false for host)
-      false,   // are_tree_results_on_device (false for host)
-      false,   // is_path_on_device (false for host)
-      false,   // is_async (false for synchronous execution)
-      nullptr  // ext (no backend-specific extensions by default)
-    };
-    return config;
-  }
+  static MerkleTreeConfig default_merkle_tree_config() { return MerkleTreeConfig(); }
+
 } // namespace icicle

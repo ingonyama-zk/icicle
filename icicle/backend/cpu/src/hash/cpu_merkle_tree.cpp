@@ -7,33 +7,30 @@ namespace icicle {
   {
   public:
     CPUMerkleTreeBackend(
-      const std::vector<Hash>& layer_hashes, uint64_t leaf_element_size_in_limbs, uint64_t output_store_min_layer = 0)
-        : MerkleTreeBackend(layer_hashes, leaf_element_size_in_limbs, output_store_min_layer)
+      const std::vector<Hash>& layer_hashes, uint64_t leaf_element_size, uint64_t output_store_min_layer = 0)
+        : MerkleTreeBackend(layer_hashes, leaf_element_size, output_store_min_layer)
     {
     }
 
-    ~CPUMerkleTreeBackend() = default;
-
-    eIcicleError
-    build(const limb_t* leaves, const MerkleTreeConfig& config, const limb_t* secondary_leaves = nullptr) override
+    eIcicleError build(const std::byte* leaves, const MerkleTreeConfig& config) override
     {
       ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::build()";
       // TODO implement
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError get_root(const limb_t*& root) const override { return eIcicleError::SUCCESS; }
+    eIcicleError get_root(const std::byte*& root) const override { return eIcicleError::SUCCESS; }
 
-    eIcicleError
-    get_path(const limb_t* leaves, uint64_t element_idx, limb_t* path, const MerkleTreeConfig& config) const override
+    eIcicleError get_path(
+      const std::byte* leaves, uint64_t element_idx, std::byte* path, const MerkleTreeConfig& config) const override
     {
       ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::get_path()";
       // TODO implement
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError
-    verify(const limb_t* path, uint64_t element_idx, bool& verification_valid, const MerkleTreeConfig& config) override
+    eIcicleError verify(
+      const std::byte* path, uint64_t element_idx, bool& verification_valid, const MerkleTreeConfig& config) override
     {
       ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::verify()";
       // TODO implement
@@ -44,11 +41,11 @@ namespace icicle {
   eIcicleError create_merkle_tree_backend(
     const Device& device,
     const std::vector<Hash>& layer_hashes,
-    uint64_t leaf_element_size_in_limbs,
+    uint64_t leaf_element_size,
     uint64_t output_store_min_layer,
     std::shared_ptr<MerkleTreeBackend>& backend /*OUT*/)
   {
-    backend = std::make_shared<CPUMerkleTreeBackend>(layer_hashes, leaf_element_size_in_limbs, output_store_min_layer);
+    backend = std::make_shared<CPUMerkleTreeBackend>(layer_hashes, leaf_element_size, output_store_min_layer);
     return eIcicleError::SUCCESS;
   }
 

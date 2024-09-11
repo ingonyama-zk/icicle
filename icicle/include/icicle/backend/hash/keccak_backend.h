@@ -9,7 +9,7 @@ namespace icicle {
 
   /*************************** Backend registration ***************************/
   using KeccakFactoryImpl = std::function<eIcicleError(
-    const Device& device, uint64_t total_input_limbs, std::shared_ptr<HashBackend>& backend /*OUT*/)>;
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend /*OUT*/)>;
 
   // Keccak 256
   void register_keccak_256_factory(const std::string& deviceType, KeccakFactoryImpl impl);
