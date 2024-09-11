@@ -65,21 +65,26 @@ public:
 
 TEST_F(HashApiTest, Keccak256)
 {
-  const uint64_t input_chunk_size = 64; // Number of input bytes
+  const uint64_t input_size = 64; // Number of input bytes
   const uint64_t output_size = 256;
 
   // Create unique pointers for input and output arrays
-  auto input = std::make_unique<std::byte[]>(input_chunk_size);
+  auto input = std::make_unique<std::byte[]>(input_size);
   auto output = std::make_unique<std::byte[]>(output_size);
+
   // Randomize the input array
-  randomize(input.get(), input_chunk_size);
+  randomize(input.get(), input_size);
 
   auto config = default_hash_config();
-  config.input_chunk_size = input_chunk_size;
   // Create Keccak-256 hash object
-  auto keccak256 = create_keccak_256_hash();
+  auto keccak256 = Keccak256::create();
   // Run single hash operation
-  ICICLE_CHECK(keccak256.hash(input.get(), config, output.get()));
+  ICICLE_CHECK(keccak256.hash(input.get(), input_size, config, output.get()));
+
+  // Batch hash (hashing each half seperately)
+  auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
+  config.batch = 2;
+  ICICLE_CHECK(keccak256.hash(input.get(), input_size >> 1, config, output_batch.get()));
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 
@@ -91,39 +96,38 @@ class HashSumBackend : public HashBackend
 public:
   HashSumBackend(uint64_t input_chunk_size, uint64_t output_size) : HashBackend(output_size, input_chunk_size) {}
 
-  eIcicleError hash(const std::byte* input, const HashConfig& config, std::byte* output) const override
+  eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
   {
-    const auto chunk_size = input_chunk_size(config);
+    const auto chunk_size = get_single_chunk_size(size);
     const auto otput_digest_size = output_size();
     for (int i = 0; i < config.batch; ++i) {
-      hash_single(input, config, output);
+      hash_single(input, size, config, output);
       input += chunk_size;
       output += otput_digest_size;
     }
     return eIcicleError::SUCCESS;
   }
 
-  void hash_single(const std::byte* input, const HashConfig& config, std::byte* output) const
+  void hash_single(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const
   {
-    const auto chunk_size = input_chunk_size(config);
     const uint32_t* input_u32 = (const uint32_t*)input;
     uint32_t* output_u32 = (uint32_t*)output;
 
     output_u32[0] = 0;
-    for (int i = 0; i < (chunk_size >> 2); ++i) {
+    for (int i = 0; i < (size >> 2); ++i) {
       output_u32[0] += input_u32[i];
     }
     for (int i = 1; i < (output_size() >> 2); ++i) {
       output_u32[i] += output_u32[0];
     }
   }
-};
 
-Hash create_hash_sum(uint64_t input_chunk_size, uint64_t output_size_limbs)
-{
-  auto backend = std::make_shared<HashSumBackend>(input_chunk_size, output_size_limbs);
-  return Hash(backend);
-}
+  static Hash create(uint64_t input_chunk_size, uint64_t output_size)
+  {
+    auto backend = std::make_shared<HashSumBackend>(input_chunk_size, output_size);
+    return Hash(backend);
+  }
+};
 
 TEST_F(HashApiTest, MerkleTree)
 {
@@ -133,9 +137,9 @@ TEST_F(HashApiTest, MerkleTree)
   // randomize(leaves.get(), nof_leaves_limbs);
 
   auto config = default_merkle_tree_config();
-  auto layer0_hash = create_hash_sum(20, 8);  // input 20 bytes, output 8 bytes
-  auto layer1_hash = create_hash_sum(24, 12); // input 24 bytes, output 12 bytes
-  auto layer2_hash = create_hash_sum(24, 8);  // input 24 bytes, output 8 bytes
+  auto layer0_hash = HashSumBackend::create(20, 8);  // input 20 bytes, output 8 bytes
+  auto layer1_hash = HashSumBackend::create(24, 12); // input 24 bytes, output 12 bytes
+  auto layer2_hash = HashSumBackend::create(24, 8);  // input 24 bytes, output 8 bytes
   auto merkle_tree =
     create_merkle_tree({layer0_hash, layer1_hash, layer2_hash}, 1 /*limbs per leaf*/, 2 /*min level to store*/);
 

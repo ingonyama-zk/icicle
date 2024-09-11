@@ -11,7 +11,8 @@ namespace icicle {
     {
     }
 
-    eIcicleError hash(const std::byte* input_limbs, const HashConfig& config, std::byte* output_limbs) const override
+    eIcicleError
+    hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output_limbs) const override
     {
       ICICLE_LOG_INFO << "Keccak CPU hash() called";
       // TODO implement

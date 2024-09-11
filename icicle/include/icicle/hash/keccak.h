@@ -14,6 +14,9 @@ namespace icicle {
    * @return Hash object encapsulating the Keccak-256 backend.
    */
   Hash create_keccak_256_hash(uint64_t input_chunk_size = 0);
+  struct Keccak256 {
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_keccak_256_hash(); }
+  };
 
   /**
    * @brief Creates a Keccak-512 hash object.
@@ -25,6 +28,9 @@ namespace icicle {
    * @return Hash object encapsulating the Keccak-512 backend.
    */
   Hash create_keccak_512_hash(uint64_t input_chunk_size = 0);
+  struct Keccak512 {
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_keccak_512_hash(); }
+  };
 
   /**
    * @brief Creates a SHA3-256 hash object.
@@ -36,6 +42,9 @@ namespace icicle {
    * @return Hash object encapsulating the SHA3-256 backend.
    */
   Hash create_sha3_256_hash(uint64_t input_chunk_size = 0);
+  struct Sha3_256 {
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_256_hash(); }
+  };
 
   /**
    * @brief Creates a SHA3-512 hash object.
@@ -47,5 +56,8 @@ namespace icicle {
    * @return Hash object encapsulating the SHA3-512 backend.
    */
   Hash create_sha3_512_hash(uint64_t input_chunk_size = 0);
+  struct Sha3_512 {
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_512_hash(); }
+  };
 
 } // namespace icicle

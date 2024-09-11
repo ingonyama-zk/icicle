@@ -30,20 +30,22 @@ namespace icicle {
      * This function delegates the hash operation to the backend and returns the result.
      *
      * @param input Pointer to the input data as bytes.
+     * @param size Number of bytes to hash. For batch case, this is a single chunk of data. Set 0 for default chunk
+     * size.
      * @param config Configuration options for the hash operation.
      * @param output Pointer to the output data in bytes.
      * @return An error code of type eIcicleError indicating success or failure.
      */
-    inline eIcicleError hash(const std::byte* input, const HashConfig& config, std::byte* output) const
+    inline eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const
     {
-      return m_backend->hash(input, config, output);
+      return m_backend->hash(input, size, config, output);
     }
 
     /**
-     * @brief Get the input chunk size.
-     * @return The size of the input chunk (optional).
+     * @brief Get the default input chunk size.
+     * @return The size of the default input chunk (optional).
      */
-    inline uint64_t input_chunk_size() const { return m_backend->input_chunk_size(); }
+    inline uint64_t input_default_chunk_size() const { return m_backend->input_default_chunk_size(); }
 
     /**
      * @brief Get the output size in bytes.
