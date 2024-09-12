@@ -66,7 +66,7 @@ class Poseidon : public Hash {
     PoseidonConstants<S>  m_poseidon_constants;      ///< Structure that holds Poseidon hash round constants and MDS matrix values.
 
     void field_vec_sqr_full_matrix_mul(const S* matrix, const S* vector, S* result) const;    // matrix is needed here because this func is used both mds and pre-matrix mults.
-    void field_vec_sqr_sparse_matrix_mul(const S* vector, const S* matrix, S* result, const int arity) const;
+    void field_vec_sqr_sparse_matrix_mul(const S* vector, const S* matrix, S* result) const;
     void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, const S*& rounds_constants) const;   // nof_full_rounds needed because the number of the upper and the lower full rounds could be different.
 };
 
@@ -122,7 +122,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
     // Add round constants
     tmp_fields[0] = tmp_fields[0] + *rounds_constants++;
     // Multiplication by sparse matrix.
-    field_vec_sqr_sparse_matrix_mul(tmp_fields, &m_poseidon_constants.m_sparse_round_matrix[partial_rounds_idx*m_arity*m_arity], tmp_fields, m_arity);
+    field_vec_sqr_sparse_matrix_mul(tmp_fields, &m_poseidon_constants.m_sparse_round_matrix[partial_rounds_idx*m_arity*m_arity], tmp_fields);
   }
 
   // Bottom full rounds.
@@ -153,17 +153,17 @@ eIcicleError Poseidon<S>::run_multiple_hash(const limb_t *input_limbs, limb_t *o
 }
 
 template <typename S>
-void Poseidon<S>::field_vec_sqr_sparse_matrix_mul(const S* vec_in, const S* matrix_in, S* result, const int arity) const {
-  S tmp_col_res[arity];     // Have to use temp storage because vec_in and result are the same storage.
+void Poseidon<S>::field_vec_sqr_sparse_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const {
+  S tmp_col_res[m_arity];     // Have to use temp storage because vec_in and result are the same storage.
   tmp_col_res[0] = S::from(0);
-  for (int col_idx = 0; col_idx < arity; col_idx++) {   // Calc first column result.
-    tmp_col_res[0] = tmp_col_res[0] + vec_in[col_idx] * matrix_in[col_idx * arity];
+  for (int col_idx = 0; col_idx < m_arity; col_idx++) {   // Calc first column result.
+    tmp_col_res[0] = tmp_col_res[0] + vec_in[col_idx] * matrix_in[col_idx * m_arity];
   }
-  for (int col_idx = 1; col_idx < arity; col_idx++) {   // Calc rest columns results.
+  for (int col_idx = 1; col_idx < m_arity; col_idx++) {   // Calc rest columns results.
     tmp_col_res[col_idx] = S::from(0);
     tmp_col_res[col_idx] = vec_in[0] * matrix_in[col_idx] + vec_in[col_idx];
   }
-  for (int col_idx = 0; col_idx < arity; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
+  for (int col_idx = 0; col_idx < m_arity; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
         result[col_idx] = tmp_col_res[col_idx];
   }
 }
