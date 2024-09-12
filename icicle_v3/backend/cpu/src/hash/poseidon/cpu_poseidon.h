@@ -8,20 +8,6 @@
 namespace icicle {
  
 /**
- * @brief Poseidon hash constant struct.
- */
-template <typename S>
-struct PoseidonConstants {
-  const S* m_rounds_constants;     ///< Rounds constants of this Poseidon hash.
-  const S* m_mds_matrix;           ///< Full rounds MDS matrix.
-  const S* m_pre_matrix;           ///< Pre-matrix (used at the last round of the upper full rounds).
-  const S* m_sparse_round_matrix;  ///< Partial rounds MDS matrix.
-  PoseidonConstants(const S* m_rounds_constants, const S* m_mds_matrix, const S* m_pre_matrix, const S* m_sparse_round_matrix) :
-    m_rounds_constants(m_rounds_constants), m_mds_matrix(m_mds_matrix),
-    m_pre_matrix(m_pre_matrix), m_sparse_round_matrix(m_sparse_round_matrix) {}
-};
-
-/**
  * @brief Poseidon hash class.
  */
 // template <typename S = scalar_t>
@@ -63,7 +49,10 @@ class Poseidon : public Hash {
     const unsigned int    m_nof_partial_rounds;     ///< Partial number of rounds of this Poseidon hash.
     const unsigned int    m_nof_upper_full_rounds;     ///< Number of full rounds at the beginning of this Poseidon hash.
     const unsigned int    m_nof_end_full_rounds;     ///< Number of full rounds at the end of this Poseidon hash.
-    PoseidonConstants<S>  m_poseidon_constants;      ///< Structure that holds Poseidon hash round constants and MDS matrix values.
+    const S*              m_rounds_constants;     ///< Rounds constants of this Poseidon hash.
+    const S*              m_mds_matrix;           ///< Full rounds MDS matrix.
+    const S*              m_pre_matrix;           ///< Pre-matrix (used at the last round of the upper full rounds).
+    const S*              m_sparse_round_matrix;  ///< Partial rounds MDS matrix.
 
     void field_vec_sqr_full_matrix_mul(const S* matrix, const S* vector, S* result) const;    // matrix is needed here because this func is used both mds and pre-matrix mults.
     void field_vec_sqr_sparse_matrix_mul(const S* vector, const S* matrix, S* result) const;
@@ -83,7 +72,7 @@ Poseidon<S>::Poseidon (
   const S*            sparse_matrix
   ) : Hash(arity*(S::TLC), arity*(S::TLC), 0), m_arity(arity), m_alpha(alpha), m_nof_partial_rounds(nof_partial_rounds),
       m_nof_upper_full_rounds(nof_upper_full_rounds), m_nof_end_full_rounds(nof_end_full_rounds),
-      m_poseidon_constants{rounds_constants, mds_matrix, pre_matrix, sparse_matrix} {}
+      m_rounds_constants(rounds_constants), m_mds_matrix(mds_matrix), m_pre_matrix(pre_matrix), m_sparse_round_matrix(sparse_matrix) {}
 
 template <typename S>
 eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* output_limbs, const HashConfig& config) const {
@@ -96,8 +85,8 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
   memcpy(tmp_fields, in_fields, m_arity * sizeof(S));
 
   // Add pre-round constants.
-  const S* pre_round_constants = m_poseidon_constants.m_pre_matrix;    // Needed because m_poseidon_constants.m_pre_matrix couldn't be changed.
-  const S* rounds_constants = m_poseidon_constants.m_rounds_constants;    // Needed because m_poseidon_constants.m_rounds_constants couldn't be changed.  
+  const S* pre_round_constants = m_pre_matrix;    // Needed because m_pre_matrix couldn't be changed.
+  const S* rounds_constants = m_rounds_constants;    // Needed because m_rounds_constants couldn't be changed.  
   for (int arity_idx=0; arity_idx<m_arity; arity_idx++) {
     tmp_fields[arity_idx] = tmp_fields[arity_idx] + *rounds_constants++;
   }
@@ -113,7 +102,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
     tmp_fields[arity_idx] = tmp_fields[arity_idx] + *rounds_constants++;
   }
   // Multiplication by matrix
-  field_vec_sqr_full_matrix_mul(tmp_fields, m_poseidon_constants.m_pre_matrix, tmp_fields);
+  field_vec_sqr_full_matrix_mul(tmp_fields, m_pre_matrix, tmp_fields);
 
   // Partial rounds. Perform calculation only for the first element of *tmp_fields.
   for (int partial_rounds_idx=0; partial_rounds_idx<m_nof_partial_rounds; partial_rounds_idx++) {
@@ -122,7 +111,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
     // Add round constants
     tmp_fields[0] = tmp_fields[0] + *rounds_constants++;
     // Multiplication by sparse matrix.
-    field_vec_sqr_sparse_matrix_mul(tmp_fields, &m_poseidon_constants.m_sparse_round_matrix[partial_rounds_idx*m_arity*m_arity], tmp_fields);
+    field_vec_sqr_sparse_matrix_mul(tmp_fields, &m_sparse_round_matrix[partial_rounds_idx*m_arity*m_arity], tmp_fields);
   }
 
   // Bottom full rounds.
@@ -134,7 +123,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
     tmp_fields[arity_idx] = S::pow(tmp_fields[arity_idx], m_alpha);
   }
   // Multiplication by MDS matrix
-  field_vec_sqr_full_matrix_mul(tmp_fields, m_poseidon_constants.m_mds_matrix, tmp_fields);
+  field_vec_sqr_full_matrix_mul(tmp_fields, m_mds_matrix, tmp_fields);
 
   memcpy(output_limbs, &tmp_fields[1].limbs_storage.limbs, S::TLC * sizeof(limb_t));
 
