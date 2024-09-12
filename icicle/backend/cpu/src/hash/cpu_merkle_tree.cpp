@@ -12,30 +12,29 @@ namespace icicle {
     {
     }
 
-    eIcicleError build(const std::byte* leaves, const MerkleTreeConfig& config) override
+    eIcicleError build(const std::byte* leaves, uint64_t size, const MerkleTreeConfig& config) override
     {
       ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::build()";
       // TODO implement
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError get_root(const std::byte*& root) const override { return eIcicleError::SUCCESS; }
+    eIcicleError get_merkle_root(std::byte* root /*output*/) const override
+    {
+      ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::get_root()";
+      return eIcicleError::SUCCESS;
+    }
 
-    eIcicleError get_path(
-      const std::byte* leaves, uint64_t element_idx, std::byte* path, const MerkleTreeConfig& config) const override
+    eIcicleError get_merkle_path(
+      const std::byte* leaves,
+      uint64_t element_idx,
+      const MerkleTreeConfig& config,
+      MerklePath& merkle_path /*output*/) const override
     {
       ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::get_path()";
       // TODO implement
       return eIcicleError::SUCCESS;
     }
-
-    eIcicleError verify(
-      const std::byte* path, uint64_t element_idx, bool& verification_valid, const MerkleTreeConfig& config) override
-    {
-      ICICLE_LOG_INFO << "in CPU CPUMerkleTreeBackend::verify()";
-      // TODO implement
-      return eIcicleError::SUCCESS;
-    };
   };
 
   eIcicleError create_merkle_tree_backend(

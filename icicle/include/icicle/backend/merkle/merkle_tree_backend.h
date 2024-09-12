@@ -5,6 +5,7 @@
 #include <vector>
 #include "icicle/hash/hash.h"
 #include "icicle/merkle/merkle_tree_config.h"
+#include "icicle/merkle/merkle_path.h"
 
 namespace icicle {
 
@@ -36,44 +37,33 @@ namespace icicle {
 
     /**
      * @brief Build the Merkle tree from the provided leaves.
-     *
-     * @param leaves Pointer to the input leaves (data) of the tree.
-     * @param config Configuration for the Merkle tree.
-     * @return An error code of type eIcicleError indicating success or failure.
+     * @param leaves Pointer to the leaves of the tree (input data).
+     * @param size The size of the leaves.
+     * @param config Configuration for the Merkle tree operation.
+     * @return Error code of type eIcicleError indicating success or failure.
      */
-    virtual eIcicleError build(const std::byte* leaves, const MerkleTreeConfig& config) = 0;
+    virtual eIcicleError build(const std::byte* leaves, uint64_t size, const MerkleTreeConfig& config) = 0;
 
     /**
      * @brief Retrieve the root of the Merkle tree.
-     *
-     * @param root Output parameter for the root of the tree.
-     * @return An error code of type eIcicleError indicating success or failure.
+     * @param root Pointer to where the Merkle root will be written.
+     * @return Error code of type eIcicleError.
      */
-    virtual eIcicleError get_root(const std::byte*& root) const = 0;
+    virtual eIcicleError get_merkle_root(std::byte* root /*output*/) const = 0;
 
     /**
      * @brief Retrieve the Merkle path for a specific element.
-     *
      * @param leaves Pointer to the leaves of the tree.
-     * @param element_idx Index of the element whose path is to be retrieved.
-     * @param path Output parameter for the Merkle path.
-     * @param config Configuration for the Merkle tree.
-     * @return An error code of type eIcicleError indicating success or failure.
+     * @param element_idx Index of the element for which the Merkle path is required.
+     * @param config Configuration for the Merkle tree operation.
+     * @param merkle_path Reference to the MerklePath object where the path will be stored.
+     * @return Error code of type eIcicleError.
      */
-    virtual eIcicleError
-    get_path(const std::byte* leaves, uint64_t element_idx, std::byte* path, const MerkleTreeConfig& config) const = 0;
-
-    /**
-     * @brief Verify an element against its Merkle path.
-     *
-     * @param path Pointer to the Merkle path.
-     * @param element_idx Index of the element being verified.
-     * @param verification_valid Output parameter indicating if the verification succeeded.
-     * @param config Configuration for the Merkle tree.
-     * @return An error code of type eIcicleError indicating success or failure.
-     */
-    virtual eIcicleError
-    verify(const std::byte* path, uint64_t element_idx, bool& verification_valid, const MerkleTreeConfig& config) = 0;
+    virtual eIcicleError get_merkle_path(
+      const std::byte* leaves,
+      uint64_t element_idx,
+      const MerkleTreeConfig& config,
+      MerklePath& merkle_path /*output*/) const = 0;
 
     /**
      * @brief Get the hash functions used for each layer of the Merkle tree.

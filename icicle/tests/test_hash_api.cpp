@@ -81,7 +81,7 @@ TEST_F(HashApiTest, Keccak256)
   // Run single hash operation
   ICICLE_CHECK(keccak256.hash(input.get(), input_size, config, output.get()));
 
-  // Batch hash (hashing each half seperately)
+  // Batch hash (hashing each half separately)
   auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
   config.batch = 2;
   ICICLE_CHECK(keccak256.hash(input.get(), input_size >> 1, config, output_batch.get()));
@@ -131,37 +131,35 @@ public:
 
 TEST_F(HashApiTest, MerkleTree)
 {
-  // const uint64_t nof_leaves_limbs = 100; // Number of input limbs
-  // auto leaves = std::make_unique<uint32_t[]>(nof_leaves_limbs);
-  // // Randomize the input array
-  // randomize(leaves.get(), nof_leaves_limbs);
-
-  auto config = default_merkle_tree_config();
-  auto layer0_hash = HashSumBackend::create(20, 8);  // input 20 bytes, output 8 bytes
-  auto layer1_hash = HashSumBackend::create(24, 12); // input 24 bytes, output 12 bytes
-  auto layer2_hash = HashSumBackend::create(24, 8);  // input 24 bytes, output 8 bytes
-  auto merkle_tree =
-    create_merkle_tree({layer0_hash, layer1_hash, layer2_hash}, 1 /*limbs per leaf*/, 2 /*min level to store*/);
-
-  uint32_t leaves[100];
-  for (int i = 0; i < 100; ++i) {
+  // define input
+  constexpr int nof_leaves = 100;
+  uint32_t leaves[nof_leaves];
+  const size_t input_size = sizeof(leaves);
+  for (int i = 0; i < nof_leaves; ++i) {
     leaves[i] = i;
   }
-  // std::cout << “build start” << std::endl;
-  merkle_tree.build((std::byte*)leaves, config);
-  // merkle_tree.print_tree();
-  // const limb_t* root;
-  // merkle_tree.get_root(root);
-  // std::cout << "Root = " << *root << std::endl;
-  // limb_t* path;
-  // uint path_size;
-  // uint64_t element_idx = 5;
-  // merkle_tree.allocate_path(path, path_size);
-  // merkle_tree.get_path(leaves, element_idx, path, config);
-  // std::cout << “path(“<< element_idx << “):” << std::endl;
-  // merkle_tree.print_path(path);
-  // std::cout << “verify:” << std::endl;
-  // bool verification_valid;
-  // merkle_tree.verify(path, element_idx, verification_valid, config);
-  // std::cout << “verify = ” << verification_valid<< std::endl;
+
+  // define the merkle tree
+  auto config = default_merkle_tree_config();
+  auto layer0_hash = HashSumBackend::create(20, 8); // input 20 bytes, output 8 bytes input   400B ->  160B
+  auto layer1_hash = HashSumBackend::create(16, 2); // input 16 bytes, output 2 bytes         160B ->  20B
+  auto layer2_hash = HashSumBackend::create(20, 8); // input 20 bytes, output 8 bytes         20B  ->  8B    output
+  auto leaf_element_size = 4;
+  auto merkle_tree =
+    MerkleTree::create({layer0_hash, layer1_hash, layer2_hash}, leaf_element_size, 2 /*min level to store*/);
+
+  // build tree
+  merkle_tree.build((std::byte*)leaves, input_size, config);
+
+  // ret root and merkle-path to an element
+  uint64_t root = 0; // assuming output is 8B
+  int element_idx = 5;
+  const auto path_size = merkle_tree.calculate_merkle_path_size();
+  MerklePath merkle_path{path_size};
+  merkle_tree.get_merkle_root((std::byte*)&root);
+  merkle_tree.get_merkle_path((std::byte*)leaves, element_idx, config, merkle_path);
+
+  bool verification_valid = merkle_tree.verify(
+    (std::byte*)leaves + element_idx * leaf_element_size, element_idx, merkle_path, (std::byte*)root, config);
+  // ASSERT_EQ(verification_valid, true);
 }
