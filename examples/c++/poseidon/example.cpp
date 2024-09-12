@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 
   // Check multiple poseidon hash.
   std::cout << "\nPoseidon multiple hash test." << std::endl;
-  int nof_hashes = 3;  
+  int nof_hashes = 5;  
   limb_t* multiple_hash_in_limbs = new limb_t[nof_hashes * scalar_t::TLC * arity];
   limb_t* multiple_hash_out_limbs = new limb_t[nof_hashes * scalar_t::TLC];
   // Prepare multiple hash input.

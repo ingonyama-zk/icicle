@@ -29,15 +29,15 @@ template <typename S>
 class Poseidon : public Hash {
   public:
     Poseidon (
-      const unsigned int  arity,
-      const unsigned int  alpha,
-      const unsigned int  nof_partial_rounds,
-      const unsigned int  nof_upper_full_rounds,
-      const unsigned int  nof_end_full_rounds,
-      const S*            rounds_constants,
-      const S*            mds_matrix,
-      const S*            pre_matrix,
-      const S*            sparse_matrix
+      const unsigned int  arity,                ///< Arity of a hash (number of inputs of the single hash).
+      const unsigned int  alpha,                  ///< Sbox power.
+      const unsigned int  nof_upper_full_rounds,  ///< Number of upper full rounds of a single hash.
+      const unsigned int  nof_partial_rounds,     ///< Number of partial rounds of a single hash.
+      const unsigned int  nof_end_full_rounds,    ///< Number of bottom full rounds of a single hash.
+      const S*            rounds_constants,       ///< Round constants (both of the full and the partial rounds). The order of the constants in the memory is according to the rounds order.
+      const S*            mds_matrix,             ///> MDS matrix used in the full rounds. The same matrix is used for all the full rounds.
+      const S*            pre_matrix,             ///< Pre-matrix used in the last upper full round.
+      const S*            sparse_matrix           ///< Sparse matries that are used in the partial rounds. A single aprse matrix in the memory has "arity x arity" members. The calculation is done only on the member that not equal to zero.
     );
 
     /**
@@ -65,9 +65,9 @@ class Poseidon : public Hash {
     const unsigned int    m_nof_end_full_rounds;     ///< Number of full rounds at the end of this Poseidon hash.
     PoseidonConstants<S>  m_poseidon_constants;      ///< Structure that holds Poseidon hash round constants and MDS matrix values.
 
-    void field_vec_sqr_full_matrix_mul(const S* vector, const S* matrix, S* result, const int arity) const;
+    void field_vec_sqr_full_matrix_mul(const S* matrix, const S* vector, S* result) const;    // matrix is needed here because this func is used both mds and pre-matrix mults.
     void field_vec_sqr_sparse_matrix_mul(const S* vector, const S* matrix, S* result, const int arity) const;
-    void full_rounds(const unsigned int arity, const unsigned int alpha, const unsigned int nof_full_rounds, S* in_out_fields, const S*& rounds_constants, const S* mds_matrix) const;
+    void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, const S*& rounds_constants) const;   // nof_full_rounds needed because the number of the upper and the lower full rounds could be different.
 };
 
 template <typename S>
@@ -93,9 +93,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
   const S* in_fields = (S*)(input_limbs);
   // Copy input scalar to the output (as a temp storage) to be used in the rounds.
   // *tmp_fields are used as a temp storage alog the calculations in this function.
-  for (int arity_idx=0; arity_idx<m_arity; arity_idx++) {
-    tmp_fields[arity_idx] = in_fields[arity_idx];
-  }
+  memcpy(tmp_fields, in_fields, m_arity * sizeof(S));
 
   // Add pre-round constants.
   const S* pre_round_constants = m_poseidon_constants.m_pre_matrix;    // Needed because m_poseidon_constants.m_pre_matrix couldn't be changed.
@@ -105,7 +103,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
   }
 
   // Upper full rounds.
-  full_rounds(m_arity, m_alpha, m_nof_upper_full_rounds, tmp_fields, rounds_constants, m_poseidon_constants.m_mds_matrix);
+  full_rounds(m_nof_upper_full_rounds, tmp_fields, rounds_constants);
 
   // Single full round with pre_matrix.
   for (int arity_idx=0; arity_idx<m_arity; arity_idx++) {
@@ -115,7 +113,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
     tmp_fields[arity_idx] = tmp_fields[arity_idx] + *rounds_constants++;
   }
   // Multiplication by matrix
-  field_vec_sqr_full_matrix_mul(tmp_fields, m_poseidon_constants.m_pre_matrix, tmp_fields, m_arity);
+  field_vec_sqr_full_matrix_mul(tmp_fields, m_poseidon_constants.m_pre_matrix, tmp_fields);
 
   // Partial rounds. Perform calculation only for the first element of *tmp_fields.
   for (int partial_rounds_idx=0; partial_rounds_idx<m_nof_partial_rounds; partial_rounds_idx++) {
@@ -128,7 +126,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
   }
 
   // Bottom full rounds.
-  full_rounds(m_arity, m_alpha, m_nof_end_full_rounds, tmp_fields, rounds_constants, m_poseidon_constants.m_mds_matrix);
+  full_rounds(m_nof_end_full_rounds, tmp_fields, rounds_constants);
 
   // Last full round
   for (int arity_idx=0; arity_idx<m_arity; arity_idx++) {
@@ -136,7 +134,7 @@ eIcicleError Poseidon<S>::run_single_hash(const limb_t* input_limbs, limb_t* out
     tmp_fields[arity_idx] = S::pow(tmp_fields[arity_idx], m_alpha);
   }
   // Multiplication by MDS matrix
-  field_vec_sqr_full_matrix_mul(tmp_fields, m_poseidon_constants.m_mds_matrix, tmp_fields, m_arity);
+  field_vec_sqr_full_matrix_mul(tmp_fields, m_poseidon_constants.m_mds_matrix, tmp_fields);
 
   memcpy(output_limbs, &tmp_fields[1].limbs_storage.limbs, S::TLC * sizeof(limb_t));
 
@@ -165,38 +163,38 @@ void Poseidon<S>::field_vec_sqr_sparse_matrix_mul(const S* vec_in, const S* matr
     tmp_col_res[col_idx] = S::from(0);
     tmp_col_res[col_idx] = vec_in[0] * matrix_in[col_idx] + vec_in[col_idx];
   }
-  for (int col_idx = 0; col_idx < arity; col_idx++) {
+  for (int col_idx = 0; col_idx < arity; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
         result[col_idx] = tmp_col_res[col_idx];
   }
 }
 
 template <typename S>
-void Poseidon<S>::field_vec_sqr_full_matrix_mul(const S* vec_in, const S* matrix_in, S* result, const int arity) const {
-  S tmp_col_res[arity];     // Have to use temp storage because vec_in and result are the same storage.
-  for (int col_idx = 0; col_idx < arity; col_idx++) {   // Columns of matrix.
+void Poseidon<S>::field_vec_sqr_full_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const {
+  S tmp_col_res[m_arity];     // Have to use temp storage because vec_in and result are the same storage.
+  for (int col_idx = 0; col_idx < m_arity; col_idx++) {   // Columns of matrix.
     tmp_col_res[col_idx] = S::from(0);
-    for (int row_idx = 0; row_idx < arity; row_idx++) {    // Matrix rows but also input vec columns.
-      tmp_col_res[col_idx] = tmp_col_res[col_idx] + vec_in[row_idx] * matrix_in[row_idx * arity + col_idx];
+    for (int row_idx = 0; row_idx < m_arity; row_idx++) {    // Matrix rows but also input vec columns.
+      tmp_col_res[col_idx] = tmp_col_res[col_idx] + vec_in[row_idx] * matrix_in[row_idx * m_arity + col_idx];
     }
   }
-  for (int col_idx = 0; col_idx < arity; col_idx++) {
+  for (int col_idx = 0; col_idx < m_arity; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
         result[col_idx] = tmp_col_res[col_idx];
   }
 }
 
 template <typename S>
-void Poseidon<S>::full_rounds(const unsigned int arity, const unsigned int alpha, const unsigned int nof_full_rounds, S* in_out_fields, const S*& rounds_constants, const S* mds_matrix) const {
+void Poseidon<S>::full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, const S*& rounds_constants) const {
   for (int full_rounds_idx=0; full_rounds_idx<nof_full_rounds-1; full_rounds_idx++) {   // Note that the number of full rounds is nof_full_rounds-1 because of the
                                                                                         // pre_matrix round (last round of upper full rounds) and the last round of
                                                                                         // the bottom fulld rounds that doesn't have sbox operation.
-    for (int arity_idx=0; arity_idx<arity; arity_idx++) {
+    for (int arity_idx=0; arity_idx<m_arity; arity_idx++) {
       // S box
-      in_out_fields[arity_idx] = S::pow(in_out_fields[arity_idx], alpha);
+      in_out_fields[arity_idx] = S::pow(in_out_fields[arity_idx], m_alpha);
       // Add round constants
       in_out_fields[arity_idx] = in_out_fields[arity_idx] + *rounds_constants++;
     }
     // Multiplication by matrix
-    field_vec_sqr_full_matrix_mul(in_out_fields, mds_matrix, in_out_fields, arity);
+    field_vec_sqr_full_matrix_mul(in_out_fields, mds_matrix, in_out_fields);
   }
 }
 
