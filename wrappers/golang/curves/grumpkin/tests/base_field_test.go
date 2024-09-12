@@ -5,85 +5,105 @@ import (
 
 	grumpkin "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/grumpkin"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
 	BASE_LIMBS = grumpkin.BASE_LIMBS
 )
 
-func TestBaseFieldFromLimbs(t *testing.T) {
+func testBaseFieldFromLimbs(suite suite.Suite) {
 	emptyField := grumpkin.BaseField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
 	randLimbs[0] = 100
-	assert.NotEqual(t, randLimbs, emptyField.GetLimbs())
+	suite.NotEqual(randLimbs, emptyField.GetLimbs())
 }
 
-func TestBaseFieldGetLimbs(t *testing.T) {
+func testBaseFieldGetLimbs(suite suite.Suite) {
 	emptyField := grumpkin.BaseField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
 }
 
-func TestBaseFieldOne(t *testing.T) {
+func testBaseFieldOne(suite suite.Suite) {
 	var emptyField grumpkin.BaseField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(BASE_LIMBS))
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "BaseField with limbs to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "BaseField with limbs to field one did not work")
 }
 
-func TestBaseFieldZero(t *testing.T) {
+func testBaseFieldZero(suite suite.Suite) {
 	var emptyField grumpkin.BaseField
 	emptyField.Zero()
 	limbsZero := make([]uint32, BASE_LIMBS)
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "BaseField with limbs to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "BaseField with limbs to field zero failed")
 }
 
-func TestBaseFieldSize(t *testing.T) {
+func testBaseFieldSize(suite suite.Suite) {
 	var emptyField grumpkin.BaseField
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	suite.Equal(len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func TestBaseFieldAsPointer(t *testing.T) {
+func testBaseFieldAsPointer(suite suite.Suite) {
 	var emptyField grumpkin.BaseField
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
+	suite.Equal(randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func TestBaseFieldFromBytes(t *testing.T) {
+func testBaseFieldFromBytes(suite suite.Suite) {
 	var emptyField grumpkin.BaseField
 	bytes, expected := test_helpers.GenerateBytesArray(int(BASE_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
-	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func TestBaseFieldToBytes(t *testing.T) {
+func testBaseFieldToBytes(suite suite.Suite) {
 	var emptyField grumpkin.BaseField
 	expected, limbs := test_helpers.GenerateBytesArray(int(BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
 
-	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+}
+
+type BaseFieldTestSuite struct {
+	suite.Suite
+}
+
+func (s *BaseFieldTestSuite) TestBaseField() {
+	s.Run("TestBaseFieldFromLimbs", testWrapper(s.Suite, testBaseFieldFromLimbs))
+	s.Run("TestBaseFieldGetLimbs", testWrapper(s.Suite, testBaseFieldGetLimbs))
+	s.Run("TestBaseFieldOne", testWrapper(s.Suite, testBaseFieldOne))
+	s.Run("TestBaseFieldZero", testWrapper(s.Suite, testBaseFieldZero))
+	s.Run("TestBaseFieldSize", testWrapper(s.Suite, testBaseFieldSize))
+	s.Run("TestBaseFieldAsPointer", testWrapper(s.Suite, testBaseFieldAsPointer))
+	s.Run("TestBaseFieldFromBytes", testWrapper(s.Suite, testBaseFieldFromBytes))
+	s.Run("TestBaseFieldToBytes", testWrapper(s.Suite, testBaseFieldToBytes))
+
+}
+
+func TestSuiteBaseField(t *testing.T) {
+	suite.Run(t, new(BaseFieldTestSuite))
 }

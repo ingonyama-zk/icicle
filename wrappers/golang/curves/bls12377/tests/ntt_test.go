@@ -11,10 +11,10 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12377/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func testAgainstGnarkCryptoNtt(t *testing.T, size int, scalars core.HostSlice[bls12_377.ScalarField], output core.HostSlice[bls12_377.ScalarField], order core.Ordering, direction core.NTTDir) {
+func testAgainstGnarkCryptoNtt(suite suite.Suite, size int, scalars core.HostSlice[bls12_377.ScalarField], output core.HostSlice[bls12_377.ScalarField], order core.Ordering, direction core.NTTDir) {
 	scalarsFr := make([]fr.Element, size)
 	for i, v := range scalars {
 		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
@@ -26,10 +26,10 @@ func testAgainstGnarkCryptoNtt(t *testing.T, size int, scalars core.HostSlice[bl
 		outputAsFr[i] = slice64
 	}
 
-	testAgainstGnarkCryptoNttGnarkTypes(t, size, scalarsFr, outputAsFr, order, direction)
+	testAgainstGnarkCryptoNttGnarkTypes(suite, size, scalarsFr, outputAsFr, order, direction)
 }
 
-func testAgainstGnarkCryptoNttGnarkTypes(t *testing.T, size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) {
+func testAgainstGnarkCryptoNttGnarkTypes(suite suite.Suite, size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) {
 	domainWithPrecompute := fft.NewDomain(uint64(size))
 	// DIT + BitReverse == Ordering.kRR
 	// DIT == Ordering.kRN
@@ -51,25 +51,19 @@ func testAgainstGnarkCryptoNttGnarkTypes(t *testing.T, size int, scalarsFr core.
 	if order == core.KNN || order == core.KRR {
 		fft.BitReverse(scalarsFr)
 	}
-	assert.Equal(t, scalarsFr, outputAsFr)
+	suite.Equal(scalarsFr, outputAsFr)
 }
-func TestNTTGetDefaultConfig(t *testing.T) {
+func testNTTGetDefaultConfig(suite suite.Suite) {
 	actual := ntt.GetDefaultNttConfig()
 	expected := test_helpers.GenerateLimbOne(int(bls12_377.SCALAR_LIMBS))
-	assert.Equal(t, expected, actual.CosetGen[:])
+	suite.Equal(expected, actual.CosetGen[:])
 
 	cosetGenField := bls12_377.ScalarField{}
 	cosetGenField.One()
-	assert.ElementsMatch(t, cosetGenField.GetLimbs(), actual.CosetGen)
+	suite.ElementsMatch(cosetGenField.GetLimbs(), actual.CosetGen)
 }
 
-func TestInitDomain(t *testing.T) {
-	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	cfg := core.GetDefaultNTTInitDomainConfig()
-	assert.NotPanics(t, func() { initDomain(largestTestSize, cfg) })
-}
-
-func TestNtt(t *testing.T) {
+func testNtt(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := bls12_377.GenerateScalars(1 << largestTestSize)
 
@@ -87,11 +81,11 @@ func TestNtt(t *testing.T) {
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, core.KForward)
+			testAgainstGnarkCryptoNtt(suite, testSize, scalarsCopy, output, v, core.KForward)
 		}
 	}
 }
-func TestNttFrElement(t *testing.T) {
+func testNttFrElement(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := make([]fr.Element, 4)
 	var x fr.Element
@@ -114,12 +108,12 @@ func TestNttFrElement(t *testing.T) {
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
 			// Compare with gnark-crypto
-			testAgainstGnarkCryptoNttGnarkTypes(t, testSize, scalarsCopy, output, v, core.KForward)
+			testAgainstGnarkCryptoNttGnarkTypes(suite, testSize, scalarsCopy, output, v, core.KForward)
 		}
 	}
 }
 
-func TestNttDeviceAsync(t *testing.T) {
+func testNttDeviceAsync(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := bls12_377.GenerateScalars(1 << largestTestSize)
 
@@ -150,13 +144,13 @@ func TestNttDeviceAsync(t *testing.T) {
 				runtime.SynchronizeStream(stream)
 				runtime.DestroyStream(stream)
 				// Compare with gnark-crypto
-				testAgainstGnarkCryptoNtt(t, testSize, scalarsCopy, output, v, direction)
+				testAgainstGnarkCryptoNtt(suite, testSize, scalarsCopy, output, v, direction)
 			}
 		}
 	}
 }
 
-func TestNttBatch(t *testing.T) {
+func testNttBatch(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	largestTestSize := 10
 	largestBatchSize := 20
@@ -194,16 +188,26 @@ func TestNttBatch(t *testing.T) {
 
 				domainWithPrecompute.FFT(scalarsFr, fft.DIF)
 				fft.BitReverse(scalarsFr)
-				if !assert.True(t, reflect.DeepEqual(scalarsFr, outputAsFr[i*testSize:(i+1)*testSize])) {
-					t.FailNow()
+				if !suite.True(reflect.DeepEqual(scalarsFr, outputAsFr[i*testSize:(i+1)*testSize])) {
+					suite.T().FailNow()
 				}
 			}
 		}
 	}
 }
 
-func TestReleaseDomain(t *testing.T) {
-	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	e := ntt.ReleaseDomain()
-	assert.Equal(t, runtime.Success, e, "ReleasDomain failed")
+type NTTTestSuite struct {
+	suite.Suite
+}
+
+func (s *NTTTestSuite) TestNTT() {
+	s.Run("TestNTTGetDefaultConfig", testWrapper(s.Suite, testNTTGetDefaultConfig))
+	s.Run("TestNTT", testWrapper(s.Suite, testNtt))
+	s.Run("TestNTTFrElement", testWrapper(s.Suite, testNttFrElement))
+	s.Run("TestNttDeviceAsync", testWrapper(s.Suite, testNttDeviceAsync))
+	s.Run("TestNttBatch", testWrapper(s.Suite, testNttBatch))
+}
+
+func TestSuiteNTT(t *testing.T) {
+	suite.Run(t, new(NTTTestSuite))
 }

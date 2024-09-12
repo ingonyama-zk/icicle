@@ -46,11 +46,11 @@ func IsActiveDeviceMemory(ptr unsafe.Pointer) bool {
 	return EIcicleError(cErr) == Success
 }
 
-// RunOnDevice forces the provided function to run all GPU related calls within it
-// on the same host thread and therefore the same GPU device.
+// RunOnDevice forces the provided function to run all device related calls within it
+// on the same host thread and therefore the same device.
 //
 // NOTE: Goroutines launched within funcToRun are not bound to the
-// same host thread as funcToRun and therefore not to the same GPU device.
+// same host thread as funcToRun and therefore not to the same device.
 // If that is a requirement, RunOnDevice should be called for each with the
 // same deviceId as the original call.
 //
@@ -78,11 +78,11 @@ func IsActiveDeviceMemory(ptr unsafe.Pointer) bool {
 //
 //	}, i)
 func RunOnDevice(device *Device, funcToRun func(args ...any), args ...any) {
-	go func(id *Device) {
+	go func(deviceToRunOn *Device) {
 		defer runtime.UnlockOSThread()
 		runtime.LockOSThread()
 		originalDevice, _ := GetActiveDevice()
-		SetDevice(id)
+		SetDevice(deviceToRunOn)
 		funcToRun(args...)
 		SetDevice(originalDevice)
 	}(device)

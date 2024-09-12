@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"	
+	"sync"
+	"github.com/stretchr/testify/suite"
 	{{if .SupportsNTT -}}
 	"fmt"
 	
@@ -19,6 +21,7 @@ import (
 const (
 	largestTestSize = 20
 )
+
 var DEVICE runtime.Device
 
 {{if .SupportsNTT -}}
@@ -38,6 +41,18 @@ func initDomain({{if ne .GnarkImport "" -}}largestTestSize int, {{end -}}cfg cor
 	return e
 }{{end}}
 
+func testWrapper(suite suite.Suite, fn func(suite.Suite)) func() {
+	return func() {
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		runtime.RunOnDevice(&DEVICE, func(args ...any) {
+			defer wg.Done()
+			fn(suite)
+		})
+		wg.Wait()
+	}
+}
+
 func TestMain(m *testing.M) {
 	runtime.LoadBackendFromEnvOrDefault()
 	devices, e := runtime.GetRegisteredDevices()
@@ -45,6 +60,7 @@ func TestMain(m *testing.M) {
 		panic("Failed to load registered devices")
 	}
 	for _, deviceType := range devices {
+		fmt.Println("Running tests for device type:", deviceType)
 		DEVICE = runtime.CreateDevice(deviceType, 0)
 		runtime.SetDevice(&DEVICE)
 

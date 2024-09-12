@@ -5,15 +5,15 @@ import (
 
 	grumpkin "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/grumpkin"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestAffineZero(t *testing.T) {
+func testAffineZero(suite suite.Suite) {
 	var fieldZero = grumpkin.BaseField{}
 
 	var affineZero grumpkin.Affine
-	assert.Equal(t, affineZero.X, fieldZero)
-	assert.Equal(t, affineZero.Y, fieldZero)
+	suite.Equal(affineZero.X, fieldZero)
+	suite.Equal(affineZero.Y, fieldZero)
 
 	x := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	y := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
@@ -21,22 +21,22 @@ func TestAffineZero(t *testing.T) {
 	affine.FromLimbs(x, y)
 
 	affine.Zero()
-	assert.Equal(t, affine.X, fieldZero)
-	assert.Equal(t, affine.Y, fieldZero)
+	suite.Equal(affine.X, fieldZero)
+	suite.Equal(affine.Y, fieldZero)
 }
 
-func TestAffineFromLimbs(t *testing.T) {
+func testAffineFromLimbs(suite suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 
 	var affine grumpkin.Affine
 	affine.FromLimbs(randLimbs, randLimbs2)
 
-	assert.ElementsMatch(t, randLimbs, affine.X.GetLimbs())
-	assert.ElementsMatch(t, randLimbs2, affine.Y.GetLimbs())
+	suite.ElementsMatch(randLimbs, affine.X.GetLimbs())
+	suite.ElementsMatch(randLimbs2, affine.Y.GetLimbs())
 }
 
-func TestAffineToProjective(t *testing.T) {
+func testAffineToProjective(suite suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var fieldOne grumpkin.BaseField
@@ -49,31 +49,31 @@ func TestAffineToProjective(t *testing.T) {
 	affine.FromLimbs(randLimbs, randLimbs2)
 
 	projectivePoint := affine.ToProjective()
-	assert.Equal(t, expected, projectivePoint)
+	suite.Equal(expected, projectivePoint)
 }
 
-func TestProjectiveZero(t *testing.T) {
+func testProjectiveZero(suite suite.Suite) {
 	var projectiveZero grumpkin.Projective
 	projectiveZero.Zero()
 	var fieldZero = grumpkin.BaseField{}
 	var fieldOne grumpkin.BaseField
 	fieldOne.One()
 
-	assert.Equal(t, projectiveZero.X, fieldZero)
-	assert.Equal(t, projectiveZero.Y, fieldOne)
-	assert.Equal(t, projectiveZero.Z, fieldZero)
+	suite.Equal(projectiveZero.X, fieldZero)
+	suite.Equal(projectiveZero.Y, fieldOne)
+	suite.Equal(projectiveZero.Z, fieldZero)
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var projective grumpkin.Projective
 	projective.FromLimbs(randLimbs, randLimbs, randLimbs)
 
 	projective.Zero()
-	assert.Equal(t, projective.X, fieldZero)
-	assert.Equal(t, projective.Y, fieldOne)
-	assert.Equal(t, projective.Z, fieldZero)
+	suite.Equal(projective.X, fieldZero)
+	suite.Equal(projective.Y, fieldOne)
+	suite.Equal(projective.Z, fieldZero)
 }
 
-func TestProjectiveFromLimbs(t *testing.T) {
+func testProjectiveFromLimbs(suite suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs3 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
@@ -81,12 +81,12 @@ func TestProjectiveFromLimbs(t *testing.T) {
 	var projective grumpkin.Projective
 	projective.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
-	assert.ElementsMatch(t, randLimbs, projective.X.GetLimbs())
-	assert.ElementsMatch(t, randLimbs2, projective.Y.GetLimbs())
-	assert.ElementsMatch(t, randLimbs3, projective.Z.GetLimbs())
+	suite.ElementsMatch(randLimbs, projective.X.GetLimbs())
+	suite.ElementsMatch(randLimbs2, projective.Y.GetLimbs())
+	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
-func TestProjectiveFromAffine(t *testing.T) {
+func testProjectiveFromAffine(suite suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var fieldOne grumpkin.BaseField
@@ -100,5 +100,22 @@ func TestProjectiveFromAffine(t *testing.T) {
 
 	var projectivePoint grumpkin.Projective
 	projectivePoint.FromAffine(affine)
-	assert.Equal(t, expected, projectivePoint)
+	suite.Equal(expected, projectivePoint)
+}
+
+type CurveTestSuite struct {
+	suite.Suite
+}
+
+func (s *CurveTestSuite) TestCurve() {
+	s.Run("TestAffineZero", testWrapper(s.Suite, testAffineZero))
+	s.Run("TestAffineFromLimbs", testWrapper(s.Suite, testAffineFromLimbs))
+	s.Run("TestAffineToProjective", testWrapper(s.Suite, testAffineToProjective))
+	s.Run("TestProjectiveZero", testWrapper(s.Suite, testProjectiveZero))
+	s.Run("TestProjectiveFromLimbs", testWrapper(s.Suite, testProjectiveFromLimbs))
+	s.Run("TestProjectiveFromAffine", testWrapper(s.Suite, testProjectiveFromAffine))
+}
+
+func TestSuiteCurve(t *testing.T) {
+	suite.Run(t, new(CurveTestSuite))
 }

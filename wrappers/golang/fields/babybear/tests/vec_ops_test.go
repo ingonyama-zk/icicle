@@ -6,10 +6,10 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/vecOps"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestBabybearVecOps(t *testing.T) {
+func testBabybearVecOps(suite suite.Suite) {
 	testSize := 1 << 14
 
 	a := babybear.GenerateScalars(testSize)
@@ -27,14 +27,14 @@ func TestBabybearVecOps(t *testing.T) {
 	vecOps.VecOp(a, b, out, cfg, core.Add)
 	vecOps.VecOp(out, b, out2, cfg, core.Sub)
 
-	assert.Equal(t, a, out2)
+	suite.Equal(a, out2)
 
 	vecOps.VecOp(a, ones, out3, cfg, core.Mul)
 
-	assert.Equal(t, a, out3)
+	suite.Equal(a, out3)
 }
 
-func TestBabybearTranspose(t *testing.T) {
+func testBabybearTranspose(suite suite.Suite) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 
@@ -48,7 +48,7 @@ func TestBabybearTranspose(t *testing.T) {
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, cfg)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, cfg)
 
-	assert.Equal(t, matrix, out2)
+	suite.Equal(matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice
 
@@ -61,5 +61,18 @@ func TestBabybearTranspose(t *testing.T) {
 	output := make(core.HostSlice[babybear.ScalarField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
-	assert.Equal(t, matrix, output)
+	suite.Equal(matrix, output)
+}
+
+type VecOpsTestSuite struct {
+	suite.Suite
+}
+
+func (s *VecOpsTestSuite) TestBabybearVecOps() {
+	s.Run("TestBabybearVecOps", testWrapper(s.Suite, testBabybearVecOps))
+	s.Run("TestBabybearTranspose", testWrapper(s.Suite, testBabybearTranspose))
+}
+
+func TestSuiteVecOps(t *testing.T) {
+	suite.Run(t, new(VecOpsTestSuite))
 }
