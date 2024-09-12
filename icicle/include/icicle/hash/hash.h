@@ -41,6 +41,12 @@ namespace icicle {
       return m_backend->hash(input, size, config, output);
     }
 
+    template <typename PREIMAGE, typename IMAGE>
+    inline eIcicleError hash(const PREIMAGE* input, uint64_t size, const HashConfig& config, IMAGE* output) const
+    {
+      return hash((const std::byte*)input, size * sizeof(PREIMAGE), config, (std::byte*)output);
+    }
+
     /**
      * @brief Get the default input chunk size.
      * @return The size of the default input chunk (optional).

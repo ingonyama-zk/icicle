@@ -65,6 +65,12 @@ namespace icicle {
       return m_backend->build(leaves, size, config);
     }
 
+    template <typename T>
+    inline eIcicleError build(const T* leaves, uint64_t size, const MerkleTreeConfig& config)
+    {
+      return build((const std::byte*)leaves, size, config);
+    }
+
     /**
      * @brief Retrieve the root of the Merkle tree.
      * @param root Pointer to where the Merkle root will be written. Must be on host memory.
@@ -72,12 +78,18 @@ namespace icicle {
      */
     inline eIcicleError get_merkle_root(std::byte* root /*output*/) const { return m_backend->get_merkle_root(root); }
 
+    template <typename T>
+    inline eIcicleError get_merkle_root(T* root /*output*/) const
+    {
+      return get_merkle_root((std::byte*)root);
+    }
+
     /**
      * @brief Calculate the size of the Merkle path for an element.
      *
      * This function calculates the size of the Merkle path based on the number of levels
      * in the tree and the size of each hash.
-     * @param pruned A pruned path the siblings required for computation, excluing the elements that can be computed
+     * @param pruned A pruned path the siblings required for computation, excluding the elements that can be computed
      * directly.
      *
      * @return The total size of the Merkle path in bytes.
@@ -111,6 +123,14 @@ namespace icicle {
       return m_backend->get_merkle_path(leaves, element_idx, config, merkle_path);
     }
 
+    template <typename T>
+    inline eIcicleError get_merkle_path(
+      const T* leaves, uint64_t element_idx, const MerkleTreeConfig& config, MerklePath& merkle_path /*output*/) const
+    {
+      // Ask backend to generate the path and store it in the MerklePath object
+      return get_merkle_path((std::byte*)leaves, element_idx, config, merkle_path);
+    }
+
     /**
      * @brief Verify an element against the Merkle path using layer hashes (frontend verification).
      * @param element Pointer to the element being verified.
@@ -129,6 +149,17 @@ namespace icicle {
     {
       // TODO merkle-path verification
       return false;
+    }
+
+    template <typename T, typename R>
+    bool verify(
+      const T* element,
+      uint64_t element_idx,
+      const MerklePath& merkle_path,
+      const R* root,
+      const MerkleTreeConfig& config) const
+    {
+      return verify((const std::byte*)element, element_idx, merkle_path, (const std::byte*)root, config);
     }
 
   private:

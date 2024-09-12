@@ -65,11 +65,11 @@ public:
 
 TEST_F(HashApiTest, Keccak256)
 {
-  const uint64_t input_size = 64; // Number of input bytes
+  const uint64_t input_size = 64; // Number of input elements
   const uint64_t output_size = 256;
 
   // Create unique pointers for input and output arrays
-  auto input = std::make_unique<std::byte[]>(input_size);
+  auto input = std::make_unique<uint32_t[]>(input_size);
   auto output = std::make_unique<std::byte[]>(output_size);
 
   // Randomize the input array
@@ -84,7 +84,7 @@ TEST_F(HashApiTest, Keccak256)
   // Batch hash (hashing each half separately)
   auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
   config.batch = 2;
-  ICICLE_CHECK(keccak256.hash(input.get(), input_size >> 1, config, output_batch.get()));
+  ICICLE_CHECK(keccak256.hash(input.get(), input_size / 2, config, output_batch.get()));
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 
@@ -149,17 +149,16 @@ TEST_F(HashApiTest, MerkleTree)
     MerkleTree::create({layer0_hash, layer1_hash, layer2_hash}, leaf_element_size, 2 /*min level to store*/);
 
   // build tree
-  merkle_tree.build((std::byte*)leaves, input_size, config);
+  merkle_tree.build(leaves, input_size, config);
 
   // ret root and merkle-path to an element
   uint64_t root = 0; // assuming output is 8B
-  int element_idx = 5;
+  uint64_t element_idx = 5;
   const auto path_size = merkle_tree.calculate_merkle_path_size();
   MerklePath merkle_path{path_size};
-  merkle_tree.get_merkle_root((std::byte*)&root);
-  merkle_tree.get_merkle_path((std::byte*)leaves, element_idx, config, merkle_path);
+  merkle_tree.get_merkle_root(&root);
+  merkle_tree.get_merkle_path(leaves, element_idx, config, merkle_path);
 
-  bool verification_valid = merkle_tree.verify(
-    (std::byte*)leaves + element_idx * leaf_element_size, element_idx, merkle_path, (std::byte*)root, config);
+  bool verification_valid = merkle_tree.verify(leaves + element_idx, element_idx, merkle_path, &root, config);
   // ASSERT_EQ(verification_valid, true);
 }
