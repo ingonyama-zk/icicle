@@ -21,7 +21,7 @@ namespace icicle {
      * @brief Constructor for the HashBackend class.
      *
      * @param output_size The size of the output in bytes.
-     * @param default_input_chunk_size The size of a single input chunk. Useful for Merkle trees.
+     * @param default_input_chunk_size The default size of a single input chunk in bytes. Useful for Merkle trees.
      */
     HashBackend(uint64_t output_size, uint64_t default_input_chunk_size = 0)
         : m_output_size{output_size}, m_default_input_chunk_size{default_input_chunk_size}
