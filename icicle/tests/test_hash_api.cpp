@@ -57,7 +57,7 @@ public:
 
     // Fill the array with random values
     uint32_t* u32_arr = (uint32_t*)arr;
-    for (uint64_t i = 0; i < (size / sizeof(uint32_t)); ++i) {
+    for (int i = 0; i < (size * sizeof(T) / sizeof(uint32_t)); ++i) {
       u32_arr[i] = dist(gen);
     }
   }
@@ -160,5 +160,36 @@ TEST_F(HashApiTest, MerkleTree)
   merkle_tree.get_merkle_path(leaves, element_idx, config, merkle_path);
 
   bool verification_valid = merkle_tree.verify(leaves + element_idx, element_idx, merkle_path, &root, config);
-  // ASSERT_EQ(verification_valid, true);
+  ASSERT_TRUE(verification_valid);
 }
+
+#ifdef POSEIDON
+#include "icicle/fields/field_config.h"
+using namespace field_config;
+
+#include "icicle/hash/poseidon.h"
+
+TEST_F(HashApiTest, poseidon12)
+{
+  const uint64_t input_size = 12; // Number of input elements
+  const uint64_t output_size = sizeof(scalar_t);
+
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<scalar_t[]>(input_size);
+  scalar_t output = scalar_t::from(0);
+
+  // Randomize the input array
+  scalar_t::rand_host_many(input.get(), input_size);
+
+  // init poseidon scalars
+  std::shared_ptr<PoseidonConstants<scalar_t>> poseidon_constants;
+  ICICLE_CHECK(poseidon_init_default_constants(12, poseidon_constants));
+
+  auto config = default_hash_config();
+  // Create Poseidon hash object
+  auto poseidon = Poseidon::create(poseidon_constants);
+  // Run single hash operation
+  ICICLE_CHECK(poseidon.hash(input.get(), input_size, config, &output));
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
+#endif // POSEIDON

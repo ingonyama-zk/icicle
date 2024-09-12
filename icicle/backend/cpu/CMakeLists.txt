@@ -12,6 +12,9 @@ if (FIELD)
     if (NTT)
         target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp src/polynomials/cpu_polynomial_backend.cpp)
     endif()
+    if (POSEIDON)
+        target_sources(icicle_field PRIVATE src/hash/cpu_poseidon.cpp)
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 

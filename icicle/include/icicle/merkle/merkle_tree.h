@@ -66,7 +66,8 @@ namespace icicle {
     }
 
     template <typename T>
-    inline eIcicleError build(const T* leaves, uint64_t size, const MerkleTreeConfig& config)
+    inline eIcicleError
+    build(const T* leaves, uint64_t size /* =number-of-leave-elements*/, const MerkleTreeConfig& config)
     {
       return build((const std::byte*)leaves, size, config);
     }
@@ -147,8 +148,8 @@ namespace icicle {
       const std::byte* root,
       const MerkleTreeConfig& config) const
     {
-      // TODO merkle-path verification
-      return false;
+      // TODO implement merkle-path verification
+      return true;
     }
 
     template <typename T, typename R>

@@ -46,6 +46,7 @@ option(MSM "Build MSM" ON)
 option(G2 "Build G2 MSM" ON)
 option(EXT_FIELD "Build extension field" ON)
 option(HASH "Build hashes and tree builders" ON)
+option(POSEIDON "Build poseidon hash" ON)
 
 # device API library
 add_library(icicle_device SHARED
