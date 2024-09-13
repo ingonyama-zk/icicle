@@ -5,9 +5,13 @@ namespace icicle {
 
 
   /*********************************** REDUCE PRODUCT ************************/
-  ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, scalarVectorOpImpl /* @@@ confirm this argument */);
+  ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, scalarVectorReduceOpImpl);
 
-  // TODO: extern "C" for FFI
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_product)(
+    const scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+  {
+    return VectorProductDispatcher::execute(vec_a, n, *config, output);
+  }
 
   template <>
   eIcicleError
@@ -17,9 +21,13 @@ namespace icicle {
   }
 
   /*********************************** REDUCE SUM ****************************/
-  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, scalarVectorOpImpl /* @@@ confirm this argument */);
+  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, scalarVectorReduceOpImpl );
 
-  // TODO: extern "C" for FFI
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sum)(
+    const scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+  {
+    return VectorSumDispatcher::execute(vec_a, n, *config, output);
+  }
 
   template <>
   eIcicleError

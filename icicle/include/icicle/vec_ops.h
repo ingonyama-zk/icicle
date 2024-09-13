@@ -48,11 +48,33 @@ namespace icicle {
 
   // Reduction operations
 
-  template <typename T>
-  eIcicleError vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+  /**
+   * @brief Computes the product of all elements in a vector.
+   *
+   * @tparam T Type of the elements in the vector.
+   * @param vec_a Input vector.
+   * @param n Number of elements in the vector.
+   * @param config Configuration for the operation.
+   * @param output Output scalar to store the result.
+   * @return eIcicleError Error code indicating success or failure.
+   */
 
   template <typename T>
-  eIcicleError vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+  eIcicleError vector_product(const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+
+  /**
+   * @brief Computes the sum of all elements in a vector.
+   *
+   * @tparam T Type of the elements in the vector.
+   * @param vec_a Input vector.
+   * @param n Number of elements in the vector.
+   * @param config Configuration for the operation.
+   * @param output Output scalar to store the result.
+   * @return eIcicleError Error code indicating success or failure.
+   */
+
+  template <typename T>
+  eIcicleError vector_sum(const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
 
 
   // Element-wise vector operations

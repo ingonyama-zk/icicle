@@ -154,7 +154,9 @@ private:
   // Single worker functionality to execute sum(vector)
   void vector_sum()
   {
+    ICICLE_LOG_INFO << "enter vector_sum";
     *m_output = m_op_a[0];
+    ICICLE_LOG_INFO << "point 1";
     for (uint64_t i = 1; i < m_nof_operations; ++i) {
       *m_output = *m_output + m_op_a[i];
     }
@@ -242,6 +244,7 @@ private:
   int m_bit_size;           // use in bitrev operation
   uint64_t m_stride;        // used in slice operation
   T* m_output;              // pointer to the output. Can be a vector or scalar pointer
+public:  
   T m_intermidiate_res;     // pointer to the output. Can be a vector or scalar pointer
 };
 
@@ -339,6 +342,11 @@ cpu_vector_div(const Device& device, const T* vec_a, const T* vec_b, uint64_t n,
 
 REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
 
+
+// #define SP_DEBUG
+
+#ifndef SP_DEBUG
+
 /*********************************** SUM ***********************************/
 template <typename T>
 eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
@@ -362,8 +370,27 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
   return eIcicleError::SUCCESS;
 }
 
+#else
+
+template <typename T>
+eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
+{
+  *output = scalar_t::zero();
+  for (uint64_t i = 0; i < n; ++i) {
+    *output = *output + vec_a[i];
+  }
+  return eIcicleError::SUCCESS;
+}
+
+#endif
+
+
 REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
-/*********************************** SUM ***********************************/
+/*********************************** PRODUCT ***********************************/
+
+
+#ifndef SP_DEBUG
+
 template <typename T>
 eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
 {
@@ -379,12 +406,25 @@ eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n
     }
     if (vec_s_offset < n) {
       task_p->send_intermidiate_res_task(
-        VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
+        VecOperation::VECTOR_PRODUCT, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
       vec_s_offset += NOF_OPERATIONS_PER_TASK;
     }
   } while (task_p != nullptr);
   return eIcicleError::SUCCESS;
 }
+
+#else
+template <typename T>
+eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
+{
+  *output = scalar_t::one();
+  for (uint64_t i = 0; i < n; ++i) {
+    *output = *output * vec_a[i];
+  }
+  return eIcicleError::SUCCESS;
+}
+
+#endif
 
 REGISTER_VECTOR_PRODUCT_BACKEND("CPU", cpu_vector_product<scalar_t>);
 

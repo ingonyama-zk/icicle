@@ -7,6 +7,15 @@ using namespace field_config;
 namespace icicle {
   /*************************** Backend registration ***************************/
 
+  using scalarVectorReduceOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* vec_a,
+    uint64_t n,
+    const VecOpsConfig& config,
+    scalar_t* output)>;
+
+
+
   using scalarVectorOpImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* vec_a,
@@ -17,6 +26,28 @@ namespace icicle {
 
   using scalarVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device, scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)>;
+
+  void register_vector_sum(const std::string& deviceType, scalarVectorReduceOpImpl impl);
+
+#define REGISTER_VECTOR_SUM_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_sum) = []() -> bool {                                                                  \
+      register_vector_sum(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_vector_product(const std::string& deviceType, scalarVectorReduceOpImpl impl);
+
+#define REGISTER_VECTOR_PRODUCT_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_product) = []() -> bool {                                                                  \
+      register_vector_product(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+
 
   void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
 
