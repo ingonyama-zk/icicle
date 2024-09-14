@@ -14,9 +14,9 @@ pub mod tests;
 pub struct VecOpsConfig<'a> {
     /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
     pub ctx: DeviceContext<'a>,
-    is_a_on_device: bool,
-    is_b_on_device: bool,
-    is_result_on_device: bool,
+    pub is_a_on_device: bool,
+    pub is_b_on_device: bool,
+    pub is_result_on_device: bool,
     /// Whether to run the vector operations asynchronously. If set to `true`, the functions will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the functions will block the current CPU thread.
     pub is_async: bool,
@@ -101,6 +101,33 @@ pub trait VecOps<F> {
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
+    ) -> IcicleResult<()>;
+
+    fn sum(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        result: &mut F,
+    ) -> IcicleResult<()>;
+
+    fn eval_cubic(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        c: &(impl HostOrDeviceSlice<F> + ?Sized),
+        len: usize,
+        result: &mut Vec<F>,
+    ) -> IcicleResult<()>;
+
+    fn bind(
+        vec: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        r: F,
+        len: usize
+    ) -> IcicleResult<()>;
+
+    fn bind_triple(
+        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        b: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        c: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        r: F,
+        len: usize
     ) -> IcicleResult<()>;
 
     fn transpose(
@@ -226,6 +253,58 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
 }
 
+pub fn sum_scalars<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &mut F,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    // let cfg = check_vec_ops_args(input, input, result, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::sum(input, result)
+}
+
+pub fn eval_cubic_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    c: &(impl HostOrDeviceSlice<F> + ?Sized),
+    len: usize,
+    result: &mut Vec<F>,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::eval_cubic(a, b, c, len, result)
+}
+
+pub fn bind_scalars<F>(
+    vec: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    r: F,
+    len: usize
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::bind(vec, r, len)
+}
+
+pub fn bind_triple_scalars<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    c: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    r: F,
+    len: usize
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::bind_triple(a, b, c, r, len)
+}
+
 pub fn sub_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -344,6 +423,38 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_sum_cuda")]
+                pub(crate) fn sum_scalars_cuda(
+                    vec: *const $field,
+                    size: u32,
+                    result: *mut $field,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_eval_cubic_cuda")]
+                pub(crate) fn eval_cubic_cuda(
+                    a: *const $field,
+                    b: *const $field,
+                    c: *const $field,
+                    n: u32,
+                    result: *mut $field,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_bind_cuda")]
+                pub(crate) fn bind_cuda(
+                    vec: *mut $field,
+                    n: u32,
+                    result: $field,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_bind_triple_cuda")]
+                pub(crate) fn bind_triple_cuda(
+                    a: *mut $field,
+                    b: *mut $field,
+                    c: *mut $field,
+                    n: u32,
+                    result: $field,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_transpose_matrix_cuda")]
                 pub(crate) fn transpose_cuda(
                     input: *const $field,
@@ -431,6 +542,79 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn sum(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                result: &mut $field,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::sum_scalars_cuda(
+                        a.as_ptr(),
+                        a.len() as u32,
+                        result
+                    )
+                    .wrap()
+                }
+            }
+
+            fn eval_cubic(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                c: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                len: usize,
+                result: &mut Vec<$field>,
+            ) -> IcicleResult<()> {
+                assert_eq!(result.len(), 4);
+                assert_eq!(a.len(), b.len());
+                assert_eq!(b.len(), c.len());
+                unsafe {
+                    $field_prefix_ident::eval_cubic_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        c.as_ptr(),
+                        len as u32,
+                        result.as_mut_ptr()
+                    )
+                    .wrap()
+                }
+            }
+
+            // TODO(sragss): This should really just be a device slice
+            // TODO(sragss): Is r on the GPU by default?
+            fn bind(
+                vec: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                r: $field,
+                len: usize
+            ) -> IcicleResult<()> {
+                // assert_eq!(vec.len(), len * 2);
+                unsafe {
+                    $field_prefix_ident::bind_cuda(
+                        vec.as_mut_ptr(),
+                        len as u32,
+                        r
+                    )
+                    .wrap()
+                }
+            }
+
+            fn bind_triple(
+                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                c: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                r: $field,
+                len: usize
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::bind_triple_cuda(
+                        a.as_mut_ptr(),
+                        b.as_mut_ptr(),
+                        c.as_mut_ptr(),
+                        len as u32,
+                        r
                     )
                     .wrap()
                 }

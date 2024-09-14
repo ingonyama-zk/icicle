@@ -197,7 +197,7 @@ namespace polynomials {
       auto [coeffs, N] = get_coefficients();
       // when reading the pointer, if the counter was modified, the pointer is invalid
       IntegrityPointer<C> integrity_pointer(coeffs, m_integrity_counter, *m_integrity_counter);
-      CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
+      // CHK_STICKY(cudaStreamSynchronize(m_device_context.stream));
       return {std::move(integrity_pointer), N, m_device_context.device_id};
     }
 

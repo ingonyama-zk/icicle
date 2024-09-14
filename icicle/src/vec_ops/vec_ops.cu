@@ -4,12 +4,20 @@
 #include "vec_ops/vec_ops.cuh"
 #include "gpu-utils/device_context.cuh"
 #include "utils/mont.cuh"
+#include <cub/cub.cuh>
 
 namespace vec_ops {
 
   namespace {
 
 #define MAX_THREADS_PER_BLOCK 256
+
+    template <typename E>
+    __global__ void sum_kernel(E* R, const E* A, const E* B, int n)
+    {
+      int idx = threadIdx.x + blockIdx.x * blockDim.x;
+      if (idx < n) { R[idx] = A[idx] + B[idx]; }
+    }
 
     template <typename E>
     __global__ void mul_kernel(const E* scalar_vec, const E* element_vec, int n, E* result)
@@ -139,6 +147,211 @@ namespace vec_ops {
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
 
     return CHK_LAST();
+  }
+
+  template <typename E>
+  __global__ void reduceSumKernel(const E* __restrict__ input, E* __restrict__ output, int n)
+  {
+    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Specialize BlockReduce for type E.
+    typedef cub::BlockReduce<E, 512> BlockReduceT;
+
+    // Allocate temporary storage in shared memory.
+    __shared__ typename BlockReduceT::TempStorage temp_storage;
+
+    E result = E::zero();
+    if (tid < n) result = input[tid];
+
+    // Perform block reduction and obtain the result.
+    result = BlockReduceT(temp_storage).Sum(result);
+
+    // Write result for this block to global memory.
+    if (threadIdx.x == 0) output[blockIdx.x] = result;
+  }
+
+  template <typename E>
+  cudaError_t sum(E* d_input, int n, E* result)
+  {
+    int blockSize = 512;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    E* d_output;
+    cudaError_t err = cudaMalloc(&d_output, numBlocks * sizeof(E));
+    if (err != cudaSuccess) return err;
+
+    // Launch the reduction kernel
+    reduceSumKernel<<<numBlocks, blockSize, blockSize * sizeof(E)>>>(d_input, d_output, n);
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+      cudaFree(d_output);
+      return err;
+    }
+
+    if (numBlocks > 1) {
+      // Recursively reduce the result if multiple blocks
+      err = sum(d_output, numBlocks, result);
+    } else {
+      // Copy the final result back to the host
+      err = cudaMemcpy(result, d_output, sizeof(E), cudaMemcpyDeviceToHost);
+    }
+
+    cudaFree(d_output);
+    return err;
+  }
+
+
+  template <typename E>
+  __global__ void eval_cubic_kernel(
+      const E* __restrict__ a_low, 
+      const E* __restrict__ a_high, 
+      const E* __restrict__ b_low, 
+      const E* __restrict__ b_high, 
+      const E* __restrict__ c_low, 
+      const E* __restrict__ c_high, 
+      E* __restrict__ e_0,
+      E* __restrict__ e_1,
+      E* __restrict__ e_2,
+      E* __restrict__ e_3,
+      int n
+    ) {
+      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid >= n) return;
+
+      E a_low_val = a_low[tid];
+      E a_high_val = a_high[tid];
+      E b_low_val = b_low[tid];
+      E b_high_val = b_high[tid];
+      E c_low_val = c_low[tid];
+      E c_high_val = c_high[tid];
+
+      e_0[tid] = a_low_val * b_low_val * c_low_val;
+      e_1[tid] = a_high_val * b_high_val * c_high_val;
+
+      E M_a = a_high_val - a_low_val;
+      E M_b = b_high_val - b_low_val;
+      E M_c = c_high_val - c_low_val;
+
+      E B_a = a_high_val + M_a;
+      E B_b = b_high_val + M_b;
+      E B_c = c_high_val + M_c;
+      e_2[tid] = B_a * B_b * B_c;
+
+      B_a = B_a + M_a;
+      B_b = B_b + M_b;
+      B_c = B_c + M_c;
+      e_3[tid] = B_a * B_b * B_c;
+  }
+
+
+
+  template <typename E>
+  cudaError_t eval_cubic(E* A, E* B, E* C, int n, E* result)
+  {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    E* E_all;
+    cudaError_t err = cudaMalloc(&E_all, 4 * n * sizeof(E));
+    if (err != cudaSuccess) return err;
+
+    E* E_0 = E_all;
+    E* E_1 = E_all + n;
+    E* E_2 = E_all + 2 * n;
+    E* E_3 = E_all + 3 * n;
+
+    E* a_low = A;
+    E* a_high = A + n;
+    E* b_low = B;
+    E* b_high = B + n;
+    E* c_low = C;
+    E* c_high = C + n;
+
+    eval_cubic_kernel<<<numBlocks, blockSize>>>(a_low, a_high, b_low, b_high, c_low, c_high, E_0, E_1, E_2, E_3, n);
+    E* eval_points;
+    err = cudaMalloc(&eval_points, 4 * sizeof(E));
+    if (err != cudaSuccess) {
+        cudaFree(E_all);
+        return err;
+    }
+
+    sum(E_0, n, &eval_points[0]);
+    sum(E_1, n, &eval_points[1]);
+    sum(E_2, n, &eval_points[2]);
+    sum(E_3, n, &eval_points[3]);
+
+    CHK_IF_RETURN(cudaMemcpy(result, eval_points, sizeof(E) * 4, cudaMemcpyDeviceToHost));
+    CHK_IF_RETURN(cudaFree(E_all));
+    CHK_IF_RETURN(cudaFree(eval_points));
+
+    if (err != cudaSuccess) {
+      return err;
+    }
+
+    return cudaSuccess;
+  }
+
+  template <typename E>
+  __global__ void bind_kernel(
+      E* __restrict__ low, 
+      E* __restrict__ high, 
+      int n,
+      E r
+  ) {
+      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid >= n) return;
+
+      low[tid] = low[tid] + (r * (high[tid] - low[tid]));
+  }
+
+  template <typename E>
+  cudaError_t bind(E* vec, int n, E r)
+  {
+    int numBlocks = (n + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+    int blockSize = MAX_THREADS_PER_BLOCK;
+
+    E* low = vec;
+    E* high = vec + n;
+
+    bind_kernel<<<numBlocks, blockSize>>>(low, high, n, r);
+
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+      return err;
+    }
+
+    // Synchronize to ensure all operations are complete
+    err = cudaDeviceSynchronize();
+    if (err != cudaSuccess) {
+        return err;
+    }
+
+    return cudaSuccess;
+  }
+
+  // TODO(sragss): Try bind triple
+  template <typename E>
+  cudaError_t bind_triple(E* a, E* b, E* c, int n, E r)
+  {
+    int numBlocks = (n + MAX_THREADS_PER_BLOCK - 1) / MAX_THREADS_PER_BLOCK;
+    int blockSize = MAX_THREADS_PER_BLOCK;
+
+    bind_kernel<<<numBlocks, blockSize>>>(a, a + n, n, r);
+    bind_kernel<<<numBlocks, blockSize>>>(b, b + n, n, r);
+    bind_kernel<<<numBlocks, blockSize>>>(c, c + n, n, r);
+
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+      return err;
+    }
+
+    // Synchronize to ensure all operations are complete
+    err = cudaDeviceSynchronize();
+    if (err != cudaSuccess) {
+        return err;
+    }
+
+    return cudaSuccess;
   }
 
   template <typename E>

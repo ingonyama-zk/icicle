@@ -77,4 +77,35 @@ namespace vec_ops {
   {
     return bit_reverse<scalar_t>(input, n, config, output);
   }
+
+  /**
+   * Extern version of sum function with the template parameter
+   * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
+   * or standalone "STARK field" given by `-DFIELD`).
+   * @return `cudaSuccess` if the execution was successful and an error code otherwise.
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, sum_cuda)(scalar_t* vec, uint64_t n, scalar_t* result)
+  {
+    return sum<scalar_t>(vec, n, result);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, eval_cubic_cuda)(
+    scalar_t* A, 
+    scalar_t* B, 
+    scalar_t* C, 
+    uint64_t n, 
+    scalar_t* result)
+  {
+    return eval_cubic<scalar_t>(A, B, C, n, result);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, bind_cuda)(scalar_t* vec, uint64_t n, scalar_t r)
+  {
+    return bind<scalar_t>(vec, n, r);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, bind_triple_cuda)(scalar_t* a, scalar_t* b, scalar_t* c, uint64_t n, scalar_t r)
+  {
+    return bind_triple<scalar_t>(a, b, c, n, r);
+  }
 } // namespace vec_ops
