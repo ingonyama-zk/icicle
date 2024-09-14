@@ -5,6 +5,7 @@ pub mod msm;
 pub mod ntt;
 pub mod polynomials;
 pub mod vec_ops;
+pub mod sumcheck;
 
 #[doc(hidden)]
 pub mod test_utilities;
