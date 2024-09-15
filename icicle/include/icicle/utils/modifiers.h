@@ -14,7 +14,7 @@
 
 #define HOST_INLINE        __host__ INLINE_MACRO
 #define DEVICE_INLINE      __device__ INLINE_MACRO
-#define HOST_DEVICE __host__ __device__
+#define HOST_DEVICE        __host__ __device__
 #define HOST_DEVICE_INLINE HOST_DEVICE INLINE_MACRO
 #else // not CUDA
 #define INLINE_MACRO
