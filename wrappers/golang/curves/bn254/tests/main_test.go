@@ -2,14 +2,13 @@ package tests
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/suite"
-	"sync"
-	"testing"
-
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/stretchr/testify/suite"
+	"sync"
+	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 )

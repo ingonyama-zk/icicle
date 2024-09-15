@@ -2,14 +2,13 @@ package tests
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/suite"
-	"sync"
-	"testing"
-
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/stretchr/testify/suite"
+	"sync"
+	"testing"
 )
 
 const (

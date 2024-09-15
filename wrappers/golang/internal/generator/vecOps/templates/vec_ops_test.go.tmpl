@@ -64,15 +64,15 @@ func test{{capitalize .Field}}Transpose(suite suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
-type VecOpsTestSuite struct {
+type {{capitalize .Field}}VecOpsTestSuite struct {
 	suite.Suite
 }
 
-func (s *VecOpsTestSuite) Test{{capitalize .Field}}VecOps() {
+func (s *{{capitalize .Field}}VecOpsTestSuite) Test{{capitalize .Field}}VecOps() {
 	s.Run("Test{{capitalize .Field}}VecOps", testWrapper(s.Suite, test{{capitalize .Field}}VecOps))
 	s.Run("Test{{capitalize .Field}}Transpose", testWrapper(s.Suite, test{{capitalize .Field}}Transpose))
 }
 
-func TestSuiteVecOps(t *testing.T) {
-	suite.Run(t, new(VecOpsTestSuite))
+func TestSuite{{capitalize .Field}}VecOps(t *testing.T) {
+	suite.Run(t, new({{capitalize .Field}}VecOpsTestSuite))
 }

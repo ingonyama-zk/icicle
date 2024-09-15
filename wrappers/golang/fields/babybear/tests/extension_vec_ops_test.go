@@ -64,15 +64,15 @@ func testBabybear_extensionTranspose(suite suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
-type VecOpsTestSuite struct {
+type Babybear_extensionVecOpsTestSuite struct {
 	suite.Suite
 }
 
-func (s *VecOpsTestSuite) TestBabybear_extensionVecOps() {
+func (s *Babybear_extensionVecOpsTestSuite) TestBabybear_extensionVecOps() {
 	s.Run("TestBabybear_extensionVecOps", testWrapper(s.Suite, testBabybear_extensionVecOps))
 	s.Run("TestBabybear_extensionTranspose", testWrapper(s.Suite, testBabybear_extensionTranspose))
 }
 
-func TestSuiteVecOps(t *testing.T) {
-	suite.Run(t, new(VecOpsTestSuite))
+func TestSuiteBabybear_extensionVecOps(t *testing.T) {
+	suite.Run(t, new(Babybear_extensionVecOpsTestSuite))
 }

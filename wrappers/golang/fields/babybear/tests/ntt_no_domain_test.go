@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"github.com/stretchr/testify/suite"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
@@ -9,7 +10,7 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
-func TestNttNoDomain(t *testing.T) {
+func testNttNoDomain(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := babybear_extension.GenerateScalars(1 << largestTestSize)
 
@@ -29,7 +30,7 @@ func TestNttNoDomain(t *testing.T) {
 	}
 }
 
-func TestNttDeviceAsyncNoDomain(t *testing.T) {
+func testNttDeviceAsyncNoDomain(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := babybear_extension.GenerateScalars(1 << largestTestSize)
 
@@ -64,7 +65,7 @@ func TestNttDeviceAsyncNoDomain(t *testing.T) {
 	}
 }
 
-func TestNttBatchNoDomain(t *testing.T) {
+func testNttBatchNoDomain(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	largestTestSize := 12
 	largestBatchSize := 100
@@ -86,4 +87,18 @@ func TestNttBatchNoDomain(t *testing.T) {
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 		}
 	}
+}
+
+type NTTNoDomainTestSuite struct {
+	suite.Suite
+}
+
+func (s *NTTNoDomainTestSuite) TestNTTNoDomain() {
+	s.Run("TestNTTNoDomain", testWrapper(s.Suite, testNttNoDomain))
+	s.Run("TestNttDeviceAsyncNoDomain", testWrapper(s.Suite, testNttDeviceAsyncNoDomain))
+	s.Run("TestNttBatchNoDomain", testWrapper(s.Suite, testNttBatchNoDomain))
+}
+
+func TestSuiteNTTNoDomain(t *testing.T) {
+	suite.Run(t, new(NTTNoDomainTestSuite))
 }

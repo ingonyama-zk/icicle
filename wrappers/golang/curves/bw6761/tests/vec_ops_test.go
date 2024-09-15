@@ -64,15 +64,15 @@ func testBw6_761Transpose(suite suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
-type VecOpsTestSuite struct {
+type Bw6_761VecOpsTestSuite struct {
 	suite.Suite
 }
 
-func (s *VecOpsTestSuite) TestBw6_761VecOps() {
+func (s *Bw6_761VecOpsTestSuite) TestBw6_761VecOps() {
 	s.Run("TestBw6_761VecOps", testWrapper(s.Suite, testBw6_761VecOps))
 	s.Run("TestBw6_761Transpose", testWrapper(s.Suite, testBw6_761Transpose))
 }
 
-func TestSuiteVecOps(t *testing.T) {
-	suite.Run(t, new(VecOpsTestSuite))
+func TestSuiteBw6_761VecOps(t *testing.T) {
+	suite.Run(t, new(Bw6_761VecOpsTestSuite))
 }

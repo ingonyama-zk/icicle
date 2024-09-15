@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"	
 	"sync"
+	"fmt"
 	"github.com/stretchr/testify/suite"
 	{{if .SupportsNTT -}}
-	"fmt"
 	
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}

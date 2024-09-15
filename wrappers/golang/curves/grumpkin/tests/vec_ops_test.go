@@ -64,15 +64,15 @@ func testGrumpkinTranspose(suite suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
-type VecOpsTestSuite struct {
+type GrumpkinVecOpsTestSuite struct {
 	suite.Suite
 }
 
-func (s *VecOpsTestSuite) TestGrumpkinVecOps() {
+func (s *GrumpkinVecOpsTestSuite) TestGrumpkinVecOps() {
 	s.Run("TestGrumpkinVecOps", testWrapper(s.Suite, testGrumpkinVecOps))
 	s.Run("TestGrumpkinTranspose", testWrapper(s.Suite, testGrumpkinTranspose))
 }
 
-func TestSuiteVecOps(t *testing.T) {
-	suite.Run(t, new(VecOpsTestSuite))
+func TestSuiteGrumpkinVecOps(t *testing.T) {
+	suite.Run(t, new(GrumpkinVecOpsTestSuite))
 }
