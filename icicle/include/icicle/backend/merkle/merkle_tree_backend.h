@@ -5,7 +5,7 @@
 #include <vector>
 #include "icicle/hash/hash.h"
 #include "icicle/merkle/merkle_tree_config.h"
-#include "icicle/merkle/merkle_path.h"
+#include "icicle/merkle/merkle_proof.h"
 
 namespace icicle {
 
@@ -47,23 +47,24 @@ namespace icicle {
     /**
      * @brief Retrieve the root of the Merkle tree.
      * @param root Pointer to where the Merkle root will be written.
+     * @param root_size The size of the root in bytes.
      * @return Error code of type eIcicleError.
      */
-    virtual eIcicleError get_merkle_root(std::byte* root /*output*/) const = 0;
+    virtual eIcicleError get_merkle_root(std::byte* root, uint64_t root_size) const = 0;
 
     /**
      * @brief Retrieve the Merkle path for a specific element.
      * @param leaves Pointer to the leaves of the tree.
      * @param element_idx Index of the element for which the Merkle path is required.
      * @param config Configuration for the Merkle tree operation.
-     * @param merkle_path Reference to the MerklePath object where the path will be stored.
+     * @param merkle_proof Reference to the MerkleProof object where the path will be stored.
      * @return Error code of type eIcicleError.
      */
-    virtual eIcicleError get_merkle_path(
+    virtual eIcicleError get_merkle_proof(
       const std::byte* leaves,
       uint64_t element_idx,
       const MerkleTreeConfig& config,
-      MerklePath& merkle_path /*output*/) const = 0;
+      MerkleProof& merkle_proof /*output*/) const = 0;
 
     /**
      * @brief Get the hash functions used for each layer of the Merkle tree.

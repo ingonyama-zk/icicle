@@ -149,21 +149,22 @@ TEST_F(HashApiTest, MerkleTree)
     MerkleTree::create({layer0_hash, layer1_hash, layer2_hash}, leaf_element_size, 2 /*min level to store*/);
 
   // build tree
-  merkle_tree.build(leaves, input_size, config);
+  ICICLE_CHECK(merkle_tree.build(leaves, input_size, config));
 
   // ret root and merkle-path to an element
   uint64_t root = 0; // assuming output is 8B
-  uint64_t element_idx = 5;
-  const auto path_size = merkle_tree.calculate_merkle_path_size();
-  MerklePath merkle_path{path_size};
-  merkle_tree.get_merkle_root(&root);
-  merkle_tree.get_merkle_path(leaves, element_idx, config, merkle_path);
+  uint64_t leaf_idx = 5;
+  MerkleProof merkle_proof{};
+  ICICLE_CHECK(merkle_tree.get_merkle_root(root));
+  ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, leaf_idx, config, merkle_proof));
 
-  bool verification_valid = merkle_tree.verify(leaves + element_idx, element_idx, merkle_path, &root, config);
+  bool verification_valid = false;
+  ICICLE_CHECK(merkle_tree.verify(merkle_proof, verification_valid));
   ASSERT_TRUE(verification_valid);
 }
 
 #ifdef POSEIDON
+
 #include "icicle/fields/field_config.h"
 using namespace field_config;
 

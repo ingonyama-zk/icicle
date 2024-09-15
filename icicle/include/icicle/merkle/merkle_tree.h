@@ -4,7 +4,7 @@
 #include <array>
 #include <vector>
 #include "icicle/merkle/merkle_tree_config.h"
-#include "icicle/merkle/merkle_path.h"
+#include "icicle/merkle/merkle_proof.h"
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 
 namespace icicle {
@@ -49,9 +49,8 @@ namespace icicle {
     /**
      * @brief Constructor for the MerkleTree class.
      * @param backend Shared pointer to the backend responsible for Merkle tree operations.
-     * @param layer_hashes A vector of Hash objects representing the hashes of each tree layer.
      */
-    MerkleTree(std::shared_ptr<MerkleTreeBackend> backend) : m_backend{std::move(backend)} {}
+    explicit MerkleTree(std::shared_ptr<MerkleTreeBackend> backend) : m_backend{std::move(backend)} {}
 
     /**
      * @brief Build the Merkle tree from the provided leaves.
@@ -67,9 +66,9 @@ namespace icicle {
 
     template <typename T>
     inline eIcicleError
-    build(const T* leaves, uint64_t size /* =number-of-leave-elements*/, const MerkleTreeConfig& config)
+    build(const T* leaves, uint64_t size /* number of leaf elements */, const MerkleTreeConfig& config)
     {
-      return build((const std::byte*)leaves, size, config);
+      return build(reinterpret_cast<const std::byte*>(leaves), size * sizeof(T), config);
     }
 
     /**
@@ -77,90 +76,52 @@ namespace icicle {
      * @param root Pointer to where the Merkle root will be written. Must be on host memory.
      * @return Error code of type eIcicleError.
      */
-    inline eIcicleError get_merkle_root(std::byte* root /*output*/) const { return m_backend->get_merkle_root(root); }
-
-    template <typename T>
-    inline eIcicleError get_merkle_root(T* root /*output*/) const
+    inline eIcicleError get_merkle_root(std::byte* root /*output*/, uint64_t root_size) const
     {
-      return get_merkle_root((std::byte*)root);
+      return m_backend->get_merkle_root(root, root_size);
     }
 
-    /**
-     * @brief Calculate the size of the Merkle path for an element.
-     *
-     * This function calculates the size of the Merkle path based on the number of levels
-     * in the tree and the size of each hash.
-     * @param pruned A pruned path the siblings required for computation, excluding the elements that can be computed
-     * directly.
-     *
-     * @return The total size of the Merkle path in bytes.
-     */
-    inline uint64_t calculate_merkle_path_size(bool pruned = false) const
+    template <typename T>
+    inline eIcicleError get_merkle_root(T& root /*output*/) const
     {
-      ICICLE_ASSERT(!pruned) << "TODO support pruned merkle paths";
-      // TODO: pruned paths can be smaller
-      uint64_t merkle_path_size = 0;
-      for (const auto& layer : m_backend->get_layer_hashes()) {
-        merkle_path_size += layer.output_size();
-      }
-      return merkle_path_size;
+      return get_merkle_root(reinterpret_cast<std::byte*>(&root), sizeof(T));
     }
 
     /**
      * @brief Retrieve the Merkle path for a specific element.
      * @param leaves Pointer to the leaves of the tree.
-     * @param element_idx Index of the element for which the Merkle path is required.
+     * @param leaf_idx Index of the element for which the Merkle path is required.
      * @param config Configuration for the Merkle tree operation.
-     * @param merkle_path Reference to the MerklePath object where the path will be stored.
+     * @param merkle_proof Reference to the MerkleProof object where the path will be stored.
      * @return Error code of type eIcicleError.
      */
-    inline eIcicleError get_merkle_path(
+    inline eIcicleError get_merkle_proof(
       const std::byte* leaves,
-      uint64_t element_idx,
+      uint64_t leaf_idx,
       const MerkleTreeConfig& config,
-      MerklePath& merkle_path /*output*/) const
+      MerkleProof& merkle_proof /*output*/) const
     {
-      // Ask backend to generate the path and store it in the MerklePath object
-      return m_backend->get_merkle_path(leaves, element_idx, config, merkle_path);
+      return m_backend->get_merkle_proof(leaves, leaf_idx, config, merkle_proof);
     }
 
     template <typename T>
-    inline eIcicleError get_merkle_path(
-      const T* leaves, uint64_t element_idx, const MerkleTreeConfig& config, MerklePath& merkle_path /*output*/) const
+    inline eIcicleError get_merkle_proof(
+      const T* leaves, uint64_t leaf_idx, const MerkleTreeConfig& config, MerkleProof& merkle_proof /*output*/) const
     {
-      // Ask backend to generate the path and store it in the MerklePath object
-      return get_merkle_path((std::byte*)leaves, element_idx, config, merkle_path);
+      return get_merkle_proof(reinterpret_cast<const std::byte*>(leaves), leaf_idx, config, merkle_proof);
     }
 
     /**
-     * @brief Verify an element against the Merkle path using layer hashes (frontend verification).
-     * @param element Pointer to the element being verified.
-     * @param element_idx Index of the element being verified.
-     * @param merkle_path The MerklePath object representing the path.
-     * @param root Pointer to the root of the Merkle tree.
-     * @param config Configuration for the Merkle tree operation.
-     * @return True if the verification succeeds, false otherwise.
+     * @brief Verify an element against the Merkle path using layer hashes.
+     * @param merkle_proof The MerkleProof object includes the leaf, path, and the root.
+     * @param valid output valid bit. True if the Proof is valid, false otherwise.
+     * @return Error code of type eIcicleError indicating success or failure.
      */
-    bool verify(
-      const std::byte* element,
-      uint64_t element_idx,
-      const MerklePath& merkle_path,
-      const std::byte* root,
-      const MerkleTreeConfig& config) const
+    eIcicleError verify(const MerkleProof& merkle_proof, bool& valid /*output*/) const
     {
-      // TODO implement merkle-path verification
-      return true;
-    }
-
-    template <typename T, typename R>
-    bool verify(
-      const T* element,
-      uint64_t element_idx,
-      const MerklePath& merkle_path,
-      const R* root,
-      const MerkleTreeConfig& config) const
-    {
-      return verify((const std::byte*)element, element_idx, merkle_path, (const std::byte*)root, config);
+      // TODO: Implement Merkle path verification here
+      valid = true;
+      return eIcicleError::SUCCESS;
     }
 
   private:
