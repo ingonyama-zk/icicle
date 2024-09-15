@@ -120,7 +120,18 @@ namespace icicle {
     eIcicleError verify(const MerkleProof& merkle_proof, bool& valid /*output*/) const
     {
       // TODO: Implement Merkle path verification here
-      valid = true;
+
+      // can access path by offset or all of it
+      // auto digest = merkle_proof.access_path_at_offset<DIGEST_TYPE>(offset);
+      auto path = merkle_proof.get_path();
+      auto path_size = merkle_proof.get_path_size();
+      auto root = merkle_proof.get_root();
+      auto root_size = merkle_proof.get_root_size();
+      auto leaf_idx = merkle_proof.get_leaf_idx();
+      auto leaf = merkle_proof.get_leaf();
+      auto leaf_size = merkle_proof.get_leaf_size();
+
+      valid = true; // TODO use hashers to check path from leaf to root is recomputing the expected root
       return eIcicleError::SUCCESS;
     }
 

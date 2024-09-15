@@ -89,13 +89,13 @@ namespace icicle {
      * @brief Get a pointer to the path data.
      * @return Pointer to the path data.
      */
-    const std::byte* data() const { return m_path.data(); }
+    const std::byte* get_path() const { return m_path.data(); }
 
     /**
      * @brief Get the size of the path data.
      * @return The size of the path data.
      */
-    uint64_t path_size() const { return m_path.size(); }
+    uint64_t get_path_size() const { return m_path.size(); }
 
     /**
      * @brief Push a node to the path, given as bytes, using icicle_copy.
@@ -137,31 +137,31 @@ namespace icicle {
      * @brief Get the index of the leaf this path is a proof for.
      * @return Index of the proved leaf.
      */
-    uint64_t leaf_index() const { return m_leaf_index; }
+    uint64_t get_leaf_idx() const { return m_leaf_index; }
 
     /**
      * @brief Get a pointer to the leaf data.
      * @return Pointer to the leaf data, or nullptr if no leaf data is available.
      */
-    const std::byte* leaf_data() const { return m_leaf.empty() ? nullptr : m_leaf.data(); }
+    const std::byte* get_leaf() const { return m_leaf.empty() ? nullptr : m_leaf.data(); }
 
     /**
      * @brief Get the size of the leaf data.
      * @return The size of the leaf data, or 0 if no leaf data is available.
      */
-    uint64_t leaf_size() const { return m_leaf.size(); }
+    uint64_t get_leaf_size() const { return m_leaf.size(); }
 
     /**
      * @brief Get a pointer to the root data.
      * @return Pointer to the root data, or nullptr if no root data is available.
      */
-    const std::byte* root_data() const { return m_root.empty() ? nullptr : m_root.data(); }
+    const std::byte* get_root() const { return m_root.empty() ? nullptr : m_root.data(); }
 
     /**
      * @brief Get the size of the root data.
      * @return The size of the root data, or 0 if no root data is available.
      */
-    uint64_t root_size() const { return m_root.size(); }
+    uint64_t get_root_size() const { return m_root.size(); }
 
   private:
     bool m_pruned{false};          ///< Whether the Merkle path is pruned.
