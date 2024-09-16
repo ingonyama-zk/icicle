@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 {
   try_load_and_set_backend_device(argc, argv);
 
-  int N_LOG = 20;
+  int N_LOG = 10;
   int N = 1 << N_LOG;
 
   // on-host data
@@ -90,13 +90,6 @@ int main(int argc, char** argv)
   }
   END_TIMER(baseline_reduce_sum, "baseline reduce sum took");
 
-  ICICLE_LOG_INFO << "Failed to load ";
-  std::cout << "ext: " << std::endl;
-  // d_config.ext = 2;
-  std::cout << "ext: " << d_config.ext << std::endl;
-
-  // return 0;
-
   START_TIMER(reduce_sum);
   ICICLE_CHECK(bn254_vector_sum(d_a, N, &d_config, d_out));
   END_TIMER(reduce_sum, "reduce sum took");
@@ -106,7 +99,7 @@ int main(int argc, char** argv)
   std::cout << "d_out: " << d_out[0] << std::endl;
 
 
-
+  return 0;
 
   START_TIMER(baseline_reduce_product);  
   h_out[0] = scalar_t::one();
