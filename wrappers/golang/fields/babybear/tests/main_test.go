@@ -15,7 +15,10 @@ const (
 	largestTestSize = 20
 )
 
-var DEVICE runtime.Device
+var (
+	DEVICE   runtime.Device
+	exitCode int
+)
 
 func initDomain(cfg core.NTTInitDomainConfig) runtime.EIcicleError {
 	rouIcicle := babybear.ScalarField{}
@@ -58,8 +61,10 @@ func TestMain(m *testing.M) {
 			}
 		}
 
+		// TODO - run tests for each device type without calling `m.Run` multiple times
+		// see https://cs.opensource.google/go/go/+/refs/tags/go1.23.1:src/testing/testing.go;l=1936-1940 for more info
 		// execute tests
-		m.Run()
+		exitCode |= m.Run()
 
 		// release domain
 		e = ntt.ReleaseDomain()
@@ -71,4 +76,6 @@ func TestMain(m *testing.M) {
 			}
 		}
 	}
+
+	os.Exit(exitCode)
 }

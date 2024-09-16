@@ -13,7 +13,10 @@ const (
 	largestTestSize = 20
 )
 
-var DEVICE runtime.Device
+var (
+	DEVICE   runtime.Device
+	exitCode int
+)
 
 func testWrapper(suite suite.Suite, fn func(suite.Suite)) func() {
 	return func() {
@@ -38,8 +41,12 @@ func TestMain(m *testing.M) {
 		DEVICE = runtime.CreateDevice(deviceType, 0)
 		runtime.SetDevice(&DEVICE)
 
+		// TODO - run tests for each device type without calling `m.Run` multiple times
+		// see https://cs.opensource.google/go/go/+/refs/tags/go1.23.1:src/testing/testing.go;l=1936-1940 for more info
 		// execute tests
-		m.Run()
+		exitCode |= m.Run()
 
 	}
+
+	os.Exit(exitCode)
 }
