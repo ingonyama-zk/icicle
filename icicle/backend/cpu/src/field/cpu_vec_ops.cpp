@@ -155,23 +155,21 @@ private:
   // Single worker functionality to execute sum(vector)
   void vector_sum()
   {
-    ICICLE_LOG_INFO << "enter vector_sum";
-    ICICLE_LOG_INFO << "m_op_a[0]: " << m_op_a[0];
-    ICICLE_LOG_INFO << "point 0";
-    // *m_output = m_op_a[0];
+    // SP: *m_output = m_op_a[0];
     m_intermidiate_res = m_op_a[0];
-    ICICLE_LOG_INFO << "point 1";
     for (uint64_t i = 1; i < m_nof_operations; ++i) {
-      // *m_output = *m_output + m_op_a[i];
+      // SP: *m_output = *m_output + m_op_a[i];
       m_intermidiate_res = m_intermidiate_res + m_op_a[i];
     }
   }
   // Single worker functionality to execute product(vector)
   void vector_product()
   {
-    *m_output = m_op_a[0];
+    // SP: *m_output = m_op_a[0];
+    m_intermidiate_res = m_op_a[0];
     for (uint64_t i = 1; i < m_nof_operations; ++i) {
-      *m_output = *m_output * m_op_a[i];
+      // SP: *m_output = *m_output * m_op_a[i];
+      m_intermidiate_res = m_intermidiate_res * m_op_a[i];
     }
   }
   // Single worker functionality to execute conversion from barret to montgomery
@@ -347,102 +345,65 @@ cpu_vector_div(const Device& device, const T* vec_a, const T* vec_b, uint64_t n,
 
 REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
 
-
-// #define SP_DEBUG
-
-#ifndef SP_DEBUG
-
 /*********************************** SUM ***********************************/
 template <typename T>
 eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
 {
-  ICICLE_LOG_INFO << "cpu_vector_sum";
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
   bool output_initialized = false;
-  uint64_t vec_s_offset = 0;
-  VectorOpTask<T>* task_p;
+  uint64_t vec_a_offset = 0;
   // run until all vector deployed and all tasks completed
-  do {
-    task_p = vec_s_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
+  while (true) {
+    VectorOpTask<T>* task_p  = vec_a_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
+    if (task_p == nullptr) {
+      return eIcicleError::SUCCESS;
+    }
     if (task_p->is_completed()) {
-      ICICLE_LOG_INFO << "task_p->m_intermidiate_res: " << task_p->m_intermidiate_res;
-      *output = output_initialized ? task_p->m_intermidiate_res : *output + task_p->m_intermidiate_res;
-      // SP: we used m_intermidiate_res, we have to mark it so we can't use it again. set_idle?
-      // SP: Use dispatch if setting a new task, or set_idle if to just mark the task result as handled.
-      // output_initialized = true;
-      // task_p->set_idle();
-      ICICLE_LOG_INFO << "after set_idle";
-      ICICLE_LOG_INFO << "is_completed: " << task_p->is_completed();
+      *output = output_initialized ? *output + task_p->m_intermidiate_res : task_p->m_intermidiate_res;
+      output_initialized = true;
     }
-    if (vec_s_offset < n) {
-      ICICLE_LOG_INFO << "vec_s_offset: " << vec_s_offset;
+    if (vec_a_offset < n) {
       task_p->send_intermidiate_res_task(
-        VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
-      vec_s_offset += NOF_OPERATIONS_PER_TASK;
+        VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_a_offset), vec_a + vec_a_offset);
+      vec_a_offset += NOF_OPERATIONS_PER_TASK;
     }
-    ICICLE_LOG_INFO << "task_p: " << task_p;
-  } while (task_p != nullptr);
-  // } while (vec_s_offset < n);
-  return eIcicleError::SUCCESS;
-}
-
-#else
-
-template <typename T>
-eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
-{
-  *output = scalar_t::zero();
-  for (uint64_t i = 0; i < n; ++i) {
-    *output = *output + vec_a[i];
+    else {
+      task_p->set_idle();
+    }
   }
-  return eIcicleError::SUCCESS;
 }
-
-#endif
-
 
 REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
+
 /*********************************** PRODUCT ***********************************/
-
-
-#ifndef SP_DEBUG
-
 template <typename T>
 eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
 {
   ICICLE_LOG_INFO << "cpu_vector_product";
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
   bool output_initialized = false;
-  uint64_t vec_s_offset = 0;
-  VectorOpTask<T>* task_p;
+  uint64_t vec_a_offset = 0;
+  
   // run until all vector deployed and all tasks completed
-  do {
-    task_p = vec_s_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
+  while (true) {
+    VectorOpTask<T>* task_p = vec_a_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
+    if (task_p == nullptr) {
+      return eIcicleError::SUCCESS;
+    }
     if (task_p->is_completed()) {
-      *output = output_initialized ? task_p->m_intermidiate_res : *output * task_p->m_intermidiate_res;
+      *output = output_initialized ? *output * task_p->m_intermidiate_res : task_p->m_intermidiate_res;
+      output_initialized = true;
     }
-    if (vec_s_offset < n) {
-      ICICLE_LOG_INFO << "vec_s_offset: " << vec_s_offset;
+    if (vec_a_offset < n) {
       task_p->send_intermidiate_res_task(
-        VecOperation::VECTOR_PRODUCT, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_s_offset), vec_a + vec_s_offset);
-      vec_s_offset += NOF_OPERATIONS_PER_TASK;
+        VecOperation::VECTOR_PRODUCT, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_a_offset), vec_a + vec_a_offset);
+      vec_a_offset += NOF_OPERATIONS_PER_TASK;
     }
-  } while (task_p != nullptr);
-  return eIcicleError::SUCCESS;
+    else {
+      task_p->set_idle();
+    }
+  } 
 }
-
-#else
-template <typename T>
-eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
-{
-  *output = scalar_t::one();
-  for (uint64_t i = 0; i < n; ++i) {
-    *output = *output * vec_a[i];
-  }
-  return eIcicleError::SUCCESS;
-}
-
-#endif
 
 REGISTER_VECTOR_PRODUCT_BACKEND("CPU", cpu_vector_product<scalar_t>);
 

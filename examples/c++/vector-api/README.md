@@ -1,18 +1,16 @@
 # Icicle Example: Vector Operations API
 
-TBD
-
 ## Key-Takeaway
 
-Icicle provides polynomial multiplication using the Number Theoretical Transform (NTT), including forward and inverse transforms.
+The Vector Operations API supports the following:
 
-## Concise Usage Explanation
-
-1.	Include the necessary headers.
-2.	Initialize the NTT domain.
-3.	Prepare and transform the polynomials from host to device memory.
-4.	Perform pointwise multiplication.
-5.	Apply the inverse NTT.
+ - element-wise vector operations (e.g. addition, multiplication)
+ - vector reduction operations (e.g. sum of elements, product of elements)
+ - scalar-vector operations (e.g add scalar to vector)
+ - matrix operations (e.g. transposition)
+ - miscellaneous operations like bit-reversal and slicing. 
+ 
+ All these operations can be performed on a host or device both synchronously and asynchronously.
 
 ## Running the example
 
@@ -25,8 +23,6 @@ Icicle provides polynomial multiplication using the Number Theoretical Transform
 
 ## What's in the example
 
-1.	Define the size of the example.
-2.	Initialize input polynomials.
-3.	Perform Radix-2 or Mixed-Radix NTT.
-4.	Perform pointwise polynomial multiplication.
-5.	Apply the inverse NTT.
+1.	`example_element_wise`: examples of element-wise operations
+2.	`example_scalar_vector`: examples of scalar-vector operations
+

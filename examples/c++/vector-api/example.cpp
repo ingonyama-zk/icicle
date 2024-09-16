@@ -27,18 +27,23 @@ void random_samples(scalar_t* res, uint32_t count)
     res[i] = i < 1000 ? scalar_t::rand_host() : res[i - 1000];
 }
 
-// void incremental_values(scalar_t* res, uint32_t count)
-// {
-//   for (int i = 0; i < count; i++) {
-//     res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::zero();
-//   }
-// }
+void incremental_values(scalar_t* res, uint32_t count)
+{
+  for (int i = 0; i < count; i++) {
+    res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::zero();
+  }
+}
+
+
+void example_element_wise() {
+  return;
+}
 
 int main(int argc, char** argv)
 {
-  try_load_and_set_backend_device(argc, argv);
+  // try_load_and_set_backend_device(argc, argv);
 
-  int N_LOG = 10;
+  int N_LOG = 20;
   int N = 1 << N_LOG;
 
   // on-host data
@@ -49,11 +54,19 @@ int main(int argc, char** argv)
   random_samples(h_a.get(), N ); 
   random_samples(h_b.get(), N ); 
 
+  // incremental_values(h_a.get(), N ); 
+  // incremental_values(h_b.get(), N ); 
+
   // on-device data
   scalar_t *d_a, *d_b, *d_out;
 
   DeviceProperties device_props;
   ICICLE_CHECK(icicle_get_device_properties(device_props));
+  if (!device_props.using_host_memory) {
+    std::cout << "Device isn't using host memory" << std::endl;
+  } else {
+    std::cout << "Device is using host memory" << std::endl;
+  }  
   
   ICICLE_CHECK(icicle_malloc((void**)&d_a, sizeof(scalar_t) * N));
   ICICLE_CHECK(icicle_malloc((void**)&d_b, sizeof(scalar_t) * N));
@@ -91,7 +104,8 @@ int main(int argc, char** argv)
   END_TIMER(baseline_reduce_sum, "baseline reduce sum took");
 
   START_TIMER(reduce_sum);
-  ICICLE_CHECK(bn254_vector_sum(d_a, N, &d_config, d_out));
+  ICICLE_CHECK(bn254_vector_sum(d_a, N, &h_config, d_out));
+  // ICICLE_CHECK(bn254_vector_sum(d_a, N, &d_config, d_out));
   END_TIMER(reduce_sum, "reduce sum took");
 
 
@@ -99,7 +113,7 @@ int main(int argc, char** argv)
   std::cout << "d_out: " << d_out[0] << std::endl;
 
 
-  return 0;
+  // return 0;
 
   START_TIMER(baseline_reduce_product);  
   h_out[0] = scalar_t::one();
