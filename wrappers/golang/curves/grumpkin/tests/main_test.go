@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"github.com/stretchr/testify/suite"
+	"os"
 	"sync"
 	"testing"
 

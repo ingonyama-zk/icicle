@@ -7,6 +7,7 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/stretchr/testify/suite"
+	"os"
 	"sync"
 	"testing"
 
