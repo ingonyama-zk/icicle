@@ -511,16 +511,36 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, false);
+    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, nof_ntt_blocks, inv, false);
 
-    if (columns_batch_size)
-      engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
-    else
-      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    // engine.loadGlobalData16(in, data_stride, log_data_stride, strided, s_meta);
 
-    if (threadIdx.x < 4) {
+    // if (s_meta.ntt_block_id < 4) {
       printf(
-        "T Before: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        "Before T: %d, I: %d, B: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        s_meta.ntt_inp_id,
+        s_meta.ntt_block_id,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
+    // }
+
+    // engine.ntt2_4();
+    engine.ntt8();
+    // engine.SharedData16Columns2_4(shmem, true, false, strided); // store
+    // __syncthreads();
+    // engine.SharedData16Rows8(shmem, false, false, strided); // load
+    if (s_meta.ntt_block_id < 2) {
+      printf(
+        "T BEFORE Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
         threadIdx.x,
         engine.X[0].limbs_storage.limbs[0],
         engine.X[1].limbs_storage.limbs[0],
@@ -533,44 +553,46 @@ namespace mxntt {
       );
     }
 
-    engine.ntt4_2_interlaced();
-    if (threadIdx.x < 4) {
-      printf(
-        "T AFTER FIRST NTT: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        threadIdx.x,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
-    }
-    engine.SharedData16Columns4_2(shmem, true, false, strided); // store
+    engine.SharedData16Columns8(shmem, true, false, strided); // store
     __syncthreads();
-    engine.SharedData16Rows4_2(shmem, false, false, strided); // load
+    engine.SharedData16Rows2_4(shmem, false, false, strided); // load
 
-    printf(
-      "T AFTER TRANSPOSE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-      threadIdx.x,
-      engine.X[0].limbs_storage.limbs[0],
-      engine.X[1].limbs_storage.limbs[0],
-      engine.X[2].limbs_storage.limbs[0],
-      engine.X[3].limbs_storage.limbs[0],
-      engine.X[4].limbs_storage.limbs[0],
-      engine.X[5].limbs_storage.limbs[0],
-      engine.X[6].limbs_storage.limbs[0],
-      engine.X[7].limbs_storage.limbs[0]
-    );
+    if (s_meta.ntt_block_id < 2) {
+      printf(
+        "T AFTER Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
+    }
 
-    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, true);
-    engine.ntt4_2();
-    if (columns_batch_size)
-      engine.storeGlobalData16ColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
-    else
-      engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
+    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, nof_ntt_blocks, inv, true);
+    // engine.ntt8();
+    engine.ntt2_4();
+
+    if (s_meta.ntt_block_id < 2) {
+      printf(
+        "T FINAL: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
+    }
+
+    engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
+    // engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 #endif
 
@@ -1090,14 +1112,14 @@ namespace mxntt {
       if (dit) {
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, basic_twiddles, log_size, tw_log_size,
+          in, out, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
           inv, dit, fast_tw);
         // ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        //   in, out, basic_twiddles, log_size, tw_log_size,
-        //   columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
-        //   columns_batch, 0, inv, dit, fast_tw);
-#else
+        //   out, out, basic_twiddles, log_size, tw_log_size,
+        //   columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 0,
+        //   inv, dit, fast_tw);
+ #else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,

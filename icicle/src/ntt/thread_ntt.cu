@@ -109,16 +109,18 @@ public:
   }
 
   DEVICE_INLINE void loadBasicTwiddlesGeneric16(
-    S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, bool inv, bool phase)
+    S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size,  uint32_t nof_ntt_blocks, bool inv, bool phase)
   {
+    size_t tw_size = (1 << (tw_log_size - 1)) * tw_log_size;
+
     size_t stage_size = 1 << (tw_log_size - 1);
     uint32_t exp;
 
     uint32_t stage_offset = 0;
-    uint32_t phase_offset = stage_size * phase * 2; // 2 is the number of stages
+    uint32_t phase_offset = (1 << (tw_log_size - 1)) * 3 * phase;
 
     printf(
-      "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, phase: %d\n",
+      "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, nof_ntt_blocks: %d\n",
       threadIdx.x,
       s_meta.ntt_inp_id,
       s_meta.ntt_block_id,
@@ -126,33 +128,70 @@ public:
       tw_order,
       tw_log_order,
       tw_log_size,
-      phase
+      nof_ntt_blocks
     );
 
-    UNROLL
-    for (uint32_t stage = 0; stage < 2; stage++) {
-      UNROLL
+    if (phase) {
       for (uint32_t i = 0; i < 4; i++) {
-        if (phase) {
-          exp = phase_offset + stage_offset + s_meta.ntt_inp_id * 4 + i;
+        exp = phase_offset + s_meta.ntt_inp_id * (1 << tw_log_order) * 4 + i * (tw_order ? tw_order : 1);
+
+        if (tw_log_order) {
+          exp += s_meta.ntt_block_id;
         } else {
-          exp = s_meta.ntt_inp_id + (stage * 4 + i) * 2;
+          exp += s_meta.ntt_block_id * 8;
         }
 
-        // if (threadIdx.x == 0) {
+        if (tw_log_size - tw_log_order - 4) 
+          exp += (1 << (tw_log_size - tw_log_order - 4)) * tw_log_size * 4;
+
+        // if (threadIdx.x < 2 || threadIdx.x == 32 || threadIdx.x == 33) {
+        if (s_meta.ntt_block_id == 1) {
           printf(
-            "T: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
+            "T: %d, B: %d, I: %d, exp: %d, tw: 0x%x\n",
             threadIdx.x,
-            stage * 4 + i,
-            stage_offset,
+            s_meta.ntt_block_id,
+            i,
             exp,
             basic_twiddles[exp].limbs_storage.limbs[0]
           );
-        // }
-        WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
+        }
+        WB[i] = basic_twiddles[(inv && exp) ? (tw_size - exp) : exp];
       }
-      stage_offset += stage_size;
+    } else {
+      UNROLL
+      for (uint32_t stage = 0; stage < 3; stage++) {
+        UNROLL
+        for (uint32_t i = 0; i < 4; i++) {
+          exp = stage_offset
+                + s_meta.ntt_inp_id * (1 << tw_log_order)
+                + i * (tw_order ? tw_order : 1 ) * 2;
+          if (tw_log_order) {
+            exp += s_meta.ntt_block_id;
+          } else {
+            exp += s_meta.ntt_block_id * 8;
+          }
+          if (tw_log_size - tw_log_order - 4) 
+            exp += (1 << (tw_log_size - tw_log_order - 4)) * tw_log_size * 4; 
+
+          // if (s_meta.ntt_block_id < 2 || s_meta.ntt_block_id == 8) {
+          if (s_meta.ntt_block_id == 1) {
+            printf(
+              "T: %d, II: %d, B: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
+              threadIdx.x,
+              s_meta.ntt_inp_id,
+              s_meta.ntt_block_id,
+              stage * 4 + i,
+              stage_offset,
+              exp,
+              basic_twiddles[exp].limbs_storage.limbs[0]
+            );
+          }
+          WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? (tw_size - exp) : exp];
+        }
+        stage_offset += stage_size;
+      }
     }
+
   }
 
   DEVICE_INLINE void
@@ -194,6 +233,10 @@ public:
     if (strided) {
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
+      printf("STORE block_id: %d, inp_id: %d, offset: %d\n", s_meta.ntt_block_id, s_meta.ntt_inp_id,
+        (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
+        (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size
+      );
     } else {
       data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
     }
@@ -303,14 +346,14 @@ public:
       data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 4 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
     }
 
     UNROLL
-    for (uint32_t j = 0; j < 2; j++) {
+    for (uint32_t j = 0; j < 4; j++) {
       UNROLL
-      for (uint32_t i = 0; i < 4; i++) {
-        X[4 * j + i] = data[(i * 2 + j * 8) * data_stride_u64];
+      for (uint32_t i = 0; i < 2; i++) {
+        X[2 * j + i] = data[(8 * i + j) * data_stride_u64];
       }
     }
   }
@@ -373,23 +416,20 @@ public:
 
 #define BF(t, x, y) t = x; x = x + y; y = t - y;
 
-
-  // [0, 1, 2, 3] -> ntt4()
-  // [4, 5, 6, 7] -> ntt4()
   DEVICE_INLINE void ntt4_2()
   {
     E T;
 
     // Stage 0
-    X[2] = X[2] * WB[0];
+    X[1] = X[1] * WB[0];
     X[3] = X[3] * WB[1];
-    BF(T, X[0], X[2]);
-    BF(T, X[1], X[3]);
+    BF(T, X[0], X[1]);
+    BF(T, X[2], X[3]);
 
-    X[6] = X[6] * WB[2];
+    X[5] = X[5] * WB[2];
     X[7] = X[7] * WB[3];
-    BF(T, X[4], X[6]);
-    BF(T, X[5], X[7]);
+    BF(T, X[4], X[5]);
+    BF(T, X[6], X[7]);
 
     // Stage 1
     X[1] = X[1] * WB[4];
@@ -403,48 +443,15 @@ public:
     BF(T, X[6], X[7]);
   }
 
-  DEVICE_INLINE void ntt4_2_interlaced()
-  {
-    E T;
-
-    // Stage 0
-    X[4] = X[4] * WB[0];
-    X[5] = X[5] * WB[1];
-    BF(T, X[0], X[4]);
-    BF(T, X[1], X[5]);
-
-    X[6] = X[6] * WB[2];
-    X[7] = X[7] * WB[3];
-    BF(T, X[2], X[6]);
-    BF(T, X[3], X[7]);
-
-    // Stage 1
-    X[2] = X[2] * WB[4];
-    X[3] = X[3] * WB[5];
-    BF(T, X[0], X[2]);
-    BF(T, X[1], X[3]);
-
-    X[6] = X[6] * WB[6];
-    X[7] = X[7] * WB[7];
-    BF(T, X[4], X[6]);
-    BF(T, X[5], X[7]);
-  }
-
   DEVICE_INLINE void ntt2_4()
   {
-    UNROLL
-    for (int i = 0; i < 4; i++) {
-      ntt2(X[2 * i], X[2 * i + 1]);
-    }
-  }
-
-  DEVICE_INLINE void ntt2(E& X0, E& X1)
-  {
     E T;
 
-    T = X0 + X1;
-    X1 = X0 - X1;
-    X0 = T;
+    UNROLL
+    for (int i = 0; i < 4; i++) {
+      X[2 * i + 1] = X[2 * i + 1] * WB[i];
+      BF(T, X[2 * i], X[2 * i + 1]);
+    }
   }
 
   DEVICE_INLINE void ntt8()

@@ -131,7 +131,7 @@ int main(int argc, char** argv)
   std::cout << "Output" << std::endl;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
   // for (int i = 0; i < 100; i++) {
-    std::cout << CpuOutput[i] << std::endl;
+    std::cout << CpuOutput[i] << " " << i << std::endl;
   }
   bool success = true;
   // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
