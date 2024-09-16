@@ -12,7 +12,9 @@ namespace icicle {
     const scalar_t* vec_a,
     uint64_t n,
     const VecOpsConfig& config,
-    scalar_t* output)>;
+    scalar_t* output,
+    uint64_t offset, 
+    uint64_t  stride)>;
 
 
 

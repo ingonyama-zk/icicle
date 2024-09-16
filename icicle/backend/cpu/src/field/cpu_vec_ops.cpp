@@ -346,8 +346,9 @@ cpu_vector_div(const Device& device, const T* vec_a, const T* vec_b, uint64_t n,
 REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
 
 /*********************************** SUM ***********************************/
+
 template <typename T>
-eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
+eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output, uint64_t offset, uint64_t  stride)
 {
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
   bool output_initialized = false;
@@ -377,7 +378,7 @@ REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
 
 /*********************************** PRODUCT ***********************************/
 template <typename T>
-eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output)
+eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output, uint64_t offset, uint64_t  stride)
 {
   ICICLE_LOG_INFO << "cpu_vector_product";
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));

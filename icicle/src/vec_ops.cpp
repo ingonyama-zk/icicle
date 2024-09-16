@@ -8,32 +8,32 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, scalarVectorReduceOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_product)(
-    const scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, scalar_t* output, uint64_t offset, uint64_t  stride)
   {
-    return VectorProductDispatcher::execute(vec_a, n, *config, output);
+    return VectorProductDispatcher::execute(vec_a, n, *config, output, offset, stride);
   }
 
   template <>
   eIcicleError
-  vector_product(const scalar_t* vec_a, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  vector_product(const scalar_t* vec_a, uint64_t n, const VecOpsConfig& config, scalar_t* output, uint64_t offset, uint64_t  stride)
   {
-    return CONCAT_EXPAND(FIELD, vector_product)(vec_a, n, &config, output);
+    return CONCAT_EXPAND(FIELD, vector_product)(vec_a, n, &config, output, offset, stride);
   }
 
   /*********************************** REDUCE SUM ****************************/
   ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, scalarVectorReduceOpImpl );
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sum)(
-    const scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, scalar_t* output, uint64_t offset=0, uint64_t  stride=1)
   {
-    return VectorSumDispatcher::execute(vec_a, n, *config, output);
+    return VectorSumDispatcher::execute(vec_a, n, *config, output, offset, stride);
   }
 
   template <>
   eIcicleError
-  vector_sum(const scalar_t* vec_a, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  vector_sum(const scalar_t* vec_a, uint64_t n, const VecOpsConfig& config, scalar_t* output, uint64_t offset, uint64_t  stride)
   {
-    return CONCAT_EXPAND(FIELD, vector_sum)(vec_a, n, &config, output);
+    return CONCAT_EXPAND(FIELD, vector_sum)(vec_a, n, &config, output, offset, stride);
   }
 
   /*********************************** ADD ***********************************/

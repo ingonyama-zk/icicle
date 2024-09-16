@@ -10,10 +10,10 @@
 // SP: I undertstand this code is auto-generated, but I can't get scrip/gen to work. 
 
 extern "C" eIcicleError bn254_vector_product(
-  const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result);
+  const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result, uint64_t offset, uint64_t  stride);
 
 extern "C" eIcicleError bn254_vector_sum(
-  const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result);
+  const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result, uint64_t offset, uint64_t  stride);
 
 // SP: end of my changes
 
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
   END_TIMER(baseline_reduce_sum, "baseline reduce sum took");
 
   START_TIMER(reduce_sum);
-  ICICLE_CHECK(bn254_vector_sum(d_a, N, &h_config, d_out));
+  ICICLE_CHECK(bn254_vector_sum(d_a, N, &h_config, d_out, 0, 1));
   // ICICLE_CHECK(bn254_vector_sum(d_a, N, &d_config, d_out));
   END_TIMER(reduce_sum, "reduce sum took");
 
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
 
   
   START_TIMER(reduce_product);
-  ICICLE_CHECK(bn254_vector_product(d_a, N, &d_config, d_out));
+  ICICLE_CHECK(bn254_vector_product(d_a, N, &d_config, d_out, 0, 1));
   END_TIMER(reduce_product, "reduce product took");
 
 

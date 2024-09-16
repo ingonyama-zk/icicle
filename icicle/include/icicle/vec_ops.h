@@ -60,7 +60,7 @@ namespace icicle {
    */
 
   template <typename T>
-  eIcicleError vector_product(const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+  eIcicleError vector_product(const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output, uint64_t offset, uint64_t  stride);
 
   /**
    * @brief Computes the sum of all elements in a vector.
@@ -74,7 +74,7 @@ namespace icicle {
    */
 
   template <typename T>
-  eIcicleError vector_sum(const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output);
+  eIcicleError vector_sum(const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output, uint64_t offset, uint64_t  stride);
 
 
   // Element-wise vector operations
