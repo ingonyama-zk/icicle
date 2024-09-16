@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"testing"
 	"os/exec"
+	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
