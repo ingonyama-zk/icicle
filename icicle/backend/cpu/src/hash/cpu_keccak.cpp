@@ -13,8 +13,11 @@ namespace icicle {
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      ICICLE_LOG_INFO << "Keccak CPU hash() called";
+      ICICLE_LOG_INFO << "Keccak CPU hash() called, batch=" << config.batch;
       // TODO implement
+      for (int i = 0; i < output_size() * config.batch; ++i) {
+        output[i] = std::byte(i % 256);
+      }
       return eIcicleError::SUCCESS;
     }
   };

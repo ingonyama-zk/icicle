@@ -79,16 +79,35 @@ impl Hasher {
         let mut local_cfg = cfg.clone();
         local_cfg.are_inputs_on_device = input.is_on_device();
         local_cfg.are_outputs_on_device = output.is_on_device();
+        let input_byte_len = (input.len() * std::mem::size_of::<T>()) as u64;
+        let output_byte_len = (output.len() * std::mem::size_of::<T>()) as u64;
+
+        if output_byte_len as u64 % self.output_size() != 0 {
+            eprintln!(
+                "output size (={}Bytes) must divide single hash output size (={}Bytes)",
+                output_byte_len,
+                self.output_size()
+            );
+            return Err(eIcicleError::InvalidArgument);
+        }
+        local_cfg.batch = output_byte_len / self.output_size();
+
+        if input_byte_len % local_cfg.batch != 0 {
+            eprintln!(
+                "input size (={}Bytes) must divide batch-size={} (inferred from output size)",
+                input_byte_len, local_cfg.batch,
+            );
+            return Err(eIcicleError::InvalidArgument);
+        }
 
         unsafe {
             let input_ptr = input.as_ptr() as *const u8;
             let output_ptr = output.as_mut_ptr() as *mut u8;
-            let byte_len = input.len() * std::mem::size_of::<T>();
 
             icicle_hasher_hash(
                 self.handle,
-                input_ptr,       // Casted to *const u8
-                byte_len as u64, // Adjust the length in bytes
+                input_ptr, // Casted to *const u8
+                input_byte_len,
                 &local_cfg,
                 output_ptr, // Casted to *mut u8
             )

@@ -40,7 +40,7 @@ fn main() {
         .build();
 
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
-    println!("cargo:rustc-link-lib=icicle_device");
+    println!("cargo:rustc-link-lib=icicle_hash");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir
