@@ -7,9 +7,8 @@ fn main() {
     let build_dir = PathBuf::from(format!("{}/../../../", &out_dir));
     let deps_dir = build_dir.join("deps");
 
-    // Construct the path to icicle source directory
     let main_dir = env::current_dir().expect("Failed to get current directory");
-    let icicle_src_dir = PathBuf::from(format!("{}/../../../../icicle", main_dir.display()));
+    let icicle_src_dir = PathBuf::from(format!("{}/../../../icicle", main_dir.display()));
 
     println!("cargo:rerun-if-env-changed=CXXFLAGS");
     println!("cargo:rerun-if-changed={}", icicle_src_dir.display());
@@ -24,8 +23,7 @@ fn main() {
         PathBuf::from(format!("{}/icicle/", deps_dir.display()))
     };
     config
-        .define("CURVE", "grumpkin")
-        .define("HASH", "OFF")
+        .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.
@@ -42,8 +40,7 @@ fn main() {
         .build();
 
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
-    println!("cargo:rustc-link-lib=icicle_field_grumpkin");
-    println!("cargo:rustc-link-lib=icicle_curve_grumpkin");
+    println!("cargo:rustc-link-lib=icicle_device");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir

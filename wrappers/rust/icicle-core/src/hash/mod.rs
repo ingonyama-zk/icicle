@@ -36,7 +36,7 @@ impl HashConfig {
     }
 }
 
-type HasherHandle = *const c_void;
+pub type HasherHandle = *const c_void;
 
 pub struct Hasher {
     handle: HasherHandle,
@@ -56,6 +56,10 @@ extern "C" {
 }
 
 impl Hasher {
+    pub fn from_handle(_handle: HasherHandle) -> Self {
+        Hasher { handle: _handle }
+    }
+
     pub fn hash<T>(
         &self,
         input: &(impl HostOrDeviceSlice<T> + ?Sized),

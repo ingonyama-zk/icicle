@@ -24,6 +24,7 @@ fn main() {
     };
     config
         .define("CMAKE_BUILD_TYPE", "Release")
+        .define("HASH", "OFF")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.

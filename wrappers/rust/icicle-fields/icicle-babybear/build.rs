@@ -25,6 +25,7 @@ fn main() {
     };
     config
         .define("FIELD", "babybear")
+        .define("HASH", "OFF")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.

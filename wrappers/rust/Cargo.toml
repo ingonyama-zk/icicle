@@ -10,7 +10,7 @@ members = [
   "icicle-curves/icicle-grumpkin",
   "icicle-fields/icicle-babybear",
   "icicle-fields/icicle-m31",
-  "icicle-fields/icicle-stark252",
+  "icicle-fields/icicle-stark252", "icicle-hash",
 ]
 exclude = []
 
