@@ -2,7 +2,11 @@
 mod tests {
 
     use crate::{keccak, sha3};
-    use icicle_core::{hash::HashConfig, test_utilities};
+    use icicle_core::{
+        hash::HashConfig,
+        merkle::{MerkleProof, MerkleTreeConfig},
+        test_utilities,
+    };
     use icicle_runtime::memory::HostSlice;
     use std::sync::Once;
 
@@ -51,5 +55,21 @@ mod tests {
             .unwrap();
         println!("output= {:?}", output);
         // TODO compare to main device (CUDA by default) or verify with goldens
+    }
+
+    #[test]
+    fn merkle_tree_keccak() {
+        initialize();
+        test_utilities::test_set_ref_device();
+
+        let merkle_proof = MerkleProof::new().unwrap();
+        let root: &[u8] = merkle_proof.get_root();
+        let path: &[u8] = merkle_proof.get_path();
+        let (leaf, leaf_idx) = merkle_proof.get_leaf::<u8>();
+        println!("root = {:?}", root);
+        println!("path = {:?}", path);
+        println!("leaf = {:?}, leaf_idx = {}", leaf, leaf_idx);
+
+        // TODO real test
     }
 }
