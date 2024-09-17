@@ -39,7 +39,7 @@ impl HashConfig {
 pub type HasherHandle = *const c_void;
 
 pub struct Hasher {
-    handle: HasherHandle,
+    pub handle: HasherHandle,
 }
 
 // External C functions for hashing and deleting hash objects

@@ -4,7 +4,7 @@ mod tests {
     use crate::{keccak, sha3};
     use icicle_core::{
         hash::HashConfig,
-        merkle::{MerkleProof, MerkleTreeConfig},
+        merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
         test_utilities,
     };
     use icicle_runtime::memory::HostSlice;
@@ -62,7 +62,21 @@ mod tests {
         initialize();
         test_utilities::test_set_ref_device();
 
-        let merkle_proof = MerkleProof::new().unwrap();
+        let hasher_l0 = keccak::create_keccak_256_hasher(0).unwrap();
+        let hasher_l1 = sha3::create_sha3_256_hasher(0).unwrap();
+        let layer_hashes = [hasher_l0, hasher_l1];
+
+        // build a simple tree with 2 layers, hashing 4 elements of 128B to a 256B root
+        let leaf_element_size = 128 as u64;
+        let merkle_tree = MerkleTree::new(&layer_hashes, leaf_element_size, 0).unwrap();
+        let input = vec![0 as u8; leaf_element_size as usize * 4];
+        merkle_tree
+            .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
+            .unwrap();
+
+        let merkle_proof: MerkleProof = merkle_tree
+            .get_proof(HostSlice::from_slice(&input), 1, &MerkleTreeConfig::default())
+            .unwrap();
         let root: &[u8] = merkle_proof.get_root();
         let path: &[u8] = merkle_proof.get_path();
         let (leaf, leaf_idx) = merkle_proof.get_leaf::<u8>();

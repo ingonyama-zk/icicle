@@ -1,10 +1,12 @@
 #include "icicle/utils/log.h"
 #include "icicle/errors.h"
 #include "icicle/merkle/merkle_proof.h"
+#include "icicle/merkle/merkle_tree.h"
 
 extern "C" {
 // Define an opaque pointer type for MerkleProof (similar to a handle in C)
 typedef icicle::MerkleProof* MerkleProofHandle;
+typedef icicle::MerkleTree* MerkleTreeHandle;
 
 // Create a new MerkleProof object and return a handle to it.
 MerkleProofHandle icicle_merkle_proof_create() { return new icicle::MerkleProof(); }
@@ -50,6 +52,86 @@ const std::byte* icicle_merkle_proof_get_root(MerkleProofHandle proof, std::size
   auto [root, size] = proof->get_root();
   *out_size = size;
   return root;
+}
+
+// Create a new MerkleTree object
+icicle::MerkleTree* icicle_merkle_tree_create(
+  const icicle::Hash* layer_hashes,
+  size_t layer_hashes_len,
+  uint64_t leaf_element_size,
+  uint64_t output_store_min_layer)
+{
+  try {
+    // Use the layer_hashes directly, assuming they can cast to Hash*.
+    std::vector<icicle::Hash> hash_vector(layer_hashes, layer_hashes + layer_hashes_len);
+
+    // Create a MerkleTree instance using the static factory method
+    return new icicle::MerkleTree(icicle::MerkleTree::create(hash_vector, leaf_element_size, output_store_min_layer));
+  } catch (...) {
+    return nullptr;
+  }
+}
+
+// Delete the MerkleTree object and free its resources
+void icicle_merkle_tree_delete(icicle::MerkleTree* tree)
+{
+  if (tree) { delete tree; }
+}
+
+// Build the Merkle tree from the provided leaves
+eIcicleError icicle_merkle_tree_build(
+  icicle::MerkleTree* tree, const std::byte* leaves, uint64_t size, const icicle::MerkleTreeConfig* config)
+{
+  if (!tree || !leaves || !config) { return eIcicleError::INVALID_POINTER; }
+
+  try {
+    return tree->build(leaves, size, *config);
+  } catch (...) {
+    return eIcicleError::UNKNOWN_ERROR;
+  }
+}
+
+// Get the Merkle root as a pointer to the root data and its size
+const std::byte* icicle_merkle_tree_get_root(icicle::MerkleTree* tree, size_t* out_size)
+{
+  if (!tree || !out_size) { return nullptr; }
+
+  try {
+    auto [root_ptr, root_size] = tree->get_merkle_root();
+    *out_size = root_size;
+    return root_ptr;
+  } catch (...) {
+    return nullptr;
+  }
+}
+
+// Retrieve the Merkle proof for a specific element
+eIcicleError icicle_merkle_tree_get_proof(
+  icicle::MerkleTree* tree,
+  const std::byte* leaves,
+  uint64_t leaf_idx,
+  const icicle::MerkleTreeConfig* config,
+  icicle::MerkleProof* merkle_proof)
+{
+  if (!tree || !leaves || !config || !merkle_proof) { return eIcicleError::INVALID_POINTER; }
+
+  try {
+    return tree->get_merkle_proof(leaves, leaf_idx, *config, *merkle_proof);
+  } catch (...) {
+    return eIcicleError::UNKNOWN_ERROR;
+  }
+}
+
+// Verify a Merkle proof
+eIcicleError icicle_merkle_tree_verify(icicle::MerkleTree* tree, const icicle::MerkleProof* merkle_proof, bool* valid)
+{
+  if (!tree || !merkle_proof || !valid) { return eIcicleError::INVALID_POINTER; }
+
+  try {
+    return tree->verify(*merkle_proof, *valid);
+  } catch (...) {
+    return eIcicleError::UNKNOWN_ERROR;
+  }
 }
 
 } // extern "C"
