@@ -19,10 +19,10 @@ namespace icicle {
       return eIcicleError::SUCCESS; // TODO: Implement tree-building logic
     }
 
-    eIcicleError get_merkle_root(std::byte* root, uint64_t root_size) const override
+    std::pair<std::byte*, size_t> get_merkle_root() const override
     {
       ICICLE_LOG_INFO << "CPU CPUMerkleTreeBackend::get_merkle_root() called";
-      return eIcicleError::SUCCESS; // TODO: Implement root retrieval logic
+      return {nullptr, 0}; // TODO: Implement root retrieval logic
     }
 
     eIcicleError get_merkle_proof(

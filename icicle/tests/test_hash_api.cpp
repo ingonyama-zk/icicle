@@ -151,11 +151,10 @@ TEST_F(HashApiTest, MerkleTree)
   // build tree
   ICICLE_CHECK(merkle_tree.build(leaves, input_size, config));
 
-  // ret root and merkle-path to an element
-  uint64_t root = 0; // assuming output is 8B
+  // get root and merkle-path to an element
   uint64_t leaf_idx = 5;
+  auto [root, root_size] = merkle_tree.get_merkle_root();
   MerkleProof merkle_proof{};
-  ICICLE_CHECK(merkle_tree.get_merkle_root(root));
   ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, leaf_idx, config, merkle_proof));
 
   bool verification_valid = false;

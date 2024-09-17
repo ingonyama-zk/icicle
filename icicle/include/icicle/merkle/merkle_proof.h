@@ -5,35 +5,41 @@
 #include <vector>
 #include <iostream> // For streams
 #include <stdexcept>
+#include <utility> // For std::pair
 #include "icicle/runtime.h"
 
 namespace icicle {
 
   /**
-   * @brief Class representing the Merkle path in a move-only manner.
+   * @brief Represents a Merkle proof with leaf, root, and path data.
    *
-   * This class manages a Merkle path as a collection of bytes. It is designed to be move-only,
-   * meaning it can be transferred but not copied, ensuring clear ownership of the path data.
-   * The path is stored using a `std::vector<std::byte>` for easy management and flexibility.
+   * This class encapsulates the Merkle proof, managing the leaf, root, and path as byte arrays.
+   * It provides functionality to allocate, copy, and access these components, supporting both
+   * raw byte manipulation and type-safe access via templates.
    */
   class MerkleProof
   {
   public:
-    /**
-     * @brief Simple constructor for MerkleProof.
-     */
     explicit MerkleProof() = default;
 
     /**
-     * @brief Allocate and copy leaf and root data using raw byte pointers.
+     * @brief Allocates memory for the Merkle proof and copies the leaf and root data.
+     *
+     * This function initializes the Merkle proof by setting whether the path is pruned and storing
+     * the index of the leaf being proved. It then allocates memory for both the root and leaf data
+     * and copies the provided data into the allocated buffers. It assumes the provided pointers
+     * (leaf and root) point to either host memory or memory allocated via `icicle_malloc`.
+     *
      * @param pruned_path Whether the Merkle path is pruned.
-     * @param leaf_idx The index of the leaf for which the path is a proof.
-     * @param leaf Pointer to the leaf data as std::byte*. Can be host/device memory.
-     * @param leaf_size The size of the leaf data.
-     * @param root Pointer to the root data as std::byte*. Can be host/device memory.
-     * @param root_size The size of the root data.
+     * @param leaf_idx The index of the leaf for which this is a proof.
+     * @param leaf Pointer to the leaf data as a sequence of bytes. It can be host memory or memory allocated via
+     * `icicle_malloc`.
+     * @param leaf_size The size of the leaf data in bytes.
+     * @param root Pointer to the root data as a sequence of bytes. It can be host memory or memory allocated via
+     * `icicle_malloc`.
+     * @param root_size The size of the root data in bytes.
      */
-    void allocate_from_bytes(
+    void allocate(
       bool pruned_path,
       uint64_t leaf_idx,
       const std::byte* leaf,
@@ -46,37 +52,15 @@ namespace icicle {
 
       if (root != nullptr && root_size > 0) {
         m_root.resize(root_size);
+        // Note: assuming root is either host memory or allocated via icicle_malloc!
         ICICLE_CHECK(icicle_copy(m_root.data(), root, root_size));
       }
 
       if (leaf != nullptr && leaf_size > 0) {
         m_leaf.resize(leaf_size);
+        // Note: assuming leaf is either host memory or allocated via icicle_malloc!
         ICICLE_CHECK(icicle_copy(m_leaf.data(), leaf, leaf_size));
       }
-    }
-
-    /**
-     * @brief Allocate and copy leaf and root data using templated types.
-     * @tparam LEAF The type of the leaf data.
-     * @tparam DIGEST The type of the root data.
-     * @param pruned_path Whether the Merkle path is pruned.
-     * @param leaf_idx The index of the leaf for which the path is a proof.
-     * @param leaf The leaf data.
-     * @param root The root data.
-     */
-    template <typename LEAF, typename DIGEST>
-    void allocate(bool pruned_path, uint64_t leaf_idx, const LEAF& leaf, const DIGEST& root)
-    {
-      m_pruned = pruned_path;
-      m_leaf_index = leaf_idx;
-
-      // Allocate and copy root data
-      m_root.resize(sizeof(DIGEST));
-      ICICLE_CHECK(icicle_copy(m_root.data(), &root, sizeof(DIGEST)));
-
-      // Allocate and copy leaf data
-      m_leaf.resize(sizeof(LEAF));
-      ICICLE_CHECK(icicle_copy(m_leaf.data(), &leaf, sizeof(LEAF)));
     }
 
     /**
@@ -86,21 +70,40 @@ namespace icicle {
     bool is_pruned() const { return m_pruned; }
 
     /**
-     * @brief Get a pointer to the path data.
-     * @return Pointer to the path data.
+     * @brief Returns a pair containing the pointer to the path data and its size.
+     * @return A pair of (path data pointer, path size).
      */
-    const std::byte* get_path() const { return m_path.data(); }
+    std::pair<const std::byte*, std::size_t> get_path() const
+    {
+      return {m_path.empty() ? nullptr : m_path.data(), m_path.size()};
+    }
 
     /**
-     * @brief Get the size of the path data.
-     * @return The size of the path data.
+     * @brief Returns a tuple containing the pointer to the leaf data, its size and index.
+     * @return A tuple of (leaf data pointer, leaf size, leaf_index).
      */
-    uint64_t get_path_size() const { return m_path.size(); }
+    std::tuple<const std::byte*, std::size_t, uint64_t> get_leaf() const
+    {
+      return {m_leaf.empty() ? nullptr : m_leaf.data(), m_leaf.size(), m_leaf_index};
+    }
 
     /**
-     * @brief Push a node to the path, given as bytes, using icicle_copy.
-     * @param node The pointer to the node data.
-     * @param size The size of the node data in bytes.
+     * @brief Returns a pair containing the pointer to the root data and its size.
+     * @return A pair of (root data pointer, root size).
+     */
+    std::pair<const std::byte*, std::size_t> get_root() const
+    {
+      return {m_root.empty() ? nullptr : m_root.data(), m_root.size()};
+    }
+
+    /**
+     * @brief Adds a node to the Merkle path using raw byte data.
+     *
+     * This function resizes the internal path buffer to accommodate the new node and then copies
+     * the provided byte data into the newly allocated space.
+     *
+     * @param node Pointer to the node data as a sequence of bytes.
+     * @param size Size of the node data in bytes.
      */
     void push_node_to_path(const std::byte* node, uint64_t size)
     {
@@ -110,9 +113,13 @@ namespace icicle {
     }
 
     /**
-     * @brief Push a node to the path, given as a typed object.
-     * @tparam T The type of the node.
-     * @param node The pointer to the node.
+     * @brief Adds a node to the Merkle path using a typed object.
+     *
+     * This templated function accepts any type of node, calculates its size, and forwards the
+     * data to the byte-based version of `push_node_to_path()`.
+     *
+     * @tparam T Type of the node to add to the Merkle path.
+     * @param node The node data to add to the Merkle path.
      */
     template <typename T>
     void push_node_to_path(const T& node)
@@ -121,10 +128,27 @@ namespace icicle {
     }
 
     /**
-     * @brief Access data at a specific offset and cast it to the desired type.
-     * @tparam T The type to cast the data to.
-     * @param offset The byte offset to access.
-     * @return Pointer to the data cast to type T.
+     * @brief Pre-allocate the path to a given size and return a pointer to the allocated memory.
+     * @param size The size to pre-allocate for the path, in bytes.
+     * @return std::byte* Pointer to the allocated memory.
+     */
+    std::byte* allocate_path_and_get_ptr(std::size_t size)
+    {
+      m_path.resize(size);  // Resize the path vector to the desired size
+      return m_path.data(); // Return a pointer to the beginning of the data
+    }
+
+    /**
+     * @brief Accesses the Merkle path at a specific byte offset and casts the data to the desired type.
+     *
+     * This function allows access to the Merkle path at a given byte offset, interpreting the data
+     * as a type `T`. It checks if the offset is within bounds before performing the cast. If the
+     * offset is out of bounds, an exception is thrown.
+     *
+     * @tparam T The type to cast the data to (e.g., struct or primitive type).
+     * @param offset The byte offset from the beginning of the Merkle path.
+     * @return A pointer to the data at the specified offset, cast to the requested type `T`.
+     * @throws std::out_of_range If the offset is beyond the size of the path.
      */
     template <typename T>
     const T* access_path_at_offset(uint64_t offset)
@@ -133,42 +157,12 @@ namespace icicle {
       return reinterpret_cast<const T*>(m_path.data() + offset);
     }
 
-    /**
-     * @brief Get the index of the leaf this path is a proof for.
-     * @return Index of the proved leaf.
-     */
-    uint64_t get_leaf_idx() const { return m_leaf_index; }
-
-    /**
-     * @brief Get a pointer to the leaf data.
-     * @return Pointer to the leaf data, or nullptr if no leaf data is available.
-     */
-    const std::byte* get_leaf() const { return m_leaf.empty() ? nullptr : m_leaf.data(); }
-
-    /**
-     * @brief Get the size of the leaf data.
-     * @return The size of the leaf data, or 0 if no leaf data is available.
-     */
-    uint64_t get_leaf_size() const { return m_leaf.size(); }
-
-    /**
-     * @brief Get a pointer to the root data.
-     * @return Pointer to the root data, or nullptr if no root data is available.
-     */
-    const std::byte* get_root() const { return m_root.empty() ? nullptr : m_root.data(); }
-
-    /**
-     * @brief Get the size of the root data.
-     * @return The size of the root data, or 0 if no root data is available.
-     */
-    uint64_t get_root_size() const { return m_root.size(); }
-
   private:
-    bool m_pruned{false};          ///< Whether the Merkle path is pruned.
-    uint64_t m_leaf_index{0};      ///< Index of the leaf this path is a proof for.
-    std::vector<std::byte> m_leaf; ///< Optional leaf data.
-    std::vector<std::byte> m_root; ///< Optional root data.
-    std::vector<std::byte> m_path; ///< Path data.
+    bool m_pruned{false};
+    uint64_t m_leaf_index{0};
+    std::vector<std::byte> m_leaf;
+    std::vector<std::byte> m_root;
+    std::vector<std::byte> m_path;
   };
 
 } // namespace icicle

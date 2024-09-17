@@ -72,19 +72,16 @@ namespace icicle {
     }
 
     /**
-     * @brief Retrieve the root of the Merkle tree.
-     * @param root Pointer to where the Merkle root will be written. Must be on host memory.
-     * @return Error code of type eIcicleError.
+     * @brief Returns a pair containing the pointer to the root (ON HOST) data and its size.
+     * @return A pair of (root data pointer, root size).
      */
-    inline eIcicleError get_merkle_root(std::byte* root /*output*/, uint64_t root_size) const
-    {
-      return m_backend->get_merkle_root(root, root_size);
-    }
+    inline std::pair<std::byte*, size_t> get_merkle_root() const { return m_backend->get_merkle_root(); }
 
     template <typename T>
-    inline eIcicleError get_merkle_root(T& root /*output*/) const
+    inline std::pair<T*, size_t> get_merkle_root() const
     {
-      return get_merkle_root(reinterpret_cast<std::byte*>(&root), sizeof(T));
+      auto [root, size] = get_merkle_root();
+      return {reinterpret_cast<T*>(root), size / sizeof(T)};
     }
 
     /**
@@ -123,13 +120,9 @@ namespace icicle {
 
       // can access path by offset or all of it
       // auto digest = merkle_proof.access_path_at_offset<DIGEST_TYPE>(offset);
-      auto path = merkle_proof.get_path();
-      auto path_size = merkle_proof.get_path_size();
-      auto root = merkle_proof.get_root();
-      auto root_size = merkle_proof.get_root_size();
-      auto leaf_idx = merkle_proof.get_leaf_idx();
-      auto leaf = merkle_proof.get_leaf();
-      auto leaf_size = merkle_proof.get_leaf_size();
+      auto [path, path_size] = merkle_proof.get_path();
+      auto [root, root_size] = merkle_proof.get_root();
+      auto [leaf, leaf_size, leaf_idx] = merkle_proof.get_leaf();
 
       valid = true; // TODO use hashers to check path from leaf to root is recomputing the expected root
       return eIcicleError::SUCCESS;
