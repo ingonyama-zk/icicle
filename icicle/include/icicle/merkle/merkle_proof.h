@@ -10,11 +10,35 @@
 
 namespace icicle {
 
+  /**
+   * @brief Represents a Merkle proof with leaf, root, and path data.
+   *
+   * This class encapsulates the Merkle proof, managing the leaf, root, and path as byte arrays.
+   * It provides functionality to allocate, copy, and access these components, supporting both
+   * raw byte manipulation and type-safe access via templates.
+   */
   class MerkleProof
   {
   public:
     explicit MerkleProof() = default;
 
+    /**
+     * @brief Allocates memory for the Merkle proof and copies the leaf and root data.
+     *
+     * This function initializes the Merkle proof by setting whether the path is pruned and storing
+     * the index of the leaf being proved. It then allocates memory for both the root and leaf data
+     * and copies the provided data into the allocated buffers. It assumes the provided pointers
+     * (leaf and root) point to either host memory or memory allocated via `icicle_malloc`.
+     *
+     * @param pruned_path Whether the Merkle path is pruned.
+     * @param leaf_idx The index of the leaf for which this is a proof.
+     * @param leaf Pointer to the leaf data as a sequence of bytes. It can be host memory or memory allocated via
+     * `icicle_malloc`.
+     * @param leaf_size The size of the leaf data in bytes.
+     * @param root Pointer to the root data as a sequence of bytes. It can be host memory or memory allocated via
+     * `icicle_malloc`.
+     * @param root_size The size of the root data in bytes.
+     */
     void allocate(
       bool pruned_path,
       uint64_t leaf_idx,
@@ -39,6 +63,10 @@ namespace icicle {
       }
     }
 
+    /**
+     * @brief Check if the Merkle path is pruned.
+     * @return True if the path is pruned, false otherwise.
+     */
     bool is_pruned() const { return m_pruned; }
 
     /**
@@ -110,6 +138,18 @@ namespace icicle {
       return m_path.data(); // Return a pointer to the beginning of the data
     }
 
+    /**
+     * @brief Accesses the Merkle path at a specific byte offset and casts the data to the desired type.
+     *
+     * This function allows access to the Merkle path at a given byte offset, interpreting the data
+     * as a type `T`. It checks if the offset is within bounds before performing the cast. If the
+     * offset is out of bounds, an exception is thrown.
+     *
+     * @tparam T The type to cast the data to (e.g., struct or primitive type).
+     * @param offset The byte offset from the beginning of the Merkle path.
+     * @return A pointer to the data at the specified offset, cast to the requested type `T`.
+     * @throws std::out_of_range If the offset is beyond the size of the path.
+     */
     template <typename T>
     const T* access_path_at_offset(uint64_t offset)
     {
