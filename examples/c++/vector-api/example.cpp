@@ -30,7 +30,7 @@ void random_samples(scalar_t* res, uint32_t count)
 void incremental_values(scalar_t* res, uint32_t count)
 {
   for (int i = 0; i < count; i++) {
-    res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::zero();
+    res[i] = i ? res[i - 1] + scalar_t::one() : scalar_t::one();
   }
 }
 
@@ -45,6 +45,8 @@ int main(int argc, char** argv)
 
   int N_LOG = 20;
   int N = 1 << N_LOG;
+  int offset = 1;
+  int stride = 4;
 
   // on-host data
   auto h_a = std::make_unique<scalar_t[]>(N);
@@ -98,14 +100,13 @@ int main(int argc, char** argv)
 
   START_TIMER(baseline_reduce_sum);  
   h_out[0] = scalar_t::zero();
-  for (uint64_t i = 0; i < N; ++i) {
+  for (uint64_t i = offset; i < N; i=i+stride) {
     h_out[0] = h_out[0] + h_a[i];
   }
   END_TIMER(baseline_reduce_sum, "baseline reduce sum took");
 
   START_TIMER(reduce_sum);
-  ICICLE_CHECK(bn254_vector_sum(d_a, N, &h_config, d_out, 0, 1));
-  // ICICLE_CHECK(bn254_vector_sum(d_a, N, &d_config, d_out));
+  ICICLE_CHECK(bn254_vector_sum(d_a, N, &h_config, d_out, offset, stride));
   END_TIMER(reduce_sum, "reduce sum took");
 
 
@@ -113,18 +114,16 @@ int main(int argc, char** argv)
   std::cout << "d_out: " << d_out[0] << std::endl;
 
 
-  // return 0;
-
   START_TIMER(baseline_reduce_product);  
   h_out[0] = scalar_t::one();
-  for (uint64_t i = 0; i < N; ++i) {
+  for (uint64_t i = offset; i < N; i = i + stride) {
     h_out[0] = h_out[0] * h_a[i];
   }
   END_TIMER(baseline_reduce_product, "baseline reduce product took");
 
   
   START_TIMER(reduce_product);
-  ICICLE_CHECK(bn254_vector_product(d_a, N, &d_config, d_out, 0, 1));
+  ICICLE_CHECK(bn254_vector_product(d_a, N, &d_config, d_out, offset, stride));
   END_TIMER(reduce_product, "reduce product took");
 
 

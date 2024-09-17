@@ -66,12 +66,12 @@ public:
     dispatch();
   }
   // Set the operands to execute a task of 1 operand and dispatch the task
-  void send_intermidiate_res_task(VecOperation operation, const int nof_operations, const T* op_a)
+  void send_intermidiate_res_task(VecOperation operation, const uint64_t stop_index, const T* op_a, const uint64_t stride)
   {
     m_operation = operation;
-    m_nof_operations = nof_operations;
+    m_stop_index = stop_index;
     m_op_a = op_a;
-    // SP: where is m_output?
+    m_stride = stride;
     dispatch();
   }
 
@@ -155,20 +155,16 @@ private:
   // Single worker functionality to execute sum(vector)
   void vector_sum()
   {
-    // SP: *m_output = m_op_a[0];
-    m_intermidiate_res = m_op_a[0];
-    for (uint64_t i = 1; i < m_nof_operations; ++i) {
-      // SP: *m_output = *m_output + m_op_a[i];
+    m_intermidiate_res = T::zero();
+    for (uint64_t i = 0; i < m_stop_index; i = i + m_stride) {
       m_intermidiate_res = m_intermidiate_res + m_op_a[i];
     }
   }
   // Single worker functionality to execute product(vector)
   void vector_product()
   {
-    // SP: *m_output = m_op_a[0];
-    m_intermidiate_res = m_op_a[0];
-    for (uint64_t i = 1; i < m_nof_operations; ++i) {
-      // SP: *m_output = *m_output * m_op_a[i];
+    m_intermidiate_res = T::one();
+    for (uint64_t i = 0; i < m_stop_index; i = i + m_stride) {
       m_intermidiate_res = m_intermidiate_res * m_op_a[i];
     }
   }
@@ -244,6 +240,7 @@ private:
   const T* m_op_a;          // pointer to operand A. Operand A is a vector.
   const T* m_op_b;          // pointer to operand B. Operand B is a vector or scalar
   uint64_t m_start_index;   // index used in bitreverse
+  uint64_t m_stop_index;    // index used in reduce operations
   int m_bit_size;           // use in bitrev operation
   uint64_t m_stride;        // used in slice operation
   T* m_output;              // pointer to the output. Can be a vector or scalar pointer
@@ -352,7 +349,9 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
 {
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
   bool output_initialized = false;
-  uint64_t vec_a_offset = 0;
+  uint64_t vec_a_offset = offset;
+  assert(stride > 0);
+  const uint64_t slice_length = stride * NOF_OPERATIONS_PER_TASK;
   // run until all vector deployed and all tasks completed
   while (true) {
     VectorOpTask<T>* task_p  = vec_a_offset < n ? task_manager.get_idle_or_completed_task() : task_manager.get_completed_task();
@@ -365,8 +364,8 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t n, co
     }
     if (vec_a_offset < n) {
       task_p->send_intermidiate_res_task(
-        VecOperation::VECTOR_SUM, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_a_offset), vec_a + vec_a_offset);
-      vec_a_offset += NOF_OPERATIONS_PER_TASK;
+        VecOperation::VECTOR_SUM, std::min( slice_length , n - vec_a_offset), vec_a + vec_a_offset, stride);
+      vec_a_offset += slice_length;
     }
     else {
       task_p->set_idle();
@@ -380,10 +379,11 @@ REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
 template <typename T>
 eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n, const VecOpsConfig& config, T* output, uint64_t offset, uint64_t  stride)
 {
-  ICICLE_LOG_INFO << "cpu_vector_product";
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
   bool output_initialized = false;
-  uint64_t vec_a_offset = 0;
+  uint64_t vec_a_offset = offset;
+  assert(stride > 0);
+  const uint64_t slice_length = stride * NOF_OPERATIONS_PER_TASK;
   
   // run until all vector deployed and all tasks completed
   while (true) {
@@ -397,8 +397,8 @@ eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t n
     }
     if (vec_a_offset < n) {
       task_p->send_intermidiate_res_task(
-        VecOperation::VECTOR_PRODUCT, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, n - vec_a_offset), vec_a + vec_a_offset);
-      vec_a_offset += NOF_OPERATIONS_PER_TASK;
+        VecOperation::VECTOR_PRODUCT, std::min(slice_length, n - vec_a_offset), vec_a + vec_a_offset, stride);
+      vec_a_offset += slice_length;
     }
     else {
       task_p->set_idle();
