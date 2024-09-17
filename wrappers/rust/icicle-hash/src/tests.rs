@@ -8,6 +8,7 @@ mod tests {
         test_utilities,
     };
     use icicle_runtime::memory::HostSlice;
+    use rand::Rng;
     use std::sync::Once;
 
     static INIT: Once = Once::new();
@@ -66,10 +67,16 @@ mod tests {
         let hasher_l1 = sha3::create_sha3_256_hasher(0).unwrap();
         let layer_hashes = [hasher_l0, hasher_l1];
 
-        // build a simple tree with 2 layers, hashing 4 elements of 128B to a 256B root
-        let leaf_element_size = 128 as u64;
-        let merkle_tree = MerkleTree::new(&layer_hashes, leaf_element_size, 0).unwrap();
-        let input = vec![0 as u8; leaf_element_size as usize * 4];
+        // build a simple tree with 2 layers, hashing 4 elements of 8B to a 256B root
+        let leaf_element_size = 8;
+        let num_elements = 4;
+        let merkle_tree = MerkleTree::new(&layer_hashes, leaf_element_size as u64, 0).unwrap();
+
+        // Create a vector of random bytes efficiently
+        let mut input: Vec<u8> = vec![0; leaf_element_size * num_elements];
+        rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
+        println!("input = {:?}", input);
+
         merkle_tree
             .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
             .unwrap();
@@ -77,13 +84,20 @@ mod tests {
         let merkle_proof: MerkleProof = merkle_tree
             .get_proof(HostSlice::from_slice(&input), 1, &MerkleTreeConfig::default())
             .unwrap();
-        let root: &[u8] = merkle_proof.get_root();
-        let path: &[u8] = merkle_proof.get_path();
+        let root = merkle_proof.get_root::<u64>();
+        let path = merkle_proof.get_path::<u8>();
         let (leaf, leaf_idx) = merkle_proof.get_leaf::<u8>();
         println!("root = {:?}", root);
         println!("path = {:?}", path);
         println!("leaf = {:?}, leaf_idx = {}", leaf, leaf_idx);
 
-        // TODO real test
+        let verification_valid = merkle_tree
+            .verify(&merkle_proof)
+            .unwrap();
+        assert_eq!(verification_valid, true);
+
+        // TODOs :
+        // (1) test real backends: CPU + CUDA. Can also compare the proofs to see the root, path and leaf are the same.
+        // (2) test different cases of input padding
     }
 }

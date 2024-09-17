@@ -56,14 +56,24 @@ const std::byte* icicle_merkle_proof_get_root(MerkleProofHandle proof, std::size
 
 // Create a new MerkleTree object
 icicle::MerkleTree* icicle_merkle_tree_create(
-  const icicle::Hash* layer_hashes,
+  const icicle::Hash** layer_hashes,
   size_t layer_hashes_len,
   uint64_t leaf_element_size,
   uint64_t output_store_min_layer)
 {
   try {
-    // Use the layer_hashes directly, assuming they can cast to Hash*.
-    std::vector<icicle::Hash> hash_vector(layer_hashes, layer_hashes + layer_hashes_len);
+    // Convert the array of Hash pointers to a vector of Hash objects
+    std::vector<icicle::Hash> hash_vector;
+    hash_vector.reserve(layer_hashes_len);
+
+    // Dereference each pointer and push the Hash object into the vector
+    for (size_t i = 0; i < layer_hashes_len; ++i) {
+      if (layer_hashes[i] == nullptr) {
+        // Handle the case where one of the pointers is null, if needed
+        throw std::invalid_argument("Null pointer found in layer_hashes.");
+      }
+      hash_vector.push_back(*layer_hashes[i]);
+    }
 
     // Create a MerkleTree instance using the static factory method
     return new icicle::MerkleTree(icicle::MerkleTree::create(hash_vector, leaf_element_size, output_store_min_layer));

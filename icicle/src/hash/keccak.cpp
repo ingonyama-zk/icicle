@@ -32,7 +32,7 @@ namespace icicle {
   Hash create_sha3_256_hash(uint64_t input_chunk_size)
   {
     std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(Keccak256Dispatcher::execute(input_chunk_size, backend));
+    ICICLE_CHECK(Sah3_256Dispatcher::execute(input_chunk_size, backend));
     Hash keccak{backend};
     return keccak;
   }
@@ -43,7 +43,7 @@ namespace icicle {
   Hash create_sha3_512_hash(uint64_t input_chunk_size)
   {
     std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(Keccak512Dispatcher::execute(input_chunk_size, backend));
+    ICICLE_CHECK(Sah3_512Dispatcher::execute(input_chunk_size, backend));
     Hash keccak{backend};
     return keccak;
   }

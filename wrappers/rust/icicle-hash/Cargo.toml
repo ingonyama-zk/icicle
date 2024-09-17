@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 icicle-core =  {workspace = true }
 icicle-runtime = { workspace = true }
+rand = "0.8"
 
 [build-dependencies]
 cmake = "0.1.50"

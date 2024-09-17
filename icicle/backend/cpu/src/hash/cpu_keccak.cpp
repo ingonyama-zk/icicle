@@ -6,8 +6,8 @@ namespace icicle {
   class KeccakBackend : public HashBackend
   {
   public:
-    KeccakBackend(uint64_t input_chunk_size, uint64_t output_size, uint64_t rate, int padding_const)
-        : HashBackend(output_size, input_chunk_size)
+    KeccakBackend(uint64_t input_chunk_size, uint64_t output_size, uint64_t rate, int padding_const, const char* name)
+        : HashBackend(output_size, input_chunk_size, name)
     {
     }
 
@@ -35,7 +35,12 @@ namespace icicle {
   {
   public:
     Keccak256Backend(int input_chunk_size)
-        : KeccakBackend(input_chunk_size, KECCAK_256_DIGEST * sizeof(uint64_t), KECCAK_256_RATE, KECCAK_PADDING_CONST)
+        : KeccakBackend(
+            input_chunk_size,
+            KECCAK_256_DIGEST * sizeof(uint64_t),
+            KECCAK_256_RATE,
+            KECCAK_PADDING_CONST,
+            "Keccak256-CPU")
     {
     }
   };
@@ -44,7 +49,12 @@ namespace icicle {
   {
   public:
     Keccak512Backend(int input_chunk_size)
-        : KeccakBackend(input_chunk_size, KECCAK_512_DIGEST * sizeof(uint64_t), KECCAK_512_RATE, KECCAK_PADDING_CONST)
+        : KeccakBackend(
+            input_chunk_size,
+            KECCAK_512_DIGEST * sizeof(uint64_t),
+            KECCAK_512_RATE,
+            KECCAK_PADDING_CONST,
+            "Keccak512-CPU")
     {
     }
   };
@@ -53,7 +63,8 @@ namespace icicle {
   {
   public:
     Sha3_256Backend(int input_chunk_size)
-        : KeccakBackend(input_chunk_size, KECCAK_256_DIGEST * sizeof(uint64_t), KECCAK_256_RATE, SHA3_PADDING_CONST)
+        : KeccakBackend(
+            input_chunk_size, KECCAK_256_DIGEST * sizeof(uint64_t), KECCAK_256_RATE, SHA3_PADDING_CONST, "SHA3-256-CPU")
     {
     }
   };
@@ -62,7 +73,8 @@ namespace icicle {
   {
   public:
     Sha3_512Backend(int input_chunk_size)
-        : KeccakBackend(input_chunk_size, KECCAK_512_DIGEST * sizeof(uint64_t), KECCAK_512_RATE, SHA3_PADDING_CONST)
+        : KeccakBackend(
+            input_chunk_size, KECCAK_512_DIGEST * sizeof(uint64_t), KECCAK_512_RATE, SHA3_PADDING_CONST, "SHA3-512-CPU")
     {
     }
   };

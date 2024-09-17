@@ -73,6 +73,8 @@ namespace icicle {
      */
     inline uint64_t output_size() const { return m_backend->output_size(); }
 
+    const std::string& name() const { return m_backend->name(); }
+
   private:
     std::shared_ptr<HashBackend> m_backend; ///< Shared pointer to the backend performing the hash operation.
   };
