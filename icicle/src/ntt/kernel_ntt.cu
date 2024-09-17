@@ -533,11 +533,7 @@ namespace mxntt {
       );
     // }
 
-    // engine.ntt2_4();
     engine.ntt8();
-    // engine.SharedData16Columns2_4(shmem, true, false, strided); // store
-    // __syncthreads();
-    // engine.SharedData16Rows8(shmem, false, false, strided); // load
     if (s_meta.ntt_block_id < 2) {
       printf(
         "T BEFORE Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
@@ -576,7 +572,7 @@ namespace mxntt {
     // engine.ntt8();
     engine.ntt2_4();
 
-    if (s_meta.ntt_block_id < 2) {
+    // if (s_meta.ntt_block_id < 2) {
       printf(
         "T FINAL: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
         threadIdx.x,
@@ -589,7 +585,7 @@ namespace mxntt {
         engine.X[6].limbs_storage.limbs[0],
         engine.X[7].limbs_storage.limbs[0]
       );
-    }
+    // }
 
     engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
     // engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
@@ -1115,10 +1111,10 @@ namespace mxntt {
           in, out, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
           inv, dit, fast_tw);
-        // ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        //   out, out, basic_twiddles, log_size, tw_log_size,
-        //   columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 0,
-        //   inv, dit, fast_tw);
+        ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, basic_twiddles, log_size, tw_log_size,
+          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 0,
+          inv, dit, fast_tw);
  #else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
