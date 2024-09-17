@@ -45,12 +45,10 @@ namespace icicle {
     virtual eIcicleError build(const std::byte* leaves, uint64_t size, const MerkleTreeConfig& config) = 0;
 
     /**
-     * @brief Retrieve the root of the Merkle tree.
-     * @param root Pointer to where the Merkle root will be written.
-     * @param root_size The size of the root in bytes.
-     * @return Error code of type eIcicleError.
+     * @brief Returns a pair containing the pointer to the root (ON HOST) data and its size.
+     * @return A pair of (root data pointer, root size).
      */
-    virtual eIcicleError get_merkle_root(std::byte* root, uint64_t root_size) const = 0;
+    virtual std::pair<std::byte*, size_t> get_merkle_root() const = 0;
 
     /**
      * @brief Retrieve the Merkle path for a specific element.
