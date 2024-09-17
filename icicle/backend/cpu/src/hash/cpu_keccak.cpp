@@ -13,8 +13,9 @@ namespace icicle {
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      ICICLE_LOG_INFO << "Keccak CPU hash() called, batch=" << config.batch;
-      // TODO implement
+      ICICLE_LOG_INFO << "Keccak/sha3 CPU hash() called, batch=" << config.batch
+                      << ", single_output_size=" << output_size();
+      // TODO implement real logic
       for (int i = 0; i < output_size() * config.batch; ++i) {
         output[i] = std::byte(i % 256);
       }
@@ -34,11 +35,7 @@ namespace icicle {
   {
   public:
     Keccak256Backend(int input_chunk_size)
-        : KeccakBackend(
-            input_chunk_size,
-            KECCAK_256_DIGEST * sizeof(uint64_t) / sizeof(std::byte),
-            KECCAK_256_RATE,
-            KECCAK_PADDING_CONST)
+        : KeccakBackend(input_chunk_size, KECCAK_256_DIGEST * sizeof(uint64_t), KECCAK_256_RATE, KECCAK_PADDING_CONST)
     {
     }
   };
@@ -47,11 +44,7 @@ namespace icicle {
   {
   public:
     Keccak512Backend(int input_chunk_size)
-        : KeccakBackend(
-            input_chunk_size,
-            KECCAK_512_DIGEST * sizeof(uint64_t) / sizeof(std::byte),
-            KECCAK_512_RATE,
-            KECCAK_PADDING_CONST)
+        : KeccakBackend(input_chunk_size, KECCAK_512_DIGEST * sizeof(uint64_t), KECCAK_512_RATE, KECCAK_PADDING_CONST)
     {
     }
   };
@@ -60,11 +53,7 @@ namespace icicle {
   {
   public:
     Sha3_256Backend(int input_chunk_size)
-        : KeccakBackend(
-            input_chunk_size,
-            KECCAK_256_DIGEST * sizeof(uint64_t) / sizeof(std::byte),
-            KECCAK_256_RATE,
-            SHA3_PADDING_CONST)
+        : KeccakBackend(input_chunk_size, KECCAK_256_DIGEST * sizeof(uint64_t), KECCAK_256_RATE, SHA3_PADDING_CONST)
     {
     }
   };
@@ -73,11 +62,7 @@ namespace icicle {
   {
   public:
     Sha3_512Backend(int input_chunk_size)
-        : KeccakBackend(
-            input_chunk_size,
-            KECCAK_512_DIGEST * sizeof(uint64_t) / sizeof(std::byte),
-            KECCAK_512_RATE,
-            SHA3_PADDING_CONST)
+        : KeccakBackend(input_chunk_size, KECCAK_512_DIGEST * sizeof(uint64_t), KECCAK_512_RATE, SHA3_PADDING_CONST)
     {
     }
   };
