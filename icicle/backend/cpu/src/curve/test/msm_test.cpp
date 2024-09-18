@@ -6,7 +6,7 @@
 #include <cassert>
 #include "timer.hpp"
 
-// #define DUMMY_TYPES
+#define DUMMY_TYPES
 #define DEBUG_PRINTS
 #define P_MACRO 1000
 
@@ -377,18 +377,18 @@ void store_inputs(T* arr, const int arr_size, const std::string fname)
   out_file.close();
 }
 
-void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
+void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size, bool gen_new=false)
 {
   // Scalars
   std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n * batch_size) + ".dat";
-  if (!read_inputs<scalar_t>(scalars, n * batch_size, scalar_file)) {
+  if (gen_new || !read_inputs<scalar_t>(scalars, n * batch_size, scalar_file)) {
     std::cout << "Generating scalars.\n";
     scalar_t::rand_host_many(scalars, n * batch_size);
     store_inputs<scalar_t>(scalars, n * batch_size, scalar_file);
   }
   // Bases
   std::string base_file = "build/generated_data/bases_N" + std::to_string(n) + ".dat";
-  if (!read_inputs<A>(bases, n, base_file)) {
+  if (gen_new || !read_inputs<A>(bases, n, base_file)) {
     std::cout << "Generating bases.\n";
     P::rand_host_many(bases, n);
     store_inputs<A>(bases, n, base_file);
@@ -397,17 +397,20 @@ void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size)
 
 int main()
 {
-  while (true) {
+  // while (true) 
+  {
     // MSM config
-    const int logn = 17;
+    const int logn = 10;
     const int N = 1 << logn;
     const int log_p = 2;
     const int batch_size = 3;
     bool conv_mont = true;
 
+    bool gen_new = true;
+
     auto scalars = std::make_unique<scalar_t[]>(N * batch_size);
     auto bases = std::make_unique<A[]>(N);
-    get_inputs(bases.get(), scalars.get(), N, batch_size);
+    get_inputs(bases.get(), scalars.get(), N, batch_size, gen_new);
 
     if (conv_mont) {
       std::cout << "Convertiting inputs to Montgomery form\n";
@@ -421,13 +424,14 @@ int main()
 
     auto run = [&](const char* dev_type, P* result, const char* msg, bool measure, int iters, auto msm_func) {
       const int c = std::max(logn, 8) - 1;
+      // const int c = 4;
       std::cout << "c:\t" << c << '\n';
       const int pcf = 1 << log_p;
 
       int hw_threads = std::thread::hardware_concurrency();
       if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
-      const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
-      // const int n_threads = 1;
+      // const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
+      const int n_threads = 1;
       std::cout << "Num threads: " << n_threads << '\n';
       // const int n_threads = 8;
 
@@ -448,7 +452,7 @@ int main()
       auto precomp_bases = std::make_unique<A[]>(N * pcf);
       std::string precomp_fname =
         "build/generated_data/precomp_N" + std::to_string(N) + "_pcf" + std::to_string(pcf) + ".dat";
-      if (!read_inputs<A>(precomp_bases.get(), N * pcf, precomp_fname)) {
+      if (gen_new || !read_inputs<A>(precomp_bases.get(), N * pcf, precomp_fname)) {
         std::cout << "Precomputing bases.";
         cpu_msm_precompute_bases<A, P>("CPU", bases.get(), N, config, precomp_bases.get());
         std::cout << " Storing.\n";

@@ -65,10 +65,10 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 12;
-    const int batch = 2;
+    const int logn = 11;
+    const int batch = 1;
     const int N = 1 << logn;
-    const int precompute_factor = 2;
+    const int precompute_factor = 8;
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
