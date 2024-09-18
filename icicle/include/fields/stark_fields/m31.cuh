@@ -4,6 +4,7 @@
 #include "fields/field.cuh"
 #include "fields/quadratic_extension.cuh"
 #include "fields/quartic_extension.cuh"
+#include "fields/params_gen.cuh"
 
 namespace m31 {
   template <class CONFIG>
@@ -190,12 +191,12 @@ namespace m31 {
     {
       if (logn == 0) { return MersenneField{CONFIG::one}; }
 #ifndef __CUDA_ARCH__
-      if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
+      if (logn > CONFIG::ext_omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
 #else
-      if (logn > CONFIG::omegas_count) {
+      if (logn > CONFIG::ext_omegas_count) {
         printf(
           "CUDA ERROR: field.cuh: error on inv_log_size(logn): logn(=%u) > omegas_count (=%u)", logn,
-          CONFIG::omegas_count);
+          CONFIG::ext_omegas_count);
         assert(false);
       }
 #endif // __CUDA_ARCH__
@@ -251,6 +252,11 @@ namespace m31 {
   typedef QuadExtensionField<fp_config, scalar_t> quad_extension_t;
 
   const quad_extension_t ROU = {{2}, {1268011823}};
+
+  // namespace quad_extension_config {
+  //   static constexpr storage<1> rou = {0x00000089};
+  //   TWIDDLES(modulus, rou)
+  // }
 
   static HOST_INLINE quad_extension_t get_ext_omega(uint32_t logn)
   {
