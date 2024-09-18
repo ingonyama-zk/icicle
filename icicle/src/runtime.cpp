@@ -186,7 +186,8 @@ extern "C" eIcicleError icicle_copy(void* dst, const void* src, size_t size)
   if (eCopyDirection::HostToHost == direction) {
     ICICLE_LOG_DEBUG
       << "Host to Host copy, falling back to std::memcpy(). NOTE: memory allocated outside of icicle APIs is "
-         "considered host memory. Do not use it with memory allocated by external libs (e.g. a cudaMalloc() call)";
+         "considered host memory. Do not use icicle_copy() with memory allocated by external libs (e.g. a cudaMalloc() "
+         "call)";
     std::memcpy(dst, src, size);
     return eIcicleError::SUCCESS;
   }

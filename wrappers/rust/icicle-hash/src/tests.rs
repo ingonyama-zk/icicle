@@ -3,7 +3,7 @@ mod tests {
 
     use crate::{keccak, sha3};
     use icicle_core::{
-        hash::HashConfig,
+        hash::{HashConfig, Hasher},
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
         test_utilities,
     };
@@ -63,14 +63,25 @@ mod tests {
         initialize();
         test_utilities::test_set_ref_device();
 
-        let hasher_l0 = keccak::create_keccak_256_hasher(0).unwrap();
-        let hasher_l1 = sha3::create_sha3_256_hasher(0).unwrap();
-        let layer_hashes = [hasher_l0, hasher_l1];
-
-        // build a simple tree with 2 layers, hashing 4 elements of 8B to a 256B root
         let leaf_element_size = 8;
         let num_elements = 4;
-        let merkle_tree = MerkleTree::new(&layer_hashes, leaf_element_size as u64, 0).unwrap();
+
+        // Need a &[&Hashers] to build a tree. Can build it like this
+        {
+            // build a simple tree with 2 layers
+            let hasher_l0 = keccak::create_keccak_256_hasher(0).unwrap();
+            let hasher_l1 = sha3::create_sha3_256_hasher(0).unwrap();
+            let layer_hashes = [&hasher_l0, &hasher_l1];
+            let _merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+        }
+
+        // or any way that ends up with &[&Hashers]
+        let nof_layers = 8;
+        let hasher = keccak::create_keccak_256_hasher(0).unwrap();
+        let layer_hashes: Vec<&Hasher> = (0..nof_layers)
+            .map(|_| &hasher)
+            .collect();
+        let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
 
         // Create a vector of random bytes efficiently
         let mut input: Vec<u8> = vec![0; leaf_element_size * num_elements];

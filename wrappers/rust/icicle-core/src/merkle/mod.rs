@@ -190,7 +190,7 @@ extern "C" {
 impl MerkleTree {
     // Create a new MerkleTree with an array/vector of Hasher structs for the layer hashes
     pub fn new(
-        layer_hashes: &[Hasher],
+        layer_hashes: &[&Hasher],
         leaf_element_size: u64,
         output_store_min_layer: u64,
     ) -> Result<Self, eIcicleError> {
