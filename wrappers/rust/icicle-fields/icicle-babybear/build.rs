@@ -25,7 +25,7 @@ fn main() {
     };
     config
         .define("FIELD", "babybear")
-        .define("HASH", "OFF")
+        .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.
@@ -43,6 +43,7 @@ fn main() {
 
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
     println!("cargo:rustc-link-lib=icicle_field_babybear");
+    println!("cargo:rustc-link-lib=icicle_hash"); // TODO Yuval: not ideal to have this dependency here
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir

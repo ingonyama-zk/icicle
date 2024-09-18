@@ -30,17 +30,24 @@ typedef icicle::Hash* HasherHandle;
  *
  * @return eIcicleError indicating success or failure of the initialization.
  */
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(
+eIcicleError poseidon_init_constants(
   unsigned arity,
   unsigned alpha,
   unsigned full_rounds_half,
   unsigned partial_rounds,
-  const uint64_t* rounds_constants,
-  const uint64_t* mds_matrix,
-  const uint64_t* non_sparse_matrix,
-  const uint64_t* sparse_matrices,
-  const uint64_t* domain_tag,
-  PoseidonConstantsHandle* constants /*output*/);
+  const scalar_t* rounds_constants,
+  const scalar_t* mds_matrix,
+  const scalar_t* non_sparse_matrix,
+  const scalar_t* sparse_matrices,
+  const scalar_t* domain_tag,
+  PoseidonConstantsHandle* constants /*output*/)
+{
+  *constants = new std::shared_ptr<PoseidonConstants<scalar_t>>;
+  auto err = icicle::poseidon_init_constants<scalar_t>(
+    arity, alpha, full_rounds_half, partial_rounds, rounds_constants, mds_matrix, non_sparse_matrix, sparse_matrices,
+    domain_tag, **constants);
+  return err;
+}
 
 /**
  * @brief Initialize Poseidon constants with default values based on arity.
@@ -52,7 +59,12 @@ eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(
  *
  * @return eIcicleError indicating success or failure of the initialization.
  */
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)(unsigned arity, PoseidonConstantsHandle constants);
+eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)(PoseidonConstantsHandle* constants)
+{
+  *constants = new std::shared_ptr<PoseidonConstants<scalar_t>>;
+  auto err = icicle::poseidon_init_default_constants<scalar_t>(**constants);
+  return err;
+}
 
 /**
  * @brief Delete the PoseidonConstants object.
@@ -63,7 +75,7 @@ eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)(unsigned arit
  *
  * @return eIcicleError indicating success or failure of the deletion.
  */
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_delete_constants)(PoseidonConstantsHandle constants);
+eIcicleError CONCAT_EXPAND(FIELD, poseidon_delete_constants)(PoseidonConstantsHandle constants) { delete constants; }
 
 /**
  * @brief Creates a Poseidon hash object.

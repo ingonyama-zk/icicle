@@ -28,10 +28,9 @@ namespace icicle {
     InitPoseidonDefaultConstantsDispatcher, poseidon_init_default_constants, InitPoseidonDefaultConstantsImpl);
 
   template <>
-  eIcicleError
-  poseidon_init_default_constants(unsigned arity, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
+  eIcicleError poseidon_init_default_constants(std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
   {
-    return InitPoseidonDefaultConstantsDispatcher::execute(arity, constants);
+    return InitPoseidonDefaultConstantsDispatcher::execute(constants);
   }
 
   ICICLE_DISPATCHER_INST(CreatePoseidonHasherDispatcher, create_poseidon, CreatePoseidonImpl);
@@ -39,6 +38,7 @@ namespace icicle {
   template <>
   Hash create_poseidon_hash(std::shared_ptr<PoseidonConstants<scalar_t>> constants)
   {
+    ICICLE_LOG_DEBUG << "creating poseidon hasher";
     std::shared_ptr<HashBackend> backend;
     ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(constants, backend));
     Hash poseidon{backend};

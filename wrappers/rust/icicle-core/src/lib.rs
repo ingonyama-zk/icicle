@@ -6,6 +6,7 @@ pub mod merkle;
 pub mod msm;
 pub mod ntt;
 pub mod polynomials;
+pub mod poseidon;
 pub mod vec_ops;
 
 #[doc(hidden)]

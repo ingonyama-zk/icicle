@@ -36,8 +36,8 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  using InitPoseidonDefaultConstantsImpl = std::function<eIcicleError(
-    const Device& device, unsigned arity, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)>;
+  using InitPoseidonDefaultConstantsImpl =
+    std::function<eIcicleError(const Device& device, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)>;
 
   // poseidon init constants
   void register_poseidon_init_default_constants(const std::string& deviceType, InitPoseidonDefaultConstantsImpl impl);

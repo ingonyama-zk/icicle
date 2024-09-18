@@ -15,6 +15,10 @@ namespace icicle {
   {
     // The backend will populate this class with Poseidon-specific constants.
     // This is intentionally left opaque and managed by the backend.
+
+  public:
+    PoseidonConstants() { ICICLE_LOG_DEBUG << "creating poseidon constants"; }
+    virtual ~PoseidonConstants() { ICICLE_LOG_DEBUG << "deleting poseidon constants"; }
   };
 
   /**
@@ -56,17 +60,15 @@ namespace icicle {
   /**
    * @brief Initialize Poseidon constants with default values based on arity.
    *
-   * This function initializes a PoseidonConstants object with default values, based only on the arity.
+   * This function initializes a PoseidonConstants object with default values, for any supported arity.
    * The backend will populate the constants object with pre-determined default values for Poseidon parameters.
    *
-   * @param arity The arity (branching factor) of the Poseidon hash.
    * @param constants [OUT] Shared pointer to the initialized PoseidonConstants object.
    *
    * @return eIcicleError Error code indicating success or failure of the initialization.
    */
   template <typename S>
-  eIcicleError
-  poseidon_init_default_constants(unsigned arity, std::shared_ptr<PoseidonConstants<S>>& constants /*out*/);
+  eIcicleError poseidon_init_default_constants(std::shared_ptr<PoseidonConstants<S>>& constants /*out*/);
 
   /**
    * @brief Create a Poseidon hash object using the shared PoseidonConstants.

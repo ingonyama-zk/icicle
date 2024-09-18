@@ -4,10 +4,10 @@
 namespace icicle {
 
   template <typename S>
-  class PoseidonConstantsCPU : PoseidonConstants<S>
-  {
+  struct PoseidonConstantsCPU : PoseidonConstants<S> {
     // TODO add field here
-    S* m_dummy_poseidon_constant;
+    S* m_dummy_poseidon_constant = nullptr;
+    int dummy_int = 79;
   };
 
   static eIcicleError cpu_poseidon_init_constants(
@@ -24,6 +24,7 @@ namespace icicle {
     std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
   {
     ICICLE_LOG_INFO << "in cpu_poseidon_init_constants()";
+    constants = std::make_shared<PoseidonConstantsCPU<scalar_t>>();
     // TODO implement
     return eIcicleError::SUCCESS;
   }
@@ -31,9 +32,10 @@ namespace icicle {
   REGISTER_POSEIDON_INIT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_constants);
 
   static eIcicleError cpu_poseidon_init_default_constants(
-    const Device& device, unsigned arity, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
+    const Device& device, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
   {
     ICICLE_LOG_INFO << "in cpu_poseidon_init_default_constants()";
+    constants = std::make_shared<PoseidonConstantsCPU<scalar_t>>();
     // TODO implement
     return eIcicleError::SUCCESS;
   }
@@ -45,19 +47,25 @@ namespace icicle {
   {
   public:
     PoseidonBackendCPU(std::shared_ptr<PoseidonConstants<S>> constants)
-        : HashBackend(sizeof(S), 0 /*TODO get from constants arity of whatever*/), m_constants{constants}
+        : HashBackend(sizeof(S), 0 /*TODO get from constants arity of whatever*/)
     {
+      auto downcast_constants = std::dynamic_pointer_cast<PoseidonConstantsCPU<S>>(constants);
+      ICICLE_ASSERT(downcast_constants != nullptr)
+        << "CPU poseidon expecting PoseidonConstantsCPU<S> constants, got invalid constant type";
+      m_constants = downcast_constants;
+      ICICLE_LOG_DEBUG << "constant.dummy_int=" << m_constants->dummy_int;
     }
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      ICICLE_LOG_INFO << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>();
+      ICICLE_LOG_DEBUG << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>()
+                       << ", batch=" << config.batch;
       // TODO implement
       return eIcicleError::SUCCESS;
     }
 
   private:
-    std::shared_ptr<PoseidonConstants<S>> m_constants = nullptr;
+    std::shared_ptr<PoseidonConstantsCPU<S>> m_constants = nullptr;
   };
 
   static eIcicleError create_cpu_poseidon_hash_backend(

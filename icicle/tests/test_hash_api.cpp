@@ -183,7 +183,7 @@ TEST_F(HashApiTest, poseidon12)
 
   // init poseidon scalars
   std::shared_ptr<PoseidonConstants<scalar_t>> poseidon_constants;
-  ICICLE_CHECK(poseidon_init_default_constants(12, poseidon_constants));
+  ICICLE_CHECK(poseidon_init_default_constants(poseidon_constants));
 
   auto config = default_hash_config();
   // Create Poseidon hash object
