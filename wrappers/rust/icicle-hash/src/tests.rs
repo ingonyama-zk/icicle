@@ -63,28 +63,29 @@ mod tests {
         initialize();
         test_utilities::test_set_ref_device();
 
-        let leaf_element_size = 8;
-        let num_elements = 4;
-
         // Need a &[&Hashers] to build a tree. Can build it like this
         {
             // build a simple tree with 2 layers
-            let hasher_l0 = keccak::create_keccak_256_hasher(0).unwrap();
-            let hasher_l1 = sha3::create_sha3_256_hasher(0).unwrap();
+            let leaf_element_size = 8;
+            let hasher_l0 = keccak::create_keccak_256_hasher(256 /*input chunk size*/).unwrap();
+            let hasher_l1 = sha3::create_sha3_256_hasher(128 /*input chunk size*/).unwrap();
             let layer_hashes = [&hasher_l0, &hasher_l1];
             let _merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
         }
 
         // or any way that ends up with &[&Hashers]
-        let nof_layers = 8;
-        let hasher = keccak::create_keccak_256_hasher(0).unwrap();
+        // building a binray tree, each layer takes 2*32B=64B and hashes to 32B
+        let nof_layers = 4;
+        let num_elements = 1 << nof_layers;
+        let leaf_element_size = 32;
+        let hasher = keccak::create_keccak_256_hasher(2 * leaf_element_size /*input chunk size*/).unwrap();
         let layer_hashes: Vec<&Hasher> = (0..nof_layers)
             .map(|_| &hasher)
             .collect();
         let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
 
         // Create a vector of random bytes efficiently
-        let mut input: Vec<u8> = vec![0; leaf_element_size * num_elements];
+        let mut input: Vec<u8> = vec![0; leaf_element_size as usize * num_elements];
         rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
         println!("input = {:?}", input);
 
