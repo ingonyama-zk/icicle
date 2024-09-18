@@ -48,25 +48,4 @@ namespace icicle {
     return keccak;
   }
 
-  /*************************** C API ***************************/
-
-  extern "C" Hash* create_keccak_256_hash_c_api(uint64_t input_chunk_size)
-  {
-    return new Hash(create_keccak_256_hash(input_chunk_size));
-  }
-  extern "C" Hash* create_keccak_512_hash_c_api(uint64_t input_chunk_size)
-  {
-    return new Hash(create_keccak_512_hash(input_chunk_size));
-  }
-  extern "C" Hash* create_sha3_256_hash_c_api(uint64_t input_chunk_size)
-  {
-    return new Hash(create_sha3_256_hash(input_chunk_size));
-  }
-  extern "C" Hash* create_sha3_512_hash_c_api(uint64_t input_chunk_size)
-  {
-    return new Hash(create_sha3_512_hash(input_chunk_size));
-  }
-
-  // TODO Yuval : need to expose one deleter from C++. This will be used to drop any object
-
 } // namespace icicle
