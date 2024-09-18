@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests {
 
-    use crate::{keccak, sha3};
+    use crate::{
+        keccak::{Keccak256, Keccak512},
+        sha3::{Sha3_256, Sha3_512},
+    };
     use icicle_core::{
         hash::{HashConfig, Hasher},
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
@@ -25,7 +28,7 @@ mod tests {
         initialize();
         test_utilities::test_set_ref_device();
 
-        let keccak_hasher = keccak::create_keccak_256_hasher(0).unwrap();
+        let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
         let input = vec![0 as u8; 90];
         let mut output = vec![0 as u8; 96]; // 256b * batch
         keccak_hasher
@@ -44,7 +47,7 @@ mod tests {
         initialize();
         test_utilities::test_set_ref_device();
 
-        let sha3_hasher = sha3::create_sha3_512_hasher(0).unwrap();
+        let sha3_hasher = Sha3_512::new(0 /*default chunk size */).unwrap();
         let input = vec![0 as u8; 90];
         let mut output = vec![0 as u8; 64]; // 256b * batch
         sha3_hasher
@@ -67,8 +70,8 @@ mod tests {
         {
             // build a simple tree with 2 layers
             let leaf_element_size = 8;
-            let hasher_l0 = keccak::create_keccak_256_hasher(256 /*input chunk size*/).unwrap();
-            let hasher_l1 = sha3::create_sha3_256_hasher(128 /*input chunk size*/).unwrap();
+            let hasher_l0 = Keccak256::new(2 * leaf_element_size /*input chunk size*/).unwrap();
+            let hasher_l1 = Sha3_256::new(2 * 32 /*input chunk size*/).unwrap();
             let layer_hashes = [&hasher_l0, &hasher_l1];
             let _merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
         }
@@ -78,7 +81,7 @@ mod tests {
         let nof_layers = 4;
         let num_elements = 1 << nof_layers;
         let leaf_element_size = 32;
-        let hasher = keccak::create_keccak_256_hasher(2 * leaf_element_size /*input chunk size*/).unwrap();
+        let hasher = Keccak256::new(2 * leaf_element_size /*input chunk size*/).unwrap();
         let layer_hashes: Vec<&Hasher> = (0..nof_layers)
             .map(|_| &hasher)
             .collect();
