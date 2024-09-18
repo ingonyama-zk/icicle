@@ -20,34 +20,37 @@ namespace icicle {
   /**
    * @brief Initialize Poseidon constants with full configuration parameters.
    *
-   * This function initializes a PoseidonConstants object with the provided configuration parameters.
-   * The user provides arity, alpha, round constants, matrices, and other Poseidon-specific parameters.
-   * The backend allocates and returns the initialized constants as a shared object.
+   * This function initializes a `PoseidonConstants` object with the provided configuration parameters.
+   * The user must provide the arity (branching factor), alpha (exponent used in the S-box),
+   * round constants, MDS matrix, non-sparse matrix, sparse matrices, and other Poseidon-specific parameters.
+   * The function allocates and returns the initialized constants through the `constants` output parameter.
    *
-   * @param arity The arity (branching factor) of the Poseidon hash.
+   * @tparam S Type of the field elements used for constants (e.g., integers or field elements).
+   *
+   * @param arity The arity (branching factor) of the Poseidon hash (i.e., the number of inputs).
    * @param alpha Exponent used in the S-box function.
-   * @param nof_partial_rounds Number of partial rounds.
-   * @param nof_upper_full_rounds Number of full rounds at the beginning.
-   * @param nof_end_full_rounds Number of full rounds at the end.
-   * @param rounds_constants Array of round constants for Poseidon.
-   * @param mds_matrix Array representing the MDS matrix.
-   * @param pre_matrix Array representing the pre-processing matrix.
-   * @param sparse_matrix Array representing the sparse matrix.
-   * @param constants [OUT] Shared pointer to the initialized PoseidonConstants object.
+   * @param full_rounds_half The number of full rounds (half of the total rounds).
+   * @param partial_rounds The number of partial rounds.
+   * @param rounds_constants Pointer to the array of round constants for Poseidon.
+   * @param mds_matrix Pointer to the array representing the MDS (Maximum Distance Separable) matrix.
+   * @param non_sparse_matrix Pointer to the array representing the non-sparse matrix.
+   * @param sparse_matrices Pointer to the array representing the sparse matrices.
+   * @param domain_tag Pointer to the domain tag.
+   * @param constants [OUT] Shared pointer to the initialized `PoseidonConstants` object.
    *
-   * @return eIcicleError Error code indicating success or failure of the initialization.
+   * @return eIcicleError Error code indicating the success or failure of the initialization.
    */
   template <typename S>
   eIcicleError poseidon_init_constants(
     unsigned arity,
     unsigned alpha,
-    unsigned nof_partial_rounds,
-    unsigned nof_upper_full_rounds,
-    unsigned nof_end_full_rounds,
+    unsigned full_rounds_half,
+    unsigned partial_rounds,
     const S* rounds_constants,
     const S* mds_matrix,
-    const S* pre_matrix,
-    const S* sparse_matrix,
+    const S* non_sparse_matrix,
+    const S* sparse_matrices,
+    const S* domain_tag,
     std::shared_ptr<PoseidonConstants<S>>& constants /*out*/);
 
   /**

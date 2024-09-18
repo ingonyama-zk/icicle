@@ -14,13 +14,13 @@ namespace icicle {
     const Device& device,
     unsigned arity,
     unsigned alpha,
-    unsigned nof_partial_rounds,
-    unsigned nof_upper_full_rounds,
-    unsigned nof_end_full_rounds,
+    unsigned full_rounds_half,
+    unsigned partial_rounds,
     const scalar_t* rounds_constants,
     const scalar_t* mds_matrix,
-    const scalar_t* pre_matrix,
-    const scalar_t* sparse_matrix,
+    const scalar_t* non_sparse_matrix,
+    const scalar_t* sparse_matrices,
+    const scalar_t* domain_tag,
     std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
   {
     ICICLE_LOG_INFO << "in cpu_poseidon_init_constants()";

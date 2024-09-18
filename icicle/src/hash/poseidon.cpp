@@ -10,18 +10,18 @@ namespace icicle {
   eIcicleError poseidon_init_constants(
     unsigned arity,
     unsigned alpha,
-    unsigned nof_partial_rounds,
-    unsigned nof_upper_full_rounds,
-    unsigned nof_end_full_rounds,
+    unsigned full_rounds_half,
+    unsigned partial_rounds,
     const scalar_t* rounds_constants,
     const scalar_t* mds_matrix,
-    const scalar_t* pre_matrix,
-    const scalar_t* sparse_matrix,
+    const scalar_t* non_sparse_matrix,
+    const scalar_t* sparse_matrices,
+    const scalar_t* domain_tag,
     std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
   {
     return InitPoseidonConstantsDispatcher::execute(
-      arity, alpha, nof_partial_rounds, nof_upper_full_rounds, nof_end_full_rounds, rounds_constants, mds_matrix,
-      pre_matrix, sparse_matrix, constants);
+      arity, alpha, full_rounds_half, partial_rounds, rounds_constants, mds_matrix, non_sparse_matrix, sparse_matrices,
+      domain_tag, constants);
   }
 
   ICICLE_DISPATCHER_INST(
