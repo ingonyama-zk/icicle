@@ -23,6 +23,8 @@ The Vector Operations API supports the following:
 
 ## What's in the example
 
-1.	`example_element_wise`: examples of element-wise operations
-2.	`example_scalar_vector`: examples of scalar-vector operations
+1. `example_element_wise`: element-wise operations
+2. `example_reduction`: reduction operations
+3. `example_scalar_vector`: scalar-vector operations
+
 
