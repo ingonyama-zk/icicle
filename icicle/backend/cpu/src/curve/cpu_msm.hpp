@@ -88,7 +88,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_AFFINE;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE - 1) { dispatch(); }
+    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
   }
 
   /**
@@ -107,7 +107,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_P2_BY_VALUE;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE - 1) { dispatch(); }
+    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
   }
 
   /**
@@ -125,7 +125,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_POINTER;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE - 1) { dispatch(); }
+    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
   }
 
   /**
@@ -143,7 +143,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_POINTER;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE - 1) { dispatch(); }
+    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
   }
 
   /**
@@ -161,7 +161,7 @@ public:
 
     // NOTE in ends of phases tasks that are smaller than batch will neeed to be dispatched manually
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE - 1) { dispatch(); }
+    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
   }
 
   void reset_idle() // TODO need to call it
