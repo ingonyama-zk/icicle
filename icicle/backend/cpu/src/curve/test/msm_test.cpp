@@ -4,10 +4,10 @@
 #include "icicle/curves/curve_config.h"
 #include <random>
 #include <cassert>
-#include "timer.hpp"
+// #include "timer.hpp"
 
 #define DUMMY_TYPES
-#define DEBUG_PRINTS
+// #define DEBUG_PRINTS
 #define P_MACRO 1000
 
 class DummyScalar
@@ -377,7 +377,7 @@ void store_inputs(T* arr, const int arr_size, const std::string fname)
   out_file.close();
 }
 
-void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size, bool gen_new=false)
+void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size, bool gen_new = false)
 {
   // Scalars
   std::string scalar_file = "build/generated_data/scalars_N" + std::to_string(n * batch_size) + ".dat";
@@ -397,14 +397,13 @@ void get_inputs(A* bases, scalar_t* scalars, const int n, const int batch_size, 
 
 int main()
 {
-  // while (true) 
-  {
+  while (true) {
     // MSM config
-    const int logn = 10;
+    const int logn = 17;
     const int N = 1 << logn;
-    const int log_p = 2;
+    const int log_p = 3;
     const int batch_size = 3;
-    bool conv_mont = true;
+    bool conv_mont = false;
 
     bool gen_new = true;
 
@@ -430,10 +429,9 @@ int main()
 
       int hw_threads = std::thread::hardware_concurrency();
       if (hw_threads <= 0) { std::cout << "Unable to detect number of hardware supported threads - fixing it to 1\n"; }
-      // const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
-      const int n_threads = 1;
+      const int n_threads = (hw_threads > 1) ? hw_threads - 1 : 1;
+      // const int n_threads = 1;
       std::cout << "Num threads: " << n_threads << '\n';
-      // const int n_threads = 8;
 
       const int tasks_per_thread = 4;
 
