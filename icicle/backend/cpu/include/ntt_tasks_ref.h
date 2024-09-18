@@ -21,7 +21,7 @@
 #include <functional>
 #include <unordered_map>
 
-#define HIERARCHY_1 15
+#define HIERARCHY_1_REF 15
 
 using namespace field_config;
 using namespace icicle;
@@ -38,7 +38,7 @@ namespace ntt_cpu {
    * layer, 13 for the second, and 0 for the third.
    */
   constexpr uint32_t layers_sub_logn_ref[31][3] = {
-    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
+    {0, 0, 0},   {1, 0, 0},   {2,0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
     {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
     {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
     {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
@@ -95,7 +95,7 @@ namespace ntt_cpu {
     NttSubLognRef(int logn) : logn(logn)
     {
       size = 1 << logn;
-      if (logn > HIERARCHY_1) {
+      if (logn > HIERARCHY_1_REF) {
         // Initialize hierarchy_1_layers_sub_logn
         hierarchy_1_layers_sub_logn =
           std::vector<int>(std::begin(layers_sub_logn_ref[logn]), std::end(layers_sub_logn_ref[logn]));
@@ -443,9 +443,9 @@ namespace ntt_cpu {
    */
   template <typename S, typename E>
   NttTasksManagerRef<S, E>::NttTasksManagerRef(int logn)
-      : counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCountersRef(NttSubLognRef(logn), 0))
+      : counters(logn > HIERARCHY_1_REF ? 2 : 1, TasksDependenciesCountersRef(NttSubLognRef(logn), 0))
   {
-    if (logn > HIERARCHY_1) { counters[1] = TasksDependenciesCountersRef(NttSubLognRef(logn), 1); }
+    if (logn > HIERARCHY_1_REF) { counters[1] = TasksDependenciesCountersRef(NttSubLognRef(logn), 1); }
   }
 
   /**
@@ -637,9 +637,9 @@ namespace ntt_cpu {
    * @param input The input array from which data will be copied.
    * @param output The output array where the copied (and potentially reordered) data will be stored.
    *
-   * @note - If `logn > HIERARCHY_1`, there is an additional level of hierarchy due to sub-NTTs, requiring extra
+   * @note - If `logn > HIERARCHY_1_REF`, there is an additional level of hierarchy due to sub-NTTs, requiring extra
    * reordering
-   *       - If `logn <= HIERARCHY_1`, only bit-reversal reordering is applied if configured.
+   *       - If `logn <= HIERARCHY_1_REF`, only bit-reversal reordering is applied if configured.
    *       - If no reordering is needed, the input data is directly copied to the output.
    */
 
@@ -660,7 +660,7 @@ namespace ntt_cpu {
       temp_output = temp_storage.get();
     }
 
-    if (logn > HIERARCHY_1) {
+    if (logn > HIERARCHY_1_REF) {
       // Apply input's reorder logic depending on the configuration
       int cur_ntt_log_size = this->ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
       int next_ntt_log_size = this->ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
@@ -696,7 +696,7 @@ namespace ntt_cpu {
       std::copy(input, input + total_memory_size, output);
     }
 
-    if (input == output && (logn > HIERARCHY_1 || bit_rev)) {
+    if (input == output && (logn > HIERARCHY_1_REF || bit_rev)) {
       // Copy the reordered elements from the temporary storage back to the output
       std::copy(temp_output, temp_output + total_memory_size, output);
     }
@@ -810,7 +810,7 @@ namespace ntt_cpu {
   {
     uint64_t size = this->ntt_sub_logn.size;
     int batch_stride = this->config.columns_batch ? this->config.batch_size : 1;
-    const bool needs_reorder_input = this->direction == NTTDir::kForward && (this->ntt_sub_logn.logn > HIERARCHY_1);
+    const bool needs_reorder_input = this->direction == NTTDir::kForward && (this->ntt_sub_logn.logn > HIERARCHY_1_REF);
 
     for (int batch = 0; batch < this->config.batch_size; ++batch) {
       E* current_elements = this->config.columns_batch ? elements + batch : elements + batch * size;

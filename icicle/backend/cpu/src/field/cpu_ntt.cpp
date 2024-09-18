@@ -1,4 +1,4 @@
-#include "cpu_ntt.h"
+#include "cpu_ntt_main.h"
 
 using namespace field_config;
 using namespace icicle;
