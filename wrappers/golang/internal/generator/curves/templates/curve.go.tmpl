@@ -97,6 +97,10 @@ func (a *{{.CurvePrefix}}Affine) Zero() {{.CurvePrefix}}Affine {
 	return *a
 }
 
+func (a *{{.CurvePrefix}}Affine) IsZero() bool {
+	return a.X.IsZero() && a.Y.IsZero()
+}
+
 func (a *{{.CurvePrefix}}Affine) FromLimbs(x, y []uint32) {{.CurvePrefix}}Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
@@ -108,9 +112,19 @@ func (a *{{.CurvePrefix}}Affine) FromLimbs(x, y []uint32) {{.CurvePrefix}}Affine
 func (a {{.CurvePrefix}}Affine) ToProjective() {{.CurvePrefix}}Projective {
 	var p {{.CurvePrefix}}Projective
 
-	cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
-	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
-	C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_from_affine(cA, cP)
+	// TODO - Figure out why this sometimes returns an empty projective point, i.e. {x:0, y:0, z:0}
+	// cA := (*C.{{toCName .CurvePrefix}}affine_t)(unsafe.Pointer(&a))
+	// cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
+	// C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_from_affine(cA, cP)
+
+	if a.IsZero() {
+		p.Zero()
+	} else {
+		p.X = a.X
+		p.Y = a.Y
+		p.Z.One()
+	}
+
 	return p
 }
 

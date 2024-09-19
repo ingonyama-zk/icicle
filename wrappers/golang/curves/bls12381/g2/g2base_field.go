@@ -53,6 +53,16 @@ func (f *G2BaseField) Zero() G2BaseField {
 	return *f
 }
 
+func (f *G2BaseField) IsZero() bool {
+	for _, limb := range f.limbs {
+		if limb != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *G2BaseField) One() G2BaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0

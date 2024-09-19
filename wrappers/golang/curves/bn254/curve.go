@@ -96,6 +96,10 @@ func (a *Affine) Zero() Affine {
 	return *a
 }
 
+func (a *Affine) IsZero() bool {
+	return a.X.IsZero() && a.Y.IsZero()
+}
+
 func (a *Affine) FromLimbs(x, y []uint32) Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
@@ -106,9 +110,19 @@ func (a *Affine) FromLimbs(x, y []uint32) Affine {
 func (a Affine) ToProjective() Projective {
 	var p Projective
 
-	cA := (*C.affine_t)(unsafe.Pointer(&a))
-	cP := (*C.projective_t)(unsafe.Pointer(&p))
-	C.bn254_from_affine(cA, cP)
+	// TODO - Figure out why this sometimes returns an empty projective point, i.e. {x:0, y:0, z:0}
+	// cA := (*C.affine_t)(unsafe.Pointer(&a))
+	// cP := (*C.projective_t)(unsafe.Pointer(&p))
+	// C.bn254_from_affine(cA, cP)
+
+	if a.IsZero() {
+		p.Zero()
+	} else {
+		p.X = a.X
+		p.Y = a.Y
+		p.Z.One()
+	}
+
 	return p
 }
 
