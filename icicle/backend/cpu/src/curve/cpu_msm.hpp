@@ -21,7 +21,7 @@
 using namespace icicle;
 using namespace curve_config;
 
-#define LOG_EC_BATCH_SIZE 3
+#define LOG_EC_BATCH_SIZE 2
 #define EC_BATCH_SIZE     (1 << LOG_EC_BATCH_SIZE)
 
 /**
@@ -39,10 +39,10 @@ public:
    * m_point1.
    */
   EcAddTask()
-      : TaskBase(), m_a_points(EC_BATCH_SIZE, P::zero()), m_a_point_ptrs(EC_BATCH_SIZE, nullptr),
-        m_b_points(EC_BATCH_SIZE, P::zero()), m_b_point_ptrs(EC_BATCH_SIZE, nullptr),
-        m_b_affine_points(EC_BATCH_SIZE, A::zero()), m_return_idx(EC_BATCH_SIZE, -1),
-        m_opcodes(EC_BATCH_SIZE, ADD_P1_P2_BY_VALUE), m_is_line(EC_BATCH_SIZE, true), m_nof_valid_points(0)
+      : TaskBase(), m_a_points(EC_BATCH_SIZE, P::zero()), m_b_points(EC_BATCH_SIZE, P::zero()),
+        m_b_point_ptrs(EC_BATCH_SIZE, nullptr), m_b_affine_points(EC_BATCH_SIZE, A::zero()),
+        m_return_idx(EC_BATCH_SIZE, -1), m_opcodes(EC_BATCH_SIZE, ADD_P1_P2_BY_VALUE), m_is_line(EC_BATCH_SIZE, true),
+        m_nof_valid_points(0)
   {
   }
 
@@ -67,6 +67,10 @@ public:
     }
   }
 
+  /**
+   * @brief Dispatch task even if batch is not full. This function is mostly used in ends of phases where the left
+   * additions are not enough to fill a batch.
+   */
   void dispatch_if_not_empty()
   {
     if (is_idle() && m_nof_valid_points > 0) { dispatch(); }
@@ -148,10 +152,10 @@ public:
 
   /**
    * @brief Chain addition used in phase 1 when a collision between a new result and an occupied bucket.
+   * @param result - the previous EC addition result.
    * @param bucket - the bucket value to be added to the existing result in p1.
+   * @param segment_idx - index of the bucket to return the result to.
    */
-  // NOTE batching means the actual addition switches spots in the vector thus the collision addition now require all 3
-  // inputs (point a, point b and return index) instead of just the current bucket value
   void set_phase1_collision_task(const P& result, const P& bucket, const int segment_idx)
   {
     m_a_points[m_nof_valid_points] = result;
@@ -159,12 +163,14 @@ public:
     m_return_idx[m_nof_valid_points] = segment_idx;
     m_opcodes[m_nof_valid_points] = ADD_P1_P2_BY_VALUE;
 
-    // NOTE in ends of phases tasks that are smaller than batch will neeed to be dispatched manually
     m_nof_valid_points++;
     if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
   }
 
-  void reset_idle() // TODO need to call it
+  /**
+   * @brief Resets task to idle, resetting the valid points counter to 0.
+   */
+  void reset_idle()
   {
     m_nof_valid_points = 0;
     set_idle();
@@ -172,18 +178,17 @@ public:
 
   int m_nof_valid_points;
 
-  std::vector<P> m_a_points;
-  std::vector<P*> m_a_point_ptrs; // TODO use this to save copies (might require adding a results vector)
-
-  std::vector<P> m_b_points;
-  std::vector<A> m_b_affine_points; // TODO pointers to affine somehow when preprocessing is figured out - tasks
-                                    // for mont and negation as well?
-  std::vector<P*> m_b_point_ptrs;
+  std::vector<P> m_a_points; // One of the addends that also stores addition results.
 
   std::vector<int> m_return_idx; // Idx allowing manager to figure out where the result belong to.
   std::vector<bool> m_is_line;   // Indicator for phase 2 sums between line sum and triangle sum.
 
 private:
+  // Variations of the second addend which will be used depending on the opcode bellow
+  std::vector<P> m_b_points;
+  std::vector<A> m_b_affine_points;
+  std::vector<P*> m_b_point_ptrs;
+
   enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_POINTER, ADD_P1_AND_P2_AFFINE };
   std::vector<eAddType> m_opcodes;
 };
@@ -344,7 +349,7 @@ Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
     : manager(nof_threads), m_curr_task(nullptr),
 
       m_c(c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
-      m_num_bms(((scalar_t::NBITS) / (config.precompute_factor * m_c)) + 1),
+      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
       m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_points_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
 
@@ -354,7 +359,7 @@ Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
         (int)std::floor(
           std::log2((double)(nof_threads * TASKS_PER_THREAD * EC_BATCH_SIZE - 1) / (double)(2 * m_num_bms))),
         0)),
-      m_num_bm_segments(std::min((int)(1 << m_log_num_segments), (int)(m_num_bms * m_num_bkts))),
+      m_num_bm_segments(std::min((int)(1 << m_log_num_segments), (int)(m_num_bkts))),
       m_segment_size(std::max((int)(m_num_bkts >> m_log_num_segments), 1)),
 
       m_phase3_threads(m_batch_size - 1)
@@ -511,7 +516,6 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
   if (m_segment_size > 1) {
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
-      // NOTE if I choose num_segments to be divided by batch size than the loop can be batched and no % operations
       if (i % EC_BATCH_SIZE == 0) { m_curr_task = manager.get_idle_task(); }
       BmSumSegment& curr_segment = segments[i]; // For readability
 
@@ -542,7 +546,6 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
         } else {
           curr_segment.triangle_sum = m_curr_task->m_a_points[i];
         }
-        // NOTE m_nof_received sums and m_is_line can be one per task instead of one per segment
         curr_segment.m_nof_received_sums++;
 
         // Check if this was the last addition in the segment
@@ -690,14 +693,6 @@ eIcicleError cpu_msm(
 {
   int c = config.c;
   if (c < 1) { c = std::max((int)std::log2(msm_size) - 1, 8); }
-  if (scalar_t::NBITS % c == 0) {
-    ICICLE_LOG_WARNING << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-                       << ") without remainder.\n";
-    // FIXME round c dividing NBITS error
-  }
-  while (scalar_t::NBITS % c == 0) {
-    c++;
-  }
 
   int nof_threads = std::thread::hardware_concurrency() - 1;
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
@@ -737,13 +732,7 @@ eIcicleError cpu_msm_precompute_bases(
 {
   int c = config.c;
   if (c < 1) { c = std::max((int)std::log2(nof_bases) - 1, 8); }
-  if (scalar_t::NBITS % c == 0) {
-    ICICLE_LOG_ERROR << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-                     << ") without remainder.\n";
-  }
-  while (scalar_t::NBITS % c == 0) {
-    c++;
-  }
+
   int precompute_factor = config.precompute_factor;
   bool is_mont = config.are_points_montgomery_form;
   const unsigned int num_bms_no_precomp = (scalar_t::NBITS - 1) / c + 1;

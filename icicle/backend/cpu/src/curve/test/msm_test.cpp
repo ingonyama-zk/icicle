@@ -4,10 +4,10 @@
 #include "icicle/curves/curve_config.h"
 #include <random>
 #include <cassert>
-// #include "timer.hpp"
+#include "timer.hpp"
 
 #define DUMMY_TYPES
-// #define DEBUG_PRINTS
+#define DEBUG_PRINTS
 #define P_MACRO 1000
 
 class DummyScalar
@@ -410,6 +410,13 @@ int main()
     auto scalars = std::make_unique<scalar_t[]>(N * batch_size);
     auto bases = std::make_unique<A[]>(N);
     get_inputs(bases.get(), scalars.get(), N, batch_size, gen_new);
+#ifdef DEBUG_PRINTS
+    std::cout << "Inputs:\n";
+    for (int i = 0; i < N; i++) {
+      std::cout << scalars[i] << " * " << bases[i] << " + ";
+    }
+    std::cout << "\n\n";
+#endif
 
     if (conv_mont) {
       std::cout << "Convertiting inputs to Montgomery form\n";
