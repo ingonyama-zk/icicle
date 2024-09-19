@@ -52,6 +52,7 @@ fn main() {
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
     println!("cargo:rustc-link-lib=icicle_field_bls12_377");
     println!("cargo:rustc-link-lib=icicle_curve_bls12_377");
+    println!("cargo:rustc-link-lib=icicle_hash");
 
     if cfg!(feature = "bw6-761") {
         // Base config
@@ -86,6 +87,7 @@ fn main() {
         println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
         println!("cargo:rustc-link-lib=icicle_field_bw6_761");
         println!("cargo:rustc-link-lib=icicle_curve_bw6_761");
+        println!("cargo:rustc-link-lib=icicle_hash");
     }
 
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments

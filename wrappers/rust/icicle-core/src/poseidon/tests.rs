@@ -40,7 +40,6 @@ where
     let mut leaves: Vec<F> = (0..num_elements)
         .map(|i| F::from_u32(i))
         .collect();
-    let mut output = F::zero();
 
     let hasher = create_poseidon_hasher::<F>(arity as u32).unwrap();
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)

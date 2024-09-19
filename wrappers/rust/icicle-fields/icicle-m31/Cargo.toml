@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
+icicle-hash = { workspace = true }
 
 [build-dependencies]
 cmake = "0.1.50"

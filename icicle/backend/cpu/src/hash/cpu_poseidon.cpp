@@ -6,7 +6,7 @@ namespace icicle {
   static eIcicleError
   cpu_poseidon_init_constants(const Device& device, const PoseidonConstantsInitOptions<scalar_t>* options)
   {
-    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_constants()";
+    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_constants() for type " << demangle<scalar_t>();
     // TODO implement
     return eIcicleError::SUCCESS;
   }
@@ -15,7 +15,7 @@ namespace icicle {
 
   static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)
   {
-    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants()";
+    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
     // TODO implement
     return eIcicleError::SUCCESS;
   }
