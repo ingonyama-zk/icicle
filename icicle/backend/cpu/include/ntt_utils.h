@@ -18,9 +18,9 @@ namespace ntt_cpu {
     * @param hierarchy_0_block_idx Index of the block within the hierarchy_0 layer.
     * @param hierarchy_0_subntt_idx Index of the sub-NTT within the hierarchy_0 block.
     *
-    * @method bool operator==(const NttTaskCordinates& other) const Compares two task coordinates for equality.
+    * @method bool operator==(const NttTaskCoordinates& other) const Compares two task coordinates for equality.
     */
-    struct NttTaskCordinates {
+    struct NttTaskCoordinates {
         uint32_t hierarchy_1_layer_idx = 0;
         uint32_t hierarchy_1_subntt_idx = 0;
         uint32_t hierarchy_0_layer_idx = 0;
@@ -28,7 +28,7 @@ namespace ntt_cpu {
         uint32_t hierarchy_0_subntt_idx = 0;
         bool reorder = false;
 
-        bool operator==(const NttTaskCordinates& other) const
+        bool operator==(const NttTaskCoordinates& other) const
         {
         return hierarchy_1_layer_idx == other.hierarchy_1_layer_idx &&
                 hierarchy_1_subntt_idx == other.hierarchy_1_subntt_idx &&

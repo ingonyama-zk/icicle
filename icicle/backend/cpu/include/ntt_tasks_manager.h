@@ -1,4 +1,5 @@
 #pragma once
+#include "icicle/utils/log.h"
 #include "ntt_task.h"
 
 
@@ -22,7 +23,7 @@ namespace ntt_cpu {
    *
    * @method TasksDependenciesCounters(NttSubLogn ntt_sub_logn, uint32_t hierarchy_1_layer_idx) Constructor that initializes
    * the counters based on NTT structure.
-   * @method bool decrement_counter(NttTaskCordinates ntt_task_cordinates) Decrements the counter for a given task and
+   * @method bool decrement_counter(NttTaskCoordinates ntt_task_coordinates) Decrements the counter for a given task and
    * returns true if the task is ready to execute.
    * @method uint32_t get_dependent_subntt_count(uint32_t hierarchy_0_layer_idx) Returns the number of counters pointing to the
    * given hierarchy_0 layer.
@@ -35,7 +36,7 @@ namespace ntt_cpu {
     TasksDependenciesCounters(const NttSubLogn& ntt_sub_logn, uint32_t hierarchy_1_layer_idx);
 
     // Function to decrement the counter for a given task and check if it is ready to execute. if so, return true
-    bool decrement_counter(NttTaskCordinates ntt_task_cordinates);
+    bool decrement_counter(NttTaskCoordinates ntt_task_coordinates);
     uint32_t get_dependent_subntt_count(uint32_t hierarchy_0_layer_idx) { return dependent_subntt_count[hierarchy_0_layer_idx]; }
     uint32_t get_nof_hierarchy_0_layers() { return nof_hierarchy_0_layers; }
 
@@ -72,30 +73,27 @@ namespace ntt_cpu {
     NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn);
 
     // Add a new task to the ntt_task_manager
-    eIcicleError push_task(NttTaskCordinates ntt_task_cordinates);
+    eIcicleError push_task(NttTaskCoordinates* ntt_task_coordinates);
+    // void add_pending_tasks(uint32_t pending_tasks){ nof_pending_tasks += pending_tasks; }
 
     // Set a task as completed and update dependencies
     eIcicleError set_task_as_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1);
 
-    bool tasks_to_do() { return !available_tasks_list.empty() || !waiting_tasks_list.empty(); }
-    // bool tasks_to_do() { return !available_tasks_list.empty() || nof_pending_tasks!=0; }
-
+    bool tasks_to_do() { return !available_tasks_list.empty() || nof_pending_tasks!=0; }
     bool available_tasks() { return !available_tasks_list.empty(); }
-
-    NttTaskCordinates get_available_task() { return available_tasks_list.front(); } // //TODO - return pointers to taskscordinates instead of copying
+    NttTaskCoordinates* get_available_task() { return available_tasks_list.front(); } // //TODO SHANIE- return pointers to taskscoordinates instead of copying
 
     eIcicleError erase_task_from_available_tasks_list()
     {
       available_tasks_list.pop_front();
       return eIcicleError::SUCCESS;
     }
+    uint32_t nof_pending_tasks = 0;
 
   private:
     const NttSubLogn& ntt_sub_logn; // Reference to NttSubLogn
     std::vector<TasksDependenciesCounters> counters;      // Dependencies counters by layer
-    std::deque<NttTaskCordinates> available_tasks_list; // List of tasks ready to run
-    std::deque<NttTaskCordinates> waiting_tasks_list; // List of tasks waiting for dependencies
-    // uint32_t nof_pending_tasks = 0;
+    std::deque<NttTaskCoordinates*> available_tasks_list; // List of tasks ready to run
   };
 
 
@@ -184,7 +182,7 @@ namespace ntt_cpu {
    * @param task_c The coordinates of the task whose counter is to be decremented.
    * @return True if the dependent task is ready to execute, false otherwise.
    */
-  bool TasksDependenciesCounters::decrement_counter(NttTaskCordinates task_c)
+  bool TasksDependenciesCounters::decrement_counter(NttTaskCoordinates task_c)
   {
     if (nof_hierarchy_0_layers == 1) { return false; }
     if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
@@ -225,18 +223,19 @@ namespace ntt_cpu {
 
   /**
    * @brief Adds a new task to the task manager.
-   * @param ntt_task_cordinates Task coordinates specifying the task's position in the hierarchy.
+   * @param ntt_task_coordinates Task coordinates specifying the task's position in the hierarchy.
    * @return Status indicating success or failure.
    */
   template <typename S, typename E>
-  eIcicleError NttTasksManager<S, E>::push_task(NttTaskCordinates ntt_task_cordinates)
+  eIcicleError NttTasksManager<S, E>::push_task(NttTaskCoordinates* ntt_task_coordinates)
   {
-    if (ntt_task_cordinates.hierarchy_0_layer_idx == 0) {
-      available_tasks_list.push_back(ntt_task_cordinates);
-    } else {
-      waiting_tasks_list.push_back(ntt_task_cordinates);
-      // nof_pending_tasks++;
-    }
+    available_tasks_list.push_back(ntt_task_coordinates);
+    // if (ntt_task_coordinates->hierarchy_0_layer_idx == 0) {
+    //   available_tasks_list.push_back(ntt_task_coordinates);
+    // } 
+    // else {
+    //   nof_pending_tasks++;
+    // }
     return eIcicleError::SUCCESS;
   }
 
@@ -249,7 +248,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   eIcicleError NttTasksManager<S, E>::set_task_as_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1)
   {
-    NttTaskCordinates task_c = completed_task.get_coordinates();
+    NttTaskCoordinates task_c = *completed_task.get_coordinates();
     uint32_t nof_hierarchy_0_layers = counters[task_c.hierarchy_1_layer_idx].get_nof_hierarchy_0_layers();
     // Update dependencies in counters
     if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c)) {
@@ -257,28 +256,19 @@ namespace ntt_cpu {
         uint32_t dependent_subntt_count = (task_c.hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1) ? 1 : counters[task_c.hierarchy_1_layer_idx].get_dependent_subntt_count(task_c.hierarchy_0_layer_idx + 1);
         uint32_t stride = nof_subntts_l1 / dependent_subntt_count;
         for (uint32_t i = 0; i < dependent_subntt_count; i++) {
-          NttTaskCordinates next_task_c = task_c.hierarchy_0_layer_idx == 0 ? NttTaskCordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, task_c.hierarchy_0_block_idx, i} 
-                                        /*task_c.hierarchy_0_layer_idx==1*/ : NttTaskCordinates{ task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, (task_c.hierarchy_0_subntt_idx + stride * i), 0};
-          // available_tasks_list.push_back(next_task_c);
-          // nof_pending_tasks--;
-          auto it = std::find(waiting_tasks_list.begin(), waiting_tasks_list.end(), next_task_c); //TODO - try without waiting_tasks_list, just push the task. if it works, remove waiting_tasks_list logic.
-          if (it != waiting_tasks_list.end()) {
-              available_tasks_list.push_back(*it);
-              waiting_tasks_list.erase(it);
-          }
+          NttTaskCoordinates* next_task_c_ptr = task_c.hierarchy_0_layer_idx == 0 ? new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, task_c.hierarchy_0_block_idx, i} 
+                                        /*task_c.hierarchy_0_layer_idx==1*/ : new NttTaskCoordinates{ task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, (task_c.hierarchy_0_subntt_idx + stride * i), 0};
+          available_tasks_list.push_back(next_task_c_ptr);
+          nof_pending_tasks--;
         }
       } else {
         // Reorder the output
-        NttTaskCordinates next_task_c = {task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, nof_hierarchy_0_layers, 0, 0, true};
-        // available_tasks_list.push_back(next_task_c);
-        // nof_pending_tasks--;
-        auto it = std::find(waiting_tasks_list.begin(), waiting_tasks_list.end(), next_task_c);
-        if (it != waiting_tasks_list.end()) {
-            available_tasks_list.push_back(*it);
-            waiting_tasks_list.erase(it);
-        }
+        NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, nof_hierarchy_0_layers, 0, 0, true};
+        available_tasks_list.push_back(next_task_c_ptr);
+        nof_pending_tasks--;
       }
     }
+    completed_task.delete_data();
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu

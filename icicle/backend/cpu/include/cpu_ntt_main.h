@@ -68,7 +68,7 @@ namespace ntt_cpu {
     const uint64_t total_input_size = size * config.batch_size;
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     NttCpuRef<S, E> ntt(logn, direction, config, domain_max_size, twiddles);
-    NttTaskCordinatesRef ntt_task_cordinates = {0, 0, 0, 0, 0};
+    NttTaskCoordinatesRef ntt_task_coordinates = {0, 0, 0, 0, 0};
     NttTasksManagerRef<S, E> ntt_tasks_manager(logn);
     const uint32_t nof_threads = std::thread::hardware_concurrency();
     auto tasks_manager = new TasksManager<NttTaskRef<S, E>>(nof_threads - 1);
@@ -89,16 +89,16 @@ namespace ntt_cpu {
     uint32_t nof_subntts_chunks;
 
     if (logn > HIERARCHY_1_REF) {
-      for (ntt_task_cordinates.hierarchy_1_layer_idx = 0; ntt_task_cordinates.hierarchy_1_layer_idx < 2;
-           ntt_task_cordinates.hierarchy_1_layer_idx++) {
+      for (ntt_task_coordinates.hierarchy_1_layer_idx = 0; ntt_task_coordinates.hierarchy_1_layer_idx < 2;
+           ntt_task_coordinates.hierarchy_1_layer_idx++) {
         sunbtt_plus_batch_logn =
-          ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[ntt_task_cordinates.hierarchy_1_layer_idx] +
+          ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[ntt_task_coordinates.hierarchy_1_layer_idx] +
           uint32_t(log2(config.batch_size));
         log_nof_hierarchy_1_subntts_todo_in_parallel =
           sunbtt_plus_batch_logn < HIERARCHY_1_REF ? HIERARCHY_1_REF - sunbtt_plus_batch_logn : 0;
         nof_hierarchy_1_subntts_todo_in_parallel = 1 << log_nof_hierarchy_1_subntts_todo_in_parallel;
         log_nof_subntts_chunks =
-          ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - ntt_task_cordinates.hierarchy_1_layer_idx] -
+          ntt.ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - ntt_task_coordinates.hierarchy_1_layer_idx] -
           log_nof_hierarchy_1_subntts_todo_in_parallel;
         nof_subntts_chunks = 1 << log_nof_subntts_chunks;
         for (uint32_t hierarchy_1_subntts_chunck_idx = 0; hierarchy_1_subntts_chunck_idx < nof_subntts_chunks;
@@ -106,26 +106,26 @@ namespace ntt_cpu {
           for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0;
                hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel;
                hierarchy_1_subntt_idx_in_chunck++) {
-            ntt_task_cordinates.hierarchy_1_subntt_idx =
+            ntt_task_coordinates.hierarchy_1_subntt_idx =
               hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel +
               hierarchy_1_subntt_idx_in_chunck;
-            ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
+            ntt.hierarchy1_push_tasks(output, ntt_task_coordinates, ntt_tasks_manager);
           }
-          ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, ntt_task_cordinates.hierarchy_1_layer_idx);
+          ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, ntt_task_coordinates.hierarchy_1_layer_idx);
         }
-        if (ntt_task_cordinates.hierarchy_1_layer_idx == 0) { ntt.hierarchy_1_reorder(output); }
+        if (ntt_task_coordinates.hierarchy_1_layer_idx == 0) { ntt.hierarchy_1_reorder(output); }
       }
       // reset hierarchy_1_subntt_idx so that reorder_and_refactor_if_needed will calculate the correct memory index
-      ntt_task_cordinates.hierarchy_1_subntt_idx = 0;
+      ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
       if (config.columns_batch) {
-        ntt.reorder_and_refactor_if_needed(output, ntt_task_cordinates, true);
+        ntt.reorder_and_refactor_if_needed(output, ntt_task_coordinates, true);
       } else {
         for (uint32_t b = 0; b < config.batch_size; b++) {
-          ntt.reorder_and_refactor_if_needed(output + b * size, ntt_task_cordinates, true);
+          ntt.reorder_and_refactor_if_needed(output + b * size, ntt_task_coordinates, true);
         }
       }
     } else {
-      ntt.hierarchy1_push_tasks(output, ntt_task_cordinates, ntt_tasks_manager);
+      ntt.hierarchy1_push_tasks(output, ntt_task_coordinates, ntt_tasks_manager);
       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
     }
 
@@ -140,8 +140,8 @@ namespace ntt_cpu {
     }
 
     if (config.ordering == Ordering::kNR || config.ordering == Ordering::kRR) {
-      ntt_task_cordinates = {0, 0, 0, 0, 0};
-      ntt.reorder_by_bit_reverse(ntt_task_cordinates, output, true);
+      ntt_task_coordinates = {0, 0, 0, 0, 0};
+      ntt.reorder_by_bit_reverse(ntt_task_coordinates, output, true);
     }
     delete tasks_manager;
     return eIcicleError::SUCCESS;
