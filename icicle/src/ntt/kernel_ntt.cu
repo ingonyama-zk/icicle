@@ -522,6 +522,20 @@ namespace mxntt {
     __syncthreads();
     engine.SharedData32Rows4_2(shmem, false, false, strided); // load
     engine.loadBasicTwiddlesGeneric32(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, true);
+
+      printf(
+        "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
+
     engine.ntt4_2();
 
     if (columns_batch_size)
@@ -839,7 +853,7 @@ namespace mxntt {
 
     return CHK_LAST();
   }
-// #else
+#else
   template <typename S>
   __global__ void generate_base_table(S basic_root, S* base_table, uint32_t skip)
   {

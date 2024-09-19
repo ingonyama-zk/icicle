@@ -6,7 +6,7 @@
 #include "ntt/ntt.cuh" // for enum Ordering
 
 namespace mxntt {
-#define DCCT
+// #define DCCT
 #ifdef DCCT
   template <typename S, typename R>
   cudaError_t generate_twiddles_dcct(

@@ -410,7 +410,7 @@ namespace ntt {
   public:
     template <typename U, typename R>
     friend cudaError_t
-    init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw, bool dcct_mode);
+    init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
 
     template <typename U>
     friend cudaError_t release_domain(device_context::DeviceContext& ctx);
@@ -429,7 +429,7 @@ namespace ntt {
   static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
 
   template <typename S, typename R>
-  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode, bool dcct_mode)
+  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
     CHK_INIT_IF_RETURN();
 
@@ -456,8 +456,10 @@ namespace ntt {
           if (found_logn) break;
         }
       }
+
+#ifdef DCCT
       domain.max_log_size--;
-      std::cout << "max log: " << domain.max_log_size << std::endl;
+#endif
 
       domain.max_size = (int)pow(2, domain.max_log_size);
       if (omega != R::one()) {
@@ -465,7 +467,7 @@ namespace ntt {
           IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
       }
 
-#define DCCT
+// #define DCCT
 #ifdef DCCT
       // allocate and calculate twiddles on GPU
       // N * (2 ** (N - 1))

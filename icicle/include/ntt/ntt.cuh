@@ -38,7 +38,7 @@ namespace ntt {
    */
   template <typename S, typename R = S>
   cudaError_t init_domain(
-    R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false, bool dcct_mode = false);
+    R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
   /**
    * Releases and deallocates resources associated with the domain initialized for performing NTTs.
