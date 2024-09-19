@@ -1201,7 +1201,6 @@ namespace mxntt {
     uint32_t nof_blocks = (1UL << (log_size - 9)) * (columns_batch ? ((batch_size + 31) / 32) * 32 : batch_size);
     if (dit) {
       for (int i = 0; i < 5; i++) {
-        printf("Stage %d\n", i);
         uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
         uint32_t stride_log = 0;
         for (int j = 0; j < i; j++)
@@ -1351,27 +1350,25 @@ namespace mxntt {
       d_input = d_output;
     }
 
-    // if (reverse_input != eRevType::None) {
-    //   const bool is_reverse_in_place = (d_input == d_output);
-    //   if (is_reverse_in_place) {
-    //     reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-    //       d_output, logn, columns_batch, batch_size, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
-    //   } else {
-    //     reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
-    //       d_input, d_output, logn, columns_batch, batch_size, columns_batch ? batch_size : 1, dit, fast_tw,
-    //       reverse_input, is_normalize, S::inv_log_size(logn));
-    //   }
-    //   is_normalize = false;
-    //   d_input = d_output;
-    // }
+    if (reverse_input != eRevType::None) {
+      const bool is_reverse_in_place = (d_input == d_output);
+      if (is_reverse_in_place) {
+        reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_output, logn, columns_batch, batch_size, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
+      } else {
+        reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
+          d_input, d_output, logn, columns_batch, batch_size, columns_batch ? batch_size : 1, dit, fast_tw,
+          reverse_input, is_normalize, S::inv_log_size(logn));
+      }
+      is_normalize = false;
+      d_input = d_output;
+    }
 
     std::cout << "Entering large ntt" << std::endl;
     // inplace ntt
     CHK_IF_RETURN(large_ntt(
       d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size,
       columns_batch, is_inverse, (is_normalize && reverse_output == eRevType::None), dit, fast_tw, cuda_stream));
-    CHK_IF_RETURN(cudaDeviceSynchronize());
-    printf("FINISHED \n");
 
     if (reverse_output != eRevType::None) {
       reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(

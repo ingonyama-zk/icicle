@@ -17,6 +17,11 @@ typedef field_config::scalar_t test_data;
 #include "kernel_ntt.cu"
 #include <memory>
 
+
+#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
+#define END_TIMER(timer, msg)                                                                                          \
+  printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+
 void random_samples(test_data* res, uint32_t count)
 {
   for (int i = 0; i < count; i++)
@@ -39,6 +44,8 @@ __global__ void transpose_batch(test_scalar* in, test_scalar* out, int row_size,
 
 int main(int argc, char** argv)
 {
+  using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
+  using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
   cudaEvent_t ntt_start, ntt_stop;
   float icicle_time;
 
@@ -105,20 +112,24 @@ int main(int argc, char** argv)
       GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
   }
 
+  // CHK_IF_RETURN(
+  //   ntt::ntt(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutput));
   auto iterations = 1;
 
+  START_TIMER(ntt_timer);
+  CHK_IF_RETURN(cudaEventRecord(ntt_start, ntt_config.ctx.stream));
   // OLD
   ntt_config.ntt_algorithm = ntt::NttAlgorithm::MixedRadix;
-  CHK_IF_RETURN(cudaEventRecord(ntt_start, ntt_config.ctx.stream));
   for (size_t i = 0; i < iterations; i++) {
     CHK_IF_RETURN(
       ntt::ntt(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutput));
   }
+  END_TIMER(ntt_timer, "NTT");
   CHK_IF_RETURN(cudaEventRecord(ntt_stop, ntt_config.ctx.stream));
   CHK_IF_RETURN(cudaStreamSynchronize(ntt_config.ctx.stream));
   CHK_IF_RETURN(cudaEventElapsedTime(&icicle_time, ntt_start, ntt_stop));
 
-  printf("Old Runtime=%0.3f MS\n", icicle_time / iterations);
+  printf("Old Runtime=%0.3f MS\n", icicle_time / (iterations));
 
   CHK_IF_RETURN(
     cudaMemcpy(CpuOutput.get(), GpuOutput, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
@@ -131,7 +142,7 @@ int main(int argc, char** argv)
   std::cout << "Output" << std::endl;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
   // for (int i = 0; i < 100; i++) {
-    if (i == 0)
+    if (i == 128)
       break;
     std::cout << CpuOutput[i] << " " << i << std::endl;
   }

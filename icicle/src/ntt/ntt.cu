@@ -480,6 +480,7 @@ namespace ntt {
       // for (size_t i = 0; i < number_of_twiddles; i++) {
       //   std::cout << tmp[i] << std::endl;
       // }
+      domain.coset_index[S::one()] = 0;
 #else
       // allocate and calculate twiddles on GPU
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
@@ -714,6 +715,7 @@ namespace ntt {
     try {
       coset_index = domain.coset_index.at(config.coset_gen);
     } catch (...) {
+      std::cout << "Computing coset" << std::endl;
       // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
       std::vector<S> h_coset;
       h_coset.push_back(S::one());
