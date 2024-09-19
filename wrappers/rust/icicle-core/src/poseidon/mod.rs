@@ -101,9 +101,25 @@ macro_rules! impl_poseidon_tests {
     ) => {
         use super::*;
 
+        use std::sync::Once;
+
+        static INIT: Once = Once::new();
+
+        pub fn initialize() {
+            INIT.call_once(move || {
+                // TODO load CUDA backend
+                // test_utilities::test_load_and_init_devices();
+            });
+        }
+
         #[test]
         fn test_poseidon_hash() {
             check_poseidon_hash::<$field>();
+        }
+
+        #[test]
+        fn test_poseidon_tree() {
+            check_poseidon_tree::<$field>();
         }
     };
 }
