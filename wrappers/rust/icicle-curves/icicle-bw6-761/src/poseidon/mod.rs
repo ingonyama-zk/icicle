@@ -4,5 +4,5 @@ pub(crate) mod tests {
     use icicle_core::impl_poseidon_tests;
     use icicle_core::poseidon::tests::*;
 
-    impl_poseidon_tests!(bw6_761, ScalarField);
+    impl_poseidon_tests!(ScalarField);
 }
