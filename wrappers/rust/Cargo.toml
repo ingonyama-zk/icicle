@@ -25,3 +25,4 @@ repository = "https://github.com/ingonyama-zk/icicle"
 [workspace.dependencies]
 icicle-core = { path = "icicle-core" }
 icicle-runtime = { path = "icicle-runtime" }
+icicle-hash = { path = "icicle-hash" }
