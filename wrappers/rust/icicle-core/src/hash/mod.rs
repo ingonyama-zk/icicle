@@ -3,8 +3,6 @@ use icicle_runtime::{
 };
 use std::ffi::c_void;
 
-pub mod tests;
-
 /// Configuration structure for hash operations.
 ///
 /// The `HashConfig` structure holds various configuration options that control how hash operations

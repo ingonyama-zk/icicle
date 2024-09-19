@@ -27,10 +27,11 @@ mod tests {
     fn keccak_hashing() {
         initialize();
         test_utilities::test_set_ref_device();
-
+        let single_hash_input_size = 30;
+        let batch = 3;
         let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
-        let input = vec![0 as u8; 90];
-        let mut output = vec![0 as u8; 96]; // 256b * batch
+        let input = vec![0 as u8; single_hash_input_size * batch];
+        let mut output = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
         keccak_hasher
             .hash(
                 HostSlice::from_slice(&input),
