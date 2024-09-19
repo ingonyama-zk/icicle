@@ -1,9 +1,47 @@
 #[doc(hidden)]
 pub mod tests;
 
-use std::ffi::c_void;
+use crate::{hash::Hasher, traits::FieldImpl};
+use icicle_runtime::errors::eIcicleError;
+use std::marker::PhantomData;
 
-pub type PoseidonConstantsHandle = *const c_void;
+pub struct PoseidonConstantsInitOptions<F: FieldImpl> {
+    // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
+    // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
+    phantom: PhantomData<F>,
+}
+
+pub trait PoseidonHasher<F: FieldImpl> {
+    fn initialize_constants(options: &PoseidonConstantsInitOptions<F>) -> Result<(), eIcicleError>;
+    fn initialize_default_constants() -> Result<(), eIcicleError>;
+    fn new(arity: u32) -> Result<Hasher, eIcicleError>;
+}
+
+pub fn initialize_default_poseidon_constants<F>() -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: PoseidonHasher<F>,
+{
+    <<F as FieldImpl>::Config as PoseidonHasher<F>>::initialize_default_constants()
+}
+
+pub fn initialize_poseidon_constants<F>(_options: &PoseidonConstantsInitOptions<F>) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: PoseidonHasher<F>,
+{
+    return Err(eIcicleError::ApiNotImplemented);
+    // TODO define PoseidonConstantsInitOptions and implement
+    // <<F as FieldImpl>::Config as PoseidonHasher<F>>::initialize_constants(_options)
+}
+
+pub fn create_poseidon_hasher<F>(arity: u32) -> Result<Hasher, eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: PoseidonHasher<F>,
+{
+    <<F as FieldImpl>::Config as PoseidonHasher<F>>::new(arity)
+}
 
 #[macro_export]
 macro_rules! impl_poseidon {
@@ -17,109 +55,34 @@ macro_rules! impl_poseidon {
             use crate::poseidon::{$field, $field_cfg};
             use icicle_core::{
                 hash::{Hasher, HasherHandle},
-                poseidon::PoseidonConstantsHandle,
+                poseidon::{PoseidonConstantsInitOptions, PoseidonHasher},
                 traits::FieldImpl,
             };
             use icicle_runtime::errors::eIcicleError;
             use std::marker::PhantomData;
 
-            pub struct Poseidon {}
-            pub struct PoseidonConstants {
-                handle: PoseidonConstantsHandle,
-            }
-
             extern "C" {
-                #[link_name = concat!($field_prefix, "_poseidon_init_constants")]
-                fn poseidon_init_constants(
-                    arity: u32,
-                    alpha: u32,
-                    full_rounds_half: u32,
-                    partial_rounds: u32,
-                    round_constants: *const $field,
-                    mds_matrix: *const $field,
-                    non_sparse_matrix: *const $field,
-                    sparse_matrices: *const $field,
-                    domain_tag: *const $field,
-                    constants_out: *mut PoseidonConstantsHandle,
-                ) -> eIcicleError;
-
                 #[link_name = concat!($field_prefix, "_poseidon_init_default_constants")]
-                fn poseidon_init_default_constants(constants_out: *mut PoseidonConstantsHandle) -> eIcicleError;
+                fn poseidon_init_default_constants() -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_poseidon_delete_constants")]
-                fn poseidon_delete_constants(handle: PoseidonConstantsHandle) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_poseidon_init_constants")]
+                fn poseidon_init_constants(options: *const PoseidonConstantsInitOptions<$field>) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_create_poseidon_hasher")]
-                fn create_poseidon_hasher(handle: PoseidonConstantsHandle) -> HasherHandle;
+                fn create_poseidon_hasher(arity: u32) -> HasherHandle;
             }
 
-            impl PoseidonConstants {
-                // init for any valid arity
-                pub fn default() -> Result<Self, eIcicleError> {
-                    let mut poseidon_constants_handle: PoseidonConstantsHandle = std::ptr::null_mut();
-                    let err: eIcicleError = unsafe { poseidon_init_default_constants(&mut poseidon_constants_handle) };
-                    if err == eIcicleError::Success {
-                        Ok(Self {
-                            handle: poseidon_constants_handle,
-                        })
-                    } else {
-                        Err(err)
-                    }
+            impl PoseidonHasher<$field> for $field_cfg {
+                fn initialize_default_constants() -> Result<(), eIcicleError> {
+                    unsafe { poseidon_init_default_constants().wrap() }
                 }
 
-                // TODO: can we do it for any supported arity?
-                fn new(
-                    arity: u32,
-                    alpha: u32,
-                    full_rounds_half: u32,
-                    partial_rounds: u32,
-                    round_constants: &[$field],
-                    mds_matrix: &[$field],
-                    non_sparse_matrix: &[$field],
-                    sparse_matrices: &[$field],
-                    domain_tag: &[$field],
-                ) -> Result<Self, eIcicleError> {
-                    let mut poseidon_constants_handle: PoseidonConstantsHandle = std::ptr::null_mut();
-                    let err: eIcicleError = unsafe {
-                        poseidon_init_constants(
-                            arity,
-                            alpha,
-                            full_rounds_half,
-                            partial_rounds,
-                            round_constants as *const _ as *const $field,
-                            mds_matrix as *const _ as *const $field,
-                            non_sparse_matrix as *const _ as *const $field,
-                            sparse_matrices as *const _ as *const $field,
-                            domain_tag as *const _ as *const $field,
-                            &mut poseidon_constants_handle,
-                        )
-                    };
-                    if err == eIcicleError::Success {
-                        Ok(Self {
-                            handle: poseidon_constants_handle,
-                        })
-                    } else {
-                        Err(err)
-                    }
+                fn initialize_constants(options: &PoseidonConstantsInitOptions<$field>) -> Result<(), eIcicleError> {
+                    unsafe { poseidon_init_constants(options as *const PoseidonConstantsInitOptions<$field>).wrap() }
                 }
-            }
 
-            impl Drop for PoseidonConstants {
-                fn drop(&mut self) {
-                    if (!self
-                        .handle
-                        .is_null())
-                    {
-                        unsafe {
-                            poseidon_delete_constants(self.handle);
-                        }
-                    }
-                }
-            }
-
-            impl Poseidon {
-                pub fn new(constants: &PoseidonConstants) -> Result<Hasher, eIcicleError> {
-                    let handle: HasherHandle = unsafe { create_poseidon_hasher(constants.handle) };
+                fn new(arity: u32) -> Result<Hasher, eIcicleError> {
+                    let handle: HasherHandle = unsafe { create_poseidon_hasher(arity) };
                     if handle.is_null() {
                         return Err(eIcicleError::UnknownError);
                     }
@@ -137,18 +100,10 @@ macro_rules! impl_poseidon_tests {
       $field:ident
     ) => {
         use super::*;
-        use crate::poseidon::$field_prefix_ident::{Poseidon, PoseidonConstants};
-        use icicle_core::hash::Hasher;
 
         #[test]
         fn test_poseidon_hash() {
-            let hasher: Hasher;
-            {
-                let poseidon_constants = PoseidonConstants::default().unwrap();
-                // ownership of the poseidon_constants is shared with the hasher here so the poseidon_constants can be dropped
-                hasher = Poseidon::new(&poseidon_constants).unwrap();
-            }
-            check_poseidon_hash::<$field>(&hasher);
+            check_poseidon_hash::<$field>();
         }
     };
 }

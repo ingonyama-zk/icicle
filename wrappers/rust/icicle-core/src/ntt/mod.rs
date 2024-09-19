@@ -318,7 +318,7 @@ macro_rules! impl_ntt {
         mod $field_prefix_ident {
             use crate::ntt::*;
 
-            extern "C" {
+            extern "C" { 
                 #[link_name = concat!($field_prefix, "_ntt_init_domain")]
                 fn initialize_ntt_domain(primitive_root: &$field, config: &NTTInitDomainConfig) -> eIcicleError;
 

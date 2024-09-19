@@ -7,14 +7,14 @@ namespace icicle {
   {
   public:
     KeccakBackend(uint64_t input_chunk_size, uint64_t output_size, uint64_t rate, int padding_const, const char* name)
-        : HashBackend(output_size, input_chunk_size, name)
+        : HashBackend(name, output_size, input_chunk_size)
     {
     }
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      ICICLE_LOG_INFO << "Keccak/sha3 CPU hash() called, batch=" << config.batch
-                      << ", single_output_size=" << output_size();
+      ICICLE_LOG_DEBUG << "Keccak/sha3 CPU hash() called, batch=" << config.batch
+                       << ", single_output_size=" << output_size();
       // TODO implement real logic
       for (int i = 0; i < output_size() * config.batch; ++i) {
         output[i] = std::byte(i % 256);
@@ -40,7 +40,7 @@ namespace icicle {
             KECCAK_256_DIGEST * sizeof(uint64_t),
             KECCAK_256_RATE,
             KECCAK_PADDING_CONST,
-            "Keccak256-CPU")
+            "Keccak-256-CPU")
     {
     }
   };
@@ -54,7 +54,7 @@ namespace icicle {
             KECCAK_512_DIGEST * sizeof(uint64_t),
             KECCAK_512_RATE,
             KECCAK_PADDING_CONST,
-            "Keccak512-CPU")
+            "Keccak-512-CPU")
     {
     }
   };

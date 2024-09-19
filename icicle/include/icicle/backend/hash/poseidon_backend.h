@@ -12,18 +12,8 @@ namespace icicle {
 
   /*************************** Backend registration ***************************/
 
-  using InitPoseidonConstantsImpl = std::function<eIcicleError(
-    const Device& device,
-    unsigned arity,
-    unsigned alpha,
-    unsigned full_rounds_half,
-    unsigned partial_rounds,
-    const scalar_t* rounds_constants,
-    const scalar_t* mds_matrix,
-    const scalar_t* non_sparse_matrix,
-    const scalar_t* sparse_matrices,
-    const scalar_t* domain_tag,
-    std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)>;
+  using InitPoseidonConstantsImpl =
+    std::function<eIcicleError(const Device& device, const PoseidonConstantsInitOptions<scalar_t>* options)>;
 
   // poseidon init constants
   void register_poseidon_init_constants(const std::string& deviceType, InitPoseidonConstantsImpl impl);
@@ -36,8 +26,9 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  using InitPoseidonDefaultConstantsImpl =
-    std::function<eIcicleError(const Device& device, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)>;
+  // Note: 'phantom' is a workaround for the function required per field but need to differentiate by type when
+  // calling.
+  using InitPoseidonDefaultConstantsImpl = std::function<eIcicleError(const Device& device, const scalar_t& phantom)>;
 
   // poseidon init constants
   void register_poseidon_init_default_constants(const std::string& deviceType, InitPoseidonDefaultConstantsImpl impl);
@@ -51,7 +42,7 @@ namespace icicle {
   }
 
   using CreatePoseidonImpl = std::function<eIcicleError(
-    const Device& device, std::shared_ptr<PoseidonConstants<scalar_t>>, std::shared_ptr<HashBackend>& /*OUT*/)>;
+    const Device& device, unsigned arity, std::shared_ptr<HashBackend>& /*OUT*/, const scalar_t& phantom)>;
 
   // poseidon init constants
   void register_create_poseidon(const std::string& deviceType, CreatePoseidonImpl impl);

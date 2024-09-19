@@ -94,7 +94,10 @@ TEST_F(HashApiTest, Keccak256)
 class HashSumBackend : public HashBackend
 {
 public:
-  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size) : HashBackend(output_size, input_chunk_size) {}
+  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size)
+      : HashBackend("HashSumTest", output_size, input_chunk_size)
+  {
+  }
 
   eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
   {
@@ -171,25 +174,23 @@ using namespace field_config;
 
 TEST_F(HashApiTest, poseidon12)
 {
-  const uint64_t input_size = 12; // Number of input elements
-  const uint64_t output_size = sizeof(scalar_t);
+  const uint64_t arity = 12; // Number of input elements
 
   // Create unique pointers for input and output arrays
-  auto input = std::make_unique<scalar_t[]>(input_size);
+  auto input = std::make_unique<scalar_t[]>(arity);
   scalar_t output = scalar_t::from(0);
-
   // Randomize the input array
-  scalar_t::rand_host_many(input.get(), input_size);
+  scalar_t::rand_host_many(input.get(), arity);
 
-  // init poseidon scalars
-  std::shared_ptr<PoseidonConstants<scalar_t>> poseidon_constants;
-  ICICLE_CHECK(poseidon_init_default_constants(poseidon_constants));
+  // init poseidon constants on current device
+  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
 
-  auto config = default_hash_config();
   // Create Poseidon hash object
-  auto poseidon = Poseidon::create(poseidon_constants);
+  auto poseidon = Poseidon::create<scalar_t>(arity);
+
   // Run single hash operation
-  ICICLE_CHECK(poseidon.hash(input.get(), input_size, config, &output));
+  auto config = default_hash_config();
+  ICICLE_CHECK(poseidon.hash(input.get(), arity, config, &output));
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 #endif // POSEIDON

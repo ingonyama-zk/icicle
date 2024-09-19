@@ -7,40 +7,27 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(InitPoseidonConstantsDispatcher, poseidon_init_constants, InitPoseidonConstantsImpl);
 
   template <>
-  eIcicleError poseidon_init_constants(
-    unsigned arity,
-    unsigned alpha,
-    unsigned full_rounds_half,
-    unsigned partial_rounds,
-    const scalar_t* rounds_constants,
-    const scalar_t* mds_matrix,
-    const scalar_t* non_sparse_matrix,
-    const scalar_t* sparse_matrices,
-    const scalar_t* domain_tag,
-    std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
+  eIcicleError poseidon_init_constants(const PoseidonConstantsInitOptions<scalar_t>* options)
   {
-    return InitPoseidonConstantsDispatcher::execute(
-      arity, alpha, full_rounds_half, partial_rounds, rounds_constants, mds_matrix, non_sparse_matrix, sparse_matrices,
-      domain_tag, constants);
+    return InitPoseidonConstantsDispatcher::execute(options);
   }
 
   ICICLE_DISPATCHER_INST(
     InitPoseidonDefaultConstantsDispatcher, poseidon_init_default_constants, InitPoseidonDefaultConstantsImpl);
 
   template <>
-  eIcicleError poseidon_init_default_constants(std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
+  eIcicleError poseidon_init_default_constants<scalar_t>()
   {
-    return InitPoseidonDefaultConstantsDispatcher::execute(constants);
+    return InitPoseidonDefaultConstantsDispatcher::execute(scalar_t::zero());
   }
 
   ICICLE_DISPATCHER_INST(CreatePoseidonHasherDispatcher, create_poseidon, CreatePoseidonImpl);
 
   template <>
-  Hash create_poseidon_hash(std::shared_ptr<PoseidonConstants<scalar_t>> constants)
+  Hash create_poseidon_hash<scalar_t>(unsigned arity)
   {
-    ICICLE_LOG_DEBUG << "creating poseidon hasher";
     std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(constants, backend));
+    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(arity, backend, scalar_t::zero()));
     Hash poseidon{backend};
     return poseidon;
   }
