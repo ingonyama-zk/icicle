@@ -31,6 +31,22 @@ impl VecOpsConfig {
 
 #[doc(hidden)]
 pub trait VecOps<F> {
+    fn sum(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+        offset: u32,
+        stride: u32,
+    ) -> Result<(), eIcicleError>;
+
+    fn product(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+        offset: u32,
+        stride: u32,
+    ) -> Result<(), eIcicleError>;
+
     fn add(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -220,6 +236,26 @@ macro_rules! impl_vec_ops_field {
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
+                #[link_name = concat!($field_prefix, "_vector_product")]
+                pub(crate) fn vector_product_ffi(
+                    a: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                    offset: u32,
+                    stride: u32,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_vector_sum")]
+                pub(crate) fn vector_sum_ffi(
+                    a: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                    offset: u32,
+                    stride: u32,
+                ) -> eIcicleError;
+                
                 #[link_name = concat!($field_prefix, "_vector_add")]
                 pub(crate) fn vector_add_ffi(
                     a: *const $field,
@@ -275,6 +311,46 @@ macro_rules! impl_vec_ops_field {
         }
 
         impl VecOps<$field> for $field_config {
+            fn sum(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+                offset: u32,
+                stride: u32,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_sum_ffi(
+                        a.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                        offset,
+                        stride,
+                    )
+                    .wrap()
+                }
+            }
+
+            fn product(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+                offset: u32,
+                stride: u32,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_product_ffi(
+                        a.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                        offset,
+                        stride,
+                    )
+                    .wrap()
+                }
+            }
+
             fn add(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
