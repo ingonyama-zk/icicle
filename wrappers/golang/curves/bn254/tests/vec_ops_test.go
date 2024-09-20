@@ -6,10 +6,10 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestBn254VecOps(t *testing.T) {
+func testBn254VecOps(suite suite.Suite) {
 	testSize := 1 << 14
 
 	a := bn254.GenerateScalars(testSize)
@@ -27,14 +27,14 @@ func TestBn254VecOps(t *testing.T) {
 	vecOps.VecOp(a, b, out, cfg, core.Add)
 	vecOps.VecOp(out, b, out2, cfg, core.Sub)
 
-	assert.Equal(t, a, out2)
+	suite.Equal(a, out2)
 
 	vecOps.VecOp(a, ones, out3, cfg, core.Mul)
 
-	assert.Equal(t, a, out3)
+	suite.Equal(a, out3)
 }
 
-func TestBn254Transpose(t *testing.T) {
+func testBn254Transpose(suite suite.Suite) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 
@@ -48,7 +48,7 @@ func TestBn254Transpose(t *testing.T) {
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, cfg)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, cfg)
 
-	assert.Equal(t, matrix, out2)
+	suite.Equal(matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice
 
@@ -61,5 +61,18 @@ func TestBn254Transpose(t *testing.T) {
 	output := make(core.HostSlice[bn254.ScalarField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
-	assert.Equal(t, matrix, output)
+	suite.Equal(matrix, output)
+}
+
+type Bn254VecOpsTestSuite struct {
+	suite.Suite
+}
+
+func (s *Bn254VecOpsTestSuite) TestBn254VecOps() {
+	s.Run("TestBn254VecOps", testWrapper(s.Suite, testBn254VecOps))
+	s.Run("TestBn254Transpose", testWrapper(s.Suite, testBn254Transpose))
+}
+
+func TestSuiteBn254VecOps(t *testing.T) {
+	suite.Run(t, new(Bn254VecOpsTestSuite))
 }

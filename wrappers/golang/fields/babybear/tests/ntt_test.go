@@ -8,26 +8,20 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestNTTGetDefaultConfig(t *testing.T) {
+func testNTTGetDefaultConfig(suite suite.Suite) {
 	actual := ntt.GetDefaultNttConfig()
 	expected := test_helpers.GenerateLimbOne(int(babybear.SCALAR_LIMBS))
-	assert.Equal(t, expected, actual.CosetGen[:])
+	suite.Equal(expected, actual.CosetGen[:])
 
 	cosetGenField := babybear.ScalarField{}
 	cosetGenField.One()
-	assert.ElementsMatch(t, cosetGenField.GetLimbs(), actual.CosetGen)
+	suite.ElementsMatch(cosetGenField.GetLimbs(), actual.CosetGen)
 }
 
-func TestInitDomain(t *testing.T) {
-	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	cfg := core.GetDefaultNTTInitDomainConfig()
-	assert.NotPanics(t, func() { initDomain(cfg) })
-}
-
-func TestNtt(t *testing.T) {
+func testNtt(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := babybear.GenerateScalars(1 << largestTestSize)
 
@@ -48,7 +42,7 @@ func TestNtt(t *testing.T) {
 	}
 }
 
-func TestNttDeviceAsync(t *testing.T) {
+func testNttDeviceAsync(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := babybear.GenerateScalars(1 << largestTestSize)
 
@@ -83,7 +77,7 @@ func TestNttDeviceAsync(t *testing.T) {
 	}
 }
 
-func TestNttBatch(t *testing.T) {
+func testNttBatch(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	largestTestSize := 10
 	largestBatchSize := 20
@@ -108,8 +102,17 @@ func TestNttBatch(t *testing.T) {
 	}
 }
 
-func TestReleaseDomain(t *testing.T) {
-	t.Skip("Skipped because each test requires the domain to be initialized before running. We ensure this using the TestMain() function")
-	e := ntt.ReleaseDomain()
-	assert.Equal(t, runtime.Success, e, "ReleasDomain failed")
+type NTTTestSuite struct {
+	suite.Suite
+}
+
+func (s *NTTTestSuite) TestNTT() {
+	s.Run("TestNTTGetDefaultConfig", testWrapper(s.Suite, testNTTGetDefaultConfig))
+	s.Run("TestNTT", testWrapper(s.Suite, testNtt))
+	s.Run("TestNttDeviceAsync", testWrapper(s.Suite, testNttDeviceAsync))
+	s.Run("TestNttBatch", testWrapper(s.Suite, testNttBatch))
+}
+
+func TestSuiteNTT(t *testing.T) {
+	suite.Run(t, new(NTTTestSuite))
 }

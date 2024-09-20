@@ -53,6 +53,16 @@ func (f *MockBaseField) Zero() MockBaseField {
 	return *f
 }
 
+func (f *MockBaseField) IsZero() bool {
+	for _, limb := range f.limbs {
+		if limb != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *MockBaseField) One() MockBaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0

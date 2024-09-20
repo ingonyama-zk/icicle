@@ -96,6 +96,10 @@ func (a *G2Affine) Zero() G2Affine {
 	return *a
 }
 
+func (a *G2Affine) IsZero() bool {
+	return a.X.IsZero() && a.Y.IsZero()
+}
+
 func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)
@@ -106,9 +110,19 @@ func (a *G2Affine) FromLimbs(x, y []uint32) G2Affine {
 func (a G2Affine) ToProjective() G2Projective {
 	var p G2Projective
 
-	cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
-	cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
-	C.bls12_381_g2_from_affine(cA, cP)
+	// TODO - Figure out why this sometimes returns an empty projective point, i.e. {x:0, y:0, z:0}
+	// cA := (*C.g2_affine_t)(unsafe.Pointer(&a))
+	// cP := (*C.g2_projective_t)(unsafe.Pointer(&p))
+	// C.bls12_381_g2_from_affine(cA, cP)
+
+	if a.IsZero() {
+		p.Zero()
+	} else {
+		p.X = a.X
+		p.Y = a.Y
+		p.Z.One()
+	}
+
 	return p
 }
 

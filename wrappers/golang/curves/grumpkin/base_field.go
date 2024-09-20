@@ -53,6 +53,16 @@ func (f *BaseField) Zero() BaseField {
 	return *f
 }
 
+func (f *BaseField) IsZero() bool {
+	for _, limb := range f.limbs {
+		if limb != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *BaseField) One() BaseField {
 	for i := range f.limbs {
 		f.limbs[i] = 0

@@ -6,10 +6,10 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bw6_761 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761/vecOps"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestBw6_761VecOps(t *testing.T) {
+func testBw6_761VecOps(suite suite.Suite) {
 	testSize := 1 << 14
 
 	a := bw6_761.GenerateScalars(testSize)
@@ -27,14 +27,14 @@ func TestBw6_761VecOps(t *testing.T) {
 	vecOps.VecOp(a, b, out, cfg, core.Add)
 	vecOps.VecOp(out, b, out2, cfg, core.Sub)
 
-	assert.Equal(t, a, out2)
+	suite.Equal(a, out2)
 
 	vecOps.VecOp(a, ones, out3, cfg, core.Mul)
 
-	assert.Equal(t, a, out3)
+	suite.Equal(a, out3)
 }
 
-func TestBw6_761Transpose(t *testing.T) {
+func testBw6_761Transpose(suite suite.Suite) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 
@@ -48,7 +48,7 @@ func TestBw6_761Transpose(t *testing.T) {
 	vecOps.TransposeMatrix(matrix, out, columnSize, rowSize, cfg)
 	vecOps.TransposeMatrix(out, out2, rowSize, columnSize, cfg)
 
-	assert.Equal(t, matrix, out2)
+	suite.Equal(matrix, out2)
 
 	var dMatrix, dOut, dOut2 core.DeviceSlice
 
@@ -61,5 +61,18 @@ func TestBw6_761Transpose(t *testing.T) {
 	output := make(core.HostSlice[bw6_761.ScalarField], rowSize*columnSize)
 	output.CopyFromDevice(&dOut2)
 
-	assert.Equal(t, matrix, output)
+	suite.Equal(matrix, output)
+}
+
+type Bw6_761VecOpsTestSuite struct {
+	suite.Suite
+}
+
+func (s *Bw6_761VecOpsTestSuite) TestBw6_761VecOps() {
+	s.Run("TestBw6_761VecOps", testWrapper(s.Suite, testBw6_761VecOps))
+	s.Run("TestBw6_761Transpose", testWrapper(s.Suite, testBw6_761Transpose))
+}
+
+func TestSuiteBw6_761VecOps(t *testing.T) {
+	suite.Run(t, new(Bw6_761VecOpsTestSuite))
 }
