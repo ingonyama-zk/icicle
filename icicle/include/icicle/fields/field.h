@@ -122,6 +122,9 @@ public:
    */
   static constexpr HOST_DEVICE_INLINE ff_storage get_neg_modulus() { return CONFIG::neg_modulus; }
 
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_inv_modulus() { return CONFIG::mont_inv_modulus; }
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_r() { return CONFIG::montgomery_r; }
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_r_inv() { return CONFIG::montgomery_r_inv; }
   /**
    * A new addition to the config file - the number of times to reduce in [reduce](@ref reduce) function.
    */
@@ -802,6 +805,29 @@ public:
     return r;
   }
 
+  template <unsigned MODULUS_MULTIPLE = 1>
+ static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& xs)
+ {
+  //  Field xs_lo = Wide::get_lower(xs);
+  //  Field xs_hi = Wide::get_higher(xs);
+  //  Wide l1 = {};
+  //  Wide l2 = {};
+  //  host_math::template multiply_raw<TLC>(xs_lo.limbs_storage, get_m(), l1.limbs_storage);
+  //  Field l1_lo = Wide::get_lower(l1);
+  //  host_math::template multiply_raw<TLC>(l1_lo.limbs_storage, get_modulus<1>(), l2.limbs_storage);
+  //  Field l2_hi = Wide::get_higher(l2);
+  //  Field r = {};
+  //  add_limbs<TLC, false>(l2_hi.limbs_storage, xs_hi.limbs_storage, r.limbs_storage);
+
+    Field r = Wide::get_lower(xs);
+    ff_storage r_reduced = {};
+    uint64_t carry = 0;
+    carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
+    if (carry == 0) r = Field{r_reduced};
+    return r;
+  }
+
+
   HOST_DEVICE Field& operator=(Field const& other)
   {
     for (int i = 0; i < TLC; i++) {
@@ -814,6 +840,13 @@ public:
   {
     Wide xy = mul_wide(xs, ys); // full mult
     return reduce(xy);          // reduce mod p
+  }
+
+  static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
+  {
+    Wide r = {};
+    host_math::multiply_mont_64<TLC>(xs.limbs_storage.limbs64, ys.limbs_storage.limbs64, get_mont_inv_modulus().limbs64, get_modulus<1>().limbs64, r.limbs_storage.limbs64);
+    return mont_reduce(r);
   }
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
