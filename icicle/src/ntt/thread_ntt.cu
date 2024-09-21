@@ -134,14 +134,14 @@ public:
 
           // if (threadIdx.x < 2 || threadIdx.x == 32 || threadIdx.x == 33) {
           // if (s_meta.ntt_block_id == 1) {
-            printf(
-              "T: %d, B: %d, I: %d, exp: %d, tw: 0x%x\n",
-              threadIdx.x,
-              s_meta.ntt_block_id,
-              stage * 4 + i,
-              exp,
-              basic_twiddles[exp].limbs_storage.limbs[0]
-            );
+            // printf(
+            //   "T: %d, B: %d, I: %d, exp: %d, tw: 0x%x\n",
+            //   threadIdx.x,
+            //   s_meta.ntt_block_id,
+            //   stage * 4 + i,
+            //   exp,
+            //   basic_twiddles[exp].limbs_storage.limbs[0]
+            // );
           // }
           WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? (tw_size - exp) : exp];
         }
@@ -165,16 +165,16 @@ public:
 
           // if (s_meta.ntt_block_id < 2 || s_meta.ntt_block_id == 8) {
           // if (s_meta.ntt_block_id == 1) {
-            printf(
-              "T: %d, II: %d, B: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
-              threadIdx.x,
-              s_meta.ntt_inp_id,
-              s_meta.ntt_block_id,
-              stage * 4 + i,
-              stage_offset,
-              exp,
-              basic_twiddles[exp].limbs_storage.limbs[0]
-            );
+            // printf(
+            //   "T: %d, II: %d, B: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
+            //   threadIdx.x,
+            //   s_meta.ntt_inp_id,
+            //   s_meta.ntt_block_id,
+            //   stage * 4 + i,
+            //   stage_offset,
+            //   exp,
+            //   basic_twiddles[exp].limbs_storage.limbs[0]
+            // );
           // }
           WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? (tw_size - exp) : exp];
         }
@@ -194,16 +194,16 @@ public:
     uint32_t stage_offset = 0;
     uint32_t phase_offset = (1 << (tw_log_size - 1)) * 3 * phase;
 
-    // printf(
-    //   "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d\n",
-    //   threadIdx.x,
-    //   s_meta.ntt_inp_id,
-    //   s_meta.ntt_block_id,
-    //   s_meta.ntt_block_size,
-    //   tw_order,
-    //   tw_log_order,
-    //   tw_log_size
-    // );
+    printf(
+      "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d\n",
+      threadIdx.x,
+      s_meta.ntt_inp_id,
+      s_meta.ntt_block_id,
+      s_meta.ntt_block_size,
+      tw_order,
+      tw_log_order,
+      tw_log_size
+    );
 
     if (phase) {
       for (uint32_t i = 0; i < 4; i++) {
@@ -249,16 +249,16 @@ public:
 
           // if (s_meta.ntt_block_id < 2 || s_meta.ntt_block_id == 8) {
           // if (s_meta.ntt_block_id == 1) {
-          //   printf(
-          //     "T: %d, II: %d, B: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
-          //     threadIdx.x,
-          //     s_meta.ntt_inp_id,
-          //     s_meta.ntt_block_id,
-          //     stage * 4 + i,
-          //     stage_offset,
-          //     exp,
-          //     basic_twiddles[exp].limbs_storage.limbs[0]
-          //   );
+            printf(
+              "T: %d, II: %d, B: %d, I: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
+              threadIdx.x,
+              s_meta.ntt_inp_id,
+              s_meta.ntt_block_id,
+              stage * 4 + i,
+              stage_offset,
+              exp,
+              basic_twiddles[exp].limbs_storage.limbs[0]
+            );
           // }
           WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? (tw_size - exp) : exp];
         }
@@ -451,17 +451,17 @@ public:
   {
     const uint64_t data_stride_u64 = data_stride;
     if (strided) {
-      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 4 +
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 8 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 4;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
     }
 
     UNROLL
     for (uint32_t j = 0; j < 4; j++) {
       UNROLL
       for (uint32_t i = 0; i < 2; i++) {
-        data[(8 * i + j) * data_stride_u64] = X[2 * j + i];
+        data[(2 * j + i) * data_stride_u64] = X[2 * j + i];
       }
     }
   }
@@ -534,15 +534,15 @@ public:
       BF(T, X[2 * i], X[2 * i + 1]);
     }
 
-    // 0, 1, 2, 3, 4, 5, 6, 7
-    SWAP(T, X[1], X[2]);
-    // 0, 2, 1, 3, 4, 5, 6, 7
-    SWAP(T, X[1], X[4]);
-    // 0, 4, 1, 3, 2, 5, 6, 7
-    SWAP(T, X[3], X[5]);
-    // 0, 4, 1, 5, 2, 3, 6, 7
-    SWAP(T, X[5], X[6]);
-    // 0, 4, 1, 5, 2, 6, 3, 7
+    // // 0, 1, 2, 3, 4, 5, 6, 7
+    // SWAP(T, X[1], X[2]);
+    // // 0, 2, 1, 3, 4, 5, 6, 7
+    // SWAP(T, X[1], X[4]);
+    // // 0, 4, 1, 3, 2, 5, 6, 7
+    // SWAP(T, X[3], X[5]);
+    // // 0, 4, 1, 5, 2, 3, 6, 7
+    // SWAP(T, X[5], X[6]);
+    // // 0, 4, 1, 5, 2, 6, 3, 7
 
     // // 0, 1, 2, 3, 4, 5, 6, 7
     // SWAP(T, X[1], X[4]);

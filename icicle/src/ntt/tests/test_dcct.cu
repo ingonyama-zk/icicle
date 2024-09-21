@@ -55,7 +55,7 @@ int main(int argc, char** argv)
   int INV = (argc > 3) ? atoi(argv[3]) : false;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
-  const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
+  const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNR;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -141,10 +141,10 @@ int main(int argc, char** argv)
 
   std::cout << "Output" << std::endl;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
-  // for (int i = 0; i < 100; i++) {
-    if (i == 128)
-      break;
+    // if (i == 128)
+    //   break;
     std::cout << CpuOutput[i] << " " << i << std::endl;
+    // std::cout << CpuOutput[i] << std::endl;
   }
   bool success = true;
   // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
   //   }
   // }
   const char* success_str = success ? "SUCCESS!" : "FAIL!";
-  printf("%s\n", success_str);
+  // printf("%s\n", success_str);
 
   CHK_IF_RETURN(cudaFree(GpuScalars));
   CHK_IF_RETURN(cudaFree(GpuOutput));

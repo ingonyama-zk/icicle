@@ -523,18 +523,18 @@ namespace mxntt {
     engine.SharedData32Rows4_2(shmem, false, false, strided); // load
     engine.loadBasicTwiddlesGeneric32(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, true);
 
-      printf(
-        "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        threadIdx.x,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
+      // printf(
+      //   "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   threadIdx.x,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
 
     engine.ntt4_2();
 
@@ -583,25 +583,26 @@ namespace mxntt {
     engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, inv, false);
     engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
-    // if (s_meta.ntt_block_id < 4) {
-      // printf(
-      //   "Before T: %d, I: %d, B: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-      //   threadIdx.x,
-      //   s_meta.ntt_inp_id,
-      //   s_meta.ntt_block_id,
-      //   engine.X[0].limbs_storage.limbs[0],
-      //   engine.X[1].limbs_storage.limbs[0],
-      //   engine.X[2].limbs_storage.limbs[0],
-      //   engine.X[3].limbs_storage.limbs[0],
-      //   engine.X[4].limbs_storage.limbs[0],
-      //   engine.X[5].limbs_storage.limbs[0],
-      //   engine.X[6].limbs_storage.limbs[0],
-      //   engine.X[7].limbs_storage.limbs[0]
-      // );
+    // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
+      printf(
+        "Before T: %d, I: %d, B: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        s_meta.ntt_inp_id,
+        s_meta.ntt_block_id,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
     // }
 
     engine.ntt8();
     // if (s_meta.ntt_block_id < 2) {
+    // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
     //   printf(
     //     "T BEFORE Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
     //     threadIdx.x,
@@ -621,6 +622,7 @@ namespace mxntt {
     engine.SharedData16Rows2_4(shmem, false, false, strided); // load
 
     // if (s_meta.ntt_block_id < 2) {
+    // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
     //   printf(
     //     "T AFTER Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
     //     threadIdx.x,
@@ -639,21 +641,22 @@ namespace mxntt {
     engine.ntt2_4();
 
     // if (s_meta.ntt_block_id < 2) {
-      // printf(
-      //   "T FINAL: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-      //   threadIdx.x,
-      //   engine.X[0].limbs_storage.limbs[0],
-      //   engine.X[1].limbs_storage.limbs[0],
-      //   engine.X[2].limbs_storage.limbs[0],
-      //   engine.X[3].limbs_storage.limbs[0],
-      //   engine.X[4].limbs_storage.limbs[0],
-      //   engine.X[5].limbs_storage.limbs[0],
-      //   engine.X[6].limbs_storage.limbs[0],
-      //   engine.X[7].limbs_storage.limbs[0]
-      // );
+      printf(
+        "T FINAL: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
     // }
 
     engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
+    // engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 #endif
 
@@ -1093,6 +1096,8 @@ namespace mxntt {
   {
     CHK_INIT_IF_RETURN();
 
+    dit = false;
+
     if (log_size == 1 || log_size == 2 || log_size == 3 || log_size == 7) {
       throw IcicleError(IcicleError_t::InvalidArgument, "size not implemented for mixed-radix-NTT");
     }
@@ -1177,6 +1182,15 @@ namespace mxntt {
       const int NOF_BLOCKS =
         columns_batch ? ((batch_size + 31) / 32 * 16) : ((32 * batch_size + NOF_THREADS - 1) / NOF_THREADS);
       if (dit) {
+        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
+          columns_batch, 0, inv, dit, fast_tw);
+        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
+          inv, dit, fast_tw);
+      } else { // dif
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, basic_twiddles, log_size, tw_log_size,
@@ -1187,24 +1201,15 @@ namespace mxntt {
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 0,
           inv, dit, fast_tw);
  #else
-        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
-          columns_batch, 0, inv, dit, fast_tw);
-        ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
           inv, dit, fast_tw);
+        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
+          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
+          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
+          columns_batch, 0, inv, dit, fast_tw);
 #endif
-      } else { // dif
-        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
-          inv, dit, fast_tw);
-        ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
-          columns_batch, 0, inv, dit, fast_tw);
       }
       if (normalize)
         normalize_kernel<<<batch_size, 256, 0, cuda_stream>>>(out, S::inv_log_size(8), (1UL << log_size) * batch_size);
@@ -1264,6 +1269,25 @@ namespace mxntt {
         for (int j = 0; j < i; j++)
           stride_log += fast_tw ? STAGE_SIZES_HOST_FT[log_size][j] : STAGE_SIZES_HOST[log_size][j];
         first_run = stage_size && !prev_stage;
+
+        std::cout << "Stage " << i << "; stage_size " << stage_size << "; stride log " << stride_log << std::endl;
+#ifdef DCCT
+        if (stage_size == 6)
+          ntt64_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size,
+            columns_batch ? batch_size : 0, (1 << log_size - 6) * (columns_batch ? 1 : batch_size), 1 << stride_log,
+            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+        else if (stage_size == 5)
+          ntt32_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size,
+            columns_batch ? batch_size : 0, (1 << log_size - 5) * (columns_batch ? 1 : batch_size), 1 << stride_log,
+            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+        else if (stage_size == 4)
+          ntt16_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
+            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size,
+            columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1 << stride_log,
+            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+#else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -1279,6 +1303,7 @@ namespace mxntt {
             first_run ? in : out, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
             columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1 << stride_log,
             stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+#endif
         prev_stage = stage_size;
       }
     }
@@ -1364,12 +1389,14 @@ namespace mxntt {
       d_input = d_output;
     }
 
+#ifndef DCCT
     if (reverse_input != eRevType::None) {
       const bool is_reverse_in_place = (d_input == d_output);
       if (is_reverse_in_place) {
         reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
           d_output, logn, columns_batch, batch_size, dit, fast_tw, reverse_input, is_normalize, S::inv_log_size(logn));
       } else {
+        std::cout << "calling reorder and normalize before ntt" << std::endl;
         reorder_digits_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
           d_input, d_output, logn, columns_batch, batch_size, columns_batch ? batch_size : 1, dit, fast_tw,
           reverse_input, is_normalize, S::inv_log_size(logn));
@@ -1377,6 +1404,7 @@ namespace mxntt {
       is_normalize = false;
       d_input = d_output;
     }
+#endif
 
     std::cout << "Entering large ntt" << std::endl;
     // inplace ntt
@@ -1384,17 +1412,21 @@ namespace mxntt {
       d_input, d_output, external_twiddles, internal_twiddles, basic_twiddles, logn, max_logn, batch_size,
       columns_batch, is_inverse, (is_normalize && reverse_output == eRevType::None), dit, fast_tw, cuda_stream));
 
+#ifndef DCCT
     if (reverse_output != eRevType::None) {
+      std::cout << "calling reorder and normalize after ntt" << std::endl;
       reorder_digits_inplace_and_normalize_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_output, logn, columns_batch, batch_size, dit, fast_tw, reverse_output, is_normalize, S::inv_log_size(logn));
     }
 
     if (is_on_coset && is_inverse) {
+      std::cout << "calling reorder and elementwise mul after ntt" << std::endl;
       batch_elementwise_mul_with_reorder_kernel<<<NOF_BLOCKS, NOF_THREADS, 0, cuda_stream>>>(
         d_output, ntt_size, columns_batch, batch_size, columns_batch ? batch_size : 1,
         arbitrary_coset ? arbitrary_coset : linear_twiddle + n_twiddles, arbitrary_coset ? 1 : -coset_gen_index,
         n_twiddles, logn, reverse_coset, fast_tw, d_output);
     }
+#endif
 
     return CHK_LAST();
   }
