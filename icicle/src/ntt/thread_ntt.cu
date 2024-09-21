@@ -52,44 +52,57 @@ public:
   DEVICE_INLINE void loadBasicTwiddlesGeneric64(
     S* basic_twiddles, uint32_t tw_order, uint32_t tw_log_order, stage_metadata s_meta, uint32_t tw_log_size, uint32_t twiddles_offset, bool inv, bool phase)
   {
-    // printf(
-    //   "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, phase: %d\n",
-    //   threadIdx.x,
-    //   s_meta.ntt_inp_id,
-    //   s_meta.ntt_block_id,
-    //   s_meta.ntt_block_size,
-    //   tw_order,
-    //   tw_log_order,
-    //   tw_log_size,
-    //   phase
-    // );
+    if (s_meta.ntt_block_id < 4) {
+      printf(
+        "T: %d, inp_id: %d, block_id: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, phase: %d\n",
+        threadIdx.x,
+        s_meta.ntt_inp_id,
+        s_meta.ntt_block_id,
+        s_meta.ntt_block_size,
+        tw_order,
+        tw_log_order,
+        tw_log_size,
+        phase
+      );
+    }
+    size_t tw_size = (1 << (tw_log_size - 1)) * tw_log_size;
     size_t stage_size = 1 << (tw_log_size - 1);
     uint32_t phase_offset = stage_size * phase * 3; // 3 is the number of stages
     uint32_t exp;
     UNROLL
     for (int stage = 0; stage < 3; stage++) {
       uint32_t stage_offset = stage * stage_size;
-      uint32_t block_offset = s_meta.ntt_inp_id * 4;
       for (int i = 0; i < 4; i++) {
         if (phase) {
-          exp = twiddles_offset + phase_offset + stage_offset + block_offset + i;
+          exp = twiddles_offset + phase_offset + stage_offset
+                + s_meta.ntt_inp_id * (1 << tw_log_order) * 4
+                + i * (tw_order ? tw_order : 1);
         } else {
-          exp = twiddles_offset + s_meta.ntt_inp_id + (stage * 4 + i) * 8;
+          exp = twiddles_offset + stage_offset
+                + s_meta.ntt_inp_id * (1 << tw_log_order)
+                + i * (tw_order ? tw_order : 1) * 8;
         }
 
-        // if (threadIdx.x == 0) {
-          // printf(
-          //   "T: %d, I: %d, stage_offset: %d, block_offset: %d, exp: %d, tw: 0x%x\n",
-          //   threadIdx.x,
-          //   stage * 4 + i,
-          //   stage_offset,
-          //   block_offset,
-          //   exp,
-          //   basic_twiddles[exp].limbs_storage.limbs[0]
-          // );
-        // }
+        if (tw_log_order) {
+          exp += s_meta.ntt_block_id;
+        } else {
+          exp += s_meta.ntt_block_id * 32;
+        }
 
-        WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? ((1 << tw_log_size) - exp) : exp];
+        if (s_meta.ntt_block_id == 0) {
+          printf(
+            "T: %d, I: %d, II: %d, B: %d, stage_offset: %d, exp: %d, tw: 0x%x\n",
+            threadIdx.x,
+            stage * 4 + i,
+            s_meta.ntt_inp_id,
+            s_meta.ntt_block_id,
+            stage_offset,
+            exp,
+            basic_twiddles[exp].limbs_storage.limbs[0]
+          );
+        }
+
+        WB[stage * 4 + i] = basic_twiddles[(inv && exp) ? (tw_size - exp) : exp];
       }
     }
   }
@@ -306,7 +319,7 @@ public:
   {
     const uint64_t data_stride_u64 = data_stride;
     if (strided) {
-      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 8 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
       data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
