@@ -538,6 +538,19 @@ namespace mxntt {
 
     engine.ntt4_2();
 
+      // printf(
+      //   "T BEFORE: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   threadIdx.x,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
+
     if (columns_batch_size)
       engine.storeGlobalData32ColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
     else
@@ -1264,6 +1277,8 @@ namespace mxntt {
     } else { // dif
       bool first_run = false, prev_stage = false;
       for (int i = 4; i >= 0; i--) {
+        // if (i == 0)
+        //   break;
         uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
         uint32_t stride_log = 0;
         for (int j = 0; j < i; j++)

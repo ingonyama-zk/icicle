@@ -126,11 +126,11 @@ public:
           if (tw_log_order) {
             exp += s_meta.ntt_block_id;
           } else {
-            exp += s_meta.ntt_block_id * 8;
+            exp += s_meta.ntt_block_id * 16;
           }
 
           if (tw_log_size - tw_log_order - 5) 
-            exp += (1 << (tw_log_size - tw_log_order - 5)) * tw_log_size * 4;
+            exp += (1 << (tw_log_size - tw_log_order - 5)) * tw_log_size * 8;
 
           // if (threadIdx.x < 2 || threadIdx.x == 32 || threadIdx.x == 33) {
           // if (s_meta.ntt_block_id == 1) {
@@ -158,10 +158,10 @@ public:
           if (tw_log_order) {
             exp += s_meta.ntt_block_id;
           } else {
-            exp += s_meta.ntt_block_id * 8;
+            exp += s_meta.ntt_block_id * 16;
           }
           if (tw_log_size - tw_log_order - 5) 
-            exp += (1 << (tw_log_size - tw_log_order - 5)) * tw_log_size * 4; 
+            exp += (1 << (tw_log_size - tw_log_order - 5)) * tw_log_size * 8; 
 
           // if (s_meta.ntt_block_id < 2 || s_meta.ntt_block_id == 8) {
           // if (s_meta.ntt_block_id == 1) {
@@ -375,17 +375,17 @@ public:
   {
     const uint64_t data_stride_u64 = data_stride;
     if (strided) {
-      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 2 +
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 8 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
     }
 
     UNROLL
     for (uint32_t j = 0; j < 2; j++) {
       UNROLL
       for (uint32_t i = 0; i < 4; i++) {
-        data[(8 * i + j) * data_stride_u64] = X[4 * j + i];
+        data[(4 * j + i) * data_stride_u64] = X[4 * j + i];
       }
     }
   }
@@ -513,15 +513,15 @@ public:
     BF(T, X[4], X[5]);
     BF(T, X[6], X[7]);
 
-    // 0, 1, 2, 3, 4, 5, 6, 7
-    SWAP(T, X[1], X[2]);
-    // 0, 2, 1, 3, 4, 5, 6, 7
-    SWAP(T, X[1], X[4]);
-    // 0, 4, 1, 3, 2, 5, 6, 7
-    SWAP(T, X[3], X[5]);
-    // 0, 4, 1, 5, 2, 3, 6, 7
-    SWAP(T, X[5], X[6]);
-    // 0, 4, 1, 5, 2, 6, 3, 7
+    // // 0, 1, 2, 3, 4, 5, 6, 7
+    // SWAP(T, X[1], X[2]);
+    // // 0, 2, 1, 3, 4, 5, 6, 7
+    // SWAP(T, X[1], X[4]);
+    // // 0, 4, 1, 3, 2, 5, 6, 7
+    // SWAP(T, X[3], X[5]);
+    // // 0, 4, 1, 5, 2, 3, 6, 7
+    // SWAP(T, X[5], X[6]);
+    // // 0, 4, 1, 5, 2, 6, 3, 7
   }
 
   DEVICE_INLINE void ntt2_4()
