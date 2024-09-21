@@ -134,11 +134,6 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(
     cudaMemcpy(CpuOutput.get(), GpuOutput, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
-  // std::cout << "Input" << std::endl;
-  // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
-  //   std::cout << CpuScalars[i] << std::endl;
-  // }
-
   std::cout << "Output" << std::endl;
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
     // if (i == 32)
