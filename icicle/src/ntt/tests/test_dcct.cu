@@ -139,7 +139,6 @@ int main(int argc, char** argv)
     // if (i == 32)
     //   break;
     std::cout << CpuOutput[i] << " " << i << std::endl;
-    // std::cout << CpuOutput[i] << std::endl;
   }
   bool success = true;
   // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {

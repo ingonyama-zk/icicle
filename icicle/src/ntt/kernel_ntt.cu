@@ -1252,8 +1252,8 @@ namespace mxntt {
       bool first_run = false, prev_stage = false;
       uint32_t twiddles_offset = 0;
       for (int i = 4; i >= 0; i--) {
-        // if (i == 0)
-        //   break;
+        if (i == 0)
+          break;
         uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
         uint32_t stride_log = 0;
         for (int j = 0; j < i; j++)
