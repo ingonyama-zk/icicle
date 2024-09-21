@@ -433,7 +433,7 @@ namespace mxntt {
     // );
 #pragma unroll 1
     for (uint32_t phase = 0; phase < 2; phase++) {
-      engine.loadBasicTwiddlesGeneric64(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, inv, phase);
+      engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 6, inv, phase);
       engine.ntt8();
 
       if (phase == 0) {
@@ -507,7 +507,7 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    engine.loadBasicTwiddlesGeneric32(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, inv, false);
+    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, false);
 
     if (columns_batch_size)
       engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
@@ -518,7 +518,7 @@ namespace mxntt {
     engine.SharedData32Columns8(shmem, true, false, strided); // store
     __syncthreads();
     engine.SharedData32Rows4_2(shmem, false, false, strided); // load
-    engine.loadBasicTwiddlesGeneric32(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, inv, true);
+    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, true);
 
       // printf(
       //   "T AFTER: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
@@ -589,7 +589,7 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, inv, false);
+    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, false);
     engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
@@ -646,7 +646,7 @@ namespace mxntt {
     //   );
     // }
 
-    engine.loadBasicTwiddlesGeneric16(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, inv, true);
+    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, true);
     engine.ntt2_4();
 
     // if (s_meta.ntt_block_id < 2) {
@@ -1252,8 +1252,8 @@ namespace mxntt {
       bool first_run = false, prev_stage = false;
       uint32_t twiddles_offset = 0;
       for (int i = 4; i >= 0; i--) {
-        if (i == 0)
-          break;
+        // if (i == 0)
+        //   break;
         uint32_t stage_size = fast_tw ? STAGE_SIZES_HOST_FT[log_size][i] : STAGE_SIZES_HOST[log_size][i];
         uint32_t stride_log = 0;
         for (int j = 0; j < i; j++)
