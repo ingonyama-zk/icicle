@@ -1,6 +1,7 @@
 #pragma once
 #include "icicle/utils/log.h"
 #include "ntt_task.h"
+#include <cstdint>
 
 
 using namespace field_config;
@@ -77,11 +78,11 @@ namespace ntt_cpu {
     // void add_pending_tasks(uint32_t pending_tasks){ nof_pending_tasks += pending_tasks; }
 
     // Set a task as completed and update dependencies
-    eIcicleError set_task_as_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1);
+    eIcicleError handle_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1);
 
     bool tasks_to_do() { return !available_tasks_list.empty() || nof_pending_tasks!=0; }
     bool available_tasks() { return !available_tasks_list.empty(); }
-    NttTaskCoordinates* get_available_task() { return available_tasks_list.front(); } // //TODO SHANIE- return pointers to taskscoordinates instead of copying
+    NttTaskCoordinates* get_available_task() { return available_tasks_list.front(); }
 
     eIcicleError erase_task_from_available_tasks_list()
     {
@@ -246,16 +247,16 @@ namespace ntt_cpu {
    * @return Status indicating success or failure.
    */
   template <typename S, typename E>
-  eIcicleError NttTasksManager<S, E>::set_task_as_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1)
+  eIcicleError NttTasksManager<S, E>::handle_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1)
   {
     NttTaskCoordinates task_c = *completed_task.get_coordinates();
     uint32_t nof_hierarchy_0_layers = counters[task_c.hierarchy_1_layer_idx].get_nof_hierarchy_0_layers();
     // Update dependencies in counters
     if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c)) {
       if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
-        uint32_t dependent_subntt_count = (task_c.hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1) ? 1 : counters[task_c.hierarchy_1_layer_idx].get_dependent_subntt_count(task_c.hierarchy_0_layer_idx + 1);
-        uint32_t stride = nof_subntts_l1 / dependent_subntt_count;
-        for (uint32_t i = 0; i < dependent_subntt_count; i++) {
+        uint32_t nof_new_ready_tasks = (task_c.hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1) ? 1 : counters[task_c.hierarchy_1_layer_idx].get_dependent_subntt_count(task_c.hierarchy_0_layer_idx + 1);
+        uint32_t stride = nof_subntts_l1 / nof_new_ready_tasks;
+        for (uint32_t i = 0; i < nof_new_ready_tasks; i++) {
           NttTaskCoordinates* next_task_c_ptr = task_c.hierarchy_0_layer_idx == 0 ? new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, task_c.hierarchy_0_block_idx, i} 
                                         /*task_c.hierarchy_0_layer_idx==1*/ : new NttTaskCoordinates{ task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, (task_c.hierarchy_0_subntt_idx + stride * i), 0};
           available_tasks_list.push_back(next_task_c_ptr);

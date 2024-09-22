@@ -34,6 +34,10 @@ namespace ntt_cpu {
         }
         eIcicleError run();
 
+        ~NttCpu() {
+          // delete[] arbitrary_coset; // TODO SHANIE - do I need to delete this?
+        }
+
 
     private:
         const E* input;
@@ -88,10 +92,8 @@ namespace ntt_cpu {
       handle_pushed_tasks(0);
     }
 
-    // std::cout << "[NEW] PRE NORMALIZE: left:\t["; for (int i = 0; i < (ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size)-1; i++) { std::cout << ntt_data.elements[i] << ", "; } std::cout <<ntt_data.elements[(ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size)-1]<<"]"<< std::endl;
 
     if (ntt_data.direction == NTTDir::kInverse) {
-      // ICICLE_LOG_DEBUG << "Inverse NTT";
       S inv_size = S::inv_log_size(ntt_data.ntt_sub_logn.logn);
       for (uint64_t i = 0; i < ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size; ++i) {
         ntt_data.elements[i] = ntt_data.elements[i] * inv_size;
@@ -477,19 +479,19 @@ namespace ntt_cpu {
       if (ntt_tasks_manager.available_tasks()) {
         // Task is available to dispatch
         task_slot = tasks_manager->get_idle_or_completed_task();
-        if (task_slot->is_completed()) { ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l1); }
+        if (task_slot->is_completed()) { ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1); }
         else {task_slot->set_data(ntt_data);}
         task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
-        ntt_tasks_manager.erase_task_from_available_tasks_list();
         task_slot->dispatch();
+        ntt_tasks_manager.erase_task_from_available_tasks_list();
       } else {
         // Wait for available tasks
         task_slot = tasks_manager->get_completed_task();
-        ntt_tasks_manager.set_task_as_completed(*task_slot, nof_subntts_l1);
+        ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1);
         if (ntt_tasks_manager.available_tasks()) {
           task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
-          ntt_tasks_manager.erase_task_from_available_tasks_list();
           task_slot->dispatch();
+          ntt_tasks_manager.erase_task_from_available_tasks_list();
         } else {
           task_slot->set_idle();
         }
@@ -532,3 +534,70 @@ namespace ntt_cpu {
     }
 
 } // namespace ntt_cpu
+
+
+
+
+
+
+  // template <typename S, typename E>
+  // eIcicleError NttCpu<S, E>::handle_pushed_tasks(uint32_t hierarchy_1_layer_idx)
+  // {
+  //   std::deque<NttTaskCoordinates*> completed_tasks_list;
+  //   NttTask<S, E>* task_slot = nullptr;
+
+  //   uint32_t nof_subntts_l1 = 1
+  //                        << ((ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
+  //                            (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
+  //   while (ntt_tasks_manager.tasks_to_do()) {
+  //     // There are tasks that are available or waiting
+
+  //     if (ntt_tasks_manager.available_tasks()) {
+  //       // Task is available to dispatch
+  //       task_slot = tasks_manager->get_idle_or_completed_task();
+  //       if (task_slot->is_completed()) { 
+  //         uint32_t nof_new_ready = ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1);
+  //         if (nof_new_ready){
+  //           NttTaskCoordinates* task_c = task_slot->get_coordinates();
+  //           NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c->hierarchy_1_layer_idx, task_c->hierarchy_1_subntt_idx, task_c->hierarchy_0_layer_idx + 1, task_c->hierarchy_0_layer_idx == 0 ? task_c->hierarchy_0_block_idx : task_c->hierarchy_0_subntt_idx, 0};
+  //           task_slot->set_coordinates(next_task_c_ptr);
+  //           task_slot->dispatch();
+  //           completed_tasks_list.push_back(task_c);
+  //         }
+  //       }
+  //       else {task_slot->set_data(ntt_data);}
+  //       task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
+  //       task_slot->dispatch();
+  //       ntt_tasks_manager.erase_task_from_available_tasks_list();
+  //     } else {
+  //       // Wait for available tasks
+  //       task_slot = tasks_manager->get_completed_task();
+  //       uint32_t nof_new_ready = ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1);
+  //       if (nof_new_ready){
+  //         NttTaskCoordinates* task_c = task_slot->get_coordinates();
+  //         NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c->hierarchy_1_layer_idx, task_c->hierarchy_1_subntt_idx, task_c->hierarchy_0_layer_idx + 1, task_c->hierarchy_0_layer_idx == 0 ? task_c->hierarchy_0_block_idx : task_c->hierarchy_0_subntt_idx, 0};
+  //         task_slot->set_coordinates(next_task_c_ptr);
+  //         task_slot->dispatch();
+  //         completed_tasks_list.push_back(task_c);
+  //       }
+
+        
+  //       if (ntt_tasks_manager.available_tasks()) {
+  //         task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
+  //         task_slot->dispatch();
+  //         ntt_tasks_manager.erase_task_from_available_tasks_list();
+  //       } else {
+  //         task_slot->set_idle();
+  //       }
+  //     }
+  //   }
+  //   while (true) {
+  //     task_slot = tasks_manager->get_completed_task(); // Get the last task (reorder task)
+  //     if (task_slot == nullptr) {
+  //       break;
+  //     } else {
+  //       task_slot->set_idle();
+  //     }
+  //   }
+  //   return eIcicleError::SUCCESS;
+  // }
