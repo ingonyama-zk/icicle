@@ -62,12 +62,18 @@ public:
     size_t stage_size = 1 << (tw_log_size - 1);
     size_t tw_size = stage_size * tw_log_size;
     uint32_t phase_offset = stage_size * phase * 3; // 3 is the number of stages
-    uint32_t exp;
-    uint32_t block_offset = s_meta.ntt_block_id * (1 << (tw_log_order ? 0 : ntt_log_size - 1));
+    uint32_t block_offset;
+    if (tw_log_order) {
+     block_offset = (s_meta.ntt_block_id & (tw_order - 1))
+                    + (s_meta.ntt_block_id >> tw_log_order) * (1 << tw_log_order - 1) * s_meta.ntt_block_size;
+    } else {
+     block_offset = s_meta.ntt_block_id * (1 << ntt_log_size - 1);
+    }
     uint32_t ntt_inp_offset = s_meta.ntt_inp_id * (1 << tw_log_order) * (phase ? 4 : 1);
     uint32_t base_exp = phase_offset + twiddles_offset + block_offset + ntt_inp_offset;
+    uint32_t exp;
 
-    if (s_meta.ntt_block_id < 2) {
+    if ((s_meta.ntt_block_id == 15 || s_meta.ntt_block_id == 16) && s_meta.ntt_inp_id == 0) {
       printf(
         "T: %d, II: %d, B: %d, block_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, block_offset: %d, ntt_inp_offset: %d\n",
         threadIdx.x,
@@ -90,7 +96,8 @@ public:
           * (tw_order ? tw_order : 1)
           * (1 << (phase ? 0 : ntt_log_size - 3));
 
-        if (s_meta.ntt_block_id < 2) {
+        // if ((s_meta.ntt_block_id == 255 && s_meta.ntt_inp_id == 3) || (s_meta.ntt_block_id == 0 && s_meta.ntt_inp_id == 0) || (s_meta.ntt_block_id == 511 && s_meta.ntt_inp_id == 1)) {
+        if ((s_meta.ntt_block_id == 15 || s_meta.ntt_block_id == 16) && s_meta.ntt_inp_id == 0) {
           printf(
             "T: %d, I: %d, II: %d, B: %d, exp: %d, tw: 0x%x\n",
             threadIdx.x,
