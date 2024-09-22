@@ -116,6 +116,15 @@ pub trait VecOps<F> {
         result: &mut Vec<F>,
     ) -> IcicleResult<()>;
 
+    fn eval_quad(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        c: &(impl HostOrDeviceSlice<F> + ?Sized),
+        d: &(impl HostOrDeviceSlice<F> + ?Sized),
+        len: usize,
+        result: &mut Vec<F>,
+    ) -> IcicleResult<()>;
+
     fn bind(
         vec: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         r: F,
@@ -279,6 +288,21 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::eval_cubic(a, b, c, len, result)
 }
 
+pub fn eval_quad_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    c: &(impl HostOrDeviceSlice<F> + ?Sized),
+    d: &(impl HostOrDeviceSlice<F> + ?Sized),
+    len: usize,
+    result: &mut Vec<F>,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    <<F as FieldImpl>::Config as VecOps<F>>::eval_quad(a, b, c, d, len, result)
+}
+
 pub fn bind_scalars<F>(
     vec: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     r: F,
@@ -439,6 +463,16 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_eval_quad_cuda")]
+                pub(crate) fn eval_quad_cuda(
+                    a: *const $field,
+                    b: *const $field,
+                    c: *const $field,
+                    d: *const $field,
+                    n: u32,
+                    result: *mut $field,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_bind_cuda")]
                 pub(crate) fn bind_cuda(
                     vec: *mut $field,
@@ -576,6 +610,32 @@ macro_rules! impl_vec_ops_field {
                         a.as_ptr(),
                         b.as_ptr(),
                         c.as_ptr(),
+                        len as u32,
+                        result.as_mut_ptr()
+                    )
+                    .wrap()
+                }
+            }
+
+            fn eval_quad(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                c: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                d: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                len: usize,
+                result: &mut Vec<$field>,
+            ) -> IcicleResult<()> {
+                assert_eq!(result.len(), 4);
+                assert_eq!(a.len(), b.len());
+                assert_eq!(b.len(), c.len());
+                assert_eq!(c.len(), d.len());
+
+                unsafe {
+                    $field_prefix_ident::eval_quad_cuda(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        c.as_ptr(),
+                        d.as_ptr(),
                         len as u32,
                         result.as_mut_ptr()
                     )

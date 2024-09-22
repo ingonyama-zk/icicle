@@ -243,7 +243,96 @@ namespace vec_ops {
       e_3[tid] = B_a * B_b * B_c;
   }
 
+  template <typename E>
+  __global__ void eval_quad_kernel(
+      const E* __restrict__ a_low, 
+      const E* __restrict__ b_low, 
+      const E* __restrict__ c_low, 
+      const E* __restrict__ d_low, 
+      E* __restrict__ e_0,
+      E* __restrict__ e_1,
+      E* __restrict__ e_2,
+      E* __restrict__ e_3,
+      int n
+    ) {
+      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid >= n) return;
 
+      E a_low_val = a_low[tid];
+      E a_high_val = a_low[tid + 1];
+      E b_low_val = b_low[tid];
+      E b_high_val = b_low[tid + 1];
+      E c_low_val = c_low[tid];
+      E c_high_val = c_low[tid + 1];
+      E d_low_val = d_low[tid];
+      E d_high_val = d_low[tid + 1];
+
+      e_0[tid] = a_low_val * (b_low_val * c_low_val - d_low_val);
+      e_1[tid] = a_high_val * (b_high_val * c_high_val - d_high_val);
+
+      E M_a = a_high_val - a_low_val;
+      E M_b = b_high_val - b_low_val;
+      E M_c = c_high_val - c_low_val;
+      E M_d = d_high_val - d_low_val;
+
+      E B_a = a_high_val + M_a;
+      E B_b = b_high_val + M_b;
+      E B_c = c_high_val + M_c;
+      E B_d = d_high_val + M_d;
+
+      e_2[tid] = B_a * (B_b * B_c - B_d);
+
+      B_a = B_a + M_a;
+      B_b = B_b + M_b;
+      B_c = B_c + M_c;
+      B_d = B_d + M_d;
+
+      e_3[tid] = B_a * (B_b * B_c - B_d);
+  }
+
+  template <typename E>
+  cudaError_t eval_quad(E* A, E* B, E* C, E* D, int n, E* result)
+  {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    E* E_all;
+    cudaError_t err = cudaMalloc(&E_all, 4 * n * sizeof(E));
+    if (err != cudaSuccess) return err;
+
+    E* E_0 = E_all;
+    E* E_1 = E_all + n;
+    E* E_2 = E_all + 2 * n;
+    E* E_3 = E_all + 3 * n;
+
+    E* a_low = A;
+    E* b_low = B;
+    E* c_low = C;
+    E* d_low = D;
+
+    eval_quad_kernel<<<numBlocks, blockSize>>>(a_low, b_low, c_low, d_low, E_0, E_1, E_2, E_3, n);
+    E* eval_points;
+    err = cudaMalloc(&eval_points, 4 * sizeof(E));
+    if (err != cudaSuccess) {
+        cudaFree(E_all);
+        return err;
+    }
+
+    sum(E_0, n, &eval_points[0]);
+    sum(E_1, n, &eval_points[1]);
+    sum(E_2, n, &eval_points[2]);
+    sum(E_3, n, &eval_points[3]);
+
+    CHK_IF_RETURN(cudaMemcpy(result, eval_points, sizeof(E) * 4, cudaMemcpyDeviceToHost));
+    CHK_IF_RETURN(cudaFree(E_all));
+    CHK_IF_RETURN(cudaFree(eval_points));
+
+    if (err != cudaSuccess) {
+      return err;
+    }
+
+    return cudaSuccess;
+  }
 
   template <typename E>
   cudaError_t eval_cubic(E* A, E* B, E* C, int n, E* result)

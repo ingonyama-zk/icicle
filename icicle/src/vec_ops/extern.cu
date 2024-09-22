@@ -99,6 +99,17 @@ namespace vec_ops {
     return eval_cubic<scalar_t>(A, B, C, n, result);
   }
 
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, eval_quad_cuda)(
+    scalar_t* A, 
+    scalar_t* B, 
+    scalar_t* C, 
+    scalar_t* D, 
+    uint64_t n, 
+    scalar_t* result)
+  {
+    return eval_quad<scalar_t>(A, B, C, D, n, result);
+  }
+
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, bind_cuda)(scalar_t* vec, uint64_t n, scalar_t r)
   {
     return bind<scalar_t>(vec, n, r);
