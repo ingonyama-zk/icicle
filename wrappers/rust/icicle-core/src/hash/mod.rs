@@ -66,11 +66,11 @@ impl Hasher {
     ) -> Result<(), eIcicleError> {
         // check device slices are on active device
         if input.is_on_device() && !input.is_on_active_device() {
-            eprintln!("input not allocated on an inactive device");
+            eprintln!("input not allocated on the active device");
             return Err(eIcicleError::InvalidPointer);
         }
         if output.is_on_device() && !output.is_on_active_device() {
-            eprintln!("output not allocated on an inactive device");
+            eprintln!("output not allocated on the active device");
             return Err(eIcicleError::InvalidPointer);
         }
 

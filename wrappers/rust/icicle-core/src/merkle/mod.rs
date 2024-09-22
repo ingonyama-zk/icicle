@@ -224,7 +224,7 @@ impl MerkleTree {
     ) -> Result<(), eIcicleError> {
         // check device slices are on active device
         if leaves.is_on_device() && !leaves.is_on_active_device() {
-            eprintln!("leaves not allocated on an inactive device");
+            eprintln!("leaves not allocated on the active device");
             return Err(eIcicleError::InvalidPointer);
         }
 
@@ -256,6 +256,12 @@ impl MerkleTree {
         leaf_idx: u64,
         config: &MerkleTreeConfig,
     ) -> Result<MerkleProof, eIcicleError> {
+        // check device slices are on active device
+        if leaves.is_on_device() && !leaves.is_on_active_device() {
+            eprintln!("leaves not allocated on the active device");
+            return Err(eIcicleError::InvalidPointer);
+        }
+
         let proof = MerkleProof::new().unwrap();
         let result = unsafe {
             icicle_merkle_tree_get_proof(
