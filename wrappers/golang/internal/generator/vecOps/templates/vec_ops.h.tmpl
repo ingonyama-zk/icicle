@@ -11,6 +11,24 @@ typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
 
+int {{.Field}}_vector_product(
+  scalar_t* vec_a,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result,
+  int offset,
+  int stride
+);
+
+int {{.Field}}_vector_sum(
+  scalar_t* vec_a,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result,
+  int offset,
+  int stride
+);
+
 int {{.Field}}_vector_mul(
   scalar_t* vec_a,
   scalar_t* vec_b,

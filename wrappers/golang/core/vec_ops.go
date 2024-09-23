@@ -14,6 +14,8 @@ const (
 	Sub VecOps = iota
 	Add
 	Mul
+	Sum
+	Product
 )
 
 type VecOpsConfig struct {
@@ -47,6 +49,30 @@ func DefaultVecOpsConfig() VecOpsConfig {
 	}
 
 	return config
+}
+
+func VecReduceOpCheck(a, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
+	aLen, outLen := a.Len(), out.Len()
+	
+	if outLen < 1 {
+		errorString := fmt.Sprintf(
+			"out length %d < 1",
+			outLen,
+		)
+		panic(errorString)
+	}
+
+	if a.IsOnDevice() {
+		a.(DeviceSlice).CheckDevice()
+	}
+	if out.IsOnDevice() {
+		out.(DeviceSlice).CheckDevice()
+	}
+
+	cfg.isAOnDevice = a.IsOnDevice()
+	cfg.isResultOnDevice = out.IsOnDevice()
+
+	return a.AsUnsafePointer(), out.AsUnsafePointer(), unsafe.Pointer(cfg), a.Len()
 }
 
 func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {

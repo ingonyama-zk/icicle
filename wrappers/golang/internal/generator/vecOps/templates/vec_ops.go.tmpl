@@ -9,6 +9,27 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
+func VecReduceOp(a, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecReduceOps, offset int , stride int) (ret runtime.EIcicleError) {
+	aPointer, outPointer, cfgPointer, size := core.VecReduceOpCheck(a, out, &config)
+
+	cA := (*C.scalar_t)(aPointer)
+	cOut := (*C.scalar_t)(outPointer)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cSize := (C.int)(size)
+	cOffset := (C.int)(offset)
+	cStride := (C.int)(stride)
+
+	switch op {
+	case core.Sum:
+		ret = (runtime.EIcicleError)(C.{{.Field}}_vector_sum(cA, cSize, cConfig, cOut, cOffset, cStride))
+	case core.Product:
+		ret = (runtime.EIcicleError)(C.{{.Field}}_vector_product(cA, cSize, cConfig, cOut, cOffset, cStride))
+	}
+
+	return ret
+}
+
+
 func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret runtime.EIcicleError) {
 	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
 
