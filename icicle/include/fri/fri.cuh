@@ -14,7 +14,7 @@ namespace fri {
     bool are_domain_elements_on_device;
     bool are_results_on_device;
     bool is_async;
-  }
+  };
 
   /**
    * @brief Folds a layer's evaluation into a degree d/2 evaluation using the provided folding factor alpha.
@@ -31,7 +31,7 @@ namespace fri {
    * @note The size of the output array 'folded_evals' should be half of 'n', as folding reduces the number of evaluations by half.
    */
   template <typename S, typename E>
-  cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_evals, int n, FriConfig cfg);
+  cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_eval, int n, FriConfig& cfg);
 
   /**
    * @brief Folds a layer of FRI evaluations from a circle into a line.
@@ -54,6 +54,8 @@ namespace fri {
    */
 
   template <typename S, typename E>
-  cudaError_t fold_circle_into_line(E* evals, S* domain_ys, S alpha, E* folded_evals, int n, FriConfig cfg);
+  cudaError_t fold_circle_into_line(E* eval, S* domain_ys, E alpha, E* folded_eval, int n, FriConfig& cfg);
 
 } // namespace fri
+
+#endif
