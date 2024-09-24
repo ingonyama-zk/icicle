@@ -17,4 +17,3 @@ cmake = "0.1.50"
 [features]
 default = []
 devmode = ["icicle-core/devmode"]
-fri = []

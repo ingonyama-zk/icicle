@@ -102,7 +102,7 @@ pub fn fold_line(
             domain_elements.as_ptr(),
             &alpha,
             folded_eval.as_mut_ptr(),
-            eval.len() as i32,
+            eval.len() as u64,
             &cfg as *const FriConfig,
         )
         .wrap()
@@ -123,7 +123,7 @@ pub fn fold_circle_into_line(
             domain_elements.as_ptr(),
             &alpha,
             folded_eval.as_mut_ptr(),
-            eval.len() as i32,
+            eval.len() as u64,
             &cfg as *const FriConfig,
         )
         .wrap()
@@ -140,7 +140,7 @@ mod _fri {
             domain_elements: *const ScalarField,
             alpha: &ExtensionField,
             folded_eval: *mut ExtensionField,
-            n: i32,
+            n: u64,
             cfg: *const FriConfig,
         ) -> CudaError;
 
@@ -150,7 +150,7 @@ mod _fri {
             domain_elements: *const ScalarField,
             alpha: &ExtensionField,
             folded_line_eval: *mut ExtensionField,
-            n: i32,
+            n: u64,
             cfg: *const FriConfig,
         ) -> CudaError;
     }
@@ -203,10 +203,7 @@ pub(crate) mod tests {
         let alpha = ExtensionField::from_u32(19283);
         let cfg = FriConfig::default();
 
-        let start = std::time::Instant::now();
         let res = fold_line(&d_eval[..], &d_domain_elements[..], &mut d_folded_eval[..], alpha, &cfg);
-        let duration = start.elapsed();
-        println!("fold_line execution time: {:?}", duration);
 
         assert!(res.is_ok());
 
@@ -278,7 +275,6 @@ pub(crate) mod tests {
         let alpha = ExtensionField::one();
         let cfg = FriConfig::default();
 
-        let start = std::time::Instant::now();
         let res = fold_circle_into_line(
             &d_circle_eval[..],
             &d_domain_elements[..],
@@ -286,9 +282,6 @@ pub(crate) mod tests {
             alpha,
             &cfg,
         );
-
-        let duration = start.elapsed();
-        println!("Time taken by fold_circle_into_line: {:?}", duration);
 
         assert!(res.is_ok());
 

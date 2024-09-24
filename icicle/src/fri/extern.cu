@@ -23,7 +23,7 @@ namespace fri {
     scalar_t* domain_elements,
     extension_t alpha,
     extension_t* folded_evals,
-    int n,
+    uint64_t n,
     FriConfig& cfg)
   {
     return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
@@ -47,7 +47,7 @@ namespace fri {
     scalar_t* domain_elements,
     extension_t alpha,
     extension_t* folded_line_evals,
-    int n,
+    uint64_t n,
     FriConfig& cfg)
   {
     return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);

@@ -18,9 +18,9 @@ namespace fri {
     }
 
     template <typename S, typename E>
-    __global__ void fold_line_kernel(E* eval, S* domain_xs, E alpha, E* folded_eval, int n)
+    __global__ void fold_line_kernel(E* eval, S* domain_xs, E alpha, E* folded_eval, uint64_t n)
     {
-      int idx = blockIdx.x * blockDim.x + threadIdx.x;
+      unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
       if (idx % 2 == 0 && idx < n) {
         E f_x = eval[idx];         // even
         E f_x_neg = eval[idx + 1]; // odd
@@ -32,9 +32,9 @@ namespace fri {
     }
 
     template <typename S, typename E>
-    __global__ void fold_circle_into_line_kernel(E* eval, S* domain_ys, E alpha, E alpha_sq, E* folded_eval, int n)
+    __global__ void fold_circle_into_line_kernel(E* eval, S* domain_ys, E alpha, E alpha_sq, E* folded_eval, uint64_t n)
     {
-      int idx = blockIdx.x * blockDim.x + threadIdx.x;
+      unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
       if (idx % 2 == 0 && idx < n) {
         E f0_px = eval[idx];
         E f1_px = eval[idx + 1];
@@ -47,7 +47,7 @@ namespace fri {
   } // namespace
 
   template <typename S, typename E>
-  cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_eval, int n, FriConfig& cfg)
+  cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg)
   {
     CHK_INIT_IF_RETURN();
 
@@ -80,13 +80,20 @@ namespace fri {
       d_folded_eval = folded_eval;
     }
 
-    int num_threads = 256;
-    int num_blocks = (n / 2 + num_threads - 1) / num_threads;
+    uint64_t num_threads = 256;
+    uint64_t num_blocks = (n / 2 + num_threads - 1) / num_threads;
     fold_line_kernel<<<num_blocks, num_threads, 0, stream>>>(d_eval, d_domain_xs, alpha, d_folded_eval, n);
 
     // Move folded_eval back to host if requested
     if (!cfg.are_results_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
+    }
+    if (!cfg.are_domain_elements_on_device) {
+        CHK_IF_RETURN(cudaFreeAsync(d_domain_xs, stream));
+    }
+    if (!cfg.are_evals_on_device) {
+        CHK_IF_RETURN(cudaFreeAsync(d_eval, stream));
     }
 
     // Sync if stream is default stream
@@ -96,7 +103,7 @@ namespace fri {
   }
 
   template <typename S, typename E>
-  cudaError_t fold_circle_into_line(E* eval, S* domain_ys, E alpha, E* folded_eval, int n, FriConfig& cfg)
+  cudaError_t fold_circle_into_line(E* eval, S* domain_ys, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg)
   {
     CHK_INIT_IF_RETURN();
 
@@ -130,14 +137,21 @@ namespace fri {
     }
 
     E alpha_sq = alpha * alpha;
-    int num_threads = 256;
-    int num_blocks = (n / 2 + num_threads - 1) / num_threads;
+    uint64_t num_threads = 256;
+    uint64_t num_blocks = (n / 2 + num_threads - 1) / num_threads;
     fold_circle_into_line_kernel<<<num_blocks, num_threads, 0, stream>>>(
       d_eval, d_domain_ys, alpha, alpha_sq, d_folded_eval, n);
 
     // Move folded_evals back to host if requested
     if (!cfg.are_results_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
+    }
+    if (!cfg.are_domain_elements_on_device) {
+        CHK_IF_RETURN(cudaFreeAsync(d_domain_ys, stream));
+    }
+    if (!cfg.are_evals_on_device) {
+        CHK_IF_RETURN(cudaFreeAsync(d_eval, stream));
     }
 
     // Sync if stream is default stream
