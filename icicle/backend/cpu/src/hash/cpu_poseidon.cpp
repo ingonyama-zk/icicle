@@ -3,37 +3,19 @@
 
 namespace icicle {
 
-  template <typename S>
-  class PoseidonConstantsCPU : PoseidonConstants<S>
+  static eIcicleError
+  cpu_poseidon_init_constants(const Device& device, const PoseidonConstantsInitOptions<scalar_t>* options)
   {
-    // TODO add field here
-    S* m_dummy_poseidon_constant;
-  };
-
-  static eIcicleError cpu_poseidon_init_constants(
-    const Device& device,
-    unsigned arity,
-    unsigned alpha,
-    unsigned nof_partial_rounds,
-    unsigned nof_upper_full_rounds,
-    unsigned nof_end_full_rounds,
-    const scalar_t* rounds_constants,
-    const scalar_t* mds_matrix,
-    const scalar_t* pre_matrix,
-    const scalar_t* sparse_matrix,
-    std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
-  {
-    ICICLE_LOG_INFO << "in cpu_poseidon_init_constants()";
+    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_constants() for type " << demangle<scalar_t>();
     // TODO implement
     return eIcicleError::SUCCESS;
   }
 
   REGISTER_POSEIDON_INIT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_constants);
 
-  static eIcicleError cpu_poseidon_init_default_constants(
-    const Device& device, unsigned arity, std::shared_ptr<PoseidonConstants<scalar_t>>& constants /*out*/)
+  static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)
   {
-    ICICLE_LOG_INFO << "in cpu_poseidon_init_default_constants()";
+    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
     // TODO implement
     return eIcicleError::SUCCESS;
   }
@@ -44,28 +26,22 @@ namespace icicle {
   class PoseidonBackendCPU : public HashBackend
   {
   public:
-    PoseidonBackendCPU(std::shared_ptr<PoseidonConstants<S>> constants)
-        : HashBackend(sizeof(S), 0 /*TODO get from constants arity of whatever*/), m_constants{constants}
-    {
-    }
+    PoseidonBackendCPU(unsigned arity) : HashBackend("Poseidon-CPU", sizeof(S), arity * sizeof(S)) {}
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      ICICLE_LOG_INFO << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>();
+      ICICLE_LOG_DEBUG << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>()
+                       << ", batch=" << config.batch;
       // TODO implement
       return eIcicleError::SUCCESS;
     }
-
-  private:
-    std::shared_ptr<PoseidonConstants<S>> m_constants = nullptr;
   };
 
   static eIcicleError create_cpu_poseidon_hash_backend(
-    const Device& device,
-    std::shared_ptr<PoseidonConstants<scalar_t>> constants,
-    std::shared_ptr<HashBackend>& backend /*OUT*/)
+    const Device& device, unsigned arity, std::shared_ptr<HashBackend>& backend /*OUT*/, const scalar_t& phantom)
   {
-    backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(constants);
+    ICICLE_LOG_DEBUG << "in create_cpu_poseidon_hash_backend(arity=" << arity << ")";
+    backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(arity);
     return eIcicleError::SUCCESS;
   }
 

@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
+icicle-hash = { workspace = true }
 icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
 
 [dev-dependencies]

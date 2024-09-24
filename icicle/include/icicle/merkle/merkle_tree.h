@@ -118,6 +118,8 @@ namespace icicle {
     {
       // TODO: Implement Merkle path verification here
 
+      ICICLE_LOG_DEBUG << "In MerkleTree::verify()";
+
       // can access path by offset or all of it
       // auto digest = merkle_proof.access_path_at_offset<DIGEST_TYPE>(offset);
       auto [path, path_size] = merkle_proof.get_path();
