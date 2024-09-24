@@ -89,12 +89,8 @@ namespace fri {
       CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
       CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
     }
-    if (!cfg.are_domain_elements_on_device) {
-        CHK_IF_RETURN(cudaFreeAsync(d_domain_xs, stream));
-    }
-    if (!cfg.are_evals_on_device) {
-        CHK_IF_RETURN(cudaFreeAsync(d_eval, stream));
-    }
+    if (!cfg.are_domain_elements_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_domain_xs, stream)); }
+    if (!cfg.are_evals_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_eval, stream)); }
 
     // Sync if stream is default stream
     if (stream == 0) CHK_IF_RETURN(cudaStreamSynchronize(stream));
@@ -147,12 +143,8 @@ namespace fri {
       CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
       CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
     }
-    if (!cfg.are_domain_elements_on_device) {
-        CHK_IF_RETURN(cudaFreeAsync(d_domain_ys, stream));
-    }
-    if (!cfg.are_evals_on_device) {
-        CHK_IF_RETURN(cudaFreeAsync(d_eval, stream));
-    }
+    if (!cfg.are_domain_elements_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_domain_ys, stream)); }
+    if (!cfg.are_evals_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_eval, stream)); }
 
     // Sync if stream is default stream
     if (stream == 0) CHK_IF_RETURN(cudaStreamSynchronize(stream));
