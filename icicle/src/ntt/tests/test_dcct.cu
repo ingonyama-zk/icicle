@@ -52,10 +52,10 @@ int main(int argc, char** argv)
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 6;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
-  int INV = (argc > 3) ? atoi(argv[3]) : false;
+  int INV = (argc > 3) ? atoi(argv[3]) : true;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
-  const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNR;
+  const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
 
   // Note: NM, MN are not expected to be equal when comparing mixed-radix and radix-2 NTTs
   const char* ordering_str = ordering == ntt::Ordering::kNN   ? "NN"
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
   for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
     // if (i == 1024)
     //   break;
-    if (i % 512 < 2)
+    // if (i % 128 < 2)
       std::cout << CpuOutput[i] << " " << i << std::endl;
   }
   bool success = true;

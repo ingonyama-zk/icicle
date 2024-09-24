@@ -200,8 +200,8 @@ namespace m31 {
         assert(false);
       }
 #endif // __CUDA_ARCH__
-      storage_array<CONFIG::omegas_count, 1> const inv = CONFIG::inv;
-      return MersenneField{inv.storages[logn - 1]};
+      // storage_array<CONFIG::omegas_count, 1> const inv = CONFIG::inv;
+      return MersenneField::inverse(MersenneField{1U << logn});
     }
   };
 
