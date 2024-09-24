@@ -76,9 +76,9 @@ namespace fri {
             d_folded_eval = folded_eval;
         }
 
-        int block_size = 256;
-        int num_blocks = (n / 2 + block_size - 1) / block_size;
-        fold_line_kernel<<<num_blocks, block_size, 0, stream>>>(d_eval, d_domain_xs, alpha, d_folded_eval, n);
+        int num_threads = 256;
+        int num_blocks = (n / 2 + num_threads - 1) / num_threads;
+        fold_line_kernel<<<num_blocks, num_threads, 0, stream>>>(d_eval, d_domain_xs, alpha, d_folded_eval, n);
 
         // Move folded_eval back to host if requested
         if (!cfg.are_results_on_device) {
@@ -125,9 +125,9 @@ namespace fri {
         }
 
         E alpha_sq = alpha * alpha;
-        int block_size = 256;
-        int num_blocks = (n / 2 + block_size - 1) / block_size;
-        fold_circle_into_line_kernel<<<num_blocks, block_size, 0, stream>>>(d_eval, d_domain_ys, alpha, alpha_sq, d_folded_eval, n);
+        int num_threads = 256;
+        int num_blocks = (n / 2 + num_threads - 1) / num_threads;
+        fold_circle_into_line_kernel<<<num_blocks, num_threads, 0, stream>>>(d_eval, d_domain_ys, alpha, alpha_sq, d_folded_eval, n);
 
         // Move folded_evals back to host if requested
         if (!cfg.are_results_on_device) {
