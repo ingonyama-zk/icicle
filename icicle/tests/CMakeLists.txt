@@ -41,6 +41,12 @@ if (FIELD)
         target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_field)
         gtest_discover_tests(test_polynomial_api)    
     endif()
+
+  # Montgomery vec_ops API test
+  add_executable(test_mont_vec_ops_api test_mont_vec_ops_api.cpp)
+  target_include_directories(test_mont_vec_ops_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
+  target_link_libraries(test_mont_vec_ops_api PRIVATE GTest::gtest_main icicle_device icicle_field)
+  gtest_discover_tests(test_mont_vec_ops_api)
 endif()
 
 #curve API test
@@ -55,8 +61,5 @@ if (CURVE)
     endif()
 endif()
 
-# Montgomery vec_ops API test
-add_executable(test_mont_vec_ops_api test_mont_vec_ops_api.cpp)
-target_include_directories(test_mont_vec_ops_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
-target_link_libraries(test_mont_vec_ops_api PRIVATE GTest::gtest_main icicle_device)
-gtest_discover_tests(test_mont_vec_ops_api)
+
+
