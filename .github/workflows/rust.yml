@@ -85,6 +85,7 @@ jobs:
       run: |
         cargo test --release --verbose -- --ignored
         cargo test --release --verbose
+        cargo test --release --verbose --features=fri tests::test_fold
 
   # build-windows:
   #   name: Build on Windows
