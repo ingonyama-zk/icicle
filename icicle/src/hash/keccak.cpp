@@ -37,7 +37,7 @@ namespace icicle {
     return keccak;
   }
 
-  // Keccak 512
+  // Sha3 512
   ICICLE_DISPATCHER_INST(Sha3_512Dispatcher, sha3_512_factory, KeccakFactoryImpl);
 
   Hash create_sha3_512_hash(uint64_t input_chunk_size)

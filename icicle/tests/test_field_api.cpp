@@ -84,6 +84,47 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+#ifndef EXT_FIELD
+TYPED_TEST(FieldApiTest, MontBench)
+{
+  auto a = TypeParam::rand_host();
+  auto b = TypeParam::rand_host();
+
+  auto ar = TypeParam::to_montgomery(a);
+  auto br = TypeParam::to_montgomery(b);
+  auto rr = TypeParam::mont_mult(ar, br);
+  auto r = TypeParam::from_montgomery(rr);
+
+  // std::cout << "a: " << a << std::endl;
+  // std::cout << "b: " << b << std::endl;
+  // std::cout << "ar: " << ar << std::endl;
+  // std::cout << "br: " << br << std::endl;
+  // std::cout << "rr: " << rr << std::endl;
+  // std::cout << "r: " << r << std::endl;
+  // std::cout << "p: " << TypeParam{TypeParam::get_modulus()} << std::endl;
+  // std::cout << "N': " << TypeParam{TypeParam::get_mont_inv_modulus()} << std::endl;
+  // std::cout << "R: " << TypeParam{TypeParam::get_mont_r()} << std::endl;
+  // std::cout << "R': " << TypeParam{TypeParam::get_mont_r_inv()} << std::endl;
+
+  ASSERT_EQ(r, a * b);
+
+  std::ostringstream oss;
+  START_TIMER(barret)
+  for (int i = 0; i < 100000; i++) {
+    a = a * a;
+  }
+  END_TIMER(barret, "barret", true);
+
+  START_TIMER(mont)
+  for (int i = 0; i < 100000; i++) {
+    ar = TypeParam::mont_mult(ar, ar);
+  }
+  END_TIMER(mont, "mont", true);
+
+  ASSERT_EQ(TypeParam::from_montgomery(ar), a);
+}
+#endif
+
 TYPED_TEST(FieldApiTest, vectorOps)
 {
   const uint64_t N = 1 << 22;
