@@ -4,7 +4,6 @@ using namespace field_config;
 #include "fri.cu"
 #include "utils/utils.h"
 
-
 namespace fri {
   /**
    * Extern "C" version of [fold_line](@ref fold_line) function with the following values of
@@ -19,7 +18,14 @@ namespace fri {
    * @param ctx The device context; if the stream is not 0, then everything is run async
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line)(extension_t* line_eval, scalar_t* domain_elements, extension_t alpha, extension_t* folded_evals, int n, FriConfig& cfg) {
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line)(
+    extension_t* line_eval,
+    scalar_t* domain_elements,
+    extension_t alpha,
+    extension_t* folded_evals,
+    int n,
+    FriConfig& cfg)
+  {
     return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
   };
 
@@ -36,7 +42,14 @@ namespace fri {
    * @param ctx The device context; if the stream is not 0, then everything is run async
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line)(extension_t* circle_evals, scalar_t* domain_elements, extension_t alpha, extension_t* folded_line_evals, int n, FriConfig& cfg) {
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line)(
+    extension_t* circle_evals,
+    scalar_t* domain_elements,
+    extension_t alpha,
+    extension_t* folded_line_evals,
+    int n,
+    FriConfig& cfg)
+  {
     return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);
   };
 } // namespace fri
