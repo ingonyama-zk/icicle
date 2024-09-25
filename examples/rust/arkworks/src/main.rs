@@ -15,7 +15,7 @@ fn randomize_ark_scalars(size: usize) -> Vec<Fr> {
     return ark_scalars;
 }
 
-fn increment_ark_scalars(size: usize) -> Vec<Fr> {
+fn incremental_ark_scalars(size: usize) -> Vec<Fr> {
     let ark_scalars = (0..size)
         .map(|i| Fr::from(i as u64))
         .collect();
@@ -46,7 +46,7 @@ fn main() {
     //================================ Part 1: transmute ark scalars =============================//
     //============================================================================================//
     // let ark_elements = randomize_ark_field_elements(2);
-    let mut ark_scalars = increment_ark_scalars(10);
+    let mut ark_scalars = incremental_ark_scalars(10);
     println!("ark elements: {:?}\n", ark_scalars);
 
     let icicle_scalars = transmute_ark_to_icicle_scalars::<Fr, IcicleBn254Scalar>(&mut ark_scalars);
