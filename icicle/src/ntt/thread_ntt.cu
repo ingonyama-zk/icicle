@@ -154,18 +154,35 @@ public:
   {
     const uint64_t data_stride_u64 = data_stride;
     if (strided) {
-      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 2 +
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 8 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
     }
 
     UNROLL
     for (uint32_t j = 0; j < 2; j++) {
       UNROLL
       for (uint32_t i = 0; i < 4; i++) {
-        X[4 * j + i] = data[(8 * i + j) * data_stride_u64];
+        X[4 * j + i] = data[(4 * j + i) * data_stride_u64];
       }
+    }
+  }
+
+  DEVICE_INLINE void
+  storeGlobalData32dit(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  {
+    const uint64_t data_stride_u64 = data_stride;
+    if (strided) {
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
+    } else {
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
+    }
+
+    UNROLL
+    for (uint32_t i = 0; i < 8; i++) {
+      data[i * 4 * data_stride_u64] = X[i];
     }
   }
 
@@ -331,18 +348,18 @@ public:
     E T;
 
     // Stage 0
-    IBF(T, X[0], X[2], WB[0]);
-    IBF(T, X[1], X[3], WB[1]);
+    IBF(T, X[0], X[1], WB[0]);
+    IBF(T, X[2], X[3], WB[1]);
 
-    IBF(T, X[4], X[6], WB[2]);
-    IBF(T, X[5], X[7], WB[3]);
+    IBF(T, X[4], X[5], WB[2]);
+    IBF(T, X[6], X[7], WB[3]);
 
     // Stage 1
-    IBF(T, X[0], X[1], WB[4]);
-    IBF(T, X[2], X[3], WB[5]);
+    IBF(T, X[0], X[2], WB[4]);
+    IBF(T, X[1], X[3], WB[5]);
 
-    IBF(T, X[4], X[5], WB[6]);
-    IBF(T, X[6], X[7], WB[7]);
+    IBF(T, X[4], X[6], WB[6]);
+    IBF(T, X[5], X[7], WB[7]);
   }
 
   DEVICE_INLINE void intt2_4()

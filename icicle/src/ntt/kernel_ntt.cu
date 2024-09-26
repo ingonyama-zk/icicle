@@ -504,10 +504,13 @@ namespace mxntt {
       return;
 
     engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, false);
+    if (dit) {
+      engine.loadGlobalData32(in, data_stride, log_data_stride, strided, s_meta);
+    } else {
+      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    }
 
-    engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
-
-    if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
+    // if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
       printf(
         "T BEFORE: B: %d, I: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
         s_meta.ntt_block_id,
@@ -522,12 +525,31 @@ namespace mxntt {
         engine.X[7].limbs_storage.limbs[0]
       );
 
-    engine.ntt8();
-    engine.SharedData32Columns8(shmem, true, false, strided); // store
-    __syncthreads();
-    engine.SharedData32Rows4_2(shmem, false, false, strided); // load
+    if (dit) {
+      if (inv) {
+        engine.intt4_2();
+      } else {
+        engine.ntt4_2();
+      }
+    } else {
+      if (inv) {
+        engine.intt8();
+      } else {
+        engine.ntt8();
+      }
+    }
 
-    if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
+    if (dit) {
+      engine.SharedData32Columns4_2(shmem, true, false, strided); // store
+      __syncthreads();
+      engine.SharedData32Rows8(shmem, false, false, strided); // load
+    } else {
+      engine.SharedData32Columns8(shmem, true, false, strided); // store
+      __syncthreads();
+      engine.SharedData32Rows4_2(shmem, false, false, strided); // load
+    }
+
+    // if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
       printf(
         "T AFTER: B: %d, I: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
         s_meta.ntt_block_id,
@@ -543,7 +565,19 @@ namespace mxntt {
       );
 
     engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, true);
-    engine.ntt4_2();
+    if (dit) {
+      if (inv) {
+        engine.intt8();
+      } else {
+        engine.ntt8();
+      }
+    } else {
+      if (inv) {
+        engine.intt4_2();
+      } else {
+        engine.ntt4_2();
+      }
+    }
 
     // if (s_meta.ntt_block_id < 33)
     //   printf(
@@ -559,7 +593,11 @@ namespace mxntt {
     //     engine.X[7].limbs_storage.limbs[0]
     //   );
 
-    engine.storeGlobalData32(out, data_stride, log_data_stride, strided, s_meta);
+    if (dit) {
+      engine.storeGlobalData32dit(out, data_stride, log_data_stride, strided, s_meta);
+    } else {
+      engine.storeGlobalData32(out, data_stride, log_data_stride, strided, s_meta);
+    }
   }
 
   template <typename E, typename S>
