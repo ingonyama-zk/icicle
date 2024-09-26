@@ -33,6 +33,15 @@ fn try_load_and_set_backend_device(args: &Args) {
     icicle_runtime::set_device(&device).unwrap();
 }
 
+//// Generate scalars and ec points
+
+fn incremental_ark_scalars(size: usize) -> Vec<Fr> {
+    let ark_scalars = (0..size)
+        .map(|i| Fr::from(i as u64))
+        .collect();
+    ark_scalars
+}
+
 // use ark_ff::UniformRand;
 // use rand::thread_rng;
 // fn randomize_ark_scalars(size: usize) -> Vec<Fr> {
@@ -43,30 +52,55 @@ fn try_load_and_set_backend_device(args: &Args) {
 //     ark_scalars
 // }
 
-fn incremental_ark_scalars(size: usize) -> Vec<Fr> {
-    let ark_scalars = (0..size)
-        .map(|i| Fr::from(i as u64))
+fn incremental_ark_affine_points(size: usize) -> Vec<ArkAffine> {
+    let ark_affine_points = (1..=size)
+        .map(|i| {
+            // Incremental scalars times the generator
+            let scalar = Fr::from(i as u64);
+            ArkAffine::generator()
+                .mul(&scalar)
+                .into_affine()
+        })
         .collect();
-    ark_scalars
+    ark_affine_points
 }
 
+fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
+    let ark_projective_points = (1..=size)
+        .map(|i| {
+            // Incremental scalars times the generator
+            let scalar = Fr::from(i as u64);
+            ArkAffine::generator().mul(&scalar)
+        })
+        .collect();
+    ark_projective_points
+}
+
+//// convert single field element
 fn from_ark<T, I>(ark: &T) -> I
 where
-    T: ark_ff::PrimeField,
+    T: PrimeField,
     I: FieldImpl,
 {
-    let ark_bytes: Vec<u8> = ark
-        .to_base_prime_field_elements()
-        .map(|x| {
-            x.into_bigint()
-                .to_bytes_le()
-        })
-        .flatten()
-        .collect();
+    // Pre-allocate the memory based on the number of base field elements and their size
+    let element_size = T::BigInt::NUM_LIMBS * 8; // Each limb is 8 bytes (u64)
+    let num_elements = T::extension_degree() as usize; // Number of base prime field elements
+
+    let mut ark_bytes = Vec::with_capacity(element_size * num_elements);
+
+    // Directly iterate over the base prime field elements and append the bytes
+    for base_elem in ark.to_base_prime_field_elements() {
+        let bigint = base_elem.into_bigint();
+        ark_bytes.extend_from_slice(&bigint.to_bytes_le()); // Append bytes directly to the buffer
+    }
+
+    // Convert the bytes to the Icicle field element
     I::from_bytes_le(&ark_bytes)
 }
 
-// Generic function to convert Arkworks field elements to Icicle format and return a mutable slice
+//// Transmute or copy scalars
+
+// Generic function to transmute Arkworks field elements to Icicle format and return a mutable slice
 fn transmute_ark_scalars_slice<T, I>(ark_scalars: &mut [T]) -> &mut [I]
 where
     T: PrimeField,
@@ -109,36 +143,16 @@ where
     icicle_scalars
 }
 
+//// Copy ec points: note that this is a quite expensive operation due to different internal memory layout
+/// Arkworks represents affine points as affine:{x,y,is_infinity}, projective is twisted edwards
+/// ICICLE represents affine points as affine:{x,y}, projective is standard projective
+
 fn copy_ark_scalars_slice<T, I>(ark_scalars: &[T]) -> DeviceVec<I>
 where
     T: PrimeField,
     I: FieldImpl + MontgomeryConvertible,
 {
     copy_ark_scalars_slice_async(ark_scalars, &IcicleStream::default())
-}
-
-fn incremental_ark_affine_points(size: usize) -> Vec<ArkAffine> {
-    let ark_affine_points = (1..=size)
-        .map(|i| {
-            // Incremental scalars times the generator
-            let scalar = Fr::from(i as u64);
-            ArkAffine::generator()
-                .mul(&scalar)
-                .into_affine()
-        })
-        .collect();
-    ark_affine_points
-}
-
-fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
-    let ark_projective_points = (1..=size)
-        .map(|i| {
-            // Incremental scalars times the generator
-            let scalar = Fr::from(i as u64);
-            ArkAffine::generator().mul(&scalar)
-        })
-        .collect();
-    ark_projective_points
 }
 
 fn copy_ark_affine_points(ark_affine: &[ArkAffine]) -> Vec<IcicleAffine> {
