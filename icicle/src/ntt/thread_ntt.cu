@@ -60,7 +60,7 @@ public:
     bool inv, bool dit, bool phase)
   {
     size_t stage_size = 1 << (tw_log_size - 1);
-    size_t tw_size = (1 << ntt_log_size) * ntt_log_size;
+    size_t tw_size = (1 << tw_log_size) * tw_log_size;
     uint32_t phase_offset = stage_size * phase * (dit ? ntt_log_size - 3 : 3); // 3 is the number of stages
     uint32_t block_offset;
     if (tw_log_order) {
@@ -69,7 +69,7 @@ public:
     } else {
      block_offset = s_meta.ntt_block_id * (1 << ntt_log_size - 1);
     }
-    uint32_t ntt_inp_offset = s_meta.ntt_inp_id * (1 << tw_log_order) * (phase ? 4 : 1);
+    uint32_t ntt_inp_offset = s_meta.ntt_inp_id * (1 << tw_log_order) * ((phase != dit) ? 4 : 1);
     uint32_t base_exp = phase_offset + twiddles_offset + block_offset + ntt_inp_offset;
     uint32_t exp;
 
@@ -94,7 +94,7 @@ public:
       for (int i = 0; i < 4; i++) {
         exp = base_exp + i
           * (tw_order ? tw_order : 1)
-          * (1 << (phase ? 0 : ntt_log_size - 3));
+          * (1 << ((phase != dit) ? 0 : ntt_log_size - 3));
 
         // if ((s_meta.ntt_block_id == 255 && s_meta.ntt_inp_id == 3) || (s_meta.ntt_block_id == 0 && s_meta.ntt_inp_id == 0) || (s_meta.ntt_block_id == 511 && s_meta.ntt_inp_id == 1)) {
         // if ((s_meta.ntt_block_id == 15 || s_meta.ntt_block_id == 16) && s_meta.ntt_inp_id == 0) {
@@ -132,21 +132,6 @@ public:
     }
   }
 
-  DEVICE_INLINE void loadGlobalDataColumnBatch(
-    const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
-  {
-    const uint64_t data_stride_u64 = data_stride;
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
-             (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size) *
-              batch_size +
-            s_meta.batch_id;
-
-    UNROLL
-    for (uint32_t i = 0; i < 8; i++) {
-      X[i] = data[s_meta.th_stride * i * data_stride_u64 * batch_size];
-    }
-  }
-
   DEVICE_INLINE void
   storeGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
@@ -161,21 +146,6 @@ public:
     UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       data[i * data_stride_u64] = X[i];
-    }
-  }
-
-  DEVICE_INLINE void storeGlobalDataColumnBatch(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
-  {
-    const uint64_t data_stride_u64 = data_stride;
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
-             (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size) *
-              batch_size +
-            s_meta.batch_id;
-
-    UNROLL
-    for (uint32_t i = 0; i < 8; i++) {
-      data[s_meta.th_stride * i * data_stride_u64 * batch_size] = X[i];
     }
   }
 
@@ -195,24 +165,6 @@ public:
       UNROLL
       for (uint32_t i = 0; i < 4; i++) {
         X[4 * j + i] = data[(8 * i + j) * data_stride_u64];
-      }
-    }
-  }
-
-  DEVICE_INLINE void loadGlobalData32ColumnBatch(
-    const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
-  {
-    const uint64_t data_stride_u64 = data_stride;
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 2 +
-             (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size) *
-              batch_size +
-            s_meta.batch_id;
-
-    UNROLL
-    for (uint32_t j = 0; j < 2; j++) {
-      UNROLL
-      for (uint32_t i = 0; i < 4; i++) {
-        X[4 * j + i] = data[(8 * i + j) * data_stride_u64 * batch_size];
       }
     }
   }
@@ -237,58 +189,22 @@ public:
     }
   }
 
-  DEVICE_INLINE void storeGlobalData32ColumnBatch(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
-  {
-    const uint64_t data_stride_u64 = data_stride;
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 2 +
-             (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size) *
-              batch_size +
-            s_meta.batch_id;
-
-    UNROLL
-    for (uint32_t j = 0; j < 2; j++) {
-      UNROLL
-      for (uint32_t i = 0; i < 4; i++) {
-        data[(8 * i + j) * data_stride_u64 * batch_size] = X[4 * j + i];
-      }
-    }
-  }
-
   DEVICE_INLINE void
   loadGlobalData16(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     const uint64_t data_stride_u64 = data_stride;
     if (strided) {
-      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 2 +
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 8 +
               (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
     } else {
-      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 2;
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
     }
 
     UNROLL
     for (uint32_t j = 0; j < 4; j++) {
       UNROLL
       for (uint32_t i = 0; i < 2; i++) {
-        X[2 * j + i] = data[(i + j * 4) * data_stride_u64];
-      }
-    }
-  }
-
-  DEVICE_INLINE void loadGlobalData16ColumnBatch(
-    const E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
-  {
-    const uint64_t data_stride_u64 = data_stride;
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 4 +
-             (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size) *
-              batch_size +
-            s_meta.batch_id;
-
-    UNROLL
-    for (uint32_t j = 0; j < 4; j++) {
-      UNROLL
-      for (uint32_t i = 0; i < 2; i++) {
-        X[2 * j + i] = data[(8 * i + j) * data_stride_u64 * batch_size];
+        X[2 * j + i] = data[(2 * j + i) * data_stride_u64];
       }
     }
   }
@@ -313,21 +229,20 @@ public:
     }
   }
 
-  DEVICE_INLINE void storeGlobalData16ColumnBatch(
-    E* data, uint32_t data_stride, uint32_t log_data_stride, stage_metadata s_meta, uint32_t batch_size)
+  DEVICE_INLINE void
+  storeGlobalData16dit(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
   {
     const uint64_t data_stride_u64 = data_stride;
-    data += ((s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 4 +
-             (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size) *
-              batch_size +
-            s_meta.batch_id;
+    if (strided) {
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
+    } else {
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
+    }
 
     UNROLL
-    for (uint32_t j = 0; j < 4; j++) {
-      UNROLL
-      for (uint32_t i = 0; i < 2; i++) {
-        data[(8 * i + j) * data_stride_u64 * batch_size] = X[2 * j + i];
-      }
+    for (uint32_t i = 0; i < 8; i++) {
+      data[i * 2 * data_stride_u64] = X[i];
     }
   }
 

@@ -415,10 +415,7 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    if (columns_batch_size)
-      engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
-    else
-      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     // printf(
     //   "T Before: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
@@ -468,10 +465,7 @@ namespace mxntt {
     //   engine.X[7].limbs_storage.limbs[0]
     // );
 
-    if (columns_batch_size)
-      engine.storeGlobalDataColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
-    else
-      engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+    engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
   }
 
   template <typename E, typename S>
@@ -511,10 +505,7 @@ namespace mxntt {
 
     engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, false);
 
-    if (columns_batch_size)
-      engine.loadGlobalDataColumnBatch(in, data_stride, log_data_stride, s_meta, columns_batch_size);
-    else
-      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
 
     if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
       printf(
@@ -568,10 +559,7 @@ namespace mxntt {
     //     engine.X[7].limbs_storage.limbs[0]
     //   );
 
-    if (columns_batch_size)
-      engine.storeGlobalData32ColumnBatch(out, data_stride, log_data_stride, s_meta, columns_batch_size);
-    else
-      engine.storeGlobalData32(out, data_stride, log_data_stride, strided, s_meta);
+    engine.storeGlobalData32(out, data_stride, log_data_stride, strided, s_meta);
   }
 
   template <typename E, typename S>
@@ -720,7 +708,7 @@ namespace mxntt {
     // }
 
     if (dit) {
-      engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+      engine.storeGlobalData16dit(out, data_stride, log_data_stride, strided, s_meta);
     } else {
       engine.storeGlobalData16(out, data_stride, log_data_stride, strided, s_meta);
     }
