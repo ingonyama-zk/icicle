@@ -1,12 +1,15 @@
-use ark_bn254::{Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
-use ark_ec::{AffineRepr, CurveGroup};
+use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
+use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::{BigInteger, PrimeField};
 use std::ops::Mul;
 use std::time::Instant;
 
 use clap::Parser;
 use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField as IcicleScalar};
-use icicle_core::traits::{FieldImpl, MontgomeryConvertible};
+use icicle_core::{
+    msm::{msm, MSMConfig},
+    traits::{FieldImpl, MontgomeryConvertible},
+};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     stream::IcicleStream,
@@ -15,7 +18,7 @@ use rayon::prelude::*;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long, default_value_t = 1<<15)]
+    #[arg(short, long, default_value_t = 1<<12)]
     size: usize,
 
     /// Device type (e.g., "CPU", "CUDA")
@@ -33,24 +36,16 @@ fn try_load_and_set_backend_device(args: &Args) {
     icicle_runtime::set_device(&device).unwrap();
 }
 
-//// Generate scalars and ec points
+//============================================================================================//
+//============================ Generate ark scalars and ec points ============================//
+//============================================================================================//
 
-fn incremental_ark_scalars(size: usize) -> Vec<Fr> {
+fn incremental_ark_scalars<T: PrimeField>(size: usize) -> Vec<T> {
     let ark_scalars = (0..size)
-        .map(|i| Fr::from(i as u64))
+        .map(|i| T::from(i as u64))
         .collect();
     ark_scalars
 }
-
-// use ark_ff::UniformRand;
-// use rand::thread_rng;
-// fn randomize_ark_scalars(size: usize) -> Vec<Fr> {
-//     let mut rng = thread_rng();
-//     let ark_scalars = (0..size)
-//         .map(|_| Fr::rand(&mut rng))
-//         .collect();
-//     ark_scalars
-// }
 
 fn incremental_ark_affine_points(size: usize) -> Vec<ArkAffine> {
     let ark_affine_points = (1..=size)
@@ -76,7 +71,9 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
     ark_projective_points
 }
 
-//// convert single field element
+//============================================================================================//
+//========================= Convert single field element ark<->ICICLE ========================//
+//============================================================================================//
 fn from_ark<T, I>(ark: &T) -> I
 where
     T: PrimeField,
@@ -98,10 +95,20 @@ where
     I::from_bytes_le(&ark_bytes)
 }
 
-//// Transmute or copy scalars
+fn to_ark<T, I>(icicle: &I) -> T
+where
+    T: PrimeField,
+    I: FieldImpl,
+{
+    T::from_random_bytes(&icicle.to_bytes_le()).unwrap()
+}
+
+//============================================================================================//
+//============================ Transmute or copy ark scalars =================================//
+//============================================================================================//
 
 // Generic function to transmute Arkworks field elements to Icicle format and return a mutable slice
-fn transmute_ark_scalars_slice<T, I>(ark_scalars: &mut [T]) -> &mut [I]
+fn transmute_ark_to_icicle_scalars<T, I>(ark_scalars: &mut [T]) -> &mut [I]
 where
     T: PrimeField,
     I: FieldImpl + MontgomeryConvertible,
@@ -120,7 +127,7 @@ where
 }
 
 // Function to copy a slice of Arkworks scalar elements to Icicle scalar elements.
-fn copy_ark_scalars_slice_async<T, I>(ark_scalars: &[T], stream: &IcicleStream) -> DeviceVec<I>
+fn ark_to_icicle_scalars_async<T, I>(ark_scalars: &[T], stream: &IcicleStream) -> DeviceVec<I>
 where
     T: PrimeField,
     I: FieldImpl + MontgomeryConvertible,
@@ -143,32 +150,33 @@ where
     icicle_scalars
 }
 
-//// Copy ec points: note that this is a quite expensive operation due to different internal memory layout
-/// Arkworks represents affine points as affine:{x,y,is_infinity}, projective is twisted edwards
-/// ICICLE represents affine points as affine:{x,y}, projective is standard projective
-
-fn copy_ark_scalars_slice<T, I>(ark_scalars: &[T]) -> DeviceVec<I>
+fn ark_to_icicle_scalars<T, I>(ark_scalars: &[T]) -> DeviceVec<I>
 where
     T: PrimeField,
     I: FieldImpl + MontgomeryConvertible,
 {
-    copy_ark_scalars_slice_async(ark_scalars, &IcicleStream::default())
+    ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default())
 }
 
-fn copy_ark_affine_points(ark_affine: &[ArkAffine]) -> Vec<IcicleAffine> {
+//============================================================================================//
+//============================ Convert EC points ark<->ICICLE ================================//
+//============================================================================================//
+
+//// Note that this is a quite expensive operation due to different internal memory layout
+/// Affine: Arkworks represents affine points as {x:Fq ,y:Fq ,is_infinity:bool } while ICICLE is {x,y}
+/// Projective: Arkworks is using Jacobian representation while ICICLE is using Projective
+
+fn ark_to_icicle_affine_points(ark_affine: &[ArkAffine]) -> Vec<IcicleAffine> {
     ark_affine
         .par_iter() // parallel
-        .map(|ark| IcicleAffine {
-            x: from_ark(&ark.x),
-            y: from_ark(&ark.y),
-        })
+        .map(|ark| IcicleAffine { x: from_ark(&ark.x),y: from_ark(&ark.y)})
         .collect()
 }
 
 // conversion between Jacobian used in arkworks and projective used in icicle
-fn copy_ark_projective_points(ark_affine: &[ArkProjective]) -> Vec<IcicleProjective> {
-    // Note: this can be accelerated on device (e.g. GPU) if we implement conversion from twisted-edwards
-    ark_affine
+fn ark_to_icicle_projective_points(ark_projective: &[ArkProjective]) -> Vec<IcicleProjective> {
+    // Note: this can be accelerated on device (e.g. GPU) if we implement conversion from Jacobian
+    ark_projective
         .par_iter() // parallel
         .map(|ark| {
             let proj_x = ark.x * ark.z;
@@ -182,6 +190,33 @@ fn copy_ark_projective_points(ark_affine: &[ArkProjective]) -> Vec<IcicleProject
         .collect()
 }
 
+#[allow(unused)]
+fn icicle_to_ark_affine_points(icicle_projective: &[IcicleAffine]) -> Vec<ArkAffine> {
+    icicle_projective
+        .par_iter()
+        .map(|icicle| ArkAffine::new_unchecked(to_ark(&icicle.x), to_ark(&icicle.y)))
+        .collect()
+}
+
+fn icicle_to_ark_projective_points(icicle_projective: &[IcicleProjective]) -> Vec<ArkProjective> {
+    icicle_projective
+        .par_iter()
+        .map(|icicle| {
+            let proj_x: Fq = to_ark(&icicle.x);
+            let proj_y: Fq = to_ark(&icicle.y);
+            let proj_z: Fq = to_ark(&icicle.z);
+
+            // conversion between projective used in icicle and Jacobian used in arkworks
+            let proj_x = proj_x * proj_z;
+            let proj_y = proj_y * proj_z * proj_z;
+            ArkProjective::new_unchecked(proj_x, proj_y, proj_z)
+        })
+        .collect()
+}
+//============================================================================================//
+//============================================================================================//
+//============================================================================================//
+
 fn main() {
     let args = Args::parse();
     println!("{:?}", args);
@@ -190,7 +225,7 @@ fn main() {
 
     let size = args.size;
     let print = size <= 10;
-    let mut ark_scalars = incremental_ark_scalars(size);
+    let ark_scalars = incremental_ark_scalars(size);
     if print {
         println!("Ark scalars (incremental): {:?}\n", ark_scalars);
     }
@@ -198,14 +233,14 @@ fn main() {
     //================================ Part 1: copy ark scalars ==================================//
     //============================================================================================//
     let start_copy = Instant::now(); // Start timing
-    let _icicle_scalars: DeviceVec<IcicleScalar> = copy_ark_scalars_slice(&ark_scalars);
+    let _icicle_scalars: DeviceVec<IcicleScalar> = ark_to_icicle_scalars(&ark_scalars);
     let duration_copy = start_copy.elapsed(); // End timing
     println!("Time taken for copying {} scalars: {:?}", size, duration_copy);
 
     // Can dispatch the copy and convert to a stream without blocking the CPU thread (for supported device such as CUDA)
     let start_copy = Instant::now(); // Start timing
     let mut stream = IcicleStream::create().unwrap();
-    let icicle_scalars: DeviceVec<IcicleScalar> = copy_ark_scalars_slice_async(&ark_scalars, &stream);
+    let icicle_scalars: DeviceVec<IcicleScalar> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
     let duration_copy = start_copy.elapsed(); // End timing
     println!("Time taken for dispatching async copy: {:?}", duration_copy);
 
@@ -231,13 +266,14 @@ fn main() {
     //========================== Part 2: transmute ark scalars in-place ==========================//
     //============================================================================================//
     // Note that this is reusing the ark-works owned memory and mutates in places (convert from Montgomery representation
+    let mut ark_scalars_copy = ark_scalars.clone();
     let start_transmute = Instant::now();
-    let icicle_scalars: &mut [IcicleScalar] = transmute_ark_scalars_slice(&mut ark_scalars);
+    let icicle_transumated_scalars: &mut [IcicleScalar] = transmute_ark_to_icicle_scalars(&mut ark_scalars_copy);
     let duration_transmute = start_transmute.elapsed(); // End timing
     println!("Time taken for transmuting {} scalars: {:?}", size, duration_transmute);
 
     if print {
-        println!("ICICLE elements (transmuted): {:?}\n", icicle_scalars);
+        println!("ICICLE elements (transmuted): {:?}\n", icicle_transumated_scalars);
     }
 
     //============================================================================================//
@@ -249,7 +285,7 @@ fn main() {
     }
 
     let start_copy_points = Instant::now();
-    let icicle_affine_points = copy_ark_affine_points(&ark_affine_points);
+    let icicle_affine_points = ark_to_icicle_affine_points(&ark_affine_points);
     let duration_copy_points = start_copy_points.elapsed(); // End timing
     println!("Time taken for copy {} affine points: {:?}", size, duration_copy_points);
     if print {
@@ -260,17 +296,14 @@ fn main() {
     //================================ Part 4: copy ark projective ===============================//
     //============================================================================================//
 
-    // Note that arkworks is using twisted-edwards representation, which is different from ICICLE's projective.
+    // Note that arkworks is using Jacobian representation, which is different from ICICLE's projective.
     let ark_projective_points = incremental_ark_projective_points(size);
     if print {
-        println!(
-            "Ark twisted-edwards ec points (incremental): {:?}\n",
-            ark_projective_points
-        );
+        println!("Ark Jacobian ec points (incremental): {:?}\n", ark_projective_points);
     }
 
     let start_copy_points = Instant::now();
-    let icicle_projective_points = copy_ark_projective_points(&ark_projective_points);
+    let icicle_projective_points = ark_to_icicle_projective_points(&ark_projective_points);
     let duration_copy_points = start_copy_points.elapsed(); // End timing
     println!(
         "Time taken for copy {} projective points: {:?}",
@@ -282,4 +315,27 @@ fn main() {
             icicle_projective_points
         );
     }
+
+    //============================================================================================//
+    //================================ Part 5: compute MSM  ======================================//
+    //============================================================================================//
+    let start_ark_msm = Instant::now();
+    let ark_msm_result = ArkProjective::msm(&ark_affine_points, &ark_scalars).unwrap();
+    let ark_msm_duration = start_ark_msm.elapsed(); // End timing
+    println!("Time taken for ark msm : {:?}", ark_msm_duration);
+
+    let mut icicle_msm_result = vec![IcicleProjective::zero()];
+    let start_icicle_msm = Instant::now();
+    msm(
+        &icicle_scalars[..],
+        HostSlice::from_slice(&icicle_affine_points),
+        &MSMConfig::default(),
+        HostSlice::from_mut_slice(&mut icicle_msm_result),
+    )
+    .unwrap();
+    let icicle_msm_duration = start_icicle_msm.elapsed();
+    println!("Time taken for ICICLE msm : {:?}", icicle_msm_duration);
+
+    let ark_res_from_icicle = icicle_to_ark_projective_points(&icicle_msm_result);
+    assert_eq!(ark_res_from_icicle[0], ark_msm_result);
 }
