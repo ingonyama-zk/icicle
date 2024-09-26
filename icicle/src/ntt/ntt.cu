@@ -467,7 +467,6 @@ namespace ntt {
           IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
       }
 
-// #define DCCT
 #ifdef DCCT
       // allocate and calculate twiddles on GPU
       // N * (2 ** (N - 1)) for dcct
@@ -478,11 +477,6 @@ namespace ntt {
       CHK_IF_RETURN(mxntt::generate_twiddles_dcct(
         primitive_root, domain.basic_twiddles, domain.max_log_size, ctx.stream));
 
-      // S* tmp = static_cast<S*>(malloc(number_of_twiddles * sizeof(S)));
-      // cudaMemcpy(tmp, domain.basic_twiddles, number_of_twiddles * sizeof(S), cudaMemcpyDeviceToHost);
-      // for (size_t i = 0; i < number_of_twiddles; i++) {
-      //   std::cout << tmp[i] << std::endl;
-      // }
       domain.coset_index[S::one()] = 0;
 #else
       // allocate and calculate twiddles on GPU
@@ -718,7 +712,6 @@ namespace ntt {
     try {
       coset_index = domain.coset_index.at(config.coset_gen);
     } catch (...) {
-      std::cout << "Computing coset" << std::endl;
       // if coset index is not found in the subgroup, compute coset powers on CPU and move them to device
       std::vector<S> h_coset;
       h_coset.push_back(S::one());
@@ -755,7 +748,6 @@ namespace ntt {
                               ? (is_inverse ? domain.fast_basic_twiddles_inv : domain.fast_basic_twiddles)
                               : domain.basic_twiddles;
         S* linear_twiddles = domain.twiddles; // twiddles organized as [1,w,w^2,...]
-        std::cout << "Calling mixed radix" << std::endl;
         CHK_IF_RETURN(mxntt::mixed_radix_ntt(
           d_input, d_output, twiddles, internal_twiddles, basic_twiddles, linear_twiddles, size, domain.max_log_size,
           batch_size, config.columns_batch, is_inverse, is_fast_twiddles_enabled, config.ordering, coset, coset_index,

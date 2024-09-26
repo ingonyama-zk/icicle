@@ -52,7 +52,7 @@ int main(int argc, char** argv)
   int NTT_LOG_SIZE = (argc > 1) ? atoi(argv[1]) : 6;
   int NTT_SIZE = 1 << NTT_LOG_SIZE;
   bool INPLACE = (argc > 2) ? atoi(argv[2]) : false;
-  int INV = (argc > 3) ? atoi(argv[3]) : true;
+  int INV = (argc > 3) ? atoi(argv[3]) : false;
   int BATCH_SIZE = (argc > 4) ? atoi(argv[4]) : 1;
   bool COLUMNS_BATCH = (argc > 5) ? atoi(argv[5]) : false;
   const ntt::Ordering ordering = (argc > 6) ? ntt::Ordering(atoi(argv[6])) : ntt::Ordering::kNN;
@@ -103,7 +103,6 @@ int main(int argc, char** argv)
 
   // init inputs
   incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
-  // random_samples(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
@@ -112,8 +111,6 @@ int main(int argc, char** argv)
       GpuScalars, GpuScalarsTransposed, NTT_SIZE, BATCH_SIZE);
   }
 
-  // CHK_IF_RETURN(
-  //   ntt::ntt(GpuScalars, NTT_SIZE, INV ? ntt::NTTDir::kInverse : ntt::NTTDir::kForward, ntt_config, GpuOutput));
   auto iterations = 1;
 
   START_TIMER(ntt_timer);
@@ -142,19 +139,6 @@ int main(int argc, char** argv)
       std::cout << CpuOutput[i] << " " << i << std::endl;
   }
   bool success = true;
-  // for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
-  //   // if (i%64==0) printf("\n");
-  //   if (CpuOutputNew[i] != CpuOutput[i]) {
-  //     success = false;
-  //     // std::cout << i << " ref " << CpuOutput[i] << " != " << CpuOutputNew[i] << std::endl;
-  //     // break;
-  //   } else {
-  //     // std::cout << i << " ref " << CpuOutput[i] << " == " << CpuOutputNew[i] << std::endl;
-  //     // break;
-  //   }
-  // }
-  const char* success_str = success ? "SUCCESS!" : "FAIL!";
-  // printf("%s\n", success_str);
 
   CHK_IF_RETURN(cudaFree(GpuScalars));
   CHK_IF_RETURN(cudaFree(GpuOutput));
