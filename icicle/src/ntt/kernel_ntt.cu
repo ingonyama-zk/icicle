@@ -415,24 +415,33 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    if (dit) {
+      engine.loadGlobalData64(in, data_stride, log_data_stride, strided, s_meta);
+    } else {
+      engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
+    }
 
-    // printf(
-    //   "T Before: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-    //   threadIdx.x,
-    //   engine.X[0].limbs_storage.limbs[0],
-    //   engine.X[1].limbs_storage.limbs[0],
-    //   engine.X[2].limbs_storage.limbs[0],
-    //   engine.X[3].limbs_storage.limbs[0],
-    //   engine.X[4].limbs_storage.limbs[0],
-    //   engine.X[5].limbs_storage.limbs[0],
-    //   engine.X[6].limbs_storage.limbs[0],
-    //   engine.X[7].limbs_storage.limbs[0]
-    // );
+    if (s_meta.ntt_block_id < 2)
+      printf(
+        "T Before: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+        threadIdx.x,
+        engine.X[0].limbs_storage.limbs[0],
+        engine.X[1].limbs_storage.limbs[0],
+        engine.X[2].limbs_storage.limbs[0],
+        engine.X[3].limbs_storage.limbs[0],
+        engine.X[4].limbs_storage.limbs[0],
+        engine.X[5].limbs_storage.limbs[0],
+        engine.X[6].limbs_storage.limbs[0],
+        engine.X[7].limbs_storage.limbs[0]
+      );
 #pragma unroll 1
     for (uint32_t phase = 0; phase < 2; phase++) {
       engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 6, inv, dit, phase);
-      engine.ntt8();
+      if (inv) {
+        engine.intt8();
+      } else {
+        engine.ntt8();
+      }
 
       if (phase == 0) {
         engine.SharedData64Columns8(shmem, true, false, strided); // store
@@ -465,7 +474,11 @@ namespace mxntt {
     //   engine.X[7].limbs_storage.limbs[0]
     // );
 
-    engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+    if (dit) {
+      engine.storeGlobalDataDit(out, data_stride, log_data_stride, strided, s_meta);
+    } else {
+      engine.storeGlobalData(out, data_stride, log_data_stride, strided, s_meta);
+    }
   }
 
   template <typename E, typename S>

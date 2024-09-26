@@ -478,11 +478,11 @@ namespace ntt {
       CHK_IF_RETURN(mxntt::generate_twiddles_dcct(
         primitive_root, domain.basic_twiddles, domain.max_log_size, ctx.stream));
 
-      S* tmp = static_cast<S*>(malloc(number_of_twiddles * sizeof(S)));
-      cudaMemcpy(tmp, domain.basic_twiddles, number_of_twiddles * sizeof(S), cudaMemcpyDeviceToHost);
-      for (size_t i = 0; i < number_of_twiddles; i++) {
-        std::cout << tmp[i] << std::endl;
-      }
+      // S* tmp = static_cast<S*>(malloc(number_of_twiddles * sizeof(S)));
+      // cudaMemcpy(tmp, domain.basic_twiddles, number_of_twiddles * sizeof(S), cudaMemcpyDeviceToHost);
+      // for (size_t i = 0; i < number_of_twiddles; i++) {
+      //   std::cout << tmp[i] << std::endl;
+      // }
       domain.coset_index[S::one()] = 0;
 #else
       // allocate and calculate twiddles on GPU

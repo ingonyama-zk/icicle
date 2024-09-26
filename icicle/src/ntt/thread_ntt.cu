@@ -131,6 +131,22 @@ public:
       X[i] = data[s_meta.th_stride * i * data_stride_u64];
     }
   }
+  DEVICE_INLINE void
+  loadGlobalData64(const E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  {
+    const uint64_t data_stride_u64 = data_stride;
+    if (strided) {
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id * 8 +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
+    } else {
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id * 8;
+    }
+
+    UNROLL
+    for (uint32_t i = 0; i < 8; i++) {
+      X[i] = data[i * data_stride_u64];
+    }
+  }
 
   DEVICE_INLINE void
   storeGlobalData(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
@@ -146,6 +162,23 @@ public:
     UNROLL
     for (uint32_t i = 0; i < 8; i++) {
       data[i * data_stride_u64] = X[i];
+    }
+  }
+
+  DEVICE_INLINE void
+  storeGlobalDataDit(E* data, uint32_t data_stride, uint32_t log_data_stride, bool strided, stage_metadata s_meta)
+  {
+    const uint64_t data_stride_u64 = data_stride;
+    if (strided) {
+      data += (s_meta.ntt_block_id & (data_stride - 1)) + data_stride_u64 * s_meta.ntt_inp_id +
+              (s_meta.ntt_block_id >> log_data_stride) * data_stride_u64 * s_meta.ntt_block_size;
+    } else {
+      data += (uint64_t)s_meta.ntt_block_id * s_meta.ntt_block_size + s_meta.ntt_inp_id;
+    }
+
+    UNROLL
+    for (uint32_t i = 0; i < 8; i++) {
+      data[i * 8 * data_stride_u64] = X[i];
     }
   }
 
