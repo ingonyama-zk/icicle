@@ -605,7 +605,7 @@ namespace mxntt {
       engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
     }
 
-    // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
+    if (s_meta.ntt_block_id == 0 || s_meta.ntt_block_id == 1) {
       printf(
         "Before T: %d, I: %d, B: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
         threadIdx.x,
@@ -620,7 +620,7 @@ namespace mxntt {
         engine.X[6].limbs_storage.limbs[0],
         engine.X[7].limbs_storage.limbs[0]
       );
-    // }
+    }
 
     if (dit) {
       if (inv) {
@@ -637,18 +637,18 @@ namespace mxntt {
     }
     // if (s_meta.ntt_block_id < 2) {
     // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
-      printf(
-        "T BEFORE Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        threadIdx.x,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
+      // printf(
+      //   "T BEFORE Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   threadIdx.x,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
     // }
 
     if (dit) {
@@ -663,18 +663,18 @@ namespace mxntt {
 
     // if (s_meta.ntt_block_id < 2) {
     // if (s_meta.ntt_block_id == 8 || s_meta.ntt_block_id == 7) {
-      printf(
-        "T AFTER Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        threadIdx.x,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
+      // printf(
+      //   "T AFTER Transpose: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   threadIdx.x,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
     // }
 
     engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, dit, true);
@@ -693,18 +693,18 @@ namespace mxntt {
     }
 
     // if (s_meta.ntt_block_id < 2) {
-      printf(
-        "T FINAL: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        threadIdx.x,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
+      // printf(
+      //   "T FINAL: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   threadIdx.x,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
     // }
 
     if (dit) {
@@ -1168,7 +1168,7 @@ namespace mxntt {
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, true, inv);
+          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
 #else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -1178,7 +1178,7 @@ namespace mxntt {
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, false, inv);
+          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
 #else
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -1244,7 +1244,7 @@ namespace mxntt {
           columns_batch, 0, inv, dit);
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           out, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
+          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 512,
           inv, dit);
  #else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
