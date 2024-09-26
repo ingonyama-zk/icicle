@@ -1,6 +1,8 @@
-use ark_bn254::Fr; // Fr is the scalar field of BN254
-use ark_ff::{PrimeField, UniformRand}; // Added BigInteger trait import
+use ark_bn254::{Fr, G1Affine, G1Projective};
+use ark_ec::{AffineRepr, CurveGroup};
+use ark_ff::{PrimeField, UniformRand};
 use rand::thread_rng;
+use std::ops::Mul;
 use std::time::Instant;
 
 use icicle_bn254::curve::ScalarField as IcicleBn254Scalar;
@@ -76,23 +78,24 @@ where
     copy_ark_scalars_slice_async(ark_scalars, &IcicleStream::default())
 }
 
+fn incremental_ark_affine_points(size: usize) -> Vec<G1Affine> {
+    let ark_affine_points = (1..=size)
+        .map(|i| {
+            // Incremental scalars times the generator
+            let scalar = Fr::from(i as u64);
+            G1Affine::generator()
+                .mul(&scalar)
+                .into_affine()
+        })
+        .collect();
+    ark_affine_points
+}
+
 fn main() {
+    let mut ark_scalars = incremental_ark_scalars(10);
+    println!("Ark scalars (incremental): {:?}\n", ark_scalars);
     //============================================================================================//
-    //================================ Part 1: transmute ark scalars =============================//
-    //============================================================================================//
-    let mut ark_scalars = incremental_ark_scalars(1 << 20);
-    // println!("Ark scalars (incremental): {:?}\n", ark_scalars);
-
-    // Note that this is reusing the ark-works owned memory and mutates in places (convert from Montgomery representation
-    let start_transmute = Instant::now(); // Start timing                                          )
-    let icicle_scalars: &mut [IcicleBn254Scalar] = transmute_ark_scalars_slice(&mut ark_scalars);
-    let duration_transmute = start_transmute.elapsed(); // End timing
-    println!("Time taken for transmuting: {:?}", duration_transmute);
-
-    // println!("ICICLE elements (transmuted): {:?}\n", icicle_scalars);
-
-    //============================================================================================//
-    //================================ Part 2: copy ark scalars ==================================//
+    //================================ Part 1: copy ark scalars ==================================//
     //============================================================================================//
     let start_copy = Instant::now(); // Start timing
     let icicle_scalars: DeviceVec<IcicleBn254Scalar> = copy_ark_scalars_slice(&ark_scalars);
@@ -106,9 +109,33 @@ fn main() {
     let duration_copy = start_copy.elapsed(); // End timing
     println!("Time taken for dispatching async copy: {:?}", duration_copy);
 
-    // println!("ICICLE scalar (copied): {:?}\n", icicle_scalars);
+    let mut h_icicle_scalars = vec![IcicleBn254Scalar::zero(); 10];
+    stream
+        .synchronize()
+        .unwrap();
+    icicle_scalars
+        .copy_to_host(HostSlice::from_mut_slice(&mut h_icicle_scalars))
+        .unwrap();
+    println!("ICICLE scalar (copied): {:?}\n", &h_icicle_scalars[..]);
 
     stream
         .destroy()
         .unwrap();
+
+    //============================================================================================//
+    //================================ Part 2: transmute ark scalars =============================//
+    //============================================================================================//
+    // Note that this is reusing the ark-works owned memory and mutates in places (convert from Montgomery representation
+    let start_transmute = Instant::now(); // Start timing                                          )
+    let icicle_scalars: &mut [IcicleBn254Scalar] = transmute_ark_scalars_slice(&mut ark_scalars);
+    let duration_transmute = start_transmute.elapsed(); // End timing
+    println!("Time taken for transmuting: {:?}", duration_transmute);
+
+    println!("ICICLE elements (transmuted): {:?}\n", icicle_scalars);
+
+    //============================================================================================//
+    //================================ Part 3: copy ark affine ===================================//
+    //============================================================================================//}
+    let ark_affine_points = incremental_ark_affine_points(10);
+    println!("Ark affine ec points (incremental): {:?}\n", ark_affine_points);
 }
