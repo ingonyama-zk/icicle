@@ -51,23 +51,25 @@ public:
 
   DEVICE_INLINE void loadBasicTwiddlesGeneric(
     S* basic_twiddles,
-    uint32_t tw_order, 
+    uint32_t tw_order,
     uint32_t tw_log_order,
     stage_metadata s_meta,
     uint32_t tw_log_size,
     uint32_t twiddles_offset,
     uint32_t ntt_log_size,
-    bool inv, bool dit, bool phase)
+    bool inv,
+    bool dit,
+    bool phase)
   {
     size_t stage_size = 1 << (tw_log_size - 1);
     size_t tw_size = (1 << tw_log_size) * tw_log_size;
     uint32_t phase_offset = stage_size * phase * (dit ? ntt_log_size - 3 : 3); // 3 is the number of stages
     uint32_t block_offset;
     if (tw_log_order) {
-     block_offset = (s_meta.ntt_block_id & (tw_order - 1))
-                    + (s_meta.ntt_block_id >> tw_log_order) * (1 << tw_log_order - 1) * s_meta.ntt_block_size;
+      block_offset = (s_meta.ntt_block_id & (tw_order - 1)) +
+                     (s_meta.ntt_block_id >> tw_log_order) * (1 << tw_log_order - 1) * s_meta.ntt_block_size;
     } else {
-     block_offset = s_meta.ntt_block_id * (1 << ntt_log_size - 1);
+      block_offset = s_meta.ntt_block_id * (1 << ntt_log_size - 1);
     }
     uint32_t ntt_inp_offset = s_meta.ntt_inp_id * (1 << tw_log_order) * ((phase != dit) ? 4 : 1);
     uint32_t base_exp = phase_offset + twiddles_offset + block_offset + ntt_inp_offset;
@@ -77,9 +79,7 @@ public:
     for (int stage = 0; stage < ((phase != dit) ? ntt_log_size - 3 : 3); stage++) {
       UNROLL
       for (int i = 0; i < 4; i++) {
-        exp = base_exp + i
-          * (tw_order ? tw_order : 1)
-          * (1 << ((phase != dit) ? 0 : ntt_log_size - 3));
+        exp = base_exp + i * (tw_order ? tw_order : 1) * (1 << ((phase != dit) ? 0 : ntt_log_size - 3));
 
         WB[stage * 4 + i] = basic_twiddles[inv ? (tw_size - 1 - exp) : exp];
       }
@@ -268,7 +268,10 @@ public:
     }
   }
 
-#define BF(t, x, y) t = x; x = x + y; y = t - y;
+#define BF(t, x, y)                                                                                                    \
+  t = x;                                                                                                               \
+  x = x + y;                                                                                                           \
+  y = t - y;
 
   DEVICE_INLINE void ntt4_2()
   {
@@ -346,7 +349,10 @@ public:
     BF(T, X[6], X[7]);
   }
 
-#define IBF(t, x, y, tw) t = x; x = x + y; y = (t - y) * tw;
+#define IBF(t, x, y, tw)                                                                                               \
+  t = x;                                                                                                               \
+  x = x + y;                                                                                                           \
+  y = (t - y) * tw;
 
   DEVICE_INLINE void intt4_2()
   {
@@ -971,8 +977,8 @@ public:
 
     X3 = X2 - X1; // X'3 = (X0 - X2) - (X1 - X3) * WB[0]
     X1 = X2 + X1; // X'1 = (X0 - X2) + (X1 - X3) * WB[0]
-    X2 = T - X0; // X'2 = (X0 + X2) - (X1 + X3)
-    X0 = T + X0; // X'0 = (X0 + X2) + (X1 + X3)
+    X2 = T - X0;  // X'2 = (X0 + X2) - (X1 + X3)
+    X0 = T + X0;  // X'0 = (X0 + X2) + (X1 + X3)
   }
 
   // rbo version

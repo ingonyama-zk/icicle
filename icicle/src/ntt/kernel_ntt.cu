@@ -395,8 +395,7 @@ namespace mxntt {
     bool strided,
     uint32_t twiddles_offset,
     bool inv,
-    bool dit
-    )
+    bool dit)
   {
     DCCTEngine<E, S> engine;
     stage_metadata s_meta;
@@ -422,7 +421,8 @@ namespace mxntt {
 
 #pragma unroll 1
     for (uint32_t phase = 0; phase < 2; phase++) {
-      engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 6, inv, dit, phase);
+      engine.loadBasicTwiddlesGeneric(
+        basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 6, inv, dit, phase);
       if (inv) {
         engine.intt8();
       } else {
@@ -458,8 +458,7 @@ namespace mxntt {
     bool strided,
     uint32_t twiddles_offset,
     bool inv,
-    bool dit
-    )
+    bool dit)
   {
     DCCTEngine<E, S> engine;
     stage_metadata s_meta;
@@ -478,7 +477,8 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, false);
+    engine.loadBasicTwiddlesGeneric(
+      basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, false);
     if (dit) {
       engine.loadGlobalData32(in, data_stride, log_data_stride, strided, s_meta);
     } else {
@@ -509,7 +509,8 @@ namespace mxntt {
       engine.SharedData32Rows4_2(shmem, false, false, strided); // load
     }
 
-    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, true);
+    engine.loadBasicTwiddlesGeneric(
+      basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, true);
     if (dit) {
       if (inv) {
         engine.intt8();
@@ -546,8 +547,7 @@ namespace mxntt {
     bool strided,
     uint32_t twiddles_offset,
     bool inv,
-    bool dit
-    )
+    bool dit)
   {
     DCCTEngine<E, S> engine;
     stage_metadata s_meta;
@@ -567,7 +567,8 @@ namespace mxntt {
     if (s_meta.ntt_block_id >= nof_ntt_blocks || (columns_batch_size > 0 && s_meta.batch_id >= columns_batch_size))
       return;
 
-    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, dit, false);
+    engine.loadBasicTwiddlesGeneric(
+      basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, dit, false);
     if (dit) {
       engine.loadGlobalData16(in, data_stride, log_data_stride, strided, s_meta);
     } else {
@@ -598,7 +599,8 @@ namespace mxntt {
       engine.SharedData16Rows2_4(shmem, false, false, strided); // load
     }
 
-    engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, dit, true);
+    engine.loadBasicTwiddlesGeneric(
+      basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 4, inv, dit, true);
     if (dit) {
       if (inv) {
         engine.intt8();
@@ -775,8 +777,15 @@ namespace mxntt {
 
 #ifdef DCCT
   template <typename S, typename R>
-  __global__ void
-  generate_dcct_twiddles_layer(S* basic_twiddles, S* inv_twiddles, R basic_root, R step, uint32_t stage, uint32_t stage_rev, uint32_t stage_size, bool is_first)
+  __global__ void generate_dcct_twiddles_layer(
+    S* basic_twiddles,
+    S* inv_twiddles,
+    R basic_root,
+    R step,
+    uint32_t stage,
+    uint32_t stage_rev,
+    uint32_t stage_size,
+    bool is_first)
   {
     uint32_t tid = blockIdx.x * blockDim.x + threadIdx.x;
     R twiddle = basic_root * (R::pow(step, bit_rev(tid / (1 << stage_rev), stage)));
@@ -785,11 +794,7 @@ namespace mxntt {
   }
 
   template <typename S, typename R>
-  cudaError_t generate_twiddles_dcct(
-    const R& basic_root,
-    S* basic_twiddles,
-    uint32_t log_size,
-    cudaStream_t& stream)
+  cudaError_t generate_twiddles_dcct(const R& basic_root, S* basic_twiddles, uint32_t log_size, cudaStream_t& stream)
   {
     R step = R::pow(basic_root, 4);
     R temp_root = basic_root;
@@ -802,14 +807,16 @@ namespace mxntt {
     S* inv_ptr = stage_ptr + ((stage + 1) * (1 << stage));
     const int NOF_BLOCKS = (stage >= 8) ? (1 << (stage - 8)) : 1;
     const int NOF_THREADS = (stage >= 8) ? 256 : (1 << stage);
-    generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, inv_ptr, temp_root, step, stage, stage_rev, stage_size, true);
+    generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(
+      stage_ptr, inv_ptr, temp_root, step, stage, stage_rev, stage_size, true);
     CHK_IF_RETURN(cudaPeekAtLastError());
 
     for (--stage; stage >= 0; stage--) {
       stage_ptr -= stage_size;
       inv_ptr -= stage_size;
       stage_rev++;
-      generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(stage_ptr, inv_ptr, temp_root, step, stage, stage_rev, stage_size, false);
+      generate_dcct_twiddles_layer<<<NOF_BLOCKS, NOF_THREADS, 0, stream>>>(
+        stage_ptr, inv_ptr, temp_root, step, stage, stage_rev, stage_size, false);
       CHK_IF_RETURN(cudaPeekAtLastError());
 
       temp_root = R::sqr(temp_root);
@@ -1069,8 +1076,8 @@ namespace mxntt {
       if (dit) {
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
+          in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+          columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
 #else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -1079,8 +1086,8 @@ namespace mxntt {
       } else { // dif
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
+          in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+          columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
 #else
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -1098,8 +1105,8 @@ namespace mxntt {
         columns_batch ? ((batch_size + 15) / 16) : (4 * batch_size + NOF_THREADS - 1) / NOF_THREADS;
 #ifdef DCCT
       ntt32_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        in, out, basic_twiddles, log_size, tw_log_size,
-        columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
+        in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size,
+        1, 0, 0, columns_batch, 0, inv, dit);
 #else
       if (dit) {
         ntt32dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
@@ -1122,8 +1129,8 @@ namespace mxntt {
         columns_batch ? ((batch_size + 7) / 8) : ((8 * batch_size + NOF_THREADS - 1) / NOF_THREADS);
 #ifdef DCCT
       ntt64_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-        in, out, basic_twiddles, log_size, tw_log_size,
-        columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size, 1, 0, 0, columns_batch, 0, inv, dit);
+        in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, columns_batch ? 1 : batch_size,
+        1, 0, 0, columns_batch, 0, inv, dit);
 #else
       ntt64<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
         in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
@@ -1141,14 +1148,12 @@ namespace mxntt {
       if (dit) {
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
-          columns_batch, 0, inv, dit);
+          in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 0, inv, dit);
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 512,
-          inv, dit);
- #else
+          out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 512, inv, dit);
+#else
         ntt16dit<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0,
@@ -1161,14 +1166,12 @@ namespace mxntt {
       } else { // dif
 #ifdef DCCT
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          in, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 0,
-          inv, dit);
+          in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 0, inv, dit);
         ntt16_dcct<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
-          out, out, basic_twiddles, log_size, tw_log_size,
-          columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 512,
-          inv, dit);
- #else
+          out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+          (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 1, 0, 0, columns_batch, 512, inv, dit);
+#else
         ntt16<<<NOF_BLOCKS, NOF_THREADS, 8 * 64 * sizeof(E), cuda_stream>>>(
           in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
           columns_batch ? batch_size : 0, (1 << log_size - 4) * (columns_batch ? 1 : batch_size), 16, 4, 16, true, 1,
@@ -1198,36 +1201,33 @@ namespace mxntt {
 #ifdef DCCT
         if (stage_size == 6)
           ntt64_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            i ? out : in, out, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
+            i ? out : in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, nof_ntt_blocks,
+            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
         else if (stage_size == 5)
           ntt32_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            i ? out : in, out, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
+            i ? out : in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, nof_ntt_blocks,
+            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
         else if (stage_size == 4)
           ntt16_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            i ? out : in, out, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
+            i ? out : in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, nof_ntt_blocks,
+            1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
         twiddles_offset += nof_ntt_blocks * stage_size * (1 << stage_size - 1);
 #else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         else if (stage_size == 5)
           ntt32dit<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
         else if (stage_size == 4)
           ntt16dit<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, external_twiddles, internal_twiddles, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, i, inv, dit, fast_tw);
+            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0,
+            i || columns_batch, i, inv, dit, fast_tw);
 #endif
       }
     } else { // dif
@@ -1244,19 +1244,19 @@ namespace mxntt {
 #ifdef DCCT
         if (stage_size == 6)
           ntt64_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
+            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+            nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset,
+            inv, dit);
         else if (stage_size == 5)
           ntt32_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
+            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+            nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset,
+            inv, dit);
         else if (stage_size == 4)
           ntt16_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
-            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size,
-            columns_batch ? batch_size : 0, nof_ntt_blocks, 1 << stride_log,
-            stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
+            first_run ? in : out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
+            nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset,
+            inv, dit);
         twiddles_offset += nof_ntt_blocks * stage_size * (1 << stage_size - 1);
 #else
         if (stage_size == 6)
@@ -1396,10 +1396,7 @@ namespace mxntt {
 
 #ifdef DCCT
   template cudaError_t generate_twiddles_dcct(
-    const quad_extension_t& basic_root,
-    scalar_t* basic_twiddles,
-    uint32_t log_size,
-    cudaStream_t& stream);
+    const quad_extension_t& basic_root, scalar_t* basic_twiddles, uint32_t log_size, cudaStream_t& stream);
 #else
   // Explicit instantiation for scalar type
   template cudaError_t generate_external_twiddles_generic(

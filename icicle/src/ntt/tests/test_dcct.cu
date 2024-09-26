@@ -17,7 +17,6 @@ typedef field_config::scalar_t test_data;
 #include "kernel_ntt.cu"
 #include <memory>
 
-
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
@@ -136,7 +135,7 @@ int main(int argc, char** argv)
     // if (i == 1024)
     //   break;
     // if (i % 128 < 2)
-      std::cout << CpuOutput[i] << " " << i << std::endl;
+    std::cout << CpuOutput[i] << " " << i << std::endl;
   }
   bool success = true;
 

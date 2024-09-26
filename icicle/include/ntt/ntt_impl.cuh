@@ -9,11 +9,7 @@ namespace mxntt {
 // #define DCCT
 #ifdef DCCT
   template <typename S, typename R>
-  cudaError_t generate_twiddles_dcct(
-    const R& basic_root,
-    S* basic_twiddles,
-    uint32_t log_size,
-    cudaStream_t& stream);
+  cudaError_t generate_twiddles_dcct(const R& basic_root, S* basic_twiddles, uint32_t log_size, cudaStream_t& stream);
 #else
   template <typename S>
   cudaError_t generate_external_twiddles_generic(

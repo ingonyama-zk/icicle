@@ -409,8 +409,7 @@ namespace ntt {
 
   public:
     template <typename U, typename R>
-    friend cudaError_t
-    init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+    friend cudaError_t init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
 
     template <typename U>
     friend cudaError_t release_domain(device_context::DeviceContext& ctx);
@@ -474,8 +473,8 @@ namespace ntt {
       size_t number_of_twiddles = domain.max_log_size * (1 << domain.max_log_size);
       CHK_IF_RETURN(cudaMalloc(&domain.basic_twiddles, number_of_twiddles * sizeof(S)));
 
-      CHK_IF_RETURN(mxntt::generate_twiddles_dcct(
-        primitive_root, domain.basic_twiddles, domain.max_log_size, ctx.stream));
+      CHK_IF_RETURN(
+        mxntt::generate_twiddles_dcct(primitive_root, domain.basic_twiddles, domain.max_log_size, ctx.stream));
 
       domain.coset_index[S::one()] = 0;
 #else

@@ -37,8 +37,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S, typename R = S>
-  cudaError_t init_domain(
-    R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
+  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
   /**
    * Releases and deallocates resources associated with the domain initialized for performing NTTs.
