@@ -17,10 +17,3 @@ icicle-bls12-377 = { path = "../../wrappers/rust/icicle-curves/icicle-bls12-377"
 rand = "0.8"
 clap = { version = "<=4.4.12", features = ["derive"] }
 
-[workspace.features]
-cuda = ["icicle-runtime/cuda_backend",
-        "icicle-bn254/cuda_backend",
-        "icicle-bls12-377/cuda_backend",
-        "icicle-bn254/no_ecntt",
-        "icicle-bls12-377/no_ecntt"
-]

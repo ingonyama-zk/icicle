@@ -11,3 +11,12 @@ ark-bn254 = { version = "0.4.0" }
 ark-ff = { version = "0.4.0" }
 ark-ec = { version = "0.4.0" }
 rand = "0.8"
+rayon = "1.5"
+clap = { version = "<=4.4.12", features = ["derive"] }
+
+[features]
+cuda = ["icicle-runtime/cuda_backend",
+        "icicle-bn254/cuda_backend",
+        "icicle-bn254/no_ecntt",
+        "icicle-bn254/no_g2",        
+]

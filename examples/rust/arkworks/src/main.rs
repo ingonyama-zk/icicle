@@ -4,12 +4,34 @@ use ark_ff::{BigInteger, PrimeField};
 use std::ops::Mul;
 use std::time::Instant;
 
+use clap::Parser;
 use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField as IcicleScalar};
 use icicle_core::traits::{FieldImpl, MontgomeryConvertible};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     stream::IcicleStream,
 };
+use rayon::prelude::*;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[arg(short, long, default_value_t = 1<<15)]
+    size: usize,
+
+    /// Device type (e.g., "CPU", "CUDA")
+    #[arg(short, long, default_value = "CPU")]
+    device_type: String,
+}
+
+// Load backend and set device
+fn try_load_and_set_backend_device(args: &Args) {
+    if args.device_type != "CPU" {
+        icicle_runtime::runtime::load_backend_from_env_or_default().unwrap();
+    }
+    println!("Setting device {}", args.device_type);
+    let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
+    icicle_runtime::set_device(&device).unwrap();
+}
 
 // use ark_ff::UniformRand;
 // use rand::thread_rng;
@@ -121,7 +143,7 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
 
 fn copy_ark_affine_points(ark_affine: &[ArkAffine]) -> Vec<IcicleAffine> {
     ark_affine
-        .iter()
+        .par_iter() // parallel
         .map(|ark| IcicleAffine {
             x: from_ark(&ark.x),
             y: from_ark(&ark.y),
@@ -129,10 +151,11 @@ fn copy_ark_affine_points(ark_affine: &[ArkAffine]) -> Vec<IcicleAffine> {
         .collect()
 }
 
+// conversion between Jacobian used in arkworks and projective used in icicle
 fn copy_ark_projective_points(ark_affine: &[ArkProjective]) -> Vec<IcicleProjective> {
-    // conversion between Jacobian used in arkworks and projective used in icicle
+    // Note: this can be accelerated on device (e.g. GPU) if we implement conversion from twisted-edwards
     ark_affine
-        .iter()
+        .par_iter() // parallel
         .map(|ark| {
             let proj_x = ark.x * ark.z;
             let proj_z = ark.z * ark.z * ark.z;
@@ -146,9 +169,17 @@ fn copy_ark_projective_points(ark_affine: &[ArkProjective]) -> Vec<IcicleProject
 }
 
 fn main() {
-    let size = 1 << 12;
+    let args = Args::parse();
+    println!("{:?}", args);
+
+    try_load_and_set_backend_device(&args);
+
+    let size = args.size;
+    let print = size <= 10;
     let mut ark_scalars = incremental_ark_scalars(size);
-    // println!("Ark scalars (incremental): {:?}\n", ark_scalars);
+    if print {
+        println!("Ark scalars (incremental): {:?}\n", ark_scalars);
+    }
     //============================================================================================//
     //================================ Part 1: copy ark scalars ==================================//
     //============================================================================================//
@@ -160,18 +191,20 @@ fn main() {
     // Can dispatch the copy and convert to a stream without blocking the CPU thread (for supported device such as CUDA)
     let start_copy = Instant::now(); // Start timing
     let mut stream = IcicleStream::create().unwrap();
-    let _icicle_scalars: DeviceVec<IcicleScalar> = copy_ark_scalars_slice_async(&ark_scalars, &stream);
+    let icicle_scalars: DeviceVec<IcicleScalar> = copy_ark_scalars_slice_async(&ark_scalars, &stream);
     let duration_copy = start_copy.elapsed(); // End timing
     println!("Time taken for dispatching async copy: {:?}", duration_copy);
 
-    // let mut h_icicle_scalars = vec![IcicleScalar::zero(); 10];
-    // stream
-    //     .synchronize()
-    //     .unwrap();
-    // icicle_scalars
-    //     .copy_to_host(HostSlice::from_mut_slice(&mut h_icicle_scalars))
-    //     .unwrap();
-    // println!("ICICLE scalar (copied): {:?}\n", &h_icicle_scalars[..]);
+    if print {
+        let mut h_icicle_scalars = vec![IcicleScalar::zero(); size];
+        stream
+            .synchronize()
+            .unwrap();
+        icicle_scalars
+            .copy_to_host(HostSlice::from_mut_slice(&mut h_icicle_scalars))
+            .unwrap();
+        println!("ICICLE scalar (copied): {:?}\n", &h_icicle_scalars[..]);
+    }
 
     stream
         .synchronize()
@@ -181,55 +214,58 @@ fn main() {
         .unwrap();
 
     //============================================================================================//
-    //================================ Part 2: transmute ark scalars =============================//
+    //========================== Part 2: transmute ark scalars in-place ==========================//
     //============================================================================================//
     // Note that this is reusing the ark-works owned memory and mutates in places (convert from Montgomery representation
-    let start_transmute = Instant::now(); // Start timing                                          )
-    let _icicle_scalars: &mut [IcicleScalar] = transmute_ark_scalars_slice(&mut ark_scalars);
+    let start_transmute = Instant::now();
+    let icicle_scalars: &mut [IcicleScalar] = transmute_ark_scalars_slice(&mut ark_scalars);
     let duration_transmute = start_transmute.elapsed(); // End timing
     println!("Time taken for transmuting {} scalars: {:?}", size, duration_transmute);
 
-    // println!("ICICLE elements (transmuted): {:?}\n", icicle_scalars);
+    if print {
+        println!("ICICLE elements (transmuted): {:?}\n", icicle_scalars);
+    }
 
     //============================================================================================//
     //================================ Part 3: copy ark affine ===================================//
-    //============================================================================================//}
+    //============================================================================================//
     let ark_affine_points = incremental_ark_affine_points(size);
-    // let ark_projective_points = incremental_ark_projective_points(10);
-    // println!("Ark affine ec points (incremental): {:?}\n", ark_affine_points);
+    if print {
+        println!("Ark affine ec points (incremental): {:?}\n", ark_affine_points);
+    }
 
     let start_copy_points = Instant::now();
-    let _icicle_affine_points = copy_ark_affine_points(&ark_affine_points);
+    let icicle_affine_points = copy_ark_affine_points(&ark_affine_points);
     let duration_copy_points = start_copy_points.elapsed(); // End timing
     println!("Time taken for copy {} affine points: {:?}", size, duration_copy_points);
-    // println!("ICICLE affine ec points (incremental): {:?}\n", icicle_affine_points);
+    if print {
+        println!("ICICLE affine ec points (incremental): {:?}\n", icicle_affine_points);
+    }
 
     //============================================================================================//
-    //================================ Part 3: copy ark projective ===================================//
-    //============================================================================================//}
+    //================================ Part 4: copy ark projective ===============================//
+    //============================================================================================//
 
+    // Note that arkworks is using twisted-edwards representation, which is different from ICICLE's projective.
     let ark_projective_points = incremental_ark_projective_points(size);
-    // println!("Ark projective ec points (incremental): {:?}\n", ark_projective_points);
+    if print {
+        println!(
+            "Ark twisted-edwards ec points (incremental): {:?}\n",
+            ark_projective_points
+        );
+    }
 
     let start_copy_points = Instant::now();
-    let _icicle_projective_points = copy_ark_projective_points(&ark_projective_points);
+    let icicle_projective_points = copy_ark_projective_points(&ark_projective_points);
     let duration_copy_points = start_copy_points.elapsed(); // End timing
     println!(
         "Time taken for copy {} projective points: {:?}",
         size, duration_copy_points
     );
-    // println!(
-    // "ICICLE projective ec points (incremental): {:?}\n",
-    // icicle_projective_points
-    // );
-
-    // for i in 0..2 {
-    //     let affine: IcicleAffine = icicle_projective_points[i].into();
-    //     println!("{:?}", affine);
-    // }
-
-    // for i in 0..2 {
-    //     let affine: ArkAffine = ark_projective_points[i].into();
-    //     println!("{:?}", affine);
-    // }
+    if print {
+        println!(
+            "ICICLE projective ec points (incremental): {:?}\n",
+            icicle_projective_points
+        );
+    }
 }
