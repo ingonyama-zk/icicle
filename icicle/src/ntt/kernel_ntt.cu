@@ -524,19 +524,19 @@ namespace mxntt {
     }
 
     // if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
-      printf(
-        "T BEFORE: B: %d, I: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        s_meta.ntt_block_id,
-        s_meta.ntt_inp_id,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
+      // printf(
+      //   "T BEFORE: B: %d, I: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   s_meta.ntt_block_id,
+      //   s_meta.ntt_inp_id,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
 
     if (dit) {
       if (inv) {
@@ -563,19 +563,19 @@ namespace mxntt {
     }
 
     // if (s_meta.ntt_block_id > 14 && s_meta.ntt_block_id < 18 && s_meta.ntt_inp_id == 0)
-      printf(
-        "T AFTER: B: %d, I: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-        s_meta.ntt_block_id,
-        s_meta.ntt_inp_id,
-        engine.X[0].limbs_storage.limbs[0],
-        engine.X[1].limbs_storage.limbs[0],
-        engine.X[2].limbs_storage.limbs[0],
-        engine.X[3].limbs_storage.limbs[0],
-        engine.X[4].limbs_storage.limbs[0],
-        engine.X[5].limbs_storage.limbs[0],
-        engine.X[6].limbs_storage.limbs[0],
-        engine.X[7].limbs_storage.limbs[0]
-      );
+      // printf(
+      //   "T AFTER: B: %d, I: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+      //   s_meta.ntt_block_id,
+      //   s_meta.ntt_inp_id,
+      //   engine.X[0].limbs_storage.limbs[0],
+      //   engine.X[1].limbs_storage.limbs[0],
+      //   engine.X[2].limbs_storage.limbs[0],
+      //   engine.X[3].limbs_storage.limbs[0],
+      //   engine.X[4].limbs_storage.limbs[0],
+      //   engine.X[5].limbs_storage.limbs[0],
+      //   engine.X[6].limbs_storage.limbs[0],
+      //   engine.X[7].limbs_storage.limbs[0]
+      // );
 
     engine.loadBasicTwiddlesGeneric(basic_twiddles, twiddle_stride, log_data_stride, s_meta, tw_log_size, twiddles_offset, 5, inv, dit, true);
     if (dit) {
@@ -1515,7 +1515,7 @@ namespace mxntt {
 // #ifndef DCCT
     // reverse_input = eRevType::NaturalToMixedRev;
     reverse_input = eRevType::None;
-    is_normalize = false;
+    // is_normalize = false;
     dit = true;
     if (reverse_input != eRevType::None) {
       const bool is_reverse_in_place = (d_input == d_output);
