@@ -7,7 +7,7 @@ function(set_env)
     if("$ENV{ICICLE_PIC}" STREQUAL "OFF" OR ICICLE_PIC STREQUAL "OFF")
         message(WARNING "Note that PIC (position-independent code) is disabled.")
     else()
-        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON PARENT_SCOPE)
     endif()
 endfunction()
 
