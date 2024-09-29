@@ -12,6 +12,11 @@ fn cuda_include_path() -> &'static str {
     {
         "/usr/local/cuda/include"
     }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        panic!("Currently, ICICLE can only be built for Windows or Linux")
+    }
 }
 
 fn cuda_lib_path() -> &'static str {
@@ -23,6 +28,11 @@ fn cuda_lib_path() -> &'static str {
     #[cfg(target_os = "linux")]
     {
         "/usr/local/cuda/lib64"
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        panic!("Currently, ICICLE can only be built for Windows or Linux")
     }
 }
 

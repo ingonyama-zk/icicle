@@ -130,7 +130,7 @@ namespace m31 {
     {
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];
       uint32_t tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 2^31-1 = 2^31
-      tmp = (tmp >> 31) + (tmp & modulus);                        // max: 1 + 0 = 1 //TODO: changed due to fix? in V3
+      tmp = (tmp >> 31) + (tmp & modulus);                        // max: 1 + 0 = 1
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
