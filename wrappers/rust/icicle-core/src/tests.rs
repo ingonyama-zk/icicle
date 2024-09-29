@@ -62,8 +62,8 @@ where
         .copy_from_host(HostSlice::from_slice(&scalars))
         .unwrap();
 
-    F::to_mont(&mut d_scalars[..], &stream);
-    F::from_mont(&mut d_scalars[..], &stream);
+    F::to_mont(&mut d_scalars, &stream);
+    F::from_mont(&mut d_scalars, &stream);
 
     let mut scalars_copy = vec![F::zero(); size];
     d_scalars
@@ -92,10 +92,10 @@ where
         .copy_from_host(HostSlice::from_slice(&affine_points))
         .unwrap();
 
-    Affine::<C>::to_mont(&mut d_affine[..], &IcicleStream::default())
+    Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default())
         .wrap()
         .unwrap();
-    Affine::<C>::from_mont(&mut d_affine[..], &IcicleStream::default())
+    Affine::<C>::from_mont(&mut d_affine, &IcicleStream::default())
         .wrap()
         .unwrap();
 
@@ -112,10 +112,10 @@ where
         .copy_from_host(HostSlice::from_slice(&proj_points))
         .unwrap();
 
-    Projective::<C>::to_mont(&mut d_proj[..], &IcicleStream::default())
+    Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default())
         .wrap()
         .unwrap();
-    Projective::<C>::from_mont(&mut d_proj[..], &IcicleStream::default())
+    Projective::<C>::from_mont(&mut d_proj, &IcicleStream::default())
         .wrap()
         .unwrap();
 

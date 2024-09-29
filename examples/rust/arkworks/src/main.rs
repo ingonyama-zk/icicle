@@ -128,7 +128,7 @@ where
         .unwrap();
 
     // Convert from Montgomery representation using the Icicle type's conversion method
-    I::from_mont(&mut icicle_scalars[..], &stream);
+    I::from_mont(&mut icicle_scalars, &stream);
     icicle_scalars
 }
 
@@ -274,7 +274,7 @@ fn main() {
     let mut icicle_msm_result = vec![IcicleProjective::zero()];
     let start = Instant::now();
     msm(
-        &icicle_scalars_dev[..],
+        &icicle_scalars_dev,
         HostSlice::from_slice(&icicle_affine_points),
         &MSMConfig::default(),
         HostSlice::from_mut_slice(&mut icicle_msm_result),
