@@ -50,7 +50,6 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
     }
 }
 
-// Note: Implementing the trait for DeviceSlice such that functions expecting DeviceSlice can take a HostOrDeviceSlice without being a breaking change
 impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     fn is_on_device(&self) -> bool {
         true
@@ -82,6 +81,8 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     }
 }
 
+// Note: Implementing the trait for DeviceVec such that functions expecting DeviceSlice reference can take a HostOrDeviceSlice reference without being a breaking change.
+// Otherwise the syntax would be &device_vec[..] rather than &device_vec which would be a breaking change.
 impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
     fn is_on_device(&self) -> bool {
         // Forward to the dereferenced DeviceSlice
