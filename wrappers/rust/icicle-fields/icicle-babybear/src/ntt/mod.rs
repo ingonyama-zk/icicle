@@ -1,4 +1,4 @@
-use crate::field::{ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{QuarticExtensionField, ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTT};
@@ -15,12 +15,12 @@ impl_ntt_without_domain!(
     ScalarCfg,
     NTT,
     "_ntt",
-    ExtensionField
+    QuarticExtensionField
 );
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::{ExtensionField, ScalarField};
+    use super::{QuarticExtensionField, ScalarField};
     use icicle_core::{
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir},
         traits::{FieldImpl, GenerateRandom},
@@ -68,7 +68,7 @@ pub(crate) mod tests {
                 assert_eq!(Into::<[u32; 1]>::into(*s1)[0], s2.as_u32());
             }
 
-            let mut ext_scalars: Vec<ExtensionField> = <ExtensionField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut ext_scalars: Vec<QuarticExtensionField> = <QuarticExtensionField as FieldImpl>::Config::generate_random(ntt_size);
             let mut ext_scalars_risc0: Vec<ExtElem> = ext_scalars
                 .iter()
                 .map(|x| ExtElem::from_u32_words(&Into::<[u32; 4]>::into(*x)[..]))
@@ -133,8 +133,8 @@ pub(crate) mod tests {
 
             type Plonky3Extension = BinomialExtensionField<BabyBear, 4>;
 
-            let mut ext_scalars: Vec<ExtensionField> =
-                <ExtensionField as FieldImpl>::Config::generate_random(nrows * ntt_size);
+            let mut ext_scalars: Vec<QuarticExtensionField> =
+                <QuarticExtensionField as FieldImpl>::Config::generate_random(nrows * ntt_size);
             let ext_scalars_p3: Vec<Plonky3Extension> = ext_scalars
                 .iter()
                 .map(|x| {

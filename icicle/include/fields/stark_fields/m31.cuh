@@ -3,7 +3,7 @@
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
 #include "fields/quartic_extension.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "fields/complex_extension.cuh"
 
 #include <thread>
 #include <vector>
@@ -130,7 +130,7 @@ namespace m31 {
     {
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];
       uint32_t tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 2^31-1 = 2^31
-      tmp = (xs.storage >> 31) + (xs.storage & modulus);          // max: 1 + 0 = 1
+      tmp = (tmp >> 31) + (tmp & modulus);                        // max: 1 + 0 = 1 //TODO: changed due to fix? in V3
       return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
@@ -243,9 +243,9 @@ namespace m31 {
     static constexpr storage_array<omegas_count, limbs_count> inv = {{{0x40000000}}};
 
     // nonresidue to generate the extension field
-    static constexpr uint32_t nonresidue = 11;
+    static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
-    static constexpr bool nonresidue_is_negative = false;
+    static constexpr bool nonresidue_is_negative = true;
   };
 
   /**
@@ -254,8 +254,17 @@ namespace m31 {
   typedef MersenneField<fp_config> scalar_t;
 
   /**
-   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef ExtensionField<fp_config, scalar_t> extension_t;
-  typedef CExtensionField<fp_config, scalar_t> cextension_t;
+  typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
+
+  /**
+   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
+
+  /**
+   * The default extension type
+   */
+  typedef q_extension_t extension_t;
 } // namespace m31

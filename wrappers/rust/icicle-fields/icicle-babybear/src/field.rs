@@ -14,14 +14,14 @@ impl_scalar_field!(
     "babybear_extension",
     babybear_extension,
     EXTENSION_LIMBS,
-    ExtensionField,
+    QuarticExtensionField,
     ExtensionCfg,
     Fr
 );
 
 #[cfg(test)]
 mod tests {
-    use super::{ExtensionField, ScalarField};
+    use super::{QuarticExtensionField, ScalarField};
     use icicle_core::impl_field_tests;
     use icicle_core::tests::*;
 
@@ -29,6 +29,6 @@ mod tests {
     mod extension {
         use super::*;
 
-        impl_field_tests!(ExtensionField);
+        impl_field_tests!(QuarticExtensionField);
     }
 }
