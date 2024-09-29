@@ -31,12 +31,13 @@ namespace icicle {
         : m_layer_hashes(layer_hashes), m_leaf_element_size(leaf_element_size),
           m_output_store_min_layer(output_store_min_layer)
     {
-      ICICLE_ASSERT(output_store_min_layer < layer_hashes.size()) << 
-        "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree. (nof_layers=" 
+      ICICLE_ASSERT(output_store_min_layer < layer_hashes.size())
+        << "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree. "
+           "(nof_layers="
         << layer_hashes.size() << ", output_store_min_layer=" << output_store_min_layer << ")\n";
 
-      ICICLE_ASSERT(layer_hashes[0].input_default_chunk_size() % leaf_element_size == 0) << 
-        "A whole number of leaves must be fitted into the hashes of the first layer.\n";
+      ICICLE_ASSERT(layer_hashes[0].input_default_chunk_size() % leaf_element_size == 0)
+        << "A whole number of leaves must be fitted into the hashes of the first layer.\n";
     }
 
     virtual ~MerkleTreeBackend() = default;

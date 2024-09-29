@@ -123,9 +123,15 @@ namespace icicle {
      */
     template <typename T>
     inline eIcicleError get_merkle_proof(
-      const T* leaves, uint64_t nof_leaves, uint64_t leaf_idx, bool is_pruned, const MerkleTreeConfig& config, MerkleProof& merkle_proof /*output*/) const
+      const T* leaves,
+      uint64_t nof_leaves,
+      uint64_t leaf_idx,
+      bool is_pruned,
+      const MerkleTreeConfig& config,
+      MerkleProof& merkle_proof /*output*/) const
     {
-      return get_merkle_proof(reinterpret_cast<const std::byte*>(leaves), nof_leaves * sizeof(T), leaf_idx, is_pruned, config, merkle_proof);
+      return get_merkle_proof(
+        reinterpret_cast<const std::byte*>(leaves), nof_leaves * sizeof(T), leaf_idx, is_pruned, config, merkle_proof);
     }
 
     /**
@@ -146,7 +152,7 @@ namespace icicle {
 
       // Hash the leaves into hash_results
       uint hash_output_size = layer_hashes[0].output_size();
-      std::vector <std::byte> hash_results(hash_output_size);
+      std::vector<std::byte> hash_results(hash_output_size);
       layer_hashes[0].hash(leaf, hash_input_size, hash_config, hash_results.data());
 
       auto [path, path_size] = merkle_proof.get_path();
@@ -154,15 +160,15 @@ namespace icicle {
         // update the pointer to the selected leaf by dividing it by the shrinking factor of the hash
         leaf_element_start = (leaf_element_start / hash_input_size) * hash_output_size;
 
-        // Calculate the previous hash result offset inside the current hash input 
-        hash_input_size  = layer_hashes[layer_idx].input_default_chunk_size();
+        // Calculate the previous hash result offset inside the current hash input
+        hash_input_size = layer_hashes[layer_idx].input_default_chunk_size();
         hash_output_size = layer_hashes[layer_idx].output_size();
         const int element_offset_in_path = leaf_element_start % hash_input_size;
 
         if (merkle_proof.is_pruned()) {
           // build an input vector to the next hash layer based on the siblings from the path
           const uint siblings_size = hash_input_size - hash_results.size();
-          std::vector <std::byte> hash_inputs(path, path + siblings_size);
+          std::vector<std::byte> hash_inputs(path, path + siblings_size);
           path += siblings_size;
 
           // push the hash results from previous layer to the right offset
@@ -171,15 +177,14 @@ namespace icicle {
           // run current layer hash
           hash_results.resize(hash_output_size);
           layer_hashes[layer_idx].hash(hash_inputs.data(), hash_input_size, hash_config, hash_results.data());
-        }
-        else {  // not pruned
+        } else { // not pruned
           // check that the hash result from previous layer matches the element in the path
-          if (std::memcmp(hash_results.data(), path+element_offset_in_path, hash_results.size())) {
+          if (std::memcmp(hash_results.data(), path + element_offset_in_path, hash_results.size())) {
             // Comparison failed. No need to continue check
             valid = false;
             return eIcicleError::SUCCESS;
           }
-          // run current layer hash 
+          // run current layer hash
           hash_results.resize(hash_output_size);
           layer_hashes[layer_idx].hash(path, hash_input_size, hash_config, hash_results.data());
           path += hash_input_size;
@@ -189,7 +194,7 @@ namespace icicle {
       // Copare the last hash result with the root
       auto [root, root_size] = merkle_proof.get_root();
       valid = !std::memcmp(hash_results.data(), root, root_size);
-      return eIcicleError::SUCCESS; 
+      return eIcicleError::SUCCESS;
     }
 
   private:

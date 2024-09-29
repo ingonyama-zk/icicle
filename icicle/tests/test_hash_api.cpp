@@ -94,7 +94,10 @@ TEST_F(HashApiTest, Keccak256)
 class HashSumBackend : public HashBackend
 {
 public:
-  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size) : HashBackend("HashSum", output_size, input_chunk_size) {}
+  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size)
+      : HashBackend("HashSum", output_size, input_chunk_size)
+  {
+  }
 
   eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
   {
@@ -128,7 +131,6 @@ public:
     return Hash(backend);
   }
 };
-
 
 TEST_F(HashApiTest, MerkleTreeBasic)
 {
@@ -164,7 +166,6 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, true, config, merkle_proof));
   ICICLE_CHECK(merkle_tree.verify(merkle_proof, verification_valid));
   ASSERT_TRUE(verification_valid);
-
 }
 #ifdef POSEIDON
 
