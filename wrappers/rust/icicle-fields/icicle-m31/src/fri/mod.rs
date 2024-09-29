@@ -1,4 +1,4 @@
-use crate::field::{ExtensionField, ScalarField};
+use crate::field::{QuarticExtensionField, ScalarField};
 use icicle_core::error::IcicleResult;
 use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device::check_device;
@@ -89,10 +89,10 @@ fn check_fri_args<'a, F, S>(
 }
 
 pub fn fold_line(
-    eval: &(impl HostOrDeviceSlice<ExtensionField> + ?Sized),
+    eval: &(impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     domain_elements: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
-    folded_eval: &mut (impl HostOrDeviceSlice<ExtensionField> + ?Sized),
-    alpha: ExtensionField,
+    folded_eval: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
+    alpha: QuarticExtensionField,
     cfg: &FriConfig,
 ) -> IcicleResult<()> {
     let cfg = check_fri_args(eval, domain_elements, folded_eval, cfg);
@@ -110,10 +110,10 @@ pub fn fold_line(
 }
 
 pub fn fold_circle_into_line(
-    eval: &(impl HostOrDeviceSlice<ExtensionField> + ?Sized),
+    eval: &(impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     domain_elements: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
-    folded_eval: &mut (impl HostOrDeviceSlice<ExtensionField> + ?Sized),
-    alpha: ExtensionField,
+    folded_eval: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
+    alpha: QuarticExtensionField,
     cfg: &FriConfig,
 ) -> IcicleResult<()> {
     let cfg = check_fri_args(eval, domain_elements, folded_eval, cfg);
@@ -131,25 +131,25 @@ pub fn fold_circle_into_line(
 }
 
 mod _fri {
-    use super::{CudaError, ExtensionField, FriConfig, ScalarField};
+    use super::{CudaError, QuarticExtensionField, FriConfig, ScalarField};
 
     extern "C" {
         #[link_name = "m31_fold_line"]
         pub(crate) fn fold_line(
-            line_eval: *const ExtensionField,
+            line_eval: *const QuarticExtensionField,
             domain_elements: *const ScalarField,
-            alpha: &ExtensionField,
-            folded_eval: *mut ExtensionField,
+            alpha: &QuarticExtensionField,
+            folded_eval: *mut QuarticExtensionField,
             n: u64,
             cfg: *const FriConfig,
         ) -> CudaError;
 
         #[link_name = "m31_fold_circle_into_line"]
         pub(crate) fn fold_circle_into_line(
-            circle_eval: *const ExtensionField,
+            circle_eval: *const QuarticExtensionField,
             domain_elements: *const ScalarField,
-            alpha: &ExtensionField,
-            folded_line_eval: *mut ExtensionField,
+            alpha: &QuarticExtensionField,
+            folded_line_eval: *mut QuarticExtensionField,
             n: u64,
             cfg: *const FriConfig,
         ) -> CudaError;
@@ -159,7 +159,7 @@ mod _fri {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::field::{ExtensionField, ScalarField};
+    use crate::field::{QuarticExtensionField, ScalarField};
     use icicle_core::traits::FieldImpl;
     use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
     use std::iter::zip;
@@ -175,10 +175,10 @@ pub(crate) mod tests {
         ];
         let evals_as_extension = evals_raw
             .into_iter()
-            .map(|val: u32| ExtensionField::from_u32(val))
-            .collect::<Vec<ExtensionField>>();
+            .map(|val: u32| QuarticExtensionField::from_u32(val))
+            .collect::<Vec<QuarticExtensionField>>();
         let eval = HostSlice::from_slice(evals_as_extension.as_slice());
-        let mut d_eval = DeviceVec::<ExtensionField>::cuda_malloc(DEGREE).unwrap();
+        let mut d_eval = DeviceVec::<QuarticExtensionField>::cuda_malloc(DEGREE).unwrap();
         d_eval
             .copy_from_host(eval)
             .unwrap();
@@ -196,11 +196,11 @@ pub(crate) mod tests {
             .unwrap();
 
         // Alloc folded_evals
-        let mut folded_eval_raw = vec![ExtensionField::zero(); DEGREE / 2];
+        let mut folded_eval_raw = vec![QuarticExtensionField::zero(); DEGREE / 2];
         let folded_eval = HostSlice::from_mut_slice(folded_eval_raw.as_mut_slice());
-        let mut d_folded_eval = DeviceVec::<ExtensionField>::cuda_malloc(DEGREE / 2).unwrap();
+        let mut d_folded_eval = DeviceVec::<QuarticExtensionField>::cuda_malloc(DEGREE / 2).unwrap();
 
-        let alpha = ExtensionField::from_u32(19283);
+        let alpha = QuarticExtensionField::from_u32(19283);
         let cfg = FriConfig::default();
 
         let res = fold_line(&d_eval[..], &d_domain_elements[..], &mut d_folded_eval[..], alpha, &cfg);
@@ -210,8 +210,8 @@ pub(crate) mod tests {
         let expected_folded_evals_raw: [u32; DEGREE / 2] = [547848116, 1352534073, 2053322292, 341725613];
         let expected_folded_evals_extension = expected_folded_evals_raw
             .into_iter()
-            .map(|val: u32| ExtensionField::from_u32(val))
-            .collect::<Vec<ExtensionField>>();
+            .map(|val: u32| QuarticExtensionField::from_u32(val))
+            .collect::<Vec<QuarticExtensionField>>();
         let expected_folded_evals = expected_folded_evals_extension.as_slice();
 
         d_folded_eval
@@ -244,10 +244,10 @@ pub(crate) mod tests {
         ];
         let circle_eval_as_extension = circle_eval_raw
             .into_iter()
-            .map(|val: u32| ExtensionField::from_u32(val))
-            .collect::<Vec<ExtensionField>>();
+            .map(|val: u32| QuarticExtensionField::from_u32(val))
+            .collect::<Vec<QuarticExtensionField>>();
         let circle_eval = HostSlice::from_slice(circle_eval_as_extension.as_slice());
-        let mut d_circle_eval = DeviceVec::<ExtensionField>::cuda_malloc(DEGREE).unwrap();
+        let mut d_circle_eval = DeviceVec::<QuarticExtensionField>::cuda_malloc(DEGREE).unwrap();
         d_circle_eval
             .copy_from_host(circle_eval)
             .unwrap();
@@ -268,11 +268,11 @@ pub(crate) mod tests {
             .copy_from_host(domain_elements)
             .unwrap();
 
-        let mut folded_eval_raw = vec![ExtensionField::zero(); DEGREE / 2];
+        let mut folded_eval_raw = vec![QuarticExtensionField::zero(); DEGREE / 2];
         let folded_eval = HostSlice::from_mut_slice(folded_eval_raw.as_mut_slice());
-        let mut d_folded_eval = DeviceVec::<ExtensionField>::cuda_malloc(DEGREE / 2).unwrap();
+        let mut d_folded_eval = DeviceVec::<QuarticExtensionField>::cuda_malloc(DEGREE / 2).unwrap();
 
-        let alpha = ExtensionField::one();
+        let alpha = QuarticExtensionField::one();
         let cfg = FriConfig::default();
 
         let res = fold_circle_into_line(
@@ -293,8 +293,8 @@ pub(crate) mod tests {
         ];
         let expected_folded_evals_extension = expected_folded_evals_raw
             .into_iter()
-            .map(|val: u32| ExtensionField::from_u32(val))
-            .collect::<Vec<ExtensionField>>();
+            .map(|val: u32| QuarticExtensionField::from_u32(val))
+            .collect::<Vec<QuarticExtensionField>>();
         let expected_folded_evals = expected_folded_evals_extension.as_slice();
 
         d_folded_eval
