@@ -189,6 +189,7 @@ macro_rules! impl_scalar_field {
                 values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
                 stream: &IcicleStream,
             ) -> eIcicleError {
+                use icicle_core::vec_ops::VecOpsConfig;
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
                     panic!("input not allocated on the active device");
@@ -209,6 +210,7 @@ macro_rules! impl_scalar_field {
                 values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
                 stream: &IcicleStream,
             ) -> eIcicleError {
+                use icicle_core::vec_ops::VecOpsConfig;
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
                     panic!("input not allocated on the active device");
