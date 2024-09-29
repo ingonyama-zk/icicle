@@ -140,6 +140,18 @@ where
     ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default())
 }
 
+// Note that you can also do the following but it's slower and we prefer the result in device memory
+// fn ark_to_icicle_scalars<T, I>(ark_scalars: &[T]) -> Vec<I>
+// where
+//     T: PrimeField,
+//     I: FieldImpl,
+// {
+//     ark_scalars
+//         .par_iter()
+//         .map(|ark| from_ark(ark))
+//         .collect()
+// }
+
 // Note: can convert scalars back to Ark if need to by from_mont() or to_ark()
 
 //============================================================================================//
@@ -206,14 +218,14 @@ fn main() {
     //================================ Part 1: copy ark scalars ==================================//
     //============================================================================================//
     let start = Instant::now();
-    let icicle_scalars: DeviceVec<IcicleScalar> = ark_to_icicle_scalars(&ark_scalars);
+    let icicle_scalars_dev: DeviceVec<IcicleScalar> = ark_to_icicle_scalars(&ark_scalars);
     let duration = start.elapsed();
     println!("Time taken for copying {} scalars: {:?}", args.size, duration);
 
     // Can also do it async using a stream
     let mut stream = IcicleStream::create().unwrap();
     let start = Instant::now();
-    let _icicle_scalars: DeviceVec<IcicleScalar> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
+    let _icicle_scalars_dev: DeviceVec<IcicleScalar> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
     let duration = start.elapsed();
     println!("Time taken for dispatching async copy: {:?}", duration);
 
@@ -262,7 +274,7 @@ fn main() {
     let mut icicle_msm_result = vec![IcicleProjective::zero()];
     let start = Instant::now();
     msm(
-        &icicle_scalars[..],
+        &icicle_scalars_dev[..],
         HostSlice::from_slice(&icicle_affine_points),
         &MSMConfig::default(),
         HostSlice::from_mut_slice(&mut icicle_msm_result),
