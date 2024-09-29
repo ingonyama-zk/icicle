@@ -65,7 +65,7 @@ namespace icicle {
         // handle completed task
         if (task->is_completed()) {
           if (task->m_layer_idx == nof_layers - 1) { // Root processed
-            //print_tree(leaves, leaves_size);
+            // print_tree(leaves, leaves_size);
             return eIcicleError::SUCCESS;
           }
           const uint64_t completed_layer_idx = task->m_layer_idx;
@@ -161,7 +161,7 @@ namespace icicle {
       }
 
       copy_to_path_from_store_min_layer(input_chunk_offset, is_pruned, path);
-      //print_proof(merkle_proof);
+      // print_proof(merkle_proof);
       return eIcicleError::SUCCESS;
     }
 
