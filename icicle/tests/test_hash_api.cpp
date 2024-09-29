@@ -152,7 +152,7 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   ICICLE_CHECK(merkle_tree.build(leaves, nof_leaves, config));
 
   // get root and merkle-path to an element
-  uint64_t leaf_idx = 5;
+  uint64_t leaf_idx = 17;
   auto [root, root_size] = merkle_tree.get_merkle_root();
   MerkleProof merkle_proof{};
   ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, false, config, merkle_proof));

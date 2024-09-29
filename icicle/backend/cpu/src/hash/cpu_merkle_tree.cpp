@@ -139,12 +139,13 @@ namespace icicle {
 
         // build the sub tree
         const uint64_t sub_tree_leaves_size = l0_total_input_size * m_layers[0].m_nof_hashes / m_layers[m_output_store_min_layer].m_nof_hashes;
-        const uint64_t sub_tree_input_chunk_offset = element_offset / sub_tree_leaves_size * sub_tree_leaves_size;
-        const std::byte *sub_tree_leaves = &(leaves[sub_tree_input_chunk_offset]);
+        const uint64_t sub_tree_leaves_offset = (element_offset / sub_tree_leaves_size) * sub_tree_leaves_size;
+        const std::byte *sub_tree_leaves = &(leaves[sub_tree_leaves_offset]);
         sub_tree.build(sub_tree_leaves, sub_tree_leaves_size, config);
         
         // retrive from the sub tree the path and incremenet path
-        sub_tree.copy_to_path_from_store_min_layer(input_chunk_offset, is_pruned, path);
+        const uint64_t sub_tree_input_chunk_offset = element_offset % sub_tree_leaves_size;
+        sub_tree.copy_to_path_from_store_min_layer(sub_tree_input_chunk_offset, is_pruned, path);
       }
       
       copy_to_path_from_store_min_layer(input_chunk_offset, is_pruned, path);
@@ -353,16 +354,16 @@ namespace icicle {
     }
 
     // restore the proof path from the tree
-    void copy_to_path_from_store_min_layer(uint64_t& input_chunk_offset, bool is_prooned, std::byte* &path) const {
+    void copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_prooned, std::byte* &path) const {
       const u_int64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
       for (int layer_idx = m_output_store_min_layer; layer_idx < m_layers.size()-1; layer_idx++) {
         const uint64_t copy_range_size  =  m_layers[layer_idx+1].m_hash.input_default_chunk_size();  
         const uint64_t one_element_size = m_layers[layer_idx].m_hash.output_size();
-        const uint64_t element_start    =  input_chunk_offset * m_layers[layer_idx].m_hash.output_size() / m_layers[layer_idx].m_hash.input_default_chunk_size();
-        input_chunk_offset =  (element_start / copy_range_size) * copy_range_size;
+        const uint64_t element_start    =  input_chunk_offset * m_layers[layer_idx].m_nof_hashes / total_input_size * one_element_size;
+        const uint64_t copy_chunk_start =  (element_start / copy_range_size) * copy_range_size;
         auto& cur_layer_result =  m_layers[layer_idx].m_results;
 
-        for (int byte_idx = input_chunk_offset; byte_idx < input_chunk_offset + copy_range_size; byte_idx++) {
+        for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (!is_prooned ||
               byte_idx < element_start ||                       // copy data before the element
               element_start + one_element_size <= byte_idx)  {   // copy data after the element
