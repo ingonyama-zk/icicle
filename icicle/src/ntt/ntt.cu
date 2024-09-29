@@ -469,6 +469,8 @@ namespace ntt {
       CHK_IF_RETURN(mxntt::generate_external_twiddles_generic(
         primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
         ctx.stream));
+      
+      fast_twiddles_mode &= domain.max_log_size >= 4; // fast twiddles cannot be built for smaller domain
 
       if (fast_twiddles_mode) {
         // generating fast-twiddles (note that this cost 4N additional memory)
