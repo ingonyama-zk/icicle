@@ -19,7 +19,7 @@ use rayon::prelude::*;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long, default_value_t = 1 << 12)]
+    #[arg(short, long, default_value_t = 1 << 18)]
     size: usize,
 
     /// Device type (e.g., "CPU", "CUDA")
@@ -269,7 +269,10 @@ fn main() {
     )
     .unwrap();
     let duration = start.elapsed();
-    println!("Time taken for ICICLE MSM: {:?}", duration);
+    println!(
+        "Time taken for ICICLE MSM (scalars on device, points on host): {:?}",
+        duration
+    );
 
     // convert the ICICLE result back to Ark projective and compare
     let ark_res_from_icicle = icicle_to_ark_projective_points(&icicle_msm_result);
