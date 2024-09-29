@@ -28,6 +28,10 @@ type VecOpsConfig struct {
 	*  non-blocking and you'll need to synchronize it explicitly by calling
 	*  `SynchronizeStream`. If set to false, the function will block the current CPU thread. */
 	IsAsync bool
+	/* If true then vec_a, vec_b are in montgomery form. Default value: false. */
+	IsInputInMontgomeryForm bool
+	/* If true then result is in montgomery form. Default value: false. */
+	IsResultInMontgomeryForm bool
 }
 
 /**
@@ -42,6 +46,8 @@ func DefaultVecOpsConfig() VecOpsConfig {
 		false, // isBOnDevice
 		false, // isResultOnDevice
 		false, // IsAsync
+		false, // IsInputInMontgomeryForm
+		false, // IsResultInMontgomeryForm
 	}
 
 	return config
