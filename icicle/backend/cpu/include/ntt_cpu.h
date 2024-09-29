@@ -1,7 +1,10 @@
 #pragma once
 #include "icicle/utils/log.h"
 #include "ntt_tasks_manager.h"
+#include "ntt_utils.h"
 #include <_types/_uint32_t.h>
+#include <cstdint>
+#include <deque>
 
 using namespace field_config;
 using namespace icicle;
@@ -29,8 +32,8 @@ namespace ntt_cpu {
         ntt_tasks_manager(ntt_data.ntt_sub_logn, logn),
         // tasks_manager(std::thread::hardware_concurrency() - 1) // Initialize TasksManager with nof_threads - 1
         tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1)) // Allocate on the heap
+        // tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(1)) // Allocate on the heap //FIXME SHANIE !!
         {
-          coset_stride = find_or_generate_coset(arbitrary_coset);
         }
         eIcicleError run();
 
@@ -42,13 +45,11 @@ namespace ntt_cpu {
     private:
         const E* input;
         NttData<S, E> ntt_data;
-        uint32_t coset_stride;
-        std::unique_ptr<S[]> arbitrary_coset = nullptr;
         NttTasksManager<S, E> ntt_tasks_manager;
         // TasksManager<NttTask<S, E>> tasks_manager;
         std::unique_ptr<TasksManager<NttTask<S, E>>> tasks_manager;
 
-        void coset_mul();
+        void coset_mul(); //FIXME SHANIE - REMOVE
         eIcicleError hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx);
         eIcicleError handle_pushed_tasks(uint32_t hierarchy_1_layer_idx);
         void hierarchy_1_reorder();
@@ -56,7 +57,7 @@ namespace ntt_cpu {
         void reorder_by_bit_reverse();
 
         E* copy_and_reorder_if_needed(const E* input, E* output);
-        uint32_t find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset);
+        // uint32_t find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset);
 
     }; // class NttCpu
 
@@ -68,9 +69,9 @@ namespace ntt_cpu {
   eIcicleError NttCpu<S, E>::run()
   {
     copy_and_reorder_if_needed(input, ntt_data.elements);
-    if (ntt_data.config.coset_gen != S::one() && ntt_data.direction == NTTDir::kForward) {
-      coset_mul();
-    }
+    // if (ntt_data.config.coset_gen != S::one() && ntt_data.direction == NTTDir::kForward) {
+      // coset_mul();
+    // }
     if (ntt_data.ntt_sub_logn.logn > HIERARCHY_1) {
       for (uint32_t hierarchy_1_layer_idx = 0; hierarchy_1_layer_idx < 2; hierarchy_1_layer_idx++) {
         const uint32_t sunbtt_plus_batch_logn = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] + uint32_t(log2(ntt_data.config.batch_size));
@@ -93,13 +94,7 @@ namespace ntt_cpu {
     }
 
 
-    if (ntt_data.direction == NTTDir::kInverse) {
-      S inv_size = S::inv_log_size(ntt_data.ntt_sub_logn.logn);
-      for (uint64_t i = 0; i < ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size; ++i) {
-        ntt_data.elements[i] = ntt_data.elements[i] * inv_size;
-      }
-      if (ntt_data.config.coset_gen != S::one()) { coset_mul(); }
-    }
+    if (ntt_data.direction == NTTDir::kInverse && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
 
     if (ntt_data.config.ordering == Ordering::kNR || ntt_data.config.ordering == Ordering::kRR) {
       reorder_by_bit_reverse();
@@ -208,6 +203,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttCpu<S, E>::coset_mul()
   {
+    //FIXME SHANIE - Remove this function
     uint32_t batch_stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     const bool needs_reorder_input = ntt_data.direction == NTTDir::kForward && (ntt_data.ntt_sub_logn.logn > HIERARCHY_1);
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
@@ -228,10 +224,10 @@ namespace ntt_cpu {
         }
 
         // Apply coset multiplication based on the available coset information
-        if (arbitrary_coset) {
-          current_elements[batch_stride * i] = current_elements[batch_stride * i] * arbitrary_coset[idx];
+        if (ntt_data.arbitrary_coset) {
+          current_elements[batch_stride * i] = current_elements[batch_stride * i] * ntt_data.arbitrary_coset[idx];
         } else {
-          uint32_t twiddle_idx = coset_stride * idx;
+          uint32_t twiddle_idx = ntt_data.coset_stride * idx;
           twiddle_idx = ntt_data.direction == NTTDir::kForward ? twiddle_idx : CpuNttDomain<S>::s_ntt_domain.get_max_size() - twiddle_idx;
           current_elements[batch_stride * i] = current_elements[batch_stride * i] * twiddles[twiddle_idx];
         }
@@ -253,29 +249,29 @@ namespace ntt_cpu {
    *             returns 0 (since the stride is not applicable in this case).
    */
 
-  template <typename S, typename E>
-  uint32_t NttCpu<S, E>::find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset)
-  {
-    uint32_t coset_stride = 0;
+  // template <typename S, typename E>
+  // uint32_t NttCpu<S, E>::find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset)
+  // {
+  //   uint32_t coset_stride = 0;
 
-    if (ntt_data.config.coset_gen != S::one()) {
-      try {
-        coset_stride =
-          CpuNttDomain<S>::s_ntt_domain.get_coset_stride(ntt_data.config.coset_gen); // Coset generator found in twiddles
-      } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
-        int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
-        arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
-        arbitrary_coset[0] = S::one();
-        S coset_gen = 
-          ntt_data.direction == NTTDir::kForward ? ntt_data.config.coset_gen : S::inverse(ntt_data.config.coset_gen); // inverse for INTT
-        for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
-          arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
-        }
-      }
-    }
+  //   if (ntt_data.config.coset_gen != S::one()) {
+  //     try {
+  //       coset_stride =
+  //         CpuNttDomain<S>::s_ntt_domain.get_coset_stride(ntt_data.config.coset_gen); // Coset generator found in twiddles
+  //     } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
+  //       int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
+  //       arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
+  //       arbitrary_coset[0] = S::one();
+  //       S coset_gen = 
+  //         ntt_data.direction == NTTDir::kForward ? ntt_data.config.coset_gen : S::inverse(ntt_data.config.coset_gen); // inverse for INTT
+  //       for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
+  //         arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
+  //       }
+  //     }
+  //   }
 
-    return coset_stride;
-  }
+  //   return coset_stride;
+  // }
 
   /**
    * @brief Reorders elements between layers of hierarchy 1, based on sub-NTT structure.
@@ -391,8 +387,13 @@ namespace ntt_cpu {
       for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
         for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
           if (hierarchy_0_layer_idx == 0) {
-            NttTaskCoordinates* ntt_task_coordinates = new NttTaskCoordinates{hierarchy_1_layer_idx, hierarchy_1_subntt_idx, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false};
-            ntt_tasks_manager.push_task(ntt_task_coordinates);
+            NttTaskCoordinates* ntt_task_coordinates = ntt_tasks_manager.get_slot_for_next_task_coordinates();
+            ntt_task_coordinates->hierarchy_1_layer_idx = hierarchy_1_layer_idx;
+            ntt_task_coordinates->hierarchy_1_subntt_idx = hierarchy_1_subntt_idx;
+            ntt_task_coordinates->hierarchy_0_layer_idx = hierarchy_0_layer_idx;
+            ntt_task_coordinates->hierarchy_0_block_idx = hierarchy_0_block_idx;
+            ntt_task_coordinates->hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
+            ntt_task_coordinates->reorder = false;
           } else {
             ntt_tasks_manager.nof_pending_tasks++;
           }
@@ -469,6 +470,7 @@ namespace ntt_cpu {
   eIcicleError NttCpu<S, E>::handle_pushed_tasks(uint32_t hierarchy_1_layer_idx)
   {
     NttTask<S, E>* task_slot = nullptr;
+    // std::deque<NttTaskCoordinates> completed_tasks_list;
 
     uint32_t nof_subntts_l1 = 1
                          << ((ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
@@ -479,26 +481,34 @@ namespace ntt_cpu {
       if (ntt_tasks_manager.available_tasks()) {
         // Task is available to dispatch
         task_slot = tasks_manager->get_idle_or_completed_task();
-        if (task_slot->is_completed()) { ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1); }
+        if (task_slot->is_completed()) {
+          if(ntt_tasks_manager.handle_completed(task_slot, nof_subntts_l1)){
+            continue;
+          }
+        }
         else {task_slot->set_data(ntt_data);}
-        task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
+        NttTaskCoordinates* next_task_c_ptr = ntt_tasks_manager.get_available_task();
+        task_slot->set_coordinates(next_task_c_ptr);
         task_slot->dispatch();
-        ntt_tasks_manager.erase_task_from_available_tasks_list();
+        // ICICLE_LOG_DEBUG << "[NttCpu]\tDispatched task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
       } else {
         // Wait for available tasks
         task_slot = tasks_manager->get_completed_task();
-        ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1);
+        if(ntt_tasks_manager.handle_completed(task_slot, nof_subntts_l1)){
+          continue; 
+        }
         if (ntt_tasks_manager.available_tasks()) {
-          task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
+          NttTaskCoordinates* next_task_c_ptr = ntt_tasks_manager.get_available_task();
+          task_slot->set_coordinates(next_task_c_ptr);
+          // ICICLE_LOG_DEBUG << "[NttCpu]\tDispatched task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
           task_slot->dispatch();
-          ntt_tasks_manager.erase_task_from_available_tasks_list();
         } else {
           task_slot->set_idle();
         }
       }
     }
     while (true) {
-      task_slot = tasks_manager->get_completed_task(); // Get the last task (reorder task)
+      task_slot = tasks_manager->get_completed_task();
       if (task_slot == nullptr) {
         break;
       } else {

@@ -4,12 +4,13 @@
 #include "cpu_ntt_domain.h"
 
 #include <_types/_uint32_t.h>
+#include <csetjmp>
 #include <sys/types.h>
 #include <deque>
 #include <functional>
 #include <unordered_map>
 
-#define HIERARCHY_1 15
+#define HIERARCHY_1 22
 
 namespace ntt_cpu {
 
@@ -26,8 +27,13 @@ namespace ntt_cpu {
   constexpr uint32_t layers_sub_logn[31][3] = {
     {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
     {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
-    {8, 8, 0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0},
+    // {8,8,0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0}, //FIXME SHANIE - choose best and remove
+    {5,5, 6},   {5, 5, 7},   {5, 5, 8},   {5,5, 9},  {5, 5, 10}, {5, 5, 11}, {5, 5, 12}, {12, 11, 0},
     {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
+
+
+
+
 
   /**
    * @brief Represents the log sizes of sub-NTTs in the NTT computation hierarchy.
@@ -79,8 +85,24 @@ namespace ntt_cpu {
     E* const elements;
     const NTTConfig<S>& config;
     const NTTDir direction;
+    uint32_t coset_stride=0;
+    std::unique_ptr<S[]> arbitrary_coset = nullptr;
     NttData(uint32_t logn, E* elements, const NTTConfig<S>& config, NTTDir direction)
         : ntt_sub_logn(logn), elements(elements), config(config), direction(direction) {
+          if (config.coset_gen != S::one()) {
+            try {
+              coset_stride = CpuNttDomain<S>::s_ntt_domain.get_coset_stride(config.coset_gen); // Coset generator found in twiddles
+            } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
+              int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
+              arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
+              arbitrary_coset[0] = S::one();
+              S coset_gen = direction == NTTDir::kForward ? config.coset_gen : S::inverse(config.coset_gen); // inverse for INTT
+              for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
+                arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
+                // ICICLE_LOG_INFO << "NTT test: arbitrary_coset[" << i << "]=" << arbitrary_coset[i];
+              }
+            }
+          }
         }
   };
 

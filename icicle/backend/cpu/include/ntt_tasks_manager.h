@@ -74,27 +74,40 @@ namespace ntt_cpu {
     NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn);
 
     // Add a new task to the ntt_task_manager
-    eIcicleError push_task(NttTaskCoordinates* ntt_task_coordinates);
+    eIcicleError push_task(const NttTaskCoordinates& ntt_task_coordinates);
     // void add_pending_tasks(uint32_t pending_tasks){ nof_pending_tasks += pending_tasks; }
 
     // Set a task as completed and update dependencies
-    eIcicleError handle_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1);
+    bool handle_completed(NttTask<S, E>* completed_task, uint32_t nof_subntts_l1);
+    NttTaskCoordinates* get_slot_for_next_task_coordinates();
 
-    bool tasks_to_do() { return !available_tasks_list.empty() || nof_pending_tasks!=0; }
-    bool available_tasks() { return !available_tasks_list.empty(); }
-    NttTaskCoordinates* get_available_task() { return available_tasks_list.front(); }
+    // bool tasks_to_do() { return !available_tasks_list.empty() || nof_pending_tasks!=0; }
+    // bool available_tasks() { return !available_tasks_list.empty(); }
+    // NttTaskCoordinates* get_available_task() { return available_tasks_list.front(); }
 
-    eIcicleError erase_task_from_available_tasks_list()
-    {
-      available_tasks_list.pop_front();
-      return eIcicleError::SUCCESS;
-    }
+    bool tasks_to_do() const;
+    bool available_tasks() const;
+    NttTaskCoordinates* get_available_task();
+
+    // eIcicleError erase_task_from_available_tasks_list()
+    // {
+    //   available_tasks_list.pop_front();
+    //   return eIcicleError::SUCCESS;
+    // }
     uint32_t nof_pending_tasks = 0;
 
   private:
     const NttSubLogn& ntt_sub_logn; // Reference to NttSubLogn
     std::vector<TasksDependenciesCounters> counters;      // Dependencies counters by layer
-    std::deque<NttTaskCoordinates*> available_tasks_list; // List of tasks ready to run
+    // std::deque<NttTaskCoordinates*> available_tasks_list; // List of tasks ready to run
+    std::vector<NttTaskCoordinates> task_buffer;
+    size_t head;
+    size_t tail;
+
+    bool is_full() const;
+    bool is_empty() const;
+    void increment(size_t& index);
+    void decrement(size_t& index);
   };
 
 
@@ -217,10 +230,35 @@ namespace ntt_cpu {
   template <typename S, typename E>
   NttTasksManager<S, E>::NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn)
       : ntt_sub_logn(ntt_sub_logn_ref),
-        counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_logn_ref, 0))
+        counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_logn_ref, 0)),
+        task_buffer(1<<(logn-1)), // Pre-allocate buffer
+        head(0),
+        tail(0),
+        nof_pending_tasks(0)
+
   {
     if (logn > HIERARCHY_1) { counters[1] = TasksDependenciesCounters(ntt_sub_logn_ref, 1); }
   }
+
+  template <typename S, typename E>
+  bool NttTasksManager<S, E>::is_full() const {
+    return (tail + 1) % (1<<(ntt_sub_logn.logn-1)) == head;
+  }
+
+  template <typename S, typename E>
+  bool NttTasksManager<S, E>::is_empty() const {
+    return head == tail && nof_pending_tasks == 0;
+  }
+
+  template <typename S, typename E>
+  void NttTasksManager<S, E>::increment(size_t& index) {
+    index = (index + 1) % (1<<(ntt_sub_logn.logn-1));
+  }
+  template <typename S, typename E>
+  void NttTasksManager<S, E>::decrement(size_t& index) {
+    index = (index - 1) % (1<<(ntt_sub_logn.logn-1));
+  }
+
 
   /**
    * @brief Adds a new task to the task manager.
@@ -228,17 +266,107 @@ namespace ntt_cpu {
    * @return Status indicating success or failure.
    */
   template <typename S, typename E>
-  eIcicleError NttTasksManager<S, E>::push_task(NttTaskCoordinates* ntt_task_coordinates)
+  eIcicleError NttTasksManager<S, E>::push_task(const NttTaskCoordinates& ntt_task_coordinates)
   {
-    available_tasks_list.push_back(ntt_task_coordinates);
-    // if (ntt_task_coordinates->hierarchy_0_layer_idx == 0) {
-    //   available_tasks_list.push_back(ntt_task_coordinates);
-    // } 
-    // else {
-    //   nof_pending_tasks++;
-    // }
+    if (is_full()) {
+        return eIcicleError::OUT_OF_MEMORY;
+    }
+    task_buffer[tail] = ntt_task_coordinates;
+    // ICICLE_LOG_INFO << "[Manager]\tPushed task to idx: " << tail;
+    // ICICLE_LOG_INFO << "[Manager]\tPushed task: " << ntt_task_coordinates.hierarchy_1_layer_idx << ", " << ntt_task_coordinates.hierarchy_1_subntt_idx << ", " << ntt_task_coordinates.hierarchy_0_layer_idx << ", " << ntt_task_coordinates.hierarchy_0_block_idx << ", " << ntt_task_coordinates.hierarchy_0_subntt_idx << ", " << ntt_task_coordinates.reorder;
+    increment(tail);
     return eIcicleError::SUCCESS;
   }
+
+  template <typename S, typename E>
+  NttTaskCoordinates* NttTasksManager<S, E>::get_slot_for_next_task_coordinates(){
+    if (is_full()) {
+      return nullptr;
+    }
+    NttTaskCoordinates* task = &task_buffer[tail];
+    // ICICLE_LOG_INFO << "[Manager]\tGoing to push task to idx: " << tail;
+    increment(tail);
+    return task;
+  }
+
+
+  template <typename S, typename E>
+  NttTaskCoordinates* NttTasksManager<S, E>::get_available_task() {
+    if (head == tail) {
+      // No available tasks
+      return nullptr;
+    }
+    NttTaskCoordinates* task = &task_buffer[head];
+    // ICICLE_LOG_INFO << "[Manager]\tPopped task from idx: " << head;
+    increment(head);
+    // NttTaskCoordinates* task = &task_buffer[tail-1];
+    // ICICLE_LOG_INFO << "[Manager]\tPopped task from idx: " << tail-1;
+    // decrement(tail);
+    return task;
+  }
+
+  template <typename S, typename E>
+  bool NttTasksManager<S, E>::tasks_to_do() const {
+    return head != tail || nof_pending_tasks != 0;
+  }
+
+  template <typename S, typename E>
+  bool NttTasksManager<S, E>::available_tasks() const {
+    return head != tail;
+  }
+
+
+  template <typename S, typename E>
+  bool NttTasksManager<S, E>::handle_completed(NttTask<S, E>* completed_task, uint32_t nof_subntts_l1)
+  {
+    bool task_dispatched = false;
+    NttTaskCoordinates task_c = *completed_task->get_coordinates();
+    uint32_t nof_hierarchy_0_layers = counters[task_c.hierarchy_1_layer_idx].get_nof_hierarchy_0_layers();
+    // Update dependencies in counters
+    if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c)) {
+      if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
+        NttTaskCoordinates* next_task_c_ptr = nullptr;
+        uint32_t nof_new_ready_tasks = (task_c.hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1) ? 1 : counters[task_c.hierarchy_1_layer_idx].get_dependent_subntt_count(task_c.hierarchy_0_layer_idx + 1);
+        uint32_t stride = nof_subntts_l1 / nof_new_ready_tasks;
+
+        for (uint32_t i = 0; i < nof_new_ready_tasks; i++) {
+          next_task_c_ptr = get_slot_for_next_task_coordinates();
+          next_task_c_ptr->hierarchy_1_layer_idx = task_c.hierarchy_1_layer_idx;
+          next_task_c_ptr->hierarchy_1_subntt_idx = task_c.hierarchy_1_subntt_idx;
+          next_task_c_ptr->hierarchy_0_layer_idx = task_c.hierarchy_0_layer_idx + 1;
+          next_task_c_ptr->hierarchy_0_block_idx = (task_c.hierarchy_0_layer_idx == 0) ? task_c.hierarchy_0_block_idx : task_c.hierarchy_0_subntt_idx + stride * i;
+          next_task_c_ptr->hierarchy_0_subntt_idx = (task_c.hierarchy_0_layer_idx == 0) ? i : 0;
+          // ICICLE_LOG_INFO << "[handle_completed]\tPushed task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
+          if (i == 0) {
+            completed_task->set_coordinates(get_available_task());
+            completed_task->dispatch();
+            task_dispatched = true;
+            // ICICLE_LOG_DEBUG << "[handle_completed]\tDispatched task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
+          }
+          nof_pending_tasks--;
+        }
+      } else {
+        // Reorder the output
+        NttTaskCoordinates* next_task_c_ptr = nullptr;
+        next_task_c_ptr = get_slot_for_next_task_coordinates();
+        next_task_c_ptr->hierarchy_1_layer_idx = task_c.hierarchy_1_layer_idx;
+        next_task_c_ptr->hierarchy_1_subntt_idx = task_c.hierarchy_1_subntt_idx;
+        next_task_c_ptr->hierarchy_0_layer_idx = nof_hierarchy_0_layers;
+        next_task_c_ptr->hierarchy_0_block_idx = 0;
+        next_task_c_ptr->hierarchy_0_subntt_idx = 0;
+        next_task_c_ptr->reorder = true;
+        // ICICLE_LOG_INFO << "[handle_completed]\tPushed task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
+        completed_task->set_coordinates(get_available_task());
+        completed_task->dispatch();
+        task_dispatched = true;
+        // ICICLE_LOG_DEBUG << "[handle_completed]\tDispatched task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
+        nof_pending_tasks--;
+      }
+    }
+    // completed_task.delete_data(); // TODO SHANIE - how to clean up the data?
+    return task_dispatched;
+  }
+
 
   /**
    * @brief Marks a task as completed and updates dependencies.
@@ -246,31 +374,31 @@ namespace ntt_cpu {
    * @param nof_subntts_l1 Number of sub-NTTs in the second layer of hierarchy 1.
    * @return Status indicating success or failure.
    */
-  template <typename S, typename E>
-  eIcicleError NttTasksManager<S, E>::handle_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1)
-  {
-    NttTaskCoordinates task_c = *completed_task.get_coordinates();
-    uint32_t nof_hierarchy_0_layers = counters[task_c.hierarchy_1_layer_idx].get_nof_hierarchy_0_layers();
-    // Update dependencies in counters
-    if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c)) {
-      if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
-        uint32_t nof_new_ready_tasks = (task_c.hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1) ? 1 : counters[task_c.hierarchy_1_layer_idx].get_dependent_subntt_count(task_c.hierarchy_0_layer_idx + 1);
-        uint32_t stride = nof_subntts_l1 / nof_new_ready_tasks;
-        for (uint32_t i = 0; i < nof_new_ready_tasks; i++) {
-          NttTaskCoordinates* next_task_c_ptr = task_c.hierarchy_0_layer_idx == 0 ? new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, task_c.hierarchy_0_block_idx, i} 
-                                        /*task_c.hierarchy_0_layer_idx==1*/ : new NttTaskCoordinates{ task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, (task_c.hierarchy_0_subntt_idx + stride * i), 0};
-          available_tasks_list.push_back(next_task_c_ptr);
-          nof_pending_tasks--;
-        }
-      } else {
-        // Reorder the output
-        NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, nof_hierarchy_0_layers, 0, 0, true};
-        available_tasks_list.push_back(next_task_c_ptr);
-        nof_pending_tasks--;
-      }
-    }
-    completed_task.delete_data();
-    return eIcicleError::SUCCESS;
-  }
+  // template <typename S, typename E>
+  // eIcicleError NttTasksManager<S, E>::handle_completed(NttTask<S, E>& completed_task, uint32_t nof_subntts_l1)
+  // {
+  //   NttTaskCoordinates task_c = *completed_task.get_coordinates();
+  //   uint32_t nof_hierarchy_0_layers = counters[task_c.hierarchy_1_layer_idx].get_nof_hierarchy_0_layers();
+  //   // Update dependencies in counters
+  //   if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c)) {
+  //     if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
+  //       uint32_t nof_new_ready_tasks = (task_c.hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1) ? 1 : counters[task_c.hierarchy_1_layer_idx].get_dependent_subntt_count(task_c.hierarchy_0_layer_idx + 1);
+  //       uint32_t stride = nof_subntts_l1 / nof_new_ready_tasks;
+  //       for (uint32_t i = 0; i < nof_new_ready_tasks; i++) {
+  //         NttTaskCoordinates* next_task_c_ptr = task_c.hierarchy_0_layer_idx == 0 ? new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, task_c.hierarchy_0_block_idx, i} 
+  //                                       /*task_c.hierarchy_0_layer_idx==1*/ : new NttTaskCoordinates{ task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, task_c.hierarchy_0_layer_idx + 1, (task_c.hierarchy_0_subntt_idx + stride * i), 0};
+  //         available_tasks_list.push_back(next_task_c_ptr);
+  //         nof_pending_tasks--;
+  //       }
+  //     } else {
+  //       // Reorder the output
+  //       NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c.hierarchy_1_layer_idx, task_c.hierarchy_1_subntt_idx, nof_hierarchy_0_layers, 0, 0, true};
+  //       available_tasks_list.push_back(next_task_c_ptr);
+  //       nof_pending_tasks--;
+  //     }
+  //   }
+  //   completed_task.delete_data();
+  //   return eIcicleError::SUCCESS;
+  // }
 } // namespace ntt_cpu
 
