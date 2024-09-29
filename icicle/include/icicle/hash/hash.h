@@ -22,7 +22,7 @@ namespace icicle {
      *
      * @param backend A shared pointer to a backend hash implementation.
      */
-    explicit Hash(std::shared_ptr<HashBackend> backend) : m_backend(std::move(backend)) {}
+    explicit Hash(std::shared_ptr<HashBackend> backend = nullptr) : m_backend(std::move(backend)) {}
 
     /**
      * @brief Perform a hash operation.

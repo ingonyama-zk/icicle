@@ -38,5 +38,6 @@ if (HASH)
         src/hash/cpu_keccak.cpp
         src/hash/cpu_merkle_tree.cpp
     )
+    target_include_directories(icicle_hash PUBLIC include)
 endif()
 

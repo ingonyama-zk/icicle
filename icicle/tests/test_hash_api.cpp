@@ -94,19 +94,16 @@ TEST_F(HashApiTest, Keccak256)
 class HashSumBackend : public HashBackend
 {
 public:
-  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size)
-      : HashBackend("HashSumTest", output_size, input_chunk_size)
-  {
-  }
+  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size) : HashBackend("HashSum", output_size, input_chunk_size) {}
 
   eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
   {
     const auto chunk_size = get_single_chunk_size(size);
-    const auto otput_digest_size = output_size();
+    const auto output_digest_size = output_size();
     for (int i = 0; i < config.batch; ++i) {
       hash_single(input, size, config, output);
       input += chunk_size;
-      output += otput_digest_size;
+      output += output_digest_size;
     }
     return eIcicleError::SUCCESS;
   }
@@ -132,12 +129,12 @@ public:
   }
 };
 
-TEST_F(HashApiTest, MerkleTree)
+
+TEST_F(HashApiTest, MerkleTreeBasic)
 {
   // define input
   constexpr int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
-  const size_t input_size = sizeof(leaves);
   for (int i = 0; i < nof_leaves; ++i) {
     leaves[i] = i;
   }
@@ -149,22 +146,26 @@ TEST_F(HashApiTest, MerkleTree)
   auto layer2_hash = HashSumBackend::create(20, 8); // input 20 bytes, output 8 bytes         20B  ->  8B    output
   auto leaf_element_size = 4;
   auto merkle_tree =
-    MerkleTree::create({layer0_hash, layer1_hash, layer2_hash}, leaf_element_size, 2 /*min level to store*/);
+    MerkleTree::create({layer0_hash, layer1_hash, layer2_hash}, leaf_element_size, 1 /*min level to store*/);
 
   // build tree
-  ICICLE_CHECK(merkle_tree.build(leaves, input_size, config));
+  ICICLE_CHECK(merkle_tree.build(leaves, nof_leaves, config));
 
   // get root and merkle-path to an element
   uint64_t leaf_idx = 5;
   auto [root, root_size] = merkle_tree.get_merkle_root();
   MerkleProof merkle_proof{};
-  ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, leaf_idx, config, merkle_proof));
+  ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, false, config, merkle_proof));
 
   bool verification_valid = false;
   ICICLE_CHECK(merkle_tree.verify(merkle_proof, verification_valid));
   ASSERT_TRUE(verification_valid);
-}
 
+  ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, true, config, merkle_proof));
+  ICICLE_CHECK(merkle_tree.verify(merkle_proof, verification_valid));
+  ASSERT_TRUE(verification_valid);
+
+}
 #ifdef POSEIDON
 
 #include "icicle/fields/field_config.h"

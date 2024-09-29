@@ -119,14 +119,16 @@ const std::byte* icicle_merkle_tree_get_root(icicle::MerkleTree* tree, size_t* o
 eIcicleError icicle_merkle_tree_get_proof(
   icicle::MerkleTree* tree,
   const std::byte* leaves,
+  uint64_t leaves_size,
   uint64_t leaf_idx,
+  bool is_pruned,
   const icicle::MerkleTreeConfig* config,
   icicle::MerkleProof* merkle_proof)
 {
   if (!tree || !leaves || !config || !merkle_proof) { return eIcicleError::INVALID_POINTER; }
 
   try {
-    return tree->get_merkle_proof(leaves, leaf_idx, *config, *merkle_proof);
+    return tree->get_merkle_proof(leaves, leaves_size, leaf_idx, is_pruned, *config, *merkle_proof);
   } catch (...) {
     return eIcicleError::UNKNOWN_ERROR;
   }
