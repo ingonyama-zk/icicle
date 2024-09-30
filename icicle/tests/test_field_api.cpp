@@ -96,7 +96,7 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
   auto br = TypeParam::to_montgomery(b);
   auto rr = TypeParam::mont_mult(ar,br);
   auto r = TypeParam::from_montgomery(rr);
-  // if (r != a*b){
+  if (r != a*b){
   std::cout << "a: "<< a << std::endl;
   std::cout << "b: "<< b << std::endl;
   std::cout << "ar: "<< ar << std::endl;
@@ -108,7 +108,7 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
   std::cout << "R: "<<TypeParam{TypeParam::get_mont_r()} << std::endl;
   std::cout << "R': "<<TypeParam{TypeParam::get_mont_r_inv()} << std::endl;
   // break;
-  // }
+  }
   ASSERT_EQ(r, a*b);
   // }
   std::ostringstream oss;

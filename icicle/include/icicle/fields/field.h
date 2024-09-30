@@ -820,6 +820,9 @@ public:
   //  add_limbs<TLC, false>(l2_hi.limbs_storage, xs_hi.limbs_storage, r.limbs_storage);
 
     Field r = Wide::get_lower(xs);
+    Field p = Field{get_modulus<1>()};
+    if (p.limbs_storage.limbs[TLC-1] > r.limbs_storage.limbs[TLC-1])
+      return r;
     ff_storage r_reduced = {};
     uint64_t carry = 0;
     carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
@@ -847,6 +850,7 @@ public:
     Wide r = {};
     host_math::multiply_mont_64<TLC>(xs.limbs_storage.limbs64, ys.limbs_storage.limbs64, get_mont_inv_modulus().limbs64, get_modulus<1>().limbs64, r.limbs_storage.limbs64);
     return mont_reduce(r);
+    // return Wide::get_lower(r);
   }
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
