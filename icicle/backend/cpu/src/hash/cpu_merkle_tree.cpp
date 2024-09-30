@@ -6,7 +6,7 @@
 #include "icicle/utils/log.h"
 #include "tasks_manager.h"
 
-#define CONFIG_NOF_THREADS_KEY  "n_threads" // TODO move it similar to n threads in msm
+#define CONFIG_NOF_THREADS_KEY  "n_threads"
 #define NOF_OPERATIONS_PER_TASK 16
 
 namespace icicle {
@@ -21,7 +21,7 @@ namespace icicle {
       // update layers data base with the hashes
       const int nof_layers = layer_hashes.size();
       m_layers.resize(nof_layers);
-      m_prooned_path_size = 0;
+      m_pruned_path_size = 0;
       m_full_path_size = 0;
       for (int layer_idx = 0; layer_idx < nof_layers; ++layer_idx) {
         ICICLE_ASSERT(
@@ -34,9 +34,9 @@ namespace icicle {
         // initialize m_layers with hashes
         m_layers[layer_idx].m_hash = layer_hashes[layer_idx];
 
-        // Calculate m_path_size
+        // Calculate path_size
         if (0 < layer_idx) {
-          m_prooned_path_size +=
+          m_pruned_path_size +=
             layer_hashes[layer_idx].input_default_chunk_size() - layer_hashes[layer_idx - 1].output_size();
           m_full_path_size += layer_hashes[layer_idx].input_default_chunk_size();
         }
@@ -47,10 +47,13 @@ namespace icicle {
     eIcicleError build(const std::byte* leaves, uint64_t leaves_size, const MerkleTreeConfig& config) override
     {
       TasksManager<HashTask> task_manager(get_nof_workers(config)); // Run workers.
-      ICICLE_ASSERT(!m_tree_already_built) << "Tree cannot be built more than one time";
-      const int nof_layers = m_layers.size();
+      if (m_tree_already_built) {
+        ICICLE_LOG_ERROR << "Tree cannot be built more than one time\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
       m_tree_already_built = true; // Set the tree status as built
-      uint64_t l0_segment_idx = 0; // Index for the chunk of hashes from layer 0 to send
+      uint64_t l0_segment_idx = 0; // Index for the segment of hashes from layer 0 to send
+      const int nof_layers = m_layers.size();
       init_layers_db(config);
       const uint64_t nof_segments_at_l0 =
         (m_layers[0].m_nof_hashes + NOF_OPERATIONS_PER_TASK - 1) / NOF_OPERATIONS_PER_TASK;
@@ -58,9 +61,8 @@ namespace icicle {
       // run until the root is processed
       while (1) {
         HashTask* task = (l0_segment_idx < nof_segments_at_l0) ? // If there are tasks from layer 0 to send
-                           task_manager.get_idle_or_completed_task()
-                                                               : // get any task slot to assign
-                           task_manager.get_completed_task();    // else, only completed tasks are interesting.
+                  task_manager.get_idle_or_completed_task() :    // get any task slot to assign
+                  task_manager.get_completed_task();             // else, only completed tasks are interesting.
 
         // handle completed task
         if (task->is_completed()) {
@@ -90,7 +92,8 @@ namespace icicle {
           const uint64_t nof_hashes_in_seg = std::min(
             m_layers[cur_layer_idx].m_nof_hashes - cur_segment_idx * NOF_OPERATIONS_PER_TASK,
             uint64_t(NOF_OPERATIONS_PER_TASK));
-          ICICLE_ASSERT(nof_hashes_in_seg > 0) << "Edge case negative number of hashes";
+//          ICICLE_ASSERT(
+//             > 0) << "Edge case negative number of hashes"; // Koren what is that for?
           if (cur_segment_iter->second->m_nof_inputs_ready >= cur_hash.input_default_chunk_size() * nof_hashes_in_seg) {
             const std::byte* task_input = (completed_layer_idx < m_output_store_min_layer)
                                             ? cur_segment_iter->second->m_input_data
@@ -117,7 +120,6 @@ namespace icicle {
       return {m_layers.back().m_results.data(), m_layers.back().m_hash.output_size()};
     }
 
-    // TODO: handle leaves_size
     eIcicleError get_merkle_proof(
       const std::byte* leaves,
       uint64_t leaves_size,
@@ -126,12 +128,16 @@ namespace icicle {
       const MerkleTreeConfig& config,
       MerkleProof& merkle_proof) const override
     {
-      ICICLE_ASSERT(m_tree_already_built) << "Tree cannot generate a merkle proof before built";
+      if (!m_tree_already_built) {
+        ICICLE_LOG_ERROR << "Tree cannot generate a merkle proof before built\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
       const uint64_t element_offset = leaf_idx * m_leaf_element_size;
       const int l0_total_input_size = m_layers[0].m_hash.input_default_chunk_size();
-      ICICLE_ASSERT(leaf_idx < m_layers[0].m_nof_hashes * l0_total_input_size)
-        << "Element index out of range. Should be smaller than "
+      if (leaf_idx > m_layers[0].m_nof_hashes * l0_total_input_size) {
+        ICICLE_LOG_ERROR << "Element index out of range. Should be smaller than "
         << m_layers[0].m_nof_hashes * l0_total_input_size / m_leaf_element_size;
+      }
       uint64_t input_chunk_offset = (element_offset / l0_total_input_size) * l0_total_input_size;
 
       // allocate merkle_proof memory
@@ -139,7 +145,7 @@ namespace icicle {
       const auto input_chunk_size = m_layers[0].m_hash.input_default_chunk_size();
       merkle_proof.allocate(is_pruned, leaf_idx, &leaves[input_chunk_offset], input_chunk_size, root, root_size);
 
-      std::byte* path = merkle_proof.allocate_path_and_get_ptr(is_pruned ? m_prooned_path_size : m_full_path_size);
+      std::byte* path = merkle_proof.allocate_path_and_get_ptr(is_pruned ? m_pruned_path_size : m_full_path_size);
 
       // if not all leaves are stored
       if (m_output_store_min_layer != 0) {
@@ -168,7 +174,6 @@ namespace icicle {
     // Debug functions
     eIcicleError print_tree(const std::byte* leaves, uint64_t leaves_size) const
     {
-      ICICLE_ASSERT(m_tree_already_built) << "Tree cannot print before built";
       std::cout << "Print tree:" << std::endl;
       std::cout << "Leaves: size=" << m_leaf_element_size << std::endl;
       print_bytes(leaves, leaves_size / m_leaf_element_size, m_leaf_element_size);
@@ -207,8 +212,14 @@ namespace icicle {
 
     eIcicleError get_hash_result(int layer_index, int hash_index, const std::byte*& hash_result /*OUT*/) const
     {
-      ICICLE_ASSERT(m_tree_already_built) << "Tree cannot get hash result before built";
-      ICICLE_ASSERT(layer_index >= m_output_store_min_layer) << "Layer not saved";
+      if (!m_tree_already_built) {
+        ICICLE_LOG_ERROR << "Tree cannot get hash result before built\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+      if (layer_index < m_output_store_min_layer) {
+        ICICLE_LOG_ERROR << "Layer not saved\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
       auto& layer = m_layers[layer_index];
       uint result_offset = hash_index * layer.m_hash.output_size();
       hash_result = &(layer.m_results[result_offset]);
@@ -268,8 +279,8 @@ namespace icicle {
 
     // private members
     bool m_tree_already_built;        // indicates if build function already called
-    unsigned int m_prooned_path_size; // prooned proof size in bytes
-    unsigned int m_full_path_size;    // non prooned proof size in bytes
+    unsigned int m_pruned_path_size; // pruned proof size in bytes
+    unsigned int m_full_path_size;    // non pruned proof size in bytes
 
     // Data base per layer
     std::vector<LayerDB> m_layers; // data base per layer
@@ -381,7 +392,7 @@ namespace icicle {
     }
 
     // restore the proof path from the tree
-    void copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_prooned, std::byte*& path) const
+    void copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_pruned, std::byte*& path) const
     {
       const u_int64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
       for (int layer_idx = m_output_store_min_layer; layer_idx < m_layers.size() - 1; layer_idx++) {
@@ -394,7 +405,7 @@ namespace icicle {
 
         for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (
-            !is_prooned || byte_idx < element_start ||      // copy data before the element
+            !is_pruned || byte_idx < element_start ||      // copy data before the element
             element_start + one_element_size <= byte_idx) { // copy data after the element
             *path = cur_layer_result[byte_idx];
             path++;

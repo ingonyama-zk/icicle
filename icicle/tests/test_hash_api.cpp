@@ -151,7 +151,11 @@ TEST_F(HashApiTest, MerkleTreeBasic)
     MerkleTree::create({layer0_hash, layer1_hash, layer2_hash}, leaf_element_size, 1 /*min level to store*/);
 
   // build tree
+
+  //START_TIMER(MerkleTree_build)
   ICICLE_CHECK(merkle_tree.build(leaves, nof_leaves, config));
+  //std::cout << "MerkleTree build time: ";
+  //END_TIMER(MerkleTree_build, std::cout, true)
 
   // get root and merkle-path to an element
   uint64_t leaf_idx = 17;
