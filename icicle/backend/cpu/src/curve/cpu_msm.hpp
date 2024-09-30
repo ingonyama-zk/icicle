@@ -191,6 +191,13 @@ public:
   void run_msm(
     const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
+  static unsigned get_optimal_c(unsigned msm_size)
+  {
+    // This seems to be working well but not clear why
+    // TODO Koren: find optimal c. Maybe can use a lookup table if the logic is not clear but consistent for intel/ARM
+    return std::max((int)std::log2(msm_size) - 5, 1);
+  }
+
 private:
   TasksManager<EcAddTask<A, P>> manager; // Tasks manager for multithreading
 
@@ -591,14 +598,16 @@ eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
   int c = config.c;
-  if (c < 1) { c = std::max((int)std::log2(msm_size) - 1, 8); }
+  if (c < 1) { c = Msm<A, P>::get_optimal_c(msm_size); }
   if (scalar_t::NBITS % c == 0) {
-    ICICLE_LOG_DEBUG << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-                     << ") without remainder.\n";
+    ICICLE_LOG_WARNING << "MSM c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
+                       << ") without remainder. Incrementing to a higher c";
   }
   while (scalar_t::NBITS % c == 0) {
     c++;
   }
+
+  ICICLE_LOG_INFO << "c=" << c;
 
   int nof_threads = std::thread::hardware_concurrency();
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
@@ -638,7 +647,7 @@ eIcicleError cpu_msm_precompute_bases(
   A* output_bases) // Pre assigned?
 {
   int c = config.c;
-  if (c < 1) { c = std::max((int)std::log2(nof_bases) - 1, 8); }
+  if (c < 1) { c = Msm<A, P>::get_optimal_c(nof_bases); }
   if (scalar_t::NBITS % c == 0) {
     ICICLE_LOG_ERROR << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
                      << ") without remainder.\n";
