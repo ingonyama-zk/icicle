@@ -6,9 +6,26 @@ project(icicle)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+
+if(ANDROID)
+    message(STATUS "Building for Android")
+    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} CACHE STRING "Toolchain file used for cross-compiling")
+    set(ANDROID_ABI ${ANDROID_ABI} CACHE STRING "Android ABI")
+    set(ANDROID_PLATFORM ${ANDROID_PLATFORM} CACHE STRING "Android platform")
+    set(ANDROID_STL ${ANDROID_STL} CACHE STRING "Android STL")
+    
+endif()
+
+# Include the field.cmake file
+include(cmake/field.cmake)
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/hash.cmake)
+
+# if(ANDROID)
+#   find_package(Threads REQUIRED)
+#   target_link_libraries(icicle_field PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+# endif()    
 
 # Set the default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)

@@ -54,7 +54,14 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   # Add additional feature handling calls here
 
   set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
-  target_link_libraries(icicle_field PUBLIC icicle_device pthread)
+  target_link_libraries(icicle_field PUBLIC icicle_device)
+  if(NOT ANDROID)
+    target_link_libraries(icicle_field PUBLIC icicle_device pthread)
+  else()
+    # Android doesn't need pthread, it's already included in the system
+    target_link_libraries(icicle_field PUBLIC icicle_device)
+  endif()
+
 
   # Ensure FIELD is defined in the cache for backends to see
   set(FIELD "${FIELD}" CACHE STRING "")
