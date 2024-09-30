@@ -8,7 +8,7 @@
 #include "curves/projective.cuh"
 #include "fields/snark_fields/bn254_base.cuh"
 #include "fields/snark_fields/bn254_scalar.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "fields/complex_extension.cuh"
 
 namespace bn254 {
   // G1 and G2 generators
