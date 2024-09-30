@@ -2,7 +2,7 @@
 
 [workspace]
 members = [
-    "arkworks",    
+    "arkworks_icicle_conversions",    
     "msm",    
     "ntt",
     "polynomials",

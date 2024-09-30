@@ -124,7 +124,7 @@ where
 
     let mut icicle_scalars = DeviceVec::<I>::device_malloc_async(ark_scalars.len(), &stream).unwrap();
     icicle_scalars
-        .copy_from_host(&icicle_host_slice)
+        .copy_from_host_async(&icicle_host_slice, &stream)
         .unwrap();
 
     // Convert from Montgomery representation using the Icicle type's conversion method
@@ -137,7 +137,7 @@ where
     T: PrimeField,
     I: FieldImpl + MontgomeryConvertible,
 {
-    ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default())
+    ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default()) // default stream is sync
 }
 
 // Note that you can also do the following but it's slower and we prefer the result in device memory
