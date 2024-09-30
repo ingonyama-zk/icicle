@@ -17,8 +17,6 @@ The Vector Operations API supports the following:
 ```sh
 # for CPU
 ./run.sh -d CPU
-# for CUDA
-./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
 ```
 
 ## What's in the example
