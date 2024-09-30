@@ -1,0 +1,19 @@
+[workspace.package]
+
+[workspace]
+members = [
+    "arkworks_icicle_conversions",    
+    "msm",    
+    "ntt",
+    "polynomials",
+]
+
+[workspace.dependencies]
+# Add any shared dependencies here
+icicle-runtime = { path = "../../wrappers/rust/icicle-runtime" }
+icicle-core = { path = "../../wrappers/rust/icicle-core" }
+icicle-bn254 = { path = "../../wrappers/rust/icicle-curves/icicle-bn254" }
+icicle-bls12-377 = { path = "../../wrappers/rust/icicle-curves/icicle-bls12-377" }
+rand = "0.8"
+clap = { version = "<=4.4.12", features = ["derive"] }
+
