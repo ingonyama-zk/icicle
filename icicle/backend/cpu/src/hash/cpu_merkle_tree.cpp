@@ -61,8 +61,9 @@ namespace icicle {
       // run until the root is processed
       while (1) {
         HashTask* task = (l0_segment_idx < nof_segments_at_l0) ? // If there are tasks from layer 0 to send
-                  task_manager.get_idle_or_completed_task() :    // get any task slot to assign
-                  task_manager.get_completed_task();             // else, only completed tasks are interesting.
+                           task_manager.get_idle_or_completed_task()
+                                                               : // get any task slot to assign
+                           task_manager.get_completed_task();    // else, only completed tasks are interesting.
 
         // handle completed task
         if (task->is_completed()) {
@@ -92,8 +93,8 @@ namespace icicle {
           const uint64_t nof_hashes_in_seg = std::min(
             m_layers[cur_layer_idx].m_nof_hashes - cur_segment_idx * NOF_OPERATIONS_PER_TASK,
             uint64_t(NOF_OPERATIONS_PER_TASK));
-//          ICICLE_ASSERT(
-//             > 0) << "Edge case negative number of hashes"; // Koren what is that for?
+          //          ICICLE_ASSERT(
+          //             > 0) << "Edge case negative number of hashes"; // Koren what is that for?
           if (cur_segment_iter->second->m_nof_inputs_ready >= cur_hash.input_default_chunk_size() * nof_hashes_in_seg) {
             const std::byte* task_input = (completed_layer_idx < m_output_store_min_layer)
                                             ? cur_segment_iter->second->m_input_data
@@ -136,7 +137,7 @@ namespace icicle {
       const int l0_total_input_size = m_layers[0].m_hash.input_default_chunk_size();
       if (leaf_idx > m_layers[0].m_nof_hashes * l0_total_input_size) {
         ICICLE_LOG_ERROR << "Element index out of range. Should be smaller than "
-        << m_layers[0].m_nof_hashes * l0_total_input_size / m_leaf_element_size;
+                         << m_layers[0].m_nof_hashes * l0_total_input_size / m_leaf_element_size;
       }
       uint64_t input_chunk_offset = (element_offset / l0_total_input_size) * l0_total_input_size;
 
@@ -278,9 +279,9 @@ namespace icicle {
     };
 
     // private members
-    bool m_tree_already_built;        // indicates if build function already called
+    bool m_tree_already_built;       // indicates if build function already called
     unsigned int m_pruned_path_size; // pruned proof size in bytes
-    unsigned int m_full_path_size;    // non pruned proof size in bytes
+    unsigned int m_full_path_size;   // non pruned proof size in bytes
 
     // Data base per layer
     std::vector<LayerDB> m_layers; // data base per layer
@@ -405,7 +406,7 @@ namespace icicle {
 
         for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (
-            !is_pruned || byte_idx < element_start ||      // copy data before the element
+            !is_pruned || byte_idx < element_start ||       // copy data before the element
             element_start + one_element_size <= byte_idx) { // copy data after the element
             *path = cur_layer_result[byte_idx];
             path++;
