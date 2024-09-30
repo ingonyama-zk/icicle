@@ -4,22 +4,10 @@
 #include <cassert>
 
 #include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
 #include "icicle/utils/log.h"
+#include "icicle/vec_ops.h"
 
-
-// SP: I undertstand this code is auto-generated, but I can't get scrip/gen_c_api.py to work. 
-
-extern "C" eIcicleError bn254_vector_product(
-  const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result, uint64_t offset, uint64_t  stride);
-
-extern "C" eIcicleError bn254_vector_sum(
-  const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result, uint64_t offset, uint64_t  stride);
-
-extern "C" eIcicleError bn254_vector_div(const bn254::scalar_t* vec_a, const bn254::scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, bn254::scalar_t* output);
-
-// SP: end of my changes
-
+#include "icicle/api/bn254.h"
 using namespace bn254;
 
 #include "examples_utils.h"
@@ -38,19 +26,14 @@ void incremental_values(scalar_t* res, uint32_t count)
 }
 
 void example_element_wise(
-  scalar_t* h_a,
-  scalar_t* h_b, 
-  scalar_t* h_out, 
-  scalar_t* h_out_baseline, 
-  uint64_t N, 
-  VecOpsConfig config) 
+  scalar_t* h_a, scalar_t* h_b, scalar_t* h_out, scalar_t* h_out_baseline, uint64_t N, VecOpsConfig config)
 {
   std::cout << "Running example_element_wise" << std::endl;
-  
+
   std::cout << std::endl << "Element-wise add" << std::endl;
-  START_TIMER(baseline_add);  
+  START_TIMER(baseline_add);
   for (uint64_t i = 0; i < N; i++) {
-    h_out_baseline[i] =  h_a[i] + h_b[i];
+    h_out_baseline[i] = h_a[i] + h_b[i];
   }
   END_TIMER(baseline_add, "Baseline");
 
@@ -63,9 +46,9 @@ void example_element_wise(
   }
 
   std::cout << std::endl << "Element-wise multiply" << std::endl;
-  START_TIMER(baseline_mul);  
+  START_TIMER(baseline_mul);
   for (uint64_t i = 0; i < N; i++) {
-    h_out_baseline[i] =  h_a[i] * h_b[i];
+    h_out_baseline[i] = h_a[i] * h_b[i];
   }
   END_TIMER(baseline_mul, "Baseline");
 
@@ -79,7 +62,7 @@ void example_element_wise(
 
   std::cout << std::endl << "Element-wise divide" << std::endl;
 
-  // START_TIMER(baseline_div);  
+  // START_TIMER(baseline_div);
   // for (uint64_t i = 0; i < N; i++) {
   //   h_out_baseline[i] =  h_a[i] / h_b[i];
   // }
@@ -87,7 +70,7 @@ void example_element_wise(
   std::cout << " Baseline division not yet implemented" << std::endl;
 
   START_TIMER(ew_div);
-  ICICLE_CHECK(bn254_vector_div(h_a, h_b, N, &config, h_out));
+  ICICLE_CHECK(vector_div(h_a, h_b, N, config, h_out));
   END_TIMER(ew_div, "  Icicle");
 
   for (uint64_t i = 0; i < N; i++) {
@@ -97,12 +80,7 @@ void example_element_wise(
   return;
 }
 
-void example_scalar_vector(
-  scalar_t* h_a, 
-  scalar_t* h_out, 
-  scalar_t* h_out_baseline, 
-  uint64_t N, 
-  VecOpsConfig config) 
+void example_scalar_vector(scalar_t* h_a, scalar_t* h_out, scalar_t* h_out_baseline, uint64_t N, VecOpsConfig config)
 {
   std::cout << std::endl << "Running example_scalar_vector" << std::endl;
   std::cout << "Not implemented yet" << std::endl;
@@ -111,39 +89,39 @@ void example_scalar_vector(
 }
 
 void example_reduce(
-  scalar_t* h_a, 
-  scalar_t* h_out, 
-  scalar_t* h_out_baseline, 
-  uint64_t N, 
+  scalar_t* h_a,
+  scalar_t* h_out,
+  scalar_t* h_out_baseline,
+  uint64_t N,
   VecOpsConfig config,
-  uint64_t offset, 
-  uint64_t stride) 
+  uint64_t offset,
+  uint64_t stride)
 {
   std::cout << std::endl << "Running example_reduce" << std::endl;
   std::cout << std::endl << "Sum of vector elements" << std::endl;
-  START_TIMER(baseline_reduce_sum);  
+  START_TIMER(baseline_reduce_sum);
   h_out_baseline[0] = scalar_t::zero();
-  for (uint64_t i = offset; i < N; i=i+stride) {
+  for (uint64_t i = offset; i < N; i = i + stride) {
     h_out_baseline[0] = h_out_baseline[0] + h_a[i];
   }
   END_TIMER(baseline_reduce_sum, "Baseline");
 
   START_TIMER(reduce_sum);
-  ICICLE_CHECK(bn254_vector_sum(h_a, N, &config, h_out, offset, stride));
+  ICICLE_CHECK(vector_sum(h_a, N, config, h_out, offset, stride));
   END_TIMER(reduce_sum, "  Icicle");
 
   assert(h_out[0] == h_out_baseline[0]);
 
   std::cout << std::endl << "Product of vector elements" << std::endl;
-  START_TIMER(baseline_reduce_product);  
+  START_TIMER(baseline_reduce_product);
   h_out_baseline[0] = scalar_t::one();
   for (uint64_t i = offset; i < N; i = i + stride) {
     h_out_baseline[0] = h_out_baseline[0] * h_a[i];
   }
   END_TIMER(baseline_reduce_product, "Baseline");
-  
+
   START_TIMER(reduce_product);
-  ICICLE_CHECK(bn254_vector_product(h_a, N, &config, h_out, offset, stride));
+  ICICLE_CHECK(vector_product(h_a, N, config, h_out, offset, stride));
   END_TIMER(reduce_product, "  Icicle");
 
   assert(h_out[0] == h_out_baseline[0]);
@@ -165,24 +143,17 @@ int main(int argc, char** argv)
   auto h_out = std::make_unique<scalar_t[]>(N);
   auto h_out_baseline = std::make_unique<scalar_t[]>(N);
 
-  random_samples(h_a.get(), N ); 
-  random_samples(h_b.get(), N ); 
+  random_samples(h_a.get(), N);
+  random_samples(h_b.get(), N);
 
-  // incremental_values(h_a.get(), N ); 
-  // incremental_values(h_b.get(), N ); 
+  // incremental_values(h_a.get(), N );
+  // incremental_values(h_b.get(), N );
 
-  VecOpsConfig config{
-    nullptr,
-    false,   // is_a_on_device
-    false,   // is_b_on_device
-    false,   // is_result_on_device
-    false,   // is_async
-    nullptr  // ext
-  };
+  VecOpsConfig config = default_vec_ops_config();
 
   example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
   example_reduce(h_a.get(), h_out.get(), h_out_baseline.get(), N, config, offset, stride);
   example_scalar_vector(h_a.get(), h_out.get(), h_out_baseline.get(), N, config);
-  
+
   return 0;
 }
