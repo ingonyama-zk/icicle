@@ -101,7 +101,7 @@ where
     I: FieldImpl + MontgomeryConvertible,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
-    let icicle_scalars = unsafe { &mut *(&mut ark_scalars[..] as *mut _ as *mut [I]) };
+    let icicle_scalars = unsafe { &mut *(ark_scalars as *mut _ as *mut [I]) };
 
     let icicle_host_slice = HostSlice::from_mut_slice(&mut icicle_scalars[..]);
 
@@ -117,7 +117,7 @@ where
     I: FieldImpl + MontgomeryConvertible,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
-    let icicle_scalars = unsafe { &*(&ark_scalars[..] as *const _ as *const [I]) };
+    let icicle_scalars = unsafe { &*(ark_scalars as *const _ as *const [I]) };
 
     // Create a HostSlice from the mutable slice
     let icicle_host_slice = HostSlice::from_slice(&icicle_scalars[..]);
