@@ -212,7 +212,13 @@ fn main() {
     println!("{:?}", args);
     try_load_and_set_backend_device(&args);
 
+    println!(
+        "Randomizing {} scalars, affine and ark projective (actually Jacobian) points",
+        args.size
+    );
     let ark_scalars = incremental_ark_scalars(args.size);
+    let ark_projective_points = incremental_ark_projective_points(args.size);
+    let ark_affine_points = incremental_ark_affine_points(args.size);
 
     //============================================================================================//
     //================================ Part 1: copy ark scalars ==================================//
@@ -248,7 +254,6 @@ fn main() {
     //============================================================================================//
     //================================ Part 3: copy ark affine ===================================//
     //============================================================================================//
-    let ark_affine_points = incremental_ark_affine_points(args.size);
     let start = Instant::now();
     let icicle_affine_points = ark_to_icicle_affine_points(&ark_affine_points);
     let duration = start.elapsed();
@@ -257,7 +262,6 @@ fn main() {
     //============================================================================================//
     //================================ Part 4: copy ark projective ===============================//
     //============================================================================================//
-    let ark_projective_points = incremental_ark_projective_points(args.size);
     let start = Instant::now();
     let _icicle_projective_points = ark_to_icicle_projective_points(&ark_projective_points);
     let duration = start.elapsed();
@@ -281,12 +285,49 @@ fn main() {
     )
     .unwrap();
     let duration = start.elapsed();
+    let device = icicle_runtime::runtime::get_active_device().unwrap();
     println!(
-        "Time taken for ICICLE MSM (scalars on device, points on host): {:?}",
-        duration
+        "Time taken for ICICLE ({:?}) MSM (scalars on device, points on host): {:?}",
+        device, duration
     );
 
     // convert the ICICLE result back to Ark projective and compare
     let ark_res_from_icicle = icicle_to_ark_projective_points(&icicle_msm_result);
+    assert_eq!(ark_res_from_icicle[0], ark_msm_result);
+
+    //============================================================================================//
+    //======================= Part 5b: compute MSM on device memory  =============================//
+    //============================================================================================//
+
+    let is_device_shraing_host_mem = icicle_runtime::runtime::get_device_properties()
+        .unwrap()
+        .using_host_memory;
+
+    if is_device_shraing_host_mem {
+        println!("Skipping MSM from device memory since device doesn't have global memory");
+        return;
+    }
+
+    // transfer points to device
+    let mut d_icicle_affine_points = DeviceVec::<IcicleAffine>::device_malloc(icicle_affine_points.len()).unwrap();
+    d_icicle_affine_points
+        .copy_from_host(HostSlice::from_slice(&icicle_affine_points[..]))
+        .unwrap();
+
+    let start = Instant::now();
+    msm(
+        &icicle_scalars_dev,
+        &d_icicle_affine_points,
+        &MSMConfig::default(),
+        HostSlice::from_mut_slice(&mut icicle_msm_result),
+    )
+    .unwrap();
+    let duration = start.elapsed();
+    let device = icicle_runtime::runtime::get_active_device().unwrap();
+    println!(
+        "Time taken for ICICLE ({:?}) MSM (scalars on device, points on device): {:?}",
+        device, duration
+    );
+
     assert_eq!(ark_res_from_icicle[0], ark_msm_result);
 }

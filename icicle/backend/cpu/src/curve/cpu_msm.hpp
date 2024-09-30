@@ -195,7 +195,7 @@ public:
   {
     // This seems to be working well but not clear why
     // TODO Koren: find optimal c. Maybe can use a lookup table if the logic is not clear but consistent for intel/ARM
-    return std::max((int)std::log2(msm_size) - 5, 1);
+    return std::max((int)std::log2(msm_size) - 5, 8);
   }
 
 private:
@@ -606,8 +606,6 @@ eIcicleError cpu_msm(
   while (scalar_t::NBITS % c == 0) {
     c++;
   }
-
-  ICICLE_LOG_INFO << "c=" << c;
 
   int nof_threads = std::thread::hardware_concurrency();
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
