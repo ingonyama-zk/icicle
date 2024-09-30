@@ -5,7 +5,7 @@
 #include "gpu-utils/sharedmem.cuh"
 
 template <typename CONFIG, class T>
-class QuadExtensionField
+class ComplexExtensionField
 {
 private:
   friend T;
@@ -34,73 +34,83 @@ public:
   FF real;
   FF imaginary;
 
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField zero() { return QuadExtensionField{FF::zero(), FF::zero()}; }
-
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField one() { return QuadExtensionField{FF::one(), FF::zero()}; }
-
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField to_montgomery(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField zero()
   {
-    return QuadExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
+    return ComplexExtensionField{FF::zero(), FF::zero()};
   }
 
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField from_montgomery(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField one()
   {
-    return QuadExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
+    return ComplexExtensionField{FF::one(), FF::zero()};
   }
 
-  static HOST_INLINE QuadExtensionField rand_host() { return QuadExtensionField{FF::rand_host(), FF::rand_host()}; }
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
+  {
+    return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
+  }
 
-  static void rand_host_many(QuadExtensionField* out, int size)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from_montgomery(const ComplexExtensionField& xs)
+  {
+    return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
+  }
+
+  static HOST_INLINE ComplexExtensionField rand_host()
+  {
+    return ComplexExtensionField{FF::rand_host(), FF::rand_host()};
+  }
+
+  static void rand_host_many(ComplexExtensionField* out, int size)
   {
     for (int i = 0; i < size; i++)
       out[i] = rand_host();
   }
 
   template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField sub_modulus(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus(const ComplexExtensionField& xs)
   {
-    return QuadExtensionField{
+    return ComplexExtensionField{
       FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.imaginary)};
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const QuadExtensionField& xs)
+  friend std::ostream& operator<<(std::ostream& os, const ComplexExtensionField& xs)
   {
     os << "{ Real: " << xs.real << " }; { Imaginary: " << xs.imaginary << " }";
     return os;
   }
 
-  friend HOST_DEVICE_INLINE QuadExtensionField operator+(QuadExtensionField xs, const QuadExtensionField& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator+(ComplexExtensionField xs, const ComplexExtensionField& ys)
   {
-    return QuadExtensionField{xs.real + ys.real, xs.imaginary + ys.imaginary};
+    return ComplexExtensionField{xs.real + ys.real, xs.imaginary + ys.imaginary};
   }
 
-  friend HOST_DEVICE_INLINE QuadExtensionField operator-(QuadExtensionField xs, const QuadExtensionField& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator-(ComplexExtensionField xs, const ComplexExtensionField& ys)
   {
-    return QuadExtensionField{xs.real - ys.real, xs.imaginary - ys.imaginary};
+    return ComplexExtensionField{xs.real - ys.real, xs.imaginary - ys.imaginary};
   }
 
-  friend HOST_DEVICE_INLINE QuadExtensionField operator+(FF xs, const QuadExtensionField& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator+(FF xs, const ComplexExtensionField& ys)
   {
-    return QuadExtensionField{xs + ys.real, ys.imaginary};
+    return ComplexExtensionField{xs + ys.real, ys.imaginary};
   }
 
-  friend HOST_DEVICE_INLINE QuadExtensionField operator-(FF xs, const QuadExtensionField& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator-(FF xs, const ComplexExtensionField& ys)
   {
-    return QuadExtensionField{xs - ys.real, FF::neg(ys.imaginary)};
+    return ComplexExtensionField{xs - ys.real, FF::neg(ys.imaginary)};
   }
 
-  friend HOST_DEVICE_INLINE QuadExtensionField operator+(QuadExtensionField xs, const FF& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator+(ComplexExtensionField xs, const FF& ys)
   {
-    return QuadExtensionField{xs.real + ys, xs.imaginary};
+    return ComplexExtensionField{xs.real + ys, xs.imaginary};
   }
 
-  friend HOST_DEVICE_INLINE QuadExtensionField operator-(QuadExtensionField xs, const FF& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator-(ComplexExtensionField xs, const FF& ys)
   {
-    return QuadExtensionField{xs.real - ys, xs.imaginary};
+    return ComplexExtensionField{xs.real - ys, xs.imaginary};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const QuadExtensionField& xs, const QuadExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide
+  mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     FWide real_prod = FF::mul_wide(xs.real, ys.real);
     FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
@@ -111,43 +121,43 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const QuadExtensionField& xs, const FF& ys)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ComplexExtensionField& xs, const FF& ys)
   {
     return ExtensionWide{FF::mul_wide(xs.real, ys), FF::mul_wide(xs.imaginary, ys)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const QuadExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const ComplexExtensionField& ys)
   {
     return mul_wide(ys, xs);
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField reduce(const ExtensionWide& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce(const ExtensionWide& xs)
   {
-    return QuadExtensionField{
+    return ComplexExtensionField{
       FF::template reduce<MODULUS_MULTIPLE>(xs.real), FF::template reduce<MODULUS_MULTIPLE>(xs.imaginary)};
   }
 
   template <class T1, class T2>
-  friend HOST_DEVICE_INLINE QuadExtensionField operator*(const T1& xs, const T2& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const T1& xs, const T2& ys)
   {
     ExtensionWide xy = mul_wide(xs, ys);
     return reduce(xy);
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const QuadExtensionField& xs, const QuadExtensionField& ys)
+  friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     return (xs.real == ys.real) && (xs.imaginary == ys.imaginary);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const QuadExtensionField& xs, const QuadExtensionField& ys)
+  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     return !(xs == ys);
   }
 
-  template <const QuadExtensionField& multiplier>
-  static HOST_DEVICE_INLINE QuadExtensionField mul_const(const QuadExtensionField& xs)
+  template <const ComplexExtensionField& multiplier>
+  static HOST_DEVICE_INLINE ComplexExtensionField mul_const(const ComplexExtensionField& xs)
   {
     static constexpr FF mul_real = multiplier.real;
     static constexpr FF mul_imaginary = multiplier.imaginary;
@@ -159,32 +169,32 @@ public:
     FF im_re = FF::template mul_const<mul_imaginary>(xs_real);
     FF nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
     nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
-    return QuadExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
+    return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
   }
 
   template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField mul_unsigned(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField mul_unsigned(const ComplexExtensionField& xs)
   {
     return {FF::template mul_unsigned<multiplier>(xs.real), FF::template mul_unsigned<multiplier>(xs.imaginary)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const ComplexExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
     return mul_wide<MODULUS_MULTIPLE>(xs, xs);
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField sqr(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField sqr(const ComplexExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
     return xs * xs;
   }
 
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField pow(QuadExtensionField base, int exp)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField pow(ComplexExtensionField base, int exp)
   {
-    QuadExtensionField res = one();
+    ComplexExtensionField res = one();
     while (exp > 0) {
       if (exp & 1) res = res * base;
       base = base * base;
@@ -194,20 +204,20 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField neg(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField neg(const ComplexExtensionField& xs)
   {
-    return QuadExtensionField{FF::neg(xs.real), FF::neg(xs.imaginary)};
+    return ComplexExtensionField{FF::neg(xs.real), FF::neg(xs.imaginary)};
   }
 
   // inverse of zero is set to be zero which is what we want most of the time
-  static constexpr HOST_DEVICE_INLINE QuadExtensionField inverse(const QuadExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField inverse(const ComplexExtensionField& xs)
   {
-    QuadExtensionField xs_conjugate = {xs.real, FF::neg(xs.imaginary)};
+    ComplexExtensionField xs_conjugate = {xs.real, FF::neg(xs.imaginary)};
     FF nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr(xs.imaginary));
     nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
     // TODO: wide here
     FF xs_norm_squared = FF::sqr(xs.real) - nonresidue_times_im;
-    return xs_conjugate * QuadExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
+    return xs_conjugate * ComplexExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
   }
 
   static constexpr HOST_INLINE unsigned get_omegas_count()
@@ -222,10 +232,10 @@ public:
   static constexpr bool has_member_omegas_count() { return sizeof(CONFIG::ext_omegas_count) > 0; }
 };
 template <typename CONFIG, class T>
-struct SharedMemory<QuadExtensionField<CONFIG, T>> {
-  __device__ QuadExtensionField<CONFIG, T>* getPointer()
+struct SharedMemory<ComplexExtensionField<CONFIG, T>> {
+  __device__ ComplexExtensionField<CONFIG, T>* getPointer()
   {
-    extern __shared__ QuadExtensionField<CONFIG, T> s_ext2_scalar_[];
+    extern __shared__ ComplexExtensionField<CONFIG, T> s_ext2_scalar_[];
     return s_ext2_scalar_;
   }
 };

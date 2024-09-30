@@ -2,7 +2,7 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "fields/complex_extension.cuh"
 #include "fields/quartic_extension.cuh"
 #include "fields/params_gen.cuh"
 
@@ -249,26 +249,26 @@ namespace m31 {
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef QuadExtensionField<fp_config, scalar_t> quad_extension_t;
+  typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
 
-  const quad_extension_t ROU = {{2}, {1268011823}};
+  const c_extension_t ROU = {{2}, {1268011823}};
 
   // namespace quad_extension_config {
   //   static constexpr storage<1> rou = {0x00000089};
   //   TWIDDLES(modulus, rou)
   // }
 
-  static HOST_INLINE quad_extension_t get_ext_omega(uint32_t logn)
+  static HOST_INLINE c_extension_t get_ext_omega(uint32_t logn)
   {
-    if (logn == 0) { return quad_extension_t::one(); }
+    if (logn == 0) { return c_extension_t::one(); }
 
     if (logn > fp_config::ext_omegas_count) {
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid ext omega index");
     }
 
-    quad_extension_t omega = ROU;
+    c_extension_t omega = ROU;
     for (int i = 0; i < fp_config::ext_omegas_count - logn; i++) {
-      omega = quad_extension_t::sqr(omega);
+      omega = c_extension_t::sqr(omega);
     }
     return omega;
   }
@@ -276,7 +276,7 @@ namespace m31 {
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef QuartExtensionField<fp_config, scalar_t> quart_extension_t;
+  typedef QuartExtensionField<fp_config, scalar_t> q_extension_t;
 } // namespace m31
 
 template <typename CONFIG>
