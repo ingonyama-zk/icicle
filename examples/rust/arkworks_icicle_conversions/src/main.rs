@@ -299,11 +299,11 @@ fn main() {
     //======================= Part 5b: compute MSM on device memory  =============================//
     //============================================================================================//
 
-    let is_device_shraing_host_mem = icicle_runtime::runtime::get_device_properties()
+    let is_device_sharing_host_mem = icicle_runtime::runtime::get_device_properties()
         .unwrap()
         .using_host_memory;
 
-    if is_device_shraing_host_mem {
+    if is_device_sharing_host_mem {
         println!("Skipping MSM from device memory since device doesn't have global memory");
         return;
     }
