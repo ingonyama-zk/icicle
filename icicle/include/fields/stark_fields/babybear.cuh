@@ -27,5 +27,5 @@ namespace babybear {
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef QuartExtensionField<fp_config, scalar_t> extension_t;
+  typedef QuarticExtensionField<fp_config, scalar_t> extension_t;
 } // namespace babybear
