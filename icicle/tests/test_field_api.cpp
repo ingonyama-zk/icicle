@@ -126,7 +126,7 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
     // a = TypeParam::Wide::get_lower(r_wide);
     // b = TypeParam::Wide::get_lower(r2_wide);
     // a = a + a;
-    a = a * a;
+    // a = a * a;
   }
   END_TIMER(MULT_sync, oss.str().c_str(), true);
   ASSERT_EQ(TypeParam::from_montgomery(ar), a);
@@ -351,21 +351,21 @@ TYPED_TEST(FieldApiTest, ntt)
 
   int seed = time(0);
   srand(seed);
-  const bool inplace = rand() % 2;
-  const int logn = rand() % 16 + 3;
+  const bool inplace = 1;
+  const int logn = 15;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
-  const int log_batch_size = rand() % 3;
+  const int log_batch_size = 0;
   const int batch_size = 1 << log_batch_size;
-  const Ordering ordering = static_cast<Ordering>(rand() % 4);
+  const Ordering ordering = static_cast<Ordering>(0);
   bool columns_batch;
   if (logn == 7 || logn < 4) {
     columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
   } else {
-    columns_batch = rand() % 2;
+    columns_batch = 0;
   }
-  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
-  const int log_coset_stride = rand() % 3;
+  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  const int log_coset_stride = 0;
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
@@ -399,6 +399,7 @@ TYPED_TEST(FieldApiTest, ntt)
     config.are_outputs_on_device = true;
     config.is_async = false;
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+    // ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config);
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));

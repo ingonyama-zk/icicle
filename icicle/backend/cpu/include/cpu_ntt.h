@@ -54,7 +54,7 @@ namespace ntt_cpu {
     NttTaskCordinates ntt_task_cordinates = {0, 0, 0, 0, 0};
     NttTasksManager<S, E> ntt_tasks_manager(logn);
     const int nof_threads = std::thread::hardware_concurrency();
-    auto tasks_manager = new TasksManager<NttTask<S, E>>(nof_threads - 1);
+    auto tasks_manager = new TasksManager<NttTask<S, E>>(1);
     NttTask<S, E>* task_slot;
     std::unique_ptr<S[]> arbitrary_coset = nullptr;
     const int coset_stride = ntt.find_or_generate_coset(arbitrary_coset);

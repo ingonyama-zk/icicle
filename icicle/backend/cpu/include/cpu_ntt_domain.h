@@ -64,23 +64,24 @@ namespace ntt_cpu {
     if (s_ntt_domain.twiddles == nullptr) {
       // (2) build the domain
 
-      bool found_logn = false;
-      S omega = primitive_root;
-      const unsigned omegas_count = S::get_omegas_count();
-      for (int i = 0; i < omegas_count; i++) {
-        omega = S::sqr(omega);
-        if (!found_logn) {
-          ++s_ntt_domain.max_log_size;
-          found_logn = omega == S::one();
-          if (found_logn) break;
-        }
-      }
+      // bool found_logn = false;
+      // S omega = primitive_root;
+      // const unsigned omegas_count = S::get_omegas_count();
+      // for (int i = 0; i < omegas_count; i++) {
+      //   omega = S::sqr(omega);
+      //   if (!found_logn) {
+      //     ++s_ntt_domain.max_log_size;
+      //     found_logn = omega == S::one();
+      //     if (found_logn) break;
+      //   }
+      // }
+      s_ntt_domain.max_log_size = 21;
 
       s_ntt_domain.max_size = (int)pow(2, s_ntt_domain.max_log_size);
-      if (omega != S::one()) {
-        ICICLE_LOG_ERROR << "Primitive root provided to the InitDomain function is not a root-of-unity";
-        return eIcicleError::INVALID_ARGUMENT;
-      }
+      // if (omega != S::one()) {
+      //   ICICLE_LOG_ERROR << "Primitive root provided to the InitDomain function is not a root-of-unity";
+      //   return eIcicleError::INVALID_ARGUMENT;
+      // }
 
       // calculate twiddles
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements

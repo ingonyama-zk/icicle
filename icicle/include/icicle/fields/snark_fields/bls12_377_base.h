@@ -7,6 +7,8 @@ namespace bls12_377 {
   struct fq_config {
     static constexpr storage<12> modulus = {0x00000001, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f,
                                             0x00f5138f, 0x1a22d9f3, 0x6ca1493b, 0xc63b05c0, 0x17c510ea, 0x01ae3a46};
+    static constexpr storage<12> mont_inv_modulus = {0xffffffff, 0x8508bfff, 0xa0000000, 0xd1e94577, 0x970debff, 0x35ed1347, 0xcced7a13, 0x5b245b86, 0x806a3cec, 0x22f80141, 0xeec82e3d, 0xbfa5205f};
+
     PARAMS(modulus)
 
     static constexpr storage<12> rou = {0xc563b9a1, 0x7eca603c, 0x06fe0bc3, 0x06df0a43, 0x0ddff8c6, 0xb44d994a,

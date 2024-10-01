@@ -843,6 +843,7 @@ public:
   {
     Wide xy = mul_wide(xs, ys); // full mult
     return reduce(xy);          // reduce mod p
+    // return mont_mult(xs,ys);
   }
 
   static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)

@@ -65,10 +65,10 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 12;
-    const int batch = 2;
+    const int logn = 20;
+    const int batch = 1;
     const int N = 1 << logn;
-    const int precompute_factor = 2;
+    const int precompute_factor = 1;
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -84,6 +84,7 @@ public:
     config.batch_size = batch;
     config.are_points_shared_in_batch = true;
     config.precompute_factor = precompute_factor;
+    config.c = 15;
 
     auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
       Device dev = {dev_type, 0};
