@@ -2,8 +2,8 @@
 mod tests {
 
     use crate::{
+        blake2s::Blake2s,
         keccak::{Keccak256, Keccak512},
-        blake2s::{Blake2s},
         sha3::{Sha3_256, Sha3_512},
     };
     use icicle_core::{
