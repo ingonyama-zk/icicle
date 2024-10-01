@@ -9,10 +9,7 @@ namespace icicle {
   class Blake2sBackend : public HashBackend
   {
   public:
-    Blake2sBackend(uint64_t input_chunk_size)
-        : HashBackend("Blake2s-CPU", BLAKE2S_DIGEST, BLAKE2S_RATE)
-    {
-    }
+    Blake2sBackend(uint64_t input_chunk_size) : HashBackend("Blake2s-CPU", BLAKE2S_DIGEST, BLAKE2S_RATE) {}
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
