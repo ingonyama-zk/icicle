@@ -277,6 +277,8 @@ namespace m31 {
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
+
+  typedef q_extension_t extension_t;
 } // namespace m31
 
 template <typename CONFIG>
