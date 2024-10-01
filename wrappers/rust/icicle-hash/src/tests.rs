@@ -3,6 +3,7 @@ mod tests {
 
     use crate::{
         keccak::{Keccak256, Keccak512},
+        blake2s::{Blake2s},
         sha3::{Sha3_256, Sha3_512},
     };
     use icicle_core::{
@@ -33,6 +34,26 @@ mod tests {
         let input = vec![0 as u8; single_hash_input_size * batch];
         let mut output = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
         keccak_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output),
+            )
+            .unwrap();
+        println!("output= {:?}", output);
+        // TODO compare to main device (CUDA by default) or verify with goldens
+    }
+
+    #[test]
+    fn blake2s_hashing() {
+        initialize();
+        test_utilities::test_set_ref_device();
+        let single_hash_input_size = 8;
+        let batch = 3;
+        let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
+        let input = vec![0 as u8; single_hash_input_size * batch];
+        let mut output = vec![0 as u8; 8 * batch]; // 8B (=64b) is the output size of Blake2s,
+        blake2s_hasher
             .hash(
                 HostSlice::from_slice(&input),
                 &HashConfig::default(),
