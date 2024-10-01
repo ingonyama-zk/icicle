@@ -8,7 +8,7 @@
 #include "curves/projective.cuh"
 #include "fields/snark_fields/bw6_761_base.cuh"
 #include "fields/snark_fields/bw6_761_scalar.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "fields/complex_extension.cuh"
 
 namespace bw6_761 {
   // G1 and G2 generators

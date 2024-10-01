@@ -8,7 +8,7 @@
 #include "curves/projective.cuh"
 #include "fields/snark_fields/bls12_377_base.cuh"
 #include "fields/snark_fields/bls12_377_scalar.cuh"
-#include "fields/quadratic_extension.cuh"
+#include "fields/complex_extension.cuh"
 
 namespace bls12_377 {
   // G1 and G2 generators
