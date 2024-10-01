@@ -4,6 +4,7 @@ function(setup_hash_target)
   add_library(icicle_hash SHARED)
   target_sources(icicle_hash PRIVATE 
     src/hash/keccak.cpp
+    src/hash/blake2s.cpp
     src/hash/merkle_tree.cpp
     src/hash/hash_c_api.cpp
     src/hash/merkle_c_api.cpp

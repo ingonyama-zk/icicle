@@ -6,6 +6,7 @@
 #include "icicle/utils/log.h"
 #include "icicle/hash/hash.h"
 #include "icicle/hash/keccak.h"
+#include "icicle/hash/blake2s.h"
 #include "icicle/merkle/merkle_tree.h"
 
 using namespace icicle;
@@ -85,6 +86,31 @@ TEST_F(HashApiTest, Keccak256)
   auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
   config.batch = 2;
   ICICLE_CHECK(keccak256.hash(input.get(), input_size / 2, config, output_batch.get()));
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
+
+TEST_F(HashApiTest, Blake2s)
+{
+  const uint64_t input_size = 64; // Number of input elements
+  const uint64_t output_size = 256;
+
+  // Create unique pointers for input and output arrays
+  auto input = std::make_unique<uint32_t[]>(input_size);
+  auto output = std::make_unique<std::byte[]>(output_size);
+
+  // Randomize the input array
+  randomize(input.get(), input_size);
+
+  auto config = default_hash_config();
+  // Create Blake2s hash object
+  auto blake2s = Blake2s::create();
+  // Run single hash operation
+  ICICLE_CHECK(blake2s.hash(input.get(), input_size, config, output.get()));
+
+  // Batch hash (hashing each half separately)
+  auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
+  config.batch = 2;
+  ICICLE_CHECK(blake2s.hash(input.get(), input_size / 2, config, output_batch.get()));
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 
