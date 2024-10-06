@@ -3,7 +3,7 @@
 #include <thread>
 #include <cassert>
 
-#define LOG_TASKS_PER_THREAD 3
+#define LOG_TASKS_PER_THREAD 6
 #define TASKS_PER_THREAD     (1 << LOG_TASKS_PER_THREAD)
 #define TASK_IDX_MASK        (TASKS_PER_THREAD - 1)
 #define MANAGER_SLEEP_USEC   10

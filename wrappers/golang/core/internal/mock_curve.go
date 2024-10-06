@@ -47,6 +47,10 @@ func (a *MockAffine) Zero() MockAffine {
 	return *a
 }
 
+func (a *MockAffine) IsZero() bool {
+	return a.X.IsZero() && a.Y.IsZero()
+}
+
 func (a *MockAffine) FromLimbs(x, y []uint32) MockAffine {
 	a.X.FromLimbs(x)
 	a.Y.FromLimbs(y)

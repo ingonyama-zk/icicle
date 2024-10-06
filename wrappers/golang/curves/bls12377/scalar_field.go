@@ -60,6 +60,16 @@ func (f *ScalarField) Zero() ScalarField {
 	return *f
 }
 
+func (f *ScalarField) IsZero() bool {
+	for _, limb := range f.limbs {
+		if limb != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *ScalarField) One() ScalarField {
 	for i := range f.limbs {
 		f.limbs[i] = 0

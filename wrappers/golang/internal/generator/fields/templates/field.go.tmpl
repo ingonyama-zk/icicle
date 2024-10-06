@@ -63,6 +63,16 @@ func (f *{{.FieldPrefix}}Field) Zero() {{.FieldPrefix}}Field {
 	return *f
 }
 
+func (f *{{.FieldPrefix}}Field) IsZero() bool {
+	for _, limb := range f.limbs {
+		if limb != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *{{.FieldPrefix}}Field) One() {{.FieldPrefix}}Field {
 	for i := range f.limbs {
 		f.limbs[i] = 0

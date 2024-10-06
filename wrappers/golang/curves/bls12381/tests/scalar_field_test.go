@@ -6,101 +6,101 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bls12_381 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
 	SCALAR_LIMBS = bls12_381.SCALAR_LIMBS
 )
 
-func TestScalarFieldFromLimbs(t *testing.T) {
+func testScalarFieldFromLimbs(suite suite.Suite) {
 	emptyField := bls12_381.ScalarField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ScalarField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ScalarField's limbs")
 	randLimbs[0] = 100
-	assert.NotEqual(t, randLimbs, emptyField.GetLimbs())
+	suite.NotEqual(randLimbs, emptyField.GetLimbs())
 }
 
-func TestScalarFieldGetLimbs(t *testing.T) {
+func testScalarFieldGetLimbs(suite suite.Suite) {
 	emptyField := bls12_381.ScalarField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ScalarField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ScalarField's limbs")
 }
 
-func TestScalarFieldOne(t *testing.T) {
+func testScalarFieldOne(suite suite.Suite) {
 	var emptyField bls12_381.ScalarField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(SCALAR_LIMBS))
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "ScalarField with limbs to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "ScalarField with limbs to field one did not work")
 }
 
-func TestScalarFieldZero(t *testing.T) {
+func testScalarFieldZero(suite suite.Suite) {
 	var emptyField bls12_381.ScalarField
 	emptyField.Zero()
 	limbsZero := make([]uint32, SCALAR_LIMBS)
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "ScalarField with limbs to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "ScalarField with limbs to field zero failed")
 }
 
-func TestScalarFieldSize(t *testing.T) {
+func testScalarFieldSize(suite suite.Suite) {
 	var emptyField bls12_381.ScalarField
 	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	suite.Equal(len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func TestScalarFieldAsPointer(t *testing.T) {
+func testScalarFieldAsPointer(suite suite.Suite) {
 	var emptyField bls12_381.ScalarField
 	randLimbs := test_helpers.GenerateRandomLimb(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
+	suite.Equal(randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func TestScalarFieldFromBytes(t *testing.T) {
+func testScalarFieldFromBytes(suite suite.Suite) {
 	var emptyField bls12_381.ScalarField
 	bytes, expected := test_helpers.GenerateBytesArray(int(SCALAR_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
-	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func TestScalarFieldToBytes(t *testing.T) {
+func testScalarFieldToBytes(suite suite.Suite) {
 	var emptyField bls12_381.ScalarField
 	expected, limbs := test_helpers.GenerateBytesArray(int(SCALAR_LIMBS))
 	emptyField.FromLimbs(limbs)
 
-	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
 
-func TestBls12_381GenerateScalars(t *testing.T) {
+func testBls12_381GenerateScalars(suite suite.Suite) {
 	const numScalars = 8
 	scalars := bls12_381.GenerateScalars(numScalars)
 
-	assert.Implements(t, (*core.HostOrDeviceSlice)(nil), &scalars)
+	suite.Implements((*core.HostOrDeviceSlice)(nil), &scalars)
 
-	assert.Equal(t, numScalars, scalars.Len())
+	suite.Equal(numScalars, scalars.Len())
 	zeroScalar := bls12_381.ScalarField{}
-	assert.NotContains(t, scalars, zeroScalar)
+	suite.NotContains(scalars, zeroScalar)
 }
 
-func TestBls12_381MongtomeryConversion(t *testing.T) {
+func testBls12_381MongtomeryConversion(suite suite.Suite) {
 	size := 1 << 20
 	scalars := bls12_381.GenerateScalars(size)
 
@@ -112,10 +112,31 @@ func TestBls12_381MongtomeryConversion(t *testing.T) {
 	scalarsMontHost := make(core.HostSlice[bls12_381.ScalarField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
-	assert.NotEqual(t, scalars, scalarsMontHost)
+	suite.NotEqual(scalars, scalarsMontHost)
 
 	bls12_381.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
-	assert.Equal(t, scalars, scalarsMontHost)
+	suite.Equal(scalars, scalarsMontHost)
+}
+
+type ScalarFieldTestSuite struct {
+	suite.Suite
+}
+
+func (s *ScalarFieldTestSuite) TestScalarField() {
+	s.Run("TestScalarFieldFromLimbs", testWrapper(s.Suite, testScalarFieldFromLimbs))
+	s.Run("TestScalarFieldGetLimbs", testWrapper(s.Suite, testScalarFieldGetLimbs))
+	s.Run("TestScalarFieldOne", testWrapper(s.Suite, testScalarFieldOne))
+	s.Run("TestScalarFieldZero", testWrapper(s.Suite, testScalarFieldZero))
+	s.Run("TestScalarFieldSize", testWrapper(s.Suite, testScalarFieldSize))
+	s.Run("TestScalarFieldAsPointer", testWrapper(s.Suite, testScalarFieldAsPointer))
+	s.Run("TestScalarFieldFromBytes", testWrapper(s.Suite, testScalarFieldFromBytes))
+	s.Run("TestScalarFieldToBytes", testWrapper(s.Suite, testScalarFieldToBytes))
+	s.Run("TestBls12_381GenerateScalars", testWrapper(s.Suite, testBls12_381GenerateScalars))
+	s.Run("TestBls12_381MongtomeryConversion", testWrapper(s.Suite, testBls12_381MongtomeryConversion))
+}
+
+func TestSuiteScalarField(t *testing.T) {
+	suite.Run(t, new(ScalarFieldTestSuite))
 }

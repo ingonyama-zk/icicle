@@ -15,7 +15,7 @@ namespace icicle {
   /**
    * @brief Enum for specifying the direction of data copy.
    */
-  enum eCopyDirection { HostToDevice, DeviceToHost, DeviceToDevice };
+  enum eCopyDirection { HostToDevice, DeviceToHost, DeviceToDevice, HostToHost };
 
   /**
    * @brief Typedef for an abstract stream used for asynchronous operations.

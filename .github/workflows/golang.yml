@@ -36,6 +36,9 @@ jobs:
     with:
       pr-number: ${{ github.event.pull_request.number }}
 
+  # TODO - add runtime tests to the workflow
+  # TODO - add core tests to the workflow
+
   build-curves-linux:
     name: Build and test curves on Linux
     runs-on: [self-hosted, Linux, X64, icicle]

@@ -239,6 +239,14 @@ public:
   void run_msm(
     const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
+  static unsigned get_optimal_c(unsigned msm_size, bool precompute_factor)
+  {
+    // This seems to be working well but not clear why
+    // TODO Koren: find optimal c. Maybe can use a lookup table if the logic is not clear but consistent for intel/ARM
+    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) - 1, 8)
+                                 : std::max((int)std::log2(msm_size) - 5, 8);
+  }
+
 private:
   TasksManager<EcAddTask<A, P>> manager; // Tasks manager for multithreading
 

@@ -1,0 +1,19 @@
+[package]
+name = "icicle-hash"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+icicle-core =  {workspace = true }
+icicle-runtime = { workspace = true }
+rand = "0.8"
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[features]
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
