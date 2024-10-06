@@ -200,7 +200,6 @@ namespace m31 {
         assert(false);
       }
 #endif // __CUDA_ARCH__
-      // storage_array<CONFIG::omegas_count, 1> const inv = CONFIG::inv;
       return MersenneField::inverse(MersenneField{1U << logn});
     }
   };
@@ -252,11 +251,6 @@ namespace m31 {
   typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
 
   const c_extension_t ROU = {{2}, {1268011823}};
-
-  // namespace quad_extension_config {
-  //   static constexpr storage<1> rou = {0x00000089};
-  //   TWIDDLES(modulus, rou)
-  // }
 
   static HOST_INLINE c_extension_t get_ext_omega(uint32_t logn)
   {

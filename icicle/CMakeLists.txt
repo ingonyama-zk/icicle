@@ -19,6 +19,7 @@ option(ECNTT "Build ECNTT" OFF)
 option(BUILD_HASH "Build hash functions" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(DCCT "Build circle fft instead of ntt" OFF)
 # add options here
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
@@ -47,6 +48,10 @@ endif ()
 
 if (EXT_FIELD)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DEXT_FIELD")
+endif ()
+
+if (DCCT)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DDCCT")
 endif ()
 
 if(BUILD_HASH)

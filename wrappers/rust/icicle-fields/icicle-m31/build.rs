@@ -9,6 +9,7 @@ fn main() {
     let mut config = Config::new("../../../../icicle/");
     config
         .define("FIELD", "m31")
+        .define("DCCT", "ON")
         .define("CMAKE_BUILD_TYPE", "Release")
         .define("EXT_FIELD", "ON");
 
