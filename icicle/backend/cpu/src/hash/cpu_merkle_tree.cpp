@@ -23,7 +23,8 @@ namespace icicle {
       m_layers.resize(nof_layers);
       m_pruned_path_size = 0;
       m_full_path_size = 0;
-      for (int layer_idx = 0; layer_idx < nof_layers; ++layer_idx) {
+      uint64_t nof_hashes = 1;
+      for (int layer_idx = nof_layers - 1; layer_idx >= 0; --layer_idx) {
         ICICLE_ASSERT(
           layer_idx == nof_layers - 1 ||
           layer_hashes[layer_idx + 1].input_default_chunk_size() % layer_hashes[layer_idx].output_size() == 0)
@@ -32,10 +33,17 @@ namespace icicle {
           << "Layer " << layer_idx + 1 << " output size = " << layer_hashes[layer_idx].output_size() << "\n";
 
         // initialize m_layers with hashes
-        m_layers[layer_idx].m_hash = layer_hashes[layer_idx];
+        auto& cur_layer = m_layers[layer_idx];
+        cur_layer.m_hash = layer_hashes[layer_idx];
+        cur_layer.m_nof_hashes = nof_hashes;
 
-        // Calculate path_size
+
         if (0 < layer_idx) {
+          // update nof_hashes to the next layer (below)
+          const u_int64_t next_layer_total_size = layer_hashes[layer_idx - 1].output_size();
+          nof_hashes = nof_hashes * cur_layer.m_hash.input_default_chunk_size() / next_layer_total_size;
+
+          // Calculate path_size
           m_pruned_path_size +=
             layer_hashes[layer_idx].input_default_chunk_size() - layer_hashes[layer_idx - 1].output_size();
           m_full_path_size += layer_hashes[layer_idx].input_default_chunk_size();
@@ -305,12 +313,10 @@ namespace icicle {
     void init_layers_db(const MerkleTreeConfig& merkle_config)
     {
       const uint nof_layers = m_layers.size();
-      uint64_t nof_hashes = 1;
 
       // run over all hashes from top layer until bottom layer
-      for (int layer_idx = nof_layers - 1; layer_idx >= 0; --layer_idx) {
+      for (int layer_idx = 0; layer_idx < nof_layers; ++layer_idx) {
         auto& cur_layer = m_layers[layer_idx];
-        cur_layer.m_nof_hashes = nof_hashes;
 
         // config when calling a hash function not last in layer
         cur_layer.m_hash_config.batch = NOF_OPERATIONS_PER_TASK;
@@ -318,19 +324,16 @@ namespace icicle {
 
         // config when calling last in layer hash function
         cur_layer.m_last_hash_config.batch =
-          (nof_hashes % NOF_OPERATIONS_PER_TASK) ? (nof_hashes % NOF_OPERATIONS_PER_TASK) : NOF_OPERATIONS_PER_TASK;
+          (cur_layer.m_nof_hashes % NOF_OPERATIONS_PER_TASK) ? (cur_layer.m_nof_hashes % NOF_OPERATIONS_PER_TASK) : NOF_OPERATIONS_PER_TASK;
         cur_layer.m_last_hash_config.is_async = merkle_config.is_async;
 
         // if the layer is in range then allocate the according to the number of hashes in that layer.
         if (m_output_store_min_layer <= layer_idx) {
-          const uint64_t nof_bytes_to_allocate = nof_hashes * cur_layer.m_hash.input_default_chunk_size();
+          const uint64_t nof_bytes_to_allocate = cur_layer.m_nof_hashes * cur_layer.m_hash.input_default_chunk_size();
           cur_layer.m_results.reserve(nof_bytes_to_allocate);
           cur_layer.m_results.resize(nof_bytes_to_allocate);
         }
 
-        // update nof_hashes to the next layer (below)
-        const u_int64_t next_layer_total_size = (layer_idx > 0) ? m_layers[layer_idx - 1].m_hash.output_size() : 1;
-        nof_hashes = nof_hashes * cur_layer.m_hash.input_default_chunk_size() / next_layer_total_size;
       }
     }
 

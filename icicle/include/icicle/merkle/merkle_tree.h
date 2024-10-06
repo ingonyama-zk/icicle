@@ -191,7 +191,7 @@ namespace icicle {
         }
       }
 
-      // Copare the last hash result with the root
+      // Compare the last hash result with the root
       auto [root, root_size] = merkle_proof.get_root();
       valid = !std::memcmp(hash_results.data(), root, root_size);
       return eIcicleError::SUCCESS;
