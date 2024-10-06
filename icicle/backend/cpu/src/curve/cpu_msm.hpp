@@ -402,7 +402,6 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
   const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
   // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
   const int num_bms_before_precompute = ((scalar_t::NBITS - 1) / m_c) + 1; // +1 for ceiling
-
   int carry = 0;
   for (int i = 0; i < msm_size; i++) {
     carry = 0;
@@ -414,8 +413,10 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
       // Handle required preprocess of base P
       A base =
         m_are_points_mont ? A::from_montgomery(bases[m_precompute_factor * i + j]) : bases[m_precompute_factor * i + j];
+      // TODO move to preprocess before precompute to avoid repeating conversions
       if (base == A::zero()) { continue; }
       if (negate_p_and_s) { base = A::neg(base); }
+      // TODO move to preprocess before precompute to avoid repeating negations
 
       for (int k = 0; k < m_num_bms; k++) {
         // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
@@ -423,11 +424,12 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
 
         uint32_t curr_coeff = scalar.get_scalar_digit(m_num_bms * j + k, m_c) + carry;
         int bkt_idx = 0;
+        // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
         if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
           // Remove sign to infer the bkt idx.
-          carry = curr_coeff >= m_num_bkts;
-          if (curr_coeff < m_num_bkts) {
-            bkt_idx = m_num_bkts * k + curr_coeff;
+          carry = curr_coeff > m_num_bkts;
+          if (!carry) {
+            bkt_idx = m_num_bkts * k + (curr_coeff & coeff_bit_mask_no_sign_bit);
           } else {
             bkt_idx = m_num_bkts * k + ((-curr_coeff) & coeff_bit_mask_no_sign_bit);
           }
