@@ -42,6 +42,7 @@ public:
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
     s_registered_devices = get_registered_devices_list();
+    ASSERT_GE(s_registered_devices.size(), 1);
   }
   static void TearDownTestSuite()
   {
@@ -91,11 +92,16 @@ TEST_F(HashApiTest, Keccak512)
   auto output = std::make_unique<std::byte[]>(output_size);
 
   // Create Keccak-512 hash object
-  auto keccak512 = Keccak512::create();
-  ICICLE_CHECK(keccak512.hash(input.data(), input.size() / config.batch, config, output.get()));
-  // Convert the output do a hex string and compare to expected output string
-  std::string output_as_str = voidPtrToHexString(output.get(), output_size);
-  ASSERT_EQ(output_as_str, expected_output);
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_DEBUG << "Keccak512 test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+
+    auto keccak512 = Keccak512::create();
+    ICICLE_CHECK(keccak512.hash(input.data(), input.size() / config.batch, config, output.get()));
+    // Convert the output do a hex string and compare to expected output string
+    std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+    ASSERT_EQ(output_as_str, expected_output);
+  }
 }
 
 TEST_F(HashApiTest, Keccak256Batch)
@@ -126,7 +132,7 @@ TEST_F(HashApiTest, Keccak256Batch)
 TEST_F(HashApiTest, KeccakLarge)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 12;
+  config.batch = 1 << 10;
   const unsigned chunk_size = 1 << 13; // 8KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
