@@ -78,7 +78,25 @@ public:
   }
 };
 
-TEST_F(HashApiTest, Keccak256)
+TEST_F(HashApiTest, Keccak512)
+{
+  auto config = default_hash_config();
+
+  const std::string input = "HelloWorld! FromKeccak512";
+  const std::string expected_output = "b493094fc34b23cc868b170f68b767fcd5844f51640fdce7946958aba24336007637325d567ae456"
+                                      "d4c981f144031a398f37122eb476fe75a67ab85974098e9a";
+  const uint64_t output_size = 64;
+  auto output = std::make_unique<std::byte[]>(output_size);
+
+  // Create Keccak-512 hash object
+  auto keccak512 = Keccak512::create();
+  ICICLE_CHECK(keccak512.hash(input.data(), input.size() / config.batch, config, output.get()));
+  // Convert the output do a hex string and compare to expected output string
+  std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+  ASSERT_EQ(output_as_str, expected_output);
+}
+
+TEST_F(HashApiTest, Keccak256Batch)
 {
   auto config = default_hash_config();
   config.batch = 2;
@@ -89,9 +107,8 @@ TEST_F(HashApiTest, Keccak256)
   const uint64_t output_size = 32;
   auto output = std::make_unique<std::byte[]>(output_size * config.batch);
 
-  // Create Keccak-256 hash object
+  // Create Keccak-256 hash object and hash
   auto keccak256 = Keccak256::create();
-  // Run single hash operation
   ICICLE_CHECK(keccak256.hash(input.data(), input.size() / config.batch, config, output.get()));
   // Convert the output do a hex string and compare to expected output string
   std::string output_as_str = voidPtrToHexString(output.get(), output_size);
@@ -100,7 +117,28 @@ TEST_F(HashApiTest, Keccak256)
   ASSERT_EQ(output_as_str, expected_output_1);
 }
 
-// TODO: add tests for all hashes
+TEST_F(HashApiTest, sha3)
+{
+  auto config = default_hash_config();
+
+  const std::string input = "I am SHA3";
+  const uint64_t output_size = 64;
+  auto output = std::make_unique<std::byte[]>(output_size);
+
+  // sha3-256
+  auto sha3_256 = Sha3_256::create();
+  ICICLE_CHECK(sha3_256.hash(input.data(), input.size() / config.batch, config, output.get()));
+  const std::string expected_output_sha_256 = "b45ee6bc2e599daf8ffd1fd952c32f58e6a7046300331b2321b927327a9affcf";
+  std::string output_as_str = voidPtrToHexString(output.get(), 32);
+  ASSERT_EQ(output_as_str, expected_output_sha_256);
+  // sha3-512
+  auto sha3_512 = Sha3_512::create();
+  ICICLE_CHECK(sha3_512.hash(input.data(), input.size() / config.batch, config, output.get()));
+  const std::string expected_output_sha_512 = "50b0cf05a243907301a10a1c14b4750a8fdbd1f8ef818624dff2f4e83901c9f8e8de84a2"
+                                              "410d45c968b9307dfd9a4da58768e0d1f5594511b31b7274cfc04280";
+  output_as_str = voidPtrToHexString(output.get(), 64);
+  ASSERT_EQ(output_as_str, expected_output_sha_512);
+}
 
 /****************************** Merkle **********************************/
 class HashSumBackend : public HashBackend
