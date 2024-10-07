@@ -58,7 +58,7 @@ namespace icicle {
      */
     uint64_t inline output_size() const { return m_output_size; }
 
-    const inline std::string& name() { return m_name_hint; }
+    const inline std::string& name() const { return m_name_hint; }
 
   protected:
     const uint64_t m_output_size;              ///< The number of output bytes produced by the hash.
