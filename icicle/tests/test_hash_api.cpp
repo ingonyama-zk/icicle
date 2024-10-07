@@ -66,7 +66,7 @@ public:
 TEST_F(HashApiTest, Keccak256)
 {
   const uint64_t input_size = 64; // Number of input elements
-  const uint64_t output_size = 256;
+  const uint64_t output_size = 32;
 
   // Create unique pointers for input and output arrays
   auto input = std::make_unique<uint32_t[]>(input_size);
