@@ -50,7 +50,7 @@ namespace icicle {
      * @brief Get the default input chunk size.
      * @return The size of the input chunk in bytes.
      */
-    const inline uint64_t input_default_chunk_size() const { return m_default_input_chunk_size; }
+    inline uint64_t input_default_chunk_size() const { return m_default_input_chunk_size; }
 
     /**
      * @brief Get the output size in bytes for a single hash chunk.
