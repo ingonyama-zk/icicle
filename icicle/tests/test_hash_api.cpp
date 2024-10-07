@@ -24,6 +24,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
 static bool VERBOSE = true;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
+static inline std::vector<std::string> s_registered_devices;
 
 class HashApiTest : public ::testing::Test
 {
@@ -40,6 +41,7 @@ public:
     if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
+    s_registered_devices = get_registered_devices_list();
   }
   static void TearDownTestSuite()
   {
@@ -107,14 +109,46 @@ TEST_F(HashApiTest, Keccak256Batch)
   const uint64_t output_size = 32;
   auto output = std::make_unique<std::byte[]>(output_size * config.batch);
 
-  // Create Keccak-256 hash object and hash
-  auto keccak256 = Keccak256::create();
-  ICICLE_CHECK(keccak256.hash(input.data(), input.size() / config.batch, config, output.get()));
-  // Convert the output do a hex string and compare to expected output string
-  std::string output_as_str = voidPtrToHexString(output.get(), output_size);
-  ASSERT_EQ(output_as_str, expected_output_0);
-  output_as_str = voidPtrToHexString(output.get() + output_size, output_size);
-  ASSERT_EQ(output_as_str, expected_output_1);
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_DEBUG << "Keccak256 test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+    // Create Keccak-256 hash object and hash
+    auto keccak256 = Keccak256::create();
+    ICICLE_CHECK(keccak256.hash(input.data(), input.size() / config.batch, config, output.get()));
+    // Convert the output do a hex string and compare to expected output string
+    std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+    ASSERT_EQ(output_as_str, expected_output_0);
+    output_as_str = voidPtrToHexString(output.get() + output_size, output_size);
+    ASSERT_EQ(output_as_str, expected_output_1);
+  }
+}
+
+TEST_F(HashApiTest, KeccakLarge)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 12;
+  const unsigned chunk_size = 1 << 13; // 8KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(s_main_target));
+  auto keccakCUDA = Keccak256::create();
+  START_TIMER(cuda_timer);
+  ICICLE_CHECK(keccakCUDA.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(cuda_timer, "CUDA Keccak large time", true);
+
+  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  auto keccakCPU = Keccak256::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(keccakCPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU Keccak large time", true);
+
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
 }
 
 TEST_F(HashApiTest, sha3)
@@ -125,19 +159,25 @@ TEST_F(HashApiTest, sha3)
   const uint64_t output_size = 64;
   auto output = std::make_unique<std::byte[]>(output_size);
 
-  // sha3-256
-  auto sha3_256 = Sha3_256::create();
-  ICICLE_CHECK(sha3_256.hash(input.data(), input.size() / config.batch, config, output.get()));
-  const std::string expected_output_sha_256 = "b45ee6bc2e599daf8ffd1fd952c32f58e6a7046300331b2321b927327a9affcf";
-  std::string output_as_str = voidPtrToHexString(output.get(), 32);
-  ASSERT_EQ(output_as_str, expected_output_sha_256);
-  // sha3-512
-  auto sha3_512 = Sha3_512::create();
-  ICICLE_CHECK(sha3_512.hash(input.data(), input.size() / config.batch, config, output.get()));
-  const std::string expected_output_sha_512 = "50b0cf05a243907301a10a1c14b4750a8fdbd1f8ef818624dff2f4e83901c9f8e8de84a2"
-                                              "410d45c968b9307dfd9a4da58768e0d1f5594511b31b7274cfc04280";
-  output_as_str = voidPtrToHexString(output.get(), 64);
-  ASSERT_EQ(output_as_str, expected_output_sha_512);
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_DEBUG << "SHA3 test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+
+    // sha3-256
+    auto sha3_256 = Sha3_256::create();
+    ICICLE_CHECK(sha3_256.hash(input.data(), input.size() / config.batch, config, output.get()));
+    const std::string expected_output_sha_256 = "b45ee6bc2e599daf8ffd1fd952c32f58e6a7046300331b2321b927327a9affcf";
+    std::string output_as_str = voidPtrToHexString(output.get(), 32);
+    ASSERT_EQ(output_as_str, expected_output_sha_256);
+    // sha3-512
+    auto sha3_512 = Sha3_512::create();
+    ICICLE_CHECK(sha3_512.hash(input.data(), input.size() / config.batch, config, output.get()));
+    const std::string expected_output_sha_512 =
+      "50b0cf05a243907301a10a1c14b4750a8fdbd1f8ef818624dff2f4e83901c9f8e8de84a2"
+      "410d45c968b9307dfd9a4da58768e0d1f5594511b31b7274cfc04280";
+    output_as_str = voidPtrToHexString(output.get(), 64);
+    ASSERT_EQ(output_as_str, expected_output_sha_512);
+  }
 }
 
 /****************************** Merkle **********************************/

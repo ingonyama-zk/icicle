@@ -12,3 +12,6 @@ Please provide a clear and concise description of the feature you would like inc
 ## Motivation
 
 Please provide a clear and concise description of the motivation for adding this feature.
+
+## (optional) CUDA backend branch
+cuda-backend-branch: main
