@@ -61,7 +61,7 @@ namespace icicle {
       for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
         int result = sha3_hash_buffer(
           8 * digest_size_in_bytes, this->sha_flag, input + batch_idx * single_input_size, single_input_size,
-          output + batch_idx * digest_size_in_bytes, digest_size_in_bytes);
+          output + batch_idx * digest_size_in_bytes);
         // TODO better error codes
         if (result != 0) { return eIcicleError::UNKNOWN_ERROR; }
       }
@@ -102,9 +102,7 @@ namespace icicle {
       SHA3_FLAGS flags,  // SHA3_FLAGS_SHA3 or SHA3_FLAGS_KECCAK
       const void* in,
       unsigned inBytes,
-      void* out,
-      unsigned outBytes // up to bit_size/8; truncation OK
-    ) const;
+      void* out) const;
   };
 
   const uint64_t KeccakBackendCPU::keccakf_rndc[24] = {
@@ -183,9 +181,8 @@ namespace icicle {
 
   void KeccakBackendCPU::sha3_init512(sha3_context* priv) const { KeccakBackendCPU::sha3_init(priv, 512); }
 
-  enum SHA3_FLAGS KeccakBackendCPU::sha3_set_flags(sha3_context* priv, enum SHA3_FLAGS flags) const
+  enum SHA3_FLAGS KeccakBackendCPU::sha3_set_flags(sha3_context* ctx, enum SHA3_FLAGS flags) const
   {
-    sha3_context* ctx = (sha3_context*)priv;
     flags = (enum SHA3_FLAGS)(flags & SHA3_FLAGS_KECCAK);
     ctx->capacityWords |= (flags == SHA3_FLAGS_KECCAK ? SHA3_USE_KECCAK_FLAG : 0);
     return flags;
@@ -329,7 +326,7 @@ namespace icicle {
   }
 
   sha3_return_t KeccakBackendCPU::sha3_hash_buffer(
-    unsigned bit_size, enum SHA3_FLAGS flags, const void* in, unsigned inBytes, void* out, unsigned outBytes) const
+    unsigned bit_size, enum SHA3_FLAGS flags, const void* in, unsigned inBytes, void* out) const
   {
     sha3_return_t err;
     sha3_context c;
@@ -340,8 +337,7 @@ namespace icicle {
     sha3_update(&c, in, inBytes);
     const void* h = sha3_finalize(&c);
 
-    if (outBytes > bit_size / 8) outBytes = bit_size / 8;
-    memcpy(out, h, outBytes);
+    memcpy(out, h, bit_size >> 3); // TODO Yuval: remove this redundant copy
     return SHA3_RETURN_OK;
   }
 

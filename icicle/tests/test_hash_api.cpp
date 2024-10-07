@@ -8,6 +8,10 @@
 #include "icicle/hash/keccak.h"
 #include "icicle/merkle/merkle_tree.h"
 
+#include <string>
+#include <sstream>
+#include <iomanip>
+
 using namespace icicle;
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
@@ -61,31 +65,39 @@ public:
       u32_arr[i] = dist(gen);
     }
   }
+
+  std::string voidPtrToHexString(const std::byte* byteData, size_t size)
+  {
+    std::ostringstream hexStream;
+    for (size_t i = 0; i < size; ++i) {
+      // Use fully qualified names for std::hex, std::setw, and std::setfill
+      hexStream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byteData[i]);
+    }
+
+    return hexStream.str();
+  }
 };
 
 TEST_F(HashApiTest, Keccak256)
 {
-  const uint64_t input_size = 64; // Number of input elements
-  const uint64_t output_size = 32;
-
-  // Create unique pointers for input and output arrays
-  auto input = std::make_unique<uint32_t[]>(input_size);
-  auto output = std::make_unique<std::byte[]>(output_size);
-
-  // Randomize the input array
-  randomize(input.get(), input_size);
-
   auto config = default_hash_config();
+  config.batch = 2;
+
+  const std::string input = "0123456789abcdef"; // this is a batch of "01234567" and "89abcdef"
+  const std::string expected_output_0 = "d529b8ccadec912a5c302a7a9ef53e70c144eea6043dcea534fdbbb2d042fc31";
+  const std::string expected_output_1 = "58ed472a16d883f4dec9fc40438a59b017de9a7dbaa0bbc2cc9170e94eed2337";
+  const uint64_t output_size = 32;
+  auto output = std::make_unique<std::byte[]>(output_size * config.batch);
+
   // Create Keccak-256 hash object
   auto keccak256 = Keccak256::create();
   // Run single hash operation
-  ICICLE_CHECK(keccak256.hash(input.get(), input_size, config, output.get()));
-
-  // Batch hash (hashing each half separately)
-  auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
-  config.batch = 2;
-  ICICLE_CHECK(keccak256.hash(input.get(), input_size / 2, config, output_batch.get()));
-  // TODO: Verify output (e.g., check CPU against CUDA)
+  ICICLE_CHECK(keccak256.hash(input.data(), input.size() / config.batch, config, output.get()));
+  // Convert the output do a hex string and compare to expected output string
+  std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+  ASSERT_EQ(output_as_str, expected_output_0);
+  output_as_str = voidPtrToHexString(output.get() + output_size, output_size);
+  ASSERT_EQ(output_as_str, expected_output_1);
 }
 
 // TODO: add tests for all hashes
