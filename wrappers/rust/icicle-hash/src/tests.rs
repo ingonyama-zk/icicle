@@ -60,21 +60,35 @@ mod tests {
     #[test]
     fn blake2s_hashing() {
         initialize();
+        let single_hash_input_size = 567;
+        let batch = 11;
+        let total_input_size = batch * single_hash_input_size;
+
+        let mut input = vec![0 as u8; single_hash_input_size * batch];
+        rand::thread_rng().fill(&mut input[..]);
+        let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake2s
+        let mut output_main = vec![0 as u8; 32 * batch];
+
         test_utilities::test_set_ref_device();
-        let single_hash_input_size = 8;
-        let batch = 3;
         let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
-        let input = vec![0 as u8; single_hash_input_size * batch];
-        let mut output = vec![0 as u8; 8 * batch]; // 8B (=64b) is the output size of Blake2s,
         blake2s_hasher
             .hash(
                 HostSlice::from_slice(&input),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output),
+                HostSlice::from_mut_slice(&mut output_ref),
             )
             .unwrap();
-        println!("output= {:?}", output);
-        // TODO compare to main device (CUDA by default) or verify with goldens
+
+        test_utilities::test_set_main_device();
+        let blake2s_hasher = Blake2s::new(0 /*default chunk size */).unwrap();
+        blake2s_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_main),
+            )
+            .unwrap();
+        assert_eq!(output_ref, output_main);
     }
 
     #[test]
