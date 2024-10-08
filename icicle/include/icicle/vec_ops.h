@@ -21,11 +21,11 @@ namespace icicle {
     bool is_a_on_device;       /**< True if `a` is on the device, false if it is not. Default value: false. */
     bool is_b_on_device;       /**< True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
     bool is_result_on_device; /**< If true, the output is preserved on the device, otherwise on the host. Default value:
-                                 false. */
+                                                             false. */
     bool is_async;            /**< Whether to run the vector operations asynchronously.
-                                   If set to `true`, the function will be non-blocking and synchronization
-                                   must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
-                                   If set to `false`, the function will block the current CPU thread. */
+                                                       If set to `true`, the function will be non-blocking and synchronization
+                                                       must be explicitly managed using `cudaStreamSynchronize` or
+                                 `cudaDeviceSynchronize`.            If set to `false`, the function will block the current CPU thread. */
     ConfigExtension* ext = nullptr; /**< Backend-specific extension. */
   };
 

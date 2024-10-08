@@ -37,3 +37,4 @@ SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 Standard: c++17
 UseTab: Never
+IndentPPDirectives: BeforeHash

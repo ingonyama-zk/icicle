@@ -15,7 +15,7 @@ namespace icicle {
 #define SHA3_USE_KECCAK_FLAG (0x80000000)
 #define SHA3_CW(x)           ((x) & (~SHA3_USE_KECCAK_FLAG))
 #ifndef SHA3_ROTL64
-#define SHA3_ROTL64(x, y) (((x) << (y)) | ((x) >> ((sizeof(uint64_t) * 8) - (y))))
+  #define SHA3_ROTL64(x, y) (((x) << (y)) | ((x) >> ((sizeof(uint64_t) * 8) - (y))))
 #endif
 
 // Define sponge words for Keccak

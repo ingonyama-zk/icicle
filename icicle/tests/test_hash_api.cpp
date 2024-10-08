@@ -308,10 +308,10 @@ TEST_F(HashApiTest, MerkleTree)
 
 #ifdef POSEIDON
 
-#include "icicle/fields/field_config.h"
+  #include "icicle/fields/field_config.h"
 using namespace field_config;
 
-#include "icicle/hash/poseidon.h"
+  #include "icicle/hash/poseidon.h"
 
 TEST_F(HashApiTest, poseidon12)
 {

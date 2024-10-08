@@ -39,13 +39,13 @@ namespace icicle {
 
   void register_extension_ntt(const std::string& deviceType, NttExtFieldImpl impl);
 
-#define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                              \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_ntt_ext_field) = []() -> bool {                                                            \
-      register_extension_ntt(DEVICE_TYPE, FUNC);                                                                       \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ntt_ext_field) = []() -> bool {                                                          \
+        register_extension_ntt(DEVICE_TYPE, FUNC);                                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 #endif // EXT_FIELD
 
   /*************************** INIT DOMAIN ***************************/
