@@ -25,7 +25,8 @@ namespace icicle {
     bool is_async;            /**< Whether to run the vector operations asynchronously.
                                                        If set to `true`, the function will be non-blocking and synchronization
                                                        must be explicitly managed using `cudaStreamSynchronize` or
-                                 `cudaDeviceSynchronize`.            If set to `false`, the function will block the current CPU thread. */
+                                 `cudaDeviceSynchronize`.            If set to `false`, the function will block the current CPU
+                                 thread. */
     ConfigExtension* ext = nullptr; /**< Backend-specific extension. */
   };
 

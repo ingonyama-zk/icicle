@@ -29,6 +29,8 @@
 
 #if defined(_MSC_VER)
   #define LONG_CONST_SUFFIX(x) x
+  #define PACKED(x)            __pragma(pack(push, 1)) x __pragma(pack(pop))
 #else
   #define LONG_CONST_SUFFIX(x) x##L
+  #define PACKED(x)            x __attribute__((packed))
 #endif

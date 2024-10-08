@@ -107,29 +107,27 @@ TEST_F(HashApiTest, Keccak512)
 
 TEST_F(HashApiTest, Blake2s)
 {
-  // TODO Yuval
-  const uint64_t input_size = 64; // Number of input elements
-  const uint64_t output_size = 256;
+  auto config = default_hash_config();
 
-  // Create unique pointers for input and output arrays
-  auto input = std::make_unique<uint32_t[]>(input_size);
+  const std::string input = "Hello world I am blake2s";
+  const std::string expected_output = "291c4b3648438cc57d1e965ee52e5572e8dc4938bc960e22d6ebe3a280aea759";
+
+  const uint64_t output_size = 32;
   auto output = std::make_unique<std::byte[]>(output_size);
 
-  // Randomize the input array
-  randomize(input.get(), input_size);
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_DEBUG << "Blake2s test on device=" << device;
+    ICICLE_CHECK(icicle_set_device("CPU"));
 
-  auto config = default_hash_config();
-  // Create Blake2s hash object
-  auto blake2s = Blake2s::create();
-  // Run single hash operation
-  ICICLE_CHECK(blake2s.hash(input.get(), input_size, config, output.get()));
-
-  // Batch hash (hashing each half separately)
-  auto output_batch = std::make_unique<std::byte[]>(output_size * 2);
-  config.batch = 2;
-  ICICLE_CHECK(blake2s.hash(input.get(), input_size / 2, config, output_batch.get()));
-  // TODO: Verify output (e.g., check CPU against CUDA)
+    auto blake2s = Blake2s::create();
+    ICICLE_CHECK(blake2s.hash(input.data(), input.size() / config.batch, config, output.get()));
+    // Convert the output do a hex string and compare to expected output string
+    std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+    ASSERT_EQ(output_as_str, expected_output);
+  }
 }
+
+// TODO Yuval large blake2s with performance when adding CUDA
 
 TEST_F(HashApiTest, Keccak256Batch)
 {
