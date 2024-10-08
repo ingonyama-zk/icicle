@@ -3,6 +3,7 @@
  * Canonical implementation of Init/Update/Finalize for SHA-3 byte input.
  * SHA3-256, SHA3-384, SHA-512 are implemented. SHA-224 can easily be added.
  * Based on code from http://keccak.noekeon.org/ .
+ * Original work can be found on https://github.com/brainhub/SHA3IUF
  * ---------------------------------------------------------------------- */
 
 #include "icicle/backend/hash/keccak_backend.h"
