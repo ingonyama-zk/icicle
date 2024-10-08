@@ -132,7 +132,7 @@ TEST_F(HashApiTest, Keccak256Batch)
 TEST_F(HashApiTest, KeccakLarge)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 10;
+  config.batch = 1 << 8;
   const unsigned chunk_size = 1 << 13; // 8KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
@@ -140,13 +140,8 @@ TEST_F(HashApiTest, KeccakLarge)
 
   const uint64_t output_size = 32;
   auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
   auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
-
-  ICICLE_CHECK(icicle_set_device(s_main_target));
-  auto keccakCUDA = Keccak256::create();
-  START_TIMER(cuda_timer);
-  ICICLE_CHECK(keccakCUDA.hash(input.get(), chunk_size, config, output_main.get()));
-  END_TIMER(cuda_timer, "CUDA Keccak large time", true);
 
   ICICLE_CHECK(icicle_set_device(s_reference_target));
   auto keccakCPU = Keccak256::create();
@@ -154,7 +149,29 @@ TEST_F(HashApiTest, KeccakLarge)
   ICICLE_CHECK(keccakCPU.hash(input.get(), chunk_size, config, output_ref.get()));
   END_TIMER(cpu_timer, "CPU Keccak large time", true);
 
+  ICICLE_CHECK(icicle_set_device(s_main_target));
+  auto keccakCUDA = Keccak256::create();
+
+  // test with host memory
+  START_TIMER(cuda_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(keccakCUDA.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(cuda_timer, "CUDA Keccak large time (on host memory)", true);
   ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(cuda_timer_device_mem);
+  ICICLE_CHECK(keccakCUDA.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(cuda_timer_device_mem, "CUDA Keccak large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
 }
 
 TEST_F(HashApiTest, sha3)
@@ -230,6 +247,7 @@ public:
 
 TEST_F(HashApiTest, MerkleTree)
 {
+  ICICLE_CHECK(icicle_set_device(s_reference_target)); // TODO CUDA too
   // define input
   constexpr int nof_leaves = 100;
   uint32_t leaves[nof_leaves];

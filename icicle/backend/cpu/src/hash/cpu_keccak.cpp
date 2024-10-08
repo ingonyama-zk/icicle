@@ -6,19 +6,13 @@
  * ---------------------------------------------------------------------- */
 
 #include "icicle/backend/hash/keccak_backend.h"
+#include "icicle/utils/modifiers.h"
 
 namespace icicle {
 
 // Configuration flags for Keccak and SHA-3
 #define SHA3_USE_KECCAK_FLAG (0x80000000)
 #define SHA3_CW(x)           ((x) & (~SHA3_USE_KECCAK_FLAG))
-
-#if defined(_MSC_VER)
-#define SHA3_CONST(x) x
-#else
-#define SHA3_CONST(x) x##L
-#endif
-
 #ifndef SHA3_ROTL64
 #define SHA3_ROTL64(x, y) (((x) << (y)) | ((x) >> ((sizeof(uint64_t) * 8) - (y))))
 #endif
@@ -41,9 +35,13 @@ namespace icicle {
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
       ICICLE_LOG_DEBUG << name() << "::hash() called, batch=" << config.batch << ", input-size=" << size << " bytes";
 
+      // TODO (future): use tasks manager to parallel across threads. Add option to config-extension to set #threads
+      // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
+      // outside a merkle-tree context is not as fast as it could be.
+      // Note that for batch=1 this has not effect.
       for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
         eIcicleError err = sha3_hash_buffer(
-          8 * digest_size_in_bytes, m_is_keccak, input + batch_idx * single_input_size, single_input_size,
+          8 * digest_size_in_bytes /*=bitsize*/, m_is_keccak, input + batch_idx * single_input_size, single_input_size,
           output + batch_idx * digest_size_in_bytes);
 
         if (err != eIcicleError::SUCCESS) { return err; }
@@ -78,14 +76,18 @@ namespace icicle {
   };
 
   const uint64_t KeccakBackendCPU::s_keccakf_rndc[24] = {
-    SHA3_CONST(0x0000000000000001UL), SHA3_CONST(0x0000000000008082UL), SHA3_CONST(0x800000000000808aUL),
-    SHA3_CONST(0x8000000080008000UL), SHA3_CONST(0x000000000000808bUL), SHA3_CONST(0x0000000080000001UL),
-    SHA3_CONST(0x8000000080008081UL), SHA3_CONST(0x8000000000008009UL), SHA3_CONST(0x000000000000008aUL),
-    SHA3_CONST(0x0000000000000088UL), SHA3_CONST(0x0000000080008009UL), SHA3_CONST(0x000000008000000aUL),
-    SHA3_CONST(0x000000008000808bUL), SHA3_CONST(0x800000000000008bUL), SHA3_CONST(0x8000000000008089UL),
-    SHA3_CONST(0x8000000000008003UL), SHA3_CONST(0x8000000000008002UL), SHA3_CONST(0x8000000000000080UL),
-    SHA3_CONST(0x000000000000800aUL), SHA3_CONST(0x800000008000000aUL), SHA3_CONST(0x8000000080008081UL),
-    SHA3_CONST(0x8000000000008080UL), SHA3_CONST(0x0000000080000001UL), SHA3_CONST(0x8000000080008008UL)};
+    LONG_CONST_SUFFIX(0x0000000000000001UL), LONG_CONST_SUFFIX(0x0000000000008082UL),
+    LONG_CONST_SUFFIX(0x800000000000808aUL), LONG_CONST_SUFFIX(0x8000000080008000UL),
+    LONG_CONST_SUFFIX(0x000000000000808bUL), LONG_CONST_SUFFIX(0x0000000080000001UL),
+    LONG_CONST_SUFFIX(0x8000000080008081UL), LONG_CONST_SUFFIX(0x8000000000008009UL),
+    LONG_CONST_SUFFIX(0x000000000000008aUL), LONG_CONST_SUFFIX(0x0000000000000088UL),
+    LONG_CONST_SUFFIX(0x0000000080008009UL), LONG_CONST_SUFFIX(0x000000008000000aUL),
+    LONG_CONST_SUFFIX(0x000000008000808bUL), LONG_CONST_SUFFIX(0x800000000000008bUL),
+    LONG_CONST_SUFFIX(0x8000000000008089UL), LONG_CONST_SUFFIX(0x8000000000008003UL),
+    LONG_CONST_SUFFIX(0x8000000000008002UL), LONG_CONST_SUFFIX(0x8000000000000080UL),
+    LONG_CONST_SUFFIX(0x000000000000800aUL), LONG_CONST_SUFFIX(0x800000008000000aUL),
+    LONG_CONST_SUFFIX(0x8000000080008081UL), LONG_CONST_SUFFIX(0x8000000000008080UL),
+    LONG_CONST_SUFFIX(0x0000000080000001UL), LONG_CONST_SUFFIX(0x8000000080008008UL)};
 
   const unsigned KeccakBackendCPU::s_keccakf_rotc[24] = {1,  3,  6,  10, 15, 21, 28, 36, 45, 55, 2,  14,
                                                          27, 41, 56, 8,  25, 43, 62, 18, 39, 61, 20, 44};
@@ -236,7 +238,7 @@ namespace icicle {
     }
 
     ctx->u.s[ctx->wordIndex] ^= ctx->saved ^ t;
-    ctx->u.s[SHA3_KECCAK_SPONGE_WORDS - SHA3_CW(ctx->capacityWords) - 1] ^= SHA3_CONST(0x8000000000000000UL);
+    ctx->u.s[SHA3_KECCAK_SPONGE_WORDS - SHA3_CW(ctx->capacityWords) - 1] ^= LONG_CONST_SUFFIX(0x8000000000000000UL);
     keccakf(ctx->u.s);
 
     /* Return first bytes of the ctx->s. This conversion is not needed for
