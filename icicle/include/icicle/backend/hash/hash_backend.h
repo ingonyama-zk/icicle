@@ -56,9 +56,9 @@ namespace icicle {
      * @brief Get the output size in bytes for a single hash chunk.
      * @return The output size in bytes.
      */
-    uint64_t output_size() const { return m_output_size; }
+    uint64_t inline output_size() const { return m_output_size; }
 
-    const std::string& name() { return m_name_hint; }
+    const inline std::string& name() const { return m_name_hint; }
 
   protected:
     const uint64_t m_output_size;              ///< The number of output bytes produced by the hash.
@@ -67,7 +67,7 @@ namespace icicle {
 
     inline uint64_t get_single_chunk_size(uint64_t size_or_zero) const
     {
-      auto size = (size_or_zero == 0) ? input_default_chunk_size() : size_or_zero;
+      const uint64_t size = (size_or_zero == 0) ? input_default_chunk_size() : size_or_zero;
       ICICLE_ASSERT(size > 0) << "Cannot infer hash size. Make sure to pass it to hasher.hash(...size...) or have "
                                  "default size for the hasher";
       return size;
