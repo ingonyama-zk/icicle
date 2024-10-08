@@ -22,6 +22,10 @@ namespace icicle {
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
+      const auto digest_size_in_bytes = output_size();
+      const auto single_input_size = get_single_chunk_size(
+        size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
+
       ICICLE_LOG_DEBUG << "Blake2s CPU hash() called, batch=" << config.batch
                        << ", single_output_size=" << output_size();
 
@@ -31,7 +35,8 @@ namespace icicle {
       // Note that for batch=1 this has not effect.
       for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
         int result = blake2s(
-          output + batch_idx * BLAKE2S_OUTBYTES, BLAKE2S_OUTBYTES, input + batch_idx * size, size,
+          output + batch_idx * digest_size_in_bytes, digest_size_in_bytes, input + batch_idx * single_input_size,
+          single_input_size,
           nullptr, // No key used
           0        // Key length is 0
         );
