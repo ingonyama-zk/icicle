@@ -168,10 +168,34 @@ TEST_F(HashApiTest, MerkleTree)
 #ifdef POSEIDON
 
 #include "icicle/fields/field_config.h"
+#include "..//tests/poseidon_constants/poseidon_input_and_ref_value.h"
+
 using namespace field_config;
+using namespace poseidon_constants_bn254;
 
 #include "icicle/hash/poseidon.h"
 
+TEST_F(HashApiTest, poseidon3)
+{
+  const uint64_t arity = 3; // Number of input elements
+  std::cout << "Running HashApiTest.poseidon3 test" << std::endl;
+
+  // Create unique pointers for input and output arrays
+  auto input = pre_round_input_state;
+  scalar_t output = scalar_t::from(0);
+
+  // init poseidon constants on current device
+  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
+
+  // Create Poseidon hash object
+  auto poseidon = Poseidon::create<scalar_t>(arity);
+
+  // Run single hash operation
+  auto config = default_hash_config();
+  ICICLE_CHECK(poseidon.hash(input, arity * sizeof(scalar_t), config, &output));
+  std::cout << "HashApiTest.poseidon3 test: output = " << output << std::endl;
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
 TEST_F(HashApiTest, poseidon12)
 {
   const uint64_t arity = 12; // Number of input elements
@@ -190,7 +214,7 @@ TEST_F(HashApiTest, poseidon12)
 
   // Run single hash operation
   auto config = default_hash_config();
-  ICICLE_CHECK(poseidon.hash(input.get(), arity, config, &output));
+  ICICLE_CHECK(poseidon.hash(input.get(), arity * sizeof(scalar_t), config, &output));
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 #endif // POSEIDON

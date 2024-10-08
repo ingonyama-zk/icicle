@@ -18,6 +18,15 @@ namespace icicle {
   struct PoseidonConstantsInitOptions {
     // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
     // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
+    unsigned int  arity;                  ///< Arity of a hash (number of inputs of the single hash).
+    unsigned int  alpha;                  ///< Sbox power.
+    unsigned int  nof_upper_full_rounds;  ///< Number of upper full rounds of a single hash.
+    unsigned int  nof_partial_rounds;     ///< Number of partial rounds of a single hash.
+    unsigned int  nof_end_full_rounds;    ///< Number of bottom full rounds of a single hash.
+    S*            rounds_constants;       ///< Round constants (both of the full and the partial rounds). The order of the constants in the memory is according to the rounds order.
+    S*            mds_matrix;             ///> MDS matrix used in the full rounds. The same matrix is used for all the full rounds.
+    S*            pre_matrix;             ///< Pre-matrix used in the last upper full round.
+    S*            sparse_matrices;        ///< Sparse matries that are used in the partial rounds. A single aprse matrix in the memory has "arity x arity" members. The calculation is done only on the member that not equal to zero.
   };
 
   // Function to generate and initialize Poseidon constants based on user-defined options.
