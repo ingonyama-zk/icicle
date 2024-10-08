@@ -408,8 +408,13 @@ namespace ntt {
     S* fast_basic_twiddles_inv = nullptr;    // required by mixed-radix NTT (fast-twiddles mode)
 
   public:
+#ifdef DCCT
+    template <typename U, typename R>
+    friend cudaError_t init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+#else
     template <typename U>
     friend cudaError_t init_domain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+#endif
 
     template <typename U>
     friend cudaError_t release_domain(device_context::DeviceContext& ctx);
@@ -426,6 +431,61 @@ namespace ntt {
 
   template <typename S>
   static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
+
+#ifdef DCCT
+  template <typename S, typename R>
+  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  {
+    CHK_INIT_IF_RETURN();
+
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+
+    // only generate twiddles if they haven't been generated yet
+    // please note that this offers just basic thread-safety,
+    // it's assumed a singleton (non-enforced) that is supposed
+    // to be initialized once per device per program lifetime
+    if (!domain.initialized) {
+      // Mutex is automatically released when lock goes out of scope, even in case of exceptions
+      std::lock_guard<std::mutex> lock(Domain<S>::device_domain_mutex);
+      // double check locking
+      if (domain.initialized) return CHK_LAST(); // another thread is already initializing the domain
+
+      bool found_logn = false;
+      R omega = primitive_root;
+      unsigned omegas_count = R::get_omegas_count();
+      for (int i = 0; i < omegas_count; i++) {
+        omega = R::sqr(omega);
+        if (!found_logn) {
+          ++domain.max_log_size;
+          found_logn = omega == R::one();
+          if (found_logn) break;
+        }
+      }
+
+      domain.max_log_size--;
+      domain.max_size = (int)pow(2, domain.max_log_size);
+      if (omega != R::one()) {
+        THROW_ICICLE_ERR(
+          IcicleError_t::InvalidArgument, "Primitive root provided to the InitDomain function is not in the subgroup");
+      }
+
+      // allocate and calculate twiddles on GPU
+      // N * (2 ** (N - 1)) for dcct
+      // N * (2 ** (N - 1)) for idcct
+      size_t number_of_twiddles = domain.max_log_size * (1 << domain.max_log_size);
+      CHK_IF_RETURN(cudaMalloc(&domain.basic_twiddles, number_of_twiddles * sizeof(S)));
+
+      CHK_IF_RETURN(
+        mxntt::generate_twiddles_dcct(primitive_root, domain.basic_twiddles, domain.max_log_size, ctx.stream));
+
+      domain.coset_index[S::one()] = 0;
+      domain.initialized = true;
+    }
+
+    return CHK_LAST();
+  }
+
+#else
 
   template <typename S>
   cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
@@ -466,6 +526,7 @@ namespace ntt {
       // Note: radix-2 INTT needs ONE in last element (in addition to first element), therefore have n+1 elements
       // Managed allocation allows host to read the elements (logn) without copying all (n) TFs back to host
       CHK_IF_RETURN(cudaMallocManaged(&domain.twiddles, (domain.max_size + 1) * sizeof(S)));
+
       CHK_IF_RETURN(mxntt::generate_external_twiddles_generic(
         primitive_root, domain.twiddles, domain.internal_twiddles, domain.basic_twiddles, domain.max_log_size,
         ctx.stream));
@@ -510,6 +571,8 @@ namespace ntt {
 
     return CHK_LAST();
   }
+
+#endif
 
   template <typename S>
   cudaError_t release_domain(device_context::DeviceContext& ctx)

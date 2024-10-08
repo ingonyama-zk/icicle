@@ -34,9 +34,15 @@ public:
   FF real;
   FF imaginary;
 
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField zero() { return ComplexExtensionField{FF::zero(), FF::zero()}; }
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField zero()
+  {
+    return ComplexExtensionField{FF::zero(), FF::zero()};
+  }
 
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField one() { return ComplexExtensionField{FF::one(), FF::zero()}; }
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField one()
+  {
+    return ComplexExtensionField{FF::one(), FF::zero()};
+  }
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
   {
@@ -48,7 +54,10 @@ public:
     return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
   }
 
-  static HOST_INLINE ComplexExtensionField rand_host() { return ComplexExtensionField{FF::rand_host(), FF::rand_host()}; }
+  static HOST_INLINE ComplexExtensionField rand_host()
+  {
+    return ComplexExtensionField{FF::rand_host(), FF::rand_host()};
+  }
   
   static HOST_INLINE ComplexExtensionField rand_host_fast(int seed) { return {(uint32_t)seed, (uint32_t)seed}; }
 
@@ -56,12 +65,14 @@ public:
   {
     for (int i = 0; i < size; i++)
       out[i] = rand_host_fast(i);
+      out[i] = rand_host();
   }
 
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.imaginary)};
+    return ComplexExtensionField{
+      FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.imaginary)};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const ComplexExtensionField& xs)
@@ -101,7 +112,8 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE ExtensionWide
+  mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     FWide real_prod = FF::mul_wide(xs.real, ys.real);
     FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
@@ -142,7 +154,10 @@ public:
     return (xs.real == ys.real) && (xs.imaginary == ys.imaginary);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys) { return !(xs == ys); }
+  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  {
+    return !(xs == ys);
+  }
 
   template <const ComplexExtensionField& multiplier>
   static HOST_DEVICE_INLINE ComplexExtensionField mul_const(const ComplexExtensionField& xs)
@@ -180,6 +195,17 @@ public:
     return xs * xs;
   }
 
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField pow(ComplexExtensionField base, int exp)
+  {
+    ComplexExtensionField res = one();
+    while (exp > 0) {
+      if (exp & 1) res = res * base;
+      base = base * base;
+      exp >>= 1;
+    }
+    return res;
+  }
+
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField neg(const ComplexExtensionField& xs)
   {
@@ -196,6 +222,17 @@ public:
     FF xs_norm_squared = FF::sqr(xs.real) - nonresidue_times_im;
     return xs_conjugate * ComplexExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
   }
+
+  static constexpr HOST_INLINE unsigned get_omegas_count()
+  {
+    if constexpr (has_member_omegas_count()) {
+      return CONFIG::ext_omegas_count;
+    } else {
+      return 0;
+    }
+  }
+
+  static constexpr bool has_member_omegas_count() { return sizeof(CONFIG::ext_omegas_count) > 0; }
 };
 
 template <typename CONFIG, class T>

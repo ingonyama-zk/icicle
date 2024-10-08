@@ -2,12 +2,9 @@
 
 #include "fields/storage.cuh"
 #include "fields/field.cuh"
-#include "fields/quartic_extension.cuh"
 #include "fields/complex_extension.cuh"
-
-#include <thread>
-#include <vector>
-#include <random>
+#include "fields/quartic_extension.cuh"
+#include "fields/params_gen.cuh"
 
 namespace m31 {
   template <class CONFIG>
@@ -21,7 +18,7 @@ namespace m31 {
 
     static constexpr HOST_DEVICE_INLINE MersenneField zero() { return MersenneField(CONFIG::zero); }
 
-    static constexpr HOST_DEVICE_INLINE MersenneField one() { return MersenneField(CONFIG::one.limbs[0]); }
+    static constexpr HOST_DEVICE_INLINE MersenneField one() { return MersenneField(CONFIG::one); }
 
     static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) { return MersenneField(value); }
 
@@ -102,6 +99,7 @@ namespace m31 {
       template <unsigned MODULUS_MULTIPLE = 1>
       static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
       {
+        if (xs.storage == 0) return xs;
         uint64_t tmp = CONFIG::modulus_3 - xs.storage;                      // max: 3(2^31-1) - 0 = 2^32(1) + (2^31 - 3)
         return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1)+(2^31-3) = 2^31 - 1
       }
@@ -110,6 +108,12 @@ namespace m31 {
         uint64_t t1 = (uint64_t)xs.storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
         t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);         // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
         return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
+      }
+
+      friend std::ostream& operator<<(std::ostream& os, const Wide& xs)
+      {
+        os << xs.storage;
+        return os;
       }
     };
 
@@ -213,10 +217,29 @@ namespace m31 {
       }
       return res;
     }
+
+    static HOST_DEVICE_INLINE MersenneField inv_log_size(uint32_t logn)
+    {
+      if (logn == 0) { return MersenneField{CONFIG::one}; }
+#ifndef __CUDA_ARCH__
+      if (logn > CONFIG::ext_omegas_count) THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid inv index");
+#else
+      if (logn > CONFIG::ext_omegas_count) {
+        printf(
+          "CUDA ERROR: field.cuh: error on inv_log_size(logn): logn(=%u) > omegas_count (=%u)", logn,
+          CONFIG::ext_omegas_count);
+        assert(false);
+      }
+#endif // __CUDA_ARCH__
+      // storage_array<CONFIG::omegas_count, 1> const inv = CONFIG::inv;
+      return MersenneField::inverse(MersenneField{1U << logn});
+    }
   };
+
   struct fp_config {
     static constexpr unsigned limbs_count = 1;
     static constexpr unsigned omegas_count = 1;
+    static constexpr unsigned ext_omegas_count = 30;
     static constexpr unsigned modulus_bit_count = 31;
     static constexpr unsigned num_of_reductions = 1;
 
@@ -235,6 +258,7 @@ namespace m31 {
     static constexpr storage<limbs_count> zero = {0x00000000};
     static constexpr storage<limbs_count> montgomery_r = {0x00000001};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x00000001};
+    static constexpr storage<limbs_count> rou = {0x00000001};
 
     static constexpr storage_array<omegas_count, limbs_count> omega = {{{0x7ffffffe}}};
 
@@ -258,13 +282,54 @@ namespace m31 {
    */
   typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
 
+  const c_extension_t ROU = {{2}, {1268011823}};
+
+  // namespace quad_extension_config {
+  //   static constexpr storage<1> rou = {0x00000089};
+  //   TWIDDLES(modulus, rou)
+  // }
+
+  static HOST_INLINE c_extension_t get_ext_omega(uint32_t logn)
+  {
+    if (logn == 0) { return c_extension_t::one(); }
+
+    if (logn > fp_config::ext_omegas_count) {
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, "Field: Invalid ext omega index");
+    }
+
+    c_extension_t omega = ROU;
+    for (int i = 0; i < fp_config::ext_omegas_count - logn; i++) {
+      omega = c_extension_t::sqr(omega);
+    }
+    return omega;
+  }
+
   /**
-   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
 
-  /**
-   * The default extension type
-   */
   typedef q_extension_t extension_t;
 } // namespace m31
+
+template <typename CONFIG>
+struct std::hash<m31::MersenneField<CONFIG>> {
+  std::size_t operator()(const m31::MersenneField<CONFIG>& key) const
+  {
+    std::size_t hash = 0;
+    // boost hashing, see
+    // https://stackoverflow.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
+    for (int i = 0; i < CONFIG::limbs_count; i++)
+      hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    return hash;
+  }
+};
+
+template <class CONFIG>
+struct SharedMemory<m31::MersenneField<CONFIG>> {
+  __device__ m31::MersenneField<CONFIG>* getPointer()
+  {
+    extern __shared__ m31::MersenneField<CONFIG> s_scalar_[];
+    return s_scalar_;
+  }
+};

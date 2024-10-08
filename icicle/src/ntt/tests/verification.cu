@@ -1,5 +1,5 @@
 #include "fields/id.h"
-#define FIELD_ID BN254
+#define FIELD_ID BABY_BEAR
 
 #ifdef ECNTT
 #define CURVE_ID BN254
