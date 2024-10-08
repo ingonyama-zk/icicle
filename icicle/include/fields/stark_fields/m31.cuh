@@ -6,6 +6,10 @@
 #include "fields/quartic_extension.cuh"
 #include "fields/params_gen.cuh"
 
+#include <thread>
+#include <vector>
+#include <random>
+
 namespace m31 {
   template <class CONFIG>
   class MersenneField : public Field<CONFIG>

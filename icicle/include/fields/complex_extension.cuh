@@ -65,7 +65,7 @@ public:
   {
     for (int i = 0; i < size; i++)
       out[i] = rand_host_fast(i);
-      out[i] = rand_host();
+      // out[i] = rand_host(); //TODO: painfully slow
   }
 
   template <unsigned REDUCTION_SIZE = 1>
