@@ -117,7 +117,7 @@ TEST_F(HashApiTest, Blake2s)
 
   for (const auto& device : s_registered_devices) {
     ICICLE_LOG_DEBUG << "Blake2s test on device=" << device;
-    ICICLE_CHECK(icicle_set_device("CPU"));
+    ICICLE_CHECK(icicle_set_device(device));
 
     auto blake2s = Blake2s::create();
     ICICLE_CHECK(blake2s.hash(input.data(), input.size() / config.batch, config, output.get()));
@@ -126,8 +126,6 @@ TEST_F(HashApiTest, Blake2s)
     ASSERT_EQ(output_as_str, expected_output);
   }
 }
-
-// TODO Yuval large blake2s with performance when adding CUDA
 
 TEST_F(HashApiTest, Keccak256Batch)
 {
@@ -195,6 +193,51 @@ TEST_F(HashApiTest, KeccakLarge)
   START_TIMER(cuda_timer_device_mem);
   ICICLE_CHECK(keccakCUDA.hash(d_input, chunk_size, config, d_output));
   END_TIMER(cuda_timer_device_mem, "CUDA Keccak large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+}
+
+TEST_F(HashApiTest, Blake2sLarge)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 8;
+  const unsigned chunk_size = 1 << 13; // 8KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  auto blake2sCPU = Blake2s::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(blake2sCPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU blake2s large time", true);
+
+  ICICLE_CHECK(icicle_set_device(s_main_target));
+  auto blake2sCUDA = Blake2s::create();
+
+  // test with host memory
+  START_TIMER(cuda_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(blake2sCUDA.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(cuda_timer, "CUDA blake2s large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(cuda_timer_device_mem);
+  ICICLE_CHECK(blake2sCUDA.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(cuda_timer_device_mem, "CUDA blake2s large time (on device memory)", true);
   ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
   ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
 }

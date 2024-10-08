@@ -31,8 +31,7 @@ mod tests {
         let total_input_size = batch * single_hash_input_size;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
-        let mut rng = rand::thread_rng();
-        rng.fill(&mut input[..]);
+        rand::thread_rng().fill(&mut input[..]);
         let mut output_ref = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
         let mut output_main = vec![0 as u8; 64 * batch];
 
@@ -82,8 +81,7 @@ mod tests {
     fn sha3_hashing() {
         initialize();
         let mut input = vec![0 as u8; 1153];
-        let mut rng = rand::thread_rng();
-        rng.fill(&mut input[..]);
+        rand::thread_rng().fill(&mut input[..]);
         let mut output_main = vec![0 as u8; 32];
         let mut output_ref = vec![0 as u8; 32];
 
@@ -126,7 +124,7 @@ mod tests {
         }
 
         // or any way that ends up with &[&Hashers]
-        // building a binray tree, each layer takes 2*32B=64B and hashes to 32B
+        // building a binary tree, each layer takes 2*32B=64B and hashes to 32B
         let nof_layers = 4;
         let num_elements = 1 << nof_layers;
         let leaf_element_size = 32;
