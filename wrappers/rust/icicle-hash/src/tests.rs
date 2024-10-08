@@ -18,48 +18,75 @@ mod tests {
 
     pub fn initialize() {
         INIT.call_once(move || {
-            // TODO load CUDA backend
-            // test_utilities::test_load_and_init_devices();
+            test_utilities::test_load_and_init_devices();
         });
     }
 
     #[test]
-    fn keccak_hashing() {
+    fn keccak_hashing_batch() {
         initialize();
-        test_utilities::test_set_ref_device();
         let single_hash_input_size = 30;
         let batch = 3;
+        let total_input_size = batch * single_hash_input_size;
+
+        let mut input = vec![0 as u8; single_hash_input_size * batch];
+        let mut rng = rand::thread_rng();
+        rng.fill(&mut input[..]);
+        let mut output_ref = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
+        let mut output_main = vec![0 as u8; 64 * batch];
+
+        test_utilities::test_set_ref_device();
         let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
-        let input = vec![0 as u8; single_hash_input_size * batch];
-        let mut output = vec![0 as u8; 64 * batch]; // 64B (=512b) is the output size of Keccak512,
         keccak_hasher
             .hash(
                 HostSlice::from_slice(&input),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output),
+                HostSlice::from_mut_slice(&mut output_ref),
             )
             .unwrap();
-        println!("output= {:?}", output);
-        // TODO compare to main device (CUDA by default) or verify with goldens
+
+        test_utilities::test_set_main_device();
+        let keccak_hasher = Keccak512::new(0 /*default chunk size */).unwrap();
+        keccak_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_main),
+            )
+            .unwrap();
+        assert_eq!(output_ref, output_main);
     }
 
     #[test]
     fn sha3_hashing() {
         initialize();
-        test_utilities::test_set_ref_device();
+        let mut input = vec![0 as u8; 1153];
+        let mut rng = rand::thread_rng();
+        rng.fill(&mut input[..]);
+        let mut output_main = vec![0 as u8; 32];
+        let mut output_ref = vec![0 as u8; 32];
 
-        let sha3_hasher = Sha3_512::new(0 /*default chunk size */).unwrap();
-        let input = vec![0 as u8; 90];
-        let mut output = vec![0 as u8; 64]; // 256b * batch
+        test_utilities::test_set_ref_device();
+        let sha3_hasher = Sha3_256::new(0 /*default chunk size */).unwrap();
         sha3_hasher
             .hash(
                 HostSlice::from_slice(&input),
                 &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut output),
+                HostSlice::from_mut_slice(&mut output_ref),
             )
             .unwrap();
-        println!("output= {:?}", output);
-        // TODO compare to main device (CUDA by default) or verify with goldens
+
+        test_utilities::test_set_main_device();
+        let sha3_hasher = Sha3_256::new(0 /*default chunk size */).unwrap();
+        sha3_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_main),
+            )
+            .unwrap();
+
+        assert_eq!(output_ref, output_main);
     }
 
     #[test]

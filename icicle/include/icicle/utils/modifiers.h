@@ -26,3 +26,9 @@
 #define __host__
 #define __device__
 #endif
+
+#if defined(_MSC_VER)
+#define LONG_CONST_SUFFIX(x) x
+#else
+#define LONG_CONST_SUFFIX(x) x##L
+#endif
