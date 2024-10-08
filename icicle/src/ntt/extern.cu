@@ -8,6 +8,7 @@ using namespace field_config;
 #include "utils/utils.h"
 
 namespace ntt {
+#ifdef DCCT
   /**
    * Extern "C" version of [init_domain](@ref init_domain) function with the following
    * value of template parameter (where the field is given by `-DFIELD` env variable during build):
@@ -19,6 +20,19 @@ namespace ntt {
   {
     return init_domain(*primitive_root, ctx, fast_twiddles_mode);
   }
+#else
+  /**
+   * Extern "C" version of [init_domain](@ref init_domain) function with the following
+   * value of template parameter (where the field is given by `-DFIELD` env variable during build):
+   *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
+   * stand-alone "STARK field";
+   */
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, initialize_domain)(
+    scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  {
+    return init_domain(*primitive_root, ctx, fast_twiddles_mode);
+  }
+#endif
 
   /**
    * Extern "C" version of [ntt](@ref ntt) function with the following values of template parameters

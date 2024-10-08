@@ -419,8 +419,13 @@ namespace ntt {
     template <typename U>
     friend cudaError_t release_domain(device_context::DeviceContext& ctx);
 
-    template <typename U>
+#ifdef DCCT
+    template <typename U, typename R>
     friend U get_root_of_unity<U>(uint64_t logn, device_context::DeviceContext& ctx);
+#else
+    template <typename U>
+    friend R get_root_of_unity<U, R>(uint64_t logn, device_context::DeviceContext& ctx);
+#endif
 
     template <typename U>
     friend U get_root_of_unity_from_domain<U>(uint64_t logn, device_context::DeviceContext& ctx);

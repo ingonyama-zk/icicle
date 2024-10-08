@@ -7,9 +7,11 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
 
 pub(crate) const SCALAR_LIMBS: usize = 1;
+pub(crate) const COMPLEX_EXTENSION_LIMBS: usize = 2;
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
 impl_scalar_field!("m31", m31, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
+
 impl_scalar_field!(
     "m31_extension",
     m31_extension,
@@ -18,6 +20,17 @@ impl_scalar_field!(
     ExtensionCfg,
     Fr
 );
+
+impl_scalar_field!(
+    "m31_complex_extension",
+    m31_complex_extension,
+    COMPLEX_EXTENSION_LIMBS,
+    ComplexExtensionField,
+    ComplexExtensionCfg,
+    Fr
+);
+
+
 #[cfg(test)]
 mod tests {
     use super::{ExtensionField, ScalarField};
