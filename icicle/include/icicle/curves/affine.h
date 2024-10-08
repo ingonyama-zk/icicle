@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef __CUDACC__
-#include "gpu-utils/sharedmem.h"
+  #include "gpu-utils/sharedmem.h"
 #endif // __CUDACC__
 #include "icicle/utils/modifiers.h"
 #include <iostream>

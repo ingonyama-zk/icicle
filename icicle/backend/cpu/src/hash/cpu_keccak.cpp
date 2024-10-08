@@ -1,10 +1,14 @@
-/* -------------------------------------------------------------------------
- * Works when compiled for either 32-bit or 64-bit targets, optimized for 64-bit.
- * Canonical implementation of Init/Update/Finalize for SHA-3 byte input.
- * SHA3-256, SHA3-384, SHA-512 are implemented. SHA-224 can easily be added.
- * Based on code from http://keccak.noekeon.org/ .
- * Original work can be found on https://github.com/brainhub/SHA3IUF
- * ---------------------------------------------------------------------- */
+/*
+   This file includes code from the SHA3IUF project.
+
+   SHA3IUF is licensed under the MIT License.
+   You may obtain a copy of the MIT License at:
+
+     https://opensource.org/licenses/MIT
+
+   Original source:
+     https://github.com/brainhub/SHA3IUF
+*/
 
 #include "icicle/backend/hash/keccak_backend.h"
 #include "icicle/utils/modifiers.h"
@@ -15,7 +19,7 @@ namespace icicle {
 #define SHA3_USE_KECCAK_FLAG (0x80000000)
 #define SHA3_CW(x)           ((x) & (~SHA3_USE_KECCAK_FLAG))
 #ifndef SHA3_ROTL64
-#define SHA3_ROTL64(x, y) (((x) << (y)) | ((x) >> ((sizeof(uint64_t) * 8) - (y))))
+  #define SHA3_ROTL64(x, y) (((x) << (y)) | ((x) >> ((sizeof(uint64_t) * 8) - (y))))
 #endif
 
 // Define sponge words for Keccak

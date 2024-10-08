@@ -3,7 +3,7 @@
 #include "field.h"
 #include "icicle/utils/modifiers.h"
 #ifdef __CUDACC__
-#include "gpu-utils/sharedmem.h"
+  #include "gpu-utils/sharedmem.h"
 #endif // __CUDACC__
 
 template <typename CONFIG, class T>

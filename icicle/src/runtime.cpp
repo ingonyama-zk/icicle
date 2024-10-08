@@ -265,7 +265,7 @@ const std::string SHARED_LIB_EXTENSION = ".so";
 #elif __APPLE__
 const std::string SHARED_LIB_EXTENSION = ".dylib";
 #else
-#error "Unsupported operating system"
+  #error "Unsupported operating system"
 #endif
 
 extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
