@@ -41,8 +41,79 @@ namespace icicle {
 
   REGISTER_POSEIDON_INIT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_constants);
 
-  // static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)   DANNY
-  static eIcicleError cpu_poseidon_init_default_constants(const Device& device, /* unsigned int arity, */ const scalar_t& phantom)
+  // // static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)   DANNY
+  // static eIcicleError cpu_poseidon_init_default_constants(const Device& device, /* unsigned int arity, */ const scalar_t& phantom)
+  // {
+  //   ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
+  //   unsigned int partial_rounds;
+  //   unsigned char* constants;
+  //   for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_arities); arity_idx++) {
+  //     unsigned int arity = poseidon_legal_arities[arity_idx];
+  //     poseidon_constants[arity].alpha = 5;
+  //     poseidon_constants[arity].nof_upper_full_rounds = 4;
+  //     poseidon_constants[arity].nof_end_full_rounds = 4;      
+  //     switch (poseidon_legal_arities[arity_idx]) {
+  //       case 3:
+  //         constants = poseidon_constants_3;
+  //         partial_rounds = partial_rounds_3;
+  //         break;
+  //       case 5:
+  //         constants = poseidon_constants_5;
+  //         partial_rounds = partial_rounds_5;
+  //         break;
+  //       case 9:
+  //         constants = poseidon_constants_9;
+  //         partial_rounds = partial_rounds_9;
+  //         break;
+  //       case 12:
+  //         constants = poseidon_constants_12;
+  //         partial_rounds = partial_rounds_12;
+  //         break;
+  //       default:
+  //         ICICLE_LOG_ERROR << "cpu_poseidon_init_default_constants: #arity must be one of [2, 4, 8, 11]";
+  //         return eIcicleError::INVALID_ARGUMENT;
+  //     }
+  //   }
+
+  //   scalar_t* h_constants = reinterpret_cast<scalar_t*>(constants);
+
+  //   for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_arities); arity_idx++) {
+  //     unsigned int arity = poseidon_legal_arities[arity_idx];
+  //     unsigned int round_constants_len = arity * (poseidon_constants[arity].nof_upper_full_rounds + poseidon_constants[arity].nof_upper_full_rounds) + partial_rounds;
+  //     unsigned int mds_matrix_len = arity * arity;      
+  //     poseidon_constants[arity].rounds_constants = h_constants;
+  //     poseidon_constants[arity].mds_matrix = poseidon_constants[arity].rounds_constants + round_constants_len;
+  //     poseidon_constants[arity].pre_matrix = poseidon_constants[arity].mds_matrix + mds_matrix_len;
+  //     poseidon_constants[arity].sparse_matrices = poseidon_constants[arity].pre_matrix + mds_matrix_len;
+  //   }
+  //   return eIcicleError::SUCCESS;
+  // }
+
+  // REGISTER_POSEIDON_INIT_DEFAULT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_default_constants);
+
+  // DEBUG
+  int print_input_bytes(std::string input_type, const std::byte* input, uint64_t size) {
+    int nof_lines = size / 16;
+    for (int line_idx = 0; line_idx < nof_lines; line_idx++) {
+      for (int byte_idx = 0; byte_idx < 16; byte_idx++) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*input) << " ";
+        input++;
+        std::cout << std::endl;
+      }
+    }
+    return 0;
+  }
+  // DEBUG
+
+  template <typename S>
+  class PoseidonBackendCPU : public HashBackend
+  {
+  public:
+    PoseidonBackendCPU(unsigned arity) : HashBackend("Poseidon-CPU", sizeof(S), arity * sizeof(S)) {
+      cpu_poseidon_init_default_constants("Poseidon-CPU", scalar_t::from(0));
+    }
+
+  eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)
   {
     ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
     unsigned int partial_rounds;
@@ -87,31 +158,9 @@ namespace icicle {
       poseidon_constants[arity].sparse_matrices = poseidon_constants[arity].pre_matrix + mds_matrix_len;
     }
     return eIcicleError::SUCCESS;
-  }
+  }    
 
-  REGISTER_POSEIDON_INIT_DEFAULT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_default_constants);
-
-  // DEBUG
-  int print_input_bytes(std::string input_type, const std::byte* input, uint64_t size) {
-    int nof_lines = size / 16;
-    for (int line_idx = 0; line_idx < nof_lines; line_idx++) {
-      for (int byte_idx = 0; byte_idx < 16; byte_idx++) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*input) << " ";
-        input++;
-        std::cout << std::endl;
-      }
-    }
-    return 0;
-  }
-  // DEBUG
-
-  template <typename S>
-  class PoseidonBackendCPU : public HashBackend
-  {
-  public:
-    PoseidonBackendCPU(unsigned arity) : HashBackend("Poseidon-CPU", sizeof(S), arity * sizeof(S)) {}
-
-    // size should be zero in order or equal to HashBackend::m_default_input_chunk_size.
+    // Size should be zero in order or equal to HashBackend::m_default_input_chunk_size.
     // Otherwise return eIcicleError::INVALID_ARGUMENT.
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override    // DANNY - config isn't needed in cpu
     {
@@ -123,7 +172,7 @@ namespace icicle {
         ICICLE_LOG_ERROR << "PoseidonBackendCPU:hash(...): size = " << size << ", m_default_input_chunk_size = " << m_default_input_chunk_size;
         return eIcicleError::INVALID_ARGUMENT;
       }
-      print_input_bytes("Input", input, size);
+      print_input_bytes("Input", input, size);    // DEBUG
       
       unsigned int arity = m_default_input_chunk_size / sizeof(S);
 
