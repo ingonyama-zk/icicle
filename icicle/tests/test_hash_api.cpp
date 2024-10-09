@@ -196,6 +196,9 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   constexpr int nof_leaves = 50;
   merkel_hash_t leaves[nof_leaves];
   randomize(leaves, nof_leaves);
+
+  merkel_hash_t other_leaves[nof_leaves];
+  randomize(other_leaves, nof_leaves);
   
   // define the merkle tree
   auto config = default_merkle_tree_config();
@@ -206,14 +209,22 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   
   std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
   
-  auto merkle_tree =
-    MerkleTree::create(hashes, sizeof(merkel_hash_t), 0 /*min level to store*/);
+  int output_store_min_layer;
+  randomize(&output_store_min_layer, 1);
+  output_store_min_layer = output_store_min_layer & 3; // Ensure index is in a valid 0-3 range
+  ICICLE_LOG_DEBUG << "Min store layer:\t" << output_store_min_layer;
+
+  auto prover_tree =
+    MerkleTree::create(hashes, sizeof(merkel_hash_t), output_store_min_layer);
+
+  auto verifier_tree =
+    MerkleTree::create(hashes, sizeof(merkel_hash_t), output_store_min_layer);
 
   // build tree
 
   //START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(merkle_tree.build(leaves, nof_leaves, config));
-  assert_valid_tree<uint32_t>(merkle_tree, nof_leaves, leaves, hashes, config);
+  ICICLE_CHECK(prover_tree.build(leaves, nof_leaves, config));
+  assert_valid_tree<uint32_t>(prover_tree, nof_leaves, leaves, hashes, config);
   //std::cout << "MerkleTree build time: ";
   //END_TIMER(MerkleTree_build, std::cout, true)
 
@@ -226,17 +237,32 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   {
     int leaf_idx = leaf_indices[i] % nof_leaves;
 
-    auto [root, root_size] = merkle_tree.get_merkle_root();
+    auto [root, root_size] = prover_tree.get_merkle_root();
     MerkleProof merkle_proof{};
-    ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, false, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, false, config, merkle_proof));
 
+    // Test valid proof
     bool verification_valid = false;
-    ICICLE_CHECK(merkle_tree.verify(merkle_proof, verification_valid));
+    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_TRUE(verification_valid);
+    
+    // Test invalid proof (By modifying random data in the leaves)
+    verification_valid = true;
+    ICICLE_CHECK(prover_tree.get_merkle_proof(other_leaves, nof_leaves, leaf_idx, false, config, merkle_proof));
+    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+    ASSERT_FALSE(verification_valid);
 
-    ICICLE_CHECK(merkle_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, true, config, merkle_proof));
-    ICICLE_CHECK(merkle_tree.verify(merkle_proof, verification_valid));
+    // Same for pruned proof
+    verification_valid = false;
+    ICICLE_CHECK(prover_tree.get_merkle_proof(leaves, nof_leaves, leaf_idx, true, config, merkle_proof));
+    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_TRUE(verification_valid);
+    
+    // Test invalid proof (By adding random data to the proof)
+    verification_valid = true;
+    ICICLE_CHECK(prover_tree.get_merkle_proof(other_leaves, nof_leaves, leaf_idx, true, config, merkle_proof));
+    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+    ASSERT_FALSE(verification_valid);
   }
 }
 #ifdef POSEIDON
