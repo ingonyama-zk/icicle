@@ -1,7 +1,7 @@
 [package]
 name = "hash-and-merkle"
 version = "0.1.0"
-edition = "2021"
+edition = "2018"
 
 [dependencies]
 hex = "0.4" 
