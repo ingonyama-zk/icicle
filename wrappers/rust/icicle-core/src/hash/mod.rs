@@ -105,7 +105,7 @@ impl Hasher {
             icicle_hasher_hash(
                 self.handle,
                 input_ptr, // Casted to *const u8
-                input_byte_len,
+                input_byte_len / local_cfg.batch,
                 &local_cfg,
                 output_ptr, // Casted to *mut u8
             )

@@ -264,6 +264,8 @@ extern "C" eIcicleError icicle_is_device_available(const Device& dev);
 
 /**
  * @brief Retrieves the registered devices in comma-separated string.
+ *        Useful for FFI where we avoid returning std collections types.
+ *        Prefer using get_registered_devices_list() -> std::list
  *
  * @param output buffer for writing registered devices types
  * @return eIcicleError Status of the properties query.

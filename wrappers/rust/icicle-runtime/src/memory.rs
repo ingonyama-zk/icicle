@@ -81,6 +81,40 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     }
 }
 
+// Note: Implementing the trait for DeviceVec such that functions expecting DeviceSlice reference can take a HostOrDeviceSlice reference without being a breaking change.
+// Otherwise the syntax would be &device_vec[..] rather than &device_vec which would be a breaking change.
+impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
+    fn is_on_device(&self) -> bool {
+        // Forward to the dereferenced DeviceSlice
+        (&**self).is_on_device()
+    }
+
+    fn is_on_active_device(&self) -> bool {
+        // Forward to the dereferenced DeviceSlice
+        (&**self).is_on_active_device()
+    }
+
+    unsafe fn as_ptr(&self) -> *const T {
+        // Forward to the dereferenced DeviceSlice
+        (&**self).as_ptr()
+    }
+
+    unsafe fn as_mut_ptr(&mut self) -> *mut T {
+        // Forward to the dereferenced DeviceSlice
+        (&mut **self).as_mut_ptr()
+    }
+
+    fn len(&self) -> usize {
+        // Forward to the dereferenced DeviceSlice
+        (&**self).len()
+    }
+
+    fn is_empty(&self) -> bool {
+        // Forward to the dereferenced DeviceSlice
+        (&**self).is_empty()
+    }
+}
+
 impl<T> HostSlice<T> {
     // Currently this function just transmutes types. However it is not guaranteed that this function
     // will always be cheap as it might at some point e.g. pin the memory which takes some time.

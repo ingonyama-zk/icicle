@@ -29,7 +29,7 @@ namespace icicle {
     bool is_leaves_on_device =
       false; /**< True if leaves are on the device (GPU), false if on the host (CPU). Default is false. */
     bool is_tree_on_device = false; /**< True if the tree results are allocated on the device (GPU), false if on the
-                                       host (CPU). Default is false. */
+                                                                       host (CPU). Default is false. */
     bool is_async = false;          /**< True for asynchronous execution, false for synchronous. Default is false. */
     PaddingPolicy padding_policy =
       PaddingPolicy::None;          /**< Policy for handling cases where the input is smaller than expected. */

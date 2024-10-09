@@ -61,13 +61,13 @@ namespace icicle {
 
   void register_g2_affine_convert_montgomery(const std::string& deviceType, AffineG2ConvertMontImpl);
 
-#define REGISTER_AFFINE_G2_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                               \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_affine_g2_convert_mont) = []() -> bool {                                                   \
-      register_g2_affine_convert_montgomery(DEVICE_TYPE, FUNC);                                                        \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_AFFINE_G2_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                             \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_affine_g2_convert_mont) = []() -> bool {                                                 \
+        register_g2_affine_convert_montgomery(DEVICE_TYPE, FUNC);                                                      \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   using ProjectiveG2ConvertMontImpl = std::function<eIcicleError(
     const Device& device,
@@ -79,13 +79,13 @@ namespace icicle {
 
   void register_g2_projective_convert_montgomery(const std::string& deviceType, ProjectiveG2ConvertMontImpl);
 
-#define REGISTER_PROJECTIVE_G2_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                           \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_projective_g2_convert_mont) = []() -> bool {                                               \
-      register_g2_projective_convert_montgomery(DEVICE_TYPE, FUNC);                                                    \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_PROJECTIVE_G2_CONVERT_MONTGOMERY_BACKEND(DEVICE_TYPE, FUNC)                                         \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_projective_g2_convert_mont) = []() -> bool {                                             \
+        register_g2_projective_convert_montgomery(DEVICE_TYPE, FUNC);                                                  \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 #endif // G2
 
 }; // namespace icicle
