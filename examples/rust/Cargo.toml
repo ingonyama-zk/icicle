@@ -1,8 +1,7 @@
-[workspace.package]
 
 [workspace]
-members = [        
-    "msm",    
+members = [
+    "msm",
     "ntt",
     "polynomials",
     "arkworks-icicle-conversions",
