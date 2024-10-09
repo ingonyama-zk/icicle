@@ -2,10 +2,11 @@
 
 [workspace]
 members = [
-    "arkworks_icicle_conversions",    
+    "arkworks-icicle-conversions", "hash-and-merkle",    
     "msm",    
     "ntt",
     "polynomials",
+    "hash-and-merkle",
 ]
 
 [workspace.dependencies]

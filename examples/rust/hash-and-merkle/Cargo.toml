@@ -1,0 +1,11 @@
+[package]
+name = "hash-and-merkle"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hex = "0.4" 
+icicle-core = {path = "../../../wrappers/rust/icicle-core" }
+icicle-runtime = {path = "../../../wrappers/rust/icicle-runtime" }
+icicle-hash = {path = "../../../wrappers/rust/icicle-hash" }
+icicle-babybear = {path = "../../../wrappers/rust/icicle-fields/icicle-babybear" }
