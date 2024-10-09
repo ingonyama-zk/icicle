@@ -117,6 +117,11 @@ module.exports = {
               id: "icicle/polynomials/overview",
             },
             {
+              type: "doc",
+              label: "Hash",
+              id: "icicle/primitives/hash",
+            },
+            {
               type: "category",
               label: "Golang bindings",
               link: {
@@ -196,6 +201,11 @@ module.exports = {
                   type: "doc",
                   label: "Polynomials",
                   id: "icicle/rust-bindings/polynomials",
+                },
+                {
+                  type: "doc",
+                  label: "Hash",
+                  id: "icicle/rust-bindings/hash",
                 },
                 // {
                 //   type: "doc",

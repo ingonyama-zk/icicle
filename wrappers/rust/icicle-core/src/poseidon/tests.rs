@@ -1,7 +1,7 @@
 use crate::{
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
-    poseidon::{create_poseidon_hasher, initialize_default_poseidon_constants, PoseidonHasher},
+    poseidon::{Poseidon, PoseidonHasher},
     traits::FieldImpl,
 };
 use icicle_runtime::memory::HostSlice;
@@ -14,10 +14,9 @@ where
     let batch = 1 << 10;
     let arity = 3;
     let mut inputs = vec![F::one(); batch * arity];
-    let mut outputs = vec![F::zero(); arity];
+    let mut outputs = vec![F::zero(); batch];
 
-    initialize_default_poseidon_constants::<F>().unwrap();
-    let poseidon_hasher = create_poseidon_hasher::<F>(arity as u32).unwrap();
+    let poseidon_hasher = Poseidon::new::<F>(arity as u32).unwrap();
 
     poseidon_hasher
         .hash(
@@ -41,7 +40,7 @@ where
         .map(|i| F::from_u32(i))
         .collect();
 
-    let hasher = create_poseidon_hasher::<F>(arity as u32).unwrap();
+    let hasher = Poseidon::new::<F>(arity as u32).unwrap();
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)
         .map(|_| &hasher)
         .collect();
