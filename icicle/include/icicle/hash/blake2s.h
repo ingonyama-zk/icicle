@@ -15,6 +15,6 @@ namespace icicle {
    */
   Hash create_blake2s_hash(uint64_t input_chunk_size = 0);
   struct Blake2s {
-    inline static Hash create(uint64_t input_chunk_size = 0) { return create_blake2s_hash(); }
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_blake2s_hash(input_chunk_size); }
   };
 } // namespace icicle

@@ -15,7 +15,7 @@ namespace icicle {
    */
   Hash create_keccak_256_hash(uint64_t input_chunk_size = 0);
   struct Keccak256 {
-    inline static Hash create(uint64_t input_chunk_size = 0) { return create_keccak_256_hash(); }
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_keccak_256_hash(input_chunk_size); }
   };
 
   /**
@@ -29,7 +29,7 @@ namespace icicle {
    */
   Hash create_keccak_512_hash(uint64_t input_chunk_size = 0);
   struct Keccak512 {
-    inline static Hash create(uint64_t input_chunk_size = 0) { return create_keccak_512_hash(); }
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_keccak_512_hash(input_chunk_size); }
   };
 
   /**
@@ -43,7 +43,7 @@ namespace icicle {
    */
   Hash create_sha3_256_hash(uint64_t input_chunk_size = 0);
   struct Sha3_256 {
-    inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_256_hash(); }
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_256_hash(input_chunk_size); }
   };
 
   /**
@@ -57,7 +57,7 @@ namespace icicle {
    */
   Hash create_sha3_512_hash(uint64_t input_chunk_size = 0);
   struct Sha3_512 {
-    inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_512_hash(); }
+    inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_512_hash(input_chunk_size); }
   };
 
 } // namespace icicle
