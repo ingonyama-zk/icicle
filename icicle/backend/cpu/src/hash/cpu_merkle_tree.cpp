@@ -37,7 +37,6 @@ namespace icicle {
         cur_layer.m_hash = layer_hashes[layer_idx];
         cur_layer.m_nof_hashes = nof_hashes;
 
-
         if (0 < layer_idx) {
           // update nof_hashes to the next layer (below)
           const u_int64_t next_layer_total_size = layer_hashes[layer_idx - 1].output_size();
@@ -323,8 +322,9 @@ namespace icicle {
         cur_layer.m_hash_config.is_async = merkle_config.is_async;
 
         // config when calling last in layer hash function
-        cur_layer.m_last_hash_config.batch =
-          (cur_layer.m_nof_hashes % NOF_OPERATIONS_PER_TASK) ? (cur_layer.m_nof_hashes % NOF_OPERATIONS_PER_TASK) : NOF_OPERATIONS_PER_TASK;
+        cur_layer.m_last_hash_config.batch = (cur_layer.m_nof_hashes % NOF_OPERATIONS_PER_TASK)
+                                               ? (cur_layer.m_nof_hashes % NOF_OPERATIONS_PER_TASK)
+                                               : NOF_OPERATIONS_PER_TASK;
         cur_layer.m_last_hash_config.is_async = merkle_config.is_async;
 
         // if the layer is in range then allocate the according to the number of hashes in that layer.
@@ -333,7 +333,6 @@ namespace icicle {
           cur_layer.m_results.reserve(nof_bytes_to_allocate);
           cur_layer.m_results.resize(nof_bytes_to_allocate);
         }
-
       }
     }
 

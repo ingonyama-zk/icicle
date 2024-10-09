@@ -1,11 +1,11 @@
 #include <stdbool.h>
 
 #ifndef _CONFIG_EXTENSION_H
-#define _CONFIG_EXTENSION_H
+  #define _CONFIG_EXTENSION_H
 
-#ifdef __cplusplus
+  #ifdef __cplusplus
 extern "C" {
-#endif
+  #endif
 
 void* create_config_extension();
 void destroy_config_extension(void* ext);
@@ -15,8 +15,8 @@ int config_extension_get_int(const void* ext, const char* key);
 bool config_extension_get_bool(const void* ext, const char* key);
 void* clone_config_extension(const void* ext);
 
-#ifdef __cplusplus
+  #ifdef __cplusplus
 }
-#endif
+  #endif
 
 #endif
