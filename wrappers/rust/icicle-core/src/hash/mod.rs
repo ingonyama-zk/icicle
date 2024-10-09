@@ -13,9 +13,9 @@ use std::ffi::c_void;
 #[derive(Clone)]
 pub struct HashConfig {
     pub stream_handle: IcicleStreamHandle,
-    pub batch: u64,
-    pub are_inputs_on_device: bool,
-    pub are_outputs_on_device: bool,
+    batch: u64,
+    are_inputs_on_device: bool,
+    are_outputs_on_device: bool,
     pub is_async: bool,
     pub ext: ConfigExtension,
 }

@@ -5,7 +5,14 @@ edition = "2021"
 
 [dependencies]
 hex = "0.4" 
+clap = { version = "<=4.4.12", features = ["derive"] }
 icicle-core = {path = "../../../wrappers/rust/icicle-core" }
 icicle-runtime = {path = "../../../wrappers/rust/icicle-runtime" }
 icicle-hash = {path = "../../../wrappers/rust/icicle-hash" }
 icicle-babybear = {path = "../../../wrappers/rust/icicle-fields/icicle-babybear" }
+
+[features]
+cuda = ["icicle-runtime/cuda_backend",
+        "icicle-babybear/cuda_backend",
+        "icicle-hash/cuda_backend",            
+]

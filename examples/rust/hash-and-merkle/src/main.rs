@@ -1,9 +1,27 @@
+use clap::Parser;
 use hex;
 use icicle_babybear::field::ScalarCfg as BabybearCfg;
 use icicle_core::{hash::HashConfig, traits::GenerateRandom};
 use icicle_hash::keccak::Keccak256;
 use icicle_runtime::memory::HostSlice;
 use std::time::Instant;
+
+#[derive(Parser, Debug)]
+struct Args {
+    /// Device type (e.g., "CPU", "CUDA")
+    #[arg(short, long, default_value = "CPU")]
+    device_type: String,
+}
+
+// Load backend and set device
+fn try_load_and_set_backend_device(args: &Args) {
+    if args.device_type != "CPU" {
+        icicle_runtime::runtime::load_backend_from_env_or_default().unwrap();
+    }
+    println!("Setting device {}", args.device_type);
+    let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
+    icicle_runtime::set_device(&device).unwrap();
+}
 
 fn keccak_hash_example() {
     // (1) construct a keccak-256 hasher
@@ -56,10 +74,9 @@ fn keccak_hash_example() {
         )
         .unwrap();
     println!(
-        "hashing {} batches of {} field elements on device {} took: {} ms",
+        "hashing {} batches of {} field elements on selected device took (from host memory): {} ms",
         batch,
         single_hash_input_nof_elements,
-        "nodevice TODO",
         start
             .elapsed()
             .as_millis()
@@ -67,7 +84,9 @@ fn keccak_hash_example() {
 }
 
 fn main() {
-    // TODO Yuval: device load and select
+    let args = Args::parse();
+    println!("{:?}", args);
+    try_load_and_set_backend_device(&args);
 
     // Keccak hashing example
     keccak_hash_example()
