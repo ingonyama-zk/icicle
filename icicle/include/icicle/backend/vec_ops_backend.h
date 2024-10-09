@@ -10,24 +10,32 @@ namespace icicle {
   using scalarVectorReduceOpImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* vec_a,
-    uint64_t n,
+    uint64_t size,
     const VecOpsConfig& config,
-    scalar_t* output,
-    uint64_t offset, 
-    uint64_t  stride)>;
+    scalar_t* output)>;
 
 
 
   using scalarVectorOpImpl = std::function<eIcicleError(
     const Device& device,
-    const scalar_t* vec_a,
+    const scalar_t* scalar_a,
     const scalar_t* vec_b,
-    uint64_t n,
+    uint64_t size,
+    bool use_single_scalar,
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  using scalarVectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device, scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)>;
+
+  using vectorVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    scalar_t* output)>;
+
+  using vectorVectorOpImplInplaceA = std::function<eIcicleError(
+    const Device& device, scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
   void register_vector_sum(const std::string& deviceType, scalarVectorReduceOpImpl impl);
 
@@ -51,7 +59,7 @@ namespace icicle {
 
 
 
-  void register_vector_add(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_add(const std::string& deviceType, vectorVectorOpImpl impl);
 
 #define REGISTER_VECTOR_ADD_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -61,7 +69,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_accumulate(const std::string& deviceType, scalarVectorOpImplInplaceA impl);
+  void register_vector_accumulate(const std::string& deviceType, vectorVectorOpImplInplaceA impl);
 
 #define REGISTER_VECTOR_ACCUMULATE_BACKEND(DEVICE_TYPE, FUNC)                                                          \
   namespace {                                                                                                          \
@@ -71,7 +79,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_sub(const std::string& deviceType, vectorVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_sub) = []() -> bool {                                                                  \
@@ -80,7 +88,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_mul(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_mul(const std::string& deviceType, vectorVectorOpImpl impl);
 
 #define REGISTER_VECTOR_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -90,7 +98,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_div(const std::string& deviceType, scalarVectorOpImpl impl);
+  void register_vector_div(const std::string& deviceType, vectorVectorOpImpl impl);
 
 #define REGISTER_VECTOR_DIV_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -134,7 +142,7 @@ namespace icicle {
     const Device& device,
     const scalar_t* input,
     uint64_t size,
-    bool is_into,
+    bool is_to_montgomery,
     const VecOpsConfig& config,
     scalar_t* output)>;
 
@@ -184,7 +192,8 @@ namespace icicle {
     const scalar_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig& config,
     scalar_t* output)>;
 
@@ -266,12 +275,12 @@ namespace icicle {
     const Device& device,
     const extension_t* vec_a,
     const extension_t* vec_b,
-    uint64_t n,
+    uint64_t size,
     const VecOpsConfig& config,
     extension_t* output)>;
 
   using extFieldVectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device, extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config)>;
+    const Device& device, extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
   void register_extension_vector_add(const std::string& deviceType, extFieldVectorOpImpl impl);
 
@@ -316,7 +325,7 @@ namespace icicle {
     const Device& device,
     const extension_t* input,
     uint64_t size,
-    bool is_into,
+    bool is_to_montgomery,
     const VecOpsConfig& config,
     extension_t* output)>;
 
