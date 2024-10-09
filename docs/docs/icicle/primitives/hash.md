@@ -127,4 +127,4 @@ eIcicleErr err = keccak256.hash(input.data(), input.size() / config.batch, confi
 ### Supported Bindings
 
 - [Rust](../rust-bindings/hash)
-- [Go](TODO)
+- Go bindings soon
