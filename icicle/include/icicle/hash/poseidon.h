@@ -16,8 +16,43 @@ namespace icicle {
   // Poseidon constants are being initialized.
   template <typename S>
   struct PoseidonConstantsInitOptions {
-    // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
+    unsigned int  arity;                  ///< Arity of a hash (number of inputs of the single hash).
+    unsigned int  alpha;                  ///< Sbox power.
+    unsigned int  partial_rounds;         ///< Number of upper full rounds of a single hash.
+    unsigned int  full_rounds_half;       ///< Number of partial rounds of a single hash.
+    S*            round_constants;        ///< Round constants (both of the full and the partial rounds). The order of the constants in the memory is according to the rounds order.
+    S*            mds_matrix;             ///> MDS matrix used in the full rounds. The same matrix is used for all the full rounds.
+    S*            non_sparse_matrix;
+    S*            sparse_matrices;        ///< Sparse matries that are used in the partial rounds. A single aprse matrix in the memory has "arity x arity" members. The calculation is done only on the member that not equal to zero.
+    S             domain_tag;             ///< Pre-matrix used in the last upper full round.
     // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
+
+    PoseidonConstantsInitOptions()
+      : arity(0),
+        alpha(0),
+        partial_rounds(0),
+        full_rounds_half(0),
+        round_constants(nullptr),
+        mds_matrix(nullptr),
+        non_sparse_matrix(nullptr),
+        sparse_matrices(nullptr),
+        domain_tag(S::zero()) 
+        {}
+
+    PoseidonConstantsInitOptions(unsigned int arity_val, unsigned int alpha_val, unsigned int partial_rounds_val,
+                                 unsigned int full_rounds_half_val, S* round_constants_val,
+                                 S* mds_matrix_val, S* non_sparse_matrix_val, S* sparse_matrices_val,
+                                 S domain_tag_val)
+      : arity(arity_val),
+        alpha(alpha_val),
+        partial_rounds(partial_rounds_val),
+        full_rounds_half(full_rounds_half_val),
+        round_constants(round_constants_val),
+        mds_matrix(mds_matrix_val),
+        non_sparse_matrix(non_sparse_matrix_val),
+        sparse_matrices(sparse_matrices_val),
+        domain_tag(domain_tag_val)
+    {}
   };
 
   // Function to generate and initialize Poseidon constants based on user-defined options.

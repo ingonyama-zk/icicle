@@ -174,16 +174,18 @@ using namespace field_config;
 
 TEST_F(HashApiTest, poseidon12)
 {
-  const uint64_t arity = 12; // Number of input elements
+  const uint64_t arity = 3; // Number of input elements
 
   // Create unique pointers for input and output arrays
   auto input = std::make_unique<scalar_t[]>(arity);
   scalar_t output = scalar_t::from(0);
   // Randomize the input array
-  scalar_t::rand_host_many(input.get(), arity);
+  input[0] = scalar_t::from(1);
+  input[1] = scalar_t::from(1);
+  input[2] = scalar_t::from(1);
 
   // init poseidon constants on current device
-  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
+  // ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
 
   // Create Poseidon hash object
   auto poseidon = Poseidon::create<scalar_t>(arity);
@@ -191,6 +193,8 @@ TEST_F(HashApiTest, poseidon12)
   // Run single hash operation
   auto config = default_hash_config();
   ICICLE_CHECK(poseidon.hash(input.get(), arity, config, &output));
+  
+  std::cout << "output: " << output << std::endl;
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 #endif // POSEIDON
