@@ -14,15 +14,15 @@
 #include "icicle/msm.h"
 #include "tasks_manager.h"
 #include "icicle/backend/msm_config.h"
-#ifdef LOG_UTILIZATION
+#ifdef MEASURE_MSM_TIMES
 #include "icicle/utils/timer.hpp"
 #endif
 
 using namespace icicle;
 using namespace curve_config;
 
-#define LOG_EC_BATCH_SIZE 2
-#define EC_BATCH_SIZE     (1 << LOG_EC_BATCH_SIZE)
+#define LOG_EC_ADDITIONS_IN_BATCH 2
+#define NOF_EC_ADDITIONS_IN_BATCH (1 << LOG_EC_ADDITIONS_IN_BATCH)
 
 /**
  * @class EcAddTask
@@ -39,10 +39,10 @@ public:
    * m_point1.
    */
   EcAddTask()
-      : TaskBase(), m_a_points(EC_BATCH_SIZE, P::zero()), m_b_points(EC_BATCH_SIZE, P::zero()),
-        m_b_point_ptrs(EC_BATCH_SIZE, nullptr), m_b_affine_points(EC_BATCH_SIZE, A::zero()),
-        m_return_idx(EC_BATCH_SIZE, -1), m_opcodes(EC_BATCH_SIZE, ADD_P1_P2_BY_VALUE), m_is_line(EC_BATCH_SIZE, true),
-        m_nof_valid_points(0)
+      : TaskBase(), m_a_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()), m_b_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()),
+        m_b_point_ptrs(NOF_EC_ADDITIONS_IN_BATCH, nullptr), m_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, A::zero()),
+        m_return_idx(NOF_EC_ADDITIONS_IN_BATCH, -1), m_opcodes(NOF_EC_ADDITIONS_IN_BATCH, ADD_P1_P2_BY_VALUE),
+        m_is_line(NOF_EC_ADDITIONS_IN_BATCH, true), m_nof_valid_points(0)
   {
   }
 
@@ -92,7 +92,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_AFFINE;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -111,7 +111,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_P2_BY_VALUE;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -129,7 +129,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_POINTER;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -147,7 +147,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_POINTER;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -164,7 +164,7 @@ public:
     m_opcodes[m_nof_valid_points] = ADD_P1_P2_BY_VALUE;
 
     m_nof_valid_points++;
-    if (m_nof_valid_points == EC_BATCH_SIZE) { dispatch(); }
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -184,7 +184,7 @@ public:
   std::vector<bool> m_is_line;   // Indicator for phase 2 sums between line sum and triangle sum.
 
 private:
-  // Variations of the second addend which will be used depending on the opcode bellow
+  // Variations of the second addend which will be used depending on the opcode below
   std::vector<P> m_b_points;
   std::vector<A> m_b_affine_points;
   std::vector<P*> m_b_point_ptrs;
@@ -223,7 +223,6 @@ public:
     for (std::thread& phase3_thread : m_phase3_threads) {
       phase3_thread.join();
     }
-    // thread_f.close();
   }
 
   /**
@@ -239,11 +238,10 @@ public:
   void run_msm(
     const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
-  static unsigned get_optimal_c(unsigned msm_size, bool precompute_factor)
+  static unsigned get_optimal_c(unsigned msm_size, int precompute_factor)
   {
     // This seems to be working well but not clear why
-    // TODO Koren: find optimal c. Maybe can use a lookup table if the logic is not clear but consistent for intel/ARM
-    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) - 1, 8)
+    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
                                  : std::max((int)std::log2(msm_size) - 5, 8);
   }
 
@@ -365,7 +363,7 @@ Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
 
       m_log_num_segments(std::max(
         (int)std::floor(
-          std::log2((double)(nof_threads * TASKS_PER_THREAD * EC_BATCH_SIZE - 1) / (double)(2 * m_num_bms))),
+          std::log2((double)(nof_threads * TASKS_PER_THREAD * NOF_EC_ADDITIONS_IN_BATCH - 1) / (2 * m_num_bms))),
         0)),
       m_num_bm_segments(std::min((int)(1 << m_log_num_segments), (int)(m_num_bkts))),
       m_segment_size(std::max((int)(m_num_bkts >> m_log_num_segments), 1)),
@@ -378,24 +376,24 @@ template <typename A, typename P>
 void Msm<A, P>::run_msm(
   const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results)
 {
-#ifdef LOG_UTILIZATION
+#ifdef MEASURE_MSM_TIMES
   Timer tmsm("Total msm time");
-#endif
   {
-#ifdef LOG_UTILIZATION
     Timer tp1("Phase 1");
+#else
+  {
 #endif
     phase1_bucket_accumulator(scalars, bases, msm_size);
   }
   auto segments = std::vector<BmSumSegment>(m_num_bms * m_num_bm_segments);
   {
-#ifdef LOG_UTILIZATION
+#ifdef MEASURE_MSM_TIMES
     Timer tp1("Phase 2");
 #endif
     phase2_bm_sum(segments);
   }
   {
-#ifdef LOG_UTILIZATION
+#ifdef MEASURE_MSM_TIMES
     Timer tp1("Phase 3");
 #endif
     phase3_final_accumulator(segments, batch_idx, results);
@@ -421,10 +419,8 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
       // Handle required preprocess of base P
       A base =
         m_are_points_mont ? A::from_montgomery(bases[m_precompute_factor * i + j]) : bases[m_precompute_factor * i + j];
-      // TODO move to preprocess before precompute to avoid repeating conversions
       if (base == A::zero()) { continue; }
       if (negate_p_and_s) { base = A::neg(base); }
-      // TODO move to preprocess before precompute to avoid repeating negations
 
       for (int k = 0; k < m_num_bms; k++) {
         // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
@@ -526,7 +522,7 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
   if (m_segment_size > 1) {
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
-      if (i % EC_BATCH_SIZE == 0) { m_curr_task = manager.get_idle_task(); }
+      if (i % NOF_EC_ADDITIONS_IN_BATCH == 0) { m_curr_task = manager.get_idle_task(); }
       BmSumSegment& curr_segment = segments[i]; // For readability
 
       int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
@@ -702,7 +698,7 @@ eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
   int c = config.c;
-  if (c < 1) { c = std::max((int)std::log2(msm_size) - 1, 8); }
+  if (c < 1) { c = Msm<A, P>::get_optimal_c(msm_size, config.precompute_factor); }
 
   int nof_threads = std::thread::hardware_concurrency() - 1;
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
@@ -741,7 +737,7 @@ eIcicleError cpu_msm_precompute_bases(
   A* output_bases) // Pre assigned?
 {
   int c = config.c;
-  if (c < 1) { c = std::max((int)std::log2(nof_bases) - 1, 8); }
+  if (c < 1) { c = Msm<A, P>::get_optimal_c(nof_bases, config.precompute_factor); }
 
   int precompute_factor = config.precompute_factor;
   bool is_mont = config.are_points_montgomery_form;

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <list>
+#include <random>
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
@@ -59,7 +60,7 @@ public:
   void random_scalars(T* arr, uint64_t count)
   {
     for (uint64_t i = 0; i < count; i++)
-      arr[i] = i < 1000 ? T::rand_host() : arr[i - 1000];
+      arr[i] = T::rand_host();
   }
 
   template <typename A, typename P>
@@ -68,7 +69,7 @@ public:
     const int logn = 12;
     const int batch = 3;
     const int N = 1 << logn;
-    const int precompute_factor = 8;
+    const int precompute_factor = (rand() & 7) + 1; // between 1 and 8
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
