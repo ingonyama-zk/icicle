@@ -410,7 +410,7 @@ namespace ntt {
   public:
 #ifdef DCCT
     template <typename U, typename R>
-    friend cudaError_t init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+    friend cudaError_t init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx);
 #else
     template <typename U>
     friend cudaError_t init_domain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
@@ -419,8 +419,13 @@ namespace ntt {
     template <typename U>
     friend cudaError_t release_domain(device_context::DeviceContext& ctx);
 
+#ifdef DCCT
+    template <typename U, typename R>
+    friend R get_root_of_unity<U, R>(uint64_t logn, device_context::DeviceContext& ctx);
+#else
     template <typename U>
     friend U get_root_of_unity<U>(uint64_t logn, device_context::DeviceContext& ctx);
+#endif
 
     template <typename U>
     friend U get_root_of_unity_from_domain<U>(uint64_t logn, device_context::DeviceContext& ctx);
@@ -434,7 +439,7 @@ namespace ntt {
 
 #ifdef DCCT
   template <typename S, typename R>
-  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
 
@@ -607,6 +612,15 @@ namespace ntt {
     return CHK_LAST();
   }
 
+#ifdef DCCT
+  template <typename S, typename U>
+  U get_root_of_unity(uint32_t logn)
+  {
+    return field_config::get_ext_omega(logn);
+  }
+  // explicit instantiation to avoid having to include this file
+  template c_extension_t get_root_of_unity<scalar_t, c_extension_t>(uint32_t logn);
+#else
   template <typename S>
   S get_root_of_unity(uint64_t max_size)
   {
@@ -616,6 +630,7 @@ namespace ntt {
   }
   // explicit instantiation to avoid having to include this file
   template scalar_t get_root_of_unity(uint64_t logn);
+#endif
 
   template <typename S>
   S get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx)

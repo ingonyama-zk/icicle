@@ -14,11 +14,19 @@ namespace ntt {
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
    */
+#ifdef DCCT
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, initialize_domain)(
+    c_extension_t* primitive_root, device_context::DeviceContext& ctx)
+  {
+    return init_domain<scalar_t, c_extension_t>(*primitive_root, ctx);
+  }
+#else
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, initialize_domain)(
     scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
     return init_domain(*primitive_root, ctx, fast_twiddles_mode);
   }
+#endif
 
   /**
    * Extern "C" version of [ntt](@ref ntt) function with the following values of template parameters
@@ -51,8 +59,15 @@ namespace ntt {
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
    */
+#ifdef DCCT
+  extern "C" c_extension_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn)
+  {
+    return get_root_of_unity<scalar_t, c_extension_t>(logn);
+  }
+#else
   extern "C" scalar_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn)
   {
     return get_root_of_unity<scalar_t>(logn);
   }
+#endif
 } // namespace ntt

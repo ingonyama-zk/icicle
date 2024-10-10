@@ -11,6 +11,7 @@ pub(crate) const COMPLEX_EXTENSION_LIMBS: usize = 2;
 pub(crate) const QUARTIC_EXTENSION_LIMBS: usize = 4;
 
 impl_scalar_field!("m31", m31, SCALAR_LIMBS, ScalarField, ScalarCfg, Fr);
+
 impl_scalar_field!(
     "m31_c_extension",
     m31_c_extension,
@@ -27,6 +28,7 @@ impl_scalar_field!(
     ExtensionCfg,
     Fr
 );
+
 #[cfg(test)]
 mod tests {
     use super::{QuarticExtensionField, ScalarField};
