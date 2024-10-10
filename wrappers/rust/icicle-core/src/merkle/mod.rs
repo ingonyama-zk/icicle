@@ -175,7 +175,9 @@ extern "C" {
     fn icicle_merkle_tree_get_proof(
         tree: MerkleTreeHandle,
         leaves: *const u8,
+        size: u64,
         leaf_idx: u64,
+        is_pruned: bool,
         config: *const MerkleTreeConfig,
         merkle_proof: MerkleProofHandle,
     ) -> eIcicleError;
@@ -263,11 +265,14 @@ impl MerkleTree {
         }
 
         let proof = MerkleProof::new().unwrap();
+        let byte_size = (leaves.len() * std::mem::size_of::<T>()) as u64;
         let result = unsafe {
             icicle_merkle_tree_get_proof(
                 self.handle,
                 leaves.as_ptr() as *const u8,
+                byte_size,
                 leaf_idx as u64,
+                false,
                 config,
                 proof.handle,
             )
