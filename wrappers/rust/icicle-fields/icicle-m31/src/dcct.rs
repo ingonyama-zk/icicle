@@ -7,19 +7,17 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 use crate::field::{ComplexExtensionCfg, ComplexExtensionField, ScalarField};
+use icicle_core::ntt::FieldImpl;
 
 extern "C" {
     #[link_name = "m31_initialize_domain"]
-    fn initialize_domain(
-        primitive_root: &ComplexExtensionField,
-        ctx: &DeviceContext,
-    ) -> CudaError;
+    fn initialize_domain(primitive_root: &ComplexExtensionField, ctx: &DeviceContext) -> CudaError;
 
     #[link_name = "m31_release_domain"]
     fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
 
     #[link_name = "m31_get_root_of_unity"]
-    fn get_root_of_unity(max_size: u32) -> ComplexExtensionField;
+    fn get_root_of_unity(max_size: u32, rou_out: *mut ComplexExtensionField);
 
     #[link_name = "m31_ntt_cuda"]
     fn ntt_cuda(
@@ -40,19 +38,18 @@ extern "C" {
 /// This function will panic if the order of `primitive_root` is not a power of two.
 ///
 /// * `ctx` - GPU index and stream to perform the computation.
-pub fn initialize_dcct_domain(primitive_root: ComplexExtensionField, ctx: &DeviceContext) -> IcicleResult<()>
-{
+pub fn initialize_dcct_domain(primitive_root: ComplexExtensionField, ctx: &DeviceContext) -> IcicleResult<()> {
     unsafe { initialize_domain(&primitive_root, ctx).wrap() }
 }
 
-pub fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>
-{
+pub fn release_domain(ctx: &DeviceContext) -> IcicleResult<()> {
     unsafe { release_ntt_domain(ctx).wrap() }
 }
 
-pub fn get_dcct_root_of_unity(max_size: u32) -> ComplexExtensionField
-{
-    unsafe { get_root_of_unity(max_size) }
+pub fn get_dcct_root_of_unity(max_size: u32) -> ComplexExtensionField {
+    let mut rou = ComplexExtensionField::zero();
+    unsafe { get_root_of_unity(max_size, &mut rou as *mut ComplexExtensionField) };
+    rou
 }
 
 fn dcct_unchecked(
@@ -89,8 +86,7 @@ pub fn dcct(
     dir: NTTDir,
     cfg: &NTTConfig<ScalarField>,
     output: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
-) -> IcicleResult<()>
-{
+) -> IcicleResult<()> {
     if input.len() != output.len() {
         panic!(
             "input and output lengths {}; {} do not match",
@@ -146,7 +142,10 @@ pub(crate) mod tests {
     use icicle_core::ntt::{FieldImpl, NTTConfig};
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
 
-    use crate::{dcct::{evaluate, get_dcct_root_of_unity, initialize_dcct_domain}, field::ScalarField};
+    use crate::{
+        dcct::{evaluate, get_dcct_root_of_unity, initialize_dcct_domain},
+        field::ScalarField,
+    };
 
     #[test]
     fn test_evaluate_4() {
@@ -154,79 +153,32 @@ pub(crate) mod tests {
 
         let rou = get_dcct_root_of_unity(LOG);
         println!("ROU {:?}", rou);
-        // initialize_dcct_domain(rou, &DeviceContext::default());
+        initialize_dcct_domain(rou, &DeviceContext::default()).unwrap();
+        println!("initialied DCCT succesfully");
 
-        let coeffs: Vec<ScalarField> = (0u32..1<<LOG).map(ScalarField::from_u32).collect();
+        let coeffs: Vec<ScalarField> = (0u32..1 << LOG)
+            .map(ScalarField::from_u32)
+            .collect();
         let expected = [
-            0x6103dfb,
-            0x25cbfdad,
-            0x4f35cf25,
-            0x39a34de3,
-            0x24862591,
-            0x7607aa42,
-            0xc8f98cb,
-            0x23c949af,
-            0x33a8d92e,
-            0x687b1fd,
-            0x56dd7a35,
-            0x1a447068,
-            0x4926b47e,
-            0x4c71dfd9,
-            0x22a218e1,
-            0x2485ad20,
-            0x284f0ee4,
-            0x3dfabc33,
-            0x69d57fdf,
-            0x65aad3ef,
-            0x3a80d4a1,
-            0x5157f85f,
-            0x6c3182de,
-            0x6294b4ff,
-            0x13e77c3a,
-            0x1ce9cc10,
-            0x7ae749ca,
-            0x631b8c6c,
-            0x5bfa6c0b,
-            0x670d13c7,
-            0x20a57b4a,
-            0x7566e736,
-            0x23362583,
-            0x4e85b831,
-            0x4be15511,
-            0x5154ecb6,
-            0x3890cf71,
-            0x74a836f4,
-            0x73738fc3,
-            0x3f454b45,
-            0x612d2b5f,
-            0x61c716ce,
-            0x53d3e3fe,
-            0x961aae5,
-            0x329b7b98,
-            0x5531aafc,
-            0x4dfbdb78,
-            0x1b6dcced,
-            0x6535b85a,
-            0x5e402279,
-            0x533c9f36,
-            0x737b7774,
-            0x71e33235,
-            0x681fa712,
-            0x399d1b64,
-            0x3de2ed65,
-            0x536c73a8,
-            0x10d8a6cc,
-            0x2ac55f9b,
-            0x558ea2a6,
-            0x76a5ce55,
-            0x4f7d8990,
-            0x1790f920,
+            0x6103dfb, 0x25cbfdad, 0x4f35cf25, 0x39a34de3, 0x24862591, 0x7607aa42, 0xc8f98cb, 0x23c949af, 0x33a8d92e,
+            0x687b1fd, 0x56dd7a35, 0x1a447068, 0x4926b47e, 0x4c71dfd9, 0x22a218e1, 0x2485ad20, 0x284f0ee4, 0x3dfabc33,
+            0x69d57fdf, 0x65aad3ef, 0x3a80d4a1, 0x5157f85f, 0x6c3182de, 0x6294b4ff, 0x13e77c3a, 0x1ce9cc10, 0x7ae749ca,
+            0x631b8c6c, 0x5bfa6c0b, 0x670d13c7, 0x20a57b4a, 0x7566e736, 0x23362583, 0x4e85b831, 0x4be15511, 0x5154ecb6,
+            0x3890cf71, 0x74a836f4, 0x73738fc3, 0x3f454b45, 0x612d2b5f, 0x61c716ce, 0x53d3e3fe, 0x961aae5, 0x329b7b98,
+            0x5531aafc, 0x4dfbdb78, 0x1b6dcced, 0x6535b85a, 0x5e402279, 0x533c9f36, 0x737b7774, 0x71e33235, 0x681fa712,
+            0x399d1b64, 0x3de2ed65, 0x536c73a8, 0x10d8a6cc, 0x2ac55f9b, 0x558ea2a6, 0x76a5ce55, 0x4f7d8990, 0x1790f920,
             0x61bd1df4,
-        ].map(ScalarField::from_u32);
+        ]
+        .map(ScalarField::from_u32);
 
-        let mut evaluations = vec![ScalarField::zero(); 1<<LOG];
+        let mut evaluations = vec![ScalarField::zero(); 1 << LOG];
         let cfg = NTTConfig::default();
-        evaluate(HostSlice::from_slice(&coeffs), &cfg, HostSlice::from_mut_slice(&mut evaluations)).unwrap();
+        evaluate(
+            HostSlice::from_slice(&coeffs),
+            &cfg,
+            HostSlice::from_mut_slice(&mut evaluations),
+        )
+        .unwrap();
 
         assert_eq!(evaluations, expected);
     }
