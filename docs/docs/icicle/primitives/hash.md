@@ -4,7 +4,7 @@
 
 ICICLE’s hashing system is designed to be flexible, efficient, and optimized for both general-purpose and cryptographic operations. Hash functions are essential in operations such as generating commitments, constructing Merkle trees, executing the Sumcheck protocol, and more.
 
-ICICLE provides an easy-to-use interface for hashing on both CPU and GPU, with transparent backend selection. You can choose between several hash algorithms such as Keccak-256, Keccak-512, SHA3-256, SHA3-512, Blake2s, and Poseidon, which are optimized for processing both general data and cryptographic field elements or elliptic curve points.
+ICICLE provides an easy-to-use interface for hashing on both CPU and GPU, with transparent backend selection. You can choose between several hash algorithms such as Keccak-256, Keccak-512, SHA3-256, SHA3-512, Blake2s, Poseidon and more, which are optimized for processing both general data and cryptographic field elements or elliptic curve points.
 
 ## Hashing Logic
 
@@ -25,6 +25,10 @@ ICICLE supports the following hash functions:
 5.	**Blake2s**
 6.	**Poseidon**
 
+:::info
+Additional hash functions might be added in the future. Stay tuned!
+:::
+
 ### Keccak and SHA3
 
 [Keccak](https://keccak.team/files/Keccak-implementation-3.2.pdf) is a cryptographic hash function designed by Guido Bertoni, Joan Daemen, Michaël Peeters, and Gilles Van Assche. It was selected as the winner of the NIST hash function competition, becoming the basis for the [SHA-3 standard](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf).
@@ -33,12 +37,14 @@ Keccak can take input messages of any length and produce a fixed-size hash. It u
 
 ### Blake2s
 
-Blake2s is an optimized cryptographic hash function that provides high performance while ensuring strong security. Blake2s is ideal for hashing small data (such as field elements), especially when speed is crucial. It produces a 256-bit (32-byte) output and is often used in cryptographic protocols.
+[Blake2s](https://www.rfc-editor.org/rfc/rfc7693.txt) is an optimized cryptographic hash function that provides high performance while ensuring strong security. Blake2s is ideal for hashing small data (such as field elements), especially when speed is crucial. It produces a 256-bit (32-byte) output and is often used in cryptographic protocols.
 
 
 ### Poseidon
 
-Poseidon is a hash function designed specifically for cryptographic field elements and elliptic curve points. It is optimized for zero-knowledge proofs (ZKPs) and is often used in ZK-SNARK systems. Poseidon’s strength lies in its efficiency when working with cryptographic data, making it ideal for scenarios like Merkle tree construction and proof generation.
+[Poseidon](https://eprint.iacr.org/2019/458) is a cryptographic hash function designed specifically for field elements. It is highly optimized for zero-knowledge proofs (ZKPs) and is commonly used in ZK-SNARK systems. Poseidon’s main strength lies in its arithmetization-friendly design, meaning it can be efficiently expressed as arithmetic constraints within a ZK-SNARK circuit.
+
+Traditional hash functions, such as SHA-2, are difficult to represent within ZK circuits because they involve complex bitwise operations that don’t translate efficiently into arithmetic operations. Poseidon, however, is specifically designed to minimize the number of constraints required in these circuits, making it significantly more efficient for use in ZK-SNARKs and other cryptographic protocols that require hashing over field elements.
 
 
 ## Using Hash API
@@ -58,7 +64,8 @@ auto keccak512 = Keccak512::create();
 auto sha3_256 = Sha3_256::create();
 auto sha3_512 = Sha3_512::create();
 auto blake2s = Blake2s::create();
-auto poseidon = Poseidon::create<scalar_t>(arity); // Poseidon requires specifying the field type and arity
+// Poseidon requires specifying the field type and arity (supported 3,5,9,12)
+auto poseidon = Poseidon::create<scalar_t>(arity); 
 ```
 
 ### 2. Hashing Data

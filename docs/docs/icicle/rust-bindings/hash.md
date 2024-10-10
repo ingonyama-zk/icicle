@@ -1,5 +1,9 @@
 # ICICLE Hashing in Rust
 
+:::note
+For a general overview of ICICLE's hashing logic and supported algorithms, check out the [ICICLE Hashing Overview](../primitives/hash.md).
+:::
+
 ## Overview
 
 The ICICLE library provides Rust bindings for hashing using a variety of cryptographic hash functions. These hash functions are optimized for both general-purpose data and cryptographic operations such as multi-scalar multiplication, commitment generation, and Merkle tree construction.
