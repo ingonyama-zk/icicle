@@ -32,33 +32,3 @@ The rust bindings are rust crates that wrap the ICICLE Core libraries (C++). Eac
 :::note
 Since ICICLE V3, core libraries are shared-libraries. This means that they must be installed in a directory that can be found by the linker. In addition, installing an application that depends on ICICLE must make sure to install ICICLE or have it installed on the target machine.
 :::
-
-## Supported curves, fields and operations
-
-### Supported curves and operations
-
-| Operation\Curve | bn254 | bls12_377 | bls12_381 | bw6-761 | grumpkin |
-| --------------- | :---: | :-------: | :-------: | :-----: | :------: |
-| MSM             |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
-| G2              |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| NTT             |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| ECNTT           |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| VecOps          |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
-| Polynomials     |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| Poseidon        |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
-| Merkle Tree     |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
-
-### Supported fields and operations
-
-| Operation\Field | babybear | stark252 |
-| --------------- | :------: | :------: |
-| VecOps          |    ✅     |    ✅     |
-| Polynomials     |    ✅     |    ✅     |
-| NTT             |    ✅     |    ✅     |
-| Extension Field |    ✅     |    ❌     |
-
-### Supported hashes
-
-| Hash   |  Sizes   |
-| ------ | :------: |
-| Keccak | 256, 512 |
