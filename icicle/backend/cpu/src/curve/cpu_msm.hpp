@@ -14,9 +14,15 @@
 #include "icicle/msm.h"
 #include "tasks_manager.h"
 #include "icicle/backend/msm_config.h"
+#ifdef MEASURE_MSM_TIMES
+#include "icicle/utils/timer.hpp"
+#endif
 
 using namespace icicle;
 using namespace curve_config;
+
+#define LOG_EC_ADDITIONS_IN_BATCH 2
+#define NOF_EC_ADDITIONS_IN_BATCH (1 << LOG_EC_ADDITIONS_IN_BATCH)
 
 /**
  * @class EcAddTask
@@ -33,7 +39,10 @@ public:
    * m_point1.
    */
   EcAddTask()
-      : TaskBase(), m_point1(P::zero()), m_point2(P::zero()), m_return_idx(-1), m_point2_opcode(ADD_P1_P2_BY_VALUE)
+      : TaskBase(), m_a_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()), m_b_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()),
+        m_b_point_ptrs(NOF_EC_ADDITIONS_IN_BATCH, nullptr), m_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, A::zero()),
+        m_return_idx(NOF_EC_ADDITIONS_IN_BATCH, -1), m_opcodes(NOF_EC_ADDITIONS_IN_BATCH, ADD_P1_P2_BY_VALUE),
+        m_is_line(NOF_EC_ADDITIONS_IN_BATCH, true), m_nof_valid_points(0)
   {
   }
 
@@ -42,17 +51,29 @@ public:
    */
   void execute()
   {
-    switch (m_point2_opcode) {
-    case ADD_P1_P2_BY_VALUE:
-      m_point1 = m_point1 + m_point2;
-      return;
-    case ADD_P1_AND_P2_POINTER:
-      m_point1 = m_point1 + *m_point2_pointer;
-      return;
-    case ADD_P1_AND_P2_AFFINE:
-      m_point1 = m_point1 + m_point2_affine;
-      return;
+    static int counter = 0;
+    for (int i = 0; i < m_nof_valid_points; i++) {
+      switch (m_opcodes[i]) {
+      case ADD_P1_P2_BY_VALUE:
+        m_a_points[i] = m_a_points[i] + m_b_points[i];
+        continue;
+      case ADD_P1_AND_P2_POINTER:
+        m_a_points[i] = m_a_points[i] + *(m_b_point_ptrs[i]);
+        continue;
+      case ADD_P1_AND_P2_AFFINE:
+        m_a_points[i] = m_a_points[i] + m_b_affine_points[i];
+        // continue;
+      }
     }
+  }
+
+  /**
+   * @brief Dispatch task even if batch is not full. This function is mostly used in ends of phases where the left
+   * additions are not enough to fill a batch.
+   */
+  void dispatch_if_not_empty()
+  {
+    if (is_idle() && m_nof_valid_points > 0) { dispatch(); }
   }
 
   /**
@@ -65,11 +86,13 @@ public:
    */
   void set_phase1_addition_with_affine(const P& bucket, const A& base, int bucket_idx)
   {
-    m_point1 = bucket;
-    m_point2_affine = base;
-    m_return_idx = bucket_idx;
-    m_point2_opcode = ADD_P1_AND_P2_AFFINE;
-    dispatch();
+    m_a_points[m_nof_valid_points] = bucket;
+    m_b_affine_points[m_nof_valid_points] = base;
+    m_return_idx[m_nof_valid_points] = bucket_idx;
+    m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_AFFINE;
+
+    m_nof_valid_points++;
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -81,12 +104,14 @@ public:
    */
   void set_phase2_addition_by_value(const P& line_sum, const P& bucket, int segment_idx)
   {
-    m_point1 = line_sum;
-    m_point2 = bucket;
-    m_return_idx = segment_idx;
-    m_is_line = true;
-    m_point2_opcode = ADD_P1_P2_BY_VALUE;
-    dispatch();
+    m_a_points[m_nof_valid_points] = line_sum;
+    m_b_points[m_nof_valid_points] = bucket;
+    m_return_idx[m_nof_valid_points] = segment_idx;
+    m_is_line[m_nof_valid_points] = true;
+    m_opcodes[m_nof_valid_points] = ADD_P1_P2_BY_VALUE;
+
+    m_nof_valid_points++;
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -97,12 +122,14 @@ public:
    */
   void set_phase2_line_addition(const P& line_sum, P* bucket_ptr, const int segment_idx)
   {
-    m_point1 = line_sum;
-    m_point2_pointer = bucket_ptr;
-    m_return_idx = segment_idx;
-    m_is_line = true;
-    m_point2_opcode = ADD_P1_AND_P2_POINTER;
-    dispatch();
+    m_a_points[m_nof_valid_points] = line_sum;
+    m_b_point_ptrs[m_nof_valid_points] = bucket_ptr;
+    m_return_idx[m_nof_valid_points] = segment_idx;
+    m_is_line[m_nof_valid_points] = true;
+    m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_POINTER;
+
+    m_nof_valid_points++;
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
@@ -114,36 +141,56 @@ public:
    */
   void set_phase2_triangle_addition(P& line_sum, P* triangle_sum_ptr)
   {
-    m_point1 = line_sum;
-    m_point2_pointer = triangle_sum_ptr;
-    m_is_line = false;
-    m_point2_opcode = ADD_P1_AND_P2_POINTER;
-    dispatch();
+    m_a_points[m_nof_valid_points] = line_sum;
+    m_b_point_ptrs[m_nof_valid_points] = triangle_sum_ptr;
+    m_is_line[m_nof_valid_points] = false;
+    m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_POINTER;
+
+    m_nof_valid_points++;
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
   /**
    * @brief Chain addition used in phase 1 when a collision between a new result and an occupied bucket.
+   * @param result - the previous EC addition result.
    * @param bucket - the bucket value to be added to the existing result in p1.
+   * @param segment_idx - index of the bucket to return the result to.
    */
-  void set_phase1_collision_task(const P& bucket)
+  void set_phase1_collision_task(const P& result, const P& bucket, const int segment_idx)
   {
-    m_point2 = bucket;
-    m_point2_opcode = ADD_P1_P2_BY_VALUE;
-    dispatch();
+    m_a_points[m_nof_valid_points] = result;
+    m_b_points[m_nof_valid_points] = bucket;
+    m_return_idx[m_nof_valid_points] = segment_idx;
+    m_opcodes[m_nof_valid_points] = ADD_P1_P2_BY_VALUE;
+
+    m_nof_valid_points++;
+    if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
   }
 
-  P m_point1;             // One of the addends, and holds the addition result afterwards
-  int m_return_idx;       // Idx allowing manager to figure out where the result belong to.
-  bool m_is_line = false; // Indicator for phase 2 sums between line sum and triangle sum.
+  /**
+   * @brief Resets task to idle, resetting the valid points counter to 0.
+   */
+  void reset_idle()
+  {
+    m_nof_valid_points = 0;
+    set_idle();
+  }
+
+  int m_nof_valid_points;
+
+  std::vector<P> m_a_points; // One of the addends that also stores addition results.
+
+  std::vector<int> m_return_idx; // Idx allowing manager to figure out where the result belong to.
+  std::vector<bool> m_is_line;   // Indicator for phase 2 sums between line sum and triangle sum.
 
 private:
-  enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_POINTER, ADD_P1_AND_P2_AFFINE };
-  eAddType m_point2_opcode;
+  // Variations of the second addend which will be used depending on the opcode below
+  std::vector<P> m_b_points;
+  std::vector<A> m_b_affine_points;
+  std::vector<P*> m_b_point_ptrs;
 
-  // Various configs of the second addend p2, one for each eAddType
-  P m_point2;
-  P const* m_point2_pointer;
-  A m_point2_affine;
+  enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_POINTER, ADD_P1_AND_P2_AFFINE };
+  std::vector<eAddType> m_opcodes;
 };
 
 /**
@@ -191,11 +238,10 @@ public:
   void run_msm(
     const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
-  static unsigned get_optimal_c(unsigned msm_size, bool precompute_factor)
+  static unsigned get_optimal_c(unsigned msm_size, int precompute_factor)
   {
     // This seems to be working well but not clear why
-    // TODO Koren: find optimal c. Maybe can use a lookup table if the logic is not clear but consistent for intel/ARM
-    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) - 1, 8)
+    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
                                  : std::max((int)std::log2(msm_size) - 5, 8);
   }
 
@@ -209,6 +255,8 @@ private:
   const bool m_are_scalars_mont;          // Are the input scalars in Montgomery representation
   const bool m_are_points_mont;           //  Are the input points in Montgomery representation
   const int m_batch_size;
+
+  EcAddTask<A, P>* m_curr_task;
 
   // Phase 1 members
   std::vector<P> m_buckets;           // Vector of all buckets required for phase 1 (All bms in order)
@@ -304,18 +352,20 @@ private:
 
 template <typename A, typename P>
 Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
-    : manager(nof_threads),
+    : manager(nof_threads), m_curr_task(nullptr),
 
       m_c(c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
-      m_num_bms(((scalar_t::NBITS) / (config.precompute_factor * m_c)) + 1),
+      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
       m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_points_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
 
       m_buckets(m_num_bms * m_num_bkts), m_bkts_occupancy(m_num_bms * m_num_bkts, false),
 
       m_log_num_segments(std::max(
-        (int)std::floor(std::log2((double)(nof_threads * TASKS_PER_THREAD - 1) / (double)(2 * m_num_bms))), 0)),
-      m_num_bm_segments(std::min((int)(1 << m_log_num_segments), (int)(m_num_bms * m_num_bkts))),
+        (int)std::floor(
+          std::log2((double)(nof_threads * TASKS_PER_THREAD * NOF_EC_ADDITIONS_IN_BATCH - 1) / (2 * m_num_bms))),
+        0)),
+      m_num_bm_segments(std::min((int)(1 << m_log_num_segments), (int)(m_num_bkts))),
       m_segment_size(std::max((int)(m_num_bkts >> m_log_num_segments), 1)),
 
       m_phase3_threads(m_batch_size - 1)
@@ -326,11 +376,29 @@ template <typename A, typename P>
 void Msm<A, P>::run_msm(
   const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results)
 {
-  phase1_bucket_accumulator(scalars, bases, msm_size);
+#ifdef MEASURE_MSM_TIMES
+  Timer tmsm("Total msm time");
+  {
+    Timer tp1("Phase 1");
+#else
+  {
+#endif
+    phase1_bucket_accumulator(scalars, bases, msm_size);
+  }
   auto segments = std::vector<BmSumSegment>(m_num_bms * m_num_bm_segments);
-  phase2_bm_sum(segments);
-  phase3_final_accumulator(segments, batch_idx, results);
-  if (batch_idx < m_batch_size - 1) { batch_run_reset(); }
+  {
+#ifdef MEASURE_MSM_TIMES
+    Timer tp1("Phase 2");
+#endif
+    phase2_bm_sum(segments);
+  }
+  {
+#ifdef MEASURE_MSM_TIMES
+    Timer tp1("Phase 3");
+#endif
+    phase3_final_accumulator(segments, batch_idx, results);
+    if (batch_idx < m_batch_size - 1) { batch_run_reset(); }
+  }
 }
 
 template <typename A, typename P>
@@ -340,7 +408,6 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
   const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
   // NUmber of windows / additions per scalar in case num_bms * precompute_factor exceed scalar width
   const int num_bms_before_precompute = ((scalar_t::NBITS - 1) / m_c) + 1; // +1 for ceiling
-
   int carry = 0;
   for (int i = 0; i < msm_size; i++) {
     carry = 0;
@@ -361,11 +428,12 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
 
         uint32_t curr_coeff = scalar.get_scalar_digit(m_num_bms * j + k, m_c) + carry;
         int bkt_idx = 0;
+        // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
         if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
           // Remove sign to infer the bkt idx.
-          carry = curr_coeff >= m_num_bkts;
-          if (curr_coeff < m_num_bkts) {
-            bkt_idx = m_num_bkts * k + curr_coeff;
+          carry = curr_coeff > m_num_bkts;
+          if (!carry) {
+            bkt_idx = m_num_bkts * k + (curr_coeff & coeff_bit_mask_no_sign_bit);
           } else {
             bkt_idx = m_num_bkts * k + ((-curr_coeff) & coeff_bit_mask_no_sign_bit);
           }
@@ -392,40 +460,57 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
 template <typename A, typename P>
 void Msm<A, P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base)
 {
-  EcAddTask<A, P>* task = nullptr;
-  while (task == nullptr) {
+  while (m_curr_task == nullptr) {
     // Use the search for an available (idle or completed) task as an opportunity to handle the existing results.
-    task = manager.get_idle_or_completed_task();
-    if (task->is_completed()) {
-      // Check for collision in the destination bucket, and chain and addition / store result accordingly.
-      if (m_bkts_occupancy[task->m_return_idx]) {
-        m_bkts_occupancy[task->m_return_idx] = false;
-        task->set_phase1_collision_task(m_buckets[task->m_return_idx]);
-        task = nullptr;
-      } else {
-        m_buckets[task->m_return_idx] = task->m_point1;
-        m_bkts_occupancy[task->m_return_idx] = true;
+    m_curr_task = manager.get_idle_or_completed_task();
+    if (m_curr_task->is_completed()) {
+      const int nof_results = m_curr_task->m_nof_valid_points;
+      m_curr_task->reset_idle();
+      for (int i = 0; i < nof_results; i++) {
+        // Check for collision in the destination bucket, and chain and addition / store result accordingly.
+        if (m_bkts_occupancy[m_curr_task->m_return_idx[i]]) {
+          m_bkts_occupancy[m_curr_task->m_return_idx[i]] = false;
+          m_curr_task->set_phase1_collision_task(
+            m_curr_task->m_a_points[i], m_buckets[m_curr_task->m_return_idx[i]], m_curr_task->m_return_idx[i]);
+        } else {
+          m_buckets[m_curr_task->m_return_idx[i]] = m_curr_task->m_a_points[i];
+          m_bkts_occupancy[m_curr_task->m_return_idx[i]] = true;
+        }
       }
     }
+    // If the collision tasks cause the task to be dispatched again this task can't be assigned more additions -
+    // repeat the loop with a new task.
+    if (!m_curr_task->is_idle()) { m_curr_task = nullptr; }
   }
   // After handling the result a new one can be set.
-  task->set_phase1_addition_with_affine(bkt, base, task_bkt_idx);
+  m_curr_task->set_phase1_addition_with_affine(bkt, base, task_bkt_idx);
+  if (!m_curr_task->is_idle()) { m_curr_task = nullptr; }
 }
 
 template <typename A, typename P>
 void Msm<A, P>::phase1_wait_for_completion()
 {
+  // In case remaining additions are smaller than a batch size - dispatch current task
+  if (m_curr_task && m_curr_task->is_idle()) { m_curr_task->dispatch(); }
+
   EcAddTask<A, P>* task = manager.get_completed_task();
   while (task != nullptr) {
-    // Check for collision in the destination bucket, and chain and addition / store result accordingly.
-    if (m_bkts_occupancy[task->m_return_idx]) {
-      m_bkts_occupancy[task->m_return_idx] = false;
-      task->set_phase1_collision_task(m_buckets[task->m_return_idx]);
-    } else {
-      m_buckets[task->m_return_idx] = task->m_point1;
-      m_bkts_occupancy[task->m_return_idx] = true;
-      task->set_idle();
+    const int nof_results = task->m_nof_valid_points;
+    task->reset_idle();
+    bool had_collision = false;
+    for (int i = 0; i < nof_results; i++) {
+      // Check for collision in the destination bucket, and chain and addition / store result accordingly.
+      if (m_bkts_occupancy[task->m_return_idx[i]]) {
+        m_bkts_occupancy[task->m_return_idx[i]] = false;
+        task->set_phase1_collision_task(task->m_a_points[i], m_buckets[task->m_return_idx[i]], task->m_return_idx[i]);
+        had_collision = true;
+      } else {
+        m_buckets[task->m_return_idx[i]] = task->m_a_points[i];
+        m_bkts_occupancy[task->m_return_idx[i]] = true;
+      }
     }
+    task->dispatch_if_not_empty();
+
     task = manager.get_completed_task();
   }
 }
@@ -437,56 +522,70 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
   if (m_segment_size > 1) {
     // Send first additions - line additions.
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
-      EcAddTask<A, P>* task = manager.get_idle_task();
+      if (i % NOF_EC_ADDITIONS_IN_BATCH == 0) { m_curr_task = manager.get_idle_task(); }
       BmSumSegment& curr_segment = segments[i]; // For readability
 
       int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
       P bucket = m_bkts_occupancy[bkt_idx] ? m_buckets[bkt_idx] : P::zero();
-      task->set_phase2_addition_by_value(curr_segment.line_sum, bucket, i);
+      m_curr_task->set_phase2_addition_by_value(curr_segment.line_sum, bucket, i);
     }
+    // Dispatch last task if itis not enough to fill a batch and dispatch automatically.
+    if (m_curr_task->is_idle()) { m_curr_task->dispatch(); }
 
     // Loop until all line/tri sums are done.
     int done_segments = 0;
     while (done_segments < m_num_bms * m_num_bm_segments) {
-      EcAddTask<A, P>* task = manager.get_completed_task();
-      BmSumSegment& curr_segment = segments[task->m_return_idx]; // For readability
+      m_curr_task = manager.get_completed_task();
 
-      if (task->m_is_line) {
-        curr_segment.line_sum = task->m_point1;
-      } else {
-        curr_segment.triangle_sum = task->m_point1;
-      }
-      curr_segment.m_nof_received_sums++;
+      // Check if there is a need for a line task according to the received sums counter of one of the received segments
+      EcAddTask<A, P>* line_task = nullptr;
+      if (segments[m_curr_task->m_return_idx[0]].m_nof_received_sums == 1) { line_task = manager.get_idle_task(); }
 
-      // Check if this was the last addition in the segment
-      if (curr_segment.m_idx_in_segment < 0) {
-        done_segments++;
-        task->set_idle();
-        continue;
-      }
-      // Otherwise check if it is possible to assign new additions:
-      // Triangle sum is dependent on the 2 previous sums (line and triangle) - so check if 2 sums were received.
-      if (curr_segment.m_nof_received_sums == 2) {
-        curr_segment.m_nof_received_sums = 0;
-        task->set_phase2_triangle_addition(curr_segment.line_sum, &(curr_segment.triangle_sum));
-        curr_segment.m_idx_in_segment--;
+      const int nof_results = m_curr_task->m_nof_valid_points;
+      m_curr_task->reset_idle();
 
-        // Line sum (if not the last one in the segment)
-        if (curr_segment.m_idx_in_segment >= 0) {
-          int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
-          if (m_bkts_occupancy[bkt_idx]) {
-            int return_idx = task->m_return_idx;
-            // Due to the choice of num segments being less than half of total tasks there ought to be an idle task for
-            // the line sum
-            task = manager.get_idle_task();
-            task->set_phase2_line_addition(curr_segment.line_sum, &m_buckets[bkt_idx], return_idx);
-          } else {
-            curr_segment.m_nof_received_sums++;
-          } // No need to add a zero - just increase nof_received_sums
+      for (int i = 0; i < nof_results; i++) {
+        BmSumSegment& curr_segment = segments[m_curr_task->m_return_idx[i]]; // For readability
+
+        if (m_curr_task->m_is_line[i]) {
+          curr_segment.line_sum = m_curr_task->m_a_points[i];
+        } else {
+          curr_segment.triangle_sum = m_curr_task->m_a_points[i];
         }
-      } else {
-        task->set_idle();
-      } // Handling Completed task without dispatching a new one
+        curr_segment.m_nof_received_sums++;
+
+        // Check if this was the last addition in the segment
+        if (curr_segment.m_idx_in_segment < 0) {
+          done_segments++;
+          continue;
+        }
+        // Otherwise check if it is possible to assign new additions:
+        // Triangle sum is dependent on the 2 previous sums (line and triangle) - so check if 2 sums were received.
+        // Line sum (if not the last one in the segment).
+
+        // Due to the choice of num segments being less than half of total tasks there ought to be an idle task
+        // for the line sum.
+        if (curr_segment.m_nof_received_sums == 2) {
+          curr_segment.m_nof_received_sums = 0;
+          m_curr_task->set_phase2_triangle_addition(curr_segment.line_sum, &(curr_segment.triangle_sum));
+          curr_segment.m_idx_in_segment--;
+
+          if (curr_segment.m_idx_in_segment >= 0) {
+            int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
+            if (m_bkts_occupancy[bkt_idx]) {
+              int return_idx = m_curr_task->m_return_idx[i];
+              line_task->set_phase2_line_addition(curr_segment.line_sum, &m_buckets[bkt_idx], return_idx);
+            } else {
+              // curr_segment.m_nof_received_sums++;
+              int return_idx = m_curr_task->m_return_idx[i];
+              line_task->set_phase2_addition_by_value(curr_segment.line_sum, P::zero(), return_idx);
+            } // No need to add a zero - just increase nof_received_sums.
+          }
+        }
+      }
+      // Check if tri and line task haven't been dispatched due to not enough inputs - dispatch them
+      m_curr_task->dispatch_if_not_empty();
+      if (line_task) { line_task->dispatch_if_not_empty(); }
     }
   }
 }
@@ -600,15 +699,8 @@ eIcicleError cpu_msm(
 {
   int c = config.c;
   if (c < 1) { c = Msm<A, P>::get_optimal_c(msm_size, config.precompute_factor); }
-  if (scalar_t::NBITS % c == 0) {
-    ICICLE_LOG_WARNING << "MSM c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-                       << ") without remainder. Incrementing to a higher c";
-  }
-  while (scalar_t::NBITS % c == 0) {
-    c++;
-  }
 
-  int nof_threads = std::thread::hardware_concurrency();
+  int nof_threads = std::thread::hardware_concurrency() - 1;
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
     nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
   }
@@ -616,7 +708,6 @@ eIcicleError cpu_msm(
     ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
     nof_threads = 1;
   }
-
   auto msm = Msm<A, P>{config, c, nof_threads};
 
   for (int i = 0; i < config.batch_size; i++) {
@@ -647,13 +738,7 @@ eIcicleError cpu_msm_precompute_bases(
 {
   int c = config.c;
   if (c < 1) { c = Msm<A, P>::get_optimal_c(nof_bases, config.precompute_factor); }
-  if (scalar_t::NBITS % c == 0) {
-    ICICLE_LOG_ERROR << "Currerntly c (" << c << ") mustn't divide scalar width (" << scalar_t::NBITS
-                     << ") without remainder.\n";
-  }
-  while (scalar_t::NBITS % c == 0) {
-    c++;
-  }
+
   int precompute_factor = config.precompute_factor;
   bool is_mont = config.are_points_montgomery_form;
   const unsigned int num_bms_no_precomp = (scalar_t::NBITS - 1) / c + 1;
