@@ -6,21 +6,20 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use crate::field::{ComplexExtensionField, ScalarField};
+use crate::field::{ComplexExtensionCfg, ComplexExtensionField, ScalarField};
 
 extern "C" {
     #[link_name = "m31_initialize_domain"]
-    fn initialize_ntt_domain(
+    fn initialize_domain(
         primitive_root: &ComplexExtensionField,
         ctx: &DeviceContext,
-        fast_twiddles_mode: bool,
     ) -> CudaError;
 
     #[link_name = "m31_release_domain"]
     fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
 
     #[link_name = "m31_get_root_of_unity"]
-    fn get_root_of_unity(max_size: u64) -> ScalarField;
+    fn get_root_of_unity(max_size: u32) -> ComplexExtensionField;
 
     #[link_name = "m31_ntt_cuda"]
     fn ntt_cuda(
@@ -43,7 +42,7 @@ extern "C" {
 /// * `ctx` - GPU index and stream to perform the computation.
 pub fn initialize_dcct_domain(primitive_root: ComplexExtensionField, ctx: &DeviceContext) -> IcicleResult<()>
 {
-    unsafe { initialize_ntt_domain(&primitive_root, ctx, false).wrap() }
+    unsafe { initialize_domain(&primitive_root, ctx).wrap() }
 }
 
 pub fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>
@@ -51,7 +50,7 @@ pub fn release_domain(ctx: &DeviceContext) -> IcicleResult<()>
     unsafe { release_ntt_domain(ctx).wrap() }
 }
 
-pub fn get_dcct_root_of_unity(max_size: u64) -> ScalarField
+pub fn get_dcct_root_of_unity(max_size: u32) -> ComplexExtensionField
 {
     unsafe { get_root_of_unity(max_size) }
 }
@@ -153,8 +152,9 @@ pub(crate) mod tests {
     fn test_evaluate_4() {
         const LOG: u32 = 4;
 
-        let rou = get_dcct_root_of_unity(4);
-        initialize_dcct_domain(rou, &DeviceContext::default());
+        let rou = get_dcct_root_of_unity(LOG);
+        println!("ROU {:?}", rou);
+        // initialize_dcct_domain(rou, &DeviceContext::default());
 
         let coeffs: Vec<ScalarField> = (0u32..1<<LOG).map(ScalarField::from_u32).collect();
         let expected = [

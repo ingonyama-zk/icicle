@@ -82,9 +82,10 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&ntt_stop));
 
   auto start = std::chrono::high_resolution_clock::now();
-  const test_ext basic_root = field_config::get_ext_omega(NTT_LOG_SIZE);
+  // const test_ext basic_root = field_config::get_ext_omega(NTT_LOG_SIZE);
+  const test_ext basic_root = ntt::get_root_of_unity<test_scalar, test_ext>(NTT_LOG_SIZE);
   std::cout << "Basic root: " << basic_root << std::endl;
-  ntt::init_domain<test_scalar, test_ext>(basic_root, ntt_config.ctx, false);
+  ntt::init_domain<test_scalar, test_ext>(basic_root, ntt_config.ctx);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
