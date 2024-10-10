@@ -15,8 +15,8 @@ namespace ntt {
    * stand-alone "STARK field";
    */
 #ifdef DCCT
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, initialize_domain)(
-    c_extension_t* primitive_root, device_context::DeviceContext& ctx)
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, initialize_domain)(c_extension_t* primitive_root, device_context::DeviceContext& ctx)
   {
     return init_domain<scalar_t, c_extension_t>(*primitive_root, ctx);
   }
@@ -60,9 +60,9 @@ namespace ntt {
    * stand-alone "STARK field";
    */
 #ifdef DCCT
-  extern "C" c_extension_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn)
+  extern "C" void CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn, c_extension_t* output)
   {
-    return get_root_of_unity<scalar_t, c_extension_t>(logn);
+    *output = get_root_of_unity<scalar_t, c_extension_t>(logn);
   }
 #else
   extern "C" scalar_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn)
