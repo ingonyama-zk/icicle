@@ -651,6 +651,9 @@ namespace ntt {
   template <typename S>
   static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
+#ifdef DCCT
+    return false;
+#endif
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
     if (!is_mixed_radix_alg_supported && config.columns_batch)
       throw IcicleError(IcicleError_t::InvalidArgument, "columns batch is not supported for given NTT size");
