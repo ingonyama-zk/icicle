@@ -139,7 +139,7 @@ pub fn interpolate(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::ntt::{FieldImpl, NTTConfig};
+    use icicle_core::ntt::{FieldImpl, NTTConfig, NttAlgorithm};
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
 
     use crate::{
@@ -148,9 +148,8 @@ pub(crate) mod tests {
     };
 
     #[test]
-    #[ignore = "cuda mem err"]
-    fn test_evaluate_4() {
-        const LOG: u32 = 4;
+    fn test_evaluate_6() {
+        const LOG: u32 = 6;
 
         let rou = get_dcct_root_of_unity(LOG);
         println!("ROU {:?}", rou);
@@ -173,7 +172,9 @@ pub(crate) mod tests {
         .map(ScalarField::from_u32);
 
         let mut evaluations = vec![ScalarField::zero(); 1 << LOG];
-        let cfg = NTTConfig::default();
+        let mut cfg = NTTConfig::default();
+
+        cfg.ntt_algorithm = NttAlgorithm::MixedRadix; //TODO: should force mixed radix for dcct
         evaluate(
             HostSlice::from_slice(&coeffs),
             &cfg,
