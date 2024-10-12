@@ -191,8 +191,7 @@ TEST_F(CurveApiTest, ecntt)
 
   run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t))); // TODO ucomment when CPU is
-  // implemented
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t)));
 }
 #endif // ECNTT
 

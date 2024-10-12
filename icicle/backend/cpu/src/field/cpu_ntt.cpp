@@ -45,12 +45,10 @@ REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU", cpu_ntt_release_domain<scalar_t>);
 REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND("CPU", cpu_get_root_of_unity_from_domain<scalar_t>);
 REGISTER_NTT_BACKEND("CPU", (cpu_ntt<scalar_t, scalar_t>));
 
-
 REGISTER_NTT_INIT_DOMAIN_BACKEND("CPU_REF", (cpu_ntt_init_domain));
 REGISTER_NTT_RELEASE_DOMAIN_BACKEND("CPU_REF", cpu_ntt_release_domain<scalar_t>);
 REGISTER_NTT_GET_ROU_FROM_DOMAIN_BACKEND("CPU_REF", cpu_get_root_of_unity_from_domain<scalar_t>);
 REGISTER_NTT_BACKEND("CPU_REF", (cpu_ntt_ref<scalar_t, scalar_t>));
-
 
 #ifdef EXT_FIELD
 REGISTER_NTT_EXT_FIELD_BACKEND("CPU", (cpu_ntt<scalar_t, extension_t>));

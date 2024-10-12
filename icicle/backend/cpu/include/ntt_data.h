@@ -14,7 +14,7 @@
 
 namespace ntt_cpu {
 
-/**
+  /**
    * @brief Defines the log sizes of sub-NTTs for different problem sizes.
    *
    * `layers_sub_logn` specifies the log sizes for up to three layers (hierarchy1 or hierarchy0) in the NTT computation.
@@ -25,15 +25,10 @@ namespace ntt_cpu {
    * layer, 13 for the second, and 0 for the third.
    */
   constexpr uint32_t layers_sub_logn[31][3] = {
-    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},   {4, 3, 0},
-    {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},   {5, 5, 5},
-    // {8,8,0},   {9, 8, 0},   {9, 9, 0},   {10, 9, 0},  {10, 10, 0}, {11, 10, 0}, {11, 11, 0}, {12, 11, 0}, //FIXME SHANIE - choose best and remove
-    {5,5, 6},   {5, 5, 7},   {5, 5, 8},   {5,5, 9},  {5, 5, 10}, {5, 5, 11}, {5, 5, 12}, {12, 11, 0},
+    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},  {4, 3, 0},
+    {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},  {5, 5, 5},
+    {5, 5, 6},   {5, 5, 7},   {5, 5, 8},   {5, 5, 9},   {5, 5, 10},  {5, 5, 11},  {5, 5, 12}, {12, 11, 0},
     {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
-
-
-
-
 
   /**
    * @brief Represents the log sizes of sub-NTTs in the NTT computation hierarchy.
@@ -50,7 +45,7 @@ namespace ntt_cpu {
    */
   struct NttSubLogn {
     uint32_t logn;                                                  // Original log_size of the problem
-    uint64_t size;                                             // Original size of the problem
+    uint64_t size;                                                  // Original size of the problem
     std::vector<std::vector<uint32_t>> hierarchy_0_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 0 layers
     std::vector<uint32_t> hierarchy_1_layers_sub_logn;              // Log sizes of sub-NTTs in hierarchy 1 layers
 
@@ -78,32 +73,33 @@ namespace ntt_cpu {
     }
   };
 
-
   template <typename S = scalar_t, typename E = scalar_t>
   struct NttData {
-    const NttSubLogn ntt_sub_logn;
-    E* const elements;
-    const NTTConfig<S>& config;
-    const NTTDir direction;
-    uint32_t coset_stride=0;
-    std::unique_ptr<S[]> arbitrary_coset = nullptr;
+    const NttSubLogn ntt_sub_logn; /**< Log sizes of sub-NTTs based on the original NTT log size. */
+    E* const elements;             /**< Pointer to the output elements array. */
+    const NTTConfig<S>& config;    /**< Configuration settings for the NTT computation. */
+    const NTTDir direction;        /**< Direction of the NTT computation (forward or inverse). */
+    uint32_t coset_stride = 0;     /**< Stride value for coset multiplication, retrieved from the NTT domain. */
+    std::unique_ptr<S[]> arbitrary_coset = nullptr; /**< Array holding arbitrary coset values if needed. */
     NttData(uint32_t logn, E* elements, const NTTConfig<S>& config, NTTDir direction)
-        : ntt_sub_logn(logn), elements(elements), config(config), direction(direction) {
-          if (config.coset_gen != S::one()) {
-            try {
-              coset_stride = CpuNttDomain<S>::s_ntt_domain.get_coset_stride(config.coset_gen); // Coset generator found in twiddles
-            } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
-              int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
-              arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
-              arbitrary_coset[0] = S::one();
-              S coset_gen = direction == NTTDir::kForward ? config.coset_gen : S::inverse(config.coset_gen); // inverse for INTT
-              for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
-                arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
-                // ICICLE_LOG_INFO << "NTT test: arbitrary_coset[" << i << "]=" << arbitrary_coset[i];
-              }
-            }
+        : ntt_sub_logn(logn), elements(elements), config(config), direction(direction)
+    {
+      if (config.coset_gen != S::one()) {
+        try {
+          coset_stride =
+            CpuNttDomain<S>::s_ntt_domain.get_coset_stride(config.coset_gen); // Coset generator found in twiddles
+        } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
+          int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
+          arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
+          arbitrary_coset[0] = S::one();
+          S coset_gen =
+            direction == NTTDir::kForward ? config.coset_gen : S::inverse(config.coset_gen); // inverse for INTT
+          for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
+            arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
           }
         }
+      }
+    }
   };
 
 } // namespace ntt_cpu

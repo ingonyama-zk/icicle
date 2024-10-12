@@ -42,7 +42,9 @@ namespace ntt_cpu {
   cpu_ntt(const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>& config, E* output)
   {
     ICICLE_ASSERT(!(size & (size - 1))) << "Size must be a power of 2. size = " << size;
-    ICICLE_ASSERT(size <= CpuNttDomain<S>::s_ntt_domain.get_max_size()) << "Size is too large for domain. size = " << size << ", domain_max_size = " << CpuNttDomain<S>::s_ntt_domain.get_max_size();
+    ICICLE_ASSERT(size <= CpuNttDomain<S>::s_ntt_domain.get_max_size())
+      << "Size is too large for domain. size = " << size
+      << ", domain_max_size = " << CpuNttDomain<S>::s_ntt_domain.get_max_size();
 
     NttCpu<S, E> ntt(uint32_t(log2(size)), direction, config, input, output);
     ntt.run();
@@ -50,9 +52,9 @@ namespace ntt_cpu {
     return eIcicleError::SUCCESS;
   }
 
-  template <typename S = scalar_t, typename E = scalar_t>
-  eIcicleError
-  cpu_ntt_ref(const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>& config, E* output)
+  template <typename S = scalar_t, typename E = scalar_t> // TODO SHANIE - Remove this function
+  eIcicleError cpu_ntt_ref(
+    const Device& device, const E* input, uint64_t size, NTTDir direction, const NTTConfig<S>& config, E* output)
   {
     const uint32_t domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
     if (size & (size - 1)) {
@@ -129,7 +131,8 @@ namespace ntt_cpu {
       ntt.handle_pushed_tasks(tasks_manager, ntt_tasks_manager, 0);
     }
 
-    // std::cout << "[REF] PRE NORMALIZE: right:\t["; for (int i = 0; i < total_input_size-1; i++) { std::cout << output[i] << ", "; } std::cout <<output[total_input_size-1]<<"]"<< std::endl;
+    // std::cout << "[REF] PRE NORMALIZE: right:\t["; for (int i = 0; i < total_input_size-1; i++) { std::cout <<
+    // output[i] << ", "; } std::cout <<output[total_input_size-1]<<"]"<< std::endl;
 
     if (direction == NTTDir::kInverse) {
       S inv_size = S::inv_log_size(logn);

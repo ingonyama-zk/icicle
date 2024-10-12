@@ -106,7 +106,6 @@ public:
 
 REGISTER_DEVICE_API("CPU", CpuDeviceAPI);
 
-
 class CpuDeviceAPIREF : public CpuDeviceAPI
 {
 };

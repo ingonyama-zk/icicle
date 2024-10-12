@@ -10,78 +10,70 @@ using namespace field_config;
 using namespace icicle;
 
 namespace ntt_cpu {
-    /**
-    * @brief Manages the Number Theoretic Transform (NTT) computation, including various transformation and reordering
-    * tasks.
-    *
-    * This class handles the full process of NTT computation, including initialization, transformations,
-    * and handling task dependencies within a hierarchical structure.
-    *
-    * @param ntt_sub_logn Stores the log sizes for sub-NTTs in different layers.
-    * @param direction Indicates the direction of the NTT (forward or inverse).
-    * @param config Configuration settings for the NTT.
-    */
-    template <typename S = scalar_t, typename E = scalar_t>
-    class NttCpu
+  /**
+   * @brief Constructs an `NttCpu` instance with the specified parameters.
+   *
+   * Initializes the NTT data structures, task managers, and input/output buffers.
+   *
+   * @param logn       The log of the size of the NTT.
+   * @param direction  The direction of the NTT computation, either forward or inverse.
+   * @param config     Configuration settings for the NTT, including batch size and ordering.
+   * @param input      Pointer to the input data array.
+   * @param output     Pointer to the output data array where results will be stored.
+   */
+  template <typename S = scalar_t, typename E = scalar_t>
+  class NttCpu
+  {
+  public:
+    NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
+        : input(input), ntt_data(logn, output, config, direction), ntt_tasks_manager(ntt_data.ntt_sub_logn, logn),
+          tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1))
     {
-    public:
-        NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output) 
-        : input(input),
-        ntt_data(logn, output, config, direction),
-        // coset_stride(find_or_generate_coset(arbitrary_coset)),
-        ntt_tasks_manager(ntt_data.ntt_sub_logn, logn),
-        // tasks_manager(std::thread::hardware_concurrency() - 1) // Initialize TasksManager with nof_threads - 1
-        tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1)) // Allocate on the heap
-        // tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(1)) // Allocate on the heap //FIXME SHANIE !!
-        {
-        }
-        eIcicleError run();
+    }
+    eIcicleError run();
 
-        ~NttCpu() {
-          // delete[] arbitrary_coset; // TODO SHANIE - do I need to delete this?
-        }
+  private:
+    const E* input;
+    NttData<S, E> ntt_data;
+    NttTasksManager<S, E> ntt_tasks_manager;
+    std::unique_ptr<TasksManager<NttTask<S, E>>> tasks_manager;
 
+    void coset_mul();
+    eIcicleError hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx);
+    eIcicleError handle_pushed_tasks(uint32_t hierarchy_1_layer_idx);
+    void hierarchy_1_reorder();
+    eIcicleError reorder_output();
+    void reorder_by_bit_reverse();
+    void copy_and_reorder_if_needed(const E* input, E* output);
 
-    private:
-        const E* input;
-        NttData<S, E> ntt_data;
-        NttTasksManager<S, E> ntt_tasks_manager;
-        // TasksManager<NttTask<S, E>> tasks_manager;
-        std::unique_ptr<TasksManager<NttTask<S, E>>> tasks_manager;
-
-        void coset_mul(); //FIXME SHANIE - REMOVE
-        eIcicleError hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx);
-        eIcicleError handle_pushed_tasks(uint32_t hierarchy_1_layer_idx);
-        void hierarchy_1_reorder();
-        eIcicleError reorder_output();
-        void reorder_by_bit_reverse();
-
-        E* copy_and_reorder_if_needed(const E* input, E* output);
-        // uint32_t find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset);
-
-    }; // class NttCpu
-
+  }; // class NttCpu
 
   //////////////////////////// NttCpu Implementation ////////////////////////////
-
 
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::run()
   {
     copy_and_reorder_if_needed(input, ntt_data.elements);
-    // if (ntt_data.config.coset_gen != S::one() && ntt_data.direction == NTTDir::kForward) {
-      // coset_mul();
-    // }
     if (ntt_data.ntt_sub_logn.logn > HIERARCHY_1) {
       for (uint32_t hierarchy_1_layer_idx = 0; hierarchy_1_layer_idx < 2; hierarchy_1_layer_idx++) {
-        const uint32_t sunbtt_plus_batch_logn = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] + uint32_t(log2(ntt_data.config.batch_size));
-        const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel = sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
+        const uint32_t sunbtt_plus_batch_logn =
+          ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] +
+          uint32_t(log2(ntt_data.config.batch_size));
+        const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel =
+          sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
         const uint32_t nof_hierarchy_1_subntts_todo_in_parallel = 1 << log_nof_hierarchy_1_subntts_todo_in_parallel;
-        const uint32_t log_nof_subntts_chunks = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] -log_nof_hierarchy_1_subntts_todo_in_parallel;
+        const uint32_t log_nof_subntts_chunks =
+          ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] -
+          log_nof_hierarchy_1_subntts_todo_in_parallel;
         const uint32_t nof_subntts_chunks = 1 << log_nof_subntts_chunks;
-        for (uint32_t hierarchy_1_subntts_chunck_idx = 0; hierarchy_1_subntts_chunck_idx < nof_subntts_chunks; hierarchy_1_subntts_chunck_idx++) {
-          for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
-            hierarchy1_push_tasks(hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck);
+        for (uint32_t hierarchy_1_subntts_chunck_idx = 0; hierarchy_1_subntts_chunck_idx < nof_subntts_chunks;
+             hierarchy_1_subntts_chunck_idx++) {
+          for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0;
+               hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel;
+               hierarchy_1_subntt_idx_in_chunck++) {
+            hierarchy1_push_tasks(
+              hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel +
+                                       hierarchy_1_subntt_idx_in_chunck);
           }
           handle_pushed_tasks(hierarchy_1_layer_idx);
         }
@@ -89,10 +81,9 @@ namespace ntt_cpu {
       }
       reorder_output();
     } else {
-      hierarchy1_push_tasks(0,0);
+      hierarchy1_push_tasks(0, 0);
       handle_pushed_tasks(0);
     }
-
 
     if (ntt_data.direction == NTTDir::kInverse && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
 
@@ -103,23 +94,19 @@ namespace ntt_cpu {
   }
 
   /**
-   * @brief Copies the input data to the output buffer, applying reordering if necessary.
+   * @brief Copies the input data to the output buffer with necessary reordering.
    *
-   * The reordering can involve bit-reversal and/or a custom reorder logic, depending
-   * on the size of the input data and the specified ordering configuration. If no reordering
-   * is needed, the data is simply copied as-is.
+   * Depending on the size of the input data and the specified ordering configuration,
+   * this function performs bit-reversal and/or custom reordering logic. If no reordering
+   * is needed, the data is copied as-is. It handles scenarios where input and output
+   * buffers may overlap by using temporary storage if necessary.
    *
-   * @param input The input array from which data will be copied.
-   * @param output The output array where the copied (and potentially reordered) data will be stored.
-   *
-   * @note - If `logn > HIERARCHY_1`, there is an additional level of hierarchy due to sub-NTTs, requiring extra
-   * reordering
-   *       - If `logn <= HIERARCHY_1`, only bit-reversal reordering is applied if configured.
-   *       - If no reordering is needed, the input data is directly copied to the output.
+   * @param input  Pointer to the input array to be copied and reordered.
+   * @param output Pointer to the output array where the data will be stored.
+   * @return E*    Pointer to the output array after copying and reordering.
    */
-
   template <typename S, typename E>
-  E* NttCpu<S, E>::copy_and_reorder_if_needed(const E* input, E* output)
+  void NttCpu<S, E>::copy_and_reorder_if_needed(const E* input, E* output)
   {
     const uint64_t total_memory_size = ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size;
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
@@ -141,15 +128,14 @@ namespace ntt_cpu {
       uint32_t next_ntt_log_size = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
 
       for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
-        const E* input_batch = ntt_data.config.columns_batch ? (input + batch) : (input + batch * ntt_data.ntt_sub_logn.size);
+        const E* input_batch =
+          ntt_data.config.columns_batch ? (input + batch) : (input + batch * ntt_data.ntt_sub_logn.size);
         E* output_batch =
           ntt_data.config.columns_batch ? (temp_output + batch) : (temp_output + batch * ntt_data.ntt_sub_logn.size);
 
         for (uint64_t i = 0; i < ntt_data.ntt_sub_logn.size; ++i) {
           uint32_t subntt_idx = i >> cur_ntt_log_size;
           uint32_t element = i & ((1 << cur_ntt_log_size) - 1);
-          // uint64_t new_idx = bit_rev ? NttUtils<S, E>::bit_reverse(subntt_idx + (element << next_ntt_log_size), logn)
-          //                            : subntt_idx + (element << next_ntt_log_size);
           uint64_t new_idx = bit_rev ? bit_reverse(subntt_idx + (element << next_ntt_log_size), logn)
                                      : subntt_idx + (element << next_ntt_log_size);
           output_batch[stride * i] = input_batch[stride * new_idx];
@@ -159,7 +145,8 @@ namespace ntt_cpu {
     } else if (bit_rev) {
       // Only bit-reverse reordering needed
       for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
-        const E* input_batch = ntt_data.config.columns_batch ? (input + batch) : (input + batch * ntt_data.ntt_sub_logn.size);
+        const E* input_batch =
+          ntt_data.config.columns_batch ? (input + batch) : (input + batch * ntt_data.ntt_sub_logn.size);
         E* output_batch =
           ntt_data.config.columns_batch ? (temp_output + batch) : (temp_output + batch * ntt_data.ntt_sub_logn.size);
 
@@ -178,38 +165,27 @@ namespace ntt_cpu {
       // Copy the reordered elements from the temporary storage back to the output
       std::copy(temp_output, temp_output + total_memory_size, output);
     }
-
-    return output;
   }
 
   /**
-   * @brief Applies coset multiplication to the given elements based on the provided twiddles or arbitrary coset.
+   * @brief Applies coset multiplication to the elements.
    *
-   * This function performs a coset multiplication on the `elements` array, which may have been reordered
-   * due to input reordering operations. The multiplication is based on either a precomputed
-   * coset stride using `twiddles` or an `arbitrary_coset` generated dynamically. The function handles
-   * different reordering schemes and ensures the correct indices are used for multiplication.
-   *
-   * @param elements The array of elements to which the coset multiplication will be applied.
-   * @param coset_stride The stride used to select the appropriate twiddle factor. This is computed based on the coset
-   * generator.
-   * @param arbitrary_coset A unique pointer to an array of arbitrary coset values generated if the coset generator is
-   * not found in the twiddles.
-   *
-   * @note This function assumes that the input data may have undergone reordering, and it adjusts the indices used for
-   *       coset multiplication accordingly. The function handles both the cases where `twiddles` are used and where
-   *       an `arbitrary_coset` is used.
+   * This function performs coset multiplication on the `elements` array based on
+   * the coset generator specified in the configuration. It adjusts indices according
+   * to any prior reordering to ensure correct multiplication.
+   * Used in the inverse NTT.
    */
   template <typename S, typename E>
   void NttCpu<S, E>::coset_mul()
   {
-    //FIXME SHANIE - Remove this function
     uint32_t batch_stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
-    const bool needs_reorder_input = ntt_data.direction == NTTDir::kForward && (ntt_data.ntt_sub_logn.logn > HIERARCHY_1);
+    const bool needs_reorder_input =
+      ntt_data.direction == NTTDir::kForward && (ntt_data.ntt_sub_logn.logn > HIERARCHY_1);
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
 
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
-      E* current_elements = ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.ntt_sub_logn.size;
+      E* current_elements = ntt_data.config.columns_batch ? ntt_data.elements + batch
+                                                          : ntt_data.elements + batch * ntt_data.ntt_sub_logn.size;
 
       for (uint64_t i = 1; i < ntt_data.ntt_sub_logn.size; ++i) {
         uint64_t idx = i;
@@ -228,50 +204,14 @@ namespace ntt_cpu {
           current_elements[batch_stride * i] = current_elements[batch_stride * i] * ntt_data.arbitrary_coset[idx];
         } else {
           uint32_t twiddle_idx = ntt_data.coset_stride * idx;
-          twiddle_idx = ntt_data.direction == NTTDir::kForward ? twiddle_idx : CpuNttDomain<S>::s_ntt_domain.get_max_size() - twiddle_idx;
+          twiddle_idx = ntt_data.direction == NTTDir::kForward
+                          ? twiddle_idx
+                          : CpuNttDomain<S>::s_ntt_domain.get_max_size() - twiddle_idx;
           current_elements[batch_stride * i] = current_elements[batch_stride * i] * twiddles[twiddle_idx];
         }
       }
     }
   }
-
-  /**
-   * @brief Handles the determination of the coset stride and potentially calculates an arbitrary coset.
-   *
-   * This function determines the appropriate coset stride based on the coset generator provided
-   * in the configuration. If the coset generator is found within the precomputed twiddles, the
-   * corresponding coset stride is returned. If the coset generator is not found, an arbitrary coset
-   * is calculated dynamically and stored in the provided `arbitrary_coset` array.
-   *
-   * @param arbitrary_coset A unique pointer that will be allocated and filled with the arbitrary coset values
-   *                        if the coset generator is not found in the precomputed twiddles.
-   * @return uint32_t Returns the coset stride if found in the precomputed twiddles. If an arbitrary coset is calculated,
-   *             returns 0 (since the stride is not applicable in this case).
-   */
-
-  // template <typename S, typename E>
-  // uint32_t NttCpu<S, E>::find_or_generate_coset(std::unique_ptr<S[]>& arbitrary_coset)
-  // {
-  //   uint32_t coset_stride = 0;
-
-  //   if (ntt_data.config.coset_gen != S::one()) {
-  //     try {
-  //       coset_stride =
-  //         CpuNttDomain<S>::s_ntt_domain.get_coset_stride(ntt_data.config.coset_gen); // Coset generator found in twiddles
-  //     } catch (const std::out_of_range& oor) { // Coset generator not found in twiddles. Calculating arbitrary coset
-  //       int domain_max_size = CpuNttDomain<S>::s_ntt_domain.get_max_size();
-  //       arbitrary_coset = std::make_unique<S[]>(domain_max_size + 1);
-  //       arbitrary_coset[0] = S::one();
-  //       S coset_gen = 
-  //         ntt_data.direction == NTTDir::kForward ? ntt_data.config.coset_gen : S::inverse(ntt_data.config.coset_gen); // inverse for INTT
-  //       for (uint32_t i = 1; i <= CpuNttDomain<S>::s_ntt_domain.get_max_size(); i++) {
-  //         arbitrary_coset[i] = arbitrary_coset[i - 1] * coset_gen;
-  //       }
-  //     }
-  //   }
-
-  //   return coset_stride;
-  // }
 
   /**
    * @brief Reorders elements between layers of hierarchy 1, based on sub-NTT structure.
@@ -286,9 +226,10 @@ namespace ntt_cpu {
 
     auto temp_elements = std::make_unique<E[]>(temp_elements_size);
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
-      E* cur_layer_output = ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.ntt_sub_logn.size;
+      E* cur_layer_output = ntt_data.config.columns_batch ? ntt_data.elements + batch
+                                                          : ntt_data.elements + batch * ntt_data.ntt_sub_logn.size;
       E* cur_temp_elements = ntt_data.config.columns_batch ? temp_elements.get() + batch
-                                                        : temp_elements.get() + batch * ntt_data.ntt_sub_logn.size;
+                                                           : temp_elements.get() + batch * ntt_data.ntt_sub_logn.size;
       for (uint32_t sntt_idx = 0; sntt_idx < nof_sntts; sntt_idx++) {
         for (uint32_t elem = 0; elem < sntt_size; elem++) {
           cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =
@@ -300,77 +241,95 @@ namespace ntt_cpu {
   }
 
   /**
-   * @brief Reorders and optionally refactors the output data based on task coordinates and hierarchy level.
+   * @brief Reorders the output data after completing hierarchy 1 computations.
    *
-   * This function reorders the output data based on the task coordinates so that the data will be in
-   * the correct order for the next layer. If the function is dealing with a non-top-level
-   * hierarchy and not limited to hierarchy 0, it will also apply a twiddle factor refactoring step before
-   * moving on to the next hierarchy 1 layer.
+   * This function rearranges the output elements based on the hierarchy levels and
+   * sub-NTT structures so that the final output is in the correct order.
    *
-   * The reordering process involves reshuffling elements within the output array to match the required
-   * structure, taking into account the sub-NTT sizes and indices.
-   *
-   * @param elements The array where the reordered and potentially refactored data will be stored.
-   * @param ntt_task_coordinates The coordinates specifying the current task within the NTT computation hierarchy.
-   * @param is_top_hirarchy A boolean indicating whether the function is operating at the top-level hierarchy (between
-   * layers of hierarchy 1).
-   *
+   * @return eIcicleError Returns SUCCESS if reordering is successful, or an error code otherwise.
    */
   template <typename S, typename E>
-  eIcicleError
-  NttCpu<S, E>::reorder_output()
+  eIcicleError NttCpu<S, E>::reorder_output()
   {
     uint32_t columns_batch_reps = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
-    uint32_t rows_batch_reps    = ntt_data.config.columns_batch ? 1 : ntt_data.config.batch_size;
+    uint32_t rows_batch_reps = ntt_data.config.columns_batch ? 1 : ntt_data.config.batch_size;
     uint32_t s0 = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
     uint32_t s1 = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
-    for (uint32_t row_batch = 0; row_batch < rows_batch_reps; ++row_batch) {// if columns_batch=false, then elements pointer is shifted by batch*size
+    for (uint32_t row_batch = 0; row_batch < rows_batch_reps;
+         ++row_batch) { // if columns_batch=false, then elements pointer is shifted by batch*size
       E* elements = ntt_data.elements + row_batch * ntt_data.ntt_sub_logn.size;
-      uint64_t temp_output_size = ntt_data.config.columns_batch ? ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size : ntt_data.ntt_sub_logn.size;
+      uint64_t temp_output_size = ntt_data.config.columns_batch
+                                    ? ntt_data.ntt_sub_logn.size * ntt_data.config.batch_size
+                                    : ntt_data.ntt_sub_logn.size;
       auto temp_output = std::make_unique<E[]>(temp_output_size);
       uint64_t new_idx = 0;
       uint32_t subntt_idx;
       uint32_t element;
       for (uint32_t col_batch = 0; col_batch < columns_batch_reps; ++col_batch) {
-        E* current_elements = ntt_data.config.columns_batch ? elements + col_batch : elements; // if columns_batch=true, then elements pointer is shifted by 1 for each batch
+        E* current_elements =
+          ntt_data.config.columns_batch
+            ? elements + col_batch
+            : elements; // if columns_batch=true, then elements pointer is shifted by 1 for each batch
         E* current_temp_output = ntt_data.config.columns_batch ? temp_output.get() + col_batch : temp_output.get();
         for (uint64_t i = 0; i < ntt_data.ntt_sub_logn.size; i++) {
-            subntt_idx = i >> s1;
-            element = i & ((1 << s1) - 1);
-            new_idx = subntt_idx + (element << s0);
+          subntt_idx = i >> s1;
+          element = i & ((1 << s1) - 1);
+          new_idx = subntt_idx + (element << s0);
           current_temp_output[stride * new_idx] = current_elements[stride * i];
         }
       }
-      std::copy(temp_output.get(), temp_output.get() + temp_output_size, elements); // columns_batch=false: for each row in the batch, copy the reordered elements back to the elements array
+      std::copy(
+        temp_output.get(), temp_output.get() + temp_output_size,
+        elements); // columns_batch=false: for each row in the batch, copy the reordered elements back to the elements
+                   // array
     }
     return eIcicleError::SUCCESS;
   }
 
+  /**
+   * @brief Reorders the elements by performing a bit-reversal permutation.
+   *
+   * When the configuration specifies bit-reversed ordering (RN or RR), this function
+   * rearranges the elements accordingly. It swaps elements whose indices are bitwise
+   * reversed with respect to each other, ensuring the output meets the required ordering.
+   */
+  template <typename S, typename E>
+  void NttCpu<S, E>::reorder_by_bit_reverse()
+  {
+    uint64_t subntt_size = (ntt_data.ntt_sub_logn.size);
+    uint32_t subntt_log_size = (ntt_data.ntt_sub_logn.logn);
+    uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
+    for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
+      E* current_elements = ntt_data.config.columns_batch ? ntt_data.elements + batch
+                                                          : ntt_data.elements + batch * ntt_data.ntt_sub_logn.size;
+      uint64_t rev;
+      for (uint64_t i = 0; i < subntt_size; ++i) {
+        rev = bit_reverse(i, subntt_log_size);
+        if (i < rev) { std::swap(current_elements[stride * i], current_elements[stride * rev]); }
+      }
+    }
+  }
 
   /**
-   * @brief Pushes tasks for the hierarchy_1 hierarchy of the NTT computation.
+   * @brief Schedules tasks for the first hierarchy layer of the NTT computation.
    *
-   * This function organizes and pushes tasks for the hierarchy_1 hierarchy level of the NTT computation
-   * into the task manager. It iterates over the layers and sub-NTTs, scheduling the necessary
-   * computations while ensuring that the data elements remain close in memory for efficiency,
-   * assuming that in this hierarchy the sub-NTT fits in the cache.
-   * If multiple layers are involved, Instead of sorting between layers, we are using the function
-   * idx_in_mem to calculate the memory index of each element a final reorder task is pushed to fix
-   * the order after processing.
+   * This function organizes and pushes tasks corresponding to a specific hierarchy 1 layer
+   * and sub-NTT index into the task manager. It calculates the number of blocks and sub-NTTs
+   * based on the layer indices and logs, then schedules tasks accordingly. If multiple hierarchy 0
+   * layers are involved, it also schedules a reorder task after processing.
    *
-   * @param input The input array of elements to be processed.
-   * @param ntt_task_coordinates The coordinates specifying the current sub-NTT within the NTT hierarchy.
-   * @param ntt_tasks_manager The task manager responsible for handling the scheduling of tasks.
-   * @return eIcicleError Returns `SUCCESS` if all tasks are successfully pushed to the task manager.
+   * @param hierarchy_1_layer_idx    Index of the current hierarchy 1 layer.
+   * @param hierarchy_1_subntt_idx   Index of the sub-NTT within the hierarchy 1 layer.
+   * @return eIcicleError            Returns SUCCESS if tasks are successfully scheduled, or an error code otherwise.
    */
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx)
   {
     uint32_t nof_hierarchy_0_layers =
-      (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)  ? 3
-      : (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0)? 2
-                                                                                          : 1;
+      (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)   ? 3
+      : (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2
+                                                                                           : 1;
     uint64_t nof_blocks;
     uint64_t nof_subntts;
     for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
@@ -381,7 +340,9 @@ namespace ntt_cpu {
         nof_blocks = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
         nof_subntts = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
       } else {
-        nof_blocks = 1 << (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] + ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
+        nof_blocks = 1
+                     << (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
+                         ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
         nof_subntts = 1;
       }
       for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
@@ -397,74 +358,26 @@ namespace ntt_cpu {
           } else {
             ntt_tasks_manager.nof_pending_tasks++;
           }
-          
         }
       }
     }
     if (nof_hierarchy_0_layers > 1) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data
                                       // is in the correct order for the next hierarchy 1 layer
       ntt_tasks_manager.nof_pending_tasks++;
-
     }
     return eIcicleError::SUCCESS;
   }
 
-
-  // template <typename S, typename E>
-  // eIcicleError NttCpu<S, E>::hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx)
-  // {
-  //   uint32_t nof_hierarchy_0_layers =
-  //     (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)  ? 3
-  //     : (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0)? 2
-  //                                                                                         : 1;
-  //   uint64_t nof_blocks;
-  //   uint64_t nof_subntts;
-  //   for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
-  //     if (hierarchy_0_layer_idx == 0) {
-  //       nof_blocks = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-  //       nof_subntts = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
-  //       for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
-  //         for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
-  //           NttTaskCoordinates* ntt_task_coordinates = new NttTaskCoordinates{hierarchy_1_layer_idx, hierarchy_1_subntt_idx, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false};
-  //           ntt_tasks_manager.push_task(ntt_task_coordinates);
-  //         }
-  //       }
-  //     } else {
-  //       if (hierarchy_0_layer_idx == 1) {
-  //         nof_blocks = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-  //         nof_subntts = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
-  //       } else {
-  //         nof_blocks = 1 << (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] + ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
-  //         nof_subntts = 1;
-  //       }
-  //       ntt_tasks_manager.add_pending_tasks(nof_blocks * nof_subntts);
-  //     } 
-  //   }
-  //   if (nof_hierarchy_0_layers > 1) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data
-  //                                     // is in the correct order for the next hierarchy 1 layer
-  //     ntt_tasks_manager.add_pending_tasks(1);
-  //     // NttTaskCoordinates* ntt_task_coordinates = new NttTaskCoordinates{hierarchy_1_layer_idx, hierarchy_1_subntt_idx, nof_hierarchy_0_layers, 0, 0, true};
-  //     // ntt_tasks_manager.push_task(ntt_task_coordinates); // reorder=true
-
-  //   }
-  //   return eIcicleError::SUCCESS;
-  // }
-
-
-
-
   /**
-   * @brief Handles the execution and completion of tasks in the NTT computation.
+   * @brief Manages the execution and completion of scheduled tasks.
    *
-   * This function manages the lifecycle of tasks within the NTT computation at a given hierarchy level.
-   * It retrieves available tasks, dispatches them for execution, and marks tasks as completed when done.
-   * The function ensures that all tasks are processed, including handling idle states for tasks that
-   * are waiting for dependencies to complete.
+   * This function handles the lifecycle of tasks at a given hierarchy level. It retrieves
+   * available tasks from the task manager, dispatches them for execution, and processes
+   * their completion. The function ensures that all tasks are executed and dependencies
+   * are correctly managed, including idle states for waiting tasks.
    *
-   * @param tasks_manager The task manager responsible for managing the execution of individual tasks.
-   * @param ntt_tasks_manager The manager responsible for handling the NTT tasks and their dependencies.
-   * @param hierarchy_1_layer_idx The index of the current hierarchy_1 layer being processed.
-   * @return eIcicleError Returns `SUCCESS` if all tasks are successfully handled.
+   * @param hierarchy_1_layer_idx Index of the current hierarchy 1 layer being processed.
+   * @return eIcicleError         Returns SUCCESS if all tasks are successfully handled, or an error code otherwise.
    */
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::handle_pushed_tasks(uint32_t hierarchy_1_layer_idx)
@@ -473,8 +386,8 @@ namespace ntt_cpu {
     // std::deque<NttTaskCoordinates> completed_tasks_list;
 
     uint32_t nof_subntts_l1 = 1
-                         << ((ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
-                             (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
+                              << ((ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
+                                  (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
     while (ntt_tasks_manager.tasks_to_do()) {
       // There are tasks that are available or waiting
 
@@ -482,25 +395,20 @@ namespace ntt_cpu {
         // Task is available to dispatch
         task_slot = tasks_manager->get_idle_or_completed_task();
         if (task_slot->is_completed()) {
-          if(ntt_tasks_manager.handle_completed(task_slot, nof_subntts_l1)){
-            continue;
-          }
+          if (ntt_tasks_manager.handle_completed(task_slot, nof_subntts_l1)) { continue; }
+        } else {
+          task_slot->set_data(ntt_data);
         }
-        else {task_slot->set_data(ntt_data);}
         NttTaskCoordinates* next_task_c_ptr = ntt_tasks_manager.get_available_task();
         task_slot->set_coordinates(next_task_c_ptr);
         task_slot->dispatch();
-        // ICICLE_LOG_DEBUG << "[NttCpu]\tDispatched task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
       } else {
         // Wait for available tasks
         task_slot = tasks_manager->get_completed_task();
-        if(ntt_tasks_manager.handle_completed(task_slot, nof_subntts_l1)){
-          continue; 
-        }
+        if (ntt_tasks_manager.handle_completed(task_slot, nof_subntts_l1)) { continue; }
         if (ntt_tasks_manager.available_tasks()) {
           NttTaskCoordinates* next_task_c_ptr = ntt_tasks_manager.get_available_task();
           task_slot->set_coordinates(next_task_c_ptr);
-          // ICICLE_LOG_DEBUG << "[NttCpu]\tDispatched task: " << next_task_c_ptr->hierarchy_1_layer_idx << ", " << next_task_c_ptr->hierarchy_1_subntt_idx << ", " << next_task_c_ptr->hierarchy_0_layer_idx << ", " << next_task_c_ptr->hierarchy_0_block_idx << ", " << next_task_c_ptr->hierarchy_0_subntt_idx << ", " << next_task_c_ptr->reorder;
           task_slot->dispatch();
         } else {
           task_slot->set_idle();
@@ -517,97 +425,4 @@ namespace ntt_cpu {
     }
     return eIcicleError::SUCCESS;
   }
-
-  template <typename S, typename E>
-  void NttCpu<S, E>::reorder_by_bit_reverse()
-    {
-        uint64_t subntt_size = (ntt_data.ntt_sub_logn.size);       
-        uint32_t subntt_log_size = (ntt_data.ntt_sub_logn.logn);
-        uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
-        for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
-            E* current_elements = ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.ntt_sub_logn.size;
-            uint64_t rev;
-            for (uint64_t i = 0; i < subntt_size; ++i) {
-                rev = bit_reverse(i, subntt_log_size);
-                if (i < rev) {
-                    std::swap(current_elements[stride * i], current_elements[stride * rev]);
-                    // if (i < ntt_data.ntt_sub_logn.size && rev < ntt_data.ntt_sub_logn.size) { // Ensure indices are within bounds //TODO SHANIE - Remove after testing
-                    //     std::swap(current_elements[stride * i], current_elements[stride * rev]);
-                    // } else {
-                    //     // Handle out-of-bounds error
-                    //     ICICLE_LOG_ERROR << "i=" << i << ", rev=" << rev << ", original_size=" << ntt_data.ntt_sub_logn.size;
-                    //     ICICLE_LOG_ERROR << "Index out of bounds: i=" << i << ", rev=" << rev;
-                    // }
-                }
-            }
-        }
-    }
-
 } // namespace ntt_cpu
-
-
-
-
-
-
-  // template <typename S, typename E>
-  // eIcicleError NttCpu<S, E>::handle_pushed_tasks(uint32_t hierarchy_1_layer_idx)
-  // {
-  //   std::deque<NttTaskCoordinates*> completed_tasks_list;
-  //   NttTask<S, E>* task_slot = nullptr;
-
-  //   uint32_t nof_subntts_l1 = 1
-  //                        << ((ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
-  //                            (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
-  //   while (ntt_tasks_manager.tasks_to_do()) {
-  //     // There are tasks that are available or waiting
-
-  //     if (ntt_tasks_manager.available_tasks()) {
-  //       // Task is available to dispatch
-  //       task_slot = tasks_manager->get_idle_or_completed_task();
-  //       if (task_slot->is_completed()) { 
-  //         uint32_t nof_new_ready = ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1);
-  //         if (nof_new_ready){
-  //           NttTaskCoordinates* task_c = task_slot->get_coordinates();
-  //           NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c->hierarchy_1_layer_idx, task_c->hierarchy_1_subntt_idx, task_c->hierarchy_0_layer_idx + 1, task_c->hierarchy_0_layer_idx == 0 ? task_c->hierarchy_0_block_idx : task_c->hierarchy_0_subntt_idx, 0};
-  //           task_slot->set_coordinates(next_task_c_ptr);
-  //           task_slot->dispatch();
-  //           completed_tasks_list.push_back(task_c);
-  //         }
-  //       }
-  //       else {task_slot->set_data(ntt_data);}
-  //       task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
-  //       task_slot->dispatch();
-  //       ntt_tasks_manager.erase_task_from_available_tasks_list();
-  //     } else {
-  //       // Wait for available tasks
-  //       task_slot = tasks_manager->get_completed_task();
-  //       uint32_t nof_new_ready = ntt_tasks_manager.handle_completed(*task_slot, nof_subntts_l1);
-  //       if (nof_new_ready){
-  //         NttTaskCoordinates* task_c = task_slot->get_coordinates();
-  //         NttTaskCoordinates* next_task_c_ptr = new NttTaskCoordinates{task_c->hierarchy_1_layer_idx, task_c->hierarchy_1_subntt_idx, task_c->hierarchy_0_layer_idx + 1, task_c->hierarchy_0_layer_idx == 0 ? task_c->hierarchy_0_block_idx : task_c->hierarchy_0_subntt_idx, 0};
-  //         task_slot->set_coordinates(next_task_c_ptr);
-  //         task_slot->dispatch();
-  //         completed_tasks_list.push_back(task_c);
-  //       }
-
-        
-  //       if (ntt_tasks_manager.available_tasks()) {
-  //         task_slot->set_coordinates(ntt_tasks_manager.get_available_task());
-  //         task_slot->dispatch();
-  //         ntt_tasks_manager.erase_task_from_available_tasks_list();
-  //       } else {
-  //         task_slot->set_idle();
-  //       }
-  //     }
-  //   }
-  //   while (true) {
-  //     task_slot = tasks_manager->get_completed_task(); // Get the last task (reorder task)
-  //     if (task_slot == nullptr) {
-  //       break;
-  //     } else {
-  //       task_slot->set_idle();
-  //     }
-  //   }
-  //   return eIcicleError::SUCCESS;
-  // }
