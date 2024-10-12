@@ -295,6 +295,7 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    * @note The input matrices are assumed to be stored in row-major order.
    *       This function transposes an input matrix or a batch of matrices. 
+   *       Matrix transpose inplace is not supported for non-power of 2 rows and columns.
    */
   template <typename T>
   eIcicleError
@@ -312,7 +313,7 @@ namespace icicle {
   *              - The layout depends on `config.columns_batch`:
   *                - If `false`, vectors are stored contiguously.
   *                - If `true`, vectors are stored as columns in a 2D array.
-   * @param size Number of elements in each vector.
+   * @param size Number of elements in each vector. Must be a power of 2.
    * @param config Configuration for the operation.
    * @param vec_out Pointer to the output vector(s) where the results will be stored.
    *                The output array should have the same storage layout as the input vectors.
@@ -337,6 +338,7 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    * @note The total input size is `size_in * config.batch_size`.
    *       The total output size is `size_out * config.batch_size`.
+   *       parameters must satisfy: offset + (size_out-1) * stride < size_in
    */
   template <typename T>
   eIcicleError
@@ -350,7 +352,7 @@ namespace icicle {
    * @param size Number of elements in each input vector.
    * @param config Configuration for the operation.
    * @param out_idx Pointer to an array where the output indices of the highest non-zero element in each input vector will be stored.
-   *                The array should have a length of at least `config.batch_size`.
+   *                The array should have a length of `config.batch_size`.
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
@@ -398,13 +400,13 @@ namespace icicle {
    *                  - Storage layout is similar to `numerator`.
    * @param denominator_deg Degree of the denominator polynomial.
    * @param config Configuration for the operation.
+   * @param q_size Size of the quotient array for one polynomial.
+   * @param r_size Size of the remainder array.
    * @param q_out Pointer to the array where the quotient polynomial(s) will be stored. This is an output parameter.
    *              - The storage layout should match that of `numerator`.
-   * @param q_size Size of the quotient array for one polynomial.
    * @param r_out Pointer to the array where the remainder polynomial(s) will be stored. This is an output parameter.
    *              - The storage layout should match that of `numerator`.
    *              - The size of `r_out` should be sufficient to hold the remainder coefficients for each polynomial.
-   * @param r_size Size of the remainder array.
    * @return eIcicleError Error code indicating success or failure.
    *
    * @note The degrees should satisfy `numerator_deg >= denominator_deg`.
@@ -417,10 +419,10 @@ namespace icicle {
     int64_t numerator_deg,
     const T* denumerator,
     int64_t denumerator_deg,
+    uint64_t q_size,
+    uint64_t r_size,
     const VecOpsConfig& config,
     T* q_out /*OUT*/,
-    uint64_t q_size,
-    T* r_out /*OUT*/,
-    uint64_t r_size);
+    T* r_out /*OUT*/);
 
 } // namespace icicle

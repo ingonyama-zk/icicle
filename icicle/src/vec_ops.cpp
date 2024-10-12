@@ -5,7 +5,7 @@ namespace icicle {
 
 
   /*********************************** REDUCE PRODUCT ************************/
-  ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, scalarVectorReduceOpImpl);
+  ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, VectorReduceOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_product)(
     const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
@@ -21,7 +21,7 @@ namespace icicle {
   }
 
   /*********************************** REDUCE SUM ****************************/
-  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, scalarVectorReduceOpImpl );
+  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, VectorReduceOpImpl );
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sum)(
     const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
@@ -401,34 +401,34 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarPolyDivDispatcher, poly_division, scalarPolyDivImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, poly_division)(
-    const scalar_t* sizeumerator,
-    int64_t sizeumerator_deg,
+    const scalar_t* numerator,
+    int64_t numerator_deg,
     const scalar_t* denumerator,
     int64_t denumerator_deg,
+    uint64_t q_size,
+    uint64_t r_size,
     const VecOpsConfig* config,
     scalar_t* q_out /*OUT*/,
-    uint64_t q_size,
-    scalar_t* r_out /*OUT*/,
-    uint64_t r_size)
+    scalar_t* r_out /*OUT*/)
   {
     return ScalarPolyDivDispatcher::execute(
-      sizeumerator, sizeumerator_deg, denumerator, denumerator_deg, *config, q_out, q_size, r_out, r_size);
+      numerator, numerator_deg, denumerator, denumerator_deg, q_size, r_size, *config, q_out, r_out);
   }
 
   template <>
   eIcicleError polynomial_division(
-    const scalar_t* sizeumerator,
-    int64_t sizeumerator_deg,
+    const scalar_t* numerator,
+    int64_t numerator_deg,
     const scalar_t* denumerator,
     int64_t denumerator_deg,
+    uint64_t q_size,
+    uint64_t r_size,
     const VecOpsConfig& config,
     scalar_t* q_out /*OUT*/,
-    uint64_t q_size,
-    scalar_t* r_out /*OUT*/,
-    uint64_t r_size)
+    scalar_t* r_out /*OUT*/)
   {
     return CONCAT_EXPAND(FIELD, poly_division)(
-      sizeumerator, sizeumerator_deg, denumerator, denumerator_deg, &config, q_out, q_size, r_out, r_size);
+      numerator, numerator_deg, denumerator, denumerator_deg, q_size, r_size, &config, q_out, r_out);
   }
 
 } // sizeamespace icicle

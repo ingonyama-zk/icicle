@@ -20,16 +20,17 @@ enum VecOperation {
   VECTOR_SUB,
   VECTOR_MUL,
   VECTOR_DIV,
-  VECTOR_SUM,
   CONVERT_TO_MONTGOMERY,
   CONVERT_FROM_MONTGOMERY,
+  VECTOR_SUM,
   VECTOR_PRODUCT,
   SCALAR_ADD_VEC,
   SCALAR_SUB_VEC,
   SCALAR_MUL_VEC,
   BIT_REVERSE,
   SLICE,
-  REPLACE_ELEMENTS, 
+  REPLACE_ELEMENTS,
+  OUT_OF_PLACE_MATRIX_TRANSPOSE,
 
   NOF_OPERATIONS
 };
@@ -80,8 +81,8 @@ public:
     dispatch();
   }
 
-  // Set the operands for bitrev operation and dispatch the task
-  void send_bitrev_task(
+  // Set the operands for bit_reverse operation and dispatch the task
+  void send_bit_reverse_task(
     VecOperation operation, uint32_t bit_size, uint64_t start_index, const uint32_t nof_operations, const T* op_a, const uint64_t stride, T* output)
   {
     m_operation = operation;
@@ -121,9 +122,22 @@ public:
     dispatch();
   }
 
+  void send_out_of_place_matrix_transpose_task(VecOperation operation, const T* mat_in, const uint32_t nof_operations, const uint32_t nof_rows, const uint32_t nof_cols, const uint32_t stride, T* mat_out)
+    {
+      m_operation = operation;
+      m_op_a = mat_in;
+      m_nof_operations = nof_operations;
+      m_nof_rows = nof_rows;
+      m_nof_cols = nof_cols;
+      m_stride = stride;
+      m_output = mat_out;
+      dispatch();
+    }
 
   // Execute the selected function based on m_operation
-  virtual void execute() { (this->*functionPtrs[static_cast<size_t>(m_operation)])(); }
+  virtual void execute() {
+    (this->*functionPtrs[static_cast<size_t>(m_operation)])(); 
+  }
 
 private:
   // Single worker functionality to execute vector add (+)
@@ -172,17 +186,17 @@ private:
   // Single worker functionality to execute sum(vector)
   void vector_sum()
   {
-    m_intermidiate_res[m_idx_in_batch] = T::zero();
+    m_intermidiate_res = T::zero();
     for (uint64_t i = 0; i < (m_stop_index * m_stride); i = i + m_stride) {
-      m_intermidiate_res[m_idx_in_batch] = m_intermidiate_res[m_idx_in_batch] + m_op_a[i];
+      m_intermidiate_res = m_intermidiate_res + m_op_a[i];
     }
   }
   // Single worker functionality to execute product(vector)
   void vector_product()
   {
-    m_intermidiate_res[m_idx_in_batch] = T::one();
+    m_intermidiate_res = T::one();
     for (uint64_t i = 0; i < (m_stop_index * m_stride); i = i + m_stride) {
-      m_intermidiate_res[m_idx_in_batch] = m_intermidiate_res[m_idx_in_batch] * m_op_a[i];
+      m_intermidiate_res = m_intermidiate_res * m_op_a[i];
     }
   }
   // Single worker functionality to execute scalar + vector
@@ -247,8 +261,6 @@ private:
     while (shifted_idx >= mod) {
       shifted_idx = (shifted_idx & mod) + (shifted_idx >> total_bits);
     }
-    // If shifted_idx == mod, result should be 0 since mod % mod == 0
-    if (shifted_idx == mod) shifted_idx = 0; //TODO SHANIE - check if redundant
     return shifted_idx;
   }
 
@@ -260,14 +272,28 @@ private:
     for (uint32_t i = 0; i < m_nof_operations; ++i) {
       uint64_t start_idx = (*m_start_indices_in_mat)[m_start_index + i];
       uint64_t idx = start_idx;
+        T prev = m_op_a[m_stride * idx];
       do {
         uint64_t shifted_idx = idx << m_log_nof_rows;
         uint64_t new_idx = mersenne_mod(shifted_idx, total_bits);
-        m_output[m_stride * new_idx] = m_op_a[m_stride * idx];
+        T next = m_op_a[m_stride * new_idx];
+        m_output[m_stride * new_idx] = prev;
+        prev = next;
         idx = new_idx;
       } while (idx != start_idx);
     }
   }
+
+  // Single worker functionality for out of palce matrix transpose
+  void out_of_place_transpose()
+  {
+    for (uint32_t k = 0; k < m_nof_operations; ++k) {
+      for (uint32_t j = 0; j < m_nof_cols; ++j) {
+        m_output[m_stride * (j * m_nof_rows + k)] = m_op_a[m_stride * (k * m_nof_cols + j)];
+      }
+    }
+  }
+
 
 
   // An array of available function pointers arranged according to the VecOperation enum
@@ -286,25 +312,30 @@ private:
     &VectorOpTask::scalar_mul_vec,          // SCALAR_MUL_VEC,
     &VectorOpTask::bit_reverse,             // BIT_REVERSE
     &VectorOpTask::slice,                   // SLICE
-    &VectorOpTask::replace_elements         // REPLACE_ELEMENTS
+    &VectorOpTask::replace_elements,        // REPLACE_ELEMENTS
+    &VectorOpTask::out_of_place_transpose   // OUT_OF_PLACE_MATRIX_TRANSPOSE
+
+
   };
 
   VecOperation m_operation; // the operation to execute
   uint32_t m_nof_operations;     // number of operations to execute for this task
   const T* m_op_a;          // pointer to operand A. Operand A is a vector, or metrix in case of replace_elements
   const T* m_op_b;          // pointer to operand B. Operand B is a vector or scalar
-  uint64_t m_start_index;   // index used in bitreverse operation
-  uint64_t m_stop_index;    // index used in reduce operations
+  uint64_t m_start_index;   // index used in bitreverse operation and out of place matrix transpose
+  uint64_t m_stop_index;    // index used in reduce operations and out of place matrix transpose
   uint32_t m_bit_size;      // use in bitrev operation
   uint64_t m_stride;        // used to support column batch operations
   uint64_t m_stride_out;    // used in slice operation
   T* m_output;              // pointer to the output. Can be a vector, scalar pointer, or a matrix pointer in case of replace_elements
   uint32_t m_log_nof_rows;  // log of the number of rows in the matrix, used in replace_elements
   uint32_t m_log_nof_cols;  // log of the number of columns in the matrix, used in replace_elements
+  uint32_t m_nof_rows;      // the number of rows in the matrix, used in out of place matrix transpose
+  uint32_t m_nof_cols;      // the number of columns in the matrix, used in out of place matrix transpose
   const std::vector<uint64_t>* m_start_indices_in_mat; // Indices used in replace_elements operations
 
 public:  
-  T* m_intermidiate_res;     // pointer to the output. Can be a vector or scalar pointer
+  T m_intermidiate_res;     // pointer to the output. Can be a vector or scalar pointer
   uint64_t m_idx_in_batch;    // index in the batch. Used in intermidiate res tasks
 }; // class VectorOpTask
 
@@ -325,7 +356,7 @@ template <typename T>
 eIcicleError
 cpu_2vectors_op(VecOperation op, const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   const uint64_t total_nof_operations = size*config.batch_size;
   for (uint64_t i = 0; i < total_nof_operations; i += NOF_OPERATIONS_PER_TASK) {
     VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
@@ -340,7 +371,7 @@ template <typename T>
 eIcicleError cpu_scalar_vector_op(
   VecOperation op, const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   const uint64_t total_nof_operations = use_single_scalar? size*config.batch_size : size;
   const uint32_t stride = (!use_single_scalar && config.columns_batch)? config.batch_size : 1;
   for (uint32_t idx_in_batch = 0; idx_in_batch < (use_single_scalar? 1 : config.batch_size); idx_in_batch++) {
@@ -416,15 +447,17 @@ template <typename T>
 eIcicleError cpu_convert_montgomery(
   const Device& device, const T* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   const uint64_t total_nof_operations = size*config.batch_size;
   for (uint64_t i = 0; i < total_nof_operations; i += NOF_OPERATIONS_PER_TASK) {
     VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
     task_p->send_1op_task(
-      is_to_montgomery ? CONVERT_TO_MONTGOMERY : CONVERT_FROM_MONTGOMERY, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, total_nof_operations - i),
+      (is_to_montgomery ? CONVERT_TO_MONTGOMERY : CONVERT_FROM_MONTGOMERY), std::min((uint64_t)NOF_OPERATIONS_PER_TASK, total_nof_operations - i),
       input + i, output + i);
   }
   task_manager.wait_done();
+  for (uint64_t i = 0; i < size*config.batch_size; i++) {
+  }
   return eIcicleError::SUCCESS;
 }
 
@@ -443,7 +476,7 @@ REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND("CPU", cpu_convert_montgomery<exte
 template <typename T>
 eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   std::vector<bool> output_initialized = std::vector<bool>(config.batch_size, false);
   uint64_t vec_a_offset = 0;
   uint64_t idx_in_batch = 0;
@@ -454,7 +487,7 @@ eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t size,
       return eIcicleError::SUCCESS;
     }
     if (task_p->is_completed()) {
-      output[task_p->m_idx_in_batch] = output_initialized[task_p->m_idx_in_batch] ? output[task_p->m_idx_in_batch] + task_p->m_intermidiate_res[task_p->m_idx_in_batch] : task_p->m_intermidiate_res[task_p->m_idx_in_batch];
+      output[task_p->m_idx_in_batch] = output_initialized[task_p->m_idx_in_batch] ? output[task_p->m_idx_in_batch] + task_p->m_intermidiate_res : task_p->m_intermidiate_res;
       output_initialized[task_p->m_idx_in_batch] = true;
     }
     if (vec_a_offset < size) {
@@ -482,7 +515,7 @@ REGISTER_VECTOR_SUM_BACKEND("CPU", cpu_vector_sum<scalar_t>);
 template <typename T>
 eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   std::vector<bool> output_initialized = std::vector<bool>(config.batch_size, false);
   uint64_t vec_a_offset = 0;
   uint64_t idx_in_batch = 0;
@@ -493,7 +526,7 @@ eIcicleError cpu_vector_product(const Device& device, const T* vec_a, uint64_t s
       return eIcicleError::SUCCESS;
     }
     if (task_p->is_completed()) {
-      output[task_p->m_idx_in_batch] = output_initialized[task_p->m_idx_in_batch] ? output[task_p->m_idx_in_batch] + task_p->m_intermidiate_res[task_p->m_idx_in_batch] : task_p->m_intermidiate_res[task_p->m_idx_in_batch];
+      output[task_p->m_idx_in_batch] = output_initialized[task_p->m_idx_in_batch] ? output[task_p->m_idx_in_batch] * task_p->m_intermidiate_res : task_p->m_intermidiate_res;
       output_initialized[task_p->m_idx_in_batch] = true;
     }
     if (vec_a_offset < size) {
@@ -548,41 +581,32 @@ eIcicleError cpu_scalar_mul(
 REGISTER_SCALAR_MUL_VEC_BACKEND("CPU", cpu_scalar_mul<scalar_t>);
 
 /*********************************** TRANSPOSE ***********************************/
-// template <typename T> todo shanie - remove
-// eIcicleError cpu_matrix_transpose_basic(
-//   const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
-// {
-//   ICICLE_ASSERT(mat_in && mat_out && nof_rows != 0 && nof_cols != 0) << "Invalid argument";
-
-//   // Perform the matrix transpose
-//   for (uint32_t i = 0; i < nof_rows; ++i) {
-//     for (uint32_t j = 0; j < nof_cols; ++j) {
-//       mat_out[j * nof_rows + i] = mat_in[i * nof_cols + j];
-//     }
-//   }
-
-//   return eIcicleError::SUCCESS;
-// }
 
 template <typename T>
-eIcicleError cpu_matrix_transpose_batch(
+eIcicleError out_of_place_matrix_transpose(
   const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
 {
-  const T* cur_mat_in = mat_in;
-  T* cur_mat_out = mat_out;
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   uint32_t stride = config.columns_batch? config.batch_size : 1;
-  const uint64_t total_elements = static_cast<uint64_t>(nof_rows) * nof_cols;
+  const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;
+  const uint32_t NOF_ROWS_PER_TASK = std::min((uint64_t)nof_rows, std::max((uint64_t)(NOF_OPERATIONS_PER_TASK / nof_cols) , (uint64_t)1));
   for (uint32_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
+    const T* cur_mat_in = config.columns_batch? mat_in + idx_in_batch : mat_in + idx_in_batch * total_elements_one_mat;
+    T* cur_mat_out = config.columns_batch? mat_out + idx_in_batch : mat_out + idx_in_batch * total_elements_one_mat;
     // Perform the matrix transpose
-    for (uint32_t i = 0; i < nof_rows; ++i) {
-      for (uint32_t j = 0; j < nof_cols; ++j) {
-        cur_mat_out[stride*(j * nof_rows + i)] = cur_mat_in[stride*(i * nof_cols + j)];
-      }
+    for (uint32_t i = 0; i < nof_rows; i += NOF_ROWS_PER_TASK) {
+      VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
+      task_p->send_out_of_place_matrix_transpose_task(
+        OUT_OF_PLACE_MATRIX_TRANSPOSE,
+        cur_mat_in + stride*i*nof_cols,
+        std::min((uint64_t)NOF_ROWS_PER_TASK, (uint64_t)nof_rows - i),
+        nof_rows,
+        nof_cols,
+        stride,
+        cur_mat_out + (stride * i));
     }
-    cur_mat_in += (config.columns_batch ? 1 : total_elements);
-    cur_mat_out += (config.columns_batch ? 1 : total_elements);
   }
-
+  task_manager.wait_done();
   return eIcicleError::SUCCESS;
 }
 
@@ -595,20 +619,6 @@ uint32_t gcd(uint32_t a, uint32_t b) {
   return a;
 }
 
-// template <typename T> //TODO shanie - remove
-// void replace_elements(uint32_t start_idx, uint32_t log_nof_rows, uint32_t log_nof_cols, const T* mat_in, T* mat_out) {
-//   uint64_t idx = start_idx;
-
-//   while (true) {
-//     uint64_t new_idx = mersenne_mod(idx << log_nof_rows, log_nof_rows+log_nof_cols); // new_idx = (idx<<log_nof_rows)%((1<<(log_nof_rows+log_nof_cols))-1);
-//     mat_out[new_idx] = mat_in[idx]
-//     if (new_idx == start_idx) {
-//       break;
-//     }
-//     idx = new_idx;
-//   }
-// }
-
 // Recursive function to generate all k-ary necklaces and to replace the elements withing the necklaces
 template <typename T>
 void gen_necklace(uint32_t t, uint32_t p, uint32_t k, uint32_t length, std::vector<uint32_t>& necklace, std::vector<uint64_t>& task_indices) {
@@ -620,9 +630,6 @@ void gen_necklace(uint32_t t, uint32_t p, uint32_t k, uint32_t length, std::vect
         start_idx += necklace[i] * multiplier;
         multiplier *= k;
       }
-      // for (int i = 1; i <= length; ++i) { // Compute start_idx as the decimal representation of the necklace //TODO SHANIE - remove
-      //   start_idx = start_idx + necklace[i] * std::pow(k, length - i);
-      // }
       task_indices.push_back(start_idx);
     }
     return;
@@ -638,53 +645,63 @@ void gen_necklace(uint32_t t, uint32_t p, uint32_t k, uint32_t length, std::vect
 }
 
 template <typename T>
-eIcicleError cpu_matrix_transpose_parallel(
-  const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
-{
-  ICICLE_ASSERT(mat_in && mat_out && nof_rows != 0 && nof_cols != 0) << "Invalid argument";
-
-  // check if the number of rows and columns are powers of 2, if not use the basic transpose
-  if ((nof_rows & (nof_rows - 1)) != 0 || (nof_cols & (nof_cols - 1)) != 0) {
-    cpu_matrix_transpose_batch(device, mat_in, nof_rows, nof_cols, config, mat_out);
-    return eIcicleError::SUCCESS;
-  }
-
+eIcicleError matrix_transpose_necklaces(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out){
   uint32_t log_nof_rows = static_cast<uint32_t>(std::floor(std::log2(nof_rows)));
   uint32_t log_nof_cols = static_cast<uint32_t>(std::floor(std::log2(nof_cols)));
   uint32_t gcd_value = gcd(log_nof_rows, log_nof_cols);
   uint32_t k = 1 << gcd_value; // Base of necklaces
   uint32_t length = (log_nof_cols + log_nof_rows) / gcd_value; // length of necklaces. Since all are powers of 2, equvalent to (log_nof_cols + log_nof_rows) / gcd_value;
   const uint64_t max_nof_operations = NOF_OPERATIONS_PER_TASK / length;
-  const uint64_t total_elements = static_cast<uint64_t>(nof_rows) * nof_cols;
+  const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;
 
   std::vector<uint32_t> necklace(length + 1, 0);
   std::vector<uint64_t> start_indices_in_mat;    // Collect start indices
   gen_necklace<T>(1, 1, k, length, necklace, start_indices_in_mat);
 
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   for (uint64_t i = 0; i < start_indices_in_mat.size(); i += max_nof_operations) {
     uint64_t nof_operations = std::min((uint64_t)max_nof_operations, start_indices_in_mat.size() - i);
     for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
       VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
       task_p->send_replace_elements_task(
         REPLACE_ELEMENTS,
-        config.columns_batch? mat_in + idx_in_batch : mat_in + idx_in_batch * total_elements,
+        config.columns_batch? mat_in + idx_in_batch : mat_in + idx_in_batch * total_elements_one_mat,
         nof_operations,
         start_indices_in_mat,
         i,
         log_nof_rows,
         log_nof_cols,
         config.columns_batch? config.batch_size : 1,
-        config.columns_batch? mat_out + idx_in_batch : mat_out + idx_in_batch * total_elements);
+        config.columns_batch? mat_out + idx_in_batch : mat_out + idx_in_batch * total_elements_one_mat);
     }
   }
   task_manager.wait_done();
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose_parallel<scalar_t>);
+
+template <typename T>
+eIcicleError cpu_matrix_transpose(
+  const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
+{
+  ICICLE_ASSERT(mat_in && mat_out && nof_rows != 0 && nof_cols != 0) << "Invalid argument";
+
+  // check if the number of rows and columns are powers of 2, if not use the basic transpose
+  bool is_power_of_2 = (nof_rows & (nof_rows - 1)) == 0 && (nof_cols & (nof_cols - 1)) == 0;
+  bool is_inplace = mat_in == mat_out;
+  if (!is_inplace) {
+    return(out_of_place_matrix_transpose(device, mat_in, nof_rows, nof_cols, config, mat_out));
+  } else if (is_power_of_2) {
+    return (matrix_transpose_necklaces<T>(mat_in, nof_rows, nof_cols, config, mat_out));
+  } else {
+    ICICLE_LOG_ERROR << "Matrix transpose is not supported for inplace non power of 2 rows and columns";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+}
+
+REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
 #ifdef EXT_FIELD
-REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", cpu_matrix_transpose_parallel<extension_t>);
+REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", cpu_matrix_transpose<extension_t>);
 #endif // EXT_FIELD
 
 /*********************************** BIT REVERSE ***********************************/
@@ -698,12 +715,12 @@ cpu_bit_reverse(const Device& device, const T* vec_in, uint64_t size, const VecO
   ICICLE_ASSERT((1ULL << logn) == size) << "Invalid argument - size is not a power of 2";
 
   // Perform the bit reverse
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
     for (uint64_t i = 0; i < size; i += NOF_OPERATIONS_PER_TASK) {
       VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
 
-      task_p->send_bitrev_task(
+      task_p->send_bit_reverse_task(
         BIT_REVERSE,
         logn,
         i,
@@ -739,7 +756,7 @@ eIcicleError cpu_slice(
   ICICLE_ASSERT(vec_in != nullptr && vec_out != nullptr) << "Error: Invalid argument - input or output vector is null";
   ICICLE_ASSERT(offset + (size_out-1) * stride < size_in) << "Error: Invalid argument - slice out of bound";
 
-  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config));
+  TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
     for (uint64_t i = 0; i < size_out; i += NOF_OPERATIONS_PER_TASK) {
       VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
@@ -817,19 +834,19 @@ REGISTER_POLYNOMIAL_EVAL("CPU", cpu_poly_eval<scalar_t>);
 
 /*============================== polynomial division ==============================*/
 template <typename T>
-void school_book_division_step_cpu(T* r, T* q, const T* b, int deg_r, int deg_b, const T& lc_b_inv)
+void school_book_division_step_cpu(T* r, T* q, const T* b, int deg_r, int deg_b, const T& lc_b_inv, uint32_t stride = 1)
 {
   int64_t monomial = deg_r - deg_b; // monomial=1 is 'x', monomial=2 is x^2 etc.
 
-  T lc_r = r[deg_r];
+  T lc_r = r[deg_r * stride]; // leading coefficient of r
   T monomial_coeff = lc_r * lc_b_inv; // lc_r / lc_b
 
   // adding monomial s to q (q=q+s)
-  q[monomial] = monomial_coeff;
+  q[monomial * stride] = monomial_coeff;
 
   for (int i = monomial; i <= deg_r; ++i) {
-    T b_coeff = b[i - monomial];
-    r[i] = r[i] - monomial_coeff * b_coeff;
+    T b_coeff = b[(i - monomial) * stride];
+    r[i * stride] = r[i * stride] - monomial_coeff * b_coeff;
   }
 }
 
@@ -840,33 +857,37 @@ eIcicleError cpu_poly_divide(
   int64_t numerator_deg,
   const T* denumerator,
   int64_t denumerator_deg,
+  uint64_t q_size,
+  uint64_t r_size,
   const VecOpsConfig& config,
   T* q_out /*OUT*/,
-  uint64_t q_size,
-  T* r_out /*OUT*/,
-  uint64_t r_size)
+  T* r_out /*OUT*/)
 {
   ICICLE_ASSERT(r_size >= numerator_deg)
     << "polynomial division expects r(x) size to be similar to numerator size and higher than numerator degree(x)";
   ICICLE_ASSERT(q_size >= (numerator_deg - denumerator_deg + 1))
     << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denumerator)+1";
 
-  ICICLE_CHECK(icicle_copy_async(r_out, numerator, r_size * config.batch_size * sizeof(T), config.stream));
+  // ICICLE_CHECK(icicle_copy_async(r_out, numerator, r_size * config.batch_size * sizeof(T), config.stream));
+  // copy numerator to r_out // FIXME should it be copied using icicle_copy_async?
+  for (uint64_t i = 0; i < (numerator_deg+1)*config.batch_size; ++i) {
+    r_out[i] = numerator[i];
+  }
 
+  uint32_t stride = config.columns_batch? config.batch_size : 1;
+  auto deg_r = std::make_unique<int64_t[]>(config.batch_size);
   for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; ++idx_in_batch) {
     const T* curr_denumerator = config.columns_batch? denumerator + idx_in_batch : denumerator + idx_in_batch * (denumerator_deg+1); // Pointer to the current vector
     T* curr_q_out = config.columns_batch? q_out + idx_in_batch : q_out + idx_in_batch * q_size; // Pointer to the current vector
     T* curr_r_out = config.columns_batch? r_out + idx_in_batch : r_out + idx_in_batch * r_size; // Pointer to the current vector
     // invert largest coeff of b
-    const T& lc_b_inv = T::inverse(curr_denumerator[denumerator_deg]);
-    int64_t deg_r = numerator_deg;
-    while (deg_r >= denumerator_deg) {
+    const T& lc_b_inv = T::inverse(curr_denumerator[denumerator_deg * stride]);
+    deg_r[idx_in_batch] = numerator_deg;
+    while (deg_r[idx_in_batch] >= denumerator_deg) {
       // each iteration is removing the largest monomial in r until deg(r)<deg(b)
-      school_book_division_step_cpu(curr_r_out, curr_q_out, curr_denumerator, deg_r, denumerator_deg, lc_b_inv);
-
+      school_book_division_step_cpu(curr_r_out, curr_q_out, curr_denumerator, deg_r[idx_in_batch], denumerator_deg, lc_b_inv, stride);
       // compute degree of r
-      auto degree_config = default_vec_ops_config();
-      cpu_highest_non_zero_idx(device, curr_r_out, deg_r + 1 /*size of R*/, degree_config, &deg_r);
+      cpu_highest_non_zero_idx(device, r_out, r_size, config, deg_r.get());
     }
   }
   return eIcicleError::SUCCESS;
