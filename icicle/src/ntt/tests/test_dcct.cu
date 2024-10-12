@@ -8,7 +8,7 @@ typedef field_config::c_extension_t test_ext;
 typedef field_config::scalar_t test_data;
 
 #include "fields/field.cuh"
-#include "curves/projective.cuh"
+// #include "curves/projective.cuh"
 #include <chrono>
 #include <iostream>
 #include <vector>
