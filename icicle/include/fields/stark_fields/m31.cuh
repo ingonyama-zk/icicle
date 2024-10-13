@@ -254,7 +254,6 @@ namespace m31 {
 
   static HOST_INLINE c_extension_t get_ext_omega(uint32_t logn)
   {
-    printf("LOGN: %d\n", logn);
     if (logn == 0) { return c_extension_t::one(); }
 
     if (logn > fp_config::ext_omegas_count) {
