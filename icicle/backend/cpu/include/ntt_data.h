@@ -3,7 +3,7 @@
 #include "tasks_manager.h"
 #include "cpu_ntt_domain.h"
 
-#include <_types/_uint32_t.h>
+// #include <_types/_uint32_t.h>
 #include <csetjmp>
 #include <sys/types.h>
 #include <deque>
