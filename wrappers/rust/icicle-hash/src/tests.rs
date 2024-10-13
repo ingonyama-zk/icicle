@@ -4,7 +4,7 @@ mod tests {
     use crate::{
         blake2s::Blake2s,
         keccak::{Keccak256, Keccak512},
-        sha3::{Sha3_256, Sha3_512},
+        sha3::Sha3_256,
     };
     use icicle_core::{
         hash::{HashConfig, Hasher},
@@ -28,7 +28,6 @@ mod tests {
         initialize();
         let single_hash_input_size = 30;
         let batch = 3;
-        let total_input_size = batch * single_hash_input_size;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
         rand::thread_rng().fill(&mut input[..]);
@@ -62,7 +61,6 @@ mod tests {
         initialize();
         let single_hash_input_size = 567;
         let batch = 11;
-        let total_input_size = batch * single_hash_input_size;
 
         let mut input = vec![0 as u8; single_hash_input_size * batch];
         rand::thread_rng().fill(&mut input[..]);
@@ -158,7 +156,12 @@ mod tests {
             .unwrap();
 
         let merkle_proof: MerkleProof = merkle_tree
-            .get_proof(HostSlice::from_slice(&input), 1, &MerkleTreeConfig::default())
+            .get_proof(
+                HostSlice::from_slice(&input),
+                1,
+                false, /*=pruned*/
+                &MerkleTreeConfig::default(),
+            )
             .unwrap();
         let root = merkle_proof.get_root::<u64>();
         let path = merkle_proof.get_path::<u8>();

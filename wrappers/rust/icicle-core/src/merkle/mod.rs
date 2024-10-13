@@ -256,6 +256,7 @@ impl MerkleTree {
         &self,
         leaves: &(impl HostOrDeviceSlice<T> + ?Sized),
         leaf_idx: u64,
+        pruned_path: bool,
         config: &MerkleTreeConfig,
     ) -> Result<MerkleProof, eIcicleError> {
         // check device slices are on active device
@@ -272,7 +273,7 @@ impl MerkleTree {
                 leaves.as_ptr() as *const u8,
                 byte_size,
                 leaf_idx as u64,
-                false,
+                pruned_path,
                 config,
                 proof.handle,
             )

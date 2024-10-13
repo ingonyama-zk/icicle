@@ -55,6 +55,7 @@ where
         .get_proof(
             HostSlice::from_slice(&leaves),
             leaf_idx_to_open as u64,
+            true, /*=pruned */
             &MerkleTreeConfig::default(),
         )
         .unwrap();
