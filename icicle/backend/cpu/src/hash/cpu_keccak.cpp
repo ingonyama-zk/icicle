@@ -38,7 +38,6 @@ namespace icicle {
       const auto digest_size_in_bytes = output_size();
       const auto single_input_size = get_single_chunk_size(
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
-      ICICLE_LOG_DEBUG << name() << "::hash() called, batch=" << config.batch << ", input-size=" << size << " bytes";
 
       // TODO (future): use tasks manager to parallel across threads. Add option to config-extension to set #threads
       // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch

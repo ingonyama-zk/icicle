@@ -28,7 +28,7 @@ namespace icicle {
         ICICLE_ASSERT(
           layer_idx == nof_layers - 1 ||
           layer_hashes[layer_idx + 1].input_default_chunk_size() % layer_hashes[layer_idx].output_size() == 0)
-          << "Each layer output size must divide the above layer input size. Otherwise its not a tree.\n"
+          << "Each layer output size must divide the next layer input size. Otherwise its not a tree.\n"
           << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx + 1].input_default_chunk_size() << "\n"
           << "Layer " << layer_idx + 1 << " output size = " << layer_hashes[layer_idx].output_size() << "\n";
 
@@ -39,7 +39,7 @@ namespace icicle {
 
         if (0 < layer_idx) {
           // update nof_hashes to the next layer (below)
-          const u_int64_t next_layer_total_size = layer_hashes[layer_idx - 1].output_size();
+          const uint64_t next_layer_total_size = layer_hashes[layer_idx - 1].output_size();
           nof_hashes = nof_hashes * cur_layer.m_hash.input_default_chunk_size() / next_layer_total_size;
 
           // Calculate path_size
@@ -58,8 +58,10 @@ namespace icicle {
         ICICLE_LOG_ERROR << "Tree cannot be built more than one time";
         return eIcicleError::INVALID_ARGUMENT;
       }
-      if (leaves_size != m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size()) {
-        ICICLE_LOG_ERROR << "Padding is currently not supported";
+      const uint64_t expected_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
+      if (leaves_size != expected_input_size) {
+        ICICLE_LOG_ERROR << "CPU Merkle tree: Expecting " << expected_input_size << " bytes in input, got "
+                         << leaves_size << ". Note: Padding is currently not supported but will be soon";
         return eIcicleError::INVALID_ARGUMENT;
       }
       m_tree_already_built = true; // Set the tree status as built
@@ -404,7 +406,7 @@ namespace icicle {
     std::byte*
     copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_pruned, std::byte* path) const
     {
-      const u_int64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
+      const uint64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
       for (int layer_idx = m_output_store_min_layer; layer_idx < m_layers.size() - 1; layer_idx++) {
         const uint64_t copy_range_size = m_layers[layer_idx + 1].m_hash.input_default_chunk_size();
         const uint64_t one_element_size = m_layers[layer_idx].m_hash.output_size();
@@ -446,7 +448,6 @@ namespace icicle {
     uint64_t output_store_min_layer,
     std::shared_ptr<MerkleTreeBackend>& backend)
   {
-    ICICLE_LOG_INFO << "Creating CPU MerkleTreeBackend";
     backend = std::make_shared<CPUMerkleTreeBackend>(layer_hashes, leaf_element_size, output_store_min_layer);
     return eIcicleError::SUCCESS;
   }
