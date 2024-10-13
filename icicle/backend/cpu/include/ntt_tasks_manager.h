@@ -214,7 +214,7 @@ namespace ntt_cpu {
   NttTasksManager<S, E>::NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn)
       : ntt_sub_logn(ntt_sub_logn_ref),
         counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_logn_ref, 0)),
-        task_buffer(1 << (logn - 1)), // Pre-allocate buffer
+        task_buffer(1 << (logn)), // Pre-allocate buffer
         head(0), tail(0), nof_pending_tasks(0)
 
   {
@@ -231,7 +231,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   bool NttTasksManager<S, E>::is_full() const
   {
-    return (tail + 1) % (1 << (ntt_sub_logn.logn - 1)) == head;
+    return (tail + 1) % (1 << (ntt_sub_logn.logn)) == head;
   }
 
   /**
@@ -257,7 +257,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttTasksManager<S, E>::increment(size_t& index)
   {
-    index = (index + 1) % (1 << (ntt_sub_logn.logn - 1));
+    index = (index + 1) % (1 << (ntt_sub_logn.logn));
   }
 
   /**
@@ -270,7 +270,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttTasksManager<S, E>::decrement(size_t& index)
   {
-    index = (index - 1) % (1 << (ntt_sub_logn.logn - 1));
+    index = (index - 1) % (1 << (ntt_sub_logn.logn));
   }
 
   /**
