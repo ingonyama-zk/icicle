@@ -241,16 +241,16 @@ namespace icicle {
   private:
     // data base for each layer at the merkle tree
     struct LayerDB {
-        LayerDB(): m_hash(nullptr) {}
+      LayerDB() : m_hash(nullptr) {}
 
-        Hash m_hash;                      // the hash function
-        int64_t m_nof_hashes;             // number of hash functions.
-        std::vector<std::byte> m_results; // vector of hash results. This vector might not be fully allocated if layer is
-                                          // not in range m_output_store_min/max_layer
-        HashConfig m_hash_config;         // config when calling a hash function not last in layer
-        HashConfig m_last_hash_config;    // config when calling last in layer hash function
-        std::vector<std::byte> m_zero_padded_input; // contains the last input in case padding is required
-        std::vector<std::byte> m_zero_input;        // zero vector for padded inputs
+      Hash m_hash;                      // the hash function
+      int64_t m_nof_hashes;             // number of hash functions.
+      std::vector<std::byte> m_results; // vector of hash results. This vector might not be fully allocated if layer is
+                                        // not in range m_output_store_min/max_layer
+      HashConfig m_hash_config;         // config when calling a hash function not last in layer
+      HashConfig m_last_hash_config;    // config when calling last in layer hash function
+      std::vector<std::byte> m_zero_padded_input; // contains the last input in case padding is required
+      std::vector<std::byte> m_zero_input;        // zero vector for padded inputs
     };
 
     // the result of each hash segments
@@ -275,8 +275,7 @@ namespace icicle {
     {
     public:
       // Constructor
-      HashTask() : TaskBase(),
-      m_hash(nullptr) {}
+      HashTask() : TaskBase(), m_hash(nullptr) {}
 
       // The worker execute this function based on the member operands
       virtual void execute() { m_hash.hash(m_input, m_hash.input_default_chunk_size(), *m_hash_config, m_output); }
@@ -402,7 +401,8 @@ namespace icicle {
     }
 
     // restore the proof path from the tree and return the new path pointer
-    std::byte* copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_pruned, std::byte* path) const
+    std::byte*
+    copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_pruned, std::byte* path) const
     {
       const u_int64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
       for (int layer_idx = m_output_store_min_layer; layer_idx < m_layers.size() - 1; layer_idx++) {
