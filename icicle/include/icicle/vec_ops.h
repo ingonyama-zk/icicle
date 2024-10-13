@@ -17,22 +17,21 @@ namespace icicle {
    * @note APIs with a single input, ignore input b.
    */
   struct VecOpsConfig {
-    icicleStreamHandle stream;  /** Stream for asynchronous execution. */
-    bool is_a_on_device;        /** True if `a` is on the device, false if it is not. Default value: false. */
-    bool is_b_on_device;        /** True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
-    bool is_result_on_device;   /** If true, the output is preserved on the device, otherwise on the host. Default value:
-                                    false. */
-    bool is_async;              /** Whether to run the vector operations asynchronously.
-                                    If set to `true`, the function will be non-blocking and synchronization
-                                    must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
-                                    If set to `false`, the function will block the current CPU thread. */
-    int batch_size;             /** Number of vectors (or operations) to process in a batch.
-                                    Each vector operation will be performed independently on each batch element.
-                                    Default value: 1. */
-    bool
-      columns_batch;            /** True if the batched vectors are stored as columns in a 2D array (i.e., the vectors are strided in memory as columns of a matrix).
-                                    If false, the batched vectors are stored contiguously in memory (e.g., as rows or in a flat array).
-                                    Default value: false. */
+    icicleStreamHandle stream; /** Stream for asynchronous execution. */
+    bool is_a_on_device;       /** True if `a` is on the device, false if it is not. Default value: false. */
+    bool is_b_on_device;       /** True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
+    bool is_result_on_device;  /** If true, the output is preserved on the device, otherwise on the host. Default value:
+                                   false. */
+    bool is_async;             /** Whether to run the vector operations asynchronously.
+                                   If set to `true`, the function will be non-blocking and synchronization
+                                   must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
+                                   If set to `false`, the function will block the current CPU thread. */
+    int batch_size;            /** Number of vectors (or operations) to process in a batch.
+                                   Each vector operation will be performed independently on each batch element.
+                                   Default value: 1. */
+    bool columns_batch; /** True if the batched vectors are stored as columns in a 2D array (i.e., the vectors are
+                           strided in memory as columns of a matrix). If false, the batched vectors are stored
+                           contiguously in memory (e.g., as rows or in a flat array). Default value: false. */
     ConfigExtension* ext = nullptr; /** Backend-specific extension. */
   };
 
@@ -93,7 +92,8 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
-  eIcicleError vector_accumulate(T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config); // use vector_add (inplace)
+  eIcicleError
+  vector_accumulate(T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config); // use vector_add (inplace)
 
   /**
    * @brief Subtracts vector `b` from vector `a` element-wise.
@@ -172,7 +172,8 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
-  eIcicleError convert_montgomery(const T* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, T* output);
+  eIcicleError
+  convert_montgomery(const T* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, T* output);
 
   // Reduction operations
 
@@ -195,24 +196,22 @@ namespace icicle {
   eIcicleError vector_sum(const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
-  * @brief Computes the product of all elements in each vector in the batch.
-  *
-  * @tparam T Type of the elements in the vectors.
-  * @param vec_a Pointer to the input vector(s).
-  *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
-  *              - The layout depends on `config.columns_batch`:
-  *                - If `false`, vectors are stored contiguously.
-  *                - If `true`, vectors are stored as columns in a 2D array.
-  * @param size Number of elements in each vector.
-  * @param config Configuration for the operation.
-  * @param output Pointer to the output array where the results will be stored.
-  * @return eIcicleError Error code indicating success or failure.
-  */
+   * @brief Computes the product of all elements in each vector in the batch.
+   *
+   * @tparam T Type of the elements in the vectors.
+   * @param vec_a Pointer to the input vector(s).
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output array where the results will be stored.
+   * @return eIcicleError Error code indicating success or failure.
+   */
 
   template <typename T>
   eIcicleError vector_product(const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output);
-
-
 
   // Scalar-Vector operations
 
@@ -222,21 +221,24 @@ namespace icicle {
    * @tparam T Type of the elements in the vector and the scalar.
    * @param scalar_a Pointer to the input scalar(s).
    *                 - If `use_single_scalar` is `true`, this should point to a single scalar value.
-   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length `config.batch_size`.
-   * @param vec_b Pointer to the input vector(s).   
+   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length
+   * `config.batch_size`.
+   * @param vec_b Pointer to the input vector(s).
    *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
    *              - The layout depends on `config.columns_batch`:
    *                - If `false`, vectors are stored contiguously.
    *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in a vector.
-   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of scalars (`false`).
+   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of
+   * scalars (`false`).
    * @param config Configuration for the operation.
    * @param output Pointer to the output vector(s) where the results will be stored.
    * @return eIcicleError Error code indicating success or failure.
-    * @note To subtract a scalar from each element of a vector - use scalar_add_vec with negative scalar.
+   * @note To subtract a scalar from each element of a vector - use scalar_add_vec with negative scalar.
    */
   template <typename T>
-  eIcicleError scalar_add_vec(const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output); 
+  eIcicleError scalar_add_vec(
+    const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
 
   /**
    * @brief Subtracts each element of a vector from a scalar, elementwise (res[i]=scalar-vec[i]).
@@ -244,21 +246,24 @@ namespace icicle {
    * @tparam T Type of the elements in the vector and the scalar.
    * @param scalar_a Pointer to Input scalar(s).
    *                 - If `use_single_scalar` is `true`, this should point to a single scalar value.
-   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length `config.batch_size`.
-   * @param vec_b Pointer to the input vector(s).   
+   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length
+   * `config.batch_size`.
+   * @param vec_b Pointer to the input vector(s).
    *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
    *              - The layout depends on `config.columns_batch`:
    *                - If `false`, vectors are stored contiguously.
    *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in a vector.
-   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of scalars (`false`).
+   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of
+   * scalars (`false`).
    * @param config Configuration for the operation.
    * @param output Pointer to the output vector(s) where the results will be stored.
    * @return eIcicleError Error code indicating success or failure.
    * @note To subtract a scalar from each element of a vector - use scalar_add_vec with negative scalar.
    */
   template <typename T>
-  eIcicleError scalar_sub_vec(const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output); 
+  eIcicleError scalar_sub_vec(
+    const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
 
   /**
    * @brief Multiplies each element of a vector by a scalar.
@@ -266,20 +271,23 @@ namespace icicle {
    * @tparam T Type of the elements in the vector and the scalar.
    * @param scalar_a Pointer to Input scalar(s).
    *                 - If `use_single_scalar` is `true`, this should point to a single scalar value.
-   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length `config.batch_size`.
-   * @param vec_b Pointer to the input vector(s).   
+   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length
+   * `config.batch_size`.
+   * @param vec_b Pointer to the input vector(s).
    *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
    *              - The layout depends on `config.columns_batch`:
    *                - If `false`, vectors are stored contiguously.
    *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in a vector.
-   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of scalars (`false`).
+   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of
+   * scalars (`false`).
    * @param config Configuration for the operation.
    * @param output Pointer to the output vector(s) where the results will be stored.
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
-  eIcicleError scalar_mul_vec(const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
+  eIcicleError scalar_mul_vec(
+    const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
 
   // Matrix operations
 
@@ -294,14 +302,13 @@ namespace icicle {
    * @param mat_out Pointer to the output matrix or matrices where the transposed matrices will be stored.
    * @return eIcicleError Error code indicating success or failure.
    * @note The input matrices are assumed to be stored in row-major order.
-   *       This function transposes an input matrix or a batch of matrices. 
+   *       This function transposes an input matrix or a batch of matrices.
    *       Matrix transpose inplace is not supported for non-power of 2 rows and columns.
    */
   template <typename T>
   eIcicleError
   matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out);
-  
-  
+
   // Miscellaneous operations
 
   /**
@@ -309,10 +316,10 @@ namespace icicle {
    *
    * @tparam T Type of the elements in the vector.
    * @param vec_in Pointer to the input vector(s).
-  *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
-  *              - The layout depends on `config.columns_batch`:
-  *                - If `false`, vectors are stored contiguously.
-  *                - If `true`, vectors are stored as columns in a 2D array.
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously.
+   *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in each vector. Must be a power of 2.
    * @param config Configuration for the operation.
    * @param vec_out Pointer to the output vector(s) where the results will be stored.
@@ -332,7 +339,7 @@ namespace icicle {
    * @param stride Stride between elements in the slice.
    * @param size_in Number of elements in one input vector.
    * @param size_out Number of elements in one input vector.
-    * @param config Configuration for the operation.
+   * @param config Configuration for the operation.
    * @param vec_out Pointer to the output vector(s) where the results will be stored.
    *                The output array should have the same storage layout as the input vectors.
    * @return eIcicleError Error code indicating success or failure.
@@ -341,8 +348,14 @@ namespace icicle {
    *       parameters must satisfy: offset + (size_out-1) * stride < size_in
    */
   template <typename T>
-  eIcicleError
-  slice(const T* vec_in, uint64_t offset, uint64_t stride, uint64_t size_in, uint64_t size_out, const VecOpsConfig& config, T* vec_out);
+  eIcicleError slice(
+    const T* vec_in,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size_in,
+    uint64_t size_out,
+    const VecOpsConfig& config,
+    T* vec_out);
 
   /**
    * @brief Finds the highest non-zero index in a vector or batch of vectors.
@@ -351,8 +364,8 @@ namespace icicle {
    * @param vec_in Pointer to the input vector(s).
    * @param size Number of elements in each input vector.
    * @param config Configuration for the operation.
-   * @param out_idx Pointer to an array where the output indices of the highest non-zero element in each input vector will be stored.
-   *                The array should have a length of `config.batch_size`.
+   * @param out_idx Pointer to an array where the output indices of the highest non-zero element in each input vector
+   * will be stored. The array should have a length of `config.batch_size`.
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
@@ -364,18 +377,19 @@ namespace icicle {
    * @tparam T Type of the elements in the polynomial and domain.
    * @param coeffs Pointer to the array of coefficients of the polynomial(s).
    *               - The size of `coeffs` should be `coeffs_size * batch_size`.
-   *               - If `config.columns_batch` is `false`, coefficients for each polynomial in the batch are stored contiguously.
+   *               - If `config.columns_batch` is `false`, coefficients for each polynomial in the batch are stored
+   * contiguously.
    *               - If `config.columns_batch` is `true`, coefficients are interleaved.
    * @param coeffs_size Number of coefficients in each polynomial.
    * @param domain Pointer to the array of points at which to evaluate the polynomial(s).
-    *               - The same domain is used for all polynomials.
-    *               - The size of `domain` should be `domain_size`.
+   *               - The same domain is used for all polynomials.
+   *               - The size of `domain` should be `domain_size`.
    * @param domain_size Number of domain points.
    * @param config Configuration for the operation.
    * @param evals Pointer to the array where the evaluated results will be stored. This is an output parameter.
- *              - The size of `evals` should be `domain_size * batch_size`.
- *              - If `config.columns_batch` is `false`, results for each polynomial are stored contiguously.
- *              - If `config.columns_batch` is `true`, results are interleaved.
+   *              - The size of `evals` should be `domain_size * batch_size`.
+   *              - If `config.columns_batch` is `false`, results for each polynomial are stored contiguously.
+   *              - If `config.columns_batch` is `true`, results are interleaved.
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
@@ -393,7 +407,8 @@ namespace icicle {
    * @tparam T Type of the elements in the polynomials.
    * @param numerator Pointer to the array of coefficients of the numerator polynomial(s).
    *                  - The size of `numerator` should be `(numerator_deg + 1) * batch_size`.
-   *                  - If `config.columns_batch` is `false`, coefficients for each polynomial in the batch are stored contiguously.
+   *                  - If `config.columns_batch` is `false`, coefficients for each polynomial in the batch are stored
+   * contiguously.
    *                  - If `config.columns_batch` is `true`, coefficients are interleaved.
    * @param numerator_deg Degree of the numerator polynomial.
    * @param denominator Pointer to the array of coefficients of the denominator polynomial(s).
@@ -410,8 +425,8 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    *
    * @note The degrees should satisfy `numerator_deg >= denominator_deg`.
-   *       The sizes `q_size` and `r_size` must be at least `numerator_deg - denominator_deg + 1` and `denominator_deg`, respectively.
-   *       The function assumes that the input and output arrays are properly allocated.
+   *       The sizes `q_size` and `r_size` must be at least `numerator_deg - denominator_deg + 1` and `denominator_deg`,
+   * respectively. The function assumes that the input and output arrays are properly allocated.
    */
   template <typename T>
   eIcicleError polynomial_division(

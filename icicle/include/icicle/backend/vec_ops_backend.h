@@ -16,11 +16,7 @@ namespace icicle {
     scalar_t* output)>;
 
   using vectorVectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device,
-    scalar_t* vec_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig& config)>;
+    const Device& device, scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
   using scalarConvertMontgomeryImpl = std::function<eIcicleError(
     const Device& device,
@@ -31,11 +27,7 @@ namespace icicle {
     scalar_t* output)>;
 
   using VectorReduceOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const scalar_t* vec_a,
-    uint64_t size,
-    const VecOpsConfig& config,
-    scalar_t* output)>;
+    const Device& device, const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
 
   using scalarVectorOpImpl = std::function<eIcicleError(
     const Device& device,
@@ -55,11 +47,7 @@ namespace icicle {
     scalar_t* out)>;
 
   using scalarBitReverseOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const scalar_t* input,
-    uint64_t size,
-    const VecOpsConfig& config,
-    scalar_t* output)>;
+    const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
 
   using scalarSliceOpImpl = std::function<eIcicleError(
     const Device& device,
@@ -72,11 +60,7 @@ namespace icicle {
     scalar_t* output)>;
 
   using scalarHighNonZeroIdxOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const scalar_t* input,
-    uint64_t size,
-    const VecOpsConfig& config,
-    int64_t* out_idx)>;
+    const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)>;
 
   using scalarPolyEvalImpl = std::function<eIcicleError(
     const Device& device,
@@ -98,9 +82,6 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* q_out /*OUT*/,
     scalar_t* r_out /*OUT*/)>;
-
-
-
 
   void register_vector_add(const std::string& deviceType, vectorVectorOpImpl impl);
 
@@ -173,10 +154,10 @@ namespace icicle {
 
   void register_vector_product(const std::string& deviceType, VectorReduceOpImpl impl);
 
-#define REGISTER_VECTOR_PRODUCT_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+#define REGISTER_VECTOR_PRODUCT_BACKEND(DEVICE_TYPE, FUNC)                                                             \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_product) = []() -> bool {                                                                  \
-      register_vector_product(DEVICE_TYPE, FUNC);                                                                          \
+    static bool UNIQUE(_reg_vec_product) = []() -> bool {                                                              \
+      register_vector_product(DEVICE_TYPE, FUNC);                                                                      \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

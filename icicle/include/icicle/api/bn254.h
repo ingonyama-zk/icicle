@@ -22,20 +22,28 @@ extern "C" eIcicleError bn254_g2_affine_convert_montgomery(
   const bn254::g2_affine_t* input, size_t n, bool is_into, const VecOpsConfig* config, bn254::g2_affine_t* output);
 
 extern "C" eIcicleError bn254_g2_projective_convert_montgomery(
-  const bn254::g2_projective_t* input, size_t n, bool is_into, const VecOpsConfig* config, bn254::g2_projective_t* output);  
+  const bn254::g2_projective_t* input,
+  size_t n,
+  bool is_into,
+  const VecOpsConfig* config,
+  bn254::g2_projective_t* output);
 
 extern "C" eIcicleError bn254_ecntt(
-  const bn254::projective_t* input, int size, NTTDir dir, const NTTConfig<bn254::scalar_t>* config, bn254::projective_t* output);
-
+  const bn254::projective_t* input,
+  int size,
+  NTTDir dir,
+  const NTTConfig<bn254::scalar_t>* config,
+  bn254::projective_t* output);
 
 extern "C" eIcicleError bn254_precompute_msm_bases(
-  const bn254::affine_t* bases,
-  int nof_bases,
-  const MSMConfig* config,
-  bn254::affine_t* output_bases);
+  const bn254::affine_t* bases, int nof_bases, const MSMConfig* config, bn254::affine_t* output_bases);
 
 extern "C" eIcicleError bn254_msm(
-  const bn254::scalar_t* scalars, const bn254::affine_t* points, int msm_size, const MSMConfig* config, bn254::projective_t* out);
+  const bn254::scalar_t* scalars,
+  const bn254::affine_t* points,
+  int msm_size,
+  const MSMConfig* config,
+  bn254::projective_t* out);
 
 extern "C" bool bn254_eq(bn254::projective_t* point1, bn254::projective_t* point2);
 
@@ -49,38 +57,54 @@ extern "C" eIcicleError bn254_affine_convert_montgomery(
   const bn254::affine_t* input, size_t n, bool is_into, const VecOpsConfig* config, bn254::affine_t* output);
 
 extern "C" eIcicleError bn254_projective_convert_montgomery(
-  const bn254::projective_t* input, size_t n, bool is_into, const VecOpsConfig* config, bn254::projective_t* output);  
+  const bn254::projective_t* input, size_t n, bool is_into, const VecOpsConfig* config, bn254::projective_t* output);
 
 extern "C" eIcicleError bn254_g2_precompute_msm_bases(
-  const bn254::g2_affine_t* bases,
-  int nof_bases,
-  const MSMConfig* config,
-  bn254::g2_affine_t* output_bases);
+  const bn254::g2_affine_t* bases, int nof_bases, const MSMConfig* config, bn254::g2_affine_t* output_bases);
 
 extern "C" eIcicleError bn254_g2_msm(
-  const bn254::scalar_t* scalars, const bn254::g2_affine_t* points, int msm_size, const MSMConfig* config, bn254::g2_projective_t* out);
+  const bn254::scalar_t* scalars,
+  const bn254::g2_affine_t* points,
+  int msm_size,
+  const MSMConfig* config,
+  bn254::g2_projective_t* out);
 
 extern "C" void bn254_generate_scalars(bn254::scalar_t* scalars, int size);
 
 extern "C" void bn254_scalar_convert_montgomery(
   const bn254::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, bn254::scalar_t* output);
 
-extern "C" eIcicleError bn254_ntt_init_domain(
-  bn254::scalar_t* primitive_root, const NTTInitDomainConfig* config);
+extern "C" eIcicleError bn254_ntt_init_domain(bn254::scalar_t* primitive_root, const NTTInitDomainConfig* config);
 
 extern "C" eIcicleError bn254_ntt(
-  const bn254::scalar_t* input, int size, NTTDir dir, const NTTConfig<bn254::scalar_t>* config, bn254::scalar_t* output);
+  const bn254::scalar_t* input,
+  int size,
+  NTTDir dir,
+  const NTTConfig<bn254::scalar_t>* config,
+  bn254::scalar_t* output);
 
 extern "C" eIcicleError bn254_ntt_release_domain();
 
 extern "C" eIcicleError bn254_vector_mul(
-  const bn254::scalar_t* vec_a, const bn254::scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result);
+  const bn254::scalar_t* vec_a,
+  const bn254::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  bn254::scalar_t* result);
 
 extern "C" eIcicleError bn254_vector_add(
-  const bn254::scalar_t* vec_a, const bn254::scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result);
+  const bn254::scalar_t* vec_a,
+  const bn254::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  bn254::scalar_t* result);
 
 extern "C" eIcicleError bn254_vector_sub(
-  const bn254::scalar_t* vec_a, const bn254::scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result);
+  const bn254::scalar_t* vec_a,
+  const bn254::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  bn254::scalar_t* result);
 
 extern "C" eIcicleError bn254_matrix_transpose(
   const bn254::scalar_t* input,
@@ -89,7 +113,5 @@ extern "C" eIcicleError bn254_matrix_transpose(
   const VecOpsConfig* config,
   bn254::scalar_t* output);
 
-extern "C" eIcicleError bn254_bit_reverse(
-  const bn254::scalar_t* input, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* output);
-
-
+extern "C" eIcicleError
+bn254_bit_reverse(const bn254::scalar_t* input, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* output);

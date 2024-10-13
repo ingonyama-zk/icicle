@@ -278,15 +278,7 @@ namespace icicle {
       config.is_result_on_device = true;
 
       ICICLE_CHECK(icicle::polynomial_division(
-        a_coeffs,
-        deg_a,
-        b_coeffs,
-        deg_b,
-        deg_a - deg_b + 1,
-        a_N,
-        config,
-        Q_coeffs,
-        R_coeffs));
+        a_coeffs, deg_a, b_coeffs, deg_b, deg_a - deg_b + 1, a_N, config, Q_coeffs, R_coeffs));
     }
 
     void quotient(PolyContext Q, PolyContext op_a, PolyContext op_b) override
@@ -554,8 +546,8 @@ namespace icicle {
         config.is_result_on_device = true;
         config.is_async = true;
         config.stream = m_stream;
-        ICICLE_CHECK(
-          icicle::slice(get_context_storage_immutable<I>(p), 0 /*offset*/, stride, poly_size, domain_size, config, d_evals));
+        ICICLE_CHECK(icicle::slice(
+          get_context_storage_immutable<I>(p), 0 /*offset*/, stride, poly_size, domain_size, config, d_evals));
       } else {
         ICICLE_CHECK(icicle_memset(d_evals, 0, domain_size * sizeof(I)));
         auto ntt_config = default_ntt_config<D>();

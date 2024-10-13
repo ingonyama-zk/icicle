@@ -3,7 +3,6 @@
 
 namespace icicle {
 
-
   /*********************************** REDUCE PRODUCT ************************/
   ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, VectorReduceOpImpl);
 
@@ -14,24 +13,22 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError
-  vector_product(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError vector_product(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_product)(vec_a, size, &config, output);
   }
 
   /*********************************** REDUCE SUM ****************************/
-  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, VectorReduceOpImpl );
+  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, VectorReduceOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sum)(
-    const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
+  extern "C" eIcicleError
+  CONCAT_EXPAND(FIELD, vector_sum)(const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
     return VectorSumDispatcher::execute(vec_a, size, *config, output);
   }
 
   template <>
-  eIcicleError
-  vector_sum(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError vector_sum(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_sum)(vec_a, size, &config, output);
   }
@@ -94,7 +91,8 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError vector_accumulate(extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)
+  eIcicleError
+  vector_accumulate(extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)
   {
     return CONCAT_EXPAND(FIELD, extension_vector_accumulate)(vec_a, vec_b, size, &config);
   }
@@ -186,14 +184,24 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_add_vec)(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    bool use_single_scalar,
+    const VecOpsConfig* config,
+    scalar_t* output)
   {
     return ScalarAddDispatcher::execute(scalar_a, vec_b, size, use_single_scalar, *config, output);
   }
 
   template <>
   eIcicleError scalar_add_vec(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    bool use_single_scalar,
+    const VecOpsConfig& config,
+    scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, size, use_single_scalar, &config, output);
   }
@@ -202,14 +210,24 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarSubDispatcher, scalar_sub_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_sub_vec)(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    bool use_single_scalar,
+    const VecOpsConfig* config,
+    scalar_t* output)
   {
     return ScalarSubDispatcher::execute(scalar_a, vec_b, size, use_single_scalar, *config, output);
   }
 
   template <>
   eIcicleError scalar_sub_vec(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    bool use_single_scalar,
+    const VecOpsConfig& config,
+    scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, size, use_single_scalar, &config, output);
   }
@@ -217,14 +235,24 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_mul_vec)(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    bool use_single_scalar,
+    const VecOpsConfig* config,
+    scalar_t* output)
   {
     return ScalarMulDispatcher::execute(scalar_a, vec_b, size, use_single_scalar, *config, output);
   }
 
   template <>
   eIcicleError scalar_mul_vec(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    bool use_single_scalar,
+    const VecOpsConfig& config,
+    scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, size, use_single_scalar, &config, output);
   }
@@ -240,8 +268,8 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError
-  convert_montgomery(const scalar_t* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError convert_montgomery(
+    const scalar_t* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(input, size, is_to_montgomery, &config, output);
   }
@@ -431,4 +459,4 @@ namespace icicle {
       numerator, numerator_deg, denumerator, denumerator_deg, q_size, r_size, &config, q_out, r_out);
   }
 
-} // sizeamespace icicle
+} // namespace icicle
