@@ -124,25 +124,3 @@ func main() {
 ```
 
 Replace `/path/to/shared/libs` with the actual path where the shared libraries are located on your system.
-
-## Supported curves, fields and operations
-
-### Supported curves and operations
-
-| Operation\Curve | bn254 | bls12_377 | bls12_381 | bw6-761 | grumpkin |
-| --------------- | :---: | :-------: | :-------: | :-----: | :------: |
-| MSM             |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
-| G2              |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| NTT             |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| ECNTT           |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-| VecOps          |   ✅   |     ✅     |     ✅     |    ✅    |    ✅     |
-| Polynomials     |   ✅   |     ✅     |     ✅     |    ✅    |    ❌     |
-
-### Supported fields and operations
-
-| Operation\Field | babybear |
-| --------------- | :------: |
-| VecOps          |    ✅     |
-| Polynomials     |    ✅     |
-| NTT             |    ✅     |
-| Extension Field |    ✅     |

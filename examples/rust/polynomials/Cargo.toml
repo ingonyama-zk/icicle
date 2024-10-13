@@ -1,6 +1,6 @@
 [package]
 name = "polynomials"
-version = "1.2.0"
+version = "0.1.0"
 edition = "2018"
 
 [dependencies]
@@ -14,8 +14,8 @@ clap = { version = "<=4.4.12", features = ["derive"] }
 [features]
 cuda = ["icicle-runtime/cuda_backend",
         "icicle-bn254/cuda_backend",
+        "icicle-bn254/no_ecntt",       
+        "icicle-bn254/no_g2",        
         "icicle-babybear/cuda_backend",
-        "icicle-bn254/no_ecntt",
-        "icicle-bn254/no_g2",
 ]
 
