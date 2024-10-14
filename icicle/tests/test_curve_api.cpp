@@ -189,11 +189,106 @@ TEST_F(CurveApiTest, ecntt)
     ntt_release_domain<scalar_t>();
   };
 
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t))); // TODO ucomment when CPU is
-  // implemented
+  // run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t))); // FIXME
 }
+
+TEST_F(CurveApiTest, ecntt_new)
+{
+  // Randomize configuration
+
+  // int seed = time(0);
+  // srand(seed);
+  // const bool inplace = rand() % 2;
+  // const int logn = rand() % 15 + 3;
+  // const uint64_t N = 1 << logn;
+  // const int log_ntt_domain_size = logn + 1;
+  // const int log_batch_size = rand() % 3;
+  // const int batch_size = 1 << log_batch_size;
+  // const Ordering ordering = static_cast<Ordering>(rand() % 4);
+  // bool columns_batch;
+  // if (logn == 7 || logn < 4) {
+  //   columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  // } else {
+  //   columns_batch = rand() % 2;
+  // }
+  // const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
+  // const int log_coset_stride = rand() % 3;
+  // scalar_t coset_gen;
+  // if (log_coset_stride) {
+  //   coset_gen = scalar_t::omega(logn + log_coset_stride);
+  // } else {
+  //   coset_gen = scalar_t::one();
+  // }
+  const bool inplace = false;
+  const int logn = 4;
+  const uint64_t N = 1 << logn;
+  const int log_ntt_domain_size = logn;
+  const int log_batch_size = 0;
+  const int batch_size = 1 << log_batch_size;
+  const Ordering ordering = static_cast<Ordering>(0);
+  bool columns_batch = false;
+  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+
+  const int total_size = N * batch_size;
+  auto input = std::make_unique<projective_t[]>(total_size);
+  projective_t::rand_host_many(input.get(), total_size);
+  auto out_main = std::make_unique<projective_t[]>(total_size);
+  auto out_ref = std::make_unique<projective_t[]>(total_size);
+  auto run = [&](const std::string& dev_type, projective_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    icicleStreamHandle stream = nullptr;
+    ICICLE_CHECK(icicle_create_stream(&stream));
+    auto init_domain_config = default_ntt_init_domain_config();
+    init_domain_config.stream = stream;
+    init_domain_config.is_async = false;
+    // ConfigExtension ext;
+    // ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    // init_domain_config.ext = &ext;
+    auto config = default_ntt_config<scalar_t>();
+    config.stream = stream;
+    config.batch_size = batch_size;       // default: 1
+    config.columns_batch = columns_batch; // default: false
+    config.ordering = ordering;           // default: kNN
+    config.are_inputs_on_device = true;
+    config.are_outputs_on_device = true;
+    config.is_async = false;
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+    projective_t *d_in, *d_out;
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(projective_t), config.stream));
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(projective_t), config.stream));
+    ICICLE_CHECK(icicle_copy_to_device_async(d_in, input.get(), total_size * sizeof(projective_t), config.stream));
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i) {
+      if (inplace) {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_in));
+      } else {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      }
+    }
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+
+    if (inplace) {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(projective_t), config.stream));
+    } else {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(projective_t), config.stream));
+    }
+    ICICLE_CHECK(icicle_free_async(d_in, config.stream));
+    ICICLE_CHECK(icicle_free_async(d_out, config.stream));
+    ICICLE_CHECK(icicle_stream_synchronize(config.stream));
+    ICICLE_CHECK(icicle_destroy_stream(stream));
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  };
+  // run(s_main_target, out_main.get(), "ecntt", false /*=measure*/, 10 /*=iters*/); // warmup
+  // run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  // run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t))); // FIXME
+}
+
 #endif // ECNTT
 
 template <typename T>

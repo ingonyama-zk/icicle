@@ -2,7 +2,7 @@
 #include "icicle/backend/ecntt_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
-#include "cpu_ntt.h"
+#include "cpu_ntt_main.h"
 
 #include "icicle/curves/curve_config.h"
 
