@@ -122,6 +122,11 @@ module.exports = {
               id: "icicle/primitives/hash",
             },
             {
+              type: "doc",
+              label: "Merkle-Tree",
+              id: "icicle/primitives/merkle",
+            },
+            {
               type: "category",
               label: "Golang bindings",
               link: {
@@ -204,8 +209,8 @@ module.exports = {
                 },
                 {
                   type: "doc",
-                  label: "Hash",
-                  id: "icicle/rust-bindings/hash",
+                  label: "Merkle-Tree",
+                  id: "icicle/rust-bindings/merkle",
                 },
                 // {
                 //   type: "doc",
