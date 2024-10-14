@@ -6,14 +6,14 @@ digraph MerkleTree {
     Root [label = "Root\n (Commitment)";];
     
     L1_0 [label = "";];
-    L1_1 [label = "";];
+    L1_1 [label = "path.3";fillcolor = yellow;];
     
     L2_0 [label = "";];
-    L2_1 [label = "";];
+    L2_1 [label = "path.2";fillcolor = yellow;];
     L2_2 [label = "";];
     L2_3 [label = "";];
     
-    L3_0 [label = "";];
+    L3_0 [label = "path.1";fillcolor = yellow;];
     L3_1 [label = "";];
     L3_2 [label = "";];
     L3_3 [label = "";];
@@ -24,7 +24,7 @@ digraph MerkleTree {
     
     L4_0 [label = "";];
     L4_1 [label = "";];
-    L4_2 [label = "";];
+    L4_2 [label = "path.0";fillcolor = yellow;];
     L4_3 [label = "";];
     L4_4 [label = "";];
     L4_5 [label = "";];
@@ -43,7 +43,7 @@ digraph MerkleTree {
     Leaf_0 [label = "Leaf-0";];
     Leaf_1 [label = "Leaf-1";];
     Leaf_2 [label = "Leaf-2";];
-    Leaf_3 [label = "Leaf-3";];
+    Leaf_3 [label = "Leaf-3";fillcolor = yellow;];
     Leaf_4 [label = "Leaf-4";];
     Leaf_5 [label = "Leaf-5";];
     Leaf_6 [label = "Leaf-6";];

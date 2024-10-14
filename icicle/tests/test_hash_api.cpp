@@ -554,6 +554,41 @@ TEST_F(HashApiTest, MerkleTreeLarge)
   }
 }
 
+TEST_F(HashApiTest, MerkleTreeExample)
+{
+  // define leaf size
+  const uint64_t leaf_size = 1024;
+  // let's allocate a dummy input. It can be any type and we need the total size to match.
+  using T = uint64_t;
+  const uint32_t max_input_size = leaf_size * 16;
+  auto input = std::make_unique<T[]>(max_input_size / sizeof(T));
+
+  // define layer hashes. In this example Keccak-256 where layer-0 hashes 1KB and then every two node (=64B) are hashed
+  // together
+  auto layer0_hasher = Keccak256::create(leaf_size /*=default input size*/);
+  auto next_layer_hasher = Keccak256::create(2 * layer0_hasher.output_size() /*=default input size*/);
+
+  std::vector<Hash> hashes = {
+    layer0_hasher, next_layer_hasher, next_layer_hasher, next_layer_hasher, next_layer_hasher};
+  auto merkle_tree = MerkleTree::create(hashes, leaf_size);
+
+  // Now to compute the tree we need input data
+  merkle_tree.build(input.get(), max_input_size / sizeof(T), default_merkle_tree_config());
+
+  auto [commitment, size] = merkle_tree.get_merkle_root();
+
+  MerkleProof proof{};
+  auto err = merkle_tree.get_merkle_proof(
+    input.get(), max_input_size / sizeof(T), 3 /* leaf idx to open*/, true /*=pruned path*/,
+    default_merkle_tree_config(), proof);
+
+  auto [_leaf, _leaf_size, _leaf_idx] = proof.get_leaf();
+  auto [_path, _path_size] = proof.get_path();
+
+  bool valid = false;
+  err = merkle_tree.verify(proof, valid);
+}
+
 #ifdef POSEIDON
 
   #include "icicle/fields/field_config.h"

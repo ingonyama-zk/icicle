@@ -1,0 +1,58 @@
+digraph MerkleTree {
+    rankdir = TB;
+    node [shape = circle; style = filled; color = lightblue; fontname = "Helvetica"; fontsize = 10;];
+    
+    // Root node
+    Root [label = "Root\n (Commitment)";];
+    
+    L1_0 [label = "";];
+    L1_1 [label = "";];
+    L1_2 [label = "";];
+    L1_3 [label = "";];
+    
+    node [style = filled; fillcolor = lightgreen; shape = rect;];
+    Leaf_0 [label = "Leaf-0";];
+    Leaf_1 [label = "Leaf-1";];
+    Leaf_2 [label = "Leaf-2";];
+    Leaf_3 [label = "Leaf-3";];
+    Leaf_4 [label = "Leaf-4";];
+    Leaf_5 [label = "Leaf-5";];
+    Leaf_6 [label = "Leaf-6";];
+    Leaf_7 [label = "Leaf-7";];
+    Leaf_8 [label = "Leaf-8";];
+    Leaf_9 [label = "Leaf-9";];
+    Leaf_10 [label = "Leaf-10";];
+    Leaf_11 [label = "Leaf-11";];
+    Leaf_12 [label = "Leaf-12";];
+    Leaf_13 [label = "Leaf-13";];
+    Leaf_14 [label = "Leaf-14";];
+    Leaf_15 [label = "Leaf-15";];
+    
+    
+    // Connections: Internal nodes to root
+    Root -> L1_0;
+    Root -> L1_1;
+    Root -> L1_2;
+    Root -> L1_3;
+    
+    // Connections
+    L1_0 -> Leaf_0;
+    L1_0 -> Leaf_1;
+    L1_0 -> Leaf_2;
+    L1_0 -> Leaf_3;
+    
+    L1_1 -> Leaf_4;
+    L1_1 -> Leaf_5;
+    L1_1 -> Leaf_6;
+    L1_1 -> Leaf_7;
+    
+    L1_2 -> Leaf_8;
+    L1_2 -> Leaf_9;
+    L1_2 -> Leaf_10;
+    L1_2 -> Leaf_11;
+    
+    L1_3 -> Leaf_12;
+    L1_3 -> Leaf_13;
+    L1_3 -> Leaf_14;
+    L1_3 -> Leaf_15;
+}
