@@ -36,7 +36,7 @@ For a more in-depth understanding on this topic we suggest you read [our article
 
 If you have any questions, ideas, or are thinking of building something in this space, join the discussion on [Discord]. You can explore our code on [github](https://github.com/ingonyama-zk) or read some of [our research papers](https://github.com/ingonyama-zk/papers).
 
-Follow us on [Twitter](https://x.com/Ingo_zk) and [YouTube](https://www.youtube.com/@ingo_ZK) and join us IRL at our [next event](https://www.ingonyama.com/events)
+Follow us on [X (formerly Twitter)](https://x.com/Ingo_zk) and [YouTube](https://www.youtube.com/@ingo_ZK) and join us IRL at our [next event](https://www.ingonyama.com/events)
 
 [ICICLE-OVERVIEW]: ./icicle/overview.md
 [Discord]: https://discord.gg/6vYrE7waPj
