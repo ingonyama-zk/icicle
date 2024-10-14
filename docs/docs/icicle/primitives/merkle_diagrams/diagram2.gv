@@ -1,14 +1,32 @@
 digraph MerkleTree {
-    rankdir = TB;
+    rankdir = BT;
+    // Reverse the rank direction to bottom-to-top
     node [shape = circle; style = filled; color = lightblue; fontname = "Helvetica"; fontsize = 10;];
     
     // Root node
-    Root [label = "Root\n (Commitment)";];
+    Root [label = "Root\n (Commitment) | Blake2s";];
     
-    L1_0 [label = "";];
+    L1_0 [label = "Blake2s";];
     L1_1 [label = "";];
     L1_2 [label = "";];
     L1_3 [label = "";];
+    
+    L2_0 [label = "Keccak256";];
+    L2_1 [label = "";];
+    L2_2 [label = "";];
+    L2_3 [label = "";];
+    L2_4 [label = "";];
+    L2_5 [label = "";];
+    L2_6 [label = "";];
+    L2_7 [label = "";];
+    L2_8 [label = "";];
+    L2_9 [label = "";];
+    L2_10 [label = "";];
+    L2_11 [label = "";];
+    L2_12 [label = "";];
+    L2_13 [label = "";];
+    L2_14 [label = "";];
+    L2_15 [label = "";];
     
     node [style = filled; fillcolor = lightgreen; shape = rect;];
     Leaf_0 [label = "Leaf-0";];
@@ -28,31 +46,44 @@ digraph MerkleTree {
     Leaf_14 [label = "Leaf-14";];
     Leaf_15 [label = "Leaf-15";];
     
-    
     // Connections: Internal nodes to root
-    Root -> L1_0;
-    Root -> L1_1;
-    Root -> L1_2;
-    Root -> L1_3;
+    L1_0 -> Root;
+    L1_1 -> Root;
+    L1_2 -> Root;
+    L1_3 -> Root;
     
-    // Connections
-    L1_0 -> Leaf_0;
-    L1_0 -> Leaf_1;
-    L1_0 -> Leaf_2;
-    L1_0 -> Leaf_3;
+    L2_0 -> L1_0;
+    L2_1 -> L1_0;
+    L2_2 -> L1_0;
+    L2_3 -> L1_0;
+    L2_4 -> L1_1;
+    L2_5 -> L1_1;
+    L2_6 -> L1_1;
+    L2_7 -> L1_1;
+    L2_8 -> L1_2;
+    L2_9 -> L1_2;
+    L2_10 -> L1_2;
+    L2_11 -> L1_2;
+    L2_12 -> L1_3;
+    L2_13 -> L1_3;
+    L2_14 -> L1_3;
+    L2_15 -> L1_3;
     
-    L1_1 -> Leaf_4;
-    L1_1 -> Leaf_5;
-    L1_1 -> Leaf_6;
-    L1_1 -> Leaf_7;
-    
-    L1_2 -> Leaf_8;
-    L1_2 -> Leaf_9;
-    L1_2 -> Leaf_10;
-    L1_2 -> Leaf_11;
-    
-    L1_3 -> Leaf_12;
-    L1_3 -> Leaf_13;
-    L1_3 -> Leaf_14;
-    L1_3 -> Leaf_15;
+    // Connections: Leaves to internal nodes
+    Leaf_0 -> L2_0;
+    Leaf_1 -> L2_1;
+    Leaf_2 -> L2_2;
+    Leaf_3 -> L2_3;
+    Leaf_4 -> L2_4;
+    Leaf_5 -> L2_5;
+    Leaf_6 -> L2_6;
+    Leaf_7 -> L2_7;
+    Leaf_8 -> L2_8;
+    Leaf_9 -> L2_9;
+    Leaf_10 -> L2_10;
+    Leaf_11 -> L2_11;
+    Leaf_12 -> L2_12;
+    Leaf_13 -> L2_13;
+    Leaf_14 -> L2_14;
+    Leaf_15 -> L2_15;
 }

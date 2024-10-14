@@ -7,18 +7,18 @@ A **Merkle tree** is a cryptographic data structure that allows for **efficient 
 - **Leaf nodes**, each containing a piece of data.
 - **Internal nodes**, which store the **hashes of their child nodes**, leading up to the **root node** (the cryptographic commitment).
 
-With ICICLE, you have the **flexibility** to build various tree topologies based on your needs. The user must define:
-
-1. **Hasher per layer** ([Link to Hasher API](./hash.md)) with a **default input size**.
-2. **Size of a leaf element** (in bytes): This defines the **granularity** of the data used for opening proofs.
-
 ---
 
 ## Tree Structure and Configuration
 
 ### Structure Definition
 
-The **root node** is assumed to be a single node. The **height of the tree** is determined by the **number of layers**.  
+With ICICLE, you have the **flexibility** to build various tree topologies based on your needs. A tree is defined by:
+
+1. **Hasher per layer** ([Link to Hasher API](./hash.md)) with a **default input size**.
+2. **Size of a leaf element** (in bytes): This defines the **granularity** of the data used for opening proofs.
+
+The **root node** is assumed to be a single node. The **height of the tree** is determined by the **number of layers**.
 Each layer's **arity** is calculated as:
 
 $$
@@ -31,6 +31,11 @@ $$
 {arity}_0 = \frac{layers[0].inputSize}{leafSize}
 $$
 
+:::note
+Each layer has a shrinking-factor defined by $\frac{layer.outputSize}{layer.inputSize}$.
+This factor is used to compute the input size, assuming a single root node.
+:::
+
 ---
 
 ### Defining a Merkle Tree
@@ -38,8 +43,8 @@ $$
 ```cpp
 // icicle/merkle/merkle_tree.h
 static MerkleTree create(
-    const std::vector<Hash>& layer_hashes, 
-    uint64_t leaf_element_size, 
+    const std::vector<Hash>& layer_hashes,
+    uint64_t leaf_element_size,
     uint64_t output_store_min_layer = 0);
 ```
 
@@ -47,17 +52,21 @@ static MerkleTree create(
 
 ### Building the Tree
 
+The Merkle tree can be constructed from input data of any type, allowing flexibility in its usage. The size of the input must align with the tree structure defined by the hash layers and leaf size. If the input size does not match the expected size, padding may be applied.
+
+Refer to the Padding Section for more details on how mismatched input sizes are handled.
+
 ```cpp
 // icicle/merkle/merkle_tree.h
 inline eIcicleError build(
-    const std::byte* leaves, 
-    uint64_t leaves_size, 
+    const std::byte* leaves,
+    uint64_t leaves_size,
     const MerkleTreeConfig& config);
 
 template <typename T>
 inline eIcicleError build(
-    const T* leaves, 
-    uint64_t nof_leaves, 
+    const T* leaves,
+    uint64_t nof_leaves,
     const MerkleTreeConfig& config);
 ```
 
@@ -77,12 +86,12 @@ const uint64_t leaf_size = 1024;
 const uint32_t max_input_size = leaf_size * 16;
 auto input = std::make_unique<uint64_t[]>(max_input_size / sizeof(uint64_t));
 
-// Define hasher
-auto layer0_hasher = Keccak256::create(leaf_size); // hash 1KB -> 32B
-auto next_layer_hasher = Keccak256::create(2 * layer0_hasher.output_size()); // hash every 64B to 32B
+// Define hashes
+auto hash = Keccak256::create(leaf_size); // hash 1KB -> 32B
+auto compress = Keccak256::create(2 * hasher.output_size()); // hash every 64B to 32B
 
 // Construct the tree using the layer hashes and leaf-size
-std::vector<Hash> hashes = {layer0_hasher, next_layer_hasher, next_layer_hasher, next_layer_hasher, next_layer_hasher};
+std::vector<Hash> hashes = {hasher, compress, compress, compress, compress};
 auto merkle_tree = MerkleTree::create(hashes, leaf_size);
 
 // compute the tree
@@ -105,10 +114,10 @@ const uint32_t max_input_size = leaf_size * 16;
 auto input = std::make_unique<uint64_t[]>(max_input_size / sizeof(uint64_t));
 
 // note here we use Blake2S for the upper layer
-auto layer0_hasher = Keccak256::create(leaf_size);
-auto next_layer_hasher = Blake2s::create(4 * layer0_hasher.output_size());
+auto hash = Keccak256::create(leaf_size);
+auto compress = Blake2s::create(4 * hash.output_size());
 
-std::vector<Hash> hashes = {layer0_hasher, next_layer_hasher};
+std::vector<Hash> hashes = {hash, compress, compress};
 auto merkle_tree = MerkleTree::create(hashes, leaf_size);
 
 merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), default_merkle_tree_config());
@@ -122,8 +131,8 @@ Any combination of hashes is valid including **Poseidon** that computes on field
 
 ## Padding
 
-:::note  
-This feature is not yet supported in **v3.1** and will be available in **v3.2**.  
+:::note
+Padding feature is not yet supported in **v3.1** and will be available in **v3.2**.
 :::
 
 When the input for **layer 0** is smaller than expected, ICICLE can apply **padding** to align the data.
@@ -142,6 +151,8 @@ merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), config);
 
 ## Root as Commitment
 
+Retrieve the Merkle-root and serialize.
+
 ```cpp
 /**
  * @brief Returns a pair containing the pointer to the root (ON HOST) data and its size.
@@ -150,16 +161,27 @@ merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), config);
 inline std::pair<const std::byte*, size_t> get_merkle_root() const;
 
 auto [commitment, size] = merkle_tree.get_merkle_root();
+serialize_commitment_application_code(...);
 ```
 
 :::note
-The commitment can be serialized to the proof.
+The commitment can be serialized to the proof. This is not handled by ICICLE.
 :::
+
 ---
 
 ## Generating Merkle Proofs
 
-### Definition
+Merkle proofs are used to **prove the integrity of opened leaves** in a Merkle tree. A proof ensures that a specific leaf belongs to the committed data by enabling the verifier to reconstruct the **root hash (commitment)**.
+
+A Merkle proof contains:
+
+- **Leaf**: The data being verified.
+- **Index** (leaf_idx): The position of the leaf in the original dataset.
+- **Path**: A sequence of sibling hashes (tree nodes) needed to recompute the path from the leaf to the root.
+
+![Merkle Pruned Phat Diagram](./merkle_diagrams/diagram1_path.png)
+
 
 ```cpp
 // icicle/merkle/merkle_proof.h
@@ -175,9 +197,9 @@ Generating a proof for leaf idx 3:
 ```cpp
 MerkleProof proof{};
 auto err = merkle_tree.get_merkle_proof(
-    input.get(), 
-    max_input_size / sizeof(uint64_t), 
-    3 /*leaf-idx*/, true, 
+    input.get(),
+    max_input_size / sizeof(uint64_t),
+    3 /*leaf-idx*/, true,
     default_merkle_tree_config(), proof);
 
 auto [_leaf, _leaf_size, _leaf_idx] = proof.get_leaf();
@@ -185,7 +207,7 @@ auto [_path, _path_size] = proof.get_path();
 ```
 
 :::note
-The Merkle-path can be serialized to the proof along the leaf.
+The Merkle-path can be serialized to the proof along the leaf. This is not handled by ICICLE.
 :::
 
 ---
@@ -198,41 +220,37 @@ The Merkle-path can be serialized to the proof along the leaf.
  * @param merkle_proof The MerkleProof object includes the leaf, path, and the root.
  * @param valid output valid bit. True if the proof is valid, false otherwise.
  */
-eIcicleError verify(const MerkleProof& merkle_proof, bool& valid) const;
+eIcicleError verify(const MerkleProof& merkle_proof, bool& valid) const
+```
 
+### Example: Verifying a Proof
+
+```cpp
 bool valid = false;
 auto err = merkle_tree.verify(proof, valid);
 ```
 
 ---
 
-## Pruned vs. Full Paths
+## Pruned vs. Full Merkle-paths
 
-A **Merkle path** is a collection of **sibling hashes** that allows the verifier to **reconstruct the root hash** from a specific leaf.  
-This enables anyone with the **path and root** to verify that the **leaf** belongs to the committed dataset. 
+A **Merkle path** is a collection of **sibling hashes** that allows the verifier to **reconstruct the root hash** from a specific leaf.
+This enables anyone with the **path and root** to verify that the **leaf** belongs to the committed dataset.
 There are two types of paths that can be computed:
 
-- **Pruned Path:** Contains only necessary sibling hashes.
-
-![Merkle Pruned Phat Diagram](./merkle_diagrams/diagram1_path.png)
-
-```cpp
-MerkleProof proof{};
-auto err = merkle_tree.get_merkle_proof(
-    input.get(), 
-    max_input_size / sizeof(uint64_t), 
-    3 /*leaf-idx*/, true /*=pruned*/,  // --> note the pruned flag here
-    default_merkle_tree_config(), proof);
-```
+- [**Pruned Path:**](#generating-merkle-proofs) Contains only necessary sibling hashes.
 - **Full Path:** Contains all sibling nodes and intermediate hashes.
+
 
 ![Merkle Full Path Diagram](./merkle_diagrams/diagram1_path_full.png)
 
+To compute a full path, specify `pruned=false`:
+
 ```cpp
 MerkleProof proof{};
 auto err = merkle_tree.get_merkle_proof(
-    input.get(), 
-    max_input_size / sizeof(uint64_t), 
+    input.get(),
+    max_input_size / sizeof(uint64_t),
     3 /*leaf-idx*/, false /*=pruned*/,  // --> note the pruned flag here
     default_merkle_tree_config(), proof);
 ```
@@ -241,7 +259,7 @@ auto err = merkle_tree.get_merkle_proof(
 
 ## Handling Partial Tree Storage
 
-In cases where the **Merkle tree is large**, only the **top layers** may be stored to conserve memory.  
+In cases where the **Merkle tree is large**, only the **top layers** may be stored to conserve memory.
 When opening leaves, the **first layers** (closest to the leaves) are **recomputed dynamically**.
 
 For example to avoid storing first layer we can define a tree as follows:
