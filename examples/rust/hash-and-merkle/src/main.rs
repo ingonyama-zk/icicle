@@ -1,6 +1,6 @@
 use clap::Parser;
 use hex;
-use icicle_babybear::field::{ScalarCfg as BabybearCfg, ScalarField as BabybearField};
+use icicle_babybear::field::ScalarCfg as BabybearCfg;
 use icicle_core::{
     hash::{HashConfig, Hasher},
     merkle::{MerkleTree, MerkleTreeConfig, PaddingPolicy},
@@ -102,91 +102,88 @@ fn keccak_hash_example() {
 }
 
 fn merkle_tree_example() {
-    // ICICLE provides the following capabilities for working with Merkle trees:
-    //
+    // In this example we will demonstrate how to build a binary Merkle-tree as a string commitment, then prove and verify parts of the string.
+    let input_string = String::from(
+        "Hello, this is an ICICLE example to commit to a string and open specific parts +Add optional Pad",
+    );
+    let leaf_size = 6; // Leaf is the value that is opened. We will open 6 chars (bytes) of the string in this example.
+    let nof_leafs = input_string
+        .chars()
+        .count() as u64
+        / leaf_size;
+
     // 1. Define the Merkle Tree Structure:
-    //    - The first step in constructing a Merkle tree is defining its structure, including the number of layers and the hash function(s) to use at each layer.
+    //    - The first step in constructing a Merkle-tree is defining its structure, including the number of layers and the hash function(s) to use at each layer.
     //    - You can apply different hash functions at different layers, giving flexibility in customizing the tree based on your requirements.
     //
-    // Let's define a Merkle tree where:
-    // - The first layer hashes chunks of 1KB using Keccak-256.
-    // - The subsequent layers use a tree with arity=4 (4 inputs per node), meaning each hash will operate on 128B of input (4x32B). For these layers, we will use the Blake2s hash function.
+    // Let's define a binary Merkle tree using Keccak-256 to hash the leaves, then Blake2s for the remaining layers
+    // Note: typical use case is using up to two different hash functions (usually one)
 
-    let leaf_size = 1024; // 1KB for the first layer (each leaf)
-    let keccak_hasher = Keccak256::new(leaf_size /* input chunk size */).unwrap();
-    let blake2s_hasher = Blake2s::new(128 /* 128B for each node in later layers */).unwrap();
+    let hasher: Hasher = Keccak256::new(leaf_size /*=default input size */).unwrap(); // will hash every 4 bytes
+    let compress: Hasher = Blake2s::new(hasher.output_size() * 2 /*=default input size */).unwrap(); // compress every two child nodes to one using blake2s
 
-    // Define the hashers for each layer in the tree. For simplicity, we're using Blake2s for the internal layers.
-    let _layer_hashes = [
-        &keccak_hasher,  // Layer 0: Each leaf is 1KB, hashed to 32B using Keccak256
-        &blake2s_hasher, // Layer 1: Hashes 128B chunks to 32B using Blake2s
-        &blake2s_hasher, // Layer 2: Continues hashing 128B to 32B
-        &blake2s_hasher, // Layer 3: Hashes 128B to 32B, producing the root
-    ];
-
-    // Alternatively, the tree structure can be built dynamically using an iterator
-    let nof_layers = 4; // Assume this is computed from the input size
-    let layer_hashes: Vec<&Hasher> = std::iter::once(&keccak_hasher)
-        .chain(std::iter::repeat(&blake2s_hasher).take(nof_layers - 1))
+    let tree_height = nof_leafs.ilog2() as usize;
+    let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
+        .chain(std::iter::repeat(&compress).take(tree_height))
         .collect();
 
-    // Initialize the Merkle tree structure with the specified layers and hash functions.
-    let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0 /* store full tree */).unwrap();
-    // NOTE: This tree is defined for a 64KB input size and may need adjustments for larger input sizes. Smaller size is padded.
+    let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0 /* min tree layer to store */).unwrap();
+    // Note that we can store only the top layers of the tree if it is very large for the device memory.
 
     // 2. Merkle Tree Construction (Commit Phase):
     //    - The commit phase involves constructing the Merkle tree and computing the root hash, which serves as a cryptographic commitment to the input data.
-    //    - You can construct the entire tree or just partial layers if the tree is too large.
-    //
-    // Generate random input data to commit. We are generating 16,384 Babybear elements (each 4 bytes), for a total of 64KB.
-    // This is a synthetic example where a leaf is 256 elements, just to demonstrate the flexibility.
-    let leafs = BabybearCfg::generate_random(1 << 14); // 16K Babybear elements (input layer = 64KB)
+    //    - You can construct and store the entire tree or just partial layers if the tree is too large.
 
-    // Configure the Merkle tree settings. In this example, zero-padding is used for smaller inputs.
+    // Configure the Merkle tree settings. In this example, zero-padding is used for when input is too small for the tree structure.
     let mut config = MerkleTreeConfig::default();
     config.padding_policy = PaddingPolicy::ZeroPadding; // Add padding if the input is smaller than expected.
+                                                        // TODO: padding not supported in v3.1. Expected in v3.2
 
     // Build (commit to) the Merkle tree with the input data.
+    let input = input_string.as_bytes();
     merkle_tree
-        .build(HostSlice::from_slice(&leafs), &config)
+        .build(HostSlice::from_slice(&input), &config)
         .unwrap();
 
-    // Retrieve the root commitment. In this example, 256 Babybear field elements make up a single leaf.
-    let commitment: &[BabybearField] = merkle_tree
+    // Retrieve the root commitment
+    let commitment: &[u8] = merkle_tree
         .get_root()
         .unwrap();
-    assert_eq!(commitment.len(), leaf_size as usize / 4); // Ensure the root matches the expected size.
+    println!("Tree.root         = 0x{}", hex::encode(commitment));
 
     // 3. Proof of Inclusion (Merkle Proofs):
     //    - After building the Merkle tree, you can generate Merkle proofs to prove the inclusion of specific leaves in the tree.
     //    - A Merkle proof consists of a set of sibling hashes that allow the verifier to reconstruct the root from the leaf.
     //    - Proofs can be pruned to include only necessary hashes or contain all sibling nodes.
-    //
-    // Generate a Merkle proof for the leaf at index 7.
-    let merkle_proof = merkle_tree
-        .get_proof(HostSlice::from_slice(&leafs), 7, &config)
-        .unwrap();
 
-    // TODO: Consider renaming `get_proof()` to `prove()` for clarity.
+    // Generate a Merkle proof for the leaf at index 3.
+    let merkle_proof = merkle_tree
+        .get_proof(HostSlice::from_slice(&input), 3, true /*=pruned*/, &config)
+        .unwrap();
 
     // 4. Serialization:
     //    - ICICLE allows you to generate Merkle proofs, but serialization (e.g., converting the proof into a format for transmission) is left to the user.
-    //
-    // Serialization of the proof is necessary if it is to be sent or stored for later verification.
 
-    let _pruned = merkle_proof.is_pruned(); // Check if the proof is pruned.
-    let _path: &[u8] = merkle_proof.get_path(); // Get the path for inclusion verification.
-    let _root: &[u8] = merkle_proof.get_root(); // Get the root associated with the proof.
-    let (_leaf, _leaf_idx): (&[u8], u64) = merkle_proof.get_leaf(); // Get the leaf and its index in the tree.
+    let (leaf, opened_leaf_idx): (&[u8], u64) = merkle_proof.get_leaf(); // Get the leaf and its index in the tree.
+    let merkle_path: &[u8] = merkle_proof.get_path();
 
-    // Can serialize any part of the proof to any format. You can also use other types instead of u8.
-    // For example, if using Poseidon, it would make sense to retrieve path, root, and leaf as field elements.
+    println!("Proof.pruned      = {}", merkle_proof.is_pruned());
+    println!("Proof.commitment  = 0x{}", hex::encode(&merkle_proof.get_root()));
+    println!("Proof.leaf_idx    = {}", opened_leaf_idx);
+    println!("Proof.leaf        = '{}'", std::str::from_utf8(leaf).unwrap());
+    let layer_hash_len = 32; // Note that this print loop assumes that the path is 32B per layer. This it not always the case but to simplify the example.
+    for (i, chunk) in merkle_path
+        .chunks(layer_hash_len)
+        .enumerate()
+    {
+        println!("Proof.path.layer{}    = {}", i, hex::encode(chunk));
+    }
+    // Note that you can get various types of slices from the merkle-proof object. // For example, if using Poseidon, it would make sense to take a &[FieldElementType]
 
     // 5. Verification:
-    //    - Verifying a Merkle proof involves checking that the provided proof hashes back to the root, thus confirming the inclusion of the data.
-    //    - ICICLE provides a `verify` function that checks the validity of the Merkle proof.
-    //
-    // Verify the proof to check if the leaf is correctly included in the tree.
+    //    - Verifying a Merkle proof involves checking that the provided proof hashes back to the root, thus confirming the inclusion of the data and its location in the input.
+    //    - ICICLE provides a `verify` function that checks the validity of the Merkle proof. Note that the verify part is fully open sourced and implemented only for CPU.
+
     let proof_is_valid = merkle_tree
         .verify(&merkle_proof)
         .unwrap();
@@ -208,5 +205,8 @@ fn main() {
     keccak_hash_example();
 
     // Execute the Merkle-tree example
+    // TODO remove this when merkle-tree works on CUDA backend
+    println!("\nWARNING: merkle-tree example falling back to CPU");
+    icicle_runtime::set_device(&icicle_runtime::Device::new("CPU", 0)).unwrap();
     merkle_tree_example();
 }
