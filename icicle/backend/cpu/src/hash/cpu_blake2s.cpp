@@ -26,9 +26,6 @@ namespace icicle {
       const auto single_input_size = get_single_chunk_size(
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
 
-      ICICLE_LOG_DEBUG << "Blake2s CPU hash() called, batch=" << config.batch
-                       << ", single_output_size=" << output_size();
-
       // TODO (future): use tasks manager to parallel across threads. Add option to config-extension to set #threads
       // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
       // outside a merkle-tree context is not as fast as it could be.

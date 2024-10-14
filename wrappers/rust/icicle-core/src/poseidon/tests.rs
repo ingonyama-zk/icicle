@@ -35,7 +35,7 @@ where
 {
     let arity = 9;
     let nof_layers = 4;
-    let num_elements = (1 << nof_layers) * arity;
+    let num_elements = 9_u32.pow(nof_layers);
     let mut leaves: Vec<F> = (0..num_elements)
         .map(|i| F::from_u32(i))
         .collect();
@@ -54,6 +54,7 @@ where
         .get_proof(
             HostSlice::from_slice(&leaves),
             leaf_idx_to_open as u64,
+            true, /*=pruned */
             &MerkleTreeConfig::default(),
         )
         .unwrap();
