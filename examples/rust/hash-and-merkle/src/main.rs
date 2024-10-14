@@ -106,6 +106,8 @@ fn merkle_tree_example() {
     let input_string = String::from(
         "Hello, this is an ICICLE example to commit to a string and open specific parts +Add optional Pad",
     );
+    println!("Commiting to the input string (leaf-size=6 bytes): `{}`", &input_string);
+
     let leaf_size = 6; // Leaf is the value that is opened. We will open 6 chars (bytes) of the string in this example.
     let nof_leafs = input_string
         .chars()
@@ -157,6 +159,7 @@ fn merkle_tree_example() {
     //    - Proofs can be pruned to include only necessary hashes or contain all sibling nodes.
 
     // Generate a Merkle proof for the leaf at index 3.
+
     let merkle_proof = merkle_tree
         .get_proof(HostSlice::from_slice(&input), 3, true /*=pruned*/, &config)
         .unwrap();
@@ -202,7 +205,7 @@ fn main() {
     try_load_and_set_backend_device(&args);
 
     // Execute the Keccak hashing example
-    keccak_hash_example();
+    // keccak_hash_example();
 
     // Execute the Merkle-tree example
     // TODO remove this when merkle-tree works on CUDA backend
