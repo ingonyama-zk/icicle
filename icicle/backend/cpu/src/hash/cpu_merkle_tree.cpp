@@ -4,6 +4,7 @@
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/errors.h"
 #include "icicle/utils/log.h"
+#include "icicle/utils/utils.h"
 #include "tasks_manager.h"
 
 #define CONFIG_NOF_THREADS_KEY  "n_threads"
@@ -181,7 +182,6 @@ namespace icicle {
       }
 
       path = copy_to_path_from_store_min_layer(input_chunk_offset, is_pruned, path);
-      // print_proof(merkle_proof);
       return eIcicleError::SUCCESS;
     }
 
@@ -335,9 +335,10 @@ namespace icicle {
                                                : NOF_OPERATIONS_PER_TASK;
         cur_layer.m_last_hash_config.is_async = merkle_config.is_async;
 
-        // if the layer is in range then allocate the according to the number of hashes in that layer.
+        // If the current layer is within the range of stored layers (starting from m_output_store_min_layer),
+        // allocate memory based on the number of hashes in the current layer.
         if (m_output_store_min_layer <= layer_idx) {
-          const uint64_t nof_bytes_to_allocate = cur_layer.m_nof_hashes * cur_layer.m_hash.input_default_chunk_size();
+          const uint64_t nof_bytes_to_allocate = cur_layer.m_nof_hashes * cur_layer.m_hash.output_size();
           cur_layer.m_results.reserve(nof_bytes_to_allocate);
           cur_layer.m_results.resize(nof_bytes_to_allocate);
         }
@@ -425,19 +426,6 @@ namespace icicle {
         }
       }
       return path;
-    }
-
-    // Debug
-    void print_bytes(const std::byte* data, const uint nof_elements, const uint element_size) const
-    {
-      for (uint element_idx = 0; element_idx < nof_elements; ++element_idx) {
-        std::cout << ", 0x";
-        for (int byte_idx = element_size - 1; byte_idx >= 0; --byte_idx) {
-          std::cout << std::hex << std::setw(2) << std::setfill('0')
-                    << static_cast<int>(data[element_idx * element_size + byte_idx]);
-        }
-      }
-      std::cout << std::endl;
     }
   };
 
