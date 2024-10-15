@@ -1,11 +1,11 @@
-curve=4
+curve=1
 
 build_msm_test:
 	mkdir -p build
 	mkdir -p build/generated_data
 	g++ -O3 -o build/msm_test msm_test.cpp -I.. -I../../../../../include -I../../../include -I../../../../../include/icicle/utils/ -std=c++17 -DCURVE_ID=$(curve)
 
-run_memory_check:
+mem_check:
 	mkdir -p build
 	mkdir -p build/generated_data
 	g++ -O3 -fsanitize=address -fno-omit-frame-pointer -g -o build/msm_test msm_test.cpp -I.. -I../../../../../include -I../../../include -I../../../../../include/icicle/utils/ -std=c++17 -DCURVE_ID=$(curve)

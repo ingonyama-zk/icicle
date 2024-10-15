@@ -1,11 +1,11 @@
 #include <stdbool.h>
 
 #ifndef _RUNTIME_H
-#define _RUNTIME_H
+  #define _RUNTIME_H
 
-#ifdef __cplusplus
+  #ifdef __cplusplus
 extern "C" {
-#endif
+  #endif
 
 typedef struct Device Device;
 typedef struct DeviceProperties DeviceProperties;
@@ -36,8 +36,8 @@ int icicle_get_device_properties(DeviceProperties* properties);
 int icicle_is_device_available(const Device* dev);
 int icicle_get_registered_devices(char* output, size_t output_size);
 
-#ifdef __cplusplus
+  #ifdef __cplusplus
 }
-#endif
+  #endif
 
 #endif

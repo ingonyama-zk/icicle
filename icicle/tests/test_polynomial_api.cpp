@@ -529,15 +529,15 @@ TEST_F(PolynomialTest, slicing)
 }
 
 #ifdef MSM
-#include "icicle/msm.h"
-#include "icicle/curves/curve_config.h"
+  #include "icicle/msm.h"
+  #include "icicle/curves/curve_config.h"
 using curve_config::affine_t;
 using curve_config::projective_t;
 
-#ifdef G2
+  #ifdef G2
 using curve_config::g2_affine_t;
 using curve_config::g2_projective_t;
-#endif // G2
+  #endif // G2
 
 class dummy_g2_t : public scalar_t
 {
@@ -985,7 +985,7 @@ TEST_F(PolynomialTest, DummyGroth16)
   ASSERT_EQ(groth16_example.dummy_verify(proof, witness), true);
 }
 
-#ifdef G2
+  #ifdef G2
 TEST_F(PolynomialTest, Groth16)
 {
   // (1) construct R1CS and QAP for circuit with N inputs
@@ -1000,7 +1000,7 @@ TEST_F(PolynomialTest, Groth16)
   auto proof = groth16_example.prove(witness);
   // groth16_example.verify(proof); // cannot implement without pairing
 }
-#endif // G2
+  #endif // G2
 
 #endif // MSM
 

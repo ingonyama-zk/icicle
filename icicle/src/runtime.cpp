@@ -184,7 +184,7 @@ extern "C" eIcicleError icicle_copy(void* dst, const void* src, size_t size)
   auto err = _determine_copy_direction(dst, src, direction);
   if (eIcicleError::SUCCESS != err) { return err; }
   if (eCopyDirection::HostToHost == direction) {
-    ICICLE_LOG_DEBUG
+    ICICLE_LOG_VERBOSE
       << "Host to Host copy, falling back to std::memcpy(). NOTE: memory allocated outside of icicle APIs is "
          "considered host memory. Do not use icicle_copy() with memory allocated by external libs (e.g. a cudaMalloc() "
          "call)";
@@ -265,7 +265,7 @@ const std::string SHARED_LIB_EXTENSION = ".so";
 #elif __APPLE__
 const std::string SHARED_LIB_EXTENSION = ".dylib";
 #else
-#error "Unsupported operating system"
+  #error "Unsupported operating system"
 #endif
 
 extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)

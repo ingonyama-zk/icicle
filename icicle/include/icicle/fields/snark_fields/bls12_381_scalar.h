@@ -1,10 +1,10 @@
 #pragma once
 #ifndef BLS12_381_SCALAR_PARAMS_H
-#define BLS12_381_SCALAR_PARAMS_H
+  #define BLS12_381_SCALAR_PARAMS_H
 
-#include "icicle/fields/storage.h"
-#include "icicle/fields/field.h"
-#include "icicle/fields/params_gen.h"
+  #include "icicle/fields/storage.h"
+  #include "icicle/fields/field.h"
+  #include "icicle/fields/params_gen.h"
 
 namespace bls12_381 {
   struct fp_config {

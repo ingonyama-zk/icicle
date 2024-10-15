@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -29,6 +31,6 @@ public:
     auto duration = end_time - start_time;
 
     double dur_s = duration * 0.001;
-    std::cout << "Time of " << m_timer_name << ":\t" << dur_s << "ms\n";
+    ICICLE_LOG_INFO << "Time of " << m_timer_name << ":\t" << dur_s << "ms\n";
   }
 };

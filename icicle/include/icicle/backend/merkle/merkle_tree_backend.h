@@ -31,6 +31,13 @@ namespace icicle {
         : m_layer_hashes(layer_hashes), m_leaf_element_size(leaf_element_size),
           m_output_store_min_layer(output_store_min_layer)
     {
+      ICICLE_ASSERT(output_store_min_layer < layer_hashes.size())
+        << "output_store_min_layer must be smaller than nof_layers. At least the root should be saved on tree. "
+           "(nof_layers="
+        << layer_hashes.size() << ", output_store_min_layer=" << output_store_min_layer << ")\n";
+
+      ICICLE_ASSERT(layer_hashes[0].input_default_chunk_size() % leaf_element_size == 0)
+        << "A whole number of leaves must be fitted into the hashes of the first layer.\n";
     }
 
     virtual ~MerkleTreeBackend() = default;
@@ -38,29 +45,33 @@ namespace icicle {
     /**
      * @brief Build the Merkle tree from the provided leaves.
      * @param leaves Pointer to the leaves of the tree (input data).
-     * @param size The size of the leaves.
+     * @param leaves_size The size of the leaves.
      * @param config Configuration for the Merkle tree operation.
      * @return Error code of type eIcicleError indicating success or failure.
      */
-    virtual eIcicleError build(const std::byte* leaves, uint64_t size, const MerkleTreeConfig& config) = 0;
+    virtual eIcicleError build(const std::byte* leaves, uint64_t leaves_size, const MerkleTreeConfig& config) = 0;
 
     /**
      * @brief Returns a pair containing the pointer to the root (ON HOST) data and its size.
      * @return A pair of (root data pointer, root size).
      */
-    virtual std::pair<std::byte*, size_t> get_merkle_root() const = 0;
+    virtual std::pair<const std::byte*, size_t> get_merkle_root() const = 0;
 
     /**
      * @brief Retrieve the Merkle path for a specific element.
      * @param leaves Pointer to the leaves of the tree.
-     * @param element_idx Index of the element for which the Merkle path is required.
+     * @param size The size of the leaves.
+     * @param leaf_idx Index of the leaf element for which the Merkle path is required.
+     * @param is_pruned If set, the path will not include hash results that can be extracted from siblings
      * @param config Configuration for the Merkle tree operation.
      * @param merkle_proof Reference to the MerkleProof object where the path will be stored.
      * @return Error code of type eIcicleError.
      */
     virtual eIcicleError get_merkle_proof(
       const std::byte* leaves,
-      uint64_t element_idx,
+      uint64_t size,
+      uint64_t leaf_idx,
+      bool is_pruned,
       const MerkleTreeConfig& config,
       MerkleProof& merkle_proof /*output*/) const = 0;
 
@@ -85,7 +96,7 @@ namespace icicle {
      */
     uint64_t get_output_store_min_layer() const { return m_output_store_min_layer; }
 
-  private:
+  protected:
     std::vector<Hash> m_layer_hashes;  ///< Vector of hash functions for each layer.
     uint64_t m_leaf_element_size;      ///< Size of each leaf element in bytes.
     uint64_t m_output_store_min_layer; ///< Minimum layer index to store in the output.

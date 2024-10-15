@@ -24,16 +24,6 @@ pub trait PoseidonHasher<F: FieldImpl> {
     fn new(arity: u32) -> Result<Hasher, eIcicleError>;
 }
 
-/// Function to initialize default Poseidon constants for a specific field type.
-/// It delegates the call to the `initialize_default_constants()` function of the `PoseidonHasher` trait.
-pub fn initialize_default_poseidon_constants<F>() -> Result<(), eIcicleError>
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: PoseidonHasher<F>, // Requires that the `Config` associated with `F` implements `PoseidonHasher`.
-{
-    <<F as FieldImpl>::Config as PoseidonHasher<F>>::initialize_default_constants()
-}
-
 /// Function to initialize Poseidon constants based on user-defined options for a specific field type.
 /// Currently, this function returns an error as the feature is not yet implemented.
 /// TODO: Define PoseidonConstantsOptions and implement the function logic.
@@ -53,6 +43,18 @@ where
     <F as FieldImpl>::Config: PoseidonHasher<F>, // Requires that the `Config` associated with `F` implements `PoseidonHasher`.
 {
     <<F as FieldImpl>::Config as PoseidonHasher<F>>::new(arity)
+}
+
+pub struct Poseidon;
+
+impl Poseidon {
+    pub fn new<F>(arity: u32) -> Result<Hasher, eIcicleError>
+    where
+        F: FieldImpl,                 // F must implement the FieldImpl trait
+        F::Config: PoseidonHasher<F>, // The Config associated with F must implement PoseidonHasher<F>
+    {
+        create_poseidon_hasher::<F>(arity)
+    }
 }
 
 #[macro_export]
