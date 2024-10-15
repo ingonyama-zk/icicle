@@ -1,5 +1,5 @@
 
-# ICICLE Example: Keccak-256 Hashing and Merkle-Tree
+# ICICLE Example: Hashing and Merkle-Tree
 
 ## Key Takeaway
 
@@ -18,7 +18,7 @@ The examples cover:
 3. **Field Element Hashing**: Hash Babybear field elements using Keccak-256.
 4. **Merkle Tree Construction**: Build, prove, and verify a Merkle tree using Keccak-256 and blake2s.
 
-## Hashing Example
+## 1. Hashing Example
 
 This example hashes both strings and field elements using **Keccak-256**, commonly used in cryptographic systems.
 
