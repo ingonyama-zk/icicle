@@ -55,6 +55,8 @@ impl Poseidon {
     {
         create_poseidon_hasher::<F>(arity)
     }
+
+    // TODO expose constructor with default_input_size and domain_tag too
 }
 
 #[macro_export]
@@ -83,7 +85,7 @@ macro_rules! impl_poseidon {
                 fn poseidon_init_constants(options: *const PoseidonConstantsOptions<$field>) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_create_poseidon_hasher")]
-                fn create_poseidon_hasher(arity: u32) -> HasherHandle;
+                fn create_poseidon_hasher(arity: u32, default_input_size: u32, domain_tag: bool) -> HasherHandle;
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
@@ -98,7 +100,7 @@ macro_rules! impl_poseidon {
                 }
 
                 fn new(arity: u32) -> Result<Hasher, eIcicleError> {
-                    let handle: HasherHandle = unsafe { create_poseidon_hasher(arity) }; // Calls the external FFI function to create the hasher.
+                    let handle: HasherHandle = unsafe { create_poseidon_hasher(arity, 0, false) }; // Calls the external FFI function to create the hasher.
                     if handle.is_null() {
                         return Err(eIcicleError::UnknownError); // Checks if the handle is null and returns an error if so.
                     }

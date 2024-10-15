@@ -24,10 +24,11 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(CreatePoseidonHasherDispatcher, create_poseidon, CreatePoseidonImpl);
 
   template <>
-  Hash create_poseidon_hash<scalar_t>(unsigned arity)
+  Hash create_poseidon_hash<scalar_t>(unsigned arity, unsigned default_input_size, bool is_domain_tag)
   {
     std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(arity, backend, scalar_t::zero()));
+    ICICLE_CHECK(
+      CreatePoseidonHasherDispatcher::execute(arity, default_input_size, is_domain_tag, backend, scalar_t::zero()));
     Hash poseidon{backend};
     return poseidon;
   }

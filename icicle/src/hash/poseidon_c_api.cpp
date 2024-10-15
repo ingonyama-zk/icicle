@@ -20,8 +20,9 @@ eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)()
   return Poseidon::init_default_constants<scalar_t>();
 }
 
-HasherHandle CONCAT_EXPAND(FIELD, create_poseidon_hasher)(unsigned arity)
+HasherHandle
+CONCAT_EXPAND(FIELD, create_poseidon_hasher)(unsigned arity, unsigned default_input_size, bool is_domain_tag)
 {
-  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(arity));
+  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(arity, default_input_size, is_domain_tag));
 }
 }

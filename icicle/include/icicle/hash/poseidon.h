@@ -18,16 +18,18 @@ namespace icicle {
   struct PoseidonConstantsOptions {
     // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
     // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
-    bool          is_domain_tag = false;  ///< If i_domain_tag is set then single hash width = arity + 1, otherwise width = arity.
-    unsigned int  arity;                  ///< Arity of a hash (number of inputs of the single hash).
-    unsigned int  alpha;                  ///< Sbox power.
-    unsigned int  nof_upper_full_rounds;  ///< Number of upper full rounds of a single hash.
-    unsigned int  nof_partial_rounds;     ///< Number of partial rounds of a single hash.
-    unsigned int  nof_end_full_rounds;    ///< Number of bottom full rounds of a single hash.
-    S*            rounds_constants;       ///< Round constants (both of the full and the partial rounds). The order of the constants in the memory is according to the rounds order.
-    S*            mds_matrix;             ///> MDS matrix used in the full rounds. The same matrix is used for all the full rounds.
-    S*            pre_matrix;             ///< Pre-matrix used in the last upper full round.
-    S*            sparse_matrices;        ///< Sparse matries that are used in the partial rounds. A single aprse matrix in the memory has "arity x arity" members. The calculation is done only on the member that not equal to zero.
+    bool is_domain_tag = false; ///< If i_domain_tag is set then single hash width = arity + 1, otherwise width = arity.
+    unsigned int arity;         ///< Arity of a hash (number of inputs of the single hash).
+    unsigned int alpha;         ///< Sbox power.
+    unsigned int nof_upper_full_rounds; ///< Number of upper full rounds of a single hash.
+    unsigned int nof_partial_rounds;    ///< Number of partial rounds of a single hash.
+    unsigned int nof_end_full_rounds;   ///< Number of bottom full rounds of a single hash.
+    S* rounds_constants; ///< Round constants (both of the full and the partial rounds). The order of the constants in
+                         ///< the memory is according to the rounds order.
+    S* mds_matrix;       ///> MDS matrix used in the full rounds. The same matrix is used for all the full rounds.
+    S* pre_matrix;       ///< Pre-matrix used in the last upper full round.
+    S* sparse_matrices; ///< Sparse matries that are used in the partial rounds. A single aprse matrix in the memory has
+                        ///< "arity x arity" members. The calculation is done only on the member that not equal to zero.
   };
 
   // Function to generate and initialize Poseidon constants based on user-defined options.
@@ -44,13 +46,15 @@ namespace icicle {
   // arities). This function simplifies initialization when custom constants are not needed, and the user can rely on
   // default values.
   template <typename S>
-  eIcicleError poseidon_init_default_constants();
+  eIcicleError poseidon_init_default_constants(); // TODO Danny: we decided to remove this API and let the backend
+                                                  // handle it when constructed right?
 
   // Function to create a Poseidon hash object for a given arity.
   // This function returns a `Hash` object configured to use the Poseidon hash for the specified arity.
   // The arity controls the number of inputs the hash function can take (branching factor).
+  // TODO Danny: describe the inputs field and how (arity,default_input_size,is_domain_tag) work.
   template <typename S>
-  Hash create_poseidon_hash(unsigned arity);
+  Hash create_poseidon_hash(unsigned arity, unsigned default_input_size, bool is_domain_tag);
 
   // Poseidon struct providing a static interface to Poseidon-related operations.
   struct Poseidon {
@@ -58,9 +62,9 @@ namespace icicle {
     // This method provides a simple API for creating a Poseidon hash object, hiding the complexity of template
     // parameters from the user. It uses the specified `arity` to create the Poseidon hash.
     template <typename S>
-    inline static Hash create(unsigned arity)
+    inline static Hash create(unsigned arity, unsigned default_input_size, bool is_domain_tag)
     {
-      return create_poseidon_hash<S>(arity);
+      return create_poseidon_hash<S>(arity, default_input_size, is_domain_tag);
     }
 
     // Static method to initialize Poseidon constants based on user-defined options.
