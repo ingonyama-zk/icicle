@@ -7,7 +7,7 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(InitPoseidonConstantsDispatcher, poseidon_init_constants, InitPoseidonConstantsImpl);
 
   template <>
-  eIcicleError poseidon_init_constants(const PoseidonConstantsInitOptions<scalar_t>* options)
+  eIcicleError poseidon_init_constants(const PoseidonConstantsOptions<scalar_t>* options)
   {
     return InitPoseidonConstantsDispatcher::execute(options);
   }

@@ -10,7 +10,7 @@ using namespace icicle;
 extern "C" {
 typedef icicle::Hash* HasherHandle;
 
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(const PoseidonConstantsInitOptions<scalar_t>* options)
+eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(const PoseidonConstantsOptions<scalar_t>* options)
 {
   return Poseidon::init_constants<scalar_t>(options);
 }

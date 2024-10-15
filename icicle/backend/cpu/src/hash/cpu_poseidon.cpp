@@ -27,12 +27,12 @@ namespace icicle {
 
   #define POSEIDON_MAX_ARITY 12
 
-  static unsigned int poseidon_legal_arities[] = {3, 5, 9, 12};
+  static unsigned int poseidon_legal_width[] = {3, 5, 9, 12};
 
-  static PoseidonConstantsInitOptions<scalar_t> poseidon_constants[POSEIDON_MAX_ARITY+1];   // The size of this array is 13 because Poseidon max arity is 12. Only terms 3, 5, 9 and 12 are filled with data. Rest of the terms are not relevant.
+  static PoseidonConstantsOptions<scalar_t> poseidon_constants[POSEIDON_MAX_ARITY+1];   // The size of this array is 13 because Poseidon max arity is 12. Only terms 3, 5, 9 and 12 are filled with data. Rest of the terms are not relevant.
 
   static eIcicleError
-  cpu_poseidon_init_constants(const Device& device, const PoseidonConstantsInitOptions<scalar_t>* options)
+  cpu_poseidon_init_constants(const Device& device, const PoseidonConstantsOptions<scalar_t>* options)
   {
     ICICLE_LOG_DEBUG << "in cpu_poseidon_init_constants() for type " << demangle<scalar_t>();
     poseidon_constants[options->arity] = *options;
@@ -41,55 +41,57 @@ namespace icicle {
 
   REGISTER_POSEIDON_INIT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_constants);
 
-  // // static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)   DANNY
-  // static eIcicleError cpu_poseidon_init_default_constants(const Device& device, /* unsigned int arity, */ const scalar_t& phantom)
-  // {
-  //   ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
-  //   unsigned int partial_rounds;
-  //   unsigned char* constants;
-  //   for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_arities); arity_idx++) {
-  //     unsigned int arity = poseidon_legal_arities[arity_idx];
-  //     poseidon_constants[arity].alpha = 5;
-  //     poseidon_constants[arity].nof_upper_full_rounds = 4;
-  //     poseidon_constants[arity].nof_end_full_rounds = 4;      
-  //     switch (poseidon_legal_arities[arity_idx]) {
-  //       case 3:
-  //         constants = poseidon_constants_3;
-  //         partial_rounds = partial_rounds_3;
-  //         break;
-  //       case 5:
-  //         constants = poseidon_constants_5;
-  //         partial_rounds = partial_rounds_5;
-  //         break;
-  //       case 9:
-  //         constants = poseidon_constants_9;
-  //         partial_rounds = partial_rounds_9;
-  //         break;
-  //       case 12:
-  //         constants = poseidon_constants_12;
-  //         partial_rounds = partial_rounds_12;
-  //         break;
-  //       default:
-  //         ICICLE_LOG_ERROR << "cpu_poseidon_init_default_constants: #arity must be one of [2, 4, 8, 11]";
-  //         return eIcicleError::INVALID_ARGUMENT;
-  //     }
-  //   }
+  static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)
+  {
+    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
+    unsigned int partial_rounds;
+    unsigned char* constants;
+    for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_width); arity_idx++) {
+      // We use width and not arity because width=arity+1 when poseidon_constants[arity].is_domain_tag is set.
+      // poseidon_constants[arity].is_domain_tag is set in the PoseidonBackendCPU constructor.
+      unsigned int T = poseidon_legal_width[arity_idx];   // Single poseidon hash width
+      poseidon_constants[T].alpha = 5;
+      poseidon_constants[T].nof_upper_full_rounds = 4;
+      poseidon_constants[T].nof_end_full_rounds = 4;      
+      switch (T) {
+        case 3:
+          constants = poseidon_constants_3;
+          partial_rounds = partial_rounds_3;
+          break;
+        case 5:
+          constants = poseidon_constants_5;
+          partial_rounds = partial_rounds_5;
+          break;
+        case 9:
+          constants = poseidon_constants_9;
+          partial_rounds = partial_rounds_9;
+          break;
+        case 12:
+          constants = poseidon_constants_12;
+          partial_rounds = partial_rounds_12;
+          break;
+        default:
+          ICICLE_LOG_ERROR << "cpu_poseidon_init_default_constants: T (width) must be one of [3, 5, 9, 12]";
+          return eIcicleError::INVALID_ARGUMENT;
+      }
+      scalar_t* h_constants = reinterpret_cast<scalar_t*>(constants);
+      // std::cout << "h_constants[0] = " << h_constants[0] << std::endl;
+      // std::cout << "h_constants[1] = " << h_constants[1] << std::endl;
+      // std::cout << "h_constants[2] = " << h_constants[2] << std::endl;
 
-  //   scalar_t* h_constants = reinterpret_cast<scalar_t*>(constants);
+      unsigned int round_constants_len =  poseidon_constants[T].arity * (poseidon_constants[T].nof_upper_full_rounds + poseidon_constants[T].nof_upper_full_rounds) + partial_rounds;
+      unsigned int mds_matrix_len = T * T;
+      poseidon_constants[T].nof_partial_rounds = partial_rounds;
+      poseidon_constants[T].rounds_constants = h_constants;
+      poseidon_constants[T].mds_matrix = poseidon_constants[T].rounds_constants + round_constants_len;
+      poseidon_constants[T].pre_matrix = poseidon_constants[T].mds_matrix + mds_matrix_len;
+      poseidon_constants[T].sparse_matrices = poseidon_constants[T].pre_matrix + mds_matrix_len;
+    }
 
-  //   for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_arities); arity_idx++) {
-  //     unsigned int arity = poseidon_legal_arities[arity_idx];
-  //     unsigned int round_constants_len = arity * (poseidon_constants[arity].nof_upper_full_rounds + poseidon_constants[arity].nof_upper_full_rounds) + partial_rounds;
-  //     unsigned int mds_matrix_len = arity * arity;      
-  //     poseidon_constants[arity].rounds_constants = h_constants;
-  //     poseidon_constants[arity].mds_matrix = poseidon_constants[arity].rounds_constants + round_constants_len;
-  //     poseidon_constants[arity].pre_matrix = poseidon_constants[arity].mds_matrix + mds_matrix_len;
-  //     poseidon_constants[arity].sparse_matrices = poseidon_constants[arity].pre_matrix + mds_matrix_len;
-  //   }
-  //   return eIcicleError::SUCCESS;
-  // }
+    return eIcicleError::SUCCESS;
+  }
 
-  // REGISTER_POSEIDON_INIT_DEFAULT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_default_constants);
+  REGISTER_POSEIDON_INIT_DEFAULT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_default_constants);
 
   // DEBUG
   int print_input_bytes(std::string input_type, const std::byte* input, uint64_t size) {
@@ -109,129 +111,127 @@ namespace icicle {
   class PoseidonBackendCPU : public HashBackend
   {
   public:
-    PoseidonBackendCPU(unsigned arity) : HashBackend("Poseidon-CPU", sizeof(S), arity * sizeof(S)) {
-      cpu_poseidon_init_default_constants("Poseidon-CPU", scalar_t::from(0));
+    PoseidonBackendCPU(unsigned arity, unsigned default_input_size, bool is_domain_tag) : HashBackend("Poseidon-CPU", sizeof(S), default_input_size), is_domain_tag(is_domain_tag), arity(arity) {
+      if (is_domain_tag)
+        poseidon_constants[arity].is_domain_tag = is_domain_tag;
+      else
+        poseidon_constants[arity+1].is_domain_tag = is_domain_tag;
     }
 
-  eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)
-  {
-    ICICLE_LOG_DEBUG << "in cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
-    unsigned int partial_rounds;
-    unsigned char* constants;
-    for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_arities); arity_idx++) {
-      unsigned int arity = poseidon_legal_arities[arity_idx];
-      poseidon_constants[arity].alpha = 5;
-      poseidon_constants[arity].nof_upper_full_rounds = 4;
-      poseidon_constants[arity].nof_end_full_rounds = 4;      
-      switch (poseidon_legal_arities[arity_idx]) {
-        case 3:
-          constants = poseidon_constants_3;
-          partial_rounds = partial_rounds_3;
-          break;
-        case 5:
-          constants = poseidon_constants_5;
-          partial_rounds = partial_rounds_5;
-          break;
-        case 9:
-          constants = poseidon_constants_9;
-          partial_rounds = partial_rounds_9;
-          break;
-        case 12:
-          constants = poseidon_constants_12;
-          partial_rounds = partial_rounds_12;
-          break;
-        default:
-          ICICLE_LOG_ERROR << "cpu_poseidon_init_default_constants: #arity must be one of [2, 4, 8, 11]";
-          return eIcicleError::INVALID_ARGUMENT;
-      }
-    }
-
-    scalar_t* h_constants = reinterpret_cast<scalar_t*>(constants);
-
-    for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_arities); arity_idx++) {
-      unsigned int arity = poseidon_legal_arities[arity_idx];
-      unsigned int round_constants_len = arity * (poseidon_constants[arity].nof_upper_full_rounds + poseidon_constants[arity].nof_upper_full_rounds) + partial_rounds;
-      unsigned int mds_matrix_len = arity * arity;      
-      poseidon_constants[arity].rounds_constants = h_constants;
-      poseidon_constants[arity].mds_matrix = poseidon_constants[arity].rounds_constants + round_constants_len;
-      poseidon_constants[arity].pre_matrix = poseidon_constants[arity].mds_matrix + mds_matrix_len;
-      poseidon_constants[arity].sparse_matrices = poseidon_constants[arity].pre_matrix + mds_matrix_len;
-    }
-    return eIcicleError::SUCCESS;
-  }    
-
-    // Size should be zero in order or equal to HashBackend::m_default_input_chunk_size.
     // Otherwise return eIcicleError::INVALID_ARGUMENT.
-    eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override    // DANNY - config isn't needed in cpu
+    eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override    // DANNY - config isn'T needed in cpu
     {
       ICICLE_LOG_DEBUG << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>()
                        << ", batch=" << config.batch;
-
-      if (size != 0 && size != m_default_input_chunk_size) {
-        ICICLE_LOG_ERROR << "PoseidonBackendCPU:hash(...): size should be either zero or HashBackend::m_default_input_chunk_size";
-        ICICLE_LOG_ERROR << "PoseidonBackendCPU:hash(...): size = " << size << ", m_default_input_chunk_size = " << m_default_input_chunk_size;
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-      print_input_bytes("Input", input, size);    // DEBUG
       
-      unsigned int arity = m_default_input_chunk_size / sizeof(S);
+      unsigned int T = is_domain_tag ? arity+1 : arity;
 
-      unsigned int alpha = poseidon_constants[arity].alpha;
-      unsigned int nof_upper_full_rounds = poseidon_constants[arity].nof_upper_full_rounds;
-      unsigned int nof_partial_rounds = poseidon_constants[arity].nof_partial_rounds;
-      unsigned int nof_end_full_rounds = poseidon_constants[arity].nof_end_full_rounds;
-      S*           rounds_constants = poseidon_constants[arity].rounds_constants;
-      S*           mds_matrix = poseidon_constants[arity].mds_matrix;
-      S*           pre_matrix = poseidon_constants[arity].pre_matrix;
-      S*           sparse_matrices = poseidon_constants[arity].sparse_matrices;
+      unsigned int alpha                  = poseidon_constants[T].alpha;
+      unsigned int nof_upper_full_rounds  = poseidon_constants[T].nof_upper_full_rounds;
+      unsigned int nof_partial_rounds     = poseidon_constants[T].nof_partial_rounds;
+      unsigned int nof_end_full_rounds    = poseidon_constants[T].nof_end_full_rounds;
+      S*           rounds_constants       = poseidon_constants[T].rounds_constants;
+      S*           mds_matrix             = poseidon_constants[T].mds_matrix;
+      S*           pre_matrix             = poseidon_constants[T].pre_matrix;
+      S*           sparse_matrices        = poseidon_constants[T].sparse_matrices;
       // Allocate temporary memory for intermediate calcs.
-      S* tmp_fields = new S[arity];
+      S* tmp_fields = new S[T];
       // Casting from limbs to scalar.
       const S* in_fields = (S*)(input);
+      std::cout << "in_fields[0] = " << in_fields[0] << std::endl;
+      std::cout << "in_fields[1] = " << in_fields[1] << std::endl;
+      std::cout << "in_fields[2] = " << in_fields[2] << std::endl;
       // Copy input scalar to the output (as a temp storage) to be used in the rounds.
       // *tmp_fields are used as a temp storage alog the calculations in this function.
-      memcpy(tmp_fields, in_fields, arity * sizeof(S));
+      memcpy(tmp_fields, in_fields, T * sizeof(S));
 
       // Add pre-round constants.
-      for (int arity_idx=0; arity_idx<arity; arity_idx++) {
-        tmp_fields[arity_idx] = tmp_fields[arity_idx] + *rounds_constants++;
+      std::cout << "rounds_constants[0] = " << rounds_constants[0] << std::endl;
+      std::cout << "rounds_constants[1] = " << rounds_constants[1] << std::endl;
+      std::cout << "rounds_constants[2] = " << rounds_constants[2] << std::endl;
+      for (int state_idx=0; state_idx<T; state_idx++) {
+        tmp_fields[state_idx] = tmp_fields[state_idx] + *rounds_constants++;
       }
+      std::cout << "\ninitial states" << std::endl;
+      std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+      std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+      std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
 
       // Upper full rounds.
       full_rounds(nof_upper_full_rounds, tmp_fields, rounds_constants);
+      std::cout << "\nstates after first full_rounds" << std::endl;
+      std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+      std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+      std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
 
       // Single full round with pre_matrix.
-      for (int arity_idx=0; arity_idx<arity; arity_idx++) {
+      for (int state_idx=0; state_idx<T; state_idx++) {
         // S box
-        tmp_fields[arity_idx] = S::pow(tmp_fields[arity_idx], alpha);
-        // Add round constants
-        tmp_fields[arity_idx] = tmp_fields[arity_idx] + *rounds_constants++;
+        tmp_fields[state_idx] = S::pow(tmp_fields[state_idx], alpha);
       }
+      std::cout << "\nstates after pre-matrix round sbox" << std::endl;
+      std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+      std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+      std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
+      std::cout << "\nstates after pre-matrix round constants" << std::endl;
+      for (int state_idx=0; state_idx<T; state_idx++) {
+        // Add round constants
+        std::cout << "      rounds_constants[" << state_idx << "] = " << *rounds_constants << std::endl;
+        std::cout << "      tmp_fields[" << state_idx << "] (before) = " << tmp_fields[state_idx] << std::endl;
+        tmp_fields[state_idx] = tmp_fields[state_idx] + *rounds_constants++;
+        std::cout << "      tmp_fields[" << state_idx << "] (after) = " << tmp_fields[state_idx] << std::endl;
+      }
+      std::cout << "\nstates after pre-matrix round add constants" << std::endl;
+      std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+      std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+      std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
       // Multiplication by matrix
       field_vec_sqr_full_matrix_mul(tmp_fields, pre_matrix, tmp_fields);
+      std::cout << "\nstates after pre-matrix round matrix multiplication" << std::endl;
+      std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+      std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+      std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
 
       // Partial rounds. Perform calculation only for the first element of *tmp_fields.
       for (int partial_rounds_idx=0; partial_rounds_idx<nof_partial_rounds; partial_rounds_idx++) {
         // S box
         tmp_fields[0] = S::pow(tmp_fields[0], alpha);
+        std::cout << "\nstates after partial round " << partial_rounds_idx << " after sbox" << std::endl;
+        std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+        std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+        std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
         // Add round constants
         tmp_fields[0] = tmp_fields[0] + *rounds_constants++;
+        std::cout << "\nstates after partial round " << partial_rounds_idx << " after add constants" << std::endl;
+        std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+        std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+        std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
         // Multiplication by sparse matrix.
-        field_vec_sqr_sparse_matrix_mul(tmp_fields, &sparse_matrices[partial_rounds_idx*arity*arity], tmp_fields);
+        field_vec_sqr_sparse_matrix_mul(tmp_fields, &sparse_matrices[partial_rounds_idx * T * T], tmp_fields);
+        std::cout << "\nstates after partial round " << partial_rounds_idx << " after sparse matrix" << std::endl;
+        std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+        std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+        std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
       }
 
       // Bottom full rounds.
       full_rounds(nof_end_full_rounds, tmp_fields, rounds_constants);
 
       // Last full round
-      for (int arity_idx=0; arity_idx<arity; arity_idx++) {
+      for (int state_idx=0; state_idx<T; state_idx++) {
         // S box
-        tmp_fields[arity_idx] = S::pow(tmp_fields[arity_idx], alpha);
+        tmp_fields[state_idx] = S::pow(tmp_fields[state_idx], alpha);
       }
       // Multiplication by MDS matrix
       field_vec_sqr_full_matrix_mul(tmp_fields, mds_matrix, tmp_fields);
 
       memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
+      // std::cout << "Print output" << std::endl;     // DEBUG
+      // print_input_bytes("Output", output, 32);      // DEBUG
+      std::cout << "\noutput" << std::endl;
+      std::cout << "tmp_fields[0] = " << tmp_fields[0] << std::endl;
+      std::cout << "tmp_fields[1] = " << tmp_fields[1] << std::endl;
+      std::cout << "tmp_fields[2] = " << tmp_fields[2] << std::endl;
 
       delete[] tmp_fields;
       tmp_fields = nullptr;
@@ -240,59 +240,83 @@ namespace icicle {
     }
 
     void field_vec_sqr_sparse_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const {
-      unsigned int arity = m_default_input_chunk_size / sizeof(S);
-      S tmp_col_res[arity];     // Have to use temp storage because vec_in and result are the same storage.
-      tmp_col_res[0] = S::from(0);
-      for (int col_idx = 0; col_idx < arity; col_idx++) {   // Calc first column result.
-        tmp_col_res[0] = tmp_col_res[0] + vec_in[col_idx] * matrix_in[col_idx * arity];
+
+      unsigned int T = is_domain_tag ? arity+1 : arity;
+      S tmp_col_res[T];     // Have to use temp storage because vec_in and result are the same storage.
+      // Note that sparse_matrix is organized in memory 1st column first and then rest of the members of the 1st row.
+      tmp_col_res[0] = vec_in[0] * matrix_in[0];
+      for (int col_idx = 1; col_idx < T; col_idx++) {   // Calc first column result.
+        tmp_col_res[0] = tmp_col_res[0] + vec_in[col_idx] * matrix_in[col_idx];
       }
-      for (int col_idx = 1; col_idx < arity; col_idx++) {   // Calc rest columns results.
-        tmp_col_res[col_idx] = S::from(0);
-        tmp_col_res[col_idx] = vec_in[0] * matrix_in[col_idx] + vec_in[col_idx];
+      for (int col_idx = 1; col_idx < T; col_idx++) {   // Calc rest columns results.
+        tmp_col_res[col_idx] = vec_in[0] * matrix_in[T + col_idx - 1] + vec_in[col_idx];
       }
-      for (int col_idx = 0; col_idx < arity; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
+      for (int col_idx = 0; col_idx < T; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
             result[col_idx] = tmp_col_res[col_idx];
       }
     }
 
     void field_vec_sqr_full_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const {
-      unsigned int arity = m_default_input_chunk_size / sizeof(S);
-      S tmp_col_res[arity];     // Have to use temp storage because vec_in and result are the same storage.
-      for (int col_idx = 0; col_idx < arity; col_idx++) {   // Columns of matrix.
+
+      unsigned int T = is_domain_tag ? arity+1 : arity;
+      S tmp_col_res[T];     // Have to use temp storage because vec_in and result are the same storage.
+      for (int col_idx = 0; col_idx < T; col_idx++) {   // Columns of matrix.
         tmp_col_res[col_idx] = S::from(0);
-        for (int row_idx = 0; row_idx < arity; row_idx++) {    // Matrix rows but also input vec columns.
-          tmp_col_res[col_idx] = tmp_col_res[col_idx] + vec_in[row_idx] * matrix_in[row_idx * arity + col_idx];
+        for (int row_idx = 0; row_idx < T; row_idx++) {    // Matrix rows but also input vec columns.
+          tmp_col_res[col_idx] = tmp_col_res[col_idx] + vec_in[row_idx] * matrix_in[row_idx * T + col_idx];
         }
       }
-      for (int col_idx = 0; col_idx < arity; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
+      for (int col_idx = 0; col_idx < T; col_idx++) {   // This copy is needed because vec_in and result storages are actually the same storage when calling to the function.
             result[col_idx] = tmp_col_res[col_idx];
       }
     }
 
-    void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, const S* rounds_constants) const {
-      unsigned int arity = m_default_input_chunk_size / sizeof(S);
-      unsigned int alpha = poseidon_constants[arity].alpha;
-      S*           mds_matrix = poseidon_constants[arity].mds_matrix;
+    void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, /* const */ S*& rounds_constants) const {
+
+      unsigned int T = is_domain_tag ? arity+1 : arity;
+      unsigned int alpha = poseidon_constants[T].alpha;
+      S*           mds_matrix = poseidon_constants[T].mds_matrix;
       for (int full_rounds_idx=0; full_rounds_idx<nof_full_rounds-1; full_rounds_idx++) {   // Note that the number of full rounds is nof_full_rounds-1 because of the
                                                                                             // pre_matrix round (last round of upper full rounds) and the last round of
-                                                                                            // the bottom fulld rounds that doesn't have sbox operation.
-        for (int arity_idx=0; arity_idx<arity; arity_idx++) {
+                                                                                            // the bottom fulld rounds that doesn'T have sbox operation.
+        for (int state_idx=0; state_idx<T; state_idx++) {
           // S box
-          in_out_fields[arity_idx] = S::pow(in_out_fields[arity_idx], alpha);
-          // Add round constants
-          in_out_fields[arity_idx] = in_out_fields[arity_idx] + *rounds_constants++;
+          in_out_fields[state_idx] = S::pow(in_out_fields[state_idx], alpha);
         }
+        std::cout << "\nfull round full_rounds_idx " << full_rounds_idx << ", after S-box" << std::endl;
+        std::cout << "tmp_fields[0] = " << in_out_fields[0] << std::endl;
+        std::cout << "tmp_fields[1] = " << in_out_fields[1] << std::endl;
+        std::cout << "tmp_fields[2] = " << in_out_fields[2] << std::endl;
+        std::cout << "rounds_constants[0] = " << rounds_constants[0] << std::endl;
+        std::cout << "rounds_constants[1] = " << rounds_constants[1] << std::endl;
+        std::cout << "rounds_constants[2] = " << rounds_constants[2] << std::endl;
+        for (int state_idx=0; state_idx<T; state_idx++) {
+          // Add round constants
+          in_out_fields[state_idx] = in_out_fields[state_idx] + *rounds_constants++;
+        }
+        std::cout << "\nfull round full_rounds_idx " << full_rounds_idx << ", after add round constants" << std::endl;
+        std::cout << "tmp_fields[0] = " << in_out_fields[0] << std::endl;
+        std::cout << "tmp_fields[1] = " << in_out_fields[1] << std::endl;
+        std::cout << "tmp_fields[2] = " << in_out_fields[2] << std::endl;
         // Multiplication by matrix
         field_vec_sqr_full_matrix_mul(in_out_fields, mds_matrix, in_out_fields);
+        std::cout << "\nfull round full_rounds_idx " << full_rounds_idx << ", after MDS matrix" << std::endl;
+        std::cout << "tmp_fields[0] = " << in_out_fields[0] << std::endl;
+        std::cout << "tmp_fields[1] = " << in_out_fields[1] << std::endl;
+        std::cout << "tmp_fields[2] = " << in_out_fields[2] << std::endl;
+        std::cout << std::endl;
       }
     }
+  private:
+    bool is_domain_tag;
+    unsigned int arity;
   };    // class PoseidonBackendCPU : public HashBackend
 
   static eIcicleError create_cpu_poseidon_hash_backend(
-    const Device& device, unsigned arity, std::shared_ptr<HashBackend>& backend /*OUT*/, const scalar_t& phantom)
+    const Device& device, unsigned arity, unsigned default_input_size, bool is_domain_tag, std::shared_ptr<HashBackend>& backend /*OUT*/, const scalar_t& phantom)
   {
     ICICLE_LOG_DEBUG << "in create_cpu_poseidon_hash_backend(arity=" << arity << ")";
-    backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(arity);
+    backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(arity, default_input_size, is_domain_tag);
     return eIcicleError::SUCCESS;
   }
 

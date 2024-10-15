@@ -13,7 +13,7 @@ namespace icicle {
   /*************************** Backend registration ***************************/
 
   using InitPoseidonConstantsImpl =
-    std::function<eIcicleError(const Device& device, const PoseidonConstantsInitOptions<scalar_t>* options)>;
+    std::function<eIcicleError(const Device& device, const PoseidonConstantsOptions<scalar_t>* options)>;
 
   // poseidon init constants
   void register_poseidon_init_constants(const std::string& deviceType, InitPoseidonConstantsImpl impl);
@@ -42,7 +42,7 @@ namespace icicle {
   }
 
   using CreatePoseidonImpl = std::function<eIcicleError(
-    const Device& device, unsigned arity, std::shared_ptr<HashBackend>& /*OUT*/, const scalar_t& phantom)>;
+    const Device& device, unsigned arity, unsigned default_input_size, bool is_domain_tag, std::shared_ptr<HashBackend>& /*OUT*/, const scalar_t& phantom)>;
 
   // poseidon init constants
   void register_create_poseidon(const std::string& deviceType, CreatePoseidonImpl impl);

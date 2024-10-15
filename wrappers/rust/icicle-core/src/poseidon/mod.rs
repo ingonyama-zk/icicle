@@ -5,7 +5,7 @@ use crate::{hash::Hasher, traits::FieldImpl};
 use icicle_runtime::errors::eIcicleError;
 use std::marker::PhantomData;
 
-pub struct PoseidonConstantsInitOptions<F: FieldImpl> {
+pub struct PoseidonConstantsOptions<F: FieldImpl> {
     // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
     // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
     phantom: PhantomData<F>,
@@ -15,7 +15,7 @@ pub struct PoseidonConstantsInitOptions<F: FieldImpl> {
 /// This allows the implementation of Poseidon hashing for various field types that implement `FieldImpl`.
 pub trait PoseidonHasher<F: FieldImpl> {
     /// Method to initialize Poseidon constants with user-defined options.
-    fn initialize_constants(options: &PoseidonConstantsInitOptions<F>) -> Result<(), eIcicleError>;
+    fn initialize_constants(options: &PoseidonConstantsOptions<F>) -> Result<(), eIcicleError>;
 
     /// Method to initialize Poseidon constants with default values.
     fn initialize_default_constants() -> Result<(), eIcicleError>;
@@ -36,8 +36,8 @@ where
 
 /// Function to initialize Poseidon constants based on user-defined options for a specific field type.
 /// Currently, this function returns an error as the feature is not yet implemented.
-/// TODO: Define PoseidonConstantsInitOptions and implement the function logic.
-pub fn initialize_poseidon_constants<F>(_options: &PoseidonConstantsInitOptions<F>) -> Result<(), eIcicleError>
+/// TODO: Define PoseidonConstantsOptions and implement the function logic.
+pub fn initialize_poseidon_constants<F>(_options: &PoseidonConstantsOptions<F>) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: PoseidonHasher<F>, // Requires that the `Config` associated with `F` implements `PoseidonHasher`.
@@ -67,7 +67,7 @@ macro_rules! impl_poseidon {
             use crate::poseidon::{$field, $field_cfg};
             use icicle_core::{
                 hash::{Hasher, HasherHandle},
-                poseidon::{PoseidonConstantsInitOptions, PoseidonHasher},
+                poseidon::{PoseidonConstantsOptions, PoseidonHasher},
                 traits::FieldImpl,
             };
             use icicle_runtime::errors::eIcicleError;
@@ -78,7 +78,7 @@ macro_rules! impl_poseidon {
                 fn poseidon_init_default_constants() -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_poseidon_init_constants")]
-                fn poseidon_init_constants(options: *const PoseidonConstantsInitOptions<$field>) -> eIcicleError;
+                fn poseidon_init_constants(options: *const PoseidonConstantsOptions<$field>) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_create_poseidon_hasher")]
                 fn create_poseidon_hasher(arity: u32) -> HasherHandle;
@@ -90,8 +90,8 @@ macro_rules! impl_poseidon {
                     unsafe { poseidon_init_default_constants().wrap() } // Calls the external FFI function and wraps the result.
                 }
 
-                fn initialize_constants(options: &PoseidonConstantsInitOptions<$field>) -> Result<(), eIcicleError> {
-                    unsafe { poseidon_init_constants(options as *const PoseidonConstantsInitOptions<$field>).wrap() }
+                fn initialize_constants(options: &PoseidonConstantsOptions<$field>) -> Result<(), eIcicleError> {
+                    unsafe { poseidon_init_constants(options as *const PoseidonConstantsOptions<$field>).wrap() }
                     // Calls the external FFI function with user-defined options.
                 }
 

@@ -15,9 +15,10 @@ namespace icicle {
   // that can easily be shared between languages. The template parameter `S` represents the field type for which the
   // Poseidon constants are being initialized.
   template <typename S>
-  struct PoseidonConstantsInitOptions {
+  struct PoseidonConstantsOptions {
     // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
     // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
+    bool          is_domain_tag = false;  ///< If i_domain_tag is set then single hash width = arity + 1, otherwise width = arity.
     unsigned int  arity;                  ///< Arity of a hash (number of inputs of the single hash).
     unsigned int  alpha;                  ///< Sbox power.
     unsigned int  nof_upper_full_rounds;  ///< Number of upper full rounds of a single hash.
@@ -35,7 +36,7 @@ namespace icicle {
   // arity. The template parameter `S` represents the field type (e.g., scalar field) for which the constants are being
   // initialized.
   template <typename S>
-  eIcicleError poseidon_init_constants(const PoseidonConstantsInitOptions<S>* options);
+  eIcicleError poseidon_init_constants(const PoseidonConstantsOptions<S>* options);
 
   // Function to initialize Poseidon constants using default, precomputed values.
   // These constants are optimized and precomputed for the given field and arity.
@@ -65,9 +66,9 @@ namespace icicle {
     // Static method to initialize Poseidon constants based on user-defined options.
     // This method abstracts away the complexity of calling the `poseidon_init_constants` function directly,
     // providing a clean interface to initialize Poseidon constants.
-    // The user provides a pointer to `PoseidonConstantsInitOptions` to customize the constants.
+    // The user provides a pointer to `PoseidonConstantsOptions` to customize the constants.
     template <typename S>
-    inline static eIcicleError init_constants(const PoseidonConstantsInitOptions<S>* options)
+    inline static eIcicleError init_constants(const PoseidonConstantsOptions<S>* options)
     {
       return poseidon_init_constants<S>(options);
     }
