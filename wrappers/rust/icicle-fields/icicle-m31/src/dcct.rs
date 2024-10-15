@@ -1,5 +1,5 @@
 use icicle_core::error::IcicleResult;
-use icicle_core::ntt::{NTTConfig, NTTDir, Ordering};
+use icicle_core::ntt::{NTTConfig, NTTDir};
 use icicle_core::traits::IcicleResultWrap;
 use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::device_context::DeviceContext;
@@ -122,9 +122,7 @@ pub fn evaluate(
     cfg: &NTTConfig<ScalarField>,
     output: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
 ) -> IcicleResult<()> {
-    let mut local_cfg = cfg.clone();
-    local_cfg.ordering = Ordering::kNR;
-    dcct(input, NTTDir::kForward, &local_cfg, output)
+    dcct(input, NTTDir::kForward, &cfg, output)
 }
 
 pub fn interpolate(
@@ -132,9 +130,7 @@ pub fn interpolate(
     cfg: &NTTConfig<ScalarField>,
     output: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
 ) -> IcicleResult<()> {
-    let mut local_cfg = cfg.clone();
-    local_cfg.ordering = Ordering::kNN;
-    dcct(input, NTTDir::kInverse, &local_cfg, output)
+    dcct(input, NTTDir::kInverse, &cfg, output)
 }
 
 #[cfg(test)]
