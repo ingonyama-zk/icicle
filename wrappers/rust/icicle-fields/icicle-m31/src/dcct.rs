@@ -181,9 +181,8 @@ pub(crate) mod tests {
         .map(ScalarField::from_u32);
 
         let mut evaluations = vec![ScalarField::zero(); 1 << LOG];
-        let mut cfg = NTTConfig::default();
+        let cfg = NTTConfig::default();
 
-        cfg.ntt_algorithm = NttAlgorithm::MixedRadix; //TODO: should force mixed radix for dcct
         evaluate(
             HostSlice::from_slice(&coeffs),
             &cfg,
