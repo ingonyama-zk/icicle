@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 
   auto start = std::chrono::high_resolution_clock::now();
   const scalar_t basic_root = test_scalar::omega(NTT_LOG_SIZE);
-  ntt::init_domain(basic_root, ntt_config.ctx, FAST_TW);
+  ntt::init_domain(NTT_LOG_SIZE, basic_root, ntt_config.ctx, FAST_TW);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;

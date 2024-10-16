@@ -37,7 +37,7 @@ public:
     // init NTT domain
     auto ntt_config = ntt::default_ntt_config<scalar_t>();
     const scalar_t basic_root = scalar_t::omega(MAX_NTT_LOG_SIZE);
-    ntt::init_domain(basic_root, ntt_config.ctx);
+    ntt::init_domain(MAX_NTT_LOG_SIZE, basic_root, ntt_config.ctx);
     // initializing polynoimals factory for CUDA backend
     Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
   }

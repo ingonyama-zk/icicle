@@ -11,13 +11,13 @@ use icicle_core::ntt::FieldImpl;
 
 extern "C" {
     #[link_name = "m31_initialize_domain"]
-    fn initialize_domain(primitive_root: &ComplexExtensionField, ctx: &DeviceContext) -> CudaError;
+    fn initialize_domain(logn: u32, primitive_root: &ComplexExtensionField, ctx: &DeviceContext) -> CudaError;
 
     #[link_name = "m31_release_domain"]
-    fn release_ntt_domain(ctx: &DeviceContext) -> CudaError;
+    fn release_ntt_domain(logn: u32, ctx: &DeviceContext) -> CudaError;
 
     #[link_name = "m31_get_root_of_unity"]
-    fn get_root_of_unity(max_size: u32, rou_out: *mut ComplexExtensionField);
+    fn get_root_of_unity(max_size: u64, rou_out: *mut ComplexExtensionField);
 
     #[link_name = "m31_ntt_cuda"]
     fn ntt_cuda(
@@ -38,15 +38,19 @@ extern "C" {
 /// This function will panic if the order of `primitive_root` is not a power of two.
 ///
 /// * `ctx` - GPU index and stream to perform the computation.
-pub fn initialize_dcct_domain(primitive_root: ComplexExtensionField, ctx: &DeviceContext) -> IcicleResult<()> {
-    unsafe { initialize_domain(&primitive_root, ctx).wrap() }
+pub fn initialize_dcct_domain(
+    logn: u32,
+    primitive_root: ComplexExtensionField,
+    ctx: &DeviceContext,
+) -> IcicleResult<()> {
+    unsafe { initialize_domain(logn, &primitive_root, ctx).wrap() }
 }
 
-pub fn release_domain(ctx: &DeviceContext) -> IcicleResult<()> {
-    unsafe { release_ntt_domain(ctx).wrap() }
+pub fn release_domain(logn: u32, ctx: &DeviceContext) -> IcicleResult<()> {
+    unsafe { release_ntt_domain(logn, ctx).wrap() }
 }
 
-pub fn get_dcct_root_of_unity(max_size: u32) -> ComplexExtensionField {
+pub fn get_dcct_root_of_unity(max_size: u64) -> ComplexExtensionField {
     let mut rou = ComplexExtensionField::zero();
     unsafe { get_root_of_unity(max_size, &mut rou as *mut ComplexExtensionField) };
     rou
@@ -147,9 +151,9 @@ pub(crate) mod tests {
     fn test_evaluate_4() {
         const LOG: u32 = 4;
 
-        let rou = get_dcct_root_of_unity(LOG);
+        let rou = get_dcct_root_of_unity(1 << LOG);
         println!("ROU {:?}", rou);
-        initialize_dcct_domain(rou, &DeviceContext::default()).unwrap();
+        initialize_dcct_domain(LOG, rou, &DeviceContext::default()).unwrap();
         println!("initialied DCCT succesfully");
 
         let coeffs: Vec<ScalarField> = (0u32..1 << LOG)
@@ -193,9 +197,9 @@ pub(crate) mod tests {
     fn test_interpolate_4() {
         const LOG: u32 = 4;
 
-        let rou = get_dcct_root_of_unity(LOG);
+        let rou = get_dcct_root_of_unity(1 << LOG);
         println!("ROU {:?}", rou);
-        initialize_dcct_domain(rou, &DeviceContext::default()).unwrap();
+        initialize_dcct_domain(LOG, rou, &DeviceContext::default()).unwrap();
         println!("initialied DCCT succesfully");
 
         let evaluations: Vec<ScalarField> = (0u32..1 << LOG)
