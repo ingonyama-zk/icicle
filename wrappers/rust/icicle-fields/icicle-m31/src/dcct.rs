@@ -135,7 +135,7 @@ pub fn interpolate(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::ntt::{FieldImpl, NTTConfig, NttAlgorithm};
+    use icicle_core::ntt::{FieldImpl, NTTConfig, Ordering};
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
 
     use crate::{
@@ -177,8 +177,8 @@ pub(crate) mod tests {
         .map(ScalarField::from_u32);
 
         let mut evaluations = vec![ScalarField::zero(); 1 << LOG];
-        let cfg = NTTConfig::default();
-
+        let mut cfg = NTTConfig::default();
+        cfg.ordering = Ordering::kNR;
         evaluate(
             HostSlice::from_slice(&coeffs),
             &cfg,
