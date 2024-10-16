@@ -591,6 +591,8 @@ TEST_F(HashApiTest, poseidon3)
   const unsigned  arity               = 3; // Number of input elements
   const unsigned  default_input_size  = 3;
   const bool      is_domain_tag       = false;
+  scalar_t  domain_tag_value          = scalar_t::from(0);
+  const bool      use_all_zeroes_padding  = true;
 
   // Create unique pointers for input and output arrays
   scalar_t* input = (scalar_t*)malloc(arity * sizeof(scalar_t));
@@ -606,7 +608,7 @@ TEST_F(HashApiTest, poseidon3)
   ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
 
   // Create Poseidon hash object
-  auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag);
+  auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
 
   // Run single hash operation
   auto config = default_hash_config();

@@ -21,8 +21,8 @@ eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)()
 }
 
 HasherHandle
-CONCAT_EXPAND(FIELD, create_poseidon_hasher)(unsigned arity, unsigned default_input_size, bool is_domain_tag)
+CONCAT_EXPAND(FIELD, create_poseidon_hasher)(unsigned arity, unsigned default_input_size, bool is_domain_tag, scalar_t* domain_tag_value, bool use_all_zeroes_padding)
 {
-  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(arity, default_input_size, is_domain_tag));
+  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value, use_all_zeroes_padding));
 }
 }
