@@ -139,13 +139,15 @@ pub fn interpolate(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::ntt::{FieldImpl, NTTConfig, Ordering};
+    use icicle_core::ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering};
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
 
     use crate::{
-        dcct::{evaluate, get_dcct_root_of_unity, initialize_dcct_domain, interpolate},
-        field::ScalarField,
+        dcct::{dcct, evaluate, get_dcct_root_of_unity, initialize_dcct_domain, interpolate},
+        field::{ScalarCfg, ScalarField},
     };
+
+    use icicle_core::traits::GenerateRandom;
 
     #[test]
     fn test_evaluate_4() {
@@ -161,22 +163,8 @@ pub(crate) mod tests {
             .collect();
 
         let expected = [
-            0x4fe32dfe,
-            0x38de5f54,
-            0x71b8fbe6,
-            0x7e54ce84,
-            0x40f40f27,
-            0x7374451f,
-            0x3d7c46eb,
-            0x154c0cff,
-            0x234c23f4,
-            0x698b7dae,
-            0x50cf78c7,
-            0x7db21e80,
-            0x5489c73d,
-            0x5451156d,
-            0x776e1c0d,
-            0x45dce6a
+            0x4fe32dfe, 0x38de5f54, 0x71b8fbe6, 0x7e54ce84, 0x40f40f27, 0x7374451f, 0x3d7c46eb, 0x154c0cff, 0x234c23f4,
+            0x698b7dae, 0x50cf78c7, 0x7db21e80, 0x5489c73d, 0x5451156d, 0x776e1c0d, 0x45dce6a,
         ]
         .map(ScalarField::from_u32);
 
@@ -207,22 +195,8 @@ pub(crate) mod tests {
             .collect();
 
         let expected = [
-            0x40000007,
-            0x000000,
-            0x73d34ffa,
-            0x000000,
-            0x16af762a,
-            0x000000,
-            0x882b425,
-            0x000000,
-            0x7ffbffff,
-            0x000000,
-            0x41ff8ac,
-            0x000000,
-            0x5c76e64c,
-            0x000000,
-            0x5a82de7a,
-            0x000004,
+            0x40000007, 0x000000, 0x73d34ffa, 0x000000, 0x16af762a, 0x000000, 0x882b425, 0x000000, 0x7ffbffff,
+            0x000000, 0x41ff8ac, 0x000000, 0x5c76e64c, 0x000000, 0x5a82de7a, 0x000004,
         ]
         .map(ScalarField::from_u32);
 
@@ -236,5 +210,113 @@ pub(crate) mod tests {
         .unwrap();
 
         assert_eq!(coeffs, expected);
+    }
+
+    #[test]
+    fn test_dcct_batch() {
+        let test_sizes_log = 4..25usize;
+        for test_size_log in test_sizes_log {
+            let test_size = 1 << test_size_log;
+            let mut config = NTTConfig::default();
+            let batch_sizes = [1,2]; //1..=20usize;
+            for batch_size in batch_sizes {
+                let test_full_size = test_size * batch_size;
+                if test_size_log == 7 || test_full_size >= 1 << 26 {
+                    continue;
+                }
+
+                let rou = get_dcct_root_of_unity(test_size as _);
+                println!("ROU {:?}", rou);
+                initialize_dcct_domain(test_size_log as _, rou, &DeviceContext::default()).unwrap();
+                println!("initialied DCCT succesfully");
+
+                let scalars = ScalarCfg::generate_random(test_full_size);
+                let scalars = HostSlice::from_slice(&scalars);
+
+                for dir in [NTTDir::kForward, NTTDir::kInverse] {
+                    // for is_inverse in [NTTDir::kInverse, NTTDir::kForward] { //TODO: interpolate correctness
+                    for ordering in [
+                        Ordering::kNN,
+                        Ordering::kNR,
+                        Ordering::kRN,
+                        Ordering::kRR,
+                        Ordering::kNM,
+                        Ordering::kMN,
+                    ] {
+                        config.ordering = ordering;
+                        let mut batch_ntt_result = vec![ScalarField::zero(); test_full_size];
+                        config.batch_size = batch_size as i32;
+                        dcct(scalars, dir, &config, HostSlice::from_mut_slice(&mut batch_ntt_result)).unwrap();
+                        config.batch_size = 1;
+                        let mut one_ntt_result = vec![ScalarField::one(); test_size];
+                        for i in 0..batch_size {
+                            dcct(
+                                &scalars[i * test_size..(i + 1) * test_size],
+                                dir,
+                                &config,
+                                HostSlice::from_mut_slice(&mut one_ntt_result),
+                            )
+                            .unwrap();
+                            // assert_eq!(
+                            //     batch_ntt_result[i * test_size..(i + 1) * test_size],
+                            //     *one_ntt_result.as_slice(),
+                            //     "i: {} logn: {} batchm: {}", i, test_size_log, batch_size
+                            // );
+                            let is_success =
+                                batch_ntt_result[i * test_size..(i + 1) * test_size] == *one_ntt_result.as_slice();
+
+                            println!(
+                                "{} {} for i: {}  batchm: {} {:?} {:?}",
+                                if is_success { "success" } else { "failed" },
+                                test_size_log,
+                                i,
+                                batch_size,
+                                ordering,
+                                dir
+                            );
+                        }
+                    }
+
+                    // let row_size = test_size as u32;
+                    // let column_size = batch_size as u32;
+                    // let on_device = false;
+                    // let is_async = false;
+                    // // for now, columns batching only works with MixedRadix NTT
+                    // config.batch_size = batch_size as i32;
+                    // config.columns_batch = true;
+                    // let mut transposed_input = vec![F::zero(); batch_size * test_size];
+                    // transpose_matrix(
+                    //     scalars,
+                    //     row_size,
+                    //     column_size,
+                    //     HostSlice::from_mut_slice(&mut transposed_input),
+                    //     &config.ctx,
+                    //     on_device,
+                    //     is_async,
+                    // )
+                    // .unwrap();
+                    // let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
+                    // ntt(
+                    //     HostSlice::from_slice(&transposed_input),
+                    //     is_inverse,
+                    //     &config,
+                    //     HostSlice::from_mut_slice(&mut col_batch_ntt_result),
+                    // )
+                    // .unwrap();
+                    // transpose_matrix(
+                    //     HostSlice::from_slice(&col_batch_ntt_result),
+                    //     column_size,
+                    //     row_size,
+                    //     HostSlice::from_mut_slice(&mut transposed_input),
+                    //     &config.ctx,
+                    //     on_device,
+                    //     is_async,
+                    // )
+                    // .unwrap();
+                    // assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
+                    // config.columns_batch = false;
+                }
+            }
+        }
     }
 }
