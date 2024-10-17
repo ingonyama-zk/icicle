@@ -122,6 +122,28 @@ namespace icicle {
 
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
 
+      // Currently sponge and padding functionalities are not supported.
+      // Therefore check that size/T == config.batch
+      // #include <cassert>
+      // assert(true);
+      // assert(size/T == config.batch);
+
+      for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx ++) {
+        hash_single(input, size, output);
+        input += m_arity * sizeof(S);
+        output += sizeof(S);
+      }
+
+      return eIcicleError::SUCCESS;
+    }                            
+
+    eIcicleError hash_single(const std::byte* input, uint64_t size, std::byte* output)
+      const
+    {
+      ICICLE_LOG_DEBUG << "Poseidon CPU hash_single() " << size << " bytes, for type " << demangle<S>();
+
+      unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
+
       unsigned int alpha = poseidon_constants[T].alpha;
       unsigned int nof_upper_full_rounds = poseidon_constants[T].nof_upper_full_rounds;
       unsigned int nof_partial_rounds = poseidon_constants[T].nof_partial_rounds;

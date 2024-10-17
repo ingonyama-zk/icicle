@@ -590,7 +590,7 @@ TEST_F(HashApiTest, poseidon12)
   std::cout << "HashApiTest.poseidon3 test: output = " << output << std::endl;
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
-TEST_F(HashApiTest, poseidon3)
+TEST_F(HashApiTest, poseidon3_single_hash)
 {
   std::cout << "Running HashApiTest.poseidon3 test" << std::endl;  
   const unsigned  arity               = 3; // Number of input elements
@@ -617,9 +617,41 @@ TEST_F(HashApiTest, poseidon3)
 
   // Run single hash operation
   auto config = default_hash_config();
-  // ICICLE_CHECK(poseidon.hash(input.get(), arity * sizeof(scalar_t), config, &output));
   ICICLE_CHECK(poseidon.hash((char*)input, arity * sizeof(scalar_t), config, (char*)&output));
   ASSERT_TRUE(output == scalar_t({0xaf470d61, 0xb0c3336d, 0x902d22a6, 0x028e76c5, 0xee976494, 0x246c74f4, 0x619f33d3, 0x1b509247}));  // Compare vs. know result.
+  // TODO: Verify output (e.g., check CPU against CUDA)
+}
+TEST_F(HashApiTest, poseidon3_tree_batch_gt_1)
+{
+  std::cout << "Running HashApiTest.poseidon3 test" << std::endl;  
+  const unsigned  arity               = 3; // Number of input elements
+  const unsigned  default_input_size  = 3;
+  const bool      is_domain_tag       = false;
+  scalar_t  domain_tag_value          = scalar_t::from(0);
+  const bool      use_all_zeroes_padding  = true;
+
+  // init poseidon constants on current device
+  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
+
+  // Create Poseidon hash object
+  auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
+
+  auto config = default_hash_config();
+  config.batch = 4;
+  
+  scalar_t* input = (scalar_t*)malloc(config.batch * arity * sizeof(scalar_t));
+  scalar_t output[config.batch];
+  for (int i=0; i<config.batch; i++) {
+    input[i * arity]     = scalar_t::from(1);
+    input[i * arity + 1] = scalar_t::from(1);
+    input[i * arity + 2] = scalar_t::from(1);
+    output[i] = scalar_t::from(0);
+  }
+  
+  ICICLE_CHECK(poseidon.hash((char*)input, config.batch * arity * sizeof(scalar_t), config, (char*)&output));
+  for (int i=0; i<config.batch; i++) {
+    ASSERT_TRUE(output[i] == scalar_t({0xaf470d61, 0xb0c3336d, 0x902d22a6, 0x028e76c5, 0xee976494, 0x246c74f4, 0x619f33d3, 0x1b509247}));  // Compare vs. know result.
+  }
   // TODO: Verify output (e.g., check CPU against CUDA)
 }
 #endif // POSEIDON
