@@ -98,21 +98,6 @@ namespace icicle {
 
   REGISTER_POSEIDON_INIT_DEFAULT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_default_constants);
 
-  // DEBUG
-  int print_input_bytes(std::string input_type, const std::byte* input, uint64_t size)
-  {
-    int nof_lines = size / 16;
-    for (int line_idx = 0; line_idx < nof_lines; line_idx++) {
-      for (int byte_idx = 0; byte_idx < 16; byte_idx++) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*input) << " ";
-        input++;
-        std::cout << std::endl;
-      }
-    }
-    return 0;
-  }
-  // DEBUG
-
   template <typename S>
   class PoseidonBackendCPU : public HashBackend
   {
@@ -121,9 +106,12 @@ namespace icicle {
         : HashBackend("Poseidon-CPU", sizeof(S), default_input_size)
     {
       unsigned int width = is_domain_tag ? arity+1 : arity;
+      poseidon_constants[width].arity = arity;
       poseidon_constants[width].is_domain_tag = is_domain_tag;
       poseidon_constants[width].domain_tag_value = domain_tag_value;        
-      poseidon_constants[width].use_all_zeroes_padding = use_all_zeroes_padding;    
+      poseidon_constants[width].use_all_zeroes_padding = use_all_zeroes_padding;
+      m_arity = arity;
+      m_is_domain_tag = is_domain_tag;
     }
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output)
@@ -132,7 +120,7 @@ namespace icicle {
       ICICLE_LOG_DEBUG << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>()
                        << ", batch=" << config.batch;
 
-      unsigned int T = is_domain_tag ? arity + 1 : arity;
+      unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
 
       unsigned int alpha = poseidon_constants[T].alpha;
       unsigned int nof_upper_full_rounds = poseidon_constants[T].nof_upper_full_rounds;
@@ -250,7 +238,7 @@ namespace icicle {
 
     void field_vec_sqr_sparse_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const
     {
-      unsigned int T = is_domain_tag ? arity + 1 : arity;
+      unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
       S tmp_col_res[T]; // Have to use temp storage because vec_in and result are the same storage.
       // Note that sparse_matrix is organized in memory 1st column first and then rest of the members of the 1st row.
       tmp_col_res[0] = vec_in[0] * matrix_in[0];
@@ -268,7 +256,7 @@ namespace icicle {
 
     void field_vec_sqr_full_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const
     {
-      unsigned int T = is_domain_tag ? arity + 1 : arity;
+      unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
       S tmp_col_res[T]; // Have to use temp storage because vec_in and result are the same storage.
       for (int col_idx = 0; col_idx < T; col_idx++) { // Columns of matrix.
         tmp_col_res[col_idx] = S::from(0);
@@ -284,7 +272,7 @@ namespace icicle {
 
     void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, /* const */ S*& rounds_constants) const
     {
-      unsigned int T = is_domain_tag ? arity + 1 : arity;
+      unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
       unsigned int alpha = poseidon_constants[T].alpha;
       S* mds_matrix = poseidon_constants[T].mds_matrix;
       for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds - 1;
@@ -321,8 +309,8 @@ namespace icicle {
     }
 
   private:
-    bool is_domain_tag;
-    unsigned int arity;
+    bool m_is_domain_tag;
+    unsigned int m_arity;
   }; // class PoseidonBackendCPU : public HashBackend
 
   static eIcicleError create_cpu_poseidon_hash_backend(
