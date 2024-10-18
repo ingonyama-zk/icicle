@@ -42,15 +42,6 @@ namespace icicle {
   template <typename S>
   eIcicleError poseidon_init_constants(const PoseidonConstantsOptions<S>* options);
 
-  // Function to initialize Poseidon constants using default, precomputed values.
-  // These constants are optimized and precomputed for the given field and arity.
-  // The arity must be supported by the implementation (i.e., predefined sets of constants exist for the supported
-  // arities). This function simplifies initialization when custom constants are not needed, and the user can rely on
-  // default values.
-  template <typename S>
-  eIcicleError poseidon_init_default_constants(); // TODO Danny: we decided to remove this API and let the backend
-                                                  // handle it when constructed right?
-
   // Function to create a Poseidon hash object for a given arity.
   // This function returns a `Hash` object configured to use the Poseidon hash for the specified arity.
   // The arity controls the number of inputs the hash function can take (branching factor).
@@ -77,16 +68,6 @@ namespace icicle {
     inline static eIcicleError init_constants(const PoseidonConstantsOptions<S>* options)
     {
       return poseidon_init_constants<S>(options);
-    }
-
-    // Static method to initialize Poseidon constants with default values.
-    // This provides a clean interface for initializing Poseidon with precomputed default constants for the given field
-    // and arity. Useful when the user doesn't need to customize the constants and wants to use pre-optimized
-    // parameters.
-    template <typename S>
-    inline static eIcicleError init_default_constants()
-    {
-      return poseidon_init_default_constants<S>();
     }
   };
 

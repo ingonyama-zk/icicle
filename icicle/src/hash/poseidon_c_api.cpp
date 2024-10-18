@@ -15,11 +15,6 @@ eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(const PoseidonConstan
   return Poseidon::init_constants<scalar_t>(options);
 }
 
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)()
-{
-  return Poseidon::init_default_constants<scalar_t>();
-}
-
 HasherHandle
 CONCAT_EXPAND(FIELD, create_poseidon_hasher)(unsigned arity, unsigned default_input_size, bool is_domain_tag, scalar_t* domain_tag_value, bool use_all_zeroes_padding)
 {

@@ -46,7 +46,7 @@ namespace icicle {
 
   REGISTER_POSEIDON_INIT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_constants);
 
-  static eIcicleError cpu_poseidon_init_default_constants(const Device& device, const scalar_t& phantom)
+  static eIcicleError init_default_constants()
   {
     ICICLE_LOG_DEBUG << "In cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
     unsigned int partial_rounds;
@@ -94,8 +94,6 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_POSEIDON_INIT_DEFAULT_CONSTANTS_BACKEND("CPU", cpu_poseidon_init_default_constants);
-
   template <typename S>
   class PoseidonBackendCPU : public HashBackend
   {
@@ -103,6 +101,7 @@ namespace icicle {
     PoseidonBackendCPU(unsigned arity, unsigned default_input_size, bool is_domain_tag, S* domain_tag_value,
         bool use_all_zeroes_padding) : HashBackend("Poseidon-CPU", sizeof(S), default_input_size)
     {
+      init_default_constants();
       unsigned int width = is_domain_tag ? arity+1 : arity;
       poseidon_constants[width].arity = arity;
       poseidon_constants[width].is_domain_tag = is_domain_tag;
@@ -124,7 +123,7 @@ namespace icicle {
 
       // Currently sponge and padding functionalities are not supported.
       // Therefore check that size/T == config.batch
-      ICICLE_ASSERT(size/(T * sizeof(S)) == config.batch) << "Sponge function still isn't supported. The following should be true: size/T == config.batch but it is not.\n";
+      ICICLE_ASSERT(size / (T * sizeof(S)) == sizeof(S) * config.batch) << "Sponge function still isn't supported. The following should be true: size/T == config.batch but it is not.\n";
 
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx ++) {

@@ -23,6 +23,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
       "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
 static bool VERBOSE = true;
+static int ITERS = 16;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
 static inline std::vector<std::string> s_registered_devices;
@@ -565,93 +566,121 @@ using namespace poseidon_constants_bn254;
 
   #include "icicle/hash/poseidon.h"
 
-TEST_F(HashApiTest, poseidon12)
+TEST_F(HashApiTest, poseidon12_single_hash)
 {
-  std::cout << "Running HashApiTest.poseidon12 test" << std::endl;  
-  const uint64_t arity = 12; // Number of input elements
-  const unsigned  default_input_size  = 3;
-  const bool      is_domain_tag       = false;
-  scalar_t  domain_tag_value          = scalar_t::from(0);
+  const unsigned  arity                   = 12;
+  const unsigned  default_input_size      = 3;
+  const bool      is_domain_tag           = false;
+  scalar_t        domain_tag_value        = scalar_t::from(0);
   const bool      use_all_zeroes_padding  = true;
+  auto            config                  = default_hash_config();
 
-  // Create unique pointers for input and output arrays
-  auto input = pre_round_input_state;
-  scalar_t output = scalar_t::from(0);
+  auto input = std::make_unique<scalar_t[]>(arity);
+  scalar_t::rand_host_many(input.get(), arity);
+  config.batch = 1;
 
-  // init poseidon constants on current device
-  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
+  auto run =
+    [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
 
-  // Create Poseidon hash object
-  auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
 
-  // Run single hash operation
-  auto config = default_hash_config();
-  ICICLE_CHECK(poseidon.hash(input, arity * sizeof(scalar_t), config, &output));
-  std::cout << "HashApiTest.poseidon3 test: output = " << output << std::endl;
-  // TODO: Verify output (e.g., check CPU against CUDA)
+      auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
+
+      START_TIMER(POSEIDON_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+      }
+      END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
+    };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
+
 TEST_F(HashApiTest, poseidon3_single_hash)
 {
-  std::cout << "Running HashApiTest.poseidon3 test" << std::endl;  
-  const unsigned  arity               = 3; // Number of input elements
-  const unsigned  default_input_size  = 3;
-  const bool      is_domain_tag       = false;
-  scalar_t  domain_tag_value          = scalar_t::from(0);
+  const unsigned  arity                   = 3;
+  const unsigned  default_input_size      = 3;
+  const bool      is_domain_tag           = false;
+  scalar_t        domain_tag_value        = scalar_t::from(0);
   const bool      use_all_zeroes_padding  = true;
+  auto            config                  = default_hash_config();
 
-  // Create unique pointers for input and output arrays
-  scalar_t* input = (scalar_t*)malloc(arity * sizeof(scalar_t));
-  input[0] = scalar_t::from(1);
-  input[1] = scalar_t::from(1);
-  input[2] = scalar_t::from(1);
-  // auto input = std::make_unique<scalar_t[]>(arity);
-  scalar_t output = scalar_t::from(0);
-  // Randomize the input array
-  // scalar_t::rand_host_many(input.get(), arity);
+  auto input = std::make_unique<scalar_t[]>(arity);
+  scalar_t::rand_host_many(input.get(), arity);
+  config.batch = 1;
 
-  // init poseidon constants on current device
-  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
+  auto run =
+    [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
 
-  // Create Poseidon hash object
-  auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
 
-  // Run single hash operation
-  auto config = default_hash_config();
-  ICICLE_CHECK(poseidon.hash((char*)input, arity * sizeof(scalar_t), config, (char*)&output));
-  ASSERT_TRUE(output == scalar_t({0xaf470d61, 0xb0c3336d, 0x902d22a6, 0x028e76c5, 0xee976494, 0x246c74f4, 0x619f33d3, 0x1b509247}));  // Compare vs. know result.
-  // TODO: Verify output (e.g., check CPU against CUDA)
+      auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
+
+      START_TIMER(POSEIDON_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+      }
+      END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
+    };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
-TEST_F(HashApiTest, poseidon3_batch_gt_1)
+
+TEST_F(HashApiTest, poseidon3_batch)
 {
-  std::cout << "Running HashApiTest.poseidon3 test" << std::endl;  
-  const unsigned  arity               = 3; // Number of input elements
-  const unsigned  default_input_size  = 3;
-  const bool      is_domain_tag       = false;
-  scalar_t  domain_tag_value          = scalar_t::from(0);
+  const unsigned  arity                   = 3;
+  const unsigned  default_input_size      = 3;
+  const bool      is_domain_tag           = false;
+  scalar_t        domain_tag_value        = scalar_t::from(0);
   const bool      use_all_zeroes_padding  = true;
+  auto            config                  = default_hash_config();
 
-  // init poseidon constants on current device
-  ICICLE_CHECK(Poseidon::init_default_constants<scalar_t>());
-
-  // Create Poseidon hash object
-  auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
-
-  auto config = default_hash_config();
   config.batch = 4;
-  
-  scalar_t* input = (scalar_t*)malloc(config.batch * arity * sizeof(scalar_t));
-  scalar_t output[config.batch];
-  for (int i=0; i<config.batch; i++) {
-    input[i * arity]     = scalar_t::from(1);
-    input[i * arity + 1] = scalar_t::from(1);
-    input[i * arity + 2] = scalar_t::from(1);
-    output[i] = scalar_t::from(0);
-  }
-  
-  ICICLE_CHECK(poseidon.hash((char*)input, config.batch * arity * sizeof(scalar_t), config, (char*)&output));
-  for (int i=0; i<config.batch; i++) {
-    ASSERT_TRUE(output[i] == scalar_t({0xaf470d61, 0xb0c3336d, 0x902d22a6, 0x028e76c5, 0xee976494, 0x246c74f4, 0x619f33d3, 0x1b509247}));  // Compare vs. know result.
-  }
-  // TODO: Verify output (e.g., check CPU against CUDA)
+  auto input = std::make_unique<scalar_t[]>(arity * config.batch);
+  scalar_t::rand_host_many(input.get(), arity * config.batch);
+
+  auto run =
+    [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, &domain_tag_value, use_all_zeroes_padding);
+
+      START_TIMER(POSEIDON_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+      }
+      END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
+    };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
+
 #endif // POSEIDON

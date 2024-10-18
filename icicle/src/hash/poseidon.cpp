@@ -12,15 +12,6 @@ namespace icicle {
     return InitPoseidonConstantsDispatcher::execute(options);
   }
 
-  ICICLE_DISPATCHER_INST(
-    InitPoseidonDefaultConstantsDispatcher, poseidon_init_default_constants, InitPoseidonDefaultConstantsImpl);
-
-  template <>
-  eIcicleError poseidon_init_default_constants<scalar_t>()
-  {
-    return InitPoseidonDefaultConstantsDispatcher::execute(scalar_t::zero());
-  }
-
   ICICLE_DISPATCHER_INST(CreatePoseidonHasherDispatcher, create_poseidon, CreatePoseidonImpl);
 
   template <>
