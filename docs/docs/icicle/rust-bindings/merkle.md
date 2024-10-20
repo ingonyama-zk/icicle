@@ -2,8 +2,9 @@
 # Merkle Tree API Documentation (Rust)
 
 This is the Rust version of the **Merkle Tree API Documentation** ([C++ documentation](../primitives/merkle.md)). It mirrors the structure and functionality of the C++ version, providing equivalent APIs in Rust.
-For more details please check the [C++ page](../primitives/merkle.md).
+For more detailed explanations, refer to the [C++ documentation](../primitives/merkle.md).
 
+To see a complete implementation, visit the [Hash and Merkle example](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/hash-and-merkle) for a full example.
 
 ## Tree Structure and Configuration in Rust
 
