@@ -1,4 +1,3 @@
-
 # ICICLE Example: Hashing and Merkle-Tree
 
 ## Key Takeaway
@@ -67,15 +66,16 @@ fn merkle_tree_example() {
         .collect();
     let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
 
-    // 1. commit
+    // 1. Commit
     merkle_tree.build(HostSlice::from_slice(&input), &config).unwrap();
     let commitment = merkle_tree.get_root().unwrap();
-    // 2. open leaf #3
+    // 2. Open leaf #3
     let merkle_proof = merkle_tree
         .get_proof(HostSlice::from_slice(&input), 3, true /*=pruned path*/, &config)
         .unwrap();
-    // 3. verify
-    let proof_is_valid = merkle_tree.verify(&merkle_proof).unwrap();
+    // 3. Verify: (Note that we reconstruct the tree here, as verification is typically performed by a separate application)
+    let verifier_merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
+    let proof_is_valid = verifier_merkle_tree.verify(&merkle_proof).unwrap();
 }
 ```
 

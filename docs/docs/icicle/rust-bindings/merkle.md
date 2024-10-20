@@ -2,67 +2,37 @@
 # Merkle Tree API Documentation (Rust)
 
 This is the Rust version of the **Merkle Tree API Documentation** ([C++ documentation](../primitives/merkle.md)). It mirrors the structure and functionality of the C++ version, providing equivalent APIs in Rust.
+For more details please check the [C++ page](../primitives/merkle.md).
 
----
-
-## What is a Merkle Tree?
-
-A **Merkle tree** is a cryptographic data structure that allows for **efficient verification of data integrity**. It consists of:
-- **Leaf nodes**, each containing a piece of data.
-- **Internal nodes**, which store the **hashes of their child nodes**, leading up to the **root node** (the cryptographic commitment).
-
----
 
 ## Tree Structure and Configuration in Rust
 
 ### Defining a Merkle Tree
 
-With ICICLE, you have the **flexibility** to build various tree topologies based on your needs. A tree is defined by:
-
-1. **Hasher per layer** ([Link to Hasher API](../rust-bindings/hash.md)) with a **default input size**.
-2. **Size of a leaf element** (in bytes): This defines the **granularity** of the data used for opening proofs.
-
-The **root node** is assumed to be a single node. The **height of the tree** is determined by the **number of layers**.
-Each layer's **arity** is calculated as:
-
-$$
-{arity}_i = \frac{layers[i].inputSize}{layer[i-1].outputSize}
-$$
-
-For **layer 0**:
-
-$$
-{arity}_0 = \frac{layers[0].inputSize}{leafSize}
-$$
-
-:::note
-Each layer has a shrinking-factor defined by $\frac{layer.outputSize}{layer.inputSize}$.
-This factor is used to compute the input size, assuming a single root node.
-:::
-
-
 ```rust
 struct MerkleTree{
-    /// * `layer_hashes` - A vector of hash objects representing the hashes of each layer.
+    /// * `layer_hashers` - A vector of hash objects representing the hashers of each layer.
     /// * `leaf_element_size` - Size of each leaf element.
     /// * `output_store_min_layer` - Minimum layer at which the output is stored.
     ///
     /// # Returns a new `MerkleTree` instance or eIcicleError.
     pub fn new(
-        layer_hashes: &[&Hasher],
+        layer_hashers: &[&Hasher],
         leaf_element_size: u64,
         output_store_min_layer: u64,
     ) -> Result<Self, eIcicleError>;
 }
 ```
 
----
+The `output_store_min_layer` parameter defines the lowest layer that will be stored in memory. Layers below this value will not be stored, saving memory at the cost of additional computation when proofs are generated.
+
+
 
 ### Building the Tree
 
 The Merkle tree can be constructed from input data of any type, allowing flexibility in its usage. The size of the input must align with the tree structure defined by the hash layers and leaf size. If the input size does not match the expected size, padding may be applied.
 
-Refer to the Padding Section for more details on how mismatched input sizes are handled.
+Refer to the [Padding Section](#padding) for more details on how mismatched input sizes are handled.
 
 ```rust
 struct MerkleTree{
@@ -78,7 +48,7 @@ struct MerkleTree{
 }
 ```
 
----
+
 
 ## Tree Examples in Rust
 
@@ -100,17 +70,17 @@ let leaf_size = 1024_u64;
 let max_input_size = leaf_size as usize * 16;
 let input: Vec<u8> = vec![0; max_input_size];
 
-// define layer hashes
+// define layer hashers
 // we want one hash layer to hash every 1KB to 32B then compress every 64B so 4 more binary layers
 let hash = Keccak256::new(leaf_size).unwrap();
 let compress = Keccak256::new(2 * hash.output_size()).unwrap();
-let _layer_hashes = vec![&hash, &compress, &compress, &compress, &compress];
+let _layer_hashers = vec![&hash, &compress, &compress, &compress, &compress];
 // or like that
-let layer_hashes: Vec<&Hasher> = std::iter::once(&hash)
+let layer_hashers: Vec<&Hasher> = std::iter::once(&hash)
     .chain(std::iter::repeat(&compress).take(4))
     .collect();
 
-let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0 /*min layer to store */).unwrap();
+let merkle_tree = MerkleTree::new(&layer_hashers, leaf_size, 0 /*min layer to store */).unwrap();
 
 // compute the tree
 merkle_tree
@@ -118,7 +88,7 @@ merkle_tree
     .unwrap();
 ```
 
----
+
 
 ### Example B: Tree with Arity 4
 
@@ -129,25 +99,25 @@ This example uses **Blake2s** in upper layers:
 ```rust
 use icicle_hash::blake2s::Blake2s;
 
-// define layer hashes
+// define layer hashers
 // we want one hash layer to hash every 1KB to 32B then compress every 128B so only 2 more layers
 let hash = Keccak256::new(leaf_size).unwrap();
 let compress = Blake2s::new(4 * hash.output_size()).unwrap();
-let layer_hashes = vec![&hash, &compress, &compress];
+let layer_hashers = vec![&hash, &compress, &compress];
 
-let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0 /*min layer to store */).unwrap();
+let merkle_tree = MerkleTree::new(&layer_hashers, leaf_size, 0 /*min layer to store */).unwrap();
 
 merkle_tree
     .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
     .unwrap();
 ```
 
----
+
 
 ## Padding
 
 :::note
-Padding feature is not yet supported in **v3.1** and will be available in **v3.2**.
+Padding feature is not yet supported in **v3.1** and is planned for **v3.2**.
 :::
 
 When the input for **layer 0** is smaller than expected, ICICLE can apply **padding** to align the data.
@@ -171,7 +141,7 @@ merkle_tree
     .unwrap();
 ```
 
----
+
 
 ## Root as Commitment
 
@@ -192,11 +162,11 @@ let commitment: &[u8] = merkle_tree
 println!("Commitment: {:?}", commitment);****
 ```
 
-:::note
+:::warning
 The commitment can be serialized to the proof. This is not handled by ICICLE.
 :::
 
----
+
 
 ## Generating Merkle Proofs
 
@@ -243,11 +213,11 @@ let merkle_proof = merkle_tree
     .unwrap();
 ```
 
-:::note
-The Merkle-path can be serialized to the proof along the leaf. This is not handled by ICICLE.
+:::warning
+The Merkle-path can be serialized to the proof along with the leaf. This is not handled by ICICLE.
 :::
 
----
+
 
 ## Verifying Merkle Proofs
 
@@ -269,7 +239,7 @@ let valid = merkle_tree
 assert!(valid);
 ```
 
----
+
 
 ## Pruned vs. Full Merkle-paths
 
@@ -295,7 +265,7 @@ let merkle_proof = merkle_tree
     .unwrap();
 ```
 
----
+
 
 ## Handling Partial Tree Storage
 
@@ -306,5 +276,5 @@ For example to avoid storing first layer we can define a tree as follows:
 
 
 ```rust
-let mut merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 1 /*min layer to store*/);
+let mut merkle_tree = MerkleTree::new(&layer_hashers, leaf_size, 1 /*min layer to store*/);
 ```

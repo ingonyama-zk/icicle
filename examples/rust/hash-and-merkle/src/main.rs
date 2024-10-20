@@ -179,9 +179,12 @@ fn merkle_tree_example() {
         println!("Proof.path.layer{} = {}", i, hex::encode(chunk));
     }
 
-    // 5. Verification:
+    // 5. Verification: This is usually done by a separate process, which reconstructs the root for verification.
+    // It is crucial that the reconstructed tree has the same structure and configuration as the original tree
+    // to correctly recompute the commitment from the provided proof and to use the appropriate hash functions.
+    let verfier_merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0 /* has not effect here */).unwrap();
     // Verify the proof by checking if it hashes back to the root.
-    let proof_is_valid = merkle_tree
+    let proof_is_valid = verfier_merkle_tree
         .verify(&merkle_proof)
         .unwrap();
     assert!(proof_is_valid); // Assert that the proof is valid.

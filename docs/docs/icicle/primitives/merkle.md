@@ -5,9 +5,8 @@
 
 A **Merkle tree** is a cryptographic data structure that allows for **efficient verification of data integrity**. It consists of:
 - **Leaf nodes**, each containing a piece of data.
-- **Internal nodes**, which store the **hashes of their child nodes**, leading up to the **root node** (the cryptographic commitment).
+- **Internal nodes**, which store the **hashes of their child nodes**, make up the layers leading to the **root node** which is the cryptographic commitment.
 
----
 
 ## Tree Structure and Configuration
 
@@ -22,7 +21,7 @@ The **root node** is assumed to be a single node. The **height of the tree** is 
 Each layer's **arity** is calculated as:
 
 $$
-{arity}_i = \frac{layers[i].inputSize}{layer[i-1].outputSize}
+{arity}_i = \frac{layers[i].inputSize}{layers[i-1].outputSize}
 $$
 
 For **layer 0**:
@@ -36,25 +35,29 @@ Each layer has a shrinking-factor defined by $\frac{layer.outputSize}{layer.inpu
 This factor is used to compute the input size, assuming a single root node.
 :::
 
----
+When dealing with very large Merkle trees, storing the entire tree can be memory-intensive. To manage this, ICICLE allows users to store only the upper layers of the tree while omitting the lower layers, which can be recomputed later as needed. This approach conserves memory but requires recomputing the omitted layers when generating Merkle proofs.
+
+
 
 ### Defining a Merkle Tree
 
 ```cpp
 // icicle/merkle/merkle_tree.h
 static MerkleTree create(
-    const std::vector<Hash>& layer_hashes,
+    const std::vector<Hash>& layer_hashers,
     uint64_t leaf_element_size,
     uint64_t output_store_min_layer = 0);
 ```
 
----
+The `output_store_min_layer` parameter defines the lowest layer that will be stored in memory. Layers below this value will not be stored, saving memory at the cost of additional computation when proofs are generated.
+
+
 
 ### Building the Tree
 
 The Merkle tree can be constructed from input data of any type, allowing flexibility in its usage. The size of the input must align with the tree structure defined by the hash layers and leaf size. If the input size does not match the expected size, padding may be applied.
 
-Refer to the Padding Section for more details on how mismatched input sizes are handled.
+Refer to the [Padding Section](#padding) for more details on how mismatched input sizes are handled.
 
 ```cpp
 // icicle/merkle/merkle_tree.h
@@ -70,7 +73,7 @@ inline eIcicleError build(
     const MerkleTreeConfig& config);
 ```
 
----
+
 
 ## Tree Examples
 
@@ -86,19 +89,19 @@ const uint64_t leaf_size = 1024;
 const uint32_t max_input_size = leaf_size * 16;
 auto input = std::make_unique<uint64_t[]>(max_input_size / sizeof(uint64_t));
 
-// Define hashes
+// Define hashers
 auto hash = Keccak256::create(leaf_size); // hash 1KB -> 32B
 auto compress = Keccak256::create(2 * hasher.output_size()); // hash every 64B to 32B
 
-// Construct the tree using the layer hashes and leaf-size
-std::vector<Hash> hashes = {hasher, compress, compress, compress, compress};
-auto merkle_tree = MerkleTree::create(hashes, leaf_size);
+// Construct the tree using the layer hashers and leaf-size
+std::vector<Hash> hashers = {hasher, compress, compress, compress, compress};
+auto merkle_tree = MerkleTree::create(hashers, leaf_size);
 
 // compute the tree
 merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), default_merkle_tree_config());
 ```
 
----
+
 
 ### Example B: Tree with Arity 4
 
@@ -117,22 +120,22 @@ auto input = std::make_unique<uint64_t[]>(max_input_size / sizeof(uint64_t));
 auto hash = Keccak256::create(leaf_size);
 auto compress = Blake2s::create(4 * hash.output_size());
 
-std::vector<Hash> hashes = {hash, compress, compress};
-auto merkle_tree = MerkleTree::create(hashes, leaf_size);
+std::vector<Hash> hashers = {hash, compress, compress};
+auto merkle_tree = MerkleTree::create(hashers, leaf_size);
 
 merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), default_merkle_tree_config());
 ```
 
 :::note
-Any combination of hashes is valid including **Poseidon** that computes on field elements.
+Any combination of hashers is valid including **Poseidon** that computes on field elements.
 :::
 
----
+
 
 ## Padding
 
 :::note
-Padding feature is not yet supported in **v3.1** and will be available in **v3.2**.
+Padding feature is not yet supported in **v3.1** and is planned for **v3.2**.
 :::
 
 When the input for **layer 0** is smaller than expected, ICICLE can apply **padding** to align the data.
@@ -147,7 +150,7 @@ config.padding_policy = PaddingPolicy::ZeroPadding;
 merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), config);
 ```
 
----
+
 
 ## Root as Commitment
 
@@ -164,11 +167,11 @@ auto [commitment, size] = merkle_tree.get_merkle_root();
 serialize_commitment_application_code(...);
 ```
 
-:::note
+:::warning
 The commitment can be serialized to the proof. This is not handled by ICICLE.
 :::
 
----
+
 
 ## Generating Merkle Proofs
 
@@ -206,17 +209,17 @@ auto [_leaf, _leaf_size, _leaf_idx] = proof.get_leaf();
 auto [_path, _path_size] = proof.get_path();
 ```
 
-:::note
-The Merkle-path can be serialized to the proof along the leaf. This is not handled by ICICLE.
+:::warning
+The Merkle-path can be serialized to the proof along with the leaf. This is not handled by ICICLE.
 :::
 
----
+
 
 ## Verifying Merkle Proofs
 
 ```cpp
 /**
- * @brief Verify an element against the Merkle path using layer hashes.
+ * @brief Verify an element against the Merkle path using layer hashers.
  * @param merkle_proof The MerkleProof object includes the leaf, path, and the root.
  * @param valid output valid bit. True if the proof is valid, false otherwise.
  */
@@ -230,7 +233,7 @@ bool valid = false;
 auto err = merkle_tree.verify(proof, valid);
 ```
 
----
+
 
 ## Pruned vs. Full Merkle-paths
 
@@ -255,7 +258,7 @@ auto err = merkle_tree.get_merkle_proof(
     default_merkle_tree_config(), proof);
 ```
 
----
+
 
 ## Handling Partial Tree Storage
 
@@ -266,5 +269,5 @@ For example to avoid storing first layer we can define a tree as follows:
 
 ```cpp
 const int min_layer_to_store = 1;
-auto merkle_tree = MerkleTree::create(hashes, leaf_size, min_layer_to_store);
+auto merkle_tree = MerkleTree::create(hashers, leaf_size, min_layer_to_store);
 ```

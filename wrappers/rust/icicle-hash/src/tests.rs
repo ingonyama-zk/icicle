@@ -149,7 +149,6 @@ mod tests {
         // Create a vector of random bytes efficiently
         let mut input: Vec<u8> = vec![0; leaf_element_size as usize * num_elements];
         rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
-                                                 // println!("input = {:?}", input);
 
         merkle_tree
             .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())

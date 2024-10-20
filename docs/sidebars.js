@@ -209,6 +209,11 @@ module.exports = {
                 },
                 {
                   type: "doc",
+                  label: "Hash",
+                  id: "icicle/rust-bindings/hash",
+                },
+                {
+                  type: "doc",
                   label: "Merkle-Tree",
                   id: "icicle/rust-bindings/merkle",
                 },
