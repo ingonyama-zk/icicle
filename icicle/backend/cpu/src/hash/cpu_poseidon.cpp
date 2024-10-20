@@ -162,7 +162,7 @@ namespace icicle {
       // Casting from bytes to scalar.
       const S* in_fields = (S*)(input);
       // Copy input scalar to the output (as a temp storage) to be used in the rounds.
-      // *tmp_fields are used as a temp storage alog the calculations in this function.
+      // *tmp_fields are used as a temp storage during the calculations in this function.
       memcpy(tmp_fields, in_fields, T * sizeof(S));
 
       // Add pre-round constants.
