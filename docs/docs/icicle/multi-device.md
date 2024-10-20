@@ -17,9 +17,7 @@ There are many [different strategies](https://github.com/NVIDIA/multi-gpu-progra
 
 This approach typically involves a single or multiple CPUs managing threads that read from and write to multiple devices, such as GPUs, CPUs, or accelerators. You can think of it as a scaled-up HOST-Device model.
 
-<p align="center">
-  <img src="image.png" alt="Multi-Device Server Approach"/>
-</p>
+![Multi-Device Server Approach](image.png)
 
 This approach doesn't necessarily allow for tackling larger computation sizes, but it does enable the simultaneous computation of tasks that wouldn't fit on a single device.
 
