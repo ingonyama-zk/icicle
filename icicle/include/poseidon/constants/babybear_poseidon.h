@@ -1,4 +1,4 @@
-// Note that these are NOT BABYBEAR value but something copied from M31 just to make regression to pass.
+// Note that these are NOT BABYBEAR values but something copied from M31 just to make regression to pass.
 #pragma once
 #ifndef BABYBEAR_POSEIDON_H
 #define BABYBEAR_POSEIDON_H

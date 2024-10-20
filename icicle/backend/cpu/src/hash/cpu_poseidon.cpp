@@ -24,6 +24,9 @@ using namespace poseidon_constants_m31;
 #elif FIELD_ID == BABY_BEAR
   #include "poseidon/constants/babybear_poseidon.h"
 using namespace poseidon_constants_babybear;
+#elif FIELD_ID == STARK_252
+  #include "poseidon/constants/stark252_poseidon.h"
+using namespace poseidon_constants_stark252;
 #endif
 
 // TODO Danny missing fields: babybear etc. or disable Poseidon for them?
