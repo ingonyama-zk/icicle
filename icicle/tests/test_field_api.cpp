@@ -28,7 +28,8 @@ static bool VERBOSE = true;
 static int ITERS = 1;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
-static const bool s_is_cuda_registered = is_device_registered("CUDA");
+// static const bool s_is_cuda_registered = is_device_registered("CUDA");
+bool s_is_cuda_registered;
 
 template <typename T>
 class FieldApiTest : public ::testing::Test
@@ -42,6 +43,7 @@ public:
 #endif
     icicle_load_backend_from_env_or_default();
 
+    s_is_cuda_registered = is_device_registered("CUDA");
     if (!s_is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs reference (on cpu)"; }
     s_main_target = s_is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
@@ -93,13 +95,18 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
+  // const uint64_t N = 1 << (3);
   const int batch_size = 1 << (rand() % 5);
+  // const int batch_size = 2;
   const bool columns_batch = rand() % 2;
   const int total_size = N * batch_size;
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto in_b = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   auto vector_accumulate_wrapper =
     [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
@@ -152,14 +159,19 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   // // accumulate
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
-  if (!s_is_cuda_registered) {
+  // if (!s_is_cuda_registered) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] + in_b[i];
     }
-  } else {
-    run(s_reference_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
-  }
+  // } else {
+    // run(s_reference_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+  // }
   run(s_main_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+
+  // for (int i = 0; i < total_size; i++) {
+  //   ICICLE_LOG_DEBUG << i << ", " << in_a[i] << ", " << in_b[i] << ", " << out_ref[i];
+  // }
+
   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // // sub
