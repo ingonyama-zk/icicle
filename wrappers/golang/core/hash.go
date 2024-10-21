@@ -15,22 +15,22 @@ import (
 )
 
 type HashConfig struct {
-	StreamHandle runtime.Stream
-	batchSize uint64
-	areInputsOnDevice bool
+	StreamHandle       runtime.Stream
+	batchSize          uint64
+	areInputsOnDevice  bool
 	areOutputsOnDevice bool
-	IsAsync bool
-	Ext config_extension.ConfigExtensionHandler
+	IsAsync            bool
+	Ext                config_extension.ConfigExtensionHandler
 }
 
 func GetDefaultHashConfig() HashConfig {
 	return HashConfig{
-		StreamHandle: nil,
-		batchSize: 1,
-		areInputsOnDevice: false,
+		StreamHandle:       nil,
+		batchSize:          1,
+		areInputsOnDevice:  false,
 		areOutputsOnDevice: false,
-		IsAsync: false,
-		Ext: nil,
+		IsAsync:            false,
+		Ext:                nil,
 	}
 }
 
@@ -53,15 +53,15 @@ func HashCheck(input, output HostOrDeviceSlice, outputSize uint64, cfg *HashConf
 		outputByteSize = uint64(output.(HostSlice[byte]).SizeOfElement() * output.Len())
 	}
 
-	if outputByteSize % outputSize != 0 {
+	if outputByteSize%outputSize != 0 {
 		errorString := fmt.Sprintf("output size (%d Bytes) must divide the output size of a single hash (%d Bytes)", outputByteSize, outputSize)
 		fmt.Println(errorString)
 		return nil, nil, 0, runtime.InvalidArgument
 	}
-	
+
 	cfg.batchSize = outputByteSize / outputSize
 
-	if inputByteSize % cfg.batchSize != 0 {
+	if inputByteSize%cfg.batchSize != 0 {
 		errorString := fmt.Sprintf("input size (%d Bytes) must divide batch size (%d; batchSize = outputByteSize / outputSize)", inputByteSize, cfg.batchSize)
 		fmt.Println(errorString)
 		return nil, nil, 0, runtime.InvalidArgument

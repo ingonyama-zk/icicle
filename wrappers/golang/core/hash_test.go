@@ -10,12 +10,12 @@ func TestHashDefaultConfig(t *testing.T) {
 	actual := GetDefaultHashConfig()
 
 	expected := HashConfig{
-		StreamHandle:             nil,
-		batchSize:                1,
-		areInputsOnDevice:       	false,
-		areOutputsOnDevice: 			false,
-		IsAsync:                  false,
-		Ext:                      actual.Ext,
+		StreamHandle:       nil,
+		batchSize:          1,
+		areInputsOnDevice:  false,
+		areOutputsOnDevice: false,
+		IsAsync:            false,
+		Ext:                actual.Ext,
 	}
 
 	assert.EqualValues(t, expected, actual)
@@ -25,7 +25,7 @@ func TestHashCheckHostSlices(t *testing.T) {
 	cfg := GetDefaultHashConfig()
 	input := make([]byte, 512)
 	inputHost := HostSliceFromElements(input)
-	
+
 	output := make([]byte, 32)
 	outputHost := HostSliceFromElements(output)
 
@@ -41,7 +41,7 @@ func TestHashCheckDeviceSlices(t *testing.T) {
 	inputHost := HostSliceFromElements(input)
 	var d_input DeviceSlice
 	inputHost.CopyToDevice(&d_input, true)
-	
+
 	output := make([]byte, 32)
 	outputHost := HostSliceFromElements(output)
 	var d_output DeviceSlice
@@ -60,7 +60,7 @@ func TestHashCheckMixSlices(t *testing.T) {
 	inputHost := HostSliceFromElements(input)
 	var d_input DeviceSlice
 	inputHost.CopyToDevice(&d_input, true)
-	
+
 	output := make([]byte, 32)
 	outputHost := HostSliceFromElements(output)
 
@@ -76,7 +76,7 @@ func TestHashCheckBatch(t *testing.T) {
 	inputHost := HostSliceFromElements(input)
 	var d_input DeviceSlice
 	inputHost.CopyToDevice(&d_input, true)
-	
+
 	output := make([]byte, 64)
 	outputHost := HostSliceFromElements(output)
 
