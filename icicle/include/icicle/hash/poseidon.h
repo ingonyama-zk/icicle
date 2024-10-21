@@ -45,7 +45,7 @@ namespace icicle {
   // Function to create a Poseidon hash object for a given arity.
   // This function returns a `Hash` object configured to use the Poseidon hash for the specified arity.
   // The arity controls the number of inputs the hash function can take (branching factor).
-  // TODO Danny: describe the inputs field and how (arity,default_input_size,is_domain_tag,domain_tag_value,use_all_zeroes_padding) work.
+  // All the inputs of this function are described in PoseidonConstantsOptions structure.
   template <typename S>
   Hash create_poseidon_hash(unsigned arity, unsigned default_input_size, bool is_domain_tag, S* domain_tag_value, bool use_all_zeroes_padding);
 
