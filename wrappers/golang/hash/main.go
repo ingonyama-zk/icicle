@@ -7,8 +7,8 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 type HasherHandle = C.struct_Hash
@@ -28,7 +28,7 @@ type Hasher struct {
 // Returns:
 //
 //   - An error if the hashing operation fails, otherwise runtime.Success.
-func (h* Hasher) Hash(input, output core.HostOrDeviceSlice, cfg core.HashConfig) runtime.EIcicleError {
+func (h *Hasher) Hash(input, output core.HostOrDeviceSlice, cfg core.HashConfig) runtime.EIcicleError {
 	inputPtr, outputPtr, length, err := core.HashCheck(input, output, h.OutputSize(), &cfg)
 	if err != runtime.Success {
 		return err
@@ -43,11 +43,11 @@ func (h* Hasher) Hash(input, output core.HostOrDeviceSlice, cfg core.HashConfig)
 	return runtime.EIcicleError(__err)
 }
 
-func (h* Hasher) OutputSize() uint64 {
+func (h *Hasher) OutputSize() uint64 {
 	return uint64(C.icicle_hasher_output_size(h.handle))
 }
 
-func (h* Hasher) Delete() runtime.EIcicleError {
+func (h *Hasher) Delete() runtime.EIcicleError {
 	__err := C.icicle_hasher_delete(h.handle)
 	return runtime.EIcicleError(__err)
 }
