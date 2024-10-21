@@ -15,7 +15,7 @@ func TestHashDefaultConfig(t *testing.T) {
 		areInputsOnDevice:  false,
 		areOutputsOnDevice: false,
 		IsAsync:            false,
-		Ext:                actual.Ext,
+		Ext:                nil,
 	}
 
 	assert.EqualValues(t, expected, actual)
