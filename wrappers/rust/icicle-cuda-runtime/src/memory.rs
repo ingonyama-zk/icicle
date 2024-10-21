@@ -205,7 +205,7 @@ impl<T> DeviceSlice<T> {
         Ok(())
     }
 
-    pub fn copy_from_host_vec_async(&mut self, val: &[&[T]], stream: &CudaStream) -> CudaResult<()> {
+    pub fn copy_from_host_slice_vec_async(&mut self, val: &[Vec<T>], stream: &CudaStream) -> CudaResult<()> {
         assert!(
             self.len() == val.len() * val[0].len(),
             "In copy from host async, destination and source slices have different lengths"
@@ -514,7 +514,7 @@ mod tests {
             });
 
         result_tr
-        .copy_from_host_vec_async(&vec_of_vec.iter().map(|v| v.as_slice()).collect::<Vec<&[_]>>(), &stream)
+        .copy_from_host_slice_vec_async(&vec_of_vec, &stream)
             .unwrap();
 
         result_tr
