@@ -161,7 +161,7 @@ extern "C" {
         output_store_min_layer: u64,
     ) -> MerkleTreeHandle;
 
-    fn icicle_merkle_tree_delete(tree: MerkleTreeHandle);
+    fn icicle_merkle_tree_delete(tree: MerkleTreeHandle) -> eIcicleError;
 
     fn icicle_merkle_tree_build(
         tree: MerkleTreeHandle,
@@ -300,7 +300,12 @@ impl MerkleTree {
 impl Drop for MerkleTree {
     fn drop(&mut self) {
         unsafe {
-            icicle_merkle_tree_delete(self.handle);
+            if !self
+                .handle
+                .is_null()
+            {
+                let _ = icicle_merkle_tree_delete(self.handle);
+            }
         }
     }
 }

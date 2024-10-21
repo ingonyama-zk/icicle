@@ -36,6 +36,7 @@ func testKeccakBatch(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
+	runtime.SetDevice(&devices[1])
 	keccakHasher, error = hash.NewKeccak512Hasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)
@@ -79,6 +80,7 @@ func testBlake2s(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
+	runtime.SetDevice(&devices[1])
 	Blake2sHasher, error = hash.NewBlake2sHasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)
@@ -122,6 +124,7 @@ func testSha3(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
+	runtime.SetDevice(&devices[1])
 	Sha3Hasher, error = hash.NewSha3256Hasher(0 /*default chunk size*/)
 	if error != runtime.Success {
 		fmt.Println("error:", error)

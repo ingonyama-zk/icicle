@@ -1,7 +1,6 @@
 package tests
 
 import (
-	// "fmt"
 	"os"
 	"sync"
 	"testing"
@@ -35,7 +34,7 @@ func TestMain(m *testing.M) {
 
 	for _, deviceType := range deviceTypes {
 		device := runtime.CreateDevice(deviceType, 0)
-		devices = append([]runtime.Device{device}, devices...)
+		devices = append(devices, device)
 	}
 
 	os.Exit(m.Run())

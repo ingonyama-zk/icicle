@@ -11,10 +11,10 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
-type HasherHandle = C.struct_Hash
+type HasherHandle = *C.struct_Hash
 
 type Hasher struct {
-	handle *HasherHandle
+	handle HasherHandle
 }
 
 // Hash computes the hash of the input data using the specified configuration and stores the result in the output slice.
@@ -45,6 +45,10 @@ func (h *Hasher) Hash(input, output core.HostOrDeviceSlice, cfg core.HashConfig)
 
 func (h *Hasher) OutputSize() uint64 {
 	return uint64(C.icicle_hasher_output_size(h.handle))
+}
+
+func (h *Hasher) GetHandle() HasherHandle {
+	return h.handle
 }
 
 func (h *Hasher) Delete() runtime.EIcicleError {
