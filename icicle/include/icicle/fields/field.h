@@ -19,8 +19,8 @@
  */
 
 #ifdef __CUDACC__
-#include "gpu-utils/sharedmem.h"
-#include "ptx.h"
+  #include "gpu-utils/sharedmem.h"
+  #include "ptx.h"
 #endif // __CUDACC__
 
 #include "icicle/errors.h"

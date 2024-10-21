@@ -6,101 +6,101 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	babybear_extension "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/extension"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
 	EXTENSION_LIMBS = babybear_extension.EXTENSION_LIMBS
 )
 
-func TestExtensionFieldFromLimbs(t *testing.T) {
+func testExtensionFieldFromLimbs(suite suite.Suite) {
 	emptyField := babybear_extension.ExtensionField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
 	randLimbs[0] = 100
-	assert.NotEqual(t, randLimbs, emptyField.GetLimbs())
+	suite.NotEqual(randLimbs, emptyField.GetLimbs())
 }
 
-func TestExtensionFieldGetLimbs(t *testing.T) {
+func testExtensionFieldGetLimbs(suite suite.Suite) {
 	emptyField := babybear_extension.ExtensionField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the ExtensionField's limbs")
 }
 
-func TestExtensionFieldOne(t *testing.T) {
+func testExtensionFieldOne(suite suite.Suite) {
 	var emptyField babybear_extension.ExtensionField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(EXTENSION_LIMBS))
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "ExtensionField with limbs to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "ExtensionField with limbs to field one did not work")
 }
 
-func TestExtensionFieldZero(t *testing.T) {
+func testExtensionFieldZero(suite suite.Suite) {
 	var emptyField babybear_extension.ExtensionField
 	emptyField.Zero()
 	limbsZero := make([]uint32, EXTENSION_LIMBS)
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "ExtensionField with limbs to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "ExtensionField with limbs to field zero failed")
 }
 
-func TestExtensionFieldSize(t *testing.T) {
+func testExtensionFieldSize(suite suite.Suite) {
 	var emptyField babybear_extension.ExtensionField
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	suite.Equal(len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func TestExtensionFieldAsPointer(t *testing.T) {
+func testExtensionFieldAsPointer(suite suite.Suite) {
 	var emptyField babybear_extension.ExtensionField
 	randLimbs := test_helpers.GenerateRandomLimb(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
+	suite.Equal(randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func TestExtensionFieldFromBytes(t *testing.T) {
+func testExtensionFieldFromBytes(suite suite.Suite) {
 	var emptyField babybear_extension.ExtensionField
 	bytes, expected := test_helpers.GenerateBytesArray(int(EXTENSION_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
-	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func TestExtensionFieldToBytes(t *testing.T) {
+func testExtensionFieldToBytes(suite suite.Suite) {
 	var emptyField babybear_extension.ExtensionField
 	expected, limbs := test_helpers.GenerateBytesArray(int(EXTENSION_LIMBS))
 	emptyField.FromLimbs(limbs)
 
-	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
 
-func TestBabybear_extensionGenerateScalars(t *testing.T) {
+func testBabybear_extensionGenerateScalars(suite suite.Suite) {
 	const numScalars = 8
 	scalars := babybear_extension.GenerateScalars(numScalars)
 
-	assert.Implements(t, (*core.HostOrDeviceSlice)(nil), &scalars)
+	suite.Implements((*core.HostOrDeviceSlice)(nil), &scalars)
 
-	assert.Equal(t, numScalars, scalars.Len())
+	suite.Equal(numScalars, scalars.Len())
 	zeroScalar := babybear_extension.ExtensionField{}
-	assert.NotContains(t, scalars, zeroScalar)
+	suite.NotContains(scalars, zeroScalar)
 }
 
-func TestBabybear_extensionMongtomeryConversion(t *testing.T) {
+func testBabybear_extensionMongtomeryConversion(suite suite.Suite) {
 	size := 1 << 20
 	scalars := babybear_extension.GenerateScalars(size)
 
@@ -112,10 +112,31 @@ func TestBabybear_extensionMongtomeryConversion(t *testing.T) {
 	scalarsMontHost := make(core.HostSlice[babybear_extension.ExtensionField], size)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
-	assert.NotEqual(t, scalars, scalarsMontHost)
+	suite.NotEqual(scalars, scalarsMontHost)
 
 	babybear_extension.FromMontgomery(deviceScalars)
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
-	assert.Equal(t, scalars, scalarsMontHost)
+	suite.Equal(scalars, scalarsMontHost)
+}
+
+type ExtensionFieldTestSuite struct {
+	suite.Suite
+}
+
+func (s *ExtensionFieldTestSuite) TestExtensionField() {
+	s.Run("TestExtensionFieldFromLimbs", testWrapper(s.Suite, testExtensionFieldFromLimbs))
+	s.Run("TestExtensionFieldGetLimbs", testWrapper(s.Suite, testExtensionFieldGetLimbs))
+	s.Run("TestExtensionFieldOne", testWrapper(s.Suite, testExtensionFieldOne))
+	s.Run("TestExtensionFieldZero", testWrapper(s.Suite, testExtensionFieldZero))
+	s.Run("TestExtensionFieldSize", testWrapper(s.Suite, testExtensionFieldSize))
+	s.Run("TestExtensionFieldAsPointer", testWrapper(s.Suite, testExtensionFieldAsPointer))
+	s.Run("TestExtensionFieldFromBytes", testWrapper(s.Suite, testExtensionFieldFromBytes))
+	s.Run("TestExtensionFieldToBytes", testWrapper(s.Suite, testExtensionFieldToBytes))
+	s.Run("TestBabybear_extensionGenerateScalars", testWrapper(s.Suite, testBabybear_extensionGenerateScalars))
+	s.Run("TestBabybear_extensionMongtomeryConversion", testWrapper(s.Suite, testBabybear_extensionMongtomeryConversion))
+}
+
+func TestSuiteExtensionField(t *testing.T) {
+	suite.Run(t, new(ExtensionFieldTestSuite))
 }

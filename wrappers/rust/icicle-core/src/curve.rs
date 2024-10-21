@@ -1,9 +1,5 @@
 use crate::traits::{FieldImpl, MontgomeryConvertible};
-use icicle_runtime::{
-    errors::eIcicleError,
-    memory::{DeviceSlice, HostOrDeviceSlice},
-    stream::IcicleStream,
-};
+use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
@@ -69,6 +65,10 @@ impl<C: Curve> Affine<C> {
     }
 
     pub fn to_projective(&self) -> Projective<C> {
+        if *self == (Affine::<C>::zero()) {
+            return Projective::<C>::zero();
+        }
+
         Projective {
             x: self.x,
             y: self.y,
@@ -127,14 +127,14 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
 }
 
 impl<C: Curve> MontgomeryConvertible for Affine<C> {
-    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
         C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
@@ -143,14 +143,14 @@ impl<C: Curve> MontgomeryConvertible for Affine<C> {
 }
 
 impl<C: Curve> MontgomeryConvertible for Projective<C> {
-    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         if !values.is_on_active_device() {
             panic!("values not allocated on an inactive device");
         }

@@ -3,11 +3,13 @@
 #include <thread>
 #include <cassert>
 
-#define LOG_TASKS_PER_THREAD 3
+#define LOG_TASKS_PER_THREAD 6
 #define TASKS_PER_THREAD     (1 << LOG_TASKS_PER_THREAD)
 #define TASK_IDX_MASK        (TASKS_PER_THREAD - 1)
 #define MANAGER_SLEEP_USEC   10
 #define THREAD_SLEEP_USEC    1
+
+// #define LOG_UTILIZATION
 
 /**
  * @class TaskBase
@@ -173,6 +175,11 @@ private:
     std::vector<Task> m_tasks; // vector containing the worker's task. a Vector is used to allow buffering.
     int m_next_task_idx;       // Tail (input) idx of the fifo above. Checks for free task start at this idx.
     bool kill;                 // boolean to flag from main to the thread to finish.
+
+    #ifdef LOG_UTILIZATION
+    int m_nof_sleeps = 0;
+    int m_total_sleep_us = 0;
+    #endif
   };
 
   std::vector<Worker> m_workers; // Vector of workers/threads to be ran simultaneously.
@@ -191,11 +198,18 @@ TasksManager<Task>::Worker::~Worker()
 {
   kill = true;
   task_executor.join();
+
+  #ifdef LOG_UTILIZATION
+  ICICLE_LOG_INFO << "Thread utilization:\n#sleeps =\t\t" << m_nof_sleeps << "\nTotal sleep time =\t" << m_total_sleep_us << "us";
+  #endif
 }
 
 template <class Task>
 void TasksManager<Task>::Worker::worker_loop()
 {
+  #ifdef LOG_UTILIZATION
+  bool had_work_since_sleep = false;
+  #endif
   while (!kill) {
     bool all_tasks_idle = true;
     for (int head = 0; head < m_tasks.size(); head++) {
@@ -204,11 +218,23 @@ void TasksManager<Task>::Worker::worker_loop()
         task->execute();
         task->set_completed();
         all_tasks_idle = false;
+
+        #ifdef LOG_UTILIZATION
+        had_work_since_sleep = true;
+  #endif
       }
     }
     if (all_tasks_idle) {
       // Sleep as the thread apparently isn't fully utilized currently
       std::this_thread::sleep_for(std::chrono::microseconds(THREAD_SLEEP_USEC));
+
+      #ifdef LOG_UTILIZATION
+      if (had_work_since_sleep) { 
+        m_nof_sleeps++;
+        had_work_since_sleep = false;
+      }
+      m_total_sleep_us++;
+  #endif
     }
   }
 }

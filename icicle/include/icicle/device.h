@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstring>
+#include <string>
+#include <iostream>
 
 namespace icicle {
 
@@ -52,7 +54,7 @@ namespace icicle {
     bool using_host_memory;      // Indicates if the device uses host memory
     int num_memory_regions;      // Number of memory regions available on the device
     bool supports_pinned_memory; // Indicates if the device supports pinned memory
-    // Add more properties as needed
+                                 // Add more properties as needed
   };
 
 } // namespace icicle

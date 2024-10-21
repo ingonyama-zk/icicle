@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"os/exec"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
@@ -21,10 +22,16 @@ func TestGetDeviceType(t *testing.T) {
 func TestIsDeviceAvailable(t *testing.T) {
 	runtime.LoadBackendFromEnvOrDefault()
 	dev := runtime.CreateDevice("CUDA", 0)
-	err := runtime.SetDevice(&dev)
+	_ = runtime.SetDevice(&dev)
 	res, err := runtime.GetDeviceCount()
+
+	expectedNumDevices, error := exec.Command("nvidia-smi", "-L", "|", "wc", "-l").Output()
+	if error != nil {
+		t.Skip("Failed to get number of devices")
+	}
+
 	assert.Equal(t, runtime.Success, err)
-	assert.Equal(t, res, 2)
+	assert.Equal(t, expectedNumDevices, res)
 
 	err = runtime.LoadBackendFromEnvOrDefault()
 	assert.Equal(t, runtime.Success, err)
@@ -39,7 +46,7 @@ func TestIsDeviceAvailable(t *testing.T) {
 func TestRegisteredDevices(t *testing.T) {
 	err := runtime.LoadBackendFromEnvOrDefault()
 	assert.Equal(t, runtime.Success, err)
-	devices, err := runtime.GetRegisteredDevices()
+	devices, _ := runtime.GetRegisteredDevices()
 	assert.Equal(t, []string{"CUDA", "CPU"}, devices)
 }
 

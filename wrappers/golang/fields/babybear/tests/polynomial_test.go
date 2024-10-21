@@ -6,10 +6,9 @@ import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
 
-	// "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/polynomial"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/vecOps"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 var one, two, three, four, five babybear.ScalarField
@@ -41,7 +40,7 @@ func vecOp(a, b babybear.ScalarField, op core.VecOps) babybear.ScalarField {
 	return out[0]
 }
 
-func TestPolyCreateFromCoefficients(t *testing.T) {
+func testPolyCreateFromCoefficients(suite suite.Suite) {
 	scalars := babybear.GenerateScalars(33)
 	var uniPoly polynomial.DensePolynomial
 
@@ -49,7 +48,7 @@ func TestPolyCreateFromCoefficients(t *testing.T) {
 	poly.Print()
 }
 
-func TestPolyEval(t *testing.T) {
+func testPolyEval(suite suite.Suite) {
 	// testing correct evaluation of f(8) for f(x)=4x^2+2x+5
 	coeffs := core.HostSliceFromElements([]babybear.ScalarField{five, two, four})
 	var f polynomial.DensePolynomial
@@ -62,10 +61,10 @@ func TestPolyEval(t *testing.T) {
 	evals := make(core.HostSlice[babybear.ScalarField], 1)
 	fEvaled := f.EvalOnDomain(domains, evals)
 	var expected babybear.ScalarField
-	assert.Equal(t, expected.FromUint32(277), fEvaled.(core.HostSlice[babybear.ScalarField])[0])
+	suite.Equal(expected.FromUint32(277), fEvaled.(core.HostSlice[babybear.ScalarField])[0])
 }
 
-func TestPolyClone(t *testing.T) {
+func testPolyClone(suite suite.Suite) {
 	f := randomPoly(8)
 	x := rand()
 	fx := f.Eval(x)
@@ -76,11 +75,11 @@ func TestPolyClone(t *testing.T) {
 	gx := g.Eval(x)
 	fgx := fg.Eval(x)
 
-	assert.Equal(t, fx, gx)
-	assert.Equal(t, vecOp(fx, gx, core.Add), fgx)
+	suite.Equal(fx, gx)
+	suite.Equal(vecOp(fx, gx, core.Add), fgx)
 }
 
-func TestPolyAddSubMul(t *testing.T) {
+func testPolyAddSubMul(suite suite.Suite) {
 	testSize := 1 << 10
 	f := randomPoly(testSize)
 	g := randomPoly(testSize)
@@ -91,26 +90,26 @@ func TestPolyAddSubMul(t *testing.T) {
 
 	polyAdd := f.Add(&g)
 	fxAddgx := vecOp(fx, gx, core.Add)
-	assert.Equal(t, polyAdd.Eval(x), fxAddgx)
+	suite.Equal(polyAdd.Eval(x), fxAddgx)
 
 	polySub := f.Subtract(&g)
 	fxSubgx := vecOp(fx, gx, core.Sub)
-	assert.Equal(t, polySub.Eval(x), fxSubgx)
+	suite.Equal(polySub.Eval(x), fxSubgx)
 
 	polyMul := f.Multiply(&g)
 	fxMulgx := vecOp(fx, gx, core.Mul)
-	assert.Equal(t, polyMul.Eval(x), fxMulgx)
+	suite.Equal(polyMul.Eval(x), fxMulgx)
 
 	s1 := rand()
 	polMulS1 := f.MultiplyByScalar(s1)
-	assert.Equal(t, polMulS1.Eval(x), vecOp(fx, s1, core.Mul))
+	suite.Equal(polMulS1.Eval(x), vecOp(fx, s1, core.Mul))
 
 	s2 := rand()
 	polMulS2 := f.MultiplyByScalar(s2)
-	assert.Equal(t, polMulS2.Eval(x), vecOp(fx, s2, core.Mul))
+	suite.Equal(polMulS2.Eval(x), vecOp(fx, s2, core.Mul))
 }
 
-func TestPolyMonomials(t *testing.T) {
+func testPolyMonomials(suite suite.Suite) {
 	var zero babybear.ScalarField
 	var f polynomial.DensePolynomial
 	f.CreateFromCoeffecitients(core.HostSliceFromElements([]babybear.ScalarField{one, zero, two}))
@@ -119,20 +118,20 @@ func TestPolyMonomials(t *testing.T) {
 	fx := f.Eval(x)
 	f.AddMonomial(three, 1)
 	fxAdded := f.Eval(x)
-	assert.Equal(t, fxAdded, vecOp(fx, vecOp(three, x, core.Mul), core.Add))
+	suite.Equal(fxAdded, vecOp(fx, vecOp(three, x, core.Mul), core.Add))
 
 	f.SubMonomial(one, 0)
 	fxSub := f.Eval(x)
-	assert.Equal(t, fxSub, vecOp(fxAdded, one, core.Sub))
+	suite.Equal(fxSub, vecOp(fxAdded, one, core.Sub))
 }
 
-func TestPolyReadCoeffs(t *testing.T) {
+func testPolyReadCoeffs(suite suite.Suite) {
 	var f polynomial.DensePolynomial
 	coeffs := core.HostSliceFromElements([]babybear.ScalarField{one, two, three, four})
 	f.CreateFromCoeffecitients(coeffs)
 	coeffsCopied := make(core.HostSlice[babybear.ScalarField], coeffs.Len())
 	_, _ = f.CopyCoeffsRange(0, coeffs.Len()-1, coeffsCopied)
-	assert.ElementsMatch(t, coeffs, coeffsCopied)
+	suite.ElementsMatch(coeffs, coeffsCopied)
 
 	var coeffsDevice core.DeviceSlice
 	coeffsDevice.Malloc(one.Size(), coeffs.Len())
@@ -140,16 +139,16 @@ func TestPolyReadCoeffs(t *testing.T) {
 	coeffsHost := make(core.HostSlice[babybear.ScalarField], coeffs.Len())
 	coeffsHost.CopyFromDevice(&coeffsDevice)
 
-	assert.ElementsMatch(t, coeffs, coeffsHost)
+	suite.ElementsMatch(coeffs, coeffsHost)
 }
 
-func TestPolyOddEvenSlicing(t *testing.T) {
+func testPolyOddEvenSlicing(suite suite.Suite) {
 	size := 1<<10 - 3
 	f := randomPoly(size)
 
 	even := f.Even()
 	odd := f.Odd()
-	assert.Equal(t, f.Degree(), even.Degree()+odd.Degree()+1)
+	suite.Equal(f.Degree(), even.Degree()+odd.Degree()+1)
 
 	x := rand()
 	var evenExpected, oddExpected babybear.ScalarField
@@ -164,13 +163,13 @@ func TestPolyOddEvenSlicing(t *testing.T) {
 	}
 
 	evenEvaled := even.Eval(x)
-	assert.Equal(t, evenExpected, evenEvaled)
+	suite.Equal(evenExpected, evenEvaled)
 
 	oddEvaled := odd.Eval(x)
-	assert.Equal(t, oddExpected, oddEvaled)
+	suite.Equal(oddExpected, oddEvaled)
 }
 
-func TestPolynomialDivision(t *testing.T) {
+func testPolynomialDivision(suite suite.Suite) {
 	// divide f(x)/g(x), compute q(x), r(x) and check f(x)=q(x)*g(x)+r(x)
 	var f, g polynomial.DensePolynomial
 	f.CreateFromCoeffecitients(core.HostSliceFromElements(babybear.GenerateScalars(1 << 4)))
@@ -184,10 +183,10 @@ func TestPolynomialDivision(t *testing.T) {
 	x := babybear.GenerateScalars(1)[0]
 	fEval := f.Eval(x)
 	fReconEval := fRecon.Eval(x)
-	assert.Equal(t, fEval, fReconEval)
+	suite.Equal(fEval, fReconEval)
 }
 
-func TestDivideByVanishing(t *testing.T) {
+func testDivideByVanishing(suite suite.Suite) {
 	// poly of x^4-1 vanishes ad 4th rou
 	var zero babybear.ScalarField
 	minus_one := vecOp(zero, one, core.Sub)
@@ -200,31 +199,51 @@ func TestDivideByVanishing(t *testing.T) {
 	fv := f.Multiply(&v)
 	fDegree := f.Degree()
 	fvDegree := fv.Degree()
-	assert.Equal(t, fDegree+4, fvDegree)
+	suite.Equal(fDegree+4, fvDegree)
 
 	fReconstructed := fv.DivideByVanishing(4)
-	assert.Equal(t, fDegree, fReconstructed.Degree())
+	suite.Equal(fDegree, fReconstructed.Degree())
 
 	x := rand()
-	assert.Equal(t, f.Eval(x), fReconstructed.Eval(x))
+	suite.Equal(f.Eval(x), fReconstructed.Eval(x))
 }
 
-// func TestPolySlice(t *testing.T) {
+// func TestPolySlice(suite suite.Suite) {
 // 	size := 4
 // 	coeffs := babybear.GenerateScalars(size)
 // 	var f DensePolynomial
 // 	f.CreateFromCoeffecitients(coeffs)
 // 	fSlice := f.AsSlice()
-// 	assert.True(t, fSlice.IsOnDevice())
-// 	assert.Equal(t, size, fSlice.Len())
+// 	suite.True(fSlice.IsOnDevice())
+// 	suite.Equal(size, fSlice.Len())
 
 // 	hostSlice := make(core.HostSlice[babybear.ScalarField], size)
 // 	hostSlice.CopyFromDevice(fSlice)
-// 	assert.Equal(t, coeffs, hostSlice)
+// 	suite.Equal(coeffs, hostSlice)
 
 // 	cfg := ntt.GetDefaultNttConfig()
 // 	res := make(core.HostSlice[babybear.ScalarField], size)
 // 	ntt.Ntt(fSlice, core.KForward, cfg, res)
 
-// 	assert.Equal(t, f.Eval(one), res[0])
+// 	suite.Equal(f.Eval(one), res[0])
 // }
+
+type PolynomialTestSuite struct {
+	suite.Suite
+}
+
+func (s *PolynomialTestSuite) TestPolynomial() {
+	s.Run("TestPolyCreateFromCoefficients", testWrapper(s.Suite, testPolyCreateFromCoefficients))
+	s.Run("TestPolyEval", testWrapper(s.Suite, testPolyEval))
+	s.Run("TestPolyClone", testWrapper(s.Suite, testPolyClone))
+	s.Run("TestPolyAddSubMul", testWrapper(s.Suite, testPolyAddSubMul))
+	s.Run("TestPolyMonomials", testWrapper(s.Suite, testPolyMonomials))
+	s.Run("TestPolyReadCoeffs", testWrapper(s.Suite, testPolyReadCoeffs))
+	s.Run("TestPolyOddEvenSlicing", testWrapper(s.Suite, testPolyOddEvenSlicing))
+	s.Run("TestPolynomialDivision", testWrapper(s.Suite, testPolynomialDivision))
+	s.Run("TestDivideByVanishing", testWrapper(s.Suite, testDivideByVanishing))
+}
+
+func TestSuitePolynomial(t *testing.T) {
+	suite.Run(t, new(PolynomialTestSuite))
+}

@@ -1,7 +1,7 @@
 use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
 use hex::FromHex;
 use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::DeviceSlice;
+use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
@@ -102,19 +102,19 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
 
 #[doc(hidden)]
 pub trait MontgomeryConvertibleField<F: FieldImpl> {
-    fn to_mont(values: &mut DeviceSlice<F>, stream: &IcicleStream) -> eIcicleError;
-    fn from_mont(values: &mut DeviceSlice<F>, stream: &IcicleStream) -> eIcicleError;
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> eIcicleError;
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
     F: MontgomeryConvertibleField<Self>,
 {
-    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         F::to_mont(values, stream)
     }
 
-    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError {
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         F::from_mont(values, stream)
     }
 }
@@ -170,13 +170,8 @@ macro_rules! impl_scalar_field {
                 scalars: *mut $field_name,
                 len: usize,
                 is_into: bool,
-                stream: &IcicleStream,
+                config: &VecOpsConfig,
             ) -> eIcicleError {
-                let mut config = VecOpsConfig::default();
-                config.is_a_on_device = true;
-                config.is_result_on_device = true;
-                config.is_async = false;
-                config.stream_handle = (&*stream).into();
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
             }
         }
@@ -190,29 +185,45 @@ macro_rules! impl_scalar_field {
         }
 
         impl MontgomeryConvertibleField<$field_name> for $field_cfg {
-            fn to_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
+            fn to_mont(
+                values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
+                stream: &IcicleStream,
+            ) -> eIcicleError {
+                use icicle_core::vec_ops::VecOpsConfig;
                 // check device slice is on active device
-                if !values.is_on_active_device() {
-                    panic!("input not allocated on an inactive device");
+                if values.is_on_device() && !values.is_on_active_device() {
+                    panic!("input not allocated on the active device");
                 }
+                let mut config = VecOpsConfig::default();
+                config.is_a_on_device = values.is_on_device();
+                config.is_async = !stream.is_null();
+                config.stream_handle = (&*stream).into();
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),
                     true,
-                    stream,
+                    &config,
                 )
             }
 
-            fn from_mont(values: &mut DeviceSlice<$field_name>, stream: &IcicleStream) -> eIcicleError {
+            fn from_mont(
+                values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
+                stream: &IcicleStream,
+            ) -> eIcicleError {
+                use icicle_core::vec_ops::VecOpsConfig;
                 // check device slice is on active device
-                if !values.is_on_active_device() {
-                    panic!("input not allocated on an inactive device");
+                if values.is_on_device() && !values.is_on_active_device() {
+                    panic!("input not allocated on the active device");
                 }
+                let mut config = VecOpsConfig::default();
+                config.is_a_on_device = values.is_on_device();
+                config.is_async = !stream.is_null();
+                config.stream_handle = (&*stream).into();
                 $field_prefix_ident::convert_scalars_montgomery(
                     unsafe { values.as_mut_ptr() },
                     values.len(),
                     false,
-                    stream,
+                    &config,
                 )
             }
         }

@@ -32,15 +32,15 @@ namespace icicle {
     return AffineG2ConvertMont::execute(input, n, is_into, *config, output);
   }
 
-#ifndef G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
+  #ifndef G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
   template <>
   eIcicleError convert_montgomery(
     const g2_affine_t* input, uint64_t n, bool is_into, const VecOpsConfig& config, g2_affine_t* output)
   {
     return CONCAT_EXPAND(CURVE, g2_affine_convert_montgomery)(input, n, is_into, &config, output);
   }
-#endif //! G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
-#endif // G2
+  #endif //! G1_AFFINE_SAME_TYPE_AS_G2_AFFINE
+#endif   // G2
   /*************************** PROJECTIVE CONVERT MONTGOMERY ***************************/
   ICICLE_DISPATCHER_INST(ProjectiveConvertMont, projective_convert_montgomery, ProjectiveConvertMontImpl);
 

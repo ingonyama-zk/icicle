@@ -9,10 +9,10 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime/config_extension"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestECNtt(t *testing.T) {
+func testECNtt(suite suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	ext := config_extension.Create()
 	ext.SetInt(core.CUDA_NTT_ALGORITHM, int(core.Radix2))
@@ -31,7 +31,19 @@ func TestECNtt(t *testing.T) {
 
 			output := make(core.HostSlice[{{.Curve}}.Projective], testSize)
 			e := ecntt.ECNtt(pointsCopy, core.KForward, &cfg, output)
-			assert.Equal(t, runtime.Success, e, "ECNtt failed")
+			suite.Equal(runtime.Success, e, "ECNtt failed")
 		}
 	}
+}
+
+type ECNttTestSuite struct {
+	suite.Suite
+}
+
+func (s *ECNttTestSuite) TestECNtt() {
+	s.Run("TestECNtt", testWrapper(s.Suite, testECNtt))
+}
+
+func TestSuiteECNtt(t *testing.T) {
+	suite.Run(t, new(ECNttTestSuite))
 }

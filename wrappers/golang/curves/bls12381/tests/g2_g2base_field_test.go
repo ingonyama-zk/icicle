@@ -5,85 +5,105 @@ import (
 
 	bls12_381 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/g2"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
 	G2BASE_LIMBS = bls12_381.G2BASE_LIMBS
 )
 
-func TestG2BaseFieldFromLimbs(t *testing.T) {
+func testG2BaseFieldFromLimbs(suite suite.Suite) {
 	emptyField := bls12_381.G2BaseField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the G2BaseField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the G2BaseField's limbs")
 	randLimbs[0] = 100
-	assert.NotEqual(t, randLimbs, emptyField.GetLimbs())
+	suite.NotEqual(randLimbs, emptyField.GetLimbs())
 }
 
-func TestG2BaseFieldGetLimbs(t *testing.T) {
+func testG2BaseFieldGetLimbs(suite suite.Suite) {
 	emptyField := bls12_381.G2BaseField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.ElementsMatch(t, randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the G2BaseField's limbs")
+	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the G2BaseField's limbs")
 }
 
-func TestG2BaseFieldOne(t *testing.T) {
+func testG2BaseFieldOne(suite suite.Suite) {
 	var emptyField bls12_381.G2BaseField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(G2BASE_LIMBS))
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "Empty field to field one did not work")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.One()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbOne, "G2BaseField with limbs to field one did not work")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "G2BaseField with limbs to field one did not work")
 }
 
-func TestG2BaseFieldZero(t *testing.T) {
+func testG2BaseFieldZero(suite suite.Suite) {
 	var emptyField bls12_381.G2BaseField
 	emptyField.Zero()
 	limbsZero := make([]uint32, G2BASE_LIMBS)
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "Empty field to field zero failed")
 
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
 	emptyField.Zero()
-	assert.ElementsMatch(t, emptyField.GetLimbs(), limbsZero, "G2BaseField with limbs to field zero failed")
+	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "G2BaseField with limbs to field zero failed")
 }
 
-func TestG2BaseFieldSize(t *testing.T) {
+func testG2BaseFieldSize(suite suite.Suite) {
 	var emptyField bls12_381.G2BaseField
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
+	suite.Equal(len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func TestG2BaseFieldAsPointer(t *testing.T) {
+func testG2BaseFieldAsPointer(suite suite.Suite) {
 	var emptyField bls12_381.G2BaseField
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
 
-	assert.Equal(t, randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
+	suite.Equal(randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func TestG2BaseFieldFromBytes(t *testing.T) {
+func testG2BaseFieldFromBytes(suite suite.Suite) {
 	var emptyField bls12_381.G2BaseField
 	bytes, expected := test_helpers.GenerateBytesArray(int(G2BASE_LIMBS))
 
 	emptyField.FromBytesLittleEndian(bytes)
 
-	assert.ElementsMatch(t, emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func TestG2BaseFieldToBytes(t *testing.T) {
+func testG2BaseFieldToBytes(suite suite.Suite) {
 	var emptyField bls12_381.G2BaseField
 	expected, limbs := test_helpers.GenerateBytesArray(int(G2BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
 
-	assert.ElementsMatch(t, emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+	suite.ElementsMatch(emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
+}
+
+type G2BaseFieldTestSuite struct {
+	suite.Suite
+}
+
+func (s *G2BaseFieldTestSuite) TestG2BaseField() {
+	s.Run("TestG2BaseFieldFromLimbs", testWrapper(s.Suite, testG2BaseFieldFromLimbs))
+	s.Run("TestG2BaseFieldGetLimbs", testWrapper(s.Suite, testG2BaseFieldGetLimbs))
+	s.Run("TestG2BaseFieldOne", testWrapper(s.Suite, testG2BaseFieldOne))
+	s.Run("TestG2BaseFieldZero", testWrapper(s.Suite, testG2BaseFieldZero))
+	s.Run("TestG2BaseFieldSize", testWrapper(s.Suite, testG2BaseFieldSize))
+	s.Run("TestG2BaseFieldAsPointer", testWrapper(s.Suite, testG2BaseFieldAsPointer))
+	s.Run("TestG2BaseFieldFromBytes", testWrapper(s.Suite, testG2BaseFieldFromBytes))
+	s.Run("TestG2BaseFieldToBytes", testWrapper(s.Suite, testG2BaseFieldToBytes))
+
+}
+
+func TestSuiteG2BaseField(t *testing.T) {
+	suite.Run(t, new(G2BaseFieldTestSuite))
 }

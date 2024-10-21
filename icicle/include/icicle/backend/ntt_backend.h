@@ -39,13 +39,13 @@ namespace icicle {
 
   void register_extension_ntt(const std::string& deviceType, NttExtFieldImpl impl);
 
-#define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                              \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_ntt_ext_field) = []() -> bool {                                                            \
-      register_extension_ntt(DEVICE_TYPE, FUNC);                                                                       \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_NTT_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ntt_ext_field) = []() -> bool {                                                          \
+        register_extension_ntt(DEVICE_TYPE, FUNC);                                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 #endif // EXT_FIELD
 
   /*************************** INIT DOMAIN ***************************/
@@ -63,9 +63,9 @@ namespace icicle {
   }
 
   /*************************** RELEASE DOMAIN ***************************/
-  // Note: 'dummy' is a workaround for the function required per field but need to differentiate by type when
-  // calling. TODO Yuval: avoid this param somehow
-  using NttReleaseDomainImpl = std::function<eIcicleError(const Device& device, const scalar_t& dummy)>;
+  // Note: 'phantom' is a workaround for the function required per field but need to differentiate by type when
+  // calling.
+  using NttReleaseDomainImpl = std::function<eIcicleError(const Device& device, const scalar_t& phantom)>;
 
   void register_ntt_release_domain(const std::string& deviceType, NttReleaseDomainImpl);
 

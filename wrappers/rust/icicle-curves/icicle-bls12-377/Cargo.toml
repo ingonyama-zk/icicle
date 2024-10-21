@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
-# criterion = "0.3"
+icicle-hash = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.3"

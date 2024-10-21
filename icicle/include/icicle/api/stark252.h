@@ -9,11 +9,6 @@
 #include "icicle/ntt.h"
 #include "icicle/vec_ops.h"
 
-extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
-
-extern "C" void stark252_scalar_convert_montgomery(
-  const stark252::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, stark252::scalar_t* output);
-
 extern "C" eIcicleError stark252_ntt_init_domain(stark252::scalar_t* primitive_root, const NTTInitDomainConfig* config);
 
 extern "C" eIcicleError stark252_ntt(
@@ -55,3 +50,8 @@ extern "C" eIcicleError stark252_matrix_transpose(
 
 extern "C" eIcicleError stark252_bit_reverse(
   const stark252::scalar_t* input, uint64_t n, const VecOpsConfig* config, stark252::scalar_t* output);
+
+extern "C" void stark252_generate_scalars(stark252::scalar_t* scalars, int size);
+
+extern "C" void stark252_scalar_convert_montgomery(
+  const stark252::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, stark252::scalar_t* output);

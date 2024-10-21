@@ -1,5 +1,5 @@
 use icicle_runtime::errors::eIcicleError;
-use icicle_runtime::memory::DeviceSlice;
+use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 
@@ -27,6 +27,6 @@ pub trait FieldImpl:
 }
 
 pub trait MontgomeryConvertible: Sized {
-    fn to_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError;
-    fn from_mont(values: &mut DeviceSlice<Self>, stream: &IcicleStream) -> eIcicleError;
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
 }

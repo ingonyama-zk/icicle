@@ -157,17 +157,15 @@ static eIcicleError _determine_copy_direction(void* dst, const void* src, eCopyD
   MemoryType dstType = _get_memory_type(dst);
   MemoryType srcType = _get_memory_type(src);
 
-  // Validate memory combinations
   if (dstType == MemoryType::Untracked && srcType == MemoryType::Untracked) {
-    ICICLE_LOG_ERROR << "Host to Host copy, not handled by DeviceAPI";
-    return eIcicleError::INVALID_POINTER;
+    direction = HostToHost;
+    return eIcicleError::SUCCESS;
   }
   if (dstType == MemoryType::NonActiveDevice || srcType == MemoryType::NonActiveDevice) {
     ICICLE_LOG_ERROR << "Either dst or src is on a non-active device memory";
     return eIcicleError::INVALID_POINTER;
   }
 
-  // Determine the copy direction
   direction = srcType == MemoryType::ActiveDevice && dstType == MemoryType::Untracked   ? eCopyDirection::DeviceToHost
               : srcType == MemoryType::Untracked && dstType == MemoryType::ActiveDevice ? eCopyDirection::HostToDevice
               : srcType == MemoryType::ActiveDevice && dstType == MemoryType::ActiveDevice
@@ -179,9 +177,20 @@ static eIcicleError _determine_copy_direction(void* dst, const void* src, eCopyD
 
 extern "C" eIcicleError icicle_copy(void* dst, const void* src, size_t size)
 {
+  // NOTE: memory allocated outside of icicle APIs is considered host memory. Do not use it with memory allocated by
+  // external libs (e.g. a cudaMalloc() call)
+
   eCopyDirection direction;
   auto err = _determine_copy_direction(dst, src, direction);
   if (eIcicleError::SUCCESS != err) { return err; }
+  if (eCopyDirection::HostToHost == direction) {
+    ICICLE_LOG_VERBOSE
+      << "Host to Host copy, falling back to std::memcpy(). NOTE: memory allocated outside of icicle APIs is "
+         "considered host memory. Do not use icicle_copy() with memory allocated by external libs (e.g. a cudaMalloc() "
+         "call)";
+    std::memcpy(dst, src, size);
+    return eIcicleError::SUCCESS;
+  }
   // Call the appropriate copy method
   return DeviceAPI::get_thread_local_deviceAPI()->copy(dst, src, size, direction);
 }
@@ -256,7 +265,7 @@ const std::string SHARED_LIB_EXTENSION = ".so";
 #elif __APPLE__
 const std::string SHARED_LIB_EXTENSION = ".dylib";
 #else
-#error "Unsupported operating system"
+  #error "Unsupported operating system"
 #endif
 
 extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)

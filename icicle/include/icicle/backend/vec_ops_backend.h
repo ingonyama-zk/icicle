@@ -266,42 +266,42 @@ namespace icicle {
 
   void register_extension_vector_add(const std::string& deviceType, extFieldVectorOpImpl impl);
 
-#define REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_add_ext_field) = []() -> bool {                                                        \
-      register_extension_vector_add(DEVICE_TYPE, FUNC);                                                                \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_add_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_add(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   void register_extension_vector_accumulate(const std::string& deviceType, extFieldVectorOpImplInplaceA impl);
 
-#define REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_accumulate_ext_field) = []() -> bool {                                                 \
-      register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                         \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                              \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_accumulate_ext_field) = []() -> bool {                                               \
+        register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                       \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   void register_extension_vector_sub(const std::string& deviceType, extFieldVectorOpImpl impl);
-#define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_sub_ext_field) = []() -> bool {                                                        \
-      register_extension_vector_sub(DEVICE_TYPE, FUNC);                                                                \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_sub_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_sub(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   void register_extension_vector_mul(const std::string& deviceType, extFieldVectorOpImpl impl);
 
-#define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                       \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                        \
-      register_extension_vector_mul(DEVICE_TYPE, FUNC);                                                                \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_mul(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   using extFieldConvertMontgomeryImpl = std::function<eIcicleError(
     const Device& device,
@@ -313,13 +313,13 @@ namespace icicle {
 
   void register_extension_scalar_convert_montgomery(const std::string& deviceType, extFieldConvertMontgomeryImpl);
 
-#define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_scalar_convert_mont_ext_field) = []() -> bool {                                            \
-      register_extension_scalar_convert_montgomery(DEVICE_TYPE, FUNC);                                                 \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                             \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_convert_mont_ext_field) = []() -> bool {                                          \
+        register_extension_scalar_convert_montgomery(DEVICE_TYPE, FUNC);                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   using extFieldMatrixOpImpl = std::function<eIcicleError(
     const Device& device,
@@ -331,26 +331,26 @@ namespace icicle {
 
   void register_extension_matrix_transpose(const std::string& deviceType, extFieldMatrixOpImpl impl);
 
-#define REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                 \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_matrix_transpose_ext_field) = []() -> bool {                                               \
-      register_extension_matrix_transpose(DEVICE_TYPE, FUNC);                                                          \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                               \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_matrix_transpose_ext_field) = []() -> bool {                                             \
+        register_extension_matrix_transpose(DEVICE_TYPE, FUNC);                                                        \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   using extFieldBitReverseOpImpl = std::function<eIcicleError(
     const Device& device, const extension_t* input, uint64_t size, const VecOpsConfig& config, extension_t* output)>;
 
   void register_extension_bit_reverse(const std::string& deviceType, extFieldBitReverseOpImpl);
 
-#define REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                      \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                      \
-      register_extension_bit_reverse(DEVICE_TYPE, FUNC);                                                               \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                    \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                    \
+        register_extension_bit_reverse(DEVICE_TYPE, FUNC);                                                             \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 
   using extFieldSliceOpImpl = std::function<eIcicleError(
     const Device& device,
@@ -363,13 +363,13 @@ namespace icicle {
 
   void register_extension_slice(const std::string& deviceType, extFieldSliceOpImpl);
 
-#define REGISTER_SLICE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                            \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_scalar_slice) = []() -> bool {                                                             \
-      register_extension_slice(DEVICE_TYPE, FUNC);                                                                     \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
+  #define REGISTER_SLICE_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                          \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_slice) = []() -> bool {                                                           \
+        register_extension_slice(DEVICE_TYPE, FUNC);                                                                   \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 #endif // EXT_FIELD
 
 } // namespace icicle

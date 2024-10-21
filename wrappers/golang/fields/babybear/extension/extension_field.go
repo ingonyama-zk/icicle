@@ -60,6 +60,16 @@ func (f *ExtensionField) Zero() ExtensionField {
 	return *f
 }
 
+func (f *ExtensionField) IsZero() bool {
+	for _, limb := range f.limbs {
+		if limb != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (f *ExtensionField) One() ExtensionField {
 	for i := range f.limbs {
 		f.limbs[i] = 0

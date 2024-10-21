@@ -12,6 +12,9 @@ if (FIELD)
     if (NTT)
         target_sources(icicle_field PRIVATE src/field/cpu_ntt.cpp src/polynomials/cpu_polynomial_backend.cpp)
     endif()
+    if (POSEIDON)
+        target_sources(icicle_field PRIVATE src/hash/cpu_poseidon.cpp)
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 
@@ -30,4 +33,12 @@ if (CURVE)
     target_include_directories(icicle_curve PUBLIC include)
 endif()
 
+if (HASH)
+    target_sources(icicle_hash PRIVATE
+        src/hash/cpu_keccak.cpp
+        src/hash/cpu_blake2s.cpp
+        src/hash/cpu_merkle_tree.cpp
+    )
+    target_include_directories(icicle_hash PUBLIC include)
+endif()
 

@@ -1,7 +1,7 @@
 // Note: this optimization generates invalid code (using gcc) when storage class has a union for both u32 and u64 so
 // disabling it.
 #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
-#pragma GCC optimize("no-strict-aliasing")
+  #pragma GCC optimize("no-strict-aliasing")
 #endif
 
 #pragma once
@@ -298,5 +298,5 @@ namespace host_math {
 } // namespace host_math
 
 #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
-#pragma GCC reset_options
+  #pragma GCC reset_options
 #endif
