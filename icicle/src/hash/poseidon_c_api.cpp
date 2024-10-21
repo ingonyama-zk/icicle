@@ -10,18 +10,19 @@ using namespace icicle;
 extern "C" {
 typedef icicle::Hash* HasherHandle;
 
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(const PoseidonConstantsInitOptions<scalar_t>* options)
+eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_constants)(const PoseidonConstantsOptions<scalar_t>* options)
 {
   return Poseidon::init_constants<scalar_t>(options);
 }
 
-eIcicleError CONCAT_EXPAND(FIELD, poseidon_init_default_constants)()
+HasherHandle CONCAT_EXPAND(FIELD, create_poseidon_hasher)(
+  unsigned arity,
+  unsigned default_input_size,
+  bool is_domain_tag,
+  scalar_t* domain_tag_value,
+  bool use_all_zeroes_padding)
 {
-  return Poseidon::init_default_constants<scalar_t>();
-}
-
-HasherHandle CONCAT_EXPAND(FIELD, create_poseidon_hasher)(unsigned arity)
-{
-  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(arity));
+  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(
+    arity, default_input_size, is_domain_tag, domain_tag_value, use_all_zeroes_padding));
 }
 }
