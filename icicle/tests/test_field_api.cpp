@@ -348,16 +348,24 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
+  // const uint64_t N = 1 << 3;
   const int batch_size = 1 << (rand() % 5);
+  // const int batch_size = 2;
   const bool columns_batch = rand() % 2;
+  // const bool columns_batch = 0;
   const bool use_single_scalar = rand() % 2;
+  // const bool use_single_scalar = 1;
   const int total_size = N * batch_size;
   auto scalar_a = std::make_unique<TypeParam[]>(use_single_scalar ? 1 : batch_size);
   auto in_b = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  ICICLE_LOG_DEBUG << "use_single_scalar = " << use_single_scalar;
 
   auto vector_accumulate_wrapper =
     [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
@@ -398,9 +406,16 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
   }
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
+
+  
+  // ICICLE_LOG_DEBUG << scalar_a[0] << ", ";
+  // for (int i = 0; i < total_size; i++) {
+  //   ICICLE_LOG_DEBUG << i << ", " << in_b[i] << ", " << out_main[i] << ", " << out_ref[i];
+  // }
+  
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  // // scalar sub vec
+  // scalar sub vec
   FieldApiTest<TypeParam>::random_samples(scalar_a.get(), (use_single_scalar ? 1 : batch_size));
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
 
