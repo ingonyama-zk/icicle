@@ -178,13 +178,32 @@ public:
 
   friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point)
   {
+    // Precompute points: P, 2P, ..., (2^window_size - 1)P
+    constexpr unsigned window_size =
+      4; // 4 seems fastest. Optimum is minimizing EC add and depends on the field size. for 256b it's 4.
+    constexpr unsigned table_size = (1 << window_size); // 2^window_size
+    std::array<Projective, table_size> table;
+    table[0] = point;
+    for (int i = 1; i < table_size; ++i) {
+      table[i] = table[i - 1] + point; // Compute (i+1)P
+    }
+
     Projective res = zero();
-#ifdef __CUDA_ARCH__
-    UNROLL
-#endif
-    for (int i = 0; i < SCALAR_FF::NBITS; i++) {
-      if (i > 0) { res = dbl(res); }
-      if (scalar.get_scalar_digit(SCALAR_FF::NBITS - i - 1, 1)) { res = res + point; }
+
+    const int nof_windows = (SCALAR_FF::NBITS + window_size - 1) / window_size;
+    for (int w = nof_windows - 1; w >= 0; w -= 1) {
+      // Extract the next window_size bits from the scalar
+      unsigned window = scalar.get_scalar_digit(w, window_size);
+
+      // Double the result window_size times
+      for (int j = 0; j < window_size; ++j) {
+        res = dbl(res); // Point doubling
+      }
+
+      // Add the precomputed value if window is not zero
+      if (window != 0) {
+        res = res + table[window - 1]; // Add the precomputed point
+      }
     }
     return res;
   }
