@@ -24,36 +24,36 @@ const (
 func (e EIcicleError) AsString() string {
 	switch e {
 	case Success:
-		return "EIcicleError.Success";
+		return "EIcicleError.Success"
 	case InvalidDevice:
-		return "EIcicleError.InvalidDevice";
+		return "EIcicleError.InvalidDevice"
 	case OutOfMemory:
-		return "EIcicleError.OutOfMemory";
+		return "EIcicleError.OutOfMemory"
 	case InvalidPointer:
-		return "EIcicleError.InvalidPointer";
+		return "EIcicleError.InvalidPointer"
 	case AllocationFailed:
-		return "EIcicleError.AllocationFailed";
+		return "EIcicleError.AllocationFailed"
 	case DeallocationFailed:
-		return "EIcicleError.DeallocationFailed";
+		return "EIcicleError.DeallocationFailed"
 	case CopyFailed:
-		return "EIcicleError.CopyFailed";
+		return "EIcicleError.CopyFailed"
 	case SynchronizationFailed:
-		return "EIcicleError.SynchronizationFailed";
+		return "EIcicleError.SynchronizationFailed"
 	case StreamCreationFailed:
-		return "EIcicleError.StreamCreationFailed";
+		return "EIcicleError.StreamCreationFailed"
 	case StreamDestructionFailed:
-		return "EIcicleError.StreamDestructionFailed";
+		return "EIcicleError.StreamDestructionFailed"
 	case ApiNotImplemented:
-		return "EIcicleError.ApiNotImplemented";
+		return "EIcicleError.ApiNotImplemented"
 	case InvalidArgument:
-		return "EIcicleError.InvalidArgument";
+		return "EIcicleError.InvalidArgument"
 	case BackendLoadFailed:
-		return "EIcicleError.BackendLoadFailed";
+		return "EIcicleError.BackendLoadFailed"
 	case LicenseCheckError:
-		return "EIcicleError.LicenseCheckError";
+		return "EIcicleError.LicenseCheckError"
 	case UnknownError:
 	default:
 	}
-	
-	return "EIcicleError.UnknownError";
+
+	return "EIcicleError.UnknownError"
 }

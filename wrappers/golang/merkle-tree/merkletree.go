@@ -143,7 +143,6 @@ func (mt *MerkleTree) Verify(mp *MerkleProof) (bool, runtime.EIcicleError) {
 	return isVerified, icicleErr
 }
 
-
 func BuildMerkleTree[T any](
 	mt *MerkleTree,
 	leaves core.HostOrDeviceSlice,
@@ -162,7 +161,6 @@ func BuildMerkleTree[T any](
 	__err := C.icicle_merkle_tree_build(mt.handle, cLeaves, cLeavesSizeInBytes, cCfg)
 	return runtime.EIcicleError(__err)
 }
-
 
 func GetMerkleTreeRoot[T any](mt *MerkleTree) ([]T, runtime.EIcicleError) {
 	if mt.handle == nil {
@@ -215,7 +213,7 @@ func GetMerkleTreeProof[T any](
 		cLeafIndex,
 		cPrunedPath,
 		cCfg,
-		proof.handle,	
+		proof.handle,
 	)
 
 	return proof, runtime.EIcicleError(__err)

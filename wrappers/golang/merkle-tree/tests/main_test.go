@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	devices   []runtime.Device
+	devices []runtime.Device
 )
 
 func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {

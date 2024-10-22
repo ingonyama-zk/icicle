@@ -31,7 +31,7 @@ func testMerkleTree(s *suite.Suite) {
 		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not create merkle tree due to: %v", err.AsString()))
 	}
 
-	leaves := make([]byte, numElems * leafElemSize)
+	leaves := make([]byte, numElems*leafElemSize)
 	rand.Read(leaves)
 
 	merkletree.BuildMerkleTree[byte](&mt, core.HostSliceFromElements(leaves), core.GetDefaultMerkleTreeConfig())
@@ -39,7 +39,7 @@ func testMerkleTree(s *suite.Suite) {
 	mp, _ := merkletree.GetMerkleTreeProof[byte](
 		&mt,
 		core.HostSliceFromElements(leaves),
-		1, /* leafIndex */
+		1,     /* leafIndex */
 		false, /* prunedPath */
 		core.GetDefaultMerkleTreeConfig(),
 	)
