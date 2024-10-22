@@ -83,9 +83,11 @@ icicle::MerkleTree* icicle_merkle_tree_create(
 }
 
 // Delete the MerkleTree object and free its resources
-void icicle_merkle_tree_delete(icicle::MerkleTree* tree)
+eIcicleError icicle_merkle_tree_delete(icicle::MerkleTree* tree)
 {
-  if (tree) { delete tree; }
+  if (!tree) { return eIcicleError::INVALID_POINTER; }
+  delete tree;
+  return eIcicleError::SUCCESS;
 }
 
 // Build the Merkle tree from the provided leaves

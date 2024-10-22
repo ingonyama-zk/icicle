@@ -171,6 +171,16 @@ module.exports = {
                   label: "Multi GPU Support",
                   id: "icicle/golang-bindings/multi-gpu",
                 },
+                {
+                  type: "doc",
+                  label: "Hash",
+                  id: "icicle/golang-bindings/hash",
+                },
+                {
+                  type: "doc",
+                  label: "Merkle-Tree",
+                  id: "icicle/golang-bindings/merkle",
+                },
               ]
             },
             {
