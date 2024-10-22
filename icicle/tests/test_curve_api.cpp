@@ -200,7 +200,7 @@ TEST_F(CurveApiTest, ecntt)
   }
 }
 
-TEST_F(CurveApiTest, ecnttRandTest)
+TEST_F(CurveApiTest, ecnttDeviceMem)
 {
   // (TODO) Randomize configuration
   const bool inplace = false;
