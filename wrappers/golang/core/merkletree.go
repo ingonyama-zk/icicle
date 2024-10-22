@@ -9,9 +9,9 @@ import (
 
 type PaddingPolicy = int
 const (
-	NoPadding 	PaddingPolicy = iota        // No padding, assume input is correctly sized.
-	ZeroPadding // Pad the input with zeroes to fit the expected input size.
-	LastValuePadding   // Pad the input by repeating the last value.
+	NoPadding 			PaddingPolicy = iota    // No padding, assume input is correctly sized.
+	ZeroPadding 														// Pad the input with zeroes to fit the expected input size.
+	LastValuePadding   											// Pad the input by repeating the last value.
 )
 
 type MerkleTreeConfig struct {

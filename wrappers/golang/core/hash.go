@@ -1,13 +1,7 @@
 package core
 
-// Should contain:
-// - the checks necessary for Hasher.hash
-// - the Hash type
-// - HashConfig
-
 import (
 	"fmt"
-	// "reflect"
 	"unsafe"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"

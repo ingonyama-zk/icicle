@@ -49,7 +49,7 @@ func (mp *MerkleProof) IsPruned() bool {
 	return (bool)(C.icicle_merkle_proof_is_pruned(mp.handle))
 }
 
-func GetPath[T any](mp *MerkleProof) []T {
+func GetMerkleProofPath[T any](mp *MerkleProof) []T {
 	var size uint64
 	cSize := (*C.uint64_t)(unsafe.Pointer(&size))
 
@@ -63,7 +63,7 @@ func GetPath[T any](mp *MerkleProof) []T {
 	}
 }
 
-func GetLeaf[T any](mp *MerkleProof) ([]T, uint64) {
+func GetMerkleProofLeaf[T any](mp *MerkleProof) ([]T, uint64) {
 	var size uint64
 	cSize := (*C.uint64_t)(unsafe.Pointer(&size))
 	var leafIndex uint64
@@ -108,11 +108,12 @@ func CreateMerkleTree(
 	}
 
 	merkleTreeHandle := C.icicle_merkle_tree_create(
-		(**C.struct_Hash)(unsafe.Pointer(&layerHasherHandles)),
+		(**C.struct_Hash)(unsafe.Pointer(&layerHasherHandles[0])),
 		C.ulong(len(layerHasherHandles)),
 		C.ulong(leafElementSize),
 		C.ulong(outputStoreMinLayer),
 	)
+
 	if merkleTreeHandle == nil {
 		return MerkleTree{}, runtime.UnknownError
 	} else {
@@ -181,7 +182,6 @@ func GetMerkleTreeRoot[T any](mt *MerkleTree) ([]T, runtime.EIcicleError) {
 		return unsafe.Slice((*T)(unsafe.Pointer(rootPtr)), length), runtime.Success
 	}
 }
-
 
 func GetMerkleTreeProof[T any](
 	mt *MerkleTree,

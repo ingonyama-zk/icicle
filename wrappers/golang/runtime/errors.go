@@ -20,3 +20,40 @@ const (
 	LicenseCheckError                           // Failed to check license or invalid license
 	UnknownError                                // An unknown error occurred
 )
+
+func (e EIcicleError) AsString() string {
+	switch e {
+	case Success:
+		return "EIcicleError.Success";
+	case InvalidDevice:
+		return "EIcicleError.InvalidDevice";
+	case OutOfMemory:
+		return "EIcicleError.OutOfMemory";
+	case InvalidPointer:
+		return "EIcicleError.InvalidPointer";
+	case AllocationFailed:
+		return "EIcicleError.AllocationFailed";
+	case DeallocationFailed:
+		return "EIcicleError.DeallocationFailed";
+	case CopyFailed:
+		return "EIcicleError.CopyFailed";
+	case SynchronizationFailed:
+		return "EIcicleError.SynchronizationFailed";
+	case StreamCreationFailed:
+		return "EIcicleError.StreamCreationFailed";
+	case StreamDestructionFailed:
+		return "EIcicleError.StreamDestructionFailed";
+	case ApiNotImplemented:
+		return "EIcicleError.ApiNotImplemented";
+	case InvalidArgument:
+		return "EIcicleError.InvalidArgument";
+	case BackendLoadFailed:
+		return "EIcicleError.BackendLoadFailed";
+	case LicenseCheckError:
+		return "EIcicleError.LicenseCheckError";
+	case UnknownError:
+	default:
+	}
+	
+	return "EIcicleError.UnknownError";
+}

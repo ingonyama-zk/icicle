@@ -17,7 +17,9 @@ func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
 	return func() {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
-		runtime.RunOnDevice(&devices[0], func(args ...any) {
+		// currently only running on CPU
+		// TODO - add run on GPU when available and check against CPU
+		runtime.RunOnDevice(&devices[1], func(args ...any) {
 			defer wg.Done()
 			fn(suite)
 		})
