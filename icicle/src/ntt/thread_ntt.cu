@@ -78,23 +78,6 @@ public:
     uint32_t base_exp = phase_offset + twiddles_offset + block_offset + ntt_inp_offset;
     uint32_t exp;
 
-    if (s_meta.ntt_inp_id == 0 && (s_meta.ntt_block_id == 0 || s_meta.ntt_block_id == (1 << (tw_log_size - ntt_log_size)))) {
-      printf(
-        "T: %d, II: %d, B: %d, block_size: %d, ntt_log_size: %d, tw_order: %d, tw_log_order: %d, tw_log_size: %d, block_offset: %d, ntt_inp_offset: %d, base_exp: %d\n",
-        threadIdx.x,
-        s_meta.ntt_inp_id,
-        s_meta.ntt_block_id,
-        s_meta.ntt_block_size,
-        ntt_log_size,
-        tw_order,
-        tw_log_order,
-        tw_log_size,
-        block_offset,
-        ntt_inp_offset,
-        base_exp
-      );
-    }
-
     UNROLL
     for (int stage = 0; stage < ((phase != dit) ? ntt_log_size - 3 : 3); stage++) {
       UNROLL

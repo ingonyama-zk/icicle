@@ -575,22 +575,6 @@ namespace mxntt {
       engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
     }
 
-    // if (s_meta.ntt_block_id == 0 || s_meta.ntt_block_id == 256 || s_meta.ntt_block_id == 128 || s_meta.ntt_block_id == 512)
-    //   printf(
-    //     "T BEFORE: B: %d, I: %d BATCH: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
-    //     s_meta.ntt_block_id,
-    //     s_meta.ntt_inp_id,
-    //     s_meta.batch_id,
-    //     engine.X[0].limbs_storage.limbs[0],
-    //     engine.X[1].limbs_storage.limbs[0],
-    //     engine.X[2].limbs_storage.limbs[0],
-    //     engine.X[3].limbs_storage.limbs[0],
-    //     engine.X[4].limbs_storage.limbs[0],
-    //     engine.X[5].limbs_storage.limbs[0],
-    //     engine.X[6].limbs_storage.limbs[0],
-    //     engine.X[7].limbs_storage.limbs[0]
-    //   );
-
     if (dit) {
       if (inv) {
         engine.intt2_4();
