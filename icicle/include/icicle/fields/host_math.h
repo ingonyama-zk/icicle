@@ -1,10 +1,10 @@
+#pragma once
+
 // Note: this optimization generates invalid code (using gcc) when storage class has a union for both u32 and u64 so
 // disabling it.
 #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
   #pragma GCC optimize("no-strict-aliasing")
 #endif
-
-#pragma once
 
 #include <cstdint>
 #include "icicle/utils/modifiers.h"
