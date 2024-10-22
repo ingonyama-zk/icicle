@@ -1214,7 +1214,7 @@ namespace mxntt {
           ntt16_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, nof_ntt_blocks,
             1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
-        twiddles_offset += nof_ntt_blocks * stage_size * (1 << stage_size - 1);
+        twiddles_offset += nof_ntt_blocks / (columns_batch ? ((batch_size + 31) / 32) * 32 : batch_size) * stage_size * (1 << stage_size - 1);
 #else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
@@ -1259,7 +1259,7 @@ namespace mxntt {
             first_run ? in : out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
             nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset,
             inv, dit);
-        twiddles_offset += nof_ntt_blocks * stage_size * (1 << stage_size - 1);
+        twiddles_offset += nof_ntt_blocks / (columns_batch ? 1 : batch_size) * stage_size * (1 << stage_size - 1);
 #else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
