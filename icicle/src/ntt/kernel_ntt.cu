@@ -575,6 +575,22 @@ namespace mxntt {
       engine.loadGlobalData(in, data_stride, log_data_stride, strided, s_meta);
     }
 
+    // if (s_meta.ntt_block_id == 0 || s_meta.ntt_block_id == 256 || s_meta.ntt_block_id == 128 || s_meta.ntt_block_id == 512)
+    //   printf(
+    //     "T BEFORE: B: %d, I: %d BATCH: %d\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n0x%x\n",
+    //     s_meta.ntt_block_id,
+    //     s_meta.ntt_inp_id,
+    //     s_meta.batch_id,
+    //     engine.X[0].limbs_storage.limbs[0],
+    //     engine.X[1].limbs_storage.limbs[0],
+    //     engine.X[2].limbs_storage.limbs[0],
+    //     engine.X[3].limbs_storage.limbs[0],
+    //     engine.X[4].limbs_storage.limbs[0],
+    //     engine.X[5].limbs_storage.limbs[0],
+    //     engine.X[6].limbs_storage.limbs[0],
+    //     engine.X[7].limbs_storage.limbs[0]
+    //   );
+
     if (dit) {
       if (inv) {
         engine.intt2_4();
@@ -1214,7 +1230,7 @@ namespace mxntt {
           ntt16_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, nof_ntt_blocks,
             1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
-        twiddles_offset += nof_ntt_blocks * stage_size * (1 << stage_size - 1);
+        twiddles_offset += nof_ntt_blocks / (columns_batch ? ((batch_size + 31) / 32) * 32 : batch_size) * stage_size * (1 << stage_size - 1);
 #else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
@@ -1259,7 +1275,7 @@ namespace mxntt {
             first_run ? in : out, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0,
             nof_ntt_blocks, 1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset,
             inv, dit);
-        twiddles_offset += nof_ntt_blocks * stage_size * (1 << stage_size - 1);
+        twiddles_offset += nof_ntt_blocks / (columns_batch ? 1 : batch_size) * stage_size * (1 << stage_size - 1);
 #else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(

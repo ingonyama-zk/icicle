@@ -6,7 +6,7 @@ use icicle_cuda_runtime::device_context::DeviceContext;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
-use crate::field::{ComplexExtensionCfg, ComplexExtensionField, ScalarField};
+use crate::field::{ComplexExtensionField, ScalarField};
 use icicle_core::ntt::FieldImpl;
 
 extern "C" {

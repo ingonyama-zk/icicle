@@ -102,7 +102,9 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaMalloc(&GpuOutput, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
-  incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  for (int i = 0; i < BATCH_SIZE; i++) {
+    incremental_values(CpuScalars.get() + NTT_SIZE * i, NTT_SIZE);
+  }
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
@@ -132,11 +134,14 @@ int main(int argc, char** argv)
     cudaMemcpy(CpuOutput.get(), GpuOutput, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
   std::cout << "Output" << std::endl;
-  for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
-    // if (i == 1024)
-    //   break;
-    // if (i % 128 < 2)
-    std::cout << CpuOutput[i] << " " << i << std::endl;
+  for (int i = 0; i < BATCH_SIZE; i++) {
+    std::cout << "BATCH " << i << std::endl;
+    for (int j = 0; j < NTT_SIZE; j++) {
+      if (j == 16) {
+        break;
+      }
+      std::cout << CpuOutput[i * NTT_SIZE + j] << " " << j << std::endl;
+    }
   }
   bool success = true;
 
