@@ -6,6 +6,7 @@
 
 #include "icicle/utils/modifiers.h"
 #include "icicle/curves/affine.h"
+#include <array>
 
 template <typename FF, class SCALAR_FF, typename Gen>
 class Projective
