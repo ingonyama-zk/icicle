@@ -1,5 +1,6 @@
 module github.com/ingonyama-zk/icicle/v3
 
+// NOTE - Using the Hash package requires go 1.22
 go 1.20
 
 require (
