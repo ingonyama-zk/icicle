@@ -149,7 +149,7 @@ func BuildMerkleTree[T any](
 	cfg core.MerkleTreeConfig,
 ) runtime.EIcicleError {
 	if mt.handle == nil {
-		fmt.Println("The MerkleTree was not initalized; Initialize first using CreateMerkleTree")
+		fmt.Println("The MerkleTree was not initialized; Initialize first using CreateMerkleTree")
 		return runtime.InvalidArgument
 	}
 
@@ -164,7 +164,7 @@ func BuildMerkleTree[T any](
 
 func GetMerkleTreeRoot[T any](mt *MerkleTree) ([]T, runtime.EIcicleError) {
 	if mt.handle == nil {
-		fmt.Println("The MerkleTree was not initalized; Initialize first using CreateMerkleTree")
+		fmt.Println("The MerkleTree was not initialized; Initialize first using CreateMerkleTree")
 		return []T{}, runtime.InvalidArgument
 	}
 
@@ -189,7 +189,7 @@ func GetMerkleTreeProof[T any](
 	cfg core.MerkleTreeConfig,
 ) (MerkleProof, runtime.EIcicleError) {
 	if mt.handle == nil {
-		fmt.Println("The MerkleTree was not initalized; Initialize first using CreateMerkleTree")
+		fmt.Println("The MerkleTree was not initialized; Initialize first using CreateMerkleTree")
 		return MerkleProof{}, runtime.InvalidArgument
 	}
 
