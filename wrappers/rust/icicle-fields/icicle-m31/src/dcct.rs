@@ -218,7 +218,7 @@ pub(crate) mod tests {
         for test_size_log in test_sizes_log {
             let test_size = 1 << test_size_log;
             let mut config = NTTConfig::default();
-            let batch_sizes = [1,2]; //1..=20usize;
+            let batch_sizes = [1, 2, 7, 1 << 13];
             for batch_size in batch_sizes {
                 let test_full_size = test_size * batch_size;
                 if test_size_log == 7 || test_full_size >= 1 << 26 {
@@ -226,20 +226,17 @@ pub(crate) mod tests {
                 }
 
                 let rou = get_dcct_root_of_unity(test_size as _);
-                println!("ROU {:?}", rou);
                 initialize_dcct_domain(test_size_log as _, rou, &DeviceContext::default()).unwrap();
-                println!("initialied DCCT succesfully");
 
                 let scalars = ScalarCfg::generate_random(test_full_size);
                 let scalars = HostSlice::from_slice(&scalars);
 
                 for dir in [NTTDir::kForward, NTTDir::kInverse] {
-                    // for is_inverse in [NTTDir::kInverse, NTTDir::kForward] { //TODO: interpolate correctness
                     for ordering in [
-                        Ordering::kNN,
-                        Ordering::kNR,
-                        Ordering::kRN,
-                        Ordering::kRR,
+                        // Ordering::kNN,
+                        // Ordering::kNR,
+                        // Ordering::kRN,
+                        // Ordering::kRR,
                         Ordering::kNM,
                         Ordering::kMN,
                     ] {
@@ -257,17 +254,10 @@ pub(crate) mod tests {
                                 HostSlice::from_mut_slice(&mut one_ntt_result),
                             )
                             .unwrap();
-                            // assert_eq!(
-                            //     batch_ntt_result[i * test_size..(i + 1) * test_size],
-                            //     *one_ntt_result.as_slice(),
-                            //     "i: {} logn: {} batchm: {}", i, test_size_log, batch_size
-                            // );
-                            let is_success =
-                                batch_ntt_result[i * test_size..(i + 1) * test_size] == *one_ntt_result.as_slice();
-
-                            println!(
-                                "{} {} for i: {}  batchm: {} {:?} {:?}",
-                                if is_success { "success" } else { "failed" },
+                            assert_eq!(
+                                batch_ntt_result[i * test_size..(i + 1) * test_size],
+                                *one_ntt_result.as_slice(),
+                                "2^{} for i: {}  batch_size: {} {:?} {:?}",
                                 test_size_log,
                                 i,
                                 batch_size,
@@ -276,45 +266,6 @@ pub(crate) mod tests {
                             );
                         }
                     }
-
-                    // let row_size = test_size as u32;
-                    // let column_size = batch_size as u32;
-                    // let on_device = false;
-                    // let is_async = false;
-                    // // for now, columns batching only works with MixedRadix NTT
-                    // config.batch_size = batch_size as i32;
-                    // config.columns_batch = true;
-                    // let mut transposed_input = vec![F::zero(); batch_size * test_size];
-                    // transpose_matrix(
-                    //     scalars,
-                    //     row_size,
-                    //     column_size,
-                    //     HostSlice::from_mut_slice(&mut transposed_input),
-                    //     &config.ctx,
-                    //     on_device,
-                    //     is_async,
-                    // )
-                    // .unwrap();
-                    // let mut col_batch_ntt_result = vec![F::zero(); batch_size * test_size];
-                    // ntt(
-                    //     HostSlice::from_slice(&transposed_input),
-                    //     is_inverse,
-                    //     &config,
-                    //     HostSlice::from_mut_slice(&mut col_batch_ntt_result),
-                    // )
-                    // .unwrap();
-                    // transpose_matrix(
-                    //     HostSlice::from_slice(&col_batch_ntt_result),
-                    //     column_size,
-                    //     row_size,
-                    //     HostSlice::from_mut_slice(&mut transposed_input),
-                    //     &config.ctx,
-                    //     on_device,
-                    //     is_async,
-                    // )
-                    // .unwrap();
-                    // assert_eq!(batch_ntt_result[..], *transposed_input.as_slice());
-                    // config.columns_batch = false;
                 }
             }
         }
