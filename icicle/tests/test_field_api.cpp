@@ -569,17 +569,17 @@ TYPED_TEST(FieldApiTest, bitReverse)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
   const bool is_in_place = rand() % 2;
   const int total_size = N * batch_size;
 
-  // const uint64_t N = 1 << (2);
+  // const uint64_t N = 1 << (3);
   // const int batch_size = 1 << (1);
-  // const bool columns_batch = true;
-  // const bool is_in_place = true;
+  // const bool columns_batch = 1;
+  // const bool is_in_place = 0;
   // const int total_size = N * batch_size;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size);
@@ -623,7 +623,7 @@ TYPED_TEST(FieldApiTest, bitReverse)
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
 
   // Reference implementation
-  if (!s_is_cuda_registered) {
+  if (!s_is_cuda_registered || is_in_place) {
     uint64_t logn = 0;
     uint64_t temp = N;
     while (temp > 1) {
@@ -651,6 +651,10 @@ TYPED_TEST(FieldApiTest, bitReverse)
     run(s_reference_target, (is_in_place ? in_a.get() : out_ref.get()), VERBOSE /*=measure*/, "bit-reverse", 1);
   }
   run(s_main_target, (is_in_place ? in_a.get() : out_main.get()), VERBOSE /*=measure*/, "bit-reverse", 1);
+
+  //   for (int i = 0; i < total_size; i++) {
+  //   ICICLE_LOG_DEBUG << i << ", " << in_a[i] << ", " << out_main[i] << ", " << out_ref[i];
+  // }
 
   if (is_in_place) {
     ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), N * sizeof(TypeParam)));
