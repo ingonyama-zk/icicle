@@ -10,6 +10,9 @@ function(setup_hash_target)
   )
   
   target_link_libraries(icicle_hash PUBLIC icicle_device)
+  if(ANDROID)
+    target_link_libraries(icicle_hash PRIVATE ${log-lib})
+  endif()
 
   install(TARGETS icicle_hash
     RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"

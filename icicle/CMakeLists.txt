@@ -72,6 +72,12 @@ add_library(icicle_device SHARED
   src/config_extension.cpp
 )
 target_link_libraries(icicle_device PUBLIC dl)
+# log library for Android only
+if(ANDROID)
+  find_library(log-lib log)
+  target_link_libraries(icicle_device PRIVATE ${log-lib})
+endif()
+
 include_directories(include)
 
 # Define the install directory (default is /usr/local)

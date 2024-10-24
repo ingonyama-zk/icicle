@@ -60,6 +60,7 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   else()
     # Android doesn't need pthread, it's already included in the system
     target_link_libraries(icicle_field PUBLIC icicle_device)
+    target_link_libraries(icicle_field PRIVATE ${log-lib})
   endif()
 
 

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 
+#include "icicle/utils/log.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
 #include "icicle/config_extension.h"
@@ -318,10 +319,15 @@ template <typename A, typename P>
 void Msm<A, P>::run_msm(
   const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results)
 {
+  ICICLE_LOG_DEBUG << "Starting run_msm";
   phase1_bucket_accumulator(scalars, bases, msm_size);
+  ICICLE_LOG_DEBUG << "Completed phase1_bucket_accumulator";
   auto segments = std::vector<BmSumSegment>(m_num_bms * m_num_bm_segments);
+  ICICLE_LOG_DEBUG << "Completed segments vector creation";
   phase2_bm_sum(segments);
+  ICICLE_LOG_DEBUG << "Completed phase2_bm_sum";
   phase3_final_accumulator(segments, batch_idx, results);
+  ICICLE_LOG_DEBUG << "Completed phase3_final_accumulator";
   if (batch_idx < m_batch_size - 1) { batch_run_reset(); }
 }
 
@@ -425,11 +431,21 @@ void Msm<A, P>::phase1_wait_for_completion()
 template <typename A, typename P>
 void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
 {
+  ICICLE_LOG_DEBUG << "Starting phase2_bm_sum";
   phase2_setup(segments);
+  ICICLE_LOG_DEBUG << "Completed phase2_setup";
+  ICICLE_LOG_DEBUG << "m_segment_size: " << m_segment_size;
   if (m_segment_size > 1) {
     // Send first additions - line additions.
+    ICICLE_LOG_DEBUG << "Sending first additions - line additions";
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
+      ICICLE_LOG_DEBUG << "i " << i << "/" << m_num_bms * m_num_bm_segments;
       EcAddTask<A, P>* task = manager.get_idle_task();
+      // check if the task is nullptr
+      if (task == nullptr) {
+        ICICLE_LOG_DEBUG << "task is nullptr";
+        continue;
+      }
       BmSumSegment& curr_segment = segments[i]; // For readability
 
       int bkt_idx = curr_segment.m_segment_mem_start + curr_segment.m_idx_in_segment;
@@ -438,6 +454,7 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
     }
 
     // Loop until all line/tri sums are done.
+    ICICLE_LOG_DEBUG << "Loop until all line/tri sums are done";
     int done_segments = 0;
     while (done_segments < m_num_bms * m_num_bm_segments) {
       EcAddTask<A, P>* task = manager.get_completed_task();
