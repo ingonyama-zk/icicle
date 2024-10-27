@@ -463,8 +463,8 @@ TEST_F(HashApiTest, MerkleTreeMixMediumSize)
   auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
 
   // assert that incorrect size fails
-  ASSERT_NE(prover_tree.build(leaves.get(), total_input_size - 1, config), eIcicleError::SUCCESS);
-  ASSERT_NE(prover_tree.build(leaves.get(), total_input_size + 1, config), eIcicleError::SUCCESS);
+  ASSERT_NE(prover_tree.build(leaves.get(), nof_leaves - 1, config), eIcicleError::SUCCESS);
+  ASSERT_NE(prover_tree.build(leaves.get(), nof_leaves + 1, config), eIcicleError::SUCCESS);
   // build tree
   START_TIMER(MerkleTree_build)
   ICICLE_CHECK(prover_tree.build(leaves.get(), nof_leaves, config));

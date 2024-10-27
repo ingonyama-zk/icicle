@@ -60,9 +60,14 @@ namespace icicle {
         return eIcicleError::INVALID_ARGUMENT;
       }
       const uint64_t expected_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
-      if (leaves_size != expected_input_size) {
+      if (leaves_size < expected_input_size) {
         ICICLE_LOG_ERROR << "CPU Merkle tree: Expecting " << expected_input_size << " bytes in input, got "
                          << leaves_size << ". Note: Padding is currently not supported but will be soon";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+      if (leaves_size > expected_input_size) {
+        ICICLE_LOG_ERROR << "CPU Merkle tree: Expecting " << expected_input_size << " bytes in input, got "
+                         << leaves_size << ". Leaves size cannot exceeds tree size.";
         return eIcicleError::INVALID_ARGUMENT;
       }
       m_tree_already_built = true; // Set the tree status as built
