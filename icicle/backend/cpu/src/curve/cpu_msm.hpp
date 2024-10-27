@@ -373,10 +373,14 @@ private:
 
 template <typename A, typename P>
 Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
-    : manager(nof_threads), m_curr_task(nullptr),
+    : manager(nof_threads, 
+              // Minimal number of tasks required in phase 2 - 2 Tasks for each BM
+              (((scalar_t::NBITS - 1) / (config.precompute_factor * c)) + 1) * 2),
+    
+      m_curr_task(nullptr),
 
       m_c(c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
-      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
+      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * c)) + 1),
       m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_points_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
 
@@ -550,7 +554,7 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
       P bucket = m_bkts_occupancy[bkt_idx] ? m_buckets[bkt_idx] : P::zero();
       m_curr_task->set_phase2_addition_by_value(curr_segment.line_sum, bucket, i);
     }
-    // Dispatch last task if itis not enough to fill a batch and dispatch automatically.
+    // Dispatch last task if it is not enough to fill a batch and dispatch automatically.
     if (m_curr_task->is_idle()) { m_curr_task->dispatch(); }
 
     // Loop until all line/tri sums are done.
