@@ -113,7 +113,7 @@ namespace icicle {
 
         // send task from layer 0:
         // If leaves data is available, send a task based on leaves
-        if ((l0_segment_idx+1) * NOF_OPERATIONS_PER_TASK <= leaves_size) {
+        if (l0_segment_idx + padding_required < nof_segments_at_l0) {
           dispatch_task(task, 0, l0_segment_idx, leaves, true);
           l0_segment_idx++;
           continue;
@@ -364,7 +364,7 @@ namespace icicle {
 
       // Check leaves size
       if (leaves_size > m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size()) {
-        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") eceedes the size of the tree(" << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ")\n";
+        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") exceeds the size of the tree(" << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ")\n";
         return false;
       }
       if (leaves_size < m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() &&
