@@ -112,6 +112,65 @@ public:
     }
   }
 
+  template <typename A, typename P>
+  void MSM_CPU_THREADS_test()
+  {
+    const int logn = 8;
+    const int c = 3;
+    // Low c to have a large amount of tasks required in phase 2
+    // For example for bn254: #bms = ceil(254/3)=85
+    // #tasks in phase 2 = 2 * #bms = 170 > 64 = TASK_PER_THREAD 
+    // As such the default amount of tasks and 1 thread shouldn't be enough and the program should readjust the task 
+    // number per thread.
+    const int batch = 3;
+    const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
+    const int precompute_factor = 1;  // Precompute is 1 to increase number of BMs
+    const int total_nof_elemets = batch * N;
+
+    auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
+    auto bases = std::make_unique<A[]>(N);
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
+    P::rand_host_many(bases.get(), N);
+
+    auto result_multi_thread = std::make_unique<P[]>(batch);
+    auto result_single_thread = std::make_unique<P[]>(batch);
+
+    auto config = default_msm_config();
+    config.batch_size = batch;
+    config.are_points_shared_in_batch = true;
+    config.precompute_factor = precompute_factor;
+    config.c = c;
+
+    auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      START_TIMER(MSM_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(msm(scalars.get(), bases.get(), N, config, result));
+      }
+      END_TIMER(MSM_sync, oss.str().c_str(), measure);
+    };
+    if (s_ref_target == "CPU")
+    {
+      run(s_ref_target, result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+      // Adjust config to have one worker thread
+      ConfigExtension ext;
+      ext.set(CpuBackendConfig::CPU_NOF_THREADS, 1);
+      config.ext = &ext;
+      run(s_ref_target, result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+
+      for (int res_idx = 0; res_idx < batch; ++res_idx) {
+        ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
+        ASSERT_EQ(true, P::is_on_curve(result_single_thread[res_idx]));
+        ASSERT_EQ(result_multi_thread[res_idx], result_single_thread[res_idx]);
+      }
+    }
+  }
+
   template <typename T, typename P>
   void mont_conversion_test()
   {
@@ -149,6 +208,7 @@ public:
 
 #ifdef MSM
 TEST_F(CurveApiTest, msm) { MSM_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }
 
