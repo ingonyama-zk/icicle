@@ -1,4 +1,0 @@
-rm -rf build
-cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DFIELD=babybear -S . -B build
-cmake --build build -j
-build/tests/test_hash_api --gtest_filter="*MerkleTreeBasic*"
