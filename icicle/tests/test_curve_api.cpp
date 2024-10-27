@@ -119,12 +119,12 @@ public:
     const int c = 3;
     // Low c to have a large amount of tasks required in phase 2
     // For example for bn254: #bms = ceil(254/3)=85
-    // #tasks in phase 2 = 2 * #bms = 170 > 64 = TASK_PER_THREAD 
-    // As such the default amount of tasks and 1 thread shouldn't be enough and the program should readjust the task 
+    // #tasks in phase 2 = 2 * #bms = 170 > 64 = TASK_PER_THREAD
+    // As such the default amount of tasks and 1 thread shouldn't be enough and the program should readjust the task
     // number per thread.
     const int batch = 3;
     const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
-    const int precompute_factor = 1;  // Precompute is 1 to increase number of BMs
+    const int precompute_factor = 1;                 // Precompute is 1 to increase number of BMs
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -154,8 +154,7 @@ public:
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
-    if (s_ref_target == "CPU")
-    {
+    if (s_ref_target == "CPU") {
       run(s_ref_target, result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       // Adjust config to have one worker thread
       ConfigExtension ext;

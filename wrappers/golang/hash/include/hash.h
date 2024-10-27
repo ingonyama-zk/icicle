@@ -22,12 +22,7 @@ typedef struct HashConfig HashConfig;
  * @return eIcicleError indicating success or failure.
  */
 int icicle_hasher_hash(
-  Hash* hash_ptr,
-  const uint8_t* input_ptr,
-  uint64_t input_len,
-  const HashConfig* config,
-  uint8_t* output_ptr
-);
+  Hash* hash_ptr, const uint8_t* input_ptr, uint64_t input_len, const HashConfig* config, uint8_t* output_ptr);
 
 /**
  * @brief Returns the output size in bytes for the hash operation.

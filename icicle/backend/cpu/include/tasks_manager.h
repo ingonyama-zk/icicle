@@ -133,7 +133,7 @@ private:
      * Inits default values for the class's members and launches the thread.
      */
     Worker(int nof_tasks);
-    
+
     /**
      * @brief Destructor of `Worker`.
      * Signals the thread to terminate and joins it with main. The destructor does not handle existing tasks' results
@@ -183,10 +183,10 @@ private:
     int m_next_task_idx;       // Tail (input) idx of the fifo above. Checks for free task start at this idx.
     bool m_kill;               // boolean to flag from main to the thread to finish.
 
-    #ifdef LOG_UTILIZATION
+#ifdef LOG_UTILIZATION
     int m_nof_sleeps = 0;
     int m_total_sleep_us = 0;
-    #endif
+#endif
   };
 
   std::vector<Worker*> m_workers; // Vector of workers/threads to be ran simultaneously.
@@ -206,17 +206,18 @@ TasksManager<Task>::Worker::~Worker()
   m_kill = true;
   task_executor.join();
 
-  #ifdef LOG_UTILIZATION
-  ICICLE_LOG_INFO << "Thread utilization:\n#sleeps =\t\t" << m_nof_sleeps << "\nTotal sleep time =\t" << m_total_sleep_us << "us";
-  #endif
+#ifdef LOG_UTILIZATION
+  ICICLE_LOG_INFO << "Thread utilization:\n#sleeps =\t\t" << m_nof_sleeps << "\nTotal sleep time =\t"
+                  << m_total_sleep_us << "us";
+#endif
 }
 
 template <class Task>
 void TasksManager<Task>::Worker::worker_loop()
 {
-  #ifdef LOG_UTILIZATION
+#ifdef LOG_UTILIZATION
   bool had_work_since_sleep = false;
-  #endif
+#endif
   while (!m_kill) {
     bool all_tasks_idle = true;
     for (int head = 0; head < m_tasks.size(); head++) {
@@ -226,22 +227,22 @@ void TasksManager<Task>::Worker::worker_loop()
         task->set_completed();
         all_tasks_idle = false;
 
-        #ifdef LOG_UTILIZATION
+#ifdef LOG_UTILIZATION
         had_work_since_sleep = true;
-  #endif
+#endif
       }
     }
     if (all_tasks_idle) {
       // Sleep as the thread apparently isn't fully utilized currently
       std::this_thread::sleep_for(std::chrono::microseconds(THREAD_SLEEP_USEC));
 
-      #ifdef LOG_UTILIZATION
-      if (had_work_since_sleep) { 
+#ifdef LOG_UTILIZATION
+      if (had_work_since_sleep) {
         m_nof_sleeps++;
         had_work_since_sleep = false;
       }
       m_total_sleep_us++;
-  #endif
+#endif
     }
   }
 }
@@ -303,8 +304,7 @@ TasksManager<Task>::TasksManager(int nof_workers, int min_nof_tasks) : m_workers
 {
   ICICLE_ASSERT(nof_workers > 0) << "Number of workers must be at least 1.";
   int nof_tasks_per_worker = std::max((min_nof_tasks + nof_workers - 1) / nof_workers, TASKS_PER_THREAD);
-  for (int i = 0; i < nof_workers; i++)
-  {
+  for (int i = 0; i < nof_workers; i++) {
     m_workers[i] = new Worker(nof_tasks_per_worker);
   }
 }
@@ -312,8 +312,7 @@ TasksManager<Task>::TasksManager(int nof_workers, int min_nof_tasks) : m_workers
 template <class Task>
 TasksManager<Task>::~TasksManager()
 {
-  for (auto &&worker : m_workers)
-  {
+  for (auto&& worker : m_workers) {
     delete worker;
   }
 }
