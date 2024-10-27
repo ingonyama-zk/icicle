@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <unistd.h> // Only valid for lynux
 
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
@@ -15,7 +16,7 @@
 #include "tasks_manager.h"
 #include "icicle/backend/msm_config.h"
 #ifdef MEASURE_MSM_TIMES
-#include "icicle/utils/timer.hpp"
+  #include "icicle/utils/timer.hpp"
 #endif
 
 using namespace icicle;
@@ -241,8 +242,28 @@ public:
   static unsigned get_optimal_c(unsigned msm_size, int precompute_factor)
   {
     // This seems to be working well but not clear why
-    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
-                                 : std::max((int)std::log2(msm_size) - 5, 8);
+    int optimal_c = precompute_factor > 1
+                      ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
+                      : std::max((int)std::log2(msm_size) - 5, 8);
+    // To avoid mem limitation c is limited
+    uint64_t point_size = 3 * scalar_t::NBITS; // NOTE this is valid under the assumption of projective points in BMs
+    uint64_t _0_75_of_mem_size =
+      sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE) * 3 / 4;
+    uint64_t max_nof_points_in_mem = _0_75_of_mem_size / point_size;
+
+    int c = optimal_c + 1;
+    uint64_t total_num_of_points;
+    do {
+      c--;
+      uint64_t num_bms = ((scalar_t::NBITS - 1) / (precompute_factor * c)) + 1;
+      total_num_of_points = num_bms << (c - 1);
+    } while (total_num_of_points > max_nof_points_in_mem);
+    ICICLE_LOG_DEBUG << "Chosen c:\t" << c
+                     << (c < optimal_c ? "\t(Not optimal, BMs are memory bound by "
+                                       : "\t(Optimal, BMs are smaller than limit of ")
+                     << (_0_75_of_mem_size >> 20) << "MB)";
+
+    return c;
   }
 
 private:
