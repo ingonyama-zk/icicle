@@ -247,8 +247,7 @@ public:
                       : std::max((int)std::log2(msm_size) - 5, 8);
     // To avoid mem limitation c is limited
     uint64_t point_size = 3 * scalar_t::NBITS; // NOTE this is valid under the assumption of projective points in BMs
-    uint64_t _0_75_of_mem_size =
-      sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE) * 3 / 4;
+    uint64_t _0_75_of_mem_size = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE) * 3 / 4;
     uint64_t max_nof_points_in_mem = _0_75_of_mem_size / point_size;
 
     int c = optimal_c + 1;
@@ -373,10 +372,11 @@ private:
 
 template <typename A, typename P>
 Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
-    : manager(nof_threads, 
-              // Minimal number of tasks required in phase 2 - 2 Tasks for each BM
-              (((scalar_t::NBITS - 1) / (config.precompute_factor * c)) + 1) * 2),
-    
+    : manager(
+        nof_threads,
+        // Minimal number of tasks required in phase 2 - 2 Tasks for each BM
+        (((scalar_t::NBITS - 1) / (config.precompute_factor * c)) + 1) * 2),
+
       m_curr_task(nullptr),
 
       m_c(c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),

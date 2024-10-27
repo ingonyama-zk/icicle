@@ -69,8 +69,8 @@ public:
   {
     const int logn = 12;
     const int batch = 3;
-    const int N = 1 << logn - rand() % (5 * logn);  // make it not always power of two
-    const int precompute_factor = (rand() & 7) + 1; // between 1 and 8
+    const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
+    const int precompute_factor = (rand() & 7) + 1;  // between 1 and 8
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
