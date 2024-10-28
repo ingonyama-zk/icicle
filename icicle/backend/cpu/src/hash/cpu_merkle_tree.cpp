@@ -78,7 +78,7 @@ namespace icicle {
         // handle completed task
         if (task->is_completed()) {
           if (task->m_layer_idx == nof_layers - 1) { // Root processed
-            // print_tree(leaves, leaves_size);
+            print_tree(leaves, leaves_size);
             return eIcicleError::SUCCESS;
           }
           const uint64_t completed_layer_idx = task->m_layer_idx;
@@ -217,7 +217,7 @@ namespace icicle {
         std::cout << std::dec << "Layer " << layer_idx << ": " << m_layers[layer_idx].m_hash.input_default_chunk_size()
                   << " -> " << m_layers[layer_idx].m_hash.output_size() << std::endl;
         print_bytes(
-          m_layers[layer_idx].m_results.data(), m_layers[layer_idx].m_nof_hashes,
+          m_layers[layer_idx].m_results.data(), m_layers[layer_idx].m_nof_hashes_2_execute,
           m_layers[layer_idx].m_hash.output_size());
       }
       return eIcicleError::SUCCESS;
@@ -318,7 +318,10 @@ namespace icicle {
 
         // padd hash result is necesary
         for (int padd_idx=0; padd_idx < m_padd_output; padd_idx++) {
-          memcpy(m_output + padd_idx*m_hash.output_size(), m_output, m_hash.output_size());
+          const uint64_t padd_offset = m_hash_config->batch * m_hash.output_size();
+          memcpy(m_output + padd_offset + padd_idx*m_hash.output_size(), // dest: start from padd_offset
+                 m_output + padd_offset -m_hash.output_size(),           // source: last calculated hash result
+                 m_hash.output_size());                                  // size: hash result size
         }
       }
 
@@ -422,7 +425,8 @@ namespace icicle {
 
       // The size of the leaves to copy to padded_leaves
       const uint64_t last_segment_tail_size = leaves_size % (NOF_OPERATIONS_PER_TASK * l0_input_size);
-      memcpy(padded_leaves.data(), leaves-last_segment_tail_size, last_segment_tail_size);
+      const uint64_t last_segment_offset = leaves_size - last_segment_tail_size;
+      memcpy(padded_leaves.data(), leaves + last_segment_offset, last_segment_tail_size);
 
       // padd with the last element
       if (config.padding_policy == PaddingPolicy::LastValue) { 
@@ -432,7 +436,9 @@ namespace icicle {
         }
         // pad with the last element
         for (uint64_t padded_leaves_offset = last_segment_tail_size; padded_leaves_offset < padded_leaves.size(); padded_leaves_offset += m_leaf_element_size) {
-          memcpy(padded_leaves.data()+padded_leaves_offset, leaves-m_leaf_element_size, m_leaf_element_size); // copy last element to the vector
+          memcpy(padded_leaves.data()+padded_leaves_offset, // dest: padd vector
+                 leaves+leaves_size-m_leaf_element_size,    // src: last elemnt 
+                 m_leaf_element_size);                      // size 1 element size 
         }
       }
       return true;
