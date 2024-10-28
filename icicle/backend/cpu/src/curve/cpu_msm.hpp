@@ -240,8 +240,8 @@ public:
     const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
   /**
-   * @brief Calculate approximate value of c to minimize number of EC additions in the MSM calculation. Having said 
-   * that, the value of c might be suboptimal in the case of physical memory limitations (Due to required memory size 
+   * @brief Calculate approximate value of c to minimize number of EC additions in the MSM calculation. Having said
+   * that, the value of c might be suboptimal in the case of physical memory limitations (Due to required memory size
    * for the BMs, determined by c).
    * @param msm_size - Number of inputs in the MSM calculation.
    * @param precompute_factor - Precompute factor determined in the config.
@@ -253,13 +253,13 @@ public:
     int optimal_c = precompute_factor > 1
                       ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
                       : std::max((int)std::log2(msm_size) - 5, 8);
-    
+
     // Get physical memory limitation (by some factor < 1 - chosen to be 3/4)
     uint64_t point_size = 3 * scalar_t::NBITS; // NOTE this is valid under the assumption of projective points in BMs
     uint64_t _0_75_of_mem_size = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE) * 3 / 4;
     uint64_t max_nof_points_in_mem = _0_75_of_mem_size / point_size;
 
-    // Reduce c until it doens't exceed the memory limitation
+    // Reduce c until it doesn't exceed the memory limitation
     int c = optimal_c + 1;
     uint64_t total_num_of_points;
     do {
