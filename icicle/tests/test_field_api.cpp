@@ -670,13 +670,25 @@ TYPED_TEST(FieldApiTest, Slice)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t size_in = 1 << (rand() % 15 + 5);
   const uint64_t offset = rand() % 15;
   const uint64_t stride = rand() % 4 + 1;
   const uint64_t size_out = rand() % (((size_in - offset) / stride) - 1) + 1;
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
+
+  // const uint64_t size_in = 1 << (20);
+  // const uint64_t offset = 97;
+  // const uint64_t stride = 6;
+  // const uint64_t size_out = (((size_in - offset) / stride) - 1) - 100;
+
+  // ICICLE_LOG_DEBUG << size_in <<", "<< offset<<", "<<stride<<", "<<size_out;
+
+  // const int batch_size = 50;
+  // const bool columns_batch = 1;
+
+
   const int total_size_in = size_in * batch_size;
   const int total_size_out = size_out * batch_size;
   // ICICLE_LOG_DEBUG << "size_in = " << size_in << ", offset = " << offset << ", stride = " << stride << ", size_out =
@@ -741,6 +753,11 @@ TYPED_TEST(FieldApiTest, Slice)
   // std::cout <<out_main[total_size_out-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i <
   // total_size_out-1; i++) { std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[total_size_out-1]<<"]"<<
   // std::endl;
+
+  //   for (int i = 0; i < total_size_in; i++) {
+  //   ICICLE_LOG_DEBUG << i << ", " << in_a[i] << ", " << out_main[i] << ", " << out_ref[i];
+  // }
+
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size_out * sizeof(TypeParam)));
 }
 
