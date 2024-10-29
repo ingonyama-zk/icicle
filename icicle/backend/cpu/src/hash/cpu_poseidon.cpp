@@ -99,7 +99,7 @@ namespace icicle {
       poseidon_constants[T].alpha = 5;
       poseidon_constants[T].nof_upper_full_rounds = upper_full_rounds;
       poseidon_constants[T].nof_bottom_full_rounds = bottom_full_rounds;
-      poseidon_constants[T].nof_partial_rounds = partial_rounds;      
+      poseidon_constants[T].nof_partial_rounds = partial_rounds;
       unsigned int round_constants_len =
         T * (poseidon_constants[T].nof_upper_full_rounds + poseidon_constants[T].nof_bottom_full_rounds) +
         partial_rounds;

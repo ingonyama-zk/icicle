@@ -627,7 +627,8 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 //       std::ostringstream oss;
 //       oss << dev_type << " " << msg;
 
-//       auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value, use_all_zeroes_padding);
+//       auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value,
+//       use_all_zeroes_padding);
 
 //       START_TIMER(POSEIDON_sync)
 //       for (int i = 0; i < iters; ++i) {
@@ -644,7 +645,6 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 
 //   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 // }
-
 
 TEST_F(HashApiTest, poseidon3_single_hash)
 {

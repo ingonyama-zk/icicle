@@ -1,0 +1,31 @@
+[  7%] Built target icicle_device
+[ 10%] Built target icicle_cuda_license
+[ 13%] Built target gtest
+[ 16%] Built target icicle_backend_cuda_device
+[ 19%] Built target gtest_main
+[ 33%] Built target icicle_hash
+[ 34%] Building CXX object CMakeFiles/icicle_field.dir/backend/cpu/src/hash/cpu_poseidon.cpp.o
+[ 37%] Built target test_device_api
+[ 39%] Linking CXX shared library libicicle_field_bn254.so
+[ 57%] Built target icicle_field
+[ 59%] Building CXX object tests/CMakeFiles/test_hash_api.dir/test_hash_api.cpp.o
+[ 60%] Linking CXX executable test_field_api
+[ 62%] Linking CXX shared library libicicle_curve_bn254.so
+[ 63%] Building CUDA object backend/cuda/CMakeFiles/icicle_cuda_field.dir/src/hash/poseidon/cuda_poseidon.cu.o
+[ 65%] Building CUDA object backend/cuda/CMakeFiles/icicle_cuda_field.dir/src/ntt/mixed_radix_ntt.cu.o
+[ 66%] Linking CXX executable test_hash_api
+[DEBUG]  Registering DEVICE: device=CPU
+[ 68%] Built target test_field_api
+[ 78%] Built target icicle_curve
+[ 80%] Linking CXX executable test_polynomial_api
+[ 81%] Linking CXX executable test_curve_api
+[DEBUG]  Registering DEVICE: device=CPU
+[ 81%] Built target test_hash_api
+[DEBUG]  Registering DEVICE: device=CPU
+[DEBUG]  Registering DEVICE: device=CPU
+[ 83%] Built target test_curve_api
+[ 84%] Built target test_polynomial_api
+[ 86%] Linking CUDA shared library libicicle_backend_cuda_field_bn254.so
+[ 92%] Built target icicle_cuda_field
+[ 93%] Linking CUDA shared library libicicle_backend_cuda_curve_bn254.so
+[100%] Built target icicle_cuda_curve
