@@ -149,7 +149,7 @@ namespace icicle {
 
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
-        hash_single(input, size, output);
+        hash_single(input, output);
         input += m_arity * sizeof(S);
         output += sizeof(S);
       }
@@ -157,10 +157,10 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError hash_single(const std::byte* input, uint64_t size, std::byte* output) const
+  private:
+    // This function performs a single hash according to parameters in the poseidon_constants[] struct.
+    eIcicleError hash_single(const std::byte* input, std::byte* output) const
     {
-      ICICLE_LOG_DEBUG << "Poseidon CPU hash_single() " << size << " bytes, for type " << demangle<S>();
-
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
 
       unsigned int alpha = poseidon_constants[T].alpha;
@@ -185,7 +185,10 @@ namespace icicle {
       }
 
       // Upper full rounds.
-      full_rounds(nof_upper_full_rounds, tmp_fields, rounds_constants);
+      // Note that the number of full rounds is nof_full_rounds-1 because of the
+      // pre_matrix round (last round of upper full rounds) and the last round of
+      // the bottom fulld rounds that doesn'T have sbox operation.
+      full_rounds(nof_upper_full_rounds - 1, tmp_fields, rounds_constants);
 
       // Single full round with pre_matrix.
       for (int state_idx = 0; state_idx < T; state_idx++) {
@@ -210,7 +213,9 @@ namespace icicle {
       }
 
       // Bottom full rounds.
-      full_rounds(nof_bottom_full_rounds, tmp_fields, rounds_constants);
+      // Note that the number of full rounds is nof_full_rounds-1 because of the
+      // last round implemented below.
+      full_rounds(nof_bottom_full_rounds - 1, tmp_fields, rounds_constants);
 
       // Last full round
       for (int state_idx = 0; state_idx < T; state_idx++) {
@@ -228,11 +233,12 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
+    // This function performs a vector by sparse matrix multiplication.
+    // Note that sparse_matrix is organized in memory 1st column first and then rest of the members of the 1st row.
     void field_vec_sqr_sparse_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const
     {
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
       S tmp_col_res[T]; // Have to use temp storage because vec_in and result are the same storage.
-      // Note that sparse_matrix is organized in memory 1st column first and then rest of the members of the 1st row.
       tmp_col_res[0] = vec_in[0] * matrix_in[0];
       for (int col_idx = 1; col_idx < T; col_idx++) { // Calc first column result.
         tmp_col_res[0] = tmp_col_res[0] + vec_in[col_idx] * matrix_in[col_idx];
@@ -246,6 +252,7 @@ namespace icicle {
       }
     }
 
+    // This function performs a vector by full matrix multiplication.
     void field_vec_sqr_full_matrix_mul(const S* vec_in, const S* matrix_in, S* result) const
     {
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
@@ -262,15 +269,14 @@ namespace icicle {
       }
     }
 
-    void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, /* const */ S*& rounds_constants) const
+    // This function performs a needed number of full rounds calculations.
+    void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
     {
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
       unsigned int alpha = poseidon_constants[T].alpha;
       S* mds_matrix = poseidon_constants[T].mds_matrix;
-      for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds - 1;
-           full_rounds_idx++) { // Note that the number of full rounds is nof_full_rounds-1 because of the
-                                // pre_matrix round (last round of upper full rounds) and the last round of
-                                // the bottom fulld rounds that doesn'T have sbox operation.
+      for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds;
+           full_rounds_idx++) {
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // S box
           in_out_fields[state_idx] = S::pow(in_out_fields[state_idx], alpha);
@@ -284,7 +290,6 @@ namespace icicle {
       }
     }
 
-  private:
     bool m_is_domain_tag;
     unsigned int m_arity;
   }; // class PoseidonBackendCPU : public HashBackend

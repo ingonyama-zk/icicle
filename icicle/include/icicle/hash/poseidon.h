@@ -16,8 +16,6 @@ namespace icicle {
   // Poseidon constants are being initialized.
   template <typename S>
   struct PoseidonConstantsOptions {
-    // TODO: Define the struct with fields such as arity, alpha, nof_rounds, mds_matrix, etc.
-    // It must be compatible with FFI, so make sure to use only types like integers, arrays, and pointers.
     unsigned int arity = 0;     ///< Arity of a hash (number of inputs of the single hash).
     unsigned int alpha;         ///< Sbox power.
     bool is_domain_tag = false; ///< If i_domain_tag is set then single hash width = arity + 1, otherwise width = arity.    
