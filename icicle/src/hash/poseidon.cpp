@@ -19,7 +19,7 @@ namespace icicle {
     unsigned arity,
     unsigned default_input_size,
     bool is_domain_tag,
-    scalar_t* domain_tag_value,
+    scalar_t domain_tag_value,
     bool use_all_zeroes_padding)
   {
     std::shared_ptr<HashBackend> backend;

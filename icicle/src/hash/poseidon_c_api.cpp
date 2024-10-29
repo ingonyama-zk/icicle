@@ -19,7 +19,7 @@ HasherHandle CONCAT_EXPAND(FIELD, create_poseidon_hasher)(
   unsigned arity,
   unsigned default_input_size,
   bool is_domain_tag,
-  scalar_t* domain_tag_value,
+  scalar_t domain_tag_value,
   bool use_all_zeroes_padding)
 {
   return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(

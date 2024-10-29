@@ -12,13 +12,21 @@ namespace poseidon_constants_bls12_377 {
    * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matrices
   */
 
-    int partial_rounds_3 = 56;
+  int full_rounds_3 =      8;
+  int half_full_rounds_3 =      4;
+  int partial_rounds_3 =      56;
 
-    int partial_rounds_5 = 56;
+  int full_rounds_5 =      8;
+  int half_full_rounds_5 =      4;
+  int partial_rounds_5 =      56;
 
-    int partial_rounds_9 = 57;
+  int full_rounds_9 =      8;
+  int half_full_rounds_9 =      4;
+  int partial_rounds_9 =      57;
 
-    int partial_rounds_12 = 57;
+  int full_rounds_12 =      8;
+  int half_full_rounds_12 =      4;
+  int partial_rounds_12 =      57;
 
     unsigned char poseidon_constants_3[] = {
         0xbf, 0xad, 0x19, 0x96, 0x67, 0xf4, 0xe9, 0xd2, 0x04, 0x7d, 0x48, 0x36,

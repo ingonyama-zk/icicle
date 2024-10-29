@@ -46,7 +46,8 @@ namespace icicle {
   cpu_poseidon_init_constants(const Device& device, const PoseidonConstantsOptions<scalar_t>* options)
   {
     ICICLE_LOG_DEBUG << "In cpu_poseidon_init_constants() for type " << demangle<scalar_t>();
-    poseidon_constants[options->arity] = *options;
+    unsigned int T = options->is_domain_tag ? options->arity + 1 : options->arity;
+    poseidon_constants[T] = *options;
     return eIcicleError::SUCCESS;
   }
 
@@ -56,31 +57,38 @@ namespace icicle {
   {
     ICICLE_LOG_DEBUG << "In cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
     unsigned int partial_rounds;
+    unsigned int upper_full_rounds;
+    unsigned int bottom_full_rounds;
     unsigned char* constants;
     // At this stage it's still unknown what arity and is_domain_tag will be used.
-    // That's the reason that all איק relevant members of the poseidon_constants array are
+    // That's the reason that all the relevant members of the poseidon_constants array are
     // loaded at this stage.
     for (int arity_idx = 0; arity_idx < std::size(poseidon_legal_width); arity_idx++) {
       unsigned int T = poseidon_legal_width[arity_idx]; // Single poseidon hash width
-      poseidon_constants[T].alpha = 5;
-      poseidon_constants[T].nof_upper_full_rounds = 4;
-      poseidon_constants[T].nof_bottom_full_rounds = 4;
       switch (T) {
       case 3:
         constants = poseidon_constants_3;
         partial_rounds = partial_rounds_3;
+        upper_full_rounds = half_full_rounds_3;
+        bottom_full_rounds = half_full_rounds_3;
         break;
       case 5:
         constants = poseidon_constants_5;
         partial_rounds = partial_rounds_5;
+        upper_full_rounds = half_full_rounds_5;
+        bottom_full_rounds = half_full_rounds_5;
         break;
       case 9:
         constants = poseidon_constants_9;
         partial_rounds = partial_rounds_9;
+        upper_full_rounds = half_full_rounds_9;
+        bottom_full_rounds = half_full_rounds_9;
         break;
       case 12:
         constants = poseidon_constants_12;
         partial_rounds = partial_rounds_12;
+        upper_full_rounds = half_full_rounds_12;
+        bottom_full_rounds = half_full_rounds_12;
         break;
       default:
         ICICLE_LOG_ERROR << "cpu_poseidon_init_default_constants: T (width) must be one of [3, 5, 9, 12]";
@@ -88,11 +96,14 @@ namespace icicle {
       }
       scalar_t* h_constants = reinterpret_cast<scalar_t*>(constants);
 
+      poseidon_constants[T].alpha = 5;
+      poseidon_constants[T].nof_upper_full_rounds = upper_full_rounds;
+      poseidon_constants[T].nof_bottom_full_rounds = bottom_full_rounds;
+      poseidon_constants[T].nof_partial_rounds = partial_rounds;      
       unsigned int round_constants_len =
         T * (poseidon_constants[T].nof_upper_full_rounds + poseidon_constants[T].nof_bottom_full_rounds) +
         partial_rounds;
       unsigned int mds_matrix_len = T * T;
-      poseidon_constants[T].nof_partial_rounds = partial_rounds;
       poseidon_constants[T].rounds_constants = h_constants;
       poseidon_constants[T].mds_matrix = poseidon_constants[T].rounds_constants + round_constants_len;
       poseidon_constants[T].pre_matrix = poseidon_constants[T].mds_matrix + mds_matrix_len;
@@ -108,7 +119,7 @@ namespace icicle {
   {
   public:
     PoseidonBackendCPU(
-      unsigned arity, unsigned default_input_size, bool is_domain_tag, S* domain_tag_value, bool use_all_zeroes_padding)
+      unsigned arity, unsigned default_input_size, bool is_domain_tag, S domain_tag_value, bool use_all_zeroes_padding)
         : HashBackend("Poseidon-CPU", sizeof(S), default_input_size)
     {
       init_default_constants();
@@ -283,7 +294,7 @@ namespace icicle {
     unsigned arity,
     unsigned default_input_size,
     bool is_domain_tag,
-    scalar_t* domain_tag_value,
+    scalar_t domain_tag_value,
     bool use_all_zeroes_padding,
     std::shared_ptr<HashBackend>& backend /*OUT*/,
     const scalar_t& phantom)

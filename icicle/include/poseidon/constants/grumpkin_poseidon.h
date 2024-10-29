@@ -12,13 +12,21 @@ namespace poseidon_constants_grumpkin {
    * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matrices
   */
 
-  int partial_rounds_3 = 56;
+  int full_rounds_3 =      8;
+  int half_full_rounds_3 =      4;
+  int partial_rounds_3 =      56;
 
-  int partial_rounds_5 = 56;
+  int full_rounds_5 =      8;
+  int half_full_rounds_5 =      4;
+  int partial_rounds_5 =      56;
 
-  int partial_rounds_9 = 57;
+  int full_rounds_9 =      8;
+  int half_full_rounds_9 =      4;
+  int partial_rounds_9 =      57;
 
-  int partial_rounds_12 = 57;
+  int full_rounds_12 =      8;
+  int half_full_rounds_12 =      4;
+  int partial_rounds_12 =      57;
 
   unsigned char poseidon_constants_3[] = {
     0x31, 0x2a, 0xfd, 0xbb, 0x33, 0xfa, 0x28, 0xd8, 0xb9, 0x3b, 0x37, 0x56,
