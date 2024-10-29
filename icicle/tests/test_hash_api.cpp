@@ -325,13 +325,52 @@ public:
 bool is_valid_tree(
   const MerkleTree& tree,
   int input_size,
+  int leaf_size,
   const std::byte* inputs,
-  const std::vector<Hash>& hashes)
+  const std::vector<Hash>& hashes,
+  const MerkleTreeConfig& config)
 {
-  ICICLE_ASSERT(!hashes.empty());
+  std::vector<std::byte> input_vec(input_size);
+  memcpy(input_vec.data(), inputs, input_size);
 
-  int max_layer_size_bytes = input_size;
-  int input_size_temp = input_size;
+  int nof_hashes = 1;
+  for (int i = hashes.size() - 2; i >= 0; i--)
+  {
+    nof_hashes *= hashes[i + 1].input_default_chunk_size() / hashes[i].output_size();
+  }
+  int tree_input_size = nof_hashes * hashes[0].input_default_chunk_size();
+  
+  ICICLE_LOG_INFO << "Nof inputs required for tree: " << tree_input_size;
+  ICICLE_ASSERT((config.padding_policy != PaddingPolicy::None) || (input_size == tree_input_size)) 
+    << "Leaves size (" << (input_size / leaf_size) << ") is smaller than tree size ("
+    << (tree_input_size / leaf_size) << ") while Padding policy is None\n";
+
+  if (tree_input_size > input_size)
+  {
+    input_vec.resize(tree_input_size);
+    if (config.padding_policy == PaddingPolicy::LastValue)
+    {
+      ICICLE_ASSERT(tree_input_size % leaf_size == 0) 
+        << "Leaf size (" << leaf_size << ") must divide tree size (" << tree_input_size << ")";
+      std::vector<std::byte> last_leaf(leaf_size);
+      memcpy(last_leaf.data(), inputs + input_size - leaf_size, leaf_size);
+      int nof_leaves_in_padding = (tree_input_size - input_size)/leaf_size;
+      for (int i = 0; i < nof_leaves_in_padding; i++)
+      {
+        memcpy(input_vec.data() + input_size + i*leaf_size, last_leaf.data(), leaf_size);
+      }
+    }
+  }
+
+  std::cout << "Padded inputs:\n";
+  for (int i = 0; i < input_vec.size(); i++)
+  {
+    std::cout << std::to_integer<int>(input_vec[i]) << "\t";
+  }
+  std::cout << '\n';
+  
+  int max_layer_size_bytes = input_vec.size();
+  int input_size_temp = input_vec.size();
   int output_size_temp = 1;
 
   for (auto& layer_hash : hashes)
@@ -341,18 +380,19 @@ bool is_valid_tree(
 
     input_size_temp = output_size_temp;
   }
-  
+
+  input_size_temp = input_vec.size();
   int output_size = input_size * hashes[0].output_size() / hashes[0].input_default_chunk_size();
   auto layer_in =   std::make_unique<std::byte[]>(max_layer_size_bytes);
   auto layer_out =  std::make_unique<std::byte[]>(max_layer_size_bytes);
   // NOTE there is an assumption here that output number is less or equal to input number for all layers
 
-  memcpy(layer_in.get(), inputs, input_size);
+  memcpy(layer_in.get(), input_vec.data(), input_size_temp);
 
   int side_inputs_offset = 0;
   for (auto& layer_hash : hashes) {
-    output_size = input_size * layer_hash.output_size() / layer_hash.input_default_chunk_size();
-    const int nof_hashes = input_size / layer_hash.input_default_chunk_size();
+    output_size = input_size_temp * layer_hash.output_size() / layer_hash.input_default_chunk_size();
+    const int nof_hashes = input_size_temp / layer_hash.input_default_chunk_size();
 
     auto config = default_hash_config();
     config.batch = nof_hashes;
@@ -360,7 +400,7 @@ bool is_valid_tree(
 
     // copy output outputs to inputs before moving to the next layer
     memcpy(layer_in.get(), layer_out.get(), output_size);
-    input_size = output_size;
+    input_size_temp = output_size;
   }
 
   // Compare computed root with the tree's root
@@ -386,9 +426,10 @@ bool is_valid_tree(
   const MerkleTree& tree,
   int nof_inputs,
   const T* inputs,
-  const std::vector<Hash>& hashes)
+  const std::vector<Hash>& hashes,
+  const MerkleTreeConfig& config)
 {
-  return is_valid_tree(tree, nof_inputs * sizeof(T), reinterpret_cast<const std::byte*>(inputs), hashes);
+  return is_valid_tree(tree, nof_inputs * sizeof(T), sizeof(T), reinterpret_cast<const std::byte*>(inputs), hashes, config);
 }
 
 /**
@@ -419,18 +460,20 @@ void test_merkle_tree(
   auto verifier_tree =  MerkleTree::create(hashes, leaf_size, output_store_min_layer);
 
   // assert that incorrect size fails
-  ASSERT_NE(prover_tree.build(leaves, nof_leaves - 1, config), eIcicleError::SUCCESS);
-  ASSERT_NE(prover_tree.build(leaves, nof_leaves + 1, config), eIcicleError::SUCCESS);
+  if (config.padding_policy == PaddingPolicy::None)
+  {
+    ASSERT_NE(prover_tree.build(leaves, nof_leaves - 1, config), eIcicleError::SUCCESS);
+    ASSERT_NE(prover_tree.build(leaves, nof_leaves + 1, config), eIcicleError::SUCCESS);
+  }
   // build tree
   START_TIMER(MerkleTree_build)
   ICICLE_CHECK(prover_tree.build(leaves, nof_leaves * explicit_leaf_size, config));
   END_TIMER(MerkleTree_build, "Merkle Tree CPU", true)
 
-  ASSERT_TRUE(is_valid_tree<T>(prover_tree, nof_leaves * explicit_leaf_size, leaves, hashes)) 
+  ASSERT_TRUE(is_valid_tree<T>(prover_tree, nof_leaves * explicit_leaf_size, leaves, hashes, config)) 
     << "Tree wasn't built correctly.";
 
   // Create wrong input leaves by taking the original input and swapping some leaves by random values
-  // TODO wrong size big and small
   auto wrong_leaves = std::make_unique<T[]>(nof_leaves * explicit_leaf_size);
   memcpy(wrong_leaves.get(), leaves, nof_leaves * explicit_leaf_size);
   const uint64_t nof_indices_modified = 5;
@@ -439,17 +482,16 @@ void test_merkle_tree(
   for (int i = 0; i < nof_indices_modified; i++)
   {
     int wrong_index = wrong_indices[i] % (nof_leaves * explicit_leaf_size);
-    ICICLE_LOG_INFO << "Modified index:\t" << wrong_index << "\t(Not capped: " << wrong_indices[i] << " / " << nof_leaves * explicit_leaf_size << " )";
-    ICICLE_LOG_INFO << "Original value:\t" << static_cast<int>(wrong_leaves[wrong_index]);
+    int og_value = static_cast<int>(wrong_leaves[wrong_index]);
     wrong_leaves[wrong_index] = static_cast<T>(rand());
-    ICICLE_LOG_INFO << "Modified value:\t" << static_cast<int>(wrong_leaves[wrong_index]);
-    ICICLE_LOG_DEBUG << "Wrong input is modified at index " << wrong_index;
+    int new_value = static_cast<int>(wrong_leaves[wrong_index]);
+    ICICLE_LOG_DEBUG << "Wrong input is modified at index " << wrong_index << " from " << og_value << " to " << new_value;
   }
 
   // Test the paths at the random indices (Both that the original input is valid and the modified input isn't)
   for (int i = 0; i < nof_indices_modified; i++) {
     int leaf_idx = (wrong_indices[i] % (nof_leaves * explicit_leaf_size)) / explicit_leaf_size;
-    ICICLE_LOG_INFO << "Checking proof of index " << leaf_idx << " (Byte idx " << leaf_idx * explicit_leaf_size << ")";
+    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx " << leaf_idx * explicit_leaf_size << ")";
 
     // get root and merkle-path for a leaf
     auto [root, root_size] = prover_tree.get_merkle_root();
@@ -509,6 +551,47 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
 }
 
+TEST_F(HashApiTest, MerkleTreeBasicPadding)
+{
+  // const int leaf_size = sizeof(uint32_t); // 1
+  // const int nof_leaves = 5;
+  // uint32_t leaves[nof_leaves];
+  // // randomize(leaves, nof_leaves);
+  // for (int i = 0; i < nof_leaves; i++)
+  // {
+  //   leaves[i] = i;
+  // }
+
+  // auto layer0_hash = HashSumBackend::create(2 * leaf_size, leaf_size);  // in 2 leaves, out 1 leaves  
+  //                                                                       // 8B ->  4B -> 2B -> 1B
+
+  // std::vector<Hash> hashes = {layer0_hash, layer0_hash, layer0_hash};
+
+  const int leaf_size = sizeof(uint32_t);
+  const int nof_leaves = 1;
+  uint32_t leaves[nof_leaves];
+  // randomize(leaves, nof_leaves);
+  for (int i = 0; i < nof_leaves; i++)
+  {
+    leaves[i] = i;
+  }
+
+  // define the merkle tree
+  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves  200B ->  80B
+  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf    80B  ->  20B
+  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf      20B  ->  20B
+  auto layer3_hash = HashSumBackend::create(5 * leaf_size, leaf_size); // in 5 leaves, out 1 leaf    20B  ->  4B output
+
+  std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+  
+  auto config = default_merkle_tree_config();
+  config.padding_policy = PaddingPolicy::ZeroPadding;
+
+  int output_store_min_layer = 0;
+
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
+}
+
 TEST_F(HashApiTest, MerkleTreeMixMediumSize)
 {
   const uint32_t leaf_size = sizeof(uint32_t);
@@ -516,9 +599,6 @@ TEST_F(HashApiTest, MerkleTreeMixMediumSize)
   const uint32_t nof_leaves = total_input_size / leaf_size;
   auto leaves = std::make_unique<uint32_t[]>(nof_leaves);
   randomize(leaves.get(), nof_leaves);
-
-  auto leaves_alternative = std::make_unique<uint32_t[]>(nof_leaves);
-  randomize(leaves_alternative.get(), nof_leaves);
 
   // TODO repeat for all devices
 

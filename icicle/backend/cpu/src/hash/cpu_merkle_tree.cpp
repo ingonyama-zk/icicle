@@ -119,7 +119,7 @@ namespace icicle {
           continue;
         }
 
-        // If padding is required 
+        // If padding is required
         if (padding_required) {
           dispatch_task(task, 0, l0_segment_idx, padded_leaves.data(), false);
           padding_required = false;
@@ -367,7 +367,7 @@ namespace icicle {
 
       // Check leaves size
       if (leaves_size > m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size()) {
-        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") exceeds the size of the tree(" << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ")\n";
+        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") exceeds the size of the tree (" << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ")\n";
         return false;
       }
       if (leaves_size < m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() &&
