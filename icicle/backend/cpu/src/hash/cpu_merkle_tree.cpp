@@ -421,7 +421,7 @@ namespace icicle {
         const uint64_t copy_chunk_start = (element_start / copy_range_size) * copy_range_size;
         auto& cur_layer_result = m_layers[layer_idx].m_results;
 
-        for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
+        for (uint64_t byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (
             !is_pruned || byte_idx < element_start ||       // copy data before the element
             element_start + one_element_size <= byte_idx) { // copy data after the element
