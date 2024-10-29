@@ -559,7 +559,7 @@ TEST_F(HashApiTest, MerkleTreeLarge)
 // p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 
   #include "icicle/fields/field_config.h"
-  #include "../tests/poseidon_constants/poseidon_input_and_ref_value.h"
+  #include "poseidon/constants/bn254_poseidon.h"
 
 using namespace field_config;
 using namespace poseidon_constants_bn254;
@@ -591,7 +591,7 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };
@@ -632,7 +632,7 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 
 //       START_TIMER(POSEIDON_sync)
 //       for (int i = 0; i < iters; ++i) {
-//         ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+//         ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
 //       }
 //       END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
 //     };
@@ -671,7 +671,7 @@ TEST_F(HashApiTest, poseidon3_single_hash)
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };
@@ -710,7 +710,7 @@ TEST_F(HashApiTest, poseidon3_batch)
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), arity * config.batch * sizeof(scalar_t), config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };

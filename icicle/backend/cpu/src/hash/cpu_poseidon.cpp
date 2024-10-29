@@ -142,8 +142,7 @@ namespace icicle {
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
 
       // Currently sponge and padding functionalities are not supported.
-      // Therefore check that size/T == config.batch
-      ICICLE_ASSERT(size / (T * sizeof(S)) == sizeof(S) * config.batch)
+      ICICLE_ASSERT(size / (T * sizeof(S)) == 1)
         << "Sponge function still isn't supported. The following should be true: size/T == config.batch but it is "
            "not.\n";
 
