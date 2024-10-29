@@ -279,6 +279,12 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
   const int total_size = N * batch_size;
+
+  // const uint64_t N = 1 << (rand() % 15 + 3);
+  // const int batch_size = 1 << 3;
+  // const bool columns_batch = 1;
+  // const int total_size = N * batch_size;
+
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(batch_size);
   auto out_ref = std::make_unique<TypeParam[]>(batch_size);
