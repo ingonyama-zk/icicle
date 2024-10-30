@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
   try_load_and_set_backend_device(argc, argv);
 
   std::cout << "\nIcicle Examples: Number Theoretical Transform (NTT)" << std::endl;
-  const unsigned log_ntt_size = 20;
+  const unsigned log_ntt_size = 24;
   const unsigned ntt_size = 1 << log_ntt_size;
   const unsigned batch_size = 2;
 

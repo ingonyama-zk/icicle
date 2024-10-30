@@ -313,21 +313,23 @@ Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
 
       m_phase3_threads(m_batch_size - 1)
 {
+  // ICICLE_LOG_DEBUG << "MSM constructor";
+  // ICICLE_LOG_DEBUG << "c: " << m_c;
+  // ICICLE_LOG_DEBUG << "m_num_bms: " << m_num_bms;
 }
 
 template <typename A, typename P>
 void Msm<A, P>::run_msm(
   const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results)
 {
-  ICICLE_LOG_DEBUG << "Starting run_msm";
+  // ICICLE_LOG_DEBUG << "Starting run_msm";
   phase1_bucket_accumulator(scalars, bases, msm_size);
-  ICICLE_LOG_DEBUG << "Completed phase1_bucket_accumulator";
+  // ICICLE_LOG_DEBUG << "Completed phase1_bucket_accumulator";
   auto segments = std::vector<BmSumSegment>(m_num_bms * m_num_bm_segments);
-  ICICLE_LOG_DEBUG << "Completed segments vector creation";
   phase2_bm_sum(segments);
-  ICICLE_LOG_DEBUG << "Completed phase2_bm_sum";
+  // ICICLE_LOG_DEBUG << "Completed phase2_bm_sum";
   phase3_final_accumulator(segments, batch_idx, results);
-  ICICLE_LOG_DEBUG << "Completed phase3_final_accumulator";
+  // ICICLE_LOG_DEBUG << "Completed phase3_final_accumulator";
   if (batch_idx < m_batch_size - 1) { batch_run_reset(); }
 }
 
@@ -431,15 +433,15 @@ void Msm<A, P>::phase1_wait_for_completion()
 template <typename A, typename P>
 void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
 {
-  ICICLE_LOG_DEBUG << "Starting phase2_bm_sum";
+  // ICICLE_LOG_DEBUG << "Starting phase2_bm_sum";
   phase2_setup(segments);
-  ICICLE_LOG_DEBUG << "Completed phase2_setup";
-  ICICLE_LOG_DEBUG << "m_segment_size: " << m_segment_size;
+  // ICICLE_LOG_DEBUG << "Completed phase2_setup";
+  // ICICLE_LOG_DEBUG << "m_segment_size: " << m_segment_size;
   if (m_segment_size > 1) {
     // Send first additions - line additions.
-    ICICLE_LOG_DEBUG << "Sending first additions - line additions";
+    // ICICLE_LOG_DEBUG << "Sending first additions - line additions";
     for (int i = 0; i < m_num_bms * m_num_bm_segments; i++) {
-      ICICLE_LOG_DEBUG << "i " << i << "/" << m_num_bms * m_num_bm_segments;
+      // ICICLE_LOG_DEBUG << "i " << i << "/" << m_num_bms * m_num_bm_segments;
       EcAddTask<A, P>* task = manager.get_idle_task();
       // check if the task is nullptr
       if (task == nullptr) {
@@ -454,7 +456,7 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
     }
 
     // Loop until all line/tri sums are done.
-    ICICLE_LOG_DEBUG << "Loop until all line/tri sums are done";
+    // ICICLE_LOG_DEBUG << "Loop until all line/tri sums are done";
     int done_segments = 0;
     while (done_segments < m_num_bms * m_num_bm_segments) {
       EcAddTask<A, P>* task = manager.get_completed_task();
@@ -618,6 +620,7 @@ eIcicleError cpu_msm(
   }
 
   int nof_threads = std::thread::hardware_concurrency();
+  ICICLE_LOG_DEBUG << "Number of threads: " << nof_threads;
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
     nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
   }

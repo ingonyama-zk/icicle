@@ -79,7 +79,7 @@ private:
         __android_log_print(priority, "IcicleNative", "%s", message.c_str());
 #else
         // Other platforms (e.g., standard error output)
-        std::cerr << message << std::endl;
+        oss << message << std::endl;
 #endif
     }
 
