@@ -274,14 +274,14 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
   const int total_size = N * batch_size;
 
-  // const uint64_t N = 1 << (rand() % 15 + 3);
-  // const int batch_size = 1 << 3;
+  // const uint64_t N = 1 << (20);
+  // const int batch_size = 1 << 4;
   // const bool columns_batch = 1;
   // const int total_size = N * batch_size;
 
@@ -356,13 +356,15 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
-  // const uint64_t N = 1 << 3;
   const int batch_size = 1 << (rand() % 5);
-  // const int batch_size = 2;
   const bool columns_batch = rand() % 2;
-  // const bool columns_batch = 0;
   const bool use_single_scalar = rand() % 2;
-  // const bool use_single_scalar = 1;
+
+  // const uint64_t N = 1 << (4);
+  // const int batch_size = 7;
+  // const bool columns_batch = 1;
+  // const bool use_single_scalar = 0;
+
   const int total_size = N * batch_size;
   auto scalar_a = std::make_unique<TypeParam[]>(use_single_scalar ? 1 : batch_size);
   auto in_b = std::make_unique<TypeParam[]>(total_size);
@@ -415,6 +417,7 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
 
   
   // ICICLE_LOG_DEBUG << scalar_a[0] << ", ";
+  // ICICLE_LOG_DEBUG << scalar_a[1] << ", ";
   // for (int i = 0; i < total_size; i++) {
   //   ICICLE_LOG_DEBUG << i << ", " << in_b[i] << ", " << out_main[i] << ", " << out_ref[i];
   // }
