@@ -417,8 +417,10 @@ namespace icicle {
   eIcicleError polynomial_division(
     const T* numerator,
     int64_t numerator_deg,
+    uint64_t numerator_size,
     const T* denumerator,
     int64_t denumerator_deg,
+    uint64_t denumerator_size,
     uint64_t q_size,
     uint64_t r_size,
     const VecOpsConfig& config,
