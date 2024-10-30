@@ -44,7 +44,7 @@ namespace icicle {
 
           // Calculate path_size
           m_pruned_path_size += cur_layer_input_size - layer_hashes[layer_idx - 1].output_size();
-          m_full_path_size   += cur_layer_input_size;
+          m_full_path_size += cur_layer_input_size;
         }
       }
     }
@@ -58,22 +58,22 @@ namespace icicle {
       }
       // build a vector with the leaves that needs padding.
       std::vector<std::byte> padded_leaves;
-      if (!init_layers_db(config, leaves_size) ||
-          !init_padded_leaves(padded_leaves, leaves, leaves_size, config)) {
+      if (!init_layers_db(config, leaves_size) || !init_padded_leaves(padded_leaves, leaves, leaves_size, config)) {
         return eIcicleError::INVALID_ARGUMENT;
       }
       const int nof_layers = m_layers.size();
       m_tree_already_built = true; // Set the tree status as built
       uint64_t l0_segment_idx = 0; // Index for the segment of hashes from layer 0 to send
-      const uint64_t nof_segments_at_l0 = 
-        ((m_layers[0].m_nof_hashes_2_execute - m_layers[0].m_last_hash_config.batch) / NOF_OPERATIONS_PER_TASK) +1;
+      const uint64_t nof_segments_at_l0 =
+        ((m_layers[0].m_nof_hashes_2_execute - m_layers[0].m_last_hash_config.batch) / NOF_OPERATIONS_PER_TASK) + 1;
       bool padding_required = !padded_leaves.empty();
 
       // run until the root is processed
       while (1) {
         HashTask* task = (l0_segment_idx < nof_segments_at_l0) ? // If there are tasks from layer 0 to send
-              task_manager.get_idle_or_completed_task() :   // get any task slot to assign
-              task_manager.get_completed_task();            // else, only completed tasks are interesting.
+                           task_manager.get_idle_or_completed_task()
+                                                               : // get any task slot to assign
+                           task_manager.get_completed_task();    // else, only completed tasks are interesting.
 
         // handle completed task
         if (task->is_completed()) {
@@ -95,7 +95,8 @@ namespace icicle {
 
           // update m_map_segment_id_2_inputs with the data that is ready for process
           auto cur_segment_iter = m_map_segment_id_2_inputs.find(cur_segment_id);
-          cur_segment_iter->second->increment_ready(m_layers[completed_layer_idx].m_hash.output_size() * task->m_hash_config->batch);
+          cur_segment_iter->second->increment_ready(
+            m_layers[completed_layer_idx].m_hash.output_size() * task->m_hash_config->batch);
 
           // check if cur segment is ready to be executed
           const Hash cur_hash = m_layers[cur_layer_idx].m_hash;
@@ -162,18 +163,18 @@ namespace icicle {
       // leaf size at the proof
       const auto proof_leaves_size = m_layers[0].m_hash.input_default_chunk_size();
       // calc the amount of leaves to copy to the proof
-      uint64_t copy_leaves_size = 
-        (proof_leaves_offset + proof_leaves_size <= leaves_size) ? proof_leaves_size : // all leaves available
-        std::min(proof_leaves_size, leaves_size - proof_leaves_offset);
+      uint64_t copy_leaves_size = (proof_leaves_offset + proof_leaves_size <= leaves_size) ? proof_leaves_size
+                                                                                           : // all leaves available
+                                    std::min(proof_leaves_size, leaves_size - proof_leaves_offset);
       // generate a vector with the proof leaves
-      std::vector <std::byte> proof_leaves(proof_leaves_size, std::byte(0));
+      std::vector<std::byte> proof_leaves(proof_leaves_size, std::byte(0));
       std::memcpy(proof_leaves.data(), &leaves[proof_leaves_offset], copy_leaves_size);
 
       // if PaddingPolicy::LastValue padd the vector with the last value
       if (config.padding_policy == PaddingPolicy::LastValue) {
-        const std::byte* last_element = &leaves[leaves_size-m_leaf_element_size];
+        const std::byte* last_element = &leaves[leaves_size - m_leaf_element_size];
         while (copy_leaves_size < proof_leaves_size) {
-          std::memcpy(proof_leaves.data()+copy_leaves_size, last_element, m_leaf_element_size);
+          std::memcpy(proof_leaves.data() + copy_leaves_size, last_element, m_leaf_element_size);
           copy_leaves_size += m_leaf_element_size;
         }
       }
@@ -267,10 +268,10 @@ namespace icicle {
     struct LayerDB {
       LayerDB() : m_hash(nullptr) {}
 
-      Hash m_hash;                      // the hash function
-      uint64_t m_nof_hashes;            // number of hash functions per layer. Maybe can change to m_input_layer_size 
-      uint64_t m_nof_hashes_2_execute;  // number of hash functions that needs to be caculated
-      
+      Hash m_hash;                     // the hash function
+      uint64_t m_nof_hashes;           // number of hash functions per layer. Maybe can change to m_input_layer_size
+      uint64_t m_nof_hashes_2_execute; // number of hash functions that needs to be caculated
+
       std::vector<std::byte> m_results; // vector of hash results. This vector might not be fully allocated if layer is
                                         // not in range m_output_store_min/max_layer
       HashConfig m_hash_config;         // config when calling a hash function not last in layer
@@ -281,9 +282,7 @@ namespace icicle {
     class SegmentDB
     {
     public:
-      SegmentDB(int input_size, bool allocate_space) : 
-        m_nof_inputs_ready(0), 
-        m_input_size(input_size)
+      SegmentDB(int input_size, bool allocate_space) : m_nof_inputs_ready(0), m_input_size(input_size)
       {
         m_input_data = allocate_space ? new std::byte[input_size] : nullptr;
       }
@@ -292,13 +291,9 @@ namespace icicle {
         if (m_input_data) { delete[] m_input_data; }
       }
 
-      inline void increment_ready(int nof_inputs_ready) {
-        m_nof_inputs_ready += nof_inputs_ready;
-      }
+      inline void increment_ready(int nof_inputs_ready) { m_nof_inputs_ready += nof_inputs_ready; }
 
-      inline bool is_ready() const {
-        return (m_nof_inputs_ready >= m_input_size);
-      }
+      inline bool is_ready() const { return (m_nof_inputs_ready >= m_input_size); }
       // members
       std::byte* m_input_data;
       int m_input_size;
@@ -312,29 +307,31 @@ namespace icicle {
       HashTask() : TaskBase(), m_hash(nullptr) {}
 
       // The worker execute this function based on the member operands
-      virtual void execute() { 
+      virtual void execute()
+      {
         // run the hash runction
-        m_hash.hash(m_input, m_hash.input_default_chunk_size(), *m_hash_config, m_output); 
+        m_hash.hash(m_input, m_hash.input_default_chunk_size(), *m_hash_config, m_output);
 
         // padd hash result is necesary
-        for (int padd_idx=0; padd_idx < m_padd_output; padd_idx++) {
+        for (int padd_idx = 0; padd_idx < m_padd_output; padd_idx++) {
           const uint64_t padd_offset = m_hash_config->batch * m_hash.output_size();
-          memcpy(m_output + padd_offset + padd_idx*m_hash.output_size(), // dest: start from padd_offset
-                 m_output + padd_offset -m_hash.output_size(),           // source: last calculated hash result
-                 m_hash.output_size());                                  // size: hash result size
+          memcpy(
+            m_output + padd_offset + padd_idx * m_hash.output_size(), // dest: start from padd_offset
+            m_output + padd_offset - m_hash.output_size(),            // source: last calculated hash result
+            m_hash.output_size());                                    // size: hash result size
         }
       }
 
-      Hash              m_hash;
-      const std::byte*  m_input;
-      std::byte*        m_output;
-      HashConfig*       m_hash_config;
+      Hash m_hash;
+      const std::byte* m_input;
+      std::byte* m_output;
+      HashConfig* m_hash_config;
 
       // task definition: set by the manager
-      uint      m_layer_idx;
-      int64_t   m_segment_idx;
-      uint64_t  m_next_segment_idx;
-      uint      m_padd_output;
+      uint m_layer_idx;
+      int64_t m_segment_idx;
+      uint64_t m_next_segment_idx;
+      uint m_padd_output;
     };
 
     // private members
@@ -367,12 +364,16 @@ namespace icicle {
 
       // Check leaves size
       if (leaves_size > m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size()) {
-        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") exceeds the size of the tree (" << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ")\n";
+        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") exceeds the size of the tree ("
+                         << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ")\n";
         return false;
       }
-      if (leaves_size < m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() &&
-          merkle_config.padding_policy == PaddingPolicy::None) {
-        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") is smaller than tree size (" << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() << ") while Padding policy is None\n";
+      if (
+        leaves_size < m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size() &&
+        merkle_config.padding_policy == PaddingPolicy::None) {
+        ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") is smaller than tree size ("
+                         << m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size()
+                         << ") while Padding policy is None\n";
         return false;
       }
 
@@ -381,32 +382,34 @@ namespace icicle {
         auto& cur_layer = m_layers[layer_idx];
 
         // calculate the actual number of hashes to execute based on leaves_size
-        const uint64_t hash_input_size  = cur_layer.m_hash.input_default_chunk_size();
+        const uint64_t hash_input_size = cur_layer.m_hash.input_default_chunk_size();
         const uint64_t hash_output_size = cur_layer.m_hash.output_size();
         // round up the the number of hashes and add 1 more for last hash that is fully padded
-        const uint64_t nof_hashes_2_execute = (leaves_size + hash_input_size - 1) / hash_input_size + 1; 
+        const uint64_t nof_hashes_2_execute = (leaves_size + hash_input_size - 1) / hash_input_size + 1;
         // make sure you don't exceed m_nof_hashes
-        cur_layer.m_nof_hashes_2_execute = std::min(cur_layer.m_nof_hashes, nof_hashes_2_execute);          
+        cur_layer.m_nof_hashes_2_execute = std::min(cur_layer.m_nof_hashes, nof_hashes_2_execute);
 
         // config when calling not last in layer hash function
         cur_layer.m_hash_config.batch = NOF_OPERATIONS_PER_TASK;
         cur_layer.m_hash_config.is_async = merkle_config.is_async;
 
         // config when calling last hash function in layer 2-17 hases
-        const uint64_t last_batch_size = cur_layer.m_nof_hashes_2_execute < NOF_OPERATIONS_PER_TASK ? 
-            cur_layer.m_nof_hashes_2_execute : (cur_layer.m_nof_hashes_2_execute - 2) % NOF_OPERATIONS_PER_TASK + 2;
-        cur_layer.m_last_hash_config.batch = std::min(cur_layer.m_nof_hashes_2_execute, last_batch_size); 
+        const uint64_t last_batch_size = cur_layer.m_nof_hashes_2_execute < NOF_OPERATIONS_PER_TASK
+                                           ? cur_layer.m_nof_hashes_2_execute
+                                           : (cur_layer.m_nof_hashes_2_execute - 2) % NOF_OPERATIONS_PER_TASK + 2;
+        cur_layer.m_last_hash_config.batch = std::min(cur_layer.m_nof_hashes_2_execute, last_batch_size);
         cur_layer.m_last_hash_config.is_async = merkle_config.is_async;
 
         // update leaves_size for the next layer
-        leaves_size = (nof_hashes_2_execute-1) * hash_output_size;
+        leaves_size = (nof_hashes_2_execute - 1) * hash_output_size;
       }
 
       // allocate the results vectors based on nof_hashes_2_execute of the next layer. part of it might be padded
       for (int layer_idx = 0; layer_idx < nof_layers; ++layer_idx) {
-        const uint64_t nof_bytes_to_allocate = (layer_idx == nof_layers-1) ? 
-            m_layers[layer_idx].m_hash.output_size() : 
-            m_layers[layer_idx+1].m_nof_hashes_2_execute * m_layers[layer_idx+1].m_hash.input_default_chunk_size();
+        const uint64_t nof_bytes_to_allocate = (layer_idx == nof_layers - 1)
+                                                 ? m_layers[layer_idx].m_hash.output_size()
+                                                 : m_layers[layer_idx + 1].m_nof_hashes_2_execute *
+                                                     m_layers[layer_idx + 1].m_hash.input_default_chunk_size();
         m_layers[layer_idx].m_results.reserve(nof_bytes_to_allocate);
         m_layers[layer_idx].m_results.resize(nof_bytes_to_allocate);
       }
@@ -414,7 +417,12 @@ namespace icicle {
     }
 
     // If padding is required resize padded_leaves and populate it with the required data.
-    bool init_padded_leaves(std::vector <std::byte>& padded_leaves, const std::byte* leaves, uint64_t leaves_size, const MerkleTreeConfig& config) {
+    bool init_padded_leaves(
+      std::vector<std::byte>& padded_leaves,
+      const std::byte* leaves,
+      uint64_t leaves_size,
+      const MerkleTreeConfig& config)
+    {
       const uint64_t l0_input_size = m_layers[0].m_hash.input_default_chunk_size();
       if (m_layers[0].m_nof_hashes * l0_input_size == leaves_size) {
         // No padding is required
@@ -425,36 +433,47 @@ namespace icicle {
       padded_leaves.resize(padded_leaves_size, std::byte(0)); // padd the vector with 0
 
       // The size of the leaves to copy to padded_leaves
-      const uint64_t last_segment_tail_size = leaves_size < (2*l0_input_size) ? leaves_size : 
-                        (leaves_size-2*l0_input_size) % (NOF_OPERATIONS_PER_TASK * l0_input_size) + (2*l0_input_size);
+      const uint64_t last_segment_tail_size =
+        leaves_size < (2 * l0_input_size)
+          ? leaves_size
+          : (leaves_size - 2 * l0_input_size) % (NOF_OPERATIONS_PER_TASK * l0_input_size) + (2 * l0_input_size);
       const uint64_t last_segment_offset = leaves_size - last_segment_tail_size;
       memcpy(padded_leaves.data(), leaves + last_segment_offset, last_segment_tail_size);
 
       // padd with the last element
-      if (config.padding_policy == PaddingPolicy::LastValue) { 
+      if (config.padding_policy == PaddingPolicy::LastValue) {
         if (leaves_size % m_leaf_element_size != 0) {
-          ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") must divide leaf_element_size (" << m_leaf_element_size << ")when Padding policy is LastValue\n";
+          ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") must divide leaf_element_size ("
+                           << m_leaf_element_size << ")when Padding policy is LastValue\n";
           return false;
         }
         // pad with the last element
-        for (uint64_t padded_leaves_offset = last_segment_tail_size; padded_leaves_offset < padded_leaves.size(); padded_leaves_offset += m_leaf_element_size) {
-          memcpy(padded_leaves.data()+padded_leaves_offset, // dest: padd vector
-                 leaves+leaves_size-m_leaf_element_size,    // src: last elemnt 
-                 m_leaf_element_size);                      // size 1 element size 
+        for (uint64_t padded_leaves_offset = last_segment_tail_size; padded_leaves_offset < padded_leaves.size();
+             padded_leaves_offset += m_leaf_element_size) {
+          memcpy(
+            padded_leaves.data() + padded_leaves_offset, // dest: padd vector
+            leaves + leaves_size - m_leaf_element_size,  // src: last elemnt
+            m_leaf_element_size);                        // size 1 element size
         }
       }
       return true;
     }
 
     // build task and dispatch it to task manager
-    void dispatch_task(HashTask* task, int cur_layer_idx, const uint64_t cur_segment_idx, const std::byte* input_bytes, bool calc_input_offset)
+    void dispatch_task(
+      HashTask* task,
+      int cur_layer_idx,
+      const uint64_t cur_segment_idx,
+      const std::byte* input_bytes,
+      bool calc_input_offset)
     {
       // Calculate Next-Segment-ID. The current task generates inputs for Next-Segment
       LayerDB& cur_layer = m_layers[cur_layer_idx];
       const uint64_t next_layer_idx = cur_layer_idx + 1;
 
       // Set HashTask input
-      const uint64_t input_offset = calc_input_offset ?  cur_segment_idx * NOF_OPERATIONS_PER_TASK * cur_layer.m_hash.input_default_chunk_size() : 0;
+      const uint64_t input_offset =
+        calc_input_offset ? cur_segment_idx * NOF_OPERATIONS_PER_TASK * cur_layer.m_hash.input_default_chunk_size() : 0;
       task->m_input = &(input_bytes[input_offset]);
 
       task->m_hash = cur_layer.m_hash;
@@ -469,32 +488,38 @@ namespace icicle {
         task->dispatch();
         return;
       }
-      
+
       // This is not the root layer (root)
       LayerDB& next_layer = m_layers[next_layer_idx];
       const uint64_t next_input_size = next_layer.m_hash.input_default_chunk_size();
       const uint64_t next_segment_idx = cur_segment_idx * cur_layer.m_hash.output_size() / next_input_size;
       const uint64_t next_segment_id = next_segment_idx ^ (next_layer_idx << 56);
-      
+
       // If next_segment does not appear in m_map_segment_id_2_inputs, then add it
       auto next_segment_it = m_map_segment_id_2_inputs.find(next_segment_id);
       if (next_segment_it == m_map_segment_id_2_inputs.end()) {
-        bool is_next_segment_last = next_segment_idx * NOF_OPERATIONS_PER_TASK + next_layer.m_last_hash_config.batch == next_layer.m_nof_hashes_2_execute;
-        const int next_seg_size_to_allocate = is_next_segment_last ? 
-          next_layer.m_last_hash_config.batch * next_input_size :   // last segment - allocate according to batch size
-          NOF_OPERATIONS_PER_TASK * next_input_size;                // middle segment - allocate max
-        const auto result = m_map_segment_id_2_inputs.emplace(next_segment_id, new SegmentDB(next_seg_size_to_allocate, cur_layer_idx < m_output_store_min_layer));
+        bool is_next_segment_last = next_segment_idx * NOF_OPERATIONS_PER_TASK + next_layer.m_last_hash_config.batch ==
+                                    next_layer.m_nof_hashes_2_execute;
+        const int next_seg_size_to_allocate =
+          is_next_segment_last ? next_layer.m_last_hash_config.batch * next_input_size
+                               :                       // last segment - allocate according to batch size
+            NOF_OPERATIONS_PER_TASK * next_input_size; // middle segment - allocate max
+        const auto result = m_map_segment_id_2_inputs.emplace(
+          next_segment_id, new SegmentDB(next_seg_size_to_allocate, cur_layer_idx < m_output_store_min_layer));
         next_segment_it = result.first;
       }
 
       // calc task_output
       const uint64_t task_output_offset = cur_segment_idx * NOF_OPERATIONS_PER_TASK * cur_layer.m_hash.output_size();
-      task->m_output = (cur_layer_idx < m_output_store_min_layer) ?
-        &(next_segment_it->second->m_input_data[task_output_offset % (NOF_OPERATIONS_PER_TASK * next_input_size)]) : // input in SegmentDB
-        &(cur_layer.m_results[task_output_offset]);                                                                 // next layer result vector
+      task->m_output =
+        (cur_layer_idx < m_output_store_min_layer)
+          ? &(next_segment_it->second->m_input_data[task_output_offset % (NOF_OPERATIONS_PER_TASK * next_input_size)])
+          :                                           // input in SegmentDB
+          &(cur_layer.m_results[task_output_offset]); // next layer result vector
 
       // If this is the last segment, padd the result
-      bool is_cur_segment_last = cur_segment_idx * NOF_OPERATIONS_PER_TASK + cur_layer.m_last_hash_config.batch == cur_layer.m_nof_hashes_2_execute;
+      bool is_cur_segment_last = cur_segment_idx * NOF_OPERATIONS_PER_TASK + cur_layer.m_last_hash_config.batch ==
+                                 cur_layer.m_nof_hashes_2_execute;
       if (is_cur_segment_last) {
         // total size of the next layer inputs
         const uint64_t result_total_size = next_layer.m_nof_hashes_2_execute * next_input_size;
@@ -505,9 +530,7 @@ namespace icicle {
         const uint64_t padd_size_in_bytes = result_total_size - last_result_location;
         task->m_padd_output = padd_size_in_bytes / task->m_hash.output_size();
         next_segment_it->second->increment_ready(padd_size_in_bytes);
-      }
-      else
-      {
+      } else {
         task->m_hash_config = &cur_layer.m_hash_config;
       }
 
@@ -529,7 +552,7 @@ namespace icicle {
         const uint64_t one_element_size = m_layers[layer_idx].m_hash.output_size();
         uint64_t element_start =
           proof_leaves_offset * m_layers[layer_idx].m_nof_hashes / total_input_size * one_element_size;
-        
+
         // if the element exceeds to the padded area, cut it to the padded hash
         if (element_start >= cur_layer_result.size()) {
           element_start = cur_layer_result.size() - copy_range_size + element_start % copy_range_size;
@@ -538,8 +561,7 @@ namespace icicle {
 
         for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (
-            !is_pruned || 
-            byte_idx < element_start ||                     // copy data before the element
+            !is_pruned || byte_idx < element_start ||       // copy data before the element
             element_start + one_element_size <= byte_idx) { // copy data after the element
             *path = cur_layer_result[byte_idx];
             path++;
