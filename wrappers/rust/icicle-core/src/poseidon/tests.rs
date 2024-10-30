@@ -12,35 +12,42 @@ pub fn check_poseidon_hash<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
 {
-    let batch = 1 << 10;
+    let batch = 1 << 4;
+    let domain_tag = F::Config::generate_random(1)[0];
     for t in [3, 5, 9, 12] {
-        let inputs: Vec<F> = F::Config::generate_random(batch * t);
-        let mut outputs_main = vec![F::zero(); batch];
-        let mut outputs_ref = vec![F::zero(); batch];
+        for domain_tag in [None, Some(&domain_tag)] {
+            let inputs: Vec<F> = if domain_tag != None {
+                F::Config::generate_random(batch * (t - 1))
+            } else {
+                F::Config::generate_random(batch * t)
+            };
+            let mut outputs_main = vec![F::zero(); batch];
+            let mut outputs_ref = vec![F::zero(); batch];
 
-        test_utilities::test_set_main_device();
-        let poseidon_hasher_main = Poseidon::new::<F>(t as u32, false /*use_domain_tag*/).unwrap();
+            test_utilities::test_set_main_device();
+            let poseidon_hasher_main = Poseidon::new::<F>(t as u32, domain_tag).unwrap();
 
-        poseidon_hasher_main
-            .hash(
-                HostSlice::from_slice(&inputs),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
-            )
-            .unwrap();
+            poseidon_hasher_main
+                .hash(
+                    HostSlice::from_slice(&inputs),
+                    &HashConfig::default(),
+                    HostSlice::from_mut_slice(&mut outputs_main),
+                )
+                .unwrap();
 
-        test_utilities::test_set_ref_device();
-        let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, false /*use_domain_tag*/).unwrap();
+            test_utilities::test_set_ref_device();
+            let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, domain_tag).unwrap();
 
-        poseidon_hasher_ref
-            .hash(
-                HostSlice::from_slice(&inputs),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_ref),
-            )
-            .unwrap();
+            poseidon_hasher_ref
+                .hash(
+                    HostSlice::from_slice(&inputs),
+                    &HashConfig::default(),
+                    HostSlice::from_mut_slice(&mut outputs_ref),
+                )
+                .unwrap();
 
-        assert_eq!(outputs_main, outputs_ref);
+            assert_eq!(outputs_main, outputs_ref);
+        }
     }
 }
 
@@ -54,7 +61,7 @@ where
         let mut outputs_ref = vec![F::zero(); 1];
 
         test_utilities::test_set_main_device();
-        let poseidon_hasher_main = Poseidon::new::<F>(t as u32, false /*use_domain_tag*/).unwrap();
+        let poseidon_hasher_main = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
         poseidon_hasher_main
             .hash(
@@ -63,10 +70,10 @@ where
                 HostSlice::from_mut_slice(&mut outputs_main),
             )
             .unwrap();
-.
+
         // Sponge poseidon is planned for v3.2. Not supported in v3.1
         test_utilities::test_set_ref_device();
-        let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, false /*use_domain_tag*/).unwrap();
+        let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
         let err = poseidon_hasher_ref.hash(
             HostSlice::from_slice(&inputs),
@@ -88,7 +95,7 @@ where
         .map(|i| F::from_u32(i))
         .collect();
 
-    let hasher = Poseidon::new::<F>(t as u32, false /*use_domain_tag*/).unwrap();
+    let hasher = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)
         .map(|_| &hasher)
         .collect();

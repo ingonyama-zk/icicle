@@ -23,12 +23,10 @@ namespace icicle {
   template <typename S>
   struct PoseidonConstantsOptions {
     unsigned int t = 0;
-    unsigned int alpha;                 ///< Sbox power.
-    bool use_domain_tag = false;        ///< If i_domain_tag is set then single hash width = t + 1, otherwise width = t.
-    S domain_tag_value = S::zero();     ///< Domain tag value that is usually used in sponge function Poseidon hashes.
-    bool use_all_zeroes_padding = true; ///< If true use [0,0,..,0] for padding. Otherwise use [1,0,..,0].
-    unsigned int nof_upper_full_rounds; ///< Number of upper full rounds of a single hash.
-    unsigned int nof_partial_rounds;    ///< Number of partial rounds of a single hash.
+    unsigned int alpha = 5;              ///< Sbox power.
+    bool use_all_zeroes_padding = true;  ///< If true use [0,0,..,0] for padding. Otherwise use [1,0,..,0].
+    unsigned int nof_upper_full_rounds;  ///< Number of upper full rounds of a single hash.
+    unsigned int nof_partial_rounds;     ///< Number of partial rounds of a single hash.
     unsigned int nof_bottom_full_rounds; ///< Number of bottom full rounds of a single hash.
     S* rounds_constants; ///< Round constants (both of the full and the partial rounds). The order of the constants in
                          ///< the memory is according to the rounds order.
@@ -44,11 +42,7 @@ namespace icicle {
   // calling.
 
   using CreatePoseidonImpl = std::function<eIcicleError(
-    const Device& device,
-    unsigned t,
-    bool use_domain_tag,
-    std::shared_ptr<HashBackend>& /*OUT*/,
-    const scalar_t& phantom)>;
+    const Device& device, unsigned t, const scalar_t* domain_tag, std::shared_ptr<HashBackend>& /*OUT*/)>;
 
   // poseidon init constants
   void register_create_poseidon(const std::string& deviceType, CreatePoseidonImpl impl);

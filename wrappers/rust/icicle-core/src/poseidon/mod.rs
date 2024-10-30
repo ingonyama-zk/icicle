@@ -8,28 +8,28 @@ use icicle_runtime::errors::eIcicleError;
 /// This allows the implementation of Poseidon hashing for various field types that implement `FieldImpl`.
 pub trait PoseidonHasher<F: FieldImpl> {
     /// Method to create a new Poseidon hasher for a given t (branching factor).
-    fn new(t: u32, use_domain_tag: bool) -> Result<Hasher, eIcicleError>;
+    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>;
 }
 
 /// Function to create a Poseidon hasher for a specific field type and t (branching factor).
 /// Delegates the creation to the `new` method of the `PoseidonHasher` trait.
-pub fn create_poseidon_hasher<F>(t: u32, use_domain_tag: bool) -> Result<Hasher, eIcicleError>
+pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: PoseidonHasher<F>, // Requires that the `Config` associated with `F` implements `PoseidonHasher`.
 {
-    <<F as FieldImpl>::Config as PoseidonHasher<F>>::new(t, use_domain_tag)
+    <<F as FieldImpl>::Config as PoseidonHasher<F>>::new(t, domain_tag)
 }
 
 pub struct Poseidon;
 
 impl Poseidon {
-    pub fn new<F>(t: u32, use_domain_tag: bool) -> Result<Hasher, eIcicleError>
+    pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
     where
         F: FieldImpl,                 // F must implement the FieldImpl trait
         F::Config: PoseidonHasher<F>, // The Config associated with F must implement PoseidonHasher<F>
     {
-        create_poseidon_hasher::<F>(t, use_domain_tag)
+        create_poseidon_hasher::<F>(t, domain_tag)
     }
 }
 
@@ -53,13 +53,15 @@ macro_rules! impl_poseidon {
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_create_poseidon_hasher")]
-                fn create_poseidon_hasher(t: u32, use_domain_tag: bool) -> HasherHandle;
+                fn create_poseidon_hasher(t: u32, domain_tag: *const $field) -> HasherHandle;
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
             impl PoseidonHasher<$field> for $field_cfg {
-                fn new(t: u32, use_domain_tag: bool) -> Result<Hasher, eIcicleError> {
-                    let handle: HasherHandle = unsafe { create_poseidon_hasher(t, use_domain_tag) }; // Calls the external FFI function to create the hasher.
+                fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
+                    let handle: HasherHandle = unsafe {
+                        create_poseidon_hasher(t, domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field))
+                    }; // Calls the external FFI function to create the hasher.
                     if handle.is_null() {
                         return Err(eIcicleError::UnknownError); // Checks if the handle is null and returns an error if so.
                     }

@@ -7,10 +7,10 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(CreatePoseidonHasherDispatcher, create_poseidon, CreatePoseidonImpl);
 
   template <>
-  Hash create_poseidon_hash<scalar_t>(unsigned t, bool use_domain_tag)
+  Hash create_poseidon_hash<scalar_t>(unsigned t, const scalar_t* domain_tag)
   {
     std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(t, use_domain_tag, backend, scalar_t::zero()));
+    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(t, domain_tag, backend));
     Hash poseidon{backend};
     return poseidon;
   }

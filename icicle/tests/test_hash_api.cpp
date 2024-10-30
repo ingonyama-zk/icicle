@@ -617,7 +617,7 @@ TEST_F(HashApiTest, poseidon12_single_hash)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    auto poseidon = Poseidon::create<scalar_t>(t, false /*=use_domain_tag*/);
+    auto poseidon = Poseidon::create<scalar_t>(t);
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
@@ -692,7 +692,7 @@ TEST_F(HashApiTest, poseidon3_single_hash)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    auto poseidon = Poseidon::create<scalar_t>(t, false /*use_domain_tag*/);
+    auto poseidon = Poseidon::create<scalar_t>(t);
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
@@ -714,10 +714,11 @@ TEST_F(HashApiTest, poseidon3_batch)
 {
   const unsigned t = 3;
   auto config = default_hash_config();
+  const scalar_t domain_tag = scalar_t::rand_host();
 
   config.batch = 1 << 10;
-  auto input = std::make_unique<scalar_t[]>(t * config.batch);
-  scalar_t::rand_host_many(input.get(), t * config.batch);
+  auto input = std::make_unique<scalar_t[]>((t - 1) * config.batch);
+  scalar_t::rand_host_many(input.get(), (t - 1) * config.batch);
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
@@ -726,11 +727,11 @@ TEST_F(HashApiTest, poseidon3_batch)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    auto poseidon = Poseidon::create<scalar_t>(t, false /*use_domain_tag*/);
+    auto poseidon = Poseidon::create<scalar_t>(t, &domain_tag);
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), t, config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), t - 1, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };
