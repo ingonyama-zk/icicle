@@ -46,7 +46,6 @@ namespace icicle {
   static eIcicleError
   cpu_poseidon_init_constants(const Device& device, const PoseidonConstantsOptions<scalar_t>* options)
   {
-    ICICLE_LOG_DEBUG << "In cpu_poseidon_init_constants() for type " << demangle<scalar_t>();
     unsigned int T = options->use_domain_tag ? options->t + 1 : options->t;
     poseidon_constants[T] = *options;
     return eIcicleError::SUCCESS;
@@ -62,7 +61,6 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    ICICLE_LOG_DEBUG << "In cpu_poseidon_init_default_constants() for type " << demangle<scalar_t>();
     unsigned int partial_rounds;
     unsigned int upper_full_rounds;
     unsigned int bottom_full_rounds;
@@ -143,9 +141,6 @@ namespace icicle {
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      ICICLE_LOG_DEBUG << "Poseidon CPU hash() " << size << " bytes, for type " << demangle<S>()
-                       << ", batch=" << config.batch;
-
       unsigned int T = m_use_domain_tag ? m_t + 1 : m_t;
 
       // Currently sponge and padding functionalities are not supported.
