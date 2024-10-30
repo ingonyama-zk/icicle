@@ -784,13 +784,13 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
-  // const uint64_t N = 1 << (rand() % 15 + 3);
-  // const int batch_size = 1 << (rand() % 5);
-  // const bool columns_batch = rand() % 2;
-  const uint64_t N = 1 << (8);
-  const int batch_size = 1 << (3);
-  const bool columns_batch = 1;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
+  const uint64_t N = 1 << (rand() % 15 + 3);
+  const int batch_size = 1 << (rand() % 5);
+  const bool columns_batch = rand() % 2;
+  // const uint64_t N = 1 << (20);
+  // const int batch_size = 1 << (0);
+  // const bool columns_batch = 0;
   const int total_size = N * batch_size;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size);
@@ -816,7 +816,7 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
 
   // Initialize each entire vector with 1 at a random index. The highest non-zero index is the index with 1
   for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-    if (!s_is_cuda_registered) { out_ref[idx_in_batch] = static_cast<int64_t>(rand() % N); } // highest_non_zero_idx
+    out_ref[idx_in_batch] = static_cast<int64_t>(rand() % N); // highest_non_zero_idx
     for (uint32_t i = 0; i < N; i++) {
       if (columns_batch) {
         in_a[idx_in_batch + batch_size * i] = TypeParam::from(i == out_ref[idx_in_batch] ? 1 : 0);
@@ -830,9 +830,9 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   // std::cout << "out_main:\t["; for (int i = 0; i < batch_size-1; i++) { std::cout << out_main[i] << ", "; } std::cout
   // <<out_main[batch_size-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i < batch_size-1; i++) {
   // std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[batch_size-1]<<"]"<< std::endl;
-    for (int i = 0; i < batch_size; i++) {
-    ICICLE_LOG_DEBUG << i << ", " << out_main[i] << ", " << out_ref[i];
-  }
+  //   for (int i = 0; i < batch_size; i++) {
+  //   ICICLE_LOG_DEBUG << i << ", " << out_main[i] << ", " << out_ref[i];
+  // }
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
@@ -932,7 +932,7 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
       START_TIMER(polynomialDivision)
       for (int i = 0; i < iters; ++i) {
         ICICLE_CHECK(polynomial_division(
-          numerator.get(), numerator_deg, denumerator.get(), denumerator_deg, q_size, r_size, config, q_out, r_out));
+          numerator.get(), numerator_deg, total_numerator_size, denumerator.get(), denumerator_deg, total_denumerator_size, q_size, r_size, config, q_out, r_out));
       }
       END_TIMER(polynomialDivision, oss.str().c_str(), measure);
     };

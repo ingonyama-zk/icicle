@@ -278,7 +278,7 @@ namespace icicle {
       config.is_result_on_device = true;
 
       ICICLE_CHECK(icicle::polynomial_division(
-        a_coeffs, deg_a, b_coeffs, deg_b, deg_a - deg_b + 1, a_N, config, Q_coeffs, R_coeffs));
+        a_coeffs, deg_a, a_N, b_coeffs, deg_b, b_N, deg_a - deg_b + 1, a_N, config, Q_coeffs, R_coeffs));
     }
 
     void quotient(PolyContext Q, PolyContext op_a, PolyContext op_b) override

@@ -342,6 +342,16 @@ namespace icicle {
     const VecOpsConfig& config,
     T* vec_out);
 
+  // Deprecated slice API
+  template <typename T>
+  eIcicleError slice(
+    const T* vec_in,
+    uint64_t offset,
+    uint64_t stride,    
+    uint64_t size,
+    const VecOpsConfig& config,
+    T* vec_out);
+
   /**
    * @brief Finds the highest non-zero index in a vector or batch of vectors.
    *
