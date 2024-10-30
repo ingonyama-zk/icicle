@@ -314,6 +314,7 @@ namespace icicle {
       // The worker execute this function based on the member operands
       virtual void execute() { 
         // run the hash runction
+        ICICLE_LOG_INFO << "Layer: " << m_layer_idx << "\t" << m_hash_config->batch;
         m_hash.hash(m_input, m_hash.input_default_chunk_size(), *m_hash_config, m_output); 
 
         // padd hash result is necesary
@@ -474,7 +475,6 @@ namespace icicle {
       const uint64_t next_segment_idx = cur_segment_idx * cur_layer.m_hash.output_size() / next_input_size;
       const uint64_t next_segment_id = next_segment_idx ^ (next_layer_idx << 56);
       
-      
       // If next_segment does not appear in m_map_segment_id_2_inputs, then add it
       auto next_segment_it = m_map_segment_id_2_inputs.find(next_segment_id);
       if (next_segment_it == m_map_segment_id_2_inputs.end()) {
@@ -504,6 +504,10 @@ namespace icicle {
         const uint64_t padd_size_in_bytes = result_total_size - last_result_location;
         task->m_padd_output = padd_size_in_bytes / task->m_hash.output_size();
         next_segment_it->second->increment_ready(padd_size_in_bytes);
+      }
+      else
+      {
+        task->m_hash_config = &cur_layer.m_hash_config;
       }
 
       // Set task next segment to handle return data
