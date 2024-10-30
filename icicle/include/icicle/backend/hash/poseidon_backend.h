@@ -25,8 +25,8 @@ namespace icicle {
     unsigned int t = 0;
     unsigned int alpha;                 ///< Sbox power.
     bool use_domain_tag = false;        ///< If i_domain_tag is set then single hash width = t + 1, otherwise width = t.
-    S domain_tag_value;                 ///< Domain tag value that is usually used in sponge function Poseidon hashes.
-    bool use_all_zeroes_padding;        ///< If true use [0,0,..,0] for padding. Otherwise use [1,0,..,0].
+    S domain_tag_value = S::zero();     ///< Domain tag value that is usually used in sponge function Poseidon hashes.
+    bool use_all_zeroes_padding = true; ///< If true use [0,0,..,0] for padding. Otherwise use [1,0,..,0].
     unsigned int nof_upper_full_rounds; ///< Number of upper full rounds of a single hash.
     unsigned int nof_partial_rounds;    ///< Number of partial rounds of a single hash.
     unsigned int nof_bottom_full_rounds; ///< Number of bottom full rounds of a single hash.
