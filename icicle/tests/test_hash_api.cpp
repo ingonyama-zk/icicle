@@ -435,9 +435,7 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 TEST_F(HashApiTest, MerkleTreeMixMediumSize)
 {
   for (int backend = 0; backend < 2; backend++) {
-    if (backend) {
-      ICICLE_CHECK(icicle_set_device(s_main_target));
-    }
+    if (backend) { ICICLE_CHECK(icicle_set_device(s_main_target)); }
     const uint32_t leaf_size = sizeof(uint32_t);
     const uint32_t total_input_size = (1 << 20);
     const uint32_t nof_leaves = total_input_size / leaf_size;
