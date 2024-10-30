@@ -144,23 +144,25 @@ namespace icicle {
     // This function performs a single hash according to parameters in the poseidon_constants[] struct.
     eIcicleError hash_single(const std::byte* input, std::byte* output) const
     {
-      const unsigned int T = m_use_domain_tag ? m_t - 1 : m_t;
+      const unsigned int T = m_t;
 
-      unsigned int alpha = poseidon_constants[m_t].alpha;
-      unsigned int nof_upper_full_rounds = poseidon_constants[m_t].nof_upper_full_rounds;
-      unsigned int nof_partial_rounds = poseidon_constants[m_t].nof_partial_rounds;
-      unsigned int nof_bottom_full_rounds = poseidon_constants[m_t].nof_bottom_full_rounds;
-      S* rounds_constants = poseidon_constants[m_t].rounds_constants;
-      S* mds_matrix = poseidon_constants[m_t].mds_matrix;
-      S* pre_matrix = poseidon_constants[m_t].pre_matrix;
-      S* sparse_matrices = poseidon_constants[m_t].sparse_matrices;
+      unsigned int alpha = poseidon_constants[T].alpha;
+      unsigned int nof_upper_full_rounds = poseidon_constants[T].nof_upper_full_rounds;
+      unsigned int nof_partial_rounds = poseidon_constants[T].nof_partial_rounds;
+      unsigned int nof_bottom_full_rounds = poseidon_constants[T].nof_bottom_full_rounds;
+      S* rounds_constants = poseidon_constants[T].rounds_constants;
+      S* mds_matrix = poseidon_constants[T].mds_matrix;
+      S* pre_matrix = poseidon_constants[T].pre_matrix;
+      S* sparse_matrices = poseidon_constants[T].sparse_matrices;
       // Allocate temporary memory for intermediate calcs.
-      S* tmp_fields = new S[m_t];
+      S* tmp_fields = new S[T];
       // Casting from bytes to scalar.
       const S* in_fields = (S*)(input);
       // Copy input scalar to the output (as a temp storage) to be used in the rounds.
       // *tmp_fields are used as a temp storage during the calculations in this function.
-      memcpy(tmp_fields, in_fields, T * sizeof(S));
+      // TODO Danny check is this is correct
+      memcpy(tmp_fields, &m_domain_tag, sizeof(S));
+      memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
 
       // Add pre-round constants.
       for (int state_idx = 0; state_idx < T; state_idx++) {
