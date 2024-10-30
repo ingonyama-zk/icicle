@@ -49,7 +49,7 @@ public:
   static void TearDownTestSuite()
   {
     // make sure to fail in CI if only have one device
-    // ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
+    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
   }
 
   // SetUp/TearDown are called before and after each test
@@ -568,15 +568,11 @@ using namespace poseidon_constants_bn254;
 
 TEST_F(HashApiTest, poseidon12_single_hash)
 {
-  const unsigned arity = 12;
-  const unsigned default_input_size = 3;
-  const bool is_domain_tag = false;
-  scalar_t domain_tag_value = scalar_t::from(0);
-  const bool use_all_zeroes_padding = true;
+  const unsigned t = 12;
   auto config = default_hash_config();
 
-  auto input = std::make_unique<scalar_t[]>(arity);
-  scalar_t::rand_host_many(input.get(), arity);
+  auto input = std::make_unique<scalar_t[]>(t);
+  scalar_t::rand_host_many(input.get(), t);
   config.batch = 1;
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
@@ -586,12 +582,11 @@ TEST_F(HashApiTest, poseidon12_single_hash)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    auto poseidon =
-      Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value, use_all_zeroes_padding);
+    auto poseidon = Poseidon::create<scalar_t>(t, false /*=use_domain_tag*/);
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), t, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };
@@ -607,15 +602,15 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 
 // TEST_F(HashApiTest, poseidon3_single_hash_domain_tag)
 // {
-//   const unsigned  arity                   = 2;
+//   const unsigned  t                   = 2;
 //   const unsigned  default_input_size      = 2;
-//   const bool      is_domain_tag           = true;
+//   const bool      use_domain_tag           = true;
 //   scalar_t        domain_tag_value        = scalar_t::from(7);
 //   const bool      use_all_zeroes_padding  = true;
 //   auto            config                  = default_hash_config();
 
-//   auto input = std::make_unique<scalar_t[]>(arity);
-//   scalar_t::rand_host_many(input.get(), arity);
+//   auto input = std::make_unique<scalar_t[]>(t);
+//   scalar_t::rand_host_many(input.get(), t);
 
 //   config.batch = 1;
 
@@ -627,12 +622,12 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 //       std::ostringstream oss;
 //       oss << dev_type << " " << msg;
 
-//       auto poseidon = Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value,
+//       auto poseidon = Poseidon::create<scalar_t>(t, default_input_size, use_domain_tag, domain_tag_value,
 //       use_all_zeroes_padding);
 
 //       START_TIMER(POSEIDON_sync)
 //       for (int i = 0; i < iters; ++i) {
-//         ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
+//         ICICLE_CHECK(poseidon.hash(input.get(), t, config, out));
 //       }
 //       END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
 //     };
@@ -648,15 +643,11 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 
 TEST_F(HashApiTest, poseidon3_single_hash)
 {
-  const unsigned arity = 3;
-  const unsigned default_input_size = 3;
-  const bool is_domain_tag = false;
-  scalar_t domain_tag_value = scalar_t::from(0);
-  const bool use_all_zeroes_padding = true;
+  const unsigned t = 3;
   auto config = default_hash_config();
 
-  auto input = std::make_unique<scalar_t[]>(arity);
-  scalar_t::rand_host_many(input.get(), arity);
+  auto input = std::make_unique<scalar_t[]>(t);
+  scalar_t::rand_host_many(input.get(), t);
   config.batch = 1;
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
@@ -666,12 +657,11 @@ TEST_F(HashApiTest, poseidon3_single_hash)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    auto poseidon =
-      Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value, use_all_zeroes_padding);
+    auto poseidon = Poseidon::create<scalar_t>(t, false /*use_domain_tag*/);
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), t, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };
@@ -687,16 +677,12 @@ TEST_F(HashApiTest, poseidon3_single_hash)
 
 TEST_F(HashApiTest, poseidon3_batch)
 {
-  const unsigned arity = 3;
-  const unsigned default_input_size = 3;
-  const bool is_domain_tag = false;
-  scalar_t domain_tag_value = scalar_t::from(0);
-  const bool use_all_zeroes_padding = true;
+  const unsigned t = 3;
   auto config = default_hash_config();
 
-  config.batch = 4;
-  auto input = std::make_unique<scalar_t[]>(arity * config.batch);
-  scalar_t::rand_host_many(input.get(), arity * config.batch);
+  config.batch = 1 << 10;
+  auto input = std::make_unique<scalar_t[]>(t * config.batch);
+  scalar_t::rand_host_many(input.get(), t * config.batch);
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
@@ -705,12 +691,11 @@ TEST_F(HashApiTest, poseidon3_batch)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    auto poseidon =
-      Poseidon::create<scalar_t>(arity, default_input_size, is_domain_tag, domain_tag_value, use_all_zeroes_padding);
+    auto poseidon = Poseidon::create<scalar_t>(t, false /*use_domain_tag*/);
 
     START_TIMER(POSEIDON_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(poseidon.hash(input.get(), arity, config, out));
+      ICICLE_CHECK(poseidon.hash(input.get(), t, config, out));
     }
     END_TIMER(POSEIDON_sync, oss.str().c_str(), measure);
   };
