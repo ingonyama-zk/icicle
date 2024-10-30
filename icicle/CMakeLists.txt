@@ -47,6 +47,13 @@ option(G2 "Build G2 MSM" ON)
 option(EXT_FIELD "Build extension field" ON)
 option(HASH "Build hashes and tree builders" ON)
 option(POSEIDON "Build poseidon hash" ON)
+option(SANITIZE "Enable memory address sanitizer" OFF)
+
+# address sanitizer
+if(SANITIZE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+endif()
 
 # device API library
 add_library(icicle_device SHARED

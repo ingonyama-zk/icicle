@@ -4,6 +4,7 @@
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/errors.h"
 #include "icicle/utils/log.h"
+#include "icicle/utils/utils.h"
 #include "tasks_manager.h"
 
 #define CONFIG_NOF_THREADS_KEY  "n_threads"
@@ -59,9 +60,14 @@ namespace icicle {
         return eIcicleError::INVALID_ARGUMENT;
       }
       const uint64_t expected_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
-      if (leaves_size != expected_input_size) {
+      if (leaves_size < expected_input_size) {
         ICICLE_LOG_ERROR << "CPU Merkle tree: Expecting " << expected_input_size << " bytes in input, got "
                          << leaves_size << ". Note: Padding is currently not supported but will be soon";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+      if (leaves_size > expected_input_size) {
+        ICICLE_LOG_ERROR << "CPU Merkle tree: Expecting " << expected_input_size << " bytes in input, got "
+                         << leaves_size << ". Leaves size cannot exceeds tree size.";
         return eIcicleError::INVALID_ARGUMENT;
       }
       m_tree_already_built = true; // Set the tree status as built
@@ -181,7 +187,6 @@ namespace icicle {
       }
 
       path = copy_to_path_from_store_min_layer(input_chunk_offset, is_pruned, path);
-      // print_proof(merkle_proof);
       return eIcicleError::SUCCESS;
     }
 
@@ -335,9 +340,10 @@ namespace icicle {
                                                : NOF_OPERATIONS_PER_TASK;
         cur_layer.m_last_hash_config.is_async = merkle_config.is_async;
 
-        // if the layer is in range then allocate the according to the number of hashes in that layer.
+        // If the current layer is within the range of stored layers (starting from m_output_store_min_layer),
+        // allocate memory based on the number of hashes in the current layer.
         if (m_output_store_min_layer <= layer_idx) {
-          const uint64_t nof_bytes_to_allocate = cur_layer.m_nof_hashes * cur_layer.m_hash.input_default_chunk_size();
+          const uint64_t nof_bytes_to_allocate = cur_layer.m_nof_hashes * cur_layer.m_hash.output_size();
           cur_layer.m_results.reserve(nof_bytes_to_allocate);
           cur_layer.m_results.resize(nof_bytes_to_allocate);
         }
@@ -415,7 +421,7 @@ namespace icicle {
         const uint64_t copy_chunk_start = (element_start / copy_range_size) * copy_range_size;
         auto& cur_layer_result = m_layers[layer_idx].m_results;
 
-        for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
+        for (uint64_t byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (
             !is_pruned || byte_idx < element_start ||       // copy data before the element
             element_start + one_element_size <= byte_idx) { // copy data after the element
@@ -425,19 +431,6 @@ namespace icicle {
         }
       }
       return path;
-    }
-
-    // Debug
-    void print_bytes(const std::byte* data, const uint nof_elements, const uint element_size) const
-    {
-      for (uint element_idx = 0; element_idx < nof_elements; ++element_idx) {
-        std::cout << ", 0x";
-        for (int byte_idx = element_size - 1; byte_idx >= 0; --byte_idx) {
-          std::cout << std::hex << std::setw(2) << std::setfill('0')
-                    << static_cast<int>(data[element_idx * element_size + byte_idx]);
-        }
-      }
-      std::cout << std::endl;
     }
   };
 

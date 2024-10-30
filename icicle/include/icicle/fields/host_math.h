@@ -1,10 +1,10 @@
+#pragma once
+
 // Note: this optimization generates invalid code (using gcc) when storage class has a union for both u32 and u64 so
 // disabling it.
 #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
   #pragma GCC optimize("no-strict-aliasing")
 #endif
-
-#pragma once
 
 #include <cstdint>
 #include "icicle/utils/modifiers.h"
@@ -151,9 +151,7 @@ namespace host_math {
     unsigned NLIMBS,
     bool SUBTRACT,
     bool CARRY_OUT,
-    bool USE_32 = true> // for now we use only the 32 add/sub because the casting of the carry causes problems when
-                        // compiling in release. to solve this we need to entirely split the field functions between a
-                        // host version and a device version.
+    bool USE_32 = false>
   static constexpr HOST_INLINE uint32_t // 32 is enough for the carry
   add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {

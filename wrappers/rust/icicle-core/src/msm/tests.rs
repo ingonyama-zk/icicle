@@ -38,7 +38,7 @@ where
             //      3) Perform all operations (without changing device on the thread)
             //      4) If necessary - export results to parent host thread
 
-            let test_sizes = [4, 8, 16, 32, 64, 128, 256, 1000, 1 << 18];
+            let test_sizes = [1, 5, 16, 32, 64, 128, 256, 1000, 1 << 18];
             test_utilities::test_set_main_device_with_id(device_id);
             let mut stream = IcicleStream::create().unwrap();
             let mut msm_results = DeviceVec::<Projective<C>>::device_malloc_async(1, &stream).unwrap();

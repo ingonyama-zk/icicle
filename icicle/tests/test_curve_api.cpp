@@ -13,6 +13,7 @@
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/backend/msm_config.h"
+#include "icicle/backend/ntt_config.h"
 
 using namespace curve_config;
 using namespace icicle;
@@ -68,8 +69,8 @@ public:
   {
     const int logn = 12;
     const int batch = 3;
-    const int N = 1 << logn;
-    const int precompute_factor = (rand() & 7) + 1; // between 1 and 8
+    const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
+    const int precompute_factor = (rand() & 7) + 1;  // between 1 and 8
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -111,6 +112,64 @@ public:
     }
   }
 
+  template <typename A, typename P>
+  void MSM_CPU_THREADS_test()
+  {
+    const int logn = 8;
+    const int c = 3;
+    // Low c to have a large amount of tasks required in phase 2
+    // For example for bn254: #bms = ceil(254/3)=85
+    // #tasks in phase 2 = 2 * #bms = 170 > 64 = TASK_PER_THREAD
+    // As such the default amount of tasks and 1 thread shouldn't be enough and the program should readjust the task
+    // number per thread.
+    const int batch = 3;
+    const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
+    const int precompute_factor = 1;                 // Precompute is 1 to increase number of BMs
+    const int total_nof_elemets = batch * N;
+
+    auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
+    auto bases = std::make_unique<A[]>(N);
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
+    P::rand_host_many(bases.get(), N);
+
+    auto result_multi_thread = std::make_unique<P[]>(batch);
+    auto result_single_thread = std::make_unique<P[]>(batch);
+
+    auto config = default_msm_config();
+    config.batch_size = batch;
+    config.are_points_shared_in_batch = true;
+    config.precompute_factor = precompute_factor;
+    config.c = c;
+
+    auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      START_TIMER(MSM_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(msm(scalars.get(), bases.get(), N, config, result));
+      }
+      END_TIMER(MSM_sync, oss.str().c_str(), measure);
+    };
+    if (s_ref_target == "CPU") {
+      run(s_ref_target, result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+      // Adjust config to have one worker thread
+      ConfigExtension ext;
+      ext.set(CpuBackendConfig::CPU_NOF_THREADS, 1);
+      config.ext = &ext;
+      run(s_ref_target, result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+
+      for (int res_idx = 0; res_idx < batch; ++res_idx) {
+        ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
+        ASSERT_EQ(true, P::is_on_curve(result_single_thread[res_idx]));
+        ASSERT_EQ(result_multi_thread[res_idx], result_single_thread[res_idx]);
+      }
+    }
+  }
+
   template <typename T, typename P>
   void mont_conversion_test()
   {
@@ -148,6 +207,7 @@ public:
 
 #ifdef MSM
 TEST_F(CurveApiTest, msm) { MSM_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }
 
@@ -189,11 +249,85 @@ TEST_F(CurveApiTest, ecntt)
     ntt_release_domain<scalar_t>();
   };
 
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(projective_t))); // TODO ucomment when CPU is
-  // implemented
+  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1);
+  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1);
+
+  // note that memcmp is tricky here because projetive points can have many representations
+  for (uint64_t i = 0; i < N; ++i) {
+    ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
+    ASSERT_EQ(out_ref[i], out_main[i]);
+  }
 }
+
+TEST_F(CurveApiTest, ecnttDeviceMem)
+{
+  // (TODO) Randomize configuration
+  const bool inplace = false;
+  const int logn = 10;
+  const uint64_t N = 1 << logn;
+  const int log_ntt_domain_size = logn;
+  const int log_batch_size = 0;
+  const int batch_size = 1 << log_batch_size;
+  const Ordering ordering = static_cast<Ordering>(0);
+  bool columns_batch = false;
+  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+
+  const int total_size = N * batch_size;
+  auto input = std::make_unique<projective_t[]>(total_size);
+  projective_t::rand_host_many(input.get(), total_size);
+  auto out_main = std::make_unique<projective_t[]>(total_size);
+  auto out_ref = std::make_unique<projective_t[]>(total_size);
+
+  auto run = [&](const std::string& dev_type, projective_t* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // init domain
+    auto init_domain_config = default_ntt_init_domain_config();
+    ConfigExtension ext;
+    ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    init_domain_config.ext = &ext;
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+
+    projective_t *d_in, *d_out;
+    ICICLE_CHECK(icicle_malloc((void**)&d_in, total_size * sizeof(projective_t)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_out, total_size * sizeof(projective_t)));
+    ICICLE_CHECK(icicle_copy(d_in, input.get(), total_size * sizeof(projective_t)));
+
+    auto config = default_ntt_config<scalar_t>();
+    config.batch_size = batch_size;       // default: 1
+    config.columns_batch = columns_batch; // default: false
+    config.ordering = ordering;           // default: kNN
+    config.are_inputs_on_device = true;
+    config.are_outputs_on_device = true;
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
+    }
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+
+    ICICLE_CHECK(
+      icicle_copy_to_host_async(out, inplace ? d_in : d_out, total_size * sizeof(projective_t), config.stream));
+
+    ICICLE_CHECK(icicle_free(d_in));
+    ICICLE_CHECK(icicle_free(d_out));
+
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  };
+
+  run(s_main_target, out_main.get(), "ecntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  // note that memcmp is tricky here because projetive points can have many representations
+  for (uint64_t i = 0; i < N; ++i) {
+    ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
+    ASSERT_EQ(out_ref[i], out_main[i]);
+  }
+}
+
 #endif // ECNTT
 
 template <typename T>
@@ -209,7 +343,8 @@ typedef testing::Types<projective_t> CTImplementations;
 
 TYPED_TEST_SUITE(CurveSanity, CTImplementations);
 
-// Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
+// Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic
+// too
 TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
@@ -222,6 +357,26 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
   ASSERT_EQ(scalar_t::from(3) * (a + b), scalar_t::from(3) * a + scalar_t::from(3) * b); // distributive
   ASSERT_EQ(a + b, a + TypeParam::to_affine(b)); // mixed addition projective+affine
   ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
+}
+
+TYPED_TEST(CurveSanity, ScalarMultTest)
+{
+  const auto point = TypeParam::rand_host();
+  const auto scalar = scalar_t::rand_host();
+
+  START_TIMER(main)
+  const auto mult = scalar * point;
+  END_TIMER(main, "scalar mult window method", true);
+
+  auto expected_mult = TypeParam::zero();
+  START_TIMER(ref)
+  for (int i = 0; i < scalar_t::NBITS; i++) {
+    if (i > 0) { expected_mult = TypeParam::dbl(expected_mult); }
+    if (scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
+  }
+  END_TIMER(ref, "scalar mult double-and-add", true);
+
+  ASSERT_EQ(mult, expected_mult);
 }
 
 int main(int argc, char** argv)

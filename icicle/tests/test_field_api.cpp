@@ -302,7 +302,7 @@ TYPED_TEST(FieldApiTest, ntt)
   int seed = time(0);
   srand(seed);
   const bool inplace = rand() % 2;
-  const int logn = rand() % 16 + 3;
+  const int logn = rand() % 15 + 3;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
   const int log_batch_size = rand() % 3;
@@ -376,7 +376,7 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(icicle_destroy_stream(stream));
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));

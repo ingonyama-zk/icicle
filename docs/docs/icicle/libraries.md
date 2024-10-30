@@ -32,7 +32,7 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 | ECNTT                                     |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
 | [Vector operations](./primitives/vec_ops) |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
 | [Polynomials](./polynomials/overview)     |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ❌     |
-| [Poseidon](primitives/poseidon)           |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
+| [Poseidon](primitives/hash#poseidon)      |                      ✅                       |                           ✅                           |                           ✅                           |                      ✅                      |    ✅     |
 
 #### Supported fields and operations
 
@@ -42,16 +42,16 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 | [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |   ❌   |
 | [NTT](primitives/ntt)                     |                        ✅                         |                                                 ✅                                                  |   ❌   |
 | Extension Field                           |                        ✅                         |                                                 ❌                                                  |   ✅   |
-| [Poseidon](primitives/poseidon)           |                        ✅                         |                                                 ✅                                                  |   ✅   |
+| [Poseidon](primitives/hash#poseidon)      |                        ✅                         |                                                 ✅                                                  |   ✅   |
 
 ### Misc
 
-| Operation   |                 Description                  |
-| ----------- | :------------------------------------------: |
-| Keccak      |       supporting 256b and 512b digest        |
-| SHA3        |       supporting 256b and 512b digest        |
-| Blake2s     |                digest is 256b                |
-| Merkle-Tree | works with any combination of hash functions |
+| Operation                                 |                 Description                  |
+| ----------------------------------------- | :------------------------------------------: |
+| [Keccak](primitives/hash#keccak-and-sha3) |       supporting 256b and 512b digest        |
+| [SHA3](primitives/hash#keccak-and-sha3)   |       supporting 256b and 512b digest        |
+| [Blake2s](primitives/hash#blake2s)        |                digest is 256b                |
+| [Merkle-Tree](primitives/merkle)          | works with any combination of hash functions |
 
 
 
