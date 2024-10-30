@@ -425,8 +425,10 @@ namespace icicle {
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, poly_division)(
     const scalar_t* numerator,
     int64_t numerator_deg,
+    uint64_t numerator_size,
     const scalar_t* denumerator,
     int64_t denumerator_deg,
+    uint64_t denumerator_size,
     uint64_t q_size,
     uint64_t r_size,
     const VecOpsConfig* config,
@@ -434,15 +436,17 @@ namespace icicle {
     scalar_t* r_out /*OUT*/)
   {
     return ScalarPolyDivDispatcher::execute(
-      numerator, numerator_deg, denumerator, denumerator_deg, q_size, r_size, *config, q_out, r_out);
+      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, *config, q_out, r_out);
   }
 
   template <>
   eIcicleError polynomial_division(
     const scalar_t* numerator,
     int64_t numerator_deg,
+    uint64_t numerator_size,
     const scalar_t* denumerator,
     int64_t denumerator_deg,
+    uint64_t denumerator_size,
     uint64_t q_size,
     uint64_t r_size,
     const VecOpsConfig& config,
@@ -450,7 +454,7 @@ namespace icicle {
     scalar_t* r_out /*OUT*/)
   {
     return CONCAT_EXPAND(FIELD, poly_division)(
-      numerator, numerator_deg, denumerator, denumerator_deg, q_size, r_size, &config, q_out, r_out);
+      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, &config, q_out, r_out);
   }
 
 } // namespace icicle
