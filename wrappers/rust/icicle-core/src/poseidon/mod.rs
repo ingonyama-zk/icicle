@@ -95,6 +95,12 @@ macro_rules! impl_poseidon_tests {
         }
 
         #[test]
+        fn test_poseidon_hash_sponge() {
+            initialize();
+            check_poseidon_hash_sponge::<$field>();
+        }
+
+        #[test]
         fn test_poseidon_tree() {
             initialize();
             // TODO Roman: enable once CUDA merkle tree is implemented

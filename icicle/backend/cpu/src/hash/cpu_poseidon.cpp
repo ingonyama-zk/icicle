@@ -144,9 +144,12 @@ namespace icicle {
       unsigned int T = m_use_domain_tag ? m_t + 1 : m_t;
 
       // Currently sponge and padding functionalities are not supported.
-      ICICLE_ASSERT(size / (T * sizeof(S)) == 1)
-        << "Sponge function still isn't supported. The following should be true: size/T == config.batch but it is "
-           "not.\n";
+      if (size % (T * sizeof(S)) != 0) {
+        ICICLE_LOG_ERROR
+          << "Sponge function still isn't supported. The following should be true: size/T == config.batch but it is "
+             "not.\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
 
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
