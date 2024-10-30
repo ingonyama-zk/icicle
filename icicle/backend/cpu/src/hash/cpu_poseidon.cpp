@@ -274,8 +274,7 @@ namespace icicle {
       unsigned int T = m_is_domain_tag ? m_arity + 1 : m_arity;
       unsigned int alpha = poseidon_constants[T].alpha;
       S* mds_matrix = poseidon_constants[T].mds_matrix;
-      for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds;
-           full_rounds_idx++) {
+      for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds; full_rounds_idx++) {
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // S box
           in_out_fields[state_idx] = S::pow(in_out_fields[state_idx], alpha);

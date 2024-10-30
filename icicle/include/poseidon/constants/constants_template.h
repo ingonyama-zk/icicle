@@ -1,6 +1,6 @@
 #pragma once
 #ifndef CURVE_POSEIDON_H
-#define CURVE_POSEIDON_H
+  #define CURVE_POSEIDON_H
 
 namespace poseidon_constants_curve {
   /**
@@ -10,7 +10,7 @@ namespace poseidon_constants_curve {
    * The number in the name corresponds to the arity of hash function
    * Each array contains:
    * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matrices
-  */
+   */
 
   int partial_rounds_3 = 0;
 
@@ -20,20 +20,12 @@ namespace poseidon_constants_curve {
 
   int partial_rounds_12 = 0;
 
-    unsigned char poseidon_constants_3[] = {
-        0x00
-    };
+  unsigned char poseidon_constants_3[] = {0x00};
 
-    unsigned char poseidon_constants_5[] = {
-        0x00
-    };
+  unsigned char poseidon_constants_5[] = {0x00};
 
-    unsigned char poseidon_constants_9[] = {
-        0x00
-    };
+  unsigned char poseidon_constants_9[] = {0x00};
 
-    unsigned char poseidon_constants_12[] = {
-        0x00
-    };
-} // namespace poseidon_constants
+  unsigned char poseidon_constants_12[] = {0x00};
+} // namespace poseidon_constants_curve
 #endif

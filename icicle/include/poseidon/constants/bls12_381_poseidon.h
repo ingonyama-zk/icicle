@@ -1,6 +1,6 @@
 #pragma once
 #ifndef BLS12_381_POSEIDON_H
-#define BLS12_381_POSEIDON_H
+  #define BLS12_381_POSEIDON_H
 
 namespace poseidon_constants_bls12_381 {
   /**
@@ -10,23 +10,23 @@ namespace poseidon_constants_bls12_381 {
    * The number in the name corresponds to the arity of hash function
    * Each array contains:
    * RoundConstants | MDSMatrix | Non-sparse matrix | Sparse matrices
-  */
+   */
 
-  int full_rounds_3 =      8;
-  int half_full_rounds_3 =      4;
-  int partial_rounds_3 =      56;
+  int full_rounds_3 = 8;
+  int half_full_rounds_3 = 4;
+  int partial_rounds_3 = 56;
 
-  int full_rounds_5 =      8;
-  int half_full_rounds_5 =      4;
-  int partial_rounds_5 =      56;
+  int full_rounds_5 = 8;
+  int half_full_rounds_5 = 4;
+  int partial_rounds_5 = 56;
 
-  int full_rounds_9 =      8;
-  int half_full_rounds_9 =      4;
-  int partial_rounds_9 =      57;
+  int full_rounds_9 = 8;
+  int half_full_rounds_9 = 4;
+  int partial_rounds_9 = 57;
 
-  int full_rounds_12 =      8;
-  int half_full_rounds_12 =      4;
-  int partial_rounds_12 =      57;
+  int full_rounds_12 = 8;
+  int half_full_rounds_12 = 4;
+  int partial_rounds_12 = 57;
 
   unsigned char poseidon_constants_3[] = {
     0xd8, 0xd3, 0x6e, 0x9d, 0x00, 0x0a, 0x32, 0xa7, 0x36, 0x8b, 0x75, 0xa2, 0x92, 0xac, 0x1e, 0x50, 0x24, 0x4a, 0xbb,
@@ -6831,5 +6831,5 @@ namespace poseidon_constants_bls12_381 {
     0x1a, 0x4b, 0x4c, 0x44, 0xbf, 0x7c, 0x1a, 0xac, 0x07, 0x94, 0x2b, 0x48, 0x39, 0x83, 0xd0, 0x04, 0x5b, 0xab, 0xa8,
     0x6e, 0xb3, 0x90, 0x85, 0x2c, 0x58, 0xc8, 0x42, 0x16, 0xa6, 0x87, 0xa5, 0x37, 0xe1, 0xa4, 0x8e, 0x32, 0x8a, 0x4c,
     0x12, 0x99, 0xe5, 0x14, 0x75, 0x7a, 0xcf, 0x61, 0x03, 0xc0, 0xc2, 0xa7, 0xce, 0x64};
-} // namespace poseidon_constants
+} // namespace poseidon_constants_bls12_381
 #endif
