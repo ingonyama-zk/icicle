@@ -161,8 +161,14 @@ namespace icicle {
       // Copy input scalar to the output (as a temp storage) to be used in the rounds.
       // *tmp_fields are used as a temp storage during the calculations in this function.
       // TODO Danny check is this is correct
-      memcpy(tmp_fields, &m_domain_tag, sizeof(S));
-      memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
+      if (m_use_domain_tag) {
+        // in that case we hash [domain_tag, t-1 field elements]
+        memcpy(tmp_fields, &m_domain_tag, sizeof(S));
+        memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
+      } else {
+        // in that case we hash [t field elements]
+        memcpy(tmp_fields, in_fields, T * sizeof(S));
+      }
 
       // Add pre-round constants.
       for (int state_idx = 0; state_idx < T; state_idx++) {
