@@ -134,6 +134,8 @@ namespace vec_ops {
     };
     return config;
   }
+  template <typename E>
+  cudaError_t bit_reverse(const E* input, uint64_t size, BitReverseConfig& cfg, E* output);
 } // namespace vec_ops
 
 #endif
