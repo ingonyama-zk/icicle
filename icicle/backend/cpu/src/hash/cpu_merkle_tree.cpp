@@ -65,8 +65,8 @@ namespace icicle {
       const int nof_layers = m_layers.size();
       m_tree_already_built = true; // Set the tree status as built
       uint64_t l0_segment_idx = 0; // Index for the segment of hashes from layer 0 to send
-      const uint64_t nof_segments_at_l0 =
-        (m_layers[0].m_nof_hashes_2_execute + NOF_OPERATIONS_PER_TASK - 1) / NOF_OPERATIONS_PER_TASK;
+      const uint64_t nof_segments_at_l0 = 
+        ((m_layers[0].m_nof_hashes_2_execute - m_layers[0].m_last_hash_config.batch) / NOF_OPERATIONS_PER_TASK) +1;
       bool padding_required = !padded_leaves.empty();
 
       // run until the root is processed
@@ -95,7 +95,7 @@ namespace icicle {
 
           // update m_map_segment_id_2_inputs with the data that is ready for process
           auto cur_segment_iter = m_map_segment_id_2_inputs.find(cur_segment_id);
-          cur_segment_iter->second->increment_ready(m_layers[completed_layer_idx].m_hash.output_size() * NOF_OPERATIONS_PER_TASK);
+          cur_segment_iter->second->increment_ready(m_layers[completed_layer_idx].m_hash.output_size() * task->m_hash_config->batch);
 
           // check if cur segment is ready to be executed
           const Hash cur_hash = m_layers[cur_layer_idx].m_hash;
@@ -314,7 +314,6 @@ namespace icicle {
       // The worker execute this function based on the member operands
       virtual void execute() { 
         // run the hash runction
-        ICICLE_LOG_INFO << "Layer: " << m_layer_idx << "\t" << m_hash_config->batch;
         m_hash.hash(m_input, m_hash.input_default_chunk_size(), *m_hash_config, m_output); 
 
         // padd hash result is necesary
@@ -394,7 +393,8 @@ namespace icicle {
         cur_layer.m_hash_config.is_async = merkle_config.is_async;
 
         // config when calling last hash function in layer 2-17 hases
-        const uint64_t last_batch_size = (cur_layer.m_nof_hashes_2_execute + NOF_OPERATIONS_PER_TASK - 2) % NOF_OPERATIONS_PER_TASK + 2;
+        const uint64_t last_batch_size = cur_layer.m_nof_hashes_2_execute < NOF_OPERATIONS_PER_TASK ? 
+            cur_layer.m_nof_hashes_2_execute : (cur_layer.m_nof_hashes_2_execute - 2) % NOF_OPERATIONS_PER_TASK + 2;
         cur_layer.m_last_hash_config.batch = std::min(cur_layer.m_nof_hashes_2_execute, last_batch_size); 
         cur_layer.m_last_hash_config.is_async = merkle_config.is_async;
 
@@ -425,7 +425,8 @@ namespace icicle {
       padded_leaves.resize(padded_leaves_size, std::byte(0)); // padd the vector with 0
 
       // The size of the leaves to copy to padded_leaves
-      const uint64_t last_segment_tail_size = leaves_size % (NOF_OPERATIONS_PER_TASK * l0_input_size);
+      const uint64_t last_segment_tail_size = leaves_size < (2*l0_input_size) ? leaves_size : 
+                        (leaves_size-2*l0_input_size) % (NOF_OPERATIONS_PER_TASK * l0_input_size) + (2*l0_input_size);
       const uint64_t last_segment_offset = leaves_size - last_segment_tail_size;
       memcpy(padded_leaves.data(), leaves + last_segment_offset, last_segment_tail_size);
 
