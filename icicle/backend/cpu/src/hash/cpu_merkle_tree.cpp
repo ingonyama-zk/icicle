@@ -78,7 +78,7 @@ namespace icicle {
         // handle completed task
         if (task->is_completed()) {
           if (task->m_layer_idx == nof_layers - 1) { // Root processed
-            print_tree(leaves, leaves_size);
+            // print_tree(leaves, leaves_size);
             return eIcicleError::SUCCESS;
           }
           const uint64_t completed_layer_idx = task->m_layer_idx;
@@ -163,8 +163,8 @@ namespace icicle {
       const auto proof_leaves_size = m_layers[0].m_hash.input_default_chunk_size();
       // calc the amount of leaves to copy to the proof
       uint64_t copy_leaves_size = 
-        (proof_leaves_offset + proof_leaves_size >= leaves_size) ? proof_leaves_size : // all leaves available
-        std::min(proof_leaves_size, proof_leaves_offset + proof_leaves_size - leaves_size);
+        (proof_leaves_offset + proof_leaves_size <= leaves_size) ? proof_leaves_size : // all leaves available
+        std::min(proof_leaves_size, leaves_size - proof_leaves_offset);
       // generate a vector with the proof leaves
       std::vector <std::byte> proof_leaves(proof_leaves_size, std::byte(0));
       std::memcpy(proof_leaves.data(), &leaves[proof_leaves_offset], copy_leaves_size);
@@ -179,7 +179,7 @@ namespace icicle {
       }
 
       // allocate merkle_proof memory
-      merkle_proof.allocate(is_pruned, leaf_idx, &leaves[proof_leaves_offset], proof_leaves_size, root, root_size);
+      merkle_proof.allocate(is_pruned, leaf_idx, proof_leaves.data(), proof_leaves_size, root, root_size);
 
       std::byte* path = merkle_proof.allocate_path_and_get_ptr(is_pruned ? m_pruned_path_size : m_full_path_size);
 
