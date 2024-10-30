@@ -187,11 +187,10 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig* config,
     scalar_t* output)
   {
-    return ScalarAddDispatcher::execute(scalar_a, vec_b, size, use_single_scalar, *config, output);
+    return ScalarAddDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
@@ -199,11 +198,10 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig& config,
     scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, size, use_single_scalar, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, size, &config, output);
   }
 
   /*********************************** (Scalar - Vector) ELEMENT WISE ***********************************/
@@ -213,11 +211,10 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig* config,
     scalar_t* output)
   {
-    return ScalarSubDispatcher::execute(scalar_a, vec_b, size, use_single_scalar, *config, output);
+    return ScalarSubDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
@@ -225,11 +222,10 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig& config,
     scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, size, use_single_scalar, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, size, &config, output);
   }
   /*********************************** MUL BY SCALAR ***********************************/
   ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul_vec, scalarVectorOpImpl);
@@ -238,11 +234,10 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig* config,
     scalar_t* output)
   {
-    return ScalarMulDispatcher::execute(scalar_a, vec_b, size, use_single_scalar, *config, output);
+    return ScalarMulDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
@@ -250,11 +245,10 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig& config,
     scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, size, use_single_scalar, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, size, &config, output);
   }
 
   /*********************************** CONVERT MONTGOMERY ***********************************/

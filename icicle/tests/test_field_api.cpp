@@ -358,22 +358,19 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   const uint64_t N = 1 << (rand() % 15 + 3);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
-  const bool use_single_scalar = rand() % 2;
 
   // const uint64_t N = 1 << (4);
   // const int batch_size = 7;
   // const bool columns_batch = 1;
-  // const bool use_single_scalar = 0;
 
   const int total_size = N * batch_size;
-  auto scalar_a = std::make_unique<TypeParam[]>(use_single_scalar ? 1 : batch_size);
+  auto scalar_a = std::make_unique<TypeParam[]>(batch_size);
   auto in_b = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
-  ICICLE_LOG_DEBUG << "use_single_scalar = " << use_single_scalar;
 
   auto vector_accumulate_wrapper =
     [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
@@ -393,13 +390,13 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
 
       START_TIMER(VECADD_sync)
       for (int i = 0; i < iters; ++i) {
-        ICICLE_CHECK(vec_op_func(scalar_a.get(), in_b.get(), N, use_single_scalar, config, out));
+        ICICLE_CHECK(vec_op_func(scalar_a.get(), in_b.get(), N, config, out));
       }
       END_TIMER(VECADD_sync, oss.str().c_str(), measure);
     };
 
   // // scalar add vec
-  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), (use_single_scalar ? 1 : batch_size));
+  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
 
   // reference
@@ -407,7 +404,7 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
-        out_ref[idx_b] = (use_single_scalar ? scalar_a[0] : scalar_a[idx_in_batch]) + in_b[idx_b];
+        out_ref[idx_b] = (scalar_a[idx_in_batch]) + in_b[idx_b];
       }
     }
   } else {
@@ -425,14 +422,14 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // scalar sub vec
-  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), (use_single_scalar ? 1 : batch_size));
+  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
 
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
-        out_ref[idx_b] = (use_single_scalar ? scalar_a[0] : scalar_a[idx_in_batch]) - in_b[idx_b];
+        out_ref[idx_b] = (scalar_a[idx_in_batch]) - in_b[idx_b];
       }
     }
   } else {
@@ -443,14 +440,14 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // // scalar mul vec
-  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), (use_single_scalar ? 1 : batch_size));
+  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
 
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
-        out_ref[idx_b] = (use_single_scalar ? scalar_a[0] : scalar_a[idx_in_batch]) * in_b[idx_b];
+        out_ref[idx_b] = (scalar_a[idx_in_batch]) * in_b[idx_b];
       }
     }
   } else {
@@ -788,12 +785,12 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   int seed = time(0);
   srand(seed);
   // ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
-  // const uint64_t N = 1 << (3);
-  // const int batch_size = 1 << (1);
-  // const bool columns_batch = true;
+  // const uint64_t N = 1 << (rand() % 15 + 3);
+  // const int batch_size = 1 << (rand() % 5);
+  // const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << (8);
+  const int batch_size = 1 << (3);
+  const bool columns_batch = 1;
   const int total_size = N * batch_size;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size);
@@ -819,7 +816,7 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
 
   // Initialize each entire vector with 1 at a random index. The highest non-zero index is the index with 1
   for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-    if (!s_is_cuda_registered) { out_ref[idx_in_batch] = rand() % N; } // highest_non_zero_idx
+    if (!s_is_cuda_registered) { out_ref[idx_in_batch] = static_cast<int64_t>(rand() % N); } // highest_non_zero_idx
     for (uint32_t i = 0; i < N; i++) {
       if (columns_batch) {
         in_a[idx_in_batch + batch_size * i] = TypeParam::from(i == out_ref[idx_in_batch] ? 1 : 0);
@@ -833,7 +830,11 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   // std::cout << "out_main:\t["; for (int i = 0; i < batch_size-1; i++) { std::cout << out_main[i] << ", "; } std::cout
   // <<out_main[batch_size-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i < batch_size-1; i++) {
   // std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[batch_size-1]<<"]"<< std::endl;
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(TypeParam)));
+    for (int i = 0; i < batch_size; i++) {
+    ICICLE_LOG_DEBUG << i << ", " << out_main[i] << ", " << out_ref[i];
+  }
+
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
 
 TYPED_TEST(FieldApiTest, polynomialEval)

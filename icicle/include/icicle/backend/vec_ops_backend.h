@@ -34,7 +34,6 @@ namespace icicle {
     const scalar_t* scalar_a,
     const scalar_t* vec_b,
     uint64_t size,
-    bool use_single_scalar,
     const VecOpsConfig& config,
     scalar_t* output)>;
 

@@ -405,22 +405,21 @@ eIcicleError cpu_scalar_vector_op(
   const T* scalar_a,
   const T* vec_b,
   uint64_t size,
-  bool use_single_scalar,
   const VecOpsConfig& config,
   T* output)
 {
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
-  const uint64_t total_nof_operations = use_single_scalar ? size * config.batch_size : size;
-  const uint32_t stride = (!use_single_scalar && config.columns_batch) ? config.batch_size : 1;
-  for (uint32_t idx_in_batch = 0; idx_in_batch < (use_single_scalar ? 1 : config.batch_size); idx_in_batch++) {
+  const uint64_t total_nof_operations = size;
+  const uint32_t stride = config.columns_batch ? config.batch_size : 1;
+  for (uint32_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
     for (uint64_t i = 0; i < total_nof_operations; i += NOF_OPERATIONS_PER_TASK) {
       VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
       task_p->send_2ops_task(
         op, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, total_nof_operations - i), scalar_a + idx_in_batch,
-        (!use_single_scalar && config.columns_batch) ? vec_b + idx_in_batch + i * config.batch_size
+        config.columns_batch ? vec_b + idx_in_batch + i * config.batch_size
                                                      : vec_b + idx_in_batch * size + i,
         stride,
-        (!use_single_scalar && config.columns_batch) ? output + idx_in_batch + i * config.batch_size
+        config.columns_batch ? output + idx_in_batch + i * config.batch_size
                                                      : output + idx_in_batch * size + i);
     }
   }
@@ -595,11 +594,10 @@ eIcicleError cpu_scalar_add(
   const T* scalar_a,
   const T* vec_b,
   uint64_t size,
-  bool use_single_scalar,
   const VecOpsConfig& config,
   T* output)
 {
-  return cpu_scalar_vector_op(VecOperation::SCALAR_ADD_VEC, scalar_a, vec_b, size, use_single_scalar, config, output);
+  return cpu_scalar_vector_op(VecOperation::SCALAR_ADD_VEC, scalar_a, vec_b, size, config, output);
 }
 
 REGISTER_SCALAR_ADD_VEC_BACKEND("CPU", cpu_scalar_add<scalar_t>);
@@ -611,11 +609,10 @@ eIcicleError cpu_scalar_sub(
   const T* scalar_a,
   const T* vec_b,
   uint64_t size,
-  bool use_single_scalar,
   const VecOpsConfig& config,
   T* output)
 {
-  return cpu_scalar_vector_op(VecOperation::SCALAR_SUB_VEC, scalar_a, vec_b, size, use_single_scalar, config, output);
+  return cpu_scalar_vector_op(VecOperation::SCALAR_SUB_VEC, scalar_a, vec_b, size, config, output);
 }
 
 REGISTER_SCALAR_SUB_VEC_BACKEND("CPU", cpu_scalar_sub<scalar_t>);
@@ -627,11 +624,10 @@ eIcicleError cpu_scalar_mul(
   const T* scalar_a,
   const T* vec_b,
   uint64_t size,
-  bool use_single_scalar,
   const VecOpsConfig& config,
   T* output)
 {
-  return cpu_scalar_vector_op(VecOperation::SCALAR_MUL_VEC, scalar_a, vec_b, size, use_single_scalar, config, output);
+  return cpu_scalar_vector_op(VecOperation::SCALAR_MUL_VEC, scalar_a, vec_b, size, config, output);
 }
 
 REGISTER_SCALAR_MUL_VEC_BACKEND("CPU", cpu_scalar_mul<scalar_t>);

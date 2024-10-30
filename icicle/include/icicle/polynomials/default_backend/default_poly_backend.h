@@ -126,7 +126,7 @@ namespace icicle {
         C zero = C::zero();
         config.is_a_on_device = false;
         ICICLE_CHECK(
-          scalar_sub_vec(&zero, b_mem_p + min_op_size, b->get_nof_elements() - min_op_size, true, config, res_mem_p));
+          scalar_sub_vec(&zero, b_mem_p + min_op_size, b->get_nof_elements() - min_op_size, config, res_mem_p));
       }
     }
 
@@ -173,7 +173,7 @@ namespace icicle {
       config.is_result_on_device = true;
       config.is_async = true;
       config.stream = m_stream;
-      icicle::scalar_mul_vec(&scalar, p_elements_p, N, true, config, out_evals_p);
+      icicle::scalar_mul_vec(&scalar, p_elements_p, N, config, out_evals_p);
     }
 
     void multiply_with_padding(PolyContext c, PolyContext a, PolyContext b)
@@ -409,7 +409,7 @@ namespace icicle {
       config.is_async = true;
       config.stream = m_stream;
       icicle::scalar_mul_vec(
-        &v_coset_eval, numerator_evals_reversed_p + N /*second half is the reversed coset*/, N, true, config,
+        &v_coset_eval, numerator_evals_reversed_p + N /*second half is the reversed coset*/, N, config,
         out_evals_reversed_p);
 
       // INTT back from reversed evals on coset to coeffs
@@ -450,7 +450,7 @@ namespace icicle {
       config.is_result_on_device = true;
       config.is_async = true;
       config.stream = m_stream;
-      icicle::scalar_mul_vec(&v_coset_eval, out_evals_reversed_p, N, true, config, out_evals_reversed_p);
+      icicle::scalar_mul_vec(&v_coset_eval, out_evals_reversed_p, N, config, out_evals_reversed_p);
 
       // (3) INTT back from coset to coeffs
       ntt_config.are_inputs_on_device = true;

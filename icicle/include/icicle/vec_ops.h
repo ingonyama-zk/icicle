@@ -220,17 +220,12 @@ namespace icicle {
    *
    * @tparam T Type of the elements in the vector and the scalar.
    * @param scalar_a Pointer to the input scalar(s).
-   *                 - If `use_single_scalar` is `true`, this should point to a single scalar value.
-   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length
-   * `config.batch_size`.
    * @param vec_b Pointer to the input vector(s).
    *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
    *              - The layout depends on `config.columns_batch`:
    *                - If `false`, vectors are stored contiguously.
    *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in a vector.
-   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of
-   * scalars (`false`).
    * @param config Configuration for the operation.
    * @param output Pointer to the output vector(s) where the results will be stored.
    * @return eIcicleError Error code indicating success or failure.
@@ -238,24 +233,19 @@ namespace icicle {
    */
   template <typename T>
   eIcicleError scalar_add_vec(
-    const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
+    const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
    * @brief Subtracts each element of a vector from a scalar, elementwise (res[i]=scalar-vec[i]).
    *
    * @tparam T Type of the elements in the vector and the scalar.
    * @param scalar_a Pointer to Input scalar(s).
-   *                 - If `use_single_scalar` is `true`, this should point to a single scalar value.
-   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length
-   * `config.batch_size`.
    * @param vec_b Pointer to the input vector(s).
    *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
    *              - The layout depends on `config.columns_batch`:
    *                - If `false`, vectors are stored contiguously.
    *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in a vector.
-   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of
-   * scalars (`false`).
    * @param config Configuration for the operation.
    * @param output Pointer to the output vector(s) where the results will be stored.
    * @return eIcicleError Error code indicating success or failure.
@@ -263,31 +253,26 @@ namespace icicle {
    */
   template <typename T>
   eIcicleError scalar_sub_vec(
-    const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
+    const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
    * @brief Multiplies each element of a vector by a scalar.
    *
    * @tparam T Type of the elements in the vector and the scalar.
    * @param scalar_a Pointer to Input scalar(s).
-   *                 - If `use_single_scalar` is `true`, this should point to a single scalar value.
-   *                 - If `use_single_scalar` is `false`, this should point to an array of scalars with length
-   * `config.batch_size`.
    * @param vec_b Pointer to the input vector(s).
    *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
    *              - The layout depends on `config.columns_batch`:
    *                - If `false`, vectors are stored contiguously.
    *                - If `true`, vectors are stored as columns in a 2D array.
    * @param size Number of elements in a vector.
-   * @param use_single_scalar Flag indicating whether to use a single scalar for all vectors (`true`) or an array of
-   * scalars (`false`).
    * @param config Configuration for the operation.
    * @param output Pointer to the output vector(s) where the results will be stored.
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
   eIcicleError scalar_mul_vec(
-    const T* scalar_a, const T* vec_b, uint64_t size, bool use_single_scalar, const VecOpsConfig& config, T* output);
+    const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   // Matrix operations
 
