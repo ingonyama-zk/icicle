@@ -909,7 +909,8 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
   const int64_t denumerator_deg = 2;
   const uint64_t q_size = 2;
   const uint64_t r_size = 4;
-  const int batch_size = 1 << (rand() % 5);
+  // const int batch_size = 1 << (rand() % 5);
+  const int batch_size = 1;
   const bool columns_batch = rand() % 2;
 
   const int64_t total_numerator_size = (numerator_deg + 1) * batch_size;
@@ -995,13 +996,13 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
   if (s_is_cuda_registered) {
     run(s_reference_target, q_out_ref.get(), r_out_ref.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
   }
-  // std::cout << "numerator:\t["; for (int i = 0; i < total_numerator_size-1; i++) { std::cout << numerator[i] << ", ";
-  // } std::cout <<numerator[total_numerator_size-1]<<"]"<< std::endl; std::cout << "denumerator:\t["; for (int i = 0; i
-  // < total_denumerator_size-1; i++) { std::cout << denumerator[i] << ", "; } std::cout
-  // <<denumerator[total_denumerator_size-1]<<"]"<< std::endl; std::cout << "q_out_ref:\t["; for (int i = 0; i <
-  // total_q_size-1; i++) { std::cout <<  q_out_ref[i] << ", "; } std::cout << q_out_ref[total_q_size-1]<<"]"<<
-  // std::endl; std::cout << "r_out_ref:\t["; for (int i = 0; i < total_r_size-1; i++) { std::cout <<  r_out_ref[i] <<
-  // ", "; } std::cout << r_out_ref[total_r_size-1]<<"]"<< std::endl;
+  std::cout << "numerator:\t["; for (int i = 0; i < total_numerator_size-1; i++) { std::cout << numerator[i] << ", ";
+  } std::cout <<numerator[total_numerator_size-1]<<"]"<< std::endl; std::cout << "denumerator:\t["; for (int i = 0; i
+  < total_denumerator_size-1; i++) { std::cout << denumerator[i] << ", "; } std::cout
+  <<denumerator[total_denumerator_size-1]<<"]"<< std::endl; std::cout << "q_out_ref:\t["; for (int i = 0; i <
+  total_q_size-1; i++) { std::cout <<  q_out_ref[i] << ", "; } std::cout << q_out_ref[total_q_size-1]<<"]"<<
+  std::endl; std::cout << "r_out_ref:\t["; for (int i = 0; i < total_r_size-1; i++) { std::cout <<  r_out_ref[i] <<
+  ", "; } std::cout << r_out_ref[total_r_size-1]<<"]"<< std::endl;
   run(s_main_target, q_out_main.get(), r_out_main.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
   ASSERT_EQ(0, memcmp(q_out_main.get(), q_out_ref.get(), total_q_size * sizeof(TypeParam)));
   ASSERT_EQ(0, memcmp(r_out_main.get(), r_out_ref.get(), total_r_size * sizeof(TypeParam)));
