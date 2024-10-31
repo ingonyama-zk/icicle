@@ -118,22 +118,23 @@ namespace icicle {
       init_default_constants();
     }
 
+    // For merkle tree size should be equal to the arity of a single hasher multiplier by sizeof(S).
+    // For sponge function it could be any number.
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      unsigned int T = m_use_domain_tag ? m_t - 1 : m_t;
+      unsigned int arity = m_use_domain_tag ? m_t - 1 : m_t;
 
       // Currently sponge and padding functionalities are not supported.
-      if (size % (T * sizeof(S)) != 0) {
+      if (size != arity * sizeof(S)) {
         ICICLE_LOG_ERROR
-          << "Sponge function still isn't supported. The following should be true: size/T == config.batch but it is "
-             "not.\n";
+          << "Sponge function still isn't supported. The following should be true: (size == T) but it is not.\n";
         return eIcicleError::INVALID_ARGUMENT;
       }
 
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
         hash_single(input, output);
-        input += T * sizeof(S);
+        input += arity * sizeof(S);
         output += sizeof(S);
       }
 

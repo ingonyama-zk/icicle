@@ -11,12 +11,11 @@ namespace icicle {
    * influencing the security level and output structure of the hash. The optional `domain_tag` parameter
    * enables domain separation, allowing isolation of hash outputs across different contexts or applications.
    *
-   * @tparam S The type representing the state or field element used by the hash (e.g., a field element class).
+   * @param S Represents the type of the field element used by the hash (e.g., a field element class).
    *
    * @param t The width of the Poseidon hash state, representing the number of elements in the hash state.
-   *          Typical values are 3, 5, 9, or 12, which correspond to different security levels and
-   *          constraints. Ensure that the selected `t` is compatible with the Poseidon implementation
-   *          and use case.
+   *          Ensure that the selected `t` is compatible with the Poseidon implementation
+   *          and use case. Currently supported values are 3, 5, 9, or 12.
    *
    * @param domain_tag A pointer to an optional domain tag of type `S`. If provided, this tag is used for
    *                   domain separation, isolating hash outputs across different contexts. Passing `nullptr`
