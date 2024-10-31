@@ -184,22 +184,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_add_vec)(
-    const scalar_t* scalar_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig* config,
-    scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
     return ScalarAddDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError scalar_add_vec(
-    const scalar_t* scalar_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig& config,
-    scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, size, &config, output);
   }
@@ -208,22 +200,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarSubDispatcher, scalar_sub_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_sub_vec)(
-    const scalar_t* scalar_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig* config,
-    scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
     return ScalarSubDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError scalar_sub_vec(
-    const scalar_t* scalar_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig& config,
-    scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, size, &config, output);
   }
@@ -231,22 +215,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_mul_vec)(
-    const scalar_t* scalar_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig* config,
-    scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
     return ScalarMulDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError scalar_mul_vec(
-    const scalar_t* scalar_a,
-    const scalar_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig& config,
-    scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, size, &config, output);
   }
@@ -347,6 +323,25 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, slice)(input, offset, stride, size_in, size_out, &config, output);
   }
 
+  // Deprecated API
+  template <>
+  eIcicleError slice(
+    const scalar_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size_out,
+    const VecOpsConfig& config,
+    scalar_t* output)
+  {
+    const auto size_in = offset + stride * (size_out - 1) + 1; // input should be at least that large
+    ICICLE_LOG_WARNING << "slice api is deprecated and replace with new api. Use new slice api instead";
+    if (config.batch_size != 1) {
+      ICICLE_LOG_ERROR << "deprecated slice API does not support batch";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    return slice(input, offset, stride, size_in, size_out, config, output);
+  }
+
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(ExtFieldSliceDispatcher, extension_slice, extFieldSliceOpImpl)
 
@@ -436,7 +431,8 @@ namespace icicle {
     scalar_t* r_out /*OUT*/)
   {
     return ScalarPolyDivDispatcher::execute(
-      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, config, q_out, r_out);
+      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, config,
+      q_out, r_out);
   }
 
   template <>
@@ -454,7 +450,32 @@ namespace icicle {
     scalar_t* r_out /*OUT*/)
   {
     return CONCAT_EXPAND(FIELD, poly_division)(
-      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, config, q_out, r_out);
+      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, config,
+      q_out, r_out);
+  }
+
+  // Deprecated API
+  template <>
+  eIcicleError polynomial_division(
+    const scalar_t* numerator,
+    int64_t numerator_deg,
+    const scalar_t* denumerator,
+    int64_t denumerator_deg,
+    const VecOpsConfig& config,
+    scalar_t* q_out /*OUT*/,
+    uint64_t q_size,
+    scalar_t* r_out /*OUT*/,
+    uint64_t r_size)
+  {
+    ICICLE_LOG_WARNING
+      << "polynomial_division api is deprecated and replace with new api. Use new polynomial_division api instead";
+    if (config.batch_size != 1) {
+      ICICLE_LOG_ERROR << "deprecated polynomial_division API does not support batch";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    return polynomial_division(
+      numerator, numerator_deg, numerator_deg + 1, denumerator, denumerator_deg, denumerator_deg + 1, q_size, r_size,
+      config, q_out, r_out);
   }
 
 } // namespace icicle
