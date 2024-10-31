@@ -350,7 +350,7 @@ private:
 
   VecOperation m_operation;  // the operation to execute
   uint32_t m_nof_operations; // number of operations to execute for this task
-  const T* m_op_a;           // pointer to operand A. Operand A is a vector, or metrix in case of replace_elements
+  const T* m_op_a;           // pointer to operand A. Operand A is a vector, or matrix in case of replace_elements
   const T* m_op_b;           // pointer to operand B. Operand B is a vector or scalar
   uint64_t m_start_index;    // index used in bitreverse operation and out of place matrix transpose
   uint64_t m_stop_index;     // index used in reduce operations and out of place matrix transpose
