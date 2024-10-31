@@ -7,7 +7,7 @@
 #include "icicle/utils/log.h"
 
 
-// SP: I undertstand this code is auto-generated, but I can't get scrip/gen to work. 
+// SP: I understand this code is auto-generated, but I can't get script/gen to work. 
 
 extern "C" eIcicleError bn254_vector_product(
   const bn254::scalar_t* vec_a, uint64_t n, const VecOpsConfig* config, bn254::scalar_t* result, uint64_t offset, uint64_t  stride);

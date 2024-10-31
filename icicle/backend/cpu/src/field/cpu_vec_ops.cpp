@@ -317,7 +317,7 @@ private:
     }
   }
 
-  // Single worker functionality for out of palce matrix transpose
+  // Single worker functionality for out of place matrix transpose
   void out_of_place_transpose()
   {
     for (uint32_t k = 0; k < m_nof_operations; ++k) {
@@ -367,8 +367,8 @@ private:
 
 public:
   T m_intermidiate_res;    // pointer to the output. Can be a vector or scalar pointer
-  uint64_t m_idx_in_batch; // index in the batch. Used in intermidiate res tasks
-}; // class VectorOpTask
+  uint64_t m_idx_in_batch; // index in the batch. Used in intermediate res tasks
+};                         // class VectorOpTask
 
 #define NOF_OPERATIONS_PER_TASK 512
 #define CONFIG_NOF_THREADS_KEY  "n_threads"
@@ -401,12 +401,7 @@ cpu_2vectors_op(VecOperation op, const T* vec_a, const T* vec_b, uint64_t size, 
 // Execute a full task from the type vector = scalar (op) vector
 template <typename T>
 eIcicleError cpu_scalar_vector_op(
-  VecOperation op,
-  const T* scalar_a,
-  const T* vec_b,
-  uint64_t size,
-  const VecOpsConfig& config,
-  T* output)
+  VecOperation op, const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
   TasksManager<VectorOpTask<T>> task_manager(get_nof_workers(config) - 1);
   const uint64_t total_nof_operations = size;
@@ -416,11 +411,8 @@ eIcicleError cpu_scalar_vector_op(
       VectorOpTask<T>* task_p = task_manager.get_idle_or_completed_task();
       task_p->send_2ops_task(
         op, std::min((uint64_t)NOF_OPERATIONS_PER_TASK, total_nof_operations - i), scalar_a + idx_in_batch,
-        config.columns_batch ? vec_b + idx_in_batch + i * config.batch_size
-                                                     : vec_b + idx_in_batch * size + i,
-        stride,
-        config.columns_batch ? output + idx_in_batch + i * config.batch_size
-                                                     : output + idx_in_batch * size + i);
+        config.columns_batch ? vec_b + idx_in_batch + i * config.batch_size : vec_b + idx_in_batch * size + i, stride,
+        config.columns_batch ? output + idx_in_batch + i * config.batch_size : output + idx_in_batch * size + i);
     }
   }
   task_manager.wait_done();
@@ -590,12 +582,7 @@ REGISTER_VECTOR_PRODUCT_BACKEND("CPU", cpu_vector_product<scalar_t>);
 /*********************************** Scalar + Vector***********************************/
 template <typename T>
 eIcicleError cpu_scalar_add(
-  const Device& device,
-  const T* scalar_a,
-  const T* vec_b,
-  uint64_t size,
-  const VecOpsConfig& config,
-  T* output)
+  const Device& device, const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
   return cpu_scalar_vector_op(VecOperation::SCALAR_ADD_VEC, scalar_a, vec_b, size, config, output);
 }
@@ -605,12 +592,7 @@ REGISTER_SCALAR_ADD_VEC_BACKEND("CPU", cpu_scalar_add<scalar_t>);
 /*********************************** Scalar - Vector***********************************/
 template <typename T>
 eIcicleError cpu_scalar_sub(
-  const Device& device,
-  const T* scalar_a,
-  const T* vec_b,
-  uint64_t size,
-  const VecOpsConfig& config,
-  T* output)
+  const Device& device, const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
   return cpu_scalar_vector_op(VecOperation::SCALAR_SUB_VEC, scalar_a, vec_b, size, config, output);
 }
@@ -620,12 +602,7 @@ REGISTER_SCALAR_SUB_VEC_BACKEND("CPU", cpu_scalar_sub<scalar_t>);
 /*********************************** MUL BY SCALAR***********************************/
 template <typename T>
 eIcicleError cpu_scalar_mul(
-  const Device& device,
-  const T* scalar_a,
-  const T* vec_b,
-  uint64_t size,
-  const VecOpsConfig& config,
-  T* output)
+  const Device& device, const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
   return cpu_scalar_vector_op(VecOperation::SCALAR_MUL_VEC, scalar_a, vec_b, size, config, output);
 }
@@ -669,7 +646,7 @@ uint32_t gcd(uint32_t a, uint32_t b)
   return a;
 }
 
-// Recursive function to generate all k-ary necklaces and to replace the elements withing the necklaces
+// Recursive function to generate all k-ary necklaces and to replace the elements within the necklaces
 template <typename T>
 void gen_necklace(
   uint32_t t,
@@ -714,7 +691,7 @@ eIcicleError matrix_transpose_necklaces(
   uint32_t gcd_value = gcd(log_nof_rows, log_nof_cols);
   uint32_t k = 1 << gcd_value; // Base of necklaces
   uint32_t length =
-    (log_nof_cols + log_nof_rows) / gcd_value; // length of necklaces. Since all are powers of 2, equvalent to
+    (log_nof_cols + log_nof_rows) / gcd_value; // length of necklaces. Since all are powers of 2, equivalent to
                                                // (log_nof_cols + log_nof_rows) / gcd_value;
   const uint64_t max_nof_operations = NOF_OPERATIONS_PER_TASK / length;
   const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;

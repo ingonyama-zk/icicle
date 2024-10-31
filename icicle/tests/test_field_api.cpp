@@ -17,7 +17,7 @@
 using namespace field_config;
 using namespace icicle;
 
-//TODO - add tests that test different configurations of data on device or on host.
+// TODO - add tests that test different configurations of data on device or on host.
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -98,11 +98,11 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   const uint64_t N = 1 << (rand() % 15 + 3);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
-  
+
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
-  
+
   const int total_size = N * batch_size;
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto in_b = std::make_unique<TypeParam[]>(total_size);
@@ -148,7 +148,7 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   // accumulate
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
-  for (int i = 0; i < total_size; i++) { //TODO - compare gpu against cpu with inplace operations?
+  for (int i = 0; i < total_size; i++) { // TODO - compare gpu against cpu with inplace operations?
     out_ref[i] = in_a[i] + in_b[i];
   }
   run(s_main_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
@@ -391,7 +391,7 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
   }
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
-  
+
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // scalar sub vec
@@ -436,12 +436,13 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
   const int R =
-    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes wich are not powers of 2
+    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
   const int C =
-    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes wich are not powers of 2
+    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
   const int batch_size = 1 << (rand() % 4);
   const bool columns_batch = rand() % 2;
-  const bool is_in_place = s_is_cuda_registered? 0 : rand() % 2; //TODO - fix inplace (Hadar: I'm not sure we should support it)
+  const bool is_in_place =
+    s_is_cuda_registered ? 0 : rand() % 2; // TODO - fix inplace (Hadar: I'm not sure we should support it)
 
   ICICLE_LOG_DEBUG << "rows = " << R;
   ICICLE_LOG_DEBUG << "cols = " << C;
@@ -777,12 +778,12 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   const uint64_t domain_size = 1 << (rand() % 8 + 2);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
-  
+
   ICICLE_LOG_DEBUG << "coeffs_size = " << coeffs_size;
   ICICLE_LOG_DEBUG << "domain_size = " << domain_size;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
-  
+
   const int total_coeffs_size = coeffs_size * batch_size;
 
   auto in_coeffs = std::make_unique<TypeParam[]>(total_coeffs_size);
@@ -815,10 +816,7 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
   if (s_is_cuda_registered) {
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-    ASSERT_EQ(
-      0, memcmp(
-           out_main.get(), out_ref.get(),
-           total_coeffs_size * sizeof(TypeParam))); 
+    ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_coeffs_size * sizeof(TypeParam)));
   }
 }
 
@@ -865,7 +863,8 @@ TYPED_TEST(FieldApiTest, polynomialEval)
 //       START_TIMER(polynomialDivision)
 //       for (int i = 0; i < iters; ++i) {
 //         ICICLE_CHECK(polynomial_division(
-//           numerator.get(), numerator_deg, total_numerator_size, denumerator.get(), denumerator_deg, total_denumerator_size, q_size, r_size, config, q_out, r_out));
+//           numerator.get(), numerator_deg, total_numerator_size, denumerator.get(), denumerator_deg,
+//           total_denumerator_size, q_size, r_size, config, q_out, r_out));
 //       }
 //       END_TIMER(polynomialDivision, oss.str().c_str(), measure);
 //     };
