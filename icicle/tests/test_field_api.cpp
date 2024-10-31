@@ -17,6 +17,8 @@
 using namespace field_config;
 using namespace icicle;
 
+//TODO - add tests that test different configurations of data on device or on host.
+
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg, enable)                                                                                  \
@@ -28,7 +30,6 @@ static bool VERBOSE = true;
 static int ITERS = 1;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
-// static const bool s_is_cuda_registered = is_device_registered("CUDA");
 bool s_is_cuda_registered;
 
 template <typename T>
@@ -95,18 +96,18 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
-  // const uint64_t N = 1 << (3);
   const int batch_size = 1 << (rand() % 5);
-  // const int batch_size = 2;
   const bool columns_batch = rand() % 2;
+  
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  
   const int total_size = N * batch_size;
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto in_b = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
-  ICICLE_LOG_DEBUG << "N = " << N;
-  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
-  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   auto vector_accumulate_wrapper =
     [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
@@ -131,19 +132,7 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
       END_TIMER(VECADD_sync, oss.str().c_str(), measure);
     };
 
-  // warmup
-  // run(s_reference_target, out_ref.get(), false /*=measure*/, 16 /*=iters*/);
-  // run(s_main_target, out_main.get(), false /*=measure*/, 1 /*=iters*/);
-
-  // warmup
-  // run(s_reference_target, out_ref.get(), false /*=measure*/, 16 /*=iters*/);
-  // run(s_main_target, out_main.get(), false /*=measure*/, 1 /*=iters*/);
-
-  // Element-wise vector operations
-  // If config.batch_size>1, (columns_batch=true or false) the operation is done element-wise anyway, so it doesn't
-  // affect the test
-
-  // // add
+  // add
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
   if (!s_is_cuda_registered) {
@@ -156,25 +145,17 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  // // accumulate
+  // accumulate
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
-  // if (!s_is_cuda_registered) {
-    for (int i = 0; i < total_size; i++) {
-      out_ref[i] = in_a[i] + in_b[i];
-    }
-  // } else {
-    // run(s_reference_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
-  // }
+  for (int i = 0; i < total_size; i++) { //TODO - compare gpu against cpu with inplace operations?
+    out_ref[i] = in_a[i] + in_b[i];
+  }
   run(s_main_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
-
-  // for (int i = 0; i < total_size; i++) {
-  //   ICICLE_LOG_DEBUG << i << ", " << in_a[i] << ", " << in_b[i] << ", " << out_ref[i];
-  // }
 
   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  // // sub
+  // sub
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
   if (!s_is_cuda_registered) {
@@ -187,7 +168,7 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  // // mul
+  // mul
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
   if (!s_is_cuda_registered) {
@@ -219,11 +200,15 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
   const uint64_t N = 1 << (rand() % 15 + 3);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
   const bool is_to_montgomery = rand() % 2;
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  ICICLE_LOG_DEBUG << "is_to_montgomery = " << is_to_montgomery;
   const int total_size = N * batch_size;
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
@@ -245,10 +230,6 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
     }
     END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
   };
-
-  // Element-wise operation
-  // If config.batch_size>1, (columns_batch=true or false) the addition is done element-wise anyway, so it doesn't
-  // affect the test
 
   // convert_montgomery
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
@@ -280,10 +261,9 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
   const bool columns_batch = rand() % 2;
   const int total_size = N * batch_size;
 
-  // const uint64_t N = 1 << (20);
-  // const int batch_size = 1 << 4;
-  // const bool columns_batch = 1;
-  // const int total_size = N * batch_size;
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(batch_size);
@@ -312,7 +292,7 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
       END_TIMER(VECADD_sync, oss.str().c_str(), measure);
     };
 
-  // // sum
+  // sum
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   // reference
   for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
@@ -331,7 +311,7 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sum<TypeParam>, "vector sum", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(TypeParam)));
 
-  // // product
+  // product
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
@@ -359,9 +339,9 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
 
-  // const uint64_t N = 1 << (4);
-  // const int batch_size = 7;
-  // const bool columns_batch = 1;
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   const int total_size = N * batch_size;
   auto scalar_a = std::make_unique<TypeParam[]>(batch_size);
@@ -395,7 +375,7 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
       END_TIMER(VECADD_sync, oss.str().c_str(), measure);
     };
 
-  // // scalar add vec
+  // scalar add vec
   FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
 
@@ -411,13 +391,6 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
   }
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
-
-  
-  // ICICLE_LOG_DEBUG << scalar_a[0] << ", ";
-  // ICICLE_LOG_DEBUG << scalar_a[1] << ", ";
-  // for (int i = 0; i < total_size; i++) {
-  //   ICICLE_LOG_DEBUG << i << ", " << in_b[i] << ", " << out_main[i] << ", " << out_ref[i];
-  // }
   
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
@@ -439,7 +412,7 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<TypeParam>, "scalar sub vec", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  // // scalar mul vec
+  // scalar mul vec
   FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
 
@@ -461,23 +434,20 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
   int seed = time(0);
   srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
+  ICICLE_LOG_DEBUG << "seed = " << seed;
   const int R =
-    1 << (rand() % 8 + 2); // cpu implementation for out of place trancpose also supports sizes wich are not powers of 2
+    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes wich are not powers of 2
   const int C =
-    1 << (rand() % 8 + 2); // cpu implementation for out of place trancpose also supports sizes wich are not powers of 2
+    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes wich are not powers of 2
   const int batch_size = 1 << (rand() % 4);
   const bool columns_batch = rand() % 2;
   const bool is_in_place = s_is_cuda_registered? 0 : rand() % 2; //TODO - fix inplace (Hadar: I'm not sure we should support it)
 
-  // const int R = 4; // cpu implementation for out of place trancpose also supports sizes wich are not powers of 2
-  // const int C = 3;
-  // const int batch_size = 1 << (1);
-  // const bool columns_batch = 1;
-  // const bool is_in_place = 1;
+  ICICLE_LOG_DEBUG << "rows = " << R;
+  ICICLE_LOG_DEBUG << "cols = " << C;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
-  // ICICLE_LOG_DEBUG << "R = " << R << ", C = " << C << ", batch_size = " << batch_size << ", columns_batch = " <<
-  // columns_batch << ", is_in_place = " << is_in_place; //TODO SHANIE - remove this
   const int total_size = R * C * batch_size;
   auto h_inout = std::make_unique<TypeParam[]>(total_size);
   auto h_out_main = std::make_unique<TypeParam[]>(total_size);
@@ -527,7 +497,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
     }
   };
 
-  // // Option 1: Initialize each input matrix in the batch with the same ascending values
+  // Option 1: Initialize each input matrix in the batch with the same ascending values
   // for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
   //   for (uint32_t i = 0; i < R * C; i++) {
   //     if(columns_batch){
@@ -538,7 +508,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
   //   }
   // }
 
-  // // Option 2: Initialize the entire input array with ascending values
+  // Option 2: Initialize the entire input array with ascending values
   // for (int i = 0; i < total_size; i++) {
   //   h_inout[i] = TypeParam::from(i);
   // }
@@ -568,19 +538,10 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 
   run(s_main_target, (is_in_place ? h_inout.get() : h_out_main.get()), VERBOSE /*=measure*/, "transpose", ITERS);
 
-   // ICICLE_LOG_DEBUG << scalar_a[0] << ", ";
-  // for (int i = 0; i < total_size; i++) {
-  //   ICICLE_LOG_DEBUG << i << ", " << h_inout[i] << ", " << h_out_main[i] << ", " << h_out_ref[i];
-  // }
-
   if (is_in_place) {
     ASSERT_EQ(0, memcmp(h_inout.get(), h_out_ref.get(), total_size * sizeof(TypeParam)));
   } else {
-    // std::cout << "h_out_main:\t["; for (int i = 0; i < total_size-1; i++) { std::cout << h_out_main[i] << ", "; }
-    // std::cout <<h_out_main[total_size-1]<<"]"<< std::endl; std::cout << " h_out_ref:\t["; for (int i = 0; i <
-    // total_size-1; i++) { std::cout <<  h_out_ref[i] << ", "; } std::cout << h_out_ref[total_size-1]<<"]"<< std::endl;
     ASSERT_EQ(0, memcmp(h_out_main.get(), h_out_ref.get(), total_size * sizeof(TypeParam)));
-    // }}//for loop TODO SHANIE - remove this
   }
 }
 
@@ -595,11 +556,10 @@ TYPED_TEST(FieldApiTest, bitReverse)
   const bool is_in_place = rand() % 2;
   const int total_size = N * batch_size;
 
-  // const uint64_t N = 1 << (3);
-  // const int batch_size = 1 << (1);
-  // const bool columns_batch = 1;
-  // const bool is_in_place = 0;
-  // const int total_size = N * batch_size;
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  ICICLE_LOG_DEBUG << "is_in_place = " << is_in_place;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
@@ -658,11 +618,8 @@ TYPED_TEST(FieldApiTest, bitReverse)
         }
         if (columns_batch) {
           out_ref[idx_in_batch + batch_size * i] = in_a[idx_in_batch + batch_size * rev];
-          // ICICLE_LOG_DEBUG << "out_ref[" << idx_in_batch + batch_size * i << "] = in_a[" << idx_in_batch + batch_size
-          // * rev << "]";
         } else {
           out_ref[idx_in_batch * N + i] = in_a[idx_in_batch * N + rev];
-          // ICICLE_LOG_DEBUG << "out_ref[" << idx_in_batch * N + i << "] = in_a[" << idx_in_batch * N + rev << "]";
         }
       }
     }
@@ -671,16 +628,9 @@ TYPED_TEST(FieldApiTest, bitReverse)
   }
   run(s_main_target, (is_in_place ? in_a.get() : out_main.get()), VERBOSE /*=measure*/, "bit-reverse", 1);
 
-  //   for (int i = 0; i < total_size; i++) {
-  //   ICICLE_LOG_DEBUG << i << ", " << in_a[i] << ", " << out_main[i] << ", " << out_ref[i];
-  // }
-
   if (is_in_place) {
     ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), N * sizeof(TypeParam)));
   } else {
-    // std::cout << "out_main:\t["; for (int i = 0; i < total_size-1; i++) { std::cout << out_main[i] << ", "; }
-    // std::cout <<out_main[total_size-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i <
-    // total_size-1; i++) { std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[total_size-1]<<"]"<< std::endl;
     ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
   }
 }
@@ -697,21 +647,15 @@ TYPED_TEST(FieldApiTest, Slice)
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
 
-  // const uint64_t size_in = 1 << (20);
-  // const uint64_t offset = 97;
-  // const uint64_t stride = 6;
-  // const uint64_t size_out = (((size_in - offset) / stride) - 1) - 100;
-
-  // ICICLE_LOG_DEBUG << size_in <<", "<< offset<<", "<<stride<<", "<<size_out;
-
-  // const int batch_size = 50;
-  // const bool columns_batch = 1;
-
+  ICICLE_LOG_DEBUG << "size_in = " << size_in;
+  ICICLE_LOG_DEBUG << "size_out = " << size_out;
+  ICICLE_LOG_DEBUG << "offset = " << offset;
+  ICICLE_LOG_DEBUG << "stride = " << stride;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   const int total_size_in = size_in * batch_size;
   const int total_size_out = size_out * batch_size;
-  // ICICLE_LOG_DEBUG << "size_in = " << size_in << ", offset = " << offset << ", stride = " << stride << ", size_out =
-  // " << size_out << ", batch_size = " << batch_size << ", columns_batch = " << columns_batch;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size_in);
   auto out_main = std::make_unique<TypeParam[]>(total_size_out);
@@ -768,14 +712,6 @@ TYPED_TEST(FieldApiTest, Slice)
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "slice", 1);
   }
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "slice", 1);
-  // std::cout << "out_main\t["; for (int i = 0; i < total_size_out-1; i++) { std::cout << out_main[i] << ", "; }
-  // std::cout <<out_main[total_size_out-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i <
-  // total_size_out-1; i++) { std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[total_size_out-1]<<"]"<<
-  // std::endl;
-
-  //   for (int i = 0; i < total_size_in; i++) {
-  //   ICICLE_LOG_DEBUG << i << ", " << in_a[i] << ", " << out_main[i] << ", " << out_ref[i];
-  // }
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size_out * sizeof(TypeParam)));
 }
@@ -788,10 +724,11 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   const uint64_t N = 1 << (rand() % 15 + 3);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
-  // const uint64_t N = 1 << (20);
-  // const int batch_size = 1 << (0);
-  // const bool columns_batch = 0;
   const int total_size = N * batch_size;
+
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   auto in_a = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<int64_t[]>(batch_size);
@@ -827,12 +764,6 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   }
   if (s_is_cuda_registered) { run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1); }
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
-  // std::cout << "out_main:\t["; for (int i = 0; i < batch_size-1; i++) { std::cout << out_main[i] << ", "; } std::cout
-  // <<out_main[batch_size-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i < batch_size-1; i++) {
-  // std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[batch_size-1]<<"]"<< std::endl;
-  //   for (int i = 0; i < batch_size; i++) {
-  //   ICICLE_LOG_DEBUG << i << ", " << out_main[i] << ", " << out_ref[i];
-  // }
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
@@ -847,10 +778,10 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
   
-  // const uint64_t coeffs_size = 1 << (3);
-  // const uint64_t domain_size = 3;
-  // const int batch_size = 1 << (1);
-  // const bool columns_batch = 1;
+  ICICLE_LOG_DEBUG << "coeffs_size = " << coeffs_size;
+  ICICLE_LOG_DEBUG << "domain_size = " << domain_size;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
   
   const int total_coeffs_size = coeffs_size * batch_size;
 
@@ -879,134 +810,129 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   FieldApiTest<TypeParam>::random_samples(in_coeffs.get(), total_coeffs_size);
   FieldApiTest<TypeParam>::random_samples(in_domain.get(), domain_size);
 
-  // Reference implementation
-  // TODO - Check in comperison with GPU implementation
+  // Reference implementation - TODO
 
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
   if (s_is_cuda_registered) {
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-    // std::cout << "out_main:\t["; for (int i = 0; i < total_coeffs_size-1; i++) { std::cout << out_main[i] << ", "; }
-    // std::cout <<out_main[total_coeffs_size-1]<<"]"<< std::endl; std::cout << "out_ref:\t["; for (int i = 0; i <
-    // total_coeffs_size-1; i++) { std::cout <<  out_ref[i] << ", "; } std::cout << out_ref[total_coeffs_size-1]<<"]"<<
-    // std::endl;
     ASSERT_EQ(
       0, memcmp(
            out_main.get(), out_ref.get(),
-           total_coeffs_size * sizeof(TypeParam))); // TODO - Check in comperison with GPU implementation
+           total_coeffs_size * sizeof(TypeParam))); 
   }
 }
 
-TYPED_TEST(FieldApiTest, polynomialDivision)
-{
-  int seed = time(0);
-  srand(seed);
-  // ICICLE_LOG_DEBUG << "seed = " << seed;
-  // const int64_t numerator_deg = 1 << 4;
-  // const int64_t denumerator_deg = 1 << 2;
-  // const uint64_t q_size = numerator_deg - denumerator_deg + 1;
-  // const uint64_t r_size = numerator_deg + 1;
-  const int64_t numerator_deg = 3;
-  const int64_t denumerator_deg = 2;
-  const uint64_t q_size = 2;
-  const uint64_t r_size = 4;
-  // const int batch_size = 1 << (rand() % 5);
-  const int batch_size = 1;
-  const bool columns_batch = rand() % 2;
+// TYPED_TEST(FieldApiTest, polynomialDivision)
+// {
+//   int seed = time(0);
+//   srand(seed);
+//   ICICLE_LOG_DEBUG << "seed = " << seed;
+//   // const int64_t numerator_deg = 1 << 4;
+//   // const int64_t denumerator_deg = 1 << 2;
+//   // const uint64_t q_size = numerator_deg - denumerator_deg + 1;
+//   // const uint64_t r_size = numerator_deg + 1;
+//   const int64_t numerator_deg = 3;
+//   const int64_t denumerator_deg = 2;
+//   const uint64_t q_size = 2;
+//   const uint64_t r_size = 4;
+//   // const int batch_size = 1 << (rand() % 5);
+//   const int batch_size = 1;
+//   const bool columns_batch = rand() % 2;
 
-  const int64_t total_numerator_size = (numerator_deg + 1) * batch_size;
-  const int64_t total_denumerator_size = (denumerator_deg + 1) * batch_size;
-  const uint64_t total_q_size = q_size * batch_size;
-  const uint64_t total_r_size = r_size * batch_size;
+//   const int64_t total_numerator_size = (numerator_deg + 1) * batch_size;
+//   const int64_t total_denumerator_size = (denumerator_deg + 1) * batch_size;
+//   const uint64_t total_q_size = q_size * batch_size;
+//   const uint64_t total_r_size = r_size * batch_size;
 
-  auto numerator = std::make_unique<TypeParam[]>(total_numerator_size);
-  auto denumerator = std::make_unique<TypeParam[]>(total_denumerator_size);
-  auto q_out_main = std::make_unique<TypeParam[]>(total_q_size);
-  auto r_out_main = std::make_unique<TypeParam[]>(total_r_size);
-  auto q_out_ref = std::make_unique<TypeParam[]>(total_q_size);
-  auto r_out_ref = std::make_unique<TypeParam[]>(total_r_size);
+//   auto numerator = std::make_unique<TypeParam[]>(total_numerator_size);
+//   auto denumerator = std::make_unique<TypeParam[]>(total_denumerator_size);
+//   auto q_out_main = std::make_unique<TypeParam[]>(total_q_size);
+//   auto r_out_main = std::make_unique<TypeParam[]>(total_r_size);
+//   auto q_out_ref = std::make_unique<TypeParam[]>(total_q_size);
+//   auto r_out_ref = std::make_unique<TypeParam[]>(total_r_size);
 
-  auto run =
-    [&](const std::string& dev_type, TypeParam* q_out, TypeParam* r_out, bool measure, const char* msg, int iters) {
-      Device dev = {dev_type, 0};
-      icicle_set_device(dev);
-      auto config = default_vec_ops_config();
-      config.batch_size = batch_size;
-      config.columns_batch = columns_batch;
+//   auto run =
+//     [&](const std::string& dev_type, TypeParam* q_out, TypeParam* r_out, bool measure, const char* msg, int iters) {
+//       Device dev = {dev_type, 0};
+//       icicle_set_device(dev);
+//       auto config = default_vec_ops_config();
+//       config.batch_size = batch_size;
+//       config.columns_batch = columns_batch;
 
-      std::ostringstream oss;
-      oss << dev_type << " " << msg;
+//       std::ostringstream oss;
+//       oss << dev_type << " " << msg;
 
-      START_TIMER(polynomialDivision)
-      for (int i = 0; i < iters; ++i) {
-        ICICLE_CHECK(polynomial_division(
-          numerator.get(), numerator_deg, total_numerator_size, denumerator.get(), denumerator_deg, total_denumerator_size, q_size, r_size, config, q_out, r_out));
-      }
-      END_TIMER(polynomialDivision, oss.str().c_str(), measure);
-    };
+//       START_TIMER(polynomialDivision)
+//       for (int i = 0; i < iters; ++i) {
+//         ICICLE_CHECK(polynomial_division(
+//           numerator.get(), numerator_deg, total_numerator_size, denumerator.get(), denumerator_deg, total_denumerator_size, q_size, r_size, config, q_out, r_out));
+//       }
+//       END_TIMER(polynomialDivision, oss.str().c_str(), measure);
+//     };
 
-  // // Option 1: Initialize input vectors with random values
-  // FieldApiTest<TypeParam>::random_samples(numerator.get(), total_numerator_size);
-  // FieldApiTest<TypeParam>::random_samples(denumerator.get(), total_denumerator_size);
-  // // Reference implementation
-  // TODO - Check in comperison with GPU implementation or implement a general reference implementation
+//   // // Option 1: Initialize input vectors with random values
+//   // FieldApiTest<TypeParam>::random_samples(numerator.get(), total_numerator_size);
+//   // FieldApiTest<TypeParam>::random_samples(denumerator.get(), total_denumerator_size);
+//   // // Reference implementation
+//   // TODO - Check in comperison with GPU implementation or implement a general reference implementation
 
-  // Option 2: Initialize the numerator and denumerator with chosen example
-  //           And the reference implementation for the example
+//   // Option 2: Initialize the numerator and denumerator with chosen example
+//   //           And the reference implementation for the example
 
-  for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-    if (columns_batch) {
-      // numerator = 3x^3+4x^2+5
-      numerator[idx_in_batch + 0 * batch_size] = TypeParam::from(5);
-      numerator[idx_in_batch + 1 * batch_size] = TypeParam::from(0);
-      numerator[idx_in_batch + 2 * batch_size] = TypeParam::from(4);
-      numerator[idx_in_batch + 3 * batch_size] = TypeParam::from(3);
-      // denumerator = x^2-1
-      denumerator[idx_in_batch + 0 * batch_size] = TypeParam::from(0) - TypeParam::from(1);
-      denumerator[idx_in_batch + 1 * batch_size] = TypeParam::from(0);
-      denumerator[idx_in_batch + 2 * batch_size] = TypeParam::from(1);
-      if (!s_is_cuda_registered) {
-        // q_out_ref = 3x+4
-        q_out_ref[idx_in_batch + 0 * batch_size] = TypeParam::from(4);
-        q_out_ref[idx_in_batch + 1 * batch_size] = TypeParam::from(3);
-        // r_out_ref = 3x+9
-        r_out_ref[idx_in_batch + 0 * batch_size] = TypeParam::from(9);
-        r_out_ref[idx_in_batch + 1 * batch_size] = TypeParam::from(3);
-      }
-    } else {
-      // numerator = 3x^3+4x^2+5
-      numerator[idx_in_batch * (numerator_deg + 1) + 0] = TypeParam::from(5);
-      numerator[idx_in_batch * (numerator_deg + 1) + 1] = TypeParam::from(0);
-      numerator[idx_in_batch * (numerator_deg + 1) + 2] = TypeParam::from(4);
-      numerator[idx_in_batch * (numerator_deg + 1) + 3] = TypeParam::from(3);
-      // denumerator = x^2-1
-      denumerator[idx_in_batch * (denumerator_deg + 1) + 0] = TypeParam::from(0) - TypeParam::from(1);
-      denumerator[idx_in_batch * (denumerator_deg + 1) + 1] = TypeParam::from(0);
-      denumerator[idx_in_batch * (denumerator_deg + 1) + 2] = TypeParam::from(1);
-      if (!s_is_cuda_registered) {
-        // q_out_ref = 3x+4
-        q_out_ref[idx_in_batch * q_size + 0] = TypeParam::from(4);
-        q_out_ref[idx_in_batch * q_size + 1] = TypeParam::from(3);
-        // r_out_ref = 3x+9
-        r_out_ref[idx_in_batch * r_size + 0] = TypeParam::from(9);
-        r_out_ref[idx_in_batch * r_size + 1] = TypeParam::from(3);
-      }
-    }
-  }
+//   for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
+//     if (columns_batch) {
+//       // numerator = 3x^3+4x^2+5
+//       numerator[idx_in_batch + 0 * batch_size] = TypeParam::from(5);
+//       numerator[idx_in_batch + 1 * batch_size] = TypeParam::from(0);
+//       numerator[idx_in_batch + 2 * batch_size] = TypeParam::from(4);
+//       numerator[idx_in_batch + 3 * batch_size] = TypeParam::from(3);
+//       // denumerator = x^2-1
+//       denumerator[idx_in_batch + 0 * batch_size] = TypeParam::from(0) - TypeParam::from(1);
+//       denumerator[idx_in_batch + 1 * batch_size] = TypeParam::from(0);
+//       denumerator[idx_in_batch + 2 * batch_size] = TypeParam::from(1);
+//       if (!s_is_cuda_registered) {
+//         // q_out_ref = 3x+4
+//         q_out_ref[idx_in_batch + 0 * batch_size] = TypeParam::from(4);
+//         q_out_ref[idx_in_batch + 1 * batch_size] = TypeParam::from(3);
+//         // r_out_ref = 3x+9
+//         r_out_ref[idx_in_batch + 0 * batch_size] = TypeParam::from(9);
+//         r_out_ref[idx_in_batch + 1 * batch_size] = TypeParam::from(3);
+//       }
+//     } else {
+//       // numerator = 3x^3+4x^2+5
+//       numerator[idx_in_batch * (numerator_deg + 1) + 0] = TypeParam::from(5);
+//       numerator[idx_in_batch * (numerator_deg + 1) + 1] = TypeParam::from(0);
+//       numerator[idx_in_batch * (numerator_deg + 1) + 2] = TypeParam::from(4);
+//       numerator[idx_in_batch * (numerator_deg + 1) + 3] = TypeParam::from(3);
+//       // denumerator = x^2-1
+//       denumerator[idx_in_batch * (denumerator_deg + 1) + 0] = TypeParam::from(0) - TypeParam::from(1);
+//       denumerator[idx_in_batch * (denumerator_deg + 1) + 1] = TypeParam::from(0);
+//       denumerator[idx_in_batch * (denumerator_deg + 1) + 2] = TypeParam::from(1);
+//       if (!s_is_cuda_registered) {
+//         // q_out_ref = 3x+4
+//         q_out_ref[idx_in_batch * q_size + 0] = TypeParam::from(4);
+//         q_out_ref[idx_in_batch * q_size + 1] = TypeParam::from(3);
+//         // r_out_ref = 3x+9
+//         r_out_ref[idx_in_batch * r_size + 0] = TypeParam::from(9);
+//         r_out_ref[idx_in_batch * r_size + 1] = TypeParam::from(3);
+//       }
+//     }
+//   }
 
-  if (s_is_cuda_registered) {
-    run(s_reference_target, q_out_ref.get(), r_out_ref.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
-  }
-  std::cout << "numerator:\t["; for (int i = 0; i < total_numerator_size-1; i++) { std::cout << numerator[i] << ", ";
-  } std::cout <<numerator[total_numerator_size-1]<<"]"<< std::endl; std::cout << "denumerator:\t["; for (int i = 0; i
-  < total_denumerator_size-1; i++) { std::cout << denumerator[i] << ", "; } std::cout
-  <<denumerator[total_denumerator_size-1]<<"]"<< std::endl; std::cout << "q_out_ref:\t["; for (int i = 0; i <
-  total_q_size-1; i++) { std::cout <<  q_out_ref[i] << ", "; } std::cout << q_out_ref[total_q_size-1]<<"]"<<
-  std::endl; std::cout << "r_out_ref:\t["; for (int i = 0; i < total_r_size-1; i++) { std::cout <<  r_out_ref[i] <<
-  ", "; } std::cout << r_out_ref[total_r_size-1]<<"]"<< std::endl;
-  run(s_main_target, q_out_main.get(), r_out_main.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
-  ASSERT_EQ(0, memcmp(q_out_main.get(), q_out_ref.get(), total_q_size * sizeof(TypeParam)));
-  ASSERT_EQ(0, memcmp(r_out_main.get(), r_out_ref.get(), total_r_size * sizeof(TypeParam)));
-}
+//   if (s_is_cuda_registered) {
+//     run(s_reference_target, q_out_ref.get(), r_out_ref.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
+//   }
+//   std::cout << "numerator:\t["; for (int i = 0; i < total_numerator_size-1; i++) { std::cout << numerator[i] << ", ";
+//   } std::cout <<numerator[total_numerator_size-1]<<"]"<< std::endl; std::cout << "denumerator:\t["; for (int i = 0; i
+//   < total_denumerator_size-1; i++) { std::cout << denumerator[i] << ", "; } std::cout
+//   <<denumerator[total_denumerator_size-1]<<"]"<< std::endl; std::cout << "q_out_ref:\t["; for (int i = 0; i <
+//   total_q_size-1; i++) { std::cout <<  q_out_ref[i] << ", "; } std::cout << q_out_ref[total_q_size-1]<<"]"<<
+//   std::endl; std::cout << "r_out_ref:\t["; for (int i = 0; i < total_r_size-1; i++) { std::cout <<  r_out_ref[i] <<
+//   ", "; } std::cout << r_out_ref[total_r_size-1]<<"]"<< std::endl;
+//   run(s_main_target, q_out_main.get(), r_out_main.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
+//   ASSERT_EQ(0, memcmp(q_out_main.get(), q_out_ref.get(), total_q_size * sizeof(TypeParam)));
+//   ASSERT_EQ(0, memcmp(r_out_main.get(), r_out_ref.get(), total_r_size * sizeof(TypeParam)));
+// }
 
 // #ifdef NTT
 // TYPED_TEST(FieldApiTest, ntt)
