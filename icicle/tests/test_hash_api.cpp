@@ -568,7 +568,7 @@ TEST_F(HashApiTest, MerkleTreeDevicePartialTree)
   }
 }
 
-TEST_F(HashApiTest, MerkleTreeDeviceSmall)
+TEST_F(HashApiTest, MerkleTreeLeavesOnDeviceTreeOnHost)
 {
   const uint64_t leaf_size = 32;
   const uint64_t total_input_size = (1 << 3) * leaf_size;
@@ -586,13 +586,20 @@ TEST_F(HashApiTest, MerkleTreeDeviceSmall)
     // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
     std::vector<Hash> hashes(tree_height, layer_hash);
 
+    // copy leaves to device
+    std::byte* device_leaves = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
+    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
+
     auto config = default_merkle_tree_config();
+    config.is_tree_on_device = false;
+    config.is_leaves_on_device = true;
     auto prover_tree = MerkleTree::create(hashes, leaf_size);
     auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
     // build tree
     START_TIMER(MerkleTree_build)
-    ICICLE_CHECK(prover_tree.build(leaves.get(), total_input_size, config));
+    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
     END_TIMER(MerkleTree_build, "Merkle Tree GPU", true)
 
     // proof leaves and verify
@@ -605,17 +612,18 @@ TEST_F(HashApiTest, MerkleTreeDeviceSmall)
       MerkleProof merkle_proof{};
       bool verification_valid = false;
       ICICLE_CHECK(
-        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
 
       // test pruned path
       verification_valid = false;
       ICICLE_CHECK(
-        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
     }
+    ICICLE_CHECK(icicle_free(device_leaves));
   }
 }
 
@@ -638,13 +646,19 @@ TEST_F(HashApiTest, MerkleTreeLarge)
     // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
     std::vector<Hash> hashes(tree_height, layer_hash);
 
+    // copy leaves to device
+    std::byte* device_leaves = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
+    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
+
     auto config = default_merkle_tree_config();
+    config.is_leaves_on_device = true;
     auto prover_tree = MerkleTree::create(hashes, leaf_size);
     auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
     // build tree
     START_TIMER(MerkleTree_build)
-    ICICLE_CHECK(prover_tree.build(leaves.get(), total_input_size, config));
+    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
     END_TIMER(MerkleTree_build, "Merkle Tree large", true)
 
     // proof leaves and verify
@@ -657,17 +671,18 @@ TEST_F(HashApiTest, MerkleTreeLarge)
       MerkleProof merkle_proof{};
       bool verification_valid = false;
       ICICLE_CHECK(
-        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
 
       // test pruned path
       verification_valid = false;
       ICICLE_CHECK(
-        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
     }
+    ICICLE_CHECK(icicle_free(device_leaves));
   }
 }
 
