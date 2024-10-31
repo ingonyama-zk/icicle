@@ -31,6 +31,6 @@ public:
     auto duration = end_time - start_time;
 
     double dur_s = duration * 0.001;
-    ICICLE_LOG_INFO << "Time of " << m_timer_name << ":\t" << dur_s << "ms\n";
+    ICICLE_LOG_INFO << "Time of " << m_timer_name << ":\t" << dur_s << "ms";
   }
 };

@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <unistd.h> // Only valid for lynux
 
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
@@ -15,7 +16,7 @@
 #include "tasks_manager.h"
 #include "icicle/backend/msm_config.h"
 #ifdef MEASURE_MSM_TIMES
-#include "icicle/utils/timer.hpp"
+  #include "icicle/utils/timer.hpp"
 #endif
 
 using namespace icicle;
@@ -238,11 +239,40 @@ public:
   void run_msm(
     const scalar_t* scalars, const A* bases, const unsigned int msm_size, const unsigned int batch_idx, P* results);
 
+  /**
+   * @brief Calculate approximate value of c to minimize number of EC additions in the MSM calculation. Having said
+   * that, the value of c might be suboptimal in the case of physical memory limitations (Due to required memory size
+   * for the BMs, determined by c).
+   * @param msm_size - Number of inputs in the MSM calculation.
+   * @param precompute_factor - Precompute factor determined in the config.
+   * @return Value of c to minimize EC additions while not filling up the physical memory.
+   */
   static unsigned get_optimal_c(unsigned msm_size, int precompute_factor)
   {
-    // This seems to be working well but not clear why
-    return precompute_factor > 1 ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
-                                 : std::max((int)std::log2(msm_size) - 5, 8);
+    // Approximation for optimal c size while ignoring memory limitation.
+    int optimal_c = precompute_factor > 1
+                      ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
+                      : std::max((int)std::log2(msm_size) - 5, 8);
+
+    // Get physical memory limitation (by some factor < 1 - chosen to be 3/4)
+    uint64_t point_size = 3 * scalar_t::NBITS; // NOTE this is valid under the assumption of projective points in BMs
+    uint64_t _0_75_of_mem_size = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE) * 3 / 4;
+    uint64_t max_nof_points_in_mem = _0_75_of_mem_size / point_size;
+
+    // Reduce c until it doesn't exceed the memory limitation
+    int c = optimal_c + 1;
+    uint64_t total_num_of_points;
+    do {
+      c--;
+      uint64_t num_bms = ((scalar_t::NBITS - 1) / (precompute_factor * c)) + 1;
+      total_num_of_points = num_bms << (c - 1);
+    } while (total_num_of_points > max_nof_points_in_mem);
+    ICICLE_LOG_DEBUG << "Chosen c:\t" << c
+                     << (c < optimal_c ? "\t(Not optimal, BMs are memory bound by "
+                                       : "\t(Optimal, BMs are smaller than limit of ")
+                     << (_0_75_of_mem_size >> 20) << "MB)";
+
+    return c;
   }
 
 private:
@@ -352,10 +382,15 @@ private:
 
 template <typename A, typename P>
 Msm<A, P>::Msm(const MSMConfig& config, const int c, const int nof_threads)
-    : manager(nof_threads), m_curr_task(nullptr),
+    : manager(
+        nof_threads,
+        // Minimal number of tasks required in phase 2 - 2 Tasks for each BM
+        (((scalar_t::NBITS - 1) / (config.precompute_factor * c)) + 1) * 2),
+
+      m_curr_task(nullptr),
 
       m_c(c), m_num_bkts(1 << (m_c - 1)), m_precompute_factor(config.precompute_factor),
-      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * m_c)) + 1),
+      m_num_bms(((scalar_t::NBITS - 1) / (config.precompute_factor * c)) + 1),
       m_are_scalars_mont(config.are_scalars_montgomery_form), m_are_points_mont(config.are_points_montgomery_form),
       m_batch_size(config.batch_size),
 
@@ -529,7 +564,7 @@ void Msm<A, P>::phase2_bm_sum(std::vector<BmSumSegment>& segments)
       P bucket = m_bkts_occupancy[bkt_idx] ? m_buckets[bkt_idx] : P::zero();
       m_curr_task->set_phase2_addition_by_value(curr_segment.line_sum, bucket, i);
     }
-    // Dispatch last task if itis not enough to fill a batch and dispatch automatically.
+    // Dispatch last task if it is not enough to fill a batch and dispatch automatically.
     if (m_curr_task->is_idle()) { m_curr_task->dispatch(); }
 
     // Loop until all line/tri sums are done.
