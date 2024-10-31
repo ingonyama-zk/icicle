@@ -232,8 +232,7 @@ namespace icicle {
    * @note To subtract a scalar from each element of a vector - use scalar_add_vec with negative scalar.
    */
   template <typename T>
-  eIcicleError scalar_add_vec(
-    const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+  eIcicleError scalar_add_vec(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
    * @brief Subtracts each element of a vector from a scalar, elementwise (res[i]=scalar-vec[i]).
@@ -252,8 +251,7 @@ namespace icicle {
    * @note To subtract a scalar from each element of a vector - use scalar_add_vec with negative scalar.
    */
   template <typename T>
-  eIcicleError scalar_sub_vec(
-    const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+  eIcicleError scalar_sub_vec(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
    * @brief Multiplies each element of a vector by a scalar.
@@ -271,8 +269,7 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    */
   template <typename T>
-  eIcicleError scalar_mul_vec(
-    const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+  eIcicleError scalar_mul_vec(const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   // Matrix operations
 
@@ -344,13 +341,8 @@ namespace icicle {
 
   // Deprecated slice API
   template <typename T>
-  eIcicleError slice(
-    const T* vec_in,
-    uint64_t offset,
-    uint64_t stride,    
-    uint64_t size,
-    const VecOpsConfig& config,
-    T* vec_out);
+  eIcicleError
+  slice(const T* vec_in, uint64_t offset, uint64_t stride, uint64_t size_out, const VecOpsConfig& config, T* vec_out);
 
   /**
    * @brief Finds the highest non-zero index in a vector or batch of vectors.
@@ -406,9 +398,11 @@ namespace icicle {
    * contiguously.
    *                  - If `config.columns_batch` is `true`, coefficients are interleaved.
    * @param numerator_deg Degree of the numerator polynomial.
+   * @param numerator_size size (number of T elements) in numerator vec
    * @param denominator Pointer to the array of coefficients of the denominator polynomial(s).
    *                  - Storage layout is similar to `numerator`.
    * @param denominator_deg Degree of the denominator polynomial.
+   * @param denominator_size size (number of T elements) in denumerator vec
    * @param config Configuration for the operation.
    * @param q_size Size of the quotient array for one polynomial.
    * @param r_size Size of the remainder array.
@@ -436,5 +430,18 @@ namespace icicle {
     const VecOpsConfig& config,
     T* q_out /*OUT*/,
     T* r_out /*OUT*/);
+
+  // deprecated API
+  template <typename T>
+  eIcicleError polynomial_division(
+    const T* numerator,
+    int64_t numerator_deg,
+    const T* denumerator,
+    int64_t denumerator_deg,
+    const VecOpsConfig& config,
+    T* q_out /*OUT*/,
+    uint64_t q_size,
+    T* r_out /*OUT*/,
+    uint64_t r_size);
 
 } // namespace icicle
