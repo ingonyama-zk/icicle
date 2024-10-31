@@ -842,15 +842,15 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   int seed = time(0);
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
-  // const uint64_t coeffs_size = 1 << (rand() % 10 + 4);
-  // const uint64_t domain_size = 1 << (rand() % 8 + 2);
-  // const int batch_size = 1 << (rand() % 5);
-  // const bool columns_batch = rand() % 2;
-  
   const uint64_t coeffs_size = 1 << (rand() % 10 + 4);
   const uint64_t domain_size = 1 << (rand() % 8 + 2);
-  const int batch_size = 1 << (0);
-  const bool columns_batch = 0;
+  const int batch_size = 1 << (rand() % 5);
+  const bool columns_batch = rand() % 2;
+  
+  // const uint64_t coeffs_size = 1 << (3);
+  // const uint64_t domain_size = 3;
+  // const int batch_size = 1 << (1);
+  // const bool columns_batch = 1;
   
   const int total_coeffs_size = coeffs_size * batch_size;
 
