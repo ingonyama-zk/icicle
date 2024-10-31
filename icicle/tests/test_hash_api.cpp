@@ -657,8 +657,7 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 //       std::ostringstream oss;
 //       oss << dev_type << " " << msg;
 
-//       auto poseidon = Poseidon::create<scalar_t>(t, default_input_size, use_domain_tag, domain_tag_value,
-//       use_all_zeroes_padding);
+//       auto poseidon = Poseidon::create<scalar_t>(t);
 
 //       START_TIMER(POSEIDON_sync)
 //       for (int i = 0; i < iters; ++i) {

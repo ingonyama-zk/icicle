@@ -29,8 +29,6 @@ using namespace poseidon_constants_babybear;
 using namespace poseidon_constants_stark252;
 #endif
 
-// TODO Danny missing fields: babybear etc. or disable Poseidon for them?
-
 namespace icicle {
 
 #define POSEIDON_MAX_t 12
@@ -161,7 +159,6 @@ namespace icicle {
       const S* in_fields = (S*)(input);
       // Copy input scalar to the output (as a temp storage) to be used in the rounds.
       // *tmp_fields are used as a temp storage during the calculations in this function.
-      // TODO Danny check is this is correct
       if (m_use_domain_tag) {
         // in that case we hash [domain_tag, t-1 field elements]
         memcpy(tmp_fields, &m_domain_tag, sizeof(S));
