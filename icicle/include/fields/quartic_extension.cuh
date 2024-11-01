@@ -89,6 +89,10 @@ public:
        << " };";
     return os;
   }
+  DEVICE_INLINE void print(char* prepend)
+  {
+    printf("%s { Real: %u }; { Im1: %u }; { Im2: %u }; { Im3: %u }\n", prepend, real.print(), im1.print(), im2.print(), im3.print());
+  }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator+(QuarticExtensionField xs, const QuarticExtensionField& ys)
   {
@@ -160,6 +164,42 @@ public:
   {
     return ExtensionWide{
       FF::mul_wide(xs, ys.real), FF::mul_wide(xs, ys.im1), FF::mul_wide(xs, ys.im2), FF::mul_wide(xs, ys.im3)};
+  }
+
+  template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr DEVICE_INLINE QuarticExtensionField mul_reduced(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  {
+    FF two = FF::from(2);
+
+    return QuarticExtensionField{
+        // Incorrect
+        (xs.real * ys.real) -
+        (xs.im1 * ys.im1) +
+        (two * xs.im2 * ys.im2) -
+        (two * xs.im3 * ys.im3) -
+        (xs.im2 * ys.im3) +
+        (xs.im3 * ys.im2),
+
+        // Correct
+        (xs.real * ys.im1) +
+        (xs.im1 * ys.real) +
+        (two * xs.im2 * ys.im3) -
+        (xs.im3 * ys.im3) +
+        (two * xs.im3 * ys.im2) +
+        (xs.im2 * ys.im2),
+
+        // Correct
+        (xs.real * ys.im2) -
+        (xs.im1 * ys.im3) +
+        (xs.im2 * ys.real) -
+        (xs.im3 * ys.im1),
+
+        // Correct
+        (xs.real * ys.im3) +
+        (xs.im1 * ys.im2) +
+        (xs.im2 * ys.im1) +
+        (xs.im3 * ys.real)
+      };
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>

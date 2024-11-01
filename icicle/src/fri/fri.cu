@@ -27,7 +27,11 @@ namespace fri {
         S x_domain = domain_xs[idx / 2];
         ibutterfly(f_x, f_x_neg, S::inverse(x_domain));
         auto folded_eval_idx = idx / 2;
-        folded_eval[folded_eval_idx] = f_x + alpha * f_x_neg;
+        auto alpha_f1 = E::mul_reduced(alpha, f_x_neg);
+        alpha_f1.print("alpha_f1:"); // --> This is where the values begin to be different than CPU
+        auto f_final = f_x + alpha_f1;
+        f_final.print("f_final:");
+        folded_eval[folded_eval_idx] = f_final;
       }
     }
 
@@ -39,9 +43,16 @@ namespace fri {
         E f0_px = eval[idx];
         E f1_px = eval[idx + 1];
         ibutterfly(f0_px, f1_px, S::inverse(domain_ys[idx / 2]));
-        E f_prime = f0_px + alpha * f1_px;
+        auto alpha_f1 = alpha * f1_px;
+        // alpha_f1.print("fold_circle: alpha_f1:");
+        E f_prime = f0_px + alpha_f1;
+        // f_prime.print("fold_circle: f_prime:");
         auto folded_eval_idx = idx / 2;
-        folded_eval[folded_eval_idx] = folded_eval[folded_eval_idx] * alpha_sq + f_prime;
+        auto alpha_folded = folded_eval[folded_eval_idx] * alpha_sq;
+        // alpha_folded.print("fold_circle: alpha_folded:");
+        auto f_final = alpha_folded + f_prime;
+        // f_final.print("fold_circle: f_final:");
+        folded_eval[folded_eval_idx] = f_final;
       }
     }
   } // namespace

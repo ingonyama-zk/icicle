@@ -754,6 +754,11 @@ public:
     return sub_modulus<1>(rs);
   }
 
+  DEVICE_INLINE uint32_t print()
+  {
+    return limbs_storage.limbs[0];
+  }
+
   friend HOST_DEVICE_INLINE Field operator-(Field xs, const Field& ys)
   {
     Field rs = {};
