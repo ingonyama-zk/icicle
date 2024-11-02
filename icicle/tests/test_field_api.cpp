@@ -774,15 +774,18 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   int seed = time(0);
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
-  // const uint64_t coeffs_size = 1 << (rand() % 10 + 4);
-  // const uint64_t domain_size = 1 << (rand() % 8 + 2);
-  // const int batch_size = 1 << (rand() % 5);
-  // const bool columns_batch = rand() % 2;
+  const uint64_t coeffs_size = 1 << (rand() % 10 + 4);
+  const uint64_t domain_size = 1 << (rand() % 8 + 2);
+  const int batch_size = 1 << (rand() % 5);
+  const bool columns_batch = rand() % 2;
+  // const bool a_on_device = rand() % 2;
+  // const bool b_on_device = rand() % 2;
+  // const bool res_on_device = rand() % 2;
 
-  const uint64_t coeffs_size = 3;
-  const uint64_t domain_size = 4;
-  const int batch_size = 1;
-  const bool columns_batch = 0;
+  // const uint64_t coeffs_size = 3;
+  // const uint64_t domain_size = 4;
+  // const int batch_size = 1;
+  // const bool columns_batch = 0;
 
   ICICLE_LOG_DEBUG << "coeffs_size = " << coeffs_size;
   ICICLE_LOG_DEBUG << "domain_size = " << domain_size;
@@ -790,18 +793,27 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   const int total_coeffs_size = coeffs_size * batch_size;
+  const int total_result_size = domain_size * batch_size;
 
   auto in_coeffs = std::make_unique<TypeParam[]>(total_coeffs_size);
   auto in_domain = std::make_unique<TypeParam[]>(domain_size);
-  auto out_main = std::make_unique<TypeParam[]>(total_coeffs_size);
-  auto out_ref = std::make_unique<TypeParam[]>(total_coeffs_size);
+  auto out_main = std::make_unique<TypeParam[]>(total_result_size);
+  auto out_ref = std::make_unique<TypeParam[]>(total_result_size);
 
   auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
     auto config = default_vec_ops_config();
     config.batch_size = batch_size;
-    config.columns_batch = columns_batch;
+    // config.is_a_on_device = a_on_device;
+    // config.is_b_on_device = b_on_device;
+    // config.is_result_on_device = res_on_device;
+
+    // if (dev_type == "CUDA") {
+    //   in_coeffs = config.is_a_on_device ? allocate_and_copy_to_device(in_coeffs, total_coeffs_size * sizeof(E), cuda_stream) : in_coeffs;
+    //   in_domain = config.is_b_on_device ? allocate_and_copy_to_device(in_domain, domain_size * sizeof(E), cuda_stream) : in_domain;
+    //   out = config.is_result_on_device ? allocate_and_copy_to_device(out, total_result_size * sizeof(E), cuda_stream) : out;
+    // }
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
@@ -811,6 +823,12 @@ TYPED_TEST(FieldApiTest, polynomialEval)
       ICICLE_CHECK(polynomial_eval(in_coeffs.get(), coeffs_size, in_domain.get(), domain_size, config, out));
     }
     END_TIMER(polynomialEval, oss.str().c_str(), measure);
+
+    // if (dev_type == "CUDA") {
+    //   if (config.is_a_on_device) cudaFree(in_coeffs);
+    //   if (config.is_b_on_device) cudaFree(in_domain);
+    //   if (config.is_result_on_device) cudaFree(out);
+    // }
   };
 
   FieldApiTest<TypeParam>::random_samples(in_coeffs.get(), total_coeffs_size);
@@ -821,7 +839,7 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
   if (s_is_cuda_registered) {
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-    ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_coeffs_size * sizeof(TypeParam)));
+    ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(TypeParam)));
   }
 }
 
