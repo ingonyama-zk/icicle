@@ -433,10 +433,7 @@ namespace icicle {
       padded_leaves.resize(padded_leaves_size, std::byte(0)); // padd the vector with 0
 
       // The size of the leaves to copy to padded_leaves
-      const uint64_t last_segment_tail_size =
-        leaves_size < (2 * l0_input_size)
-          ? leaves_size
-          : (leaves_size - 2 * l0_input_size) % (NOF_OPERATIONS_PER_TASK * l0_input_size) + (2 * l0_input_size);
+      const uint64_t last_segment_tail_size = (leaves_size-1) % (NOF_OPERATIONS_PER_TASK * l0_input_size) + 1;
       const uint64_t last_segment_offset = leaves_size - last_segment_tail_size;
       memcpy(padded_leaves.data(), leaves + last_segment_offset, last_segment_tail_size);
 

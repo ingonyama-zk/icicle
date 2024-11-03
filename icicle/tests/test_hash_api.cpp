@@ -598,14 +598,14 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   config.padding_policy = PaddingPolicy::ZeroPadding;
 
   // When tree is full (no padding required)
-  // test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
   // When a whole number of hashes is missing - even number to ensure whole number of leaves
-  // int nof_hashes = ((rand() % ((total_nof_input_hashes / 2) - 2)) + 1) * 2;
-  // ICICLE_LOG_DEBUG << "Nof used hashes " << nof_hashes << " / " << total_nof_input_hashes;
-  // test_merkle_tree(
-  //   hashes, config, output_store_min_layer, nof_hashes * layer0_hash.input_default_chunk_size() / leaf_size, leaves);
-  // // One leaf in tree
-  // test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
+  int nof_hashes = ((rand() % ((total_nof_input_hashes / 2) - 2)) + 1) * 2;
+  ICICLE_LOG_DEBUG << "Nof used hashes " << nof_hashes << " / " << total_nof_input_hashes;
+  test_merkle_tree(
+    hashes, config, output_store_min_layer, nof_hashes * layer0_hash.input_default_chunk_size() / leaf_size, leaves);
+  // One leaf in tree
+  test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
 
   // Lastly check case where last used hash isn't fully occupied
   auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
