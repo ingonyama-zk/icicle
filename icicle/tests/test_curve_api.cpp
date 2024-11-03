@@ -263,14 +263,14 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
 {
   // (TODO) Randomize configuration
   const bool inplace = false;
-  const int logn = 10;
+  const int logn = 14;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn;
   const int log_batch_size = 0;
   const int batch_size = 1 << log_batch_size;
-  const Ordering ordering = static_cast<Ordering>(0);
+  const Ordering ordering = static_cast<Ordering>(1); // NR
   bool columns_batch = false;
-  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  const NTTDir dir = static_cast<NTTDir>(1); // 0: forward, 1: inverse
 
   const int total_size = N * batch_size;
   auto input = std::make_unique<projective_t[]>(total_size);
@@ -303,6 +303,11 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
+
+    // std::cout << "press any key to proceed...";
+    // int a;
+    // std::cin >> a;
+    // std::cout << "proceeding\n";
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
       ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
@@ -318,7 +323,7 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  run(s_main_target, out_main.get(), "ecntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  // run(s_main_target, out_main.get(), "ecntt", true /*=measure*/, 1 /*=iters*/); // warmup
   run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // note that memcmp is tricky here because projetive points can have many representations
@@ -377,6 +382,101 @@ TYPED_TEST(CurveSanity, ScalarMultTest)
   END_TIMER(ref, "scalar mult double-and-add", true);
 
   ASSERT_EQ(mult, expected_mult);
+}
+
+TYPED_TEST(CurveSanity, ECarith)
+{
+  constexpr int n = 1 << 10;
+  auto a = std::make_unique<TypeParam[]>(n);
+  auto b = std::make_unique<TypeParam[]>(n);
+  auto c = std::make_unique<TypeParam[]>(n);
+
+  auto scalars = std::make_unique<scalar_t[]>(n);
+  auto d = std::make_unique<TypeParam[]>(n);
+
+  TypeParam::rand_host_many(a.get(), n);
+  TypeParam::rand_host_many(b.get(), n);
+  scalar_t::rand_host_many(scalars.get(), n);
+
+  START_TIMER(add);
+  for (int i = 0; i < n; ++i) {
+    c[i] = a[i] + b[i];
+  }
+  END_TIMER(add, "ADD", true);
+  START_TIMER(dbl);
+  for (int i = 0; i < n; ++i) {
+    c[i] = TypeParam::dbl(c[i]);
+  }
+  END_TIMER(dbl, "DOUBLE", true);
+
+  START_TIMER(scalarmult);
+  for (int i = 0; i < n; ++i) {
+    d[i] = c[i] * scalars[i];
+  }
+  END_TIMER(scalarmult, "SCALAR-EC-MULT", true);
+}
+
+TYPED_TEST(CurveSanity, FieldArith)
+{
+  constexpr int n = 1 << 20;
+
+  auto scalars = std::make_unique<scalar_t[]>(n);
+  auto scalars2 = std::make_unique<scalar_t[]>(n);
+  auto scalars3 = std::make_unique<scalar_t[]>(n);
+
+  scalar_t::rand_host_many(scalars.get(), n);
+  scalar_t::rand_host_many(scalars2.get(), n);
+
+  START_TIMER(scalarScalarmult);
+  for (int i = 0; i < n; ++i) {
+    scalars3[i] = scalars2[i] * scalars[i];
+  }
+  END_TIMER(scalarScalarmult, "SCALAR-SCALAR-MULT", true);
+}
+
+#include <random>
+
+TYPED_TEST(CurveSanity, u64Mul)
+{
+  constexpr int n = 1 << 25;
+
+  auto scalars = std::make_unique<uint64_t[]>(n);
+  auto scalars2 = std::make_unique<uint64_t[]>(n);
+  // auto scalars_res = std::make_unique<uint64_t[]>(n);
+  auto scalars_res_128 = std::make_unique<__uint128_t[]>(n);
+
+  // Initialize a random generator for uint64_t
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<uint64_t> dis(0, UINT64_MAX);
+
+  for (int i = 0; i < n; ++i) {
+    scalars[i] = dis(gen);
+    scalars2[i] = dis(gen);
+  }
+
+  START_TIMER(u64Mult);
+  for (int i = 0; i < n; ++i) {
+    scalars_res_128[i] = scalars2[i] * scalars[i];
+    // auto res = scalars2[i] * scalars[i];
+  }
+  END_TIMER(u64Mult, "U64-MULT-native", true);
+
+  START_TIMER(u64Mult_with128);
+  for (int i = 0; i < n; ++i) {
+    scalars_res_128[i] = static_cast<__uint128_t>(scalars2[i]) * scalars[i];
+    // auto res = static_cast<__uint128_t>(scalars2[i]) * scalars[i];
+  }
+  END_TIMER(u64Mult, "U64-MULT-via-u128", true);
+
+  START_TIMER(u64Mult_asm);
+  // #pragma unroll
+  uint64_t high, low;
+  for (int i = 0; i < n; ++i) {
+    asm("mulq %3" : "=d"(high), "=a"(low) : "a"(scalars[i]), "r"(scalars2[i]) : "cc");
+    scalars_res_128[i] = (static_cast<__uint128_t>(high) << 64) | low;
+  }
+  END_TIMER(u64Mult_asm, "U64-MULT-asm", true);
 }
 
 int main(int argc, char** argv)

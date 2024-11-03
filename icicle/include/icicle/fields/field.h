@@ -810,11 +810,295 @@ public:
     return *this;
   }
 
+  // #if defined(__CUDACC__)
+#if 1
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
     return reduce(xy);          // reduce mod p
   }
+#else
+
+  // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
+  //   #pragma GCC optimize("no-strict-aliasing")
+  // #endif
+
+  friend HOST_DEVICE_INLINE Field original_multiplier(const Field& xs, const Field& ys)
+  {
+    Wide xy = mul_wide(xs, ys); // full mult
+    return reduce(xy);          // reduce mod p
+  }
+
+  // #include <x86intrin.h>
+
+  /* GNARK CODE START*/
+  // those two funcs are copied from bits.go implementation (/usr/local/go/src/math/bits/bits.go)
+  static HOST_DEVICE_INLINE void Mul64(uint64_t x, uint64_t y, uint64_t& hi, uint64_t& lo)
+  {
+    // constexpr uint64_t mask32 = 4294967295ULL; // 2^32 - 1
+    // uint64_t x0 = x & mask32;
+    // uint64_t x1 = x >> 32;
+    // uint64_t y0 = y & mask32;
+    // uint64_t y1 = y >> 32;
+    // uint64_t w0 = x0 * y0;
+    // uint64_t t = x1 * y0 + w0 >> 32;
+    // uint64_t w1 = t & mask32;
+    // uint64_t w2 = t >> 32;
+    // w1 += x0 * y1;
+    // hi = x1 * y1 + w2 + w1 >> 32;
+    // lo = x * y;
+
+    // #if defined(__GNUC__) || defined(__clang__)
+    // lo = _umul128(x, y, &hi);
+    // #else
+    __uint128_t result = static_cast<__uint128_t>(x) * y;
+    hi = static_cast<uint64_t>(result >> 64);
+    lo = static_cast<uint64_t>(result);
+    // #endif
+  }
+
+  // #if defined(__GNUC__) || defined(__clang__)
+  // #include <x86intrin.h>
+  // #endif
+
+  static HOST_DEVICE_INLINE void Add64(uint64_t x, uint64_t y, uint64_t carry, uint64_t& sum, uint64_t& carry_out)
+  {
+    // #if defined(__GNUC__) || defined(__clang__)
+    // carry_out = _addcarry_u64(carry, x, y, &sum);
+    // #else
+    sum = x + y + carry;
+    carry_out = ((x & y) | ((x | y) & ~sum)) >> 63;
+    // #endif
+  }
+
+  static HOST_DEVICE_INLINE void Sub64(uint64_t x, uint64_t y, uint64_t borrow, uint64_t& diff, uint64_t& borrowOut)
+  {
+    // #if defined(__GNUC__) || defined(__clang__)
+    // borrowOut = _subborrow_u64(borrow, x, y, &diff);
+    // #else
+    diff = x - y - borrow;
+    // See Sub32 for the bit logic.
+    borrowOut = ((~x & y) | (~(x ^ y) & diff)) >> 63;
+    // #endif
+  }
+
+  static HOST_DEVICE_INLINE bool smallerThanModulus(const Field& z)
+  {
+    // for bn254 specifically
+    constexpr uint64_t q0 = 4891460686036598785ULL;
+    constexpr uint64_t q1 = 2896914383306846353ULL;
+    constexpr uint64_t q2 = 13281191951274694749ULL;
+    constexpr uint64_t q3 = 3486998266802970665ULL;
+    return (
+      z.limbs_storage.limbs64[3] < q3 ||
+      (z.limbs_storage.limbs64[3] == q3 &&
+       (z.limbs_storage.limbs64[2] < q2 ||
+        (z.limbs_storage.limbs64[2] == q2 &&
+         (z.limbs_storage.limbs64[1] < q1 ||
+          (z.limbs_storage.limbs64[1] == q1 && (z.limbs_storage.limbs64[0] < q0)))))));
+  }
+
+  // #define WITH_MONT_CONVERSIONS
+
+  #ifdef WITH_MONT_CONVERSIONS
+  friend HOST_DEVICE Field operator*(const Field& x_orig, const Field& y_orig)
+  #else
+  friend HOST_DEVICE Field operator*(const Field& x, const Field& y)
+  #endif
+  {
+    // for bn254 specifically
+    constexpr uint64_t qInvNeg = 14042775128853446655ULL;
+    constexpr uint64_t q0 = 4891460686036598785ULL;
+    constexpr uint64_t q1 = 2896914383306846353ULL;
+    constexpr uint64_t q2 = 13281191951274694749ULL;
+    constexpr uint64_t q3 = 3486998266802970665ULL;
+
+  #ifdef WITH_MONT_CONVERSIONS
+    // auto x = original_multiplier(x_orig, original_multiplier(Field{CONFIG::montgomery_r},
+    // Field{CONFIG::montgomery_r})); auto y = original_multiplier(y_orig,
+    // original_multiplier(Field{CONFIG::montgomery_r}, Field{CONFIG::montgomery_r}));
+    auto x = original_multiplier(x_orig, Field{CONFIG::montgomery_r});
+    auto y = original_multiplier(y_orig, Field{CONFIG::montgomery_r});
+  #endif
+
+    Field z{};
+    uint64_t t0, t1, t2, t3;
+    uint64_t u0, u1, u2, u3;
+
+    {
+      uint64_t c0, c1, c2, _;
+      uint64_t v = x.limbs_storage.limbs64[0];
+      Mul64(v, y.limbs_storage.limbs64[0], u0, t0);
+      Mul64(v, y.limbs_storage.limbs64[1], u1, t1);
+      Mul64(v, y.limbs_storage.limbs64[2], u2, t2);
+      Mul64(v, y.limbs_storage.limbs64[3], u3, t3);
+      Add64(u0, t1, 0, t1, c0);
+      Add64(u1, t2, c0, t2, c0);
+      Add64(u2, t3, c0, t3, c0);
+      Add64(u3, 0, c0, c2, _);
+
+      uint64_t m = qInvNeg * t0;
+
+      Mul64(m, q0, u0, c1);
+      Add64(t0, c1, 0, _, c0);
+      Mul64(m, q1, u1, c1);
+      Add64(t1, c1, c0, t0, c0);
+      Mul64(m, q2, u2, c1);
+      Add64(t2, c1, c0, t1, c0);
+      Mul64(m, q3, u3, c1);
+
+      Add64(0, c1, c0, t2, c0);
+      Add64(u3, 0, c0, u3, _);
+      Add64(u0, t0, 0, t0, c0);
+      Add64(u1, t1, c0, t1, c0);
+      Add64(u2, t2, c0, t2, c0);
+      Add64(c2, 0, c0, c2, _);
+      Add64(t3, t2, 0, t2, c0);
+      Add64(u3, c2, c0, t3, _);
+    }
+
+    {
+      uint64_t c0, c1, c2, _;
+      uint64_t v = x.limbs_storage.limbs64[1];
+      Mul64(v, y.limbs_storage.limbs64[0], u0, c1);
+      Add64(c1, t0, 0, t0, c0);
+      Mul64(v, y.limbs_storage.limbs64[1], u1, c1);
+      Add64(c1, t1, c0, t1, c0);
+      Mul64(v, y.limbs_storage.limbs64[2], u2, c1);
+      Add64(c1, t2, c0, t2, c0);
+      Mul64(v, y.limbs_storage.limbs64[3], u3, c1);
+      Add64(c1, t3, c0, t3, c0);
+
+      Add64(0, 0, c0, c2, _);
+      Add64(u0, t1, 0, t1, c0);
+      Add64(u1, t2, c0, t2, c0);
+      Add64(u2, t3, c0, t3, c0);
+      Add64(u3, c2, c0, c2, _);
+
+      uint64_t m = qInvNeg * t0;
+
+      Mul64(m, q0, u0, c1);
+      Add64(t0, c1, 0, _, c0);
+      Mul64(m, q1, u1, c1);
+      Add64(t1, c1, c0, t0, c0);
+      Mul64(m, q2, u2, c1);
+      Add64(t2, c1, c0, t1, c0);
+      Mul64(m, q3, u3, c1);
+
+      Add64(0, c1, c0, t2, c0);
+      Add64(u3, 0, c0, u3, _);
+      Add64(u0, t0, 0, t0, c0);
+      Add64(u1, t1, c0, t1, c0);
+      Add64(u2, t2, c0, t2, c0);
+      Add64(c2, 0, c0, c2, _);
+      Add64(t3, t2, 0, t2, c0);
+      Add64(u3, c2, c0, t3, _);
+    }
+
+    {
+      uint64_t c0, c1, c2, _;
+      uint64_t v = x.limbs_storage.limbs64[2];
+      Mul64(v, y.limbs_storage.limbs64[0], u0, c1);
+      Add64(c1, t0, 0, t0, c0);
+      Mul64(v, y.limbs_storage.limbs64[1], u1, c1);
+      Add64(c1, t1, c0, t1, c0);
+      Mul64(v, y.limbs_storage.limbs64[2], u2, c1);
+      Add64(c1, t2, c0, t2, c0);
+      Mul64(v, y.limbs_storage.limbs64[3], u3, c1);
+      Add64(c1, t3, c0, t3, c0);
+
+      Add64(0, 0, c0, c2, _);
+      Add64(u0, t1, 0, t1, c0);
+      Add64(u1, t2, c0, t2, c0);
+      Add64(u2, t3, c0, t3, c0);
+      Add64(u3, c2, c0, c2, _);
+
+      uint64_t m = qInvNeg * t0;
+
+      Mul64(m, q0, u0, c1);
+      Add64(t0, c1, 0, _, c0);
+      Mul64(m, q1, u1, c1);
+      Add64(t1, c1, c0, t0, c0);
+      Mul64(m, q2, u2, c1);
+      Add64(t2, c1, c0, t1, c0);
+      Mul64(m, q3, u3, c1);
+
+      Add64(0, c1, c0, t2, c0);
+      Add64(u3, 0, c0, u3, _);
+      Add64(u0, t0, 0, t0, c0);
+      Add64(u1, t1, c0, t1, c0);
+      Add64(u2, t2, c0, t2, c0);
+      Add64(c2, 0, c0, c2, _);
+      Add64(t3, t2, 0, t2, c0);
+      Add64(u3, c2, c0, t3, _);
+    }
+
+    {
+      uint64_t c0, c1, c2, _;
+      uint64_t v = x.limbs_storage.limbs64[3];
+      Mul64(v, y.limbs_storage.limbs64[0], u0, c1);
+      Add64(c1, t0, 0, t0, c0);
+      Mul64(v, y.limbs_storage.limbs64[1], u1, c1);
+      Add64(c1, t1, c0, t1, c0);
+      Mul64(v, y.limbs_storage.limbs64[2], u2, c1);
+      Add64(c1, t2, c0, t2, c0);
+      Mul64(v, y.limbs_storage.limbs64[3], u3, c1);
+      Add64(c1, t3, c0, t3, c0);
+
+      Add64(0, 0, c0, c2, _);
+      Add64(u0, t1, 0, t1, c0);
+      Add64(u1, t2, c0, t2, c0);
+      Add64(u2, t3, c0, t3, c0);
+      Add64(u3, c2, c0, c2, _);
+
+      uint64_t m = qInvNeg * t0;
+
+      Mul64(m, q0, u0, c1);
+      Add64(t0, c1, 0, _, c0);
+      Mul64(m, q1, u1, c1);
+      Add64(t1, c1, c0, t0, c0);
+      Mul64(m, q2, u2, c1);
+      Add64(t2, c1, c0, t1, c0);
+      Mul64(m, q3, u3, c1);
+
+      Add64(0, c1, c0, t2, c0);
+      Add64(u3, 0, c0, u3, _);
+      Add64(u0, t0, 0, t0, c0);
+      Add64(u1, t1, c0, t1, c0);
+      Add64(u2, t2, c0, t2, c0);
+      Add64(c2, 0, c0, c2, _);
+      Add64(t3, t2, 0, t2, c0);
+      Add64(u3, c2, c0, t3, _);
+    }
+
+    z.limbs_storage.limbs64[0] = t0;
+    z.limbs_storage.limbs64[1] = t1;
+    z.limbs_storage.limbs64[2] = t2;
+    z.limbs_storage.limbs64[3] = t3;
+
+    if (smallerThanModulus(z)) {
+      uint64_t b, _;
+      Sub64(z.limbs_storage.limbs64[0], q0, 0, z.limbs_storage.limbs64[0], b);
+      Sub64(z.limbs_storage.limbs64[1], q1, b, z.limbs_storage.limbs64[1], b);
+      Sub64(z.limbs_storage.limbs64[2], q2, b, z.limbs_storage.limbs64[2], b);
+      Sub64(z.limbs_storage.limbs64[3], q3, b, z.limbs_storage.limbs64[3], _);
+    }
+
+  #ifdef WITH_MONT_CONVERSIONS
+    z = original_multiplier(z, Field{CONFIG::montgomery_r_inv});
+      // z = original_multiplier(z, original_multiplier(Field{CONFIG::montgomery_r_inv},
+      // Field{CONFIG::montgomery_r_inv}));
+  #endif
+    return z;
+  }
+
+  // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
+  //   #pragma GCC reset_options
+  // #endif
+
+#endif // __CUDACC__
+
+  /*GNARK CODE END*/
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
   {

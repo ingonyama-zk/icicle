@@ -84,13 +84,45 @@ namespace host_math {
     return result;
   }
 
-  static constexpr __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
+  static inline __host__ __uint128_t mul64(uint64_t x, uint64_t y)
+  {
+    uint64_t high, low;
+    asm("mulq %3" : "=d"(high), "=a"(low) : "a"(x), "r"(y) : "cc");
+    return (static_cast<__uint128_t>(high) << 64) | low;
+  }
+
+  static __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
   {
     __uint128_t r = static_cast<__uint128_t>(x) * y + z + carry;
+    // __uint128_t r = mul64(x, y) + z + carry;
+
     carry = (uint64_t)(r >> 64);
     uint64_t result = r & 0xffffffffffffffff;
     return result;
   }
+
+#include <cstdint>
+
+  // static inline __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
+  // {
+  //   uint64_t high, low;
+
+  //   // Perform multiplication of x * y
+  //   asm("mulq %3\n\t"                        // x * y -> result in RDX:RAX
+  //       "addq %4, %%rax\n\t"                 // Add z to the low 64 bits (RAX), setting flags
+  //       "adcq $0, %%rdx\n\t"                 // Propagate carry to high 64 bits (RDX)
+  //       "addq %5, %%rax\n\t"                 // Add the input carry to RAX, setting flags
+  //       "adcq $0, %%rdx"                     // Propagate any carry to RDX
+  //       : "=a"(low), "=d"(high)              // Output operands
+  //       : "a"(x), "r"(y), "r"(z), "r"(carry) // Input operands
+  //       : "cc");                             // Clobbers
+
+  //   // Set carry to the high 64 bits of the result
+  //   carry = high;
+
+  //   // Return the low 64 bits of the result
+  //   return low;
+  // }
 
   template <unsigned OPS_COUNT = UINT32_MAX, bool CARRY_IN = false, bool CARRY_OUT = false>
   struct carry_chain {

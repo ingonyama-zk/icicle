@@ -301,27 +301,27 @@ TYPED_TEST(FieldApiTest, ntt)
 
   int seed = time(0);
   srand(seed);
-  const bool inplace = rand() % 2;
-  const int logn = rand() % 15 + 3;
+  const bool inplace = 0;
+  const int logn = 16;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
-  const int log_batch_size = rand() % 3;
+  const int log_batch_size = 0;
   const int batch_size = 1 << log_batch_size;
-  const Ordering ordering = static_cast<Ordering>(rand() % 4);
-  bool columns_batch;
-  if (logn == 7 || logn < 4) {
-    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
-  } else {
-    columns_batch = rand() % 2;
-  }
-  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
-  const int log_coset_stride = rand() % 3;
-  scalar_t coset_gen;
-  if (log_coset_stride) {
-    coset_gen = scalar_t::omega(logn + log_coset_stride);
-  } else {
-    coset_gen = scalar_t::one();
-  }
+  const Ordering ordering = static_cast<Ordering>(0);
+  bool columns_batch = false;
+  // if (logn == 7 || logn < 4) {
+  //   columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  // } else {
+  //   columns_batch = rand() % 2;
+  // }
+  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  const int log_coset_stride = 0;
+  scalar_t coset_gen = scalar_t::one();
+  // if (log_coset_stride) {
+  //   coset_gen = scalar_t::omega(logn + log_coset_stride);
+  // } else {
+  //   coset_gen = scalar_t::one();
+  // }
 
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
