@@ -136,7 +136,7 @@ eIcicleErr err = keccak256.hash(input.data(), input.size() / config.batch, confi
 
 ### 4. Posidon sponge function
 
-Currently the poseidon sponge function isn't implemented.
+Currently the poseidon sponge function (Sec 2.1 of https://eprint.iacr.org/2019/458.pdf ) isn't implemented.
 
 ### Supported Bindings
 
