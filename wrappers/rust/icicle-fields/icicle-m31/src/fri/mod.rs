@@ -159,7 +159,7 @@ mod _fri {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::field::{QuarticExtensionField, ScalarField};
+    use crate::field::{ComplexExtensionField, QuarticExtensionField, ScalarField};
     use icicle_core::traits::FieldImpl;
     use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
     use std::iter::zip;

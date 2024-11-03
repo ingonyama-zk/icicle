@@ -795,7 +795,8 @@ public:
    */
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
-  {
+  { 
+    //TODO: here
     // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
     Field xs_hi = Wide::get_higher_with_slack(xs);
     Wide l = {};

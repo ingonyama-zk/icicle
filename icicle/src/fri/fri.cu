@@ -31,6 +31,18 @@ namespace fri {
       }
     }
 
+    DEVICE_INLINE void printHexValues(
+      unsigned int idx, unsigned int folded_eval_idx, const uint32_t* f0_px, const uint32_t* f1_px, uint32_t domain_y)
+    {
+      // Single printf statement for all output
+      printf(
+        "idx: %u idx/2: %u  f0_px: (r: 0x%08x im1: 0x%08x im2: 0x%08x im3: 0x%08x) f1_px: (r: 0x%08x im1: 0x%08x im2: "
+        "0x%08x im3: 0x%08x) dmn: 0x%08x\n",
+        idx, folded_eval_idx, f0_px[0], f0_px[1], f0_px[2], f0_px[3], // f0_px as a 32-character hex string
+        f1_px[0], f1_px[1], f1_px[2], f1_px[3],                       // f1_px as a 32-character hex string
+        domain_y);                                                    // dmn as an 8-character hex string
+    }
+
     template <typename S, typename E>
     __global__ void fold_circle_into_line_kernel(E* eval, S* domain_ys, E alpha, E alpha_sq, E* folded_eval, uint64_t n)
     {
@@ -38,9 +50,11 @@ namespace fri {
       if (idx % 2 == 0 && idx < n) {
         E f0_px = eval[idx];
         E f1_px = eval[idx + 1];
-        ibutterfly(f0_px, f1_px, S::inverse(domain_ys[idx / 2]));
-        E f_prime = f0_px + alpha * f1_px;
         auto folded_eval_idx = idx / 2;
+        printHexValues(
+          idx, folded_eval_idx, (const uint32_t*)f0_px, (const uint32_t*)f1_px, domain_ys[folded_eval_idx].get_limb());
+        ibutterfly(f0_px, f1_px, domain_ys[folded_eval_idx]);
+        E f_prime = f0_px + alpha * f1_px;
         folded_eval[folded_eval_idx] = folded_eval[folded_eval_idx] * alpha_sq + f_prime;
       }
     }
@@ -133,6 +147,30 @@ namespace fri {
     }
 
     E alpha_sq = alpha * alpha;
+    auto alpha_ptr = (const uint32_t*)alpha;
+    auto alpha_sqr_ptr = (const uint32_t*)alpha_sq;
+    printf(
+      "alpha: (r: 0x%08x im1: 0x%08x im2: 0x%08x im3: 0x%08x) alpha_sq: (r: 0x%08x im1: 0x%08x im2: 0x%08x im3: "
+      "0x%08x)\n",
+      alpha_ptr[0], alpha_ptr[1], alpha_ptr[2], alpha_ptr[3], alpha_sqr_ptr[0], alpha_sqr_ptr[1], alpha_sqr_ptr[2],
+      alpha_sqr_ptr[3]);
+
+    ///////
+    E val_qm_values[3] = {{1, 2, 3, 4}, {2, 1, 0, 3}, {2, 0, 0, 2}};
+    printf("\n==========\n");
+    for (int i = 0; i < 3; ++i) {
+      E val_qm = val_qm_values[i];
+      // E val_qm = {val_qm_values[i][0], val_qm_values[i][1], val_qm_values[i][2], val_qm_values[i][3]};
+      E val_qm_sq = val_qm * val_qm;
+      alpha_ptr = (const uint32_t*)val_qm;
+      alpha_sqr_ptr = (const uint32_t*)val_qm_sq;
+
+      printf(
+        "\nval_qm: (r: 0x%08x im1: 0x%08x im2: 0x%08x im3: 0x%08x) val_sqr: (r: 0x%08x%08x%08x%08x)\n==========\n",
+        alpha_ptr[0], alpha_ptr[1], alpha_ptr[2], alpha_ptr[3], alpha_sqr_ptr[0], alpha_sqr_ptr[1], alpha_sqr_ptr[2],
+        alpha_sqr_ptr[3]);
+    }
+
     uint64_t num_threads = 256;
     uint64_t num_blocks = (n / 2 + num_threads - 1) / num_threads;
     fold_circle_into_line_kernel<<<num_blocks, num_threads, 0, stream>>>(
