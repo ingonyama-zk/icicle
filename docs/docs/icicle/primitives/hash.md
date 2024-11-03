@@ -46,6 +46,9 @@ Keccak can take input messages of any length and produce a fixed-size hash. It u
 
 Traditional hash functions, such as SHA-2, are difficult to represent within ZK circuits because they involve complex bitwise operations that don’t translate efficiently into arithmetic operations. Poseidon, however, is specifically designed to minimize the number of constraints required in these circuits, making it significantly more efficient for use in ZK-SNARKs and other cryptographic protocols that require hashing over field elements.
 
+Currently the Poseidon implementation is the Optimized Poseidon (https://hackmd.io/@jake/poseidon-spec#Optimized-Poseidon). Optimized Poseidon significantly decreases the calculation time of the hash.
+
+The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
 ## Using Hash API
 
@@ -94,7 +97,7 @@ eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& confi
  * @tparam PREIMAGE The type of the input data.
  * @tparam IMAGE The type of the output data.
  * @param input Pointer to the input data.
- * @param size The number of elements of type `PREIMAGE` to hash.
+ * @param size The number of elements of type `PREIMAGE` to a single hasher.
  * @param config Configuration options for the hash operation.
  * @param output Pointer to the output data.
  * @return An error code of type eIcicleError indicating success or failure.
@@ -130,6 +133,10 @@ auto output = std::make_unique<std::byte[]>(32 * config.batch); // Allocate outp
 
 eIcicleErr err = keccak256.hash(input.data(), input.size() / config.batch, config, output.get());
 ```
+
+### 4. Posidon sponge function
+
+Currently the poseidon sponge function isn't implemented.
 
 ### Supported Bindings
 

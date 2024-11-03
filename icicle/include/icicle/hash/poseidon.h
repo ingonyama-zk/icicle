@@ -8,7 +8,7 @@ namespace icicle {
    *
    * This function generates a Poseidon hash with customizable parameters to suit various cryptographic
    * contexts and use cases. The width parameter (`t`) determines the number of elements in the state,
-   * influencing the security level and output structure of the hash. The optional `domain_tag` parameter
+   * influencing the security level and output structure of the hash. The optional `domain_tag` pointer parameter
    * enables domain separation, allowing isolation of hash outputs across different contexts or applications.
    *
    * @param S Represents the type of the field element used by the hash (e.g., a field element class).
