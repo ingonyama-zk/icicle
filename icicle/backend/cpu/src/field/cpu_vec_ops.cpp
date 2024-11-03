@@ -902,11 +902,7 @@ eIcicleError cpu_poly_divide(
   ICICLE_ASSERT(q_size >= (numerator_deg - denumerator_deg + 1))
     << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denumerator)+1";
 
-  // ICICLE_CHECK(icicle_copy_async(r_out, numerator, r_size * config.batch_size * sizeof(T), config.stream));
-  // copy numerator to r_out // FIXME should it be copied using icicle_copy_async?
-  for (uint64_t i = 0; i < (numerator_deg + 1) * config.batch_size; ++i) {
-    r_out[i] = numerator[i];
-  }
+  memcpy(r_out, numerator, sizeof(T) * numerator_size * config.batch_size);
 
   uint32_t stride = config.columns_batch ? config.batch_size : 1;
   auto deg_r = std::make_unique<int64_t[]>(config.batch_size);

@@ -17,7 +17,7 @@
 using namespace field_config;
 using namespace icicle;
 
-// TODO - add tests that test different configurations of data on device or on host.
+// TODO Hadar - add tests that test different configurations of data on device or on host.
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -30,7 +30,8 @@ static bool VERBOSE = true;
 static int ITERS = 1;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
-bool s_is_cuda_registered;
+static inline std::vector<std::string> s_registered_devices;
+bool s_is_cuda_registered; // TODO Yuval remove this
 
 template <typename T>
 class FieldApiTest : public ::testing::Test
@@ -48,6 +49,7 @@ public:
     if (!s_is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs reference (on cpu)"; }
     s_main_target = s_is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
+    s_registered_devices = get_registered_devices_list();
   }
   static void TearDownTestSuite()
   {
@@ -436,9 +438,11 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
   const int R =
-    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+    1
+    << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
   const int C =
-    1 << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+    1
+    << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
   const int batch_size = 1 << (rand() % 4);
   const bool columns_batch = rand() % 2;
   const bool is_in_place =
@@ -727,11 +731,12 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   const bool columns_batch = rand() % 2;
   const int total_size = N * batch_size;
 
-  ICICLE_LOG_DEBUG << "N = " << N;
-  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
-  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
-
   auto in_a = std::make_unique<TypeParam[]>(total_size);
+  for (int i = 0; i < batch_size; ++i) {
+    // randomize different rows with zeros in the end
+    auto size = std::max(int64_t(N) / 4 - i, int64_t(1));
+    scalar_t::rand_host_many(in_a.get() + i * N, size);
+  }
   auto out_main = std::make_unique<int64_t[]>(batch_size);
   auto out_ref = std::make_unique<int64_t[]>(batch_size);
 
@@ -752,20 +757,8 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
     END_TIMER(highestNonZeroIdx, oss.str().c_str(), measure);
   };
 
-  // Initialize each entire vector with 1 at a random index. The highest non-zero index is the index with 1
-  for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-    out_ref[idx_in_batch] = static_cast<int64_t>(rand() % N); // highest_non_zero_idx
-    for (uint32_t i = 0; i < N; i++) {
-      if (columns_batch) {
-        in_a[idx_in_batch + batch_size * i] = TypeParam::from(i == out_ref[idx_in_batch] ? 1 : 0);
-      } else {
-        in_a[idx_in_batch * N + i] = TypeParam::from(i == out_ref[idx_in_batch] ? 1 : 0);
-      }
-    }
-  }
-  if (s_is_cuda_registered) { run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1); }
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
-
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
 
@@ -778,14 +771,6 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   const uint64_t domain_size = 1 << (rand() % 8 + 2);
   const int batch_size = 1 << (rand() % 5);
   const bool columns_batch = rand() % 2;
-  // const bool a_on_device = rand() % 2;
-  // const bool b_on_device = rand() % 2;
-  // const bool res_on_device = rand() % 2;
-
-  // const uint64_t coeffs_size = 3;
-  // const uint64_t domain_size = 4;
-  // const int batch_size = 1;
-  // const bool columns_batch = 0;
 
   ICICLE_LOG_DEBUG << "coeffs_size = " << coeffs_size;
   ICICLE_LOG_DEBUG << "domain_size = " << domain_size;
@@ -805,15 +790,7 @@ TYPED_TEST(FieldApiTest, polynomialEval)
     icicle_set_device(dev);
     auto config = default_vec_ops_config();
     config.batch_size = batch_size;
-    // config.is_a_on_device = a_on_device;
-    // config.is_b_on_device = b_on_device;
-    // config.is_result_on_device = res_on_device;
-
-    // if (dev_type == "CUDA") {
-    //   in_coeffs = config.is_a_on_device ? allocate_and_copy_to_device(in_coeffs, total_coeffs_size * sizeof(E), cuda_stream) : in_coeffs;
-    //   in_domain = config.is_b_on_device ? allocate_and_copy_to_device(in_domain, domain_size * sizeof(E), cuda_stream) : in_domain;
-    //   out = config.is_result_on_device ? allocate_and_copy_to_device(out, total_result_size * sizeof(E), cuda_stream) : out;
-    // }
+    config.columns_batch = columns_batch;
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
@@ -823,138 +800,67 @@ TYPED_TEST(FieldApiTest, polynomialEval)
       ICICLE_CHECK(polynomial_eval(in_coeffs.get(), coeffs_size, in_domain.get(), domain_size, config, out));
     }
     END_TIMER(polynomialEval, oss.str().c_str(), measure);
-
-    // if (dev_type == "CUDA") {
-    //   if (config.is_a_on_device) cudaFree(in_coeffs);
-    //   if (config.is_b_on_device) cudaFree(in_domain);
-    //   if (config.is_result_on_device) cudaFree(out);
-    // }
   };
 
   FieldApiTest<TypeParam>::random_samples(in_coeffs.get(), total_coeffs_size);
   FieldApiTest<TypeParam>::random_samples(in_domain.get(), domain_size);
 
-  // Reference implementation - TODO
-
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-  if (s_is_cuda_registered) {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-    ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(TypeParam)));
-  }
+  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(TypeParam)));
 }
 
-// TYPED_TEST(FieldApiTest, polynomialDivision)
-// {
-//   int seed = time(0);
-//   srand(seed);
-//   ICICLE_LOG_DEBUG << "seed = " << seed;
-//   // const int64_t numerator_deg = 1 << 4;
-//   // const int64_t denumerator_deg = 1 << 2;
-//   // const uint64_t q_size = numerator_deg - denumerator_deg + 1;
-//   // const uint64_t r_size = numerator_deg + 1;
-//   const int64_t numerator_deg = 3;
-//   const int64_t denumerator_deg = 2;
-//   const uint64_t q_size = 2;
-//   const uint64_t r_size = 4;
-//   // const int batch_size = 1 << (rand() % 5);
-//   const int batch_size = 1;
-//   const bool columns_batch = rand() % 2;
+TYPED_TEST(FieldApiTest, polynomialDivision)
+{
+  const uint64_t numerator_size = 1 << 4;
+  const uint64_t denumerator_size = 1 << 3;
+  const int64_t max_num_deg = numerator_size - 1;
+  const int64_t max_denum_deg = denumerator_size - 1;
+  const uint64_t q_size = max_num_deg - max_denum_deg + 1;
+  const uint64_t r_size = max_num_deg + 1;
+  const int batch_size = 10 + rand() % 10;
 
-//   const int64_t total_numerator_size = (numerator_deg + 1) * batch_size;
-//   const int64_t total_denumerator_size = (denumerator_deg + 1) * batch_size;
-//   const uint64_t total_q_size = q_size * batch_size;
-//   const uint64_t total_r_size = r_size * batch_size;
+  // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
-//   auto numerator = std::make_unique<TypeParam[]>(total_numerator_size);
-//   auto denumerator = std::make_unique<TypeParam[]>(total_denumerator_size);
-//   auto q_out_main = std::make_unique<TypeParam[]>(total_q_size);
-//   auto r_out_main = std::make_unique<TypeParam[]>(total_r_size);
-//   auto q_out_ref = std::make_unique<TypeParam[]>(total_q_size);
-//   auto r_out_ref = std::make_unique<TypeParam[]>(total_r_size);
+  // randomize matrix with rows/cols as polynomials
+  auto numerator = std::make_unique<TypeParam[]>(numerator_size * batch_size);
+  auto denumerator = std::make_unique<TypeParam[]>(denumerator_size * batch_size);
+  TypeParam::rand_host_many(numerator.get(), numerator_size * batch_size);
+  TypeParam::rand_host_many(denumerator.get(), denumerator_size * batch_size);
 
-//   auto run =
-//     [&](const std::string& dev_type, TypeParam* q_out, TypeParam* r_out, bool measure, const char* msg, int iters) {
-//       Device dev = {dev_type, 0};
-//       icicle_set_device(dev);
-//       auto config = default_vec_ops_config();
-//       config.batch_size = batch_size;
-//       config.columns_batch = columns_batch;
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
+      ICICLE_LOG_DEBUG << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
+                       << "]";
+      auto q = std::make_unique<TypeParam[]>(q_size * batch_size);
+      auto r = std::make_unique<TypeParam[]>(r_size * batch_size);
 
-//       std::ostringstream oss;
-//       oss << dev_type << " " << msg;
+      auto config = default_vec_ops_config();
+      config.batch_size = batch_size;
+      config.columns_batch = columns_batch;
+      ICICLE_CHECK(polynomial_division(
+        numerator.get(), max_num_deg, numerator_size, denumerator.get(), max_denum_deg, denumerator_size, q_size,
+        r_size, config, q.get(), r.get()));
 
-//       START_TIMER(polynomialDivision)
-//       for (int i = 0; i < iters; ++i) {
-//         ICICLE_CHECK(polynomial_division(
-//           numerator.get(), numerator_deg, total_numerator_size, denumerator.get(), denumerator_deg,
-//           total_denumerator_size, q_size, r_size, config, q_out, r_out));
-//       }
-//       END_TIMER(polynomialDivision, oss.str().c_str(), measure);
-//     };
+      // test a(x)=q(x)b(x)+r(x) in random point
+      const auto rand_x = TypeParam::rand_host();
+      auto ax = std::make_unique<TypeParam[]>(batch_size);
+      auto bx = std::make_unique<TypeParam[]>(batch_size);
+      auto qx = std::make_unique<TypeParam[]>(batch_size);
+      auto rx = std::make_unique<TypeParam[]>(batch_size);
+      polynomial_eval(numerator.get(), numerator_size, &rand_x, 1, config, ax.get());
+      polynomial_eval(denumerator.get(), denumerator_size, &rand_x, 1, config, bx.get());
+      polynomial_eval(q.get(), q_size, &rand_x, 1, config, qx.get());
+      polynomial_eval(r.get(), r_size, &rand_x, 1, config, rx.get());
 
-//   // // Option 1: Initialize input vectors with random values
-//   // FieldApiTest<TypeParam>::random_samples(numerator.get(), total_numerator_size);
-//   // FieldApiTest<TypeParam>::random_samples(denumerator.get(), total_denumerator_size);
-//   // // Reference implementation
-//   // TODO - Check in comperison with GPU implementation or implement a general reference implementation
-
-//   // Option 2: Initialize the numerator and denumerator with chosen example
-//   //           And the reference implementation for the example
-
-//   for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-//     if (columns_batch) {
-//       // numerator = 3x^3+4x^2+5
-//       numerator[idx_in_batch + 0 * batch_size] = TypeParam::from(5);
-//       numerator[idx_in_batch + 1 * batch_size] = TypeParam::from(0);
-//       numerator[idx_in_batch + 2 * batch_size] = TypeParam::from(4);
-//       numerator[idx_in_batch + 3 * batch_size] = TypeParam::from(3);
-//       // denumerator = x^2-1
-//       denumerator[idx_in_batch + 0 * batch_size] = TypeParam::from(0) - TypeParam::from(1);
-//       denumerator[idx_in_batch + 1 * batch_size] = TypeParam::from(0);
-//       denumerator[idx_in_batch + 2 * batch_size] = TypeParam::from(1);
-//       if (!s_is_cuda_registered) {
-//         // q_out_ref = 3x+4
-//         q_out_ref[idx_in_batch + 0 * batch_size] = TypeParam::from(4);
-//         q_out_ref[idx_in_batch + 1 * batch_size] = TypeParam::from(3);
-//         // r_out_ref = 3x+9
-//         r_out_ref[idx_in_batch + 0 * batch_size] = TypeParam::from(9);
-//         r_out_ref[idx_in_batch + 1 * batch_size] = TypeParam::from(3);
-//       }
-//     } else {
-//       // numerator = 3x^3+4x^2+5
-//       numerator[idx_in_batch * (numerator_deg + 1) + 0] = TypeParam::from(5);
-//       numerator[idx_in_batch * (numerator_deg + 1) + 1] = TypeParam::from(0);
-//       numerator[idx_in_batch * (numerator_deg + 1) + 2] = TypeParam::from(4);
-//       numerator[idx_in_batch * (numerator_deg + 1) + 3] = TypeParam::from(3);
-//       // denumerator = x^2-1
-//       denumerator[idx_in_batch * (denumerator_deg + 1) + 0] = TypeParam::from(0) - TypeParam::from(1);
-//       denumerator[idx_in_batch * (denumerator_deg + 1) + 1] = TypeParam::from(0);
-//       denumerator[idx_in_batch * (denumerator_deg + 1) + 2] = TypeParam::from(1);
-//       if (!s_is_cuda_registered) {
-//         // q_out_ref = 3x+4
-//         q_out_ref[idx_in_batch * q_size + 0] = TypeParam::from(4);
-//         q_out_ref[idx_in_batch * q_size + 1] = TypeParam::from(3);
-//         // r_out_ref = 3x+9
-//         r_out_ref[idx_in_batch * r_size + 0] = TypeParam::from(9);
-//         r_out_ref[idx_in_batch * r_size + 1] = TypeParam::from(3);
-//       }
-//     }
-//   }
-
-//   if (s_is_cuda_registered) {
-//     run(s_reference_target, q_out_ref.get(), r_out_ref.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
-//   }
-//   std::cout << "numerator:\t["; for (int i = 0; i < total_numerator_size-1; i++) { std::cout << numerator[i] << ", ";
-//   } std::cout <<numerator[total_numerator_size-1]<<"]"<< std::endl; std::cout << "denumerator:\t["; for (int i = 0; i
-//   < total_denumerator_size-1; i++) { std::cout << denumerator[i] << ", "; } std::cout
-//   <<denumerator[total_denumerator_size-1]<<"]"<< std::endl; std::cout << "q_out_ref:\t["; for (int i = 0; i <
-//   total_q_size-1; i++) { std::cout <<  q_out_ref[i] << ", "; } std::cout << q_out_ref[total_q_size-1]<<"]"<<
-//   std::endl; std::cout << "r_out_ref:\t["; for (int i = 0; i < total_r_size-1; i++) { std::cout <<  r_out_ref[i] <<
-//   ", "; } std::cout << r_out_ref[total_r_size-1]<<"]"<< std::endl;
-//   run(s_main_target, q_out_main.get(), r_out_main.get(), VERBOSE /*=measure*/, "polynomial_division", 1);
-//   ASSERT_EQ(0, memcmp(q_out_main.get(), q_out_ref.get(), total_q_size * sizeof(TypeParam)));
-//   ASSERT_EQ(0, memcmp(r_out_main.get(), r_out_ref.get(), total_r_size * sizeof(TypeParam)));
-// }
+      for (int i = 0; i < batch_size; ++i) {
+        // ICICLE_LOG_DEBUG << "ax=" << ax[i] << ", bx=" << bx[i] << ", qx=" << qx[i] << ", rx=" << rx[i];
+        ASSERT_EQ(ax[i], qx[i] * bx[i] + rx[i]);
+      }
+    }
+  }
+}
 
 #ifdef NTT
 
