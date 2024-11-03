@@ -84,6 +84,55 @@ where
     }
 }
 
+pub fn check_poseidon_hash_multi_device<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+{
+    let t = 9;
+    let inputs: Vec<F> = F::Config::generate_random(t);
+    let mut outputs_main_0 = vec![F::zero(); 1];
+    let mut outputs_main_1 = vec![F::zero(); 1];
+    let mut outputs_ref = vec![F::zero(); 1];
+
+    test_utilities::test_set_ref_device();
+    let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+
+    poseidon_hasher_ref
+        .hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_ref),
+        )
+        .unwrap();
+
+    // initialize hasher on 2 devices
+    test_utilities::test_set_main_device_with_id(0);
+    let poseidon_hasher_main_dev_0 = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+    test_utilities::test_set_main_device_with_id(1);
+    let poseidon_hasher_main_dev_1 = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+
+    // test device 1
+    poseidon_hasher_main_dev_1
+        .hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main_1),
+        )
+        .unwrap();
+    assert_eq!(outputs_ref, outputs_main_1);
+
+    // test device 0
+    test_utilities::test_set_main_device_with_id(0);
+    poseidon_hasher_main_dev_0
+        .hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main_0),
+        )
+        .unwrap();
+    assert_eq!(outputs_ref, outputs_main_0);
+}
+
 pub fn check_poseidon_tree<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: PoseidonHasher<F>,
