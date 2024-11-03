@@ -117,13 +117,13 @@ macro_rules! impl_poseidon_tests {
         use super::*;
 
         use std::sync::Once;
+        use icicle_core::test_utilities;
 
         static INIT: Once = Once::new();
 
         pub fn initialize() {
             INIT.call_once(move || {
-                // TODO load CUDA backend
-                // test_utilities::test_load_and_init_devices();
+                test_utilities::test_load_and_init_devices();
             });
         }
 
