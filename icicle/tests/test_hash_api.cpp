@@ -562,19 +562,6 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
 {
-  // const int leaf_size = sizeof(uint32_t); // 1
-  // const int nof_leaves = 5;
-  // uint32_t leaves[nof_leaves];
-  // // randomize(leaves, nof_leaves);
-  // for (int i = 0; i < nof_leaves; i++)
-  // {
-  //   leaves[i] = i;
-  // }
-
-  // auto layer0_hash = HashSumBackend::create(2 * leaf_size, leaf_size);  // in 2 leaves, out 1 leaves
-  //                                                                       // 8B ->  4B -> 2B -> 1B
-
-  // std::vector<Hash> hashes = {layer0_hash, layer0_hash, layer0_hash};
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
@@ -584,10 +571,10 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   }
 
   // define the merkle tree
-  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves  200B ->  80B
-  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf    80B  ->  20B
-  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf      20B  ->  20B
-  auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size); // in 5 leaves, out 1 leaf    20B  ->  4B output
+  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
+  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf   160B ->  40B
+  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf     40B  ->  40B
+  auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size); // in 10 leaves, out 1 leaf     40B  ->   4B
 
   int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.input_default_chunk_size();
   std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
@@ -599,15 +586,45 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
 
   // When tree is full (no padding required)
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
-  // When a whole number of hashes is missing - even number to ensure whole number of leaves
-  int nof_hashes = ((rand() % ((total_nof_input_hashes / 2) - 2)) + 1) * 2;
-  ICICLE_LOG_DEBUG << "Nof used hashes " << nof_hashes << " / " << total_nof_input_hashes;
+
+  // 20 hashes (Total hashes in layer 0) - last hash not full
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
+
+  const unsigned nof_leaves_in_hash = layer0_hash.input_default_chunk_size()  / leaf_size;
+
+  // 19 hashes (Total hashes in layer 0 - 1) - full
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
+  // 19 hashes (Total hashes in layer 0 - 1) - last hash not full
   test_merkle_tree(
-    hashes, config, output_store_min_layer, nof_hashes * layer0_hash.input_default_chunk_size() / leaf_size, leaves);
+    hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash - 1, leaves);
+
+  // 16 hashes (Batch size) - full
+  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves); // TODO import value from Miki's code
+  // 16 hashes (Batch size) - last hash not full
+  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
+  // 17 hashes (Batch size + 1) - full
+  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash, leaves);
+  // 17 hashes (Batch size + 1) - last hash not full
+  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash - 1, leaves);
+  
+  // 1 hash - full
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_in_hash, leaves);
   // One leaf in tree
   test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
 
-  // Lastly check case where last used hash isn't fully occupied
+  // When a whole number of hashes is missing
+  int nof_hashes = ((rand() % (total_nof_input_hashes - 2)) + 1);
+  ICICLE_LOG_DEBUG << "Number of used hashes: " << nof_hashes << " / " << total_nof_input_hashes;
+  test_merkle_tree(
+    hashes, config, output_store_min_layer, nof_hashes * nof_leaves_in_hash, leaves);
+
+  // Random amount of leaves
+  int nof_partial_leaves = ((rand() % nof_leaves) + 1);
+  ICICLE_LOG_DEBUG << "Random amount of leaves: " << nof_partial_leaves << " / " << nof_leaves;
+  test_merkle_tree(
+    hashes, config, output_store_min_layer, nof_partial_leaves, leaves);
+
+  // Last used hash isn't fully occupied
   auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
   int byte_size;
   do
@@ -619,7 +636,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
                     << float(byte_size) / leaf_size << " / " << nof_leaves << " leaves)";
   
   auto prover_tree = MerkleTree::create(
-    hashes, leaf_size, output_store_min_layer); // TODO add config so padding can be checked at creation
+    hashes, leaf_size, output_store_min_layer);
   auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
 
   // build tree
@@ -670,6 +687,89 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
   ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
                                     << " is valid (And should be invalid).";
+}
+
+TEST_F(HashApiTest, MerkleTreeLastValuePadding)
+{
+  const int leaf_size = sizeof(uint32_t);
+  const int nof_leaves = 100;
+  uint32_t leaves[nof_leaves];
+  // randomize(leaves, nof_leaves);
+  for (int i = 0; i < nof_leaves; i++) {
+    leaves[i] = i + 1;
+  }
+
+  // define the merkle tree
+  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
+  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf   160B ->  40B
+  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf     40B  ->  40B
+  auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size); // in 10 leaves, out 1 leaf     40B  ->   4B
+
+  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.input_default_chunk_size();
+  std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+  int output_store_min_layer = 0;
+
+  auto config = default_merkle_tree_config();
+  // Test zero padding
+  config.padding_policy = PaddingPolicy::LastValue;
+
+  // When tree is full (no padding required)
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
+
+  // 20 hashes (Total hashes in layer 0) - last hash not full
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
+
+  const unsigned nof_leaves_in_hash = layer0_hash.input_default_chunk_size()  / leaf_size;
+
+  // 19 hashes (Total hashes in layer 0 - 1) - full
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
+  // 19 hashes (Total hashes in layer 0 - 1) - last hash not full
+  test_merkle_tree(
+    hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash - 1, leaves);
+
+  // 16 hashes (Batch size) - full
+  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves); // TODO import value from Miki's code
+  // 16 hashes (Batch size) - last hash not full
+  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
+  // 17 hashes (Batch size + 1) - full
+  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash, leaves);
+  // 17 hashes (Batch size + 1) - last hash not full
+  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash - 1, leaves);
+  
+  // 1 hash - full
+  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_in_hash, leaves);
+  // One leaf in tree
+  test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
+
+  // When a whole number of hashes is missing
+  int nof_hashes = ((rand() % (total_nof_input_hashes - 2)) + 1);
+  ICICLE_LOG_DEBUG << "Number of used hashes: " << nof_hashes << " / " << total_nof_input_hashes;
+  test_merkle_tree(
+    hashes, config, output_store_min_layer, nof_hashes * nof_leaves_in_hash, leaves);
+
+  // Random amount of leaves
+  int nof_partial_leaves = ((rand() % nof_leaves) + 1);
+  ICICLE_LOG_DEBUG << "Random amount of leaves: " << nof_partial_leaves << " / " << nof_leaves;
+  test_merkle_tree(
+    hashes, config, output_store_min_layer, nof_partial_leaves, leaves);
+
+  // Last used hash isn't fully occupied - check that build fails
+  auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
+  int byte_size;
+  do
+  {
+    byte_size = rand() % (nof_leaves * leaf_size);
+  } while (byte_size % leaf_size == 0);
+  byte_size = 327;
+  ICICLE_LOG_DEBUG  << "Size of input in bytes: " << byte_size << "\t("
+                    << float(byte_size) / leaf_size << " / " << nof_leaves << " leaves)";
+  
+  auto prover_tree = MerkleTree::create(
+    hashes, leaf_size, output_store_min_layer);
+  auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+
+  // build should fail when byte size isn't a whole amount of leaves and padding policy is LastValue
+  ASSERT_EQ(prover_tree.build(byte_leaves, byte_size, config), eIcicleError::INVALID_ARGUMENT);
 }
 
 TEST_F(HashApiTest, MerkleTreeMixMediumSize)

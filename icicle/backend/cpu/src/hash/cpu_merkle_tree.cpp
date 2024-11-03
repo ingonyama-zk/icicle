@@ -441,7 +441,7 @@ namespace icicle {
       if (config.padding_policy == PaddingPolicy::LastValue) {
         if (leaves_size % m_leaf_element_size != 0) {
           ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") must divide leaf_element_size ("
-                           << m_leaf_element_size << ")when Padding policy is LastValue\n";
+                           << m_leaf_element_size << ") when Padding policy is LastValue\n";
           return false;
         }
         // pad with the last element
