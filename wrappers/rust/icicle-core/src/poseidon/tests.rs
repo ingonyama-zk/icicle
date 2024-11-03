@@ -88,7 +88,7 @@ pub fn check_poseidon_hash_multi_device<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
 {
-    let t = 9;
+    let t = 9; // t=9 is for Poseidon9 hash (t is the paper's terminology)
     let inputs: Vec<F> = F::Config::generate_random(t);
     let mut outputs_main_0 = vec![F::zero(); 1];
     let mut outputs_main_1 = vec![F::zero(); 1];
