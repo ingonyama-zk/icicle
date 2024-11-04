@@ -13,6 +13,8 @@ pub struct VecOpsConfig {
     pub is_b_on_device: bool,
     pub is_result_on_device: bool,
     pub is_async: bool,
+    pub batch_size: i128,
+    pub columns_batch: bool,
     pub ext: ConfigExtension,
 }
 
@@ -24,6 +26,8 @@ impl VecOpsConfig {
             is_b_on_device: false,
             is_result_on_device: false,
             is_async: false,
+            batch_size: 1,
+            columns_batch: false,
             ext: ConfigExtension::new(),
         }
     }
@@ -57,6 +61,46 @@ pub trait VecOps<F> {
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
+
+    // fn div(
+    //     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    //     cfg: &VecOpsConfig,
+    // ) -> Result<(), eIcicleError>;
+
+    // fn sum(
+    //     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    //     cfg: &VecOpsConfig,
+    // ) -> Result<(), eIcicleError>;
+
+    // fn product(
+    //     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    //     cfg: &VecOpsConfig,
+    // ) -> Result<(), eIcicleError>;
+
+    // fn add_scalar(
+    //     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    //     cfg: &VecOpsConfig,
+    // ) -> Result<(), eIcicleError>;
+
+    // fn sub_scalar(
+    //     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    //     cfg: &VecOpsConfig,
+    // ) -> Result<(), eIcicleError>;
+
+    // fn mul_scalar(
+    //     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    //     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    //     cfg: &VecOpsConfig,
+    // ) -> Result<(), eIcicleError>;
 
     fn transpose(
         input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -166,6 +210,88 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
+// pub fn div_scalars<F>(
+//     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+//     cfg: &VecOpsConfig,
+// ) -> Result<(), eIcicleError>
+// where
+//     F: FieldImpl,
+//     <F as FieldImpl>::Config: VecOps<F>,
+// {
+//     // let cfg = check_vec_ops_args(a, b, result, cfg);
+//     <<F as FieldImpl>::Config as VecOps<F>>::div(a, b, result, &cfg)
+// }
+
+// pub fn sum_scalars<F>(
+//     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+//     cfg: &VecOpsConfig,
+// ) -> Result<(), eIcicleError>
+// where
+//     F: FieldImpl,
+//     <F as FieldImpl>::Config: VecOps<F>,
+// {
+//     // let cfg = check_vec_ops_args(a, b, result, cfg);
+//     <<F as FieldImpl>::Config as VecOps<F>>::sum(a, result, &cfg)
+// }
+
+// pub fn product_scalars<F>(
+//     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+//     cfg: &VecOpsConfig,
+// ) -> Result<(), eIcicleError>
+// where
+//     F: FieldImpl,
+//     <F as FieldImpl>::Config: VecOps<F>,
+// {
+//     // let cfg = check_vec_ops_args(a, b, result, cfg);
+//     <<F as FieldImpl>::Config as VecOps<F>>::product(a, result, &cfg)
+// }
+
+// pub fn add_scalar<F>(
+//     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+//     cfg: &VecOpsConfig,
+// ) -> Result<(), eIcicleError>
+// where
+//     F: FieldImpl,
+//     <F as FieldImpl>::Config: VecOps<F>,
+// {
+//     // let cfg = check_vec_ops_args(a, b, result, cfg);
+//     <<F as FieldImpl>::Config as VecOps<F>>::add_scalar(a, b, result, &cfg)
+// }
+
+// pub fn sub_scalar<F>(
+//     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+//     cfg: &VecOpsConfig,
+// ) -> Result<(), eIcicleError>
+// where
+//     F: FieldImpl,
+//     <F as FieldImpl>::Config: VecOps<F>,
+// {
+//     // let cfg = check_vec_ops_args(a, b, result, cfg);
+//     <<F as FieldImpl>::Config as VecOps<F>>::sub_scalar(a, b, result, &cfg)
+// }
+
+// pub fn mul_scalar<F>(
+//     a: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     b: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+//     cfg: &VecOpsConfig,
+// ) -> Result<(), eIcicleError>
+// where
+//     F: FieldImpl,
+//     <F as FieldImpl>::Config: VecOps<F>,
+// {
+//     // let cfg = check_vec_ops_args(a, b, result, cfg);
+//     <<F as FieldImpl>::Config as VecOps<F>>::mul_scalar(a, b, result, &cfg)
+// }
+
 pub fn transpose_matrix<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     nof_rows: u32,
@@ -254,6 +380,59 @@ macro_rules! impl_vec_ops_field {
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
                 ) -> eIcicleError;
+
+                // #[link_name = concat!($field_prefix, "_vector_div")]
+                // pub(crate) fn vector_div_ffi(
+                //     a: *const $field,
+                //     b: *const $field,
+                //     size: u32,
+                //     cfg: *const VecOpsConfig,
+                //     result: *mut $field,
+                // ) -> eIcicleError;
+
+                // #[link_name = concat!($field_prefix, "_vector_sum")]
+                // pub(crate) fn vector_sum_ffi(
+                //     a: *const $field,
+                //     size: u32,
+                //     cfg: *const VecOpsConfig,
+                //     result: *mut $field,
+                // ) -> eIcicleError;
+
+
+                // #[link_name = concat!($field_prefix, "_vector_product")]
+                // pub(crate) fn vector_product_ffi(
+                //     a: *const $field,
+                //     size: u32,
+                //     cfg: *const VecOpsConfig,
+                //     result: *mut $field,
+                // ) -> eIcicleError;
+
+                // #[link_name = concat!($field_prefix, "_vector_add_scalar")]
+                // pub(crate) fn vector_add_scalar_ffi(
+                //     a: *const $field,
+                //     b: *const $field,
+                //     size: u32,
+                //     cfg: *const VecOpsConfig,
+                //     result: *mut $field,
+                // ) -> eIcicleError;
+
+                // #[link_name = concat!($field_prefix, "_vector_sub_scalar")]
+                // pub(crate) fn vector_sub_scalar_ffi(
+                //     a: *const $field,
+                //     b: *const $field,
+                //     size: u32,
+                //     cfg: *const VecOpsConfig,
+                //     result: *mut $field,
+                // ) -> eIcicleError;
+
+                // #[link_name = concat!($field_prefix, "_vector_mul_scalar")]
+                // pub(crate) fn vector_mul_scalar_ffi(
+                //     a: *const $field,
+                //     b: *const $field,
+                //     size: u32,
+                //     cfg: *const VecOpsConfig,
+                //     result: *mut $field,
+                // ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_matrix_transpose")]
                 pub(crate) fn matrix_transpose_ffi(
@@ -344,6 +523,110 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+            
+            // fn div(
+            //     a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            //     cfg: &VecOpsConfig,
+            // ) -> Result<(), eIcicleError> {
+            //     unsafe {
+            //         $field_prefix_ident::vector_div_ffi(
+            //             a.as_ptr(),
+            //             b.as_ptr(),
+            //             a.len() as u32,
+            //             cfg as *const VecOpsConfig,
+            //             result.as_mut_ptr(),
+            //         )
+            //         .wrap()
+            //     }
+            // }
+
+            // fn sum(
+            //     a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            //     cfg: &VecOpsConfig,
+            // ) -> Result<(), eIcicleError> {
+            //     unsafe {
+            //         $field_prefix_ident::vector_sum_ffi(
+            //             a.as_ptr(),
+            //             a.len() as u32,
+            //             cfg as *const VecOpsConfig,
+            //             result.as_mut_ptr(),
+            //         )
+            //         .wrap()
+            //     }
+            // }
+
+            // fn product(
+            //     a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            //     cfg: &VecOpsConfig,
+            // ) -> Result<(), eIcicleError> {
+            //     unsafe {
+            //         $field_prefix_ident::vector_sum_ffi(
+            //             a.as_ptr(),
+            //             a.len() as u32,
+            //             cfg as *const VecOpsConfig,
+            //             result.as_mut_ptr(),
+            //         )
+            //         .wrap()
+            //     }
+            // }
+
+            // fn add_scalar(
+            //     a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            //     cfg: &VecOpsConfig,
+            // ) -> Result<(), eIcicleError> {
+            //     unsafe {
+            //         $field_prefix_ident::vector_add_scalar_ffi(
+            //             a.as_ptr(),
+            //             b.as_ptr(),
+            //             b.len() as u32,
+            //             cfg as *const VecOpsConfig,
+            //             result.as_mut_ptr(),
+            //         )
+            //         .wrap()
+            //     }
+            // }
+
+            // fn sub_scalar(
+            //     a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            //     cfg: &VecOpsConfig,
+            // ) -> Result<(), eIcicleError> {
+            //     unsafe {
+            //         $field_prefix_ident::vector_sub_scalar_ffi(
+            //             a.as_ptr(),
+            //             b.as_ptr(),
+            //             b.len() as u32,
+            //             cfg as *const VecOpsConfig,
+            //             result.as_mut_ptr(),
+            //         )
+            //         .wrap()
+            //     }
+            // }
+
+            // fn mul_scalar(
+            //     a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+            //     result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+            //     cfg: &VecOpsConfig,
+            // ) -> Result<(), eIcicleError> {
+            //     unsafe {
+            //         $field_prefix_ident::vector_mul_scalar_ffi(
+            //             a.as_ptr(),
+            //             b.as_ptr(),
+            //             b.len() as u32,
+            //             cfg as *const VecOpsConfig,
+            //             result.as_mut_ptr(),
+            //         )
+            //         .wrap()
+            //     }
+            // }
 
             fn transpose(
                 input: &(impl HostOrDeviceSlice<$field> + ?Sized),

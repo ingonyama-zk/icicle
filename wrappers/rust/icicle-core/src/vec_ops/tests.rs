@@ -56,6 +56,8 @@ where
     let mut result_main = vec![F::zero(); test_size];
     let mut result_ref = vec![F::zero(); test_size];
 
+    println!("a_main: {:?}", a_main[0]);
+
     let a_main = HostSlice::from_slice(&a_main);
     let b = HostSlice::from_slice(&b);
     let result_main = HostSlice::from_mut_slice(&mut result_main);
