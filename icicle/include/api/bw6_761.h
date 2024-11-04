@@ -18,24 +18,22 @@
 #include "poseidon/poseidon.cuh"
 
 extern "C" cudaError_t bw6_761_g2_precompute_msm_bases_cuda(
-  bw6_761::g2_affine_t* bases, int msm_size, msm::MSMConfig& config, bw6_761::g2_affine_t* output_bases);
+  bw6_761::g2_affine_t* bases,
+  int msm_size,
+  msm::MSMConfig& config,
+  bw6_761::g2_affine_t* output_bases);
 
 extern "C" cudaError_t bw6_761_g2_msm_cuda(
-  const bw6_761::scalar_t* scalars,
-  const bw6_761::g2_affine_t* points,
-  int msm_size,
-  msm::MSMConfig& config,
-  bw6_761::g2_projective_t* out);
+  const bw6_761::scalar_t* scalars, const bw6_761::g2_affine_t* points, int msm_size, msm::MSMConfig& config, bw6_761::g2_projective_t* out);
 
 extern "C" cudaError_t bw6_761_precompute_msm_bases_cuda(
-  bw6_761::affine_t* bases, int msm_size, msm::MSMConfig& config, bw6_761::affine_t* output_bases);
-
-extern "C" cudaError_t bw6_761_msm_cuda(
-  const bw6_761::scalar_t* scalars,
-  const bw6_761::affine_t* points,
+  bw6_761::affine_t* bases,
   int msm_size,
   msm::MSMConfig& config,
-  bw6_761::projective_t* out);
+  bw6_761::affine_t* output_bases);
+
+extern "C" cudaError_t bw6_761_msm_cuda(
+  const bw6_761::scalar_t* scalars, const bw6_761::affine_t* points, int msm_size, msm::MSMConfig& config, bw6_761::projective_t* out);
 
 extern "C" bool bw6_761_g2_eq(bw6_761::g2_projective_t* point1, bw6_761::g2_projective_t* point2);
 
@@ -52,11 +50,7 @@ extern "C" cudaError_t bw6_761_g2_projective_convert_montgomery(
   bw6_761::g2_projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bw6_761_ecntt_cuda(
-  const bw6_761::projective_t* input,
-  int size,
-  ntt::NTTDir dir,
-  ntt::NTTConfig<bw6_761::scalar_t>& config,
-  bw6_761::projective_t* output);
+  const bw6_761::projective_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<bw6_761::scalar_t>& config, bw6_761::projective_t* output);
 
 extern "C" bool bw6_761_eq(bw6_761::projective_t* point1, bw6_761::projective_t* point2);
 
@@ -76,18 +70,18 @@ extern "C" cudaError_t bw6_761_build_merkle_tree(
   const bw6_761::scalar_t* leaves,
   bw6_761::scalar_t* digests,
   unsigned int height,
-  unsigned int input_block_len,
+  unsigned int input_block_len, 
   const hash::Hasher<bw6_761::scalar_t, bw6_761::scalar_t>* compression,
   const hash::Hasher<bw6_761::scalar_t, bw6_761::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
-extern "C" cudaError_t bw6_761_mmcs_commit_cuda(
-  const matrix::Matrix<bw6_761::scalar_t>* leaves,
-  unsigned int number_of_inputs,
-  bw6_761::scalar_t* digests,
-  const hash::Hasher<bw6_761::scalar_t, bw6_761::scalar_t>* hasher,
-  const hash::Hasher<bw6_761::scalar_t, bw6_761::scalar_t>* compression,
-  const merkle_tree::TreeBuilderConfig& tree_config);
+  extern "C" cudaError_t bw6_761_mmcs_commit_cuda(
+    const matrix::Matrix<bw6_761::scalar_t>* leaves,
+    unsigned int number_of_inputs,
+    bw6_761::scalar_t* digests,
+    const hash::Hasher<bw6_761::scalar_t, bw6_761::scalar_t>* hasher,
+    const hash::Hasher<bw6_761::scalar_t, bw6_761::scalar_t>* compression,
+    const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bw6_761_poseidon_create_cuda(
   poseidon::Poseidon<bw6_761::scalar_t>** poseidon,
@@ -103,7 +97,9 @@ extern "C" cudaError_t bw6_761_poseidon_create_cuda(
   device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bw6_761_poseidon_load_cuda(
-  poseidon::Poseidon<bw6_761::scalar_t>** poseidon, unsigned int arity, device_context::DeviceContext& ctx);
+  poseidon::Poseidon<bw6_761::scalar_t>** poseidon,
+  unsigned int arity,
+  device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bw6_761_poseidon_hash_many_cuda(
   const poseidon::Poseidon<bw6_761::scalar_t>* poseidon,
@@ -114,7 +110,8 @@ extern "C" cudaError_t bw6_761_poseidon_hash_many_cuda(
   unsigned int output_len,
   hash::HashConfig& cfg);
 
-extern "C" cudaError_t bw6_761_poseidon_delete_cuda(poseidon::Poseidon<bw6_761::scalar_t>* poseidon);
+extern "C" cudaError_t
+  bw6_761_poseidon_delete_cuda(poseidon::Poseidon<bw6_761::scalar_t>* poseidon);
 
 extern "C" cudaError_t bw6_761_mul_cuda(
   bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bw6_761::scalar_t* result);
@@ -122,8 +119,8 @@ extern "C" cudaError_t bw6_761_mul_cuda(
 extern "C" cudaError_t bw6_761_add_cuda(
   bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bw6_761::scalar_t* result);
 
-extern "C" cudaError_t
-bw6_761_accumulate_cuda(bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+extern "C" cudaError_t bw6_761_accumulate_cuda(
+  bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
 extern "C" cudaError_t bw6_761_sub_cuda(
   bw6_761::scalar_t* vec_a, bw6_761::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bw6_761::scalar_t* result);
@@ -140,6 +137,7 @@ extern "C" cudaError_t bw6_761_transpose_matrix_cuda(
 extern "C" cudaError_t bw6_761_bit_reverse_cuda(
   const bw6_761::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, bw6_761::scalar_t* output);
 
+
 extern "C" void bw6_761_generate_scalars(bw6_761::scalar_t* scalars, int size);
 
 extern "C" cudaError_t bw6_761_scalar_convert_montgomery(
@@ -149,11 +147,7 @@ extern "C" cudaError_t bw6_761_initialize_domain(
   bw6_761::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
 
 extern "C" cudaError_t bw6_761_ntt_cuda(
-  const bw6_761::scalar_t* input,
-  int size,
-  ntt::NTTDir dir,
-  ntt::NTTConfig<bw6_761::scalar_t>& config,
-  bw6_761::scalar_t* output);
+  const bw6_761::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<bw6_761::scalar_t>& config, bw6_761::scalar_t* output);
 
 extern "C" cudaError_t bw6_761_release_domain(device_context::DeviceContext& ctx);
 

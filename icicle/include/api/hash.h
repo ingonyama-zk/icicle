@@ -12,10 +12,10 @@
 /* KECCAK */
 
 extern "C" cudaError_t
-keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, keccak::HashConfig& config);
+  keccak256_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, keccak::HashConfig& config);
 
 extern "C" cudaError_t
-keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, keccak::HashConfig& config);
+  keccak512_cuda(uint8_t* input, int input_block_size, int number_of_blocks, uint8_t* output, keccak::HashConfig& config);
 
 extern "C" cudaError_t build_keccak256_merkle_tree_cuda(
   const uint8_t* leaves,
@@ -33,13 +33,8 @@ extern "C" cudaError_t build_keccak512_merkle_tree_cuda(
 
 /* BLAKE2S */
 
-extern "C" cudaError_t blake2s_cuda(
-  uint8_t* input,
-  int input_block_size,
-  int number_of_blocks,
-  int output_block_size,
-  uint8_t* output,
-  blake2s::HashConfig& config);
+extern "C" cudaError_t
+  blake2s_cuda(uint8_t* input, int input_block_size, int number_of_blocks, int output_block_size, uint8_t* output, blake2s::HashConfig& config);
 
 extern "C" cudaError_t build_blake2s_merkle_tree_cuda(
   const uint8_t* leaves,
