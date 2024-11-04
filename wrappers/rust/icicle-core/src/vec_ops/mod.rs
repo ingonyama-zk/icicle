@@ -357,7 +357,6 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
-
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -424,7 +423,6 @@ macro_rules! impl_vec_ops_field {
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
                 ) -> eIcicleError;
-
 
                 #[link_name = concat!($field_prefix, "_vector_product")]
                 pub(crate) fn vector_product_ffi(
@@ -561,7 +559,7 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
-            
+
             fn div(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),

@@ -2,8 +2,9 @@
 use crate::test_utilities;
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, mul_scalars, slice, div_scalars, sum_scalars, scalar_add, scalar_sub, scalar_mul, product_scalars, sub_scalars, transpose_matrix,
-    FieldImpl, VecOps, VecOpsConfig,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mul_scalars, product_scalars,
+    scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl, VecOps,
+    VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
