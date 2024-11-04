@@ -33,8 +33,8 @@ extern "C" cudaError_t build_keccak512_merkle_tree_cuda(
 
 /* BLAKE2S */
 
-extern "C" cudaError_t
-  blake2s_cuda(uint8_t* input, int input_block_size, int number_of_blocks, int output_block_size, uint8_t* output, blake2s::HashConfig& config);
+extern "C" cudaError_t blake2s_cuda(
+  BYTE* input, BYTE* output, WORD number_of_blocks, WORD input_block_size, WORD output_block_size, blake2s::HashConfig& config)
 
 extern "C" cudaError_t build_blake2s_merkle_tree_cuda(
   const uint8_t* leaves,
