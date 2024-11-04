@@ -72,7 +72,7 @@ namespace blake2s {
     return a;
   }
 
-  __device__ uint32_t cuda_blake2s_ROTR32(uint32_t a, uint8_t b) { return (a >> b) | (a << (32 - b)); }
+  __inline__ __device__ uint32_t cuda_blake2s_ROTR32(uint32_t a, uint8_t b) { return (a >> b) | (a << (32 - b)); }
 
   __device__ void
   cuda_blake2s_G(cuda_blake2s_ctx_t* ctx, uint32_t m1, uint32_t m2, int32_t a, int32_t b, int32_t c, int32_t d)
@@ -221,8 +221,8 @@ namespace blake2s {
   }
 
   extern "C" {
-  void
-  mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD output_len, WORD n_batch)
+  cudaError_t
+  cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD output_len, WORD n_batch)
   {
     BYTE* cuda_indata;
     BYTE* cuda_outdata;
@@ -231,9 +231,6 @@ namespace blake2s {
     cudaMalloc(&cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch);
     assert(keylen <= 32);
 
-    // CUDA_BLAKE2S_CTX ctx;
-    // cpu_blake2s_init(&ctx, key, keylen, n_outbit);
-    // cudaMemcpyToSymbol(c_CTX, &ctx, sizeof(CUDA_BLAKE2S_CTX), 0, cudaMemcpyHostToDevice);
 
     cudaMemcpy(cuda_indata, in, inlen * n_batch, cudaMemcpyHostToDevice);
 
@@ -242,10 +239,12 @@ namespace blake2s {
     kernel_blake2s_hash<<<block, thread>>>(cuda_indata, inlen, cuda_outdata, n_batch, BLAKE2S_BLOCK_SIZE);
     cudaMemcpy(out, cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch, cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
-    cudaError_t error = cudaGetLastError();
-    if (error != cudaSuccess) { printf("Error cuda blake2s hash: %s \n", cudaGetErrorString(error)); }
+    // cudaError_t error = cudaGetLastError();
+    // if (error != cudaSuccess) { printf("Error cuda blake2s hash: %s \n", cudaGetErrorString(error)); }
     cudaFree(cuda_indata);
     cudaFree(cuda_outdata);
+    CHK_IF_RETURN(cudaPeekAtLastError());
+    return CHK_LAST();
   }
   }
 

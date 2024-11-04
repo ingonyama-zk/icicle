@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 
   // Perform the hashing
   START_TIMER(blake_timer)
-  // mcm_cuda_blake2s_hash_batch(key, keylen, batched_input, max_len, output, outlen, n_batch);
+  // cuda_blake2s_hash_batch(key, keylen, batched_input, max_len, output, outlen, n_batch);
   blake2s_cuda(batched_input, output, n_batch, max_len, outlen, config);
   END_TIMER(blake_timer, "Blake Timer")
 

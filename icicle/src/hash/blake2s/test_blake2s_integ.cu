@@ -14,9 +14,9 @@ using namespace blake2s;
 #define END_TIMER(timer, msg)                                                                                          \
   printf("%s: %.0f us\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 
-extern "C" {
-void mcm_cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD n_outbit, WORD n_batch);
-}
+// extern "C" {
+// void cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD n_outbit, WORD n_batch);
+// }
 
 void print_hash(BYTE* hash, WORD len)
 {
