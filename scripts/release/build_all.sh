@@ -32,25 +32,25 @@ docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubuntu22 cuda122 &
+            icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_3_1_0 ubuntu22 cuda122 &
 
 # ubuntu 20
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubuntu20-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubuntu20 cuda122 &
+            icicle-release-ubuntu20-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_3_1_0 ubuntu20 cuda122 &
 
 # ubi 8 (rhel compatible)
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubi8 cuda122 &
+            icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_3_1_0 ubi8 cuda122 &
 
 # ubi 9 (rhel compatible)
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle30 ubi9 cuda122 &
+            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_3_1_0 ubi9 cuda122 &
