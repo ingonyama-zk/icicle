@@ -886,43 +886,48 @@ template <typename T>
 eIcicleError cpu_poly_divide(
   const Device& device,
   const T* numerator,
-  int64_t numerator_deg,
   uint64_t numerator_size,
-  const T* denumerator,
-  int64_t denumerator_deg,
-  uint64_t denumerator_size,
-  uint64_t q_size,
-  uint64_t r_size,
+  const T* denominator,
+  uint64_t denominator_size,
   const VecOpsConfig& config,
   T* q_out /*OUT*/,
-  T* r_out /*OUT*/)
+  uint64_t q_size,
+  T* r_out /*OUT*/,
+  uint64_t r_size)
 {
-  ICICLE_ASSERT(r_size >= numerator_deg)
-    << "polynomial division expects r(x) size to be similar to numerator size and higher than numerator degree(x)";
-  ICICLE_ASSERT(q_size >= (numerator_deg - denumerator_deg + 1))
-    << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denumerator)+1";
-
-  memcpy(r_out, numerator, sizeof(T) * numerator_size * config.batch_size);
+  if (config.batch_size != 1 && config.columns_batch) {
+    ICICLE_LOG_ERROR << "polynomial division is not implemented for column batch. Planned for v3.2";
+    return eIcicleError::API_NOT_IMPLEMENTED;
+  }
 
   uint32_t stride = config.columns_batch ? config.batch_size : 1;
-  auto deg_r = std::make_unique<int64_t[]>(config.batch_size);
   for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; ++idx_in_batch) {
-    const T* curr_denumerator = config.columns_batch
-                                  ? denumerator + idx_in_batch
-                                  : denumerator + idx_in_batch * (denumerator_deg + 1); // Pointer to the current vector
-    T* curr_q_out =
-      config.columns_batch ? q_out + idx_in_batch : q_out + idx_in_batch * q_size; // Pointer to the current vector
-    T* curr_r_out =
-      config.columns_batch ? r_out + idx_in_batch : r_out + idx_in_batch * r_size; // Pointer to the current vector
+    const T* curr_numerator =
+      config.columns_batch ? numerator + idx_in_batch : numerator + idx_in_batch * numerator_size;
+    const T* curr_denominator =
+      config.columns_batch ? denominator + idx_in_batch : denominator + idx_in_batch * denominator_size;
+    T* curr_q_out = config.columns_batch ? q_out + idx_in_batch : q_out + idx_in_batch * q_size;
+    T* curr_r_out = config.columns_batch ? r_out + idx_in_batch : r_out + idx_in_batch * r_size;
+
+    int64_t numerator_deg, denominator_deg;
+    cpu_highest_non_zero_idx(device, curr_numerator, numerator_size, default_vec_ops_config(), &numerator_deg);
+    cpu_highest_non_zero_idx(device, curr_denominator, denominator_size, default_vec_ops_config(), &denominator_deg);
+    ICICLE_ASSERT(r_size >= numerator_deg + 1)
+      << "polynomial division expects r(x) size to be similar to numerator size and higher than numerator degree(x)";
+    ICICLE_ASSERT(q_size >= (numerator_deg - denominator_deg + 1))
+      << "polynomial division expects q(x) size to be at least deg(numerator)-deg(denominator)+1";
+
+    memset(curr_r_out, 0, sizeof(T) * r_size);
+    memcpy(curr_r_out, curr_numerator, sizeof(T) * (numerator_deg + 1));
+
     // invert largest coeff of b
-    const T& lc_b_inv = T::inverse(curr_denumerator[denumerator_deg * stride]);
-    deg_r[idx_in_batch] = numerator_deg;
-    while (deg_r[idx_in_batch] >= denumerator_deg) {
+    const T& lc_b_inv = T::inverse(curr_denominator[denominator_deg * stride]);
+    int64_t deg_r = numerator_deg;
+    while (deg_r >= denominator_deg) {
       // each iteration is removing the largest monomial in r until deg(r)<deg(b)
-      school_book_division_step_cpu(
-        curr_r_out, curr_q_out, curr_denumerator, deg_r[idx_in_batch], denumerator_deg, lc_b_inv, stride);
+      school_book_division_step_cpu(curr_r_out, curr_q_out, curr_denominator, deg_r, denominator_deg, lc_b_inv, stride);
       // compute degree of r
-      cpu_highest_non_zero_idx(device, r_out, r_size, config, deg_r.get());
+      cpu_highest_non_zero_idx(device, r_out, deg_r, default_vec_ops_config(), &deg_r);
     }
   }
   return eIcicleError::SUCCESS;

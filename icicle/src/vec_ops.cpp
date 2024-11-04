@@ -419,63 +419,33 @@ namespace icicle {
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, poly_division)(
     const scalar_t* numerator,
-    int64_t numerator_deg,
     uint64_t numerator_size,
-    const scalar_t* denumerator,
-    int64_t denumerator_deg,
-    uint64_t denumerator_size,
-    uint64_t q_size,
-    uint64_t r_size,
-    const VecOpsConfig& config,
-    scalar_t* q_out /*OUT*/,
-    scalar_t* r_out /*OUT*/)
-  {
-    return ScalarPolyDivDispatcher::execute(
-      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, config,
-      q_out, r_out);
-  }
-
-  template <>
-  eIcicleError polynomial_division(
-    const scalar_t* numerator,
-    int64_t numerator_deg,
-    uint64_t numerator_size,
-    const scalar_t* denumerator,
-    int64_t denumerator_deg,
-    uint64_t denumerator_size,
-    uint64_t q_size,
-    uint64_t r_size,
-    const VecOpsConfig& config,
-    scalar_t* q_out /*OUT*/,
-    scalar_t* r_out /*OUT*/)
-  {
-    return CONCAT_EXPAND(FIELD, poly_division)(
-      numerator, numerator_deg, numerator_size, denumerator, denumerator_deg, denumerator_size, q_size, r_size, config,
-      q_out, r_out);
-  }
-
-  // Deprecated API
-  template <>
-  eIcicleError polynomial_division(
-    const scalar_t* numerator,
-    int64_t numerator_deg,
-    const scalar_t* denumerator,
-    int64_t denumerator_deg,
+    const scalar_t* denominator,
+    int64_t denominator_size,
     const VecOpsConfig& config,
     scalar_t* q_out /*OUT*/,
     uint64_t q_size,
     scalar_t* r_out /*OUT*/,
     uint64_t r_size)
   {
-    ICICLE_LOG_WARNING
-      << "polynomial_division api is deprecated and replace with new api. Use new polynomial_division api instead";
-    if (config.batch_size != 1) {
-      ICICLE_LOG_ERROR << "deprecated polynomial_division API does not support batch";
-      return eIcicleError::INVALID_ARGUMENT;
-    }
-    return polynomial_division(
-      numerator, numerator_deg, numerator_deg + 1, denumerator, denumerator_deg, denumerator_deg + 1, q_size, r_size,
-      config, q_out, r_out);
+    return ScalarPolyDivDispatcher::execute(
+      numerator, numerator_size, denominator, denominator_size, config, q_out, q_size, r_out, r_size);
+  }
+
+  template <>
+  eIcicleError polynomial_division(
+    const scalar_t* numerator,
+    uint64_t numerator_size,
+    const scalar_t* denominator,
+    uint64_t denominator_size,
+    const VecOpsConfig& config,
+    scalar_t* q_out /*OUT*/,
+    uint64_t q_size,
+    scalar_t* r_out /*OUT*/,
+    uint64_t r_size)
+  {
+    return CONCAT_EXPAND(FIELD, poly_division)(
+      numerator, numerator_size, denominator, denominator_size, config, q_out, q_size, r_out, r_size);
   }
 
 } // namespace icicle

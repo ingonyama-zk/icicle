@@ -73,16 +73,14 @@ namespace icicle {
   using scalarPolyDivImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* numerator,
-    int64_t numerator_deg,
     uint64_t numerator_size,
-    const scalar_t* denumerator,
-    int64_t denumerator_deg,
-    uint64_t denumerator_size,
-    uint64_t q_size,
-    uint64_t r_size,
+    const scalar_t* denominator,
+    uint64_t denominator_size,
     const VecOpsConfig& config,
     scalar_t* q_out /*OUT*/,
-    scalar_t* r_out /*OUT*/)>;
+    uint64_t q_size,
+    scalar_t* r_out /*OUT*/,
+    uint64_t r_size)>;
 
   void register_vector_add(const std::string& deviceType, vectorVectorOpImpl impl);
 

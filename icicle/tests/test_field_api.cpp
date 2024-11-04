@@ -813,20 +813,27 @@ TYPED_TEST(FieldApiTest, polynomialEval)
 TYPED_TEST(FieldApiTest, polynomialDivision)
 {
   const uint64_t numerator_size = 1 << 4;
-  const uint64_t denumerator_size = 1 << 3;
-  const int64_t max_num_deg = numerator_size - 1;
-  const int64_t max_denum_deg = denumerator_size - 1;
-  const uint64_t q_size = max_num_deg - max_denum_deg + 1;
-  const uint64_t r_size = max_num_deg + 1;
+  const uint64_t denominator_size = 1 << 3;
+  const uint64_t q_size = numerator_size - denominator_size + 1;
+  const uint64_t r_size = numerator_size;
   const int batch_size = 10 + rand() % 10;
 
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
   // randomize matrix with rows/cols as polynomials
   auto numerator = std::make_unique<TypeParam[]>(numerator_size * batch_size);
-  auto denumerator = std::make_unique<TypeParam[]>(denumerator_size * batch_size);
+  auto denominator = std::make_unique<TypeParam[]>(denominator_size * batch_size);
   TypeParam::rand_host_many(numerator.get(), numerator_size * batch_size);
-  TypeParam::rand_host_many(denumerator.get(), denumerator_size * batch_size);
+  TypeParam::rand_host_many(denominator.get(), denominator_size * batch_size);
+
+  // Add padding to each row so that the degree is lower than the size
+  const int zero_pad_length = 5;
+  for (int i = 0; i < batch_size; ++i) {
+    for (int j = 0; j < zero_pad_length; ++j) {
+      numerator[i * numerator_size + numerator_size - zero_pad_length + j] = TypeParam::zero();
+      denominator[i * denominator_size + denominator_size - zero_pad_length + j] = TypeParam::zero();
+    }
+  }
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -837,24 +844,30 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
       auto r = std::make_unique<TypeParam[]>(r_size * batch_size);
 
       auto config = default_vec_ops_config();
-      config.batch_size = batch_size;
+      config.batch_size = columns_batch ? batch_size - zero_pad_length : batch_size; // skip the zero cols
       config.columns_batch = columns_batch;
+      // TODO v3.2 support column batch for this API
+      if (columns_batch) {
+        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
+        continue;
+      }
+
       ICICLE_CHECK(polynomial_division(
-        numerator.get(), max_num_deg, numerator_size, denumerator.get(), max_denum_deg, denumerator_size, q_size,
-        r_size, config, q.get(), r.get()));
+        numerator.get(), numerator_size, denominator.get(), denominator_size, config, q.get(), q_size, r.get(),
+        r_size));
 
       // test a(x)=q(x)b(x)+r(x) in random point
       const auto rand_x = TypeParam::rand_host();
-      auto ax = std::make_unique<TypeParam[]>(batch_size);
-      auto bx = std::make_unique<TypeParam[]>(batch_size);
-      auto qx = std::make_unique<TypeParam[]>(batch_size);
-      auto rx = std::make_unique<TypeParam[]>(batch_size);
+      auto ax = std::make_unique<TypeParam[]>(config.batch_size);
+      auto bx = std::make_unique<TypeParam[]>(config.batch_size);
+      auto qx = std::make_unique<TypeParam[]>(config.batch_size);
+      auto rx = std::make_unique<TypeParam[]>(config.batch_size);
       polynomial_eval(numerator.get(), numerator_size, &rand_x, 1, config, ax.get());
-      polynomial_eval(denumerator.get(), denumerator_size, &rand_x, 1, config, bx.get());
+      polynomial_eval(denominator.get(), denominator_size, &rand_x, 1, config, bx.get());
       polynomial_eval(q.get(), q_size, &rand_x, 1, config, qx.get());
       polynomial_eval(r.get(), r_size, &rand_x, 1, config, rx.get());
 
-      for (int i = 0; i < batch_size; ++i) {
+      for (int i = 0; i < config.batch_size; ++i) {
         // ICICLE_LOG_DEBUG << "ax=" << ax[i] << ", bx=" << bx[i] << ", qx=" << qx[i] << ", rx=" << rx[i];
         ASSERT_EQ(ax[i], qx[i] * bx[i] + rx[i]);
       }

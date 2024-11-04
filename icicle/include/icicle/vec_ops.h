@@ -397,47 +397,31 @@ namespace icicle {
    *                  - If `config.columns_batch` is `false`, coefficients for each polynomial in the batch are stored
    * contiguously.
    *                  - If `config.columns_batch` is `true`, coefficients are interleaved.
-   * @param numerator_max_deg Maximal degree of the numerator polynomials in the batch.
-   * @param numerator_size size (number of T elements) in numerator vec
+   * @param numerator_size size (number of T elements) in numerator vec of a single batch element
    * @param denominator Pointer to the array of coefficients of the denominator polynomial(s).
    *                  - Storage layout is similar to `numerator`.
-   * @param denumerator_max_deg Maximal degree of the denominator polynomials in the batch.
-   * @param denominator_size size (number of T elements) in denumerator vec
+   * @param denominator_size size (number of T elements) in denominator vec of a single batch element
    * @param config Configuration for the operation.
-   * @param q_size Size of the quotient array for one polynomial.
-   * @param r_size Size of the remainder array.
    * @param q_out Pointer to the array where the quotient polynomial(s) will be stored. This is an output parameter.
    *              - The storage layout should match that of `numerator`.
+   * @param q_size Size of the quotient array for one polynomial.
    * @param r_out Pointer to the array where the remainder polynomial(s) will be stored. This is an output parameter.
    *              - The storage layout should match that of `numerator`.
    *              - The size of `r_out` should be sufficient to hold the remainder coefficients for each polynomial.
+   * @param r_size Size of the remainder array.
    * @return eIcicleError Error code indicating success or failure.
    *
    * @note The degrees should satisfy `numerator_deg >= denominator_deg`.
    *       The sizes `q_size` and `r_size` must be at least `numerator_deg - denominator_deg + 1` and `denominator_deg`,
    * respectively. The function assumes that the input and output arrays are properly allocated.
    */
-  template <typename T>
-  eIcicleError polynomial_division(
-    const T* numerator,
-    int64_t numerator_max_deg,
-    uint64_t numerator_size,
-    const T* denumerator,
-    int64_t denumerator_max_deg,
-    uint64_t denumerator_size,
-    uint64_t q_size,
-    uint64_t r_size,
-    const VecOpsConfig& config,
-    T* q_out /*OUT*/,
-    T* r_out /*OUT*/);
 
-  // deprecated API
   template <typename T>
   eIcicleError polynomial_division(
     const T* numerator,
-    int64_t numerator_deg,
-    const T* denumerator,
-    int64_t denumerator_deg,
+    uint64_t numerator_size,
+    const T* denominator,
+    uint64_t denominator_size,
     const VecOpsConfig& config,
     T* q_out /*OUT*/,
     uint64_t q_size,
