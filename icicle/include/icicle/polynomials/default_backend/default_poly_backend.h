@@ -65,7 +65,7 @@ namespace icicle {
       config.is_async = true;
       config.stream = m_stream;
 
-      ICICLE_CHECK(icicle::slice(in_coeffs, offset, stride, size, out_size, config, out_coeffs));
+      ICICLE_CHECK(icicle::slice(in_coeffs, offset, stride, in_size, out_size, config, out_coeffs));
     }
 
     void add_sub(PolyContext& res, PolyContext a, PolyContext b, bool add1_sub0)

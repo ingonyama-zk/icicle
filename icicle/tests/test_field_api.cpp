@@ -2,9 +2,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include "dlfcn.h"
-#include <new>
 #include <random>
-#include <cstdlib> // For system
 
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
