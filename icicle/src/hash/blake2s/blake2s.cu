@@ -231,7 +231,6 @@ namespace blake2s {
     cudaMalloc(&cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch);
     assert(keylen <= 32);
 
-
     cudaMemcpy(cuda_indata, in, inlen * n_batch, cudaMemcpyHostToDevice);
 
     WORD thread = 256;
