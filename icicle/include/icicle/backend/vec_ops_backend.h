@@ -302,6 +302,16 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  void register_extension_vector_div(const std::string& deviceType, extFieldVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_DIV_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_div_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_div(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   using extFieldConvertMontgomeryImpl = std::function<eIcicleError(
     const Device& device,
     const extension_t* input,
@@ -356,7 +366,8 @@ namespace icicle {
     const extension_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig& config,
     extension_t* output)>;
 

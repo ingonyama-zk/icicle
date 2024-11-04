@@ -33,8 +33,7 @@ static inline std::string s_reference_target;
 static inline std::vector<std::string> s_registered_devices;
 bool s_is_cuda_registered; // TODO Yuval remove this
 
-template <typename T>
-class FieldApiTest : public ::testing::Test
+class FieldApiTestBase : public ::testing::Test
 {
 public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
@@ -60,7 +59,12 @@ public:
   // SetUp/TearDown are called before and after each test
   void SetUp() override {}
   void TearDown() override {}
+};
 
+template <typename T>
+class FieldApiTest : public FieldApiTestBase
+{
+public:
   void random_samples(T* arr, uint64_t count)
   {
     for (uint64_t i = 0; i < count; i++)
@@ -183,9 +187,9 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  // // div
-  FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
-  FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
+  // div
+  TypeParam::rand_host_many(in_a.get(), total_size);
+  TypeParam::rand_host_many(in_b.get(), total_size);
   // reference
   if (!s_is_cuda_registered) {
     for (int i = 0; i < total_size; i++) {
@@ -253,7 +257,7 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 
-TYPED_TEST(FieldApiTest, VectorReduceOps)
+TEST_F(FieldApiTestBase, VectorReduceOps)
 {
   int seed = time(0);
   srand(seed);
@@ -267,17 +271,17 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
-  auto in_a = std::make_unique<TypeParam[]>(total_size);
-  auto out_main = std::make_unique<TypeParam[]>(batch_size);
-  auto out_ref = std::make_unique<TypeParam[]>(batch_size);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  auto out_main = std::make_unique<scalar_t[]>(batch_size);
+  auto out_ref = std::make_unique<scalar_t[]>(batch_size);
 
   auto vector_accumulate_wrapper =
-    [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
+    [](scalar_t* a, const scalar_t* b, uint64_t size, const VecOpsConfig& config, scalar_t* /*out*/) {
       return vector_accumulate(a, b, size, config);
     };
 
   auto run =
-    [&](const std::string& dev_type, TypeParam* out, bool measure, auto vec_op_func, const char* msg, int iters) {
+    [&](const std::string& dev_type, scalar_t* out, bool measure, auto vec_op_func, const char* msg, int iters) {
       Device dev = {dev_type, 0};
       icicle_set_device(dev);
       auto config = default_vec_ops_config();
@@ -295,10 +299,10 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
     };
 
   // sum
-  FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
   // reference
   for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-    out_ref[idx_in_batch] = TypeParam::from(0);
+    out_ref[idx_in_batch] = scalar_t::from(0);
   }
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
@@ -308,16 +312,16 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sum<TypeParam>, "vector sum", ITERS);
+    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sum<scalar_t>, "vector sum", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sum<TypeParam>, "vector sum", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(TypeParam)));
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sum<scalar_t>, "vector sum", ITERS);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(scalar_t)));
 
   // product
-  FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-      out_ref[idx_in_batch] = TypeParam::from(1);
+      out_ref[idx_in_batch] = scalar_t::from(1);
     }
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
@@ -326,13 +330,13 @@ TYPED_TEST(FieldApiTest, VectorReduceOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_product<TypeParam>, "vector product", ITERS);
+    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_product<scalar_t>, "vector product", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_product<TypeParam>, "vector product", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(TypeParam)));
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_product<scalar_t>, "vector product", ITERS);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(scalar_t)));
 }
 
-TYPED_TEST(FieldApiTest, scalarVectorOps)
+TEST_F(FieldApiTestBase, scalarVectorOps)
 {
   int seed = time(0);
   srand(seed);
@@ -346,21 +350,21 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   const int total_size = N * batch_size;
-  auto scalar_a = std::make_unique<TypeParam[]>(batch_size);
-  auto in_b = std::make_unique<TypeParam[]>(total_size);
-  auto out_main = std::make_unique<TypeParam[]>(total_size);
-  auto out_ref = std::make_unique<TypeParam[]>(total_size);
+  auto scalar_a = std::make_unique<scalar_t[]>(batch_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  auto out_main = std::make_unique<scalar_t[]>(total_size);
+  auto out_ref = std::make_unique<scalar_t[]>(total_size);
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
 
   auto vector_accumulate_wrapper =
-    [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
+    [](scalar_t* a, const scalar_t* b, uint64_t size, const VecOpsConfig& config, scalar_t* /*out*/) {
       return vector_accumulate(a, b, size, config);
     };
 
   auto run =
-    [&](const std::string& dev_type, TypeParam* out, bool measure, auto vec_op_func, const char* msg, int iters) {
+    [&](const std::string& dev_type, scalar_t* out, bool measure, auto vec_op_func, const char* msg, int iters) {
       Device dev = {dev_type, 0};
       icicle_set_device(dev);
       auto config = default_vec_ops_config();
@@ -378,8 +382,8 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
     };
 
   // scalar add vec
-  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
-  FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
+  scalar_t::rand_host_many(scalar_a.get(), batch_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
 
   // reference
   if (!s_is_cuda_registered) {
@@ -390,15 +394,15 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
+    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<TypeParam>, "scalar add vec", ITERS);
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
 
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 
   // scalar sub vec
-  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
-  FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
+  scalar_t::rand_host_many(scalar_a.get(), batch_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
 
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
@@ -408,15 +412,15 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_sub_vec<TypeParam>, "scalar sub vec", ITERS);
+    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
   }
 
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<TypeParam>, "scalar sub vec", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 
   // scalar mul vec
-  FieldApiTest<TypeParam>::random_samples(scalar_a.get(), batch_size);
-  FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
+  scalar_t::rand_host_many(scalar_a.get(), batch_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
 
   if (!s_is_cuda_registered) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
@@ -426,10 +430,10 @@ TYPED_TEST(FieldApiTest, scalarVectorOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_mul_vec<TypeParam>, "scalar mul vec", ITERS);
+    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_mul_vec<TypeParam>, "scalar mul vec", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec", ITERS);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
 TYPED_TEST(FieldApiTest, matrixAPIsAsync)
@@ -519,7 +523,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
   // }
 
   // Option 3: Initialize the entire input array with random values
-  FieldApiTest<TypeParam>::random_samples(h_inout.get(), total_size);
+  TypeParam::rand_host_many(h_inout.get(), total_size);
 
   // Reference implementation
   if (!s_is_cuda_registered) {
@@ -666,6 +670,8 @@ TYPED_TEST(FieldApiTest, Slice)
   auto out_main = std::make_unique<TypeParam[]>(total_size_out);
   auto out_ref = std::make_unique<TypeParam[]>(total_size_out);
 
+  TypeParam::rand_host_many(in_a.get(), total_size_in);
+
   auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
@@ -682,25 +688,6 @@ TYPED_TEST(FieldApiTest, Slice)
     }
     END_TIMER(SLICE, oss.str().c_str(), measure);
   };
-
-  // // Option 1: Initialize each input vector in the batch with the same ascending values
-  // for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-  //   for (uint32_t i = 0; i < size_in; i++) {
-  //     if(columns_batch){
-  //       in_a[idx_in_batch + batch_size * i] = TypeParam::from(i);
-  //     } else {
-  //       in_a[idx_in_batch * size_in + i] = TypeParam::from(i);
-  //     }
-  //   }
-  // }
-
-  // // Option 2: Initialize the entire input array with ascending values
-  // for (int i = 0; i < total_size_in; i++) {
-  //   in_a[i] = TypeParam::from(i);
-  // }
-
-  // Option 3: Initialize the entire input array with random values
-  FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size_in);
 
   // Reference implementation
   if (!s_is_cuda_registered) {
@@ -721,7 +708,7 @@ TYPED_TEST(FieldApiTest, Slice)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size_out * sizeof(TypeParam)));
 }
 
-TYPED_TEST(FieldApiTest, highestNonZeroIdx)
+TEST_F(FieldApiTestBase, highestNonZeroIdx)
 {
   int seed = time(0);
   srand(seed);
@@ -731,7 +718,7 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   const bool columns_batch = rand() % 2;
   const int total_size = N * batch_size;
 
-  auto in_a = std::make_unique<TypeParam[]>(total_size);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
   for (int i = 0; i < batch_size; ++i) {
     // randomize different rows with zeros in the end
     auto size = std::max(int64_t(N) / 4 - i, int64_t(1));
@@ -762,7 +749,7 @@ TYPED_TEST(FieldApiTest, highestNonZeroIdx)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
 
-TYPED_TEST(FieldApiTest, polynomialEval)
+TEST_F(FieldApiTestBase, polynomialEval)
 {
   int seed = time(0);
   srand(seed);
@@ -780,12 +767,12 @@ TYPED_TEST(FieldApiTest, polynomialEval)
   const int total_coeffs_size = coeffs_size * batch_size;
   const int total_result_size = domain_size * batch_size;
 
-  auto in_coeffs = std::make_unique<TypeParam[]>(total_coeffs_size);
-  auto in_domain = std::make_unique<TypeParam[]>(domain_size);
-  auto out_main = std::make_unique<TypeParam[]>(total_result_size);
-  auto out_ref = std::make_unique<TypeParam[]>(total_result_size);
+  auto in_coeffs = std::make_unique<scalar_t[]>(total_coeffs_size);
+  auto in_domain = std::make_unique<scalar_t[]>(domain_size);
+  auto out_main = std::make_unique<scalar_t[]>(total_result_size);
+  auto out_ref = std::make_unique<scalar_t[]>(total_result_size);
 
-  auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
     auto config = default_vec_ops_config();
@@ -802,15 +789,15 @@ TYPED_TEST(FieldApiTest, polynomialEval)
     END_TIMER(polynomialEval, oss.str().c_str(), measure);
   };
 
-  FieldApiTest<TypeParam>::random_samples(in_coeffs.get(), total_coeffs_size);
-  FieldApiTest<TypeParam>::random_samples(in_domain.get(), domain_size);
+  scalar_t::rand_host_many(in_coeffs.get(), total_coeffs_size);
+  scalar_t::rand_host_many(in_domain.get(), domain_size);
 
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
   run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(TypeParam)));
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(scalar_t)));
 }
 
-TYPED_TEST(FieldApiTest, polynomialDivision)
+TEST_F(FieldApiTestBase, polynomialDivision)
 {
   const uint64_t numerator_size = 1 << 4;
   const uint64_t denominator_size = 1 << 3;
@@ -821,17 +808,17 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
   // randomize matrix with rows/cols as polynomials
-  auto numerator = std::make_unique<TypeParam[]>(numerator_size * batch_size);
-  auto denominator = std::make_unique<TypeParam[]>(denominator_size * batch_size);
-  TypeParam::rand_host_many(numerator.get(), numerator_size * batch_size);
-  TypeParam::rand_host_many(denominator.get(), denominator_size * batch_size);
+  auto numerator = std::make_unique<scalar_t[]>(numerator_size * batch_size);
+  auto denominator = std::make_unique<scalar_t[]>(denominator_size * batch_size);
+  scalar_t::rand_host_many(numerator.get(), numerator_size * batch_size);
+  scalar_t::rand_host_many(denominator.get(), denominator_size * batch_size);
 
   // Add padding to each row so that the degree is lower than the size
   const int zero_pad_length = 5;
   for (int i = 0; i < batch_size; ++i) {
     for (int j = 0; j < zero_pad_length; ++j) {
-      numerator[i * numerator_size + numerator_size - zero_pad_length + j] = TypeParam::zero();
-      denominator[i * denominator_size + denominator_size - zero_pad_length + j] = TypeParam::zero();
+      numerator[i * numerator_size + numerator_size - zero_pad_length + j] = scalar_t::zero();
+      denominator[i * denominator_size + denominator_size - zero_pad_length + j] = scalar_t::zero();
     }
   }
 
@@ -840,8 +827,8 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
     for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
       ICICLE_LOG_DEBUG << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
                        << "]";
-      auto q = std::make_unique<TypeParam[]>(q_size * batch_size);
-      auto r = std::make_unique<TypeParam[]>(r_size * batch_size);
+      auto q = std::make_unique<scalar_t[]>(q_size * batch_size);
+      auto r = std::make_unique<scalar_t[]>(r_size * batch_size);
 
       auto config = default_vec_ops_config();
       config.batch_size = columns_batch ? batch_size - zero_pad_length : batch_size; // skip the zero cols
@@ -857,11 +844,11 @@ TYPED_TEST(FieldApiTest, polynomialDivision)
         r_size));
 
       // test a(x)=q(x)b(x)+r(x) in random point
-      const auto rand_x = TypeParam::rand_host();
-      auto ax = std::make_unique<TypeParam[]>(config.batch_size);
-      auto bx = std::make_unique<TypeParam[]>(config.batch_size);
-      auto qx = std::make_unique<TypeParam[]>(config.batch_size);
-      auto rx = std::make_unique<TypeParam[]>(config.batch_size);
+      const auto rand_x = scalar_t::rand_host();
+      auto ax = std::make_unique<scalar_t[]>(config.batch_size);
+      auto bx = std::make_unique<scalar_t[]>(config.batch_size);
+      auto qx = std::make_unique<scalar_t[]>(config.batch_size);
+      auto rx = std::make_unique<scalar_t[]>(config.batch_size);
       polynomial_eval(numerator.get(), numerator_size, &rand_x, 1, config, ax.get());
       polynomial_eval(denominator.get(), denominator_size, &rand_x, 1, config, bx.get());
       polynomial_eval(q.get(), q_size, &rand_x, 1, config, qx.get());
@@ -916,7 +903,8 @@ TYPED_TEST(FieldApiTest, ntt)
 
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
-  FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
+  TypeParam::rand_host_many(scalars.get(), total_size);
+
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
   auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {

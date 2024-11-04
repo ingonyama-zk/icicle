@@ -180,6 +180,23 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, vector_div)(vec_a, vec_b, size, &config, output);
   }
 
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(VectorDivExtFieldDispatcher, extension_vector_div, extFieldVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_div)(
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
+  {
+    return VectorDivExtFieldDispatcher::execute(vec_a, vec_b, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_div(
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_vector_div)(vec_a, vec_b, size, &config, output);
+  }
+#endif // EXT_FIELD
+
   /*********************************** (Scalar + Vector) ELEMENT WISE ***********************************/
   ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);
 
@@ -349,11 +366,12 @@ namespace icicle {
     const extension_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig* config,
     extension_t* output)
   {
-    return ExtFieldSliceDispatcher::execute(input, offset, stride, size, *config, output);
+    return ExtFieldSliceDispatcher::execute(input, offset, stride, size_in, size_out, *config, output);
   }
 
   template <>
@@ -361,11 +379,12 @@ namespace icicle {
     const extension_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig& config,
     extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_slice)(input, offset, stride, size, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_slice)(input, offset, stride, size_in, size_out, &config, output);
   }
 #endif // EXT_FIELD
 
