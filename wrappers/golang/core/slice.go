@@ -12,6 +12,7 @@ type HostOrDeviceSlice interface {
 	IsEmpty() bool
 	IsOnDevice() bool
 	AsUnsafePointer() unsafe.Pointer
+	SizeOfElement() int
 }
 
 type DevicePointer = unsafe.Pointer
@@ -42,6 +43,10 @@ func (d DeviceSlice) AsUnsafePointer() unsafe.Pointer {
 
 func (d DeviceSlice) IsOnDevice() bool {
 	return true
+}
+
+func (d DeviceSlice) SizeOfElement() int {
+	return d.capacity / d.length
 }
 
 // CheckDevice is used to ensure that the DeviceSlice about to be used resides on the currently set device

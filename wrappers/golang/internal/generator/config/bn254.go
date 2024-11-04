@@ -8,6 +8,7 @@ func init() {
 		SupportsNTT:         true,
 		SupportsECNTT:       true,
 		SupportsG2:          true,
+		SupportsPoseidon:    true,
 		ScalarFieldNumLimbs: 8,
 		BaseFieldNumLimbs:   8,
 		G2FieldNumLimbs:     16,

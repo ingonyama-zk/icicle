@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/g2"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
-func testG2AffineZero(suite suite.Suite) {
+func testG2AffineZero(suite *suite.Suite) {
 	var fieldZero = g2.G2BaseField{}
 
 	var affineZero g2.G2Affine
@@ -25,7 +25,7 @@ func testG2AffineZero(suite suite.Suite) {
 	suite.Equal(affine.Y, fieldZero)
 }
 
-func testG2AffineFromLimbs(suite suite.Suite) {
+func testG2AffineFromLimbs(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 
@@ -36,7 +36,7 @@ func testG2AffineFromLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs2, affine.Y.GetLimbs())
 }
 
-func testG2AffineToProjective(suite suite.Suite) {
+func testG2AffineToProjective(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	var fieldOne g2.G2BaseField
@@ -52,7 +52,7 @@ func testG2AffineToProjective(suite suite.Suite) {
 	suite.Equal(expected, projectivePoint)
 }
 
-func testG2ProjectiveZero(suite suite.Suite) {
+func testG2ProjectiveZero(suite *suite.Suite) {
 	var projectiveZero g2.G2Projective
 	projectiveZero.Zero()
 	var fieldZero = g2.G2BaseField{}
@@ -73,7 +73,7 @@ func testG2ProjectiveZero(suite suite.Suite) {
 	suite.Equal(projective.Z, fieldZero)
 }
 
-func testG2ProjectiveFromLimbs(suite suite.Suite) {
+func testG2ProjectiveFromLimbs(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	randLimbs3 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
@@ -86,7 +86,7 @@ func testG2ProjectiveFromLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
-func testG2ProjectiveFromAffine(suite suite.Suite) {
+func testG2ProjectiveFromAffine(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	var fieldOne g2.G2BaseField
@@ -108,12 +108,12 @@ type G2CurveTestSuite struct {
 }
 
 func (s *G2CurveTestSuite) TestG2Curve() {
-	s.Run("TestG2AffineZero", testWrapper(s.Suite, testG2AffineZero))
-	s.Run("TestG2AffineFromLimbs", testWrapper(s.Suite, testG2AffineFromLimbs))
-	s.Run("TestG2AffineToProjective", testWrapper(s.Suite, testG2AffineToProjective))
-	s.Run("TestG2ProjectiveZero", testWrapper(s.Suite, testG2ProjectiveZero))
-	s.Run("TestG2ProjectiveFromLimbs", testWrapper(s.Suite, testG2ProjectiveFromLimbs))
-	s.Run("TestG2ProjectiveFromAffine", testWrapper(s.Suite, testG2ProjectiveFromAffine))
+	s.Run("TestG2AffineZero", testWrapper(&s.Suite, testG2AffineZero))
+	s.Run("TestG2AffineFromLimbs", testWrapper(&s.Suite, testG2AffineFromLimbs))
+	s.Run("TestG2AffineToProjective", testWrapper(&s.Suite, testG2AffineToProjective))
+	s.Run("TestG2ProjectiveZero", testWrapper(&s.Suite, testG2ProjectiveZero))
+	s.Run("TestG2ProjectiveFromLimbs", testWrapper(&s.Suite, testG2ProjectiveFromLimbs))
+	s.Run("TestG2ProjectiveFromAffine", testWrapper(&s.Suite, testG2ProjectiveFromAffine))
 }
 
 func TestSuiteG2Curve(t *testing.T) {

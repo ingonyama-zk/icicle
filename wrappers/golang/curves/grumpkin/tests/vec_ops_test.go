@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func testGrumpkinVecOps(suite suite.Suite) {
+func testGrumpkinVecOps(suite *suite.Suite) {
 	testSize := 1 << 14
 
 	a := grumpkin.GenerateScalars(testSize)
@@ -34,7 +34,7 @@ func testGrumpkinVecOps(suite suite.Suite) {
 	suite.Equal(a, out3)
 }
 
-func testGrumpkinTranspose(suite suite.Suite) {
+func testGrumpkinTranspose(suite *suite.Suite) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 
@@ -69,8 +69,8 @@ type GrumpkinVecOpsTestSuite struct {
 }
 
 func (s *GrumpkinVecOpsTestSuite) TestGrumpkinVecOps() {
-	s.Run("TestGrumpkinVecOps", testWrapper(s.Suite, testGrumpkinVecOps))
-	s.Run("TestGrumpkinTranspose", testWrapper(s.Suite, testGrumpkinTranspose))
+	s.Run("TestGrumpkinVecOps", testWrapper(&s.Suite, testGrumpkinVecOps))
+	s.Run("TestGrumpkinTranspose", testWrapper(&s.Suite, testGrumpkinTranspose))
 }
 
 func TestSuiteGrumpkinVecOps(t *testing.T) {
