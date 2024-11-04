@@ -491,15 +491,6 @@ eIcicleError cpu_convert_montgomery(
 
 REGISTER_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_montgomery<scalar_t>);
 
-#ifdef EXT_FIELD
-REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CPU", cpu_vector_add<extension_t>);
-REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND("CPU", cpu_vector_accumulate<extension_t>);
-REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CPU", cpu_vector_sub<extension_t>);
-REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CPU", cpu_vector_mul<extension_t>);
-REGISTER_VECTOR_DIV_EXT_FIELD_BACKEND("CPU", cpu_vector_div<extension_t>);
-REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND("CPU", cpu_convert_montgomery<extension_t>);
-#endif // EXT_FIELD
-
 /*********************************** SUM ***********************************/
 
 template <typename T>
@@ -935,3 +926,17 @@ eIcicleError cpu_poly_divide(
 }
 
 REGISTER_POLYNOMIAL_DIVISION("CPU", cpu_poly_divide<scalar_t>);
+
+#ifdef EXT_FIELD
+REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CPU", cpu_vector_add<extension_t>);
+REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND("CPU", cpu_vector_accumulate<extension_t>);
+REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CPU", cpu_vector_sub<extension_t>);
+REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CPU", cpu_vector_mul<extension_t>);
+REGISTER_VECTOR_DIV_EXT_FIELD_BACKEND("CPU", cpu_vector_div<extension_t>);
+REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND("CPU", cpu_convert_montgomery<extension_t>);
+REGISTER_VECTOR_SUM_EXT_FIELD_BACKEND("CPU", cpu_vector_sum<extension_t>);
+REGISTER_VECTOR_PRODUCT_EXT_FIELD_BACKEND("CPU", cpu_vector_product<extension_t>);
+REGISTER_SCALAR_MUL_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_mul<extension_t>);
+REGISTER_SCALAR_ADD_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_add<extension_t>);
+REGISTER_SCALAR_SUB_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_sub<extension_t>);
+#endif // EXT_FIELD
