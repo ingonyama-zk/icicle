@@ -6,7 +6,7 @@ pub(crate) mod tests {
     };
     use icicle_cuda_runtime::memory::HostSlice;
 
-    use crate::blake2s::{build_blake2s_merkle_tree, blake2s};
+    use crate::blake2s::{blake2s, build_blake2s_merkle_tree};
 
     #[test]
     fn blake2s_hash_test() {
