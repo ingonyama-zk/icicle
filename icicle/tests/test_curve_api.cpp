@@ -86,6 +86,7 @@ public:
     config.batch_size = batch;
     config.are_points_shared_in_batch = true;
     config.precompute_factor = precompute_factor;
+    config.c = 15;
 
     auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
       Device dev = {dev_type, 0};

@@ -84,6 +84,56 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+#ifndef EXT_FIELD
+TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
+{
+  // std::cout << "__cplusplus: " << __cplusplus << std::endl;
+  // for (int i = 0; i < 100000; i++) {
+  auto a = TypeParam::rand_host();
+  auto b = TypeParam::rand_host();
+  // auto b = a;
+  auto ar = TypeParam::to_montgomery(a);
+  auto br = TypeParam::to_montgomery(b);
+  auto rr = TypeParam::mont_mult(ar,br);
+  auto r = TypeParam::from_montgomery(rr);
+  if (r != a*b){
+  std::cout << "a: "<< a << std::endl;
+  std::cout << "b: "<< b << std::endl;
+  std::cout << "ar: "<< ar << std::endl;
+  std::cout << "br: "<< br << std::endl;
+  std::cout << "rr: "<< rr << std::endl;
+  std::cout << "r: "<< r << std::endl;
+  std::cout << "p: "<<TypeParam{TypeParam::get_modulus()} << std::endl;
+  std::cout << "N': "<<TypeParam{TypeParam::get_mont_inv_modulus()} << std::endl;
+  std::cout << "R: "<<TypeParam{TypeParam::get_mont_r()} << std::endl;
+  std::cout << "R': "<<TypeParam{TypeParam::get_mont_r_inv()} << std::endl;
+  // break;
+  }
+  ASSERT_EQ(r, a*b);
+  // }
+  std::ostringstream oss;
+  START_TIMER(MULT_sync)
+  for (int i = 0; i < 100000; i++) {
+    // typename TypeParam::Wide r_wide = {};
+    // typename TypeParam::Wide r2_wide = {};
+    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, false>(a.limbs_storage, a.limbs_storage, r_wide.limbs_storage);
+    // a = TypeParam::reduce(r_wide);
+    ar = TypeParam::mont_mult(ar,ar);
+    // a = TypeParam::mont_reduce(r_wide);
+    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, true>(b.limbs_storage, b.limbs_storage, r2_wide.limbs_storage);
+    // host_math::template add_sub_limbs<TypeParam::TLC, false, false, false>(a.limbs_storage, a.limbs_storage, a.limbs_storage);
+    // host_math::template add_sub_limbs<TypeParam::TLC, false, false, true>(b.limbs_storage, b.limbs_storage, b.limbs_storage);
+    // a = TypeParam::Wide::get_lower(r_wide);
+    // b = TypeParam::Wide::get_lower(r2_wide);
+    // a = a + a;
+    // a = a * a;
+  }
+  END_TIMER(MULT_sync, oss.str().c_str(), true);
+  ASSERT_EQ(TypeParam::from_montgomery(ar), a);
+}
+#endif
+
+
 TYPED_TEST(FieldApiTest, vectorOps)
 {
   const uint64_t N = 1 << 22;
@@ -349,6 +399,7 @@ TYPED_TEST(FieldApiTest, ntt)
     config.are_outputs_on_device = true;
     config.is_async = false;
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+    // ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config);
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
