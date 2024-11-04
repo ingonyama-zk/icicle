@@ -8,9 +8,6 @@
  */
 
 #pragma once
-typedef unsigned char BYTE;
-typedef unsigned int WORD;
-typedef unsigned long long LONG;
 
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +20,11 @@ typedef unsigned long long LONG;
 using namespace hash;
 
 namespace blake2s {
+
+  typedef unsigned char BYTE;
+  typedef unsigned int WORD;
+  typedef unsigned long long LONG;
+
 #define BLAKE2S_ROUNDS       10
 #define BLAKE2S_BLOCK_LENGTH 64
 #define BLAKE2S_CHAIN_SIZE   8

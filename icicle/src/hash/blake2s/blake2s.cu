@@ -90,10 +90,6 @@ namespace blake2s {
   __device__ __forceinline__ void cuda_blake2s_init_state(cuda_blake2s_ctx_t* ctx)
   {
     memcpy(ctx->state, ctx->chain, BLAKE2S_CHAIN_LENGTH);
-    // ctx->state[8] = ctx->t0;
-    // ctx->state[9] = ctx->t1;
-    // ctx->state[10] = ctx->f0;
-    // ctx->state[11] = BLAKE2S_IVS[4];
     ctx->state[8] = BLAKE2S_IVS[0];
     ctx->state[9] = BLAKE2S_IVS[1];
     ctx->state[10] = BLAKE2S_IVS[2];
@@ -102,9 +98,6 @@ namespace blake2s {
     ctx->state[13] = ctx->t1 ^ BLAKE2S_IVS[5];
     ctx->state[14] = ctx->f0 ^ BLAKE2S_IVS[6];
     ctx->state[15] = BLAKE2S_IVS[7];
-    // ctx->state[12] = BLAKE2S_IVS[5];
-    // ctx->state[13] = BLAKE2S_IVS[6];
-    // ctx->state[14] = BLAKE2S_IVS[7];
   }
 
   __device__ __forceinline__ void cuda_blake2s_compress(cuda_blake2s_ctx_t* ctx, const BYTE* in, WORD inoffset)
