@@ -124,6 +124,19 @@ public:
    */
   static constexpr HOST_DEVICE_INLINE unsigned num_of_reductions() { return CONFIG::num_of_reductions; }
 
+  // count number of bits of the field element without leading zeros.
+  static constexpr HOST_DEVICE_INLINE unsigned num_bits(const Field& x)
+  {
+    size_t size = sizeof(x.limbs_storage.limbs[0]) * 8;
+    unsigned ret = size * TLC;
+    for (unsigned i = TLC; i-- > 0;) {
+      int leading = __clz(x.limbs_storage.limbs[i]);
+      ret -= leading;
+      if (leading != size) { break; }
+    }
+    return ret;
+  }
+
   static constexpr unsigned slack_bits = 32 * TLC - NBITS;
 
   struct Wide {

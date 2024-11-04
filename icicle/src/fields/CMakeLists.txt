@@ -4,6 +4,7 @@ endif ()
 
 SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin;m31)
 SET(SUPPORTED_FIELDS_WITHOUT_POSEIDON2 bls12_381;bls12_377;grumpkin;bw6_761;stark252;m31)
+SET(SUPPORTED_FIELDS_WITH_FRI m31)
 
 set(TARGET icicle_field)
 
@@ -40,6 +41,11 @@ if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/extern.cu)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/kernel_ntt.cu)
   list(APPEND FIELD_SOURCE ${POLYNOMIAL_SOURCE_FILES}) # requires NTT  
+endif()
+
+if (FIELD IN_LIST SUPPORTED_FIELDS_WITH_FRI)
+  list(APPEND FIELD_SOURCE ${SRC}/fri/extern.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/fri/fri.cu)
 endif()
 
 add_library(${TARGET} STATIC ${FIELD_SOURCE})
