@@ -18,30 +18,30 @@ extern "C" cudaError_t m31_build_merkle_tree(
   const m31::scalar_t* leaves,
   m31::scalar_t* digests,
   unsigned int height,
-  unsigned int input_block_len, 
+  unsigned int input_block_len,
   const hash::Hasher<m31::scalar_t, m31::scalar_t>* compression,
   const hash::Hasher<m31::scalar_t, m31::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
-  extern "C" cudaError_t m31_mmcs_commit_cuda(
-    const matrix::Matrix<m31::scalar_t>* leaves,
-    unsigned int number_of_inputs,
-    m31::scalar_t* digests,
-    const hash::Hasher<m31::scalar_t, m31::scalar_t>* hasher,
-    const hash::Hasher<m31::scalar_t, m31::scalar_t>* compression,
-    const merkle_tree::TreeBuilderConfig& tree_config);
+extern "C" cudaError_t m31_mmcs_commit_cuda(
+  const matrix::Matrix<m31::scalar_t>* leaves,
+  unsigned int number_of_inputs,
+  m31::scalar_t* digests,
+  const hash::Hasher<m31::scalar_t, m31::scalar_t>* hasher,
+  const hash::Hasher<m31::scalar_t, m31::scalar_t>* compression,
+  const merkle_tree::TreeBuilderConfig& tree_config);
 
-extern "C" cudaError_t m31_mul_cuda(
-  m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
+extern "C" cudaError_t
+m31_mul_cuda(m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
 
-extern "C" cudaError_t m31_add_cuda(
-  m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
+extern "C" cudaError_t
+m31_add_cuda(m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
 
-extern "C" cudaError_t m31_accumulate_cuda(
-  m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+extern "C" cudaError_t
+m31_accumulate_cuda(m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
-extern "C" cudaError_t m31_sub_cuda(
-  m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
+extern "C" cudaError_t
+m31_sub_cuda(m31::scalar_t* vec_a, m31::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::scalar_t* result);
 
 extern "C" cudaError_t m31_transpose_matrix_cuda(
   const m31::scalar_t* input,
@@ -52,14 +52,13 @@ extern "C" cudaError_t m31_transpose_matrix_cuda(
   bool on_device,
   bool is_async);
 
-extern "C" cudaError_t m31_bit_reverse_cuda(
-  const m31::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, m31::scalar_t* output);
-
+extern "C" cudaError_t
+m31_bit_reverse_cuda(const m31::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, m31::scalar_t* output);
 
 extern "C" void m31_generate_scalars(m31::scalar_t* scalars, int size);
 
-extern "C" cudaError_t m31_scalar_convert_montgomery(
-  m31::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
+extern "C" cudaError_t
+m31_scalar_convert_montgomery(m31::scalar_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" void m31_extension_generate_scalars(m31::extension_t* scalars, int size);
 
@@ -72,8 +71,8 @@ extern "C" cudaError_t m31_extension_mul_cuda(
 extern "C" cudaError_t m31_extension_add_cuda(
   m31::extension_t* vec_a, m31::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::extension_t* result);
 
-extern "C" cudaError_t m31_extension_accumulate_cuda(
-  m31::extension_t* vec_a, m31::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+extern "C" cudaError_t
+m31_extension_accumulate_cuda(m31::extension_t* vec_a, m31::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
 extern "C" cudaError_t m31_extension_sub_cuda(
   m31::extension_t* vec_a, m31::extension_t* vec_b, int n, vec_ops::VecOpsConfig& config, m31::extension_t* result);
@@ -89,6 +88,5 @@ extern "C" cudaError_t m31_extension_transpose_matrix_cuda(
 
 extern "C" cudaError_t m31_extension_bit_reverse_cuda(
   const m31::extension_t* input, uint64_t n, vec_ops::BitReverseConfig& config, m31::extension_t* output);
-
 
 #endif

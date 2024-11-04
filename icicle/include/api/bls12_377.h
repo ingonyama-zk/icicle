@@ -18,22 +18,24 @@
 #include "poseidon/poseidon.cuh"
 
 extern "C" cudaError_t bls12_377_g2_precompute_msm_bases_cuda(
-  bls12_377::g2_affine_t* bases,
-  int msm_size,
-  msm::MSMConfig& config,
-  bls12_377::g2_affine_t* output_bases);
+  bls12_377::g2_affine_t* bases, int msm_size, msm::MSMConfig& config, bls12_377::g2_affine_t* output_bases);
 
 extern "C" cudaError_t bls12_377_g2_msm_cuda(
-  const bls12_377::scalar_t* scalars, const bls12_377::g2_affine_t* points, int msm_size, msm::MSMConfig& config, bls12_377::g2_projective_t* out);
-
-extern "C" cudaError_t bls12_377_precompute_msm_bases_cuda(
-  bls12_377::affine_t* bases,
+  const bls12_377::scalar_t* scalars,
+  const bls12_377::g2_affine_t* points,
   int msm_size,
   msm::MSMConfig& config,
-  bls12_377::affine_t* output_bases);
+  bls12_377::g2_projective_t* out);
+
+extern "C" cudaError_t bls12_377_precompute_msm_bases_cuda(
+  bls12_377::affine_t* bases, int msm_size, msm::MSMConfig& config, bls12_377::affine_t* output_bases);
 
 extern "C" cudaError_t bls12_377_msm_cuda(
-  const bls12_377::scalar_t* scalars, const bls12_377::affine_t* points, int msm_size, msm::MSMConfig& config, bls12_377::projective_t* out);
+  const bls12_377::scalar_t* scalars,
+  const bls12_377::affine_t* points,
+  int msm_size,
+  msm::MSMConfig& config,
+  bls12_377::projective_t* out);
 
 extern "C" bool bls12_377_g2_eq(bls12_377::g2_projective_t* point1, bls12_377::g2_projective_t* point2);
 
@@ -50,7 +52,11 @@ extern "C" cudaError_t bls12_377_g2_projective_convert_montgomery(
   bls12_377::g2_projective_t* d_inout, size_t n, bool is_into, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bls12_377_ecntt_cuda(
-  const bls12_377::projective_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<bls12_377::scalar_t>& config, bls12_377::projective_t* output);
+  const bls12_377::projective_t* input,
+  int size,
+  ntt::NTTDir dir,
+  ntt::NTTConfig<bls12_377::scalar_t>& config,
+  bls12_377::projective_t* output);
 
 extern "C" bool bls12_377_eq(bls12_377::projective_t* point1, bls12_377::projective_t* point2);
 
@@ -70,18 +76,18 @@ extern "C" cudaError_t bls12_377_build_merkle_tree(
   const bls12_377::scalar_t* leaves,
   bls12_377::scalar_t* digests,
   unsigned int height,
-  unsigned int input_block_len, 
+  unsigned int input_block_len,
   const hash::Hasher<bls12_377::scalar_t, bls12_377::scalar_t>* compression,
   const hash::Hasher<bls12_377::scalar_t, bls12_377::scalar_t>* bottom_layer,
   const merkle_tree::TreeBuilderConfig& tree_config);
 
-  extern "C" cudaError_t bls12_377_mmcs_commit_cuda(
-    const matrix::Matrix<bls12_377::scalar_t>* leaves,
-    unsigned int number_of_inputs,
-    bls12_377::scalar_t* digests,
-    const hash::Hasher<bls12_377::scalar_t, bls12_377::scalar_t>* hasher,
-    const hash::Hasher<bls12_377::scalar_t, bls12_377::scalar_t>* compression,
-    const merkle_tree::TreeBuilderConfig& tree_config);
+extern "C" cudaError_t bls12_377_mmcs_commit_cuda(
+  const matrix::Matrix<bls12_377::scalar_t>* leaves,
+  unsigned int number_of_inputs,
+  bls12_377::scalar_t* digests,
+  const hash::Hasher<bls12_377::scalar_t, bls12_377::scalar_t>* hasher,
+  const hash::Hasher<bls12_377::scalar_t, bls12_377::scalar_t>* compression,
+  const merkle_tree::TreeBuilderConfig& tree_config);
 
 extern "C" cudaError_t bls12_377_poseidon_create_cuda(
   poseidon::Poseidon<bls12_377::scalar_t>** poseidon,
@@ -97,9 +103,7 @@ extern "C" cudaError_t bls12_377_poseidon_create_cuda(
   device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bls12_377_poseidon_load_cuda(
-  poseidon::Poseidon<bls12_377::scalar_t>** poseidon,
-  unsigned int arity,
-  device_context::DeviceContext& ctx);
+  poseidon::Poseidon<bls12_377::scalar_t>** poseidon, unsigned int arity, device_context::DeviceContext& ctx);
 
 extern "C" cudaError_t bls12_377_poseidon_hash_many_cuda(
   const poseidon::Poseidon<bls12_377::scalar_t>* poseidon,
@@ -110,20 +114,31 @@ extern "C" cudaError_t bls12_377_poseidon_hash_many_cuda(
   unsigned int output_len,
   hash::HashConfig& cfg);
 
-extern "C" cudaError_t
-  bls12_377_poseidon_delete_cuda(poseidon::Poseidon<bls12_377::scalar_t>* poseidon);
+extern "C" cudaError_t bls12_377_poseidon_delete_cuda(poseidon::Poseidon<bls12_377::scalar_t>* poseidon);
 
 extern "C" cudaError_t bls12_377_mul_cuda(
-  bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_377::scalar_t* result);
+  bls12_377::scalar_t* vec_a,
+  bls12_377::scalar_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  bls12_377::scalar_t* result);
 
 extern "C" cudaError_t bls12_377_add_cuda(
-  bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_377::scalar_t* result);
+  bls12_377::scalar_t* vec_a,
+  bls12_377::scalar_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  bls12_377::scalar_t* result);
 
-extern "C" cudaError_t bls12_377_accumulate_cuda(
-  bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
+extern "C" cudaError_t
+bls12_377_accumulate_cuda(bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config);
 
 extern "C" cudaError_t bls12_377_sub_cuda(
-  bls12_377::scalar_t* vec_a, bls12_377::scalar_t* vec_b, int n, vec_ops::VecOpsConfig& config, bls12_377::scalar_t* result);
+  bls12_377::scalar_t* vec_a,
+  bls12_377::scalar_t* vec_b,
+  int n,
+  vec_ops::VecOpsConfig& config,
+  bls12_377::scalar_t* result);
 
 extern "C" cudaError_t bls12_377_transpose_matrix_cuda(
   const bls12_377::scalar_t* input,
@@ -137,7 +152,6 @@ extern "C" cudaError_t bls12_377_transpose_matrix_cuda(
 extern "C" cudaError_t bls12_377_bit_reverse_cuda(
   const bls12_377::scalar_t* input, uint64_t n, vec_ops::BitReverseConfig& config, bls12_377::scalar_t* output);
 
-
 extern "C" void bls12_377_generate_scalars(bls12_377::scalar_t* scalars, int size);
 
 extern "C" cudaError_t bls12_377_scalar_convert_montgomery(
@@ -147,7 +161,11 @@ extern "C" cudaError_t bls12_377_initialize_domain(
   bls12_377::scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode);
 
 extern "C" cudaError_t bls12_377_ntt_cuda(
-  const bls12_377::scalar_t* input, int size, ntt::NTTDir dir, ntt::NTTConfig<bls12_377::scalar_t>& config, bls12_377::scalar_t* output);
+  const bls12_377::scalar_t* input,
+  int size,
+  ntt::NTTDir dir,
+  ntt::NTTConfig<bls12_377::scalar_t>& config,
+  bls12_377::scalar_t* output);
 
 extern "C" cudaError_t bls12_377_release_domain(device_context::DeviceContext& ctx);
 
