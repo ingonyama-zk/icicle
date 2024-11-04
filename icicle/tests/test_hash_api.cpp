@@ -375,6 +375,8 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   uint32_t leaves_alternative[nof_leaves];
   randomize(leaves_alternative, nof_leaves);
 
+  ICICLE_CHECK(icicle_set_device(s_reference_target));
+
   // define the merkle tree
   auto config = default_merkle_tree_config();
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves  200B ->  80B
@@ -444,67 +446,185 @@ TEST_F(HashApiTest, MerkleTreeMixMediumSize)
   auto leaves_alternative = std::make_unique<uint32_t[]>(nof_leaves);
   randomize(leaves_alternative.get(), nof_leaves);
 
-  // TODO repeat for all devices
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeMixMediumSize on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+    // define the merkle tree
+    auto config = default_merkle_tree_config();
 
-  // define the merkle tree
-  auto config = default_merkle_tree_config();
+    auto layer0_hash = Keccak256::create(1 << 10); // hash every 1KB to 32B -> layer outputs 32KB (for 1MB input)
+    auto layer1_hash = Blake2s::create(32 * 2);    // arity-2: 32KB -> 16KB
+    auto layer2_hash = Sha3_512::create(32 * 4);   // arity-4: 16KB -> 8KB (note output is 64B per hash in this layer)
+    auto layer3_hash = Blake2s::create(64 * 4);    // arity-4: 8KB -> 1KB
+    auto layer4_hash = Keccak512::create(32 * 32); // arity-32: 1KB -> 64B
 
-  auto layer0_hash = Keccak256::create(1 << 10); // hash every 1KB to 32B -> layer outputs 32KB (for 1MB input)
-  auto layer1_hash = Blake2s::create(32 * 2);    // arity-2: 32KB -> 16KB
-  auto layer2_hash = Sha3_512::create(32 * 4);   // arity-4: 16KB -> 8KB (note output is 64B per hash in this layer)
-  auto layer3_hash = Blake2s::create(64 * 4);    // arity-4: 8KB -> 1KB
-  auto layer4_hash = Keccak512::create(32 * 32); // arity-32: 1KB -> 64B
+    const std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash, layer4_hash};
 
-  const std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash, layer4_hash};
+    const int output_store_min_layer = rand() % hashes.size();
+    ICICLE_LOG_DEBUG << "Min store layer:\t" << output_store_min_layer;
 
-  const int output_store_min_layer = rand() % hashes.size();
-  ICICLE_LOG_DEBUG << "Min store layer:\t" << output_store_min_layer;
+    auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+    auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
 
-  auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-  auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+    // assert that incorrect size fails
+    ASSERT_NE(prover_tree.build(leaves.get(), nof_leaves - 1, config), eIcicleError::SUCCESS);
+    ASSERT_NE(prover_tree.build(leaves.get(), nof_leaves + 1, config), eIcicleError::SUCCESS);
+    // build tree
+    START_TIMER(MerkleTree_build)
+    ICICLE_CHECK(prover_tree.build(leaves.get(), nof_leaves, config));
+    END_TIMER(MerkleTree_build, "Merkle Tree large", true)
+    assert_valid_tree<uint32_t>(prover_tree, nof_leaves, leaves.get(), hashes, config);
 
-  // assert that incorrect size fails
-  ASSERT_NE(prover_tree.build(leaves.get(), nof_leaves - 1, config), eIcicleError::SUCCESS);
-  ASSERT_NE(prover_tree.build(leaves.get(), nof_leaves + 1, config), eIcicleError::SUCCESS);
-  // build tree
-  START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(prover_tree.build(leaves.get(), nof_leaves, config));
-  END_TIMER(MerkleTree_build, "Merkle Tree CPU", true)
-  assert_valid_tree<uint32_t>(prover_tree, nof_leaves, leaves.get(), hashes, config);
+    // get root and merkle-path to an element
+    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
+      const int leaf_idx = rand() % nof_leaves;
 
-  // get root and merkle-path to an element
-  for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
-    const int leaf_idx = rand() % nof_leaves;
+      auto [root, root_size] = prover_tree.get_merkle_root();
+      MerkleProof merkle_proof{};
+      ICICLE_CHECK(prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false, config, merkle_proof));
 
-    auto [root, root_size] = prover_tree.get_merkle_root();
-    MerkleProof merkle_proof{};
-    ICICLE_CHECK(prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false, config, merkle_proof));
+      // Test valid proof
+      bool verification_valid = false;
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
 
-    // Test valid proof
-    bool verification_valid = false;
-    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-    ASSERT_TRUE(verification_valid);
+      // Test invalid proof (By modifying random data in the leaves)
+      verification_valid = true;
+      ICICLE_CHECK(prover_tree.get_merkle_proof(
+        leaves_alternative.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_FALSE(verification_valid);
 
-    // Test invalid proof (By modifying random data in the leaves)
-    verification_valid = true;
-    ICICLE_CHECK(prover_tree.get_merkle_proof(
-      leaves_alternative.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
-    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-    ASSERT_FALSE(verification_valid);
+      // Same for pruned proof
+      verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
 
-    // Same for pruned proof
-    verification_valid = false;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
-    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-    ASSERT_TRUE(verification_valid);
+      // Test invalid proof (By adding random data to the proof)
+      verification_valid = true;
+      ICICLE_CHECK(prover_tree.get_merkle_proof(
+        leaves_alternative.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_FALSE(verification_valid);
+    }
+  }
+}
 
-    // Test invalid proof (By adding random data to the proof)
-    verification_valid = true;
-    ICICLE_CHECK(prover_tree.get_merkle_proof(
-      leaves_alternative.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
-    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-    ASSERT_FALSE(verification_valid);
+TEST_F(HashApiTest, MerkleTreeDevicePartialTree)
+{
+  const uint64_t leaf_size = 32;
+  const uint64_t total_input_size = (1 << 8) * leaf_size;
+  const uint64_t nof_leaves = total_input_size / leaf_size;
+  auto leaves = std::make_unique<std::byte[]>(total_input_size);
+  randomize(leaves.get(), nof_leaves);
+
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeDeviceCaps on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+    // Create a Keccak256 hasher with an arity of 2: every 64B -> 32B
+    auto layer_hash = Keccak256::create(32 * 2);
+    // Calculate the tree height (log2 of the number of leaves for a binary tree)
+    const int tree_height = static_cast<int>(std::log2(nof_leaves));
+    // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
+    std::vector<Hash> hashes(tree_height, layer_hash);
+
+    auto config = default_merkle_tree_config();
+    auto full_tree = MerkleTree::create(hashes, leaf_size);
+    auto prover_tree = MerkleTree::create(hashes, leaf_size, 4);
+    auto verifier_tree = MerkleTree::create(hashes, leaf_size, 4);
+
+    // build tree
+    ICICLE_CHECK(prover_tree.build(leaves.get(), total_input_size, config));
+    ICICLE_CHECK(full_tree.build(leaves.get(), total_input_size, config));
+
+    auto full_root = full_tree.get_merkle_root();
+    auto partial_root = prover_tree.get_merkle_root();
+    for (int i = 0; i < full_root.second; i++) {
+      ASSERT_TRUE(full_root.first[i] == partial_root.first[i]);
+    }
+
+    // proof leaves and verify
+    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
+      const int leaf_idx = rand() % nof_leaves;
+
+      auto [root, root_size] = prover_tree.get_merkle_root();
+
+      // test non-pruned path
+      MerkleProof merkle_proof{};
+      bool verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
+
+      // test pruned path
+      verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
+    }
+  }
+}
+
+TEST_F(HashApiTest, MerkleTreeLeavesOnDeviceTreeOnHost)
+{
+  const uint64_t leaf_size = 32;
+  const uint64_t total_input_size = (1 << 3) * leaf_size;
+  const uint64_t nof_leaves = total_input_size / leaf_size;
+  auto leaves = std::make_unique<std::byte[]>(total_input_size);
+  randomize(leaves.get(), nof_leaves);
+
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeDeviceBig on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+    // Create a Keccak256 hasher with an arity of 2: every 64B -> 32B
+    auto layer_hash = Keccak256::create(32 * 2);
+    // Calculate the tree height (log2 of the number of leaves for a binary tree)
+    const int tree_height = static_cast<int>(std::log2(nof_leaves));
+    // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
+    std::vector<Hash> hashes(tree_height, layer_hash);
+
+    // copy leaves to device
+    std::byte* device_leaves = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
+    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
+
+    auto config = default_merkle_tree_config();
+    config.is_tree_on_device = false;
+    config.is_leaves_on_device = true;
+    auto prover_tree = MerkleTree::create(hashes, leaf_size);
+    auto verifier_tree = MerkleTree::create(hashes, leaf_size);
+
+    // build tree
+    START_TIMER(MerkleTree_build)
+    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
+    END_TIMER(MerkleTree_build, "Merkle Tree GPU", true)
+
+    // proof leaves and verify
+    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
+      const int leaf_idx = rand() % nof_leaves;
+
+      auto [root, root_size] = prover_tree.get_merkle_root();
+
+      // test non-pruned path
+      MerkleProof merkle_proof{};
+      bool verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
+
+      // test pruned path
+      verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
+    }
+    ICICLE_CHECK(icicle_free(device_leaves));
   }
 }
 
@@ -516,78 +636,55 @@ TEST_F(HashApiTest, MerkleTreeLarge)
   auto leaves = std::make_unique<std::byte[]>(total_input_size);
   randomize(leaves.get(), nof_leaves);
 
-  // Create a Keccak256 hasher with an arity of 2: every 64B -> 32B
-  auto layer_hash = Keccak256::create(32 * 2);
-  // Calculate the tree height (log2 of the number of leaves for a binary tree)
-  const int tree_height = static_cast<int>(std::log2(nof_leaves));
-  // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
-  std::vector<Hash> hashes(tree_height, layer_hash);
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeDeviceBig on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
 
-  auto config = default_merkle_tree_config();
-  auto prover_tree = MerkleTree::create(hashes, leaf_size);
-  auto verifier_tree = MerkleTree::create(hashes, leaf_size);
+    // Create a Keccak256 hasher with an arity of 2: every 64B -> 32B
+    auto layer_hash = Keccak256::create(32 * 2);
+    // Calculate the tree height (log2 of the number of leaves for a binary tree)
+    const int tree_height = static_cast<int>(std::log2(nof_leaves));
+    // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
+    std::vector<Hash> hashes(tree_height, layer_hash);
 
-  // build tree
-  START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(prover_tree.build(leaves.get(), total_input_size, config));
-  END_TIMER(MerkleTree_build, "Merkle Tree CPU", true)
+    // copy leaves to device
+    std::byte* device_leaves = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
+    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
 
-  // proof leaves and verify
-  for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
-    const int leaf_idx = rand() % nof_leaves;
+    auto config = default_merkle_tree_config();
+    config.is_leaves_on_device = true;
+    auto prover_tree = MerkleTree::create(hashes, leaf_size);
+    auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
-    auto [root, root_size] = prover_tree.get_merkle_root();
+    // build tree
+    START_TIMER(MerkleTree_build)
+    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
+    END_TIMER(MerkleTree_build, "Merkle Tree large", true)
 
-    // test non-pruned path
-    MerkleProof merkle_proof{};
-    bool verification_valid = false;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
-    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-    ASSERT_TRUE(verification_valid);
+    // proof leaves and verify
+    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
+      const int leaf_idx = rand() % nof_leaves;
 
-    // test pruned path
-    verification_valid = false;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
-    ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-    ASSERT_TRUE(verification_valid);
+      auto [root, root_size] = prover_tree.get_merkle_root();
+
+      // test non-pruned path
+      MerkleProof merkle_proof{};
+      bool verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
+
+      // test pruned path
+      verification_valid = false;
+      ICICLE_CHECK(
+        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
+      ASSERT_TRUE(verification_valid);
+    }
+    ICICLE_CHECK(icicle_free(device_leaves));
   }
-}
-
-TEST_F(HashApiTest, MerkleTreeExample)
-{
-  // define leaf size
-  const uint64_t leaf_size = 1024;
-  // let's allocate a dummy input. It can be any type and we need the total size to match.
-  using T = uint64_t;
-  const uint32_t max_input_size = leaf_size * 16;
-  auto input = std::make_unique<T[]>(max_input_size / sizeof(T));
-
-  // define layer hashes. In this example Keccak-256 where layer-0 hashes 1KB and then every two node (=64B) are hashed
-  // together
-  auto layer0_hasher = Keccak256::create(leaf_size /*=default input size*/);
-  auto next_layer_hasher = Keccak256::create(2 * layer0_hasher.output_size() /*=default input size*/);
-
-  std::vector<Hash> hashes = {
-    layer0_hasher, next_layer_hasher, next_layer_hasher, next_layer_hasher, next_layer_hasher};
-  auto merkle_tree = MerkleTree::create(hashes, leaf_size);
-
-  // Now to compute the tree we need input data
-  merkle_tree.build(input.get(), max_input_size / sizeof(T), default_merkle_tree_config());
-
-  auto [commitment, size] = merkle_tree.get_merkle_root();
-
-  MerkleProof proof{};
-  auto err = merkle_tree.get_merkle_proof(
-    input.get(), max_input_size / sizeof(T), 3 /* leaf idx to open*/, true /*=pruned path*/,
-    default_merkle_tree_config(), proof);
-
-  auto [_leaf, _leaf_size, _leaf_idx] = proof.get_leaf();
-  auto [_path, _path_size] = proof.get_path();
-
-  bool valid = false;
-  err = merkle_tree.verify(proof, valid);
 }
 
 #ifdef POSEIDON
