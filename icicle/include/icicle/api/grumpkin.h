@@ -9,16 +9,6 @@
 #include "icicle/msm.h"
 #include "icicle/vec_ops.h"
 
-extern "C" eIcicleError grumpkin_precompute_msm_bases(
-  const grumpkin::affine_t* bases, int nof_bases, const MSMConfig* config, grumpkin::affine_t* output_bases);
-
-extern "C" eIcicleError grumpkin_msm(
-  const grumpkin::scalar_t* scalars,
-  const grumpkin::affine_t* points,
-  int msm_size,
-  const MSMConfig* config,
-  grumpkin::projective_t* out);
-
 extern "C" bool grumpkin_eq(grumpkin::projective_t* point1, grumpkin::projective_t* point2);
 
 extern "C" void grumpkin_to_affine(grumpkin::projective_t* point, grumpkin::affine_t* point_out);
