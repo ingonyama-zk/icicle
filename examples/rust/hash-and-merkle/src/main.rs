@@ -203,8 +203,5 @@ fn main() {
     keccak_hash_example();
 
     // Execute the Merkle-tree example
-    // TODO remove this when merkle-tree works on CUDA backend
-    println!("\nWARNING: merkle-tree example falling back to CPU");
-    icicle_runtime::set_device(&icicle_runtime::Device::new("CPU", 0)).unwrap();
     merkle_tree_example();
 }
