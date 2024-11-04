@@ -81,7 +81,6 @@ macro_rules! impl_poseidon_tests {
 
         use icicle_core::test_utilities;
         use std::sync::Once;
-        use icicle_core::test_utilities;
 
         static INIT: Once = Once::new();
 
@@ -106,9 +105,8 @@ macro_rules! impl_poseidon_tests {
         #[test]
         fn test_poseidon_tree() {
             initialize();
-            // TODO Roman: enable once CUDA merkle tree is implemented
-            // test_utilities::test_set_main_device();
-            // check_poseidon_tree::<$field>();
+            test_utilities::test_set_main_device();
+            check_poseidon_tree::<$field>();
             test_utilities::test_set_ref_device();
             check_poseidon_tree::<$field>();
         }
