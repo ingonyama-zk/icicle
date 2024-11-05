@@ -7,7 +7,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
+	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/hash"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )

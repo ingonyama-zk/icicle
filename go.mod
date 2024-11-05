@@ -1,6 +1,7 @@
 module github.com/ingonyama-zk/icicle/v3
 
 // NOTE - Using the Hash package requires go 1.22
+// NOTE - Using the Poseidon package requires go 1.22 as it relies on the Hash package
 go 1.20
 
 require (

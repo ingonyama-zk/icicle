@@ -7,7 +7,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761"
+	bw6_761 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/hash"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
