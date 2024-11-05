@@ -3,7 +3,7 @@
 set -e 
 
 # Use provided release_output directory or default to "release_output"
-output_dir="${1:-/release_output}"
+output_dir="${1:-./release_output}"
 
 # Check if both directories exist in the current working directory
 if [[ ! -d "./icicle" || ! -d "./scripts" ]]; then
