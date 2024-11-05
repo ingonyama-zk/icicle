@@ -21,6 +21,7 @@ The configuration struct allows users to modify settings such as:
 
 - Specifying whether inputs and outputs are on the host or device.
 - Adjusting the data layout for specific optimizations.
+- Setting batching parameters (batch_size and columns_batch) to perform operations on multiple data sets simultaneously.
 - Passing custom options to the backend implementation through an extension mechanism, such as setting the number of CPU cores to use.
 
 ### Example (C++)
@@ -31,6 +32,8 @@ The configuration struct allows users to modify settings such as:
 // Create config struct for vector add
 VecOpsConfig config = default_vec_ops_config();
 // optionally modify the config struct here
+config.batch_size = 4;          // Process 4 vector operations in a batch
+config.columns_batch = true;    // Batched vectors are stored as columns
 
 // Call the API
 eIcicleError err = vector_add(vec_a, vec_b, size, config, vec_res);
@@ -45,6 +48,8 @@ struct VecOpsConfig {
     bool is_b_on_device;       /**< True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
     bool is_result_on_device;  /**< If true, the output is preserved on the device, otherwise on the host. Default value: false. */
     bool is_async;             /**< Whether to run the vector operations asynchronously. */
+    int batch_size;            /**< Number of vector operations to process in a batch. Default value: 1. */
+    bool columns_batch;        /**< True if batched vectors are stored as columns; false if stored contiguously. Default value: false. */
     ConfigExtension* ext = nullptr; /**< Backend-specific extension. */
 };
 ```

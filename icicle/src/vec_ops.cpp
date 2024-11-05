@@ -3,67 +3,130 @@
 
 namespace icicle {
 
+  /*********************************** REDUCE PRODUCT ************************/
+  ICICLE_DISPATCHER_INST(VectorProductDispatcher, vector_product, VectorReduceOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_product)(
+    const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
+  {
+    return VectorProductDispatcher::execute(vec_a, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_product(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_product)(vec_a, size, &config, output);
+  }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(VectorProductExtFieldDispatcher, extension_vector_product, extFieldVectorReduceOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_product)(
+    const extension_t* vec_a, uint64_t size, const VecOpsConfig* config, extension_t* output)
+  {
+    return VectorProductExtFieldDispatcher::execute(vec_a, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_product(const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_vector_product)(vec_a, size, &config, output);
+  }
+#endif // EXT_FIELD
+
+  /*********************************** REDUCE SUM ****************************/
+  ICICLE_DISPATCHER_INST(VectorSumDispatcher, vector_sum, VectorReduceOpImpl);
+
+  extern "C" eIcicleError
+  CONCAT_EXPAND(FIELD, vector_sum)(const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
+  {
+    return VectorSumDispatcher::execute(vec_a, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_sum(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, vector_sum)(vec_a, size, &config, output);
+  }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(VectorSumExtFieldDispatcher, extension_vector_sum, extFieldVectorReduceOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_sum)(
+    const extension_t* vec_a, uint64_t size, const VecOpsConfig* config, extension_t* output)
+  {
+    return VectorSumExtFieldDispatcher::execute(vec_a, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_sum(const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_vector_sum)(vec_a, size, &config, output);
+  }
+#endif // EXT_FIELD
+
   /*********************************** ADD ***********************************/
   ICICLE_DISPATCHER_INST(VectorAddDispatcher, vector_add, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_add)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return VectorAddDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorAddDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError
-  vector_add(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  vector_add(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_add)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, vector_add)(vec_a, vec_b, size, &config, output);
   }
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(VectorAddExtFieldDispatcher, extension_vector_add, extFieldVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_add)(
-    const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig* config, extension_t* output)
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
   {
-    return VectorAddExtFieldDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorAddExtFieldDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError vector_add(
-    const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_vector_add)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_add)(vec_a, vec_b, size, &config, output);
   }
 #endif // EXT_FIELD
 
   /*********************************** ACCUMULATE ***********************************/
-  ICICLE_DISPATCHER_INST(VectorAccumulateDispatcher, vector_accumulate, scalarVectorOpImplInplaceA);
+  ICICLE_DISPATCHER_INST(VectorAccumulateDispatcher, vector_accumulate, vectorVectorOpImplInplaceA);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_accumulate)(
-    scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config)
+    scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config)
   {
-    return VectorAccumulateDispatcher::execute(vec_a, vec_b, n, *config);
+    return VectorAccumulateDispatcher::execute(vec_a, vec_b, size, *config);
   }
 
   template <>
-  eIcicleError vector_accumulate(scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config)
+  eIcicleError vector_accumulate(scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config)
   {
-    return CONCAT_EXPAND(FIELD, vector_accumulate)(vec_a, vec_b, n, &config);
+    return CONCAT_EXPAND(FIELD, vector_accumulate)(vec_a, vec_b, size, &config);
   }
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(VectorAccumulateExtFieldDispatcher, extension_vector_accumulate, extFieldVectorOpImplInplaceA);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_accumulate)(
-    extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig* config)
+    extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig* config)
   {
-    return VectorAccumulateExtFieldDispatcher::execute(vec_a, vec_b, n, *config);
+    return VectorAccumulateExtFieldDispatcher::execute(vec_a, vec_b, size, *config);
   }
 
   template <>
-  eIcicleError vector_accumulate(extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config)
+  eIcicleError
+  vector_accumulate(extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)
   {
-    return CONCAT_EXPAND(FIELD, extension_vector_accumulate)(vec_a, vec_b, n, &config);
+    return CONCAT_EXPAND(FIELD, extension_vector_accumulate)(vec_a, vec_b, size, &config);
   }
 #endif // EXT_FIELD
 
@@ -71,32 +134,32 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorSubDispatcher, vector_sub, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_sub)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return VectorSubDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorSubDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError
-  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  vector_sub(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_sub)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, vector_sub)(vec_a, vec_b, size, &config, output);
   }
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(VectorSubExtFieldDispatcher, extension_vector_sub, extFieldVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_sub)(
-    const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig* config, extension_t* output)
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
   {
-    return VectorSubExtFieldDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorSubExtFieldDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError vector_sub(
-    const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_vector_sub)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_sub)(vec_a, vec_b, size, &config, output);
   }
 #endif // EXT_FIELD
 
@@ -104,32 +167,32 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorMulDispatcher, vector_mul, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_mul)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return VectorMulDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorMulDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError
-  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  vector_mul(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_mul)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, vector_mul)(vec_a, vec_b, size, &config, output);
   }
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(VectorMulExtFieldDispatcher, extension_vector_mul, extFieldVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_mul)(
-    const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig* config, extension_t* output)
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
   {
-    return VectorMulExtFieldDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorMulExtFieldDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError vector_mul(
-    const extension_t* vec_a, const extension_t* vec_b, uint64_t n, const VecOpsConfig& config, extension_t* output)
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_vector_mul)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_mul)(vec_a, vec_b, size, &config, output);
   }
 #endif // EXT_FIELD
 
@@ -137,80 +200,172 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorDivDispatcher, vector_div, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_div)(
-    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return VectorDivDispatcher::execute(vec_a, vec_b, n, *config, output);
+    return VectorDivDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError
-  vector_div(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+  vector_div(const scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, vector_div)(vec_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, vector_div)(vec_a, vec_b, size, &config, output);
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(VectorDivExtFieldDispatcher, extension_vector_div, extFieldVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_div)(
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
+  {
+    return VectorDivExtFieldDispatcher::execute(vec_a, vec_b, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_div(
+    const extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_vector_div)(vec_a, vec_b, size, &config, output);
+  }
+#endif // EXT_FIELD
 
   /*********************************** (Scalar + Vector) ELEMENT WISE ***********************************/
   ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_add_vec)(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return ScalarAddDispatcher::execute(scalar_a, vec_b, n, *config, output);
+    return ScalarAddDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError scalar_add_vec(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_add_vec)(scalar_a, vec_b, size, &config, output);
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(ScalarAddExtFieldDispatcher, extension_scalar_add_vec, extFieldVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_scalar_add_vec)(
+    const extension_t* scalar_a,
+    const extension_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig* config,
+    extension_t* output)
+  {
+    return ScalarAddExtFieldDispatcher::execute(scalar_a, vec_b, size, *config, output);
+  }
+
+  template <>
+  eIcicleError scalar_add_vec(
+    const extension_t* scalar_a,
+    const extension_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_scalar_add_vec)(scalar_a, vec_b, size, &config, output);
+  }
+#endif // EXT_FIELD
 
   /*********************************** (Scalar - Vector) ELEMENT WISE ***********************************/
   ICICLE_DISPATCHER_INST(ScalarSubDispatcher, scalar_sub_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_sub_vec)(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return ScalarSubDispatcher::execute(scalar_a, vec_b, n, *config, output);
+    return ScalarSubDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError scalar_sub_vec(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_sub_vec)(scalar_a, vec_b, size, &config, output);
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(ScalarSubExtFieldDispatcher, extension_scalar_sub_vec, extFieldVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_scalar_sub_vec)(
+    const extension_t* scalar_a,
+    const extension_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig* config,
+    extension_t* output)
+  {
+    return ScalarSubExtFieldDispatcher::execute(scalar_a, vec_b, size, *config, output);
+  }
+
+  template <>
+  eIcicleError scalar_sub_vec(
+    const extension_t* scalar_a,
+    const extension_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_scalar_sub_vec)(scalar_a, vec_b, size, &config, output);
+  }
+#endif // EXT_FIELD
   /*********************************** MUL BY SCALAR ***********************************/
   ICICLE_DISPATCHER_INST(ScalarMulDispatcher, scalar_mul_vec, scalarVectorOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_mul_vec)(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
-    return ScalarMulDispatcher::execute(scalar_a, vec_b, n, *config, output);
+    return ScalarMulDispatcher::execute(scalar_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError scalar_mul_vec(
-    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t n, const VecOpsConfig& config, scalar_t* output)
+    const scalar_t* scalar_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, n, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_mul_vec)(scalar_a, vec_b, size, &config, output);
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(ScalarMulExtFieldDispatcher, extension_scalar_mul_vec, extFieldVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_scalar_mul_vec)(
+    const extension_t* scalar_a,
+    const extension_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig* config,
+    extension_t* output)
+  {
+    return ScalarMulExtFieldDispatcher::execute(scalar_a, vec_b, size, *config, output);
+  }
+
+  template <>
+  eIcicleError scalar_mul_vec(
+    const extension_t* scalar_a,
+    const extension_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_scalar_mul_vec)(scalar_a, vec_b, size, &config, output);
+  }
+#endif // EXT_FIELD
 
   /*********************************** CONVERT MONTGOMERY ***********************************/
 
   ICICLE_DISPATCHER_INST(ScalarConvertMontgomeryDispatcher, scalar_convert_montgomery, scalarConvertMontgomeryImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(
-    const scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, scalar_t* output)
+    const scalar_t* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig* config, scalar_t* output)
   {
-    return ScalarConvertMontgomeryDispatcher::execute(input, size, is_into, *config, output);
+    return ScalarConvertMontgomeryDispatcher::execute(input, size, is_to_montgomery, *config, output);
   }
 
   template <>
-  eIcicleError
-  convert_montgomery(const scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError convert_montgomery(
+    const scalar_t* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(input, size, is_into, &config, output);
+    return CONCAT_EXPAND(FIELD, scalar_convert_montgomery)(input, size, is_to_montgomery, &config, output);
   }
 
 #ifdef EXT_FIELD
@@ -218,16 +373,16 @@ namespace icicle {
     ExtFieldConvertMontgomeryDispatcher, extension_scalar_convert_montgomery, extFieldConvertMontgomeryImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_scalar_convert_montgomery)(
-    const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, extension_t* output)
+    const extension_t* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig* config, extension_t* output)
   {
-    return ExtFieldConvertMontgomeryDispatcher::execute(input, size, is_into, *config, output);
+    return ExtFieldConvertMontgomeryDispatcher::execute(input, size, is_to_montgomery, *config, output);
   }
 
   template <>
   eIcicleError convert_montgomery(
-    const extension_t* input, uint64_t size, bool is_into, const VecOpsConfig& config, extension_t* output)
+    const extension_t* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_scalar_convert_montgomery)(input, size, is_into, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_scalar_convert_montgomery)(input, size, is_to_montgomery, &config, output);
   }
 #endif // EXT_FIELD
 
@@ -271,11 +426,12 @@ namespace icicle {
     const scalar_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig* config,
     scalar_t* output)
   {
-    return ScalarSliceDispatcher::execute(input, offset, stride, size, *config, output);
+    return ScalarSliceDispatcher::execute(input, offset, stride, size_in, size_out, *config, output);
   }
 
   template <>
@@ -283,11 +439,31 @@ namespace icicle {
     const scalar_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig& config,
     scalar_t* output)
   {
-    return CONCAT_EXPAND(FIELD, slice)(input, offset, stride, size, &config, output);
+    return CONCAT_EXPAND(FIELD, slice)(input, offset, stride, size_in, size_out, &config, output);
+  }
+
+  // Deprecated API
+  template <>
+  eIcicleError slice(
+    const scalar_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size_out,
+    const VecOpsConfig& config,
+    scalar_t* output)
+  {
+    const auto size_in = offset + stride * (size_out - 1) + 1; // input should be at least that large
+    ICICLE_LOG_WARNING << "slice api is deprecated and replace with new api. Use new slice api instead";
+    if (config.batch_size != 1) {
+      ICICLE_LOG_ERROR << "deprecated slice API does not support batch";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    return slice(input, offset, stride, size_in, size_out, config, output);
   }
 
 #ifdef EXT_FIELD
@@ -297,11 +473,12 @@ namespace icicle {
     const extension_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig* config,
     extension_t* output)
   {
-    return ExtFieldSliceDispatcher::execute(input, offset, stride, size, *config, output);
+    return ExtFieldSliceDispatcher::execute(input, offset, stride, size_in, size_out, *config, output);
   }
 
   template <>
@@ -309,15 +486,16 @@ namespace icicle {
     const extension_t* input,
     uint64_t offset,
     uint64_t stride,
-    uint64_t size,
+    uint64_t size_in,
+    uint64_t size_out,
     const VecOpsConfig& config,
     extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_slice)(input, offset, stride, size, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_slice)(input, offset, stride, size_in, size_out, &config, output);
   }
 #endif // EXT_FIELD
 
-  /*********************************** HIGHEST NON ZERO IDX ***********************************/
+  /*********************************** HIGHEST sizeON ZERO IDX ***********************************/
 
   ICICLE_DISPATCHER_INST(ScalarHighestNonZeroIdxDispatcher, highest_non_zero_idx, scalarHighNonZeroIdxOpImpl)
 
@@ -367,25 +545,25 @@ namespace icicle {
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, poly_division)(
     const scalar_t* numerator,
-    int64_t numerator_deg,
-    const scalar_t* denumerator,
-    int64_t denumerator_deg,
-    const VecOpsConfig* config,
+    uint64_t numerator_size,
+    const scalar_t* denominator,
+    int64_t denominator_size,
+    const VecOpsConfig& config,
     scalar_t* q_out /*OUT*/,
     uint64_t q_size,
     scalar_t* r_out /*OUT*/,
     uint64_t r_size)
   {
     return ScalarPolyDivDispatcher::execute(
-      numerator, numerator_deg, denumerator, denumerator_deg, *config, q_out, q_size, r_out, r_size);
+      numerator, numerator_size, denominator, denominator_size, config, q_out, q_size, r_out, r_size);
   }
 
   template <>
   eIcicleError polynomial_division(
     const scalar_t* numerator,
-    int64_t numerator_deg,
-    const scalar_t* denumerator,
-    int64_t denumerator_deg,
+    uint64_t numerator_size,
+    const scalar_t* denominator,
+    uint64_t denominator_size,
     const VecOpsConfig& config,
     scalar_t* q_out /*OUT*/,
     uint64_t q_size,
@@ -393,7 +571,7 @@ namespace icicle {
     uint64_t r_size)
   {
     return CONCAT_EXPAND(FIELD, poly_division)(
-      numerator, numerator_deg, denumerator, denumerator_deg, &config, q_out, q_size, r_out, r_size);
+      numerator, numerator_size, denominator, denominator_size, config, q_out, q_size, r_out, r_size);
   }
 
 } // namespace icicle

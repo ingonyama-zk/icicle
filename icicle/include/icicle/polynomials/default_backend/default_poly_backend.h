@@ -65,7 +65,7 @@ namespace icicle {
       config.is_async = true;
       config.stream = m_stream;
 
-      ICICLE_CHECK(icicle::slice(in_coeffs, offset, stride, out_size, config, out_coeffs));
+      ICICLE_CHECK(icicle::slice(in_coeffs, offset, stride, in_size, out_size, config, out_coeffs));
     }
 
     void add_sub(PolyContext& res, PolyContext a, PolyContext b, bool add1_sub0)
@@ -278,7 +278,7 @@ namespace icicle {
       config.is_result_on_device = true;
 
       ICICLE_CHECK(icicle::polynomial_division(
-        a_coeffs, deg_a, b_coeffs, deg_b, config, Q_coeffs, deg_a - deg_b + 1, R_coeffs, a_N));
+        a_coeffs, deg_a + 1, b_coeffs, deg_b + 1, config, Q_coeffs, deg_a - deg_b + 1, R_coeffs, a_N));
     }
 
     void quotient(PolyContext Q, PolyContext op_a, PolyContext op_b) override
@@ -546,8 +546,8 @@ namespace icicle {
         config.is_result_on_device = true;
         config.is_async = true;
         config.stream = m_stream;
-        ICICLE_CHECK(
-          icicle::slice(get_context_storage_immutable<I>(p), 0 /*offset*/, stride, domain_size, config, d_evals));
+        ICICLE_CHECK(icicle::slice(
+          get_context_storage_immutable<I>(p), 0 /*offset*/, stride, poly_size, domain_size, config, d_evals));
       } else {
         ICICLE_CHECK(icicle_memset(d_evals, 0, domain_size * sizeof(I)));
         auto ntt_config = default_ntt_config<D>();
