@@ -1,13 +1,12 @@
 package tests
 
 import (
-	"sync"
+	// "sync"
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	icicleBn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/g2"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 	"github.com/stretchr/testify/suite"
