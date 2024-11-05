@@ -1,31 +1,26 @@
 package tests
 
 import (
-	"testing"	
-	"sync"
-	"fmt"
+	{{if .SupportsNTT -}}"fmt"{{end}}
 	"os"
-	"github.com/stretchr/testify/suite"
-	{{if .SupportsNTT -}}
-	
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}
-	{{if .SupportsNTT -}}
-	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"sync"
+	"testing"
 
 	{{if ne .GnarkImport "" -}}
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
 	{{end -}}
+	{{if .SupportsNTT -}}
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}
+	{{if .SupportsNTT -}}
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
 	largestTestSize = 20
-)
-
-var (
-	DEVICE runtime.Device
-	exitCode int
 )
 
 {{if .SupportsNTT -}}
@@ -45,11 +40,11 @@ func initDomain({{if ne .GnarkImport "" -}}largestTestSize int, {{end -}}cfg cor
 	return e
 }{{end}}
 
-func testWrapper(suite suite.Suite, fn func(suite.Suite)) func() {
+func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
 	return func() {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
-		runtime.RunOnDevice(&DEVICE, func(args ...any) {
+		runtime.RunOnDevice(&test_helpers.REFERENCE_DEVICE, func(args ...any) {
 			defer wg.Done()
 			fn(suite)
 		})
@@ -59,16 +54,16 @@ func testWrapper(suite suite.Suite, fn func(suite.Suite)) func() {
 
 func TestMain(m *testing.M) {
 	runtime.LoadBackendFromEnvOrDefault()
+	{{if .SupportsNTT -}}
 	devices, e := runtime.GetRegisteredDevices()
 	if e != runtime.Success {
 		panic("Failed to load registered devices")
 	}
 	for _, deviceType := range devices {
-		fmt.Println("Running tests for device type:", deviceType)
-		DEVICE = runtime.CreateDevice(deviceType, 0)
-		runtime.SetDevice(&DEVICE)
+		device := runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&device)
 
-		{{if .SupportsNTT -}}// setup domain
+		// setup domain
 		cfg := core.GetDefaultNTTInitDomainConfig()
 		e = initDomain({{if ne .GnarkImport "" -}}largestTestSize, {{end -}}cfg)
 		if e != runtime.Success {
@@ -77,14 +72,16 @@ func TestMain(m *testing.M) {
 			} else {
 				panic("initDomain failed")
 			}
-		}{{end}}
+		}
+	}{{end}}
 
-		// TODO - run tests for each device type without calling `m.Run` multiple times
-		// see https://cs.opensource.google/go/go/+/refs/tags/go1.23.1:src/testing/testing.go;l=1936-1940 for more info
-		// execute tests
-		exitCode |= m.Run()
+	exitCode := m.Run()
 
-		{{if .SupportsNTT -}}// release domain
+	{{if .SupportsNTT -}}// release domain
+	for _, deviceType := range devices {
+		device := runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&device)
+		// release domain
 		e = ntt.ReleaseDomain()
 		if e != runtime.Success {
 			if e != runtime.ApiNotImplemented {
@@ -92,8 +89,8 @@ func TestMain(m *testing.M) {
 			} else {
 				panic("ReleaseDomain failed")
 			}
-		}{{end}}
-	}
+		}
+	}{{end}}
 
 	os.Exit(exitCode)
 }

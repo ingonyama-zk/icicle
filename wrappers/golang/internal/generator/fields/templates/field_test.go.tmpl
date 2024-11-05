@@ -5,7 +5,7 @@ import (
   	{{if .IsScalar}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"{{end}}
 	{{if ne .FieldPrefix "G2"}}{{.Field}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}{{if eq .FieldPrefix "G2"}}/g2{{end}}"
-  	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+  	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -13,7 +13,7 @@ const (
 	{{toConst .FieldPrefix}}LIMBS = {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{toConst .FieldPrefix}}LIMBS
 )
 
-func test{{.FieldPrefix}}FieldFromLimbs(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldFromLimbs(suite *suite.Suite) {
 	emptyField := {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field{}
 	randLimbs := test_helpers.GenerateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -22,7 +22,7 @@ func test{{.FieldPrefix}}FieldFromLimbs(suite suite.Suite) {
 	suite.NotEqual(randLimbs, emptyField.GetLimbs())
 }
 
-func test{{.FieldPrefix}}FieldGetLimbs(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldGetLimbs(suite *suite.Suite) {
 	emptyField := {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field{}
 	randLimbs := test_helpers.GenerateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -30,7 +30,7 @@ func test{{.FieldPrefix}}FieldGetLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the {{.FieldPrefix}}Field's limbs")
 }
 
-func test{{.FieldPrefix}}FieldOne(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldOne(suite *suite.Suite) {
 	var emptyField {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int({{toConst .FieldPrefix}}LIMBS))
@@ -43,7 +43,7 @@ func test{{.FieldPrefix}}FieldOne(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "{{.FieldPrefix}}Field with limbs to field one did not work")
 }
 
-func test{{.FieldPrefix}}FieldZero(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldZero(suite *suite.Suite) {
 	var emptyField {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field
 	emptyField.Zero()
 	limbsZero := make([]uint32, {{toConst .FieldPrefix}}LIMBS)
@@ -56,7 +56,7 @@ func test{{.FieldPrefix}}FieldZero(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "{{.FieldPrefix}}Field with limbs to field zero failed")
 }
 
-func test{{.FieldPrefix}}FieldSize(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldSize(suite *suite.Suite) {
 	var emptyField {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field
 	randLimbs := test_helpers.GenerateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -64,7 +64,7 @@ func test{{.FieldPrefix}}FieldSize(suite suite.Suite) {
 	suite.Equal(len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func test{{.FieldPrefix}}FieldAsPointer(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldAsPointer(suite *suite.Suite) {
 	var emptyField {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field
 	randLimbs := test_helpers.GenerateRandomLimb(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -72,7 +72,7 @@ func test{{.FieldPrefix}}FieldAsPointer(suite suite.Suite) {
 	suite.Equal(randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func test{{.FieldPrefix}}FieldFromBytes(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldFromBytes(suite *suite.Suite) {
 	var emptyField {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field
 	bytes, expected := test_helpers.GenerateBytesArray(int({{toConst .FieldPrefix}}LIMBS))
 
@@ -81,7 +81,7 @@ func test{{.FieldPrefix}}FieldFromBytes(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func test{{.FieldPrefix}}FieldToBytes(suite suite.Suite) {
+func test{{.FieldPrefix}}FieldToBytes(suite *suite.Suite) {
 	var emptyField {{if eq .FieldPrefix "G2"}}g2{{else}}{{.Field}}{{end}}.{{.FieldPrefix}}Field
 	expected, limbs := test_helpers.GenerateBytesArray(int({{toConst .FieldPrefix}}LIMBS))
 	emptyField.FromLimbs(limbs)
@@ -89,7 +89,7 @@ func test{{.FieldPrefix}}FieldToBytes(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.ToBytesLittleEndian(), expected, "ToBytes returned incorrect values")
 }
 {{if .IsScalar}}
-func test{{capitalize .Field}}GenerateScalars(suite suite.Suite) {
+func test{{capitalize .Field}}GenerateScalars(suite *suite.Suite) {
 	const numScalars = 8
 	scalars := {{.Field}}.GenerateScalars(numScalars)
 
@@ -100,7 +100,7 @@ func test{{capitalize .Field}}GenerateScalars(suite suite.Suite) {
 	suite.NotContains(scalars, zeroScalar)
 }
 
-func test{{capitalize .Field}}MongtomeryConversion(suite suite.Suite) {
+func test{{capitalize .Field}}MongtomeryConversion(suite *suite.Suite) {
 	size := 1 << 20
 	scalars := {{.Field}}.GenerateScalars(size)
 
@@ -126,17 +126,17 @@ type {{.FieldPrefix}}FieldTestSuite struct {
 }
 
 func (s *{{.FieldPrefix}}FieldTestSuite) Test{{.FieldPrefix}}Field() {
-	s.Run("Test{{.FieldPrefix}}FieldFromLimbs", testWrapper(s.Suite, test{{.FieldPrefix}}FieldFromLimbs))
-	s.Run("Test{{.FieldPrefix}}FieldGetLimbs", testWrapper(s.Suite, test{{.FieldPrefix}}FieldGetLimbs))
-	s.Run("Test{{.FieldPrefix}}FieldOne", testWrapper(s.Suite, test{{.FieldPrefix}}FieldOne))
-	s.Run("Test{{.FieldPrefix}}FieldZero", testWrapper(s.Suite, test{{.FieldPrefix}}FieldZero))
-	s.Run("Test{{.FieldPrefix}}FieldSize", testWrapper(s.Suite, test{{.FieldPrefix}}FieldSize))
-	s.Run("Test{{.FieldPrefix}}FieldAsPointer", testWrapper(s.Suite, test{{.FieldPrefix}}FieldAsPointer))
-	s.Run("Test{{.FieldPrefix}}FieldFromBytes", testWrapper(s.Suite, test{{.FieldPrefix}}FieldFromBytes))
-	s.Run("Test{{.FieldPrefix}}FieldToBytes", testWrapper(s.Suite, test{{.FieldPrefix}}FieldToBytes))
+	s.Run("Test{{.FieldPrefix}}FieldFromLimbs", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldFromLimbs))
+	s.Run("Test{{.FieldPrefix}}FieldGetLimbs", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldGetLimbs))
+	s.Run("Test{{.FieldPrefix}}FieldOne", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldOne))
+	s.Run("Test{{.FieldPrefix}}FieldZero", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldZero))
+	s.Run("Test{{.FieldPrefix}}FieldSize", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldSize))
+	s.Run("Test{{.FieldPrefix}}FieldAsPointer", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldAsPointer))
+	s.Run("Test{{.FieldPrefix}}FieldFromBytes", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldFromBytes))
+	s.Run("Test{{.FieldPrefix}}FieldToBytes", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldToBytes))
 	{{if .IsScalar -}}
-	s.Run("Test{{capitalize .Field}}GenerateScalars", testWrapper(s.Suite, test{{capitalize .Field}}GenerateScalars))
-	s.Run("Test{{capitalize .Field}}MongtomeryConversion", testWrapper(s.Suite, test{{capitalize .Field}}MongtomeryConversion))
+	s.Run("Test{{capitalize .Field}}GenerateScalars", testWrapper(&s.Suite, test{{capitalize .Field}}GenerateScalars))
+	s.Run("Test{{capitalize .Field}}MongtomeryConversion", testWrapper(&s.Suite, test{{capitalize .Field}}MongtomeryConversion))
 	{{- end}}
 }
 

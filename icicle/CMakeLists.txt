@@ -80,7 +80,7 @@ install(TARGETS icicle_device
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
   if(NOT ("${CURVE}" STREQUAL "${FIELD}"))
-    message(FATAL_ERROR "CURVE and FIELD should be defined at the same time unless they are equal")
+    message(FATAL_ERROR "CURVE and FIELD should not be defined at the same time unless they are equal")
   endif()
 endif()
 

@@ -2,25 +2,21 @@ package tests
 
 import (
 	"fmt"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	bls12_381 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381"
-	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/ntt"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
-	"github.com/stretchr/testify/suite"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/fft"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bls12_381 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381"
+	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
 	largestTestSize = 20
-)
-
-var (
-	DEVICE   runtime.Device
-	exitCode int
 )
 
 func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcicleError {
@@ -34,11 +30,11 @@ func initDomain(largestTestSize int, cfg core.NTTInitDomainConfig) runtime.EIcic
 	return e
 }
 
-func testWrapper(suite suite.Suite, fn func(suite.Suite)) func() {
+func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
 	return func() {
 		wg := sync.WaitGroup{}
 		wg.Add(1)
-		runtime.RunOnDevice(&DEVICE, func(args ...any) {
+		runtime.RunOnDevice(&test_helpers.REFERENCE_DEVICE, func(args ...any) {
 			defer wg.Done()
 			fn(suite)
 		})
@@ -53,9 +49,8 @@ func TestMain(m *testing.M) {
 		panic("Failed to load registered devices")
 	}
 	for _, deviceType := range devices {
-		fmt.Println("Running tests for device type:", deviceType)
-		DEVICE = runtime.CreateDevice(deviceType, 0)
-		runtime.SetDevice(&DEVICE)
+		device := runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&device)
 
 		// setup domain
 		cfg := core.GetDefaultNTTInitDomainConfig()
@@ -67,12 +62,14 @@ func TestMain(m *testing.M) {
 				panic("initDomain failed")
 			}
 		}
+	}
 
-		// TODO - run tests for each device type without calling `m.Run` multiple times
-		// see https://cs.opensource.google/go/go/+/refs/tags/go1.23.1:src/testing/testing.go;l=1936-1940 for more info
-		// execute tests
-		exitCode |= m.Run()
+	exitCode := m.Run()
 
+	// release domain
+	for _, deviceType := range devices {
+		device := runtime.CreateDevice(deviceType, 0)
+		runtime.SetDevice(&device)
 		// release domain
 		e = ntt.ReleaseDomain()
 		if e != runtime.Success {
