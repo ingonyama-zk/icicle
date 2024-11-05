@@ -261,7 +261,7 @@ func testMSMSkewedDistribution(suite *suite.Suite) {
 }
 
 // TODO - RunOnDevice causes incorrect values
-// TODO - Support point and field arithmetics outside of vecops
+// TODO - Support point and field arithmetic outside of vecops
 //func testMSMMultiDevice(suite *suite.Suite) {
 //	test_helpers.ActivateMainDevice()
 //	secondHalfDevice := runtime.CreateDevice("CUDA", 1)
