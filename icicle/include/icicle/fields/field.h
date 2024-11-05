@@ -843,9 +843,9 @@ public:
 #if 1
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
-    Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
-    // return mont_mult(xs,ys);
+    // Wide xy = mul_wide(xs, ys); // full mult
+    // return reduce(xy);          // reduce mod p
+    return mont_mult(xs,ys);
   }
 
   static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
