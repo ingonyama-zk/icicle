@@ -141,4 +141,4 @@ Currently the poseidon sponge function (Sec 2.1 of https://eprint.iacr.org/2019/
 ### Supported Bindings
 
 - [Rust](../rust-bindings/hash)
-- Go bindings soon
+- [Go](../golang-bindings/hash)
