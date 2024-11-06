@@ -816,7 +816,7 @@ TEST_F(HashApiTest, MerkleTreeMixMediumSize)
     START_TIMER(MerkleTree_build)
     ICICLE_CHECK(prover_tree.build(leaves.get(), nof_leaves, config));
     END_TIMER(MerkleTree_build, "Merkle Tree large", true)
-    assert_valid_tree<uint32_t>(prover_tree, nof_leaves, leaves.get(), hashes, config);
+    ICICLE_ASSERT(is_valid_tree<uint32_t>(prover_tree, nof_leaves, leaves.get(), hashes, config));
 
     // get root and merkle-path to an element
     for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
