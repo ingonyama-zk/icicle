@@ -122,6 +122,11 @@ module.exports = {
               id: "icicle/primitives/hash",
             },
             {
+              type: "doc",
+              label: "Merkle-Tree",
+              id: "icicle/primitives/merkle",
+            },
+            {
               type: "category",
               label: "Golang bindings",
               link: {
@@ -166,6 +171,16 @@ module.exports = {
                   label: "Multi GPU Support",
                   id: "icicle/golang-bindings/multi-gpu",
                 },
+                {
+                  type: "doc",
+                  label: "Hash",
+                  id: "icicle/golang-bindings/hash",
+                },
+                {
+                  type: "doc",
+                  label: "Merkle-Tree",
+                  id: "icicle/golang-bindings/merkle",
+                },
               ]
             },
             {
@@ -206,6 +221,11 @@ module.exports = {
                   type: "doc",
                   label: "Hash",
                   id: "icicle/rust-bindings/hash",
+                },
+                {
+                  type: "doc",
+                  label: "Merkle-Tree",
+                  id: "icicle/rust-bindings/merkle",
                 },
                 // {
                 //   type: "doc",

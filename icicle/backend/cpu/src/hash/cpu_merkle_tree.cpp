@@ -4,6 +4,7 @@
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/errors.h"
 #include "icicle/utils/log.h"
+#include "icicle/utils/utils.h"
 #include "tasks_manager.h"
 
 #define CONFIG_NOF_THREADS_KEY  "n_threads"
@@ -28,7 +29,7 @@ namespace icicle {
         ICICLE_ASSERT(
           layer_idx == nof_layers - 1 ||
           layer_hashes[layer_idx + 1].default_input_chunk_size() % layer_hashes[layer_idx].output_size() == 0)
-          << "Each layer output size must divide the above layer input size. Otherwise its not a tree.\n"
+          << "Each layer output size must divide the next layer input size. Otherwise its not a tree.\n"
           << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx + 1].default_input_chunk_size() << "\n"
           << "Layer " << layer_idx + 1 << " output size = " << layer_hashes[layer_idx].output_size() << "\n";
 
@@ -556,7 +557,7 @@ namespace icicle {
         }
         const uint64_t copy_chunk_start = (element_start / copy_range_size) * copy_range_size;
 
-        for (int byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
+        for (uint64_t byte_idx = copy_chunk_start; byte_idx < copy_chunk_start + copy_range_size; byte_idx++) {
           if (
             !is_pruned || byte_idx < element_start ||       // copy data before the element
             element_start + one_element_size <= byte_idx) { // copy data after the element
@@ -566,19 +567,6 @@ namespace icicle {
         }
       }
       return path;
-    }
-
-    // Debug
-    void print_bytes(const std::byte* data, const uint nof_elements, const uint element_size) const
-    {
-      for (uint element_idx = 0; element_idx < nof_elements; ++element_idx) {
-        std::cout << ", 0x";
-        for (int byte_idx = element_size - 1; byte_idx >= 0; --byte_idx) {
-          std::cout << std::hex << std::setw(2) << std::setfill('0')
-                    << static_cast<int>(data[element_idx * element_size + byte_idx]);
-        }
-      }
-      std::cout << std::endl;
     }
   };
 

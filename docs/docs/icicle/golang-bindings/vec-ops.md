@@ -4,8 +4,8 @@
 
 Icicle exposes a number of vector operations which a user can use:
 
-* The VecOps API provides efficient vector operations such as addition, subtraction, and multiplication.
-* MatrixTranspose API allows a user to perform a transpose on a vector representation of a matrix
+* The VecOps API provides efficient vector operations such as addition, subtraction, and multiplication, supporting both single and batched operations.
+* MatrixTranspose API allows a user to perform a transpose on a vector representation of a matrix, with support for batched transpositions.
 
 ## VecOps API Documentation
 
@@ -121,6 +121,8 @@ type VecOpsConfig struct {
 	isBOnDevice      bool
 	isResultOnDevice bool
 	IsAsync          bool
+	batch_size       int
+	columns_batch    bool
 	Ext              config_extension.ConfigExtensionHandler
 }
 ```
@@ -132,6 +134,8 @@ type VecOpsConfig struct {
 - **`isBOnDevice`**: Indicates if vector `b` is located on the device.
 - **`isResultOnDevice`**: Specifies where the result vector should be stored (device or host memory).
 - **`IsAsync`**: Controls whether the vector operation runs asynchronously.
+- **`batch_size`**: Number of vectors (or operations) to process in a batch. Each vector operation will be performed independently on each batch element.
+- **`columns_batch`**: true if the batched vectors are stored as columns in a 2D array (i.e., the vectors are strided in memory as columns of a matrix). If false, the batched vectors are stored contiguously in memory (e.g., as rows or in a flat array).
 - **`Ext`**: Extended configuration for backend.
 
 #### Default Configuration
@@ -147,6 +151,8 @@ func DefaultVecOpsConfig() VecOpsConfig
 This section describes the functionality of the `TransposeMatrix` function used for matrix transposition.
 
 The function takes a matrix represented as a 1D slice and transposes it, storing the result in another 1D slice.
+
+If VecOpsConfig specifies a batch_size greater than one, the transposition is performed on multiple matrices simultaneously, producing corresponding transposed matrices. The storage arrangement of batched matrices is determined by the columns_batch field in the VecOpsConfig.
 
 ### Function
 

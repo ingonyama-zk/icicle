@@ -5,7 +5,6 @@
 
 #define LOG_TASKS_PER_THREAD 6
 #define TASKS_PER_THREAD     (1 << LOG_TASKS_PER_THREAD)
-#define TASK_IDX_MASK        (TASKS_PER_THREAD - 1)
 #define MANAGER_SLEEP_USEC   10
 #define THREAD_SLEEP_USEC    1
 
@@ -82,9 +81,16 @@ class TasksManager
 public:
   /**
    * @brief Constructor for `TaskManager`.
-   * @param nof_workers - number of workers / threads to be ran simultaneously
+   * @param nof_workers - Number of workers / threads to be ran simultaneously
+   * @param min_nof_tasks - Total number of tasks required by the application
    */
-  TasksManager(const int nof_workers) : m_workers(nof_workers), m_next_worker_idx(0) {}
+  TasksManager(int nof_workers, int min_nof_tasks = 0);
+
+  /**
+   * @brief Destructor of `TasksManager`.
+   * Frees the worker pointer.
+   */
+  ~TasksManager();
 
   /**
    * @brief Get free slot to insert new task to be executed. This is a blocking function - until a free task is found.
@@ -126,7 +132,8 @@ private:
      * @brief Constructor of `Worker`.
      * Inits default values for the class's members and launches the thread.
      */
-    Worker();
+    Worker(int nof_tasks);
+
     /**
      * @brief Destructor of `Worker`.
      * Signals the thread to terminate and joins it with main. The destructor does not handle existing tasks' results
@@ -174,20 +181,20 @@ private:
     std::thread task_executor; // Thread to be run parallel to main
     std::vector<Task> m_tasks; // vector containing the worker's task. a Vector is used to allow buffering.
     int m_next_task_idx;       // Tail (input) idx of the fifo above. Checks for free task start at this idx.
-    bool kill;                 // boolean to flag from main to the thread to finish.
+    bool m_kill;               // boolean to flag from main to the thread to finish.
 
-    #ifdef LOG_UTILIZATION
+#ifdef LOG_UTILIZATION
     int m_nof_sleeps = 0;
     int m_total_sleep_us = 0;
-    #endif
+#endif
   };
 
-  std::vector<Worker> m_workers; // Vector of workers/threads to be ran simultaneously.
+  std::vector<Worker*> m_workers; // Vector of workers/threads to be ran simultaneously.
   int m_next_worker_idx;
 };
 
 template <class Task>
-TasksManager<Task>::Worker::Worker() : m_tasks(TASKS_PER_THREAD), m_next_task_idx(0), kill(false)
+TasksManager<Task>::Worker::Worker(int nof_tasks) : m_tasks(nof_tasks), m_next_task_idx(0), m_kill(false)
 {
   // Init thread only after finishing all other setup to avoid data races
   task_executor = std::thread(&TasksManager<Task>::Worker::worker_loop, this);
@@ -196,21 +203,22 @@ TasksManager<Task>::Worker::Worker() : m_tasks(TASKS_PER_THREAD), m_next_task_id
 template <class Task>
 TasksManager<Task>::Worker::~Worker()
 {
-  kill = true;
+  m_kill = true;
   task_executor.join();
 
-  #ifdef LOG_UTILIZATION
-  ICICLE_LOG_INFO << "Thread utilization:\n#sleeps =\t\t" << m_nof_sleeps << "\nTotal sleep time =\t" << m_total_sleep_us << "us";
-  #endif
+#ifdef LOG_UTILIZATION
+  ICICLE_LOG_INFO << "Thread utilization:\n#sleeps =\t\t" << m_nof_sleeps << "\nTotal sleep time =\t"
+                  << m_total_sleep_us << "us";
+#endif
 }
 
 template <class Task>
 void TasksManager<Task>::Worker::worker_loop()
 {
-  #ifdef LOG_UTILIZATION
+#ifdef LOG_UTILIZATION
   bool had_work_since_sleep = false;
-  #endif
-  while (!kill) {
+#endif
+  while (!m_kill) {
     bool all_tasks_idle = true;
     for (int head = 0; head < m_tasks.size(); head++) {
       Task* task = &m_tasks[head];
@@ -219,22 +227,22 @@ void TasksManager<Task>::Worker::worker_loop()
         task->set_completed();
         all_tasks_idle = false;
 
-        #ifdef LOG_UTILIZATION
+#ifdef LOG_UTILIZATION
         had_work_since_sleep = true;
-  #endif
+#endif
       }
     }
     if (all_tasks_idle) {
       // Sleep as the thread apparently isn't fully utilized currently
       std::this_thread::sleep_for(std::chrono::microseconds(THREAD_SLEEP_USEC));
 
-      #ifdef LOG_UTILIZATION
-      if (had_work_since_sleep) { 
+#ifdef LOG_UTILIZATION
+      if (had_work_since_sleep) {
         m_nof_sleeps++;
         had_work_since_sleep = false;
       }
       m_total_sleep_us++;
-  #endif
+#endif
     }
   }
 }
@@ -244,7 +252,7 @@ Task* TasksManager<Task>::Worker::get_idle_or_completed_task()
 {
   for (int i = 0; i < m_tasks.size(); i++) {
     // TASKS_PER_WORKER is a power of 2 so modulo is done via bitmask.
-    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK;
+    m_next_task_idx = (m_next_task_idx < m_tasks.size() - 1) ? m_next_task_idx + 1 : 0;
 
     if (m_tasks[m_next_task_idx].is_idle() || m_tasks[m_next_task_idx].is_completed()) {
       return &m_tasks[m_next_task_idx];
@@ -257,7 +265,7 @@ template <class Task>
 Task* TasksManager<Task>::Worker::get_idle_task()
 {
   for (int i = 0; i < m_tasks.size(); i++) {
-    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK;
+    m_next_task_idx = (m_next_task_idx < m_tasks.size() - 1) ? m_next_task_idx + 1 : 0;
 
     if (m_tasks[m_next_task_idx].is_idle()) { return &m_tasks[m_next_task_idx]; }
   }
@@ -268,7 +276,7 @@ template <class Task>
 Task* TasksManager<Task>::Worker::get_completed_task(bool& is_idle)
 {
   for (int i = 0; i < m_tasks.size(); i++) {
-    m_next_task_idx = (1 + m_next_task_idx) & TASK_IDX_MASK;
+    m_next_task_idx = (m_next_task_idx < m_tasks.size() - 1) ? m_next_task_idx + 1 : 0;
 
     if (m_tasks[m_next_task_idx].is_completed()) {
       is_idle = false;
@@ -292,6 +300,24 @@ void TasksManager<Task>::Worker::wait_done()
 }
 
 template <class Task>
+TasksManager<Task>::TasksManager(int nof_workers, int min_nof_tasks) : m_workers(nof_workers), m_next_worker_idx(0)
+{
+  ICICLE_ASSERT(nof_workers > 0) << "Number of workers must be at least 1.";
+  int nof_tasks_per_worker = std::max((min_nof_tasks + nof_workers - 1) / nof_workers, TASKS_PER_THREAD);
+  for (int i = 0; i < nof_workers; i++) {
+    m_workers[i] = new Worker(nof_tasks_per_worker);
+  }
+}
+
+template <class Task>
+TasksManager<Task>::~TasksManager()
+{
+  for (auto&& worker : m_workers) {
+    delete worker;
+  }
+}
+
+template <class Task>
 Task* TasksManager<Task>::get_idle_or_completed_task()
 {
   Task* task = nullptr;
@@ -299,7 +325,7 @@ Task* TasksManager<Task>::get_idle_or_completed_task()
     for (int i = 0; i < m_workers.size(); i++) {
       m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1) ? m_next_worker_idx + 1 : 0;
 
-      task = m_workers[m_next_worker_idx].get_idle_or_completed_task();
+      task = m_workers[m_next_worker_idx]->get_idle_or_completed_task();
       if (task != nullptr) { return task; }
     }
     std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
@@ -313,7 +339,7 @@ Task* TasksManager<Task>::get_idle_task()
   for (int i = 0; i < m_workers.size(); i++) {
     m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1) ? m_next_worker_idx + 1 : 0;
 
-    idle_task = m_workers[m_next_worker_idx].get_idle_task();
+    idle_task = m_workers[m_next_worker_idx]->get_idle_task();
     if (idle_task != nullptr) { return idle_task; }
   }
   // No completed tasks were found in the loop - return null.
@@ -331,7 +357,7 @@ Task* TasksManager<Task>::get_completed_task()
     for (int i = 0; i < m_workers.size(); i++) {
       m_next_worker_idx = (m_next_worker_idx < m_workers.size() - 1) ? m_next_worker_idx + 1 : 0;
 
-      completed_task = m_workers[m_next_worker_idx].get_completed_task(all_idle);
+      completed_task = m_workers[m_next_worker_idx]->get_completed_task(all_idle);
       if (completed_task != nullptr) { return completed_task; }
     }
     std::this_thread::sleep_for(std::chrono::microseconds(MANAGER_SLEEP_USEC));
@@ -343,7 +369,7 @@ Task* TasksManager<Task>::get_completed_task()
 template <class Task>
 void TasksManager<Task>::wait_done()
 {
-  for (Worker& worker : m_workers) {
-    worker.wait_done();
+  for (Worker*& worker : m_workers) {
+    worker->wait_done();
   }
 }

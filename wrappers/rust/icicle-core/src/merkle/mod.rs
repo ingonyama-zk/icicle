@@ -24,11 +24,11 @@ pub enum PaddingPolicy {
 #[derive(Clone)]
 pub struct MerkleTreeConfig {
     pub stream_handle: IcicleStreamHandle, // Stream for asynchronous execution. Default is null for synchronous execution.
-    pub is_leaves_on_device: bool,         // True if leaves are on the device (GPU), false if on the host (CPU).
-    pub is_tree_on_device: bool, // True if the tree results are allocated on the device (GPU), false if on the host (CPU).
-    pub is_async: bool,          // True for asynchronous execution, false for synchronous.
+    is_leaves_on_device: bool,             // True if leaves are on the device (GPU), false if on the host (CPU).
+    is_tree_on_device: bool, // True if the tree results are allocated on the device (GPU), false if on the host (CPU).
+    pub is_async: bool,      // True for asynchronous execution, false for synchronous.
     pub padding_policy: PaddingPolicy, // Policy for handling cases where the input is smaller than expected.
-    pub ext: ConfigExtension,    // Backend-specific extensions for advanced configurations.
+    pub ext: ConfigExtension, // Backend-specific extensions for advanced configurations.
 }
 
 impl MerkleTreeConfig {
@@ -161,7 +161,7 @@ extern "C" {
         output_store_min_layer: u64,
     ) -> MerkleTreeHandle;
 
-    fn icicle_merkle_tree_delete(tree: MerkleTreeHandle);
+    fn icicle_merkle_tree_delete(tree: MerkleTreeHandle) -> eIcicleError;
 
     fn icicle_merkle_tree_build(
         tree: MerkleTreeHandle,
@@ -300,7 +300,12 @@ impl MerkleTree {
 impl Drop for MerkleTree {
     fn drop(&mut self) {
         unsafe {
-            icicle_merkle_tree_delete(self.handle);
+            if !self
+                .handle
+                .is_null()
+            {
+                let _ = icicle_merkle_tree_delete(self.handle);
+            }
         }
     }
 }

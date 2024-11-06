@@ -21,7 +21,8 @@ namespace icicle {
      * @brief Constructor for the HashBackend class.
      *
      * @param output_size The size of the output in bytes.
-     * @param default_input_chunk_size The default size of a single input chunk in bytes. Useful for Merkle trees.
+     * @param default_input_chunk_size The default size in bytes of a single hash input chunk in bytes. Useful for
+     * Merkle trees.
      */
     HashBackend(const char* name, uint64_t output_size, uint64_t default_input_chunk_size)
         : m_name_hint(name), m_output_size{output_size}, m_default_input_chunk_size{default_input_chunk_size}
@@ -50,7 +51,7 @@ namespace icicle {
      * @brief Get the default input chunk size.
      * @return The size of the input chunk in bytes.
      */
-    inline uint64_t input_default_chunk_size() const { return m_default_input_chunk_size; }
+    inline uint64_t default_input_chunk_size() const { return m_default_input_chunk_size; }
 
     /**
      * @brief Get the output size in bytes for a single hash chunk.
@@ -67,7 +68,7 @@ namespace icicle {
 
     inline uint64_t get_single_chunk_size(uint64_t size_or_zero) const
     {
-      const uint64_t size = (size_or_zero == 0) ? input_default_chunk_size() : size_or_zero;
+      const uint64_t size = (size_or_zero == 0) ? default_input_chunk_size() : size_or_zero;
       ICICLE_ASSERT(size > 0) << "Cannot infer hash size. Make sure to pass it to hasher.hash(...size...) or have "
                                  "default size for the hasher";
       return size;

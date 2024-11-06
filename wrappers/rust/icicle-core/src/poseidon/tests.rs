@@ -2,45 +2,149 @@ use crate::{
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     poseidon::{Poseidon, PoseidonHasher},
-    traits::FieldImpl,
+    test_utilities,
+    traits::{FieldImpl, GenerateRandom},
 };
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::{errors::eIcicleError, memory::HostSlice};
 use std::mem;
 
 pub fn check_poseidon_hash<F: FieldImpl>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F>,
+    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
 {
-    let batch = 1 << 10;
-    let arity = 3;
-    let mut inputs = vec![F::one(); batch * arity];
-    let mut outputs = vec![F::zero(); batch];
+    let batch = 1 << 4;
+    let domain_tag = F::Config::generate_random(1)[0];
+    for t in [3, 5, 9, 12] {
+        for domain_tag in [None, Some(&domain_tag)] {
+            let inputs: Vec<F> = if domain_tag != None {
+                F::Config::generate_random(batch * (t - 1))
+            } else {
+                F::Config::generate_random(batch * t)
+            };
+            let mut outputs_main = vec![F::zero(); batch];
+            let mut outputs_ref = vec![F::zero(); batch];
 
-    let poseidon_hasher = Poseidon::new::<F>(arity as u32).unwrap();
+            test_utilities::test_set_main_device();
+            let poseidon_hasher_main = Poseidon::new::<F>(t as u32, domain_tag).unwrap();
 
-    poseidon_hasher
-        .hash(
-            HostSlice::from_slice(&mut inputs),
+            poseidon_hasher_main
+                .hash(
+                    HostSlice::from_slice(&inputs),
+                    &HashConfig::default(),
+                    HostSlice::from_mut_slice(&mut outputs_main),
+                )
+                .unwrap();
+
+            test_utilities::test_set_ref_device();
+            let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, domain_tag).unwrap();
+
+            poseidon_hasher_ref
+                .hash(
+                    HostSlice::from_slice(&inputs),
+                    &HashConfig::default(),
+                    HostSlice::from_mut_slice(&mut outputs_ref),
+                )
+                .unwrap();
+
+            assert_eq!(outputs_main, outputs_ref);
+        }
+    }
+}
+
+pub fn check_poseidon_hash_sponge<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+{
+    for t in [3, 5, 9, 12] {
+        let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
+        let mut outputs_main = vec![F::zero(); 1];
+        let mut outputs_ref = vec![F::zero(); 1];
+
+        test_utilities::test_set_main_device();
+        let poseidon_hasher_main = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+
+        poseidon_hasher_main
+            .hash(
+                HostSlice::from_slice(&inputs),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut outputs_main),
+            )
+            .unwrap();
+
+        // Sponge poseidon is planned for v3.2. Not supported in v3.1
+        test_utilities::test_set_ref_device();
+        let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+
+        let err = poseidon_hasher_ref.hash(
+            HostSlice::from_slice(&inputs),
             &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs),
+            HostSlice::from_mut_slice(&mut outputs_ref),
+        );
+        assert_eq!(err, Err(eIcicleError::InvalidArgument));
+    }
+}
+
+pub fn check_poseidon_hash_multi_device<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+{
+    let t = 9; // t=9 is for Poseidon9 hash (t is the paper's terminology)
+    let inputs: Vec<F> = F::Config::generate_random(t);
+    let mut outputs_main_0 = vec![F::zero(); 1];
+    let mut outputs_main_1 = vec![F::zero(); 1];
+    let mut outputs_ref = vec![F::zero(); 1];
+
+    test_utilities::test_set_ref_device();
+    let poseidon_hasher_ref = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+
+    poseidon_hasher_ref
+        .hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_ref),
         )
         .unwrap();
 
-    // TODO real test for both CPU and CUDA
+    // initialize hasher on 2 devices
+    test_utilities::test_set_main_device_with_id(0);
+    let poseidon_hasher_main_dev_0 = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+    test_utilities::test_set_main_device_with_id(1);
+    let poseidon_hasher_main_dev_1 = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+
+    // test device 1
+    poseidon_hasher_main_dev_1
+        .hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main_1),
+        )
+        .unwrap();
+    assert_eq!(outputs_ref, outputs_main_1);
+
+    // test device 0
+    test_utilities::test_set_main_device_with_id(0);
+    poseidon_hasher_main_dev_0
+        .hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main_0),
+        )
+        .unwrap();
+    assert_eq!(outputs_ref, outputs_main_0);
 }
 
 pub fn check_poseidon_tree<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: PoseidonHasher<F>,
 {
-    let arity = 9;
+    let t = 9;
     let nof_layers = 4;
     let num_elements = 9_u32.pow(nof_layers);
     let mut leaves: Vec<F> = (0..num_elements)
         .map(|i| F::from_u32(i))
         .collect();
 
-    let hasher = Poseidon::new::<F>(arity as u32).unwrap();
+    let hasher = Poseidon::new::<F>(t as u32, None /*domain_tag*/).unwrap();
     let layer_hashes: Vec<&Hasher> = (0..nof_layers)
         .map(|_| &hasher)
         .collect();
@@ -58,17 +162,12 @@ where
             &MerkleTreeConfig::default(),
         )
         .unwrap();
-    let root = merkle_proof.get_root::<F>();
-    let path = merkle_proof.get_path::<F>();
-    let (leaf, leaf_idx) = merkle_proof.get_leaf::<F>();
-    println!("root = {:?}", root);
-    println!("path = {:?}", path);
-    println!("leaf = {:?}, leaf_idx = {}", leaf, leaf_idx);
+    let _root = merkle_proof.get_root::<F>();
+    let _path = merkle_proof.get_path::<F>();
+    let (_leaf, _leaf_idx) = merkle_proof.get_leaf::<F>();
 
     let verification_valid = merkle_tree
         .verify(&merkle_proof)
         .unwrap();
     assert_eq!(verification_valid, true);
-
-    // TODO real test for both CPU and CUDA
 }

@@ -16,6 +16,8 @@ The `VecOpsConfig` struct is a configuration object used to specify parameters f
 - **`is_b_on_device: bool`**: Indicates whether the second input vector (`b`) is already on the device. If `false`, the vector will be copied from the host to the device. This field is optional.
 - **`is_result_on_device: bool`**: Indicates whether the result should be stored on the device. If `false`, the result will be transferred back to the host.
 - **`is_async: bool`**: Specifies whether the vector operation should be performed asynchronously. When `true`, the operation will not block the CPU, allowing other operations to proceed concurrently. Asynchronous execution requires careful synchronization to ensure data integrity.
+- **`batch_size: int`**: Number of vectors (or operations) to process in a batch. Each vector operation will be performed independently on each batch element.
+- **`columns_batch: bool`**: True if the batched vectors are stored as columns in a 2D array (i.e., the vectors are strided in memory as columns of a matrix). If false, the batched vectors are stored contiguously in memory (e.g., as rows or in a flat array).
 - **`ext: ConfigExtension*`**: Backend-specific extensions.
 
 #### Default Configuration
@@ -28,6 +30,9 @@ static VecOpsConfig default_vec_ops_config() {
       false,   // is_b_on_device
       false,   // is_result_on_device
       false,   // is_async
+      1,       // batch_size
+      false,   // columns_batch
+      nullptr  // ext
     };
     return config;
 }
@@ -35,7 +40,7 @@ static VecOpsConfig default_vec_ops_config() {
 
 ### Element-wise Operations
 
-These functions perform element-wise operations on two input vectors `a` and `b`, producing an output vector.
+These functions perform element-wise operations on two input vectors a and b. If VecOpsConfig specifies a batch_size greater than one, the operations are performed on multiple pairs of vectors simultaneously, producing corresponding output vectors.
 
 #### `vector_add`
 
@@ -90,9 +95,31 @@ template <typename T>
 eIcicleError convert_montgomery(const T* input, uint64_t size, bool is_into, const VecOpsConfig& config, T* output);
 ```
 
+### Reduction operations
+
+These functions perform reduction operations on vectors. If VecOpsConfig specifies a batch_size greater than one, the operations are performed on multiple vectors simultaneously, producing corresponding output values. The storage arrangement of batched vectors is determined by the columns_batch field in the VecOpsConfig.
+
+#### `vector_sum`
+
+Computes the sum of all elements in each vector in a batch.
+
+```cpp
+template <typename T>
+eIcicleError vector_sum(const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output);
+```
+
+#### `vector_product`
+
+Computes the product of all elements in each vector in a batch.
+
+```cpp
+template <typename T>
+eIcicleError vector_product(const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output);
+```
+
 ### Scalar-Vector Operations
 
-These functions apply a scalar operation to each element of a vector.
+These functions apply a scalar operation to each element of a vector. If VecOpsConfig specifies a batch_size greater than one, the operations are performed on multiple vector-scalar pairs simultaneously, producing corresponding output vectors.
 
 #### `scalar_add_vec / scalar_sub_vec`
 
@@ -123,7 +150,7 @@ eIcicleError scalar_mul_vec(const T* scalar_a, const T* vec_b, uint64_t size, co
 
 ### Matrix Operations
 
-These functions perform operations on matrices.
+These functions perform operations on matrices. If VecOpsConfig specifies a batch_size greater than one, the operations are performed on multiple matrices simultaneously, producing corresponding output matrices.
 
 #### `matrix_transpose`
 
@@ -138,7 +165,7 @@ eIcicleError matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_c
 
 #### `bit_reverse`
 
-Reorders the vector elements based on a bit-reversal pattern.
+Reorders the vector elements based on a bit-reversal pattern. If VecOpsConfig specifies a batch_size greater than one, the operation is performed on multiple vectors simultaneously.
 
 ```cpp
 template <typename T>
@@ -147,16 +174,16 @@ eIcicleError bit_reverse(const T* vec_in, uint64_t size, const VecOpsConfig& con
 
 #### `slice`
 
-Extracts a slice from a vector.
+Extracts a slice from a vector. If VecOpsConfig specifies a batch_size greater than one, the operation is performed on multiple vectors simultaneously, producing corresponding output vectors.
 
 ```cpp
 template <typename T>
-eIcicleError slice(const T* vec_in, uint64_t offset, uint64_t stride, uint64_t size, const VecOpsConfig& config, T* vec_out);
+eIcicleError slice(const T* vec_in, uint64_t offset, uint64_t stride, uint64_t size_in, uint64_t size_out, const VecOpsConfig& config, T* vec_out);
 ```
 
 #### `highest_non_zero_idx`
 
-Finds the highest non-zero index in a vector.
+Finds the highest non-zero index in a vector. If VecOpsConfig specifies a batch_size greater than one, the operation is performed on multiple vectors simultaneously.
 
 ```cpp
 template <typename T>
@@ -165,7 +192,7 @@ eIcicleError highest_non_zero_idx(const T* vec_in, uint64_t size, const VecOpsCo
 
 #### `polynomial_eval`
 
-Evaluates a polynomial at given domain points.
+Evaluates a polynomial at given domain points. If VecOpsConfig specifies a batch_size greater than one, the operation is performed on multiple vectors simultaneously.
 
 ```cpp
 template <typename T>
@@ -174,7 +201,7 @@ eIcicleError polynomial_eval(const T* coeffs, uint64_t coeffs_size, const T* dom
 
 #### `polynomial_division`
 
-Divides two polynomials.
+Divides two polynomials. If VecOpsConfig specifies a batch_size greater than one, the operation is performed on multiple vectors simultaneously.
 
 ```cpp
 template <typename T>

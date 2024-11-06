@@ -149,7 +149,6 @@ mod tests {
         // Create a vector of random bytes efficiently
         let mut input: Vec<u8> = vec![0; leaf_element_size as usize * num_elements];
         rand::thread_rng().fill(&mut input[..]); // Fill the vector with random data
-        println!("input = {:?}", input);
 
         merkle_tree
             .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
@@ -174,6 +173,38 @@ mod tests {
             .verify(&merkle_proof)
             .unwrap();
         assert_eq!(verification_valid, true);
+
+        // Now we will build the same tree on the main device
+        test_utilities::test_set_main_device();
+        let hasher = Keccak256::new(2 * leaf_element_size /*input chunk size*/).unwrap();
+        let layer_hashes: Vec<&Hasher> = (0..nof_layers)
+            .map(|_| &hasher)
+            .collect();
+        let merkle_tree = MerkleTree::new(&layer_hashes[..], leaf_element_size as u64, 0).unwrap();
+        merkle_tree
+            .build(HostSlice::from_slice(&input), &MerkleTreeConfig::default())
+            .unwrap();
+
+        let merkle_proof: MerkleProof = merkle_tree
+            .get_proof(
+                HostSlice::from_slice(&input),
+                1,
+                false, /*=pruned*/
+                &MerkleTreeConfig::default(),
+            )
+            .unwrap();
+        let main_root = merkle_proof.get_root::<u64>();
+        let main_path = merkle_proof.get_path::<u8>();
+        let (main_leaf, _leaf_idx) = merkle_proof.get_leaf::<u8>();
+        let verification_valid = merkle_tree
+            .verify(&merkle_proof)
+            .unwrap();
+        assert_eq!(verification_valid, true);
+
+        // Check if results for main and ref are equal
+        assert_eq!(root, main_root);
+        assert_eq!(path, main_path);
+        assert_eq!(leaf, main_leaf);
 
         // TODOs :
         // (1) test real backends: CPU + CUDA. Can also compare the proofs to see the root, path and leaf are the same.

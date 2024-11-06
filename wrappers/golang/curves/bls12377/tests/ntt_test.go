@@ -1,59 +1,17 @@
 package tests
 
 import (
-	"reflect"
 	"testing"
 
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bls12_377 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12377"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12377/ntt"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
-func testAgainstGnarkCryptoNtt(suite suite.Suite, size int, scalars core.HostSlice[bls12_377.ScalarField], output core.HostSlice[bls12_377.ScalarField], order core.Ordering, direction core.NTTDir) {
-	scalarsFr := make([]fr.Element, size)
-	for i, v := range scalars {
-		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
-		scalarsFr[i] = slice64
-	}
-	outputAsFr := make([]fr.Element, size)
-	for i, v := range output {
-		slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
-		outputAsFr[i] = slice64
-	}
-
-	testAgainstGnarkCryptoNttGnarkTypes(suite, size, scalarsFr, outputAsFr, order, direction)
-}
-
-func testAgainstGnarkCryptoNttGnarkTypes(suite suite.Suite, size int, scalarsFr core.HostSlice[fr.Element], outputAsFr core.HostSlice[fr.Element], order core.Ordering, direction core.NTTDir) {
-	domainWithPrecompute := fft.NewDomain(uint64(size))
-	// DIT + BitReverse == Ordering.kRR
-	// DIT == Ordering.kRN
-	// DIF + BitReverse == Ordering.kNN
-	// DIF == Ordering.kNR
-	var decimation fft.Decimation
-	if order == core.KRN || order == core.KRR {
-		decimation = fft.DIT
-	} else {
-		decimation = fft.DIF
-	}
-
-	if direction == core.KForward {
-		domainWithPrecompute.FFT(scalarsFr, decimation)
-	} else {
-		domainWithPrecompute.FFTInverse(scalarsFr, decimation)
-	}
-
-	if order == core.KNN || order == core.KRR {
-		fft.BitReverse(scalarsFr)
-	}
-	suite.Equal(scalarsFr, outputAsFr)
-}
-func testNTTGetDefaultConfig(suite suite.Suite) {
+func testNTTGetDefaultConfig(suite *suite.Suite) {
 	actual := ntt.GetDefaultNttConfig()
 	expected := test_helpers.GenerateLimbOne(int(bls12_377.SCALAR_LIMBS))
 	suite.Equal(expected, actual.CosetGen[:])
@@ -63,72 +21,48 @@ func testNTTGetDefaultConfig(suite suite.Suite) {
 	suite.ElementsMatch(cosetGenField.GetLimbs(), actual.CosetGen)
 }
 
-func testNtt(suite suite.Suite) {
+func testNtt(suite *suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	scalars := bls12_377.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{4, largestTestSize} {
-		for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
-			runtime.SetDevice(&DEVICE)
+		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
+			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
+				testSize := 1 << size
 
-			testSize := 1 << size
+				scalarsCopy := core.HostSliceFromElements[bls12_377.ScalarField](scalars[:testSize])
+				cfg.Ordering = v
 
-			scalarsCopy := core.HostSliceFromElements[bls12_377.ScalarField](scalars[:testSize])
-			cfg.Ordering = v
+				// run ntt
+				test_helpers.ActivateReferenceDevice()
+				output := make(core.HostSlice[bls12_377.ScalarField], testSize)
+				ntt.Ntt(scalarsCopy, direction, &cfg, output)
 
-			// run ntt
-			output := make(core.HostSlice[bls12_377.ScalarField], testSize)
-			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
+				test_helpers.ActivateMainDevice()
+				outputMain := make(core.HostSlice[bls12_377.ScalarField], testSize)
+				ntt.Ntt(scalarsCopy, direction, &cfg, outputMain)
 
-			// Compare with gnark-crypto
-			testAgainstGnarkCryptoNtt(suite, testSize, scalarsCopy, output, v, core.KForward)
-		}
-	}
-}
-func testNttFrElement(suite suite.Suite) {
-	cfg := ntt.GetDefaultNttConfig()
-	scalars := make([]fr.Element, 4)
-	var x fr.Element
-	for i := 0; i < 4; i++ {
-		x.SetRandom()
-		scalars[i] = x
-	}
-
-	for _, size := range []int{4} {
-		for _, v := range [1]core.Ordering{core.KNN} {
-			runtime.SetDevice(&DEVICE)
-
-			testSize := size
-
-			scalarsCopy := (core.HostSlice[fr.Element])(scalars[:testSize])
-			cfg.Ordering = v
-
-			// run ntt
-			output := make(core.HostSlice[fr.Element], testSize)
-			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
-
-			// Compare with gnark-crypto
-			testAgainstGnarkCryptoNttGnarkTypes(suite, testSize, scalarsCopy, output, v, core.KForward)
+				suite.Equal(output, outputMain, "NTT Failed")
+			}
 		}
 	}
 }
 
-func testNttDeviceAsync(suite suite.Suite) {
-	cfg := ntt.GetDefaultNttConfig()
+func testNttDeviceAsync(suite *suite.Suite) {
 	scalars := bls12_377.GenerateScalars(1 << largestTestSize)
 
 	for _, size := range []int{1, 10, largestTestSize} {
 		for _, direction := range []core.NTTDir{core.KForward, core.KInverse} {
 			for _, v := range [4]core.Ordering{core.KNN, core.KNR, core.KRN, core.KRR} {
-				runtime.SetDevice(&DEVICE)
-
 				testSize := 1 << size
 				scalarsCopy := core.HostSliceFromElements[bls12_377.ScalarField](scalars[:testSize])
 
-				stream, _ := runtime.CreateStream()
-
+				// Ref device
+				test_helpers.ActivateReferenceDevice()
+				cfg := ntt.GetDefaultNttConfig()
 				cfg.Ordering = v
 				cfg.IsAsync = true
+				stream, _ := runtime.CreateStream()
 				cfg.StreamHandle = stream
 
 				var deviceInput core.DeviceSlice
@@ -143,14 +77,35 @@ func testNttDeviceAsync(suite suite.Suite) {
 
 				runtime.SynchronizeStream(stream)
 				runtime.DestroyStream(stream)
-				// Compare with gnark-crypto
-				testAgainstGnarkCryptoNtt(suite, testSize, scalarsCopy, output, v, direction)
+
+				// Main device
+				test_helpers.ActivateMainDevice()
+				cfgMain := ntt.GetDefaultNttConfig()
+				cfgMain.Ordering = v
+				cfgMain.IsAsync = true
+				streamMain, _ := runtime.CreateStream()
+				cfgMain.StreamHandle = streamMain
+
+				var deviceInputMain core.DeviceSlice
+				scalarsCopy.CopyToDeviceAsync(&deviceInputMain, streamMain, true)
+				var deviceOutputMain core.DeviceSlice
+				deviceOutputMain.MallocAsync(scalarsCopy.SizeOfElement(), testSize, streamMain)
+
+				// run ntt
+				ntt.Ntt(deviceInputMain, direction, &cfgMain, deviceOutputMain)
+				outputMain := make(core.HostSlice[bls12_377.ScalarField], testSize)
+				outputMain.CopyFromDeviceAsync(&deviceOutputMain, streamMain)
+
+				runtime.SynchronizeStream(streamMain)
+				runtime.DestroyStream(streamMain)
+
+				suite.Equal(output, outputMain, "NTT DeviceSlice async failed")
 			}
 		}
 	}
 }
 
-func testNttBatch(suite suite.Suite) {
+func testNttBatch(suite *suite.Suite) {
 	cfg := ntt.GetDefaultNttConfig()
 	largestTestSize := 10
 	largestBatchSize := 20
@@ -158,8 +113,6 @@ func testNttBatch(suite suite.Suite) {
 
 	for _, size := range []int{4, largestTestSize} {
 		for _, batchSize := range []int{2, 16, largestBatchSize} {
-			runtime.SetDevice(&DEVICE)
-
 			testSize := 1 << size
 			totalSize := testSize * batchSize
 
@@ -167,31 +120,18 @@ func testNttBatch(suite suite.Suite) {
 
 			cfg.Ordering = core.KNN
 			cfg.BatchSize = int32(batchSize)
-			// run ntt
+
+			// Ref device
+			test_helpers.ActivateReferenceDevice()
 			output := make(core.HostSlice[bls12_377.ScalarField], totalSize)
 			ntt.Ntt(scalarsCopy, core.KForward, &cfg, output)
 
-			// Compare with gnark-crypto
-			domainWithPrecompute := fft.NewDomain(uint64(testSize))
-			outputAsFr := make([]fr.Element, totalSize)
-			for i, v := range output {
-				slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
-				outputAsFr[i] = slice64
-			}
+			// Main device
+			test_helpers.ActivateMainDevice()
+			outputMain := make(core.HostSlice[bls12_377.ScalarField], totalSize)
+			ntt.Ntt(scalarsCopy, core.KForward, &cfg, outputMain)
 
-			for i := 0; i < batchSize; i++ {
-				scalarsFr := make([]fr.Element, testSize)
-				for i, v := range scalarsCopy[i*testSize : (i+1)*testSize] {
-					slice64, _ := fr.LittleEndian.Element((*[fr.Bytes]byte)(v.ToBytesLittleEndian()))
-					scalarsFr[i] = slice64
-				}
-
-				domainWithPrecompute.FFT(scalarsFr, fft.DIF)
-				fft.BitReverse(scalarsFr)
-				if !suite.True(reflect.DeepEqual(scalarsFr, outputAsFr[i*testSize:(i+1)*testSize])) {
-					suite.T().FailNow()
-				}
-			}
+			suite.Equal(output, outputMain, "Ntt Batch failed")
 		}
 	}
 }
@@ -201,11 +141,10 @@ type NTTTestSuite struct {
 }
 
 func (s *NTTTestSuite) TestNTT() {
-	s.Run("TestNTTGetDefaultConfig", testWrapper(s.Suite, testNTTGetDefaultConfig))
-	s.Run("TestNTT", testWrapper(s.Suite, testNtt))
-	s.Run("TestNTTFrElement", testWrapper(s.Suite, testNttFrElement))
-	s.Run("TestNttDeviceAsync", testWrapper(s.Suite, testNttDeviceAsync))
-	s.Run("TestNttBatch", testWrapper(s.Suite, testNttBatch))
+	s.Run("TestNTTGetDefaultConfig", testWrapper(&s.Suite, testNTTGetDefaultConfig))
+	s.Run("TestNTT", testWrapper(&s.Suite, testNtt))
+	s.Run("TestNttDeviceAsync", testWrapper(&s.Suite, testNttDeviceAsync))
+	s.Run("TestNttBatch", testWrapper(&s.Suite, testNttBatch))
 }
 
 func TestSuiteNTT(t *testing.T) {

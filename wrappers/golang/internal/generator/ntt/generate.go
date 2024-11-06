@@ -7,10 +7,9 @@ import (
 )
 
 var nttTemplates = map[string]string{
-	"src":          "ntt/templates/ntt.go.tmpl",
-	"test":         "ntt/templates/ntt_test.go.tmpl",
-	"testNoDomain": "ntt/templates/ntt_no_domain_test.go.tmpl",
-	"header":       "ntt/templates/ntt.h.tmpl",
+	"src":    "ntt/templates/ntt.go.tmpl",
+	"test":   "ntt/templates/ntt_test.go.tmpl",
+	"header": "ntt/templates/ntt.h.tmpl",
 }
 
 func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string, rou int, withDomain bool, fieldNoDomain, fieldNoDomainPrefix string) {
@@ -44,9 +43,6 @@ func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string
 	}
 
 	testPath := nttTemplates["test"]
-	if !withDomain {
-		testPath = nttTemplates["testNoDomain"]
-	}
 
 	generator.GenerateFile(nttTemplates["src"], path.Join(baseDir, additionalDirPath, "ntt"), "", "", data)
 	generator.GenerateFile(nttTemplates["header"], path.Join(baseDir, additionalDirPath, "ntt", "include"), "", "", data)

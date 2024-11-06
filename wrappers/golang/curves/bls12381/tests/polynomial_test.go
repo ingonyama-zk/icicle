@@ -40,7 +40,7 @@ func vecOp(a, b bls12_381.ScalarField, op core.VecOps) bls12_381.ScalarField {
 	return out[0]
 }
 
-func testPolyCreateFromCoefficients(suite suite.Suite) {
+func testPolyCreateFromCoefficients(suite *suite.Suite) {
 	scalars := bls12_381.GenerateScalars(33)
 	var uniPoly polynomial.DensePolynomial
 
@@ -48,7 +48,7 @@ func testPolyCreateFromCoefficients(suite suite.Suite) {
 	poly.Print()
 }
 
-func testPolyEval(suite suite.Suite) {
+func testPolyEval(suite *suite.Suite) {
 	// testing correct evaluation of f(8) for f(x)=4x^2+2x+5
 	coeffs := core.HostSliceFromElements([]bls12_381.ScalarField{five, two, four})
 	var f polynomial.DensePolynomial
@@ -64,7 +64,7 @@ func testPolyEval(suite suite.Suite) {
 	suite.Equal(expected.FromUint32(277), fEvaled.(core.HostSlice[bls12_381.ScalarField])[0])
 }
 
-func testPolyClone(suite suite.Suite) {
+func testPolyClone(suite *suite.Suite) {
 	f := randomPoly(8)
 	x := rand()
 	fx := f.Eval(x)
@@ -79,7 +79,7 @@ func testPolyClone(suite suite.Suite) {
 	suite.Equal(vecOp(fx, gx, core.Add), fgx)
 }
 
-func testPolyAddSubMul(suite suite.Suite) {
+func testPolyAddSubMul(suite *suite.Suite) {
 	testSize := 1 << 10
 	f := randomPoly(testSize)
 	g := randomPoly(testSize)
@@ -109,7 +109,7 @@ func testPolyAddSubMul(suite suite.Suite) {
 	suite.Equal(polMulS2.Eval(x), vecOp(fx, s2, core.Mul))
 }
 
-func testPolyMonomials(suite suite.Suite) {
+func testPolyMonomials(suite *suite.Suite) {
 	var zero bls12_381.ScalarField
 	var f polynomial.DensePolynomial
 	f.CreateFromCoeffecitients(core.HostSliceFromElements([]bls12_381.ScalarField{one, zero, two}))
@@ -125,7 +125,7 @@ func testPolyMonomials(suite suite.Suite) {
 	suite.Equal(fxSub, vecOp(fxAdded, one, core.Sub))
 }
 
-func testPolyReadCoeffs(suite suite.Suite) {
+func testPolyReadCoeffs(suite *suite.Suite) {
 	var f polynomial.DensePolynomial
 	coeffs := core.HostSliceFromElements([]bls12_381.ScalarField{one, two, three, four})
 	f.CreateFromCoeffecitients(coeffs)
@@ -142,7 +142,7 @@ func testPolyReadCoeffs(suite suite.Suite) {
 	suite.ElementsMatch(coeffs, coeffsHost)
 }
 
-func testPolyOddEvenSlicing(suite suite.Suite) {
+func testPolyOddEvenSlicing(suite *suite.Suite) {
 	size := 1<<10 - 3
 	f := randomPoly(size)
 
@@ -169,7 +169,7 @@ func testPolyOddEvenSlicing(suite suite.Suite) {
 	suite.Equal(oddExpected, oddEvaled)
 }
 
-func testPolynomialDivision(suite suite.Suite) {
+func testPolynomialDivision(suite *suite.Suite) {
 	// divide f(x)/g(x), compute q(x), r(x) and check f(x)=q(x)*g(x)+r(x)
 	var f, g polynomial.DensePolynomial
 	f.CreateFromCoeffecitients(core.HostSliceFromElements(bls12_381.GenerateScalars(1 << 4)))
@@ -186,7 +186,7 @@ func testPolynomialDivision(suite suite.Suite) {
 	suite.Equal(fEval, fReconEval)
 }
 
-func testDivideByVanishing(suite suite.Suite) {
+func testDivideByVanishing(suite *suite.Suite) {
 	// poly of x^4-1 vanishes ad 4th rou
 	var zero bls12_381.ScalarField
 	minus_one := vecOp(zero, one, core.Sub)
@@ -208,7 +208,7 @@ func testDivideByVanishing(suite suite.Suite) {
 	suite.Equal(f.Eval(x), fReconstructed.Eval(x))
 }
 
-// func TestPolySlice(suite suite.Suite) {
+// func TestPolySlice(suite *suite.Suite) {
 // 	size := 4
 // 	coeffs := bls12_381.GenerateScalars(size)
 // 	var f DensePolynomial
@@ -233,15 +233,15 @@ type PolynomialTestSuite struct {
 }
 
 func (s *PolynomialTestSuite) TestPolynomial() {
-	s.Run("TestPolyCreateFromCoefficients", testWrapper(s.Suite, testPolyCreateFromCoefficients))
-	s.Run("TestPolyEval", testWrapper(s.Suite, testPolyEval))
-	s.Run("TestPolyClone", testWrapper(s.Suite, testPolyClone))
-	s.Run("TestPolyAddSubMul", testWrapper(s.Suite, testPolyAddSubMul))
-	s.Run("TestPolyMonomials", testWrapper(s.Suite, testPolyMonomials))
-	s.Run("TestPolyReadCoeffs", testWrapper(s.Suite, testPolyReadCoeffs))
-	s.Run("TestPolyOddEvenSlicing", testWrapper(s.Suite, testPolyOddEvenSlicing))
-	s.Run("TestPolynomialDivision", testWrapper(s.Suite, testPolynomialDivision))
-	s.Run("TestDivideByVanishing", testWrapper(s.Suite, testDivideByVanishing))
+	s.Run("TestPolyCreateFromCoefficients", testWrapper(&s.Suite, testPolyCreateFromCoefficients))
+	s.Run("TestPolyEval", testWrapper(&s.Suite, testPolyEval))
+	s.Run("TestPolyClone", testWrapper(&s.Suite, testPolyClone))
+	s.Run("TestPolyAddSubMul", testWrapper(&s.Suite, testPolyAddSubMul))
+	s.Run("TestPolyMonomials", testWrapper(&s.Suite, testPolyMonomials))
+	s.Run("TestPolyReadCoeffs", testWrapper(&s.Suite, testPolyReadCoeffs))
+	s.Run("TestPolyOddEvenSlicing", testWrapper(&s.Suite, testPolyOddEvenSlicing))
+	s.Run("TestPolynomialDivision", testWrapper(&s.Suite, testPolynomialDivision))
+	s.Run("TestDivideByVanishing", testWrapper(&s.Suite, testDivideByVanishing))
 }
 
 func TestSuitePolynomial(t *testing.T) {

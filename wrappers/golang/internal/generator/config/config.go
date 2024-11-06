@@ -8,6 +8,7 @@ type FieldData struct {
 	SupportsExtension bool
 	ExtensionLimbsNum int
 	SupportsNTT       bool
+	SupportsPoseidon  bool
 	ROU               int
 }
 
@@ -18,6 +19,7 @@ type CurveData struct {
 	SupportsNTT         bool
 	SupportsECNTT       bool
 	SupportsG2          bool
+	SupportsPoseidon    bool
 	ScalarFieldNumLimbs int
 	BaseFieldNumLimbs   int
 	G2FieldNumLimbs     int

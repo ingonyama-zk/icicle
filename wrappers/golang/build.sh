@@ -5,6 +5,8 @@ NTT_DEFINED=ON
 G2_DEFINED=ON
 ECNTT_DEFINED=ON
 EXT_FIELD=ON
+HASH=ON
+POSEIDON=ON
 
 CUDA_COMPILER_PATH=/usr/local/cuda/bin/nvcc
 
@@ -36,6 +38,10 @@ if [[ $1 == "-help" ]]; then
   echo "  -skip_g2                  Builds the curve library with G2 (a secondary group) disabled."
   echo ""
   echo "  -skip_ecntt               Builds the curve library with ECNTT (elliptic curve NTT) disabled."
+  echo ""
+  echo "  -skip_poseidon            Builds the curve or field library with poseidon hashing disabled."
+  echo ""
+  echo "  -skip_hash                Builds the library with Hashes (Keccak, Sha3, etc) disabled."
   echo ""
   echo "  -field=<field_name>       Specifies the field to be built. If \"all\" is supplied,"
   echo "                            all fields will be built with any additional field options."
@@ -73,6 +79,12 @@ do
             ;;
         -skip_g2)
             G2_DEFINED=OFF
+            ;;
+        -skip_hash)
+            HASH=OFF
+            ;;
+        -skip_poseidon)
+            POSEIDON=OFF
             ;;
         -curve=*)
             curve=$(echo "$arg_lower" | cut -d'=' -f2)
@@ -114,8 +126,9 @@ do
   echo "ECNTT=${ECNTT_DEFINED}" >> build_config.txt
   echo "G2=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DPOSEIDON=$POSEIDON -DHASH=$POSEIDON -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
+  rm -f "$BUILD_DIR/CMakeCache.txt"
 done
 
 # Needs to remove the CMakeCache.txt file to allow building fields after curves
@@ -128,6 +141,12 @@ do
   echo "NTT=${NTT_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "EXT_FIELD=${EXT_FIELD}" >> build_config.txt
-  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DPOSEIDON=$POSEIDON -DHASH=$POSEIDON -DCMAKE_BUILD_TYPE=Release -S . -B build
   cmake --build build --target install -j8 && rm build_config.txt
 done
+
+if [[ $HASH == "ON" ]]; then
+  echo "DEVMODE=${DEVMODE}" >> build_config.txt
+  cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DHASH=$HASH -DCMAKE_BUILD_TYPE=Release -S . -B build
+  cmake --build build --target install -j8 && rm build_config.txt
+fi
