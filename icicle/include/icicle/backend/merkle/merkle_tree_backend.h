@@ -36,7 +36,7 @@ namespace icicle {
            "(nof_layers="
         << layer_hashes.size() << ", output_store_min_layer=" << output_store_min_layer << ")\n";
 
-      ICICLE_ASSERT(layer_hashes[0].input_default_chunk_size() % leaf_element_size == 0)
+      ICICLE_ASSERT(layer_hashes[0].default_input_chunk_size() % leaf_element_size == 0)
         << "A whole number of leaves must be fitted into the hashes of the first layer.\n";
     }
 

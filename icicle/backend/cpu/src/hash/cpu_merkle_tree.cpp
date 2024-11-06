@@ -28,9 +28,9 @@ namespace icicle {
       for (int layer_idx = nof_layers - 1; layer_idx >= 0; --layer_idx) {
         ICICLE_ASSERT(
           layer_idx == nof_layers - 1 ||
-          layer_hashes[layer_idx + 1].input_default_chunk_size() % layer_hashes[layer_idx].output_size() == 0)
+          layer_hashes[layer_idx + 1].default_input_chunk_size() % layer_hashes[layer_idx].output_size() == 0)
           << "Each layer output size must divide the next layer input size. Otherwise its not a tree.\n"
-          << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx + 1].input_default_chunk_size() << "\n"
+          << "Layer " << layer_idx << " input size = " << layer_hashes[layer_idx + 1].default_input_chunk_size() << "\n"
           << "Layer " << layer_idx + 1 << " output size = " << layer_hashes[layer_idx].output_size() << "\n";
 
         // initialize m_layers with hashes
@@ -41,12 +41,12 @@ namespace icicle {
         if (0 < layer_idx) {
           // update nof_hashes to the next layer (below)
           const uint64_t next_layer_total_size = layer_hashes[layer_idx - 1].output_size();
-          nof_hashes = nof_hashes * cur_layer.m_hash.input_default_chunk_size() / next_layer_total_size;
+          nof_hashes = nof_hashes * cur_layer.m_hash.default_input_chunk_size() / next_layer_total_size;
 
           // Calculate path_size
           m_pruned_path_size +=
-            layer_hashes[layer_idx].input_default_chunk_size() - layer_hashes[layer_idx - 1].output_size();
-          m_full_path_size += layer_hashes[layer_idx].input_default_chunk_size();
+            layer_hashes[layer_idx].default_input_chunk_size() - layer_hashes[layer_idx - 1].output_size();
+          m_full_path_size += layer_hashes[layer_idx].default_input_chunk_size();
         }
       }
     }
@@ -59,7 +59,7 @@ namespace icicle {
         ICICLE_LOG_ERROR << "Tree cannot be built more than one time";
         return eIcicleError::INVALID_ARGUMENT;
       }
-      const uint64_t expected_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
+      const uint64_t expected_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.default_input_chunk_size();
       if (leaves_size < expected_input_size) {
         ICICLE_LOG_ERROR << "CPU Merkle tree: Expecting " << expected_input_size << " bytes in input, got "
                          << leaves_size << ". Note: Padding is currently not supported but will be soon";
@@ -114,7 +114,7 @@ namespace icicle {
             uint64_t(NOF_OPERATIONS_PER_TASK));
           //          ICICLE_ASSERT(
           //             > 0) << "Edge case negative number of hashes"; // Koren what is that for?
-          if (cur_segment_iter->second->m_nof_inputs_ready >= cur_hash.input_default_chunk_size() * nof_hashes_in_seg) {
+          if (cur_segment_iter->second->m_nof_inputs_ready >= cur_hash.default_input_chunk_size() * nof_hashes_in_seg) {
             const std::byte* task_input = (completed_layer_idx < m_output_store_min_layer)
                                             ? cur_segment_iter->second->m_input_data
                                             : &(m_layers[completed_layer_idx].m_results[0]);
@@ -153,7 +153,7 @@ namespace icicle {
         return eIcicleError::INVALID_ARGUMENT;
       }
       const uint64_t element_offset = leaf_idx * m_leaf_element_size;
-      const int l0_total_input_size = m_layers[0].m_hash.input_default_chunk_size();
+      const int l0_total_input_size = m_layers[0].m_hash.default_input_chunk_size();
       if (leaf_idx > m_layers[0].m_nof_hashes * l0_total_input_size) {
         ICICLE_LOG_ERROR << "Element index out of range. Should be smaller than "
                          << m_layers[0].m_nof_hashes * l0_total_input_size / m_leaf_element_size;
@@ -162,7 +162,7 @@ namespace icicle {
 
       // allocate merkle_proof memory
       const auto [root, root_size] = get_merkle_root();
-      const auto input_chunk_size = m_layers[0].m_hash.input_default_chunk_size();
+      const auto input_chunk_size = m_layers[0].m_hash.default_input_chunk_size();
       merkle_proof.allocate(is_pruned, leaf_idx, &leaves[input_chunk_offset], input_chunk_size, root, root_size);
 
       std::byte* path = merkle_proof.allocate_path_and_get_ptr(is_pruned ? m_pruned_path_size : m_full_path_size);
@@ -197,7 +197,7 @@ namespace icicle {
       std::cout << "Leaves: size=" << m_leaf_element_size << std::endl;
       print_bytes(leaves, leaves_size / m_leaf_element_size, m_leaf_element_size);
       for (int layer_idx = m_output_store_min_layer; layer_idx < m_layers.size(); ++layer_idx) {
-        std::cout << std::dec << "Layer " << layer_idx << ": " << m_layers[layer_idx].m_hash.input_default_chunk_size()
+        std::cout << std::dec << "Layer " << layer_idx << ": " << m_layers[layer_idx].m_hash.default_input_chunk_size()
                   << " -> " << m_layers[layer_idx].m_hash.output_size() << std::endl;
         print_bytes(
           m_layers[layer_idx].m_results.data(), m_layers[layer_idx].m_nof_hashes,
@@ -285,7 +285,7 @@ namespace icicle {
       HashTask() : TaskBase(), m_hash(nullptr) {}
 
       // The worker execute this function based on the member operands
-      virtual void execute() { m_hash.hash(m_input, m_hash.input_default_chunk_size(), *m_hash_config, m_output); }
+      virtual void execute() { m_hash.hash(m_input, m_hash.default_input_chunk_size(), *m_hash_config, m_output); }
 
       Hash m_hash;
       const std::byte* m_input;
@@ -361,7 +361,7 @@ namespace icicle {
       const uint64_t input_offset =
         (cur_layer_idx != 0) && (cur_layer_idx - 1 < m_output_store_min_layer)
           ? 0
-          : cur_segment_idx * NOF_OPERATIONS_PER_TASK * cur_layer.m_hash.input_default_chunk_size();
+          : cur_segment_idx * NOF_OPERATIONS_PER_TASK * cur_layer.m_hash.default_input_chunk_size();
       task->m_input = &(input_bytes[input_offset]);
 
       task->m_hash = cur_layer.m_hash;
@@ -377,7 +377,7 @@ namespace icicle {
       }
 
       // This is not the last layer
-      const uint64_t next_input_size = m_layers[next_layer_idx].m_hash.input_default_chunk_size();
+      const uint64_t next_input_size = m_layers[next_layer_idx].m_hash.default_input_chunk_size();
       const uint64_t next_segment_idx = cur_segment_idx * cur_layer.m_hash.output_size() / next_input_size;
       const uint64_t next_segment_id = next_segment_idx ^ (next_layer_idx << 56);
 
@@ -412,9 +412,9 @@ namespace icicle {
     std::byte*
     copy_to_path_from_store_min_layer(const uint64_t input_chunk_offset, bool is_pruned, std::byte* path) const
     {
-      const uint64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.input_default_chunk_size();
+      const uint64_t total_input_size = m_layers[0].m_nof_hashes * m_layers[0].m_hash.default_input_chunk_size();
       for (int layer_idx = m_output_store_min_layer; layer_idx < m_layers.size() - 1; layer_idx++) {
-        const uint64_t copy_range_size = m_layers[layer_idx + 1].m_hash.input_default_chunk_size();
+        const uint64_t copy_range_size = m_layers[layer_idx + 1].m_hash.default_input_chunk_size();
         const uint64_t one_element_size = m_layers[layer_idx].m_hash.output_size();
         const uint64_t element_start =
           input_chunk_offset * m_layers[layer_idx].m_nof_hashes / total_input_size * one_element_size;

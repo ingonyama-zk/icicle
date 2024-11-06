@@ -65,7 +65,7 @@ namespace icicle {
      * @brief Get the default input chunk size.
      * @return The size of the default input chunk in bytes.
      */
-    inline uint64_t input_default_chunk_size() const { return m_backend->input_default_chunk_size(); }
+    inline uint64_t default_input_chunk_size() const { return m_backend->default_input_chunk_size(); }
 
     /**
      * @brief Get the output size in bytes.
