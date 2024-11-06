@@ -171,7 +171,7 @@ namespace icicle {
       std::vector<std::byte> proof_leaves(proof_leaves_size, std::byte(0));
       std::memcpy(proof_leaves.data(), &leaves[proof_leaves_offset], copy_leaves_size);
 
-      // if PaddingPolicy::LastValue padd the vector with the last value
+      // if PaddingPolicy::LastValue pad the vector with the last value
       if (config.padding_policy == PaddingPolicy::LastValue) {
         const std::byte* last_element = &leaves[leaves_size - m_leaf_element_size];
         while (copy_leaves_size < proof_leaves_size) {
@@ -271,7 +271,7 @@ namespace icicle {
 
       Hash m_hash;                     // the hash function
       uint64_t m_nof_hashes;           // number of hash functions per layer. Maybe can change to m_input_layer_size
-      uint64_t m_nof_hashes_2_execute; // number of hash functions that needs to be caculated
+      uint64_t m_nof_hashes_2_execute; // number of hash functions that needs to be calculated
 
       std::vector<std::byte> m_results; // vector of hash results. This vector might not be fully allocated if layer is
                                         // not in range m_output_store_min/max_layer
@@ -313,7 +313,7 @@ namespace icicle {
         // run the hash runction
         m_hash.hash(m_input, m_hash.default_input_chunk_size(), *m_hash_config, m_output);
 
-        // padd hash result is necesary
+        // pad hash result is necessary
         for (int padd_idx = 0; padd_idx < m_padd_output; padd_idx++) {
           const uint64_t padd_offset = m_hash_config->batch * m_hash.output_size();
           memcpy(
@@ -394,7 +394,7 @@ namespace icicle {
         cur_layer.m_hash_config.batch = NOF_OPERATIONS_PER_TASK;
         cur_layer.m_hash_config.is_async = merkle_config.is_async;
 
-        // config when calling last hash function in layer 2-17 hases
+        // config when calling last hash function in layer 2-17 hashes
         const uint64_t last_batch_size = cur_layer.m_nof_hashes_2_execute < NOF_OPERATIONS_PER_TASK
                                            ? cur_layer.m_nof_hashes_2_execute
                                            : (cur_layer.m_nof_hashes_2_execute - 2) % NOF_OPERATIONS_PER_TASK + 2;
@@ -431,14 +431,14 @@ namespace icicle {
       }
 
       const uint64_t padded_leaves_size = m_layers[0].m_last_hash_config.batch * l0_input_size;
-      padded_leaves.resize(padded_leaves_size, std::byte(0)); // padd the vector with 0
+      padded_leaves.resize(padded_leaves_size, std::byte(0)); // pad the vector with 0
 
       // The size of the leaves to copy to padded_leaves
       const uint64_t last_segment_tail_size = (leaves_size - 1) % (NOF_OPERATIONS_PER_TASK * l0_input_size) + 1;
       const uint64_t last_segment_offset = leaves_size - last_segment_tail_size;
       memcpy(padded_leaves.data(), leaves + last_segment_offset, last_segment_tail_size);
 
-      // padd with the last element
+      // pad with the last element
       if (config.padding_policy == PaddingPolicy::LastValue) {
         if (leaves_size % m_leaf_element_size != 0) {
           ICICLE_LOG_ERROR << "Leaves size (" << leaves_size << ") must divide leaf_element_size ("
@@ -449,8 +449,8 @@ namespace icicle {
         for (uint64_t padded_leaves_offset = last_segment_tail_size; padded_leaves_offset < padded_leaves.size();
              padded_leaves_offset += m_leaf_element_size) {
           memcpy(
-            padded_leaves.data() + padded_leaves_offset, // dest: padd vector
-            leaves + leaves_size - m_leaf_element_size,  // src: last elemnt
+            padded_leaves.data() + padded_leaves_offset, // dest: pad vector
+            leaves + leaves_size - m_leaf_element_size,  // src: last element
             m_leaf_element_size);                        // size 1 element size
         }
       }
@@ -515,7 +515,7 @@ namespace icicle {
           :                                           // input in SegmentDB
           &(cur_layer.m_results[task_output_offset]); // next layer result vector
 
-      // If this is the last segment, padd the result
+      // If this is the last segment, pad the result
       bool is_cur_segment_last = cur_segment_idx * NOF_OPERATIONS_PER_TASK + cur_layer.m_last_hash_config.batch ==
                                  cur_layer.m_nof_hashes_2_execute;
       if (is_cur_segment_last) {
