@@ -805,8 +805,7 @@ public:
     return r;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
- static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& xs)
+ static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& xs, bool get_higher_half=false)
  {
   //  Field xs_lo = Wide::get_lower(xs);
   //  Field xs_hi = Wide::get_higher(xs);
@@ -819,7 +818,7 @@ public:
   //  Field r = {};
   //  add_limbs<TLC, false>(l2_hi.limbs_storage, xs_hi.limbs_storage, r.limbs_storage);
 
-    Field r = Wide::get_lower(xs);
+    Field r = get_higher_half? Wide::get_higher(xs) : Wide::get_lower(xs);
     Field p = Field{get_modulus<1>()};
     if (p.limbs_storage.limbs[TLC-1] > r.limbs_storage.limbs[TLC-1])
       return r;
@@ -846,6 +845,41 @@ public:
     // Wide xy = mul_wide(xs, ys); // full mult
     // return reduce(xy);          // reduce mod p
     return mont_mult(xs,ys);
+  }
+
+
+  static constexpr HOST_INLINE Field sos_mont_reduce(Wide& xy)
+  {
+    // For readability and similarity to the naming in the thesis's SOS algorithm
+    const uint64_t* n_tag =   get_mont_inv_modulus().limbs64;
+    const uint64_t* n =       get_modulus<1>().limb64;
+
+    const unsigned s =        TLC / 2; // Since TLC is in 32 bit but we switch to 64 - half the word count
+
+    uint64_t* t =             xy.limbs_storage.limbs64;
+    uint64_t* u =             t + s;
+    Field u_minus_n =         zero();
+    uint64_t* u_minus_n_ptr = u_minus_n.limbs_storage.limbs64;
+
+    for (int i = 0; i < s; i++)
+    {
+      uint64_t c = 0;
+      uint64_t m = t[i] * n_tag[0];
+      
+      // ipj = i + j
+      for (int ipj = i; ipj < s + i; ipj++)
+      {
+        t[ipj] = host_math::addc_cc(t[ipj], m * n[ipj], c);
+      }
+      for (int ipj = s + i; ipj < 2 * s; ipj++)
+      {
+        t[ipj] = host_math::add_cc(t[ipj], c, c);
+      }
+      // Assuming carry less similarly to the CIOS algorithm
+      ICICLE_ASSERT(c == 0);
+    }
+    
+    return mont_reduce(xy, /* get_higher_half = */ true);
   }
 
   static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
