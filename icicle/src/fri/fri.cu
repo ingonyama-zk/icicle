@@ -147,7 +147,7 @@ namespace fri {
       CHK_IF_RETURN(cudaMallocAsync(&d_eval, data_size, stream));
       CHK_IF_RETURN(cudaMemcpyAsync(d_eval, eval, data_size, cudaMemcpyHostToDevice, stream));
     } else {
-      oss << "inputs are on device: " << n << " ";
+      // oss << "inputs are on device: " << n << " ";
       d_eval = eval;
     }
 
