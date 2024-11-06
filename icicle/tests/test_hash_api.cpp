@@ -336,9 +336,9 @@ bool is_valid_tree(
 
   int nof_hashes = 1;
   for (int i = hashes.size() - 2; i >= 0; i--) {
-    nof_hashes *= hashes[i + 1].input_default_chunk_size() / hashes[i].output_size();
+    nof_hashes *= hashes[i + 1].default_input_chunk_size() / hashes[i].output_size();
   }
-  int tree_input_size = nof_hashes * hashes[0].input_default_chunk_size();
+  int tree_input_size = nof_hashes * hashes[0].default_input_chunk_size();
 
   // ICICLE_LOG_INFO << "Nof inputs required for tree: " << tree_input_size;
   ICICLE_ASSERT((config.padding_policy != PaddingPolicy::None) || (input_size == tree_input_size))
@@ -371,14 +371,14 @@ bool is_valid_tree(
   int output_size_temp = 1;
 
   for (auto& layer_hash : hashes) {
-    output_size_temp = input_size_temp * layer_hash.output_size() / layer_hash.input_default_chunk_size();
+    output_size_temp = input_size_temp * layer_hash.output_size() / layer_hash.default_input_chunk_size();
     if (output_size_temp > max_layer_size_bytes) { max_layer_size_bytes = output_size_temp; }
 
     input_size_temp = output_size_temp;
   }
 
   input_size_temp = input_vec.size();
-  int output_size = input_size * hashes[0].output_size() / hashes[0].input_default_chunk_size();
+  int output_size = input_size * hashes[0].output_size() / hashes[0].default_input_chunk_size();
   auto layer_in = std::make_unique<std::byte[]>(max_layer_size_bytes);
   auto layer_out = std::make_unique<std::byte[]>(max_layer_size_bytes);
   // NOTE there is an assumption here that output number is less or equal to input number for all layers
@@ -388,12 +388,12 @@ bool is_valid_tree(
   int side_inputs_offset = 0;
   int lidx = 0;
   for (auto& layer_hash : hashes) {
-    output_size = input_size_temp * layer_hash.output_size() / layer_hash.input_default_chunk_size();
-    const int nof_hashes = input_size_temp / layer_hash.input_default_chunk_size();
+    output_size = input_size_temp * layer_hash.output_size() / layer_hash.default_input_chunk_size();
+    const int nof_hashes = input_size_temp / layer_hash.default_input_chunk_size();
 
     auto config = default_hash_config();
     config.batch = nof_hashes;
-    layer_hash.hash(layer_in.get(), layer_hash.input_default_chunk_size(), config, layer_out.get());
+    layer_hash.hash(layer_in.get(), layer_hash.default_input_chunk_size(), config, layer_out.get());
 
     // copy output outputs to inputs before moving to the next layer
     memcpy(layer_in.get(), layer_out.get(), output_size);
@@ -576,7 +576,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf     40B  ->  40B
   auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size); // in 10 leaves, out 1 leaf     40B  ->   4B
 
-  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.input_default_chunk_size();
+  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.default_input_chunk_size();
   std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
   int output_store_min_layer = 0;
 
@@ -590,7 +590,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   // 20 hashes (Total hashes in layer 0) - last hash not full
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
 
-  const unsigned nof_leaves_in_hash = layer0_hash.input_default_chunk_size()  / leaf_size;
+  const unsigned nof_leaves_in_hash = layer0_hash.default_input_chunk_size()  / leaf_size;
 
   // 19 hashes (Total hashes in layer 0 - 1) - full
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
@@ -705,7 +705,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf     40B  ->  40B
   auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size); // in 10 leaves, out 1 leaf     40B  ->   4B
 
-  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.input_default_chunk_size();
+  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.default_input_chunk_size();
   std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
   int output_store_min_layer = 0;
 
@@ -719,7 +719,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   // 20 hashes (Total hashes in layer 0) - last hash not full
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
 
-  const unsigned nof_leaves_in_hash = layer0_hash.input_default_chunk_size()  / leaf_size;
+  const unsigned nof_leaves_in_hash = layer0_hash.default_input_chunk_size()  / leaf_size;
 
   // 19 hashes (Total hashes in layer 0 - 1) - full
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
