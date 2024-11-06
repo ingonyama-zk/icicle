@@ -323,7 +323,7 @@ void assert_valid_tree(
   const MerkleTreeConfig& config)
 {
   ICICLE_ASSERT(!hashes.empty());
-  int output_size = input_size * hashes[0].output_size() / hashes[0].input_default_chunk_size();
+  int output_size = input_size * hashes[0].output_size() / hashes[0].default_input_chunk_size();
   auto layer_in =
     std::make_unique<std::byte[]>(input_size); // Going layer by layer - having the input layer as the largest
   auto layer_out =
@@ -334,12 +334,12 @@ void assert_valid_tree(
 
   int side_inputs_offset = 0;
   for (auto& layer_hash : hashes) {
-    output_size = input_size * layer_hash.output_size() / layer_hash.input_default_chunk_size();
-    const int nof_hashes = input_size / layer_hash.input_default_chunk_size();
+    output_size = input_size * layer_hash.output_size() / layer_hash.default_input_chunk_size();
+    const int nof_hashes = input_size / layer_hash.default_input_chunk_size();
 
     auto config = default_hash_config();
     config.batch = nof_hashes;
-    layer_hash.hash(layer_in.get(), layer_hash.input_default_chunk_size(), config, layer_out.get());
+    layer_hash.hash(layer_in.get(), layer_hash.default_input_chunk_size(), config, layer_out.get());
 
     // copy output outputs to inputs before moving to the next layer
     memcpy(layer_in.get(), layer_out.get(), output_size);

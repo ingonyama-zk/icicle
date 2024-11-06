@@ -161,7 +161,7 @@ namespace icicle {
         leaf_element_start = (leaf_element_start / hash_input_size) * hash_output_size;
 
         // Calculate the previous hash result offset inside the current hash input
-        hash_input_size = layer_hashes[layer_idx].input_default_chunk_size();
+        hash_input_size = layer_hashes[layer_idx].default_input_chunk_size();
         hash_output_size = layer_hashes[layer_idx].output_size();
         const int element_offset_in_path = leaf_element_start % hash_input_size;
 
