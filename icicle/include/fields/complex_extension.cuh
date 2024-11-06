@@ -131,9 +131,9 @@ public:
     // return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
     auto real_1 = xs.real * ys.real - xs.imaginary * ys.imaginary;
     auto im_1 = xs.real * ys.imaginary + xs.imaginary * ys.real;
-    printf(
-      "cmplx mult: {0x%08x, 0x%08x} * {0x%08x, 0x%08x} = {0x%08x%08x}\n", xs.real.get_limb(),
-      xs.imaginary.get_limb(), ys.real.get_limb(), ys.imaginary.get_limb(), real_1.get_limb(), im_1.get_limb());
+    // printf(
+    //   "cmplx mult: {0x%08x, 0x%08x} * {0x%08x, 0x%08x} = {0x%08x%08x}\n", xs.real.get_limb(),
+    //   xs.imaginary.get_limb(), ys.real.get_limb(), ys.imaginary.get_limb(), real_1.get_limb(), im_1.get_limb());
     return ExtensionWide{real_1.get_limb(), im_1.get_limb()};
   }
 
