@@ -141,7 +141,7 @@ pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
 ```
 **Go**
 ```go
-TODO
+func LoadBackendFromEnvOrDefault() EIcicleError
 ```
 
 ### Custom Backend Loading
@@ -164,5 +164,7 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
 
 **Go**
 ```go
-TODO
+func LoadBackend(path string, isRecursive bool) EIcicleError
 ```
+- **`path`**: The directory where the backend libraries are located.
+- **`isRecursive`**: If `true`, the function will search for backend libraries recursively within the specified path.
