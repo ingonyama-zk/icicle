@@ -77,32 +77,32 @@ Using other hash algorithms is similar and only requires replacing the Hasher co
 
 The Poseidon hash is designed for cryptographic field elements and curves, making it ideal for use cases such as zero-knowledge proofs (ZKPs). Poseidon hash using babybear field:
 
-:::tip
+:::note
 
 Since poseidon is designed for use with field elements and curves, it is located within the field or curve packages and not in the Hash package though it does rely on using the Hash package.
 
 :::
 
-```golang
+```go
 import (
   "github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
   babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/poseidon"
+  "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/poseidon"
 )
 
-	batch := 1 << 4
-  t := 3 // Currently support arity of 3, 5, 9, 12
-  inputsSize = batch * (t - 1)
-  inputs := babybear.GenerateScalars(inputsSize)
-	domainTag := babybear.GenerateScalars(1)[0]
+batch := 1 << 4
+t := 3 // Currently support arity of 3, 5, 9, 12
+inputsSize = batch * (t - 1)
+inputs := babybear.GenerateScalars(inputsSize)
+domainTag := babybear.GenerateScalars(1)[0]
 
-  outputsRef := make([]babybear.ScalarField, batch)
-  poseidonHasherRef, _ := poseidon.NewHasher(uint64(t), &domainTag)
-  poseidonHasherRef.Hash(
-    core.HostSliceFromElements(inputs),
-    core.HostSliceFromElements(outputsRef),
-    core.GetDefaultHashConfig(),
-  )
+outputsRef := make([]babybear.ScalarField, batch)
+poseidonHasherRef, _ := poseidon.NewHasher(uint64(t), &domainTag)
+poseidonHasherRef.Hash(
+  core.HostSliceFromElements(inputs),
+  core.HostSliceFromElements(outputsRef),
+  core.GetDefaultHashConfig(),
+)
 
-  poseidonHasherRef.Delete()
+poseidonHasherRef.Delete()
 ```
