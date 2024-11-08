@@ -28,6 +28,32 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         is_into: bool,
         stream: &IcicleStream,
     ) -> eIcicleError;
+
+    #[doc(hidden)]
+    fn add(
+        point1: Projective<Self>,
+        point2: Projective<Self>,
+    ) -> Projective<Self>;
+    #[doc(hidden)]
+    fn sub(
+        point1: Projective<Self>,
+        point2: Projective<Self>,
+    ) -> Projective<Self>;
+    #[doc(hidden)]
+    fn mul_scalar(
+        point1: Projective<Self>,
+        scalar: Self::ScalarField,
+    ) -> Projective<Self>;
+    #[doc(hidden)]
+    fn mul_two_scalar(
+        scalar1: Self::ScalarField,
+        scalar2: Self::ScalarField,
+    ) -> Self::ScalarField;
+    #[doc(hidden)]
+    fn add_two_scalar(
+        scalar1: Self::ScalarField,
+        scalar2: Self::ScalarField,
+    ) -> Self::ScalarField;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -188,6 +214,36 @@ macro_rules! impl_curve {
                 #[link_name = concat!($curve_prefix, "_generate_affine_points")]
                 pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
+                #[link_name = concat!($curve_prefix, "_add")]
+                pub(crate) fn add(
+                    point1: *const $projective_type,
+                    point2: *const $projective_type, 
+                    result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_sub")]
+                pub(crate) fn sub(
+                    point1: *const $projective_type,
+                    point2: *const $projective_type, 
+                    result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_mul_scalar")]
+                pub(crate) fn mul_scalar(
+                    point1: *const $projective_type,
+                    scalar: *const $scalar_field, 
+                    result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_mul_two_scalar")]
+                pub(crate) fn mul_two_scalar(
+                    scalar1: *const $scalar_field,
+                    scalar2: *const $scalar_field, 
+                    result: *mut $scalar_field,
+                );
+                #[link_name = concat!($curve_prefix, "_add_two_scalar")]
+                pub(crate) fn add_two_scalar(
+                    scalar1: *const $scalar_field,
+                    scalar2: *const $scalar_field, 
+                    result: *mut $scalar_field,
+                );
                 pub(crate) fn _convert_affine_montgomery(
                     input: *const $affine_type,
                     size: usize,
@@ -216,6 +272,76 @@ macro_rules! impl_curve {
 
             fn to_affine(point: *const $projective_type, point_out: *mut $affine_type) {
                 unsafe { $curve_prefix_ident::proj_to_affine(point, point_out) };
+            }
+
+            fn add(point1: $projective_type, point2: $projective_type) -> $projective_type {
+                let mut result = $projective_type::zero();
+
+                unsafe {
+                    $curve_prefix_ident::add(
+                        &point1 as *const $projective_type,
+                        &point2 as *const $projective_type,
+                        &mut result as *mut _ as *mut $projective_type
+                    );
+                };
+
+                result
+            }
+
+            fn sub(point1: $projective_type, point2: $projective_type) -> $projective_type {
+                let mut result = $projective_type::zero();
+
+                unsafe {
+                    $curve_prefix_ident::sub(
+                        &point1 as *const $projective_type,
+                        &point2 as *const $projective_type,
+                        &mut result as *mut _ as *mut $projective_type
+                    );
+                };
+
+                result
+            }
+
+            fn mul_scalar(point1: $projective_type, scalar: $scalar_field) -> $projective_type {
+                let mut result = $projective_type::zero();
+
+                unsafe {
+                    $curve_prefix_ident::mul_scalar(
+                        &point1 as *const $projective_type,
+                        &scalar as *const $scalar_field,
+                        &mut result as *mut _ as *mut $projective_type
+                    );
+                };
+
+                result
+            }
+
+            fn mul_two_scalar(scalar1: $scalar_field, scalar2: $scalar_field) -> $scalar_field {
+                let mut result = $scalar_field::zero();
+
+                unsafe {
+                    $curve_prefix_ident::mul_two_scalar(
+                        &scalar1 as *const $scalar_field,
+                        &scalar2 as *const $scalar_field,
+                        &mut result as *mut _ as *mut $scalar_field
+                    );
+                };
+
+                result
+            }
+
+            fn add_two_scalar(scalar1: $scalar_field, scalar2: $scalar_field) -> $scalar_field {
+                let mut result = $scalar_field::zero();
+
+                unsafe {
+                    $curve_prefix_ident::add_two_scalar(
+                        &scalar1 as *const $scalar_field,
+                        &scalar2 as *const $scalar_field,
+                        &mut result as *mut _ as *mut $scalar_field
+                    );
+                };
+
+                result
             }
 
             fn generate_random_projective_points(size: usize) -> Vec<$projective_type> {
