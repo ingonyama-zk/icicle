@@ -12,8 +12,10 @@ namespace icicle {
     // Assert that t is valid. Ideally would like to return an eIcicleError but the API doesn't let us do it
     constexpr std::array<int, 4> validTValues = {3, 5, 9, 12};
     const bool is_valid_t = std::find(validTValues.begin(), validTValues.end(), t) != validTValues.end();
-    ICICLE_LOG_ERROR << "Poseidon only supports t values of 3, 5, 9, or 12.";
-    ICICLE_ASSERT(is_valid_t);
+    if (!is_valid_t) {
+      ICICLE_LOG_ERROR << "Poseidon only supports t values of 3, 5, 9, or 12.";
+      ICICLE_ASSERT(false);
+    }
 
     std::shared_ptr<HashBackend> backend;
     ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(t, domain_tag, backend));
