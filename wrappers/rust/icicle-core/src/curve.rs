@@ -202,7 +202,7 @@ macro_rules! impl_curve {
         pub type $projective_type = Projective<$curve>;
 
         mod $curve_prefix_ident {
-            use super::{eIcicleError, $affine_type, $projective_type, IcicleStream, VecOpsConfig};
+            use super::{eIcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_eq")]
