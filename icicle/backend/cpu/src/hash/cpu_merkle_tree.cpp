@@ -50,9 +50,9 @@ namespace icicle {
       }
     }
 
-    ~CPUMerkleTreeBackend() { 
-      for (auto& pair : m_map_segment_id_2_inputs)
-      { 
+    ~CPUMerkleTreeBackend()
+    {
+      for (auto& pair : m_map_segment_id_2_inputs) {
         delete pair.second; // Ensure all dynamically allocated memory is freed
       }
     }

@@ -460,8 +460,8 @@ void test_merkle_tree(
     << "Explicit leaf size should only be given when the given leaves array is a bytes array.";
 
   unsigned leaf_size = explicit_leaf_size > 1 ? explicit_leaf_size : sizeof(T);
-  auto prover_tree =    MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-  auto verifier_tree =  MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+  auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+  auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
 
   // assert that incorrect size fails
   if (config.padding_policy == PaddingPolicy::None) {
@@ -913,7 +913,8 @@ TEST_F(HashApiTest, MerkleTreeLeavesOnDeviceTreeOnHost)
   }
 }
 
-void deep_copy_byte_array_to_vec(const std::byte* src, std::size_t size, std::vector<std::byte>& dest) {
+void deep_copy_byte_array_to_vec(const std::byte* src, std::size_t size, std::vector<std::byte>& dest)
+{
   dest.resize(size);
   std::memcpy(dest.data(), src, size);
 }
@@ -966,15 +967,15 @@ TEST_F(HashApiTest, MerkleTreeLarge)
       // test non-pruned path
       MerkleProof merkle_proof{};
       bool verification_valid = false;
-      ICICLE_CHECK(
-        prover_tree.get_merkle_proof(device_leaves, total_input_size, leaf_idx, false /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(prover_tree.get_merkle_proof(
+        device_leaves, total_input_size, leaf_idx, false /*=pruned*/, config, merkle_proof));
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
 
       // test pruned path
       verification_valid = false;
-      ICICLE_CHECK(
-        prover_tree.get_merkle_proof(device_leaves, total_input_size, leaf_idx, true /*=pruned*/, config, merkle_proof));
+      ICICLE_CHECK(prover_tree.get_merkle_proof(
+        device_leaves, total_input_size, leaf_idx, true /*=pruned*/, config, merkle_proof));
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
     }
@@ -982,19 +983,19 @@ TEST_F(HashApiTest, MerkleTreeLarge)
   }
 
   // Check valid tree of each device by comparing their roots
-  for (int i = 1; i < device_roots.size(); i++)
-  {
-    std::vector<std::byte>& first_root =  device_roots[0];
-    std::vector<std::byte>& root =        device_roots[i];
+  for (int i = 1; i < device_roots.size(); i++) {
+    std::vector<std::byte>& first_root = device_roots[0];
+    std::vector<std::byte>& root = device_roots[i];
     ASSERT_EQ(first_root.size(), root.size());
     auto size = root.size();
-    for (int j = 0; j < size; j++)
-    {
-      ASSERT_EQ (first_root[j], root[j]) << "Different tree roots:\n" 
-        << s_registered_devices[0] << " =\t0x" << HashApiTest::voidPtrToHexString(first_root.data(), size)<< "\n"
-        << s_registered_devices[i] << " =\t0x" << HashApiTest::voidPtrToHexString(root.data(), size);
+    for (int j = 0; j < size; j++) {
+      ASSERT_EQ(first_root[j], root[j]) << "Different tree roots:\n"
+                                        << s_registered_devices[0] << " =\t0x"
+                                        << HashApiTest::voidPtrToHexString(first_root.data(), size) << "\n"
+                                        << s_registered_devices[i] << " =\t0x"
+                                        << HashApiTest::voidPtrToHexString(root.data(), size);
     }
-  }  
+  }
 }
 
 #ifdef POSEIDON
