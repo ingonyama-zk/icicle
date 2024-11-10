@@ -10,7 +10,7 @@ namespace fri {
 
   namespace {
     template <typename S, typename E>
-    __device__ void ibutterfly(E& v0, E& v1, const S& itwid)
+    DEVICE_INLINE void ibutterfly(E& v0, E& v1, const S& itwid)
     {
       E tmp = v0;
       v0 = tmp + v1;
