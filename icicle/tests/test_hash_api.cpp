@@ -72,7 +72,7 @@ public:
     }
   }
 
-  std::string voidPtrToHexString(const std::byte* byteData, size_t size)
+  static std::string voidPtrToHexString(const std::byte* byteData, size_t size)
   {
     std::ostringstream hexStream;
     for (size_t i = 0; i < size; ++i) {
@@ -412,12 +412,7 @@ bool is_valid_tree(
   auto [root, root_size] = tree.get_merkle_root();
 
   // Check valid tree of each device by comparing their roots
-  std::cout << "\nRoot at is_valid_tree\n0x";
-  for (int j = 0; j < root_size; j++)
-  {
-    std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<uint8_t>(root[j]));
-  }
-  std::cout << '\n';
+  ICICLE_LOG_INFO << "Root at is_valid_tree:\n0x" << HashApiTest::voidPtrToHexString(root, root_size);
 
   for (int i = 0; i < root_size; i++) {
     if (root[i] != layer_out[i]) { return false; }
@@ -475,8 +470,8 @@ void test_merkle_tree(
 
   // assert that incorrect size fails
   if (config.padding_policy == PaddingPolicy::None) {
-    ASSERT_NE(prover_tree.build(leaves, nof_leaves - 1, config), eIcicleError::SUCCESS);
-    ASSERT_NE(prover_tree.build(leaves, nof_leaves + 1, config), eIcicleError::SUCCESS);
+    ASSERT_NE(prover_tree.build(leaves, nof_leaves * explicit_leaf_size - 1, config), eIcicleError::SUCCESS);
+    ASSERT_NE(prover_tree.build(leaves, nof_leaves * explicit_leaf_size + 1, config), eIcicleError::SUCCESS);
   }
   // build tree
   START_TIMER(MerkleTree_build)
@@ -989,13 +984,8 @@ TEST_F(HashApiTest, MerkleTreeLarge)
   // Check valid tree of each device by comparing their roots
   for (int i = 0; i < device_roots.size(); i++)
   {
-    std::cout << "Device " << (i? "CPU" : "CUDA")  << ":\n0x";
-    auto [root, size] =             device_roots[i];
-    for (int j = 0; j < size; j++)
-    {
-      std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<uint8_t>(root[j]));
-    }
-    std::cout << '\n';
+    auto [root, size] = device_roots[i];
+    ICICLE_LOG_INFO << "Device " << (i? "CPU" : "CUDA")  << ":\n0x" << HashApiTest::voidPtrToHexString(root, size);
   }
   
   for (int i = 1; i < device_roots.size(); i++)
