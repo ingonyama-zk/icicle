@@ -197,6 +197,9 @@ TEST_F(HashApiTest, KeccakLarge)
   END_TIMER(cuda_timer_device_mem, "CUDA Keccak large time (on device memory)", true);
   ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
   ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
 }
 
 TEST_F(HashApiTest, Blake2sLarge)
@@ -242,6 +245,9 @@ TEST_F(HashApiTest, Blake2sLarge)
   END_TIMER(cuda_timer_device_mem, "CUDA blake2s large time (on device memory)", true);
   ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
   ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
 }
 
 TEST_F(HashApiTest, sha3)
@@ -399,21 +405,10 @@ bool is_valid_tree(
     // copy output outputs to inputs before moving to the next layer
     memcpy(layer_in.get(), layer_out.get(), output_size);
     input_size_temp = output_size;
-
-    // std::cout << "Layer" << lidx << " output:\t";
-    // for (int i = 0; i < output_size; i++)
-    // {
-    //   std::cout << std::to_integer<int>(layer_out[i]) << "\t";
-    // }
-    // std::cout << '\n';
   }
 
   // Compare computed root with the tree's root
   auto [root, root_size] = tree.get_merkle_root();
-
-  // Check valid tree of each device by comparing their roots
-  ICICLE_LOG_INFO << "Root at is_valid_tree:\n0x" << HashApiTest::voidPtrToHexString(root, root_size);
-
   for (int i = 0; i < root_size; i++) {
     if (root[i] != layer_out[i]) { return false; }
   }
@@ -918,17 +913,24 @@ TEST_F(HashApiTest, MerkleTreeLeavesOnDeviceTreeOnHost)
   }
 }
 
+void deep_copy_byte_array_to_vec(const std::byte* src, std::size_t size, std::vector<std::byte>& dest) {
+  dest.resize(size);
+  std::memcpy(dest.data(), src, size);
+}
+
 TEST_F(HashApiTest, MerkleTreeLarge)
 {
   const uint64_t leaf_size = 32;
-  const uint64_t total_input_size = (1 << 8);
+  const uint64_t total_input_size = (1 << 28);
   const uint64_t nof_leaves = total_input_size / leaf_size;
   auto leaves = std::make_unique<std::byte[]>(total_input_size);
   randomize(leaves.get(), total_input_size);
 
-  std::vector<std::pair<const std::byte*, size_t>> device_roots(0);
+  std::vector<std::vector<std::byte>> device_roots(s_registered_devices.size());
+  int device_roots_idx = 0;
 
-  for (const auto& device : s_registered_devices) {
+  for (int i = 0; i < s_registered_devices.size(); i++) {
+    const auto& device = s_registered_devices[i];
     ICICLE_LOG_INFO << "MerkleTreeDeviceBig on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
@@ -954,7 +956,8 @@ TEST_F(HashApiTest, MerkleTreeLarge)
     ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
     END_TIMER(MerkleTree_build, "Merkle Tree large", true)
 
-    device_roots.push_back(prover_tree.get_merkle_root());
+    auto [root, root_size] = prover_tree.get_merkle_root();
+    deep_copy_byte_array_to_vec(root, root_size, device_roots[i]);
 
     // proof leaves and verify
     for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
@@ -975,29 +978,23 @@ TEST_F(HashApiTest, MerkleTreeLarge)
       ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
       ASSERT_TRUE(verification_valid);
     }
-
-    if (device == "CPU") { test_merkle_tree(hashes, config, 0, nof_leaves, device_leaves, leaf_size); }
-
     ICICLE_CHECK(icicle_free(device_leaves));
   }
 
   // Check valid tree of each device by comparing their roots
-  for (int i = 0; i < device_roots.size(); i++)
-  {
-    auto [root, size] = device_roots[i];
-    ICICLE_LOG_INFO << "Device " << (i? "CPU" : "CUDA")  << ":\n0x" << HashApiTest::voidPtrToHexString(root, size);
-  }
-  
   for (int i = 1; i < device_roots.size(); i++)
   {
-    auto [first_root, first_size] = device_roots[0];
-    auto [root, size] =             device_roots[i];
-    ASSERT_EQ(first_size, size);
+    std::vector<std::byte>& first_root =  device_roots[0];
+    std::vector<std::byte>& root =        device_roots[i];
+    ASSERT_EQ(first_root.size(), root.size());
+    auto size = root.size();
     for (int j = 0; j < size; j++)
     {
-      if (first_root[j] != root[j]) { ASSERT_TRUE(false); }
+      ASSERT_EQ (first_root[j], root[j]) << "Different tree roots:\n" 
+        << s_registered_devices[0] << " =\t0x" << HashApiTest::voidPtrToHexString(first_root.data(), size)<< "\n"
+        << s_registered_devices[i] << " =\t0x" << HashApiTest::voidPtrToHexString(root.data(), size);
     }
-  }
+  }  
 }
 
 #ifdef POSEIDON

@@ -50,6 +50,13 @@ namespace icicle {
       }
     }
 
+    ~CPUMerkleTreeBackend() { 
+      for (auto& pair : m_map_segment_id_2_inputs)
+      { 
+        delete pair.second; // Ensure all dynamically allocated memory is freed
+      }
+    }
+
     eIcicleError build(const std::byte* leaves, uint64_t leaves_size, const MerkleTreeConfig& config) override
     {
       TasksManager<HashTask> task_manager(get_nof_workers(config)); // Run workers.
@@ -79,7 +86,7 @@ namespace icicle {
         // handle completed task
         if (task->is_completed()) {
           if (task->m_layer_idx == nof_layers - 1) { // Root processed
-            print_tree(leaves, leaves_size);
+            // print_tree(leaves, leaves_size);
             return eIcicleError::SUCCESS;
           }
           const uint64_t completed_layer_idx = task->m_layer_idx;
@@ -87,7 +94,11 @@ namespace icicle {
 
           // delete completed_segment_id from the map
           const uint64_t completed_segment_id = completed_segment_idx ^ (completed_layer_idx << 56);
-          m_map_segment_id_2_inputs.erase(completed_segment_id);
+          auto segment = m_map_segment_id_2_inputs.find(completed_segment_id);
+          if (segment != m_map_segment_id_2_inputs.end()) {
+            delete segment->second;
+            m_map_segment_id_2_inputs.erase(completed_segment_id);
+          }
 
           // Calculate Current-Segment-ID. The completed task generated inputs for Current-Segment
           const uint64_t cur_layer_idx = completed_layer_idx + 1;

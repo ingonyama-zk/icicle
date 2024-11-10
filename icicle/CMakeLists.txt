@@ -18,6 +18,11 @@ endif()
 # Print the selected build type
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+# Prevent build if both SANITIZE and CUDA_BACKEND are enabled
+if(SANITIZE AND CUDA_BACKEND) 
+  message(FATAL_ERROR "Address sanitizer and Cuda cannot be enabled at the same time.")
+endif()
+
 # Find the ccache program
 find_program(CCACHE_PROGRAM ccache)
 # If ccache is found, use it as the compiler launcher
