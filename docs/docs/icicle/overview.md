@@ -56,7 +56,7 @@ For a detailed guide on setting up Google Colab with ICICLE, refer to [this arti
 
 [ICICLE](https://github.com/ingonyama-zk/icicle) can be used similarly to any other cryptography library. Through various integrations, ICICLE has proven effective in multiple use cases:
 
-### Circuit Developers
+### Boost Your ZK Prover Performance
 
 If you're a circuit developer facing bottlenecks, integrating ICICLE into your prover may solve performance issues. ICICLE is integrated into popular ZK provers like [Gnark](https://github.com/Consensys/gnark) and [Halo2](https://github.com/zkonduit/halo2), enabling immediate GPU acceleration without additional code changes.
 
