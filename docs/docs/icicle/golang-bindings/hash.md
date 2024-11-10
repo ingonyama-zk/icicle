@@ -92,6 +92,9 @@ import (
 
 batch := 1 << 4
 t := 3 // Currently support arity of 3, 5, 9, 12
+// (t - 1) is due to domainTag being non nil
+// if domainTag is nil, then the input size should be `batch * t`
+// See more in our tests: https://github.com/ingonyama-zk/icicle/blob/docs/v3/golang/poseidon/wrappers/golang/curves/bn254/tests/poseidon_test.go#L23-L27
 inputsSize = batch * (t - 1)
 inputs := babybear.GenerateScalars(inputsSize)
 domainTag := babybear.GenerateScalars(1)[0]
