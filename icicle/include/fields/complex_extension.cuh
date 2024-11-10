@@ -4,7 +4,7 @@
 #include "gpu-utils/modifiers.cuh"
 #include "gpu-utils/sharedmem.cuh"
 
-template <typename CONFIG, class T>
+template <typename CONFIG, class T, const bool M31MULT=false>
 class ComplexExtensionField
 {
 private:
@@ -123,18 +123,21 @@ public:
     //     )
     // }
 
-    // FWide real_prod = FF::mul_wide(xs.real, ys.real);
-    // FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
-    // FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
-    // FWide nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
-    // nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    // return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
-    auto real_1 = xs.real * ys.real - xs.imaginary * ys.imaginary;
-    auto im_1 = xs.real * ys.imaginary + xs.imaginary * ys.real;
-    printf(
-      "cmplx mult: {0x%08x, 0x%08x} * {0x%08x, 0x%08x} = {0x%08x%08x}\n", xs.real.get_limb(),
-      xs.imaginary.get_limb(), ys.real.get_limb(), ys.imaginary.get_limb(), real_1.get_limb(), im_1.get_limb());
-    return ExtensionWide{real_1.get_limb(), im_1.get_limb()};
+    if constexpr(M31MULT) {
+      auto real_1 = xs.real * ys.real - xs.imaginary * ys.imaginary;
+      auto im_1 = xs.real * ys.imaginary + xs.imaginary * ys.real;
+      // printf(
+      //   "cmplx mult: {0x%08x, 0x%08x} * {0x%08x, 0x%08x} = {0x%08x%08x}\n", xs.real.get_limb(),
+      //   xs.imaginary.get_limb(), ys.real.get_limb(), ys.imaginary.get_limb(), real_1.get_limb(), im_1.get_limb());
+      return ExtensionWide{real_1.get_limb(), im_1.get_limb()};
+    } else {
+      FWide real_prod = FF::mul_wide(xs.real, ys.real);
+      FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
+      FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
+      FWide nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
+      return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    }
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>

@@ -5,7 +5,7 @@
 #include "gpu-utils/modifiers.cuh"
 #include "gpu-utils/sharedmem.cuh"
 
-template <typename CONFIG, class T>
+template <typename CONFIG, class T, const bool M31MULT=false>
 class QuarticExtensionField
 {
 private:
@@ -125,44 +125,49 @@ public:
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
-    // TODO heresss
+    if constexpr(M31MULT) {
+      /////////////////////
+      // self.0 * rhs.0 + R * self.1 * rhs.1,
+      // self.0 * rhs.1 + self.1 * rhs.0,
+      ComplexExtensionField<CONFIG, T, M31MULT> R = {2, 1};
 
-    // if (CONFIG::nonresidue_is_negative)
-    //   return ExtensionWide{
-    //     FF::mul_wide(xs.real, ys.real) -
-    //       FF::template mul_unsigned<CONFIG::nonresidue>(
-    //         FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
-    //     FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) -
-    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
-    //     FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) -
-    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
-    //     FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
-    //       FF::mul_wide(xs.im3, ys.real)};
-    // else
-    //   return ExtensionWide{
-    //     FF::mul_wide(xs.real, ys.real) +
-    //       FF::template mul_unsigned<CONFIG::nonresidue>(
-    //         FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
-    //     FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) +
-    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
-    //     FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) +
-    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
-    //     FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
-    //       FF::mul_wide(xs.im3, ys.real)};
-    /////////////////////
-    // self.0 * rhs.0 + R * self.1 * rhs.1,
-    // self.0 * rhs.1 + self.1 * rhs.0,
-    ComplexExtensionField<CONFIG, T> R = {2, 1};
+      ComplexExtensionField<CONFIG, T, true> self_0 = {xs.real.get_limb(), xs.im1.get_limb()};
+      ComplexExtensionField<CONFIG, T, true> self_1 = {xs.im2.get_limb(), xs.im3.get_limb()};
+      ComplexExtensionField<CONFIG, T, true> rhs_0 = {ys.real.get_limb(), ys.im1.get_limb()};
+      ComplexExtensionField<CONFIG, T, true> rhs_1 = {ys.im2.get_limb(), ys.im3.get_limb()};
+      ComplexExtensionField<CONFIG, T, true> res_xs = self_0 * rhs_0 + R * self_1 * rhs_1;
+      ComplexExtensionField<CONFIG, T, true> res_ys = self_0 * rhs_1 + self_1 * rhs_0;
 
-    ComplexExtensionField<CONFIG, T> self_0 = {xs.real.get_limb(), xs.im1.get_limb()};
-    ComplexExtensionField<CONFIG, T> self_1 = {xs.im2.get_limb(), xs.im3.get_limb()};
-    ComplexExtensionField<CONFIG, T> rhs_0 = {ys.real.get_limb(), ys.im1.get_limb()};
-    ComplexExtensionField<CONFIG, T> rhs_1 = {ys.im2.get_limb(), ys.im3.get_limb()};
-    ComplexExtensionField<CONFIG, T> res_xs = self_0 * rhs_0 + R * self_1 * rhs_1;
-    ComplexExtensionField<CONFIG, T> res_ys = self_0 * rhs_1 + self_1 * rhs_0;
+      return ExtensionWide{
+        res_xs.real.get_limb(), res_xs.imaginary.get_limb(), res_ys.real.get_limb(), res_ys.imaginary.get_limb()};
+    } else {
+      if constexpr (CONFIG::nonresidue_is_negative)
+        return ExtensionWide{
+          FF::mul_wide(xs.real, ys.real) -
+            FF::template mul_unsigned<CONFIG::nonresidue>(
+              FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
 
-    return ExtensionWide{
-      res_xs.real.get_limb(), res_xs.imaginary.get_limb(), res_ys.real.get_limb(), res_ys.imaginary.get_limb()};
+          FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) -
+            FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
+
+          FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) -
+            FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
+
+          FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
+            FF::mul_wide(xs.im3, ys.real)};
+      else
+        return ExtensionWide{
+          FF::mul_wide(xs.real, ys.real) +
+            FF::template mul_unsigned<CONFIG::nonresidue>(
+              FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
+          FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) +
+            FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
+
+          FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) +
+            FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
+          FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
+            FF::mul_wide(xs.im3, ys.real)};
+    }
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>

@@ -203,15 +203,15 @@ namespace m31 {
     {
       // TODO: here done
 
-      // uint64_t x = (uint64_t)(xs.get_limb()) * ys.get_limb();
-      // uint32_t t = ((x >> 31) + (x & MersenneField::get_modulus().limbs[0]));
-      // uint32_t m = MersenneField::get_modulus().limbs[0];
-      // if (t > m) t = (t & m) + (t >> 31);
-      // if (t > m) t = (t & m) + (t >> 31);
-      // if (t == m) t = 0;
-      // return MersenneField{{t}};
+      uint64_t x = (uint64_t)(xs.get_limb()) * ys.get_limb();
+      uint32_t t = ((x >> 31) + (x & MersenneField::get_modulus().limbs[0]));
+      uint32_t m = MersenneField::get_modulus().limbs[0];
+      if (t > m) t = (t & m) + (t >> 31);
+      if (t > m) t = (t & m) + (t >> 31);
+      if (t == m) t = 0;
+      return MersenneField{{t}};
 
-      return MersenneField::reduce_stwo(static_cast<uint64_t>(xs.get_limb()) * static_cast<uint64_t>(ys.get_limb()));
+      // return MersenneField::reduce_stwo(static_cast<uint64_t>(xs.get_limb()) * static_cast<uint64_t>(ys.get_limb()));
     }
 
     // Alternatively, conversion operator to uint32_t[1]
@@ -310,7 +310,7 @@ namespace m31 {
   /**
    * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
+  typedef ComplexExtensionField<fp_config, scalar_t, true> c_extension_t;
 
   const c_extension_t ROU = {{2}, {1268011823}};
 
@@ -332,7 +332,7 @@ namespace m31 {
   /**
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
-  typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
+  typedef QuarticExtensionField<fp_config, scalar_t, true> q_extension_t;
 
   typedef q_extension_t extension_t;
 } // namespace m31
