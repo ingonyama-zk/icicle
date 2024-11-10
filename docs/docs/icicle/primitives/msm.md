@@ -152,7 +152,7 @@ msm(..., config,...); // msm backend is reading the config-extension
 
 ### Choosing optimal parameters
 
-`is_big_triangle` should be `false` in almost all cases. It might provide better results only for very small MSMs (smaller than 2^8^) with a large batch (larger than 100) but this should be tested per scenario.
+`is_big_triangle` should be `false` in almost all cases. It might provide better results only for very small MSMs (smaller than 2^8) with a large batch (larger than 100) but this should be tested per scenario.
 Large buckets exist in two cases:
 1. When the scalar distribution isn't uniform.
 2. When `c` does not divide the scalar bit-size.
