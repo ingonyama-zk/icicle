@@ -24,9 +24,8 @@ namespace fri {
       if (idx % 2 == 0 && idx < n) {
         E f_x = eval[idx];         // even
         E f_x_neg = eval[idx + 1]; // odd
-        S x_domain = domain_xs[idx / 2];
-        ibutterfly(f_x, f_x_neg, S::inverse(x_domain));
         auto folded_eval_idx = idx / 2;
+        ibutterfly(f_x, f_x_neg, domain_xs[folded_eval_idx]);
         folded_eval[folded_eval_idx] = f_x + alpha * f_x_neg;
       }
     }
