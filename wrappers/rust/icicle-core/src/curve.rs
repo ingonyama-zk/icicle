@@ -213,7 +213,6 @@ macro_rules! impl_curve {
                 pub(crate) fn generate_projective_points(points: *mut $projective_type, size: usize);
                 #[link_name = concat!($curve_prefix, "_generate_affine_points")]
                 pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
-                #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 #[link_name = concat!($curve_prefix, "_add")]
                 pub(crate) fn add(
                     point1: *const $projective_type,
@@ -244,6 +243,7 @@ macro_rules! impl_curve {
                     scalar2: *const $scalar_field, 
                     result: *mut $scalar_field,
                 );
+                #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
                     input: *const $affine_type,
                     size: usize,
