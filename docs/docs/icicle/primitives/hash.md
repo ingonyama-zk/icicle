@@ -67,8 +67,13 @@ auto keccak512 = Keccak512::create();
 auto sha3_256 = Sha3_256::create();
 auto sha3_512 = Sha3_512::create();
 auto blake2s = Blake2s::create();
-// Poseidon requires specifying the field type and arity (supported 3,5,9,12)
-auto poseidon = Poseidon::create<scalar_t>(arity); 
+// Poseidon requires specifying the field-type and t parameter (supported 3,5,9,12) as defined by the Poseidon paper.
+auto poseidon = Poseidon::create<scalar_t>(t); 
+// Optionally, Poseidon can accept a domain-tag, which is a field element used to separate applications or contexts.
+// The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
+scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
+auto poseidon_with_domain_tag = Poseidon::create<scalar_t>(t, &domain_tag);
+// This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
 ```
 
 ### 2. Hashing Data
