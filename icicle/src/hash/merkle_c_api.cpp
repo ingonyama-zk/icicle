@@ -3,8 +3,6 @@
 #include "icicle/merkle/merkle_proof.h"
 #include "icicle/merkle/merkle_tree.h"
 
-using namespace icicle;
-
 extern "C" {
 // Define an opaque pointer type for MerkleProof (similar to a handle in C)
 typedef icicle::MerkleProof* MerkleProofHandle;

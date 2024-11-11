@@ -3,8 +3,6 @@
 #include <thread>
 #include <cassert>
 
-#include "icicle/errors.h"
-
 #define LOG_TASKS_PER_THREAD 6
 #define TASKS_PER_THREAD     (1 << LOG_TASKS_PER_THREAD)
 #define MANAGER_SLEEP_USEC   10
@@ -304,7 +302,6 @@ void TasksManager<Task>::Worker::wait_done()
 template <class Task>
 TasksManager<Task>::TasksManager(int nof_workers, int min_nof_tasks) : m_workers(nof_workers), m_next_worker_idx(0)
 {
-  using namespace icicle; // for ICICLE_ASSERT but I don't want to do it in global scope for headers
   ICICLE_ASSERT(nof_workers > 0) << "Number of workers must be at least 1.";
   int nof_tasks_per_worker = std::max((min_nof_tasks + nof_workers - 1) / nof_workers, TASKS_PER_THREAD);
   for (int i = 0; i < nof_workers; i++) {
