@@ -89,8 +89,8 @@ TEST_F(DeviceApiTest, MemoryCopySyncWithOffset)
 
     int* dev_mem = nullptr;
     ICICLE_CHECK(
-      icicle_malloc((void**)&dev_mem, sizeof(input))); // allocating larger memory to have offset on this buffer too
-    // copy 2 values from offset (that is copy {2,3} only)
+      icicle_malloc((void**)&dev_mem, sizeof(input))); // allocating larger memory to have offset on this buffer to copy
+                                                       // 2 values from offset (that is copy {2,3} only)
     ICICLE_CHECK(icicle_copy_to_device(dev_mem + 1, input + 1, sizeof(output)));
     ICICLE_CHECK(icicle_copy_to_host(output, dev_mem + 1, sizeof(output)));
     ICICLE_CHECK(icicle_free(dev_mem));
