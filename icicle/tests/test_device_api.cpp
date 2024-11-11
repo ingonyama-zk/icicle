@@ -19,6 +19,8 @@ class DeviceApiTest : public ::testing::Test
 {
 public:
   static inline std::vector<std::string> s_registered_devices;
+  static inline std::string s_main_device = "UNKOWN";
+  static inline std::string s_ref_device = "CPU"; // assuming always present
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
@@ -28,6 +30,17 @@ public:
     icicle_load_backend_from_env_or_default();
     s_registered_devices = get_registered_devices_list();
     ASSERT_GT(s_registered_devices.size(), 0);
+    ASSERT_LE(s_registered_devices.size(), 2); // assuming we have a single device except for CPU
+    if (s_registered_devices.size() > 1) {
+      for (auto& device : s_registered_devices) {
+        // looking for first device that is not CPU and use that as main device
+        if (device != s_ref_device) {
+          s_main_device = device;
+          break;
+        }
+      }
+    }
+    ICICLE_LOG_INFO << "Main-device=" << s_main_device << ", Reference-device=" << s_ref_device;
   }
   static void TearDownTestSuite() {}
 
@@ -157,12 +170,15 @@ TEST_F(DeviceApiTest, InvalidDevice)
 
 TEST_F(DeviceApiTest, memoryTracker)
 {
+  // need two devices for this test
+  if (s_registered_devices.size() == 1) { return; }
   const int NOF_ALLOCS = 1000;
   const int ALLOC_SIZE = 1 << 20;
 
-  MemoryTracker tracker{};
-  Device device_cuda = {"CUDA", 0};
-  icicle_set_device(device_cuda);
+  MemoryTracker<Device> tracker{};
+  ICICLE_ASSERT(s_main_device != "UNKOWN") << "memoryTracker test assumes more than one device";
+  Device main_device = {s_main_device, 0};
+  icicle_set_device(main_device);
 
   std::vector<void*> allocated_addresses(NOF_ALLOCS, nullptr);
 
@@ -174,7 +190,7 @@ TEST_F(DeviceApiTest, memoryTracker)
 
   START_TIMER(insertion);
   for (auto& it : allocated_addresses) {
-    tracker.add_allocation(it, ALLOC_SIZE, device_cuda);
+    tracker.add_allocation(it, ALLOC_SIZE, main_device);
   }
   END_TIMER(insertion, "memory-tracker: insert average", true, NOF_ALLOCS);
 
@@ -196,8 +212,8 @@ TEST_F(DeviceApiTest, memoryTracker)
   const void* addr = (void*)((size_t)*allocated_addresses.begin() + rand() % ALLOC_SIZE);
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(addr));
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
-  auto dev = tracker.identify_device(addr);
-  ASSERT_EQ(**dev, device_cuda);
+  auto it = tracker.identify(addr);
+  ASSERT_EQ(*it->first, main_device);
 }
 
 int main(int argc, char** argv)

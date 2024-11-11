@@ -4,6 +4,8 @@
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
 
+using namespace icicle;
+
 extern "C" {
 // Define a type for the HasherHandle (which is a pointer to Hash)
 typedef icicle::Hash* HasherHandle;
