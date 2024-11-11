@@ -60,6 +60,7 @@ namespace icicle {
     bool are_inputs_on_device;      /**< True if inputs are on device, false if on host. Default value is false. */
     bool are_outputs_on_device;     /**< True if outputs are on device, false if on host. Default value is false. */
     bool is_async;                  /**< True if operation is asynchronous. Default value is false. */
+    bool is_ref;
     ConfigExtension* ext = nullptr; /**< Backend-specific extensions. */
   };
 

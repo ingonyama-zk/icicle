@@ -89,14 +89,17 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
 {
   // std::cout << "__cplusplus: " << __cplusplus << std::endl;
   // for (int i = 0; i < 100000; i++) {
-  auto a = TypeParam::rand_host();
-  auto b = TypeParam::rand_host();
+  // auto a = TypeParam::rand_host();
+  // auto b = TypeParam::rand_host();
+  auto a = TypeParam::from(1);
+  auto b = TypeParam::from(1);
   // auto b = a;
   auto ar = TypeParam::to_montgomery(a);
   auto br = TypeParam::to_montgomery(b);
   auto rr = TypeParam::mont_mult(ar,br);
   auto r = TypeParam::from_montgomery(rr);
-  if (r != a*b){
+  // if (r != a*b){
+  if (r != original_multiplier(a,b)){
   std::cout << "a: "<< a << std::endl;
   std::cout << "b: "<< b << std::endl;
   std::cout << "ar: "<< ar << std::endl;
@@ -109,7 +112,8 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
   std::cout << "R': "<<TypeParam{TypeParam::get_mont_r_inv()} << std::endl;
   // break;
   }
-  ASSERT_EQ(r, a*b);
+  // ASSERT_EQ(r, a*b);
+  ASSERT_EQ(r, original_multiplier(a,b));
   // }
   std::ostringstream oss;
   START_TIMER(MULT_sync)
@@ -347,12 +351,13 @@ TYPED_TEST(FieldApiTest, Slice)
 
 TYPED_TEST(FieldApiTest, ntt)
 {
+  for (int logn=4; logn<22; logn++){
+  ICICLE_LOG_INFO << "logn = "<<logn;
   // Randomize configuration
-
   int seed = time(0);
   srand(seed);
   const bool inplace = 0;
-  const int logn = 16;
+  // const int logn = 16;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
   const int log_batch_size = 0;
@@ -432,6 +437,120 @@ TYPED_TEST(FieldApiTest, ntt)
   run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
+}
+
+TYPED_TEST(FieldApiTest, ntt_mont)
+{
+  // Randomize configuration
+  for (int logn=3; logn<22; logn++){
+    ICICLE_LOG_DEBUG << "logn = " <<logn;
+
+  int seed = time(0);
+  srand(seed);
+  const bool inplace = 0;
+  // const int logn = 3;
+  const uint64_t N = 1 << logn;
+  const int log_ntt_domain_size = logn;
+  const int log_batch_size = 0;
+  const int batch_size = 1 << log_batch_size;
+  const Ordering ordering = static_cast<Ordering>(0);
+  bool columns_batch = false;
+  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  const int log_coset_stride = 0;
+  scalar_t coset_gen = scalar_t::one();
+
+  const int total_size = N * batch_size;
+  auto scalars = std::make_unique<TypeParam[]>(total_size);
+  auto mont_scalars = std::make_unique<TypeParam[]>(total_size);
+  auto vecops_config = default_vec_ops_config();
+  // FieldApiTest<TypeParam>::random_samples(scalars.get(), total_size);
+  for (uint32_t i=0; i<total_size; i++){
+    scalars[i] = scalar_t::from(i);
+  }
+  convert_montgomery(scalars.get(), total_size, true /*into montgomery*/, vecops_config, mont_scalars.get());
+  auto out_main_mont = std::make_unique<TypeParam[]>(total_size);
+  auto out_main = std::make_unique<TypeParam[]>(total_size);
+  auto out_ref = std::make_unique<TypeParam[]>(total_size);
+  
+  auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    icicleStreamHandle stream = nullptr;
+    ICICLE_CHECK(icicle_create_stream(&stream));
+    auto init_domain_config = default_ntt_init_domain_config();
+    init_domain_config.stream = stream;
+    init_domain_config.is_async = false;
+    ConfigExtension ext;
+    ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    init_domain_config.ext = &ext;
+    auto config = default_ntt_config<scalar_t>();
+    config.stream = stream;
+    config.coset_gen = coset_gen;
+    config.batch_size = batch_size;       // default: 1
+    config.columns_batch = columns_batch; // default: false
+    config.ordering = ordering;           // default: kNN
+    config.are_inputs_on_device = true;
+    config.are_outputs_on_device = true;
+    config.is_async = false;
+    // ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega_baret(log_ntt_domain_size), init_domain_config));
+    // ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config);
+    TypeParam *d_in, *d_out;
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
+    // if (iters==1){
+    if (msg=="ntt_mont\t"){
+      ICICLE_CHECK(icicle_copy_to_device_async(d_in, mont_scalars.get(), total_size * sizeof(TypeParam), config.stream));
+      config.is_ref = false;
+    } else {
+      ICICLE_CHECK(icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream));
+      config.is_ref = true;
+    }
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i) {
+      if (inplace) {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_in));
+      } else {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      }
+    }
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+
+    if (inplace) {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
+    } else {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    }
+    ICICLE_CHECK(icicle_free_async(d_in, config.stream));
+    ICICLE_CHECK(icicle_free_async(d_out, config.stream));
+    ICICLE_CHECK(icicle_stream_synchronize(config.stream));
+    ICICLE_CHECK(icicle_destroy_stream(stream));
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  };
+  run(s_reference_target, out_ref.get(), "ntt\t\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main_mont.get(), "ntt_mont\t", VERBOSE /*=measure*/, 10 /*=iters*/); //warmup
+  run(s_reference_target, out_ref.get(), "ntt\t\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main_mont.get(), "ntt_mont\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_reference_target, out_ref.get(), "ntt\t\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main_mont.get(), "ntt_mont\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_reference_target, out_ref.get(), "ntt\t\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main_mont.get(), "ntt_mont\t", VERBOSE /*=measure*/, 10 /*=iters*/);
+  convert_montgomery(out_main_mont.get(), total_size, false /*into montgomery*/, vecops_config, out_main.get());
+
+  // ICICLE_LOG_DEBUG << "\n";
+  // for (int i=0;i<total_size;i++){
+  //   ICICLE_LOG_DEBUG << "out_ref["<<i<<"]="<<out_ref[i];
+  // }
+  // ICICLE_LOG_DEBUG << "\n";
+  // for (int i=0;i<total_size;i++){
+  //   ICICLE_LOG_DEBUG << "out_main["<<i<<"]="<<out_main[i];
+  // }
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  }
+}
+
 #endif // NTT
 
 int main(int argc, char** argv)

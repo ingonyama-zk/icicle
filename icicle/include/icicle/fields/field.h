@@ -64,7 +64,21 @@ public:
 
     Field omega = Field{CONFIG::rou};
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
-      omega = sqr(omega);
+      omega = sqr(omega); //return xs * xs; (mont)
+      // omega =  original_multiplier(omega, omega);
+    return omega;
+  }
+  
+  static HOST_INLINE Field omega_baret(uint32_t logn)
+  {
+    if (logn == 0) { return Field{CONFIG::one}; }
+
+    if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega index"); }
+
+    Field omega = Field{CONFIG::rou};
+    for (int i = 0; i < CONFIG::omegas_count - logn; i++)
+      omega =  original_multiplier(omega, omega);
+
     return omega;
   }
 
@@ -855,17 +869,20 @@ public:
     return mont_reduce(r);
     // return Wide::get_lower(r);
   }
+
+  friend HOST_DEVICE_INLINE Field 
+  original_multiplier(const Field& xs, const Field& ys)
+  {
+    Wide xy = mul_wide(xs, ys); // full mult
+    return reduce(xy);          // reduce mod p
+  }
+
 #else
 
   // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
   //   #pragma GCC optimize("no-strict-aliasing")
   // #endif
 
-  friend HOST_DEVICE_INLINE Field original_multiplier(const Field& xs, const Field& ys)
-  {
-    Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
-  }
 
   // #include <x86intrin.h>
 
@@ -1206,11 +1223,13 @@ public:
     return xs * xs;
   }
 
-  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) {
+    return original_multiplier(xs , Field{CONFIG::montgomery_r});
+  }
 
   static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
   {
-    return xs * Field{CONFIG::montgomery_r_inv};
+    return original_multiplier(xs , Field{CONFIG::montgomery_r_inv});
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>

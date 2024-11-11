@@ -45,8 +45,13 @@ namespace ntt_cpu {
       << "Size is too large for domain. size = " << size
       << ", domain_max_size = " << CpuNttDomain<S>::s_ntt_domain.get_max_size();
 
-    NttCpu<S, E> ntt(uint32_t(log2(size)), direction, config, input, output);
-    ntt.run();
+    if (config.is_ref==false){
+      NttCpu<S, E> ntt(uint32_t(log2(size)), direction, config, input, output);
+      ntt.run();
+    } else {
+      NttCpuRef<S, E> ntt_ref(uint32_t(log2(size)), direction, config, input, output);
+      ntt_ref.run();
+    }
 
     return eIcicleError::SUCCESS;
   }
