@@ -117,7 +117,7 @@ template <typename S> S get_root_of_unity(uint64_t max_size);
 
 Finally, release the domain to free up device memory when not required:
 ```cpp
-template <typename S> S get_root_of_unity(uint64_t max_size);
+template <typename S> eIcicleError ntt_release_domain();
 ```
 
 where
