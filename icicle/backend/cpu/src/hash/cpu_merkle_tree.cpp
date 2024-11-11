@@ -501,7 +501,12 @@ namespace icicle {
       // This is not the root layer (root)
       LayerDB& next_layer = m_layers[next_layer_idx];
       const uint64_t next_input_size = next_layer.m_hash.default_input_chunk_size();
-      const uint64_t next_segment_idx = cur_segment_idx * cur_layer.m_hash.output_size() / next_input_size;
+      // Ensure next segment does not overflow due to a <NOF_OPERATIONS_PER_TASK+1> sized batch by comparing it to the
+      // max possible segment index (And taking the smaller one)
+      const uint64_t max_segment_idx =
+        (next_layer.m_nof_hashes_2_execute - next_layer.m_last_hash_config.batch) / NOF_OPERATIONS_PER_TASK;
+      const uint64_t next_segment_idx =
+        std::min(cur_segment_idx * cur_layer.m_hash.output_size() / next_input_size, max_segment_idx);
       const uint64_t next_segment_id = next_segment_idx ^ (next_layer_idx << 56);
 
       // If next_segment does not appear in m_map_segment_id_2_inputs, then add it
