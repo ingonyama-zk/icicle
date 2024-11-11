@@ -15,11 +15,13 @@ using FpNanoseconds = std::chrono::duration<float, std::chrono::nanoseconds::per
 
 using namespace icicle;
 
+#define UNKOWN_DEVICE "UNKNOWN"
+
 class DeviceApiTest : public ::testing::Test
 {
 public:
   static inline std::vector<std::string> s_registered_devices;
-  static inline std::string s_main_device = "UNKOWN";
+  static inline std::string s_main_device = UNKOWN_DEVICE;
   static inline std::string s_ref_device = "CPU"; // assuming always present
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
@@ -75,6 +77,28 @@ TEST_F(DeviceApiTest, MemoryCopySync)
   }
 }
 
+TEST_F(DeviceApiTest, MemoryCopySyncWithOffset)
+{
+  int input[4] = {1, 2, 3, 4};
+
+  for (const auto& device_type : s_registered_devices) {
+    int output[2] = {0, 0};
+
+    icicle::Device dev = {device_type, 0};
+    icicle_set_device(dev);
+
+    int* dev_mem = nullptr;
+    ICICLE_CHECK(
+      icicle_malloc((void**)&dev_mem, sizeof(input))); // allocating larger memory to have offset on this buffer too
+    // copy 2 values from offset (that is copy {2,3} only)
+    ICICLE_CHECK(icicle_copy_to_device(dev_mem + 1, input + 1, sizeof(output)));
+    ICICLE_CHECK(icicle_copy_to_host(output, dev_mem + 1, sizeof(output)));
+    ICICLE_CHECK(icicle_free(dev_mem));
+
+    ASSERT_EQ(0, memcmp(input + 1, output, sizeof(output)));
+  }
+}
+
 TEST_F(DeviceApiTest, MemoryCopyAsync)
 {
   int input[2] = {1, 2};
@@ -117,17 +141,18 @@ TEST_F(DeviceApiTest, CopyDeviceInference)
 
 TEST_F(DeviceApiTest, Memest)
 {
-  char expected[2] = {1, 1};
+  char expected[2] = {1, 2};
   for (const auto& device_type : s_registered_devices) {
     char host_mem[2] = {0, 0};
 
     // icicle::Device dev = {device_type, 0};
     icicle::Device dev = {"CPU", 0};
     icicle_set_device(dev);
-    void* dev_mem = nullptr;
+    char* dev_mem = nullptr;
 
-    ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(host_mem)));
-    ICICLE_CHECK(icicle_memset(dev_mem, 1, sizeof(host_mem)));      // implicit on device
+    ICICLE_CHECK(icicle_malloc((void**)&dev_mem, sizeof(host_mem)));
+    ICICLE_CHECK(icicle_memset(dev_mem, 1, 1));
+    ICICLE_CHECK(icicle_memset(dev_mem + 1, 2, 1));                 // memset with offset
     ICICLE_CHECK(icicle_copy(host_mem, dev_mem, sizeof(host_mem))); // implicit device to host
 
     ASSERT_EQ(0, memcmp(expected, host_mem, sizeof(host_mem)));
@@ -176,7 +201,7 @@ TEST_F(DeviceApiTest, memoryTracker)
   const int ALLOC_SIZE = 1 << 20;
 
   MemoryTracker<Device> tracker{};
-  ICICLE_ASSERT(s_main_device != "UNKOWN") << "memoryTracker test assumes more than one device";
+  ICICLE_ASSERT(s_main_device != UNKOWN_DEVICE) << "memoryTracker test assumes more than one device";
   Device main_device = {s_main_device, 0};
   icicle_set_device(main_device);
 
