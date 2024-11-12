@@ -324,7 +324,7 @@ public:
 
 /**
  * @brief Builds tree in a straight-forward single-threaded manner and compares the result with Icicle's calculation.
- * @param tree - Merkle tree to test.
+ * @param tree - Merkle tree to test (Already built).
  * @param input_size - Size of input in bytes.
  * @param leaf_size - Size of each leaf in the input below.
  * @param inputs - Input as a byte array.
@@ -412,7 +412,7 @@ bool is_valid_tree(
 /**
  * @brief Wrapper to the non-template version of is_valid_tree above, allowing to insert different types of arrays as
  * inputs. Builds tree in a straight-forward single-threaded manner and compares the result with Icicle's calculation.
- * @param tree - Merkle tree to test.
+ * @param tree - Merkle tree to test  (Already built).
  * @param input_size - Size of input in bytes.
  * @param inputs - Input as a byte array.
  * @param hashes - Vector of hashes of each layer in the tree above.
@@ -439,8 +439,8 @@ bool is_valid_tree(
  * @param output_store_min_layer - Store layer parameter for the Merkle tree builder.
  * @param nof_leaves - Size of the T leaves array.
  * @param leaves - Aforementioned leaves array.
- * @param explicit_leaf_size - Optional. Size of each leaf element in case that leaves is given as a byte array. NOTE
- *                             test will fail if this value isn't default (1) and T != std::byte
+ * @param explict_leaf_size_in_bytes - Optional. Size of each leaf element in case that leaves is given as a byte array.
+ * NOTE test will fail if this value isn't default (1) and T != std::byte
  */
 template <typename T>
 void test_merkle_tree(
@@ -449,53 +449,69 @@ void test_merkle_tree(
   const int output_store_min_layer,
   int nof_leaves,
   const T* leaves,
-  unsigned explicit_leaf_size = 1)
+  unsigned explict_leaf_size_in_bytes = 1)
 {
-  ASSERT_TRUE((explicit_leaf_size == 1 || std::is_same<T, std::byte>::value))
+  ASSERT_TRUE((explict_leaf_size_in_bytes == 1 || std::is_same<T, std::byte>::value))
     << "Explicit leaf size should only be given when the given leaves array is a bytes array.";
 
-  unsigned leaf_size = explicit_leaf_size > 1 ? explicit_leaf_size : sizeof(T);
+  const unsigned leaf_size = explict_leaf_size_in_bytes > 1 ? explict_leaf_size_in_bytes : sizeof(T);
+  const unsigned leaves_size = nof_leaves * leaf_size;
+
+  T* device_leaves;
+  if (config.is_leaves_on_device) {
+    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, leaves_size));
+    ICICLE_CHECK(icicle_copy(device_leaves, leaves, leaves_size));
+  }
+  const T* leaves4tree = config.is_leaves_on_device ? device_leaves : leaves;
+
   auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-  auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+  auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
   // assert that incorrect size fails
   if (config.padding_policy == PaddingPolicy::None) {
-    ASSERT_NE(prover_tree.build(leaves, nof_leaves * explicit_leaf_size - 1, config), eIcicleError::SUCCESS);
-    ASSERT_NE(prover_tree.build(leaves, nof_leaves * explicit_leaf_size + 1, config), eIcicleError::SUCCESS);
+    ASSERT_NE(
+      prover_tree.build(leaves4tree, nof_leaves * explict_leaf_size_in_bytes - 1, config), eIcicleError::SUCCESS);
+    ASSERT_NE(
+      prover_tree.build(leaves4tree, nof_leaves * explict_leaf_size_in_bytes + 1, config), eIcicleError::SUCCESS);
   }
   // build tree
   START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(prover_tree.build(leaves, nof_leaves * explicit_leaf_size, config));
+  ICICLE_CHECK(prover_tree.build(leaves4tree, nof_leaves * explict_leaf_size_in_bytes, config));
   END_TIMER(MerkleTree_build, "Merkle Tree build time", true)
 
-  ASSERT_TRUE(is_valid_tree<T>(prover_tree, nof_leaves * explicit_leaf_size, leaves, hashes, config))
+  ASSERT_TRUE(is_valid_tree<T>(prover_tree, nof_leaves * explict_leaf_size_in_bytes, leaves, hashes, config))
     << "Tree wasn't built correctly.";
 
   // Create wrong input leaves by taking the original input and swapping some leaves by random values
-  auto wrong_leaves = std::make_unique<T[]>(nof_leaves * explicit_leaf_size);
-  memcpy(wrong_leaves.get(), leaves, nof_leaves * explicit_leaf_size);
+  auto wrong_leaves = std::make_unique<T[]>(nof_leaves * explict_leaf_size_in_bytes);
+  memcpy(wrong_leaves.get(), leaves, nof_leaves * explict_leaf_size_in_bytes);
   const uint64_t nof_indices_modified = 5;
   unsigned int wrong_indices[nof_indices_modified];
   HashApiTest::randomize(wrong_indices, nof_indices_modified);
   for (int i = 0; i < nof_indices_modified; i++) {
-    int wrong_index = wrong_indices[i] % (nof_leaves * explicit_leaf_size);
-    int og_value = static_cast<int>(wrong_leaves[wrong_index]);
+    int wrong_index = wrong_indices[i] % (nof_leaves * explict_leaf_size_in_bytes);
     wrong_leaves[wrong_index] = static_cast<T>(rand());
-    int new_value = static_cast<int>(wrong_leaves[wrong_index]);
-    ICICLE_LOG_DEBUG << "Wrong input is modified at index " << wrong_index << " from " << og_value << " to "
-                     << new_value;
+    ICICLE_LOG_DEBUG << "Wrong input is modified at index " << wrong_index / explict_leaf_size_in_bytes;
   }
+
+  T* wrong_device_leaves;
+  if (config.is_leaves_on_device) {
+    ICICLE_CHECK(icicle_malloc((void**)&wrong_device_leaves, leaves_size));
+    ICICLE_CHECK(icicle_copy(wrong_device_leaves, wrong_leaves.get(), leaves_size));
+  }
+  const T* wrong_leaves4tree = config.is_leaves_on_device ? wrong_device_leaves : wrong_leaves.get();
 
   // Test the paths at the random indices (Both that the original input is valid and the modified input isn't)
   for (int i = 0; i < nof_indices_modified; i++) {
-    int leaf_idx = (wrong_indices[i] % (nof_leaves * explicit_leaf_size)) / explicit_leaf_size;
-    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx " << leaf_idx * explicit_leaf_size << ")";
+    int leaf_idx = (wrong_indices[i] % (nof_leaves * explict_leaf_size_in_bytes)) / explict_leaf_size_in_bytes;
+    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx " << leaf_idx * explict_leaf_size_in_bytes
+                     << ")";
 
     // get root and merkle-path for a leaf
     auto [root, root_size] = prover_tree.get_merkle_root();
     MerkleProof merkle_proof{};
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof(leaves, nof_leaves * explicit_leaf_size, leaf_idx, false, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(
+      leaves, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false, config, merkle_proof));
 
     // Test valid proof
     bool verification_valid = false;
@@ -506,15 +522,15 @@ void test_merkle_tree(
     // Test invalid proof (By modifying random data in the leaves)
     verification_valid = true;
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      wrong_leaves.get(), nof_leaves * explicit_leaf_size, leaf_idx, false, config, merkle_proof));
+      wrong_leaves4tree, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
 
     // Same for pruned proof
     verification_valid = false;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof(leaves, nof_leaves * explicit_leaf_size, leaf_idx, true, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(
+      leaves, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_TRUE(verification_valid) << "Pruned proof of valid inputs at index " << leaf_idx
                                     << " is invalid (And should be valid).";
@@ -522,10 +538,15 @@ void test_merkle_tree(
     // Test invalid proof (By modifying random data in the leaves)
     verification_valid = true;
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      wrong_leaves.get(), nof_leaves * explicit_leaf_size, leaf_idx, true, config, merkle_proof));
+      wrong_leaves4tree, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
+  }
+
+  if (config.is_leaves_on_device) {
+    ICICLE_CHECK(icicle_free(device_leaves));
+    ICICLE_CHECK(icicle_free(wrong_device_leaves));
   }
 }
 
@@ -560,6 +581,7 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
 {
+  // TODO add loop on devices (and change hash to one supported on gpu)
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
@@ -680,6 +702,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
 
 TEST_F(HashApiTest, MerkleTreeLastValuePadding)
 {
+  // TODO add loop on devices (and change hash to one supported on gpu)
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
@@ -805,41 +828,17 @@ TEST_F(HashApiTest, MerkleTreeDevicePartialTree)
     std::vector<Hash> hashes(tree_height, layer_hash);
 
     auto config = default_merkle_tree_config();
-    auto full_tree = MerkleTree::create(hashes, leaf_size);
-    auto prover_tree = MerkleTree::create(hashes, leaf_size, 4);
-    auto verifier_tree = MerkleTree::create(hashes, leaf_size, 4);
 
-    // build tree
-    ICICLE_CHECK(prover_tree.build(leaves.get(), total_input_size, config));
-    ICICLE_CHECK(full_tree.build(leaves.get(), total_input_size, config));
-
-    auto full_root = full_tree.get_merkle_root();
-    auto partial_root = prover_tree.get_merkle_root();
-    for (int i = 0; i < full_root.second; i++) {
-      ASSERT_TRUE(full_root.first[i] == partial_root.first[i]);
-    }
-
-    // proof leaves and verify
-    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
-      const int leaf_idx = rand() % nof_leaves;
-
-      auto [root, root_size] = prover_tree.get_merkle_root();
-
-      // test non-pruned path
-      MerkleProof merkle_proof{};
-      bool verification_valid = false;
-      ICICLE_CHECK(
-        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-
-      // test pruned path
-      verification_valid = false;
-      ICICLE_CHECK(
-        prover_tree.get_merkle_proof(leaves.get(), nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-    }
+    // Test with different values of output_store_min_layer
+    test_merkle_tree<std::byte>(
+      hashes, config, /*output_store_min_layer=*/0, nof_leaves, leaves.get(),
+      /*explicit_leaf_size_in_bytes=*/leaf_size);
+    test_merkle_tree<std::byte>(
+      hashes, config, /*output_store_min_layer=*/2, nof_leaves, leaves.get(),
+      /*explicit_leaf_size_in_bytes=*/leaf_size);
+    test_merkle_tree<std::byte>(
+      hashes, config, /*output_store_min_layer=*/4, nof_leaves, leaves.get(),
+      /*explicit_leaf_size_in_bytes=*/leaf_size);
   }
 }
 
@@ -861,44 +860,12 @@ TEST_F(HashApiTest, MerkleTreeLeavesOnDeviceTreeOnHost)
     // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
     std::vector<Hash> hashes(tree_height, layer_hash);
 
-    // copy leaves to device
-    std::byte* device_leaves = nullptr;
-    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
-    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
-
+    // Specify the config for the test function below
     auto config = default_merkle_tree_config();
     config.is_tree_on_device = false;
     config.is_leaves_on_device = true;
-    auto prover_tree = MerkleTree::create(hashes, leaf_size);
-    auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
-    // build tree
-    START_TIMER(MerkleTree_build)
-    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
-    END_TIMER(MerkleTree_build, "Merkle Tree GPU", true)
-
-    // proof leaves and verify
-    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
-      const int leaf_idx = rand() % nof_leaves;
-
-      auto [root, root_size] = prover_tree.get_merkle_root();
-
-      // test non-pruned path
-      MerkleProof merkle_proof{};
-      bool verification_valid = false;
-      ICICLE_CHECK(
-        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, false /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-
-      // test pruned path
-      verification_valid = false;
-      ICICLE_CHECK(
-        prover_tree.get_merkle_proof(device_leaves, nof_leaves, leaf_idx, true /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-    }
-    ICICLE_CHECK(icicle_free(device_leaves));
+    test_merkle_tree<std::byte>(hashes, config, 0, nof_leaves, leaves.get(), /*explicit_leaf_size_in_bytes=*/leaf_size);
   }
 }
 
@@ -910,11 +877,7 @@ TEST_F(HashApiTest, MerkleTreeLarge)
   auto leaves = std::make_unique<std::byte[]>(total_input_size);
   randomize(leaves.get(), total_input_size);
 
-  std::vector<std::vector<std::byte>> device_roots(0);
-  int device_roots_idx = 0;
-
-  for (int i = 0; i < s_registered_devices.size(); i++) {
-    const auto& device = s_registered_devices[i];
+  for (auto&& device : s_registered_devices) {
     ICICLE_LOG_INFO << "MerkleTreeDeviceBig on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
@@ -925,59 +888,13 @@ TEST_F(HashApiTest, MerkleTreeLarge)
     // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
     std::vector<Hash> hashes(tree_height, layer_hash);
 
-    // copy leaves to device
-    std::byte* device_leaves = nullptr;
-    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
-    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
-
+    // Specify the config for the test function below
     auto config = default_merkle_tree_config();
     config.is_leaves_on_device = true;
     auto prover_tree = MerkleTree::create(hashes, leaf_size);
     auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
-    // build tree
-    START_TIMER(MerkleTree_build)
-    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
-    END_TIMER(MerkleTree_build, "Merkle Tree large", true)
-
-    auto [root, root_size] = prover_tree.get_merkle_root();
-    device_roots.push_back(std::vector<std::byte>(root, root + root_size));
-
-    // proof leaves and verify
-    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
-      const int leaf_idx = rand() % nof_leaves;
-
-      // test non-pruned path
-      MerkleProof merkle_proof{};
-      bool verification_valid = false;
-      ICICLE_CHECK(prover_tree.get_merkle_proof(
-        device_leaves, total_input_size, leaf_idx, false /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-
-      // test pruned path
-      verification_valid = false;
-      ICICLE_CHECK(prover_tree.get_merkle_proof(
-        device_leaves, total_input_size, leaf_idx, true /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-    }
-    ICICLE_CHECK(icicle_free(device_leaves));
-  }
-
-  // Check valid tree of each device by comparing their roots
-  for (int i = 1; i < device_roots.size(); i++) {
-    std::vector<std::byte>& first_root = device_roots[0];
-    std::vector<std::byte>& root = device_roots[i];
-    ASSERT_EQ(first_root.size(), root.size());
-    auto size = root.size();
-    for (int j = 0; j < size; j++) {
-      ASSERT_EQ(first_root[j], root[j]) << "Different tree roots:\n"
-                                        << s_registered_devices[0] << " =\t0x"
-                                        << HashApiTest::voidPtrToHexString(first_root.data(), size) << "\n"
-                                        << s_registered_devices[i] << " =\t0x"
-                                        << HashApiTest::voidPtrToHexString(root.data(), size);
-    }
+    test_merkle_tree<std::byte>(hashes, config, 0, nof_leaves, leaves.get(), /*explicit_leaf_size_in_bytes=*/leaf_size);
   }
 }
 
@@ -1149,11 +1066,7 @@ TEST_F(HashApiTest, poseidon_tree)
 
   scalar_t::rand_host_many(leaves.get(), nof_leaves);
 
-  std::vector<std::vector<std::byte>> device_roots(0);
-  int device_roots_idx = 0;
-
-  for (int i = 0; i < s_registered_devices.size(); i++) {
-    const auto& device = s_registered_devices[i];
+  for (const auto& device : s_registered_devices) {
     ICICLE_LOG_INFO << "MerkleTreeDeviceBig on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
@@ -1162,59 +1075,15 @@ TEST_F(HashApiTest, poseidon_tree)
     // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
     std::vector<Hash> hashes(nof_layers, layer_hash);
 
-    // copy leaves to device
-    std::byte* device_leaves = nullptr;
-    ICICLE_CHECK(icicle_malloc((void**)&device_leaves, total_input_size));
-    ICICLE_CHECK(icicle_copy(device_leaves, leaves.get(), total_input_size));
-
+    // Specify the config for the test function below
     auto config = default_merkle_tree_config();
     config.is_leaves_on_device = true;
     auto prover_tree = MerkleTree::create(hashes, leaf_size);
     auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
-    // build tree
-    START_TIMER(MerkleTree_build)
-    ICICLE_CHECK(prover_tree.build(device_leaves, total_input_size, config));
-    END_TIMER(MerkleTree_build, "Merkle Tree large", true)
-
-    auto [root, root_size] = prover_tree.get_merkle_root();
-    device_roots.push_back(std::vector<std::byte>(root, root + root_size));
-
-    // proof leaves and verify
-    for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
-      const int leaf_idx = rand() % nof_leaves;
-
-      // test non-pruned path
-      MerkleProof merkle_proof{};
-      bool verification_valid = false;
-      ICICLE_CHECK(prover_tree.get_merkle_proof(
-        device_leaves, total_input_size, leaf_idx, false /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-
-      // test pruned path
-      verification_valid = false;
-      ICICLE_CHECK(prover_tree.get_merkle_proof(
-        device_leaves, total_input_size, leaf_idx, true /*=pruned*/, config, merkle_proof));
-      ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-      ASSERT_TRUE(verification_valid);
-    }
-    ICICLE_CHECK(icicle_free(device_leaves));
-  }
-
-  // Check valid tree of each device by comparing their roots
-  for (int i = 1; i < device_roots.size(); i++) {
-    std::vector<std::byte>& first_root = device_roots[0];
-    std::vector<std::byte>& root = device_roots[i];
-    ASSERT_EQ(first_root.size(), root.size());
-    auto size = root.size();
-    for (int j = 0; j < size; j++) {
-      ASSERT_EQ(first_root[j], root[j]) << "Different tree roots:\n"
-                                        << s_registered_devices[0] << " =\t0x"
-                                        << HashApiTest::voidPtrToHexString(first_root.data(), size) << "\n"
-                                        << s_registered_devices[i] << " =\t0x"
-                                        << HashApiTest::voidPtrToHexString(root.data(), size);
-    }
+    // Cast to bytes to conform with wrong leaves manupulation inside test_merkle_tree
+    test_merkle_tree<std::byte>(
+      hashes, config, 0, nof_leaves, reinterpret_cast<std::byte*>(leaves.get()), sizeof(scalar_t));
   }
 }
 
