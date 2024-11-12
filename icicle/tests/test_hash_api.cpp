@@ -1015,7 +1015,8 @@ TEST_F(HashApiTest, poseidon12_single_hash)
   auto config = default_hash_config();
 
   auto input = std::make_unique<scalar_t[]>(t);
-  scalar_t::rand_host_many(input.get(), t);
+  // scalar_t::rand_host_many(input.get(), t);
+  randomize<scalar_t>(input.get(), t);
   config.batch = 1;
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
