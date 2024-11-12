@@ -2,6 +2,7 @@ use cmake::Config;
 use std::{env, path::PathBuf};
 
 fn main() {
+    
     // Construct the path to the deps directory
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is not set");
     let build_dir = PathBuf::from(format!("{}/../../../", &out_dir));
@@ -15,6 +16,21 @@ fn main() {
 
     // Base config
     let mut config = Config::new(format!("{}", icicle_src_dir.display()));
+    // cross-compilation
+    let xcompile = env::var("XCOMPILE").unwrap_or_else(|_| "true".to_string());
+    if xcompile == "true" {
+        // Cross-compilation configuration
+        let ndk_path = env::var("ANDROID_NDK").expect("ANDROID_NDK not set");
+        let abi = env::var("ANDROID_ABI").unwrap_or_else(|_| "arm64-v8a".to_string());
+        let api_level = env::var("ANDROID_PLATFORM").unwrap_or_else(|_| "21".to_string());
+
+        config.define("CMAKE_TOOLCHAIN_FILE", format!("{}/build/cmake/android.toolchain.cmake", ndk_path))
+           .define("ANDROID_ABI", &abi)
+           .define("ANDROID_PLATFORM", format!("android-{}", api_level));
+        //    .generator("Ninja");
+
+        println!("Configuring for cross-compilation to Android.");
+    } 
     // Check if ICICLE_INSTALL_DIR is defined
     let icicle_install_dir = if let Ok(dir) = env::var("ICICLE_INSTALL_DIR") {
         PathBuf::from(dir)
