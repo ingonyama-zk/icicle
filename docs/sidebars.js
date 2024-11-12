@@ -75,11 +75,11 @@ module.exports = {
               label: "Multi-Device Support",
               id: "icicle/multi-device",
             },
-            {
-              type: "doc",
-              label: "Build Your Own Backend",
-              id: "icicle/build_your_own_backend"
-            },
+            // {
+            //   type: "doc",
+            //   label: "Build Your Own Backend",
+            //   id: "icicle/build_your_own_backend"
+            // },
           ]
         },
         {
@@ -241,16 +241,16 @@ module.exports = {
           label: "Migrate from ICICLE v2",
           id: "icicle/migrate_from_v2",
         },
-        {
-          type: "doc",
-          label: "Benchmarks",
-          id: "icicle/benchmarks",
-        },
-        {
-          type: "doc",
-          label: "FAQ and Troubleshooting",
-          id: "icicle/faq_and_troubleshooting",
-        },
+        // {
+        //   type: "doc",
+        //   label: "Benchmarks",
+        //   id: "icicle/benchmarks",
+        // },
+        // {
+        //   type: "doc",
+        //   label: "FAQ and Troubleshooting",
+        //   id: "icicle/faq_and_troubleshooting",
+        // },
         {
           type: "doc",
           label: "Google Colab Instructions",

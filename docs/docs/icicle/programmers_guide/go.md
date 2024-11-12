@@ -292,5 +292,3 @@ if result != runtime.SUCCESS {
     // Handle error
 }
 ```
-
-This guide provides an overview of the essential APIs available in Icicle for C++. The provided examples should help you get started with integrating Icicle into your high-performance computing projects.

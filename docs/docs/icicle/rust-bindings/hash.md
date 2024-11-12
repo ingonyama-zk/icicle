@@ -70,25 +70,41 @@ The Poseidon hash is designed for cryptographic field elements and curves, makin
 Poseidon hash using babybear field:
 
 ```rust
-    use icicle_babybear::field::{ScalarCfg, ScalarField};
-    use icicle_core::hash::HashConfig;
-    use icicle_core::poseidon::{Poseidon, PoseidonHasher};
-    use icicle_core::traits::FieldImpl;
-    use icicle_runtime::memory::HostSlice;
+use icicle_babybear::field::{ScalarCfg, ScalarField};
+use icicle_core::hash::HashConfig;
+use icicle_core::poseidon::{Poseidon, PoseidonHasher};
+use icicle_core::traits::FieldImpl;
+use icicle_runtime::memory::HostSlice;
 
-    let batch = 1 << 10;
-    let arity = 3;
-    let inputs = ScalarCfg::generate_random(batch * arity);
-    let mut outputs = vec![ScalarField::zero(); batch]; // note output array is sized for batch
+let batch = 1 << 10; // Number of hashes to compute in a single batch
+let t = 3; // Poseidon parameter that specifies the arity (number of inputs) for each hash function
+let mut outputs = vec![ScalarField::zero(); batch]; // Output array sized for the batch count
 
-    let poseidon_hasher = Poseidon::new::<ScalarField>(arity as u32).unwrap();
+// Case (1): Hashing without a domain tag
+// Generates 'batch * t' random input elements as each hash needs 't' inputs
+let inputs = ScalarCfg::generate_random(batch * t);
+let poseidon_hasher = Poseidon::new::<ScalarField>(t as u32, None /*=domain-tag*/).unwrap(); // Instantiate Poseidon without domain tag
 
-    poseidon_hasher
-        .hash(
-            HostSlice::from_slice(&inputs),
-            &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs),
-        )
-        .unwrap();
+poseidon_hasher
+    .hash(
+        HostSlice::from_slice(&inputs),           // Input slice for the hash function
+        &HashConfig::default(),                   // Default hashing configuration
+        HostSlice::from_mut_slice(&mut outputs),  // Output slice to store hash results
+    )
+    .unwrap();
+
+// Case (2): Hashing with a domain tag
+// Generates 'batch * (t - 1)' inputs, as domain tag counts as one input in each hash
+let inputs = ScalarCfg::generate_random(batch * (t - 1));
+let domain_tag = ScalarField::zero(); // Example domain tag (can be any valid field element)
+let poseidon_hasher_with_domain_tag = Poseidon::new::<ScalarField>(t as u32, Some(&domain_tag) /*=domain-tag*/).unwrap();
+
+poseidon_hasher_with_domain_tag
+    .hash(
+        HostSlice::from_slice(&inputs),           // Input slice with 't - 1' elements per hash
+        &HashConfig::default(),                   // Default hashing configuration
+        HostSlice::from_mut_slice(&mut outputs),  // Output slice to store hash results
+    )
+    .unwrap();
 ```
 
