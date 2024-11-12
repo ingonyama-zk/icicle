@@ -50,13 +50,6 @@ namespace icicle {
       }
     }
 
-    ~CPUMerkleTreeBackend()
-    {
-      for (auto& pair : m_map_segment_id_2_inputs) {
-        delete pair.second; // Ensure all dynamically allocated memory is freed
-      }
-    }
-
     eIcicleError build(const std::byte* leaves, uint64_t leaves_size, const MerkleTreeConfig& config) override
     {
       TasksManager<HashTask> task_manager(get_nof_workers(config)); // Run workers.
@@ -79,9 +72,8 @@ namespace icicle {
       // run until the root is processed
       while (1) {
         HashTask* task = (l0_segment_idx < nof_segments_at_l0) ? // If there are tasks from layer 0 to send
-                           task_manager.get_idle_or_completed_task()
-                                                               : // get any task slot to assign
-                           task_manager.get_completed_task();    // else, only completed tasks are interesting.
+              task_manager.get_idle_or_completed_task() : // get any task slot to assign
+              task_manager.get_completed_task();    // else, only completed tasks are interesting.
 
         // handle completed task
         if (task->is_completed()) {
@@ -96,7 +88,6 @@ namespace icicle {
           const uint64_t completed_segment_id = completed_segment_idx ^ (completed_layer_idx << 56);
           auto segment = m_map_segment_id_2_inputs.find(completed_segment_id);
           if (segment != m_map_segment_id_2_inputs.end()) {
-            delete segment->second;
             m_map_segment_id_2_inputs.erase(completed_segment_id);
           }
 
@@ -116,9 +107,9 @@ namespace icicle {
             m_layers[cur_layer_idx].m_nof_hashes_2_execute - cur_segment_idx * NOF_OPERATIONS_PER_TASK,
             uint64_t(NOF_OPERATIONS_PER_TASK));
           if (cur_segment_iter->second->is_ready()) {
-            const std::byte* task_input = (completed_layer_idx < m_output_store_min_layer)
-                                            ? cur_segment_iter->second->m_input_data
-                                            : &(m_layers[completed_layer_idx].m_results[0]);
+            const auto task_input = (completed_layer_idx < m_output_store_min_layer)
+                                      ? cur_segment_iter->second->m_input_data.get()
+                                      : m_layers[completed_layer_idx].m_results.data();
             dispatch_task(task, cur_layer_idx, cur_segment_idx, task_input, cur_layer_idx > m_output_store_min_layer);
             continue;
           }
@@ -296,18 +287,14 @@ namespace icicle {
     public:
       SegmentDB(int input_size, bool allocate_space) : m_nof_inputs_ready(0), m_input_size(input_size)
       {
-        m_input_data = allocate_space ? new std::byte[input_size] : nullptr;
-      }
-      ~SegmentDB()
-      {
-        if (m_input_data) { delete[] m_input_data; }
+        m_input_data.reset(allocate_space ? new std::byte[input_size] : nullptr);
       }
 
       inline void increment_ready(int nof_inputs_ready) { m_nof_inputs_ready += nof_inputs_ready; }
 
       inline bool is_ready() const { return (m_nof_inputs_ready >= m_input_size); }
       // members
-      std::byte* m_input_data;
+      std::shared_ptr<std::byte[]> m_input_data;
       int m_input_size;
       int m_nof_inputs_ready;
     };
@@ -356,7 +343,7 @@ namespace icicle {
 
     // Map from in hash-segment-id to the data size available for process
     // If this segment is not stored in the tree then SegmentDB also contains the input data for that segment
-    std::unordered_map<uint64_t, SegmentDB*> m_map_segment_id_2_inputs;
+    std::unordered_map<uint64_t, std::unique_ptr<SegmentDB> > m_map_segment_id_2_inputs;
 
     // get the number of workers to launch at the task manager
     int get_nof_workers(const MerkleTreeConfig& config)
@@ -519,7 +506,7 @@ namespace icicle {
                                :                       // last segment - allocate according to batch size
             NOF_OPERATIONS_PER_TASK * next_input_size; // middle segment - allocate max
         const auto result = m_map_segment_id_2_inputs.emplace(
-          next_segment_id, new SegmentDB(next_seg_size_to_allocate, cur_layer_idx < m_output_store_min_layer));
+          next_segment_id, std::make_unique<SegmentDB>(SegmentDB(next_seg_size_to_allocate, cur_layer_idx < m_output_store_min_layer)));
         next_segment_it = result.first;
       }
 
