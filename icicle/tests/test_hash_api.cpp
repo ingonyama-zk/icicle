@@ -1163,8 +1163,8 @@ TEST_F(HashApiTest, poseidon_tree)
   auto leaves = std::make_unique<scalar_t[]>(nof_leaves);
   const uint64_t leaf_size = sizeof(scalar_t);
   const uint64_t total_input_size = nof_leaves * leaf_size;
-  ICICLE_LOG_INFO << total_input_size;
-  randomize<scalar_t>(leaves.get(), nof_leaves);
+  
+  scalar_t::rand_host_many(leaves.get(), nof_leaves);
 
   std::vector<std::vector<std::byte>> device_roots(s_registered_devices.size());
   int device_roots_idx = 0;
