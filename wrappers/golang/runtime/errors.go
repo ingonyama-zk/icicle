@@ -1,6 +1,6 @@
 package runtime
 
-// eIcicleError represents the error codes
+// EIcicleError represents the error codes
 type EIcicleError int
 
 const (
