@@ -466,7 +466,7 @@ void test_merkle_tree(
   // build tree
   START_TIMER(MerkleTree_build)
   ICICLE_CHECK(prover_tree.build(leaves, nof_leaves * explicit_leaf_size, config));
-  END_TIMER(MerkleTree_build, "Merkle Tree CPU", true)
+  END_TIMER(MerkleTree_build, "Merkle Tree build time", true)
 
   ASSERT_TRUE(is_valid_tree<T>(prover_tree, nof_leaves * explicit_leaf_size, leaves, hashes, config))
     << "Tree wasn't built correctly.";
@@ -563,10 +563,8 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
-  // randomize(leaves, nof_leaves);
-  for (int i = 0; i < nof_leaves; i++) {
-    leaves[i] = i + 1;
-  }
+  randomize(leaves, nof_leaves);
+  ICICLE_CHECK(icicle_set_device(device));
 
   // define the merkle tree
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
@@ -596,8 +594,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash - 1, leaves);
 
   // 16 hashes (Batch size) - full
-  test_merkle_tree(
-    hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
+  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
   // 16 hashes (Batch size) - last hash not full
   test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
   // 17 hashes (Batch size + 1) - full
@@ -686,10 +683,8 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
-  // randomize(leaves, nof_leaves);
-  for (int i = 0; i < nof_leaves; i++) {
-    leaves[i] = i + 1;
-  }
+  randomize(leaves, nof_leaves);
+  ICICLE_CHECK(icicle_set_device(device));
 
   // define the merkle tree
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
@@ -719,8 +714,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash - 1, leaves);
 
   // 16 hashes (Batch size) - full
-  test_merkle_tree(
-    hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
+  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
   // 16 hashes (Batch size) - last hash not full
   test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
   // 17 hashes (Batch size + 1) - full
@@ -908,12 +902,6 @@ TEST_F(HashApiTest, MerkleTreeLeavesOnDeviceTreeOnHost)
   }
 }
 
-void deep_copy_byte_array_to_vec(const std::byte* src, std::size_t size, std::vector<std::byte>& dest)
-{
-  dest.resize(size);
-  std::memcpy(dest.data(), src, size);
-}
-
 TEST_F(HashApiTest, MerkleTreeLarge)
 {
   const uint64_t leaf_size = 32;
@@ -922,7 +910,7 @@ TEST_F(HashApiTest, MerkleTreeLarge)
   auto leaves = std::make_unique<std::byte[]>(total_input_size);
   randomize(leaves.get(), total_input_size);
 
-  std::vector<std::vector<std::byte>> device_roots(s_registered_devices.size());
+  std::vector<std::vector<std::byte>> device_roots(0);
   int device_roots_idx = 0;
 
   for (int i = 0; i < s_registered_devices.size(); i++) {
@@ -953,7 +941,7 @@ TEST_F(HashApiTest, MerkleTreeLarge)
     END_TIMER(MerkleTree_build, "Merkle Tree large", true)
 
     auto [root, root_size] = prover_tree.get_merkle_root();
-    deep_copy_byte_array_to_vec(root, root_size, device_roots[i]);
+    device_roots.push_back(std::vector<std::byte>(root, root + root_size));
 
     // proof leaves and verify
     for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
@@ -1161,7 +1149,7 @@ TEST_F(HashApiTest, poseidon_tree)
 
   scalar_t::rand_host_many(leaves.get(), nof_leaves);
 
-  std::vector<std::vector<std::byte>> device_roots(s_registered_devices.size());
+  std::vector<std::vector<std::byte>> device_roots(0);
   int device_roots_idx = 0;
 
   for (int i = 0; i < s_registered_devices.size(); i++) {
@@ -1169,7 +1157,7 @@ TEST_F(HashApiTest, poseidon_tree)
     ICICLE_LOG_INFO << "MerkleTreeDeviceBig on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
-    // Create a Keccak256 hasher with an arity of 2: every 64B -> 32B
+    // Create relevant hash to compose the tree
     auto layer_hash = Poseidon::create<scalar_t>(t);
     // Create a vector of `Hash` objects, all initialized with the same `layer_hash`
     std::vector<Hash> hashes(nof_layers, layer_hash);
@@ -1190,7 +1178,7 @@ TEST_F(HashApiTest, poseidon_tree)
     END_TIMER(MerkleTree_build, "Merkle Tree large", true)
 
     auto [root, root_size] = prover_tree.get_merkle_root();
-    deep_copy_byte_array_to_vec(root, root_size, device_roots[i]);
+    device_roots.push_back(std::vector<std::byte>(root, root + root_size));
 
     // proof leaves and verify
     for (int test_leaf_idx = 0; test_leaf_idx < 5; test_leaf_idx++) {
