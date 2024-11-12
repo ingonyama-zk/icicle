@@ -1081,7 +1081,7 @@ TEST_F(HashApiTest, poseidon_tree)
     auto prover_tree = MerkleTree::create(hashes, leaf_size);
     auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
-    // Cast to bytes to conform with wrong leaves manupulation inside test_merkle_tree
+    // Cast to bytes to conform with wrong leaves manipulation inside test_merkle_tree
     test_merkle_tree<std::byte>(
       hashes, config, 0, nof_leaves, reinterpret_cast<std::byte*>(leaves.get()), sizeof(scalar_t));
   }
