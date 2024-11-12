@@ -326,8 +326,10 @@ public:
  * @brief Builds tree in a straight-forward single-threaded manner and compares the result with Icicle's calculation.
  * @param tree - Merkle tree to test.
  * @param input_size - Size of input in bytes.
+ * @param leaf_size - Size of each leaf in the input below.
  * @param inputs - Input as a byte array.
  * @param hashes - Vector of hashes of each layer in the tree above.
+ * @param config - Configuration of the merkle tree given above, to be used when building the reference.
  * @return True if the tree's calculations (icicle and test) match.
  */
 bool is_valid_tree(
@@ -347,7 +349,6 @@ bool is_valid_tree(
   }
   int tree_input_size = nof_hashes * hashes[0].default_input_chunk_size();
 
-  // ICICLE_LOG_INFO << "Nof inputs required for tree: " << tree_input_size;
   ICICLE_ASSERT((config.padding_policy != PaddingPolicy::None) || (input_size == tree_input_size))
     << "Leaves size (" << (input_size / leaf_size) << ") is smaller than tree size (" << (tree_input_size / leaf_size)
     << ") while Padding policy is None\n";
@@ -365,13 +366,6 @@ bool is_valid_tree(
       }
     }
   }
-
-  // std::cout << "Padded inputs:\n";
-  // for (int i = 0; i < input_vec.size(); i++)
-  // {
-  //   std::cout << std::to_integer<int>(input_vec[i]) << "\t";
-  // }
-  // std::cout << '\n';
 
   int max_layer_size_bytes = input_vec.size();
   int input_size_temp = input_vec.size();
@@ -422,6 +416,7 @@ bool is_valid_tree(
  * @param input_size - Size of input in bytes.
  * @param inputs - Input as a byte array.
  * @param hashes - Vector of hashes of each layer in the tree above.
+ * @param config - - Configuration of the merkle tree given above, to be used when building the reference.
  * @return True if the tree's calculations (icicle and test) match.
  */
 template <typename T>
@@ -602,7 +597,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
 
   // 16 hashes (Batch size) - full
   test_merkle_tree(
-    hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves); // TODO import value from Miki's code
+    hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
   // 16 hashes (Batch size) - last hash not full
   test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
   // 17 hashes (Batch size + 1) - full
@@ -725,7 +720,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
 
   // 16 hashes (Batch size) - full
   test_merkle_tree(
-    hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves); // TODO import value from Miki's code
+    hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
   // 16 hashes (Batch size) - last hash not full
   test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
   // 17 hashes (Batch size + 1) - full
