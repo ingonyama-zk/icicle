@@ -6,20 +6,14 @@ project(icicle)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Select the C++ compiler
-find_program(CLANG_COMPILER clang++)
-find_program(CLANG_C_COMPILER clang)
-
-if(CLANG_COMPILER AND CLANG_C_COMPILER)
-    set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "Clang++ compiler" FORCE)
-    set(CMAKE_C_COMPILER ${CLANG_C_COMPILER} CACHE STRING "Clang compiler" FORCE)
-    message(STATUS "Using Clang++ as the C++ compiler: ${CLANG_COMPILER}")
-    message(STATUS "Using Clang as the C compiler: ${CLANG_C_COMPILER}")    
-else()
-    message(WARNING "ICICLE CPU works best with clang++ and clang. Defaulting to ${CLANG_COMPILER}")        
+if(ANDROID)
+    message(STATUS "Building for Android")
+    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} CACHE STRING "Toolchain file used for cross-compiling")
+    set(ANDROID_ABI ${ANDROID_ABI} CACHE STRING "Android ABI")
+    set(ANDROID_PLATFORM ${ANDROID_PLATFORM} CACHE STRING "Android platform")
+    set(ANDROID_STL ${ANDROID_STL} CACHE STRING "Android STL")
+    
 endif()
-
-
 
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
@@ -86,6 +80,11 @@ add_library(icicle_device SHARED
   src/config_extension.cpp
 )
 target_link_libraries(icicle_device PUBLIC dl)
+# log library for Android only
+if(ANDROID)
+  find_library(log-lib log)
+  target_link_libraries(icicle_device PRIVATE ${log-lib})
+endif()
 include_directories(include)
 
 # Define the install directory (default is /usr/local)
