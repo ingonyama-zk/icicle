@@ -564,7 +564,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
   randomize(leaves, nof_leaves);
-  ICICLE_CHECK(icicle_set_device(device));
+  ICICLE_CHECK(icicle_set_device(s_reference_target));
 
   // define the merkle tree
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
@@ -684,7 +684,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
   randomize(leaves, nof_leaves);
-  ICICLE_CHECK(icicle_set_device(device));
+  ICICLE_CHECK(icicle_set_device(s_reference_target));
 
   // define the merkle tree
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
