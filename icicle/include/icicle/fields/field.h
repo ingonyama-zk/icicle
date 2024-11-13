@@ -49,7 +49,11 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field zero() { return Field{CONFIG::zero}; }
 
+#ifdef BARRET
   static constexpr HOST_DEVICE_INLINE Field one() { return Field{CONFIG::one}; }
+#else
+  static constexpr HOST_DEVICE_INLINE Field one() { return Field{CONFIG::montgomery_r}; }
+#endif
 
   static constexpr HOST_DEVICE_INLINE Field from(uint32_t value)
   {
@@ -58,37 +62,40 @@ public:
     for (int i = 1; i < TLC; i++) {
       scalar.limbs[i] = 0;
     }
-    // printf("what?\n");
-    // std::cout <<Field{CONFIG::montgomery_r}<<std::endl;
-    // std::cout <<Field{scalar} * Field{CONFIG::montgomery_r}<<std::endl;
-    // return Field{scalar} * Field{CONFIG::montgomery_r};
+  #ifdef BARRET
+    return Field{scalar};
+    #else
     return to_montgomery(Field{scalar});
-    // return Field{scalar};
+    #endif
   }
 
   static HOST_INLINE Field omega(uint32_t logn)
   {
-    if (logn == 0) { return Field{CONFIG::one}; }
+    if (logn == 0) { return one(); }
 
     if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega index"); }
-
+    #ifdef BARRET
+    Field omega = Field{CONFIG::rou};
+    #else
     Field omega = to_montgomery(Field{CONFIG::rou});
-    // Field omega = Field{CONFIG::rou};
+    #endif
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
-    std::cout << "omega: " << omega <<std::endl;
     return omega;
   }
 
   static HOST_INLINE Field omega_inv(uint32_t logn)
   {
-    if (logn == 0) { return Field{CONFIG::one}; }
+    if (logn == 0) { return one(); }
 
     if (logn > CONFIG::omegas_count) {
       THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega_inv index");
     }
-
+  #ifdef BARRET
+    Field omega = inverse(Field{CONFIG::rou});
+    #else
     Field omega = inverse(to_montgomery(Field{CONFIG::rou}));
+    #endif
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -96,7 +103,7 @@ public:
 
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
   {
-    if (logn == 0) { return Field{CONFIG::one}; }
+    if (logn == 0) { return one(); }
 #ifndef __CUDA_ARCH__
     if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid inv index");
 #else
@@ -107,7 +114,11 @@ public:
     }
 #endif // __CUDA_ARCH__
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
+    #ifdef BARRET
+    return Field{inv.storages[logn - 1]};
+    #else
     return to_montgomery(Field{inv.storages[logn - 1]});
+    #endif
   }
 
   static constexpr HOST_INLINE unsigned get_omegas_count()
@@ -1185,7 +1196,11 @@ public:
       value.limbs_storage.limbs[i] = distribution(generator);
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
+    #ifdef BARRET
+    return value;
+    #else
     return to_montgomery(value);
+    #endif
   }
 
   static void rand_host_many(Field* out, int size)
@@ -1327,13 +1342,19 @@ public:
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
     #ifdef __CUDA_ARCH__ //cuda
-      return Field{mulz(xs.limbs_storage,ys.limbs_storage)};
-    // Wide xy = mul_wide(xs, ys); // full mult
-    // return reduce(xy);          // reduce mod p
+    #ifdef BARRET
+    Wide xy = mul_wide(xs, ys); // full mult
+    return reduce(xy);          // reduce mod p
     #else
-      // Wide xy = mul_wide(xs, ys); // full mult
-      // return reduce(xy);          // reduce mod p
+      return Field{mulz(xs.limbs_storage,ys.limbs_storage)};
+      #endif
+    #else
+    #ifdef BARRET
+      Wide xy = mul_wide(xs, ys); // full mult
+      return reduce(xy);          // reduce mod p
+      #else
     return mont_mult(xs,ys);
+    #endif
     #endif
   }
 
@@ -1342,7 +1363,6 @@ public:
     Wide r = {};
     host_math::multiply_mont_64<TLC>(xs.limbs_storage.limbs64, ys.limbs_storage.limbs64, get_mont_inv_modulus().limbs64, get_modulus<1>().limbs64, r.limbs_storage.limbs64);
     return mont_reduce(r);
-    // return Wide::get_lower(r);
   }
 #else
 
@@ -1694,13 +1714,13 @@ public:
     // TODO: change to a more efficient squaring
     return xs * xs;
   }
-
+#ifdef BARRET
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r_inv}; }
+  #else
   static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r_sqr}; }
-
-  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
-  {
-    return xs * Field{1};
-  }
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) { return xs * Field{CONFIG::one}; }
+  #endif
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Field neg(const Field& xs)
@@ -1750,7 +1770,11 @@ public:
     if (xs == zero()) return zero();
     constexpr Field one = {1};
     constexpr ff_storage modulus = CONFIG::modulus;
+    #ifdef BARRET
+    Field u = xs;
+    #else
     Field u = from_montgomery(xs);
+    #endif
     Field v = Field{modulus};
     Field b = one;
     Field c = {};
@@ -1773,7 +1797,11 @@ public:
         c = c - b;
       }
     }
+    #ifdef BARRET
+    return (u == one) ? b : c;
+    #else
     return (u == one) ? to_montgomery(b) : to_montgomery(c);
+    #endif
   }
 
   static constexpr HOST_DEVICE Field pow(Field base, int exp)
