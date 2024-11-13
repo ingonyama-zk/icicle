@@ -161,14 +161,6 @@ namespace merkle_tree {
     // Reuse leaves memory
     D* digests = (D*)d_leaves;
 
-    size_t size = sizeof(L) * leaves[0].height * leaves[0].width;
-    L* buffer = (L*)malloc(size);
-    cudaMemcpy(buffer, leaves[0].values, size, cudaMemcpyDeviceToHost);
-    for (int i = 0; i < size; i++) {
-      if (i % 4 == 0) { std::cout << std::endl << i / 32 << ": "; }
-      printf("%.2X", buffer[i]);
-    }
-
     CHK_IF_RETURN(hash_leaves(
       d_leaves_info, params.number_of_leaves_to_inject, params.number_of_rows, states, params.digest_elements,
       *params.hasher, *params.ctx));

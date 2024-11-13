@@ -109,12 +109,6 @@ namespace blake2s {
 
   __device__ __forceinline__ void cuda_blake2s_core(cuda_blake2s_ctx_t* ctx, const uint32_t* m)
   {
-    // printf("Before rounds State: [%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u]\n",
-    //       ctx->state[0],ctx->state[1],ctx->state[2],ctx->state[3],
-    //       ctx->state[4],ctx->state[5],ctx->state[6],ctx->state[7],
-    //       ctx->state[8],ctx->state[9],ctx->state[10],ctx->state[11],
-    //       ctx->state[12],ctx->state[13],ctx->state[14],ctx->state[15]
-    //   );
     for (int round = 0; round < BLAKE2S_ROUNDS; round++) {
       cuda_blake2s_G(ctx, m[BLAKE2S_SIGMA[round][0]], m[BLAKE2S_SIGMA[round][1]], 0, 4, 8, 12);
       cuda_blake2s_G(ctx, m[BLAKE2S_SIGMA[round][2]], m[BLAKE2S_SIGMA[round][3]], 1, 5, 9, 13);
@@ -245,9 +239,6 @@ namespace blake2s {
       }
       cuda_blake2s_init_state(ctx);
       cuda_blake2s_core(ctx, m);
-      printf(
-        "State: [%u, %u, %u, %u, %u, %u, %u, %u]\n", ctx->chain[0], ctx->chain[1], ctx->chain[2], ctx->chain[3],
-        ctx->chain[4], ctx->chain[5], ctx->chain[6], ctx->chain[7]);
     }
   }
 

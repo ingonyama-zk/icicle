@@ -73,18 +73,12 @@ int main(int argc, char* argv[])
   size_t digests_mem = digests_len;
   BYTE* digests = static_cast<BYTE*>(malloc(digests_mem));
 
-  // std::cout << "Memory for leaves = " << total_number_of_leaves * sizeof(scalar_t) / 1024 / 1024 << " MB; " <<
-  // leaves_mem / 1024 / 1024 / 1024 << " GB"
-  //           << std::endl;
   std::cout << "Number of leaves = " << number_of_leaves << std::endl;
   std::cout << "Total Number of leaves = " << total_number_of_leaves << std::endl;
   std::cout << "Memory for digests = " << digests_mem / 1024 / 1024 << " MB; " << digests_mem / 1024 / 1024 / 1024
             << " GB" << std::endl;
   std::cout << "Number of digest elements = " << digests_len << std::endl;
   std::cout << std::endl;
-
-  // std::cout << "Total RAM consumption = " << (digests_mem + leaves_mem) / 1024 / 1024 << " MB; "
-  //           << (digests_mem + leaves_mem) / 1024 / 1024 / 1024 << " GB" << std::endl;
 
   merkle_tree::TreeBuilderConfig tree_config = merkle_tree::default_merkle_config();
   tree_config.are_inputs_on_device = are_inputs_on_device;
@@ -99,32 +93,6 @@ int main(int argc, char* argv[])
     if (i % 32 == 0) { std::cout << std::endl; }
     printf("%.2X", digests[i]);
   }
-
-  // for (int i = 0; i < 10; i++) {
-  //   std::cout << digests[digests_len - i - 1] << std::endl;
-  // }
-
-  // Use this to generate test vectors
-  // for (int i = 0; i < digests_len; i++) {
-  //   std::cout << "{";
-  //   for (int j = 0; j < 8; j++) {
-  //     std::cout << ((uint64_t*)&digests[i].limbs_storage)[j];
-  //     if (j != 7) { std::cout << ", "; }
-  //   }
-  //   std::cout << "}," << std::endl;
-  // }
-
-  /// These scalars are digests of top-7 rows of a Merkle tree.
-  /// Arity = 2, Tree height = 28, keep_rows = 7
-  /// They are aligned in the following format:
-  ///  L-7      L-6     L-5       L-4       L-3       L-2    L-1
-  /// [0..63, 64..95, 96..111, 112..119, 120..123, 124..125, 126]
-  // scalar_t expected[0] = {};
-
-  // for (int i = 0; i < digests_len; i++) {
-  //   scalar_t root = digests[i];
-  //   // assert(root == expected[i]);
-  // }
   free(digests);
   free(leaves);
 }
