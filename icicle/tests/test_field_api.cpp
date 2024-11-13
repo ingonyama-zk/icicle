@@ -504,23 +504,6 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
     }
   };
 
-  // Option 1: Initialize each input matrix in the batch with the same ascending values
-  // for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-  //   for (uint32_t i = 0; i < R * C; i++) {
-  //     if(columns_batch){
-  //       h_inout[idx_in_batch + batch_size * i] = TypeParam::from(i);
-  //     } else {
-  //       h_inout[idx_in_batch * R * C + i] = TypeParam::from(i);
-  //     }
-  //   }
-  // }
-
-  // Option 2: Initialize the entire input array with ascending values
-  // for (int i = 0; i < total_size; i++) {
-  //   h_inout[i] = TypeParam::from(i);
-  // }
-
-  // Option 3: Initialize the entire input array with random values
   TypeParam::rand_host_many(h_inout.get(), total_size);
 
   // Reference implementation
@@ -589,23 +572,6 @@ TYPED_TEST(FieldApiTest, bitReverse)
     END_TIMER(BIT_REVERSE, oss.str().c_str(), measure);
   };
 
-  // // Option 1: Initialize each input vector in the batch with the same ascending values
-  // for (uint32_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-  //   for (uint32_t i = 0; i < N; i++) {
-  //     if(columns_batch){
-  //       in_a[idx_in_batch + batch_size * i] = TypeParam::from(i);
-  //     } else {
-  //       in_a[idx_in_batch * N + i] = TypeParam::from(i);
-  //     }
-  //   }
-  // }
-
-  // // Option 2: Initialize the entire input array with ascending values
-  // for (int i = 0; i < total_size; i++) {
-  //   in_a[i] = TypeParam::from(i);
-  // }
-
-  // Option 3: Initialize the entire input array with random values
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
 
   // Reference implementation
@@ -797,42 +763,53 @@ TEST_F(FieldApiTestBase, polynomialEval)
 
 TEST_F(FieldApiTestBase, polynomialDivision)
 {
-  const uint64_t numerator_size = 1 << 4;
-  const uint64_t denominator_size = 1 << 3;
+  int seed = time(0);
+  srand(seed);
+  const uint64_t numerator_size = 1 << (rand() % 3 + 5);
+  const uint64_t denominator_size = 1 << (rand() % 2 + 3);
   const uint64_t q_size = numerator_size - denominator_size + 1;
   const uint64_t r_size = numerator_size;
   const int batch_size = 10 + rand() % 10;
 
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
-  // randomize matrix with rows/cols as polynomials
   auto numerator = std::make_unique<scalar_t[]>(numerator_size * batch_size);
   auto denominator = std::make_unique<scalar_t[]>(denominator_size * batch_size);
-  scalar_t::rand_host_many(numerator.get(), numerator_size * batch_size);
-  scalar_t::rand_host_many(denominator.get(), denominator_size * batch_size);
-
-  // Add padding to each row so that the degree is lower than the size
-  const int zero_pad_length = 5;
-  for (int i = 0; i < batch_size; ++i) {
-    for (int j = 0; j < zero_pad_length; ++j) {
-      numerator[i * numerator_size + numerator_size - zero_pad_length + j] = scalar_t::zero();
-      denominator[i * denominator_size + denominator_size - zero_pad_length + j] = scalar_t::zero();
-    }
-  }
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
-      ICICLE_LOG_DEBUG << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
-                       << "]";
+      ICICLE_LOG_INFO << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
+                      << "]";
+
+      // randomize matrix with rows/cols as polynomials
+      scalar_t::rand_host_many(numerator.get(), numerator_size * batch_size);
+      scalar_t::rand_host_many(denominator.get(), denominator_size * batch_size);
+
+      // Add padding to each vector so that the degree is lower than the size
+      const int zero_pad_length = 1;
+      if (columns_batch) {
+        for (int i = 0; i < batch_size * zero_pad_length; i++) {
+          numerator[batch_size * numerator_size - batch_size * zero_pad_length + i] = scalar_t::zero();
+          denominator[batch_size * denominator_size - batch_size * zero_pad_length + i] = scalar_t::zero();
+        }
+      } else {
+        for (int i = 0; i < batch_size; ++i) {
+          for (int j = 0; j < zero_pad_length; ++j) {
+            numerator[i * numerator_size + numerator_size - zero_pad_length + j] = scalar_t::zero();
+            denominator[i * denominator_size + denominator_size - zero_pad_length + j] = scalar_t::zero();
+          }
+        }
+      }
+
       auto q = std::make_unique<scalar_t[]>(q_size * batch_size);
       auto r = std::make_unique<scalar_t[]>(r_size * batch_size);
 
       auto config = default_vec_ops_config();
-      config.batch_size = columns_batch ? batch_size - zero_pad_length : batch_size; // skip the zero cols
+      config.batch_size = batch_size;
       config.columns_batch = columns_batch;
       // TODO v3.2 support column batch for this API
-      if (columns_batch) {
+      if (columns_batch && device == "CUDA") {
         ICICLE_LOG_INFO << "Skipping polynomial division column batch";
         continue;
       }
@@ -853,7 +830,6 @@ TEST_F(FieldApiTestBase, polynomialDivision)
       polynomial_eval(r.get(), r_size, &rand_x, 1, config, rx.get());
 
       for (int i = 0; i < config.batch_size; ++i) {
-        // ICICLE_LOG_DEBUG << "ax=" << ax[i] << ", bx=" << bx[i] << ", qx=" << qx[i] << ", rx=" << rx[i];
         ASSERT_EQ(ax[i], qx[i] * bx[i] + rx[i]);
       }
     }
