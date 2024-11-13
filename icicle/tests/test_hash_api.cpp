@@ -495,16 +495,15 @@ void test_merkle_tree(
     uint8_t* wrong_leaves_byte_ptr = reinterpret_cast<uint8_t*>(wrong_leaves.get());
 
     uint8_t new_worng_val;
-    do
-    {
+    do {
       new_worng_val = rand();
     } while (new_worng_val == wrong_leaves_byte_ptr[wrong_byte_index]);
-    
+
     wrong_leaves_byte_ptr[wrong_byte_index] = new_worng_val;
-    
+
     int wrong_leaf_idx = wrong_byte_index / leaf_size;
-    ICICLE_LOG_DEBUG  << "Wrong input is modified at leaf " << wrong_leaf_idx
-                      << " (modified at byte " << wrong_byte_index % leaf_size << ")";
+    ICICLE_LOG_DEBUG << "Wrong input is modified at leaf " << wrong_leaf_idx << " (modified at byte "
+                     << wrong_byte_index % leaf_size << ")";
   }
 
   T* wrong_device_leaves;
@@ -518,8 +517,8 @@ void test_merkle_tree(
   for (int i = 0; i < nof_indices_modified; i++) {
     // int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
     int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
-    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx " << (wrong_indices[i] % (nof_leaves * leaf_size))
-                     << ")";
+    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx "
+                     << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
 
     // get root and merkle-path for a leaf
     auto [root, root_size] = prover_tree.get_merkle_root();
@@ -623,7 +622,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
 
   const unsigned nof_leaves_in_hash = layer0_hash.default_input_chunk_size() / leaf_size;
-  
+
   ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - full";
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
   ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - last hash not full";
@@ -744,7 +743,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
 
   const unsigned nof_leaves_in_hash = layer0_hash.default_input_chunk_size() / leaf_size;
-  
+
   ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - full";
   test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
   ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - last hash not full";
