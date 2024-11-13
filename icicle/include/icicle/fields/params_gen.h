@@ -150,8 +150,7 @@ namespace params_gen {
   static constexpr unsigned modulus_bit_count =                                                                        \
     32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;                                \
   static constexpr storage<limbs_count> zero = {};                                                                     \
-  static constexpr storage<limbs_count> one =                                                                          \
-    params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
+  static constexpr storage<limbs_count> one = {1};                                                                     \
   static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
   static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);         \
   static constexpr storage<limbs_count> neg_modulus =                                                                  \

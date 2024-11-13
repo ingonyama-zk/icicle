@@ -71,6 +71,11 @@ TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
+  #ifdef BARRET
+  printf("USING BARRET MULT\n");
+  #else
+  printf("USING MONTGOMERY MULT\n");
+  #endif
   auto a = TypeParam::rand_host();
   std::cout<<a;
   std::cout<<'\n';
