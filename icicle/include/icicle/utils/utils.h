@@ -5,9 +5,14 @@
 #include <iomanip>
 #include <iostream>
 
-#define CONCAT_DIRECT(a, b) a##_##b
-#define CONCAT_EXPAND(a, b) CONCAT_DIRECT(a, b) // expand a,b before concatenation
-#define UNIQUE(a)           CONCAT_EXPAND(a, __LINE__)
+#define CONCAT_DIRECT(a, b) a##b
+#define CONCAT_EXPAND(a, b) CONCAT_DIRECT(a, b)
+
+// Define a separate macro to ensure expansion before stringification
+#define STRINGIFY_EXPAND(x) STRINGIFY(x)
+#define STRINGIFY(x)        #x
+
+#define UNIQUE(a) CONCAT_EXPAND(a, __LINE__)
 
 // Template function to demangle the name of the type
 template <typename T>
