@@ -15,9 +15,13 @@
 #include <stdint.h>
 #include "gpu-utils/device_context.cuh"
 #include "gpu-utils/error_handler.cuh"
+#include "merkle-tree/merkle.cuh"
 
 #include "hash/hash.cuh"
 using namespace hash;
+
+#include "matrix/matrix.cuh"
+using matrix::Matrix;
 
 namespace blake2s {
 
@@ -43,11 +47,36 @@ namespace blake2s {
       WORD output_len,
       const device_context::DeviceContext& ctx) const override;
 
-    Blake2s() : Hasher<BYTE, BYTE>(BLAKE2S_STATE_SIZE, BLAKE2S_STATE_SIZE, BLAKE2S_STATE_SIZE, 0) {}
+    cudaError_t hash_2d(
+      const Matrix<BYTE>* inputs,
+      BYTE* states,
+      unsigned int number_of_inputs,
+      unsigned int output_len,
+      uint64_t number_of_rows,
+      const device_context::DeviceContext& ctx) const override;
+
+    cudaError_t compress_and_inject(
+      const Matrix<BYTE>* matrices_to_inject,
+      unsigned int number_of_inputs,
+      uint64_t number_of_rows,
+      const BYTE* prev_layer,
+      BYTE* next_layer,
+      unsigned int digest_elements,
+      const device_context::DeviceContext& ctx) const override;
+
+    Blake2s() : Hasher<BYTE, BYTE>(BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, 0) {}
   };
 
   extern "C" {
   cudaError_t
   cuda_blake2s_hash_batch(BYTE* key, WORD keylen, BYTE* in, WORD inlen, BYTE* out, WORD output_len, WORD n_batch);
+
+  cudaError_t blake2s_mmcs_commit_cuda(
+    const Matrix<BYTE>* leaves,
+    unsigned int number_of_inputs,
+    BYTE* digests,
+    const Blake2s* hasher,
+    const merkle_tree::TreeBuilderConfig& tree_config);
   }
+
 } // namespace blake2s
