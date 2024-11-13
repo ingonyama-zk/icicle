@@ -49,6 +49,18 @@ namespace params_gen {
     return rs;
   }
 
+  template <unsigned NLIMBS, bool INV>
+  static constexpr HOST_INLINE storage<NLIMBS> get_montgomery_constant_sqr(const storage<NLIMBS>& modulus)
+  {
+    storage<NLIMBS> rs = {1};
+    for (int i = 0; i < 32 * NLIMBS * 2; i++) {
+      rs = host_math::template left_shift<NLIMBS, 1>(rs);
+      storage<NLIMBS> temp = {};
+      rs = host_math::template add_sub_limbs<NLIMBS, true, true, true>(rs, modulus, temp) ? rs : temp;
+    }
+    return rs;
+  }
+
   template <unsigned NLIMBS>
   static constexpr HOST_INLINE storage<NLIMBS> get_lower(const storage<2*NLIMBS>& xs)
   {
@@ -68,13 +80,10 @@ namespace params_gen {
     storage<2*NLIMBS> w_tmp = {};
     host_math::template multiply_raw<NLIMBS, NLIMBS, true>(modulus, modulus, w_tmp);
     tmp = params_gen::template get_lower<NLIMBS>(w_tmp);
-    for (int i = 0; i < NLIMBS; i++)
-    {
-      rs.limbs[i] = modulus.limbs[i];
-    }
+    rs = modulus;
     host_math::template multiply_raw<NLIMBS, NLIMBS, true>(tmp, rs, w_rs);
     rs = params_gen::template get_lower<NLIMBS>(w_rs);
-    for (int i = 0; i < 252; i++) {
+    for (int i = 0; i < sizeof(modulus.limbs[0])*8*NLIMBS - 4; i++) {
       storage<2*NLIMBS> w_tmp2 = {};
       host_math::template multiply_raw<NLIMBS, NLIMBS, true>(tmp, tmp, w_tmp2);
       tmp = params_gen::template get_lower<NLIMBS>(w_tmp2);
@@ -83,10 +92,6 @@ namespace params_gen {
       rs = params_gen::template get_lower<NLIMBS>(w_rs2);
     }
     storage<NLIMBS> mont_r = {};
-    for (int i = 0; i < NLIMBS; i++)
-    {
-      mont_r.limbs[i] = 0;
-    }
     host_math::template add_sub_limbs<NLIMBS, true, false, true>(mont_r, rs, rs);
     return rs;
   }
@@ -124,25 +129,29 @@ namespace params_gen {
   }
 
   template <unsigned NLIMBS, unsigned TWO_ADICITY>
-  constexpr storage_array<TWO_ADICITY, NLIMBS> get_invs(const storage<NLIMBS>& modulus)
+  constexpr storage_array<TWO_ADICITY, NLIMBS> get_invs(const storage<NLIMBS>& modulus, const storage<NLIMBS>& mont_r_sqr, const storage<NLIMBS>& mont_inv)
   {
     storage_array<TWO_ADICITY, NLIMBS> invs = {};
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < TWO_ADICITY; i++) {
       if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
       rs = host_math::template right_shift<NLIMBS, 1>(rs);
+      // host_math::template multiply_mont_32<NLIMBS>(rs.limbs, mont_r_sqr.limbs, mont_inv.limbs, modulus.limbs, rs.limbs);
       invs.storages[i] = rs;
     }
     return invs;
   }
 } // namespace params_gen
 
+//do we still need modulus_2, 3, 4 when using montgomery? smae for num_of_reductions
+
 #define PARAMS(modulus)                                                                                                \
   static constexpr unsigned limbs_count = modulus.LC;                                                                  \
   static constexpr unsigned modulus_bit_count =                                                                        \
     32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;                                \
   static constexpr storage<limbs_count> zero = {};                                                                     \
-  static constexpr storage<limbs_count> one = {1};                                                                     \
+  static constexpr storage<limbs_count> one =                                                                          \
+    params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
   static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
   static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);         \
   static constexpr storage<limbs_count> neg_modulus =                                                                  \
@@ -156,6 +165,8 @@ namespace params_gen {
   static constexpr storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus);   \
   static constexpr storage<limbs_count> montgomery_r =                                                                 \
     params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
+  static constexpr storage<limbs_count> montgomery_r_sqr =                                                                 \
+    params_gen::template get_montgomery_constant_sqr<limbs_count, false>(modulus);                                         \
   static constexpr storage<limbs_count> montgomery_r_inv =                                                             \
     params_gen::template get_montgomery_constant<limbs_count, true>(modulus);                                          \
   static constexpr storage<limbs_count> mont_inv_modulus =                                                             \
@@ -166,4 +177,4 @@ namespace params_gen {
 #define TWIDDLES(modulus, rou)                                                                                         \
   static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
   static constexpr storage_array<omegas_count, limbs_count> inv =                                                      \
-    params_gen::template get_invs<limbs_count, omegas_count>(modulus);
+    params_gen::template get_invs<limbs_count, omegas_count>(modulus, montgomery_r_sqr, mont_inv_modulus);

@@ -229,6 +229,23 @@ namespace host_math {
     }
   }
 
+  template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
+  static constexpr HOST_INLINE void multiply_mont_32(const uint32_t* a, const uint32_t* b, const uint32_t* q, const uint32_t* p, uint32_t* r)
+  {
+    for (unsigned i = 0; i < NLIMBS_B; i++) {
+      uint32_t A = 0, C = 0;
+      r[0] = host_math::madc_cc(a[0], b[i], r[0], A);
+      uint32_t m = host_math::madc_cc(r[0], q[0], 0, C); //TODO - multiply inst
+      C = 0;
+      host_math::madc_cc(m, p[0], r[0], C);
+      for (unsigned j = 1; j < NLIMBS_A; j++) {
+        r[j] = host_math::madc_cc(a[j], b[i], r[j], A);
+        r[j - 1] = host_math::madc_cc(m, p[j], r[j], C);
+      }
+      r[NLIMBS_A - 1] = C + A;
+    }
+  }
+
    template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static HOST_INLINE void multiply_mont_64(const uint64_t* a, const uint64_t* b, const uint64_t* q, const uint64_t* p, uint64_t* r)
   {
