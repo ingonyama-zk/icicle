@@ -480,6 +480,36 @@ TYPED_TEST(CurveSanity, u64Mul)
   END_TIMER(u64Mult_asm, "U64-MULT-asm", true);
 }
 
+#ifndef BARRET
+TYPED_TEST(CurveSanity, MontSosReduction)
+{
+  // SOS reduction currently only in CPU
+  if (s_ref_target == "CPU") {
+    const unsigned n = 1 << 10;
+    auto as = std::make_unique<scalar_t[]>(n);
+    auto bs = std::make_unique<scalar_t[]>(n);
+    auto abs = std::make_unique<scalar_t[]>(n);
+
+    scalar_t::rand_host_many(as.get(), n);
+    scalar_t::rand_host_many(bs.get(), n);
+
+    icicle_set_device(Device{s_ref_target, 0});
+
+    START_TIMER(mont_sos_reduction);
+    for (int i = 0; i < n; i++) {
+      auto ab_no_mod = scalar_t::mul_wide(as[i], bs[i]);
+      abs[i] = scalar_t::sos_mont_reduce(ab_no_mod);
+    }
+    END_TIMER(mont_sos_reduction, "CPU-Montgomery SOS reduction", true);
+
+    // Assert reduction in comparison with Montgomery multiplier
+    for (int i = 0; i < n; i++) {
+      ICICLE_ASSERT(abs[i] == as[i] * bs[i]);
+    }
+  }
+}
+#endif
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
