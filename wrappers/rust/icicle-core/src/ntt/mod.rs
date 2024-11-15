@@ -422,14 +422,17 @@ macro_rules! impl_ntt_bench {
       $field:ident
     ) => {
         use icicle_core::ntt::ntt;
+        use icicle_core::ntt::get_root_of_unity;
+        use icicle_core::ntt::initialize_domain;
         use icicle_core::ntt::NTTDomain;
+
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use icicle_cuda_runtime::device_context::DeviceContext;
         use std::sync::OnceLock;
 
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
         use icicle_core::{
             ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering},
-            traits::ArkConvertible,
         };
 
         use icicle_core::ntt::NTT;
@@ -453,6 +456,15 @@ macro_rules! impl_ntt_bench {
             ntt(input, is_inverse, config, batch_ntt_result).unwrap();
         }
 
+        fn init_domain<F: FieldImpl>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
+        where
+            <F as FieldImpl>::Config: NTTDomain<F>,
+        {
+            let ctx = DeviceContext::default_for_device(device_id);
+            let rou: F = get_root_of_unity(max_size);
+            initialize_domain(rou, &ctx, fast_twiddles_mode).unwrap();
+        }
+
         static INIT: OnceLock<()> = OnceLock::new();
 
         fn benchmark_ntt<T, F: FieldImpl>(c: &mut Criterion)
@@ -462,7 +474,7 @@ macro_rules! impl_ntt_bench {
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::ntt;
-            use icicle_core::ntt::tests::init_domain;
+            // use icicle_core::ntt::tests::init_domain;
             use icicle_core::ntt::NTTDomain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
             use std::env;
