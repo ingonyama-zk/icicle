@@ -429,6 +429,7 @@ macro_rules! impl_ntt_bench {
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
         use icicle_cuda_runtime::device_context::DeviceContext;
         use std::sync::OnceLock;
+        use std::iter::once;
 
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
         use icicle_core::{
@@ -474,10 +475,10 @@ macro_rules! impl_ntt_bench {
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::ntt;
-            // use icicle_core::ntt::tests::init_domain;
             use icicle_core::ntt::NTTDomain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
             use std::env;
+            use icicle_cuda_runtime::memory::DeviceVec;
 
             let group_id = format!("{} NTT", $field_prefix);
             let mut group = c.benchmark_group(&group_id);
@@ -498,8 +499,9 @@ macro_rules! impl_ntt_bench {
             let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
             let mut config = NTTConfig::<F>::default();
 
-            for test_size_log2 in (13u32..max_log2 + 1) {
-                for batch_size_log2 in (7u32..17u32) {
+            for test_size_log2 in (16..max_log2+1) {
+                for batch_size_log2 in [0, 8] {
+                // for batch_size_log2 in once(0).chain(8u32..=10u32) {
                     let test_size = 1 << test_size_log2;
                     let batch_size = 1 << batch_size_log2;
                     let full_size = batch_size * test_size;
@@ -513,39 +515,70 @@ macro_rules! impl_ntt_bench {
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
-                    let mut config = NTTConfig::default();
-                    for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
-                        for ordering in [
-                            Ordering::kNN,
-                            Ordering::kNR, // times are ~ same as kNN
-                            Ordering::kRN,
-                            Ordering::kRR,
-                            Ordering::kNM,
-                            Ordering::kMN,
-                        ] {
-                            config.ordering = ordering;
-                            // for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-                            config.batch_size = batch_size as i32;
-                            // config.ntt_algorithm = alg;
-                            let bench_descr = format!(
-                                "{:?} {:?} {} x {}",
-                                ordering, is_inverse, test_size, batch_size
-                            );
-                            group.bench_function(&bench_descr, |b| {
-                                b.iter(|| {
-                                    ntt_for_bench::<F, F>(
-                                        input,
-                                        batch_ntt_result,
-                                        test_size,
-                                        batch_size,
-                                        is_inverse,
-                                        ordering,
-                                        &mut config,
-                                        black_box(1),
-                                    )
-                                })
-                            });
-                            // }
+
+                    for is_on_device in [true] {
+
+                        let mut config = NTTConfig::default();
+                        for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
+                            for ordering in [
+                                Ordering::kNN,
+                                // Ordering::kNR, // times are ~ same as kNN
+                                // Ordering::kRN,
+                                // Ordering::kRR,
+                                Ordering::kNM,
+                                Ordering::kMN,
+                            ] {
+                                config.ordering = ordering;
+                                for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+
+                                    if alg == NttAlgorithm::Radix2 && ordering as u32 > 3 {
+                                        continue;
+                                    }
+
+                                    config.batch_size = batch_size as i32;
+                                    config.ntt_algorithm = alg;
+                                    let bench_descr = format!(
+                                        "{} {:?} {:?} {:?} 2^ {} x {}",
+                                        if is_on_device { "on device"} else {"on host"}, alg, ordering, is_inverse, test_size_log2, batch_size
+                                    );
+                                    if is_on_device {
+                                        let mut d_input = DeviceVec::<F>::cuda_malloc(full_size).unwrap();
+                                        d_input.copy_from_host(input).unwrap();
+                                        let mut d_batch_ntt_result = DeviceVec::<F>::cuda_malloc(full_size).unwrap();
+                                        d_batch_ntt_result.copy_from_host(batch_ntt_result).unwrap();
+
+                                        group.bench_function(&bench_descr, |b| {
+                                            b.iter(|| {
+                                                ntt_for_bench::<F, F>(
+                                                    &d_input[..],
+                                                    &mut d_batch_ntt_result[..],
+                                                    test_size,
+                                                    batch_size,
+                                                    is_inverse,
+                                                    ordering,
+                                                    &mut config,
+                                                    black_box(1),
+                                                )
+                                            })
+                                        });
+                                    } else {
+                                        group.bench_function(&bench_descr, |b| {
+                                            b.iter(|| {
+                                                ntt_for_bench::<F, F>(
+                                                    input,
+                                                    batch_ntt_result,
+                                                    test_size,
+                                                    batch_size,
+                                                    is_inverse,
+                                                    ordering,
+                                                    &mut config,
+                                                    black_box(1),
+                                                )
+                                            })
+                                        });
+                                    }
+                                }
+                            }
                         }
                     }
                 }

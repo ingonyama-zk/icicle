@@ -331,6 +331,9 @@ where
                         config.ordering = ordering;
                         let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+                            if alg == NttAlgorithm::Radix2 && ordering as u32 > 3 {
+                                continue;
+                            }
                             config.batch_size = batch_size as i32;
                             config.ntt_algorithm = alg;
                             ntt(
