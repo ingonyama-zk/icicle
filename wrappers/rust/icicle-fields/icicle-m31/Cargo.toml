@@ -10,10 +10,18 @@ repository.workspace = true
 [dependencies]
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
+criterion = "0.3"
 
 [build-dependencies]
 cmake = "0.1.50"
 
+[dev-dependencies]
+criterion = "0.3"
+
 [features]
 default = []
 devmode = ["icicle-core/devmode"]
+
+[[bench]]
+name = "vec_bench"
+harness = false

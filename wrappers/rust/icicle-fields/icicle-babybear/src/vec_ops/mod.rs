@@ -1,4 +1,4 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionCfg, QuarticExtensionField, ScalarCfg, ScalarField};
 
 use icicle_core::error::IcicleResult;
 use icicle_core::impl_vec_ops_field;
@@ -9,11 +9,11 @@ use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
 impl_vec_ops_field!("babybear", babybear, ScalarField, ScalarCfg);
-impl_vec_ops_field!("babybear_extension", babybear_extension, ExtensionField, ExtensionCfg);
+impl_vec_ops_field!("babybear_extension", babybear_extension, QuarticExtensionField, ExtensionCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::{ExtensionField, ScalarField};
+    use crate::field::{QuarticExtensionField, ScalarField};
     use icicle_core::impl_vec_add_tests;
     use icicle_core::vec_ops::tests::*;
 
@@ -22,6 +22,6 @@ pub(crate) mod tests {
     mod extension {
         use super::*;
 
-        impl_vec_add_tests!(ExtensionField);
+        impl_vec_add_tests!(QuarticExtensionField);
     }
 }

@@ -37,7 +37,7 @@ namespace ntt {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   template <typename S>
-  cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
+  cudaError_t init_domain(uint32_t logn, S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode = false);
 
   /**
    * Releases and deallocates resources associated with the domain initialized for performing NTTs.
@@ -70,7 +70,7 @@ namespace ntt {
    * @return Wn root of unity corresponding to logn and the basic root used for initDomain(root)
    */
   template <typename S>
-  S get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx);
+  S get_root_of_unity_from_domain(uint32_t logn, device_context::DeviceContext& ctx);
 
   /**
    * @enum NTTDir

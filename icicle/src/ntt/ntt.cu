@@ -34,6 +34,7 @@ namespace ntt {
            // size limited by on-device memory
     const uint32_t MAX_SHARED_MEM_ELEMENT_SIZE = 32; // TODO: occupancy calculator, hardcoded for sm_86..sm_89
     const uint32_t MAX_SHARED_MEM = MAX_SHARED_MEM_ELEMENT_SIZE * MAX_NUM_THREADS;
+    const uint32_t MAX_DOMAIN_LOG2 = 50; // TODO: more or less
 
     template <typename E>
     __global__ void reverse_order_kernel(const E* arr, E* arr_reversed, uint32_t n, uint32_t logn, uint32_t batch_size)
@@ -390,10 +391,7 @@ namespace ntt {
     static inline std::mutex device_domain_mutex;
     // The domain-per-device container - assumption is init_domain is called once per device per program.
 
-    int max_size = 0;
-    int max_log_size = 0;
     S* twiddles = nullptr;
-    bool initialized = false; // protection for multi-threaded case
     std::unordered_map<S, int> coset_index = {};
 
     S* internal_twiddles = nullptr; // required by mixed-radix NTT
@@ -408,37 +406,47 @@ namespace ntt {
     S* fast_basic_twiddles_inv = nullptr;    // required by mixed-radix NTT (fast-twiddles mode)
 
   public:
+    int max_size = 0;
+    int max_log_size = 0;
+
+    bool initialized = false; // protection for multi-threaded case
+
 #ifdef DCCT
     template <typename U, typename R>
-    friend cudaError_t init_domain<U, R>(R primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+    friend cudaError_t init_domain<U, R>(uint32_t logn, R primitive_root, device_context::DeviceContext& ctx);
 #else
     template <typename U>
-    friend cudaError_t init_domain<U>(U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
+    friend cudaError_t init_domain<U>(uint32_t logn, U primitive_root, device_context::DeviceContext& ctx, bool fast_tw);
 #endif
 
     template <typename U>
-    friend cudaError_t release_domain(device_context::DeviceContext& ctx);
+    friend cudaError_t release_domain(uint32_t logn, device_context::DeviceContext& ctx);
+
+#ifdef DCCT
+    template <typename U, typename R>
+    friend R get_root_of_unity<U, R>(uint32_t logn, device_context::DeviceContext& ctx);
+#else
+    template <typename U>
+    friend U get_root_of_unity<U>(uint32_t logn, device_context::DeviceContext& ctx);
+#endif
 
     template <typename U>
-    friend U get_root_of_unity<U>(uint64_t logn, device_context::DeviceContext& ctx);
-
-    template <typename U>
-    friend U get_root_of_unity_from_domain<U>(uint64_t logn, device_context::DeviceContext& ctx);
+    friend U get_root_of_unity_from_domain<U>(uint32_t logn, device_context::DeviceContext& ctx);
 
     template <typename U, typename E>
     friend cudaError_t ntt<U, E>(const E* input, int size, NTTDir dir, NTTConfig<U>& config, E* output);
   };
 
   template <typename S>
-  static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES] = {};
+  static inline Domain<S> domains_for_devices[device_context::MAX_DEVICES][MAX_DOMAIN_LOG2] = {};
 
 #ifdef DCCT
   template <typename S, typename R>
-  cudaError_t init_domain(R primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  cudaError_t init_domain(uint32_t logn, R primitive_root, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
 
-    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id][logn];
 
     // only generate twiddles if they haven't been generated yet
     // please note that this offers just basic thread-safety,
@@ -488,11 +496,11 @@ namespace ntt {
 #else
 
   template <typename S>
-  cudaError_t init_domain(S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
+  cudaError_t init_domain(uint32_t logn, S primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
     CHK_INIT_IF_RETURN();
 
-    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id][logn];
 
     // only generate twiddles if they haven't been generated yet
     // please note that this offers just basic thread-safety,
@@ -575,11 +583,11 @@ namespace ntt {
 #endif
 
   template <typename S>
-  cudaError_t release_domain(device_context::DeviceContext& ctx)
+  cudaError_t release_domain(uint32_t logn, device_context::DeviceContext& ctx)
   {
     CHK_INIT_IF_RETURN();
 
-    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id][logn];
 
     domain.max_size = 0;
     domain.max_log_size = 0;
@@ -607,6 +615,16 @@ namespace ntt {
     return CHK_LAST();
   }
 
+#ifdef DCCT
+  template <typename S, typename U>
+  U get_root_of_unity(uint64_t max_size)
+  {
+    const auto log_max_size = static_cast<uint32_t>(std::ceil(std::log2(max_size)));
+    return field_config::get_ext_omega(log_max_size);
+  }
+  // explicit instantiation to avoid having to include this file
+  template c_extension_t get_root_of_unity<scalar_t, c_extension_t>(uint64_t max_size);
+#else
   template <typename S>
   S get_root_of_unity(uint64_t max_size)
   {
@@ -615,12 +633,19 @@ namespace ntt {
     return S::omega(log_max_size);
   }
   // explicit instantiation to avoid having to include this file
-  template scalar_t get_root_of_unity(uint64_t logn);
+  template scalar_t get_root_of_unity(uint64_t max_size);
+#endif
 
   template <typename S>
-  S get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx)
+  S get_root_of_unity_from_domain(uint32_t logn, device_context::DeviceContext& ctx)
   {
-    Domain<S>& domain = domains_for_devices<S>[ctx.device_id];
+    if (logn > MAX_DOMAIN_LOG2) {
+      std::ostringstream oss;
+      oss << "NTT log_size=" << logn << " is too large. Currently supported maximum is "
+          << MAX_DOMAIN_LOG2 << " or less (depending on device's memory available).\n";
+      THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
+    }
+    Domain<S>& domain = domains_for_devices<S>[ctx.device_id][logn];
     if (logn > domain.max_log_size) {
       std::ostringstream oss;
       oss << "NTT log_size=" << logn
@@ -631,11 +656,14 @@ namespace ntt {
     return domain.twiddles[twiddles_idx];
   }
   // explicit instantiation to avoid having to include this file
-  template scalar_t get_root_of_unity_from_domain(uint64_t logn, device_context::DeviceContext& ctx);
+  template scalar_t get_root_of_unity_from_domain(uint32_t logn, device_context::DeviceContext& ctx);
 
   template <typename S>
   static bool is_choosing_radix2_algorithm(int logn, int batch_size, const NTTConfig<S>& config)
   {
+#ifdef DCCT
+    return false;
+#endif
     const bool is_mixed_radix_alg_supported = (logn > 3 && logn != 7);
     if (!is_mixed_radix_alg_supported && config.columns_batch)
       throw IcicleError(IcicleError_t::InvalidArgument, "columns batch is not supported for given NTT size");
@@ -709,8 +737,9 @@ namespace ntt {
   cudaError_t ntt(const E* input, int size, NTTDir dir, NTTConfig<S>& config, E* output)
   {
     CHK_INIT_IF_RETURN();
+    int logn = int(log2(size));
 
-    Domain<S>& domain = domains_for_devices<S>[config.ctx.device_id];
+    Domain<S>& domain = domains_for_devices<S>[config.ctx.device_id][logn];
 
     if (size > domain.max_size) {
       std::ostringstream oss;
@@ -719,7 +748,6 @@ namespace ntt {
       THROW_ICICLE_ERR(IcicleError_t::InvalidArgument, oss.str().c_str());
     }
 
-    int logn = int(log2(size));
     const bool is_size_power_of_two = size == (1 << logn);
     if (!is_size_power_of_two) {
       std::ostringstream oss;

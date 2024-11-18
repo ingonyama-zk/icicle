@@ -63,13 +63,16 @@ public:
   {
     size_t stage_size = 1 << (tw_log_size - 1);
     size_t tw_size = (1 << tw_log_size) * tw_log_size;
+    uint32_t blocks_per_batch = (1 << (tw_log_size - ntt_log_size)) - 1;
     uint32_t phase_offset = stage_size * phase * (dit ? ntt_log_size - 3 : 3); // 3 is the number of stages
     uint32_t block_offset;
     if (tw_log_order) {
       block_offset = (s_meta.ntt_block_id & (tw_order - 1)) +
-                     (s_meta.ntt_block_id >> tw_log_order) * (1 << tw_log_order - 1) * s_meta.ntt_block_size;
+                     ((s_meta.ntt_block_id & blocks_per_batch) >> tw_log_order) *
+                     (1 << tw_log_order - 1) *
+                     s_meta.ntt_block_size;
     } else {
-      block_offset = s_meta.ntt_block_id * (1 << ntt_log_size - 1);
+      block_offset = (s_meta.ntt_block_id & blocks_per_batch) * (1 << ntt_log_size - 1);
     }
     uint32_t ntt_inp_offset = s_meta.ntt_inp_id * (1 << tw_log_order) * ((phase != dit) ? 4 : 1);
     uint32_t base_exp = phase_offset + twiddles_offset + block_offset + ntt_inp_offset;

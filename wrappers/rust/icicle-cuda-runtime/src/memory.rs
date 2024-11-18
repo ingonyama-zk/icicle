@@ -120,6 +120,10 @@ impl<T> HostSlice<T> {
 }
 
 impl<T> DeviceSlice<T> {
+    pub fn cuda_free(&mut self) -> CudaResult<()> {
+        unsafe { cudaFree(self.as_mut_ptr() as _).wrap() }
+    }
+
     pub unsafe fn from_slice(slice: &[T]) -> &Self {
         &*(slice as *const [T] as *const Self)
     }
@@ -198,6 +202,46 @@ impl<T> DeviceSlice<T> {
                 .wrap()?
             }
         }
+        Ok(())
+    }
+
+    pub fn copy_from_host_slice_vec_async(&mut self, val: &[Vec<T>], stream: &CudaStream) -> CudaResult<()> {
+        assert!(
+            self.len() == val.len() * val[0].len(),
+            "In copy from host async, destination and source slices have different lengths"
+        );
+        check_device(
+            self.device_id()
+                .unwrap(),
+        );
+
+        let mut streams = Vec::new();
+
+        let mut written_count = 0;
+
+        for i in 0..val.len() {
+            unsafe {
+                if i > 0 {
+                    streams.push(CudaStream::create().unwrap())
+                };
+                cudaMemcpyAsync(
+                    self.as_mut_ptr()
+                        .add(written_count) as *mut c_void,
+                    val[i].as_ptr() as *const c_void,
+                    val[i].len() * size_of::<T>(),
+                    cudaMemcpyKind::cudaMemcpyHostToDevice,
+                    if i == 0 { stream.handle } else { streams[i - 1].handle },
+                )
+                .wrap()?;
+                written_count = written_count + val[i].len();
+            }
+        }
+        streams
+            .iter()
+            .for_each(|s| {
+                s.synchronize()
+                    .unwrap()
+            });
         Ok(())
     }
 
@@ -424,3 +468,63 @@ impl<T> Drop for DeviceVec<T> {
 
 #[allow(non_camel_case_types)]
 pub type CudaMemPool = cudaMemPool_t;
+
+#[cfg(test)]
+mod tests {
+    use crate::stream::CudaStream;
+
+    use super::{DeviceVec, HostSlice};
+
+    #[test]
+    fn test_vec_of_vec_async_copy() {
+        let vec_size = 1 << 4;
+        let batch_size = 1 << 5;
+        let count = vec_size * batch_size;
+        let mut result_tr: DeviceVec<i32> = DeviceVec::cuda_malloc(count).unwrap();
+        let mut full_batch = vec![0i32; count];
+
+        let res_host = HostSlice::from_mut_slice(&mut full_batch[..]);
+        // result_tr.copy_to_host(res_host).unwrap();
+        let stream = CudaStream::create().unwrap();
+
+        let vec_of_vec: Vec<Vec<i32>> = (0..batch_size)
+            .map(|i| {
+                (0..vec_size)
+                    .map(|j| ((i * vec_size) as i32) + j as i32)
+                    .collect()
+            })
+            .collect();
+
+        let flatten_extended = vec_of_vec
+            .clone()
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        assert_eq!(flatten_extended.len(), count);
+        // need to check flattened vec each el is equal to index
+        flatten_extended
+            .iter()
+            .enumerate()
+            .for_each(|(index, &value)| {
+                assert_eq!(
+                    value, index as i32,
+                    "Value at index {} is not equal to its index",
+                    index
+                );
+            });
+
+        result_tr
+        .copy_from_host_slice_vec_async(&vec_of_vec, &stream)
+            .unwrap();
+
+        result_tr
+            .copy_to_host_async(res_host, &stream)
+            .unwrap();
+
+        stream
+            .synchronize()
+            .unwrap();
+
+        assert_eq!(full_batch, flatten_extended);
+    }
+}

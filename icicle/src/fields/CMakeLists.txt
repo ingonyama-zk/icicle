@@ -2,8 +2,16 @@ if (EXT_FIELD)
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DEXT_FIELD")
 endif ()
 
-SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin;m31)
+if (DCCT)
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DDCCT")
+endif ()
+
+SET(SUPPORTED_FIELDS_WITHOUT_NTT grumpkin)
 SET(SUPPORTED_FIELDS_WITHOUT_POSEIDON2 bls12_381;bls12_377;grumpkin;bw6_761;stark252;m31)
+SET(SUPPORTED_FIELDS_WITH_FRI m31)
+# TODO: this
+# SET(SUPPORTED_FIELDS_QUARTIC_EXTENSION babybear;m31)
+# SET(SUPPORTED_FIELDS_COMPLEX_EXTENSION bls12_381;bls12_377;grumpkin;bw6_761;stark252;m31)
 SET(SUPPORTED_FIELDS_WITH_QUOTIENT m31)
 
 set(TARGET icicle_field)
@@ -16,11 +24,14 @@ list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern.cu)
 list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern_mmcs.cu)
 
 if(EXT_FIELD)
-  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_extension.cu)
+  # TODO: conditional extension based on field list
+  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_quartic_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_complex_extension.cu)
   if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
     list(APPEND FIELD_SOURCE ${SRC}/ntt/extern_extension.cu)
   endif()
-  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_quartic_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_complex_extension.cu)
 endif()
 
 set(POLYNOMIAL_SOURCE_FILES 
@@ -41,6 +52,11 @@ if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/extern.cu)
   list(APPEND FIELD_SOURCE ${SRC}/ntt/kernel_ntt.cu)
   list(APPEND FIELD_SOURCE ${POLYNOMIAL_SOURCE_FILES}) # requires NTT  
+endif()
+
+if (FIELD IN_LIST SUPPORTED_FIELDS_WITH_FRI)
+  list(APPEND FIELD_SOURCE ${SRC}/fri/extern.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/fri/fri.cu)
 endif()
 
 if (FIELD IN_LIST SUPPORTED_FIELDS_WITH_QUOTIENT)

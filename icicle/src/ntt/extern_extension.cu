@@ -8,6 +8,7 @@ using namespace field_config;
 #include "utils/utils.h"
 
 namespace ntt {
+  #ifndef DCCT
   /**
    * Extern "C" version of [ntt](@ref ntt) function with the following values of template parameters
    * (where the field is given by `-DFIELD` env variable during build):
@@ -20,4 +21,5 @@ namespace ntt {
   {
     return ntt<scalar_t, extension_t>(input, size, dir, config, output);
   }
+  #endif
 } // namespace ntt

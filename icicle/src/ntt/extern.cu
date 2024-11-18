@@ -14,11 +14,19 @@ namespace ntt {
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
    */
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, initialize_domain)(
+#ifdef DCCT
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, initialize_domain)(uint32_t logn, c_extension_t* primitive_root, device_context::DeviceContext& ctx)
+  {
+    return init_domain<scalar_t, c_extension_t>(logn, *primitive_root, ctx);
+  }
+#else
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, initialize_domain)(uint32_t logn, 
     scalar_t* primitive_root, device_context::DeviceContext& ctx, bool fast_twiddles_mode)
   {
-    return init_domain(*primitive_root, ctx, fast_twiddles_mode);
+    return init_domain(logn, *primitive_root, ctx, fast_twiddles_mode);
   }
+#endif
 
   /**
    * Extern "C" version of [ntt](@ref ntt) function with the following values of template parameters
@@ -40,9 +48,9 @@ namespace ntt {
    * stand-alone "STARK field";
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, release_domain)(device_context::DeviceContext& ctx)
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, release_domain)(uint32_t logn, device_context::DeviceContext& ctx)
   {
-    return release_domain<scalar_t>(ctx);
+    return release_domain<scalar_t>(logn, ctx);
   }
 
   /**
@@ -51,8 +59,15 @@ namespace ntt {
    *  - `S` is the [field](@ref scalar_t) - either a scalar field of the elliptic curve or a
    * stand-alone "STARK field";
    */
-  extern "C" scalar_t CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn)
+#ifdef DCCT
+  extern "C" void CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn, c_extension_t* output)
   {
-    return get_root_of_unity<scalar_t>(logn);
+    *output = get_root_of_unity<scalar_t, c_extension_t>(logn);
   }
+#else
+  extern "C" void CONCAT_EXPAND(FIELD, get_root_of_unity)(uint32_t logn, scalar_t* output)
+  {
+    *output = get_root_of_unity<scalar_t>(logn);
+  }
+#endif
 } // namespace ntt

@@ -8,7 +8,7 @@ typedef field_config::c_extension_t test_ext;
 typedef field_config::scalar_t test_data;
 
 #include "fields/field.cuh"
-#include "curves/projective.cuh"
+// #include "curves/projective.cuh"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -82,9 +82,10 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaEventCreate(&ntt_stop));
 
   auto start = std::chrono::high_resolution_clock::now();
-  const test_ext basic_root = field_config::get_ext_omega(NTT_LOG_SIZE);
+  // const test_ext basic_root = field_config::get_ext_omega(NTT_LOG_SIZE);
+  const test_ext basic_root = ntt::get_root_of_unity<test_scalar, test_ext>(NTT_LOG_SIZE);
   std::cout << "Basic root: " << basic_root << std::endl;
-  ntt::init_domain<test_scalar, test_ext>(basic_root, ntt_config.ctx, false);
+  ntt::init_domain<test_scalar, test_ext>(basic_root, ntt_config.ctx);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   std::cout << "initDomain took: " << duration / 1000 << " MS" << std::endl;
@@ -101,7 +102,9 @@ int main(int argc, char** argv)
   CHK_IF_RETURN(cudaMalloc(&GpuOutput, sizeof(test_data) * NTT_SIZE * BATCH_SIZE));
 
   // init inputs
-  incremental_values(CpuScalars.get(), NTT_SIZE * BATCH_SIZE);
+  for (int i = 0; i < BATCH_SIZE; i++) {
+    incremental_values(CpuScalars.get() + NTT_SIZE * i, NTT_SIZE);
+  }
   CHK_IF_RETURN(
     cudaMemcpy(GpuScalars, CpuScalars.get(), NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyHostToDevice));
 
@@ -131,11 +134,14 @@ int main(int argc, char** argv)
     cudaMemcpy(CpuOutput.get(), GpuOutput, NTT_SIZE * BATCH_SIZE * sizeof(test_data), cudaMemcpyDeviceToHost));
 
   std::cout << "Output" << std::endl;
-  for (int i = 0; i < NTT_SIZE * BATCH_SIZE; i++) {
-    // if (i == 1024)
-    //   break;
-    // if (i % 128 < 2)
-    std::cout << CpuOutput[i] << " " << i << std::endl;
+  for (int i = 0; i < BATCH_SIZE; i++) {
+    std::cout << "BATCH " << i << std::endl;
+    for (int j = 0; j < NTT_SIZE; j++) {
+      if (j == 16) {
+        break;
+      }
+      std::cout << CpuOutput[i * NTT_SIZE + j] << " " << j << std::endl;
+    }
   }
   bool success = true;
 

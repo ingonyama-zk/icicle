@@ -7,6 +7,10 @@
 #include "fields/params_gen.cuh"
 #include "fields/point.cuh"
 
+#include <thread>
+#include <vector>
+#include <random>
+
 namespace m31 {
   template <class CONFIG>
   class MersenneField : public Field<CONFIG>
@@ -25,10 +29,44 @@ namespace m31 {
 
     static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
 
+    static HOST_INLINE MersenneField rand_host_fast(int seed)
+    {
+      return MersenneField(Field<CONFIG>::rand_host_fast(seed));
+    }
+
+    // static void rand_host_many(MersenneField* out, int size)
+    // {
+    //   for (int i = 0; i < size; i++) //TODO: parallel - as it's painfully slow
+    //     out[i] = rand_host();
+    // }
+
+    // static HOST_INLINE MersenneField rand_host_fast(int seed) { return {(uint32_t)seed}; }
+
     static void rand_host_many(MersenneField* out, int size)
     {
-      for (int i = 0; i < size; i++)
-        out[i] = rand_host();
+      int num_threads = std::thread::hardware_concurrency(); // Get number of supported threads
+      int chunk_size = size / num_threads;
+
+      auto worker = [&](int start, int end) {
+        for (int i = start; i < end; i++) {
+          // out[i] = rand_host();
+          out[i] = rand_host_fast(i);
+        }
+      };
+
+      std::vector<std::thread> threads;
+
+      // Launch threads
+      for (int i = 0; i < num_threads; i++) {
+        int start = i * chunk_size;
+        int end = (i == num_threads - 1) ? size : (i + 1) * chunk_size;
+        threads.emplace_back(worker, start, end);
+      }
+
+      // Join threads
+      for (auto& t : threads) {
+        t.join();
+      }
     }
 
     HOST_DEVICE_INLINE MersenneField& operator=(const Field<CONFIG>& other)
@@ -75,9 +113,11 @@ namespace m31 {
       }
       friend HOST_DEVICE_INLINE Wide operator*(Wide xs, const Wide& ys)
       {
-        uint64_t t1 = (uint64_t)xs.storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
-        t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);         // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
-        return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
+        // TODO: here done
+        //  uint64_t t1 = (uint64_t)xs.storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
+        //  t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);         // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
+        //  return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
+        return from_number(reduce_stwo((uint64_t)xs.storage * (uint64_t)ys.storage).get_limb());
       }
 
       friend std::ostream& operator<<(std::ostream& os, const Wide& xs)
@@ -106,6 +146,17 @@ namespace m31 {
       uint32_t tmp = (xs.storage >> 31) + (xs.storage & modulus); // max: 1 + 2^31-1 = 2^31
       tmp = (tmp >> 31) + (tmp & modulus);                        // max: 1 + 0 = 1
       return MersenneField{{tmp == modulus ? 0 : tmp}};
+    }
+
+    /// @brief stwo mult
+    static constexpr uint32_t MODULUS_BITS = 31;
+    static constexpr uint32_t P = 2147483647; // 2 ** 31 - 1
+
+    static constexpr HOST_DEVICE_INLINE MersenneField reduce_stwo(uint64_t val)
+    {
+      uint32_t res =
+        static_cast<uint32_t>(((((val >> MODULUS_BITS) + val + 1) >> MODULUS_BITS) + val) & static_cast<uint64_t>(P));
+      return MersenneField(res);
     }
 
     static constexpr HOST_DEVICE_INLINE MersenneField inverse(const MersenneField& x)
@@ -151,18 +202,29 @@ namespace m31 {
 
     friend HOST_DEVICE_INLINE MersenneField operator*(MersenneField xs, const MersenneField& ys)
     {
-      uint64_t x = (uint64_t)(xs.get_limb()) * ys.get_limb();
-      uint32_t t = ((x >> 31) + (x & MersenneField::get_modulus().limbs[0]));
-      uint32_t m = MersenneField::get_modulus().limbs[0];
-      if (t > m) t = (t & m) + (t >> 31);
-      if (t > m) t = (t & m) + (t >> 31);
-      if (t == m) t = 0;
-      return MersenneField{{t}};
+      // TODO: here done
+
+      // uint64_t x = (uint64_t)(xs.get_limb()) * ys.get_limb();
+      // uint32_t t = ((x >> 31) + (x & MersenneField::get_modulus().limbs[0]));
+      // uint32_t m = MersenneField::get_modulus().limbs[0];
+      // if (t > m) t = (t & m) + (t >> 31);
+      // if (t > m) t = (t & m) + (t >> 31);
+      // if (t == m) t = 0;
+      // return MersenneField{{t}};
+
+      return MersenneField::reduce_stwo(static_cast<uint64_t>(xs.get_limb()) * static_cast<uint64_t>(ys.get_limb()));
+    }
+
+    // Alternatively, conversion operator to uint32_t[1]
+    HOST_DEVICE_INLINE operator uint32_t*()
+    {
+      return this->limbs_storage.limbs; // Assuming real, im1, im2, im3 are contiguous in memory
     }
 
     static constexpr HOST_DEVICE_INLINE Wide mul_wide(const MersenneField& xs, const MersenneField& ys)
     {
-      return Wide::from_field(xs) * Wide::from_field(ys);
+      // return Wide::from_field(xs) * Wide::from_field(ys);
+      return Wide::from_field(xs * ys);
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
@@ -201,7 +263,6 @@ namespace m31 {
         assert(false);
       }
 #endif // __CUDA_ARCH__
-      // storage_array<CONFIG::omegas_count, 1> const inv = CONFIG::inv;
       return MersenneField::inverse(MersenneField{1U << logn});
     }
   };
@@ -251,16 +312,11 @@ namespace m31 {
   typedef MersenneField<fp_config> scalar_t;
 
   /**
-   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
 
   const c_extension_t ROU = {{2}, {1268011823}};
-
-  // namespace quad_extension_config {
-  //   static constexpr storage<1> rou = {0x00000089};
-  //   TWIDDLES(modulus, rou)
-  // }
 
   static HOST_INLINE c_extension_t get_ext_omega(uint32_t logn)
   {

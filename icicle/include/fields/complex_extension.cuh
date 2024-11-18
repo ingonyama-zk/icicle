@@ -59,10 +59,13 @@ public:
     return ComplexExtensionField{FF::rand_host(), FF::rand_host()};
   }
 
+  static HOST_INLINE ComplexExtensionField rand_host_fast(int seed) { return {(uint32_t)seed, (uint32_t)seed}; }
+
   static void rand_host_many(ComplexExtensionField* out, int size)
   {
     for (int i = 0; i < size; i++)
-      out[i] = rand_host();
+      out[i] = rand_host_fast(i);
+    // out[i] = rand_host(); //TODO: painfully slow
   }
 
   template <unsigned REDUCTION_SIZE = 1>
@@ -112,12 +115,26 @@ public:
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
-    FWide real_prod = FF::mul_wide(xs.real, ys.real);
-    FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
-    FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
-    FWide nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    // fn mul(self, rhs: Self) -> Self::Output {
+    // (a + bi) * (c + di) = (ac - bd) + (ad + bc)i.
+    //     Self(
+    //         self.0 * rhs.0 - self.1 * rhs.1,
+    //         self.0 * rhs.1 + self.1 * rhs.0,
+    //     )
+    // }
+
+    // FWide real_prod = FF::mul_wide(xs.real, ys.real);
+    // FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
+    // FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
+    // FWide nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
+    // nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
+    // return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    auto real_1 = xs.real * ys.real - xs.imaginary * ys.imaginary;
+    auto im_1 = xs.real * ys.imaginary + xs.imaginary * ys.real;
+    // printf(
+    //   "cmplx mult: {0x%08x, 0x%08x} * {0x%08x, 0x%08x} = {0x%08x%08x}\n", xs.real.get_limb(),
+    //   xs.imaginary.get_limb(), ys.real.get_limb(), ys.imaginary.get_limb(), real_1.get_limb(), im_1.get_limb());
+    return ExtensionWide{real_1.get_limb(), im_1.get_limb()};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
@@ -159,6 +176,12 @@ public:
   friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     return !(xs == ys);
+  }
+
+  // Alternatively, conversion operator to uint32_t[2]
+  HOST_DEVICE_INLINE operator const uint32_t*() const
+  {
+    return (uint32_t*)real; // Assuming real, im1, im2, im3 are contiguous in memory
   }
 
   template <const ComplexExtensionField& multiplier>
@@ -236,6 +259,7 @@ public:
 
   static constexpr bool has_member_omegas_count() { return sizeof(CONFIG::ext_omegas_count) > 0; }
 };
+
 template <typename CONFIG, class T>
 struct SharedMemory<ComplexExtensionField<CONFIG, T>> {
   __device__ ComplexExtensionField<CONFIG, T>* getPointer()

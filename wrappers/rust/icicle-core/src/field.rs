@@ -26,7 +26,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
         for &b in self
             .limbs
             .iter()
-            .rev()
+            // .rev()
         {
             write!(f, "{:08x}", b)?;
         }
