@@ -146,6 +146,11 @@ public:
     return reduce(xy);
   }
 
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  {
+    return ComplexExtensionField{(xs.real * ys.real) - (xs.imaginary * ys.imaginary), (xs.real * ys.imaginary) + (ys.real * xs.imaginary)};
+  }
+
   friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     return (xs.real == ys.real) && (xs.imaginary == ys.imaginary);

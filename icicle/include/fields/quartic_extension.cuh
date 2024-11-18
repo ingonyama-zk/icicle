@@ -1,6 +1,7 @@
 #pragma once
 
 #include "field.cuh"
+#include "complex_extension.cuh"
 #include "gpu-utils/modifiers.cuh"
 #include "gpu-utils/sharedmem.cuh"
 
@@ -64,10 +65,15 @@ public:
     return QuarticExtensionField{FF::rand_host(), FF::rand_host(), FF::rand_host(), FF::rand_host()};
   }
 
+  static HOST_INLINE QuarticExtensionField rand_host_fast(int seed)
+  {
+    return {(uint32_t)seed, (uint32_t)seed, (uint32_t)seed, (uint32_t)seed};
+  }
+
   static void rand_host_many(QuarticExtensionField* out, int size)
   {
     for (int i = 0; i < size; i++)
-      out[i] = rand_host();
+      out[i] = rand_host_fast(i);
   }
 
   template <unsigned REDUCTION_SIZE = 1>
@@ -119,28 +125,44 @@ public:
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
-    if (CONFIG::nonresidue_is_negative)
-      return ExtensionWide{
-        FF::mul_wide(xs.real, ys.real) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(
-            FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
-        FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
-        FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
-        FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
-          FF::mul_wide(xs.im3, ys.real)};
-    else
-      return ExtensionWide{
-        FF::mul_wide(xs.real, ys.real) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(
-            FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
-        FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
-        FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
-        FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
-          FF::mul_wide(xs.im3, ys.real)};
+    // TODO heresss
+
+    // if (CONFIG::nonresidue_is_negative)
+    //   return ExtensionWide{
+    //     FF::mul_wide(xs.real, ys.real) -
+    //       FF::template mul_unsigned<CONFIG::nonresidue>(
+    //         FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
+    //     FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) -
+    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
+    //     FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) -
+    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
+    //     FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
+    //       FF::mul_wide(xs.im3, ys.real)};
+    // else
+    //   return ExtensionWide{
+    //     FF::mul_wide(xs.real, ys.real) +
+    //       FF::template mul_unsigned<CONFIG::nonresidue>(
+    //         FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
+    //     FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) +
+    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
+    //     FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) +
+    //       FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
+    //     FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
+    //       FF::mul_wide(xs.im3, ys.real)};
+    /////////////////////
+    // self.0 * rhs.0 + R * self.1 * rhs.1,
+    // self.0 * rhs.1 + self.1 * rhs.0,
+    ComplexExtensionField<CONFIG, T> R = {2, 1};
+
+    ComplexExtensionField<CONFIG, T> self_0 = {xs.real.get_limb(), xs.im1.get_limb()};
+    ComplexExtensionField<CONFIG, T> self_1 = {xs.im2.get_limb(), xs.im3.get_limb()};
+    ComplexExtensionField<CONFIG, T> rhs_0 = {ys.real.get_limb(), ys.im1.get_limb()};
+    ComplexExtensionField<CONFIG, T> rhs_1 = {ys.im2.get_limb(), ys.im3.get_limb()};
+    ComplexExtensionField<CONFIG, T> res_xs = self_0 * rhs_0 + R * self_1 * rhs_1;
+    ComplexExtensionField<CONFIG, T> res_ys = self_0 * rhs_1 + self_1 * rhs_0;
+
+    return ExtensionWide{
+      res_xs.real.get_limb(), res_xs.imaginary.get_limb(), res_ys.real.get_limb(), res_ys.imaginary.get_limb()};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
@@ -168,6 +190,9 @@ public:
   template <class T1, class T2>
   friend HOST_DEVICE_INLINE QuarticExtensionField operator*(const T1& xs, const T2& ys)
   {
+    //
+    // self.0 * rhs.0 + R * self.1 * rhs.1,
+    // self.0 * rhs.1 + self.1 * rhs.0,
     ExtensionWide xy = mul_wide(xs, ys);
     return reduce(xy);
   }
@@ -247,6 +272,12 @@ public:
       FF::reduce(FF::mul_wide(xs.im2, x0) - FF::mul_wide(xs.real, x2)),
       FF::reduce(FF::mul_wide(xs.im1, x2) - FF::mul_wide(xs.im3, x0)),
     };
+  }
+
+  // Alternatively, conversion operator to uint32_t[4]
+  HOST_DEVICE_INLINE operator const uint32_t*() const
+  {
+    return real.limbs_storage.limbs; // Assuming real, im1, im2, im3 are contiguous in memory
   }
 };
 

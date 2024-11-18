@@ -52,22 +52,22 @@ namespace circle_math {
   private:
     friend T;
 
-    typedef typename T::Wide FWide;
+    // typedef typename T::Wide FWide;
 
-    struct PointWide {
-      FWide x;
-      FWide y;
+    // struct PointWide {
+    //   FWide x;
+    //   FWide y;
 
-      friend HOST_DEVICE_INLINE PointWide operator+(PointWide xs, const PointWide& ys)
-      {
-        return PointWide{xs.x + ys.x, xs.y + ys.y};
-      }
+    //   friend HOST_DEVICE_INLINE PointWide operator+(PointWide xs, const PointWide& ys)
+    //   {
+    //     return PointWide{xs.x + ys.x, xs.y + ys.y};
+    //   }
 
-      friend HOST_DEVICE_INLINE PointWide operator-(PointWide xs, const PointWide& ys)
-      {
-        return PointWide{xs.x - ys.x, xs.y - ys.y};
-      }
-    };
+    //   friend HOST_DEVICE_INLINE PointWide operator-(PointWide xs, const PointWide& ys)
+    //   {
+    //     return PointWide{xs.x - ys.x, xs.y - ys.y};
+    //   }
+    // };
 
   public:
     typedef T FF;
@@ -87,18 +87,8 @@ namespace circle_math {
 
     static HOST_DEVICE_INLINE CirclePoint generator()
     {
-      return CirclePoint{{2}, {1268011823}};
+      return CirclePoint{FF{CONFIG::circle_point_generator_x}, FF{CONFIG::circle_point_generator_y}};
     }
-
-    // static constexpr HOST_DEVICE_INLINE CirclePoint to_montgomery(const CirclePoint& xs)
-    // {
-    //   return CirclePoint{xs.x * FF{CONFIG::montgomery_r}, xs.y * FF{CONFIG::montgomery_r}};
-    // }
-
-    // static constexpr HOST_DEVICE_INLINE CirclePoint from_montgomery(const CirclePoint& xs)
-    // {
-    //   return CirclePoint{xs.x * FF{CONFIG::montgomery_r_inv}, xs.y * FF{CONFIG::montgomery_r_inv}};
-    // }
 
     static HOST_INLINE CirclePoint rand_host()
     {
@@ -154,42 +144,9 @@ namespace circle_math {
       return CirclePoint{xs.x - ys, xs.y};
     }
 
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE PointWide
-    mul_wide(const CirclePoint& xs, const CirclePoint& ys)
+    friend HOST_DEVICE_INLINE CirclePoint operator*(const CirclePoint& xs, const CirclePoint& ys)
     {
-      FWide x_prod = FF::mul_wide(xs.x, ys.x);
-      FWide y_prod = FF::mul_wide(xs.y, ys.y);
-      FWide prod_of_sums = FF::mul_wide(xs.x + xs.y, ys.x + ys.y);
-      FWide nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(y_prod);
-      nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-      return PointWide{x_prod + nonresidue_times_im, prod_of_sums - x_prod - y_prod};
-    }
-
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE PointWide mul_wide(const CirclePoint& xs, const FF& ys)
-    {
-      return PointWide{FF::mul_wide(xs.x, ys), FF::mul_wide(xs.y, ys)};
-    }
-
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE PointWide mul_wide(const FF& xs, const CirclePoint& ys)
-    {
-      return mul_wide(ys, xs);
-    }
-
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE CirclePoint reduce(const PointWide& xs)
-    {
-      return CirclePoint{
-        FF::template reduce<MODULUS_MULTIPLE>(xs.x), FF::template reduce<MODULUS_MULTIPLE>(xs.y)};
-    }
-
-    template <class T1, class T2>
-    friend HOST_DEVICE_INLINE CirclePoint operator*(const T1& xs, const T2& ys)
-    {
-      PointWide xy = mul_wide(xs, ys);
-      return reduce(xy);
+      return CirclePoint{(xs.x * ys.x) - (xs.y * ys.y), (xs.x * ys.y) + (ys.x * xs.y)};
     }
 
     friend HOST_DEVICE_INLINE bool operator==(const CirclePoint& xs, const CirclePoint& ys)
@@ -224,12 +181,12 @@ namespace circle_math {
       return {FF::template mul_unsigned<multiplier>(xs.x), FF::template mul_unsigned<multiplier>(xs.y)};
     }
 
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE PointWide sqr_wide(const CirclePoint& xs)
-    {
-      // TODO: change to a more efficient squaring
-      return mul_wide<MODULUS_MULTIPLE>(xs, xs);
-    }
+    // template <unsigned MODULUS_MULTIPLE = 1>
+    // static constexpr HOST_DEVICE_INLINE PointWide sqr_wide(const CirclePoint& xs)
+    // {
+    //   // TODO: change to a more efficient squaring
+    //   return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    // }
 
     template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE CirclePoint sqr(const CirclePoint& xs)
@@ -242,7 +199,9 @@ namespace circle_math {
     {
       CirclePoint res = one();
       while (exp > 0) {
-        if (exp & 1) res = res * base;
+        if (exp & 1) {
+          res = res * base;
+        }
         base = base * base;
         exp >>= 1;
       }
@@ -298,14 +257,18 @@ namespace circle_math {
     }
 
     // TODO get consts from config
-    static HOST_DEVICE_INLINE CirclePoint get_domain_by_index(uint32_t half_coset_initial_index, uint32_t half_coset_step_size, uint32_t domain_size, uint32_t index) {
+    static HOST_DEVICE_INLINE CirclePoint get_domain_by_index(uint32_t half_coset_initial_index, uint32_t half_coset_step_size, uint32_t index, uint32_t domain_size) {
       uint32_t half_coset_size = domain_size >> 1;
+// #ifndef __CUDA_ARCH__
+//       std::cout << "half_coset_initial_index: " << half_coset_initial_index << "\nhalf_coset_step_size: " << half_coset_step_size << "\nindex: " << index << "\ndomain_size: " << domain_size << "half_coset_size: " << half_coset_size << std::endl;
+// #endif
+      uint32_t modulo_u31_mask = 0x7fffffff;
       if (index < half_coset_size) {
         uint64_t global_index = (uint64_t) half_coset_initial_index + (uint64_t) half_coset_step_size * (uint64_t) index;
-        return get_point_by_index(global_index & CONFIG::modulus.limbs[0]);
+        return get_point_by_index(global_index & modulo_u31_mask);
       } else {
         uint64_t global_index = (uint64_t) half_coset_initial_index + (uint64_t) half_coset_step_size * (uint64_t) (index - half_coset_size);
-        return get_point_by_index((CONFIG::modulus.limbs[0] + 1 - global_index) & CONFIG::modulus.limbs[0]);
+        return get_point_by_index((2147483648 - global_index) & modulo_u31_mask);
       }
     }
 
@@ -318,8 +281,6 @@ namespace circle_math {
   //     return s_ext2_scalar_;
   //   }
   // };
-
-  #define M31_CIRCLE_LOG_ORDER 31
 
   template <typename CONFIG, class T>
   class CircleCoset {
@@ -335,16 +296,16 @@ namespace circle_math {
     size_t log_size;
 
     CircleCoset(size_t initial_index, uint32_t log_size) {
-      assert(log_size <= M31_CIRCLE_LOG_ORDER);
+      assert(log_size <= CONFIG::modulus_bit_count);
       this->initial_index = initial_index;
       this->log_size = log_size;
-      this->step_size = 1 << (M31_CIRCLE_LOG_ORDER - log_size);
+      this->step_size = 1 << (CONFIG::modulus_bit_count - log_size);
       this->initial_point = Point::to_point(initial_index);
       this->step = Point::to_point(step_size);
     }
 
     static CircleCoset coset_shifted(uint32_t log_shift, uint32_t log_size) {
-      return CircleCoset(1 << (M31_CIRCLE_LOG_ORDER - log_size - log_shift), log_size);
+      return CircleCoset(1 << (CONFIG::modulus_bit_count - log_size - log_shift), log_size);
     }
 
     // Creates a coset of the form <G_n>.
@@ -362,8 +323,12 @@ namespace circle_math {
       return coset_shifted(2, log_size); // log 4
     }
 
-    size_t size() {
-      return 1 << this->log_size;
+    size_t lg_size() const {
+      return this->log_size;
+    }
+
+    size_t size() const {
+      return 1 << this->lg_size();
     }
 
     CircleCoset dbl() const {
@@ -376,15 +341,15 @@ namespace circle_math {
         this->log_size? this->log_size - 1 : 0 };
     }
 
-    size_t index_at(size_t index) {
+    size_t index_at(size_t index) const {
       return this->initial_index + ((this->step_size * index) & (CONFIG::modulus.limbs[0]));
     }
 
-    Point at(size_t index) {
+    Point at(size_t index) const {
       return Point::to_point(this->index_at(index));
     }
 
-    CircleCoset shift(size_t shift_size) {
+    CircleCoset shift(size_t shift_size) const {
       size_t initial_index = this->initial_index + shift_size;
       return CircleCoset{
         initial_index,
@@ -395,7 +360,7 @@ namespace circle_math {
       };
     }
 
-    CircleCoset conjugate() {
+    CircleCoset conjugate() const {
       size_t initial_index = ((CONFIG::modulus.limbs[0] + 1) - this->initial_index) & (CONFIG::modulus.limbs[0]);
       size_t step_size = ((CONFIG::modulus.limbs[0] + 1) - this->step_size) & (CONFIG::modulus.limbs[0]);
       return CircleCoset{
@@ -406,5 +371,74 @@ namespace circle_math {
         this->log_size
       };
     }
+
+    template <typename C, typename U>
+    friend std::ostream& operator<<(std::ostream& os, const CircleCoset<C, U>& coset) {
+        os << "CircleCoset { "
+          << "initial_index: " << coset.initial_index << ", "
+          << "initial_point: " << coset.initial_point << ", "
+          << "step_size: " << coset.step_size << ", "
+          << "step: " << coset.step << ", "
+          << "log_size: " << coset.log_size
+          << " }";
+        return os;
+    }
+  };
+  template <typename CONFIG, class T>
+  class CircleDomain {
+  public:
+    typedef CirclePoint<CONFIG, T> Point;
+    CircleCoset<CONFIG, T> coset;
+    // Constructors
+    // CircleDomain(size_t initial_index, uint32_t log_size)
+    //     : coset(initial_index, log_size) {}
+    CircleDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {}
+    CircleDomain<CONFIG, T>(uint32_t log_size) : coset(CircleCoset<CONFIG, T>::half_odds(log_size - 1)) {}
+
+    // static CircleDomain coset_shifted(uint32_t log_shift, uint32_t log_size) {
+    //   return CircleDomain(CircleCoset<CONFIG, T>::coset_shifted(log_shift, log_size));
+    // }
+
+    // static CircleDomain subgroup(uint32_t log_size) {
+    //   return CircleDomain(CircleCoset<CONFIG, T>::subgroup(log_size));
+    // }
+
+    // static CircleDomain odds(uint32_t log_size) {
+    //   return CircleDomain(CircleCoset<CONFIG, T>::odds(log_size));
+    // }
+
+    // static CircleDomain half_odds(uint32_t log_size) {
+    //   return CircleDomain(CircleCoset<CONFIG, T>::half_odds(log_size));
+    // }
+
+    // Override log_size method
+    size_t lg_size() const {
+      return coset.lg_size() + 1;
+    }
+
+    // Forward other methods to coset
+    size_t size() const {
+      return 1 << this->lg_size();
+    }
+
+    // CircleDomain dbl() const {
+    //   return CircleDomain(coset.dbl());
+    // }
+
+    size_t index_at(size_t index) const {
+      return coset.index_at(index);
+    }
+
+    Point at(size_t index) const {
+      return coset.at(index);
+    }
+
+    CircleDomain shift(size_t shift_size) const {
+      return CircleDomain(coset.shift(shift_size));
+    }
+
+    // CircleDomain conjugate() const {
+    //   return CircleDomain(coset.conjugate());
+    // }
   };
 }
