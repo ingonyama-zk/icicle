@@ -173,7 +173,7 @@ namespace params_gen {
   static constexpr unsigned num_of_reductions =                                                                        \
     params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
 
-#define TWIDDLES(modulus, rou)                                                                                         \
+#define TWIDDLES(modulus)                                                                                         \
   static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
   static constexpr storage_array<omegas_count, limbs_count> inv =                                                      \
     params_gen::template get_invs<limbs_count, omegas_count>(modulus, montgomery_r_sqr, mont_inv_modulus);

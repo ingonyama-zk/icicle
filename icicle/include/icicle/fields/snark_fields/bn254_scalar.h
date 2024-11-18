@@ -12,7 +12,7 @@ namespace bn254 {
 
     static constexpr storage<8> rou = {0x725b19f0, 0x9bd61b6e, 0x41112ed4, 0x402d111e,
                                        0x8ef62abc, 0x00e0a7eb, 0xa58a7e85, 0x2a3c09f0};
-    TWIDDLES(modulus, rou)
+    TWIDDLES(modulus)
   };
 
   /**

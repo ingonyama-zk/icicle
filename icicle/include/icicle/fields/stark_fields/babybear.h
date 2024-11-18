@@ -11,7 +11,7 @@ namespace babybear {
     PARAMS(modulus)
 
     static constexpr storage<1> rou = {0x00000089};
-    TWIDDLES(modulus, rou)
+    TWIDDLES(modulus)
 
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 11;

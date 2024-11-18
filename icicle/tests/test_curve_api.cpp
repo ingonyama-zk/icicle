@@ -46,6 +46,11 @@ public:
     if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_ref_target = "CPU";
+          #ifdef BARRET
+  ICICLE_LOG_INFO << "USING BARRET MULT\n";
+  #else
+  ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+  #endif
   }
   static void TearDownTestSuite()
   {
@@ -355,6 +360,8 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
+  ICICLE_LOG_INFO << "a: "<<a;
+  ICICLE_LOG_INFO << "b: "<<b;
   ASSERT_EQ(true, TypeParam::is_on_curve(a) && TypeParam::is_on_curve(b));               // rand is on curve
   ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
   ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
@@ -369,6 +376,11 @@ TYPED_TEST(CurveSanity, ScalarMultTest)
 {
   const auto point = TypeParam::rand_host();
   const auto scalar = scalar_t::rand_host();
+  #ifndef BARRET
+  const auto barret_scalar = scalar_t::from_montgomery(scalar);
+  #else
+  const auto barret_scalar = scalar;
+  #endif
 
   START_TIMER(main)
   const auto mult = scalar * point;
@@ -378,7 +390,7 @@ TYPED_TEST(CurveSanity, ScalarMultTest)
   START_TIMER(ref)
   for (int i = 0; i < scalar_t::NBITS; i++) {
     if (i > 0) { expected_mult = TypeParam::dbl(expected_mult); }
-    if (scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
+    if (barret_scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
   }
   END_TIMER(ref, "scalar mult double-and-add", true);
 

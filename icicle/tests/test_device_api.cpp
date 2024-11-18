@@ -28,6 +28,11 @@ public:
     icicle_load_backend_from_env_or_default();
     s_registered_devices = get_registered_devices_list();
     ASSERT_GT(s_registered_devices.size(), 0);
+          #ifdef BARRET
+  ICICLE_LOG_INFO << "USING BARRET MULT\n";
+  #else
+  ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+  #endif
   }
   static void TearDownTestSuite() {}
 

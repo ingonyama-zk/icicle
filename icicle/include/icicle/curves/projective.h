@@ -46,8 +46,11 @@ public:
   {
     return {FF::from_montgomery(point.x), FF::from_montgomery(point.y), FF::from_montgomery(point.z)};
   }
-
+#ifdef BARRET
   static HOST_DEVICE_INLINE Projective generator() { return {Gen::gen_x, Gen::gen_y, FF::one()}; }
+  #else
+  static HOST_DEVICE_INLINE Projective generator() { return {FF::to_montgomery(Gen::gen_x), FF::to_montgomery(Gen::gen_y), FF::one()}; }
+  #endif
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
 
@@ -160,15 +163,7 @@ public:
     const FF t22 = t01 - t20;                                                        // t22 ← t01 − t20   < 2
     const FF t23 =
       FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t17)); // t23 ← b3 · t17    < 2
-    const auto t24 = FF::mul_wide(t12, t23);                                         // t24 ← t12 · t23   < 2
-    const auto t25 = FF::mul_wide(t07, t22);                                         // t25 ← t07 · t22   < 2
-    const FF X3 = FF::reduce(t25 - t24);                                             // X3 ← t25 − t24    < 2
-    const auto t27 = FF::mul_wide(t23, t19);                                         // t27 ← t23 · t19   < 2
-    const auto t28 = FF::mul_wide(t22, t21);                                         // t28 ← t22 · t21   < 2
-    const FF Y3 = FF::reduce(t28 + t27);                                             // Y3 ← t28 + t27    < 2
-    const auto t30 = FF::mul_wide(t19, t07);                                         // t30 ← t19 · t07   < 2
-    const auto t31 = FF::mul_wide(t21, t12);                                         // t31 ← t21 · t12   < 2
-    const FF Z3 = FF::reduce(t31 + t30);                                             // Z3 ← t31 + t30    < 2
+    // #ifdef __CUDA_ARCH__
     // const auto t24 = FF::mul_widez(t12.limbs_storage, t23.limbs_storage);                                         // t24 ← t12 · t23   < 2
     // const auto t25 = FF::mul_widez(t07.limbs_storage, t22.limbs_storage);                                         // t25 ← t07 · t22   < 2
     // typename FF::Wide W3 = typename FF::Wide{t25} - typename FF::Wide{t24};                                             // X3 ← t25 − t24    < 2
@@ -184,6 +179,17 @@ public:
     // W3 = typename FF::Wide{t31} + typename FF::Wide{t30};                                             // Z3 ← t31 + t30    < 2
     // FF::redc_wide_inplacez(W3.limbs_storage);                                             // Z3 ← t31 + t30    < 2
     // const auto Z3 = FF::Wide::get_lower(W3);
+    // #else
+    const auto t24 = FF::mul_wide(t12, t23);                                         // t24 ← t12 · t23   < 2
+    const auto t25 = FF::mul_wide(t07, t22);                                         // t25 ← t07 · t22   < 2
+    const FF X3 = FF::reduce(t25 - t24);                                             // X3 ← t25 − t24    < 2
+    const auto t27 = FF::mul_wide(t23, t19);                                         // t27 ← t23 · t19   < 2
+    const auto t28 = FF::mul_wide(t22, t21);                                         // t28 ← t22 · t21   < 2
+    const FF Y3 = FF::reduce(t28 + t27);                                             // Y3 ← t28 + t27    < 2
+    const auto t30 = FF::mul_wide(t19, t07);                                         // t30 ← t19 · t07   < 2
+    const auto t31 = FF::mul_wide(t21, t12);                                         // t31 ← t21 · t12   < 2
+    const FF Z3 = FF::reduce(t31 + t30);                                             // Z3 ← t31 + t30    < 2
+    // #endif
     return {X3, Y3, Z3};
   }
 
@@ -194,6 +200,9 @@ public:
 
   friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point)
   {
+    #ifndef BARRET
+    scalar = SCALAR_FF::from_montgomery(scalar);
+    #endif
     // Precompute points: P, 2P, ..., (2^window_size - 1)P
     constexpr unsigned window_size =
       4; // 4 seems fastest. Optimum is minimizing EC add and depends on the field size. for 256b it's 4.

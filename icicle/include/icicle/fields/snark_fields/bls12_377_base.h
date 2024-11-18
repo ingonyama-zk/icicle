@@ -13,7 +13,7 @@ namespace bls12_377 {
 
     static constexpr storage<12> rou = {0xc563b9a1, 0x7eca603c, 0x06fe0bc3, 0x06df0a43, 0x0ddff8c6, 0xb44d994a,
                                         0x4512a3d4, 0x40fbe05b, 0x8aeffc9b, 0x30f15248, 0x05198a80, 0x0036a92e};
-    TWIDDLES(modulus, rou)
+    TWIDDLES(modulus)
 
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 5;

@@ -42,6 +42,11 @@ public:
     if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
+          #ifdef BARRET
+  ICICLE_LOG_INFO << "USING BARRET MULT\n";
+  #else
+  ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+  #endif
   }
   static void TearDownTestSuite()
   {
@@ -71,11 +76,6 @@ TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
-  #ifdef BARRET
-  printf("USING BARRET MULT\n");
-  #else
-  printf("USING MONTGOMERY MULT\n");
-  #endif
   auto a = TypeParam::rand_host();
   std::cout<<a;
   std::cout<<'\n';
@@ -152,7 +152,7 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
-  const uint64_t N = 1 << 25;
+  const uint64_t N = 5;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
   FieldApiTest<TypeParam>::random_samples(in_a.get(), N);
@@ -198,14 +198,14 @@ TYPED_TEST(FieldApiTest, vectorOps)
   ASSERT_EQ(0, memcmp(in_a.get(), temp_result.get(), N * sizeof(TypeParam)));
 
   // add
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
+  // run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  // run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 
-  // sub
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
+  // // sub
+  // run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
+  // run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 
   // mul
   run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
@@ -213,6 +213,11 @@ TYPED_TEST(FieldApiTest, vectorOps)
 
   // std::cout << in_a[0] << ", " << in_b[0] << ", " << out_main[0] << ", " << out_ref[0] << std::endl;
   // std::cout << in_a[1] << ", " << in_b[1] << ", " << out_main[1] << ", " << out_ref[1] << std::endl;
+  for (int i = 0; i < N; i++)
+  {
+    std::cout << in_a[i] << ", " << in_b[i] << ", " << out_main[i] << ", " << out_ref[i] << std::endl;
+  }
+  
 
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));

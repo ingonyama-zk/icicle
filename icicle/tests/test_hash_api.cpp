@@ -45,6 +45,11 @@ public:
     s_reference_target = "CPU";
     s_registered_devices = get_registered_devices_list();
     ASSERT_GE(s_registered_devices.size(), 1);
+          #ifdef BARRET
+  ICICLE_LOG_INFO << "USING BARRET MULT\n";
+  #else
+  ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+  #endif
   }
   static void TearDownTestSuite()
   {

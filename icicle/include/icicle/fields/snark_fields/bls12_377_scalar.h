@@ -13,7 +13,7 @@ namespace bls12_377 {
 
     static constexpr storage<8> rou = {0xec2a895e, 0x476ef4a4, 0x63e3f04a, 0x9b506ee3,
                                        0xd1a8a12f, 0x60c69477, 0x0cb92cc1, 0x11d4b7f6};
-    TWIDDLES(modulus, rou)
+    TWIDDLES(modulus)
   };
 
   /**
