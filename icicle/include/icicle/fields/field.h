@@ -543,8 +543,6 @@ public:
     return mont_reduce(r, /* get_higher_half = */ true);
   }
 
-#else
-
   // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
   //   #pragma GCC optimize("no-strict-aliasing")
   // #endif
@@ -554,6 +552,8 @@ public:
     Wide xy = mul_wide(xs, ys); // full mult
     return reduce(xy);          // reduce mod p
   }
+
+#ifdef GARBAGE
 
   // #include <x86intrin.h>
 
@@ -817,12 +817,11 @@ public:
   #endif
     return z;
   }
+#endif
 
   // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
   //   #pragma GCC reset_options
   // #endif
-
-#endif // __CUDACC__
 
   /*GNARK CODE END*/
 
