@@ -64,10 +64,10 @@ namespace quotient {
             CF *flat_denominators) {
 
             for (unsigned int i = 0; i < sample_size; i++) {
-                CF prx = CF{sample_batches[i].point.x.real, sample_batches[i].point.x.im1};
-                CF pry = CF{sample_batches[i].point.y.real, sample_batches[i].point.y.im1};
-                CF pix = CF{sample_batches[i].point.x.im2, sample_batches[i].point.x.im3};
-                CF piy = CF{sample_batches[i].point.y.im2, sample_batches[i].point.y.im3};
+                CF prx = CF{sample_batches[i].point->x.real, sample_batches[i].point->x.im1};
+                CF pry = CF{sample_batches[i].point->y.real, sample_batches[i].point->y.im1};
+                CF pix = CF{sample_batches[i].point->x.im2, sample_batches[i].point->x.im3};
+                CF piy = CF{sample_batches[i].point->y.im2, sample_batches[i].point->y.im3};
 
                 CF first_substraction = CF{prx.real - domain_point.x, prx.imaginary};
                 CF second_substraction = CF{pry.real - domain_point.y, pry.imaginary};
@@ -77,26 +77,26 @@ namespace quotient {
         }
     }
 
-    // // template <typename QP, typename QF>
-    // // std::ostream& operator<<(std::ostream& os, const ColumnSampleBatch<QP, QF>& batch) {
-    // //     os << "ColumnSampleBatch {\n";
-    // //     os << "  point: " << batch.point << "\n";
-    // //     os << "  columns: [";
-    // //     for (uint32_t i = 0; i < batch.size; ++i) {
-    // //         os << batch.columns[i];
-    // //         if (i < batch.size - 1) os << ", ";
-    // //     }
-    // //     os << "]\n";
-    // //     os << "  values: [";
-    // //     for (uint32_t i = 0; i < batch.size; ++i) {
-    // //         os << batch.values[i];
-    // //         if (i < batch.size - 1) os << ", ";
-    // //     }
-    // //     os << "]\n";
-    // //     os << "  size: " << batch.size << "\n";
-    // //     os << "}\n";
-    // //     return os;
-    // // }
+    template <typename QP, typename QF>
+    std::ostream& operator<<(std::ostream& os, const ColumnSampleBatch<QP, QF>& batch) {
+        os << "ColumnSampleBatch {\n";
+        os << "  point: " << batch.point << "\n";
+        os << "  columns: [";
+        for (uint32_t i = 0; i < batch.size; ++i) {
+            os << batch.columns[i];
+            if (i < batch.size - 1) os << ", ";
+        }
+        os << "]\n";
+        os << "  values: [";
+        for (uint32_t i = 0; i < batch.size; ++i) {
+            os << batch.values[i];
+            if (i < batch.size - 1) os << ", ";
+        }
+        os << "]\n";
+        os << "  size: " << batch.size << "\n";
+        os << "}\n";
+        return os;
+    }
 
     template <typename QP, typename QF, typename F>
     __global__ void column_line_and_batch_random_coeffs(
@@ -119,7 +119,7 @@ namespace quotient {
             for(size_t j = 0; j < sample_batches[tid].size; ++j) {
                 QF sampled_value = sample_batches[tid].values[j];
                 alpha = alpha * random_coefficient; 
-                QP point = sample_batches[tid].point;
+                QP point = *sample_batches[tid].point;
                 QF value = sampled_value; 
 
                 size_t sampled_offset = sample_batches_offset + (j * 3);
@@ -185,11 +185,13 @@ namespace quotient {
     }
 
     template <typename QP, typename QF>
-    __global__ void set_columns_and_values_pointers(ColumnSampleBatch<QP, QF> *d_samples, uint32_t **d_columns_ptrs, QF **d_values_ptrs, int sample_size) {
+    __global__ void set_columns_and_values_pointers(ColumnSampleBatch<QP, QF> *d_samples, uint32_t **d_columns_ptrs, QF **d_values_ptrs, QP **d_point_ptrs, int sample_size) {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < sample_size) {
+
             d_samples[i].columns = d_columns_ptrs[i];
             d_samples[i].values = d_values_ptrs[i];
+            d_samples[i].point = d_point_ptrs[i];
         }
     }
 
@@ -200,7 +202,7 @@ namespace quotient {
         uint32_t domain_log_size,
         F *columns, // 2d number_of_columns * domain_size elements
         uint32_t number_of_columns,
-        QF random_coefficient,
+        QF &random_coefficient,
         ColumnSampleBatch<QP, QF> *samples,
         uint32_t sample_size,
         uint32_t flattened_line_coeffs_size,
@@ -224,8 +226,10 @@ namespace quotient {
         ColumnSampleBatch<QP, QF> *d_samples;
         uint32_t **d_columns_ptrs;
         QF **d_values_ptrs;
+        QP **d_point_ptrs;
         uint32_t **h_columns_ptrs;
         QF **h_values_ptrs;
+        QP **h_point_ptrs;
         if (cfg.are_sample_points_on_device) {
             d_samples = samples;
         }
@@ -233,6 +237,7 @@ namespace quotient {
             CHK_IF_RETURN(cudaMallocAsync(&d_samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, stream));
             h_columns_ptrs = new uint32_t*[sample_size];
             h_values_ptrs = new QF*[sample_size];
+            h_point_ptrs = new QP*[sample_size];
 
             for (int i = 0; i < sample_size; ++i) {
                 // Allocate device memory for columns and values for each struct
@@ -246,20 +251,24 @@ namespace quotient {
                     h_columns_ptrs[i] = nullptr;
                     h_values_ptrs[i] = nullptr;
                 }
+                cudaMallocAsync(&h_point_ptrs[i], sizeof(QP), stream);
+                cudaMemcpyAsync(h_point_ptrs[i], samples[i].point, sizeof(QP), cudaMemcpyHostToDevice, stream);
             }
             // Allocate device memory to store the arrays of pointers for columns and values
             CHK_IF_RETURN(cudaMallocAsync(&d_columns_ptrs, sizeof(uint32_t*) * sample_size, stream));
             CHK_IF_RETURN(cudaMallocAsync(&d_values_ptrs, sizeof(QF*) * sample_size, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&d_point_ptrs, sizeof(QP*) * sample_size, stream));
 
             // Copy the host arrays of pointers to device memory
             CHK_IF_RETURN(cudaMemcpyAsync(d_columns_ptrs, h_columns_ptrs, sizeof(uint32_t*) * sample_size, cudaMemcpyHostToDevice, stream));
             CHK_IF_RETURN(cudaMemcpyAsync(d_values_ptrs, h_values_ptrs, sizeof(QF*) * sample_size, cudaMemcpyHostToDevice, stream));
+            CHK_IF_RETURN(cudaMemcpyAsync(d_point_ptrs, h_point_ptrs, sizeof(QP*) * sample_size, cudaMemcpyHostToDevice, stream));
 
             // Copy the struct array from host to device (with placeholder pointers)
             CHK_IF_RETURN(cudaMemcpyAsync(d_samples, samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, cudaMemcpyHostToDevice, stream));
 
             // Kernel to set the `columns` and `values` pointers in the device struct array
-            set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, sample_size);
+            set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
         }
         
         QF *d_batch_random_coeffs;

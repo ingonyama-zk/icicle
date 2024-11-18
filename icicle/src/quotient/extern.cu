@@ -6,7 +6,7 @@ using namespace field_config;
 #include "utils/utils.h"
 
 namespace quotient {
-    extern "C" cudaError_t CONCAT_EXPAND(FIELD, accumulate_quotients_cuda)(
+    extern "C" cudaError_t CONCAT_EXPAND(FIELD, accumulate_quotients)(
         uint32_t half_coset_initial_index,
         uint32_t half_coset_step_size,
         uint32_t domain_log_size,

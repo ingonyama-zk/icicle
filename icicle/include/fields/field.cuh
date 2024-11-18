@@ -737,13 +737,13 @@ public:
   friend std::ostream& operator<<(std::ostream& os, const Field& xs)
   {
     std::stringstream hex_string;
-    hex_string << std::setfill('0');
+    hex_string << std::hex << std::setfill('0');
 
     for (int i = 0; i < TLC; i++) {
       hex_string << std::setw(8) << xs.limbs_storage.limbs[TLC - i - 1];
     }
 
-    os << hex_string.str();
+    os << "0x" << hex_string.str();
     return os;
   }
 

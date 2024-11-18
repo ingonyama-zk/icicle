@@ -131,7 +131,7 @@ pub fn fold_circle_into_line(
 }
 
 mod _fri {
-    use super::{CudaError, QuarticExtensionField, FriConfig, ScalarField};
+    use super::{CudaError, FriConfig, QuarticExtensionField, ScalarField};
 
     extern "C" {
         #[link_name = "m31_fold_line"]

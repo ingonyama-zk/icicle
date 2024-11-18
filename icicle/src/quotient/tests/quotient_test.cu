@@ -60,7 +60,7 @@ int main(int argc, char** argv)
   uint32_t col_indexes[] = {0, 1};
   QF col_vals[] = {a,b};
   QP gen = {QF{1, 0, 478637715, 513582971}, QF{992285211, 649143431, 740191619, 1186584352}};
-  quotient::ColumnSampleBatch<QP, QF> sample = quotient::ColumnSampleBatch<QP, QF>{gen, col_indexes, col_vals, 2};
+  quotient::ColumnSampleBatch<QP, QF> sample = quotient::ColumnSampleBatch<QP, QF>{&gen, col_indexes, col_vals, 2};
   quotient::ColumnSampleBatch<QP, QF> sample_batches[] = {sample, sample, sample};
   uint32_t sample_size = 3;
   uint32_t flattened_line_coeffs_size = 18;
@@ -82,6 +82,10 @@ int main(int argc, char** argv)
     cfg,
     result
   );
+
+  for (int i = 0; i < 10; i++) {
+    std::cout << result[i] << " ";
+  }
 
   // circle_math::CircleDomain<m31::fp_config, m31::scalar_t> domain = circle_math::CircleDomain<m31::fp_config, m31::scalar_t>(domain_log_size);
   // std::cout << domain.coset;

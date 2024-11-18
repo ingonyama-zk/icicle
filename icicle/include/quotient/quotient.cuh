@@ -8,7 +8,7 @@
 namespace quotient {
     template <typename QP, typename QF>
     struct ColumnSampleBatch {
-        QP point;
+        QP *point;
         uint32_t *columns;
         QF *values;
         uint32_t size;
@@ -42,7 +42,7 @@ namespace quotient {
         uint32_t domain_log_size,
         F *columns, // 2d number_of_columns * domain_size elements
         uint32_t number_of_columns,
-        QF random_coefficient,
+        QF &random_coefficient,
         ColumnSampleBatch<QP, QF> *samples,
         uint32_t sample_size,
         uint32_t flattened_line_coeffs_size,
