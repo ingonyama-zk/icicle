@@ -230,12 +230,13 @@ namespace host_math {
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
-  static constexpr HOST_INLINE void multiply_mont_32(const uint32_t* a, const uint32_t* b, const uint32_t* q, const uint32_t* p, uint32_t* r)
+  static constexpr HOST_INLINE void
+  multiply_mont_32(const uint32_t* a, const uint32_t* b, const uint32_t* q, const uint32_t* p, uint32_t* r)
   {
     for (unsigned i = 0; i < NLIMBS_B; i++) {
       uint32_t A = 0, C = 0;
       r[0] = host_math::madc_cc(a[0], b[i], r[0], A);
-      uint32_t m = host_math::madc_cc(r[0], q[0], 0, C); //TODO - multiply inst
+      uint32_t m = host_math::madc_cc(r[0], q[0], 0, C); // TODO - multiply inst
       C = 0;
       host_math::madc_cc(m, p[0], r[0], C);
       for (unsigned j = 1; j < NLIMBS_A; j++) {
@@ -246,8 +247,9 @@ namespace host_math {
     }
   }
 
-   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
-  static HOST_INLINE void multiply_mont_64(const uint64_t* a, const uint64_t* b, const uint64_t* q, const uint64_t* p, uint64_t* r)
+  template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
+  static HOST_INLINE void
+  multiply_mont_64(const uint64_t* a, const uint64_t* b, const uint64_t* q, const uint64_t* p, uint64_t* r)
   {
     // printf("r0: ");
     // for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
@@ -262,7 +264,7 @@ namespace host_math {
       // printf("q0 %lu\n",q[0]);
       // printf("p0 %lu\n",p[0]);
       // printf("A %lu\n",A);
-      uint64_t m = host_math::madc_cc_64(r[0], q[0], 0, C); //TODO - multiply inst
+      uint64_t m = host_math::madc_cc_64(r[0], q[0], 0, C); // TODO - multiply inst
       // printf("m %lu\n",m);
       C = 0;
       host_math::madc_cc_64(m, p[0], r[0], C);
@@ -278,6 +280,43 @@ namespace host_math {
     //   printf(" %lu,",r[i]);
     // }
     // printf("\n");
+  }
+
+  /**
+   * @brief Perform  SOS reduction on a number in montgomery representation \p t in range [0, \p n ^2-1] limiting it to
+   * the range [0,2 \p n -1].
+   * @param t Number to be reduced. Must be in montgomery rep, and in range [0, \p n ^2-1].
+   * @param n Field modulus.
+   * @param n_tag Number such that \p n * \p n_tag modR = -1
+   * @param r Array in which to store the result in its upper half (Lower half is data that would be removed by
+   * dividing by R = shifting NLIMBS down).
+   * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
+   */
+  template <unsigned NLIMBS>
+  static HOST_INLINE void
+  sos_mont_reduction_64(const uint64_t* t, const uint64_t* n, const uint64_t* n_tag, uint64_t* r)
+  {
+    const unsigned s = NLIMBS / 2; // Divide by 2 because NLIMBS is 32bit and this function is 64bit
+
+    // Copy t to r as t is read-only
+    for (int i = 0; i < 2 * s; i++) {
+      r[i] = t[i];
+    }
+
+    for (int i = 0; i < s; i++) {
+      uint64_t c = 0;
+      uint64_t m = r[i] * n_tag[0];
+
+      for (int j = 0; j < s; j++) {
+        // r[i+j] = addc_cc(r[i+j], m * n[j], c);
+        r[i + j] = madc_cc_64(m, n[j], r[i + j], c);
+      }
+      // Propagate the carry to the remaining sublimbs
+      for (int carry_idx = s + i; carry_idx < 2 * s; carry_idx++) {
+        if (c == 0) { break; }
+        r[carry_idx] = add_cc(r[carry_idx], c, c);
+      }
+    }
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>

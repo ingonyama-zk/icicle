@@ -58,11 +58,11 @@ public:
     for (int i = 1; i < TLC; i++) {
       scalar.limbs[i] = 0;
     }
-  #ifdef BARRET
+#ifdef BARRET
     return Field{scalar};
-    #else
+#else
     return to_montgomery(Field{scalar});
-    #endif
+#endif
   }
 
   static HOST_INLINE Field omega(uint32_t logn)
@@ -70,11 +70,11 @@ public:
     if (logn == 0) { return one(); }
 
     if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega index"); }
-    #ifdef BARRET
+#ifdef BARRET
     Field omega = Field{CONFIG::rou};
-    #else
+#else
     Field omega = to_montgomery(Field{CONFIG::rou});
-    #endif
+#endif
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -87,11 +87,11 @@ public:
     if (logn > CONFIG::omegas_count) {
       THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega_inv index");
     }
-  #ifdef BARRET
+#ifdef BARRET
     Field omega = inverse(Field{CONFIG::rou});
-    #else
+#else
     Field omega = inverse(to_montgomery(Field{CONFIG::rou}));
-    #endif
+#endif
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -110,11 +110,11 @@ public:
     }
 #endif // __CUDA_ARCH__
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
-    #ifdef BARRET
+#ifdef BARRET
     return Field{inv.storages[logn - 1]};
-    #else
+#else
     return to_montgomery(Field{inv.storages[logn - 1]});
-    #endif
+#endif
   }
 
   static constexpr HOST_INLINE unsigned get_omegas_count()
@@ -357,11 +357,11 @@ public:
       value.limbs_storage.limbs[i] = distribution(generator);
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
-    #ifdef BARRET
+#ifdef BARRET
     return value;
-    #else
+#else
     return to_montgomery(value);
-    #endif
+#endif
   }
 
   static void rand_host_many(Field* out, int size)
@@ -465,30 +465,28 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
- static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& xs)
- {
-  //  Field xs_lo = Wide::get_lower(xs);
-  //  Field xs_hi = Wide::get_higher(xs);
-  //  Wide l1 = {};
-  //  Wide l2 = {};
-  //  host_math::template multiply_raw<TLC>(xs_lo.limbs_storage, get_m(), l1.limbs_storage);
-  //  Field l1_lo = Wide::get_lower(l1);
-  //  host_math::template multiply_raw<TLC>(l1_lo.limbs_storage, get_modulus<1>(), l2.limbs_storage);
-  //  Field l2_hi = Wide::get_higher(l2);
-  //  Field r = {};
-  //  add_limbs<TLC, false>(l2_hi.limbs_storage, xs_hi.limbs_storage, r.limbs_storage);
+  static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& xs, bool get_higher_half = false)
+  {
+    //  Field xs_lo = Wide::get_lower(xs);
+    //  Field xs_hi = Wide::get_higher(xs);
+    //  Wide l1 = {};
+    //  Wide l2 = {};
+    //  host_math::template multiply_raw<TLC>(xs_lo.limbs_storage, get_m(), l1.limbs_storage);
+    //  Field l1_lo = Wide::get_lower(l1);
+    //  host_math::template multiply_raw<TLC>(l1_lo.limbs_storage, get_modulus<1>(), l2.limbs_storage);
+    //  Field l2_hi = Wide::get_higher(l2);
+    //  Field r = {};
+    //  add_limbs<TLC, false>(l2_hi.limbs_storage, xs_hi.limbs_storage, r.limbs_storage);
 
-    Field r = Wide::get_lower(xs);
+    Field r = get_higher_half ? Wide::get_higher(xs) : Wide::get_lower(xs);
     Field p = Field{get_modulus<1>()};
-    if (p.limbs_storage.limbs[TLC-1] > r.limbs_storage.limbs[TLC-1])
-      return r;
+    if (p.limbs_storage.limbs[TLC - 1] > r.limbs_storage.limbs[TLC - 1]) return r;
     ff_storage r_reduced = {};
     uint64_t carry = 0;
     carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
     if (carry == 0) r = Field{r_reduced};
     return r;
   }
-
 
   HOST_DEVICE Field& operator=(Field const& other)
   {
@@ -502,7 +500,7 @@ public:
 #if 1
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
-    #ifdef __CUDA_ARCH__ //cuda
+  #ifdef __CUDA_ARCH__ // cuda
     #ifdef BARRET
     Wide xy = mul_wide(xs, ys); // full mult
     return reduce(xy);          // reduce mod p
@@ -519,14 +517,32 @@ public:
     return mont_mult(xs,ys);
     #endif
     #endif
+  #endif
   }
 
   static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
     Wide r = {};
-    host_math::multiply_mont_64<TLC>(xs.limbs_storage.limbs64, ys.limbs_storage.limbs64, get_mont_inv_modulus().limbs64, get_modulus<1>().limbs64, r.limbs_storage.limbs64);
+    host_math::multiply_mont_64<TLC>(
+      xs.limbs_storage.limbs64, ys.limbs_storage.limbs64, get_mont_inv_modulus().limbs64, get_modulus<1>().limbs64,
+      r.limbs_storage.limbs64);
     return mont_reduce(r);
   }
+
+  /**
+   * @brief Perform  SOS reduction on a number in montgomery representation \p t in range [0,p^2-1] (p is the field's
+   * modulus) limiting it to the range [0,2p-1].
+   * @param t Number to be reduced. Must be in montgomery rep, and in range [0,p^2-1].
+   * @return \p t mod p
+   */
+  static constexpr HOST_INLINE Field sos_mont_reduce(const Wide& t)
+  {
+    Wide r = {};
+    host_math::sos_mont_reduction_64<TLC>(
+      t.limbs_storage.limbs64, get_modulus<1>().limbs64, get_mont_inv_modulus().limbs64, r.limbs_storage.limbs64);
+    return mont_reduce(r, /* get_higher_half = */ true);
+  }
+
 #else
 
   // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
@@ -884,11 +900,17 @@ public:
   }
 #ifdef BARRET
   static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
-  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r_inv}; }
-  #else
-  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r_sqr}; }
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
+  {
+    return xs * Field{CONFIG::montgomery_r_inv};
+  }
+#else
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs)
+  {
+    return xs * Field{CONFIG::montgomery_r_sqr};
+  }
   static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) { return xs * Field{CONFIG::one}; }
-  #endif
+#endif
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Field neg(const Field& xs)
@@ -938,11 +960,11 @@ public:
     if (xs == zero()) return zero();
     constexpr Field one = {1};
     constexpr ff_storage modulus = CONFIG::modulus;
-    #ifdef BARRET
+#ifdef BARRET
     Field u = xs;
-    #else
+#else
     Field u = from_montgomery(xs);
-    #endif
+#endif
     Field v = Field{modulus};
     Field b = one;
     Field c = {};
@@ -965,11 +987,11 @@ public:
         c = c - b;
       }
     }
-    #ifdef BARRET
+#ifdef BARRET
     return (u == one) ? b : c;
-    #else
+#else
     return (u == one) ? to_montgomery(b) : to_montgomery(c);
-    #endif
+#endif
   }
 
   static constexpr HOST_DEVICE Field pow(Field base, int exp)
