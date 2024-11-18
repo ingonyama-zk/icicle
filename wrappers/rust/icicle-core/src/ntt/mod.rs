@@ -314,7 +314,7 @@ macro_rules! impl_ntt {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::ntt::*;
+            use $crate::ntt::*;
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_initialize_domain")]

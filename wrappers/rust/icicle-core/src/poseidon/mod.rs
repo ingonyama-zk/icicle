@@ -28,12 +28,10 @@ where
     <F as FieldImpl>::Config: PoseidonImpl<F>,
 {
     pub fn load(arity: usize, ctx: &DeviceContext) -> IcicleResult<Self> {
-        <<F as FieldImpl>::Config as PoseidonImpl<F>>::load(arity as u32, ctx).and_then(|handle| {
-            Ok(Self {
-                width: arity + 1,
-                handle,
-                phantom: PhantomData,
-            })
+        <<F as FieldImpl>::Config as PoseidonImpl<F>>::load(arity as u32, ctx).map(|handle| Self {
+            width: arity + 1,
+            handle,
+            phantom: PhantomData,
         })
     }
 
@@ -61,12 +59,10 @@ where
             domain_tag,
             ctx,
         )
-        .and_then(|handle| {
-            Ok(Self {
-                width: arity + 1,
-                handle,
-                phantom: PhantomData,
-            })
+        .map(|handle| Self {
+            width: arity + 1,
+            handle,
+            phantom: PhantomData,
         })
     }
 }
@@ -160,7 +156,7 @@ macro_rules! impl_poseidon {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon::{$field, $field_config, CudaError, DeviceContext, HashConfig, PoseidonHandle};
+            use $crate::poseidon::{$field, $field_config, CudaError, DeviceContext, HashConfig, PoseidonHandle};
             extern "C" {
                 #[link_name = concat!($field_prefix, "_poseidon_create_cuda")]
                 pub(crate) fn create(
