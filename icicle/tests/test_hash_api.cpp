@@ -915,7 +915,7 @@ TEST_F(HashApiTest, MerkleTreeLarge)
 // p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 
   #include "icicle/fields/field_config.h"
-  #include "icicle/hash/poseidon_constants/bn254_poseidon.h" 
+  #include "icicle/hash/poseidon_constants/bn254_poseidon.h"
 
 using namespace field_config;
 using namespace poseidon_constants_bn254;
