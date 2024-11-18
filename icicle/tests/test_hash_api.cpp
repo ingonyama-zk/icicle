@@ -594,7 +594,7 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
 {
-  // TODO add loop on devices (and change hash to one supported on gpu)
+  // TODO:add loop on devices (and change hash to one supported on gpu)
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
