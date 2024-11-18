@@ -368,11 +368,15 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 TYPED_TEST(CurveSanity, ScalarMultTest)
 {
   const auto point = TypeParam::rand_host();
-  const auto scalar = scalar_t::rand_host();
+  auto scalar = scalar_t::rand_host();
 
   START_TIMER(main)
   const auto mult = scalar * point;
   END_TIMER(main, "scalar mult window method", true);
+
+  #ifndef BARRET
+  scalar = scalar_t::from_montgomery(scalar);
+  #endif
 
   auto expected_mult = TypeParam::zero();
   START_TIMER(ref)

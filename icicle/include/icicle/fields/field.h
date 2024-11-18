@@ -1407,7 +1407,7 @@ public:
    * @param t Number to be reduced. Must be in montgomery rep, and in range [0,p^2-1].
    * @return \p t mod p
    */
-  static constexpr HOST_INLINE Field sos_mont_reduce(Wide& t)
+  static constexpr HOST_INLINE Field sos_mont_reduce(const Wide& t)
   {
     Wide r = {};
     host_math::sos_mont_reduction_64<TLC>(

@@ -67,9 +67,17 @@ namespace icicle {
       1,       // batch_size
       true,    // are_points_shared_in_batch
       false,   // are_scalars_on_device
+      #ifdef BARRET
       false,   // are_scalars_montgomery_form
+      #else
+      true,   // are_scalars_montgomery_form
+      #endif
       false,   // are_points_on_device
+      #ifdef BARRET
       false,   // are_points_montgomery_form
+      #else
+      true,   // are_points_montgomery_form
+      #endif
       false,   // are_results_on_device
       false,   // is_async
       nullptr, // ext
