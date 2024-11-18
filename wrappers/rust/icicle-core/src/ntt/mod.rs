@@ -440,6 +440,23 @@ macro_rules! impl_ntt_bench {
         use icicle_cuda_runtime::memory::HostSlice;
         use icicle_core::traits::GenerateRandom;
         use icicle_core::vec_ops::VecOps;
+        use std::env;
+
+        fn get_min_max_log_size(min_log2_default: u32, max_log2_default: u32) -> (u32, u32) {
+
+            fn get_env_log2(key: &str, default: u32) -> u32 {
+                env::var(key).unwrap_or_else(|_| default.to_string()).parse().unwrap_or(default)
+            }
+
+            let min_log2 = get_env_log2("MIN_LOG2", min_log2_default);
+            let max_log2 = get_env_log2("MAX_LOG2", max_log2_default);
+
+            assert!(min_log2 >= min_log2_default);
+            assert!(min_log2 < max_log2);
+
+            (min_log2, max_log2)
+        }
+
 
         fn ntt_for_bench<T, F: FieldImpl>(
             input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -477,7 +494,6 @@ macro_rules! impl_ntt_bench {
             use icicle_core::ntt::ntt;
             use icicle_core::ntt::NTTDomain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
-            use std::env;
             use icicle_cuda_runtime::memory::DeviceVec;
 
             let group_id = format!("{} NTT", $field_prefix);
@@ -485,23 +501,19 @@ macro_rules! impl_ntt_bench {
             group.sampling_mode(SamplingMode::Flat);
             group.sample_size(10);
 
+            const MIN_LOG2: u32 = 8; // min length = 2 ^ MIN_LOG2
             const MAX_LOG2: u32 = 25; // max length = 2 ^ MAX_LOG2
-
-            let max_log2 = env::var("MAX_LOG2")
-                .unwrap_or_else(|_| MAX_LOG2.to_string())
-                .parse::<u32>()
-                .unwrap_or(MAX_LOG2);
-
             const FAST_TWIDDLES_MODE: bool = false;
+
+            let (min_log2, max_log2) = get_min_max_log_size(MIN_LOG2, MAX_LOG2);
 
             INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
 
             let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
             let mut config = NTTConfig::<F>::default();
 
-            for test_size_log2 in (16..max_log2+1) {
-                for batch_size_log2 in [0, 8] {
-                // for batch_size_log2 in once(0).chain(8u32..=10u32) {
+            for test_size_log2 in (min_log2..=max_log2) {
+                for batch_size_log2 in [0, 6, 8, 10] {
                     let test_size = 1 << test_size_log2;
                     let batch_size = 1 << batch_size_log2;
                     let full_size = batch_size * test_size;
@@ -516,15 +528,15 @@ macro_rules! impl_ntt_bench {
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
 
-                    for is_on_device in [true] {
+                    for is_on_device in [true, false] {
 
                         let mut config = NTTConfig::default();
                         for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
                             for ordering in [
                                 Ordering::kNN,
-                                // Ordering::kNR, // times are ~ same as kNN
-                                // Ordering::kRN,
-                                // Ordering::kRR,
+                                Ordering::kNR, // times are ~ same as kNN
+                                Ordering::kRN,
+                                Ordering::kRR,
                                 Ordering::kNM,
                                 Ordering::kMN,
                             ] {
