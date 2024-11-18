@@ -207,7 +207,6 @@ pub fn accumulate_quotients(
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
     let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
-    let rand_coef_slice = [random_coef];
     unsafe {
         _quotient::accumulate_quotients(
             half_coset_initial_index,
@@ -259,9 +258,7 @@ pub fn accumulate_quotients_wrapped(
 }
 
 mod _quotient {
-    use super::{
-        CirclePoint, ColumnSampleBatchInternal, CudaError, QuarticExtensionField, QuotientConfig, ScalarField,
-    };
+    use super::{ColumnSampleBatchInternal, CudaError, QuarticExtensionField, QuotientConfig, ScalarField};
 
     extern "C" {
         #[link_name = "m31_accumulate_quotients"]
@@ -285,11 +282,6 @@ mod _quotient {
 pub(crate) mod tests {
     use super::*;
     use icicle_core::traits::FieldImpl;
-
-    extern "C" {
-        #[link_name = "print_point"]
-        pub(crate) fn spoint(point: *const CirclePoint<QuarticExtensionField>) -> CudaError;
-    }
 
     #[test]
     fn test_quotients() {
