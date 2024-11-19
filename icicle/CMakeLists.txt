@@ -138,8 +138,8 @@ if (CUDA_BACKEND)
 endif()
 
 if (METAL_BACKEND)
-  string(TOLOWER "${METAL_BACKEND}" CUDA_BACKEND_LOWER)
-  if (CUDA_BACKEND_LOWER STREQUAL "local")
+  string(TOLOWER "${METAL_BACKEND}" METAL_BACKEND_LOWER)
+  if (METAL_BACKEND_LOWER STREQUAL "local")
     # CUDA backend is local, no need to pull
     message(STATUS "Adding Metal backend from local path: icicle/backend/metal")
     add_subdirectory(backend/metal)
