@@ -8,14 +8,19 @@ extern "C" void CONCAT_EXPAND(FIELD, generate_scalars)(scalar_t* scalars, int si
   scalar_t::rand_host_many(scalars, size);
 }
 
-extern "C" void CONCAT_EXPAND(CURVE, sub)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
+extern "C" void CONCAT_EXPAND(FIELD, sub)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
 {
   *result = *scalar1 - *scalar2;
 }
 
-extern "C" void CONCAT_EXPAND(CURVE, add)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
+extern "C" void CONCAT_EXPAND(FIELD, add)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
 {
   *result = *scalar1 + *scalar2;
+}
+
+extern "C" void CONCAT_EXPAND(FIELD, mul)(scalar_t* scalar1, scalar_t* scalar2, scalar_t* result)
+{
+  *result = *scalar1 * *scalar2;
 }
 
 #ifdef EXT_FIELD
