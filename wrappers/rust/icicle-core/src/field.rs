@@ -175,20 +175,20 @@ macro_rules! impl_scalar_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_add")]
-                pub(crate) fn _add(
+                pub(crate) fn add(
                     a: *const $field_name,
                     b: *const $field_name,
                     result: *mut $field_name,
                 );
             }
 
-            fn add(
+            fn add_scalar(
                 a: *const $field_name,
                 b: *const $field_name
             ) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
-                    $field_prefix_ident::_add(
+                    $field_prefix_ident::add(
                         a as *const $field_name,
                         b as *const $field_name,
                         &mut result as *mut $field_name,
