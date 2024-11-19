@@ -5,6 +5,7 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
+use std::ops::{Add};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -45,6 +46,14 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u32; NUM_LIMBS]> for Field<NU
 impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
     fn from(limbs: [u32; NUM_LIMBS]) -> Self {
         Self { limbs, p: PhantomData }
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F> {
+    type Output = Self;
+    
+    fn add(self, other: Self) -> Self {
+        self //TODO:
     }
 }
 
@@ -148,7 +157,7 @@ macro_rules! impl_scalar_field {
 
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
-            use icicle_core::vec_ops::VecOpsConfig;
+            use icicle_core::{vec_ops::VecOpsConfig, traits::FieldImpl};
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
 
@@ -164,6 +173,29 @@ macro_rules! impl_scalar_field {
                     config: &VecOpsConfig,
                     output: *mut $field_name,
                 ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_add")]
+                pub(crate) fn _add(
+                    a: *const $field_name,
+                    b: *const $field_name,
+                    result: *mut $field_name,
+                );
+            }
+
+            fn add(
+                a: *const $field_name,
+                b: *const $field_name
+            ) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::_add(
+                        a as *const $field_name,
+                        b as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
             }
 
             pub(crate) fn convert_scalars_montgomery(
@@ -254,6 +286,12 @@ macro_rules! impl_field_tests {
             fn test_field_equality() {
                 initialize();
                 check_field_equality::<$field_name>()
+            }
+
+            #[test]
+            fn test_field_arithmetic() {
+                initialize();
+                check_field_arithmetic::<$field_name>()
             }
         }
     };
