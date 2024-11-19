@@ -184,6 +184,8 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     return cr;
   }
 
+  #ifdef BARRET
+
   template <unsigned NLIMBS, bool EVEN_PHASE>
   static DEVICE_INLINE void mad_row_msb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = NLIMBS)
   {
@@ -205,6 +207,8 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     }
     return;
   }
+
+  #endif
 
   template <unsigned NLIMBS>
   static DEVICE_INLINE uint32_t
@@ -341,6 +345,8 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     }
   }
 
+  #ifdef BARRET
+
   /**
    * A function that computes wide product \f$ rs = as \cdot bs \f$ that's correct for the higher NLIMBS + 1 limbs with a
    * small maximum error.
@@ -437,6 +443,7 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     }
   }
 
+#endif
   
   // The following algorithms are adaptations of
   // http://www.acsel-lab.com/arithmetic/arith23/data/1616a047.pdf,
@@ -642,7 +649,7 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     // static_assert(!(CONFIG::modulus.limbs[NLIMBS - 1] >> 30));
     storage<2*NLIMBS> rs = {0};
     sqr_raw(xs, rs);
-    redc_wide_inplace(rs); // after reduce_twopass, tmp's low NLIMBS limbs should represent a value in [0, 2*mod)
+    reduce_mont_inplace(rs); // after reduce_twopass, tmp's low NLIMBS limbs should represent a value in [0, 2*mod)
     return rs.get_lo();
   }
 // //add

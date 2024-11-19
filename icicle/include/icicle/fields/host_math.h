@@ -251,35 +251,18 @@ namespace host_math {
   static HOST_INLINE void
   multiply_mont_64(const uint64_t* a, const uint64_t* b, const uint64_t* q, const uint64_t* p, uint64_t* r)
   {
-    // printf("r0: ");
-    // for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
-    //   printf(" %lu,",r[i]);
-    // }
-    // printf("\n");
     for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
-      // printf("i %d\n", i);
       uint64_t A = 0, C = 0;
       r[0] = host_math::madc_cc_64(a[0], b[i], r[0], A);
-      // printf("r0 %lu\n",r[0]);
-      // printf("q0 %lu\n",q[0]);
-      // printf("p0 %lu\n",p[0]);
-      // printf("A %lu\n",A);
       uint64_t m = host_math::madc_cc_64(r[0], q[0], 0, C); // TODO - multiply inst
-      // printf("m %lu\n",m);
       C = 0;
       host_math::madc_cc_64(m, p[0], r[0], C);
-      // printf("c %lu\n",C);
       for (unsigned j = 1; j < NLIMBS_A / 2; j++) {
         r[j] = host_math::madc_cc_64(a[j], b[i], r[j], A);
         r[j - 1] = host_math::madc_cc_64(m, p[j], r[j], C);
       }
       r[NLIMBS_A / 2 - 1] = C + A;
     }
-    // printf("rf: ");
-    // for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
-    //   printf(" %lu,",r[i]);
-    // }
-    // printf("\n");
   }
 
   /**
@@ -316,6 +299,24 @@ namespace host_math {
         if (c == 0) { break; }
         r[carry_idx] = add_cc(r[carry_idx], c, c);
       }
+    }
+  }
+
+template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
+  static constexpr HOST_INLINE void
+  multiply_mont(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, const storage<NLIMBS_A>& qs, const storage<NLIMBS_A>& ps, storage<NLIMBS_A + NLIMBS_B>& rs)
+  {
+    static_assert(
+      (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
+      "odd number of limbs is not supported\n");
+    if constexpr (USE_32) {
+      multiply_mont_32<NLIMBS_A, NLIMBS_B>(as.limbs, bs.limbs, qs.limbs, ps.limbs, rs.limbs);
+      return;
+    } else if constexpr (NLIMBS_A == 1 || NLIMBS_B == 1) {
+      multiply_mont_32<NLIMBS_A, NLIMBS_B>(as.limbs, bs.limbs, qs.limbs, ps.limbs, rs.limbs);
+      return;
+    } else {
+      multiply_mont_64<NLIMBS_A, NLIMBS_B>(as.limbs64, bs.limbs64, qs.limbs64, ps.limbs64, rs.limbs64);
     }
   }
 

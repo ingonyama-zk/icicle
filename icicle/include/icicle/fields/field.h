@@ -308,6 +308,8 @@ public:
 #endif
   }
 
+  #ifdef BARRET
+
   static HOST_DEVICE_INLINE void
   multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
   {
@@ -329,6 +331,8 @@ public:
     return host_math::template multiply_raw<TLC>(as, bs, rs);
 #endif
   }
+
+  #endif
 
 public:
   ff_storage limbs_storage;
@@ -417,6 +421,8 @@ public:
     return rs;
   }
 
+  #ifdef BARRET
+
   /**
    * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
    *
@@ -438,8 +444,7 @@ public:
    * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
    * will cause only 1 reduction to be performed.
    */
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs) //TODO = add reduce_mont_inplace
+  static constexpr HOST_DEVICE_INLINE Field barret_reduce(const Wide& xs) //TODO = add reduce_mont_inplace
   {
     // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
     Field xs_hi = Wide::get_higher_with_slack(xs);
@@ -464,21 +469,11 @@ public:
     return r;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& xs, bool get_higher_half = false)
-  {
-    //  Field xs_lo = Wide::get_lower(xs);
-    //  Field xs_hi = Wide::get_higher(xs);
-    //  Wide l1 = {};
-    //  Wide l2 = {};
-    //  host_math::template multiply_raw<TLC>(xs_lo.limbs_storage, get_m(), l1.limbs_storage);
-    //  Field l1_lo = Wide::get_lower(l1);
-    //  host_math::template multiply_raw<TLC>(l1_lo.limbs_storage, get_modulus<1>(), l2.limbs_storage);
-    //  Field l2_hi = Wide::get_higher(l2);
-    //  Field r = {};
-    //  add_limbs<TLC, false>(l2_hi.limbs_storage, xs_hi.limbs_storage, r.limbs_storage);
+  #endif
 
-    Field r = get_higher_half ? Wide::get_higher(xs) : Wide::get_lower(xs);
+  static constexpr HOST_DEVICE_INLINE Field mont_sub_modulus(const Wide& xs, bool get_higher = false)
+  {
+    Field r = get_higher? Wide::get_higher(xs) : Wide::get_lower(xs);
     Field p = Field{get_modulus<1>()};
     if (p.limbs_storage.limbs[TLC - 1] > r.limbs_storage.limbs[TLC - 1]) return r;
     ff_storage r_reduced = {};
@@ -486,6 +481,15 @@ public:
     carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
     if (carry == 0) r = Field{r_reduced};
     return r;
+  }
+
+  static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
+  {
+    #ifdef BARRET
+    return barret_reduce(xs);
+    #else
+    return mont_reduce(xs);
+    #endif
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
@@ -503,7 +507,7 @@ public:
   #ifdef __CUDA_ARCH__ // cuda
     #ifdef BARRET
     Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
+    return barret_reduce(xy);          // reduce mod p
     // return Wide::get_lower(xy);          // reduce mod p
     #else
       return sub_modulus<1>(Field{device_math::template mulmont_device<TLC>(xs.limbs_storage,ys.limbs_storage,get_modulus<1>(),get_mont_inv_modulus())});
@@ -511,7 +515,7 @@ public:
     #else
     #ifdef BARRET
       Wide xy = mul_wide(xs, ys); // full mult
-      return reduce(xy);          // reduce mod p
+      return barret_reduce(xy);          // reduce mod p
       // return Wide::get_lower(xy);
     #else
     return mont_mult(xs,ys);
@@ -523,10 +527,8 @@ public:
   static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
     Wide r = {};
-    host_math::multiply_mont_64<TLC>(
-      xs.limbs_storage.limbs64, ys.limbs_storage.limbs64, get_mont_inv_modulus().limbs64, get_modulus<1>().limbs64,
-      r.limbs_storage.limbs64);
-    return mont_reduce(r);
+    host_math::multiply_mont<TLC>(xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
+    return mont_sub_modulus(r);
   }
 
   /**
@@ -535,12 +537,17 @@ public:
    * @param t Number to be reduced. Must be in montgomery rep, and in range [0,p^2-1].
    * @return \p t mod p
    */
-  static constexpr HOST_INLINE Field sos_mont_reduce(const Wide& t)
+  static constexpr HOST_INLINE Field mont_reduce(const Wide& t)
   {
+    #ifdef __CUDA_ARCH__
+    Wide r = t;
+    device_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
+    #else
     Wide r = {};
-    host_math::sos_mont_reduction_64<TLC>(
-      t.limbs_storage.limbs64, get_modulus<1>().limbs64, get_mont_inv_modulus().limbs64, r.limbs_storage.limbs64);
-    return mont_reduce(r, /* get_higher_half = */ true);
+    host_math::template sos_mont_reduction_64<TLC>(
+      t.limbs_storage.limbs64, get_modulus<1>().limbs64, get_mont_inv_modulus().limbs64, r.limbs_storage.limbs64); //TODO enable 32
+    #endif
+    return mont_sub_modulus(r, true);
   }
 
   // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
@@ -553,7 +560,7 @@ public:
     return reduce(xy);          // reduce mod p
   }
 
-#ifdef GARBAGE
+#if 0
 
   // #include <x86intrin.h>
 

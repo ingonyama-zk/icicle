@@ -510,7 +510,7 @@ TYPED_TEST(CurveSanity, MontSosReduction)
     START_TIMER(mont_sos_reduction);
     for (int i = 0; i < n; i++) {
       auto ab_no_mod = scalar_t::mul_wide(as[i], bs[i]);
-      abs[i] = scalar_t::sos_mont_reduce(ab_no_mod);
+      abs[i] = scalar_t::reduce(ab_no_mod);
     }
     END_TIMER(mont_sos_reduction, "CPU-Montgomery SOS reduction", true);
 
