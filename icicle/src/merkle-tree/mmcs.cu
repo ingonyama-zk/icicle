@@ -306,7 +306,6 @@ namespace merkle_tree {
     D* caps;
     if (caps_mode) { caps = static_cast<D*>(malloc(caps_len * sizeof(D))); }
 
-#ifdef MERKLE_DEBUG
     std::cout << "MMCS DEBUG" << std::endl;
     std::cout << "====================================" << std::endl;
     std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;
@@ -326,7 +325,6 @@ namespace merkle_tree {
     std::cout << "Allocating " << subtree_leaves_memory * number_of_streams << " bytes for leaves" << std::endl;
     std::cout << "Allocating " << subtree_aux_elements * number_of_streams << " elements for aux leaves" << std::endl;
     std::cout << std::endl;
-#endif
 
     // Allocate memory for the states, injected leaves (aux) and digests
     // These are shared by streams in a pool

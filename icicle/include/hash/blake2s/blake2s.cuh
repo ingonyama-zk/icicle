@@ -75,7 +75,6 @@ namespace blake2s {
     const Matrix<BYTE>* leaves,
     unsigned int number_of_inputs,
     BYTE* digests,
-    const Blake2s* hasher,
     const merkle_tree::TreeBuilderConfig& tree_config);
   }
 

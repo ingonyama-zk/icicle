@@ -33,9 +33,9 @@ namespace blake2s {
     const Matrix<BYTE>* leaves,
     unsigned int number_of_inputs,
     BYTE* digests,
-    const Blake2s* hasher,
     const merkle_tree::TreeBuilderConfig& tree_config)
   {
-    return merkle_tree::mmcs_commit<BYTE, BYTE>(leaves, number_of_inputs, digests, *hasher, *hasher, tree_config);
+    Blake2s hasher;
+    return merkle_tree::mmcs_commit<BYTE, BYTE>(leaves, number_of_inputs, digests, hasher, hasher, tree_config);
   }
 } // namespace blake2s

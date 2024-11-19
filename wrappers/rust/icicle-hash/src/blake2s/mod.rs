@@ -1,5 +1,6 @@
 use icicle_core::hash::HashConfig;
 use icicle_core::tree::TreeBuilderConfig;
+use icicle_core::Matrix;
 use icicle_cuda_runtime::error::CudaError;
 use icicle_cuda_runtime::memory::HostOrDeviceSlice;
 
@@ -24,6 +25,13 @@ extern "C" {
         height: u32,
         input_block_len: u32,
         tree_config: &TreeBuilderConfig,
+    ) -> CudaError;
+
+    pub(crate) fn blake2s_mmcs_commit_cuda(
+        leaves: *const Matrix,
+        number_of_inputs: u32,
+        digests: *mut u8,
+        tree_config: &TreeBuilderConfig
     ) -> CudaError;
 }
 
@@ -64,6 +72,22 @@ pub fn build_blake2s_merkle_tree(
             digests.as_mut_ptr(),
             height as u32,
             input_block_len as u32,
+            config,
+        )
+        .wrap()
+    }
+}
+
+pub fn build_blake2s_mmcs(
+    leaves: &Vec<Matrix>,
+    digests: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
+    config: &TreeBuilderConfig,
+) -> IcicleResult<()> {
+    unsafe {
+        blake2s_mmcs_commit_cuda(
+            leaves.as_ptr(),
+            leaves.len() as u32,
+            digests.as_mut_ptr(),
             config,
         )
         .wrap()

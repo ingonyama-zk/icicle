@@ -2,11 +2,11 @@
 pub(crate) mod tests {
     use icicle_core::{
         hash::HashConfig,
-        tree::{merkle_tree_digests_len, TreeBuilderConfig},
+        tree::{merkle_tree_digests_len, TreeBuilderConfig}, Matrix,
     };
     use icicle_cuda_runtime::memory::HostSlice;
 
-    use crate::blake2s::{blake2s, build_blake2s_merkle_tree};
+    use crate::blake2s::{blake2s, blake2s_mmcs_commit_cuda, build_blake2s_merkle_tree, build_blake2s_mmcs};
 
     #[test]
     fn single_hash_test() {
@@ -50,5 +50,43 @@ pub(crate) mod tests {
 
         build_blake2s_merkle_tree(leaves_slice, digests_slice, height, input_block_len, &config).unwrap();
         println!("Root: {:?}", digests_slice[0]);
+    }
+
+    #[test]
+    fn blake2s_mmcs_test() {
+        let mut config = TreeBuilderConfig::default();
+        config.arity = 2;
+        config.digest_elements = 32;
+        let log_max = 4;
+        let input_block_len = 4;
+
+        let copy_matrices = 2;
+        let mut matrices = vec![];
+
+        let mut keep_leaves = vec![];
+        for log in 1..log_max+1 {
+            let mut leaves = vec![0u32; 1 << log];
+            for i in 0..1<<log {
+                leaves[i] = i as u32;
+            }
+
+            for _ in 0..copy_matrices {
+                matrices.push(Matrix::from_slice(&leaves, input_block_len, 1 << log));
+            }
+            keep_leaves.push(leaves);
+        }
+        let digests_len = merkle_tree_digests_len(log_max as u32, 2, 32);
+        println!("Digests len: {}", digests_len);
+        let mut digests = vec![0u8; digests_len];
+        let digests_slice = HostSlice::from_mut_slice(&mut digests);
+        build_blake2s_mmcs(&matrices, digests_slice, &config).unwrap();
+        assert_eq!(digests[0], 42);
+
+        for j in 0..digests_len / 32 {
+            for i in 0..32 {
+                print!("{:02x?}", digests[digests.len() - 32 * (digests_len / 32 - 1 - j) - 32 + i]);
+            }
+            println!();
+        }
     }
 }

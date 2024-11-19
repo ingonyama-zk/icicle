@@ -27,10 +27,9 @@ int main(int argc, char* argv[])
   uint64_t number_of_leaves = pow(tree_arity, tree_height);
   uint64_t total_number_of_leaves = number_of_leaves * input_block_len;
 
-  bool are_inputs_on_device = true;
+  bool are_inputs_on_device = false;
 
   device_context::DeviceContext ctx = device_context::get_default_device_context();
-  Blake2s hasher;
 
   /// Use keep_rows to specify how many rows do you want to store
   int keep_rows = argc > 2 ? atoi(argv[2]) : tree_height + 1;
@@ -86,13 +85,14 @@ int main(int argc, char* argv[])
   tree_config.keep_rows = keep_rows;
   tree_config.digest_elements = digest_elements;
   START_TIMER(timer_merkle);
-  blake2s_mmcs_commit_cuda(leaves, number_of_inputs * copied_matrices, digests, &hasher, tree_config);
+  blake2s_mmcs_commit_cuda(leaves, number_of_inputs * copied_matrices, digests, tree_config);
   END_TIMER(timer_merkle, "Merkle tree built: ")
 
   for (int i = 0; i < digests_len; i++) {
     if (i % 32 == 0) { std::cout << std::endl; }
     printf("%.2X", digests[i]);
   }
+  printf("\n");
   free(digests);
   free(leaves);
 }
