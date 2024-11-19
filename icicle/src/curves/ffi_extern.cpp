@@ -15,6 +15,16 @@ extern "C" bool CONCAT_EXPAND(CURVE, eq)(projective_t* point1, projective_t* poi
            (point2->z == point_field_t::zero()));
 }
 
+extern "C" void CONCAT_EXPAND(CURVE, sub)(projective_t* point1, projective_t* point2, projective_t* result)
+{
+  *result = *point1 - *point2;
+}
+
+extern "C" void CONCAT_EXPAND(CURVE, add)(projective_t* point1, projective_t* point2, projective_t* result)
+{
+  *result = *point1 + *point2;
+}
+
 extern "C" void CONCAT_EXPAND(CURVE, to_affine)(projective_t* point, affine_t* point_out)
 {
   *point_out = projective_t::to_affine(*point);
@@ -44,6 +54,16 @@ extern "C" bool CONCAT_EXPAND(CURVE, g2_eq)(g2_projective_t* point1, g2_projecti
            (point1->z == g2_point_field_t::zero())) &&
          !((point2->x == g2_point_field_t::zero()) && (point2->y == g2_point_field_t::zero()) &&
            (point2->z == g2_point_field_t::zero()));
+}
+
+extern "C" void CONCAT_EXPAND(CURVE, g2_sub)(g2_projective_t* point1, g2_projective_t* point2, g2_projective_t* result)
+{
+  *result = *point1 - *point2;
+}
+
+extern "C" void CONCAT_EXPAND(CURVE, g2_add)(g2_projective_t* point1, g2_projective_t* point2, g2_projective_t* result)
+{
+  *result = *point1 + *point2;
 }
 
 extern "C" void CONCAT_EXPAND(CURVE, g2_to_affine)(g2_projective_t* point, g2_affine_t* point_out)
