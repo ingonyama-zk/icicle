@@ -30,6 +30,18 @@ pub fn check_affine_projective_convert<C: Curve>() {
     }
 }
 
+pub fn check_point_arithmetic<C: Curve>() {
+    let size = 1 << 10;
+    let projective_points_a = C::generate_random_projective_points(size);
+    let projective_points_b = C::generate_random_projective_points(size);
+
+    for i in 0..size {
+        let result1 = projective_points_a[i] + projective_points_b[i];
+        let result2 = result1 - projective_points_b[i];
+        assert_eq!(result2, projective_points_a[i]);
+    }
+}
+
 pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
 where
     C: Curve<BaseField = Field<BASE_LIMBS, F>>,
@@ -78,6 +90,23 @@ where
 
     assert_eq!(scalars_copy, scalars);
 }
+
+
+// pub fn check_field_arithmetic<F>()
+// where 
+//     F: FieldImpl,
+//     F::Config: GenerateRandom<F>,
+// {
+//     let size = 1 << 10;
+//     let scalars_a = F::Config::generate_random(size);
+//     let scalars_b = F::Config::generate_random(size);
+
+//     for i in 0..size {
+//         let result1 = scalars_a[i] + scalars_b[i];
+//         let result2 = result1 - scalars_b[i];
+//         assert_eq!(result2, scalars_a[i]);
+//     }
+// }
 
 pub fn check_points_convert_montgomery<C: Curve>()
 where
