@@ -84,12 +84,12 @@ namespace host_math {
     return result;
   }
 
-  static inline __host__ __uint128_t mul64(uint64_t x, uint64_t y)
-  {
-    uint64_t high, low;
-    asm("mulq %3" : "=d"(high), "=a"(low) : "a"(x), "r"(y) : "cc");
-    return (static_cast<__uint128_t>(high) << 64) | low;
-  }
+  // static inline __host__ __uint128_t mul64(uint64_t x, uint64_t y)
+  // {
+  //   uint64_t high, low;
+  //   asm("mulq %3" : "=d"(high), "=a"(low) : "a"(x), "r"(y) : "cc");
+  //   return (static_cast<__uint128_t>(high) << 64) | low;
+  // }
 
   static __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
   {
@@ -277,6 +277,43 @@ namespace host_math {
    */
   template <unsigned NLIMBS>
   static HOST_INLINE void
+  sos_mont_reduction_32(const uint32_t* t, const uint32_t* n, const uint32_t* n_tag, uint32_t* r)
+  {
+    const unsigned s = NLIMBS; // For similarity to the original algorithm
+
+    // Copy t to r as t is read-only
+    for (int i = 0; i < 2 * s; i++) {
+      r[i] = t[i];
+    }
+
+    for (int i = 0; i < s; i++) {
+      uint32_t c = 0;
+      uint32_t m = r[i] * n_tag[0];
+
+      for (int j = 0; j < s; j++) {
+        // r[i+j] = addc_cc(r[i+j], m * n[j], c);
+        r[i + j] = madc_cc(m, n[j], r[i + j], c);
+      }
+      // Propagate the carry to the remaining sublimbs
+      for (int carry_idx = s + i; carry_idx < 2 * s; carry_idx++) {
+        if (c == 0) { break; }
+        r[carry_idx] = add_cc(r[carry_idx], c, c);
+      }
+    }
+  }
+
+  /**
+   * @brief Perform  SOS reduction on a number in montgomery representation \p t in range [0, \p n ^2-1] limiting it to
+   * the range [0,2 \p n -1].
+   * @param t Number to be reduced. Must be in montgomery rep, and in range [0, \p n ^2-1].
+   * @param n Field modulus.
+   * @param n_tag Number such that \p n * \p n_tag modR = -1
+   * @param r Array in which to store the result in its upper half (Lower half is data that would be removed by
+   * dividing by R = shifting NLIMBS down).
+   * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
+   */
+  template <unsigned NLIMBS>
+  static HOST_INLINE void
   sos_mont_reduction_64(const uint64_t* t, const uint64_t* n, const uint64_t* n_tag, uint64_t* r)
   {
     const unsigned s = NLIMBS / 2; // Divide by 2 because NLIMBS is 32bit and this function is 64bit
@@ -299,6 +336,35 @@ namespace host_math {
         if (c == 0) { break; }
         r[carry_idx] = add_cc(r[carry_idx], c, c);
       }
+    }
+  }
+
+  /**
+   * @brief Perform  SOS reduction on a number in montgomery representation \p t in range [0, \p n ^2-1] limiting it to
+   * the range [0,2 \p n -1].
+   * @param t Number to be reduced. Must be in montgomery rep, and in range [0, \p n ^2-1].
+   * @param n Field modulus.
+   * @param n_tag Number such that \p n * \p n_tag modR = -1
+   * @param r Array in which to store the result in its upper half (Lower half is data that would be removed by
+   * dividing by R = shifting NLIMBS down).
+   * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
+   */
+  template <unsigned NLIMBS, bool USE_32 = false>
+  static HOST_INLINE void
+  sos_mont_reduction(
+    const storage<2*NLIMBS>& t, const storage<NLIMBS>& n, const storage<NLIMBS>& n_tag, storage<2*NLIMBS>& r)
+  {
+    static_assert(
+      NLIMBS % 2 == 0 || NLIMBS == 1,
+      "Odd number of limbs (That is not 1) is not supported\n");
+    if constexpr (USE_32) {
+      sos_mont_reduction_32<NLIMBS>(t.limbs, n.limbs, n_tag.limbs, r.limbs);
+      return;
+    } else if constexpr (NLIMBS == 1) {
+      sos_mont_reduction_32<NLIMBS>(t.limbs, n.limbs, n_tag.limbs, r.limbs);
+      return;
+    } else {
+      sos_mont_reduction_64<NLIMBS>(t.limbs64, n.limbs64, n_tag.limbs64, r.limbs64);
     }
   }
 

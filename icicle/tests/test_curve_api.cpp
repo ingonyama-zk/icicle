@@ -486,7 +486,7 @@ TYPED_TEST(CurveSanity, u64Mul)
   // #pragma unroll
   uint64_t high, low;
   for (int i = 0; i < n; ++i) {
-    asm("mulq %3" : "=d"(high), "=a"(low) : "a"(scalars[i]), "r"(scalars2[i]) : "cc");
+    // asm("mulq %3" : "=d"(high), "=a"(low) : "a"(scalars[i]), "r"(scalars2[i]) : "cc");
     scalars_res_128[i] = (static_cast<__uint128_t>(high) << 64) | low;
   }
   END_TIMER(u64Mult_asm, "U64-MULT-asm", true);

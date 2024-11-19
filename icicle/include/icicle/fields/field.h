@@ -544,8 +544,8 @@ public:
     device_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
     #else
     Wide r = {};
-    host_math::template sos_mont_reduction_64<TLC>(
-      t.limbs_storage.limbs64, get_modulus<1>().limbs64, get_mont_inv_modulus().limbs64, r.limbs_storage.limbs64); //TODO enable 32
+    host_math::template sos_mont_reduction<TLC>(
+      t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
     #endif
     return mont_sub_modulus(r, true);
   }
