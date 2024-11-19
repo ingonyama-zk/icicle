@@ -161,8 +161,8 @@ namespace fri {
     }
 
     E alpha_sq = alpha * alpha;
-    auto alpha_ptr = (const uint32_t*)alpha;
-    auto alpha_sqr_ptr = (const uint32_t*)alpha_sq;
+    // auto alpha_ptr = (const uint32_t*)alpha;
+    // auto alpha_sqr_ptr = (const uint32_t*)alpha_sq;
 
     uint64_t num_threads = max(1, min(unsigned(n), 256));
     uint64_t num_blocks = (n + num_threads - 1) / num_threads;

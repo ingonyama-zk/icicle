@@ -335,12 +335,15 @@ namespace quotient {
             for (int i = 0; i < sample_size; ++i) {
                 CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream));
                 CHK_IF_RETURN(cudaFreeAsync(h_values_ptrs[i], stream));
+                CHK_IF_RETURN(cudaFreeAsync(h_point_ptrs[i], stream));
             }
             CHK_IF_RETURN(cudaFreeAsync(d_columns_ptrs, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_point_ptrs, stream));
             CHK_IF_RETURN(cudaFreeAsync(d_values_ptrs, stream));
             CHK_IF_RETURN(cudaFreeAsync(d_samples, stream));
             delete[] h_columns_ptrs;
             delete[] h_values_ptrs;
+            delete[] h_point_ptrs;
         }
 
         if (!cfg.are_columns_on_device) {

@@ -139,7 +139,7 @@ pub fn interpolate(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use icicle_core::ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering};
+    use icicle_core::ntt::{FieldImpl, NTTConfig, NTTDir, Ordering};
     use icicle_cuda_runtime::{device_context::DeviceContext, memory::HostSlice};
 
     use crate::{
