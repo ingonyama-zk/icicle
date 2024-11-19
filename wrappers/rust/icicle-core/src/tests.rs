@@ -16,6 +16,17 @@ pub fn check_field_equality<F: FieldImpl>() {
     assert_eq!(left, right);
 }
 
+pub fn check_field_arithmetic<F>()
+where
+    F: FieldImpl + MontgomeryConvertible + std::ops::Add,
+    F::Config: GenerateRandom<F>,
+{
+    let scalars = F::Config::generate_random(2);
+
+    let result = scalars[0] + scalars[1];
+
+}
+
 pub fn check_affine_projective_convert<C: Curve>() {
     let size = 1 << 10;
     let affine_points = C::generate_random_affine_points(size);
