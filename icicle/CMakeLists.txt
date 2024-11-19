@@ -19,7 +19,7 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
-if(SANITIZE AND CUDA_BACKEND) 
+if(SANITIZE AND CUDA_BACKEND)
   message(FATAL_ERROR "Address sanitizer and Cuda cannot be enabled at the same time.")
 endif()
 
@@ -60,13 +60,17 @@ if(SANITIZE)
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
 endif()
 
+# Find and include OpenMP
+set(OpenMP_ROOT $ENV{OPENMP_ROOT})
+find_package(OpenMP REQUIRED)
+
 # device API library
 add_library(icicle_device SHARED
   src/device_api.cpp
   src/runtime.cpp
   src/config_extension.cpp
 )
-target_link_libraries(icicle_device PUBLIC dl)
+target_link_libraries(icicle_device PUBLIC dl OpenMP::OpenMP_CXX)
 include_directories(include)
 
 # Define the install directory (default is /usr/local)

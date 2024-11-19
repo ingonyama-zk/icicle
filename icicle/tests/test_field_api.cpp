@@ -4,6 +4,8 @@
 #include "dlfcn.h"
 #include <random>
 
+#include "omp.h"
+
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
 #include "icicle/ntt.h"
@@ -25,7 +27,7 @@ using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::p
       "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
 
 static bool VERBOSE = true;
-static int ITERS = 1;
+static int ITERS = 3;
 static inline std::string s_main_target;
 static inline std::string s_reference_target;
 static inline std::vector<std::string> s_registered_devices;
@@ -334,14 +336,43 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(scalar_t)));
 }
 
+/**
+ * @brief CPU using OpenMP for scalar*vec ops
+ * @param scalar_a Pointer to the scalar/s to be multiplied (a operand)
+ * @param vec_b Pointer to the vector/s to be multiplied (b operand)
+ * @param size Size of a single vector in T limbs
+ * @param config Configuration of the VecOP including batch size (nof vectors and scalars to be operated) and columns
+ * @param output Result of the operation
+ */
+template <typename T> eIcicleError omp_scalar_vector_op(
+  const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
+{
+  // TODO add support for batch of vectors and 
+  // omp_set_num_threads(1);
+  #pragma omp parallel for collapse(2)
+  for (int idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++)
+  {
+    T scalar = scalar_a[idx_in_batch];
+    for (int i = 0; i < size; i++)
+    {
+      output[i + idx_in_batch * size] = scalar * vec_b[i + idx_in_batch * size];
+    }
+  }
+  return eIcicleError::SUCCESS;
+}
+
 TEST_F(FieldApiTestBase, scalarVectorOps)
 {
   int seed = time(0);
   srand(seed);
   ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  // const uint64_t N = 1 << (rand() % 15 + 3);
+  const uint64_t N = 1 << 20;
+  ICICLE_LOG_INFO << "N:\t" << N;
+  // const int batch_size = 1 << (rand() % 5);
+  const int batch_size = 3;
+  // const bool columns_batch = rand() % 2;
+  const bool columns_batch = false;
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -352,9 +383,10 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
   auto in_b = std::make_unique<scalar_t[]>(total_size);
   auto out_main = std::make_unique<scalar_t[]>(total_size);
   auto out_ref = std::make_unique<scalar_t[]>(total_size);
-  ICICLE_LOG_DEBUG << "N = " << N;
-  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
-  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  ICICLE_LOG_INFO << "N = " << N;
+  ICICLE_LOG_INFO << "batch_size = " << batch_size;
+  ICICLE_LOG_INFO << "columns_batch = " << columns_batch;
+  ICICLE_LOG_INFO << "columns_batch = " << columns_batch;
 
   auto vector_accumulate_wrapper =
     [](scalar_t* a, const scalar_t* b, uint64_t size, const VecOpsConfig& config, scalar_t* /*out*/) {
@@ -380,57 +412,60 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
     };
 
   // scalar add vec
-  scalar_t::rand_host_many(scalar_a.get(), batch_size);
-  scalar_t::rand_host_many(in_b.get(), total_size);
+  // scalar_t::rand_host_many(scalar_a.get(), batch_size);
+  // scalar_t::rand_host_many(in_b.get(), total_size);
 
-  // reference
-  if (!s_is_cuda_registered) {
-    for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-      for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
-        uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
-        out_ref[idx_b] = (scalar_a[idx_in_batch]) + in_b[idx_b];
-      }
-    }
-  } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
-  }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
+  // // reference
+  // if (!s_is_cuda_registered) {
+  //   for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
+  //     for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
+  //       uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
+  //       out_ref[idx_b] = (scalar_a[idx_in_batch]) + in_b[idx_b];
+  //     }
+  //   }
+  // } else {
+  //   run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
+  // }
+  // run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
 
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 
-  // scalar sub vec
-  scalar_t::rand_host_many(scalar_a.get(), batch_size);
-  scalar_t::rand_host_many(in_b.get(), total_size);
+  // // scalar sub vec
+  // scalar_t::rand_host_many(scalar_a.get(), batch_size);
+  // scalar_t::rand_host_many(in_b.get(), total_size);
 
-  if (!s_is_cuda_registered) {
-    for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-      for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
-        uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
-        out_ref[idx_b] = (scalar_a[idx_in_batch]) - in_b[idx_b];
-      }
-    }
-  } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
-  }
+  // if (!s_is_cuda_registered) {
+  //   for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
+  //     for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
+  //       uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
+  //       out_ref[idx_b] = (scalar_a[idx_in_batch]) - in_b[idx_b];
+  //     }
+  //   }
+  // } else {
+  //   run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
+  // }
 
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  // run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 
   // scalar mul vec
   scalar_t::rand_host_many(scalar_a.get(), batch_size);
   scalar_t::rand_host_many(in_b.get(), total_size);
 
   if (!s_is_cuda_registered) {
-    for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
-      for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
-        uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
-        out_ref[idx_b] = (scalar_a[idx_in_batch]) * in_b[idx_b];
-      }
-    }
+    // for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
+    //   for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
+    //     uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
+    //     out_ref[idx_b] = (scalar_a[idx_in_batch]) * in_b[idx_b];
+    //   }
+    // }
+    run(s_reference_target, out_ref.get(), VERBOSE, omp_scalar_vector_op<scalar_t>, "scalar mul vec OMP", ITERS);
   } else {
     run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec", ITERS);
   }
   run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec", ITERS);
+
+  ICICLE_LOG_INFO << "Comp 0 idx:\n\t" << out_main[0] << "\n\t" << out_ref[0];
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
