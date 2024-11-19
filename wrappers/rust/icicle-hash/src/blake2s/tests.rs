@@ -6,7 +6,7 @@ pub(crate) mod tests {
     };
     use icicle_cuda_runtime::memory::HostSlice;
 
-    use crate::blake2s::{blake2s, blake2s_mmcs_commit_cuda, build_blake2s_merkle_tree, build_blake2s_mmcs};
+    use crate::blake2s::{blake2s, build_blake2s_merkle_tree, build_blake2s_mmcs};
 
     #[test]
     fn single_hash_test() {
@@ -76,17 +76,17 @@ pub(crate) mod tests {
             keep_leaves.push(leaves);
         }
         let digests_len = merkle_tree_digests_len(log_max as u32, 2, 32);
-        println!("Digests len: {}", digests_len);
         let mut digests = vec![0u8; digests_len];
         let digests_slice = HostSlice::from_mut_slice(&mut digests);
         build_blake2s_mmcs(&matrices, digests_slice, &config).unwrap();
         assert_eq!(digests[0], 42);
+        assert_eq!(digests[digests.len() - 1], 196);
 
-        for j in 0..digests_len / 32 {
-            for i in 0..32 {
-                print!("{:02x?}", digests[digests.len() - 32 * (digests_len / 32 - 1 - j) - 32 + i]);
-            }
-            println!();
-        }
+        // for j in 0..digests_len / 32 {
+        //     for i in 0..32 {
+        //         print!("{:02x?}", digests[digests.len() - 32 * (digests_len / 32 - 1 - j) - 32 + i]);
+        //     }
+        //     println!();
+        // }
     }
 }

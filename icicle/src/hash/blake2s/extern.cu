@@ -36,6 +36,7 @@ namespace blake2s {
     const merkle_tree::TreeBuilderConfig& tree_config)
   {
     Blake2s hasher;
-    return merkle_tree::mmcs_commit<BYTE, BYTE>(leaves, number_of_inputs, digests, hasher, hasher, tree_config);
+    Blake2s folder(false);
+    return merkle_tree::mmcs_commit<BYTE, BYTE>(leaves, number_of_inputs, digests, hasher, folder, tree_config);
   }
 } // namespace blake2s

@@ -243,7 +243,7 @@ namespace blake2s {
   }
 
   __global__ void
-  kernel_blake2s_hash(const BYTE* indata, WORD inlen, BYTE* outdata, WORD n_batch, WORD BLAKE2S_BLOCK_SIZE)
+  kernel_blake2s_hash(const BYTE* indata, WORD inlen, BYTE* outdata, WORD n_batch, WORD BLAKE2S_BLOCK_SIZE, bool mmcs)
   {
     WORD thread = blockIdx.x * blockDim.x + threadIdx.x;
     if (thread >= n_batch) { return; }
@@ -254,11 +254,14 @@ namespace blake2s {
     BYTE* out = outdata + thread * BLAKE2S_BLOCK_SIZE;
 
     cuda_blake2s_init(&blake_ctx, key, keylen, (BLAKE2S_BLOCK_SIZE << 3));
-    // cuda_blake2s_update(&blake_ctx, in, inlen);
-    memset(blake_ctx.chain, 0, BLAKE2S_CHAIN_LENGTH);
-    cuda_blake2s_compress(&blake_ctx, in, 0);
-    // cuda_blake2s_final(&blake_ctx, out);
-    memcpy(out, blake_ctx.chain, BLAKE2S_CHAIN_LENGTH);
+    if (mmcs) {
+      memset(blake_ctx.chain, 0, BLAKE2S_CHAIN_LENGTH);
+      cuda_blake2s_compress(&blake_ctx, in, 0);
+      memcpy(out, blake_ctx.chain, BLAKE2S_CHAIN_LENGTH);
+    } else {
+      cuda_blake2s_update(&blake_ctx, in, inlen);
+      cuda_blake2s_final(&blake_ctx, out);
+    }
   }
 
   __global__ void
@@ -308,7 +311,7 @@ namespace blake2s {
 
     WORD thread = 256;
     WORD block = (n_batch + thread - 1) / thread;
-    kernel_blake2s_hash<<<block, thread>>>(cuda_indata, inlen, cuda_outdata, n_batch, BLAKE2S_BLOCK_SIZE);
+    kernel_blake2s_hash<<<block, thread>>>(cuda_indata, inlen, cuda_outdata, n_batch, BLAKE2S_BLOCK_SIZE, false);
     cudaMemcpy(out, cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch, cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     // cudaError_t error = cudaGetLastError();
@@ -333,7 +336,7 @@ namespace blake2s {
     WORD block = (number_of_states + thread - 1) / thread;
 
     kernel_blake2s_hash<<<block, thread, 0, ctx.stream>>>(
-      input, input_len, output, number_of_states, BLAKE2S_BLOCK_SIZE);
+      input, input_len, output, number_of_states, BLAKE2S_BLOCK_SIZE, !use_iv);
 
     CHK_IF_RETURN(cudaPeekAtLastError());
     return CHK_LAST();

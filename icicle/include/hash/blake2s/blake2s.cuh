@@ -38,6 +38,7 @@ namespace blake2s {
 
   class Blake2s : public Hasher<BYTE, BYTE>
   {
+    bool use_iv;
   public:
     cudaError_t run_hash_many_kernel(
       const BYTE* input,
@@ -64,7 +65,7 @@ namespace blake2s {
       unsigned int digest_elements,
       const device_context::DeviceContext& ctx) const override;
 
-    Blake2s() : Hasher<BYTE, BYTE>(BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, 0) {}
+    Blake2s(bool use_iv=true) : Hasher<BYTE, BYTE>(BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, 0), use_iv(use_iv) {}
   };
 
   extern "C" {
