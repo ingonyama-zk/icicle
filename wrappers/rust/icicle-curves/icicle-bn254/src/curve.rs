@@ -5,6 +5,7 @@ use icicle_core::{
     traits::{FieldConfig, FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
+use std::ops::Add;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 8;

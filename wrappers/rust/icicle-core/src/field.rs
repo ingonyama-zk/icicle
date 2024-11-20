@@ -5,7 +5,6 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
-use std::ops::{Add};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -46,14 +45,6 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u32; NUM_LIMBS]> for Field<NU
 impl<const NUM_LIMBS: usize, F: FieldConfig> From<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
     fn from(limbs: [u32; NUM_LIMBS]) -> Self {
         Self { limbs, p: PhantomData }
-    }
-}
-
-impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F> {
-    type Output = Self;
-    
-    fn add(self, other: Self) -> Self {
-        self //TODO:
     }
 }
 
@@ -182,22 +173,6 @@ macro_rules! impl_scalar_field {
                 );
             }
 
-            fn add_scalar(
-                a: *const $field_name,
-                b: *const $field_name
-            ) -> $field_name {
-                let mut result = $field_name::zero();
-                unsafe {
-                    $field_prefix_ident::add(
-                        a as *const $field_name,
-                        b as *const $field_name,
-                        &mut result as *mut $field_name,
-                    );
-                }
-
-                result
-            }
-
             pub(crate) fn convert_scalars_montgomery(
                 scalars: *mut $field_name,
                 len: usize,
@@ -205,6 +180,31 @@ macro_rules! impl_scalar_field {
                 config: &VecOpsConfig,
             ) -> eIcicleError {
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
+            }
+
+            pub(crate) fn add_scalar(
+                a: $field_name,
+                b: $field_name
+            ) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    add(
+                        &a as *const $field_name,
+                        &b as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+        }
+
+       
+        impl Add for $field_name {
+            type Output = Self;
+            
+            fn add(self, other: Self) -> Self {
+                $field_prefix_ident::add_scalar(self, other)
             }
         }
 
