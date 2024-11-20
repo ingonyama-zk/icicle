@@ -32,6 +32,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <cassert>
 
 using namespace icicle;
 
@@ -80,6 +81,19 @@ public:
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
+  }
+
+  static HOST_DEVICE Field hex_str2scalar(const std::string& in_str)   // The input string should be in a hex format - 0xABCD....
+  {
+    assert(in_str.substr(0, 2) == "0x" && "The input string is not in hex format!");
+    std::string tmp_str = in_str.substr(2);  // Stript "0x" from the string.
+    int length = tmp_str.length();
+    // Split string into chuncks of 8 chars (for uint32_t) and store in scalar storage.
+    storage<TLC> scalar{};
+    for (int str_idx=((int)((length-8)/8))*8, limb_idx = 0; str_idx>=0; str_idx-=8, limb_idx++) {   // ((int)((length-8)/8))*8 is for case if length<8.
+      scalar.limbs[limb_idx] = strtoul(tmp_str.substr(str_idx, std::min(8, length)).c_str(), nullptr, 16);
+    }
+    return scalar;
   }
 
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)

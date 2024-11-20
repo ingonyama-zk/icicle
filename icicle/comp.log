@@ -1,0 +1,55 @@
+[  3%] Built target gtest
+[ 13%] Built target icicle_device
+[ 17%] Built target gtest_main
+[ 35%] Built target icicle_hash
+[ 37%] Building CXX object CMakeFiles/icicle_field.dir/backend/cpu/src/hash/cpu_poseidon2.cpp.o
+[ 41%] Built target test_device_api
+[ 43%] Linking CXX shared library libicicle_field_bn254.so
+[ 72%] Built target icicle_field
+[ 74%] Linking CXX executable test_field_api
+[ 76%] Building CXX object tests/CMakeFiles/test_hash_api.dir/test_hash_api.cpp.o
+[ 78%] Linking CXX shared library libicicle_curve_bn254.so
+[ 80%] Linking CXX executable test_hash_api
+[ 90%] Built target icicle_curve
+[ 92%] Built target test_field_api
+[ 94%] Linking CXX executable test_polynomial_api
+[ 96%] Linking CXX executable test_curve_api
+free(): double free detected in tcache 2
+[ 98%] Built target test_curve_api
+[100%] Built target test_polynomial_api
+CMake Error at /home/administrator/users/yuvals/cmake-3.27.6/Modules/GoogleTestAddTests.cmake:112 (message):
+  Error running test executable.
+
+    Path: '/home/administrator/users/danny/github/icicle/danny_poseidon2_v3.2/icicle/icicle/build/tests/test_hash_api'
+    Result: Subprocess aborted
+    Output:
+      Running main() from /home/administrator/users/danny/github/icicle/danny_poseidon2_v3.2/icicle/icicle/build/_deps/googletest-src/googletest/src/gtest_main.cc
+      HashApiTest.
+        Keccak512
+        Blake2s
+        Keccak256Batch
+        KeccakLarge
+        Blake2sLarge
+        sha3
+        MerkleTreeBasic
+        MerkleTreeZeroPadding
+        MerkleTreeLastValuePadding
+        MerkleTreeMixMediumSize
+        MerkleTreeDevicePartialTree
+        MerkleTreeLeavesOnDeviceTreeOnHost
+        MerkleTreeLarge
+        poseidon2_3_single_hash
+        poseidon12_single_hash
+        poseidon3_single_hash
+        poseidon3_batch
+        poseidon_tree
+      
+
+Call Stack (most recent call first):
+  /home/administrator/users/yuvals/cmake-3.27.6/Modules/GoogleTestAddTests.cmake:225 (gtest_discover_tests_impl)
+
+
+make[2]: *** [tests/CMakeFiles/test_hash_api.dir/build.make:103: tests/test_hash_api] Error 1
+make[2]: *** Deleting file 'tests/test_hash_api'
+make[1]: *** [CMakeFiles/Makefile2:408: tests/CMakeFiles/test_hash_api.dir/all] Error 2
+make: *** [Makefile:136: all] Error 2

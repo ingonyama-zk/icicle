@@ -10,7 +10,7 @@ namespace icicle {
    * @brief Class representing a high-level hash interface.
    *
    * This class provides a unified interface for performing hash operations using a
-   * device-specific backend hash implementation (e.g., Keccak, Blake2, Poseidon).
+   * device-specific backend hash implementation (e.g., Keccak, Blake2, Poseidon, Poseidon2).
    * The actual hashing logic is delegated to the backend, allowing users to work with
    * the same interface regardless of the backend.
    */
