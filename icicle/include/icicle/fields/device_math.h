@@ -115,6 +115,8 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     acc[0] = CARRY_IN ? ptx::madc_lo_cc(a[0], bi, acc[0]) : ptx::mad_lo_cc(a[0], bi, acc[0]);
     acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
 
+    // printf("even %d, mod %d, mi %d\n", acc[0], a[0],bi);
+    // printf("even %d, mod %d, mi %d\n", acc[0], a[0],bi);
     UNROLL
     for (size_t i = 2; i < n; i += 2) {
       acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
@@ -494,22 +496,43 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
   static DEVICE_INLINE void multiply_raw_sb(const storage<NLIMBS> &as, const storage<NLIMBS> &bs, storage<2*NLIMBS> &rs) {
     const uint32_t *a = as.limbs;
     const uint32_t *b = bs.limbs;
-    uint32_t *even = rs.limbs;
-    __align__(8) uint32_t odd[2 * NLIMBS - 2];
-    mul_n<NLIMBS>(even, a, b[0]);
-    mul_n<NLIMBS>(odd, a + 1, b[0]);
-    mad_row<NLIMBS>(&even[2], &odd[0], a, b[1]);
-    size_t i;
-#pragma unroll
-    for (i = 2; i < NLIMBS - 1; i += 2) {
-      mad_row<NLIMBS>(&odd[i], &even[i], a, b[i]);
-      mad_row<NLIMBS>(&even[i + 2], &odd[i], a, b[i + 1]);
+    if constexpr (NLIMBS > 2){
+      uint32_t *even = rs.limbs;
+      __align__(8) uint32_t odd[2 * NLIMBS - 2];
+      mul_n<NLIMBS>(even, a, b[0]);
+      mul_n<NLIMBS>(odd, a + 1, b[0]);
+      mad_row<NLIMBS>(&even[2], &odd[0], a, b[1]);
+      size_t i;
+  #pragma unroll
+      for (i = 2; i < NLIMBS - 1; i += 2) {
+        mad_row<NLIMBS>(&odd[i], &even[i], a, b[i]);
+        mad_row<NLIMBS>(&even[i + 2], &odd[i], a, b[i + 1]);
+      }
+      // merge |even| and |odd|
+      even[1] = ptx::add_cc(even[1], odd[0]);
+      for (i = 1; i < 2 * NLIMBS - 2; i++)
+        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
+      even[i + 1] = ptx::addc(even[i + 1], 0);
+    } 
+    else if (NLIMBS == 2) {
+      uint32_t *r = rs.limbs;
+      __align__(8) uint32_t odd[2];
+      r[0] = ptx::mul_lo(a[0], b[0]);
+      r[1] = ptx::mul_hi(a[0], b[0]);
+      r[2] = ptx::mul_lo(a[1], b[1]);
+      r[3] = ptx::mul_hi(a[1], b[1]);
+      odd[0] = ptx::mul_lo(a[0], b[1]);
+      odd[1] = ptx::mul_hi(a[0], b[1]);
+      odd[0] = ptx::mad_lo(a[1], b[0], odd[0]);
+      odd[1] = ptx::mad_hi(a[1], b[0], odd[1]);
+      r[1] = ptx::add_cc(r[1], odd[0]);
+      r[2] = ptx::addc_cc(r[2], odd[1]);
+      r[3] = ptx::addc(r[3], 0);
+    } else if (NLIMBS == 1) {
+      uint32_t *r = rs.limbs;
+      r[0] = ptx::mul_lo(a[0], b[0]);
+      r[1] = ptx::mul_hi(a[0], b[0]);
     }
-    // merge |even| and |odd|
-    even[1] = ptx::add_cc(even[1], odd[0]);
-    for (i = 1; i < 2 * NLIMBS - 2; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
   }
 
   template <unsigned NLIMBS>
@@ -592,24 +615,58 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     // Since the hi NLIMBS limbs don't participate in computing the "mi" factor at each mul-and-rightshift stage,
     // it's ok to ignore the hi NLIMBS limbs during this process and just add them in afterward.
     uint32_t odd[NLIMBS];
-    size_t i;
-#pragma unroll
-    for (i = 0; i < NLIMBS; i += 2) {
-      mul_by_1_row<NLIMBS>(&even[0], &odd[0], modulus.limbs, mont_inv_modulus.limbs, i == 0);
-      mul_by_1_row<NLIMBS>(&odd[0], &even[0], modulus.limbs, mont_inv_modulus.limbs);
+    if constexpr (NLIMBS == 1) {
+      uint32_t mi = even[0] * mont_inv_modulus.limbs[0]; //m
+      // printf("m %u\n", mi);
+      // printf("p %u\n", modulus.limbs[0]);
+      // printf("t0 %u\n", odd[0]);
+      // cmad_n<NLIMBS>(odd, modulus + 1, mi);
+      // acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
+      // acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
+      // cmad_n<NLIMBS>(even, modulus.limbs, mi);
+      even[0] = ptx::mad_lo_cc(modulus.limbs[0], mi, even[0]);
+      odd[0] = ptx::madc_hi_cc(modulus.limbs[0], mi, 0);
+      
+      // odd[0] = ptx::mad_lo(modulus.limbs[0], mi, odd[0]); //C
+      // even[0] = ptx::mul_hi(modulus.limbs[0], mi, odd[0]); //C
+      // even[0] = ptx::mad_hi(modulus.limbs[0], mi, 0); //C
+      // even[0] = ptx::mad_hi(modulus.limbs[0], 0, odd[0]); //C
+      // printf("C %u\n", odd[1]);
+      // acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
+      // odd[0] = ptx::addc(odd[0], 0);
+
+      // odd[0] = ptx::add_cc(odd[0], even[1]);
+      // madc_n_rshift<NLIMBS>(even, a + 1, bi);
+      // cmad_n<NLIMBS>(odd, a, bi);
+      // even[NLIMBS - 1] = ptx::addc(even[NLIMBS - 1], 0);
+      // mi = odd[0] * mont_inv_modulus.limbs[0];
+      // cmad_n<NLIMBS>(even, modulus + 1, mi);
+      // cmad_n<NLIMBS>(odd, modulus.limbs, mi);
+      // odd[0] = ptx::mad_lo_cc(modulus.limbs[0], mi, 0);
+      // odd[1] = ptx::madc_hi_cc(modulus.limbs[0], mi, 0);
+      // even[0] = ptx::addc(even[0], 0);
+      even[0] = ptx::add_cc(even[1], odd[0]);
     }
-    even[0] = ptx::add_cc(even[0], odd[1]);
-#pragma unroll
-    for (i = 1; i < NLIMBS - 1; i++)
-      even[i] = ptx::addc_cc(even[i], odd[i + 1]);
-    even[i] = ptx::addc(even[i], 0);
-    // Adds in (hi NLIMBS limbs), implicitly right-shifting them by NLIMBS limbs as if they had participated in the
-    // add-and-rightshift stages above.
-    xs.limbs[0] = ptx::add_cc(xs.limbs[0], xs.limbs[NLIMBS]);
-#pragma unroll
-    for (i = 1; i < NLIMBS - 1; i++)
-      xs.limbs[i] = ptx::addc_cc(xs.limbs[i], xs.limbs[i + NLIMBS]);
-    xs.limbs[NLIMBS - 1] = ptx::addc(xs.limbs[NLIMBS - 1], xs.limbs[2 * NLIMBS - 1]);
+    else {
+      size_t i;
+  #pragma unroll
+      for (i = 0; i < NLIMBS; i += 2) {
+        mul_by_1_row<NLIMBS>(&even[0], &odd[0], modulus.limbs, mont_inv_modulus.limbs, i == 0);
+        mul_by_1_row<NLIMBS>(&odd[0], &even[0], modulus.limbs, mont_inv_modulus.limbs);
+      }
+      even[0] = ptx::add_cc(even[0], odd[1]);
+  #pragma unroll
+      for (i = 1; i < NLIMBS - 1; i++)
+        even[i] = ptx::addc_cc(even[i], odd[i + 1]);
+      even[i] = ptx::addc(even[i], 0);
+      // Adds in (hi NLIMBS limbs), implicitly right-shifting them by NLIMBS limbs as if they had participated in the
+      // add-and-rightshift stages above.
+      xs.limbs[0] = ptx::add_cc(xs.limbs[0], xs.limbs[NLIMBS]);
+  #pragma unroll
+      for (i = 1; i < NLIMBS - 1; i++)
+        xs.limbs[i] = ptx::addc_cc(xs.limbs[i], xs.limbs[i + NLIMBS]);
+      xs.limbs[NLIMBS - 1] = ptx::addc(xs.limbs[NLIMBS - 1], xs.limbs[2 * NLIMBS - 1]);
+    }
   }
 
   template <unsigned NLIMBS>
@@ -619,17 +676,71 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
     uint32_t *even = r_in.limbs;
     __align__(8) uint32_t odd[NLIMBS + 1];
     size_t i;
-#pragma unroll
-    for (i = 0; i < NLIMBS; i += 2) {
-      mad_n_redc<NLIMBS>(&even[0], &odd[0], a, b[i], modulus.limbs, mont_inv_modulus.limbs, i == 0);
-      mad_n_redc<NLIMBS>(&odd[0], &even[0], a, b[i + 1], modulus.limbs, mont_inv_modulus.limbs);
+    if constexpr (NLIMBS == 1) {
+      // mad_n_redc<NLIMBS>(&even[0], &odd[0], a, b[0], modulus.limbs, mont_inv_modulus.limbs, true);
+      // printf("even0 b %d\n", even[0]);
+      // mul_n<NLIMBS>(even, a, b[0]);
+      // printf("even0 a %d\n", even[0]);
+      // uint32_t mi = even[0] * mont_inv_modulus.limbs[0];
+      // printf("mi %d\n", mi);
+      // cmad_n<NLIMBS>(even, modulus.limbs, mi);
+      // printf("even0 c %d\n", even[0]);
+
+      // mul_n<NLIMBS>(odd, a + 1, bi);
+      // odd[0] = ptx::mul_lo(a[1], b[0]);
+      // odd[1] = ptx::mul_hi(a[1], b[0]);
+      // mul_n<NLIMBS>(even, a, b[0]);
+      // printf("a %u\n", a[0]);
+      // printf("b %u\n", b[0]);
+      odd[0] = ptx::mul_lo(a[0], b[0]); //t[0]
+      // printf("t0 %u\n", odd[0]);
+      even[0] = ptx::mul_hi(a[0], b[0]); //A
+      // printf("A %u\n", even[0]);
+      uint32_t mi = odd[0] * mont_inv_modulus.limbs[0]; //m
+      // printf("m %u\n", mi);
+      // printf("p %u\n", modulus.limbs[0]);
+      // printf("t0 %u\n", odd[0]);
+      // cmad_n<NLIMBS>(odd, modulus + 1, mi);
+      // acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
+      // acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
+      // cmad_n<NLIMBS>(even, modulus.limbs, mi);
+      odd[0] = ptx::mad_lo_cc(modulus.limbs[0], mi, odd[0]);
+      odd[1] = ptx::madc_hi_cc(modulus.limbs[0], mi, 0);
+      
+      // odd[0] = ptx::mad_lo(modulus.limbs[0], mi, odd[0]); //C
+      // even[0] = ptx::mul_hi(modulus.limbs[0], mi, odd[0]); //C
+      // even[0] = ptx::mad_hi(modulus.limbs[0], mi, 0); //C
+      // even[0] = ptx::mad_hi(modulus.limbs[0], 0, odd[0]); //C
+      // printf("C %u\n", odd[1]);
+      // acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
+      // odd[0] = ptx::addc(odd[0], 0);
+
+      // odd[0] = ptx::add_cc(odd[0], even[1]);
+      // madc_n_rshift<NLIMBS>(even, a + 1, bi);
+      // cmad_n<NLIMBS>(odd, a, bi);
+      // even[NLIMBS - 1] = ptx::addc(even[NLIMBS - 1], 0);
+      // mi = odd[0] * mont_inv_modulus.limbs[0];
+      // cmad_n<NLIMBS>(even, modulus + 1, mi);
+      // cmad_n<NLIMBS>(odd, modulus.limbs, mi);
+      // odd[0] = ptx::mad_lo_cc(modulus.limbs[0], mi, 0);
+      // odd[1] = ptx::madc_hi_cc(modulus.limbs[0], mi, 0);
+      // even[0] = ptx::addc(even[0], 0);
+      even[0] = ptx::add_cc(even[0], odd[1]);
+      // printf("A+C %u\n", even[0]);
     }
-    // merge |even| and |odd|
-    even[0] = ptx::add_cc(even[0], odd[1]);
-#pragma unroll
-    for (i = 1; i < NLIMBS - 1; i++)
-      even[i] = ptx::addc_cc(even[i], odd[i + 1]);
-    even[i] = ptx::addc(even[i], 0);
+    else {
+  #pragma unroll
+      for (i = 0; i < NLIMBS; i += 2) {
+        mad_n_redc<NLIMBS>(&even[0], &odd[0], a, b[i], modulus.limbs, mont_inv_modulus.limbs, i == 0);
+        mad_n_redc<NLIMBS>(&odd[0], &even[0], a, b[i + 1], modulus.limbs, mont_inv_modulus.limbs);
+      }
+      // merge |even| and |odd|
+      even[0] = ptx::add_cc(even[0], odd[1]);
+  #pragma unroll
+      for (i = 1; i < NLIMBS - 1; i++)
+        even[i] = ptx::addc_cc(even[i], odd[i + 1]);
+      even[i] = ptx::addc(even[i], 0);
+    }
     // final reduction from [0, 2*mod) to [0, mod) not done here, instead performed optionally in mul_device wrapper
   }
 
@@ -638,9 +749,9 @@ template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
   template <unsigned NLIMBS> static constexpr DEVICE_INLINE storage<NLIMBS> mulmont_device(const storage<NLIMBS> &xs, const storage<NLIMBS> &ys, const storage<NLIMBS> &modulus, const storage<NLIMBS> &mont_inv_modulus) {
     // Forces us to think more carefully about the last carry bit if we use a modulus with fewer than 2 leading zeroes of slack
     // static_assert(!(CONFIG::modulus.limbs[NLIMBS - 1] >> 30));
-    // printf(" ");
     storage<NLIMBS> rs = {0};
     montmul_raw(xs, ys, modulus, mont_inv_modulus, rs);
+    // printf("rs %d\n",rs.limbs[0]);
     return rs;
   }
 

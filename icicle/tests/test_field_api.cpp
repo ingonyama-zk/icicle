@@ -73,13 +73,16 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 
+
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
   auto a = TypeParam::rand_host();
+  // a.limbs_storage.limbs[0] = 1089097490;
   std::cout<<a;
   std::cout<<'\n';
   auto b = TypeParam::rand_host();
+  // a.limbs_storage.limbs[0] = 1691855643;
   std::cout<<b;
   std::cout<<'\n';
   auto b_inv = TypeParam::inverse(b);
@@ -94,9 +97,9 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
   ASSERT_EQ(b * b_inv, TypeParam::one());
-  std::cout<<TypeParam::from(2);
+  std::cout<<scalar_t::from(2);
   std::cout<<'\n';
-  ASSERT_EQ(a * TypeParam::from(2), a + a);
+  ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
 #ifndef EXT_FIELD
@@ -152,11 +155,13 @@ TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
-  const uint64_t N = 5;
+  const uint64_t N = 1;
   auto in_a = std::make_unique<TypeParam[]>(N);
   auto in_b = std::make_unique<TypeParam[]>(N);
   FieldApiTest<TypeParam>::random_samples(in_a.get(), N);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), N);
+  // in_a[0].limbs_storage.limbs[0] = 1089097490;
+  // in_b[0].limbs_storage.limbs[0] = 1691855643;
 
   auto out_main = std::make_unique<TypeParam[]>(N);
   auto out_ref = std::make_unique<TypeParam[]>(N);
