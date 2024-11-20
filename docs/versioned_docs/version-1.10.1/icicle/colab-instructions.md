@@ -9,11 +9,11 @@ First thing to do in a notebook is to set the runtime type to a T4 GPU.
 
 - in the upper corner click on the dropdown menu and select "change runtime type"
 
-![Change runtime](./static/img/colab_change_runtime.png)
+![Change runtime](/img/colab_change_runtime.png)
 
 - In the window select "T4 GPU" and press Save
 
-![T4 GPU](./static/img/t4_gpu.png)
+![T4 GPU](/img/t4_gpu.png)
 
 Installing Rust is rather simple, just execute the following command:
 
@@ -90,48 +90,19 @@ Now we are ready to clone ICICE repository,
 !git clone https://github.com/ingonyama-zk/icicle.git
 ```
 
-We can browse the repository and run tests to check the runtime environment:
+We now can browse the repository and run tests to check the runtime environment:
 
 ```sh
 !ls -la
-%cd /content/icicle
+%cd icicle
 ```
-
-## Download CUDA backend
-
-First let's create a backend directory
-
-```sh
-%cd /content
-!rm -rf cuda_backend/
-!mkdir cuda_backend
-%cd cuda_backend
-```
-
-Download and extract a backend from [ICICLE released](https://github.com/ingonyama-zk/icicle/releases) backends
-In this example we are using [ICICLE Cuda backend v3.1.0](https://github.com/ingonyama-zk/icicle/releases/download/v3.1.0/icicle_3_1_0-ubuntu22-cuda122.tar.gz)
-
-```sh
-!curl -O -L https://github.com/ingonyama-zk/icicle/releases/download/v3.1.0/icicle_3_1_0-ubuntu22-cuda122.tar.gz
-!tar -xvf icicle_3_1_0-ubuntu22-cuda122.tar.gz
-```
-
-## Setting CUDA backend installation directory
-Point colab to the extracted cuda backend using an [environment variable](https://github.com/ingonyama-zk/icicle/blob/f638e9d3056d2a5d6271a67ba4f63973a2ba2c1a/docs/docs/icicle/getting_started.md#backend-loading)
-
-```sh
-import os
-os.envvar["ICICLE_BACKEND_INSTALL_DIR"] = "/content/cuda_backend/icicle"
-```
-
-## Fun with ICICLE
 
 Let's run a test!
 Navigate to icicle/wrappers/rust/icicle-curves/icicle-bn254 and run cargo test:
 
 ```sh
-%cd /content/icicle/wrappers/rust/icicle-curves/icicle-bn254/
-!cargo test --release -- ntt
+%cd wrappers/rust/icicle-curves/icicle-bn254/
+!cargo test --release
 ```
 
 :::note
@@ -143,20 +114,25 @@ Compiling the first time may take a while
 Test run should end like this:
 
 ```sh
-running 9 tests
-[WARNING] Defaulting to Ingonyama icicle-cuda-license-server at `5053@license.icicle.ingonyama.com`. For more information about icicle-cuda-license, please contact support@ingonyama.com.
-[INFO] ICICLE backend loaded from $ICICLE_BACKEND_INSTALL_DIR=/content/cuda_backend/icicle
-test ecntt::tests::test_ecntt::test_ecntt_batch ... ok
+running 15 tests
+test curve::tests::test_ark_point_convert ... ok
+test curve::tests::test_ark_scalar_convert ... ok
+test curve::tests::test_affine_projective_convert ... ok
+test curve::tests::test_point_equality ... ok
+test curve::tests::test_field_convert_montgomery ... ok
+test curve::tests::test_scalar_equality ... ok
+test curve::tests::test_points_convert_montgomery ... ok
+test msm::tests::test_msm ... ok
+test msm::tests::test_msm_skewed_distributions ... ok
 test ntt::tests::test_ntt ... ok
 test ntt::tests::test_ntt_arbitrary_coset ... ok
-test ntt::tests::test_ntt_batch ... ok
+test msm::tests::test_msm_batch has been running for over 60 seconds
+test msm::tests::test_msm_batch ... ok
 test ntt::tests::test_ntt_coset_from_subgroup ... ok
-test ntt::tests::test_ntt_coset_interpolation_nm ... ok
-test ecntt::tests::test_ecntt::test_ecntt ... ok
 test ntt::tests::test_ntt_device_async ... ok
-test ntt::tests::test_ntt_release_domain ... ok
+test ntt::tests::test_ntt_batch ... ok
 
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 36 filtered out; finished in 42.71s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 99.39s
 ```
 
 Viola, ICICLE in Colab!

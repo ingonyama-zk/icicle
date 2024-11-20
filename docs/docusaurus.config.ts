@@ -13,6 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: true,
     showLastUpdateTime: true,
+    includeCurrentVersion: false,
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -40,6 +41,11 @@ const navBarLeftSide = [
 ] satisfies NavbarItem[]
 
 const navBarRightSide = [
+  {
+    type: 'docsVersionDropdown',
+    position: 'right',
+    dropdownActiveClassDisabled: true,
+  },
   {
     href: 'https://github.com/ingonyama-zk',
     position: 'right',
@@ -87,6 +93,7 @@ const config: Config = {
   projectName: 'developer-docs',
   trailingSlash: false,
   deploymentBranch: "main",
+  staticDirectories: ['static'],
   presets: [
     [
       'classic',
