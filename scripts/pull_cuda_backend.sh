@@ -11,7 +11,7 @@ fi
 # Get the absolute path of the backend directory
 ABS_CUDA_DIR=$(realpath ${BACKEND_DIR})/cuda
 
-echo "Trying to pull Metal backend commit '${CUDA_BACKEND}' to '${ABS_CUDA_DIR}'"
+echo "Trying to pull CUDA backend commit '${CUDA_BACKEND}' to '${ABS_CUDA_DIR}'"
 
 if [ -d "${ABS_CUDA_DIR}" ] && [ "$(ls -A ${ABS_CUDA_DIR})" ]; then
     echo "Directory ${ABS_CUDA_DIR} is not empty."
