@@ -243,7 +243,6 @@ pub fn accumulate_quotients_wrapped(
         .iter()
         .map(|x| x.size)
         .sum();
-    println!("{:?}", internal_samples);
     accumulate_quotients(
         half_coset_initial_index,
         half_coset_step_size,
