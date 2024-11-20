@@ -6,7 +6,9 @@
 #include "hash/blake2s/blake2s.cuh"
 #include "blake2s.cu"
 #include "../../merkle-tree/merkle.cu"
+#include "../../merkle-tree/mmcs.cu"
 #include "merkle-tree/merkle.cuh"
+#include "matrix/matrix.cuh"
 
 namespace blake2s {
   extern "C" cudaError_t blake2s_cuda(
@@ -27,4 +29,14 @@ namespace blake2s {
       leaves, digests, height, input_block_len, blake2s, blake2s, tree_config);
   }
 
+  extern "C" cudaError_t blake2s_mmcs_commit_cuda(
+    const Matrix<BYTE>* leaves,
+    unsigned int number_of_inputs,
+    BYTE* digests,
+    const merkle_tree::TreeBuilderConfig& tree_config)
+  {
+    Blake2s hasher;
+    Blake2s folder(false);
+    return merkle_tree::mmcs_commit<BYTE, BYTE>(leaves, number_of_inputs, digests, hasher, folder, tree_config);
+  }
 } // namespace blake2s

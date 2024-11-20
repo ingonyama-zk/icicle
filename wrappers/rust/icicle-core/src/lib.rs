@@ -29,3 +29,13 @@ pub struct Matrix {
     pub width: usize,
     pub height: usize,
 }
+
+impl Matrix {
+    pub fn from_slice<T>(slice: &[T], width: usize, height: usize) -> Self {
+        Matrix {
+            values: slice.as_ptr() as *const c_void,
+            width,
+            height
+        }
+    }
+}

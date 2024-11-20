@@ -2,3 +2,4 @@ mmcs.o
 poseidon2.o
 test_mmcs_poseidon2
 vec_ops.o
+test_mmcs_blake2s

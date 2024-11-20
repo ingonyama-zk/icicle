@@ -5,8 +5,10 @@
 #include "hash/hash.cuh"
 
 #include "hash/blake2s/blake2s.cuh"
-
 using namespace hash;
+
+#include "matrix/matrix.cuh"
+using matrix::Matrix;
 
 namespace blake2s {
 
@@ -32,6 +34,18 @@ namespace blake2s {
 
   const uint32_t CPU_BLAKE2S_IVS[8] = {0x6A09E667UL, 0xBB67AE85UL, 0x3C6EF372UL, 0xA54FF53AUL,
                                        0x510E527FUL, 0x9B05688CUL, 0x1F83D9ABUL, 0x5BE0CD19UL};
+
+  static DEVICE_INLINE unsigned int d_next_pow_of_two(unsigned int v)
+  {
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+  }
 
   void cpu_blake2s_init(cuda_blake2s_ctx_t* ctx, BYTE* key, WORD keylen, WORD digestbitlen)
   {
@@ -65,13 +79,6 @@ namespace blake2s {
     {12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11}, {13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10},
     {6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5}, {10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0}};
 
-  __device__ uint32_t cuda_blake2s_leuint32(const BYTE* in)
-  {
-    uint32_t a;
-    memcpy(&a, in, 4);
-    return a;
-  }
-
   __inline__ __device__ uint32_t cuda_blake2s_ROTR32(uint32_t a, uint8_t b) { return (a >> b) | (a << (32 - b)); }
 
   __device__ void
@@ -100,13 +107,8 @@ namespace blake2s {
     ctx->state[15] = BLAKE2S_IVS[7];
   }
 
-  __device__ __forceinline__ void cuda_blake2s_compress(cuda_blake2s_ctx_t* ctx, const BYTE* in, WORD inoffset)
+  __device__ __forceinline__ void cuda_blake2s_core(cuda_blake2s_ctx_t* ctx, const uint32_t* m)
   {
-    cuda_blake2s_init_state(ctx);
-    uint32_t m[16] = {0};
-    for (int j = 0; j < 16; j++)
-      m[j] = cuda_blake2s_leuint32(in + inoffset + (j << 2));
-
     for (int round = 0; round < BLAKE2S_ROUNDS; round++) {
       cuda_blake2s_G(ctx, m[BLAKE2S_SIGMA[round][0]], m[BLAKE2S_SIGMA[round][1]], 0, 4, 8, 12);
       cuda_blake2s_G(ctx, m[BLAKE2S_SIGMA[round][2]], m[BLAKE2S_SIGMA[round][3]], 1, 5, 9, 13);
@@ -120,6 +122,15 @@ namespace blake2s {
 
     for (int offset = 0; offset < BLAKE2S_CHAIN_SIZE; offset++)
       ctx->chain[offset] = ctx->chain[offset] ^ ctx->state[offset] ^ ctx->state[offset + 8];
+  }
+
+  __device__ __forceinline__ void cuda_blake2s_compress(cuda_blake2s_ctx_t* ctx, const BYTE* in, WORD inoffset)
+  {
+    cuda_blake2s_init_state(ctx);
+    uint32_t m[16] = {0};
+    memcpy((void*)&m, in + inoffset, BLAKE2S_BLOCK_LENGTH);
+
+    cuda_blake2s_core(ctx, m);
   }
 
   __device__ void cuda_blake2s_init(cuda_blake2s_ctx_t* ctx, BYTE* key, WORD keylen, WORD digestbitlen)
@@ -204,8 +215,35 @@ namespace blake2s {
     }
   }
 
+  __device__ void cuda_blake2s_hash_2d(
+    CUDA_BLAKE2S_CTX* ctx, const Matrix<BYTE>* inputs, unsigned int number_of_inputs, uint64_t row_idx)
+  {
+    uint32_t m[BLAKE2S_STATE_SIZE] = {0};
+    unsigned int index = 0;
+    for (int i = 0; i < number_of_inputs; i++) {
+      const Matrix<BYTE>* input = inputs + i;
+      for (int j = 0; j < (input->width / 4); j++) {
+        m[index] = ((uint32_t*)input->values)[row_idx * (input->width / 4) + j];
+        index++;
+        if (index == BLAKE2S_STATE_SIZE) {
+          cuda_blake2s_init_state(ctx);
+          cuda_blake2s_core(ctx, m);
+          index = 0;
+        }
+      }
+    }
+
+    if (index) {
+      for (int i = index; i < BLAKE2S_STATE_SIZE; i++) {
+        m[i] = 0;
+      }
+      cuda_blake2s_init_state(ctx);
+      cuda_blake2s_core(ctx, m);
+    }
+  }
+
   __global__ void
-  kernel_blake2s_hash(const BYTE* indata, WORD inlen, BYTE* outdata, WORD n_batch, WORD BLAKE2S_BLOCK_SIZE)
+  kernel_blake2s_hash(const BYTE* indata, WORD inlen, BYTE* outdata, WORD n_batch, WORD BLAKE2S_BLOCK_SIZE, bool mmcs)
   {
     WORD thread = blockIdx.x * blockDim.x + threadIdx.x;
     if (thread >= n_batch) { return; }
@@ -216,8 +254,46 @@ namespace blake2s {
     BYTE* out = outdata + thread * BLAKE2S_BLOCK_SIZE;
 
     cuda_blake2s_init(&blake_ctx, key, keylen, (BLAKE2S_BLOCK_SIZE << 3));
-    cuda_blake2s_update(&blake_ctx, in, inlen);
-    cuda_blake2s_final(&blake_ctx, out);
+    if (mmcs) {
+      memset(blake_ctx.chain, 0, BLAKE2S_CHAIN_LENGTH);
+      cuda_blake2s_compress(&blake_ctx, in, 0);
+      memcpy(out, blake_ctx.chain, BLAKE2S_CHAIN_LENGTH);
+    } else {
+      cuda_blake2s_update(&blake_ctx, in, inlen);
+      cuda_blake2s_final(&blake_ctx, out);
+    }
+  }
+
+  __global__ void
+  hash_2d_kernel(const Matrix<BYTE>* inputs, BYTE* output, unsigned int number_of_inputs, unsigned int output_len)
+  {
+    uint64_t idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    if (idx >= inputs[0].height) { return; }
+
+    CUDA_BLAKE2S_CTX ctx;
+    cuda_blake2s_init(&ctx, nullptr, 0, (32 << 3));
+    memset(ctx.chain, 0, BLAKE2S_CHAIN_LENGTH);
+    cuda_blake2s_hash_2d(&ctx, inputs, number_of_inputs, idx);
+    memcpy(output + idx * output_len, ctx.chain, BLAKE2S_CHAIN_LENGTH);
+  }
+
+  __global__ void compress_and_inject_kernel(
+    const Matrix<BYTE>* matrices_to_inject, unsigned int number_of_inputs, const BYTE* prev_layer, BYTE* next_layer)
+  {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    uint64_t number_of_rows = d_next_pow_of_two(matrices_to_inject[0].height);
+    if (idx >= number_of_rows) { return; }
+
+    CUDA_BLAKE2S_CTX ctx;
+    cuda_blake2s_init(&ctx, nullptr, 0, (32 << 3));
+    memset(ctx.chain, 0, BLAKE2S_CHAIN_LENGTH);
+
+    size_t next_layer_len = matrices_to_inject[0].height;
+    cuda_blake2s_compress(&ctx, &prev_layer[idx * BLAKE2S_BLOCK_LENGTH], 0);
+
+    if (idx < next_layer_len) { cuda_blake2s_hash_2d(&ctx, matrices_to_inject, number_of_inputs, idx); }
+
+    memcpy(next_layer + idx * BLAKE2S_CHAIN_LENGTH, ctx.chain, BLAKE2S_CHAIN_LENGTH);
   }
 
   extern "C" {
@@ -235,7 +311,7 @@ namespace blake2s {
 
     WORD thread = 256;
     WORD block = (n_batch + thread - 1) / thread;
-    kernel_blake2s_hash<<<block, thread>>>(cuda_indata, inlen, cuda_outdata, n_batch, BLAKE2S_BLOCK_SIZE);
+    kernel_blake2s_hash<<<block, thread>>>(cuda_indata, inlen, cuda_outdata, n_batch, BLAKE2S_BLOCK_SIZE, false);
     cudaMemcpy(out, cuda_outdata, BLAKE2S_BLOCK_SIZE * n_batch, cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     // cudaError_t error = cudaGetLastError();
@@ -260,9 +336,43 @@ namespace blake2s {
     WORD block = (number_of_states + thread - 1) / thread;
 
     kernel_blake2s_hash<<<block, thread, 0, ctx.stream>>>(
-      input, input_len, output, number_of_states, BLAKE2S_BLOCK_SIZE);
+      input, input_len, output, number_of_states, BLAKE2S_BLOCK_SIZE, !use_iv);
 
     CHK_IF_RETURN(cudaPeekAtLastError());
+    return CHK_LAST();
+  }
+
+  cudaError_t Blake2s::hash_2d(
+    const Matrix<BYTE>* inputs,
+    BYTE* states,
+    unsigned int number_of_inputs,
+    unsigned int output_len,
+    uint64_t number_of_rows,
+    const device_context::DeviceContext& ctx) const
+  {
+    const WORD BLAKE2S_BLOCK_SIZE = output_len;
+    WORD thread = 256;
+    WORD block = (number_of_rows + thread - 1) / thread;
+
+    hash_2d_kernel<<<block, thread, 0, ctx.stream>>>(inputs, states, number_of_inputs, output_len);
+    return CHK_LAST();
+  }
+
+  cudaError_t Blake2s::compress_and_inject(
+    const Matrix<BYTE>* matrices_to_inject,
+    unsigned int number_of_inputs,
+    uint64_t number_of_rows,
+    const BYTE* prev_layer,
+    BYTE* next_layer,
+    unsigned int digest_elements,
+    const device_context::DeviceContext& ctx) const
+  {
+    const WORD BLAKE2S_BLOCK_SIZE = digest_elements;
+    WORD thread = 256;
+    WORD block = (number_of_rows + thread - 1) / thread;
+
+    compress_and_inject_kernel<<<block, thread, 0, ctx.stream>>>(
+      matrices_to_inject, number_of_inputs, prev_layer, next_layer);
     return CHK_LAST();
   }
 
