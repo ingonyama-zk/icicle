@@ -38,10 +38,10 @@ mod tests {
     use super::G2CurveCfg;
     use super::{CurveCfg, ScalarField, BASE_LIMBS};
     use icicle_core::curve::Curve;
-    use icicle_runtime::test_utilities;
     use icicle_core::tests::*;
     use icicle_core::traits::FieldImpl;
     use icicle_core::{impl_curve_tests, impl_field_tests};
+    use icicle_runtime::test_utilities;
 
     impl_field_tests!(ScalarField);
     impl_curve_tests!(BASE_LIMBS, CurveCfg);
