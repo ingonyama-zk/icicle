@@ -853,8 +853,8 @@ TYPED_TEST(FieldApiTest, ntt)
   const bool inplace = rand() % 2;
   const int logn = rand() % 15 + 3;
   const uint64_t N = 1 << logn;
-  const int log_ntt_domain_size = logn;
-  const int log_batch_size = 0;
+  const int log_ntt_domain_size = logn + 1;
+  const int log_batch_size = rand() % 3;
   const int batch_size = 1 << log_batch_size;
   const int _ordering = rand() % 4;
   const Ordering ordering = static_cast<Ordering>(_ordering);
@@ -907,7 +907,6 @@ TYPED_TEST(FieldApiTest, ntt)
     config.are_outputs_on_device = true;
     config.is_async = false;
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
-    // ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config);
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
@@ -935,10 +934,9 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(icicle_destroy_stream(stream));
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-
+  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
+  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT

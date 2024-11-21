@@ -310,10 +310,6 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
-    // std::cout << "press any key to proceed...";
-    // int a;
-    // std::cin >> a;
-    // std::cout << "proceeding\n";
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
       ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
@@ -329,7 +325,7 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  // run(s_main_target, out_main.get(), "ecntt", true /*=measure*/, 1 /*=iters*/); // warmup
+  run(s_main_target, out_main.get(), "ecntt", true /*=measure*/, 1 /*=iters*/); // warmup
   run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // note that memcmp is tricky here because projetive points can have many representations
@@ -360,8 +356,6 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  ICICLE_LOG_INFO << "a: " << a;
-  ICICLE_LOG_INFO << "b: " << b;
   ASSERT_EQ(true, TypeParam::is_on_curve(a) && TypeParam::is_on_curve(b));               // rand is on curve
   ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
   ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
