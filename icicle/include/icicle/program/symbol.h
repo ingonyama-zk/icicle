@@ -107,7 +107,7 @@ class Symbol {
     Symbol operator*(const S& operand) const { return multiply(Symbol(operand));}
     Symbol operator*=(const Symbol& operand) { return assign(multiply(operand));}
     Symbol operator*=(const S& operand) { return assign(multiply(Symbol(operand)));}
-    Symbol operator!() const { return inv();}
+    Symbol operator!() const { return inverse();}
 
     void set_as_input(int input_idx) {
       m_operation = std::make_shared<Operation<S> >(OP_INPUT, nullptr, nullptr, nullptr, input_idx);
@@ -140,7 +140,8 @@ class Symbol {
       return rv;
     }
 
-    Symbol inv() {
+    // inverse
+    Symbol inverse() {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S> >(OP_INV, m_operation);
       return rv;

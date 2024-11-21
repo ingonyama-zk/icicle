@@ -93,7 +93,7 @@ private:
       int_arr[2] = std::byte(operation->m_operand2->m_mem_addr);
     }
     if (operation->m_mem_addr < 0) {
-      operation->m_mem_addr = m_nof_inputs + m_nof_constants + m_nof_intermidiates++;
+      operation->m_mem_addr = allocate_intermidiate();
     }
     int_arr[3]= std::byte(operation->m_mem_addr);
     InstructionType instruction;
@@ -108,9 +108,15 @@ private:
     allocate_constants(operation->m_operand2);
     if (operation->m_opcode == OP_CONST) {
       m_constants.push_back(*(operation->m_constant));
-      operation->m_mem_addr = m_nof_inputs + m_nof_outputs + m_nof_constants;
-      m_nof_constants++;
+      operation->m_mem_addr = allocate_constant();
     }
+  }
+
+  int allocate_constant() {
+    return (m_nof_inputs + m_nof_outputs + m_nof_constants++);
+  }
+  int allocate_intermidiate() {
+    return (m_nof_inputs + m_nof_outputs + m_nof_constants + m_nof_intermidiates++);
   }
 public:
   void print_program() {
