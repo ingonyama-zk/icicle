@@ -53,11 +53,11 @@ public:
     const int dev_idx = rand() % s_registered_devices.size();
     icicle_set_device(s_registered_devices.at(dev_idx));
     ICICLE_LOG_INFO << "setting device " << s_registered_devices.at(dev_idx) << " for polynomial tests";
-      #ifdef BARRET
-  ICICLE_LOG_INFO << "USING BARRET MULT\n";
-  #else
-  ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
-  #endif
+#ifdef BARRET
+    ICICLE_LOG_INFO << "USING BARRET MULT\n";
+#else
+    ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+#endif
   }
 
   static void TearDownTestSuite() {}

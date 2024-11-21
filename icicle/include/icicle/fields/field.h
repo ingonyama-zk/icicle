@@ -20,12 +20,11 @@
 
 #ifdef __CUDACC__
   #include "gpu-utils/sharedmem.h"
-  #include "ptx.h"
+  #include "device_math.h"
 #endif // __CUDACC__
+#include "host_math.h"
 
 #include "icicle/errors.h"
-#include "host_math.h"
-#include "device_math.h"
 #include "storage.h"
 
 #include <iomanip>
@@ -35,6 +34,12 @@
 #include <string>
 
 using namespace icicle;
+
+#ifdef __CUDA_ARCH__
+namespace base_math = device_math;
+#else
+namespace base_math = host_math;
+#endif
 
 template <class CONFIG>
 class Field
@@ -191,18 +196,7 @@ public:
     static constexpr Field HOST_DEVICE_INLINE get_higher_with_slack(const Wide& xs)
     {
       Field out{};
-#ifdef __CUDA_ARCH__
-      UNROLL
-#endif
-      for (unsigned i = 0; i < TLC; i++) {
-#ifdef __CUDA_ARCH__
-        out.limbs_storage.limbs[i] =
-          __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], 2 * slack_bits);
-#else
-        out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << 2 * slack_bits) +
-                                     (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - 2 * slack_bits));
-#endif
-      }
+      base_math::get_higher_with_slack(xs.limbs_storage, out.limbs_storage, slack_bits);
       return out;
     }
 
@@ -281,58 +275,21 @@ public:
   static constexpr HOST_DEVICE_INLINE uint32_t
   add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-#ifdef __CUDA_ARCH__
-    return device_math::template add_sub_limbs_device<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
-#else
-    return host_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
-#endif
+    return base_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
   static constexpr HOST_DEVICE_INLINE uint32_t
   sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-#ifdef __CUDA_ARCH__
-    return device_math::template add_sub_limbs_device<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
-#else
-    return host_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
-#endif
+    return base_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
   }
 
   static HOST_DEVICE_INLINE void multiply_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
-#ifdef __CUDA_ARCH__
-    return device_math::template multiply_raw_device(as, bs, rs);
-#else
-    return host_math::template multiply_raw<TLC>(as, bs, rs);
-#endif
+    return base_math::template multiply_raw<TLC>(as, bs, rs);
   }
 
-  #ifdef BARRET
-
-  static HOST_DEVICE_INLINE void
-  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
-  {
-#ifdef __CUDA_ARCH__
-    return device_math::template multiply_and_add_lsb_neg_modulus_raw_device(as, get_neg_modulus(), cs, rs);
-#else
-    Wide r_wide = {};
-    host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
-    Field r = Wide::get_lower(r_wide);
-    add_limbs<TLC, false>(cs, r.limbs_storage, rs);
-#endif
-  }
-
-  static HOST_DEVICE_INLINE void multiply_msb_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-#ifdef __CUDA_ARCH__
-    return device_math::template multiply_msb_raw_device(as, bs, rs);
-#else
-    return host_math::template multiply_raw<TLC>(as, bs, rs);
-#endif
-  }
-
-  #endif
 
 public:
   ff_storage limbs_storage;
@@ -421,7 +378,29 @@ public:
     return rs;
   }
 
-  #ifdef BARRET
+#ifdef BARRET
+
+  static HOST_DEVICE_INLINE void
+  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
+  {
+  #ifdef __CUDA_ARCH__
+    return base_math::template multiply_and_add_lsb_neg_modulus_raw(as, get_neg_modulus(), cs, rs);
+  #else
+    Wide r_wide = {};
+    base_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
+    Field r = Wide::get_lower(r_wide);
+    add_limbs<TLC, false>(cs, r.limbs_storage, rs);
+  #endif
+  }
+
+  static HOST_DEVICE_INLINE void multiply_msb_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
+  {
+  #ifdef __CUDA_ARCH__
+    return base_math::template multiply_msb_raw(as, bs, rs);
+  #else
+    return base_math::template multiply_raw<TLC>(as, bs, rs);
+  #endif
+  }
 
   /**
    * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
@@ -444,7 +423,7 @@ public:
    * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
    * will cause only 1 reduction to be performed.
    */
-  static constexpr HOST_DEVICE_INLINE Field barret_reduce(const Wide& xs) //TODO = add reduce_mont_inplace
+  static constexpr HOST_DEVICE_INLINE Field barret_reduce(const Wide& xs) // TODO = add reduce_mont_inplace
   {
     // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
     Field xs_hi = Wide::get_higher_with_slack(xs);
@@ -469,11 +448,17 @@ public:
     return r;
   }
 
-  #endif
-
-  static constexpr HOST_DEVICE_INLINE Field mont_sub_modulus(const Wide& xs, bool get_higher = false)
+  static constexpr HOST_INLINE Field barret_mult(const Field& xs, const Field& ys)
   {
-    Field r = get_higher? Wide::get_higher(xs) : Wide::get_lower(xs);
+    Wide xy = mul_wide(xs, ys); // full mult
+    return reduce(xy);   // reduce mod p
+  }
+
+#endif
+
+  static constexpr HOST_DEVICE_INLINE Field mont_sub_modulus(const Field& xs, bool get_higher = false)
+  {
+    Field r = xs;
     Field p = Field{get_modulus<1>()};
     if (p.limbs_storage.limbs[TLC - 1] > r.limbs_storage.limbs[TLC - 1]) return r;
     ff_storage r_reduced = {};
@@ -483,13 +468,36 @@ public:
     return r;
   }
 
+  static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
+  {
+    Field r = {};
+    base_math::template multiply_mont<TLC>(xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
+    return mont_sub_modulus(r);
+  }
+  
+
+
+  static constexpr HOST_INLINE Field mont_reduce(const Wide& t)
+  {
+#ifdef __CUDA_ARCH__
+    Wide r = t;
+    base_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
+    return mont_sub_modulus(Wide::get_lower(r));
+#else
+    Wide r = {};
+    base_math::template sos_mont_reduction<TLC>(
+      t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
+    return mont_sub_modulus(Wide::get_higher(r));
+#endif
+  }
+
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
-    #ifdef BARRET
+#ifdef BARRET
     return barret_reduce(xs);
-    #else
+#else
     return mont_reduce(xs);
-    #endif
+#endif
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
@@ -500,354 +508,19 @@ public:
     return *this;
   }
 
-  // #if defined(__CUDACC__)
-#if 1
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
-  #ifdef __CUDA_ARCH__ // cuda
-    #ifdef BARRET
-    Wide xy = mul_wide(xs, ys); // full mult
-    return barret_reduce(xy);          // reduce mod p
-    // return Wide::get_lower(xy);          // reduce mod p
-    #else
-      return sub_modulus<1>(Field{device_math::template mulmont_device<TLC>(xs.limbs_storage,ys.limbs_storage,get_modulus<1>(),get_mont_inv_modulus())});
-    #endif
-    #else
-    #ifdef BARRET
-      Wide xy = mul_wide(xs, ys); // full mult
-      return barret_reduce(xy);          // reduce mod p
-      // return Wide::get_lower(xy);
-    #else
-    return mont_mult(xs,ys);
-    #endif
-    #endif
-  #endif
-  }
-
-  static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
-  {
-    Wide r = {};
-    host_math::multiply_mont<TLC>(xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
-    return mont_sub_modulus(r);
-  }
-
-  /**
-   * @brief Perform  SOS reduction on a number in montgomery representation \p t in range [0,p^2-1] (p is the field's
-   * modulus) limiting it to the range [0,2p-1].
-   * @param t Number to be reduced. Must be in montgomery rep, and in range [0,p^2-1].
-   * @return \p t mod p
-   */
-  static constexpr HOST_INLINE Field mont_reduce(const Wide& t)
-  {
-    #ifdef __CUDA_ARCH__
-    Wide r = t;
-    device_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
-    return mont_sub_modulus(r);
-    #else
-    Wide r = {};
-    host_math::template sos_mont_reduction<TLC>(
-      t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
-    return mont_sub_modulus(r, true);
-    #endif
-  }
-
-  // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
-  //   #pragma GCC optimize("no-strict-aliasing")
-  // #endif
-
-  friend HOST_DEVICE_INLINE Field original_multiplier(const Field& xs, const Field& ys)
-  {
-    Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
-  }
-
-#if 0
-
-  // #include <x86intrin.h>
-
-  /* GNARK CODE START*/
-  // those two funcs are copied from bits.go implementation (/usr/local/go/src/math/bits/bits.go)
-  static HOST_DEVICE_INLINE void Mul64(uint64_t x, uint64_t y, uint64_t& hi, uint64_t& lo)
-  {
-    // constexpr uint64_t mask32 = 4294967295ULL; // 2^32 - 1
-    // uint64_t x0 = x & mask32;
-    // uint64_t x1 = x >> 32;
-    // uint64_t y0 = y & mask32;
-    // uint64_t y1 = y >> 32;
-    // uint64_t w0 = x0 * y0;
-    // uint64_t t = x1 * y0 + w0 >> 32;
-    // uint64_t w1 = t & mask32;
-    // uint64_t w2 = t >> 32;
-    // w1 += x0 * y1;
-    // hi = x1 * y1 + w2 + w1 >> 32;
-    // lo = x * y;
-
-    // #if defined(__GNUC__) || defined(__clang__)
-    // lo = _umul128(x, y, &hi);
-    // #else
-    __uint128_t result = static_cast<__uint128_t>(x) * y;
-    hi = static_cast<uint64_t>(result >> 64);
-    lo = static_cast<uint64_t>(result);
-    // #endif
-  }
-
-  // #if defined(__GNUC__) || defined(__clang__)
-  // #include <x86intrin.h>
-  // #endif
-
-  static HOST_DEVICE_INLINE void Add64(uint64_t x, uint64_t y, uint64_t carry, uint64_t& sum, uint64_t& carry_out)
-  {
-    // #if defined(__GNUC__) || defined(__clang__)
-    // carry_out = _addcarry_u64(carry, x, y, &sum);
-    // #else
-    sum = x + y + carry;
-    carry_out = ((x & y) | ((x | y) & ~sum)) >> 63;
-    // #endif
-  }
-
-  static HOST_DEVICE_INLINE void Sub64(uint64_t x, uint64_t y, uint64_t borrow, uint64_t& diff, uint64_t& borrowOut)
-  {
-    // #if defined(__GNUC__) || defined(__clang__)
-    // borrowOut = _subborrow_u64(borrow, x, y, &diff);
-    // #else
-    diff = x - y - borrow;
-    // See Sub32 for the bit logic.
-    borrowOut = ((~x & y) | (~(x ^ y) & diff)) >> 63;
-    // #endif
-  }
-
-  static HOST_DEVICE_INLINE bool smallerThanModulus(const Field& z)
-  {
-    // for bn254 specifically
-    constexpr uint64_t q0 = 4891460686036598785ULL;
-    constexpr uint64_t q1 = 2896914383306846353ULL;
-    constexpr uint64_t q2 = 13281191951274694749ULL;
-    constexpr uint64_t q3 = 3486998266802970665ULL;
-    return (
-      z.limbs_storage.limbs64[3] < q3 ||
-      (z.limbs_storage.limbs64[3] == q3 &&
-       (z.limbs_storage.limbs64[2] < q2 ||
-        (z.limbs_storage.limbs64[2] == q2 &&
-         (z.limbs_storage.limbs64[1] < q1 ||
-          (z.limbs_storage.limbs64[1] == q1 && (z.limbs_storage.limbs64[0] < q0)))))));
-  }
-
-  // #define WITH_MONT_CONVERSIONS
-
-  #ifdef WITH_MONT_CONVERSIONS
-  friend HOST_DEVICE Field operator*(const Field& x_orig, const Field& y_orig)
+  #ifdef BARRET
+    return barret_mult(xs, ys);
   #else
-  friend HOST_DEVICE Field operator*(const Field& x, const Field& y)
+    return mont_mult(xs, ys);
   #endif
-  {
-    // for bn254 specifically
-    constexpr uint64_t qInvNeg = 14042775128853446655ULL;
-    constexpr uint64_t q0 = 4891460686036598785ULL;
-    constexpr uint64_t q1 = 2896914383306846353ULL;
-    constexpr uint64_t q2 = 13281191951274694749ULL;
-    constexpr uint64_t q3 = 3486998266802970665ULL;
-
-  #ifdef WITH_MONT_CONVERSIONS
-    // auto x = original_multiplier(x_orig, original_multiplier(Field{CONFIG::montgomery_r},
-    // Field{CONFIG::montgomery_r})); auto y = original_multiplier(y_orig,
-    // original_multiplier(Field{CONFIG::montgomery_r}, Field{CONFIG::montgomery_r}));
-    auto x = original_multiplier(x_orig, Field{CONFIG::montgomery_r});
-    auto y = original_multiplier(y_orig, Field{CONFIG::montgomery_r});
-  #endif
-
-    Field z{};
-    uint64_t t0, t1, t2, t3;
-    uint64_t u0, u1, u2, u3;
-
-    {
-      uint64_t c0, c1, c2, _;
-      uint64_t v = x.limbs_storage.limbs64[0];
-      Mul64(v, y.limbs_storage.limbs64[0], u0, t0);
-      Mul64(v, y.limbs_storage.limbs64[1], u1, t1);
-      Mul64(v, y.limbs_storage.limbs64[2], u2, t2);
-      Mul64(v, y.limbs_storage.limbs64[3], u3, t3);
-      Add64(u0, t1, 0, t1, c0);
-      Add64(u1, t2, c0, t2, c0);
-      Add64(u2, t3, c0, t3, c0);
-      Add64(u3, 0, c0, c2, _);
-
-      uint64_t m = qInvNeg * t0;
-
-      Mul64(m, q0, u0, c1);
-      Add64(t0, c1, 0, _, c0);
-      Mul64(m, q1, u1, c1);
-      Add64(t1, c1, c0, t0, c0);
-      Mul64(m, q2, u2, c1);
-      Add64(t2, c1, c0, t1, c0);
-      Mul64(m, q3, u3, c1);
-
-      Add64(0, c1, c0, t2, c0);
-      Add64(u3, 0, c0, u3, _);
-      Add64(u0, t0, 0, t0, c0);
-      Add64(u1, t1, c0, t1, c0);
-      Add64(u2, t2, c0, t2, c0);
-      Add64(c2, 0, c0, c2, _);
-      Add64(t3, t2, 0, t2, c0);
-      Add64(u3, c2, c0, t3, _);
-    }
-
-    {
-      uint64_t c0, c1, c2, _;
-      uint64_t v = x.limbs_storage.limbs64[1];
-      Mul64(v, y.limbs_storage.limbs64[0], u0, c1);
-      Add64(c1, t0, 0, t0, c0);
-      Mul64(v, y.limbs_storage.limbs64[1], u1, c1);
-      Add64(c1, t1, c0, t1, c0);
-      Mul64(v, y.limbs_storage.limbs64[2], u2, c1);
-      Add64(c1, t2, c0, t2, c0);
-      Mul64(v, y.limbs_storage.limbs64[3], u3, c1);
-      Add64(c1, t3, c0, t3, c0);
-
-      Add64(0, 0, c0, c2, _);
-      Add64(u0, t1, 0, t1, c0);
-      Add64(u1, t2, c0, t2, c0);
-      Add64(u2, t3, c0, t3, c0);
-      Add64(u3, c2, c0, c2, _);
-
-      uint64_t m = qInvNeg * t0;
-
-      Mul64(m, q0, u0, c1);
-      Add64(t0, c1, 0, _, c0);
-      Mul64(m, q1, u1, c1);
-      Add64(t1, c1, c0, t0, c0);
-      Mul64(m, q2, u2, c1);
-      Add64(t2, c1, c0, t1, c0);
-      Mul64(m, q3, u3, c1);
-
-      Add64(0, c1, c0, t2, c0);
-      Add64(u3, 0, c0, u3, _);
-      Add64(u0, t0, 0, t0, c0);
-      Add64(u1, t1, c0, t1, c0);
-      Add64(u2, t2, c0, t2, c0);
-      Add64(c2, 0, c0, c2, _);
-      Add64(t3, t2, 0, t2, c0);
-      Add64(u3, c2, c0, t3, _);
-    }
-
-    {
-      uint64_t c0, c1, c2, _;
-      uint64_t v = x.limbs_storage.limbs64[2];
-      Mul64(v, y.limbs_storage.limbs64[0], u0, c1);
-      Add64(c1, t0, 0, t0, c0);
-      Mul64(v, y.limbs_storage.limbs64[1], u1, c1);
-      Add64(c1, t1, c0, t1, c0);
-      Mul64(v, y.limbs_storage.limbs64[2], u2, c1);
-      Add64(c1, t2, c0, t2, c0);
-      Mul64(v, y.limbs_storage.limbs64[3], u3, c1);
-      Add64(c1, t3, c0, t3, c0);
-
-      Add64(0, 0, c0, c2, _);
-      Add64(u0, t1, 0, t1, c0);
-      Add64(u1, t2, c0, t2, c0);
-      Add64(u2, t3, c0, t3, c0);
-      Add64(u3, c2, c0, c2, _);
-
-      uint64_t m = qInvNeg * t0;
-
-      Mul64(m, q0, u0, c1);
-      Add64(t0, c1, 0, _, c0);
-      Mul64(m, q1, u1, c1);
-      Add64(t1, c1, c0, t0, c0);
-      Mul64(m, q2, u2, c1);
-      Add64(t2, c1, c0, t1, c0);
-      Mul64(m, q3, u3, c1);
-
-      Add64(0, c1, c0, t2, c0);
-      Add64(u3, 0, c0, u3, _);
-      Add64(u0, t0, 0, t0, c0);
-      Add64(u1, t1, c0, t1, c0);
-      Add64(u2, t2, c0, t2, c0);
-      Add64(c2, 0, c0, c2, _);
-      Add64(t3, t2, 0, t2, c0);
-      Add64(u3, c2, c0, t3, _);
-    }
-
-    {
-      uint64_t c0, c1, c2, _;
-      uint64_t v = x.limbs_storage.limbs64[3];
-      Mul64(v, y.limbs_storage.limbs64[0], u0, c1);
-      Add64(c1, t0, 0, t0, c0);
-      Mul64(v, y.limbs_storage.limbs64[1], u1, c1);
-      Add64(c1, t1, c0, t1, c0);
-      Mul64(v, y.limbs_storage.limbs64[2], u2, c1);
-      Add64(c1, t2, c0, t2, c0);
-      Mul64(v, y.limbs_storage.limbs64[3], u3, c1);
-      Add64(c1, t3, c0, t3, c0);
-
-      Add64(0, 0, c0, c2, _);
-      Add64(u0, t1, 0, t1, c0);
-      Add64(u1, t2, c0, t2, c0);
-      Add64(u2, t3, c0, t3, c0);
-      Add64(u3, c2, c0, c2, _);
-
-      uint64_t m = qInvNeg * t0;
-
-      Mul64(m, q0, u0, c1);
-      Add64(t0, c1, 0, _, c0);
-      Mul64(m, q1, u1, c1);
-      Add64(t1, c1, c0, t0, c0);
-      Mul64(m, q2, u2, c1);
-      Add64(t2, c1, c0, t1, c0);
-      Mul64(m, q3, u3, c1);
-
-      Add64(0, c1, c0, t2, c0);
-      Add64(u3, 0, c0, u3, _);
-      Add64(u0, t0, 0, t0, c0);
-      Add64(u1, t1, c0, t1, c0);
-      Add64(u2, t2, c0, t2, c0);
-      Add64(c2, 0, c0, c2, _);
-      Add64(t3, t2, 0, t2, c0);
-      Add64(u3, c2, c0, t3, _);
-    }
-
-    z.limbs_storage.limbs64[0] = t0;
-    z.limbs_storage.limbs64[1] = t1;
-    z.limbs_storage.limbs64[2] = t2;
-    z.limbs_storage.limbs64[3] = t3;
-
-    if (smallerThanModulus(z)) {
-      uint64_t b, _;
-      Sub64(z.limbs_storage.limbs64[0], q0, 0, z.limbs_storage.limbs64[0], b);
-      Sub64(z.limbs_storage.limbs64[1], q1, b, z.limbs_storage.limbs64[1], b);
-      Sub64(z.limbs_storage.limbs64[2], q2, b, z.limbs_storage.limbs64[2], b);
-      Sub64(z.limbs_storage.limbs64[3], q3, b, z.limbs_storage.limbs64[3], _);
-    }
-
-  #ifdef WITH_MONT_CONVERSIONS
-    z = original_multiplier(z, Field{CONFIG::montgomery_r_inv});
-      // z = original_multiplier(z, original_multiplier(Field{CONFIG::montgomery_r_inv},
-      // Field{CONFIG::montgomery_r_inv}));
-  #endif
-    return z;
   }
-#endif
 
-  // #if defined(__GNUC__) && !defined(__NVCC__) && !defined(__clang__)
-  //   #pragma GCC reset_options
-  // #endif
-
-  /*GNARK CODE END*/
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
   {
-#ifdef __CUDA_ARCH__
-    const uint32_t* x = xs.limbs_storage.limbs;
-    const uint32_t* y = ys.limbs_storage.limbs;
-    uint32_t limbs_or = x[0] ^ y[0];
-    UNROLL
-    for (unsigned i = 1; i < TLC; i++)
-      limbs_or |= x[i] ^ y[i];
-    return limbs_or == 0;
-#else
-    for (unsigned i = 0; i < TLC; i++)
-      if (xs.limbs_storage.limbs[i] != ys.limbs_storage.limbs[i]) return false;
-    return true;
-#endif
+    return base_math::template is_equal<TLC>(xs.limbs_storage, ys.limbs_storage);
   }
 
   friend HOST_DEVICE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
@@ -856,19 +529,19 @@ public:
   static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
   {
     Field mul = multiplier;
-    #ifdef BARRET
+#ifdef BARRET
     static bool is_u32 = true;
-#ifdef __CUDA_ARCH__
+  #ifdef __CUDA_ARCH__
     UNROLL
-#endif
+  #endif
     for (unsigned i = 1; i < TLC; i++)
       is_u32 &= (mul.limbs_storage.limbs[i] == 0);
 
     if (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
-    #endif
-    #ifndef BARRET
-    mul = to_montgomery(mul);
-    #endif
+#endif
+#ifndef BARRET
+    mul = to_montgomery(mul); // TODO - optimize
+#endif
     return mul * xs;
   }
 

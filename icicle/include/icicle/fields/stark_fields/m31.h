@@ -200,7 +200,9 @@ namespace m31 {
     static constexpr storage<limbs_count> one = {0x00000001};
     static constexpr storage<limbs_count> zero = {0x00000000};
     static constexpr storage<limbs_count> montgomery_r = {0x00000001};
+    static constexpr storage<limbs_count> montgomery_r_sqr = {0x00000001};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x00000001};
+    static constexpr storage<limbs_count> mont_inv_modulus = {0x80000001};
 
     static constexpr storage_array<omegas_count, limbs_count> omega = {{{0x7ffffffe}}};
 

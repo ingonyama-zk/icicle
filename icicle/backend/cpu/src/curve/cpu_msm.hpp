@@ -453,11 +453,11 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
     for (int j = 0; j < m_precompute_factor; j++) {
       // Handle required preprocess of base P according to the version of Field/Ec adder (accepting Barret / Montgomery)
       A base =
-      #ifdef BARRET
+#ifdef BARRET
         m_are_points_mont ? A::from_montgomery(bases[m_precompute_factor * i + j]) : bases[m_precompute_factor * i + j];
-      #else
+#else
         m_are_points_mont ? bases[m_precompute_factor * i + j] : A::to_montgomery(bases[m_precompute_factor * i + j]);
-      #endif
+#endif
       if (base == A::zero()) { continue; }
       if (negate_p_and_s) { base = A::neg(base); }
 
@@ -785,22 +785,22 @@ eIcicleError cpu_msm_precompute_bases(
   for (int i = 0; i < nof_bases; i++) {
     output_bases[precompute_factor * i] = input_bases[i];
     // Handle required preprocess of base P according to the version of Field/Ec adder (accepting Barret / Montgomery)
-    P point = 
-    #ifdef BARRET
+    P point =
+#ifdef BARRET
       P::from_affine(is_mont ? A::from_montgomery(input_bases[i]) : input_bases[i]);
-    #else
+#else
       P::from_affine(is_mont ? input_bases[i] : A::to_montgomery(input_bases[i]));
-    #endif
+#endif
     for (int j = 1; j < precompute_factor; j++) {
       for (int k = 0; k < shift; k++) {
         point = P::dbl(point);
       }
-      output_bases[precompute_factor * i + j] = 
-      #ifdef BARRET
+      output_bases[precompute_factor * i + j] =
+#ifdef BARRET
         is_mont ? A::to_montgomery(P::to_affine(point)) : P::to_affine(point);
-      #else
+#else
         is_mont ? P::to_affine(point) : A::from_montgomery(P::to_affine(point));
-      #endif
+#endif
     }
   }
   return eIcicleError::SUCCESS;

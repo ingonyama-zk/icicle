@@ -27,8 +27,7 @@ namespace ntt_cpu {
   public:
     NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
         : input(input), ntt_data(logn, output, config, direction), ntt_tasks_manager(ntt_data.ntt_sub_logn, logn),
-          // tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1))
-    tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(1))
+          tasks_manager(std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1))
     {
     }
     eIcicleError run();

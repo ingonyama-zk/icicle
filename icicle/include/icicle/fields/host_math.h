@@ -84,17 +84,9 @@ namespace host_math {
     return result;
   }
 
-  // static inline __host__ __uint128_t mul64(uint64_t x, uint64_t y)
-  // {
-  //   uint64_t high, low;
-  //   asm("mulq %3" : "=d"(high), "=a"(low) : "a"(x), "r"(y) : "cc");
-  //   return (static_cast<__uint128_t>(high) << 64) | low;
-  // }
-
   static __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
   {
     __uint128_t r = static_cast<__uint128_t>(x) * y + z + carry;
-    // __uint128_t r = mul64(x, y) + z + carry;
 
     carry = (uint64_t)(r >> 64);
     uint64_t result = r & 0xffffffffffffffff;
@@ -102,27 +94,6 @@ namespace host_math {
   }
 
 #include <cstdint>
-
-  // static inline __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
-  // {
-  //   uint64_t high, low;
-
-  //   // Perform multiplication of x * y
-  //   asm("mulq %3\n\t"                        // x * y -> result in RDX:RAX
-  //       "addq %4, %%rax\n\t"                 // Add z to the low 64 bits (RAX), setting flags
-  //       "adcq $0, %%rdx\n\t"                 // Propagate carry to high 64 bits (RDX)
-  //       "addq %5, %%rax\n\t"                 // Add the input carry to RAX, setting flags
-  //       "adcq $0, %%rdx"                     // Propagate any carry to RDX
-  //       : "=a"(low), "=d"(high)              // Output operands
-  //       : "a"(x), "r"(y), "r"(z), "r"(carry) // Input operands
-  //       : "cc");                             // Clobbers
-
-  //   // Set carry to the high 64 bits of the result
-  //   carry = high;
-
-  //   // Return the low 64 bits of the result
-  //   return low;
-  // }
 
   template <unsigned OPS_COUNT = UINT32_MAX, bool CARRY_IN = false, bool CARRY_OUT = false>
   struct carry_chain {
@@ -350,13 +321,10 @@ namespace host_math {
    * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS, bool USE_32 = false>
-  static HOST_INLINE void
-  sos_mont_reduction(
-    const storage<2*NLIMBS>& t, const storage<NLIMBS>& n, const storage<NLIMBS>& n_tag, storage<2*NLIMBS>& r)
+  static HOST_INLINE void sos_mont_reduction(
+    const storage<2 * NLIMBS>& t, const storage<NLIMBS>& n, const storage<NLIMBS>& n_tag, storage<2 * NLIMBS>& r)
   {
-    static_assert(
-      NLIMBS % 2 == 0 || NLIMBS == 1,
-      "Odd number of limbs (That is not 1) is not supported\n");
+    static_assert(NLIMBS % 2 == 0 || NLIMBS == 1, "Odd number of limbs (That is not 1) is not supported\n");
     if constexpr (USE_32) {
       sos_mont_reduction_32<NLIMBS>(t.limbs, n.limbs, n_tag.limbs, r.limbs);
       return;
@@ -368,9 +336,13 @@ namespace host_math {
     }
   }
 
-template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
-  static constexpr HOST_INLINE void
-  multiply_mont(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, const storage<NLIMBS_A>& qs, const storage<NLIMBS_A>& ps, storage<NLIMBS_A + NLIMBS_B>& rs)
+  template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
+  static constexpr HOST_INLINE void multiply_mont(
+    const storage<NLIMBS_A>& as,
+    const storage<NLIMBS_B>& bs,
+    const storage<NLIMBS_A>& qs,
+    const storage<NLIMBS_A>& ps,
+    storage<NLIMBS_A>& rs)
   {
     static_assert(
       (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
@@ -481,6 +453,22 @@ template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
         }
       }
     }
+  }
+  template <unsigned NLIMBS>
+  static constexpr void get_higher_with_slack(const storage<2*NLIMBS>& xs, storage<NLIMBS>& out, unsigned slack_bits)
+  {
+      for (unsigned i = 0; i < NLIMBS; i++) {
+        out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * slack_bits) +
+                                     (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * slack_bits));
+      }
+  }
+
+  template <unsigned NLIMBS>
+  static constexpr DEVICE_INLINE bool is_equal(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
+  {
+    for (unsigned i = 0; i < NLIMBS; i++)
+      if (xs.limbs[i] != ys.limbs[i]) return false;
+    return true;
   }
 } // namespace host_math
 

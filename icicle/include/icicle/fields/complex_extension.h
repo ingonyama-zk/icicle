@@ -135,8 +135,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce(const ExtensionWide& xs)
   {
-    return ComplexExtensionField{
-      FF::reduce(xs.real), FF::reduce(xs.imaginary)};
+    return ComplexExtensionField{FF::reduce(xs.real), FF::reduce(xs.imaginary)};
   }
 
   template <class T1, class T2>

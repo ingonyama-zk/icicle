@@ -42,11 +42,11 @@ public:
     if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
     s_main_target = is_cuda_registered ? "CUDA" : "CPU";
     s_reference_target = "CPU";
-          #ifdef BARRET
-  ICICLE_LOG_INFO << "USING BARRET MULT\n";
-  #else
-  ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
-  #endif
+#ifdef BARRET
+    ICICLE_LOG_INFO << "USING BARRET MULT\n";
+#else
+    ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+#endif
   }
   static void TearDownTestSuite()
   {
@@ -73,85 +73,82 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 
-
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
   auto a = TypeParam::rand_host();
   // a.limbs_storage.limbs[0] = 1089097490;
-  std::cout<<a;
-  std::cout<<'\n';
+  std::cout << a;
+  std::cout << '\n';
   auto b = TypeParam::rand_host();
   // a.limbs_storage.limbs[0] = 1691855643;
-  std::cout<<b;
-  std::cout<<'\n';
+  std::cout << b;
+  std::cout << '\n';
   auto b_inv = TypeParam::inverse(b);
-  std::cout<<b_inv;
-  std::cout<<'\n';
+  std::cout << b_inv;
+  std::cout << '\n';
   auto a_neg = TypeParam::neg(a);
-  std::cout<<a_neg;
-  std::cout<<'\n';
+  std::cout << a_neg;
+  std::cout << '\n';
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(b * a * b_inv, a);
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
   ASSERT_EQ(b * b_inv, TypeParam::one());
-  std::cout<<scalar_t::from(2);
-  std::cout<<'\n';
+  std::cout << scalar_t::from(2);
+  std::cout << '\n';
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
-#ifndef EXT_FIELD
+// #ifndef EXT_FIELD
 TYPED_TEST(FieldApiTest, FieldLimbsTypeSanityTest)
 {
   // std::cout << "__cplusplus: " << __cplusplus << std::endl;
   // for (int i = 0; i < 100000; i++) {
-  auto a = TypeParam::rand_host();
-  auto b = TypeParam::rand_host();
-  // auto b = a;
-  auto ar = TypeParam::to_montgomery(a);
-  auto br = TypeParam::to_montgomery(b);
-  auto rr = TypeParam::mont_mult(ar,br);
-  auto r = TypeParam::from_montgomery(rr);
+  // auto a = TypeParam::rand_host();
+  // auto b = TypeParam::rand_host();
+  // // auto b = a;
+  // auto ar = TypeParam::to_montgomery(a);
+  // auto br = TypeParam::to_montgomery(b);
+  // auto rr = TypeParam::mont_mult(ar, br);
+  // auto r = TypeParam::from_montgomery(rr);
   // if (r != a*b){
-  std::cout << "a: "<< a << std::endl;
-  std::cout << "b: "<< b << std::endl;
-  std::cout << "ar: "<< ar << std::endl;
-  std::cout << "br: "<< br << std::endl;
-  std::cout << "rr: "<< rr << std::endl;
-  std::cout << "r: "<< r << std::endl;
-  std::cout << "p: "<<TypeParam{TypeParam::get_modulus()} << std::endl;
-  std::cout << "N': "<<TypeParam{TypeParam::get_mont_inv_modulus()} << std::endl;
-  std::cout << "R: "<<TypeParam{TypeParam::get_mont_r()} << std::endl;
-  std::cout << "R^2: "<<TypeParam{TypeParam::get_mont_r_sqr()} << std::endl;
-  std::cout << "R': "<<TypeParam{TypeParam::get_mont_r_inv()} << std::endl;
+  // std::cout << "a: " << a << std::endl;
+  // std::cout << "b: " << b << std::endl;
+  // std::cout << "ar: " << ar << std::endl;
+  // std::cout << "br: " << br << std::endl;
+  // std::cout << "rr: " << rr << std::endl;
+  // std::cout << "r: " << r << std::endl;
+  std::cout << "p: " << TypeParam{TypeParam::get_modulus()} << std::endl;
+  std::cout << "m: " << TypeParam{TypeParam::get_m()} << std::endl;
+  std::cout << "N': " << TypeParam{TypeParam::get_mont_inv_modulus()} << std::endl;
+  std::cout << "R: " << TypeParam{TypeParam::get_mont_r()} << std::endl;
+  std::cout << "R^2: " << TypeParam{TypeParam::get_mont_r_sqr()} << std::endl;
+  std::cout << "R': " << TypeParam{TypeParam::get_mont_r_inv()} << std::endl;
   // break;
   // }
   // ASSERT_EQ(r, a*b);
   // }
-  std::ostringstream oss;
-  START_TIMER(MULT_sync)
-  for (int i = 0; i < 100000; i++) {
+  // std::ostringstream oss;
+  // START_TIMER(MULT_sync)
+  // for (int i = 0; i < 100000; i++) {
     // typename TypeParam::Wide r_wide = {};
     // typename TypeParam::Wide r2_wide = {};
-    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, false>(a.limbs_storage, a.limbs_storage, r_wide.limbs_storage);
-    // a = TypeParam::reduce(r_wide);
-    ar = TypeParam::mont_mult(ar,ar);
+    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, false>(a.limbs_storage, a.limbs_storage,
+    // r_wide.limbs_storage); a = TypeParam::reduce(r_wide);
+    // ar = TypeParam::mont_mult(ar, ar);
     // a = TypeParam::mont_reduce(r_wide);
-    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, true>(b.limbs_storage, b.limbs_storage, r2_wide.limbs_storage);
-    // host_math::template add_sub_limbs<TypeParam::TLC, false, false, false>(a.limbs_storage, a.limbs_storage, a.limbs_storage);
-    // host_math::template add_sub_limbs<TypeParam::TLC, false, false, true>(b.limbs_storage, b.limbs_storage, b.limbs_storage);
-    // a = TypeParam::Wide::get_lower(r_wide);
-    // b = TypeParam::Wide::get_lower(r2_wide);
-    // a = a + a;
-    // a = a * a;
-  }
-  END_TIMER(MULT_sync, oss.str().c_str(), true);
+    // host_math::template multiply_raw<TypeParam::TLC, TypeParam::TLC, true>(b.limbs_storage, b.limbs_storage,
+    // r2_wide.limbs_storage); host_math::template add_sub_limbs<TypeParam::TLC, false, false, false>(a.limbs_storage,
+    // a.limbs_storage, a.limbs_storage); host_math::template add_sub_limbs<TypeParam::TLC, false, false,
+    // true>(b.limbs_storage, b.limbs_storage, b.limbs_storage); a = TypeParam::Wide::get_lower(r_wide); b =
+    // TypeParam::Wide::get_lower(r2_wide); a = a + a; a = a * a;
+  // }
+  // END_TIMER(MULT_sync, oss.str().c_str(), true);
   // ASSERT_EQ(TypeParam::from_montgomery(ar), a);
 }
-#endif
-
+// #endif
 
 TYPED_TEST(FieldApiTest, vectorOps)
 {
@@ -218,12 +215,9 @@ TYPED_TEST(FieldApiTest, vectorOps)
 
   // std::cout << in_a[0] << ", " << in_b[0] << ", " << out_main[0] << ", " << out_ref[0] << std::endl;
   // std::cout << in_a[1] << ", " << in_b[1] << ", " << out_main[1] << ", " << out_ref[1] << std::endl;
-  for (int i = 0; i < N; i++)
-  {
+  for (int i = 0; i < N; i++) {
     std::cout << in_a[i] << ", " << in_b[i] << ", " << out_main[i] << ", " << out_ref[i] << std::endl;
   }
-  
-
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), N * sizeof(TypeParam)));
 }
@@ -464,7 +458,6 @@ TYPED_TEST(FieldApiTest, ntt)
   run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 1 /*=iters*/); // warmup
   run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-
 
   // std::cout << "\n";
   // for (int i=0;i<total_size;i++){

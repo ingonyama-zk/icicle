@@ -161,9 +161,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce(const ExtensionWide& xs)
   {
-    return QuarticExtensionField{
-      FF::reduce(xs.real), FF::reduce(xs.im1),
-      FF::reduce(xs.im2), FF::reduce(xs.im3)};
+    return QuarticExtensionField{FF::reduce(xs.real), FF::reduce(xs.im1), FF::reduce(xs.im2), FF::reduce(xs.im3)};
   }
 
   template <class T1, class T2>
