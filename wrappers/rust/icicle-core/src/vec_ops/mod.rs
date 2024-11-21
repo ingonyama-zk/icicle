@@ -753,6 +753,7 @@ macro_rules! impl_vec_ops_tests {
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
             }
 
             #[test]
