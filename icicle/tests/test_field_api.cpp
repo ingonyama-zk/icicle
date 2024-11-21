@@ -174,7 +174,7 @@ template <typename T> eIcicleError omp_vector_vector_sub(
 template <typename T> eIcicleError omp_vector_vector_mul(
   const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic, 64)
   for (int vec_idx = 0; vec_idx < size * config.batch_size; vec_idx++)
   {
     output[vec_idx] = vec_a[vec_idx] * vec_b[vec_idx];
@@ -193,7 +193,7 @@ template <typename T> eIcicleError omp_vector_vector_mul(
 template <typename T> eIcicleError omp_vector_vector_div(
   const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  #pragma omp parallel for
+  #pragma omp parallel for schedule(dynamic, 64)
   for (int vec_idx = 0; vec_idx < size * config.batch_size; vec_idx++)
   {
     output[vec_idx] = vec_a[vec_idx] * T::inverse(vec_b[vec_idx]);
@@ -211,7 +211,7 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   // const int batch_size = 1 << (rand() % 5);
   const int batch_size = 2;
   // const bool columns_batch = rand() % 2;
-  const bool columns_batch = false;
+  const bool columns_batch = true;
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -408,7 +408,7 @@ template <typename T> eIcicleError omp_vector_sum(
     unsigned stride =     config.columns_batch? config.batch_size : 1;
     unsigned total_size = config.columns_batch? size * stride : size;
     unsigned idx_offset = config.columns_batch? idx_in_batch : idx_in_batch * size;
-    #pragma omp parallel for reduction (+:sum)
+    #pragma omp parallel for reduction (+:sum) schedule(dynamic, 64)
     for (int vec_idx = 0; vec_idx < total_size; vec_idx = vec_idx + stride)
     {
       sum = sum + vec_a[vec_idx + idx_offset];
@@ -437,7 +437,7 @@ template <typename T> eIcicleError omp_vector_product(
     unsigned total_size = config.columns_batch? size * stride : size;
     unsigned idx_offset = config.columns_batch? idx_in_batch : idx_in_batch * size;
 
-    #pragma omp parallel for reduction (*:product)
+    #pragma omp parallel for reduction (*:product) schedule(dynamic, 64)
     for (int vec_idx = 0; vec_idx < total_size; vec_idx = vec_idx + stride)
     {
       product = product * vec_a[vec_idx + idx_offset];
@@ -457,7 +457,7 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
   // const int batch_size = 1 << (rand() % 5);
   const int batch_size = 2;
   // const bool columns_batch = rand() % 2;
-  const bool columns_batch = false;
+  const bool columns_batch = true;
   const int total_size = N * batch_size;
 
   ICICLE_LOG_INFO << "N = " << N;
@@ -637,7 +637,7 @@ template <typename T> eIcicleError omp_scalar_vector_mul(
     T scalar = scalar_a[idx_in_batch];
     if (!config.columns_batch)
     {
-      #pragma omp parallel for
+      #pragma omp parallel for schedule(dynamic, 64)
       for (int vec_idx = 0; vec_idx < size; vec_idx++)
       {
         output[vec_idx + idx_in_batch * size] = scalar * vec_b[vec_idx + idx_in_batch * size];
@@ -646,7 +646,7 @@ template <typename T> eIcicleError omp_scalar_vector_mul(
     else
     {
       unsigned total_size = size * config.batch_size;
-      #pragma omp parallel for
+      #pragma omp parallel for schedule(dynamic, 64)
       for (int vec_idx = 0; vec_idx < total_size; vec_idx = vec_idx + config.batch_size)
       {
         output[vec_idx + idx_in_batch] = scalar * vec_b[vec_idx + idx_in_batch];
@@ -667,7 +667,7 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
   // const int batch_size = 1 << (rand() % 5);
   const int batch_size = 2;
   // const bool columns_batch = rand() % 2;
-  const bool columns_batch = false;
+  const bool columns_batch = true;
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
