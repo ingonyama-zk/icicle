@@ -8,7 +8,7 @@ If you're interested in understanding these integrations better or learning how 
 
 ## A primer to building your own integrations
 
-Lets illustrate an ICICLE integration, so you can understand the core API and design overview of ICICLE.
+Let's illustrate an ICICLE integration, so you can understand the core API and design overview of ICICLE.
 
 ![ICICLE architecture](../../static/img/architecture-high-level.png)
 
@@ -21,7 +21,7 @@ A developer may use ICICLE with two main approaches in mind.
 
 The first approach for GPU-accelerating your Prover with ICICLE is quick to implement, but it has limitations, such as reduced memory optimization and limited protocol tuning for GPUs. It's a solid starting point, but those committed to fully leveraging GPU acceleration should consider a more comprehensive approach.
 
-A End-to-End GPU replacement means performing the entire ZK proof on the GPU. This approach will reduce latency to a minimum and requires you to change the way you implement the protocol to be more GPU friendly. This approach will take full advantage of GPU acceleration. Redesigning your prover this way may take more engineering effort but we promise you that its worth it!
+A End-to-End GPU replacement means performing the entire ZK proof on the GPU. This approach will reduce latency to a minimum and requires you to change the way you implement the protocol to be more GPU friendly. This approach will take full advantage of GPU acceleration. Redesigning your prover this way may take more engineering effort but we promise you that it's worth it!
 
 ## Using ICICLE integrated provers
 
