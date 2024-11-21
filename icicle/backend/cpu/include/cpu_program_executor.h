@@ -66,18 +66,18 @@ class CpuProgramExecutor {
     }
     void exe_predef_ab_minus_c(const InstructionType instruction) {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
-      const S& a = *m_variable_ptrs[(int)inst_arr[0]];
-      const S& b = *m_variable_ptrs[(int)inst_arr[1]];
-      const S& c = *m_variable_ptrs[(int)inst_arr[2]];
-      *m_variable_ptrs[(int)inst_arr[3]] = a*b - c;
+      const S& a = *m_variable_ptrs[0];
+      const S& b = *m_variable_ptrs[1];
+      const S& c = *m_variable_ptrs[2];
+      *m_variable_ptrs[3] = a*b - c;
     }
     void exe_predef_eq_x_ab_minus_c(const InstructionType instruction) {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
-      const S& a = *m_variable_ptrs[(int)inst_arr[0]];
-      const S& b = *m_variable_ptrs[(int)inst_arr[1]];
-      const S& c = *m_variable_ptrs[(int)inst_arr[2]];
-      const S& eq = *m_variable_ptrs[(int)inst_arr[3]];
-      *m_variable_ptrs[(int)inst_arr[4]] = eq*(a*b - c);
+      const S& a = *m_variable_ptrs[0];
+      const S& b = *m_variable_ptrs[1];
+      const S& c = *m_variable_ptrs[2];
+      const S& eq = *m_variable_ptrs[3];
+      *m_variable_ptrs[4] = eq*(a*b - c);
     }
 
     using FunctionPtr = void(CpuProgramExecutor::*)(const InstructionType);
