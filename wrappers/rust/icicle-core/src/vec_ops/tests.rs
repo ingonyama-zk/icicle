@@ -30,9 +30,6 @@ fn test_vec_ops_config() {
     stream
         .synchronize()
         .unwrap();
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars<F: FieldImpl>()
@@ -67,9 +64,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     add_scalars(a_main, b, result_main, &cfg).unwrap();
@@ -78,10 +73,6 @@ where
     add_scalars(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_sub<F: FieldImpl>(test_size: usize)
@@ -98,9 +89,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     sub_scalars(a_main, b, result_main, &cfg).unwrap();
@@ -109,10 +98,6 @@ where
     sub_scalars(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_mul<F: FieldImpl>(test_size: usize)
@@ -129,9 +114,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     mul_scalars(a_main, b, result_main, &cfg).unwrap();
@@ -140,10 +123,6 @@ where
     mul_scalars(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_div<F: FieldImpl>(test_size: usize)
@@ -160,9 +139,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     div_scalars(a_main, b, result_main, &cfg).unwrap();
@@ -171,10 +148,6 @@ where
     div_scalars(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_sum<F: FieldImpl>(test_size: usize)
@@ -189,9 +162,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     sum_scalars(a_main, result_main, &cfg).unwrap();
@@ -200,10 +171,6 @@ where
     sum_scalars(a_main, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_product<F: FieldImpl>(test_size: usize)
@@ -218,9 +185,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     product_scalars(a_main, result_main, &cfg).unwrap();
@@ -229,10 +194,6 @@ where
     product_scalars(a_main, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_add_scalar<F: FieldImpl>(test_size: usize)
@@ -249,10 +210,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
-    cfg.batch_size = 1;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     scalar_add(a_main, b, result_main, &cfg).unwrap();
@@ -261,10 +219,6 @@ where
     scalar_add(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_sub_scalar<F: FieldImpl>(test_size: usize)
@@ -281,10 +235,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
-    cfg.batch_size = 1;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     scalar_sub(a_main, b, result_main, &cfg).unwrap();
@@ -293,10 +244,6 @@ where
     scalar_sub(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_mul_scalar<F: FieldImpl>(test_size: usize)
@@ -313,10 +260,7 @@ where
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
-    cfg.batch_size = 1;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     scalar_mul(a_main, b, result_main, &cfg).unwrap();
@@ -325,10 +269,6 @@ where
     scalar_mul(a_main, b, result_ref, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_vec_ops_scalars_accumulate<F: FieldImpl>(test_size: usize)
@@ -344,9 +284,7 @@ where
     let b_slice = HostSlice::from_slice(&b);
     let a_clone_slice = HostSlice::from_mut_slice(&mut a_clone);
 
-    let mut stream = IcicleStream::create().unwrap();
-    let mut cfg = VecOpsConfig::default();
-    cfg.stream_handle = *stream;
+    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     accumulate_scalars(a_main_slice, b_slice, &cfg).unwrap();
@@ -355,10 +293,6 @@ where
     accumulate_scalars(a_clone_slice, b_slice, &cfg).unwrap();
 
     assert_eq!(a_clone_slice.as_slice(), a_main_slice.as_slice());
-
-    stream
-        .destroy()
-        .unwrap();
 }
 
 pub fn check_matrix_transpose<F: FieldImpl>()
