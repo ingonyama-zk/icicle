@@ -94,7 +94,6 @@ namespace ntt_cpu {
           if (found_logn) break;
         }
       }
-      // s_ntt_domain.max_log_size = 21;
 
       s_ntt_domain.max_size = (int)pow(2, s_ntt_domain.max_log_size);
       if (omega != S::one()) {
