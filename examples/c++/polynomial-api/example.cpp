@@ -66,14 +66,14 @@ void example_from_rou(const int size)
   auto f = Polynomial_t::from_coefficients(coeff.get(), size);
   // rou: root of unity
   auto omega = scalar_t::omega(log_size);
-  scalar_t evals[nof_evals] = {scalar_t::zero()};
+  auto evals = std::make_unique<scalar_t[]>(nof_evals);
   auto x = scalar_t::one();
   for (int i = 0; i < nof_evals; ++i) {
     evals[i] = f(x);
     x = x * omega;
   }
   // reconstruct f from evaluations
-  auto fr = Polynomial_t::from_rou_evaluations(evals, nof_evals);
+  auto fr = Polynomial_t::from_rou_evaluations(evals.get(), nof_evals);
   // check for equality f-fr==0
   auto h = f - fr;
   std::cout << "degree of f - fr = " << h.degree() << std::endl;
@@ -206,7 +206,7 @@ void example_read_coeffs_to_host()
   scalar_t h_coeffs[3] = {0};
   // fetch the coefficients for a given range
   auto nof_coeffs = h.copy_coeffs(h_coeffs, 0, 2);
-  scalar_t expected_h_coeffs[nof_coeffs] = {one, two, three};
+  scalar_t expected_h_coeffs[] = {one, two, three};
   for (int i = 0; i < nof_coeffs; ++i) {
     std::cout << i << ":" << h_coeffs[i] << " expected: " << expected_h_coeffs[i] << std::endl;
   }
