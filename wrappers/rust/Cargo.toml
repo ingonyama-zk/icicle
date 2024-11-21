@@ -11,7 +11,7 @@ members = [
   # "icicle-fields/icicle-babybear",
   "icicle-fields/icicle-m31",
   # "icicle-fields/icicle-stark252",
-  # "icicle-hash",
+  "icicle-hash",
 ]
 exclude = [
   "icicle-curves/icicle-curve-template",

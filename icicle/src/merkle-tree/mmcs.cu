@@ -204,9 +204,14 @@ namespace merkle_tree {
         "Hash max preimage length does not match merkle tree arity multiplied by digest elements");
 
     std::vector<Matrix<L>> sorted_inputs(number_of_inputs);
-    std::partial_sort_copy(
-      inputs, inputs + number_of_inputs, sorted_inputs.begin(), sorted_inputs.end(),
-      [](const Matrix<L>& left, const Matrix<L>& right) { return left.height > right.height; });
+
+    if (tree_config.sort_inputs) {
+      std::partial_sort_copy(
+        inputs, inputs + number_of_inputs, sorted_inputs.begin(), sorted_inputs.end(),
+        [](const Matrix<L>& left, const Matrix<L>& right) { return left.height >= right.height; });
+    } else {
+      std::copy(inputs, inputs + number_of_inputs, sorted_inputs.begin());
+    }
 
     // Check that the height of any two given matrices either rounds up
     // to the same next power of two or otherwise equal

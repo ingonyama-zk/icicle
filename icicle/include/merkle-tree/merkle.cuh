@@ -69,6 +69,7 @@ namespace merkle_tree {
     unsigned int
       digest_elements;         /** @param digest_elements the size of output for each bottom layer hash and compression.
                                 *  Will also be equal to the size of the root of the tree. Default value 1 */
+    bool sort_inputs;
     bool are_inputs_on_device; /**< True if inputs are on device and false if they're on host. Default value: false. */
     bool
       are_outputs_on_device; /**< True if outputs are on device and false if they're on host. Default value: false. */
@@ -86,6 +87,7 @@ namespace merkle_tree {
       2,     // arity
       0,     // keep_rows
       1,     // digest_elements
+      true,  // sort_inputs
       false, // are_inputes_on_device
       false, // are_outputs_on_device
       false, // is_async
