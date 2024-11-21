@@ -54,8 +54,24 @@ class Operation {
       m_operand2(operand2),
       m_mem_addr(mem_addr),
       m_constant(std::move(constant)) {}
-};
 
+
+    bool was_visited(bool set_as_visit) {
+      const bool was_visited = (m_visit_idx == s_last_visit);
+      if (set_as_visit) {
+        m_visit_idx = s_last_visit;
+      }
+      return was_visited;
+    }
+
+    static void reset_visit() {
+      s_last_visit++;
+    }
+
+  private:
+    unsigned int m_visit_idx = 0;
+    static inline unsigned int s_last_visit = 1;
+};
 
 /**
  * @brief The basic variable used to describe a program.

@@ -57,7 +57,9 @@ public:
   void generate_program(Symbol<S> & result) {
     m_nof_outputs = 1;
     result.m_operation->m_mem_addr = m_nof_inputs;
+    Operation<S>::reset_visit();
     allocate_constants(result.m_operation);
+    Operation<S>::reset_visit();
     generate_program(result.m_operation);
   }
 
@@ -75,37 +77,32 @@ public:
 
 private:
   void generate_program(std::shared_ptr<Operation< S > > operation) {
-    if (operation == nullptr)
+    if (operation == nullptr || 
+        operation->was_visited(true) || 
+        operation->m_opcode == OP_INPUT ||
+        operation->m_opcode == OP_CONST)
       return;
     generate_program(operation->m_operand1);
     generate_program(operation->m_operand2);
 
-    InstructionType instruction(0);
-    switch(operation->m_opcode) {
-      case OP_INV:
-        instruction = int(operation->m_opcode);
-        instruction |= operation->m_operand1->m_mem_addr << 8;
-      case OP_ADD:
-      case OP_MULT:
-      case OP_SUB:
-        instruction |= operation->m_operand2->m_mem_addr << 16;
-        if (operation->m_mem_addr != 0) {
-          operation->m_mem_addr = m_nof_inputs + m_nof_constants + m_nof_intermidiates++;
-        }
-        instruction |= operation->m_mem_addr << 24;
-        m_instructions.push_back(instruction);
-        return;
-      case OP_INPUT:
-      case OP_CONST:
-        return;
-      default:
-        ICICLE_LOG_ERROR << "Unsupported operation opcode: " << int(operation->m_opcode);
-        ICICLE_ASSERT(false);
-    };
+    // Build an instruction
+    std::byte int_arr[4] = {};
+    int_arr[0] = std::byte(operation->m_opcode);
+    int_arr[1] = std::byte(operation->m_operand1->m_mem_addr);
+    if (operation->m_operand2) {
+      int_arr[2] = std::byte(operation->m_operand2->m_mem_addr);
+    }
+    if (operation->m_mem_addr < 0) {
+      operation->m_mem_addr = m_nof_inputs + m_nof_constants + m_nof_intermidiates++;
+    }
+    int_arr[3]= std::byte(operation->m_mem_addr);
+    InstructionType instruction;
+    std::memcpy(&instruction, int_arr, 4);
+    m_instructions.push_back(instruction);
   }
 
   void allocate_constants(std::shared_ptr<Operation<S> > operation) {
-    if (operation == nullptr)
+    if (operation == nullptr || operation->was_visited(true))
       return;
     allocate_constants(operation->m_operand1);
     allocate_constants(operation->m_operand2);
@@ -115,10 +112,19 @@ private:
       m_nof_constants++;
     }
   }
-
+public:
   void print_program() {
+    std::cout << "nof_inputs: " <<        m_nof_inputs << std::endl;
+    std::cout << "nof_outputs: " <<       m_nof_outputs << std::endl;
+    std::cout << "nof_constants: " <<     m_nof_constants << std::endl;
+    std::cout << "nof_intermidiates: " << m_nof_intermidiates << std::endl;
+    std::cout << "Constants:: " << std::endl;
+    for (auto constant : m_constants) {
+      std::cout << "   " << constant << std::endl;
+    }
+    std::cout << "Instructions:: " << std::endl;
     for (auto inst : m_instructions) {
-      std::cout << "Opcode: " << (inst & 0xFF) << ", op1: " << ((inst >> 8) & 0xFF) << 
+      std::cout << "   Opcode: " << (inst & 0xFF) << ", op1: " << ((inst >> 8) & 0xFF) << 
         ", op2: " << ((inst >> 16) & 0xFF) << ", Res: " << ((inst >> 24) & 0xFF) << std::endl;
     }
   }
