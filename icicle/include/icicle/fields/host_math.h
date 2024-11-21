@@ -244,7 +244,7 @@ namespace host_math {
    * @param n_tag Number such that \p n * \p n_tag modR = -1
    * @param r Array in which to store the result in its upper half (Lower half is data that would be removed by
    * dividing by R = shifting NLIMBS down).
-   * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
+   * @tparam NLIMBS Number of 32bit limbs required to represent a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS>
   static HOST_INLINE void
@@ -281,7 +281,7 @@ namespace host_math {
    * @param n_tag Number such that \p n * \p n_tag modR = -1
    * @param r Array in which to store the result in its upper half (Lower half is data that would be removed by
    * dividing by R = shifting NLIMBS down).
-   * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
+   * @tparam NLIMBS Number of 32bit limbs required to represent a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS>
   static HOST_INLINE void
@@ -318,7 +318,7 @@ namespace host_math {
    * @param n_tag Number such that \p n * \p n_tag modR = -1
    * @param r Array in which to store the result in its upper half (Lower half is data that would be removed by
    * dividing by R = shifting NLIMBS down).
-   * @tparam NLIMBS Number of 32bit limbs required to represend a number in the field defined by n. R is 2^(NLIMBS*32).
+   * @tparam NLIMBS Number of 32bit limbs required to represent a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS, bool USE_32 = false>
   static HOST_INLINE void sos_mont_reduction(
@@ -455,12 +455,11 @@ namespace host_math {
     }
   }
   template <unsigned NLIMBS>
-  static constexpr void get_higher_with_slack(const storage<2*NLIMBS>& xs, storage<NLIMBS>& out, unsigned slack_bits)
+  static constexpr void get_higher_with_slack(const storage<2 * NLIMBS>& xs, storage<NLIMBS>& out, unsigned slack_bits)
   {
-      for (unsigned i = 0; i < NLIMBS; i++) {
-        out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * slack_bits) +
-                                     (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * slack_bits));
-      }
+    for (unsigned i = 0; i < NLIMBS; i++) {
+      out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * slack_bits) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * slack_bits));
+    }
   }
 
   template <unsigned NLIMBS>

@@ -290,7 +290,6 @@ public:
     return base_math::template multiply_raw<TLC>(as, bs, rs);
   }
 
-
 public:
   ff_storage limbs_storage;
 
@@ -451,7 +450,7 @@ public:
   static constexpr HOST_INLINE Field barret_mult(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);   // reduce mod p
+    return reduce(xy);          // reduce mod p
   }
 
 #endif
@@ -471,11 +470,10 @@ public:
   static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
     Field r = {};
-    base_math::template multiply_mont<TLC>(xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
+    base_math::template multiply_mont<TLC>(
+      xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
     return mont_sub_modulus(r);
   }
-  
-
 
   static constexpr HOST_INLINE Field mont_reduce(const Wide& t)
   {
@@ -510,13 +508,12 @@ public:
 
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
-  #ifdef BARRET
+#ifdef BARRET
     return barret_mult(xs, ys);
-  #else
+#else
     return mont_mult(xs, ys);
-  #endif
+#endif
   }
-
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
   {
