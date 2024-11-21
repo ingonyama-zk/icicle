@@ -237,7 +237,7 @@ macro_rules! impl_field_tests {
     ) => {
         pub mod test_field {
             use super::*;
-            use icicle_core::test_utilities;
+            use icicle_runtime::test_utilities;
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();

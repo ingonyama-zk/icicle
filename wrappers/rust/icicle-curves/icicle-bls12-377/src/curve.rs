@@ -49,7 +49,7 @@ mod tests {
     #[cfg(not(feature = "no_g2"))]
     use super::{G2CurveCfg, G2_BASE_LIMBS};
     use icicle_core::curve::Curve;
-    use icicle_core::test_utilities;
+    use icicle_runtime::test_utilities;
     use icicle_core::tests::*;
     use icicle_core::traits::FieldImpl;
     use icicle_core::{impl_curve_tests, impl_field_tests};

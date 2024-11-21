@@ -121,7 +121,7 @@ macro_rules! impl_ecntt_tests {
         pub mod test_ecntt {
             use super::*;
             use icicle_core::ntt::tests::init_domain;
-            use icicle_core::test_utilities;
+            use icicle_runtime::test_utilities;
             use std::sync::Once;
 
             const MAX_SIZE: u64 = 1 << 18;
