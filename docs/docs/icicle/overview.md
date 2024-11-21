@@ -80,5 +80,5 @@ If you have any questions or need support, feel free to reach out on [Discord], 
 <!-- Being Links -->
 [Discord]: https://discord.gg/6vYrE7waPj
 [Github]: https://github.com/ingonyama-zk
-[SupportEmail]: support@ingonyama.com
+[SupportEmail]: mailto:support@ingonyama.com
 <!-- End Links -->

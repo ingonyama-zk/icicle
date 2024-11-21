@@ -1,6 +1,6 @@
 # Getting started with ICICLE
 
-This guide is oriented towards developers who want to start writing code with the ICICLE libraries. If you just want to run your existing ZK circuits on GPU refer to [this guide](./integrations.md#using-icicle-integrations) please.
+This guide is oriented towards developers who want to start writing code with the ICICLE libraries. If you just want to run your existing ZK circuits on GPU refer to [this guide](./integrations.md#using-icicle-integrated-provers) please.
 
 ## ICICLE repository overview
 

@@ -1,6 +1,6 @@
 # Getting started with ICICLE
 
-This guide is oriented towards developers who want to start writing code with the ICICLE libraries. If you just want to run your existing ZK circuits on GPU refer to [this guide](./integrations.md#using-icicle-integrations) please.
+This guide is oriented towards developers who want to start writing code with the ICICLE libraries. If you just want to run your existing ZK circuits on GPU refer to [this guide](./integrations.md#using-icicle-integrated-provers) please.
 
 ## ICICLE repository overview
 
@@ -18,7 +18,7 @@ Based on this dependency architecture, the ICICLE repository has three main sect
 
 ### ICICLE Core
 
-[ICICLE Core](/icicle/core) is a library that directly works with GPU by defining CUDA kernels and algorithms that invoke them. It contains code for [fast field arithmetic](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/field/field.cuh), cryptographic primitives used in ZK such as [NTT](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/ntt/), [MSM](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/msm/), [Poseidon Hash](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/poseidon/), [Polynomials](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/polynomials/) and others.
+[ICICLE Core](./core.md) is a library that directly works with GPU by defining CUDA kernels and algorithms that invoke them. It contains code for [fast field arithmetic](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/field/field.cuh), cryptographic primitives used in ZK such as [NTT](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/ntt/), [MSM](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/msm/), [Poseidon Hash](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/poseidon/), [Polynomials](https://github.com/ingonyama-zk/icicle/tree/main/icicle/src/polynomials/) and others.
 
 ICICLE Core would typically be compiled into a static library and either used in a third party language such as Rust or Golang, or linked with your own C++ project.
 

@@ -76,4 +76,4 @@ Explore the full capabilities of ICICLE by diving into the [Architecture](./arch
 If you have any questions or need support, feel free to reach out on [Discord], [GitHub](https://github.com/ingonyama-zk) or [via support email][SupportEmail]. We're here to help you accelerate your ZK development with ICICLE.
 
 [Discord]: https://discord.gg/6vYrE7waPj
-[SupportEmail]: support@ingonyama.com
+[SupportEmail]: mailto:support@ingonyama.com

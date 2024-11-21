@@ -75,5 +75,3 @@ extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/);
   
 - **Launch One CPU Thread per Device:** To avoid [common errors](https://developer.nvidia.com/blog/cuda-pro-tip-always-set-current-device-avoid-multithreading-bugs/) and ensure code readability, we recommend creating a dedicated thread for each device. Within each CPU thread, you can launch as many tasks as you like for a device, as long as they all run on the same device ID. This will make your code more manageable, easier to read, and performant.
 ---
-
-This guide provides an overview of multi-device support in ICICLE, explaining the approaches and best practices for efficiently scaling ZK computations across multiple devices. For further information or support, please refer to our [documentation](./) or join the discussion on [Discord](https://discord.gg/6vYrE7waPj).
