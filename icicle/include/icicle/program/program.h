@@ -11,7 +11,6 @@ using InstructionType = uint32_t;
 
 
 enum PreDefinedPrograms{
-  IDENTITY,
   AB_MINUS_C,
   EQ_X_AB_MINUS_C
 };
@@ -42,9 +41,6 @@ public:
   // Generate a program based on a PreDefinedPrograms
   Program(PreDefinedPrograms pre_def) {
     switch (pre_def) {
-      case IDENTITY:
-        m_nof_inputs = 1;
-        break;
       case AB_MINUS_C:
         m_nof_inputs = 3;
         break;

@@ -62,8 +62,6 @@ class CpuProgramExecutor {
       *m_variable_ptrs[(int)inst_arr[3]] = S::inverse(*m_variable_ptrs[(int)inst_arr[1]]); 
     }
 
-    void exe_predef_identity(const InstructionType instruction) {
-    }
     void exe_predef_ab_minus_c(const InstructionType instruction) {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
       const S& a = *m_variable_ptrs[0];
@@ -87,7 +85,6 @@ class CpuProgramExecutor {
       &CpuProgramExecutor::exe_sub,  // OP_SUB
       &CpuProgramExecutor::exe_inverse,   // OP_INV      
       // pre defined functions
-      &CpuProgramExecutor::exe_predef_identity,
       &CpuProgramExecutor::exe_predef_ab_minus_c,
       &CpuProgramExecutor::exe_predef_eq_x_ab_minus_c
     };
