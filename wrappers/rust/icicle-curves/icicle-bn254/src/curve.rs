@@ -1,6 +1,6 @@
 use icicle_core::{
     curve::{Affine, Curve, Projective},
-    field::{Field, MontgomeryConvertibleField},
+    field::{Field, MontgomeryConvertibleField, FieldArithmetic},
     impl_curve, impl_field, impl_scalar_field,
     traits::{FieldConfig, FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
