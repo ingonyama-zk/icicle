@@ -42,15 +42,15 @@ where
     let test_size = 1 << 14;
 
     check_vec_ops_scalars_add::<F>(test_size);
-    // check_vec_ops_scalars_sub::<F>(test_size);
-    // check_vec_ops_scalars_mul::<F>(test_size);
-    // check_vec_ops_scalars_div::<F>(test_size);
-    // check_vec_ops_scalars_sum::<F>(test_size);
-    // check_vec_ops_scalars_product::<F>(test_size);
-    // check_vec_ops_scalars_add_scalar::<F>(test_size);
-    // check_vec_ops_scalars_sub_scalar::<F>(test_size);
-    // check_vec_ops_scalars_mul_scalar::<F>(test_size);
-    // check_vec_ops_scalars_accumulate::<F>(test_size);
+    check_vec_ops_scalars_sub::<F>(test_size);
+    check_vec_ops_scalars_mul::<F>(test_size);
+    check_vec_ops_scalars_div::<F>(test_size);
+    check_vec_ops_scalars_sum::<F>(test_size);
+    check_vec_ops_scalars_product::<F>(test_size);
+    check_vec_ops_scalars_add_scalar::<F>(test_size);
+    check_vec_ops_scalars_sub_scalar::<F>(test_size);
+    check_vec_ops_scalars_mul_scalar::<F>(test_size);
+    check_vec_ops_scalars_accumulate::<F>(test_size);
 }
 
 pub fn check_vec_ops_scalars_add<F: FieldImpl>(test_size: usize)

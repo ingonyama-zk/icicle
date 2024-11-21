@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
-#define CONCAT_DIRECT(a, b) a##b
+#define CONCAT_DIRECT(a, b) a##_##b
 #define CONCAT_EXPAND(a, b) CONCAT_DIRECT(a, b)
 
 // Define a separate macro to ensure expansion before stringification

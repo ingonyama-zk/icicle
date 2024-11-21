@@ -5,7 +5,7 @@ use std::sync::{Mutex, OnceLock};
 // This module is used to load backends and choose a main and reference devices for tests
 
 static INIT: OnceLock<()> = OnceLock::new();
-pub static TEST_MAIN_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("UNKOWN", 0)));
+pub static TEST_MAIN_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("UNKNOWN", 0)));
 pub static TEST_REF_DEVICE: Lazy<Mutex<Device>> = Lazy::new(|| Mutex::new(Device::new("CPU", 0)));
 
 pub fn test_load_and_init_devices() {
@@ -25,7 +25,7 @@ pub fn test_load_and_init_devices() {
         };
         *main_device = Device::new(&main_device_name, 0);
         println!(
-            "[INFO] Rust resting: registered_devices={:?}, Main-device={}, Reference-device=CPU",
+            "[INFO] Rust testing: registered_devices={:?}, Main-device={}, Reference-device=CPU",
             registered_devices, main_device_name
         );
     });
