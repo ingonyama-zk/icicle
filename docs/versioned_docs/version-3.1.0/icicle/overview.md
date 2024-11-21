@@ -11,8 +11,6 @@ title: ICICLE Overview
 
 ## What is ICICLE?
 
-[![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
-
 [ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library designed to accelerate zero-knowledge proofs (ZKPs) using multiple compute backends, including GPUs, CPUs, and potentially other platforms. ICICLE's key strength lies in its ability to implement blazing-fast cryptographic primitives, enabling developers to significantly reduce proving times with minimal effort.
 
 ## Key Features

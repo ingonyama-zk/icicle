@@ -17,8 +17,8 @@
     "format": "prettier --write '**/*.md'"
   },
   "dependencies": {
-    "@docusaurus/core": "~3.6.0",
-    "@docusaurus/preset-classic": "~3.6.0",
+    "@docusaurus/core": "3.6.2",
+    "@docusaurus/preset-classic": "3.6.2",
     "@mdx-js/react": "~3.0.0",
     "clsx": "~1.1.1",
     "hast-util-is-element": "~1.1.0",
