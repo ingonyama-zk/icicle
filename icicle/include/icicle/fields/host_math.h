@@ -463,7 +463,7 @@ namespace host_math {
   }
 
   template <unsigned NLIMBS>
-  static constexpr DEVICE_INLINE bool is_equal(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
+  static constexpr bool is_equal(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
   {
     for (unsigned i = 0; i < NLIMBS; i++)
       if (xs.limbs[i] != ys.limbs[i]) return false;

@@ -467,7 +467,7 @@ public:
     return r;
   }
 
-  static constexpr HOST_INLINE Field mont_mult(const Field& xs, const Field& ys)
+  static constexpr HOST_DEVICE_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
     Field r = {};
     base_math::template multiply_mont<TLC>(
@@ -475,7 +475,7 @@ public:
     return mont_sub_modulus(r);
   }
 
-  static constexpr HOST_INLINE Field mont_reduce(const Wide& t)
+  static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& t)
   {
 #ifdef __CUDA_ARCH__
     Wide r = t;
