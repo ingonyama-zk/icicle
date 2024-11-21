@@ -5,6 +5,7 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
+use std::ops::{Add, Sub, Mul};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -106,6 +107,13 @@ pub trait MontgomeryConvertibleField<F: FieldImpl> {
     fn from_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> eIcicleError;
 }
 
+#[doc(hidden)]
+pub trait FieldArithmetic<F: FieldImpl> {
+    fn add(first: F, second: F) -> F;
+    fn sub(first: F, second: F) -> F;
+    fn mul(first: F, second: F) -> F;
+}
+
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
     F: MontgomeryConvertibleField<Self>,
@@ -116,6 +124,39 @@ where
 
     fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         F::from_mont(values, stream)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn add(self, second: Self) -> Self {
+        F::add(self, second)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Sub for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn sub(self, second: Self) -> Self {
+        F::sub(self, second)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Mul for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn mul(self, second: Self) -> Self {
+        F::mul(self, second)
     }
 }
 
@@ -171,6 +212,20 @@ macro_rules! impl_scalar_field {
                     b: *const $field_name,
                     result: *mut $field_name,
                 );
+
+                #[link_name = concat!($field_prefix, "_sub")]
+                pub(crate) fn sub(
+                    a: *const $field_name,
+                    b: *const $field_name,
+                    result: *mut $field_name,
+                );
+
+                #[link_name = concat!($field_prefix, "_mul")]
+                pub(crate) fn mul(
+                    a: *const $field_name,
+                    b: *const $field_name,
+                    result: *mut $field_name,
+                );
             }
 
             pub(crate) fn convert_scalars_montgomery(
@@ -181,30 +236,55 @@ macro_rules! impl_scalar_field {
             ) -> eIcicleError {
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
             }
+        }
 
-            pub(crate) fn add_scalar(
-                a: $field_name,
-                b: $field_name
+        impl FieldArithmetic<$field_name> for $field_cfg {
+            fn add(
+                first: $field_name,
+                second: $field_name,
             ) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
-                    add(
-                        &a as *const $field_name,
-                        &b as *const $field_name,
+                    $field_prefix_ident::add(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
                         &mut result as *mut $field_name,
                     );
                 }
 
                 result
             }
-        }
 
-       
-        impl Add for $field_name {
-            type Output = Self;
-            
-            fn add(self, other: Self) -> Self {
-                $field_prefix_ident::add_scalar(self, other)
+            fn sub(
+                first: $field_name,
+                second: $field_name,
+            ) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::sub(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn mul(
+                first: $field_name,
+                second: $field_name,
+            ) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::sub(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
             }
         }
 
