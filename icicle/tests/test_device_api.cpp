@@ -4,51 +4,12 @@
 
 #include "icicle/runtime.h"
 #include "icicle/memory_tracker.h"
-#include "dlfcn.h"
-
-using FpNanoseconds = std::chrono::duration<float, std::chrono::nanoseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg, enable, iters)                                                                           \
-  if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ns\n", msg, FpNanoseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / iters);
+#include "test_base.h"
 
 using namespace icicle;
 
-#define UNKOWN_DEVICE "UNKNOWN"
-
-class DeviceApiTest : public ::testing::Test
+class DeviceApiTest : public IcicleTestBase
 {
-public:
-  static inline std::vector<std::string> s_registered_devices;
-  static inline std::string s_main_device = UNKOWN_DEVICE;
-  static inline std::string s_ref_device = "CPU"; // assuming always present
-  // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
-  static void SetUpTestSuite()
-  {
-#ifdef BACKEND_BUILD_DIR
-    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
-#endif
-    icicle_load_backend_from_env_or_default();
-    s_registered_devices = get_registered_devices_list();
-    ASSERT_GT(s_registered_devices.size(), 0);
-    ASSERT_LE(s_registered_devices.size(), 2); // assuming we have a single device except for CPU
-    if (s_registered_devices.size() > 1) {
-      for (auto& device : s_registered_devices) {
-        // looking for first device that is not CPU and use that as main device
-        if (device != s_ref_device) {
-          s_main_device = device;
-          break;
-        }
-      }
-    }
-    ICICLE_LOG_INFO << "Main-device=" << s_main_device << ", Reference-device=" << s_ref_device;
-  }
-  static void TearDownTestSuite() {}
-
-  // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
-  void TearDown() override {}
 };
 
 TEST_F(DeviceApiTest, UnregisteredDeviceError)
@@ -173,7 +134,7 @@ TEST_F(DeviceApiTest, AvailableMemory)
 {
   icicle::Device dev = {"CUDA", 0};
   const bool is_cuda_registered = eIcicleError::SUCCESS == icicle_is_device_available(dev);
-  if (!is_cuda_registered) { return; } // TODO implement for CPU too
+  if (!is_cuda_registered) { GTEST_SKIP(); } // most devices do not support this
 
   icicle_set_device(dev);
   size_t total, free;
@@ -211,13 +172,13 @@ TEST_F(DeviceApiTest, memoryTracker)
   for (auto& it : allocated_addresses) {
     icicle_malloc(&it, ALLOC_SIZE);
   }
-  END_TIMER(allocation, "memory-tracker: malloc average", true, NOF_ALLOCS);
+  END_TIMER_AVERAGE(allocation, "memory-tracker: malloc average", true, NOF_ALLOCS);
 
   START_TIMER(insertion);
   for (auto& it : allocated_addresses) {
     tracker.add_allocation(it, ALLOC_SIZE, main_device);
   }
-  END_TIMER(insertion, "memory-tracker: insert average", true, NOF_ALLOCS);
+  END_TIMER_AVERAGE(insertion, "memory-tracker: insert average", true, NOF_ALLOCS);
 
   START_TIMER(lookup);
   for (auto& it : allocated_addresses) {
@@ -225,7 +186,7 @@ TEST_F(DeviceApiTest, memoryTracker)
     const void* addr = (void*)((size_t)it + rand() % ALLOC_SIZE);
     ICICLE_CHECK(icicle_is_active_device_memory(addr));
   }
-  END_TIMER(lookup, "memory-tracker: lookup (and compare) average", true, NOF_ALLOCS);
+  END_TIMER_AVERAGE(lookup, "memory-tracker: lookup (and compare) average", true, NOF_ALLOCS);
 
   // test host pointers are identified as host memory
   auto host_mem = std::make_unique<int>();
