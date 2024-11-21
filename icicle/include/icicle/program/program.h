@@ -33,9 +33,9 @@ class Program {
 public:
   // Generate a program based on a lambda function
   Program(std::function<Symbol<S> (std::vector< Symbol<S> >&)> program_func, const int nof_inputs) {
-    std::vector<Symbol> program_inputs(nof_inputs);
+    std::vector<Symbol<S> > program_inputs(nof_inputs);
     set_as_inputs(program_inputs);
-    Symbol result = program_func(program_inputs);
+    Symbol<S>  result = program_func(program_inputs);
     generate_program(result);
   }
   
@@ -46,15 +46,15 @@ public:
   }
 
   // run over all symbols at the vector and set there gen process to OP_INPUT
-  void set_as_inputs(std::vector<Symbol<S>>& combine_inputs) const {
+  void set_as_inputs(std::vector<Symbol<S> >& combine_inputs) {
     m_nof_inputs = combine_inputs.size();
-    for (int idx = 0; idx < m_nof_inputs; idx++) {
-      combine_inputs[input_idx].set_as_input(idx);
+    for (int input_idx = 0; input_idx < m_nof_inputs; input_idx++) {
+      combine_inputs[input_idx].set_as_input(input_idx);
     }
   }
 
   // run over the DFG held by result and gemerate the program
-  void generate_program(Symbol& result) {
+  void generate_program(Symbol<S> & result) {
     m_nof_outputs = 1;
     result.m_operation->m_mem_addr = m_nof_inputs;
     allocate_constants(result.m_operation);
@@ -81,7 +81,6 @@ private:
     generate_program(operation->m_operand2);
 
     InstructionType instruction(0);
-    int result_addr = 
     switch(operation->m_opcode) {
       case OP_INV:
         instruction = int(operation->m_opcode);
@@ -100,9 +99,9 @@ private:
       case OP_CONST:
         return;
       default:
-        ICICLE_ERROR << "Unsupported operation opcode: " << operation->m_opcode << std::endl;
-        ICICLE_ASSERT(false); // unsupported opcode
-    }
+        ICICLE_LOG_ERROR << "Unsupported operation opcode: " << int(operation->m_opcode);
+        ICICLE_ASSERT(false);
+    };
   }
 
   void allocate_constants(std::shared_ptr<Operation<S> > operation) {
@@ -119,10 +118,12 @@ private:
 
   void print_program() {
     for (auto inst : m_instructions) {
-      std::cout << "Opcode: " << inst & 0xFF << ", op1: " << (inst >> 8) & 0xFF << 
-        ", op2: " << (inst >> 16) & 0xFF << ", Res: " << (inst >> 24) & 0xFF << std::endl;
+      std::cout << "Opcode: " << (inst & 0xFF) << ", op1: " << ((inst >> 8) & 0xFF) << 
+        ", op2: " << ((inst >> 16) & 0xFF) << ", Res: " << ((inst >> 24) & 0xFF) << std::endl;
     }
   }
 };
+
+}
 
 

@@ -47,13 +47,13 @@ class Operation {
     Operation<S> (OpCode opcode, 
                   std::shared_ptr<Operation<S> > operand1, 
                   std::shared_ptr<Operation<S> > operand2 = nullptr, 
-                  const std::unique_ptr<S> constant = nullptr,
+                  std::unique_ptr<S> constant = nullptr,
                   int mem_addr = -1) :
       m_opcode(opcode),
       m_operand1(operand1),
       m_operand2(operand2),
       m_mem_addr(mem_addr),
-      m_constant(constant) {}
+      m_constant(std::move(constant)) {}
 };
 
 
@@ -94,31 +94,31 @@ class Symbol {
     Symbol operator!() const { return inv();}
 
     void set_as_input(int input_idx) {
-      m_operation = std::make_shared<Operation>(OP_INPUT, nullptr, nullptr, nullptr, input_idx);
+      m_operation = std::make_shared<Operation<S> >(OP_INPUT, nullptr, nullptr, nullptr, input_idx);
     }
 
     // assign
-    Symbol assign(Symbol& other) {
+    Symbol assign(const Symbol& other) {
       m_operation = other.m_operation;
       return *this;
     }
 
     // add
-    Symbol add(Symbol& operand) const {
+    Symbol add(const Symbol& operand) const {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S> >(OP_ADD, m_operation, operand.m_operation);
       return rv;
     }
 
     // multiply
-    Symbol multiply(Symbol& operand) {
+    Symbol multiply(const Symbol& operand) const {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S> >(OP_MULT, m_operation, operand.m_operation);
       return rv;
     }
 
     // sub 
-    Symbol sub(Symbol& operand) {
+    Symbol sub(const Symbol& operand) const {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S> >(OP_SUB, m_operation, operand.m_operation);
       return rv;
