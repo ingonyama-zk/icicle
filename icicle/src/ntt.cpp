@@ -4,7 +4,7 @@
 using namespace field_config;
 namespace icicle {
 
-  /*************************** NTT ***************************/
+  /*************************** NTT ****************************/
   ICICLE_DISPATCHER_INST(NttDispatcher, ntt, NttImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, ntt)(

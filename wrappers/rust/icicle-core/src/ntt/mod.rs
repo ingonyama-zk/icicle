@@ -21,7 +21,7 @@ pub enum NTTDir {
 /// no implication that a certain decimation or butterfly will actually be used under the hood, this is just for
 /// compatibility with codebases that use "decimation" and "butterfly" to denote ordering of inputs and outputs.
 ///
-/// Ordering options are:
+/// Ordering options are :
 /// - kNN: inputs and outputs are natural-order (example of natural ordering: `a_0, a_1, a_2, a_3, a_4, a_5, a_6,
 /// a_7`.
 /// - kNR: inputs are natural-order and outputs are bit-reversed-order (example of bit-reversed ordering: `a_0,
