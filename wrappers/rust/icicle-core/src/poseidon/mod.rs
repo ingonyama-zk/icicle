@@ -103,11 +103,22 @@ macro_rules! impl_poseidon_tests {
         }
 
         #[test]
+        fn test_poseidon_hash_multi_device() {
+            initialize();
+            test_utilities::test_set_main_device();
+            let nof_devices = icicle_runtime::get_device_count().unwrap();
+            if nof_devices > 1 {
+                check_poseidon_hash_multi_device::<$field>();
+            } else {
+                println!("Skipping test_poseidon_hash_multi_device due to single device in the machine");
+            }
+        }
+
+        #[test]
         fn test_poseidon_tree() {
             initialize();
-            // TODO Roman: enable once CUDA merkle tree is implemented
-            // test_utilities::test_set_main_device();
-            // check_poseidon_tree::<$field>();
+            test_utilities::test_set_main_device();
+            check_poseidon_tree::<$field>();
             test_utilities::test_set_ref_device();
             check_poseidon_tree::<$field>();
         }

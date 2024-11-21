@@ -55,3 +55,9 @@ func (h *Hasher) Delete() runtime.EIcicleError {
 	__err := C.icicle_hasher_delete(h.handle)
 	return runtime.EIcicleError(__err)
 }
+
+func FromHandle(handle unsafe.Pointer) Hasher {
+	return Hasher{
+		handle: (HasherHandle)(handle),
+	}
+}

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide will walk you through the entire process of building, testing, and installing ICICLE using your preferred programming language—C++, Rust, or Go. Whether you're deploying on a CPU or leveraging CUDA for accelerated performance, this guide provides comprehensive instructions to get you started. It also outlines the typical workflow for a user, including key installation steps:
+This guide will walk you through the entire process of building, testing, and installing ICICLE using your preferred programming language: C++, Rust, or Go. Whether you're deploying on a CPU or leveraging CUDA for accelerated performance, this guide provides comprehensive instructions to get you started. It also outlines the typical workflow for a user, including key installation steps:
 
 
 1. **Install ICICLE or build it from source**: This is explained in this guide. For building from source, refer to the [Build from Source page](./build_from_source.md).
@@ -141,7 +141,7 @@ pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError>;
 ```
 **Go**
 ```go
-TODO
+func LoadBackendFromEnvOrDefault() EIcicleError
 ```
 
 ### Custom Backend Loading
@@ -164,5 +164,7 @@ extern "C" eIcicleError icicle_load_backend(const char* path, bool is_recursive)
 
 **Go**
 ```go
-TODO
+func LoadBackend(path string, isRecursive bool) EIcicleError
 ```
+- **`path`**: The directory where the backend libraries are located.
+- **`isRecursive`**: If `true`, the function will search for backend libraries recursively within the specified path.

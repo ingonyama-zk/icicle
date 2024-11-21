@@ -16,7 +16,7 @@ Using the Hash package requires `go` version 1.22
 
 The ICICLE library provides Golang bindings for hashing using a variety of cryptographic hash functions. These hash functions are optimized for both general-purpose data and cryptographic operations such as multi-scalar multiplication, commitment generation, and Merkle tree construction.
 
-This guide will show you how to use the ICICLE hashing API in Golang with examples for common hash algorithms, such as Keccak-256, Keccak-512, SHA3-256, SHA3-512, and Blake2s.
+This guide will show you how to use the ICICLE hashing API in Golang with examples for common hash algorithms, such as Keccak-256, Keccak-512, SHA3-256, SHA3-512, Blake2s, and Poseidon.
 
 ## Importing Hash Functions
 
@@ -72,3 +72,40 @@ fmt.Println!("Hash(`", input_str, "`) =", &outputAsHexStr)
 ```
 
 Using other hash algorithms is similar and only requires replacing the Hasher constructor with the relevant hashing algorithm.
+
+### 3. Poseidon Example (field elements) and batch hashing
+
+The Poseidon hash is designed for cryptographic field elements and curves, making it ideal for use cases such as zero-knowledge proofs (ZKPs). Poseidon hash using babybear field:
+
+:::note
+
+Since poseidon is designed for use with field elements and curves, it is located within the field or curve packages and not in the Hash package though it does rely on using the Hash package.
+
+:::
+
+```go
+import (
+  "github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+  babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
+  "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/poseidon"
+)
+
+batch := 1 << 4
+t := 3 // Currently support arity of 3, 5, 9, 12
+// (t - 1) is due to domainTag being non nil
+// if domainTag is nil, then the input size should be `batch * t`
+// See more in our tests: https://github.com/ingonyama-zk/icicle/blob/docs/v3/golang/poseidon/wrappers/golang/curves/bn254/tests/poseidon_test.go#L23-L27
+inputsSize = batch * (t - 1)
+inputs := babybear.GenerateScalars(inputsSize)
+domainTag := babybear.GenerateScalars(1)[0]
+
+outputsRef := make([]babybear.ScalarField, batch)
+poseidonHasherRef, _ := poseidon.NewHasher(uint64(t), &domainTag)
+poseidonHasherRef.Hash(
+  core.HostSliceFromElements(inputs),
+  core.HostSliceFromElements(outputsRef),
+  core.GetDefaultHashConfig(),
+)
+
+poseidonHasherRef.Delete()
+```

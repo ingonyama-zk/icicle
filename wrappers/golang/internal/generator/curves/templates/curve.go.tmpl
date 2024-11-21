@@ -50,7 +50,7 @@ func (p *{{.CurvePrefix}}Projective) FromAffine(a {{.CurvePrefix}}Affine) {{.Cur
 
 func (p {{.CurvePrefix}}Projective) ProjectiveEq(p2 *{{.CurvePrefix}}Projective) bool {
 	cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
-	cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p2))
+	cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(p2))
 	__ret := C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_eq(cP, cP2)
 	return __ret == (C._Bool)(true)
 }

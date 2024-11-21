@@ -34,17 +34,17 @@ func HashCheck(input, output HostOrDeviceSlice, outputSize uint64, cfg *HashConf
 	if input.IsOnDevice() {
 		input.(DeviceSlice).CheckDevice()
 		cfg.areInputsOnDevice = true
-		inputByteSize = uint64(input.(DeviceSlice).Cap())
+		inputByteSize = uint64(input.Cap())
 	} else {
-		inputByteSize = uint64(input.(HostSlice[byte]).Cap())
+		inputByteSize = uint64(input.SizeOfElement() * input.Len())
 	}
 
 	if output.IsOnDevice() {
 		output.(DeviceSlice).CheckDevice()
 		cfg.areOutputsOnDevice = true
-		outputByteSize = uint64(output.(DeviceSlice).Cap())
+		outputByteSize = uint64(output.Cap())
 	} else {
-		outputByteSize = uint64(output.(HostSlice[byte]).SizeOfElement() * output.Len())
+		outputByteSize = uint64(output.SizeOfElement() * output.Len())
 	}
 
 	if outputByteSize%outputSize != 0 {

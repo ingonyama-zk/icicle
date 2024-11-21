@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	bw6_761 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
-func testAffineZero(suite suite.Suite) {
+func testAffineZero(suite *suite.Suite) {
 	var fieldZero = bw6_761.BaseField{}
 
 	var affineZero bw6_761.Affine
@@ -25,7 +25,7 @@ func testAffineZero(suite suite.Suite) {
 	suite.Equal(affine.Y, fieldZero)
 }
 
-func testAffineFromLimbs(suite suite.Suite) {
+func testAffineFromLimbs(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 
@@ -36,7 +36,7 @@ func testAffineFromLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs2, affine.Y.GetLimbs())
 }
 
-func testAffineToProjective(suite suite.Suite) {
+func testAffineToProjective(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var fieldOne bw6_761.BaseField
@@ -52,7 +52,7 @@ func testAffineToProjective(suite suite.Suite) {
 	suite.Equal(expected, projectivePoint)
 }
 
-func testProjectiveZero(suite suite.Suite) {
+func testProjectiveZero(suite *suite.Suite) {
 	var projectiveZero bw6_761.Projective
 	projectiveZero.Zero()
 	var fieldZero = bw6_761.BaseField{}
@@ -73,7 +73,7 @@ func testProjectiveZero(suite suite.Suite) {
 	suite.Equal(projective.Z, fieldZero)
 }
 
-func testProjectiveFromLimbs(suite suite.Suite) {
+func testProjectiveFromLimbs(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs3 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
@@ -86,7 +86,7 @@ func testProjectiveFromLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
-func testProjectiveFromAffine(suite suite.Suite) {
+func testProjectiveFromAffine(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	var fieldOne bw6_761.BaseField
@@ -108,12 +108,12 @@ type CurveTestSuite struct {
 }
 
 func (s *CurveTestSuite) TestCurve() {
-	s.Run("TestAffineZero", testWrapper(s.Suite, testAffineZero))
-	s.Run("TestAffineFromLimbs", testWrapper(s.Suite, testAffineFromLimbs))
-	s.Run("TestAffineToProjective", testWrapper(s.Suite, testAffineToProjective))
-	s.Run("TestProjectiveZero", testWrapper(s.Suite, testProjectiveZero))
-	s.Run("TestProjectiveFromLimbs", testWrapper(s.Suite, testProjectiveFromLimbs))
-	s.Run("TestProjectiveFromAffine", testWrapper(s.Suite, testProjectiveFromAffine))
+	s.Run("TestAffineZero", testWrapper(&s.Suite, testAffineZero))
+	s.Run("TestAffineFromLimbs", testWrapper(&s.Suite, testAffineFromLimbs))
+	s.Run("TestAffineToProjective", testWrapper(&s.Suite, testAffineToProjective))
+	s.Run("TestProjectiveZero", testWrapper(&s.Suite, testProjectiveZero))
+	s.Run("TestProjectiveFromLimbs", testWrapper(&s.Suite, testProjectiveFromLimbs))
+	s.Run("TestProjectiveFromAffine", testWrapper(&s.Suite, testProjectiveFromAffine))
 }
 
 func TestSuiteCurve(t *testing.T) {

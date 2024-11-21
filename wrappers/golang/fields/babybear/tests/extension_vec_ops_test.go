@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func testBabybear_extensionVecOps(suite suite.Suite) {
+func testBabybear_extensionVecOps(suite *suite.Suite) {
 	testSize := 1 << 14
 
 	a := babybear_extension.GenerateScalars(testSize)
@@ -34,7 +34,7 @@ func testBabybear_extensionVecOps(suite suite.Suite) {
 	suite.Equal(a, out3)
 }
 
-func testBabybear_extensionTranspose(suite suite.Suite) {
+func testBabybear_extensionTranspose(suite *suite.Suite) {
 	rowSize := 1 << 6
 	columnSize := 1 << 8
 
@@ -69,8 +69,8 @@ type Babybear_extensionVecOpsTestSuite struct {
 }
 
 func (s *Babybear_extensionVecOpsTestSuite) TestBabybear_extensionVecOps() {
-	s.Run("TestBabybear_extensionVecOps", testWrapper(s.Suite, testBabybear_extensionVecOps))
-	s.Run("TestBabybear_extensionTranspose", testWrapper(s.Suite, testBabybear_extensionTranspose))
+	s.Run("TestBabybear_extensionVecOps", testWrapper(&s.Suite, testBabybear_extensionVecOps))
+	s.Run("TestBabybear_extensionTranspose", testWrapper(&s.Suite, testBabybear_extensionTranspose))
 }
 
 func TestSuiteBabybear_extensionVecOps(t *testing.T) {

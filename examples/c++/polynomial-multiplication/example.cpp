@@ -69,21 +69,18 @@ int main(int argc, char** argv)
     ICICLE_CHECK(bn254_ntt(polyB.get(), NTT_SIZE, NTTDir::kForward, &ntt_config, d_polyB));
 
     // (4) multiply A,B
-    VecOpsConfig config{
-      nullptr,
-      true,   // is_a_on_device
-      true,   // is_b_on_device
-      true,   // is_result_on_device
-      false,  // is_async
-      nullptr // ext
-    };
-    ICICLE_CHECK(bn254_vector_mul(d_polyA, d_polyB, NTT_SIZE, &config, d_polyRes));
+    VecOpsConfig config = default_vec_ops_config();
+    config.is_a_on_device = true;
+    config.is_b_on_device = true;
+    config.is_result_on_device = true;
+
+    ICICLE_CHECK(vector_mul(d_polyA, d_polyB, NTT_SIZE, config, d_polyRes));
 
     // (5) INTT (in place)
     ntt_config.are_inputs_on_device = true;
     ntt_config.are_outputs_on_device = true;
     ntt_config.ordering = Ordering::kMN;
-    ICICLE_CHECK(bn254_ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, &ntt_config, d_polyRes));
+    ICICLE_CHECK(ntt(d_polyRes, NTT_SIZE, NTTDir::kInverse, ntt_config, d_polyRes));
 
     if (print) { END_TIMER(poly_multiply, "polynomial multiplication took"); }
 

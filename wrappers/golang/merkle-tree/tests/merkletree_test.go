@@ -57,6 +57,41 @@ func testMerkleTree(s *suite.Suite) {
 		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not verify merkle tree due to: %v", err))
 	}
 
+	runtime.SetDevice(&devices[1])
+	d_keccak256, err := hash.NewKeccak256Hasher(uint64(2 * leafElemSize))
+	if err != runtime.Success {
+		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not create keccak hasher due to: %v", err))
+	}
+
+	d_hashers := make([]hash.Hasher, numLayers)
+	for i := 0; i < numLayers; i++ {
+		d_hashers[i] = d_keccak256
+	}
+
+	d_mt, err := merkletree.CreateMerkleTree(hashers, uint64(leafElemSize), 0)
+	if err != runtime.Success {
+		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not create merkle tree due to: %v", err.AsString()))
+	}
+
+	merkletree.BuildMerkleTree[byte](&d_mt, core.HostSliceFromElements(leaves), core.GetDefaultMerkleTreeConfig())
+
+	d_mp, _ := merkletree.GetMerkleTreeProof[byte](
+		&d_mt,
+		core.HostSliceFromElements(leaves),
+		1,     /* leafIndex */
+		false, /* prunedPath */
+		core.GetDefaultMerkleTreeConfig(),
+	)
+
+	d_root := merkletree.GetMerkleProofRoot[byte](&d_mp)
+	d_path := merkletree.GetMerkleProofPath[byte](&d_mp)
+	d_leaf, d_leafIndex := merkletree.GetMerkleProofLeaf[byte](&d_mp)
+
+	s.Equal(root, d_root)
+	s.Equal(path, d_path)
+	s.Equal(leaf, d_leaf)
+	s.Equal(leafIndex, d_leafIndex)
+
 	s.True(isVerified)
 }
 

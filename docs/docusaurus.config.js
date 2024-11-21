@@ -29,7 +29,7 @@ const config = {
           remarkPlugins: [math, require('mdx-mermaid')],
           rehypePlugins: [katex],
           sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/ingonyama-zk/icicle/tree/main',
+          editUrl: 'https://github.com/ingonyama-zk/icicle/tree/main/docs',
         },
         blog: {
           remarkPlugins: [math, require('mdx-mermaid')],
@@ -155,7 +155,7 @@ const config = {
       announcementBar: {
         id: 'announcement', // Any value that will identify this message.
         content:
-          '<strong>❄️🎉 New Release! ICICLE v3! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/1c9cc2f94402">Click here to read article</a> 🎉❄️</strong>',
+          '<strong>❄️🎉 New Release! ICICLE v3.1! <a style="color:#000000;" target="_blank" rel="noopener noreferrer" href="https://medium.com/@ingonyama/icicle-v3-1-more-passion-more-energy-more-zk-performance-95c3aff4b295">Click here for the full update</a> 🎉❄️</strong>',
         backgroundColor: '#64f5ef', // Light blue background color.
         textColor: '#000000', // Black text color.
         isCloseable: true, // Defaults to `true`.

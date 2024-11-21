@@ -29,7 +29,15 @@ type VecOpsConfig struct {
 	/// non-blocking and you'll need to synchronize it explicitly by calling
 	/// `SynchronizeStream`. If set to false, the function will block the current CPU thread.
 	IsAsync bool
-	Ext     config_extension.ConfigExtensionHandler
+	/// Number of vectors (or operations) to process in a batch.
+	/// Each vector operation will be performed independently on each batch element.
+	/// Default value: 1.
+	BatchSize int32
+	/// True if the batched vectors are stored as columns in a 2D array (i.e., the vectors are
+	/// strided in memory as columns of a matrix). If false, the batched vectors are stored
+	/// contiguously in memory (e.g., as rows or in a flat array). Default value: false.
+	ColumnsBatch bool
+	Ext          config_extension.ConfigExtensionHandler
 }
 
 /**
@@ -43,6 +51,8 @@ func DefaultVecOpsConfig() VecOpsConfig {
 		false, // isBOnDevice
 		false, // isResultOnDevice
 		false, // IsAsync
+		1,     // BatchSize
+		false, // ColumnsBatch
 		nil,   // Ext
 	}
 

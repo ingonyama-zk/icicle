@@ -117,7 +117,7 @@ template <typename S> S get_root_of_unity(uint64_t max_size);
 
 Finally, release the domain to free up device memory when not required:
 ```cpp
-template <typename S> S get_root_of_unity(uint64_t max_size);
+template <typename S> eIcicleError ntt_release_domain();
 ```
 
 where
@@ -169,7 +169,7 @@ To compute a batch, set the `batch_size` and `columns_batch` fields of the confi
 
 ### Example
 
-The following example demonstartes how to use ntt and how pass custom configurations to the CUDA backend. This is discussed below.
+The following example demonstartes how to use ntt and how pass custom configurations to the CUDA backend. Details are discussed below.
 
 ```cpp
 #include "icicle/backend/ntt_config.h"

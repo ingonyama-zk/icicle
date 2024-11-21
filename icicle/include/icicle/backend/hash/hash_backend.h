@@ -51,7 +51,7 @@ namespace icicle {
      * @brief Get the default input chunk size.
      * @return The size of the input chunk in bytes.
      */
-    inline uint64_t input_default_chunk_size() const { return m_default_input_chunk_size; }
+    inline uint64_t default_input_chunk_size() const { return m_default_input_chunk_size; }
 
     /**
      * @brief Get the output size in bytes for a single hash chunk.
@@ -68,7 +68,7 @@ namespace icicle {
 
     inline uint64_t get_single_chunk_size(uint64_t size_or_zero) const
     {
-      const uint64_t size = (size_or_zero == 0) ? input_default_chunk_size() : size_or_zero;
+      const uint64_t size = (size_or_zero == 0) ? default_input_chunk_size() : size_or_zero;
       ICICLE_ASSERT(size > 0) << "Cannot infer hash size. Make sure to pass it to hasher.hash(...size...) or have "
                                  "default size for the hasher";
       return size;

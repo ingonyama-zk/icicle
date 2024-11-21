@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	bw6_761 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bw6761"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -12,7 +12,7 @@ const (
 	BASE_LIMBS = bw6_761.BASE_LIMBS
 )
 
-func testBaseFieldFromLimbs(suite suite.Suite) {
+func testBaseFieldFromLimbs(suite *suite.Suite) {
 	emptyField := bw6_761.BaseField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -21,7 +21,7 @@ func testBaseFieldFromLimbs(suite suite.Suite) {
 	suite.NotEqual(randLimbs, emptyField.GetLimbs())
 }
 
-func testBaseFieldGetLimbs(suite suite.Suite) {
+func testBaseFieldGetLimbs(suite *suite.Suite) {
 	emptyField := bw6_761.BaseField{}
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -29,7 +29,7 @@ func testBaseFieldGetLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs, emptyField.GetLimbs(), "Limbs do not match; there was an issue with setting the BaseField's limbs")
 }
 
-func testBaseFieldOne(suite suite.Suite) {
+func testBaseFieldOne(suite *suite.Suite) {
 	var emptyField bw6_761.BaseField
 	emptyField.One()
 	limbOne := test_helpers.GenerateLimbOne(int(BASE_LIMBS))
@@ -42,7 +42,7 @@ func testBaseFieldOne(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.GetLimbs(), limbOne, "BaseField with limbs to field one did not work")
 }
 
-func testBaseFieldZero(suite suite.Suite) {
+func testBaseFieldZero(suite *suite.Suite) {
 	var emptyField bw6_761.BaseField
 	emptyField.Zero()
 	limbsZero := make([]uint32, BASE_LIMBS)
@@ -55,7 +55,7 @@ func testBaseFieldZero(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.GetLimbs(), limbsZero, "BaseField with limbs to field zero failed")
 }
 
-func testBaseFieldSize(suite suite.Suite) {
+func testBaseFieldSize(suite *suite.Suite) {
 	var emptyField bw6_761.BaseField
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -63,7 +63,7 @@ func testBaseFieldSize(suite suite.Suite) {
 	suite.Equal(len(randLimbs)*4, emptyField.Size(), "Size returned an incorrect value of bytes")
 }
 
-func testBaseFieldAsPointer(suite suite.Suite) {
+func testBaseFieldAsPointer(suite *suite.Suite) {
 	var emptyField bw6_761.BaseField
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	emptyField.FromLimbs(randLimbs[:])
@@ -71,7 +71,7 @@ func testBaseFieldAsPointer(suite suite.Suite) {
 	suite.Equal(randLimbs[0], *emptyField.AsPointer(), "AsPointer returned pointer to incorrect value")
 }
 
-func testBaseFieldFromBytes(suite suite.Suite) {
+func testBaseFieldFromBytes(suite *suite.Suite) {
 	var emptyField bw6_761.BaseField
 	bytes, expected := test_helpers.GenerateBytesArray(int(BASE_LIMBS))
 
@@ -80,7 +80,7 @@ func testBaseFieldFromBytes(suite suite.Suite) {
 	suite.ElementsMatch(emptyField.GetLimbs(), expected, "FromBytes returned incorrect values")
 }
 
-func testBaseFieldToBytes(suite suite.Suite) {
+func testBaseFieldToBytes(suite *suite.Suite) {
 	var emptyField bw6_761.BaseField
 	expected, limbs := test_helpers.GenerateBytesArray(int(BASE_LIMBS))
 	emptyField.FromLimbs(limbs)
@@ -93,14 +93,14 @@ type BaseFieldTestSuite struct {
 }
 
 func (s *BaseFieldTestSuite) TestBaseField() {
-	s.Run("TestBaseFieldFromLimbs", testWrapper(s.Suite, testBaseFieldFromLimbs))
-	s.Run("TestBaseFieldGetLimbs", testWrapper(s.Suite, testBaseFieldGetLimbs))
-	s.Run("TestBaseFieldOne", testWrapper(s.Suite, testBaseFieldOne))
-	s.Run("TestBaseFieldZero", testWrapper(s.Suite, testBaseFieldZero))
-	s.Run("TestBaseFieldSize", testWrapper(s.Suite, testBaseFieldSize))
-	s.Run("TestBaseFieldAsPointer", testWrapper(s.Suite, testBaseFieldAsPointer))
-	s.Run("TestBaseFieldFromBytes", testWrapper(s.Suite, testBaseFieldFromBytes))
-	s.Run("TestBaseFieldToBytes", testWrapper(s.Suite, testBaseFieldToBytes))
+	s.Run("TestBaseFieldFromLimbs", testWrapper(&s.Suite, testBaseFieldFromLimbs))
+	s.Run("TestBaseFieldGetLimbs", testWrapper(&s.Suite, testBaseFieldGetLimbs))
+	s.Run("TestBaseFieldOne", testWrapper(&s.Suite, testBaseFieldOne))
+	s.Run("TestBaseFieldZero", testWrapper(&s.Suite, testBaseFieldZero))
+	s.Run("TestBaseFieldSize", testWrapper(&s.Suite, testBaseFieldSize))
+	s.Run("TestBaseFieldAsPointer", testWrapper(&s.Suite, testBaseFieldAsPointer))
+	s.Run("TestBaseFieldFromBytes", testWrapper(&s.Suite, testBaseFieldFromBytes))
+	s.Run("TestBaseFieldToBytes", testWrapper(&s.Suite, testBaseFieldToBytes))
 
 }
 

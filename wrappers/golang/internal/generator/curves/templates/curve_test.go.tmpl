@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	{{if ne .CurvePrefix "G2"}}{{.Curve}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
-func test{{.CurvePrefix}}AffineZero(suite suite.Suite) {
+func test{{.CurvePrefix}}AffineZero(suite *suite.Suite) {
 	var fieldZero = {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}BaseField{}
 
 	var affineZero {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}Affine
@@ -25,7 +25,7 @@ func test{{.CurvePrefix}}AffineZero(suite suite.Suite) {
 	suite.Equal(affine.Y, fieldZero)
 }
 
-func test{{.CurvePrefix}}AffineFromLimbs(suite suite.Suite) {
+func test{{.CurvePrefix}}AffineFromLimbs(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 
@@ -36,7 +36,7 @@ func test{{.CurvePrefix}}AffineFromLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs2, affine.Y.GetLimbs())
 }
 
-func test{{.CurvePrefix}}AffineToProjective(suite suite.Suite) {
+func test{{.CurvePrefix}}AffineToProjective(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	var fieldOne {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}BaseField
@@ -52,7 +52,7 @@ func test{{.CurvePrefix}}AffineToProjective(suite suite.Suite) {
 	suite.Equal(expected, projectivePoint)
 }
 
-func test{{.CurvePrefix}}ProjectiveZero(suite suite.Suite) {
+func test{{.CurvePrefix}}ProjectiveZero(suite *suite.Suite) {
 	var projectiveZero {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}Projective
 	projectiveZero.Zero()
 	var fieldZero = {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}BaseField{}
@@ -73,7 +73,7 @@ func test{{.CurvePrefix}}ProjectiveZero(suite suite.Suite) {
 	suite.Equal(projective.Z, fieldZero)
 }
 
-func test{{.CurvePrefix}}ProjectiveFromLimbs(suite suite.Suite) {
+func test{{.CurvePrefix}}ProjectiveFromLimbs(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	randLimbs3 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
@@ -86,7 +86,7 @@ func test{{.CurvePrefix}}ProjectiveFromLimbs(suite suite.Suite) {
 	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
-func test{{.CurvePrefix}}ProjectiveFromAffine(suite suite.Suite) {
+func test{{.CurvePrefix}}ProjectiveFromAffine(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	var fieldOne {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}BaseField
@@ -108,12 +108,12 @@ type {{.CurvePrefix}}CurveTestSuite struct {
 }
 
 func (s *{{.CurvePrefix}}CurveTestSuite) Test{{.CurvePrefix}}Curve() {
-	s.Run("Test{{.CurvePrefix}}AffineZero", testWrapper(s.Suite, test{{.CurvePrefix}}AffineZero))
-	s.Run("Test{{.CurvePrefix}}AffineFromLimbs", testWrapper(s.Suite, test{{.CurvePrefix}}AffineFromLimbs))
-	s.Run("Test{{.CurvePrefix}}AffineToProjective", testWrapper(s.Suite, test{{.CurvePrefix}}AffineToProjective))
-	s.Run("Test{{.CurvePrefix}}ProjectiveZero", testWrapper(s.Suite, test{{.CurvePrefix}}ProjectiveZero))
-	s.Run("Test{{.CurvePrefix}}ProjectiveFromLimbs", testWrapper(s.Suite, test{{.CurvePrefix}}ProjectiveFromLimbs))
-	s.Run("Test{{.CurvePrefix}}ProjectiveFromAffine", testWrapper(s.Suite, test{{.CurvePrefix}}ProjectiveFromAffine))
+	s.Run("Test{{.CurvePrefix}}AffineZero", testWrapper(&s.Suite, test{{.CurvePrefix}}AffineZero))
+	s.Run("Test{{.CurvePrefix}}AffineFromLimbs", testWrapper(&s.Suite, test{{.CurvePrefix}}AffineFromLimbs))
+	s.Run("Test{{.CurvePrefix}}AffineToProjective", testWrapper(&s.Suite, test{{.CurvePrefix}}AffineToProjective))
+	s.Run("Test{{.CurvePrefix}}ProjectiveZero", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveZero))
+	s.Run("Test{{.CurvePrefix}}ProjectiveFromLimbs", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromLimbs))
+	s.Run("Test{{.CurvePrefix}}ProjectiveFromAffine", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromAffine))
 }
 
 func TestSuite{{.CurvePrefix}}Curve(t *testing.T) {

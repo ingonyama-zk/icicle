@@ -2,7 +2,22 @@ package test_helpers
 
 import (
 	"math/rand"
+
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
+
+var (
+	REFERENCE_DEVICE = runtime.CreateDevice("CPU", 0)
+	MAIN_DEVICE      = runtime.CreateDevice("CUDA", 0)
+)
+
+func ActivateReferenceDevice() {
+	runtime.SetDevice(&REFERENCE_DEVICE)
+}
+
+func ActivateMainDevice() {
+	runtime.SetDevice(&MAIN_DEVICE)
+}
 
 func GenerateRandomLimb(size int) []uint32 {
 	limbs := make([]uint32, size)
