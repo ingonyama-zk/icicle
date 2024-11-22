@@ -165,7 +165,7 @@ namespace merkle_tree {
       d_leaves_info, params.number_of_leaves_to_inject, params.number_of_rows, states, params.digest_elements,
       *params.hasher, *params.ctx));
 
-    CHK_IF_RETURN(maybe_copy_digests(digests, big_tree_digests, params));
+    CHK_IF_RETURN(maybe_copy_digests(states, big_tree_digests, params));
 
     params.number_of_rows_padded /= params.arity;
     params.segment_size /= params.arity;
@@ -204,9 +204,14 @@ namespace merkle_tree {
         "Hash max preimage length does not match merkle tree arity multiplied by digest elements");
 
     std::vector<Matrix<L>> sorted_inputs(number_of_inputs);
-    std::partial_sort_copy(
-      inputs, inputs + number_of_inputs, sorted_inputs.begin(), sorted_inputs.end(),
-      [](const Matrix<L>& left, const Matrix<L>& right) { return left.height > right.height; });
+
+    if (tree_config.sort_inputs) {
+      std::partial_sort_copy(
+        inputs, inputs + number_of_inputs, sorted_inputs.begin(), sorted_inputs.end(),
+        [](const Matrix<L>& left, const Matrix<L>& right) { return left.height >= right.height; });
+    } else {
+      std::copy(inputs, inputs + number_of_inputs, sorted_inputs.begin());
+    }
 
     // Check that the height of any two given matrices either rounds up
     // to the same next power of two or otherwise equal
@@ -306,7 +311,7 @@ namespace merkle_tree {
     D* caps;
     if (caps_mode) { caps = static_cast<D*>(malloc(caps_len * sizeof(D))); }
 
-#ifdef MERKLE_DEBUG
+#ifdef MMCS_DEBUG
     std::cout << "MMCS DEBUG" << std::endl;
     std::cout << "====================================" << std::endl;
     std::cout << "Available memory = " << available_memory / 1024 / 1024 << " MB" << std::endl;

@@ -11,6 +11,10 @@ repository.workspace = true
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
 
+[dev-dependencies]
+rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
+itertools = "0.12.0"
+
 [build-dependencies]
 cmake = "0.1.50"
 

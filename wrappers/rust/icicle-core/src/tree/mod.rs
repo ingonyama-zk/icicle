@@ -27,6 +27,8 @@ pub struct TreeBuilderConfig<'a> {
     /// Will also be equal to the size of the root of the tree. Default value 1
     pub digest_elements: u32,
 
+    pub sort_inputs: bool,
+
     are_inputs_on_device: bool,
 
     are_outputs_on_device: bool,
@@ -50,6 +52,7 @@ impl<'a> TreeBuilderConfig<'a> {
             arity: 2,
             keep_rows: 0,
             digest_elements: 1,
+            sort_inputs: true,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
