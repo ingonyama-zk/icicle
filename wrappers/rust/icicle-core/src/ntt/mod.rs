@@ -44,7 +44,7 @@ pub enum NTTDir {
 /// - kMN: inputs are digit-reversed-order (=mixed) and outputs are natural-order.
 #[allow(non_camel_case_types)]
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd)]
 pub enum Ordering {
     kNN,
     kNR,
@@ -451,8 +451,8 @@ macro_rules! impl_ntt_bench {
             let min_log2 = get_env_log2("MIN_LOG2", min_log2_default);
             let max_log2 = get_env_log2("MAX_LOG2", max_log2_default);
 
-            assert!(min_log2 >= min_log2_default);
-            assert!(min_log2 < max_log2);
+            assert!(min_log2 >= min_log2_default, "MIN_LOG2 must be >= {}", min_log2_default);
+            assert!(min_log2 < max_log2, "MAX_LOG2 must be > MIN_LOG2");
 
             (min_log2, max_log2)
         }

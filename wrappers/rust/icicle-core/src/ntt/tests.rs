@@ -331,7 +331,8 @@ where
                         config.ordering = ordering;
                         let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-                            if alg == NttAlgorithm::Radix2 && ordering as u32 > 3 {
+                            if alg == NttAlgorithm::Radix2 && (ordering > Ordering::kRR) {
+                                // Radix2 does not support kNM and kMN ordering
                                 continue;
                             }
                             config.batch_size = batch_size as i32;
