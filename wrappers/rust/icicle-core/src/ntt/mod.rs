@@ -44,7 +44,7 @@ pub enum NTTDir {
 /// - kMN: inputs are digit-reversed-order (=mixed) and outputs are natural-order.
 #[allow(non_camel_case_types)]
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd)]
 pub enum Ordering {
     kNN,
     kNR,
@@ -422,20 +422,41 @@ macro_rules! impl_ntt_bench {
       $field:ident
     ) => {
         use icicle_core::ntt::ntt;
+        use icicle_core::ntt::get_root_of_unity;
+        use icicle_core::ntt::initialize_domain;
         use icicle_core::ntt::NTTDomain;
+
         use icicle_cuda_runtime::memory::HostOrDeviceSlice;
+        use icicle_cuda_runtime::device_context::DeviceContext;
         use std::sync::OnceLock;
+        use std::iter::once;
 
         use criterion::{black_box, criterion_group, criterion_main, Criterion};
         use icicle_core::{
             ntt::{FieldImpl, NTTConfig, NTTDir, NttAlgorithm, Ordering},
-            traits::ArkConvertible,
         };
 
         use icicle_core::ntt::NTT;
         use icicle_cuda_runtime::memory::HostSlice;
         use icicle_core::traits::GenerateRandom;
         use icicle_core::vec_ops::VecOps;
+        use std::env;
+
+        fn get_min_max_log_size(min_log2_default: u32, max_log2_default: u32) -> (u32, u32) {
+
+            fn get_env_log2(key: &str, default: u32) -> u32 {
+                env::var(key).unwrap_or_else(|_| default.to_string()).parse().unwrap_or(default)
+            }
+
+            let min_log2 = get_env_log2("MIN_LOG2", min_log2_default);
+            let max_log2 = get_env_log2("MAX_LOG2", max_log2_default);
+
+            assert!(min_log2 >= min_log2_default, "MIN_LOG2 must be >= {}", min_log2_default);
+            assert!(min_log2 < max_log2, "MAX_LOG2 must be > MIN_LOG2");
+
+            (min_log2, max_log2)
+        }
+
 
         fn ntt_for_bench<T, F: FieldImpl>(
             input: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -453,6 +474,15 @@ macro_rules! impl_ntt_bench {
             ntt(input, is_inverse, config, batch_ntt_result).unwrap();
         }
 
+        fn init_domain<F: FieldImpl>(max_size: u64, device_id: usize, fast_twiddles_mode: bool)
+        where
+            <F as FieldImpl>::Config: NTTDomain<F>,
+        {
+            let ctx = DeviceContext::default_for_device(device_id);
+            let rou: F = get_root_of_unity(max_size);
+            initialize_domain(rou, &ctx, fast_twiddles_mode).unwrap();
+        }
+
         static INIT: OnceLock<()> = OnceLock::new();
 
         fn benchmark_ntt<T, F: FieldImpl>(c: &mut Criterion)
@@ -462,32 +492,28 @@ macro_rules! impl_ntt_bench {
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::ntt;
-            use icicle_core::ntt::tests::init_domain;
             use icicle_core::ntt::NTTDomain;
             use icicle_cuda_runtime::device_context::DEFAULT_DEVICE_ID;
-            use std::env;
+            use icicle_cuda_runtime::memory::DeviceVec;
 
             let group_id = format!("{} NTT", $field_prefix);
             let mut group = c.benchmark_group(&group_id);
             group.sampling_mode(SamplingMode::Flat);
             group.sample_size(10);
 
+            const MIN_LOG2: u32 = 8; // min length = 2 ^ MIN_LOG2
             const MAX_LOG2: u32 = 25; // max length = 2 ^ MAX_LOG2
-
-            let max_log2 = env::var("MAX_LOG2")
-                .unwrap_or_else(|_| MAX_LOG2.to_string())
-                .parse::<u32>()
-                .unwrap_or(MAX_LOG2);
-
             const FAST_TWIDDLES_MODE: bool = false;
+
+            let (min_log2, max_log2) = get_min_max_log_size(MIN_LOG2, MAX_LOG2);
 
             INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, DEFAULT_DEVICE_ID, FAST_TWIDDLES_MODE));
 
             let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
             let mut config = NTTConfig::<F>::default();
 
-            for test_size_log2 in (13u32..max_log2 + 1) {
-                for batch_size_log2 in (7u32..17u32) {
+            for test_size_log2 in (min_log2..=max_log2) {
+                for batch_size_log2 in [0, 6, 8, 10] {
                     let test_size = 1 << test_size_log2;
                     let batch_size = 1 << batch_size_log2;
                     let full_size = batch_size * test_size;
@@ -501,39 +527,70 @@ macro_rules! impl_ntt_bench {
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);
-                    let mut config = NTTConfig::default();
-                    for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
-                        for ordering in [
-                            Ordering::kNN,
-                            Ordering::kNR, // times are ~ same as kNN
-                            Ordering::kRN,
-                            Ordering::kRR,
-                            Ordering::kNM,
-                            Ordering::kMN,
-                        ] {
-                            config.ordering = ordering;
-                            // for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
-                            config.batch_size = batch_size as i32;
-                            // config.ntt_algorithm = alg;
-                            let bench_descr = format!(
-                                "{:?} {:?} {} x {}",
-                                ordering, is_inverse, test_size, batch_size
-                            );
-                            group.bench_function(&bench_descr, |b| {
-                                b.iter(|| {
-                                    ntt_for_bench::<F, F>(
-                                        input,
-                                        batch_ntt_result,
-                                        test_size,
-                                        batch_size,
-                                        is_inverse,
-                                        ordering,
-                                        &mut config,
-                                        black_box(1),
-                                    )
-                                })
-                            });
-                            // }
+
+                    for is_on_device in [true, false] {
+
+                        let mut config = NTTConfig::default();
+                        for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
+                            for ordering in [
+                                Ordering::kNN,
+                                Ordering::kNR, // times are ~ same as kNN
+                                Ordering::kRN,
+                                Ordering::kRR,
+                                Ordering::kNM,
+                                Ordering::kMN,
+                            ] {
+                                config.ordering = ordering;
+                                for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
+
+                                    if alg == NttAlgorithm::Radix2 && ordering as u32 > 3 {
+                                        continue;
+                                    }
+
+                                    config.batch_size = batch_size as i32;
+                                    config.ntt_algorithm = alg;
+                                    let bench_descr = format!(
+                                        "{} {:?} {:?} {:?} 2^ {} x {}",
+                                        if is_on_device { "on device"} else {"on host"}, alg, ordering, is_inverse, test_size_log2, batch_size
+                                    );
+                                    if is_on_device {
+                                        let mut d_input = DeviceVec::<F>::cuda_malloc(full_size).unwrap();
+                                        d_input.copy_from_host(input).unwrap();
+                                        let mut d_batch_ntt_result = DeviceVec::<F>::cuda_malloc(full_size).unwrap();
+                                        d_batch_ntt_result.copy_from_host(batch_ntt_result).unwrap();
+
+                                        group.bench_function(&bench_descr, |b| {
+                                            b.iter(|| {
+                                                ntt_for_bench::<F, F>(
+                                                    &d_input[..],
+                                                    &mut d_batch_ntt_result[..],
+                                                    test_size,
+                                                    batch_size,
+                                                    is_inverse,
+                                                    ordering,
+                                                    &mut config,
+                                                    black_box(1),
+                                                )
+                                            })
+                                        });
+                                    } else {
+                                        group.bench_function(&bench_descr, |b| {
+                                            b.iter(|| {
+                                                ntt_for_bench::<F, F>(
+                                                    input,
+                                                    batch_ntt_result,
+                                                    test_size,
+                                                    batch_size,
+                                                    is_inverse,
+                                                    ordering,
+                                                    &mut config,
+                                                    black_box(1),
+                                                )
+                                            })
+                                        });
+                                    }
+                                }
+                            }
                         }
                     }
                 }

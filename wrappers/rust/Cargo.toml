@@ -3,11 +3,16 @@ resolver = "2"
 members = [
   "icicle-cuda-runtime",
   "icicle-core",
+  # TODO: stub ArkField trait impl - for now comment these when compiling tests/benches for the fields 
+  #       that are not implemented in Arkworks. Curves depend on Arkworks for tests, 
+  #       so they enable 'arkworks' feature. Since Rust features are additive all the fields 
+  #       (due to not implemented in Arkworks) will fail with 'missing `ArkField` in implementation' 
   # "icicle-curves/icicle-bw6-761",
   # "icicle-curves/icicle-bls12-377",
   # "icicle-curves/icicle-bls12-381",
   # "icicle-curves/icicle-bn254",
   # "icicle-curves/icicle-grumpkin",
+  # not implemented by Arkworks below
   # "icicle-fields/icicle-babybear",
   "icicle-fields/icicle-m31",
   # "icicle-fields/icicle-stark252",
