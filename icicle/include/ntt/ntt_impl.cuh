@@ -6,7 +6,10 @@
 #include "ntt/ntt.cuh" // for enum Ordering
 
 namespace mxntt {
-
+#ifdef DCCT
+  template <typename S, typename R>
+  cudaError_t generate_twiddles_dcct(const R& basic_root, S* basic_twiddles, uint32_t log_size, cudaStream_t& stream);
+#else
   template <typename S>
   cudaError_t generate_external_twiddles_generic(
     const S& basic_root,
@@ -24,6 +27,7 @@ namespace mxntt {
     S*& basic_twiddles,
     uint32_t log_size,
     cudaStream_t& stream);
+#endif
 
   template <typename E, typename S>
   cudaError_t mixed_radix_ntt(

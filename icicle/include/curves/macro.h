@@ -22,7 +22,7 @@
   typedef Affine<point_field_t> affine_t;
 
 #define G2_CURVE_DEFINITIONS \
-  typedef ExtensionField<fq_config, point_field_t> g2_point_field_t; \
+  typedef ComplexExtensionField<fq_config, point_field_t> g2_point_field_t; \
   static constexpr g2_point_field_t g2_generator_x = \
     g2_point_field_t{point_field_t{g2_gen_x_re}, point_field_t{g2_gen_x_im}}; \
   static constexpr g2_point_field_t g2_generator_y = \
