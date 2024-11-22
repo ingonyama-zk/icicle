@@ -37,3 +37,7 @@ devmode = ["icicle-core/devmode"]
 [[bench]]
 name = "poseidon2"
 harness = false
+
+[[bench]]
+name = "ntt"
+harness = false
