@@ -44,7 +44,6 @@ typedef m31::c_extension_t CF;
 typedef m31::scalar_t F;
 typedef m31::point_t P;
 typedef m31::secure_point_t QP;
-typedef m31::coset_t C;
 
 int main(int argc, char** argv)
 {
@@ -86,10 +85,4 @@ int main(int argc, char** argv)
   for (int i = 0; i < 10; i++) {
     std::cout << result[i] << " ";
   }
-
-  // circle_math::CircleDomain<m31::fp_config, m31::scalar_t> domain = circle_math::CircleDomain<m31::fp_config, m31::scalar_t>(domain_log_size);
-  // std::cout << domain.coset;
-  // assert(domain.coset.initial_index == half_coset_initial_index);
-  // assert(domain.coset.step_size == half_coset_step_size);
-  // assert(domain.lg_size() == (size_t)domain_log_size);
 }

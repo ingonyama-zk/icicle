@@ -75,6 +75,18 @@ namespace quotient {
                 flat_denominators[i] = CF::inverse(result);
             }
         }
+
+        template <typename P, typename F>
+        static HOST_DEVICE_INLINE P get_domain_by_index(uint32_t half_coset_initial_index, uint32_t half_coset_step_size, uint32_t index, uint32_t domain_size) {
+        uint32_t half_coset_size = domain_size >> 1;
+        if (index < half_coset_size) {
+            uint64_t global_index = (uint64_t) half_coset_initial_index + (uint64_t) half_coset_step_size * (uint64_t) index;
+            return P::get_point_by_index(global_index & F::get_modulus().limbs[0]);
+        } else {
+            uint64_t global_index = (uint64_t) half_coset_initial_index + (uint64_t) half_coset_step_size * (uint64_t) (index - half_coset_size);
+            return P::get_point_by_index(((F::get_modulus().limbs[0] - global_index) + 1) & F::get_modulus().limbs[0]);
+        }
+        }
     }
 
     template <typename QP, typename QF>
@@ -148,8 +160,7 @@ namespace quotient {
         if (row < domain_size) {
             CF *denominator_inverses_local = &denominator_inverses[row * sample_size];
             uint32_t index = __brev(row) >> (32 - domain_log_size);
-            P point = P::get_domain_by_index(half_coset_initial_index, half_coset_step_size, index, domain_size);
-            // std::cout << "domain_point: " << point << std::endl;
+            P point = get_domain_by_index<P, F>(half_coset_initial_index, half_coset_step_size, index, domain_size);
             denominator_inverse<QP, QF, CF>(
                 samples,
                 sample_size,

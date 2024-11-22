@@ -342,8 +342,6 @@ namespace m31 {
   typedef circle_math::CirclePoint<fp_config, scalar_t> point_t;
   typedef circle_math::CirclePoint<fp_config, q_extension_t> secure_point_t;
 
-  typedef circle_math::CircleCoset<fp_config, scalar_t> coset_t;
-
 } // namespace m31
 
 template <typename CONFIG>
