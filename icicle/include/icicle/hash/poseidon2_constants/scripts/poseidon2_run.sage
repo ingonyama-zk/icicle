@@ -603,6 +603,7 @@ def print_state(f, message, state):
       f.write(f']\n')
     else:
       f.write(f', ')
+    
 def print_matrix(f, message, matrix):
   f.write(f'{message}\n')
   for row in range(matrix.nrows()):
@@ -612,6 +613,7 @@ def print_matrix(f, message, matrix):
       if row != (matrix.nrows()) - 1 or col != (matrix.nrows()) - 1:
         f.write(f',')
     f.write(f'\n')
+
 def poseidon2(f, input_words, matrix_full, matrix_partial, round_constants):
 
     R_f = int(R_F_FIXED / 2)
@@ -757,6 +759,7 @@ for i in range(len(MATRIX_PARTIAL_DIAGONAL)):
     FILE_cpp.write(f',')
 FILE_cpp.write(f'\n')
 FILE_cpp.write(f'}};\n\n')
+
 
 def to_hex(value):
     l = len(hex(p - 1))

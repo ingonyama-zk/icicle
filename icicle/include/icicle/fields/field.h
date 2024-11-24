@@ -90,10 +90,17 @@ public:
     int length = tmp_str.length();
     // Split string into chuncks of 8 chars (for uint32_t) and store in scalar storage.
     storage<TLC> scalar{};
-    for (int str_idx=((int)((length-8)/8))*8, limb_idx = 0; str_idx>=0; str_idx-=8, limb_idx++) {   // ((int)((length-8)/8))*8 is for case if length<8.
-      scalar.limbs[limb_idx] = strtoul(tmp_str.substr(str_idx, std::min(8, length)).c_str(), nullptr, 16);
+    // for (int str_idx=((int)((length-8)/8))*8, limb_idx = 0; str_idx>=0; str_idx-=8, limb_idx++) {   // ((int)((length-8)/8))*8 is for case if length<8.
+    for (int str_idx=length-8, limb_idx = 0; str_idx>=-7; str_idx-=8, limb_idx++) {   // ((int)((length-8)/8))*8 is for case if length<8.
+      if (str_idx < 0) {
+        std::string kuku = tmp_str.substr(0, str_idx+8).c_str();
+        scalar.limbs[limb_idx] = strtoul(tmp_str.substr(0, str_idx+8).c_str(), nullptr, 16);
+      } else {
+        std::string kuku = tmp_str.substr(str_idx, 8).c_str();
+        scalar.limbs[limb_idx] = strtoul(tmp_str.substr(str_idx, 8).c_str(), nullptr, 16);
+      }
     }
-    return scalar;
+    return Field{scalar};
   }
 
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)

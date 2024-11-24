@@ -30,10 +30,15 @@ namespace icicle {
     unsigned int nof_bottom_full_rounds; ///< Number of bottom full rounds of a single hash.
     S* rounds_constants; ///< Round constants (both of the full and the partial rounds). The order of the constants in
                          ///< the memory is according to the rounds order.
-    S* mds_matrix;       ///> MDS matrix used in the full rounds. The same matrix is used for all the full rounds.
-    S* pre_matrix;       ///< Pre-matrix used in the last upper full round.
-    S* sparse_matrices; ///< Sparse matries that are used in the partial rounds. A single aprse matrix in the memory has
-                        ///< "t x t" members. The calculation is done only on the member that not equal to zero.
+    S* mds_matrix;       ///> MDS matrix is used in the full rounds. The same matrix is used for all such rounds.
+    S* partial_matrix_diagonal;   ///< Partial matrix is used in the partial rounds. The same matrix is used for all such rounds.
+                                  ///< Only M[i,i] member are different from 1. These members are here.
+    S* partial_matrix_diagonal_m1;   ///< This partial matrix is used in the partial rounds instead of partial_matrix_diagonal 
+                                  ///< (using this matrix improves the performance of the partial rounds). The same matrix
+                                  ///< is used for all such rounds. Only M[i,i] member are different from 1. 
+                                  ///< These members are here. 
+    Poseidon2ConstantsOptions() {}
+    Poseidon2ConstantsOptions(const Poseidon2ConstantsOptions&) = delete;
   };
 
   /*************************** Backend registration ***************************/

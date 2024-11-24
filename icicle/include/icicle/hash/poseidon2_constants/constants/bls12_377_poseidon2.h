@@ -2,7 +2,10 @@
 #ifndef BLS12_377_POSEIDON2_H
 #define BLS12_377_POSEIDON2_H
 
+#include <string>
+
 namespace poseidon2_constants_bls12_377 {
+
   /**
    * This inner namespace contains constants for running Poseidon2.
    * The number in the name corresponds to the arity of hash function
@@ -13,7 +16,7 @@ int half_full_rounds_2 =    4;
 int partial_rounds_2 =      37;
 int alpha_2 =               11;
 
-std::string round_constants_2[] = {
+static const std::string round_constants_2[] = {
   "0x114e4b6b0e803c1a969645f7495cc94423c94e15f9a3936640041b662e95d54b",
   "0x30a734bb9171c000f310c95cd946dc04c7e4bec3144c1cd22fc5bcf84780243",
   "0x4f2eff729b5c8a810d972fc8ef728536e467db4b2bcd948f5d7ba200fb29e2b",
@@ -69,12 +72,12 @@ std::string round_constants_2[] = {
   "0x391ea57d87bf983d3a72baf8cbda96a2077e01420665c63b7494023e8b972ea"
 };
 
-std::string mds_matrix_2[] = {
+static const std::string mds_matrix_2[] = {
  "0x2", "0x1",
  "0x1", "0x2"
 };
 
-std::string partial_matrix_2[] = {
+static const std::string partial_matrix_diagonal_2[] = {
  "0x2", "0x3"
 };
 
@@ -84,7 +87,7 @@ int half_full_rounds_3 =    4;
 int partial_rounds_3 =      37;
 int alpha_3 =               11;
 
-std::string round_constants_3[] = {
+static const std::string round_constants_3[] = {
   "0x894b84bdb19c99b174eef89446c8042b49d9d2a82fc46c4d653ebdcd127a9aa",
   "0xc6b7ff8356bd516fad4f06f4c5354bb1ea26d27b3e9b156e89f0c9ba9ea1163",
   "0xd03966afba794725c52dd8f7507a62b3441fb8608becf0b0cc077744ed99175",
@@ -148,13 +151,13 @@ std::string round_constants_3[] = {
   "0x19e2b92497e2585e28fd0c5cbdad9c93faa238d34d5eb24a3e8e81ac9b5f343"
 };
 
-std::string mds_matrix_3[] = {
+static const std::string mds_matrix_3[] = {
  "0x2", "0x1", "0x1",
  "0x1", "0x2", "0x1",
  "0x1", "0x1", "0x2"
 };
 
-std::string partial_matrix_3[] = {
+static const std::string partial_matrix_diagonal_3[] = {
  "0x2", "0x2", "0x3"
 };
 
@@ -164,7 +167,7 @@ int half_full_rounds_4 =    4;
 int partial_rounds_4 =      37;
 int alpha_4 =               11;
 
-std::string round_constants_4[] = {
+static const std::string round_constants_4[] = {
   "0x12885ea31bb116a3d94b1e3e06e6690d84e08035133e7dbd5d16103920e5565e",
   "0xfe121d3a78b69c16c365e2ec6e8f65f34a86865fc3a1d04ce75954a784696e7",
   "0x1215da3254c044b9c57fb80416628b822ad4ab35354db98938080506902b5c6",
@@ -236,14 +239,14 @@ std::string round_constants_4[] = {
   "0x7ea82da8a19a2bc6ef4220d452ca4a24dcfcb35d5127c3ea9e8af0277740903"
 };
 
-std::string mds_matrix_4[] = {
+static const std::string mds_matrix_4[] = {
  "0x5", "0x7", "0x1", "0x3",
  "0x4", "0x6", "0x1", "0x1",
  "0x1", "0x3", "0x5", "0x7",
  "0x1", "0x1", "0x4", "0x6"
 };
 
-std::string partial_matrix_4[] = {
+static const std::string partial_matrix_diagonal_4[] = {
  "0x2574ac64ca91d12d02d4f3cf6b23e59851e4c86d1e44c6fff1482975b339a4f", "0x8a2a4bf394d807c5b866ab3ed8b00f179eaa9d2cab8c9fda1e0f4d635247c2e", "0xbc3c399d590b573f0ea83593fac1d48926141d8f1860be322b3ea01eb84f67", "0x13f32136409547ab2b37398c7bd60d76689c0a3a3d963f5e7ffbced1fd574cb"
 };
 
@@ -253,7 +256,7 @@ int half_full_rounds_8 =    4;
 int partial_rounds_8 =      37;
 int alpha_8 =               11;
 
-std::string round_constants_8[] = {
+static const std::string round_constants_8[] = {
   "0xc41ba529d3a519fbb431094f9511053b921ae8db909b40e315520a8e18cea1d",
   "0x819c18df5f5f0f58af9557b14c4fec0e4376fe2f8bea3eb74410fca83d9d7ce",
   "0xd2f039a35d1245a5448b75f036a67f26a5b68a682c88294beac479cb513f467",
@@ -357,7 +360,7 @@ std::string round_constants_8[] = {
   "0x48fe2580726aba2044432c17b190e0471fd1b356005f603f432a828a6e1016e"
 };
 
-std::string mds_matrix_8[] = {
+static const std::string mds_matrix_8[] = {
  "0xa", "0xe", "0x2", "0x6", "0x5", "0x7", "0x1", "0x3",
  "0x8", "0xc", "0x2", "0x2", "0x4", "0x6", "0x1", "0x1",
  "0x2", "0x6", "0xa", "0xe", "0x1", "0x3", "0x5", "0x7",
@@ -368,7 +371,7 @@ std::string mds_matrix_8[] = {
  "0x1", "0x1", "0x4", "0x6", "0x2", "0x2", "0x8", "0xc"
 };
 
-std::string partial_matrix_8[] = {
+static const std::string partial_matrix_diagonal_8[] = {
  "0x86f8ffd65bebe5137654c441bf8e9520fbca080cc233c0f6c64062c99f2e199", "0xcafcb5a1551b2f5d6345456b95de2b6dc3f2bd8a5b114f6d8e4daf26cea902c", "0x33def38d6cbd4417f40e33aa822f7b0b3743ce4f32dcbb47033f96ca9ea4339", "0x806f5b5dd08360b1cfe54899a7cf8f3c543b5dbe3dc25c08ffa00b89f167182", "0x2addc4612044efd1937f6238fa77092b98d674262f8b1fbc2a6026daa881a60", "0x11f4fec8189febc1c7c4bf540320cdce84c0fb90ab38c16276ba1106811c9371", "0x4763569f19baf961b5c3f3dcdbe54b5feaed59d0c6876fd33153812f01fa547", "0x362799e791390a5cf391ad263db8fc7823fa117cd9be80114c73177e96fe611"
 };
 
@@ -377,36 +380,44 @@ int full_rounds_12 =         0;
 int half_full_rounds_12 =    0;
 int partial_rounds_12 =      0;
 int alpha_12 =               0;
-scalar_t round_constants_12[] = {};
-scalar_t mds_matrix_12[]      = {};
-scalar_t partial_matrix_12[]  = {};
+static const std::string round_constants_12[] = {};
+static const std::string mds_matrix_12[]      = {};
+static const std::string partial_matrix_diagonal_12[]  = {};
+
+static const std::string partial_matrix_diagonal_m1_12[]  = {};
 
 
 int full_rounds_16 =         0;
 int half_full_rounds_16 =    0;
 int partial_rounds_16 =      0;
 int alpha_16 =               0;
-scalar_t round_constants_16[] = {};
-scalar_t mds_matrix_16[]      = {};
-scalar_t partial_matrix_16[]  = {};
+static const std::string round_constants_16[] = {};
+static const std::string mds_matrix_16[]      = {};
+static const std::string partial_matrix_diagonal_16[]  = {};
+
+static const std::string partial_matrix_diagonal_m1_16[]  = {};
 
 
 int full_rounds_20 =         0;
 int half_full_rounds_20 =    0;
 int partial_rounds_20 =      0;
 int alpha_20 =               0;
-scalar_t round_constants_20[] = {};
-scalar_t mds_matrix_20[]      = {};
-scalar_t partial_matrix_20[]  = {};
+static const std::string round_constants_20[] = {};
+static const std::string mds_matrix_20[]      = {};
+static const std::string partial_matrix_diagonal_20[]  = {};
+
+static const std::string partial_matrix_diagonal_m1_20[]  = {};
 
 
 int full_rounds_24 =         0;
 int half_full_rounds_24 =    0;
 int partial_rounds_24 =      0;
 int alpha_24 =               0;
-scalar_t round_constants_24[] = {};
-scalar_t mds_matrix_24[]      = {};
-scalar_t partial_matrix_24[]  = {};
+static const std::string round_constants_24[] = {};
+static const std::string mds_matrix_24[]      = {};
+static const std::string partial_matrix_diagonal_24[]  = {};
+
+static const std::string partial_matrix_diagonal_m1_24[]  = {};
 
 
 }   // namespace poseidon2_constants_bls12_377 {

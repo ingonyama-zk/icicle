@@ -6,9 +6,9 @@ possible_hash_width = [2, 3, 4, 8, 12, 16, 20, 24]
 small_field_max_width = 64
 
 fields = [
-  # <field_name>, <hash_width>, <prime>
+  # <field_name>, <is_field> <hash_width>, <prime>
   ["babybear",   [2, 3, 4, 8, 12, 16, 20, 24], 0x78000001],    # 15 * 2^27 + 1
-  ["mersene",    [2, 3, 4, 8, 12, 16, 20, 24], 0x7fffffff],   # 2^31 - 1
+  ["m31",        [2, 3, 4, 8, 12, 16, 20, 24], 0x7fffffff],   # 2^31 - 1
   ["goldilocks", [2, 3, 4, 8, 12, 16, 20, 24], 0xffffffff00000001],    # 2^64 - 2^32 + 1
   ["stark252",   [2, 3, 4, 8], 0x800000000000011000000000000000000000000000000000000000000000001],    # 2^251 + 17 * 2^192 + 1
   ["bn254",      [2, 3, 4, 8], 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001],
@@ -28,7 +28,8 @@ for field in fields:
   FILE_cpp.write(f'#pragma once\n')
   FILE_cpp.write(f'#ifndef {field[0].upper()}_POSEIDON2_H\n')
   FILE_cpp.write(f'#define {field[0].upper()}_POSEIDON2_H\n\n')
-  FILE_cpp.write(f'namespace poseidon2_constants_{field[0]} {{\n')
+  FILE_cpp.write(f'#include <string>\n\n')
+  FILE_cpp.write(f'namespace poseidon2_constants_{field[0]} {{\n\n')
   FILE_cpp.write(f'  /**\n')
   FILE_cpp.write(f'   * This inner namespace contains constants for running Poseidon2.\n')
   FILE_cpp.write(f'   * The number in the name corresponds to the arity of hash function\n')
@@ -46,9 +47,10 @@ for field in fields:
       FILE_cpp_tmp.write(f'int half_full_rounds_{hash_width} =    0;\n')
       FILE_cpp_tmp.write(f'int partial_rounds_{hash_width} =      0;\n')
       FILE_cpp_tmp.write(f'int alpha_{hash_width} =               0;\n')
-      FILE_cpp_tmp.write(f'std::string round_constants_{hash_width}[] = {{}};\n')
-      FILE_cpp_tmp.write(f'std::string mds_matrix_{hash_width}[]      = {{}};\n')
-      FILE_cpp_tmp.write(f'std::string partial_matrix_{hash_width}[]  = {{}};\n\n')
+      FILE_cpp_tmp.write(f'static const std::string round_constants_{hash_width}[] = {{}};\n')
+      FILE_cpp_tmp.write(f'static const std::string mds_matrix_{hash_width}[]      = {{}};\n')
+      FILE_cpp_tmp.write(f'static const std::string partial_matrix_diagonal_{hash_width}[]  = {{}};\n\n')
+      FILE_cpp_tmp.write(f'static const std::string partial_matrix_diagonal_m1_{hash_width}[]  = {{}};\n\n')
       FILE_cpp_tmp.close()
     else:
       gen_constants_cmd = f'sage poseidon2_params.sage {field[0]} {hash_width} {hex(field[2])}'
@@ -62,6 +64,7 @@ for field in fields:
           partial_round = int(line.split()[2])    # Not needed in this case.
           alpha = int(line.split()[3])
           break
+    # exit()   # For DEBUG - run a single width of a single field
 
     with open(f'{field[0]}_poseidon2_{hash_width}_{alpha}.h', 'r') as f_params:
       FILE_cpp.write(f_params.read())

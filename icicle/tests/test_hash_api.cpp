@@ -8,6 +8,7 @@
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
 #include "icicle/merkle/merkle_tree.h"
+#include "icicle/fields/field.h"
 
 #include <string>
 #include <sstream>
@@ -690,47 +691,95 @@ TEST_F(HashApiTest, MerkleTreeLarge)
 #ifdef POSEIDON2
 // p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 
-  // #include "icicle/fields/field_config.h"
-  #include "icicle/hash/poseidon2_constants/constants/bn254_poseidon2.h"
+#include "icicle/fields/field_config.h"
+#include "icicle/hash/poseidon2_constants/constants/bn254_poseidon2.h"
 
-// using namespace field_config;
-// using namespace poseidon2_constants_bn254;
+using namespace field_config;
+using namespace poseidon2_constants_bn254;
 
-  // #include "icicle/hash/poseidon2.h"
+#include "icicle/hash/poseidon2.h"
 
-// TEST_F(HashApiTest, poseidon2_3_single_hash)
-// {
-  // const unsigned t = 3;
-  // auto config = default_hash_config();
+// 0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570
 
-  // auto input = std::make_unique<scalar_t[]>(t);
-  // scalar_t::rand_host_many(input.get(), t);
-  // config.batch = 1;
+TEST_F(HashApiTest, poseidon2_3_single_hash_cpu_only)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
 
-  // auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
-  //   Device dev = {dev_type, 0};
-  //   icicle_set_device(dev);
+  auto input = std::make_unique<scalar_t[]>(t);
+  scalar_t::rand_host_many(input.get(), t);
+    // DEBUG
+  input[0] = scalar_t::from(0);
+  input[1] = scalar_t::from(1);
+  input[2] = scalar_t::from(2);
+  // DEBUG
+  config.batch = 1;
 
-  //   std::ostringstream oss;
-  //   oss << dev_type << " " << msg;
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
 
-  //   auto poseidon2 = Poseidon2::create<scalar_t>(t);
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
-  //   START_TIMER(POSEIDON2_3_sync)
-  //   for (int i = 0; i < iters; ++i) {
-  //     ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
-  //   }
-  //   END_TIMER(POSEIDON2_3_sync, oss.str().c_str(), measure);
-  // };
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
 
-  // auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  // // auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+    START_TIMER(POSEIDON2_3_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
+    }
+    END_TIMER(POSEIDON2_3_sync, oss.str().c_str(), measure);
+  };
 
-  // run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  // // run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  // auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
 
-  // //ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
-// }
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  scalar_t expected_res = scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570");
+  // run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  ASSERT_EQ(expected_res, *(output_cpu.get()));
+
+  // ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+}
+
+TEST_F(HashApiTest, poseidon2_3_single_hash)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
+
+  auto input = std::make_unique<scalar_t[]>(t);
+  scalar_t::rand_host_many(input.get(), t);
+    // DEBUG
+  input[0] = scalar_t::from(0);
+  input[1] = scalar_t::from(1);
+  input[2] = scalar_t::from(2);
+  // DEBUG
+  config.batch = 1;
+
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
+
+    START_TIMER(POSEIDON2_3_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
+    }
+    END_TIMER(POSEIDON2_3_sync, oss.str().c_str(), measure);
+  };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  // auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  // run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+
+  // ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+}
 #endif    // POSEIDON2
 
 #ifdef POSEIDON
@@ -744,7 +793,7 @@ using namespace poseidon_constants_bn254;
 
   #include "icicle/hash/poseidon.h"
 
-TEST_F(HashApiTest, poseidon12_single_hash)
+TEST_F(HashApiTest, poseidon_12_single_hash)
 {
   const unsigned t = 12;
   auto config = default_hash_config();
@@ -778,7 +827,7 @@ TEST_F(HashApiTest, poseidon12_single_hash)
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
 
-// TEST_F(HashApiTest, poseidon3_single_hash_domain_tag)
+// TEST_F(HashApiTest, poseidon_3_single_hash_domain_tag)
 // {
 //   const unsigned  t                   = 2;
 //   const unsigned  default_input_size      = 2;
@@ -818,7 +867,7 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 //   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 // }
 
-TEST_F(HashApiTest, poseidon3_single_hash)
+TEST_F(HashApiTest, poseidon_3_single_hash)
 {
   const unsigned t = 3;
   auto config = default_hash_config();
@@ -852,7 +901,7 @@ TEST_F(HashApiTest, poseidon3_single_hash)
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
 
-TEST_F(HashApiTest, poseidon3_batch)
+TEST_F(HashApiTest, poseidon_3_batch)
 {
   const unsigned t = 3;
   auto config = default_hash_config();
