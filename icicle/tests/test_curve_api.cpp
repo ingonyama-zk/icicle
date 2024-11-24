@@ -4,6 +4,7 @@
 #include <fstream>
 #include <list>
 #include <random>
+#include <time.h>
 #include "dlfcn.h"
 
 #include "icicle/runtime.h"
@@ -37,6 +38,9 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
+    auto seed = time(NULL);
+    srand(seed);
+    ICICLE_LOG_INFO << "Seed for tests is: " << seed;
 #ifdef BACKEND_BUILD_DIR
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif
@@ -115,6 +119,7 @@ public:
   template <typename A, typename P>
   void MSM_CPU_THREADS_test()
   {
+
     const int logn = 8;
     const int c = 3;
     // Low c to have a large amount of tasks required in phase 2
