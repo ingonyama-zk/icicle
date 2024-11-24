@@ -19,10 +19,10 @@ namespace fri {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line)(
-    extension_t* line_eval,
+    q_extension_t* line_eval,
     scalar_t* domain_elements,
-    extension_t alpha,
-    extension_t* folded_evals,
+    q_extension_t alpha,
+    q_extension_t* folded_evals,
     uint64_t n,
     FriConfig& cfg)
   {
@@ -43,10 +43,10 @@ namespace fri {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line)(
-    extension_t* circle_evals,
+    q_extension_t* circle_evals,
     scalar_t* domain_elements,
-    extension_t alpha,
-    extension_t* folded_line_evals,
+    q_extension_t alpha,
+    q_extension_t* folded_line_evals,
     uint64_t n,
     FriConfig& cfg)
   {

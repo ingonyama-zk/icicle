@@ -337,10 +337,12 @@ namespace m31 {
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
-  typedef ComplexExtensionField<fp_config, scalar_t> extension_t;
+  typedef ComplexExtensionField<fp_config, scalar_t> с_extension_t;
 
   typedef circle_math::CirclePoint<fp_config, scalar_t> point_t;
   typedef circle_math::CirclePoint<fp_config, q_extension_t> secure_point_t;
+
+  // typedef circle_math::CircleCoset<fp_config, scalar_t> coset_t; //TODO: somehow stopped building with this line :(
 
 } // namespace m31
 

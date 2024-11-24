@@ -1438,9 +1438,9 @@ namespace mxntt {
     cudaStream_t cuda_stream);
 
 #if defined(EXT_FIELD)
-  template cudaError_t mixed_radix_ntt<extension_t, scalar_t>(
-    const extension_t* d_input,
-    extension_t* d_output,
+  template cudaError_t mixed_radix_ntt<q_extension_t, scalar_t>(
+    const q_extension_t* d_input,
+    q_extension_t* d_output,
     scalar_t* external_twiddles,
     scalar_t* internal_twiddles,
     scalar_t* basic_twiddles,
