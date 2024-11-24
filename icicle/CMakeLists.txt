@@ -106,7 +106,7 @@ if (HASH)
   setup_hash_target()
 endif()
 
-option(BARRET "Enable memory address sanitizer" OFF)
+option(BARRET "Use Barret representation" OFF)
 if(BARRET)
   add_compile_definitions(BARRET)
 endif()

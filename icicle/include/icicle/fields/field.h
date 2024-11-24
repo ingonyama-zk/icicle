@@ -369,7 +369,6 @@ public:
     return rs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide mul_wide(const Field& xs, const Field& ys)
   {
     Wide rs = {};
@@ -562,14 +561,12 @@ public:
     return rs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const Field& xs)
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(xs, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field sqr(const Field& xs)
   {
     // TODO: change to a more efficient squaring

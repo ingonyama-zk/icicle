@@ -7,6 +7,7 @@
 #endif
 
 #include <cstdint>
+#include <cstring>
 #include "icicle/utils/modifiers.h"
 #include "icicle/fields/storage.h"
 namespace host_math {
@@ -92,8 +93,6 @@ namespace host_math {
     uint64_t result = r & 0xffffffffffffffff;
     return result;
   }
-
-#include <cstdint>
 
   template <unsigned OPS_COUNT = UINT32_MAX, bool CARRY_IN = false, bool CARRY_OUT = false>
   struct carry_chain {
@@ -200,6 +199,9 @@ namespace host_math {
     }
   }
 
+  /*The two following functions implement montgomery multiplication using the CIOS method. The implementation assumes
+   * that the top bit of the modulus is 0 and therefore we use the carry-less optimization from here:
+   * https://hackmd.io/@gnark/modular_multiplication*/
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static constexpr HOST_INLINE void
   multiply_mont_32(const uint32_t* a, const uint32_t* b, const uint32_t* q, const uint32_t* p, uint32_t* r)
@@ -465,9 +467,7 @@ namespace host_math {
   template <unsigned NLIMBS>
   static constexpr bool is_equal(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
   {
-    for (unsigned i = 0; i < NLIMBS; i++)
-      if (xs.limbs[i] != ys.limbs[i]) return false;
-    return true;
+    return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
   }
 } // namespace host_math
 

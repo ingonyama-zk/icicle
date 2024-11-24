@@ -118,7 +118,6 @@ public:
     return QuarticExtensionField{xs.real - ys, xs.im1, xs.im2, xs.im3};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
@@ -146,7 +145,6 @@ public:
           FF::mul_wide(xs.im3, ys.real)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const QuarticExtensionField& xs, const FF& ys)
   {
     return ExtensionWide{
@@ -189,14 +187,12 @@ public:
       FF::template mul_unsigned<multiplier>(xs.im2), FF::template mul_unsigned<multiplier>(xs.im3)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const QuarticExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(xs, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField sqr(const QuarticExtensionField& xs)
   {
     // TODO: change to a more efficient squaring

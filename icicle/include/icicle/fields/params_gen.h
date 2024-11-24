@@ -129,8 +129,7 @@ namespace params_gen {
   }
 
   template <unsigned NLIMBS, unsigned TWO_ADICITY>
-  constexpr storage_array<TWO_ADICITY, NLIMBS>
-  get_invs(const storage<NLIMBS>& modulus, const storage<NLIMBS>& mont_r_sqr, const storage<NLIMBS>& mont_inv)
+  constexpr storage_array<TWO_ADICITY, NLIMBS> get_invs(const storage<NLIMBS>& modulus)
   {
     storage_array<TWO_ADICITY, NLIMBS> invs = {};
     storage<NLIMBS> rs = {1};
@@ -174,4 +173,4 @@ namespace params_gen {
 #define TWIDDLES(modulus)                                                                                              \
   static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
   static constexpr storage_array<omegas_count, limbs_count> inv =                                                      \
-    params_gen::template get_invs<limbs_count, omegas_count>(modulus, montgomery_r_sqr, mont_inv_modulus);
+    params_gen::template get_invs<limbs_count, omegas_count>(modulus);

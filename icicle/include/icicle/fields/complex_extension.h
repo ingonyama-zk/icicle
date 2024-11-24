@@ -110,7 +110,6 @@ public:
     return ComplexExtensionField{xs.real - ys, xs.imaginary};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
@@ -122,7 +121,6 @@ public:
     return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ComplexExtensionField& xs, const FF& ys)
   {
     return ExtensionWide{FF::mul_wide(xs.real, ys), FF::mul_wide(xs.imaginary, ys)};
@@ -177,21 +175,18 @@ public:
     return {FF::template mul_unsigned<multiplier>(xs.real), FF::template mul_unsigned<multiplier>(xs.imaginary)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const ComplexExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(xs, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField sqr(const ComplexExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
     return xs * xs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField neg(const ComplexExtensionField& xs)
   {
     return ComplexExtensionField{FF::neg(xs.real), FF::neg(xs.imaginary)};
