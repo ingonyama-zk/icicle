@@ -9,4 +9,4 @@ A ZKContainer is a standardized, optimized and secure docker container that we c
 ZKContainer has been used by Ingonyama clients to achieve scalability across large data centers.
 We suggest you read our [article](https://medium.com/@ingonyama/product-announcement-zk-containers-0e2a1f2d0a2b) regarding ZKContainer to understand the benefits of using them.
 
-![ZKContainer inside a ZK data center](../static/img/architecture-zkcontainer.png)
+![ZKContainer inside a ZK data center](/img/architecture-zkcontainer.png)
