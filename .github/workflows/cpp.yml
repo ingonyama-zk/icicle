@@ -25,7 +25,7 @@ jobs:
       uses: actions/checkout@v4
     - name: Check clang-format
       if: needs.check-changed-files.outputs.cpp == 'true'
-      run: ./scripts/format_all.sh . --check
+      run: ./scripts/format_all.sh . --check --exclude "build|wrappers"
 
   extract-cuda-backend-branch:
     uses: ./.github/workflows/extract-backends.yml

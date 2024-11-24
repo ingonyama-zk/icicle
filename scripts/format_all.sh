@@ -10,7 +10,7 @@ show_help() {
     echo "Options:"
     echo "  DIRECTORY       The directory to process (default: current directory)"
     echo "  --check         Only check formatting, do not modify files"
-    echo "  --exclude       Regex pattern for directories/files to exclude"
+    echo "  --exclude       Regex pattern for directories/files to exclude (default: no exclusions)"
     echo "  -h, --help      Show this help message"
     exit 1
 }
@@ -18,7 +18,7 @@ show_help() {
 # Default values
 DIRECTORY="."
 CHECK_ONLY=false
-EXCLUDE_REGEX=""
+EXCLUDE_REGEX="^$" # Matches nothing by default
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -54,10 +54,16 @@ fi
 FAILED_FILES=$(mktemp)
 echo 0 > "$FAILED_FILES" # Initialize failure flag
 
-# Find files and apply exclusions using grep
+# Find files, apply regex exclusions using grep
 FILES=$(find "$DIRECTORY" \
     \( -name '*.c' -o -name '*.cpp' -o -name '*.cc' -o -name '*.h' -o -name '*.hpp' -o -name '*.cu' -o -name '*.cuh' -o -name '*.metal' -o -name '*.metalh' \) \
     -type f | grep -vE "$EXCLUDE_REGEX")
+
+# Ensure at least some files are found
+if [ -z "$FILES" ]; then
+    echo "No files found to process. Check your directory or exclusion patterns."
+    exit 0
+fi
 
 # Process files
 echo "$FILES" | while read -r file; do
