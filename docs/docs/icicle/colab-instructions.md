@@ -9,11 +9,11 @@ First thing to do in a notebook is to set the runtime type to a T4 GPU.
 
 - in the upper corner click on the dropdown menu and select "change runtime type"
 
-![Change runtime](../../static/img/colab_change_runtime.png)
+![Change runtime](./static/img/colab_change_runtime.png)
 
 - In the window select "T4 GPU" and press Save
 
-![T4 GPU](../../static/img/t4_gpu.png)
+![T4 GPU](./static/img/t4_gpu.png)
 
 Installing Rust is rather simple, just execute the following command:
 

@@ -4,7 +4,6 @@
 #include <fstream>
 #include <list>
 #include <random>
-#include "dlfcn.h"
 
 #include "icicle/runtime.h"
 #include "icicle/ntt.h"
@@ -15,53 +14,16 @@
 #include "icicle/backend/msm_config.h"
 #include "icicle/backend/ntt_config.h"
 
+#include "test_base.h"
+
 using namespace curve_config;
 using namespace icicle;
 
-using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg, enable)                                                                                  \
-  if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
-
 static bool VERBOSE = true;
-static inline std::string s_main_target;
-static inline std::string s_ref_target;
 
-class CurveApiTest : public ::testing::Test
+class CurveApiTest : public IcicleTestBase
 {
 public:
-  static inline std::list<std::string> s_registered_devices;
-
-  // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
-  static void SetUpTestSuite()
-  {
-#ifdef BACKEND_BUILD_DIR
-    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
-#endif
-    icicle_load_backend_from_env_or_default();
-
-    const bool is_cuda_registered = is_device_registered("CUDA");
-    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
-    s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_ref_target = "CPU";
-#ifdef BARRET
-    ICICLE_LOG_INFO << "USING BARRET MULT\n";
-#else
-    ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
-#endif
-  }
-  static void TearDownTestSuite()
-  {
-    // make sure to fail in CI if only have one device
-    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
-  }
-
-  // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
-  void TearDown() override {}
-
   template <typename T>
   void random_scalars(T* arr, uint64_t count)
   {
@@ -109,8 +71,8 @@ public:
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
-    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
       ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
       ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
@@ -160,13 +122,13 @@ public:
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
-    if (s_ref_target == "CPU") {
-      run(s_ref_target, result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    if (IcicleTestBase::reference_device() == "CPU") {
+      run(IcicleTestBase::reference_device(), result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       // Adjust config to have one worker thread
       ConfigExtension ext;
       ext.set(CpuBackendConfig::CPU_NOF_THREADS, 1);
       config.ext = &ext;
-      run(s_ref_target, result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+      run(IcicleTestBase::reference_device(), result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
 
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
         ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
@@ -201,12 +163,20 @@ public:
         END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
       };
 
-    run(s_main_target, elements.get(), main_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
-    run(s_ref_target, elements.get(), ref_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(
+      IcicleTestBase::main_device(), elements.get(), main_output.get(), true /*into*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
+    run(
+      IcicleTestBase::reference_device(), elements.get(), ref_output.get(), true /*into*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
     ASSERT_EQ(0, memcmp(main_output.get(), ref_output.get(), N * sizeof(T)));
 
-    run(s_main_target, main_output.get(), main_output.get(), false /*from*/, VERBOSE /*=measure*/, "to-montgomery", 1);
-    run(s_ref_target, ref_output.get(), ref_output.get(), false /*from*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(
+      IcicleTestBase::main_device(), main_output.get(), main_output.get(), false /*from*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
+    run(
+      IcicleTestBase::reference_device(), ref_output.get(), ref_output.get(), false /*from*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
     ASSERT_EQ(0, memcmp(main_output.get(), ref_output.get(), N * sizeof(T)));
   }
 };
@@ -255,8 +225,8 @@ TEST_F(CurveApiTest, ecntt)
     ntt_release_domain<scalar_t>();
   };
 
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1);
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1);
+  run(IcicleTestBase::main_device(), out_main.get(), "ecntt", VERBOSE /*=measure*/, 1);
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1);
 
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
@@ -325,9 +295,9 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  run(s_main_target, out_main.get(), "ecntt", true /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ecntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
     ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
@@ -366,155 +336,152 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
   ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
 }
 
-TYPED_TEST(CurveSanity, ScalarMultTest)
-{
-  const auto point = TypeParam::rand_host();
-  const auto scalar = scalar_t::rand_host();
-#ifndef BARRET
-  const auto barret_scalar = scalar_t::from_montgomery(scalar);
-#else
-  const auto barret_scalar = scalar;
-#endif
-
-  START_TIMER(main)
-  const auto mult = scalar * point;
-  END_TIMER(main, "scalar mult window method", true);
-
-  auto expected_mult = TypeParam::zero();
-  START_TIMER(ref)
-  for (int i = 0; i < scalar_t::NBITS; i++) {
-    if (i > 0) { expected_mult = TypeParam::dbl(expected_mult); }
-    if (barret_scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
-  }
-  END_TIMER(ref, "scalar mult double-and-add", true);
-
-  ASSERT_EQ(mult, expected_mult);
-}
-
-TYPED_TEST(CurveSanity, ECarith)
-{
-  constexpr int n = 1 << 10;
-  auto a = std::make_unique<TypeParam[]>(n);
-  auto b = std::make_unique<TypeParam[]>(n);
-  auto c = std::make_unique<TypeParam[]>(n);
-
-  auto scalars = std::make_unique<scalar_t[]>(n);
-  auto d = std::make_unique<TypeParam[]>(n);
-
-  TypeParam::rand_host_many(a.get(), n);
-  TypeParam::rand_host_many(b.get(), n);
-  scalar_t::rand_host_many(scalars.get(), n);
-
-  START_TIMER(add);
-  for (int i = 0; i < n; ++i) {
-    c[i] = a[i] + b[i];
-  }
-  END_TIMER(add, "ADD", true);
-  START_TIMER(dbl);
-  for (int i = 0; i < n; ++i) {
-    c[i] = TypeParam::dbl(c[i]);
-  }
-  END_TIMER(dbl, "DOUBLE", true);
-
-  START_TIMER(scalarmult);
-  for (int i = 0; i < n; ++i) {
-    d[i] = c[i] * scalars[i];
-  }
-  END_TIMER(scalarmult, "SCALAR-EC-MULT", true);
-}
-
-TYPED_TEST(CurveSanity, FieldArith)
-{
-  constexpr int n = 1 << 20;
-
-  auto scalars = std::make_unique<scalar_t[]>(n);
-  auto scalars2 = std::make_unique<scalar_t[]>(n);
-  auto scalars3 = std::make_unique<scalar_t[]>(n);
-
-  scalar_t::rand_host_many(scalars.get(), n);
-  scalar_t::rand_host_many(scalars2.get(), n);
-
-  START_TIMER(scalarScalarmult);
-  for (int i = 0; i < n; ++i) {
-    scalars3[i] = scalars2[i] * scalars[i];
-  }
-  END_TIMER(scalarScalarmult, "SCALAR-SCALAR-MULT", true);
-}
-
-#include <random>
-
-TYPED_TEST(CurveSanity, u64Mul)
-{
-  constexpr int n = 1 << 25;
-
-  auto scalars = std::make_unique<uint64_t[]>(n);
-  auto scalars2 = std::make_unique<uint64_t[]>(n);
-  // auto scalars_res = std::make_unique<uint64_t[]>(n);
-  auto scalars_res_128 = std::make_unique<__uint128_t[]>(n);
-
-  // Initialize a random generator for uint64_t
-  std::random_device rd;
-  std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<uint64_t> dis(0, UINT64_MAX);
-
-  for (int i = 0; i < n; ++i) {
-    scalars[i] = dis(gen);
-    scalars2[i] = dis(gen);
-  }
-
-  START_TIMER(u64Mult);
-  for (int i = 0; i < n; ++i) {
-    scalars_res_128[i] = scalars2[i] * scalars[i];
-    // auto res = scalars2[i] * scalars[i];
-  }
-  END_TIMER(u64Mult, "U64-MULT-native", true);
-
-  START_TIMER(u64Mult_with128);
-  for (int i = 0; i < n; ++i) {
-    scalars_res_128[i] = static_cast<__uint128_t>(scalars2[i]) * scalars[i];
-    // auto res = static_cast<__uint128_t>(scalars2[i]) * scalars[i];
-  }
-  END_TIMER(u64Mult, "U64-MULT-via-u128", true);
-
-  START_TIMER(u64Mult_asm);
-  // #pragma unroll
-  uint64_t high, low;
-  for (int i = 0; i < n; ++i) {
-    // asm("mulq %3" : "=d"(high), "=a"(low) : "a"(scalars[i]), "r"(scalars2[i]) : "cc");
-    scalars_res_128[i] = (static_cast<__uint128_t>(high) << 64) | low;
-  }
-  END_TIMER(u64Mult_asm, "U64-MULT-asm", true);
-}
-
 #ifndef BARRET
 TYPED_TEST(CurveSanity, MontSosReduction)
 {
   // SOS reduction currently only in CPU
-  if (s_ref_target == "CPU") {
-    const unsigned n = 1 << 10;
-    auto as = std::make_unique<scalar_t[]>(n);
-    auto bs = std::make_unique<scalar_t[]>(n);
-    auto abs = std::make_unique<scalar_t[]>(n);
+  const unsigned n = 1 << 10;
+  auto as = std::make_unique<scalar_t[]>(n);
+  auto bs = std::make_unique<scalar_t[]>(n);
+  auto abs = std::make_unique<scalar_t[]>(n);
 
-    scalar_t::rand_host_many(as.get(), n);
-    scalar_t::rand_host_many(bs.get(), n);
+  scalar_t::rand_host_many(as.get(), n);
+  scalar_t::rand_host_many(bs.get(), n);
 
-    icicle_set_device(Device{s_ref_target, 0});
+  START_TIMER(mont_sos_reduction);
+  for (int i = 0; i < n; i++) {
+    auto ab_no_mod = scalar_t::mul_wide(as[i], bs[i]);
+    abs[i] = scalar_t::reduce(ab_no_mod);
+  }
+  END_TIMER(mont_sos_reduction, "CPU-Montgomery SOS reduction", true);
 
-    START_TIMER(mont_sos_reduction);
-    for (int i = 0; i < n; i++) {
-      auto ab_no_mod = scalar_t::mul_wide(as[i], bs[i]);
-      abs[i] = scalar_t::reduce(ab_no_mod);
-    }
-    END_TIMER(mont_sos_reduction, "CPU-Montgomery SOS reduction", true);
-
-    // Assert reduction in comparison with Montgomery multiplier
-    for (int i = 0; i < n; i++) {
-      ICICLE_ASSERT(abs[i] == as[i] * bs[i]);
-    }
+  // Assert reduction in comparison with Montgomery multiplier
+  for (int i = 0; i < n; i++) {
+    ICICLE_ASSERT(abs[i] == as[i] * bs[i]);
   }
 }
 #endif
+
+// TODO DO NOT MERGE THIS: we need to remove the following tests right?? They were just for debug against gnark
+// performance TYPED_TEST(CurveSanity, ScalarMultTest)
+// {
+//   const auto point = TypeParam::rand_host();
+//   const auto scalar = scalar_t::rand_host();
+// #ifndef BARRET
+//   const auto barret_scalar = scalar_t::from_montgomery(scalar);
+// #else
+//   const auto barret_scalar = scalar;
+// #endif
+
+//   START_TIMER(main)
+//   const auto mult = scalar * point;
+//   END_TIMER(main, "scalar mult window method", true);
+
+//   auto expected_mult = TypeParam::zero();
+//   START_TIMER(ref)
+//   for (int i = 0; i < scalar_t::NBITS; i++) {
+//     if (i > 0) { expected_mult = TypeParam::dbl(expected_mult); }
+//     if (barret_scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
+//   }
+//   END_TIMER(ref, "scalar mult double-and-add", true);
+
+//   ASSERT_EQ(mult, expected_mult);
+// }
+
+// TYPED_TEST(CurveSanity, ECarith)
+// {
+//   constexpr int n = 1 << 10;
+//   auto a = std::make_unique<TypeParam[]>(n);
+//   auto b = std::make_unique<TypeParam[]>(n);
+//   auto c = std::make_unique<TypeParam[]>(n);
+
+//   auto scalars = std::make_unique<scalar_t[]>(n);
+//   auto d = std::make_unique<TypeParam[]>(n);
+
+//   TypeParam::rand_host_many(a.get(), n);
+//   TypeParam::rand_host_many(b.get(), n);
+//   scalar_t::rand_host_many(scalars.get(), n);
+
+//   START_TIMER(add);
+//   for (int i = 0; i < n; ++i) {
+//     c[i] = a[i] + b[i];
+//   }
+//   END_TIMER(add, "ADD", true);
+//   START_TIMER(dbl);
+//   for (int i = 0; i < n; ++i) {
+//     c[i] = TypeParam::dbl(c[i]);
+//   }
+//   END_TIMER(dbl, "DOUBLE", true);
+
+//   START_TIMER(scalarmult);
+//   for (int i = 0; i < n; ++i) {
+//     d[i] = c[i] * scalars[i];
+//   }
+//   END_TIMER(scalarmult, "SCALAR-EC-MULT", true);
+// }
+
+// TYPED_TEST(CurveSanity, FieldArith)
+// {
+//   constexpr int n = 1 << 20;
+
+//   auto scalars = std::make_unique<scalar_t[]>(n);
+//   auto scalars2 = std::make_unique<scalar_t[]>(n);
+//   auto scalars3 = std::make_unique<scalar_t[]>(n);
+
+//   scalar_t::rand_host_many(scalars.get(), n);
+//   scalar_t::rand_host_many(scalars2.get(), n);
+
+//   START_TIMER(scalarScalarmult);
+//   for (int i = 0; i < n; ++i) {
+//     scalars3[i] = scalars2[i] * scalars[i];
+//   }
+//   END_TIMER(scalarScalarmult, "SCALAR-SCALAR-MULT", true);
+// }
+
+// #include <random>
+
+// TYPED_TEST(CurveSanity, u64Mul)
+// {
+//   constexpr int n = 1 << 25;
+
+//   auto scalars = std::make_unique<uint64_t[]>(n);
+//   auto scalars2 = std::make_unique<uint64_t[]>(n);
+//   // auto scalars_res = std::make_unique<uint64_t[]>(n);
+//   auto scalars_res_128 = std::make_unique<__uint128_t[]>(n);
+
+//   // Initialize a random generator for uint64_t
+//   std::random_device rd;
+//   std::mt19937_64 gen(rd());
+//   std::uniform_int_distribution<uint64_t> dis(0, UINT64_MAX);
+
+//   for (int i = 0; i < n; ++i) {
+//     scalars[i] = dis(gen);
+//     scalars2[i] = dis(gen);
+//   }
+
+//   START_TIMER(u64Mult);
+//   for (int i = 0; i < n; ++i) {
+//     scalars_res_128[i] = scalars2[i] * scalars[i];
+//     // auto res = scalars2[i] * scalars[i];
+//   }
+//   END_TIMER(u64Mult, "U64-MULT-native", true);
+
+//   START_TIMER(u64Mult_with128);
+//   for (int i = 0; i < n; ++i) {
+//     scalars_res_128[i] = static_cast<__uint128_t>(scalars2[i]) * scalars[i];
+//     // auto res = static_cast<__uint128_t>(scalars2[i]) * scalars[i];
+//   }
+//   END_TIMER(u64Mult, "U64-MULT-via-u128", true);
+
+//   START_TIMER(u64Mult_asm);
+//   // #pragma unroll
+//   uint64_t high, low;
+//   for (int i = 0; i < n; ++i) {
+//     // asm("mulq %3" : "=d"(high), "=a"(low) : "a"(scalars[i]), "r"(scalars2[i]) : "cc");
+//     scalars_res_128[i] = (static_cast<__uint128_t>(high) << 64) | low;
+//   }
+//   END_TIMER(u64Mult_asm, "U64-MULT-asm", true);
+// }
 
 int main(int argc, char** argv)
 {

@@ -25,6 +25,8 @@ default = []
 no_g2 = ["icicle-bls12-377/no_bw6_g2"]
 cuda_backend = ["icicle-bls12-377/cuda_backend"]
 pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
+metal_backend = ["icicle-bls12-377/metal_backend"]
+pull_metal_backend = ["icicle-bls12-377/pull_metal_backend"]
 
 [[bench]]
 name = "ntt"

@@ -18,4 +18,10 @@ cuda = ["icicle-runtime/cuda_backend",
         "icicle-bn254/no_g2",        
         "icicle-babybear/cuda_backend",
 ]
+metal = ["icicle-runtime/metal_backend",
+        "icicle-bn254/metal_backend",
+        "icicle-bn254/no_ecntt",       
+        "icicle-bn254/no_g2",        
+        "icicle-babybear/metal_backend",
+]
 

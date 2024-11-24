@@ -28,5 +28,7 @@ Running the example:
 ./run.sh -d CPU
 # for CUDA
 ./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+# for METAL
+./run.sh -d METAL -b /path/to/cuda/backend/install/dir
 ```
 

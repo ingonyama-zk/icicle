@@ -5,11 +5,11 @@ set -e
 
 # Function to display usage information
 show_help() {
-  echo "Usage: $0 [-d DEVICE_TYPE] [-b ICICLE_BACKEND_INSTALL_DIR]"
+  echo "Usage: $0 [-d DEVICE_TYPE] [-b BACKEND_INSTALL_DIR]"
   echo
   echo "Options:"
   echo "  -d DEVICE_TYPE            Specify the device type (default: CPU)"
-  echo "  -b ICICLE_BACKEND_INSTALL_DIR    Specify the backend installation directory (default: empty)"
+  echo "  -b BACKEND_INSTALL_DIR    Specify the backend installation directory (default: empty)"
   echo "  -h                        Show this help message"
   exit 0
 }
@@ -41,20 +41,22 @@ done
 : "${DEVICE_TYPE:=CPU}"
 : "${ICICLE_BACKEND_INSTALL_DIR:=}"
 
+DEVICE_TYPE_LOWERCASE=$(echo "$DEVICE_TYPE" | tr '[:upper:]' '[:lower:]')
+
 # Create necessary directories
 mkdir -p build/example
 mkdir -p build/icicle
 
 ICILE_DIR=$(realpath "../../../icicle/")
-ICICLE_CUDA_SOURCE_DIR="${ICILE_DIR}/backend/cuda"
+ICICLE_BACKEND_SOURCE_DIR="${ICILE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
 
 # Build Icicle and the example app that links to it
-if [ "$DEVICE_TYPE" == "CUDA" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_CUDA_SOURCE_DIR}" ]; then
-  echo "Building icicle with CUDA backend"
-  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DMSM=OFF -DG2=OFF -DECNTT=OFF -DCUDA_BACKEND=local -S "${ICILE_DIR}" -B build/icicle
+if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_BACKEND_SOURCE_DIR}" ]; then
+  echo "Building icicle and ${DEVICE_TYPE} backend"
+  cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -DMSM=OFF -DG2=OFF -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICILE_DIR}" -B build/icicle
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")
 else
-  echo "Building icicle without CUDA backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
+  echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
   cmake -DCMAKE_BUILD_TYPE=Release -DCURVE=bn254 -S "${ICILE_DIR}" -B build/icicle
 fi
