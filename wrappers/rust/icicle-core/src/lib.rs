@@ -35,7 +35,7 @@ impl Matrix {
         Matrix {
             values: slice.as_ptr() as *const c_void,
             width,
-            height
+            height,
         }
     }
 }

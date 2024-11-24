@@ -4,11 +4,12 @@ pub(crate) mod tests {
 
     use icicle_core::{
         hash::HashConfig,
-        tree::{merkle_tree_digests_len, TreeBuilderConfig}, Matrix,
+        tree::{merkle_tree_digests_len, TreeBuilderConfig},
+        Matrix,
     };
     use icicle_cuda_runtime::memory::HostSlice;
-    use rand::{rngs::SmallRng, Rng, SeedableRng};
     use itertools::Itertools;
+    use rand::{rngs::SmallRng, Rng, SeedableRng};
 
     use crate::blake2s::{blake2s, build_blake2s_merkle_tree, build_blake2s_mmcs};
 
@@ -22,17 +23,12 @@ pub(crate) mod tests {
         let preimages_slice = HostSlice::from_slice(preimages);
         let digests_slice = HostSlice::from_mut_slice(&mut digests);
 
-        blake2s(
-            preimages_slice,
-            1 as u32,
-            1 as u32,
-            32 as u32,
-            digests_slice,
-            &config,
-        )
-        .unwrap();
+        blake2s(preimages_slice, 1 as u32, 1 as u32, 32 as u32, digests_slice, &config).unwrap();
 
-        let hex_string: String = digests_slice.iter().map(|byte| format!("{:02x}", byte)).collect();
+        let hex_string: String = digests_slice
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
 
         assert_eq!(
             hex_string,
@@ -68,9 +64,9 @@ pub(crate) mod tests {
         let mut matrices = vec![];
 
         let mut keep_leaves = vec![];
-        for log in 1..log_max+1 {
+        for log in 1..log_max + 1 {
             let mut leaves = vec![0u32; 1 << log];
-            for i in 0..1<<log {
+            for i in 0..1 << log {
                 leaves[i] = i as u32;
             }
 
@@ -135,7 +131,10 @@ pub(crate) mod tests {
 
         for j in 0..digests_len / 32 {
             for i in 0..32 {
-                print!("{:02x?}", digests[digests.len() - 32 * (digests_len / 32 - 1 - j) - 32 + i]);
+                print!(
+                    "{:02x?}",
+                    digests[digests.len() - 32 * (digests_len / 32 - 1 - j) - 32 + i]
+                );
             }
             println!();
         }

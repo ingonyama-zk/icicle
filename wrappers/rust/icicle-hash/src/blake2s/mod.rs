@@ -31,7 +31,7 @@ extern "C" {
         leaves: *const Matrix,
         number_of_inputs: u32,
         digests: *mut u8,
-        tree_config: &TreeBuilderConfig
+        tree_config: &TreeBuilderConfig,
     ) -> CudaError;
 }
 
@@ -83,13 +83,5 @@ pub fn build_blake2s_mmcs(
     digests: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
     config: &TreeBuilderConfig,
 ) -> IcicleResult<()> {
-    unsafe {
-        blake2s_mmcs_commit_cuda(
-            leaves.as_ptr(),
-            leaves.len() as u32,
-            digests.as_mut_ptr(),
-            config,
-        )
-        .wrap()
-    }
+    unsafe { blake2s_mmcs_commit_cuda(leaves.as_ptr(), leaves.len() as u32, digests.as_mut_ptr(), config).wrap() }
 }
