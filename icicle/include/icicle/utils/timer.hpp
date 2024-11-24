@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include "icicle/utils/log.h"
 
 /**
  * @class Timer
@@ -13,6 +14,7 @@ class Timer
 private:
   std::chrono::time_point<std::chrono::high_resolution_clock> start_point;
   std::string m_timer_name;
+  bool m_stopped = false;
 
 public:
   Timer(std::string timer_name)
@@ -25,6 +27,7 @@ public:
 
   void Stop()
   {
+    if (m_stopped) { return; }
     auto end_point = std::chrono::high_resolution_clock::now();
     auto start_time = std::chrono::time_point_cast<std::chrono::microseconds>(start_point).time_since_epoch().count();
     auto end_time = std::chrono::time_point_cast<std::chrono::microseconds>(end_point).time_since_epoch().count();
@@ -32,5 +35,6 @@ public:
 
     double dur_s = duration * 0.001;
     ICICLE_LOG_INFO << "Time of " << m_timer_name << ":\t" << dur_s << "ms";
+    m_stopped = true;
   }
 };

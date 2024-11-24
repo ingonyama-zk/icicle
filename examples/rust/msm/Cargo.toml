@@ -17,3 +17,10 @@ cuda = ["icicle-runtime/cuda_backend",
         "icicle-bls12-377/cuda_backend",
         "icicle-bls12-377/no_ecntt"
 ]
+
+metal = ["icicle-runtime/metal_backend",
+        "icicle-bn254/metal_backend",
+        "icicle-bn254/no_ecntt",
+        "icicle-bls12-377/metal_backend",
+        "icicle-bls12-377/no_ecntt"
+]

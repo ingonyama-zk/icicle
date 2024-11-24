@@ -747,12 +747,13 @@ macro_rules! impl_vec_ops_tests {
     ) => {
         pub(crate) mod test_vecops {
             use super::*;
-            use icicle_core::test_utilities;
+            use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
             }
 
             #[test]

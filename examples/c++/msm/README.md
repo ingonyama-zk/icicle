@@ -15,7 +15,7 @@
 ...
 MSMConfig config = default_msm_config();
 ...
-bn254_msm(scalars, points, size, config, &result);
+msm(scalars, points, size, config, &result);
 ```
 
 In this example we use `BN254` curve. The function computes $result = \sum_{i=0}^{size-1} scalars[i] \cdot points[i]$, where input `points[]` use affine coordinates, and `result` uses projective coordinates.
@@ -37,6 +37,8 @@ The configuration is passed to the kernel as a structure of type `MSMConfig`. So
 ./run.sh -d CPU
 # for CUDA
 ./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+# for METAL
+./run.sh -d METAL -b /path/to/cuda/backend/install/dir
 ```
 
 ## What's in the example

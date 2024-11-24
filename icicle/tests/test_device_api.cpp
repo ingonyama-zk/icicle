@@ -4,36 +4,12 @@
 
 #include "icicle/runtime.h"
 #include "icicle/memory_tracker.h"
-#include "dlfcn.h"
-
-using FpNanoseconds = std::chrono::duration<float, std::chrono::nanoseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg, enable, iters)                                                                           \
-  if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ns\n", msg, FpNanoseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / iters);
+#include "test_base.h"
 
 using namespace icicle;
 
-class DeviceApiTest : public ::testing::Test
+class DeviceApiTest : public IcicleTestBase
 {
-public:
-  static inline std::vector<std::string> s_registered_devices;
-  // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
-  static void SetUpTestSuite()
-  {
-#ifdef BACKEND_BUILD_DIR
-    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
-#endif
-    icicle_load_backend_from_env_or_default();
-    s_registered_devices = get_registered_devices_list();
-    ASSERT_GT(s_registered_devices.size(), 0);
-  }
-  static void TearDownTestSuite() {}
-
-  // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
-  void TearDown() override {}
 };
 
 TEST_F(DeviceApiTest, UnregisteredDeviceError)
@@ -59,6 +35,28 @@ TEST_F(DeviceApiTest, MemoryCopySync)
     ICICLE_CHECK(icicle_free(dev_mem));
 
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
+  }
+}
+
+TEST_F(DeviceApiTest, MemoryCopySyncWithOffset)
+{
+  int input[4] = {1, 2, 3, 4};
+
+  for (const auto& device_type : s_registered_devices) {
+    int output[2] = {0, 0};
+
+    icicle::Device dev = {device_type, 0};
+    icicle_set_device(dev);
+
+    int* dev_mem = nullptr;
+    ICICLE_CHECK(
+      icicle_malloc((void**)&dev_mem, sizeof(input))); // allocating larger memory to have offset on this buffer to copy
+                                                       // 2 values from offset (that is copy {2,3} only)
+    ICICLE_CHECK(icicle_copy_to_device(dev_mem + 1, input + 1, sizeof(output)));
+    ICICLE_CHECK(icicle_copy_to_host(output, dev_mem + 1, sizeof(output)));
+    ICICLE_CHECK(icicle_free(dev_mem));
+
+    ASSERT_EQ(0, memcmp(input + 1, output, sizeof(output)));
   }
 }
 
@@ -104,17 +102,18 @@ TEST_F(DeviceApiTest, CopyDeviceInference)
 
 TEST_F(DeviceApiTest, Memest)
 {
-  char expected[2] = {1, 1};
+  char expected[2] = {1, 2};
   for (const auto& device_type : s_registered_devices) {
     char host_mem[2] = {0, 0};
 
     // icicle::Device dev = {device_type, 0};
     icicle::Device dev = {"CPU", 0};
     icicle_set_device(dev);
-    void* dev_mem = nullptr;
+    char* dev_mem = nullptr;
 
-    ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(host_mem)));
-    ICICLE_CHECK(icicle_memset(dev_mem, 1, sizeof(host_mem)));      // implicit on device
+    ICICLE_CHECK(icicle_malloc((void**)&dev_mem, sizeof(host_mem)));
+    ICICLE_CHECK(icicle_memset(dev_mem, 1, 1));
+    ICICLE_CHECK(icicle_memset(dev_mem + 1, 2, 1));                 // memset with offset
     ICICLE_CHECK(icicle_copy(host_mem, dev_mem, sizeof(host_mem))); // implicit device to host
 
     ASSERT_EQ(0, memcmp(expected, host_mem, sizeof(host_mem)));
@@ -135,7 +134,7 @@ TEST_F(DeviceApiTest, AvailableMemory)
 {
   icicle::Device dev = {"CUDA", 0};
   const bool is_cuda_registered = eIcicleError::SUCCESS == icicle_is_device_available(dev);
-  if (!is_cuda_registered) { return; } // TODO implement for CPU too
+  if (!is_cuda_registered) { GTEST_SKIP(); } // most devices do not support this
 
   icicle_set_device(dev);
   size_t total, free;
@@ -157,12 +156,15 @@ TEST_F(DeviceApiTest, InvalidDevice)
 
 TEST_F(DeviceApiTest, memoryTracker)
 {
+  // need two devices for this test
+  if (s_registered_devices.size() == 1) { return; }
   const int NOF_ALLOCS = 1000;
   const int ALLOC_SIZE = 1 << 20;
 
-  MemoryTracker tracker{};
-  Device device_cuda = {"CUDA", 0};
-  icicle_set_device(device_cuda);
+  MemoryTracker<Device> tracker{};
+  ICICLE_ASSERT(s_main_device != UNKOWN_DEVICE) << "memoryTracker test assumes more than one device";
+  Device main_device = {s_main_device, 0};
+  icicle_set_device(main_device);
 
   std::vector<void*> allocated_addresses(NOF_ALLOCS, nullptr);
 
@@ -170,13 +172,13 @@ TEST_F(DeviceApiTest, memoryTracker)
   for (auto& it : allocated_addresses) {
     icicle_malloc(&it, ALLOC_SIZE);
   }
-  END_TIMER(allocation, "memory-tracker: malloc average", true, NOF_ALLOCS);
+  END_TIMER_AVERAGE(allocation, "memory-tracker: malloc average", true, NOF_ALLOCS);
 
   START_TIMER(insertion);
   for (auto& it : allocated_addresses) {
-    tracker.add_allocation(it, ALLOC_SIZE, device_cuda);
+    tracker.add_allocation(it, ALLOC_SIZE, main_device);
   }
-  END_TIMER(insertion, "memory-tracker: insert average", true, NOF_ALLOCS);
+  END_TIMER_AVERAGE(insertion, "memory-tracker: insert average", true, NOF_ALLOCS);
 
   START_TIMER(lookup);
   for (auto& it : allocated_addresses) {
@@ -184,7 +186,7 @@ TEST_F(DeviceApiTest, memoryTracker)
     const void* addr = (void*)((size_t)it + rand() % ALLOC_SIZE);
     ICICLE_CHECK(icicle_is_active_device_memory(addr));
   }
-  END_TIMER(lookup, "memory-tracker: lookup (and compare) average", true, NOF_ALLOCS);
+  END_TIMER_AVERAGE(lookup, "memory-tracker: lookup (and compare) average", true, NOF_ALLOCS);
 
   // test host pointers are identified as host memory
   auto host_mem = std::make_unique<int>();
@@ -196,8 +198,8 @@ TEST_F(DeviceApiTest, memoryTracker)
   const void* addr = (void*)((size_t)*allocated_addresses.begin() + rand() % ALLOC_SIZE);
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(addr));
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
-  auto dev = tracker.identify_device(addr);
-  ASSERT_EQ(**dev, device_cuda);
+  auto it = tracker.identify(addr);
+  ASSERT_EQ(*it->first, main_device);
 }
 
 int main(int argc, char** argv)

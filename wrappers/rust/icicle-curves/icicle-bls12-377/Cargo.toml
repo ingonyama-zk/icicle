@@ -27,6 +27,8 @@ bw6-761 = []
 no_bw6_g2 = []
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
+metal_backend = ["icicle-runtime/metal_backend"]
+pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
 
 
 [[bench]]
