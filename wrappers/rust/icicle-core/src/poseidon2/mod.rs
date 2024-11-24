@@ -49,15 +49,14 @@ where
         diffusion: DiffusionStrategy,
         ctx: &DeviceContext,
     ) -> IcicleResult<Self> {
-        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::load(width as u32, rate as u32, mds_type, diffusion, ctx)
-            .and_then(|handle| {
-                Ok(Self {
-                    width,
-                    rate,
-                    handle,
-                    phantom: PhantomData,
-                })
-            })
+        <<F as FieldImpl>::Config as Poseidon2Impl<F>>::load(width as u32, rate as u32, mds_type, diffusion, ctx).map(
+            |handle| Self {
+                width,
+                rate,
+                handle,
+                phantom: PhantomData,
+            },
+        )
     }
 
     pub fn new(
@@ -84,13 +83,11 @@ where
             diffusion,
             ctx,
         )
-        .and_then(|handle| {
-            Ok(Self {
-                width,
-                rate,
-                handle,
-                phantom: PhantomData,
-            })
+        .map(|handle| Self {
+            width,
+            rate,
+            handle,
+            phantom: PhantomData,
         })
     }
 }
@@ -190,11 +187,11 @@ macro_rules! impl_poseidon2 {
       $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon2::{
+            use icicle_core::error::IcicleError;
+            use $crate::poseidon2::{
                 $field, $field_config, CudaError, DeviceContext, DiffusionStrategy, HashConfig, MdsType,
                 Poseidon2Handle,
             };
-            use icicle_core::error::IcicleError;
             extern "C" {
                 #[link_name = concat!($field_prefix, "_poseidon2_create_cuda")]
                 pub(crate) fn create(
@@ -375,7 +372,7 @@ pub mod bench {
         use criterion::SamplingMode;
         use std::env;
 
-        let group_id = format!("Poseidon2");
+        let group_id = "Poseidon2".to_string();
         let mut group = c.benchmark_group(&group_id);
         group.sampling_mode(SamplingMode::Flat);
         group.sample_size(10);

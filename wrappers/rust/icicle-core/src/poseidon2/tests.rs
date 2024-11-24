@@ -18,7 +18,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Impl<F>,
 {
     let test_size = 1 << 10;
-    let mut inputs = vec![F::one(); test_size * width as usize];
+    let mut inputs = vec![F::one(); test_size * width];
     let mut outputs = vec![F::zero(); test_size];
 
     let input_slice = HostSlice::from_mut_slice(&mut inputs);

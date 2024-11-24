@@ -139,6 +139,8 @@ namespace vec_ops {
     };
     return config;
   }
+  template <typename E>
+  cudaError_t bit_reverse(const E* input, uint64_t size, BitReverseConfig& cfg, E* output);
 
   template <typename T>
   __global__ void transpose_inplace(T* data)

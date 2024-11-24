@@ -5,6 +5,7 @@
 #include "fields/complex_extension.cuh"
 #include "fields/quartic_extension.cuh"
 #include "fields/params_gen.cuh"
+#include "fields/point.cuh"
 
 #include <thread>
 #include <vector>
@@ -300,6 +301,9 @@ namespace m31 {
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
     static constexpr bool nonresidue_is_negative = true;
+
+    static constexpr storage<limbs_count> circle_point_generator_x = {2};
+    static constexpr storage<limbs_count> circle_point_generator_y = {1268011823};
   };
 
   /**
@@ -333,8 +337,11 @@ namespace m31 {
    * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
+  typedef ComplexExtensionField<fp_config, scalar_t> extension_t;
 
-  typedef q_extension_t extension_t;
+  typedef circle_math::CirclePoint<fp_config, scalar_t> point_t;
+  typedef circle_math::CirclePoint<fp_config, q_extension_t> secure_point_t;
+
 } // namespace m31
 
 template <typename CONFIG>

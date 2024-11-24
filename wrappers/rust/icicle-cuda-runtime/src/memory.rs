@@ -233,7 +233,7 @@ impl<T> DeviceSlice<T> {
                     if i == 0 { stream.handle } else { streams[i - 1].handle },
                 )
                 .wrap()?;
-                written_count = written_count + val[i].len();
+                written_count += val[i].len();
             }
         }
         streams
@@ -514,7 +514,7 @@ mod tests {
             });
 
         result_tr
-        .copy_from_host_slice_vec_async(&vec_of_vec, &stream)
+            .copy_from_host_slice_vec_async(&vec_of_vec, &stream)
             .unwrap();
 
         result_tr

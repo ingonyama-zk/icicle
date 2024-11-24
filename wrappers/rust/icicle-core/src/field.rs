@@ -26,7 +26,7 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
         for &b in self
             .limbs
             .iter()
-            // .rev()
+        // .rev()
         {
             write!(f, "{:08x}", b)?;
         }
@@ -36,13 +36,13 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> Display for Field<NUM_LIMBS, F> {
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> Debug for Field<NUM_LIMBS, F> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self)
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Into<[u32; NUM_LIMBS]> for Field<NUM_LIMBS, F> {
-    fn into(self) -> [u32; NUM_LIMBS] {
-        self.limbs
+impl<const NUM_LIMBS: usize, F: FieldConfig> From<Field<NUM_LIMBS, F>> for [u32; NUM_LIMBS] {
+    fn from(val: Field<NUM_LIMBS, F>) -> Self {
+        val.limbs
     }
 }
 
@@ -59,11 +59,10 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     fn to_bytes_le(&self) -> Vec<u8> {
         self.limbs
             .iter()
-            .map(|limb| {
+            .flat_map(|limb| {
                 limb.to_le_bytes()
                     .to_vec()
             })
-            .flatten()
             .collect::<Vec<_>>()
     }
 

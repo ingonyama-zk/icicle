@@ -163,6 +163,11 @@ public:
     return reduce(xy);
   }
 
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  {
+    return ComplexExtensionField{(xs.real * ys.real) - (xs.imaginary * ys.imaginary), (xs.real * ys.imaginary) + (ys.real * xs.imaginary)};
+  }
+
   friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     return (xs.real == ys.real) && (xs.imaginary == ys.imaginary);
@@ -173,11 +178,11 @@ public:
     return !(xs == ys);
   }
 
-  // Alternatively, conversion operator to uint32_t[2]
-  HOST_DEVICE_INLINE operator const uint32_t*() const
-  {
-    return (uint32_t*)real; // Assuming real, im1, im2, im3 are contiguous in memory
-  }
+  // // Alternatively, conversion operator to uint32_t[2]
+  // HOST_DEVICE_INLINE operator const uint32_t*() const
+  // {
+  //   return (uint32_t*)real; // Assuming real, im1, im2, im3 are contiguous in memory
+  // }
 
   template <const ComplexExtensionField& multiplier>
   static HOST_DEVICE_INLINE ComplexExtensionField mul_const(const ComplexExtensionField& xs)

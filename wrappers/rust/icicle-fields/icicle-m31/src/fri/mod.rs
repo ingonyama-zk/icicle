@@ -131,7 +131,7 @@ pub fn fold_circle_into_line(
 }
 
 mod _fri {
-    use super::{CudaError, QuarticExtensionField, FriConfig, ScalarField};
+    use super::{CudaError, FriConfig, QuarticExtensionField, ScalarField};
 
     extern "C" {
         #[link_name = "m31_fold_line"]
@@ -159,7 +159,7 @@ mod _fri {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::field::{ComplexExtensionField, QuarticExtensionField, ScalarField};
+    use crate::field::{QuarticExtensionField, ScalarField};
     use icicle_core::traits::FieldImpl;
     use icicle_cuda_runtime::memory::{DeviceVec, HostSlice};
     use std::iter::zip;
