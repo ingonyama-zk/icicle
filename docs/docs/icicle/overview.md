@@ -9,10 +9,7 @@ title: ICICLE Overview
   <img src="https://github.com/user-attachments/assets/02080cc6-9761-4764-8ae4-05778cc93cfa" alt="Untitled design (29)" width="500"/>
 </p>
 
-
-
 ## What is ICICLE?
-
 
 [![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
 
@@ -78,7 +75,10 @@ ICICLE is also well-suited for prototyping and developing small-scale projects. 
 
 Explore the full capabilities of ICICLE by diving into the [Architecture](./arch_overview.md), [Getting Started Guide](./getting_started.md) and the [Programmer's Guide](./programmers_guide/general.md) to learn how to integrate, deploy, and extend ICICLE across different backends.
 
-If you have any questions or need support, feel free to reach out on [Discord], [GitHub](https://github.com/ingonyama-zk) or <support@ingonyama.com>. We're here to help you accelerate your ZK development with ICICLE.
+If you have any questions or need support, feel free to reach out on [Discord], [GitHub] or [via support email][SupportEmail]. We're here to help you accelerate your ZK development with ICICLE.
 
-[ICICLE-OVERVIEW]: ./icicle/overview.md
+<!-- Being Links -->
 [Discord]: https://discord.gg/6vYrE7waPj
+[Github]: https://github.com/ingonyama-zk
+[SupportEmail]: mailto:support@ingonyama.com
+<!-- End Links -->
