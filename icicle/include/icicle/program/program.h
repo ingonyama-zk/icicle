@@ -8,10 +8,10 @@ namespace icicle {
 
   using InstructionType = uint32_t;
 
-  enum PreDefinedPrograms { 
-    AB_MINUS_C = 0,       // (A*B)-C
-    EQ_X_AB_MINUS_C       // E*(A*B-C)
-    };
+  enum PreDefinedPrograms {
+    AB_MINUS_C = 0, // (A*B)-C
+    EQ_X_AB_MINUS_C // E*(A*B-C)
+  };
 
   /**
    * @brief A class that convert the function described by user into a program that can be executed
@@ -105,19 +105,19 @@ namespace icicle {
       std::byte int_arr[sizeof(InstructionType)] = {};
       // Set instruction::opcode
       int_arr[INST_OPCODE] = std::byte(operation->m_opcode);
-      // Set instruction::operand1 
+      // Set instruction::operand1
       int_arr[INST_OPERAND1] = std::byte(operation->m_operand1->m_variable_idx);
 
-      if (operation->m_operand2) { 
+      if (operation->m_operand2) {
         // Set instruction::operand2
-        int_arr[INST_OPERAND2] = std::byte(operation->m_operand2->m_variable_idx); 
+        int_arr[INST_OPERAND2] = std::byte(operation->m_operand2->m_variable_idx);
       }
 
-      if (operation->m_variable_idx < 0) { 
+      if (operation->m_variable_idx < 0) {
         // allocate a register for the result
-        operation->m_variable_idx = allocate_intermidiate(); 
+        operation->m_variable_idx = allocate_intermidiate();
       }
-      
+
       // Set instruction::operand2
       int_arr[INST_RESULT] = std::byte(operation->m_variable_idx);
       InstructionType instruction;
