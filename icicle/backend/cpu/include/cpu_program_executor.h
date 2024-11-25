@@ -12,7 +12,7 @@ namespace icicle {
   {
   public:
     CpuProgramExecutor(Program<S>& program)
-        : m_program(program), m_variable_ptrs(program.get_nof_vars()), m_intermidites(program.m_nof_intermidiates)
+        : m_program(program), m_variable_ptrs(program.get_nof_vars()), m_intermediates(program.m_nof_intermidiates)
     {
       // initialize m_variable_ptrs vector
       int variable_ptrs_idx = program.m_nof_inputs + program.m_nof_outputs;
@@ -20,7 +20,7 @@ namespace icicle {
         m_variable_ptrs[variable_ptrs_idx++] = &(program.m_constants[idx]);
       }
       for (int idx = 0; idx < program.m_nof_intermidiates; ++idx) {
-        m_variable_ptrs[variable_ptrs_idx++] = &(m_intermidites[idx]);
+        m_variable_ptrs[variable_ptrs_idx++] = &(m_intermediates[idx]);
       }
     }
 
@@ -29,45 +29,51 @@ namespace icicle {
     {
       const std::byte* instruction;
       for (InstructionType instruction : m_program.m_instructions) {
-        const int func_select = (instruction & 0xFF);
-        (this->*m_function_arr[instruction & 0xFF])(instruction);
+        const int func_select = Program<S>::get_opcode(instruction);
+        (this->*m_function_arr[func_select])(instruction);
       }
     }
 
     std::vector<S*> m_variable_ptrs;
 
   private:
-    Program<S> m_program;
-    std::vector<S> m_intermidites;
+    Program<S>& m_program;
+    std::vector<S> m_intermediates;
 
     // exe functions
     void exe_add(const InstructionType instruction)
     {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
-      *m_variable_ptrs[(int)inst_arr[3]] = *m_variable_ptrs[(int)inst_arr[1]] + *m_variable_ptrs[(int)inst_arr[2]];
+      *m_variable_ptrs[(int)inst_arr[Program<S>::INST_RESULT]] =
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]] +
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND2]];
     }
 
     void exe_mult(const InstructionType instruction)
     {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
-      *m_variable_ptrs[(int)inst_arr[3]] = *m_variable_ptrs[(int)inst_arr[1]] * *m_variable_ptrs[(int)inst_arr[2]];
+      *m_variable_ptrs[(int)inst_arr[Program<S>::INST_RESULT]] =
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]] *
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND2]];
     }
 
     void exe_sub(const InstructionType instruction)
     {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
-      *m_variable_ptrs[(int)inst_arr[3]] = *m_variable_ptrs[(int)inst_arr[1]] - *m_variable_ptrs[(int)inst_arr[2]];
+      *m_variable_ptrs[(int)inst_arr[Program<S>::INST_RESULT]] =
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]] -
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND2]];
     }
 
     void exe_inverse(const InstructionType instruction)
     {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
-      *m_variable_ptrs[(int)inst_arr[3]] = S::inverse(*m_variable_ptrs[(int)inst_arr[1]]);
+      *m_variable_ptrs[(int)inst_arr[Program<S>::INST_RESULT]] =
+        S::inverse(*m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]]);
     }
 
     void exe_predef_ab_minus_c(const InstructionType instruction)
     {
-      const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
       const S& a = *m_variable_ptrs[0];
       const S& b = *m_variable_ptrs[1];
       const S& c = *m_variable_ptrs[2];
@@ -75,7 +81,6 @@ namespace icicle {
     }
     void exe_predef_eq_x_ab_minus_c(const InstructionType instruction)
     {
-      const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
       const S& a = *m_variable_ptrs[0];
       const S& b = *m_variable_ptrs[1];
       const S& c = *m_variable_ptrs[2];
@@ -90,7 +95,8 @@ namespace icicle {
       &CpuProgramExecutor::exe_sub,     // OP_SUB
       &CpuProgramExecutor::exe_inverse, // OP_INV
       // pre defined functions
-      &CpuProgramExecutor::exe_predef_ab_minus_c, &CpuProgramExecutor::exe_predef_eq_x_ab_minus_c};
+      &CpuProgramExecutor::exe_predef_ab_minus_c,       // predef A*B-C
+      &CpuProgramExecutor::exe_predef_eq_x_ab_minus_c}; // predef EQ*(A*B-C)
   };
 
 } // namespace icicle

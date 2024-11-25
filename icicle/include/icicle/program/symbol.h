@@ -9,7 +9,7 @@ namespace icicle {
    * @brief Enum to represent all the operation supported by the Symbol class.
    *
    */
-  enum OpCode {
+  enum ProgramOpcode {
     OP_ADD = 0,
     OP_MULT,
     OP_SUB,
@@ -25,8 +25,8 @@ namespace icicle {
    * @brief a node at the data-flow grapsh (DFG) that represent a single operation
    *
    * This class contains a data about an operation done by the Symbol class.
-   * It saves oll the data to describe the operation done and point to its operands.
-   * At any given time a Sybol contains an Operation instance that represent all the
+   * It saves all the data to describe the operation done and points to its operands.
+   * At any given time a Symbol contains an Operation instance that represent all the
    * calculation history done so far to reach the current value.
    */
 
@@ -34,36 +34,43 @@ namespace icicle {
   class Operation
   {
   public:
-    OpCode m_opcode;
+    ProgramOpcode m_opcode;
     std::shared_ptr<Operation<S>> m_operand1; // 1st operand if exist
     std::shared_ptr<Operation<S>> m_operand2; // 2nd operand if exist
 
-    // optinal parameters:
+    // optional parameters:
     std::unique_ptr<S> m_constant; // for OP_CONST: const value
 
     // implementation:
-    int m_mem_addr; // location at the input vectors
+    int m_variable_idx; // location at the intermidiate variables vectors
 
     // Constructor
     Operation<S>(
-      OpCode opcode,
+      ProgramOpcode opcode,
       std::shared_ptr<Operation<S>> operand1,
       std::shared_ptr<Operation<S>> operand2 = nullptr,
       std::unique_ptr<S> constant = nullptr,
-      int mem_addr = -1)
-        : m_opcode(opcode), m_operand1(operand1), m_operand2(operand2), m_mem_addr(mem_addr),
+      int variable_idx = -1)
+        : m_opcode(opcode), m_operand1(operand1), m_operand2(operand2), m_variable_idx(variable_idx),
           m_constant(std::move(constant))
     {
     }
 
-    bool was_visited(bool set_as_visit)
+    bool is_visited(bool set_as_visit)
     {
-      const bool was_visited = (m_visit_idx == s_last_visit);
-      if (set_as_visit) { m_visit_idx = s_last_visit; }
-      return was_visited;
+      const bool is_visited = (m_visit_idx == s_last_visit); // s_last_visit was not incremented since visited
+      if (set_as_visit) {
+        m_visit_idx = s_last_visit; // set operation as visted
+      }
+      return is_visited;
     }
 
-    static void reset_visit() { s_last_visit++; }
+    // reset visit for all operations
+    static void reset_visit()
+    {
+      // changing s_last_visit means that for all operation m_visit_idx != s_last_visit
+      s_last_visit++;
+    }
 
   private:
     unsigned int m_visit_idx = 0;
@@ -75,7 +82,7 @@ namespace icicle {
    *
    * This class is used by the end user to describe a functionality later on provided
    * to execute by different backends.
-   * This enables the user to constructs lamda.
+   * This enables the user to constructs lambda.
    */
   template <typename S>
   class Symbol
@@ -89,7 +96,8 @@ namespace icicle {
 
     // constructor init
     Symbol(const S& constant)
-        : m_operation(std::make_shared<Operation<S>>(OpCode::OP_CONST, nullptr, nullptr, std::make_unique<S>(constant)))
+        : m_operation(
+            std::make_shared<Operation<S>>(ProgramOpcode::OP_CONST, nullptr, nullptr, std::make_unique<S>(constant)))
     {
     }
 

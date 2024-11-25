@@ -8,15 +8,15 @@ namespace icicle {
 
   using InstructionType = uint32_t;
 
-  enum PreDefinedPrograms { AB_MINUS_C, EQ_X_AB_MINUS_C };
+  enum PreDefinedPrograms { AB_MINUS_C = 0, EQ_X_AB_MINUS_C };
 
   /**
    * @brief A class that convert the function described by user into a program that can be executed
    *
-   * This class recieves a Symbol instance that contains a DFG representing the required calculation.
+   * This class receives a Symbol instance that contains a DFG representing the required calculation.
    * It generates a vector of instructions that represent the calculation.
    * Each instruction has the following format.
-   * bits 7:0   - opcode according to enum OpCode
+   * bits 7:0   - opcode according to enum ProgramOpcode
    * bits 15:8  - operand 1 selector from the input vector
    * bits 23:16 - operand 2 selector from the input vector
    * bits 31:24 - result selector
@@ -48,11 +48,11 @@ namespace icicle {
         ICICLE_LOG_ERROR << "Illegal opcode: " << int(pre_def);
       }
       m_nof_outputs = 1;
-      int instruction = int(OpCode::NOF_OPERATIONS) + int(pre_def);
+      int instruction = int(ProgramOpcode::NOF_OPERATIONS) + int(pre_def);
       m_instructions.push_back(instruction);
     }
 
-    // run over all symbols at the vector and set there gen process to OP_INPUT
+    // run over all inputs at the vector and set their operands to OP_INPUT
     void set_as_inputs(std::vector<Symbol<S>>& combine_inputs)
     {
       m_nof_inputs = combine_inputs.size();
@@ -65,7 +65,7 @@ namespace icicle {
     void generate_program(Symbol<S>& result)
     {
       m_nof_outputs = 1;
-      result.m_operation->m_mem_addr = m_nof_inputs;
+      result.m_operation->m_variable_idx = m_nof_inputs;
       Operation<S>::reset_visit();
       allocate_constants(result.m_operation);
       Operation<S>::reset_visit();
@@ -82,11 +82,17 @@ namespace icicle {
 
     const int get_nof_vars() const { return m_nof_inputs + m_nof_outputs + m_nof_constants + m_nof_intermidiates; }
 
+    static inline const int INST_OPCODE = 0;
+    static inline const int INST_OPERAND1 = 1;
+    static inline const int INST_OPERAND2 = 2;
+    static inline const int INST_RESULT = 3;
+    inline static int get_opcode(const InstructionType instruction) { return (instruction & 0xFF); }
+
   private:
     void generate_program(std::shared_ptr<Operation<S>> operation)
     {
       if (
-        operation == nullptr || operation->was_visited(true) || operation->m_opcode == OP_INPUT ||
+        operation == nullptr || operation->is_visited(true) || operation->m_opcode == OP_INPUT ||
         operation->m_opcode == OP_CONST)
         return;
       generate_program(operation->m_operand1);
@@ -95,10 +101,10 @@ namespace icicle {
       // Build an instruction
       std::byte int_arr[4] = {};
       int_arr[0] = std::byte(operation->m_opcode);
-      int_arr[1] = std::byte(operation->m_operand1->m_mem_addr);
-      if (operation->m_operand2) { int_arr[2] = std::byte(operation->m_operand2->m_mem_addr); }
-      if (operation->m_mem_addr < 0) { operation->m_mem_addr = allocate_intermidiate(); }
-      int_arr[3] = std::byte(operation->m_mem_addr);
+      int_arr[1] = std::byte(operation->m_operand1->m_variable_idx);
+      if (operation->m_operand2) { int_arr[2] = std::byte(operation->m_operand2->m_variable_idx); }
+      if (operation->m_variable_idx < 0) { operation->m_variable_idx = allocate_intermidiate(); }
+      int_arr[3] = std::byte(operation->m_variable_idx);
       InstructionType instruction;
       std::memcpy(&instruction, int_arr, 4);
       m_instructions.push_back(instruction);
@@ -106,12 +112,12 @@ namespace icicle {
 
     void allocate_constants(std::shared_ptr<Operation<S>> operation)
     {
-      if (operation == nullptr || operation->was_visited(true)) return;
+      if (operation == nullptr || operation->is_visited(true)) return;
       allocate_constants(operation->m_operand1);
       allocate_constants(operation->m_operand2);
       if (operation->m_opcode == OP_CONST) {
         m_constants.push_back(*(operation->m_constant));
-        operation->m_mem_addr = allocate_constant();
+        operation->m_variable_idx = allocate_constant();
       }
     }
 
