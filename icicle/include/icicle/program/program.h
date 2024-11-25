@@ -8,7 +8,10 @@ namespace icicle {
 
   using InstructionType = uint32_t;
 
-  enum PreDefinedPrograms { AB_MINUS_C = 0, EQ_X_AB_MINUS_C };
+  enum PreDefinedPrograms { 
+    AB_MINUS_C = 0,       // (A*B)-C
+    EQ_X_AB_MINUS_C       // E*(A*B-C)
+    };
 
   /**
    * @brief A class that convert the function described by user into a program that can be executed
