@@ -11,13 +11,13 @@ namespace icicle {
   class CpuProgramExecutor
   {
   public:
-    CpuProgramExecutor(Program<S>& program)
+    CpuProgramExecutor(const Program<S>& program)
         : m_program(program), m_variable_ptrs(program.get_nof_vars()), m_intermediates(program.m_nof_intermidiates)
     {
       // initialize m_variable_ptrs vector
       int variable_ptrs_idx = program.m_nof_inputs + program.m_nof_outputs;
       for (int idx = 0; idx < program.m_nof_constants; ++idx) {
-        m_variable_ptrs[variable_ptrs_idx++] = &(program.m_constants[idx]);
+        m_variable_ptrs[variable_ptrs_idx++] = (S*)(&(program.m_constants[idx]));
       }
       for (int idx = 0; idx < program.m_nof_intermidiates; ++idx) {
         m_variable_ptrs[variable_ptrs_idx++] = &(m_intermediates[idx]);
@@ -37,7 +37,7 @@ namespace icicle {
     std::vector<S*> m_variable_ptrs;
 
   private:
-    Program<S>& m_program;
+    const Program<S>& m_program;
     std::vector<S> m_intermediates;
 
     // exe functions

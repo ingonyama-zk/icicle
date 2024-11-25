@@ -99,14 +99,26 @@ namespace icicle {
       generate_program(operation->m_operand2);
 
       // Build an instruction
-      std::byte int_arr[4] = {};
-      int_arr[0] = std::byte(operation->m_opcode);
-      int_arr[1] = std::byte(operation->m_operand1->m_variable_idx);
-      if (operation->m_operand2) { int_arr[2] = std::byte(operation->m_operand2->m_variable_idx); }
-      if (operation->m_variable_idx < 0) { operation->m_variable_idx = allocate_intermidiate(); }
-      int_arr[3] = std::byte(operation->m_variable_idx);
+      std::byte int_arr[sizeof(InstructionType)] = {};
+      // Set instruction::opcode
+      int_arr[INST_OPCODE] = std::byte(operation->m_opcode);
+      // Set instruction::operand1 
+      int_arr[INST_OPERAND1] = std::byte(operation->m_operand1->m_variable_idx);
+
+      if (operation->m_operand2) { 
+        // Set instruction::operand2
+        int_arr[INST_OPERAND2] = std::byte(operation->m_operand2->m_variable_idx); 
+      }
+
+      if (operation->m_variable_idx < 0) { 
+        // allocate a register for the result
+        operation->m_variable_idx = allocate_intermidiate(); 
+      }
+      
+      // Set instruction::operand2
+      int_arr[INST_RESULT] = std::byte(operation->m_variable_idx);
       InstructionType instruction;
-      std::memcpy(&instruction, int_arr, 4);
+      std::memcpy(&instruction, int_arr, sizeof(InstructionType));
       m_instructions.push_back(instruction);
     }
 
