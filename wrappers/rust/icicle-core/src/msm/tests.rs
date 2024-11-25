@@ -1,8 +1,7 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
-use crate::test_utilities;
 use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
-use icicle_runtime::memory::HostOrDeviceSlice;
+use icicle_runtime::{memory::HostOrDeviceSlice, test_utilities};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
     runtime,

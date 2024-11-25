@@ -417,9 +417,9 @@ macro_rules! impl_polynomial_tests {
             get_root_of_unity, initialize_domain, release_domain, NTTDomain, NTTInitDomainConfig,
             CUDA_NTT_FAST_TWIDDLES_MODE,
         };
-        use icicle_core::test_utilities;
         use icicle_core::vec_ops::{add_scalars, mul_scalars, sub_scalars, VecOps, VecOpsConfig};
         use icicle_runtime::memory::{DeviceVec, HostSlice};
+        use icicle_runtime::test_utilities;
         use std::sync::Once;
 
         use icicle_core::traits::{FieldImpl, GenerateRandom};

@@ -9,9 +9,8 @@ mod tests {
     use icicle_core::{
         hash::{HashConfig, Hasher},
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
-        test_utilities,
     };
-    use icicle_runtime::memory::HostSlice;
+    use icicle_runtime::{memory::HostSlice, test_utilities};
     use rand::Rng;
     use std::sync::Once;
 

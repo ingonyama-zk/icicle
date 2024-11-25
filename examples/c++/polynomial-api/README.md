@@ -13,6 +13,8 @@ To run example, from project root directory:
 ./run.sh -d CPU
 # for CUDA
 ./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+# for METAL
+./run.sh -d METAL -b /path/to/cuda/backend/install/dir
 ```
 
 To change the scalar field, modify `compile.h` to build the corresponding lib and `CMakeLists.txt` to link to that lib and set `FIELD_ID` correspondingly.

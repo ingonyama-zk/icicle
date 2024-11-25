@@ -6,6 +6,7 @@ pub mod runtime;
 pub mod stream;
 
 #[doc(hidden)]
+pub mod test_utilities;
 pub mod tests;
 
 // Re-export the types for easier access
