@@ -1,4 +1,5 @@
 #pragma once
+#include "icicle/utils/modifiers.h"
 #include <cstdint>
 
 #define LIMBS_ALIGNMENT(x) ((x) % 4 == 0 ? 16 : ((x) % 2 == 0 ? 8 : 4))
@@ -15,7 +16,7 @@ struct ALIGN(LIMBS_ALIGNMENT(1)) storage<1> {
 
 // Specialization for LIMBS_COUNT == 3
 template <>
-struct ALIGN(LIMBS_ALIGNMENT(3)) storage<3> {
+struct ALIGN(LIMBS_ALIGNMENT(1)) storage<3> {
   static constexpr unsigned LC = 3;
   uint32_t limbs[3];
 };
