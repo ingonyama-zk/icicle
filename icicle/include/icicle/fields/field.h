@@ -525,7 +525,6 @@ public:
   static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
   {
     Field mul = multiplier;
-#ifdef BARRET
     static bool is_u32 = true;
   #ifdef __CUDA_ARCH__
     UNROLL
@@ -534,11 +533,11 @@ public:
       is_u32 &= (mul.limbs_storage.limbs[i] == 0);
 
     if (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
-#endif
-#ifndef BARRET
-    mul = to_montgomery(mul); // TODO - optimize
-#endif
+#ifdef BARRET
     return mul * xs;
+#else
+    return to_montgomery(mul) * xs;
+#endif
   }
 
   template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
