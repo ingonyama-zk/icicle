@@ -14,49 +14,16 @@
 #include <iomanip>
 #include <cmath>
 
-using namespace icicle;
+#include "test_base.h"
 
-using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg, enable)                                                                                  \
-  if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
+using namespace icicle;
 
 static bool VERBOSE = true;
 static int ITERS = 1;
-static inline std::string s_main_target;
-static inline std::string s_reference_target;
-static inline std::vector<std::string> s_registered_devices;
 
-class HashApiTest : public ::testing::Test
+class HashApiTest : public IcicleTestBase
 {
 public:
-  // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
-  static void SetUpTestSuite()
-  {
-#ifdef BACKEND_BUILD_DIR
-    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
-#endif
-    icicle_load_backend_from_env_or_default();
-
-    const bool is_cuda_registered = is_device_registered("CUDA");
-    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
-    s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_reference_target = "CPU";
-    s_registered_devices = get_registered_devices_list();
-    ASSERT_GE(s_registered_devices.size(), 1);
-  }
-  static void TearDownTestSuite()
-  {
-    // make sure to fail in CI if only have one device
-    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
-  }
-
-  // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
-  void TearDown() override {}
-
   template <typename T>
   static void randomize(T* arr, uint64_t size)
   {
@@ -168,21 +135,21 @@ TEST_F(HashApiTest, KeccakLarge)
   auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
   auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
 
-  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
   auto keccakCPU = Keccak256::create();
   START_TIMER(cpu_timer);
   ICICLE_CHECK(keccakCPU.hash(input.get(), chunk_size, config, output_ref.get()));
   END_TIMER(cpu_timer, "CPU Keccak large time", true);
 
-  ICICLE_CHECK(icicle_set_device(s_main_target));
-  auto keccakCUDA = Keccak256::create();
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto keccakMainDev = Keccak256::create();
 
   // test with host memory
-  START_TIMER(cuda_timer);
+  START_TIMER(mainDev_timer);
   config.are_inputs_on_device = false;
   config.are_outputs_on_device = false;
-  ICICLE_CHECK(keccakCUDA.hash(input.get(), chunk_size, config, output_main.get()));
-  END_TIMER(cuda_timer, "CUDA Keccak large time (on host memory)", true);
+  ICICLE_CHECK(keccakMainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev Keccak large time (on host memory)", true);
   ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
 
   // test with device memory
@@ -192,9 +159,9 @@ TEST_F(HashApiTest, KeccakLarge)
   ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
   config.are_inputs_on_device = true;
   config.are_outputs_on_device = true;
-  START_TIMER(cuda_timer_device_mem);
-  ICICLE_CHECK(keccakCUDA.hash(d_input, chunk_size, config, d_output));
-  END_TIMER(cuda_timer_device_mem, "CUDA Keccak large time (on device memory)", true);
+  START_TIMER(mainDev_timer_device_mem);
+  ICICLE_CHECK(keccakMainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev Keccak large time (on device memory)", true);
   ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
   ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
 
@@ -216,21 +183,21 @@ TEST_F(HashApiTest, Blake2sLarge)
   auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
   auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
 
-  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
   auto blake2sCPU = Blake2s::create();
   START_TIMER(cpu_timer);
   ICICLE_CHECK(blake2sCPU.hash(input.get(), chunk_size, config, output_ref.get()));
   END_TIMER(cpu_timer, "CPU blake2s large time", true);
 
-  ICICLE_CHECK(icicle_set_device(s_main_target));
-  auto blake2sCUDA = Blake2s::create();
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto blake2sMainDev = Blake2s::create();
 
   // test with host memory
-  START_TIMER(cuda_timer);
+  START_TIMER(mainDev_timer);
   config.are_inputs_on_device = false;
   config.are_outputs_on_device = false;
-  ICICLE_CHECK(blake2sCUDA.hash(input.get(), chunk_size, config, output_main.get()));
-  END_TIMER(cuda_timer, "CUDA blake2s large time (on host memory)", true);
+  ICICLE_CHECK(blake2sMainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev blake2s large time (on host memory)", true);
   ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
 
   // test with device memory
@@ -240,9 +207,9 @@ TEST_F(HashApiTest, Blake2sLarge)
   ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
   config.are_inputs_on_device = true;
   config.are_outputs_on_device = true;
-  START_TIMER(cuda_timer_device_mem);
-  ICICLE_CHECK(blake2sCUDA.hash(d_input, chunk_size, config, d_output));
-  END_TIMER(cuda_timer_device_mem, "CUDA blake2s large time (on device memory)", true);
+  START_TIMER(mainDev_timer_device_mem);
+  ICICLE_CHECK(blake2sMainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev blake2s large time (on device memory)", true);
   ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
   ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
 
@@ -573,7 +540,7 @@ TEST_F(HashApiTest, MerkleTreeBasic)
   uint32_t leaves_alternative[nof_leaves];
   randomize(leaves_alternative, nof_leaves);
 
-  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
 
   // define the merkle tree
   auto config = default_merkle_tree_config();
@@ -594,12 +561,12 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
 {
-  // TODO add loop on devices (and change hash to one supported on gpu)
+  // TODO:add loop on devices (and change hash to one supported on gpu)
   const int leaf_size = sizeof(uint32_t);
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
   randomize(leaves, nof_leaves);
-  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
 
   // define the merkle tree
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
@@ -720,7 +687,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   const int nof_leaves = 100;
   uint32_t leaves[nof_leaves];
   randomize(leaves, nof_leaves);
-  ICICLE_CHECK(icicle_set_device(s_reference_target));
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
 
   // define the merkle tree
   auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
@@ -915,7 +882,7 @@ TEST_F(HashApiTest, MerkleTreeLarge)
 // p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 
   #include "icicle/fields/field_config.h"
-  #include "poseidon/constants/bn254_poseidon.h"
+  #include "icicle/hash/poseidon_constants/bn254_poseidon.h"
 
 using namespace field_config;
 using namespace poseidon_constants_bn254;
@@ -948,12 +915,12 @@ TEST_F(HashApiTest, poseidon12_single_hash)
   };
 
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
 
-  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
-  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
 
-  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 }
 
 // TEST_F(HashApiTest, poseidon3_single_hash_domain_tag)
@@ -988,12 +955,12 @@ TEST_F(HashApiTest, poseidon12_single_hash)
 //     };
 
 //   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-//   auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+//   auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
 
-//   run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
-//   run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+//   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+//   run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
 
-//   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+//   ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 // }
 
 TEST_F(HashApiTest, poseidon3_single_hash)
@@ -1022,12 +989,12 @@ TEST_F(HashApiTest, poseidon3_single_hash)
   };
 
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
 
-  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
-  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
 
-  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 }
 
 TEST_F(HashApiTest, poseidon3_batch)
@@ -1057,12 +1024,12 @@ TEST_F(HashApiTest, poseidon3_batch)
   };
 
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
 
-  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
-  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon", ITERS);
 
-  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 }
 
 TEST_F(HashApiTest, poseidon_tree)

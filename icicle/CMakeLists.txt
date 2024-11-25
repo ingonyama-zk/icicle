@@ -42,7 +42,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Build options
 option(BUILD_TESTS "Build unit tests. Default=OFF" OFF)
 option(CPU_BACKEND "Build CPU backend. Default=ON" ON)
+# TODO Yuval: consider decoupling backends from frontend build. Is that worth the effort?
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend or `local` if under icicle/backend/cuda. Default=OFF" OFF)
+option(METAL_BACKEND "Branch/commit to pull for METAL backend or `local` if under icicle/backend/metal. Default=OFF" OFF)
 
 # features that some fields/curves have and some don't.
 option(NTT "Build NTT" ON)
@@ -132,6 +134,31 @@ if (CUDA_BACKEND)
     FetchContent_MakeAvailable(cuda_backend)
     # Set the compile definition for the backend build directory
     add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/_deps/cuda_backend-build")
+    endif()
+endif()
+
+if (METAL_BACKEND)
+  string(TOLOWER "${METAL_BACKEND}" METAL_BACKEND_LOWER)
+  if (METAL_BACKEND_LOWER STREQUAL "local")
+    # METAL backend is local, no need to pull
+    message(STATUS "Adding Metal backend from local path: icicle/backend/metal")
+    add_subdirectory(backend/metal)
+
+    # Set the compile definition for the backend build directory
+    add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/backend")
+  else()
+    set(METAL_BACKEND_URL "git@github.com:ingonyama-zk/icicle-metal-backend.git")
+
+    include(FetchContent)
+    message(STATUS "Fetching cuda backend from ${METAL_BACKEND_URL}:${METAL_BACKEND}")
+    FetchContent_Declare(
+      metal_backend
+      GIT_REPOSITORY ${METAL_BACKEND_URL}
+      GIT_TAG ${METAL_BACKEND}
+    )
+    FetchContent_MakeAvailable(metal_backend)
+    # Set the compile definition for the backend build directory
+    add_compile_definitions(BACKEND_BUILD_DIR="${CMAKE_BINARY_DIR}/_deps/metal_backend-build")
     endif()
 endif()
 

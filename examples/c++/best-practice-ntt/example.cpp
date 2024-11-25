@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
   ConfigExtension backend_cfg_ext;
   backend_cfg_ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
   ntt_init_domain_cfg.ext = &backend_cfg_ext;
-  ICICLE_CHECK(bn254_ntt_init_domain(&basic_root, &ntt_init_domain_cfg));
+  ICICLE_CHECK(ntt_init_domain(basic_root, ntt_init_domain_cfg));
 
   std::cout << "Concurrent Download, Upload, and Compute In-place NTT" << std::endl;
   int nof_blocks = 32;
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
     std::cout << "Compute Vector: " << vec_compute << std::endl;
     std::cout << "Transfer Vector: " << vec_transfer << std::endl;
     START_TIMER(inplace);
-    bn254_ntt(d_vec[vec_compute], ntt_size, NTTDir::kForward, &config_compute, d_vec[vec_compute]);
+    ICICLE_CHECK(icicle::ntt(d_vec[vec_compute], ntt_size, NTTDir::kForward, config_compute, d_vec[vec_compute]));
     // we have to delay upload to device relative to download from device by one block: preserve write after read
     for (int i = 0; i <= nof_blocks; i++) {
       if (i < nof_blocks) {
@@ -116,8 +116,8 @@ int main(int argc, char* argv[])
   // Clean-up
   for (int i = 0; i < 2; i++) {
     ICICLE_CHECK(icicle_free(d_vec[i]));
-    delete[] (h_inp[i]);
-    delete[] (h_out[i]);
+    delete[](h_inp[i]);
+    delete[](h_out[i]);
   }
   ICICLE_CHECK(icicle_destroy_stream(stream_compute));
   ICICLE_CHECK(icicle_destroy_stream(stream_d2h));

@@ -4,7 +4,6 @@
 #include <fstream>
 #include <list>
 #include <random>
-#include "dlfcn.h"
 
 #include "icicle/runtime.h"
 #include "icicle/ntt.h"
@@ -15,48 +14,16 @@
 #include "icicle/backend/msm_config.h"
 #include "icicle/backend/ntt_config.h"
 
+#include "test_base.h"
+
 using namespace curve_config;
 using namespace icicle;
 
-using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg, enable)                                                                                  \
-  if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
-
 static bool VERBOSE = true;
-static inline std::string s_main_target;
-static inline std::string s_ref_target;
 
-class CurveApiTest : public ::testing::Test
+class CurveApiTest : public IcicleTestBase
 {
 public:
-  static inline std::list<std::string> s_registered_devices;
-
-  // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
-  static void SetUpTestSuite()
-  {
-#ifdef BACKEND_BUILD_DIR
-    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
-#endif
-    icicle_load_backend_from_env_or_default();
-
-    const bool is_cuda_registered = is_device_registered("CUDA");
-    if (!is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs CPU"; }
-    s_main_target = is_cuda_registered ? "CUDA" : "CPU";
-    s_ref_target = "CPU";
-  }
-  static void TearDownTestSuite()
-  {
-    // make sure to fail in CI if only have one device
-    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
-  }
-
-  // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
-  void TearDown() override {}
-
   template <typename T>
   void random_scalars(T* arr, uint64_t count)
   {
@@ -103,8 +70,8 @@ public:
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
 
-    run(s_main_target, result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
-    run(s_ref_target, result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
       ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
       ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
@@ -154,13 +121,13 @@ public:
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
     };
-    if (s_ref_target == "CPU") {
-      run(s_ref_target, result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    if (IcicleTestBase::reference_device() == "CPU") {
+      run(IcicleTestBase::reference_device(), result_multi_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
       // Adjust config to have one worker thread
       ConfigExtension ext;
       ext.set(CpuBackendConfig::CPU_NOF_THREADS, 1);
       config.ext = &ext;
-      run(s_ref_target, result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+      run(IcicleTestBase::reference_device(), result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
 
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
         ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
@@ -195,12 +162,20 @@ public:
         END_TIMER(MONTGOMERY, oss.str().c_str(), measure);
       };
 
-    run(s_main_target, elements.get(), main_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
-    run(s_ref_target, elements.get(), ref_output.get(), true /*into*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(
+      IcicleTestBase::main_device(), elements.get(), main_output.get(), true /*into*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
+    run(
+      IcicleTestBase::reference_device(), elements.get(), ref_output.get(), true /*into*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
     ASSERT_EQ(0, memcmp(main_output.get(), ref_output.get(), N * sizeof(T)));
 
-    run(s_main_target, main_output.get(), main_output.get(), false /*from*/, VERBOSE /*=measure*/, "to-montgomery", 1);
-    run(s_ref_target, ref_output.get(), ref_output.get(), false /*from*/, VERBOSE /*=measure*/, "to-montgomery", 1);
+    run(
+      IcicleTestBase::main_device(), main_output.get(), main_output.get(), false /*from*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
+    run(
+      IcicleTestBase::reference_device(), ref_output.get(), ref_output.get(), false /*from*/, VERBOSE /*=measure*/,
+      "to-montgomery", 1);
     ASSERT_EQ(0, memcmp(main_output.get(), ref_output.get(), N * sizeof(T)));
   }
 };
@@ -249,8 +224,8 @@ TEST_F(CurveApiTest, ecntt)
     ntt_release_domain<scalar_t>();
   };
 
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1);
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1);
+  run(IcicleTestBase::main_device(), out_main.get(), "ecntt", VERBOSE /*=measure*/, 1);
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1);
 
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
@@ -318,9 +293,9 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  run(s_main_target, out_main.get(), "ecntt", false /*=measure*/, 1 /*=iters*/); // warmup
-  run(s_ref_target, out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
-  run(s_main_target, out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ecntt", false /*=measure*/, 1 /*=iters*/); // warmup
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
     ASSERT_FALSE(projective_t::is_zero(out_ref[i]));

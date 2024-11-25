@@ -357,7 +357,7 @@ macro_rules! impl_ntt_tests {
     (
       $field:ident
     ) => {
-        use icicle_core::test_utilities;
+        use icicle_runtime::test_utilities;
         use icicle_runtime::{device::Device, runtime};
         use std::sync::Once;
 

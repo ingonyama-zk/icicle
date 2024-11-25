@@ -23,15 +23,16 @@ extern "C" eIcicleError icicle_get_active_device(icicle::Device& device)
 
 extern "C" eIcicleError icicle_is_host_memory(const void* ptr)
 {
-  auto it = DeviceAPI::get_global_memory_tracker().identify_device(ptr);
+  auto it = DeviceAPI::get_global_memory_tracker().identify(ptr);
   return (it == std::nullopt) ? eIcicleError::SUCCESS : eIcicleError::INVALID_POINTER;
 }
 
 extern "C" eIcicleError icicle_is_active_device_memory(const void* ptr)
 {
-  auto it = DeviceAPI::get_global_memory_tracker().identify_device(ptr);
+  auto it = DeviceAPI::get_global_memory_tracker().identify(ptr);
   if (it == std::nullopt) { return eIcicleError::INVALID_POINTER; }
-  return (**it == DeviceAPI::get_thread_local_device()) ? eIcicleError::SUCCESS : eIcicleError::INVALID_POINTER;
+  auto [device, offset] = *it;
+  return (*device == DeviceAPI::get_thread_local_device()) ? eIcicleError::SUCCESS : eIcicleError::INVALID_POINTER;
 }
 
 extern "C" eIcicleError icicle_get_device_count(int& device_count /*OUT*/)
@@ -64,14 +65,15 @@ extern "C" eIcicleError icicle_free(void* ptr)
   // (when scope is closed)
 
   auto& tracker = DeviceAPI::get_global_memory_tracker();
-  const auto& ptr_dev = tracker.identify_device(ptr);
   const auto& cur_device = DeviceAPI::get_thread_local_device();
 
-  if (ptr_dev == std::nullopt) {
+  const auto& it = tracker.identify(ptr);
+  if (it == std::nullopt) {
     ICICLE_LOG_ERROR << "Trying to release host memory from device " << cur_device.type << " " << cur_device.id;
     return eIcicleError::INVALID_DEVICE;
   }
-  const bool is_active_device = **ptr_dev == cur_device;
+  auto [ptr_dev, offset] = *it;
+  const bool is_active_device = *ptr_dev == cur_device;
   if (is_active_device) {
     auto err = DeviceAPI::get_thread_local_deviceAPI()->free_memory(ptr);
     if (err == eIcicleError::SUCCESS) { DeviceAPI::get_global_memory_tracker().remove_allocation(ptr); }
@@ -79,7 +81,7 @@ extern "C" eIcicleError icicle_free(void* ptr)
   }
 
   // Getting here means memory does not belong to active device
-  auto err = icicle_set_device(**ptr_dev);
+  auto err = icicle_set_device(*ptr_dev);
   if (err == eIcicleError::SUCCESS) err = icicle_free(ptr);
   err = icicle_set_device(cur_device);
   return err;
@@ -88,18 +90,19 @@ extern "C" eIcicleError icicle_free(void* ptr)
 extern "C" eIcicleError icicle_free_async(void* ptr, icicleStreamHandle stream)
 {
   auto& tracker = DeviceAPI::get_global_memory_tracker();
-  const auto& ptr_dev = tracker.identify_device(ptr);
+  const auto& it = tracker.identify(ptr);
   const auto& cur_device = DeviceAPI::get_thread_local_device();
 
-  if (ptr_dev == std::nullopt) {
+  if (it == std::nullopt) {
     ICICLE_LOG_ERROR << "Trying to release host memory from device " << cur_device.type << " " << cur_device.id;
     return eIcicleError::INVALID_DEVICE;
   }
+  auto [device, offset] = *it;
 
   // Note that in that case, not switching device, since the stream may be wrong too. User has to handle it.
-  const bool is_active_device = **ptr_dev == cur_device;
+  const bool is_active_device = *device == cur_device;
   if (!is_active_device) {
-    ICICLE_LOG_ERROR << "Trying to release memory allocated by " << (**ptr_dev).type << "(" << (**ptr_dev).id
+    ICICLE_LOG_ERROR << "Trying to release memory allocated by " << device->type << "(" << device->id
                      << ") from device " << cur_device.type << "(" << cur_device.id << ")";
     return eIcicleError::INVALID_DEVICE;
   }
@@ -143,11 +146,12 @@ enum class MemoryType {
 
 static MemoryType _get_memory_type(const void* ptr)
 {
-  auto it = DeviceAPI::get_global_memory_tracker().identify_device(ptr);
+  auto it = DeviceAPI::get_global_memory_tracker().identify(ptr);
   // Untracked address assumed to be host memory but could be invalid
   if (it == std::nullopt) { return MemoryType::Untracked; }
+  auto [device, offset] = *it;
 
-  const bool is_active_device_ptr = (**it == DeviceAPI::get_thread_local_device());
+  const bool is_active_device_ptr = (*device == DeviceAPI::get_thread_local_device());
   return is_active_device_ptr ? MemoryType::ActiveDevice : MemoryType::NonActiveDevice;
 }
 

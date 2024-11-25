@@ -1,6 +1,6 @@
 {
-  "name": "docusaurus",
-  "version": "0.0.0",
+  "name": "icicle-docs",
+  "version": "3.1.0",
   "private": true,
   "description": "Ingonyama - developer docs",
   "scripts": {
@@ -17,18 +17,16 @@
     "format": "prettier --write '**/*.md'"
   },
   "dependencies": {
-    "@docusaurus/core": "2.0.0-beta.18",
-    "@docusaurus/preset-classic": "2.0.0-beta.18",
-    "@mdx-js/react": "^1.6.22",
-    "clsx": "^1.1.1",
-    "hast-util-is-element": "1.1.0",
-    "mdx-mermaid": "^1.2.2",
-    "mermaid": "^9.1.2",
-    "prism-react-renderer": "^1.3.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "rehype-katex": "5",
-    "remark-math": "3"
+    "@docusaurus/core": "3.6.2",
+    "@docusaurus/preset-classic": "3.6.2",
+    "@mdx-js/react": "~3.0.0",
+    "clsx": "~1.1.1",
+    "hast-util-is-element": "~1.1.0",
+    "prism-react-renderer": "~2.1.0",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "rehype-katex": "~7",
+    "remark-math": "~6"
   },
   "browserslist": {
     "production": [
@@ -43,6 +41,13 @@
     ]
   },
   "devDependencies": {
-    "prettier": "^3.2.4"
+    "@docusaurus/module-type-aliases": "~3.0.0",
+    "@docusaurus/tsconfig": "~3.6.1",
+    "@docusaurus/types": "~3.0.0",
+    "prettier": "~3.2.4",
+    "typescript": "~5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0"
   }
 }

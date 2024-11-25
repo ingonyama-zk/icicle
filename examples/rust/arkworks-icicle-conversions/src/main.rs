@@ -41,9 +41,10 @@ fn try_load_and_set_backend_device(args: &Args) {
 //============================ Generate ark scalars and ec points ============================//
 //============================================================================================//
 
-fn incremental_ark_scalars<T: PrimeField>(size: usize) -> Vec<T> {
+fn random_ark_scalars<T: PrimeField>(size: usize) -> Vec<T> {
+    let mut rng = rand::thread_rng();
     (0..size)
-        .map(|i| T::from(i as u64))
+        .map(|_| T::rand(&mut rng))
         .collect()
 }
 
@@ -216,7 +217,7 @@ fn main() {
         "Randomizing {} scalars, affine and ark projective (actually Jacobian) points",
         args.size
     );
-    let ark_scalars = incremental_ark_scalars(args.size);
+    let ark_scalars = random_ark_scalars(args.size);
     let ark_projective_points = incremental_ark_projective_points(args.size);
     let ark_affine_points = incremental_ark_affine_points(args.size);
 

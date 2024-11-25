@@ -263,7 +263,7 @@ macro_rules! impl_msm_tests {
     (
       $curve:ident
     ) => {
-        use icicle_core::test_utilities;
+        use icicle_runtime::test_utilities;
         pub fn initialize() {
             test_utilities::test_load_and_init_devices();
             test_utilities::test_set_main_device();
