@@ -522,23 +522,27 @@ public:
   friend HOST_DEVICE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
 
   template <const Field& multiplier>
-  static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
-  {
-    Field mul = multiplier;
-    static bool is_u32 = true;
-  #ifdef __CUDA_ARCH__
-    UNROLL
-  #endif
-    for (unsigned i = 1; i < TLC; i++)
-      is_u32 &= (mul.limbs_storage.limbs[i] == 0);
+static HOST_DEVICE_INLINE Field mul_const(const Field& xs) {
+    constexpr bool is_u32 = []() constexpr {
+        for (unsigned i = 1; i < TLC; i++) {
+            if (multiplier.limbs_storage.limbs[i] != 0) {
+                return false;
+            }
+        }
+        return true;
+    }();
 
-    if (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
+    if constexpr (is_u32) {
+        return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
+    } else {
 #ifdef BARRET
-    return mul * xs;
+        return multiplier * xs;
 #else
-    return to_montgomery(mul) * xs;
+        return to_montgomery(multiplier) * xs;
 #endif
-  }
+    }
+}
+
 
   template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T& xs)
