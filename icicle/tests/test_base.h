@@ -1,4 +1,6 @@
 #pragma once
+#include <time.h>
+#include <random>
 
 #include <gtest/gtest.h>
 #include "icicle/runtime.h"
@@ -25,6 +27,9 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
+    auto seed = time(NULL);
+    srand(seed);
+    ICICLE_LOG_INFO << "Seed for tests is: " << seed;
 #ifdef BACKEND_BUILD_DIR
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif
