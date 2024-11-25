@@ -42,7 +42,7 @@ namespace icicle {
     std::unique_ptr<S> m_constant; // for OP_CONST: const value
 
     // implementation:
-    int m_variable_idx; // location at the intermidiate variables vectors
+    int m_variable_idx; // location at the intermediate variables vectors
 
     // Constructor
     Operation<S>(
@@ -60,7 +60,7 @@ namespace icicle {
     {
       const bool is_visited = (m_visit_idx == s_last_visit); // s_last_visit was not incremented since visited
       if (set_as_visit) {
-        m_visit_idx = s_last_visit; // set operation as visted
+        m_visit_idx = s_last_visit; // set operation as visited
       }
       return is_visited;
     }
