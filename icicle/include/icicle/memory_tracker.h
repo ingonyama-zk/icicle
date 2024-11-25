@@ -6,29 +6,28 @@
 #include <optional>
 #include <thread>
 
-#include "icicle/device.h"
-
 namespace icicle {
 
+  template <typename T>
   class MemoryTracker
   {
   public:
-    // Add a new allocation
-    void add_allocation(void* address, size_t size, const Device& device)
+    // Add a new allocation with a void* address and an associated data of type T
+    void add_allocation(const void* address, size_t size, T associated_data)
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      allocations_.insert(std::make_pair(address, AllocationInfo{size, device}));
+      allocations_.insert(std::make_pair(address, AllocationInfo{size, associated_data}));
     }
 
     // Remove an allocation
-    void remove_allocation(void* address)
+    void remove_allocation(const void* address)
     {
       std::lock_guard<std::mutex> lock(mutex_);
       allocations_.erase(address);
     }
 
-    // Check if an address is allocated by this tracker and get the device
-    std::optional<const Device*> identify_device(const void* address)
+    // Identify the base address and offset for a given address
+    std::optional<std::pair<const T*, size_t /*offset*/>> identify(const void* address)
     {
       std::lock_guard<std::mutex> lock(mutex_);
       auto it = allocations_.upper_bound(address);
@@ -37,7 +36,8 @@ namespace icicle {
       const char* start = static_cast<const char*>(it->first);
       const char* end = start + it->second.size_;
       if (start <= static_cast<const char*>(address) && static_cast<const char*>(address) < end) {
-        return &it->second.device_;
+        size_t offset = static_cast<const char*>(address) - start;
+        return std::make_pair(&it->second.associated_data_, offset);
       }
       return std::nullopt;
     }
@@ -45,9 +45,9 @@ namespace icicle {
   private:
     struct AllocationInfo {
       size_t size_;
-      const Device device_;
+      const T associated_data_;
 
-      AllocationInfo(size_t size, const Device& device) : size_(size), device_(device) {}
+      AllocationInfo(size_t size, T associated_data) : size_{size}, associated_data_{associated_data} {}
     };
 
     std::map<const void*, AllocationInfo> allocations_;

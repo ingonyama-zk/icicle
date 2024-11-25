@@ -12,6 +12,8 @@
 
 namespace icicle {
 
+  using DeviceTracker = MemoryTracker<Device>;
+
   /**
    * @brief Enum for specifying the direction of data copy.
    */
@@ -180,7 +182,7 @@ namespace icicle {
     virtual eIcicleError get_device_properties(DeviceProperties& properties) const = 0;
 
   private:
-    static MemoryTracker sMemTracker;                   // tracks memory allocations and can find device given address
+    static DeviceTracker sMemTracker;                   // tracks memory allocations and can find device given address
     thread_local static Device sCurDevice;              // device that is currently active for this thread
     thread_local static const DeviceAPI* sCurDeviceAPI; // API for the currently active device of this thread
 
@@ -188,7 +190,7 @@ namespace icicle {
     static eIcicleError set_thread_local_device(const Device& device);
     static const Device& get_thread_local_device();
     static const DeviceAPI* get_thread_local_deviceAPI();
-    static MemoryTracker& get_global_memory_tracker() { return sMemTracker; }
+    static DeviceTracker& get_global_memory_tracker() { return sMemTracker; }
   };
 
   /**

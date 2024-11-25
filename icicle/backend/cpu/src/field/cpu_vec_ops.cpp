@@ -368,7 +368,7 @@ private:
 public:
   T m_intermidiate_res;    // pointer to the output. Can be a vector or scalar pointer
   uint64_t m_idx_in_batch; // index in the batch. Used in intermediate res tasks
-};                         // class VectorOpTask
+};
 
 #define NOF_OPERATIONS_PER_TASK 512
 #define CONFIG_NOF_THREADS_KEY  "n_threads"

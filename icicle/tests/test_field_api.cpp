@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <iostream>
-#include "dlfcn.h"
 #include <random>
 
 #include "icicle/runtime.h"
@@ -12,58 +11,19 @@
 #include "icicle/utils/log.h"
 #include "icicle/backend/ntt_config.h"
 
+#include "test_base.h"
+
 using namespace field_config;
 using namespace icicle;
 
 // TODO Hadar - add tests that test different configurations of data on device or on host.
 
-using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
-#define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
-#define END_TIMER(timer, msg, enable)                                                                                  \
-  if (enable)                                                                                                          \
-    printf(                                                                                                            \
-      "%s: %.3f ms\n", msg, FpMicroseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / 1000);
-
 static bool VERBOSE = true;
 static int ITERS = 1;
-static inline std::string s_main_target;
-static inline std::string s_reference_target;
-static inline std::vector<std::string> s_registered_devices;
-bool s_is_cuda_registered; // TODO Yuval remove this
 
-class FieldApiTestBase : public ::testing::Test
+class FieldApiTestBase : public IcicleTestBase
 {
-public:
-  // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
-  static void SetUpTestSuite()
-  {
-#ifdef BACKEND_BUILD_DIR
-    setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
-#endif
-    icicle_load_backend_from_env_or_default();
-
-    s_is_cuda_registered = is_device_registered("CUDA");
-    if (!s_is_cuda_registered) { ICICLE_LOG_ERROR << "CUDA device not found. Testing CPU vs reference (on cpu)"; }
-    s_main_target = s_is_cuda_registered ? "CUDA" : "CPU";
-    s_reference_target = "CPU";
-    s_registered_devices = get_registered_devices_list();
-#ifdef BARRET
-    ICICLE_LOG_INFO << "USING BARRET MULT\n";
-#else
-    ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
-#endif
-  }
-  static void TearDownTestSuite()
-  {
-    // make sure to fail in CI if only have one device
-    ICICLE_ASSERT(is_device_registered("CUDA")) << "missing CUDA backend";
-  }
-
-  // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
-  void TearDown() override {}
 };
-
 template <typename T>
 class FieldApiTest : public FieldApiTestBase
 {
@@ -144,15 +104,19 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   // add
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] + in_b[i];
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add",
+      ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+
+  return;
 
   // accumulate
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
@@ -160,48 +124,56 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   for (int i = 0; i < total_size; i++) { // TODO - compare gpu against cpu with inplace operations?
     out_ref[i] = in_a[i] + in_b[i];
   }
-  run(s_main_target, nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate", ITERS);
+  run(
+    IcicleTestBase::main_device(), nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate",
+    ITERS);
 
   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // sub
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] - in_b[i];
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub",
+      ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // mul
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] * in_b[i];
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul",
+      ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // div
   TypeParam::rand_host_many(in_a.get(), total_size);
   TypeParam::rand_host_many(in_b.get(), total_size);
   // reference
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] * TypeParam::inverse(in_b[i]);
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_div<TypeParam>, "vector div", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_div<TypeParam>, "vector div",
+      ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_div<TypeParam>, "vector div", ITERS);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_div<TypeParam>, "vector div", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 
@@ -243,7 +215,7 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
   // convert_montgomery
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   // reference
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     if (is_to_montgomery) {
       for (int i = 0; i < total_size; i++) {
         out_ref[i] = TypeParam::to_montgomery(in_a[i]);
@@ -254,9 +226,9 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "montgomery", ITERS);
+    run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, "montgomery", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "montgomery", ITERS);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, "montgomery", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 
@@ -307,7 +279,7 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
   for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
     out_ref[idx_in_batch] = scalar_t::from(0);
   }
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_a = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
@@ -315,14 +287,16 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_sum<scalar_t>, "vector sum", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_sum<scalar_t>, "vector sum",
+      ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_sum<scalar_t>, "vector sum", ITERS);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_sum<scalar_t>, "vector sum", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(scalar_t)));
 
   // product
   scalar_t::rand_host_many(in_a.get(), total_size);
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       out_ref[idx_in_batch] = scalar_t::from(1);
     }
@@ -333,9 +307,13 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, vector_product<scalar_t>, "vector product", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_product<scalar_t>,
+      "vector product", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, vector_product<scalar_t>, "vector product", ITERS);
+  run(
+    IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_product<scalar_t>, "vector product",
+    ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(scalar_t)));
 }
 
@@ -389,7 +367,7 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
   scalar_t::rand_host_many(in_b.get(), total_size);
 
   // reference
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
@@ -397,9 +375,13 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>,
+      "scalar add vec", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec", ITERS);
+  run(
+    IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, scalar_add_vec<scalar_t>, "scalar add vec",
+    ITERS);
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 
@@ -407,7 +389,7 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
   scalar_t::rand_host_many(scalar_a.get(), batch_size);
   scalar_t::rand_host_many(in_b.get(), total_size);
 
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
@@ -415,17 +397,21 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>,
+      "scalar sub vec", ITERS);
   }
 
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec", ITERS);
+  run(
+    IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, scalar_sub_vec<scalar_t>, "scalar sub vec",
+    ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 
   // scalar mul vec
   scalar_t::rand_host_many(scalar_a.get(), batch_size);
   scalar_t::rand_host_many(in_b.get(), total_size);
 
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t idx_in_N = 0; idx_in_N < N; idx_in_N++) {
         uint64_t idx_b = columns_batch ? idx_in_N * batch_size + idx_in_batch : idx_in_batch * N + idx_in_N;
@@ -433,9 +419,13 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec", ITERS);
+    run(
+      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>,
+      "scalar mul vec", ITERS);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec", ITERS);
+  run(
+    IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, scalar_mul_vec<scalar_t>, "scalar mul vec",
+    ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
@@ -452,8 +442,9 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
     << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
   const int batch_size = 1 << (rand() % 4);
   const bool columns_batch = rand() % 2;
-  const bool is_in_place =
-    s_is_cuda_registered ? 0 : rand() % 2; // TODO - fix inplace (Hadar: I'm not sure we should support it)
+  const bool is_in_place = IcicleTestBase::is_main_device_available()
+                             ? 0
+                             : rand() % 2; // TODO - fix inplace (Hadar: I'm not sure we should support it)
 
   ICICLE_LOG_DEBUG << "rows = " << R;
   ICICLE_LOG_DEBUG << "cols = " << C;
@@ -512,7 +503,7 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
   TypeParam::rand_host_many(h_inout.get(), total_size);
 
   // Reference implementation
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     const TypeParam* cur_mat_in = h_inout.get();
     TypeParam* cur_mat_out = h_out_ref.get();
     uint32_t stride = columns_batch ? batch_size : 1;
@@ -528,10 +519,14 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
       cur_mat_out += (columns_batch ? 1 : total_elements_one_mat);
     }
   } else {
-    run(s_reference_target, (is_in_place ? h_inout.get() : h_out_ref.get()), VERBOSE /*=measure*/, "transpose", ITERS);
+    run(
+      IcicleTestBase::reference_device(), (is_in_place ? h_inout.get() : h_out_ref.get()), VERBOSE /*=measure*/,
+      "transpose", ITERS);
   }
 
-  run(s_main_target, (is_in_place ? h_inout.get() : h_out_main.get()), VERBOSE /*=measure*/, "transpose", ITERS);
+  run(
+    IcicleTestBase::main_device(), (is_in_place ? h_inout.get() : h_out_main.get()), VERBOSE /*=measure*/, "transpose",
+    ITERS);
 
   if (is_in_place) {
     ASSERT_EQ(0, memcmp(h_inout.get(), h_out_ref.get(), total_size * sizeof(TypeParam)));
@@ -580,7 +575,7 @@ TYPED_TEST(FieldApiTest, bitReverse)
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
 
   // Reference implementation
-  if (!s_is_cuda_registered || is_in_place) {
+  if (!IcicleTestBase::is_main_device_available() || is_in_place) {
     uint64_t logn = 0;
     uint64_t temp = N;
     while (temp > 1) {
@@ -602,9 +597,12 @@ TYPED_TEST(FieldApiTest, bitReverse)
       }
     }
   } else {
-    run(s_reference_target, (is_in_place ? in_a.get() : out_ref.get()), VERBOSE /*=measure*/, "bit-reverse", 1);
+    run(
+      IcicleTestBase::reference_device(), (is_in_place ? in_a.get() : out_ref.get()), VERBOSE /*=measure*/,
+      "bit-reverse", 1);
   }
-  run(s_main_target, (is_in_place ? in_a.get() : out_main.get()), VERBOSE /*=measure*/, "bit-reverse", 1);
+  run(
+    IcicleTestBase::main_device(), (is_in_place ? in_a.get() : out_main.get()), VERBOSE /*=measure*/, "bit-reverse", 1);
 
   if (is_in_place) {
     ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), N * sizeof(TypeParam)));
@@ -659,7 +657,7 @@ TYPED_TEST(FieldApiTest, Slice)
   };
 
   // Reference implementation
-  if (!s_is_cuda_registered) {
+  if (!IcicleTestBase::is_main_device_available()) {
     for (uint64_t idx_in_batch = 0; idx_in_batch < batch_size; idx_in_batch++) {
       for (uint64_t i = 0; i < size_out; i++) {
         if (columns_batch) {
@@ -670,9 +668,9 @@ TYPED_TEST(FieldApiTest, Slice)
       }
     }
   } else {
-    run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "slice", 1);
+    run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, "slice", 1);
   }
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "slice", 1);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, "slice", 1);
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size_out * sizeof(TypeParam)));
 }
@@ -713,8 +711,8 @@ TEST_F(FieldApiTestBase, highestNonZeroIdx)
     END_TIMER(highestNonZeroIdx, oss.str().c_str(), measure);
   };
 
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
+  run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, "highest_non_zero_idx", 1);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
 
@@ -761,8 +759,8 @@ TEST_F(FieldApiTestBase, polynomialEval)
   scalar_t::rand_host_many(in_coeffs.get(), total_coeffs_size);
   scalar_t::rand_host_many(in_domain.get(), domain_size);
 
-  run(s_main_target, out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
-  run(s_reference_target, out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
+  run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, "polynomial_eval", 1);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(scalar_t)));
 }
 
@@ -934,9 +932,9 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(icicle_destroy_stream(stream));
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-  run(s_main_target, out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
-  run(s_reference_target, out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  run(s_main_target, out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT

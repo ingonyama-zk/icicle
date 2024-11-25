@@ -49,21 +49,31 @@ jobs:
         run: |
           git config user.name release-bot
           git config user.email release-bot@ingonyama.com
-          cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags -m "Bump rust crates' version"
+          cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags --no-git-push -m "Bump rust crates' version"
+      - name: Bump docs version
+        id: bump-docs-version
+        if: inputs.releaseType != 'patch'
+        working-directory: ./docs
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          LATEST_VERSION=$LATEST_TAG:0:1
+          npm run docusaurus docs:version $LATEST_VERSION
+          git add --all
+          git commit -m "Bump docs version"
+          git push
       - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |          
-          mkdir -p release_output && rm -rf ./release_output/*
-          # skip building release tar. TODO Yuval fix
-          # ./scripts/release/build_all.sh ./release_output
           LATEST_TAG=$(git describe --tags --abbrev=0)
           gh release create $LATEST_TAG --generate-notes -d --verify-tag -t "Release $LATEST_TAG"
       - name: Upload release tars
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mkdir -p release_output && rm -rf ./release_output/*
           LATEST_TAG=$(git describe --tags --abbrev=0)
+          ./scripts/release/build_all.sh ./release_output $LATEST_TAG
           for file in ./release_output/*.tar.gz; do
             gh release upload $LATEST_TAG "$file"
           done

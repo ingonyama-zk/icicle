@@ -72,7 +72,7 @@ namespace icicle {
     Device m_default_device{"", -1};
   };
 
-  MemoryTracker DeviceAPI::sMemTracker;
+  DeviceTracker DeviceAPI::sMemTracker;
   thread_local Device DeviceAPI::sCurDevice = {"", -1};
   thread_local const DeviceAPI* DeviceAPI::sCurDeviceAPI = nullptr;
 

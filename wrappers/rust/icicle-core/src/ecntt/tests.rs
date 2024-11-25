@@ -1,8 +1,7 @@
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::{memory::HostSlice, test_utilities};
 
 use crate::curve::Curve;
 use crate::curve::*;
-use crate::test_utilities;
 use crate::{
     ecntt::*,
     ntt::{NTTConfig, NTTDir, Ordering},
