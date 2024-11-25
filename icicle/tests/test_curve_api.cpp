@@ -82,7 +82,6 @@ public:
   template <typename A, typename P>
   void MSM_CPU_THREADS_test()
   {
-
     const int logn = 8;
     const int c = 3;
     // Low c to have a large amount of tasks required in phase 2
