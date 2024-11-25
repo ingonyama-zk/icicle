@@ -773,12 +773,12 @@ TEST_F(HashApiTest, poseidon2_3_single_hash)
   };
 
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  // auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
 
   run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  // run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  // ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
 #endif    // POSEIDON2
 
