@@ -6,6 +6,21 @@ project(icicle)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Select the C++ compiler
+find_program(CLANG_COMPILER clang++)
+find_program(CLANG_C_COMPILER clang)
+
+if(CLANG_COMPILER AND CLANG_C_COMPILER)
+    set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "Clang++ compiler" FORCE)
+    set(CMAKE_C_COMPILER ${CLANG_C_COMPILER} CACHE STRING "Clang compiler" FORCE)
+    message(STATUS "Using Clang++ as the C++ compiler: ${CLANG_COMPILER}")
+    message(STATUS "Using Clang as the C compiler: ${CLANG_C_COMPILER}")    
+else()
+    message(WARNING "ICICLE CPU works best with clang++ and clang. Defaulting to ${CLANG_COMPILER}")        
+endif()
+
+
+
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/hash.cmake)
@@ -19,7 +34,7 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
-if(SANITIZE AND CUDA_BACKEND) 
+if(SANITIZE AND CUDA_BACKEND)
   message(FATAL_ERROR "Address sanitizer and Cuda cannot be enabled at the same time.")
 endif()
 
