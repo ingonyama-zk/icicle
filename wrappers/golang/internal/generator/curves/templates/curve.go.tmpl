@@ -55,11 +55,11 @@ func (p {{.CurvePrefix}}Projective) ProjectiveEq(p2 *{{.CurvePrefix}}Projective)
 	return __ret == (C._Bool)(true)
 }
 
-func (p {{.CurvePrefix}}Projective) Add(p2 {{.CurvePrefix}}Projective) {{.CurvePrefix}}Projective {
+func (p {{.CurvePrefix}}Projective) Add(p2 *{{.CurvePrefix}}Projective) {{.CurvePrefix}}Projective {
     var res {{.CurvePrefix}}Projective
 
     cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
-    cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p2))
+    cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(p2))
     cRes := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&res))
 
     C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_add(cP, cP2, cRes)
@@ -67,11 +67,11 @@ func (p {{.CurvePrefix}}Projective) Add(p2 {{.CurvePrefix}}Projective) {{.CurveP
     return res
 }
 
-func (p {{.CurvePrefix}}Projective) Sub(p2 {{.CurvePrefix}}Projective) {{.CurvePrefix}}Projective {
+func (p {{.CurvePrefix}}Projective) Sub(p2 *{{.CurvePrefix}}Projective) {{.CurvePrefix}}Projective {
     var res {{.CurvePrefix}}Projective
 
     cP := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p))
-    cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&p2))
+    cP2 := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(p2))
     cRes := (*C.{{toCName .CurvePrefix}}projective_t)(unsafe.Pointer(&res))
 
     C.{{.Curve}}{{toCNameBackwards .CurvePrefix}}_sub(cP, cP2, cRes)
