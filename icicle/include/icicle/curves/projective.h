@@ -74,17 +74,17 @@ public:
     // t2 = FF::template mul_const<Gen::weierstrass_3b>(t2); // 7. t2 ← b3 · t2
     t2 = FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t2)); // 7. t2 ← b3 · t2
     // t2 = FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t2)); // 7. t2 ← b3 · t2
-    FF X3 = t2 * Z3;                                                                   // 8. X3 ← t2 · Z3
-    FF Y3 = t0 + t2;                                                                   // 9. Y3 ← t0 + t2
-    Z3 = t1 * Z3;                                                                      // 10. Z3 ← t1 · Z3
-    t1 = t2 + t2;                                                                      // 11. t1 ← t2 + t2
-    t2 = t1 + t2;                                                                      // 12. t2 ← t1 + t2
-    t0 = t0 - t2;                                                                      // 13. t0 ← t0 − t2
-    Y3 = t0 * Y3;                                                                      // 14. Y3 ← t0 · Y3
-    Y3 = X3 + Y3;                                                                      // 15. Y3 ← X3 + Y3
-    t1 = X * Y;                                                                        // 16. t1 ← X · Y
-    X3 = t0 * t1;                                                                      // 17. X3 ← t0 · t1
-    X3 = X3 + X3;                                                                      // 18. X3 ← X3 + X3
+    FF X3 = t2 * Z3; // 8. X3 ← t2 · Z3
+    FF Y3 = t0 + t2; // 9. Y3 ← t0 + t2
+    Z3 = t1 * Z3;    // 10. Z3 ← t1 · Z3
+    t1 = t2 + t2;    // 11. t1 ← t2 + t2
+    t2 = t1 + t2;    // 12. t2 ← t1 + t2
+    t0 = t0 - t2;    // 13. t0 ← t0 − t2
+    Y3 = t0 * Y3;    // 14. Y3 ← t0 · Y3
+    Y3 = X3 + Y3;    // 15. Y3 ← X3 + Y3
+    t1 = X * Y;      // 16. t1 ← X · Y
+    X3 = t0 * t1;    // 17. X3 ← t0 · t1
+    X3 = X3 + X3;    // 18. X3 ← X3 + X3
     return {X3, Y3, Z3};
   }
 
@@ -117,24 +117,22 @@ public:
     const FF t18 = t00 + t00; // t18 ← t00 + t00   < 2
     const FF t19 = t18 + t00; // t19 ← t18 + t00   < 2
     // const FF t20 = FF::template mul_const<Gen::weierstrass_3b>(t02); // t20 ← b3 · t02    < 2
-    const FF t20 =
-      FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t02)); // t20 ← b3 · t02    < 2
-      // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t02)); // t20 ← b3 · t02    < 2
-    const FF t21 = t01 + t20;                                                        // t21 ← t01 + t20   < 2
-    const FF t22 = t01 - t20;                                                        // t22 ← t01 − t20   < 2
+    const FF t20 = FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t02)); // t20 ← b3 · t02    < 2
+    // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t02)); // t20 ← b3 · t02    < 2
+    const FF t21 = t01 + t20; // t21 ← t01 + t20   < 2
+    const FF t22 = t01 - t20; // t22 ← t01 − t20   < 2
     // const FF t23 = FF::template mul_const<Gen::weierstrass_3b>(t17); // t23 ← b3 · t17    < 2
-    const FF t23 =
-      FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t17)); // t23 ← b3 · t17    < 2
-      // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t17)); // t23 ← b3 · t17    < 2
-    const auto t24 = FF::mul_wide(t12, t23);                                         // t24 ← t12 · t23   < 2
-    const auto t25 = FF::mul_wide(t07, t22);                                         // t25 ← t07 · t22   < 2
-    const FF X3 = FF::reduce(t25 - t24);                                             // X3 ← t25 − t24    < 2
-    const auto t27 = FF::mul_wide(t23, t19);                                         // t27 ← t23 · t19   < 2
-    const auto t28 = FF::mul_wide(t22, t21);                                         // t28 ← t22 · t21   < 2
-    const FF Y3 = FF::reduce(t28 + t27);                                             // Y3 ← t28 + t27    < 2
-    const auto t30 = FF::mul_wide(t19, t07);                                         // t30 ← t19 · t07   < 2
-    const auto t31 = FF::mul_wide(t21, t12);                                         // t31 ← t21 · t12   < 2
-    const FF Z3 = FF::reduce(t31 + t30);                                             // Z3 ← t31 + t30    < 2
+    const FF t23 = FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t17)); // t23 ← b3 · t17    < 2
+    // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t17)); // t23 ← b3 · t17    < 2
+    const auto t24 = FF::mul_wide(t12, t23); // t24 ← t12 · t23   < 2
+    const auto t25 = FF::mul_wide(t07, t22); // t25 ← t07 · t22   < 2
+    const FF X3 = FF::reduce(t25 - t24);     // X3 ← t25 − t24    < 2
+    const auto t27 = FF::mul_wide(t23, t19); // t27 ← t23 · t19   < 2
+    const auto t28 = FF::mul_wide(t22, t21); // t28 ← t22 · t21   < 2
+    const FF Y3 = FF::reduce(t28 + t27);     // Y3 ← t28 + t27    < 2
+    const auto t30 = FF::mul_wide(t19, t07); // t30 ← t19 · t07   < 2
+    const auto t31 = FF::mul_wide(t21, t12); // t31 ← t21 · t12   < 2
+    const FF Z3 = FF::reduce(t31 + t30);     // Z3 ← t31 + t30    < 2
     return {X3, Y3, Z3};
   }
 
@@ -168,24 +166,22 @@ public:
     const FF t18 = t00 + t00;      // t18 ← t00 + t00   < 2
     const FF t19 = t18 + t00;      // t19 ← t18 + t00   < 2
     // const FF t20 = FF::template mul_const<Gen::weierstrass_3b>(t02); // t20 ← b3 · t02    < 2
-    const FF t20 =
-      FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t02)); // t20 ← b3 · t02    < 2
-      // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t02)); // t20 ← b3 · t02    < 2
-    const FF t21 = t01 + t20;                                                        // t21 ← t01 + t20   < 2
-    const FF t22 = t01 - t20;                                                        // t22 ← t01 − t20   < 2
+    const FF t20 = FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t02)); // t20 ← b3 · t02    < 2
+    // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t02)); // t20 ← b3 · t02    < 2
+    const FF t21 = t01 + t20; // t21 ← t01 + t20   < 2
+    const FF t22 = t01 - t20; // t22 ← t01 − t20   < 2
     // const FF t23 = FF::template mul_const<Gen::weierstrass_3b>(t17); // t23 ← b3 · t17    < 2
-    const FF t23 =
-      FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t17)); // t23 ← b3 · t17    < 2
-      // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t17)); // t23 ← b3 · t17    < 2
-    const auto t24 = FF::mul_wide(t12, t23);                                         // t24 ← t12 · t23   < 2
-    const auto t25 = FF::mul_wide(t07, t22);                                         // t25 ← t07 · t22   < 2
-    const FF X3 = FF::reduce(t25 - t24);                                             // X3 ← t25 − t24    < 2
-    const auto t27 = FF::mul_wide(t23, t19);                                         // t27 ← t23 · t19   < 2
-    const auto t28 = FF::mul_wide(t22, t21);                                         // t28 ← t22 · t21   < 2
-    const FF Y3 = FF::reduce(t28 + t27);                                             // Y3 ← t28 + t27    < 2
-    const auto t30 = FF::mul_wide(t19, t07);                                         // t30 ← t19 · t07   < 2
-    const auto t31 = FF::mul_wide(t21, t12);                                         // t31 ← t21 · t12   < 2
-    const FF Z3 = FF::reduce(t31 + t30);                                             // Z3 ← t31 + t30    < 2
+    const FF t23 = FF::template mul_unsigned<3>(FF::template mul_weierstrass_b<Gen>(t17)); // t23 ← b3 · t17    < 2
+    // FF::template mul_unsigned<3>(FF::template mul_const<Gen::weierstrass_b>(t17)); // t23 ← b3 · t17    < 2
+    const auto t24 = FF::mul_wide(t12, t23); // t24 ← t12 · t23   < 2
+    const auto t25 = FF::mul_wide(t07, t22); // t25 ← t07 · t22   < 2
+    const FF X3 = FF::reduce(t25 - t24);     // X3 ← t25 − t24    < 2
+    const auto t27 = FF::mul_wide(t23, t19); // t27 ← t23 · t19   < 2
+    const auto t28 = FF::mul_wide(t22, t21); // t28 ← t22 · t21   < 2
+    const FF Y3 = FF::reduce(t28 + t27);     // Y3 ← t28 + t27    < 2
+    const auto t30 = FF::mul_wide(t19, t07); // t30 ← t19 · t07   < 2
+    const auto t31 = FF::mul_wide(t21, t12); // t31 ← t21 · t12   < 2
+    const FF Z3 = FF::reduce(t31 + t30);     // Z3 ← t31 + t30    < 2
     return {X3, Y3, Z3};
   }
 

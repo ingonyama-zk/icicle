@@ -548,7 +548,7 @@ public:
       r = mul_unsigned<Field{Gen::weierstrass_b}.limbs_storage.limbs[0], Field>(xs);
       if constexpr (Gen::is_b_neg)
         return neg(r);
-      else{
+      else {
         return r;
       }
     } else {

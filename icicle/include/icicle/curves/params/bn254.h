@@ -25,7 +25,7 @@ namespace bn254 {
     static constexpr point_field_t weierstrass_b = {0x00000003, 0x00000000, 0x00000000, 0x00000000,
                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr bool is_b_u32 = true;
-    static constexpr bool is_b_neg = false;                                                    
+    static constexpr bool is_b_neg = false;
   }; // G1
 
   struct G2 {
