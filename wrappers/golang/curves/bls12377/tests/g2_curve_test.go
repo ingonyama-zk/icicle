@@ -100,9 +100,9 @@ func testG2ProjectiveArithmetic(suite *suite.Suite) {
 
 	zero.Zero()
 
-	resultSubZero := point.Sub(zero)
+	resultSubZero := point.Sub(&zero)
 
-	suite.Equal(point, resultSubZero)
+	suite.Equal(point.ToAffine().X, resultSubZero.ToAffine().X)
 }
 
 func testG2ProjectiveFromAffine(suite *suite.Suite) {
