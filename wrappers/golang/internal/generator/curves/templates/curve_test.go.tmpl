@@ -86,6 +86,25 @@ func test{{.CurvePrefix}}ProjectiveFromLimbs(suite *suite.Suite) {
 	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
+func test{{.CurvePrefix}}ProjectiveArithmetic(suite *suite.Suite) {
+	randLimbs := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
+	randLimbs2 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
+	randLimbs3 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
+
+	var point {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}Projective
+	point.FromLimbs(randLimbs, randLimbs2, randLimbs3)
+
+	randLimbs = test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
+	var zero {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}Projective
+	zero.FromLimbs(randLimbs, randLimbs, randLimbs)
+
+	zero.Zero()
+
+	resultSubZero := point.Sub(zero)
+
+	suite.Equal(point, resultSubZero)
+}
+
 func test{{.CurvePrefix}}ProjectiveFromAffine(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
@@ -114,6 +133,7 @@ func (s *{{.CurvePrefix}}CurveTestSuite) Test{{.CurvePrefix}}Curve() {
 	s.Run("Test{{.CurvePrefix}}ProjectiveZero", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveZero))
 	s.Run("Test{{.CurvePrefix}}ProjectiveFromLimbs", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromLimbs))
 	s.Run("Test{{.CurvePrefix}}ProjectiveFromAffine", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveFromAffine))
+	s.Run("Test{{.CurvePrefix}}ProjectiveArithmetic", testWrapper(&s.Suite, test{{.CurvePrefix}}ProjectiveArithmetic))
 }
 
 func TestSuite{{.CurvePrefix}}Curve(t *testing.T) {

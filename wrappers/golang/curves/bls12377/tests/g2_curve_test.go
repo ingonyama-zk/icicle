@@ -86,6 +86,25 @@ func testG2ProjectiveFromLimbs(suite *suite.Suite) {
 	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
+func testG2ProjectiveArithmetic(suite *suite.Suite) {
+	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
+	randLimbs2 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
+	randLimbs3 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
+
+	var point g2.G2Projective
+	point.FromLimbs(randLimbs, randLimbs2, randLimbs3)
+
+	randLimbs = test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
+	var zero g2.G2Projective
+	zero.FromLimbs(randLimbs, randLimbs, randLimbs)
+
+	zero.Zero()
+
+	resultSubZero := point.Sub(zero)
+
+	suite.Equal(point, resultSubZero)
+}
+
 func testG2ProjectiveFromAffine(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(G2BASE_LIMBS))
@@ -114,6 +133,7 @@ func (s *G2CurveTestSuite) TestG2Curve() {
 	s.Run("TestG2ProjectiveZero", testWrapper(&s.Suite, testG2ProjectiveZero))
 	s.Run("TestG2ProjectiveFromLimbs", testWrapper(&s.Suite, testG2ProjectiveFromLimbs))
 	s.Run("TestG2ProjectiveFromAffine", testWrapper(&s.Suite, testG2ProjectiveFromAffine))
+	s.Run("TestG2ProjectiveArithmetic", testWrapper(&s.Suite, testG2ProjectiveArithmetic))
 }
 
 func TestSuiteG2Curve(t *testing.T) {
