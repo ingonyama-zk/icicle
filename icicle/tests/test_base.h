@@ -6,6 +6,9 @@
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
 
+#include "icicle/fields/field_config.h"
+using namespace field_config; // To have access to the Field rand-gen
+
 using FpMiliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg, enable)                                                                                  \
@@ -22,14 +25,15 @@ class IcicleTestBase : public ::testing::Test
 {
 public:
   static inline std::vector<std::string> s_registered_devices;
-  static inline std::string s_main_device = UNKOWN_DEVICE;
+  static inline std::string s_main_device = "CPU";
   static inline std::string s_ref_device = "CPU"; // assuming always present
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
-    auto seed = time(NULL);
+    unsigned seed = time(NULL);
     srand(seed);
     ICICLE_LOG_INFO << "Seed for tests is: " << seed;
+    scalar_t::seed_rand_generator(seed);
 #ifdef BACKEND_BUILD_DIR
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif

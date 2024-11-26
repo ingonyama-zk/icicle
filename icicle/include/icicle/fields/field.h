@@ -689,11 +689,18 @@ public:
     return rv;
   }
 
+  inline static std::mt19937 field_rand_generator = std::mt19937{};
+
+  static void seed_rand_generator(unsigned seed) { field_rand_generator.seed(seed); }
+
+  // NOTE this function is used for test and examples - it assumed it is executed on a single-thread (no two threads 
+  // accessing field_rand_generator at the same time)
   static HOST_INLINE Field rand_host()
   {
+    std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
-      value.limbs_storage.limbs[i] = rand();
+      value.limbs_storage.limbs[i] = distribution(field_rand_generator);
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
     return value;
