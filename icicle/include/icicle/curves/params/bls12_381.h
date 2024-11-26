@@ -50,6 +50,11 @@ namespace bls12_381 {
                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000};
 
+    static constexpr bool is_b_u32_g2_re = true;
+    static constexpr bool is_b_neg_g2_re = false;
+    static constexpr bool is_b_u32_g2_im = true;
+    static constexpr bool is_b_neg_g2_im = false;
+
     static constexpr g2_point_field_t gen_x = {g2_gen_x_re, g2_gen_x_im};
     static constexpr g2_point_field_t gen_y = {g2_gen_y_re, g2_gen_y_im};
     static constexpr g2_point_field_t weierstrass_b = {weierstrass_b_g2_re, weierstrass_b_g2_im};

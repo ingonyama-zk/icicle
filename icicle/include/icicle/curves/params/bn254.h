@@ -42,6 +42,16 @@ namespace bn254 {
     static constexpr point_field_t weierstrass_b_g2_im = {0x85c315d2, 0xe4a2bd06, 0xe52d1852, 0xa74fa084,
                                                           0xeed8fdf4, 0xcd2cafad, 0x3af0fed4, 0x009713b0};
 
+    static constexpr point_field_t weierstrass_b_mont_g2_re = {0x117071f8, 0xbb90ed1c, 0x7b5ec718, 0x14682c41,
+                                                               0xbb53b8dd, 0x3efe858b, 0xc92f89a9, 0x2edc811a};
+    static constexpr point_field_t weierstrass_b_mont_g2_im = {0xfbc67f71, 0x19ecc463, 0xee31876b, 0x01cadc30,
+                                                               0x6c5b4ca2, 0x1693ee7e, 0x4376a62a, 0x206e678f};
+
+    static constexpr bool is_b_u32_g2_re = false;
+    static constexpr bool is_b_neg_g2_re = false;
+    static constexpr bool is_b_u32_g2_im = false;
+    static constexpr bool is_b_neg_g2_im = false;
+
     static constexpr g2_point_field_t gen_x = {g2_gen_x_re, g2_gen_x_im};
     static constexpr g2_point_field_t gen_y = {g2_gen_y_re, g2_gen_y_im};
     static constexpr g2_point_field_t weierstrass_b = {weierstrass_b_g2_re, weierstrass_b_g2_im};

@@ -153,6 +153,60 @@ public:
     return !(xs == ys);
   }
 
+  template <typename Gen>
+  static HOST_DEVICE_INLINE FF mul_weierstrass_b_real(const FF& xs)
+  {
+    FF r = {};
+    if constexpr (Gen::is_b_u32_g2_re) {
+      r = FF::template mul_unsigned<FF{Gen::weierstrass_b_g2_re}.limbs_storage.limbs[0], FF>(xs);
+      if constexpr (Gen::is_b_neg_g2_re)
+        return FF::neg(r);
+      else {
+        return r;
+      }
+    } else {
+#ifdef BARRET
+      return FF{Gen::weierstrass_b_g2_re} * xs;
+#else
+      return FF{Gen::weierstrass_b_mont_g2_re} * xs;
+#endif
+    }
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE FF mul_weierstrass_b_imag(const FF& xs)
+  {
+    FF r = {};
+    if constexpr (Gen::is_b_u32_g2_im) {
+      r = FF::template mul_unsigned<FF{Gen::weierstrass_b_g2_im}.limbs_storage.limbs[0], FF>(xs);
+      if constexpr (Gen::is_b_neg_g2_im)
+        return FF::neg(r);
+      else {
+        return r;
+      }
+    } else {
+#ifdef BARRET
+      return FF{Gen::weierstrass_b_g2_im} * xs;
+#else
+      return FF{Gen::weierstrass_b_mont_g2_im} * xs;
+#endif
+    }
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE ComplexExtensionField mul_weierstrass_b(const ComplexExtensionField& xs)
+  {
+    const FF xs_real = xs.real;
+    const FF xs_imaginary = xs.imaginary;
+    FF real_prod = mul_weierstrass_b_real<Gen>(xs_real);
+    FF imaginary_prod = mul_weierstrass_b_imag<Gen>(xs_imaginary);
+    FF re_im = mul_weierstrass_b_real<Gen>(xs_imaginary);
+    FF im_re = mul_weierstrass_b_imag<Gen>(xs_real);
+    FF nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
+    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
+    return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
+  }
+
   template <const ComplexExtensionField& multiplier>
   static HOST_DEVICE_INLINE ComplexExtensionField mul_const(const ComplexExtensionField& xs)
   {
