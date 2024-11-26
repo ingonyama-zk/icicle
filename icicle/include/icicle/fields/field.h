@@ -165,6 +165,8 @@ public:
       Wide out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
@@ -176,6 +178,8 @@ public:
       Field out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
@@ -187,6 +191,8 @@ public:
       Field out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
@@ -568,6 +574,8 @@ public:
     bool is_zero = true;
 #ifdef __CUDA_ARCH__
     UNROLL
+#else
+  #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
       if (multiplier & (1 << i)) {
@@ -624,6 +632,8 @@ public:
     if constexpr (TLC > 1) {
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC - 1; i++) {
 #ifdef __CUDA_ARCH__
