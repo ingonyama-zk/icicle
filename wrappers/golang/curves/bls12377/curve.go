@@ -54,6 +54,30 @@ func (p Projective) ProjectiveEq(p2 *Projective) bool {
 	return __ret == (C._Bool)(true)
 }
 
+func (p Projective) Add(p2 Projective) Projective {
+	var res Projective
+
+	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.projective_t)(unsafe.Pointer(&p2))
+	cRes := (*C.projective_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_add(cP, cP2, cRes)
+
+	return res
+}
+
+func (p Projective) Sub(p2 Projective) Projective {
+	var res Projective
+
+	cP := (*C.projective_t)(unsafe.Pointer(&p))
+	cP2 := (*C.projective_t)(unsafe.Pointer(&p2))
+	cRes := (*C.projective_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_sub(cP, cP2, cRes)
+
+	return res
+}
+
 func (p *Projective) ToAffine() Affine {
 	var a Affine
 
