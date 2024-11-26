@@ -540,6 +540,26 @@ public:
     }
   }
 
+  template <typename Gen>
+  static HOST_DEVICE_INLINE Field mul_weierstrass_b(const Field& xs)
+  {
+    Field r = {};
+    if constexpr (Gen::is_b_u32) {
+      r = mul_unsigned<Field{Gen::weierstrass_b}.limbs_storage.limbs[0], Field>(xs);
+      if constexpr (Gen::is_b_neg)
+        return neg(r);
+      else{
+        return r;
+      }
+    } else {
+#ifdef BARRET
+      return Field{Gen::weierstrass_b} * xs;
+#else
+      return Field{Gen::weierstrass_b_mont} * xs;
+#endif
+    }
+  }
+
   template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T& xs)
   {

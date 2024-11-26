@@ -142,7 +142,8 @@ namespace params_gen {
   }
 } // namespace params_gen
 
-#define PARAMS(modulus)                                                                                                \
+//for large fields such as bw6_761 the montgomery inverse modulus is too much computation for a compile-time so this is a workaround:
+#define PARAMS_NO_MOD_INV(modulus)                                                                                 \
   static constexpr unsigned limbs_count = modulus.LC;                                                                  \
   static constexpr unsigned modulus_bit_count =                                                                        \
     32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;                                \
@@ -163,12 +164,13 @@ namespace params_gen {
     params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
   static constexpr storage<limbs_count> montgomery_r_sqr =                                                             \
     params_gen::template get_montgomery_constant_sqr<limbs_count, false>(modulus);                                     \
-  static constexpr storage<limbs_count> montgomery_r_inv =                                                             \
-    params_gen::template get_montgomery_constant<limbs_count, true>(modulus);                                          \
-  static constexpr storage<limbs_count> mont_inv_modulus =                                                             \
-    params_gen::template get_montgomery_mult_constant<limbs_count>(modulus);                                           \
   static constexpr unsigned num_of_reductions =                                                                        \
     params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
+
+#define PARAMS(modulus)                                                                                                \
+  PARAMS_NO_MOD_INV(modulus)                                                                                                \
+  static constexpr storage<limbs_count> mont_inv_modulus =                                                             \
+    params_gen::template get_montgomery_mult_constant<limbs_count>(modulus);                                           
 
 #define TWIDDLES(modulus)                                                                                              \
   static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \
