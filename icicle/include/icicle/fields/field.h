@@ -317,11 +317,7 @@ public:
       value.limbs_storage.limbs[i] = distribution(generator);
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
-#ifdef BARRET
     return value;
-#else
-    return to_montgomery(value);
-#endif
   }
 
   static void rand_host_many(Field* out, int size)
