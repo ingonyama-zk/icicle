@@ -33,8 +33,7 @@ namespace icicle {
 
 #define POSEIDON2_MAX_t 24
 
-  // static unsigned int poseidon2_legal_width[] = {2, 3, 4, 8, 12, 16, 20, 24};
-  static unsigned int poseidon2_legal_width[] = {3};
+  static unsigned int poseidon2_legal_width[] = {2, 3, 4, 8, 12, 16, 20, 24};
 
   static Poseidon2ConstantsOptions<scalar_t>
     poseidon2_constants[POSEIDON2_MAX_t + 1]; // The size of this array is POSEIDON2_MAX_t + 1 because Poseidon2 max t is 24. Only
@@ -51,7 +50,7 @@ namespace icicle {
     unsigned int full_rounds;
     unsigned int upper_full_rounds;
     unsigned int bottom_full_rounds;
-    const std::string* round_constants;
+    const std::string* rounds_constants;
     const std::string* mds_matrix;
     const std::string* partial_matrix_diagonal;
     const std::string* partial_matrix_diagonal_m1;
@@ -63,7 +62,7 @@ namespace icicle {
       switch (T) {
         case 2:
           alpha = alpha_2;
-          round_constants = round_constants_2;
+          rounds_constants = rounds_constants_2;
           mds_matrix = mds_matrix_2;
           partial_matrix_diagonal = partial_matrix_diagonal_2;
           partial_rounds = partial_rounds_2;
@@ -73,7 +72,7 @@ namespace icicle {
           break;
         case 3:
           alpha = alpha_3;   
-          round_constants = round_constants_3;
+          rounds_constants = rounds_constants_3;
           mds_matrix = mds_matrix_3;
           partial_matrix_diagonal = partial_matrix_diagonal_3;
           partial_rounds = partial_rounds_3;
@@ -83,7 +82,7 @@ namespace icicle {
           break;
         case 4:
           alpha = alpha_4;
-          round_constants = round_constants_4;
+          rounds_constants = rounds_constants_4;
           mds_matrix = mds_matrix_4;
           partial_matrix_diagonal = partial_matrix_diagonal_4;
           partial_rounds = partial_rounds_4;
@@ -93,7 +92,7 @@ namespace icicle {
           break;
         case 8:
           alpha = alpha_8;
-          round_constants = round_constants_8;
+          rounds_constants = rounds_constants_8;
           mds_matrix = mds_matrix_8;
           partial_matrix_diagonal = partial_matrix_diagonal_8;
           partial_rounds = partial_rounds_8;
@@ -103,7 +102,7 @@ namespace icicle {
           break;
         case 12:
           alpha = alpha_12;
-          round_constants = round_constants_12;
+          rounds_constants = rounds_constants_12;
           mds_matrix = mds_matrix_12;
           partial_matrix_diagonal = partial_matrix_diagonal_12;
           partial_rounds = partial_rounds_12;
@@ -113,7 +112,7 @@ namespace icicle {
           break;
         case 16:
           alpha = alpha_16;
-          round_constants = round_constants_16;
+          rounds_constants = rounds_constants_16;
           mds_matrix = mds_matrix_16;
           partial_matrix_diagonal = partial_matrix_diagonal_16;
           partial_rounds = partial_rounds_16;
@@ -123,7 +122,7 @@ namespace icicle {
           break;
         case 20:
           alpha = alpha_20;
-          round_constants = round_constants_20;
+          rounds_constants = rounds_constants_20;
           mds_matrix = mds_matrix_20;
           partial_matrix_diagonal = partial_matrix_diagonal_20;
           partial_rounds = partial_rounds_20;
@@ -133,7 +132,7 @@ namespace icicle {
           break;
         case 24:
           alpha = alpha_24;
-          round_constants = round_constants_24;
+          rounds_constants = rounds_constants_24;
           mds_matrix = mds_matrix_24;
           partial_matrix_diagonal = partial_matrix_diagonal_24;
           partial_rounds = partial_rounds_24;
@@ -149,9 +148,9 @@ namespace icicle {
         continue;
       }
 
-      auto h_round_constants = new scalar_t[full_rounds * T + partial_rounds];
+      scalar_t* h_rounds_constants = new scalar_t[full_rounds * T + partial_rounds];
       for (int i=0; i<(full_rounds * T + partial_rounds); i++) {
-        h_round_constants[i] = scalar_t::hex_str2scalar(round_constants[i]);
+        h_rounds_constants[i] = scalar_t::hex_str2scalar(rounds_constants[i]);
       }
 
       scalar_t* h_mds_matrix = new scalar_t[T * T];
@@ -171,9 +170,9 @@ namespace icicle {
       poseidon2_constants[T].nof_upper_full_rounds = upper_full_rounds;
       poseidon2_constants[T].nof_bottom_full_rounds = bottom_full_rounds;
       poseidon2_constants[T].nof_partial_rounds = partial_rounds;
-      poseidon2_constants[T].rounds_constants = h_round_constants;
+      poseidon2_constants[T].rounds_constants = h_rounds_constants;
       poseidon2_constants[T].mds_matrix = h_mds_matrix;
-      poseidon2_constants[T].partial_matrix_diagonal = h_partial_matrix_diagonal;
+      // poseidon2_constants[T].partial_matrix_diagonal = h_partial_matrix_diagonal;
       poseidon2_constants[T].partial_matrix_diagonal_m1 = h_partial_matrix_diagonal_m1;
     }   // for (int t_idx = 0; t_idx < std::size(poseidon2_legal_width); t_idx++) 
 
@@ -247,7 +246,7 @@ namespace icicle {
       // S* rounds_constants = poseidon2_constants[T].rounds_constants;
       S* rounds_constants = poseidon2_constants[T].rounds_constants;
       S* mds_matrix = poseidon2_constants[T].mds_matrix;
-      S* partial_matrix_diagonal = poseidon2_constants[T].partial_matrix_diagonal;
+      // S* partial_matrix_diagonal = poseidon2_constants[T].partial_matrix_diagonal;
       S* partial_matrix_diagonal_m1 = poseidon2_constants[T].partial_matrix_diagonal_m1;
       // Allocate temporary memory for intermediate calcs.
       S* tmp_fields = new S[T];
@@ -298,7 +297,7 @@ namespace icicle {
       // print_state("tmp_fields after bottom full rounds", tmp_fields);
 
       memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
-      std::cout << "singla hash output = " << std::hex << tmp_fields[1] << std::endl;
+      std::cout << "Single hash output = " << std::hex << tmp_fields[1] << std::endl;
 
       delete[] tmp_fields;
       tmp_fields = nullptr;

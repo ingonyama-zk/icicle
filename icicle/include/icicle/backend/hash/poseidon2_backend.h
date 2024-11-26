@@ -31,8 +31,8 @@ namespace icicle {
     S* rounds_constants; ///< Round constants (both of the full and the partial rounds). The order of the constants in
                          ///< the memory is according to the rounds order.
     S* mds_matrix;       ///> MDS matrix is used in the full rounds. The same matrix is used for all such rounds.
-    S* partial_matrix_diagonal;   ///< Partial matrix is used in the partial rounds. The same matrix is used for all such rounds.
-                                  ///< Only M[i,i] member are different from 1. These members are here.
+    // S* partial_matrix_diagonal;   ///< Partial matrix is used in the partial rounds. The same matrix is used for all such rounds.
+    //                               ///< Only M[i,i] member are different from 1. These members are here.
     S* partial_matrix_diagonal_m1;   ///< This partial matrix is used in the partial rounds instead of partial_matrix_diagonal 
                                   ///< (using this matrix improves the performance of the partial rounds). The same matrix
                                   ///< is used for all such rounds. Only M[i,i] member are different from 1. 
