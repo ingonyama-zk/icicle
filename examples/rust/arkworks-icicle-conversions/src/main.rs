@@ -2,14 +2,14 @@ use clap::Parser;
 use std::ops::Mul;
 use std::time::Instant;
 
-use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
+use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkJacobian};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::PrimeField;
 
 use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField as IcicleScalar};
 use icicle_core::{
     msm::{msm, MSMConfig},
-    traits::{FieldImpl, MontgomeryConvertible},
+    traits::FieldImpl,
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -58,7 +58,7 @@ fn incremental_ark_affine_points(size: usize) -> Vec<ArkAffine> {
         .collect()
 }
 
-fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
+fn incremental_ark_projective_points(size: usize) -> Vec<ArkJacobian> {
     (1..=size)
         .map(|i| ArkAffine::generator().mul(&Fr::from(i as u64)))
         .collect()
@@ -67,20 +67,26 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
 //============================================================================================//
 //========================= Convert single field element ark<->ICICLE ========================//
 //============================================================================================//
+
+// Since both arkworks and ICICLE use montgomery format, we simply copy the underlying data
+// Note: We can also transmute and avoid the copy entirely (unsafe)
+
 fn from_ark<T, I>(ark: &T) -> I
 where
     T: PrimeField,
     I: FieldImpl,
 {
-    let mut ark_bytes = Vec::with_capacity(T::BigInt::NUM_LIMBS * 8 * T::extension_degree() as usize);
-    for base_elem in ark.to_base_prime_field_elements() {
-        ark_bytes.extend_from_slice(
-            &base_elem
-                .into_bigint()
-                .to_bytes_le(),
-        );
-    }
-    I::from_bytes_le(&ark_bytes)
+    // Ensure the size of the output type matches the input representation
+    assert_eq!(
+        std::mem::size_of::<T>(),
+        std::mem::size_of::<I>(),
+        "Size mismatch between input and output types"
+    );
+
+    // Transmute the element and copy as is
+    let raw_bytes: &[u8] =
+        unsafe { std::slice::from_raw_parts(ark as *const T as *const u8, std::mem::size_of::<T>()) };
+    I::from_bytes_le(raw_bytes)
 }
 
 fn to_ark<T, I>(icicle: &I) -> T
@@ -88,7 +94,18 @@ where
     T: PrimeField,
     I: FieldImpl,
 {
-    T::from_random_bytes(&icicle.to_bytes_le()).unwrap()
+    unsafe {
+        // Ensure sizes match between `I` and `T`
+        assert_eq!(
+            std::mem::size_of::<I>(),
+            std::mem::size_of::<T>(),
+            "Size mismatch between source and target field elements"
+        );
+
+        // Transmute the element and copy as is
+        let raw_icicle_bytes = icicle as *const I as *const T;
+        std::ptr::read(raw_icicle_bytes)
+    }
 }
 
 //============================================================================================//
@@ -99,23 +116,20 @@ where
 fn transmute_ark_to_icicle_scalars<T, I>(ark_scalars: &mut [T]) -> &mut [I]
 where
     T: PrimeField,
-    I: FieldImpl + MontgomeryConvertible,
+    I: FieldImpl,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
+    // NOTE: both are assumed to be in Montgomery form
     let icicle_scalars = unsafe { &mut *(ark_scalars as *mut _ as *mut [I]) };
-
-    let icicle_host_slice = HostSlice::from_mut_slice(&mut icicle_scalars[..]);
-
-    // Convert from Montgomery representation using the Icicle type's conversion method
-    I::from_mont(icicle_host_slice, &IcicleStream::default());
-
     icicle_scalars
 }
+
+// Copying to device-memory since it is faster for ICICLE backend to access
 
 fn ark_to_icicle_scalars_async<T, I>(ark_scalars: &[T], stream: &IcicleStream) -> DeviceVec<I>
 where
     T: PrimeField,
-    I: FieldImpl + MontgomeryConvertible,
+    I: FieldImpl,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
     let icicle_scalars = unsafe { &*(ark_scalars as *const _ as *const [I]) };
@@ -128,17 +142,19 @@ where
         .copy_from_host_async(&icicle_host_slice, &stream)
         .unwrap();
 
-    // Convert from Montgomery representation using the Icicle type's conversion method
-    I::from_mont(&mut icicle_scalars, &stream);
     icicle_scalars
 }
 
 fn ark_to_icicle_scalars<T, I>(ark_scalars: &[T]) -> DeviceVec<I>
 where
     T: PrimeField,
-    I: FieldImpl + MontgomeryConvertible,
+    I: FieldImpl,
 {
-    ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default()) // default stream is sync
+    let icicle_scalars = ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default());
+    IcicleStream::default()
+        .synchronize()
+        .unwrap();
+    icicle_scalars
 }
 
 // Note that you can also do the following but it's slower and we prefer the result in device memory
@@ -169,7 +185,7 @@ fn ark_to_icicle_affine_points(ark_affine: &[ArkAffine]) -> Vec<IcicleAffine> {
         .collect()
 }
 
-fn ark_to_icicle_projective_points(ark_projective: &[ArkProjective]) -> Vec<IcicleProjective> {
+fn ark_to_icicle_projective_points(ark_projective: &[ArkJacobian]) -> Vec<IcicleProjective> {
     ark_projective
         .par_iter()
         .map(|ark| {
@@ -192,7 +208,7 @@ fn icicle_to_ark_affine_points(icicle_projective: &[IcicleAffine]) -> Vec<ArkAff
         .collect()
 }
 
-fn icicle_to_ark_projective_points(icicle_projective: &[IcicleProjective]) -> Vec<ArkProjective> {
+fn icicle_to_ark_projective_points(icicle_projective: &[IcicleProjective]) -> Vec<ArkJacobian> {
     icicle_projective
         .par_iter()
         .map(|icicle| {
@@ -203,7 +219,7 @@ fn icicle_to_ark_projective_points(icicle_projective: &[IcicleProjective]) -> Ve
             // conversion between projective used in icicle and Jacobian used in arkworks
             let proj_x = proj_x * proj_z;
             let proj_y = proj_y * proj_z * proj_z;
-            ArkProjective::new_unchecked(proj_x, proj_y, proj_z)
+            ArkJacobian::new_unchecked(proj_x, proj_y, proj_z)
         })
         .collect()
 }
@@ -217,7 +233,7 @@ fn main() {
         "Randomizing {} scalars, affine and ark projective (actually Jacobian) points",
         args.size
     );
-    let ark_scalars = random_ark_scalars(args.size);
+    let ark_scalars = random_ark_scalars::<Fr /*=scalar field*/>(args.size);
     let ark_projective_points = incremental_ark_projective_points(args.size);
     let ark_affine_points = incremental_ark_affine_points(args.size);
 
@@ -272,7 +288,7 @@ fn main() {
     //================================ Part 5: compute MSM  ======================================//
     //============================================================================================//
     let start = Instant::now();
-    let ark_msm_result = ArkProjective::msm(&ark_affine_points, &ark_scalars).unwrap();
+    let ark_msm_result = ArkJacobian::msm(&ark_affine_points, &ark_scalars).unwrap();
     let duration = start.elapsed();
     println!("Time taken for Ark MSM: {:?}", duration);
 
@@ -317,7 +333,7 @@ fn main() {
 
     let start = Instant::now();
     msm(
-        &icicle_scalars_dev,
+        &icicle_scalars_dev, // or HostSlice::from_slice(&_icicle_transumated_scalars)
         &d_icicle_affine_points,
         &MSMConfig::default(),
         HostSlice::from_mut_slice(&mut icicle_msm_result),
