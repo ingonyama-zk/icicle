@@ -693,7 +693,7 @@ public:
 
   static void seed_rand_generator(unsigned seed) { field_rand_generator.seed(seed); }
 
-  // NOTE this function is used for test and examples - it assumed it is executed on a single-thread (no two threads 
+  // NOTE this function is used for test and examples - it assumed it is executed on a single-thread (no two threads
   // accessing field_rand_generator at the same time)
   static HOST_INLINE Field rand_host()
   {
