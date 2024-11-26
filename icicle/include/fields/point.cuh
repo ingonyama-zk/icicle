@@ -205,4 +205,148 @@ namespace circle_math {
   //     return s_ext2_scalar_;
   //   }
   // };
+
+  template <typename CONFIG, class T>
+  class CircleCoset {
+  typedef CirclePoint<CONFIG, T> Point;
+  private:
+    CircleCoset(size_t index, Point point, size_t step_size, Point step_point, size_t log_size)
+          : initial_index(index), initial_point(point), step_size(step_size), step(step_point), log_size(log_size) {}
+  public:
+    size_t initial_index;
+    Point initial_point;
+    size_t step_size;
+    Point step;
+    size_t log_size;
+
+    CircleCoset(size_t initial_index, uint32_t log_size) {
+      assert(log_size <= CONFIG::modulus_bit_count);
+      this->initial_index = initial_index;
+      this->log_size = log_size;
+      this->step_size = 1 << (CONFIG::modulus_bit_count - log_size);
+      this->initial_point = Point::to_point(initial_index);
+      this->step = Point::to_point(step_size);
+    }
+
+    static CircleCoset coset_shifted(uint32_t log_shift, uint32_t log_size) {
+      return CircleCoset(1 << (CONFIG::modulus_bit_count - log_size - log_shift), log_size);
+    }
+
+    // Creates a coset of the form <G_n>.
+    static CircleCoset subgroup(uint32_t log_size) {
+      return CircleCoset(0, log_size);
+    }
+
+    // Creates a coset of the form G_2n + <G_n>.
+    static CircleCoset odds(uint32_t log_size) {
+      return coset_shifted(1, log_size); // log 2
+    }
+
+    // Creates a coset of the form G_4n + <G_n>.
+    static CircleCoset half_odds(uint32_t log_size) {
+      return coset_shifted(2, log_size); // log 4
+    }
+
+    size_t lg_size() const {
+      return this->log_size;
+    }
+
+    size_t size() const {
+      return 1 << this->lg_size();
+    }
+
+    CircleCoset dbl() const {
+      assert(this->log_size);
+      return CircleCoset{
+        this->initial_index * 2, 
+        this->initial_point.dbl(), 
+        this->step_size * 2, 
+        this->step.dbl(), 
+        this->log_size? this->log_size - 1 : 0 };
+    }
+
+    size_t index_at(size_t index) const {
+      return this->initial_index + ((this->step_size * index) & (CONFIG::modulus.limbs[0]));
+    }
+
+    Point at(size_t index) const {
+      return Point::to_point(this->index_at(index));
+    }
+
+    CircleCoset shift(size_t shift_size) const {
+      size_t initial_index = this->initial_index + shift_size;
+      return CircleCoset{
+        initial_index,
+        Point::to_point(initial_index),
+        this->step_size, 
+        this->step, 
+        this->log_size
+      };
+    }
+
+    CircleCoset conjugate() const {
+      size_t initial_index = ((CONFIG::modulus.limbs[0] + 1) - this->initial_index) & (CONFIG::modulus.limbs[0]);
+      size_t step_size = ((CONFIG::modulus.limbs[0] + 1) - this->step_size) & (CONFIG::modulus.limbs[0]);
+      return CircleCoset{
+        initial_index,
+        Point::to_point(initial_index),
+        step_size,
+        Point::to_point(step_size),
+        this->log_size
+      };
+    }
+
+    template <typename C, typename U>
+    friend std::ostream& operator<<(std::ostream& os, const CircleCoset<C, U>& coset) {
+        os << "CircleCoset { "
+          << "initial_index: " << coset.initial_index << ", "
+          << "initial_point: " << coset.initial_point << ", "
+          << "step_size: " << coset.step_size << ", "
+          << "step: " << coset.step << ", "
+          << "log_size: " << coset.log_size
+          << " }";
+        return os;
+    }
+  };
+  template <typename CONFIG, class T>
+  class CircleDomain {
+  public:
+    typedef CirclePoint<CONFIG, T> Point;
+    CircleCoset<CONFIG, T> coset;
+    // Constructors
+    // CircleDomain(size_t initial_index, uint32_t log_size)
+    //     : coset(initial_index, log_size) {}
+    CircleDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {}
+    CircleDomain<CONFIG, T>(uint32_t log_size) : coset(CircleCoset<CONFIG, T>::half_odds(log_size - 1)) {}
+
+    // Override log_size method
+    size_t lg_size() const {
+      return coset.lg_size() + 1;
+    }
+
+    // Forward other methods to coset
+    size_t size() const {
+      return 1 << this->lg_size();
+    }
+
+    size_t index_at(size_t index) const {
+      return coset.index_at(index);
+    }
+
+    Point at(size_t index) const {
+      return coset.at(index);
+    }
+
+    CircleDomain shift(size_t shift_size) const {
+      return CircleDomain(coset.shift(shift_size));
+    }
+
+    CircleDomain split(size_t log_parts, size_t* shifts) const {
+      CircleDomain<CONFIG, T> subdomain = CircleDomain<CONFIG, T>(CircleCoset<CONFIG, T>(coset.initial_index, coset.log_size - log_parts));
+      for (size_t i = 0; i < (1 << log_parts); ++i) {
+        shifts[i] = coset.step_size * i;
+      }
+      return subdomain;
+    }
+  };
 }
