@@ -114,6 +114,9 @@ pub trait FieldArithmetic<F: FieldImpl> {
     fn mul(first: F, second: F) -> F;
 }
 
+#[doc(hidden)]
+pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {}
+
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
     F: MontgomeryConvertibleField<Self>,
@@ -126,6 +129,8 @@ where
         F::from_mont(values, stream)
     }
 }
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F> where F: FieldArithmetic<Self> {}
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F>
 where
@@ -256,7 +261,7 @@ macro_rules! impl_scalar_field {
             fn mul(first: $field_name, second: $field_name) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
-                    $field_prefix_ident::sub(
+                    $field_prefix_ident::mul(
                         &first as *const $field_name,
                         &second as *const $field_name,
                         &mut result as *mut $field_name,

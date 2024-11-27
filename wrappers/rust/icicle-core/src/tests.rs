@@ -1,6 +1,6 @@
 use crate::{
     curve::{Affine, Curve, Projective},
-    field::Field,
+    field::{Arithmetic, Field},
     traits::{FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
@@ -14,18 +14,6 @@ pub fn check_field_equality<F: FieldImpl>() {
     assert_ne!(left, right);
     let left = F::from_bytes_le(&[1]);
     assert_eq!(left, right);
-}
-
-pub fn check_field_arithmetic<F>()
-where
-    F: FieldImpl + MontgomeryConvertible + std::ops::Add + std::ops::Sub + std::ops::Mul,
-    F::Config: GenerateRandom<F>,
-{
-    let scalars = F::Config::generate_random(2);
-
-    let _result = scalars[0] + scalars[1];
-    let _result = scalars[0] * scalars[1];
-    let _result = scalars[0] - scalars[1];
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
@@ -103,21 +91,25 @@ where
     assert_eq!(scalars_copy, scalars);
 }
 
-// pub fn check_field_arithmetic<F>()
-// where
-//     F: FieldImpl,
-//     F::Config: GenerateRandom<F>,
-// {
-//     let size = 1 << 10;
-//     let scalars_a = F::Config::generate_random(size);
-//     let scalars_b = F::Config::generate_random(size);
+pub fn check_field_arithmetic<F>()
+where
+    F: FieldImpl + Arithmetic,
+    F::Config: GenerateRandom<F>,
+{
+    let size = 1 << 10;
+    let scalars_a = F::Config::generate_random(size);
+    let scalars_b = F::Config::generate_random(size);
 
-//     for i in 0..size {
-//         let result1 = scalars_a[i] + scalars_b[i];
-//         let result2 = result1 - scalars_b[i];
-//         assert_eq!(result2, scalars_a[i]);
-//     }
-// }
+    for i in 0..size {
+        let result1 = scalars_a[i] + scalars_b[i];
+        let result2 = result1 - scalars_b[i];
+        assert_eq!(result2, scalars_a[i]);
+
+        let result1 = scalars_a[i] * scalars_b[i];
+        let result2 = scalars_b[i] * scalars_a[i];
+        assert_eq!(result2, result1);
+    }
+}
 
 pub fn check_points_convert_montgomery<C: Curve>()
 where
