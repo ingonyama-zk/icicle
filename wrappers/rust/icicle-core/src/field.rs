@@ -238,7 +238,7 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        impl FieldArithmetic<$field_name> for $field_cfg {
+        impl icicle_core::field::FieldArithmetic<$field_name> for $field_cfg {
             fn add(
                 first: $field_name,
                 second: $field_name,

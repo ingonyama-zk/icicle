@@ -18,13 +18,14 @@ pub fn check_field_equality<F: FieldImpl>() {
 
 pub fn check_field_arithmetic<F>()
 where
-    F: FieldImpl + MontgomeryConvertible + std::ops::Add,
+    F: FieldImpl + MontgomeryConvertible + std::ops::Add + std::ops::Sub + std::ops::Mul,
     F::Config: GenerateRandom<F>,
 {
     let scalars = F::Config::generate_random(2);
 
-    let result = scalars[0] + scalars[1];
-
+    let _result = scalars[0] + scalars[1];
+    let _result = scalars[0] * scalars[1];
+    let _result = scalars[0] - scalars[1];
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
@@ -102,9 +103,8 @@ where
     assert_eq!(scalars_copy, scalars);
 }
 
-
 // pub fn check_field_arithmetic<F>()
-// where 
+// where
 //     F: FieldImpl,
 //     F::Config: GenerateRandom<F>,
 // {
