@@ -33,6 +33,6 @@ pub trait MontgomeryConvertible: Sized {
 }
 
 pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {
-    fn square(self) -> Self;
+    fn sqr(self) -> Self;
     fn inv(self) -> Self;
 }
