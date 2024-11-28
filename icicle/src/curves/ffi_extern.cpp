@@ -15,12 +15,12 @@ extern "C" bool CONCAT_EXPAND(CURVE, eq)(projective_t* point1, projective_t* poi
            (point2->z == point_field_t::zero()));
 }
 
-extern "C" void CONCAT_EXPAND(CURVE, sub)(projective_t* point1, projective_t* point2, projective_t* result)
+extern "C" void CONCAT_EXPAND(CURVE, ecsub)(projective_t* point1, projective_t* point2, projective_t* result)
 {
   *result = *point1 - *point2;
 }
 
-extern "C" void CONCAT_EXPAND(CURVE, add)(projective_t* point1, projective_t* point2, projective_t* result)
+extern "C" void CONCAT_EXPAND(CURVE, ecadd)(projective_t* point1, projective_t* point2, projective_t* result)
 {
   *result = *point1 + *point2;
 }

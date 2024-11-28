@@ -227,13 +227,13 @@ macro_rules! impl_curve {
                 pub(crate) fn generate_projective_points(points: *mut $projective_type, size: usize);
                 #[link_name = concat!($curve_prefix, "_generate_affine_points")]
                 pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
-                #[link_name = concat!($curve_prefix, "_add")]
+                #[link_name = concat!($curve_prefix, "_ecadd")]
                 pub(crate) fn add(
                     point1: *const $projective_type,
                     point2: *const $projective_type, 
                     result: *mut $projective_type,
                 );
-                #[link_name = concat!($curve_prefix, "_sub")]
+                #[link_name = concat!($curve_prefix, "_ecsub")]
                 pub(crate) fn sub(
                     point1: *const $projective_type,
                     point2: *const $projective_type, 
@@ -401,7 +401,7 @@ macro_rules! impl_curve_tests {
 
             #[test]
             fn test_point_arithmetic() {
-                initialize();
+                // initialize(); TODO emir: no need for backend here right?
                 check_point_arithmetic::<$curve>();
             }
         }
