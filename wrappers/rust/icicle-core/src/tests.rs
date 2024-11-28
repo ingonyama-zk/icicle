@@ -26,8 +26,8 @@ where
     let scalars_b = F::Config::generate_random(size);
 
     for i in 0..size {
-        let result1 = scalars_a[i].add(scalars_b[i]);
-        let result2 = result1.sub(scalars_b[i]);
+        let result1 = scalars_a[i] + scalars_b[i];
+        let result2 = result1 - scalars_b[i];
         assert_eq!(result2, scalars_a[i]);
     }
 

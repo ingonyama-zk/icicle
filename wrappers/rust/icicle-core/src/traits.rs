@@ -2,6 +2,7 @@ use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
+use std::ops::{Add, Sub, Mul};
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {
@@ -31,10 +32,7 @@ pub trait MontgomeryConvertible: Sized {
     fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
 }
 
-pub trait Arithmetic: Sized {
-    fn add(self, other: Self) -> Self;
-    fn sub(self, other: Self) -> Self;
-    fn mul(self, other: Self) -> Self;
+pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> {
     fn square(self) -> Self;
     fn inv(self) -> Self;
 }
