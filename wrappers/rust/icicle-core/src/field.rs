@@ -5,6 +5,7 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
+use std::ops::{Add, Sub, Mul};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -115,6 +116,49 @@ pub trait FieldArithmetic<F: FieldImpl> {
     fn inv(first: F) -> F;
 }
 
+impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F> where F: FieldArithmetic<Self> {
+    fn square(self) -> Self {
+        F::square(self)
+    }
+
+    fn inv(self) -> Self {
+        F::inv(self)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn add(self, second: Self) -> Self {
+        F::add(self, second)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Sub for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn sub(self, second: Self) -> Self {
+        F::sub(self, second)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Mul for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn mul(self, second: Self) -> Self {
+        F::mul(self, second)
+    }
+}
+
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
     F: MontgomeryConvertibleField<Self>,
@@ -125,31 +169,6 @@ where
 
     fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
         F::from_mont(values, stream)
-    }
-}
-
-impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F>
-where
-    F: FieldArithmetic<Self>,
-{
-    fn add(self, other: Self) -> Self {
-        F::add(self, other)
-    }
-
-    fn sub(self, other: Self) -> Self {
-        F::sub(self, other)
-    }
-
-    fn mul(self, other: Self) -> Self {
-        F::mul(self, other)
-    }
-
-    fn square(self) -> Self {
-        F::square(self)
-    }
-
-    fn inv(self) -> Self {
-        F::inv(self)
     }
 }
 
