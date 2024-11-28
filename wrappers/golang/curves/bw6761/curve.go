@@ -61,7 +61,7 @@ func (p Projective) Add(p2 *Projective) Projective {
 	cP2 := (*C.projective_t)(unsafe.Pointer(p2))
 	cRes := (*C.projective_t)(unsafe.Pointer(&res))
 
-	C.bw6_761_add(cP, cP2, cRes)
+	C.bw6_761_ecadd(cP, cP2, cRes)
 
 	return res
 }
@@ -73,7 +73,7 @@ func (p Projective) Sub(p2 *Projective) Projective {
 	cP2 := (*C.projective_t)(unsafe.Pointer(p2))
 	cRes := (*C.projective_t)(unsafe.Pointer(&res))
 
-	C.bw6_761_sub(cP, cP2, cRes)
+	C.bw6_761_ecsub(cP, cP2, cRes)
 
 	return res
 }
