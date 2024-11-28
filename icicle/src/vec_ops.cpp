@@ -447,24 +447,24 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, slice)(input, offset, stride, size_in, size_out, &config, output);
   }
 
-  // Deprecated API
-  template <>
-  eIcicleError slice(
-    const scalar_t* input,
-    uint64_t offset,
-    uint64_t stride,
-    uint64_t size_out,
-    const VecOpsConfig& config,
-    scalar_t* output)
-  {
-    const auto size_in = offset + stride * (size_out - 1) + 1; // input should be at least that large
-    ICICLE_LOG_WARNING << "slice api is deprecated and replace with new api. Use new slice api instead";
-    if (config.batch_size != 1) {
-      ICICLE_LOG_ERROR << "deprecated slice API does not support batch";
-      return eIcicleError::INVALID_ARGUMENT;
-    }
-    return slice(input, offset, stride, size_in, size_out, config, output);
-  }
+  // // Deprecated API
+  // template <>
+  // eIcicleError slice(
+  //   const scalar_t* input,
+  //   uint64_t offset,
+  //   uint64_t stride,
+  //   uint64_t size_out,
+  //   const VecOpsConfig& config,
+  //   scalar_t* output)
+  // {
+  //   const auto size_in = offset + stride * (size_out - 1) + 1; // input should be at least that large
+  //   ICICLE_LOG_WARNING << "slice api is deprecated and replace with new api. Use new slice api instead";
+  //   if (config.batch_size != 1) {
+  //     ICICLE_LOG_ERROR << "deprecated slice API does not support batch";
+  //     return eIcicleError::INVALID_ARGUMENT;
+  //   }
+  //   return slice(input, offset, stride, size_in, size_out, config, output);
+  // }
 
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(ExtFieldSliceDispatcher, extension_slice, extFieldSliceOpImpl)
