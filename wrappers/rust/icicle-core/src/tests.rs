@@ -32,7 +32,7 @@ where
     }
 
     let scalar_a = scalars_a[0];
-    let square = scalar_a.square();
+    let square = scalar_a.sqr();
     let mul = scalar_a.mul(scalar_a);
 
     assert_eq!(square, mul);
@@ -59,17 +59,9 @@ pub fn check_point_arithmetic<C: Curve>() {
 
     for i in 0..size {
         let result1 = projective_points_a[i] + projective_points_b[i];
-        let result2 = result1 - projective_points_b[i]; //only X coordinate is correct Y and Z are zero
+        let result2 = result1 - projective_points_b[i];
         assert_eq!(result2, projective_points_a[i]);
     }
-
-    // let point = projective_points_a[0];
-    // let scalar = FieldImpl::from_u32(3);
-
-    // let mul = point * scalar;
-    // let add = point + point + point;
-    
-    // assert_eq!(mul, point);
 }
 
 pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()

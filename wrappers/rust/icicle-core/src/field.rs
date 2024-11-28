@@ -112,13 +112,13 @@ pub trait FieldArithmetic<F: FieldImpl> {
     fn add(first: F, second: F) -> F;
     fn sub(first: F, second: F) -> F;
     fn mul(first: F, second: F) -> F;
-    fn square(first: F) -> F;
+    fn sqr(first: F) -> F;
     fn inv(first: F) -> F;
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F> where F: FieldArithmetic<Self> {
-    fn square(self) -> Self {
-        F::square(self)
+    fn sqr(self) -> Self {
+        F::sqr(self)
     }
 
     fn inv(self) -> Self {
@@ -299,7 +299,7 @@ macro_rules! impl_scalar_field {
                 result
             }
 
-            fn square(
+            fn sqr(
                 first: $field_name,
             ) -> $field_name {
                 let mut result = $field_name::zero();
