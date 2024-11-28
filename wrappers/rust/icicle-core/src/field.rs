@@ -238,6 +238,12 @@ macro_rules! impl_scalar_field {
                     b: *const $field_name,
                     result: *mut $field_name,
                 );
+
+                #[link_name = concat!($field_prefix, "_inv")]
+                pub(crate) fn inv(
+                    a: *const $field_name,
+                    result: *mut $field_name,
+                );
             }
 
             pub(crate) fn convert_scalars_montgomery(
@@ -314,14 +320,12 @@ macro_rules! impl_scalar_field {
                 result
             }
 
-            //TODO: emirsoyturk
             fn inv(
                 first: $field_name,
             ) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
-                    $field_prefix_ident::mul(
-                        &first as *const $field_name,
+                    $field_prefix_ident::inv(
                         &first as *const $field_name,
                         &mut result as *mut $field_name,
                     );

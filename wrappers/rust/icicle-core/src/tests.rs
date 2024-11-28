@@ -36,6 +36,10 @@ where
     let mul = scalar_a.mul(scalar_a);
 
     assert_eq!(square, mul);
+
+    let inv = scalar_a.inv();
+    let one = scalar_a.mul(inv);
+    assert_eq!(one, F::one());
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
