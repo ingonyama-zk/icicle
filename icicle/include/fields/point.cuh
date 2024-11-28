@@ -100,22 +100,11 @@ namespace circle_math {
     {
       CirclePoint res = zero();
       CirclePoint cur = base;
-#ifndef __CUDA_ARCH__
-      std::cout << "------function_start------\nres: " << res << std::endl;
-      std::cout << "cur: " << cur << std::endl;
-#endif
       while (scalar > 0) {
         if (scalar & 1) {
           res = res + cur;
-#ifndef __CUDA_ARCH__
-          std::cout << "scal pass\n";
-#endif
         }
         cur = cur.dbl();
-#ifndef __CUDA_ARCH__
-        std::cout << scalar << "\nres: " << res << std::endl;
-        std::cout << "cur: " << cur << std::endl;
-#endif
         scalar >>= 1;
       }
       return res;
