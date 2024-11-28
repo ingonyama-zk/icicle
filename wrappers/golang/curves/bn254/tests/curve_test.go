@@ -95,14 +95,16 @@ func testProjectiveArithmetic(suite *suite.Suite) {
 	point.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
 	randLimbs = test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
-	var zero bn254.Projective
-	zero.FromLimbs(randLimbs, randLimbs, randLimbs)
+	randLimbs2 = test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
+	randLimbs3 = test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 
-	zero.Zero()
+	var point2 bn254.Projective
+	point2.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
-	resultSubZero := point.Sub(&zero)
+	add := point.Add(&point2)
+	sub := add.Sub(&point2)
 
-	suite.Equal(point.ToAffine().X, resultSubZero.ToAffine().X)
+	suite.Equal(sub.X, point.X)
 }
 
 func testProjectiveFromAffine(suite *suite.Suite) {

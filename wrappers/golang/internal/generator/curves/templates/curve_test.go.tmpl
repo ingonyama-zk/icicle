@@ -95,14 +95,16 @@ func test{{.CurvePrefix}}ProjectiveArithmetic(suite *suite.Suite) {
 	point.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
 	randLimbs = test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
-	var zero {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}Projective
-	zero.FromLimbs(randLimbs, randLimbs, randLimbs)
+	randLimbs2 = test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
+	randLimbs3 = test_helpers.GenerateRandomLimb(int({{.CurvePrefix}}BASE_LIMBS))
 
-	zero.Zero()
+	var point2 {{if eq .CurvePrefix "G2"}}g2{{else}}{{.Curve}}{{end}}.{{.CurvePrefix}}Projective
+	point2.FromLimbs(randLimbs, randLimbs2, randLimbs3)
 
-	resultSubZero := point.Sub(&zero)
+	add := point.Add(&point2)
+	sub := add.Sub(&point2)
 
-	suite.Equal(point.ToAffine().X, resultSubZero.ToAffine().X)
+	suite.Equal(sub.X, point.X)
 }
 
 func test{{.CurvePrefix}}ProjectiveFromAffine(suite *suite.Suite) {
