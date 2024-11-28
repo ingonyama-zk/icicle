@@ -11,6 +11,7 @@ POSEIDON=ON
 CUDA_COMPILER_PATH=/usr/local/cuda/bin/nvcc
 
 DEVMODE=OFF
+INSTALL=OFF
 BUILD_CURVES=( )
 BUILD_FIELDS=( )
 
@@ -53,6 +54,10 @@ if [[ $1 == "-help" ]]; then
   echo "                            Default: \"OFF\""
   echo ""
   echo "  -cuda_version=<version>   Specifies the version of CUDA to use for compilation."
+  echo ""
+  echo "  -install=<path/to/install> Specify the path for the output icicle libraries installation to path/to/install/lib location"
+  echo "                             Default is OFF, libraries will be under build/ directory"
+  echo "                             usage of -install with no path defaults to /usr/local/lib"
   echo ""
   exit 0
 fi
@@ -107,6 +112,14 @@ do
         -skip_fieldext)
             EXT_FIELD=OFF
             ;;
+        -install=*)
+            if [[$(echo "$arg" | cut -d'=' -f2)]]
+            then 
+                CMAKE_INSTALL_PREFIX=$(echo "$arg" | cut -d'=' -f2)
+            else
+                CMAKE_INSTALL_PREFIX="/usr/local"
+            INSTALL=ON
+            ;;
         *)
             echo "Unknown argument: $arg"
             exit 1
@@ -127,7 +140,11 @@ do
   echo "G2=${G2_DEFINED}" >> build_config.txt
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DCURVE=$CURVE -DMSM=$MSM_DEFINED -DNTT=$NTT_DEFINED -DG2=$G2_DEFINED -DECNTT=$ECNTT_DEFINED -DPOSEIDON=$POSEIDON -DHASH=$POSEIDON -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build --target install -j8 && rm build_config.txt
+  if [ "$INSTALL" == "ON" ]; then
+    cmake --build build --target install -j8 && rm build_config.txt
+  else
+    cmake --build build -j8 && rm build_config.txt
+  fi
   rm -f "$BUILD_DIR/CMakeCache.txt"
 done
 
@@ -142,11 +159,19 @@ do
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   echo "EXT_FIELD=${EXT_FIELD}" >> build_config.txt
   cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DFIELD=$FIELD -DNTT=$NTT_DEFINED -DEXT_FIELD=$EXT_FIELD -DPOSEIDON=$POSEIDON -DHASH=$POSEIDON -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build --target install -j8 && rm build_config.txt
+  if [ "$INSTALL" == "ON" ]; then
+    cmake --build build --target install -j8 && rm build_config.txt
+  else
+    cmake --build build -j8 && rm build_config.txt
+  fi
 done
 
 if [[ $HASH == "ON" ]]; then
   echo "DEVMODE=${DEVMODE}" >> build_config.txt
   cmake -DCMAKE_CUDA_COMPILER=$CUDA_COMPILER_PATH -DCUDA_BACKEND=$CUDA_BACKEND -DHASH=$HASH -DCMAKE_BUILD_TYPE=Release -S . -B build
-  cmake --build build --target install -j8 && rm build_config.txt
+  if [ "$INSTALL" == "ON" ]; then
+    cmake --build build --target install -j8 && rm build_config.txt
+  else
+    cmake --build build -j8 && rm build_config.txt
+  fi
 fi
