@@ -30,3 +30,11 @@ pub trait MontgomeryConvertible: Sized {
     fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
     fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError;
 }
+
+pub trait Arithmetic: Sized {
+    fn add(self, other: Self) -> Self;
+    fn sub(self, other: Self) -> Self;
+    fn mul(self, other: Self) -> Self;
+    fn square(self) -> Self;
+    fn inv(self) -> Self;
+}

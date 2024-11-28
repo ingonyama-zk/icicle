@@ -1,7 +1,7 @@
 use crate::traits::{FieldImpl, MontgomeryConvertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul};
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
     type BaseField: FieldImpl;
@@ -38,6 +38,11 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     fn sub(
         point1: Projective<Self>,
         point2: Projective<Self>,
+    ) -> Projective<Self>;
+    #[doc(hidden)]
+    fn mul_scalar(
+        point1: Projective<Self>,
+        point2: Self::ScalarField,
     ) -> Projective<Self>;
 }
 
@@ -185,6 +190,14 @@ impl<C: Curve> Sub for Projective<C> {
     }
 }
 
+impl<C: Curve> Mul<<C as Curve>::ScalarField> for Projective<C> {
+    type Output = Self;
+
+    fn mul(self, other: <C as Curve>::ScalarField) -> Self {
+        C::mul_scalar(self, other)
+    }
+}
+
 #[macro_export]
 macro_rules! impl_curve {
     (
@@ -203,7 +216,7 @@ macro_rules! impl_curve {
         pub type $projective_type = Projective<$curve>;
 
         mod $curve_prefix_ident {
-            use super::{eIcicleError, $affine_type, $projective_type, IcicleStream, VecOpsConfig};
+            use super::{eIcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_eq")]
@@ -224,6 +237,12 @@ macro_rules! impl_curve {
                 pub(crate) fn sub(
                     point1: *const $projective_type,
                     point2: *const $projective_type, 
+                    result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_mul_scalar")]
+                pub(crate) fn mul_scalar(
+                    point1: *const $projective_type,
+                    point2: *const $scalar_field, 
                     result: *mut $projective_type,
                 );
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
@@ -278,6 +297,20 @@ macro_rules! impl_curve {
                     $curve_prefix_ident::sub(
                         &point1 as *const $projective_type,
                         &point2 as *const $projective_type,
+                        &mut result as *mut _ as *mut $projective_type
+                    );
+                };
+
+                result
+            }
+
+            fn mul_scalar(point1: $projective_type, point2: $scalar_field) -> $projective_type {
+                let mut result = $projective_type::zero();
+
+                unsafe {
+                    $curve_prefix_ident::mul_scalar(
+                        &point1 as *const $projective_type,
+                        &point2 as *const $scalar_field,
                         &mut result as *mut _ as *mut $projective_type
                     );
                 };

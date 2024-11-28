@@ -1,7 +1,7 @@
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
-    traits::{FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+    traits::{FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible, Arithmetic},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -18,13 +18,24 @@ pub fn check_field_equality<F: FieldImpl>() {
 
 pub fn check_field_arithmetic<F>()
 where
-    F: FieldImpl + MontgomeryConvertible + std::ops::Add,
+    F: FieldImpl + Arithmetic,
     F::Config: GenerateRandom<F>,
 {
-    let scalars = F::Config::generate_random(2);
+    let size = 1 << 10;
+    let scalars_a = F::Config::generate_random(size);
+    let scalars_b = F::Config::generate_random(size);
 
-    let result = scalars[0] + scalars[1];
+    for i in 0..size {
+        let result1 = scalars_a[i].add(scalars_b[i]);
+        let result2 = result1.sub(scalars_b[i]);
+        assert_eq!(result2, scalars_a[i]);
+    }
 
+    let scalar_a = scalars_a[0];
+    let square = scalar_a.square();
+    let mul = scalar_a.mul(scalar_a);
+
+    assert_eq!(square, mul);
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
@@ -48,9 +59,17 @@ pub fn check_point_arithmetic<C: Curve>() {
 
     for i in 0..size {
         let result1 = projective_points_a[i] + projective_points_b[i];
-        let result2 = result1 - projective_points_b[i];
+        let result2 = result1 - projective_points_b[i]; //only X coordinate is correct Y and Z are zero
         assert_eq!(result2, projective_points_a[i]);
     }
+
+    // let point = projective_points_a[0];
+    // let scalar = FieldImpl::from_u32(3);
+
+    // let mul = point * scalar;
+    // let add = point + point + point;
+    
+    // assert_eq!(mul, point);
 }
 
 pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
