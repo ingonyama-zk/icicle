@@ -28,4 +28,19 @@ extern "C" void CONCAT_EXPAND(FIELD, extension_generate_scalars)(extension_t* sc
 {
   extension_t::rand_host_many(scalars, size);
 }
+
+extern "C" void CONCAT_EXPAND(FIELD, sub)(extension_t* scalar1, extension_t* scalar2, extension_t* result)
+{
+  *result = *scalar1 - *scalar2;
+}
+
+extern "C" void CONCAT_EXPAND(FIELD, add)(extension_t* scalar1, extension_t* scalar2, extension_t* result)
+{
+  *result = *scalar1 + *scalar2;
+}
+
+extern "C" void CONCAT_EXPAND(FIELD, mul)(extension_t* scalar1, extension_t* scalar2, extension_t* result)
+{
+  *result = *scalar1 * *scalar2;
+}
 #endif // EXT_FIELD

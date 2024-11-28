@@ -1,11 +1,10 @@
-use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
+use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible, Arithmetic};
 use hex::FromHex;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
-use std::ops::{Add, Sub, Mul};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -112,6 +111,8 @@ pub trait FieldArithmetic<F: FieldImpl> {
     fn add(first: F, second: F) -> F;
     fn sub(first: F, second: F) -> F;
     fn mul(first: F, second: F) -> F;
+    fn square(first: F) -> F;
+    fn inv(first: F) -> F;
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
@@ -127,36 +128,28 @@ where
     }
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F>
+impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F>
 where
     F: FieldArithmetic<Self>,
 {
-    type Output = Self;
-
-    fn add(self, second: Self) -> Self {
-        F::add(self, second)
+    fn add(self, other: Self) -> Self {
+        F::add(self, other)
     }
-}
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Sub for Field<NUM_LIMBS, F>
-where
-    F: FieldArithmetic<Self>,
-{
-    type Output = Self;
-
-    fn sub(self, second: Self) -> Self {
-        F::sub(self, second)
+    fn sub(self, other: Self) -> Self {
+        F::sub(self, other)
     }
-}
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Mul for Field<NUM_LIMBS, F>
-where
-    F: FieldArithmetic<Self>,
-{
-    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+        F::mul(self, other)
+    }
 
-    fn mul(self, second: Self) -> Self {
-        F::mul(self, second)
+    fn square(self) -> Self {
+        F::square(self)
+    }
+
+    fn inv(self) -> Self {
+        F::inv(self)
     }
 }
 
@@ -238,7 +231,7 @@ macro_rules! impl_scalar_field {
             }
         }
 
-        impl FieldArithmetic<$field_name> for $field_cfg {
+        impl icicle_core::field::FieldArithmetic<$field_name> for $field_cfg {
             fn add(
                 first: $field_name,
                 second: $field_name,
@@ -277,9 +270,40 @@ macro_rules! impl_scalar_field {
             ) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
-                    $field_prefix_ident::sub(
+                    $field_prefix_ident::mul(
                         &first as *const $field_name,
                         &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn square(
+                first: $field_name,
+            ) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::mul(
+                        &first as *const $field_name,
+                        &first as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            //TODO: emirsoyturk
+            fn inv(
+                first: $field_name,
+            ) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::mul(
+                        &first as *const $field_name,
+                        &first as *const $field_name,
                         &mut result as *mut $field_name,
                     );
                 }

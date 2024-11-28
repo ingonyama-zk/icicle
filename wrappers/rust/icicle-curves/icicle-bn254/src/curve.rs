@@ -1,11 +1,10 @@
 use icicle_core::{
     curve::{Affine, Curve, Projective},
-    field::{Field, MontgomeryConvertibleField, FieldArithmetic},
+    field::{Field, MontgomeryConvertibleField},
     impl_curve, impl_field, impl_scalar_field,
     traits::{FieldConfig, FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
-use std::ops::Add;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
