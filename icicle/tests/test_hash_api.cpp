@@ -748,15 +748,16 @@ TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
 {
   const unsigned t = 3;
   auto config = default_hash_config();
+  config.batch = 1;
+  // config.batch = 2;    // DEBUG
 
   auto input = std::make_unique<scalar_t[]>(t);
   scalar_t::rand_host_many(input.get(), t);
-    // DEBUG
+  // DEBUG
   input[0] = scalar_t::from(0);
   input[1] = scalar_t::from(1);
   input[2] = scalar_t::from(2);
   // DEBUG
-  config.batch = 1;
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
