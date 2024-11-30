@@ -141,7 +141,7 @@ namespace icicle {
           bottom_full_rounds = half_full_rounds_24;
           break;
         default:
-          ICICLE_LOG_ERROR << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]";
+          ICICLE_LOG_ERROR << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]\n";
           return eIcicleError::INVALID_ARGUMENT;
       }   // switch (T) {
       if (full_rounds == 0 && partial_rounds == 0) {    // All arrays are empty in this case.
@@ -196,6 +196,7 @@ namespace icicle {
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
       std::cout << "Run hash" << std::endl;
+      std::cout << "Run CPU hash: size = " << size << std::endl;
       unsigned int arity = m_use_domain_tag ? m_t - 1 : m_t;
 
       // Currently sponge and padding functionalities are not supported.
@@ -204,10 +205,11 @@ namespace icicle {
           << "Sponge function still isn't supported. The following should be true: (size == T) but it is not.\n";
         return eIcicleError::INVALID_ARGUMENT;
       }
-
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
-        hash_single(input, output);
+        eIcicleError err = hash_single(input, output);
+        if (err != eIcicleError::SUCCESS)
+          return err;
         input += arity * sizeof(S);
         output += sizeof(S);
       }
@@ -238,6 +240,11 @@ namespace icicle {
     {
       std::cout << "Run hash_single" << std::endl;
       const unsigned int T = m_t;
+      bool is_unsupported_T_for_this_field = poseidon2_constants[T].nof_upper_full_rounds == 0;
+      if (is_unsupported_T_for_this_field) {
+        ICICLE_LOG_ERROR << "Unsupported hash width (" << T << ") for this field!\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
 
       unsigned int alpha = poseidon2_constants[T].alpha;
       unsigned int nof_upper_full_rounds = poseidon2_constants[T].nof_upper_full_rounds;
@@ -267,7 +274,7 @@ namespace icicle {
       // print_matrix("MDS matrix", mds_matrix);
       // print_state("tmp_fields before pre-round", tmp_fields);
       full_matrix_mul_by_vector(tmp_fields, mds_matrix, tmp_fields);
-      // print_state("tmp_fields after pre-round", tmp_fields);
+      print_state("poseidon2: cpu: hash_single: tmp_fields after pre-round", tmp_fields);
 
       // Upper full rounds.
       full_rounds(nof_upper_full_rounds, tmp_fields, rounds_constants);
@@ -286,7 +293,6 @@ namespace icicle {
         tmp_fields[0] = S::pow(tmp_fields[0], alpha);
         // print_state("tmp_fields after S-box: ", tmp_fields);
         // Multiplication by partial (sparse) matrix.
-        // partial_matrix_diagonal_mul_by_vector(tmp_fields, partial_matrix_diagonal, tmp_fields);
         partial_matrix_diagonal_m1_mul_by_vector(tmp_fields, partial_matrix_diagonal_m1, tmp_fields);
         // print_state("tmp_fields after partial matrix", tmp_fields);
       }
@@ -297,7 +303,7 @@ namespace icicle {
       // print_state("tmp_fields after bottom full rounds", tmp_fields);
 
       memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
-      std::cout << "Single hash output = " << std::hex << tmp_fields[1] << std::endl;
+      std::cout << "Single hash output (cpu) = " << std::hex << tmp_fields[1] << std::endl;
 
       delete[] tmp_fields;
       tmp_fields = nullptr;
@@ -306,6 +312,8 @@ namespace icicle {
     }   // eIcicleError hash_single(const std::byte* input, std::byte* output) const
 
     // This function performs a partial_matrix_diagonal_m1 matrix by vector multiplication.
+    // Note that in order to increase the performance the partial matrix diagonal values
+    // are actually partial matrix diagonal values minus 1.
     void partial_matrix_diagonal_m1_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
     {
       unsigned int T = m_t;
@@ -320,29 +328,26 @@ namespace icicle {
                                                       // actually the same storage when calling to the function.
         result[col_idx] = tmp_col_res[col_idx];
       }
-    }
-
-    // This function performs a partial_matrix_diagonal_m1 matrix by vector multiplication.
-    // Note that in order to increase the performance the partial matrix diagonal values
-    // are actually partial matrix diagonal values minus 1.
-    void partial_matrix_diagonal_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
-    {
-      unsigned int T = m_t;
-      S tmp_col_res[T]; // Have to use temp storage because vec_in and result are the same storage.
-      // Sum all inputs.
-      S vec_in_sum = vec_in[0];
-      for (int vec_in_idx = 1; vec_in_idx < T; vec_in_idx++)
-        vec_in_sum = vec_in_sum + vec_in[vec_in_idx];
-      for (int col_idx = 0; col_idx < T; col_idx++)
-        tmp_col_res[col_idx] = vec_in_sum + matrix_in[col_idx] * vec_in[col_idx];
-      for (int col_idx = 0; col_idx < T; col_idx++) {
-        tmp_col_res[col_idx] = tmp_col_res[col_idx] - vec_in[col_idx];
-      }
-      for (int col_idx = 0; col_idx < T; col_idx++) { // This copy is needed because vec_in and result storages are
-                                                      // actually the same storage when calling to the function.
-        result[col_idx] = tmp_col_res[col_idx];
-      }
-    }
+    }   // void partial_matrix_diagonal_m1_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
+    // void partial_matrix_diagonal_m1_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
+    // {
+    //   unsigned int T = m_t;
+    //   typename S::Wide tmp_col_res[T]; // Have to use temp storage because vec_in and result are the same storage.
+    //   // Sum all inputs.
+    //   S vec_in_sum = vec_in[0];
+    //   UNROLL
+    //   for (int vec_in_idx = 1; vec_in_idx < T; vec_in_idx++)
+    //     vec_in_sum = vec_in_sum + vec_in[vec_in_idx];
+    //   typename S::Wide vec_in_sum_wide = S::Wide::from_field(vec_in_sum);
+    //   UNROLL
+    //   for (int col_idx = 0; col_idx < T; col_idx++)
+    //     tmp_col_res[col_idx] = vec_in_sum_wide + S::mul_wide(matrix_in[col_idx], vec_in[col_idx]);
+    //   UNROLL
+    //   for (int col_idx = 0; col_idx < T; col_idx++) { // This copy is needed because vec_in and result storages are
+    //                                                   // actually the same storage when calling to the function.
+    //     result[col_idx] = S::reduce(tmp_col_res[col_idx]);
+    //   }
+    // }    // void partial_matrix_diagonal_m1_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
 
     // This function performs a full matrix by vector multiplication.
     void full_matrix_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
@@ -360,6 +365,24 @@ namespace icicle {
         result[col_idx] = tmp_col_res[col_idx];
       }
     }   // eIcicleError hash_single(const std::byte* input, std::byte* output) const
+    // void full_matrix_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
+    // {
+    //   unsigned int T = m_t;
+    //   typename S::Wide tmp_col_res[T]; // Have to use temp storage because vec_in and result are the same storage.
+    //   UNROLL
+    //   for (int row_idx = 0; row_idx < T; row_idx++) { // Rows of matrix.
+    //     tmp_col_res[row_idx] = S::mul_wide(matrix_in[row_idx * T], vec_in[0]);
+    //     UNROLL
+    //     for (int col_idx = 1; col_idx < T; col_idx++) { // Columns of matrix.
+    //       tmp_col_res[row_idx] = tmp_col_res[row_idx] + S::mul_wide(matrix_in[row_idx * T + col_idx], vec_in[col_idx]);
+    //     }
+    //   }
+    //   UNROLL
+    //   for (int col_idx = 0; col_idx < T; col_idx++) { // This copy is needed because vec_in and result storages are
+    //                                                   // actually the same storage when calling to the function.
+    //     result[col_idx] = S::reduce(tmp_col_res[col_idx]);
+    //   }
+    // }   // eIcicleError hash_single(const std::byte* input, std::byte* output) const
 
     // This function performs a needed number of full rounds calculations.
     void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
@@ -368,21 +391,20 @@ namespace icicle {
       unsigned int alpha = poseidon2_constants[T].alpha;
       S* mds_matrix = poseidon2_constants[T].mds_matrix;
       for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds; full_rounds_idx++) {
-        // std::cout << "Full round " << full_rounds_idx << std::endl;
-        // print_state("   Round constants:", rounds_constants);
+        print_state("poseidon2: cpu: hash_single: full_rounds: rounds_constants = ", rounds_constants);
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // Add round constants
           in_out_fields[state_idx] = in_out_fields[state_idx] + *rounds_constants++;
         }
-        // print_state("   Add constants result:", in_out_fields);
+        print_state("poseidon2: cpu: hash_single: full_rounds: in_out_fields after rounds_constants = ", in_out_fields);
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // S box
           in_out_fields[state_idx] = S::pow(in_out_fields[state_idx], alpha);
         }
-        // print_state("   S-box result:", in_out_fields);
+        print_state("poseidon2: cpu: hash_single: full_rounds: in_out_fields after s-box = ", in_out_fields);
         // Multiplication by matrix
         full_matrix_mul_by_vector(in_out_fields, mds_matrix, in_out_fields);
-        // print_state("   Full matrix result:", in_out_fields);
+        print_state("poseidon2: cpu: hash_single: full_rounds: in_out_fields after mds matrix", in_out_fields);
       }
     }   // void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
 

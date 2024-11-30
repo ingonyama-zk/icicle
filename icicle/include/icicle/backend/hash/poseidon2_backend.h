@@ -38,7 +38,6 @@ namespace icicle {
                                   ///< is used for all such rounds. Only M[i,i] member are different from 1. 
                                   ///< These members are here. 
     Poseidon2ConstantsOptions() {}
-    Poseidon2ConstantsOptions(const Poseidon2ConstantsOptions&) = delete;
   };
 
   /*************************** Backend registration ***************************/

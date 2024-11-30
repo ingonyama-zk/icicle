@@ -10,10 +10,10 @@ namespace icicle {
   Hash create_poseidon2_hash<scalar_t>(unsigned t, const scalar_t* domain_tag)
   {
     // Assert that t is valid. Ideally would like to return an eIcicleError but the API doesn't let us do it
-    constexpr std::array<int, 4> validTValues = {3, 5, 9, 12};
+    constexpr std::array<int, 8> validTValues = {2, 3, 4, 8, 12, 16, 20, 24};
     const bool is_valid_t = std::find(validTValues.begin(), validTValues.end(), t) != validTValues.end();
     if (!is_valid_t) {
-      ICICLE_LOG_ERROR << "Poseidon2 only supports t values of 3, 5, 9, or 12.";
+      ICICLE_LOG_ERROR << "Poseidon2 only supports t values of 2, 3, 4, 8, 12, 16, 20, 24.";
       ICICLE_ASSERT(false);
     }
 
