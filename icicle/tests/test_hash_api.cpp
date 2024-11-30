@@ -749,15 +749,14 @@ TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
   const unsigned t = 3;
   auto config = default_hash_config();
   config.batch = 1;
-  // config.batch = 2;    // DEBUG
 
   auto input = std::make_unique<scalar_t[]>(t);
   scalar_t::rand_host_many(input.get(), t);
-  // DEBUG
-  input[0] = scalar_t::from(0);
-  input[1] = scalar_t::from(1);
-  input[2] = scalar_t::from(2);
-  // DEBUG
+  // // DEBUG
+  // input[0] = scalar_t::from(0);
+  // input[1] = scalar_t::from(1);
+  // input[2] = scalar_t::from(2);
+  // // DEBUG
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
@@ -784,57 +783,16 @@ TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
 
+// Currently there is no support for batch > 1 and domain_tag != nullpotr.
 TEST_F(HashApiTest, poseidon2_3_single_hash_with_dt)    // Danny - TODO. To add domain_tag test
-{
-  // const unsigned t = 3;
-  // auto config = default_hash_config();
-
-  // auto input = std::make_unique<scalar_t[]>(t);
-  // scalar_t::rand_host_many(input.get(), t);
-  //   // DEBUG
-  // input[0] = scalar_t::from(0);
-  // input[1] = scalar_t::from(1);
-  // input[2] = scalar_t::from(2);
-  // // DEBUG
-  // config.batch = 1;
-
-  // auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
-  //   Device dev = {dev_type, 0};
-  //   icicle_set_device(dev);
-
-  //   std::ostringstream oss;
-  //   oss << dev_type << " " << msg;
-
-  //   auto poseidon2 = Poseidon2::create<scalar_t>(t);
-
-  //   START_TIMER(POSEIDON2_3_sync)
-  //   for (int i = 0; i < iters; ++i) {
-  //     ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
-  //   }
-  //   END_TIMER(POSEIDON2_3_sync, oss.str().c_str(), measure);
-  // };
-
-  // auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  // auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
-
-  // run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  // run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-
-  // ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
-}
-
-TEST_F(HashApiTest, poseidon2_3_batch)
 {
   const unsigned t = 3;
   auto config = default_hash_config();
   const scalar_t domain_tag = scalar_t::rand_host();
+  config.batch = 1;
 
-  config.batch = 1 << 10;
-  config.batch = 4;     // DEBUG. To delete.
-  // auto input = std::make_unique<scalar_t[]>((t - 1) * config.batch);     // DEBUG
-  // scalar_t::rand_host_many(input.get(), (t - 1) * config.batch);   // DEBUG
-  auto input = std::make_unique<scalar_t[]>(t * config.batch);
-  scalar_t::rand_host_many(input.get(), t * config.batch);
+  auto input = std::make_unique<scalar_t[]>((t - 1) * config.batch);
+  scalar_t::rand_host_many(input.get(), (t - 1) * config.batch);
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     std::cout << "iters = " << iters << std::endl;
@@ -848,9 +806,102 @@ TEST_F(HashApiTest, poseidon2_3_batch)
 
     START_TIMER(POSEIDON2_sync)
     for (int i = 0; i < iters; ++i) {
-      // std::cout << "poseidon2_3_batch: t - 1 = " << std::dec << t - 1 << std::endl;    // DEBUG
-      // ICICLE_CHECK(poseidon2.hash(input.get(), t - 1, config, out));   // DEBUG
-      std::cout << "poseidon2_3_batch: t = " << std::dec << t << std::endl;
+      ICICLE_CHECK(poseidon2.hash(input.get(), t - 1, config, out));
+    }
+    END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
+  };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+}
+
+TEST_F(HashApiTest, poseidon2_3_batch_without_dt_debug)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
+
+  config.batch = 1 << 10;
+  config.batch = 11;
+  auto input = std::make_unique<scalar_t[]>(t * config.batch);
+  scalar_t::rand_host_many(input.get(), t * config.batch);
+  // scalar_t* kuku = input.get();
+  // for (int i = 0; i < config.batch * t; i++) {
+  //   std::cout << "poseidon2_3_batch_without_dt input " << kuku[i] << std::endl;
+  // } 
+  // DEBUG
+  for (int i=0; i<config.batch; i++) {
+    input[i*t + 0] = scalar_t::from(0);
+    input[i*t + 1] = scalar_t::from(1);
+    input[i*t + 2] = scalar_t::from(2);
+  }
+  for (int i = 0; i < config.batch * t; i++) {
+    std::cout << "poseidon2_3_batch_without_dt input " << input[i] << std::endl;
+  } 
+  // DEBUG
+
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    std::cout << "iters = " << iters << std::endl;
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
+
+    START_TIMER(POSEIDON2_sync)
+    for (int i = 0; i < iters; ++i) {
+      std::cout << "poseidon2_3_batch_without_dt: t = " << std::dec << t << std::endl;
+      ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
+    }
+    END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
+  };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+
+  std::cout << "output_cpu[9] = " << output_cpu.get()[9] << std::endl;
+  std::cout << "output_cuda[9] = " << output_cuda.get()[9] << std::endl;
+  std::cout << "output_cpu[10] = " << output_cpu.get()[10] << std::endl;
+  std::cout << "output_cuda[10] = " << output_cuda.get()[10] << std::endl;
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+}
+
+TEST_F(HashApiTest, poseidon2_3_batch_without_dt)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
+
+  config.batch = 1 << 10;
+  config.batch = 11;
+  auto input = std::make_unique<scalar_t[]>(t * config.batch);
+  scalar_t::rand_host_many(input.get(), t * config.batch);
+  scalar_t* kuku = input.get();
+  for (int i = 0; i < config.batch * t; i++) {
+    std::cout << "poseidon2_3_batch_without_dt input " << kuku[i] << std::endl;
+  } 
+
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    std::cout << "iters = " << iters << std::endl;
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
+
+    START_TIMER(POSEIDON2_sync)
+    for (int i = 0; i < iters; ++i) {
+      std::cout << "poseidon2_3_batch_without_dt: t = " << std::dec << t << std::endl;
       ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
     }
     END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
@@ -865,46 +916,40 @@ TEST_F(HashApiTest, poseidon2_3_batch)
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
 
-TEST_F(HashApiTest, poseidon2_3_2_two_level_tree)   // Danny- TODO. To add test with two levels tree with diff t.
+TEST_F(HashApiTest, poseidon2_3x2_to_2x1_two_level_tree_no_dt)
 {
-  // const unsigned t = 3;
-  // auto config = default_hash_config();
-  // const scalar_t domain_tag = scalar_t::rand_host();
+  const unsigned t = 3;
+  auto config = default_hash_config();
 
-  // config.batch = 1 << 10;
-  // config.batch = 4;     // DEBUG. To delete.
-  // // auto input = std::make_unique<scalar_t[]>((t - 1) * config.batch);     // DEBUG
-  // // scalar_t::rand_host_many(input.get(), (t - 1) * config.batch);   // DEBUG
-  // auto input = std::make_unique<scalar_t[]>(t * config.batch);
-  // scalar_t::rand_host_many(input.get(), t * config.batch);
+  config.batch = 1 << 10;
+  auto input = std::make_unique<scalar_t[]>(t * config.batch);
+  scalar_t::rand_host_many(input.get(), t * config.batch);
 
-  // auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
-  //   std::cout << "iters = " << iters << std::endl;
-  //   Device dev = {dev_type, 0};
-  //   icicle_set_device(dev);
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    std::cout << "iters = " << iters << std::endl;
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
 
-  //   std::ostringstream oss;
-  //   oss << dev_type << " " << msg;
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
-  //   auto poseidon2 = Poseidon2::create<scalar_t>(t, &domain_tag);
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
 
-  //   START_TIMER(POSEIDON2_sync)
-  //   for (int i = 0; i < iters; ++i) {
-  //     // std::cout << "poseidon2_3_batch: t - 1 = " << std::dec << t - 1 << std::endl;    // DEBUG
-  //     // ICICLE_CHECK(poseidon2.hash(input.get(), t - 1, config, out));   // DEBUG
-  //     std::cout << "poseidon2_3_batch: t = " << std::dec << t << std::endl;
-  //     ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
-  //   }
-  //   END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
-  // };
+    START_TIMER(POSEIDON2_sync)
+    for (int i = 0; i < iters; ++i) {
+      std::cout << "poseidon2_3_batch_without_dt: t = " << std::dec << t << std::endl;
+      ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
+    }
+    END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
+  };
 
-  // auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
-  // auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cuda = std::make_unique<scalar_t[]>(config.batch);
 
-  // run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  // run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  run(s_reference_target, output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  run(s_main_target, output_cuda.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  // ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_cuda.get(), config.batch * sizeof(scalar_t)));
 }
 #endif    // POSEIDON2
 
@@ -1070,7 +1115,6 @@ TEST_F(HashApiTest, poseidon_3_batch_with_dt)
   const scalar_t domain_tag = scalar_t::rand_host();
 
   config.batch = 1 << 10;
-  config.batch = 4;
   auto input = std::make_unique<scalar_t[]>((t - 1) * config.batch);
   scalar_t::rand_host_many(input.get(), (t - 1) * config.batch);
 
