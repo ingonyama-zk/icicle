@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
-#include "icicle/utils/rand_gen.cpp"
+#include "icicle/utils/rand_gen.h"
 
 using FpMiliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();

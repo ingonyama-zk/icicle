@@ -24,7 +24,7 @@
 #endif // __CUDACC__
 
 #include "icicle/errors.h"
-#include "icicle/utils/rand_gen.cpp"
+#include "icicle/utils/rand_gen.h"
 #include "host_math.h"
 #include "storage.h"
 
