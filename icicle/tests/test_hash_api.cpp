@@ -579,8 +579,8 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
 
     constexpr int leaf_size = 250;
     constexpr int nof_leaves = 100;
-    const std::vector<int> test_cases_nof_input_leaves = {1, 8, 16, 17, 32,
-                                                          70, 99, 100}; // those cases will be tested with padding
+    const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
+                                                          32, 70, 99, 100}; // those cases will be tested with padding
     constexpr int input_size = nof_leaves * leaf_size;
     std::byte leaves[input_size];
     randomize(leaves, input_size);
@@ -620,8 +620,8 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
 
     constexpr int leaf_size = 320;
     constexpr int nof_leaves = 100;
-    const std::vector<int> test_cases_nof_input_leaves = {1, 8, 16, 17, 32,
-                                                          70, 99, 100}; // those cases will be tested with padding
+    const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
+                                                          32, 70, 99, 100}; // those cases will be tested with padding
     constexpr int input_size = nof_leaves * leaf_size;
     std::byte leaves[input_size];
     randomize(leaves, input_size);
