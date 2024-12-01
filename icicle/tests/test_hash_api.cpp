@@ -392,11 +392,11 @@ bool is_valid_tree(
   int nof_inputs,
   const T* inputs,
   const std::vector<Hash>& hashes,
-  const MerkleTreeConfig& config, 
+  const MerkleTreeConfig& config,
   unsigned explicit_leaf_size = 1)
 {
   return is_valid_tree(
-    tree, nof_inputs * sizeof(T), sizeof(T) * explicit_leaf_size, reinterpret_cast<const std::byte*>(inputs), hashes, 
+    tree, nof_inputs * sizeof(T), sizeof(T) * explicit_leaf_size, reinterpret_cast<const std::byte*>(inputs), hashes,
     config);
 }
 
@@ -448,14 +448,13 @@ void test_merkle_tree(
   }
   // build tree
   START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(prover_tree.build( leaves4tree,
-                                  partial_leaves_size? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes,
-                                  config));
+  ICICLE_CHECK(prover_tree.build(
+    leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, config));
   // END_TIMER(MerkleTree_build, "Merkle Tree build time", true)
-  
-  ASSERT_TRUE(is_valid_tree<T>( prover_tree,
-                                partial_leaves_size? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes,
-                                leaves, hashes, config, explict_leaf_size_in_bytes))
+
+  ASSERT_TRUE(is_valid_tree<T>(
+    prover_tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaves, hashes,
+    config, explict_leaf_size_in_bytes))
     << "Tree wasn't built correctly.";
 
   // Create wrong input leaves by taking the original input and swapping some leaves by random values
@@ -465,7 +464,7 @@ void test_merkle_tree(
   unsigned int wrong_indices[nof_indices_modified];
   HashApiTest::randomize(wrong_indices, nof_indices_modified);
   for (int i = 0; i < nof_indices_modified; i++) {
-    int wrong_byte_index = wrong_indices[i] % (partial_leaves_size? partial_leaves_size : nof_leaves * leaf_size);
+    int wrong_byte_index = wrong_indices[i] % (partial_leaves_size ? partial_leaves_size : nof_leaves * leaf_size);
 
     uint8_t* wrong_leaves_byte_ptr = reinterpret_cast<uint8_t*>(wrong_leaves.get());
 
@@ -491,17 +490,17 @@ void test_merkle_tree(
   // Test the paths at the random indices (Both that the original input is valid and the modified input isn't)
   for (int i = 0; i < nof_indices_modified; i++) {
     // int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
-    int leaf_idx = (wrong_indices[i] % (partial_leaves_size? partial_leaves_size : nof_leaves * leaf_size)) / leaf_size;
+    int leaf_idx =
+      (wrong_indices[i] % (partial_leaves_size ? partial_leaves_size : nof_leaves * leaf_size)) / leaf_size;
     ICICLE_LOG_VERBOSE << "Checking proof of index " << leaf_idx << " (Byte idx "
                        << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
 
     // get root and merkle-path for a leaf
     auto [root, root_size] = prover_tree.get_merkle_root();
     MerkleProof merkle_proof{};
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof( leaves,
-                                    partial_leaves_size? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes,
-                                    leaf_idx, false, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(
+      leaves, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false,
+      config, merkle_proof));
 
     // Test valid proof
     bool verification_valid = false;
@@ -511,30 +510,27 @@ void test_merkle_tree(
 
     // Test invalid proof (By modifying random data in the leaves)
     verification_valid = true;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof( wrong_leaves4tree,
-                                    partial_leaves_size? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes,
-                                    leaf_idx, false, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(
+      wrong_leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx,
+      false, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
 
     // Same for pruned proof
     verification_valid = false;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof( leaves,
-                                    partial_leaves_size? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes,
-                                    leaf_idx, true, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(
+      leaves, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true,
+      config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_TRUE(verification_valid) << "Pruned proof of valid inputs at index " << leaf_idx
                                     << " is invalid (And should be valid).";
 
     // Test invalid proof (By modifying random data in the leaves)
     verification_valid = true;
-    ICICLE_CHECK(
-      prover_tree.get_merkle_proof( wrong_leaves4tree,
-                                    partial_leaves_size? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes,
-                                    leaf_idx, true, config, merkle_proof));
+    ICICLE_CHECK(prover_tree.get_merkle_proof(
+      wrong_leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx,
+      true, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
@@ -611,8 +607,8 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
     const unsigned nof_whole_leaves = rand() % nof_leaves;
     const unsigned partial_leaves_size_in_bytes = nof_whole_leaves * leaf_size + partial_leaf_bytes;
     ICICLE_LOG_VERBOSE << "Partial leaves byte size: " << partial_leaves_size_in_bytes;
-    test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves, leaf_size, 
-    partial_leaves_size_in_bytes);
+    test_merkle_tree(
+      hashes, config, output_store_min_layer, nof_leaves, leaves, leaf_size, partial_leaves_size_in_bytes);
   }
 }
 
