@@ -477,18 +477,22 @@ public:
     return mont_sub_modulus(r);
   }
 
-  static constexpr HOST_DEVICE_INLINE Field mont_reduce(const Wide& t)
+  static constexpr HOST_DEVICE_INLINE Field mont_reduce(Wide t)
   {
-#ifdef __CUDA_ARCH__
-    Wide r = t;
-    base_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
-    return mont_sub_modulus(Wide::get_lower(r));
-#else
-    Wide r = {};
-    base_math::template sos_mont_reduction<TLC>(
+// #ifdef __CUDA_ARCH__
+//     Wide r = t;
+//     base_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
+//     return mont_sub_modulus(Wide::get_lower(r));
+// #else
+//     Field r = {};
+//     base_math::template sos_mont_reduction<TLC>(
+//       t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
+//     return mont_sub_modulus(r);
+// #endif
+    Field r = {};
+    base_math::template reduce_mont<TLC>(
       t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
-    return mont_sub_modulus(Wide::get_higher(r));
-#endif
+    return mont_sub_modulus(r);
   }
 
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
