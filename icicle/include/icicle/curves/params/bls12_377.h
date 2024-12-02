@@ -52,9 +52,9 @@ namespace bls12_377 {
                                                           0x3c6bf800, 0x129207b6, 0xcd5fd889, 0xdc7b4f91,
                                                           0x7460c589, 0x43bd0373, 0xdb0fd6f3, 0x010222f6};
 
-    static constexpr point_field_t weierstrass_b_mont_g2_im = {0xe2663d60, 0xaa1bd183, 0x8998c2dc, 0xd5628c5f,
-                                                               0x69d8c583, 0x6bd9c3dc, 0xe648e0b0, 0x4a7ad7c6,
-                                                               0x518eb47f, 0x68317e83, 0x69cb5e0f, 0x009617f3};
+    static constexpr point_field_t weierstrass_b_mont_g2_im = {0x66666685, 0x80722666, 0x899999a9, 0x8df55926,
+                                                               0xd64f34cf, 0x7fe4561a, 0xb6e4f01b, 0xb95da6d8,
+                                                               0xfc142743, 0x4b747ccc, 0x70f49f43, 0x0039c3fa};
 
     static constexpr bool is_b_u32_g2_re = true;
     static constexpr bool is_b_neg_g2_re = false;
