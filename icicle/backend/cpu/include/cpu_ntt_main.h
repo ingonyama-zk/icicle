@@ -1,6 +1,7 @@
 #pragma once
 #include "icicle/utils/log.h"
 #include "ntt_cpu.h"
+#include "ntt_cpu_non_parallel.h"
 #include <iostream>
 
 using namespace field_config;
@@ -44,10 +45,19 @@ namespace ntt_cpu {
     ICICLE_ASSERT(size <= CpuNttDomain<S>::s_ntt_domain.get_max_size())
       << "Size is too large for domain. size = " << size
       << ", domain_max_size = " << CpuNttDomain<S>::s_ntt_domain.get_max_size();
+    uint32_t log_size = uint32_t(log2(size));
+    uint32_t log_batch_size = uint32_t(log2(config.batch_size));
+    uint32_t scalar_size = sizeof(S);
 
-    NttCpu<S, E> ntt(uint32_t(log2(size)), direction, config, input, output);
-    ntt.run();
+    bool parallel = is_parallel(log_size, log_batch_size, scalar_size);
 
+    if (!parallel) {
+      NttCpuNonParallel<S, E> ntt(log_size, direction, config, input, output);
+      ntt.run();
+    } else {
+      NttCpu<S, E> ntt(log_size, direction, config, input, output);
+      ntt.run();
+    }
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu
