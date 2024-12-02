@@ -1,7 +1,7 @@
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
-    traits::{FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible, Arithmetic},
+    traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},

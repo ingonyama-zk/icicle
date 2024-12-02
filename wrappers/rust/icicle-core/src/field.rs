@@ -1,11 +1,11 @@
-use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible, Arithmetic};
+use crate::traits::{Arithmetic, FieldConfig, FieldImpl, MontgomeryConvertible};
 use hex::FromHex;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, Mul, Sub};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -116,7 +116,10 @@ pub trait FieldArithmetic<F: FieldImpl> {
     fn inv(first: F) -> F;
 }
 
-impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F> where F: FieldArithmetic<Self> {
+impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
     fn sqr(self) -> Self {
         F::sqr(self)
     }
@@ -201,7 +204,7 @@ macro_rules! impl_scalar_field {
 
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
-            use icicle_core::{vec_ops::VecOpsConfig, traits::FieldImpl};
+            use icicle_core::{traits::FieldImpl, vec_ops::VecOpsConfig};
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
 
@@ -219,31 +222,16 @@ macro_rules! impl_scalar_field {
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_add")]
-                pub(crate) fn add(
-                    a: *const $field_name,
-                    b: *const $field_name,
-                    result: *mut $field_name,
-                );
+                pub(crate) fn add(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
 
                 #[link_name = concat!($field_prefix, "_sub")]
-                pub(crate) fn sub(
-                    a: *const $field_name,
-                    b: *const $field_name,
-                    result: *mut $field_name,
-                );
+                pub(crate) fn sub(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
 
                 #[link_name = concat!($field_prefix, "_mul")]
-                pub(crate) fn mul(
-                    a: *const $field_name,
-                    b: *const $field_name,
-                    result: *mut $field_name,
-                );
+                pub(crate) fn mul(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
 
                 #[link_name = concat!($field_prefix, "_inv")]
-                pub(crate) fn inv(
-                    a: *const $field_name,
-                    result: *mut $field_name,
-                );
+                pub(crate) fn inv(a: *const $field_name, result: *mut $field_name);
             }
 
             pub(crate) fn convert_scalars_montgomery(
@@ -257,10 +245,7 @@ macro_rules! impl_scalar_field {
         }
 
         impl icicle_core::field::FieldArithmetic<$field_name> for $field_cfg {
-            fn add(
-                first: $field_name,
-                second: $field_name,
-            ) -> $field_name {
+            fn add(first: $field_name, second: $field_name) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
                     $field_prefix_ident::add(
@@ -273,10 +258,7 @@ macro_rules! impl_scalar_field {
                 result
             }
 
-            fn sub(
-                first: $field_name,
-                second: $field_name,
-            ) -> $field_name {
+            fn sub(first: $field_name, second: $field_name) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
                     $field_prefix_ident::sub(
@@ -289,10 +271,7 @@ macro_rules! impl_scalar_field {
                 result
             }
 
-            fn mul(
-                first: $field_name,
-                second: $field_name,
-            ) -> $field_name {
+            fn mul(first: $field_name, second: $field_name) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
                     $field_prefix_ident::mul(
@@ -305,9 +284,7 @@ macro_rules! impl_scalar_field {
                 result
             }
 
-            fn sqr(
-                first: $field_name,
-            ) -> $field_name {
+            fn sqr(first: $field_name) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
                     $field_prefix_ident::mul(
@@ -320,15 +297,10 @@ macro_rules! impl_scalar_field {
                 result
             }
 
-            fn inv(
-                first: $field_name,
-            ) -> $field_name {
+            fn inv(first: $field_name) -> $field_name {
                 let mut result = $field_name::zero();
                 unsafe {
-                    $field_prefix_ident::inv(
-                        &first as *const $field_name,
-                        &mut result as *mut $field_name,
-                    );
+                    $field_prefix_ident::inv(&first as *const $field_name, &mut result as *mut $field_name);
                 }
 
                 result

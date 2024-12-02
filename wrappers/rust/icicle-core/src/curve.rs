@@ -1,7 +1,7 @@
 use crate::traits::{FieldImpl, MontgomeryConvertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, Mul, Sub};
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
     type BaseField: FieldImpl;
@@ -30,20 +30,11 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         stream: &IcicleStream,
     ) -> eIcicleError;
     #[doc(hidden)]
-    fn add(
-        point1: Projective<Self>,
-        point2: Projective<Self>,
-    ) -> Projective<Self>;
+    fn add(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
     #[doc(hidden)]
-    fn sub(
-        point1: Projective<Self>,
-        point2: Projective<Self>,
-    ) -> Projective<Self>;
+    fn sub(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
     #[doc(hidden)]
-    fn mul_scalar(
-        point1: Projective<Self>,
-        point2: Self::ScalarField,
-    ) -> Projective<Self>;
+    fn mul_scalar(point1: Projective<Self>, point2: Self::ScalarField) -> Projective<Self>;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -230,19 +221,19 @@ macro_rules! impl_curve {
                 #[link_name = concat!($curve_prefix, "_ecadd")]
                 pub(crate) fn add(
                     point1: *const $projective_type,
-                    point2: *const $projective_type, 
+                    point2: *const $projective_type,
                     result: *mut $projective_type,
                 );
                 #[link_name = concat!($curve_prefix, "_ecsub")]
                 pub(crate) fn sub(
                     point1: *const $projective_type,
-                    point2: *const $projective_type, 
+                    point2: *const $projective_type,
                     result: *mut $projective_type,
                 );
                 #[link_name = concat!($curve_prefix, "_mul_scalar")]
                 pub(crate) fn mul_scalar(
                     point1: *const $projective_type,
-                    point2: *const $scalar_field, 
+                    point2: *const $scalar_field,
                     result: *mut $projective_type,
                 );
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
@@ -283,7 +274,7 @@ macro_rules! impl_curve {
                     $curve_prefix_ident::add(
                         &point1 as *const $projective_type,
                         &point2 as *const $projective_type,
-                        &mut result as *mut _ as *mut $projective_type
+                        &mut result as *mut _ as *mut $projective_type,
                     );
                 };
 
@@ -297,7 +288,7 @@ macro_rules! impl_curve {
                     $curve_prefix_ident::sub(
                         &point1 as *const $projective_type,
                         &point2 as *const $projective_type,
-                        &mut result as *mut _ as *mut $projective_type
+                        &mut result as *mut _ as *mut $projective_type,
                     );
                 };
 
@@ -311,7 +302,7 @@ macro_rules! impl_curve {
                     $curve_prefix_ident::mul_scalar(
                         &point1 as *const $projective_type,
                         &point2 as *const $scalar_field,
-                        &mut result as *mut _ as *mut $projective_type
+                        &mut result as *mut _ as *mut $projective_type,
                     );
                 };
 
