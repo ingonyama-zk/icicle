@@ -1,8 +1,11 @@
 #pragma once
+#include <time.h>
+#include <random>
 
 #include <gtest/gtest.h>
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
+#include "icicle/utils/rand_gen.h"
 
 using FpMiliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -25,6 +28,10 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
+    unsigned seed = time(NULL);
+    srand(seed);
+    ICICLE_LOG_INFO << "Seed for tests is: " << seed;
+    seed_rand_generator(seed);
 #ifdef BACKEND_BUILD_DIR
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif
