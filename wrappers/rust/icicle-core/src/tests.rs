@@ -117,23 +117,6 @@ where
     assert_eq!(scalars_copy, scalars);
 }
 
-
-// pub fn check_field_arithmetic<F>()
-// where 
-//     F: FieldImpl,
-//     F::Config: GenerateRandom<F>,
-// {
-//     let size = 1 << 10;
-//     let scalars_a = F::Config::generate_random(size);
-//     let scalars_b = F::Config::generate_random(size);
-
-//     for i in 0..size {
-//         let result1 = scalars_a[i] + scalars_b[i];
-//         let result2 = result1 - scalars_b[i];
-//         assert_eq!(result2, scalars_a[i]);
-//     }
-// }
-
 pub fn check_points_convert_montgomery<C: Curve>()
 where
     Affine<C>: MontgomeryConvertible,

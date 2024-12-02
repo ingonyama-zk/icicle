@@ -100,6 +100,34 @@ func testBabybear_extensionGenerateScalars(suite *suite.Suite) {
 	suite.NotContains(scalars, zeroScalar)
 }
 
+func testExtensionFieldArithmetic(suite *suite.Suite) {
+	const size = 1 << 10
+
+	scalarsA := babybear_extension.GenerateScalars(size)
+	scalarsB := babybear_extension.GenerateScalars(size)
+
+	for i := 0; i < size; i++ {
+		result1 := scalarsA[i].Add(&scalarsB[i])
+		result2 := result1.Sub(&scalarsB[i])
+
+		suite.Equal(scalarsA[i], result2, "Addition and subtraction do not yield the original value")
+	}
+
+	scalarA := scalarsA[0]
+	square := scalarA.Sqr()
+	mul := scalarA.Mul(&scalarA)
+
+	suite.Equal(square, mul, "Square and multiplication do not yield the same value")
+
+	inv := scalarA.Inv()
+
+	one := scalarA.Mul(&inv)
+	expectedOne := scalarsA[1]
+	expectedOne.One()
+
+	suite.Equal(one, expectedOne)
+}
+
 func testBabybear_extensionMongtomeryConversion(suite *suite.Suite) {
 	size := 1 << 20
 	scalars := babybear_extension.GenerateScalars(size)
@@ -133,6 +161,7 @@ func (s *ExtensionFieldTestSuite) TestExtensionField() {
 	s.Run("TestExtensionFieldAsPointer", testWrapper(&s.Suite, testExtensionFieldAsPointer))
 	s.Run("TestExtensionFieldFromBytes", testWrapper(&s.Suite, testExtensionFieldFromBytes))
 	s.Run("TestExtensionFieldToBytes", testWrapper(&s.Suite, testExtensionFieldToBytes))
+	s.Run("TestExtensionFieldArithmetic", testWrapper(&s.Suite, testExtensionFieldArithmetic))
 	s.Run("TestBabybear_extensionGenerateScalars", testWrapper(&s.Suite, testBabybear_extensionGenerateScalars))
 	s.Run("TestBabybear_extensionMongtomeryConversion", testWrapper(&s.Suite, testBabybear_extensionMongtomeryConversion))
 }
