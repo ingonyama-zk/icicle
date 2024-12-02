@@ -42,10 +42,10 @@ namespace bn254 {
     static constexpr point_field_t weierstrass_b_g2_im = {0x85c315d2, 0xe4a2bd06, 0xe52d1852, 0xa74fa084,
                                                           0xeed8fdf4, 0xcd2cafad, 0x3af0fed4, 0x009713b0};
 
-    static constexpr point_field_t weierstrass_b_mont_g2_re = {0x117071f8, 0xbb90ed1c, 0x7b5ec718, 0x14682c41,
-                                                               0xbb53b8dd, 0x3efe858b, 0xc92f89a9, 0x2edc811a};
-    static constexpr point_field_t weierstrass_b_mont_g2_im = {0xfbc67f71, 0x19ecc463, 0xee31876b, 0x01cadc30,
-                                                               0x6c5b4ca2, 0x1693ee7e, 0x4376a62a, 0x206e678f};
+    static constexpr point_field_t weierstrass_b_mont_g2_re = {0x77b802a8, 0x3bf938e3, 0x3633535d, 0x020b1b27,
+                                                               0x49755260, 0x26b7edf0, 0x4384a86d, 0x2514c632};
+    static constexpr point_field_t weierstrass_b_mont_g2_im = {0xd1dcff67, 0x38e7eccc, 0x93ce0d3e, 0x65f0b37d,
+                                                               0x22ac00aa, 0xd749d0dd, 0x4a688d4d, 0x0141b9ce};
 
     static constexpr bool is_b_u32_g2_re = false;
     static constexpr bool is_b_neg_g2_re = false;
