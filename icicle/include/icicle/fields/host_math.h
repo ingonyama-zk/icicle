@@ -245,13 +245,11 @@ namespace host_math {
    * @param x 2*NLIMBS sized multiprecision input.
    * @param r NLIMBS sized multiprecision upper/lower half output.
    */
-  template <unsigned NLIMBS, bool HIGHER=true>
-  static HOST_INLINE void
-  get_half_32(const uint32_t* x, uint32_t* r)
+  template <unsigned NLIMBS, bool HIGHER = true>
+  static HOST_INLINE void get_half_32(const uint32_t* x, uint32_t* r)
   {
-    for (unsigned i = 0; i < NLIMBS; i++)
-    {
-      r[i] = x[HIGHER? i + NLIMBS : i];
+    for (unsigned i = 0; i < NLIMBS; i++) {
+      r[i] = x[HIGHER ? i + NLIMBS : i];
     }
   }
 
@@ -266,8 +264,7 @@ namespace host_math {
    * @tparam NLIMBS Number of 32bit limbs required to represent a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS>
-  static HOST_INLINE void
-  sos_mont_reduction_32(uint32_t* t, const uint32_t* n, const uint32_t n_tag0, uint32_t* r)
+  static HOST_INLINE void sos_mont_reduction_32(uint32_t* t, const uint32_t* n, const uint32_t n_tag0, uint32_t* r)
   {
     const unsigned s = NLIMBS; // For similarity to the original algorithm
     for (int i = 0; i < s; i++) {
@@ -293,14 +290,12 @@ namespace host_math {
    * @param x 2*NLIMBS sized multiprecision input.
    * @param r NLIMBS sized multiprecision upper/lower half output.
    */
-  template <unsigned NLIMBS, bool HIGHER=true>
-  static HOST_INLINE void
-  get_half_64(const uint64_t* x, uint64_t* r)
+  template <unsigned NLIMBS, bool HIGHER = true>
+  static HOST_INLINE void get_half_64(const uint64_t* x, uint64_t* r)
   {
     const unsigned nlimbs64 = NLIMBS / 2; // NLIMBS reffer to number of 32bit limbs
-    for (unsigned i = 0; i < nlimbs64; i++)
-    {
-      r[i] = x[HIGHER? i + nlimbs64 : i];
+    for (unsigned i = 0; i < nlimbs64; i++) {
+      r[i] = x[HIGHER ? i + nlimbs64 : i];
     }
   }
 
@@ -315,8 +310,7 @@ namespace host_math {
    * @tparam NLIMBS Number of 32bit limbs required to represent a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS>
-  static HOST_INLINE void
-  sos_mont_reduction_64(uint64_t* t, const uint64_t* n, const uint64_t n_tag0, uint64_t* r)
+  static HOST_INLINE void sos_mont_reduction_64(uint64_t* t, const uint64_t* n, const uint64_t n_tag0, uint64_t* r)
   {
     const unsigned s = NLIMBS / 2; // Divide by 2 because NLIMBS is 32bit and this function is 64bit
     for (int i = 0; i < s; i++) {
@@ -346,8 +340,8 @@ namespace host_math {
    * @tparam NLIMBS Number of 32bit limbs required to represent a number in the field defined by n. R is 2^(NLIMBS*32).
    */
   template <unsigned NLIMBS, bool USE_32 = false>
-  static HOST_INLINE void reduce_mont(
-    storage<2 * NLIMBS>& t, const storage<NLIMBS>& n, const storage<NLIMBS>& n_tag, storage<NLIMBS>& r)
+  static HOST_INLINE void
+  reduce_mont(storage<2 * NLIMBS>& t, const storage<NLIMBS>& n, const storage<NLIMBS>& n_tag, storage<NLIMBS>& r)
   {
     static_assert(NLIMBS % 2 == 0 || NLIMBS == 1, "Odd number of limbs (That is not 1) is not supported\n");
     if constexpr (USE_32) {
