@@ -16,7 +16,7 @@ int half_full_rounds_2 =    4;
 int partial_rounds_2 =      56;
 int alpha_2 =               5;
 
-static const std::string round_constants_2[] = {
+static const std::string rounds_constants_2[] = {
   "0x6267f5556c88257324c1c8b00d5871b2eba13cc39d72aa10dde6b69bc44c41c7",
   "0x30347723511438a085118166c68bf0c4f4ab5c10a2c55adb5cf87cc9e030f60f",
   "0x10db856965e40038eb6427303181e7b7439f1a051aa4630c26cf86d0a0451a4b",
@@ -106,7 +106,7 @@ int half_full_rounds_3 =    4;
 int partial_rounds_3 =      56;
 int alpha_3 =               5;
 
-static const std::string round_constants_3[] = {
+static const std::string rounds_constants_3[] = {
   "0x6f007a551156b3a449e44936b7c093644a0ed33f33eaccc628e942e836c1a875",
   "0x360d7470611e473d353f628f76d110f34e71162f31003b7057538c2596426303",
   "0x4b5fec3aa073df44019091f007a44ca996484965f7036dce3e9d0977edcdc0f6",
@@ -205,7 +205,7 @@ int half_full_rounds_4 =    4;
 int partial_rounds_4 =      56;
 int alpha_4 =               5;
 
-static const std::string round_constants_4[] = {
+static const std::string rounds_constants_4[] = {
   "0x1a3bdcbfc11dabfb6ed0dd5f5a9b38191488bce9eecd811c10f9378b32db8c61",
   "0x52b733e857912fdd2248dc9638dd79b1ce18b285b27792238b44c2b23c0f5d5f",
   "0x47d6df02d73e6c78ced550ec8df1a459ac41f318d8b904a37652b581b2b766b8",
@@ -313,7 +313,7 @@ int half_full_rounds_8 =    4;
 int partial_rounds_8 =      57;
 int alpha_8 =               5;
 
-static const std::string round_constants_8[] = {
+static const std::string rounds_constants_8[] = {
   "0x53ada42ebdbe3750f185d8aed927c2a339b1023dfde196b58aea362b1458208b",
   "0x52a4bd5eaee58d29bfe574cafd97f987b1da709987e3d009ae971b0c627edad6",
   "0x3b7abfefc73e31a012cebfd0420df327dd6cf8bb1a94aded25e40cb1d97ae623",
@@ -457,7 +457,7 @@ int full_rounds_12 =         0;
 int half_full_rounds_12 =    0;
 int partial_rounds_12 =      0;
 int alpha_12 =               0;
-static const std::string round_constants_12[] = {};
+static const std::string rounds_constants_12[] = {};
 static const std::string mds_matrix_12[]      = {};
 static const std::string partial_matrix_diagonal_12[]  = {};
 
@@ -468,7 +468,7 @@ int full_rounds_16 =         0;
 int half_full_rounds_16 =    0;
 int partial_rounds_16 =      0;
 int alpha_16 =               0;
-static const std::string round_constants_16[] = {};
+static const std::string rounds_constants_16[] = {};
 static const std::string mds_matrix_16[]      = {};
 static const std::string partial_matrix_diagonal_16[]  = {};
 
@@ -479,7 +479,7 @@ int full_rounds_20 =         0;
 int half_full_rounds_20 =    0;
 int partial_rounds_20 =      0;
 int alpha_20 =               0;
-static const std::string round_constants_20[] = {};
+static const std::string rounds_constants_20[] = {};
 static const std::string mds_matrix_20[]      = {};
 static const std::string partial_matrix_diagonal_20[]  = {};
 
@@ -490,7 +490,7 @@ int full_rounds_24 =         0;
 int half_full_rounds_24 =    0;
 int partial_rounds_24 =      0;
 int alpha_24 =               0;
-static const std::string round_constants_24[] = {};
+static const std::string rounds_constants_24[] = {};
 static const std::string mds_matrix_24[]      = {};
 static const std::string partial_matrix_diagonal_24[]  = {};
 

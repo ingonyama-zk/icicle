@@ -16,7 +16,7 @@ int half_full_rounds_2 =    4;
 int partial_rounds_2 =      27;
 int alpha_2 =               7;
 
-static const std::string round_constants_2[] = {
+static const std::string rounds_constants_2[] = {
   "0x5abce9a3dc4d1d10",
   "0xf9cd91d24cdedf4c",
   "0x89604b69d78c1a55",
@@ -77,7 +77,7 @@ int half_full_rounds_3 =    4;
 int partial_rounds_3 =      23;
 int alpha_3 =               7;
 
-static const std::string round_constants_3[] = {
+static const std::string rounds_constants_3[] = {
   "0xe0fb17eae61df432",
   "0x7e9a39727cb2769e",
   "0x5e8739b67aa37fce",
@@ -143,7 +143,7 @@ int half_full_rounds_4 =    4;
 int partial_rounds_4 =      21;
 int alpha_4 =               7;
 
-static const std::string round_constants_4[] = {
+static const std::string rounds_constants_4[] = {
   "0x5098165ee28e503e",
   "0x41b84edfee6c0590",
   "0xdda6bc081661f7b8",
@@ -216,7 +216,7 @@ int half_full_rounds_8 =    4;
 int partial_rounds_8 =      22;
 int alpha_8 =               7;
 
-static const std::string round_constants_8[] = {
+static const std::string rounds_constants_8[] = {
   "0xdd5743e7f2a5a5d9",
   "0xcb3a864e58ada44b",
   "0xffa2449ed32f8cdc",
@@ -326,7 +326,7 @@ int half_full_rounds_12 =    4;
 int partial_rounds_12 =      22;
 int alpha_12 =               7;
 
-static const std::string round_constants_12[] = {
+static const std::string rounds_constants_12[] = {
   "0x13dcf33aba214f46",
   "0x30b3b654a1da6d83",
   "0x1fc634ada6159b56",
@@ -472,7 +472,7 @@ int half_full_rounds_16 =    4;
 int partial_rounds_16 =      22;
 int alpha_16 =               7;
 
-static const std::string round_constants_16[] = {
+static const std::string rounds_constants_16[] = {
   "0x15ebea3fc73397c3",
   "0xd73cd9fbfe8e275c",
   "0x8c096bfce77f6c26",
@@ -654,7 +654,7 @@ int half_full_rounds_20 =    4;
 int partial_rounds_20 =      22;
 int alpha_20 =               7;
 
-static const std::string round_constants_20[] = {
+static const std::string rounds_constants_20[] = {
   "0xf50674557d527f42",
   "0x8b33e51b9306c9fb",
   "0x4cfcb30bb344eb3",
@@ -872,7 +872,7 @@ int half_full_rounds_24 =    4;
 int partial_rounds_24 =      22;
 int alpha_24 =               7;
 
-static const std::string round_constants_24[] = {
+static const std::string rounds_constants_24[] = {
   "0xb872395376c3f222",
   "0x7d7c6c8d6dda795a",
   "0xc1a1e1450d7d048e",

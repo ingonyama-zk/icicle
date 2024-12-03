@@ -172,7 +172,6 @@ namespace icicle {
       poseidon2_constants[T].nof_partial_rounds = partial_rounds;
       poseidon2_constants[T].rounds_constants = h_rounds_constants;
       poseidon2_constants[T].mds_matrix = h_mds_matrix;
-      // poseidon2_constants[T].partial_matrix_diagonal = h_partial_matrix_diagonal;
       poseidon2_constants[T].partial_matrix_diagonal_m1 = h_partial_matrix_diagonal_m1;
     }   // for (int t_idx = 0; t_idx < std::size(poseidon2_legal_width); t_idx++) 
 
@@ -195,8 +194,6 @@ namespace icicle {
     // For sponge function it could be any number.
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      std::cout << "Run hash" << std::endl;
-      std::cout << "Run CPU hash: size = " << size << std::endl;
       unsigned int arity = m_use_domain_tag ? m_t - 1 : m_t;
 
       // Currently sponge and padding functionalities are not supported.
@@ -207,7 +204,6 @@ namespace icicle {
       }
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
-        std::cout << "hash: cpu: running batch number " << batch_hash_idx << std::endl;
         eIcicleError err = hash_single(input, output);
         if (err != eIcicleError::SUCCESS)
           return err;
@@ -219,27 +215,26 @@ namespace icicle {
     }
 
   private:
-    // DEBUG start
-    void print_state(std::string str, S* state_to_print)  const {
-      std::cout << str << std::endl;
-      unsigned int T = m_t;
-      for (int state_idx = 0; state_idx < T; state_idx++) { // Columns of matrix.
-        std::cout << std::hex << state_to_print[state_idx] << std::endl;
-      }
-    }
-    void print_matrix(std::string str, S* matrix_to_print)  const {
-      std::cout << str << std::endl;
-      unsigned int T = m_t;
-      for (int matrix_idx = 0; matrix_idx < T*T; matrix_idx++) { // Columns of matrix.
-        std::cout << std::hex << matrix_to_print[matrix_idx] << std::endl;
-      }
-    }
-    // DEBUG end
+    // // DEBUG start. Do not remove!!!
+    // void print_state(std::string str, S* state_to_print)  const {
+    //   std::cout << str << std::endl;
+    //   unsigned int T = m_t;
+    //   for (int state_idx = 0; state_idx < T; state_idx++) { // Columns of matrix.
+    //     std::cout << std::hex << state_to_print[state_idx] << std::endl;
+    //   }
+    // }
+    // void print_matrix(std::string str, S* matrix_to_print)  const {
+    //   std::cout << str << std::endl;
+    //   unsigned int T = m_t;
+    //   for (int matrix_idx = 0; matrix_idx < T*T; matrix_idx++) { // Columns of matrix.
+    //     std::cout << std::hex << matrix_to_print[matrix_idx] << std::endl;
+    //   }
+    // }
+    // // DEBUG end
 
     // This function performs a single hash according to parameters in the poseidon2_constants[] struct.
     eIcicleError hash_single(const std::byte* input, std::byte* output) const
     {
-      std::cout << "Run hash_single" << std::endl;
       const unsigned int T = m_t;
       bool is_unsupported_T_for_this_field = poseidon2_constants[T].nof_upper_full_rounds == 0;
       if (is_unsupported_T_for_this_field) {
@@ -272,40 +267,25 @@ namespace icicle {
       }
 
       // Pre-rounds full maatrix multiplication.
-      // print_matrix("MDS matrix", mds_matrix);
-      // print_state("tmp_fields before pre-round", tmp_fields);
       full_matrix_mul_by_vector(tmp_fields, mds_matrix, tmp_fields);
-      print_state("poseidon2: cpu: hash_single: tmp_fields after pre-round", tmp_fields);
 
       // Upper full rounds.
       full_rounds(nof_upper_full_rounds, tmp_fields, rounds_constants);
-      // print_state("tmp_fields after upper full rounds", tmp_fields);
 
       // Partial rounds. Perform calculation only for the first element of *tmp_fields.
-      // print_state("partial_matrix_diagonal_m1: ", partial_matrix_diagonal_m1);
       for (int partial_rounds_idx = 0; partial_rounds_idx < nof_partial_rounds; partial_rounds_idx++) {
         // Add round constants
-        printf("poseidon2: cpu: hash_single: partial_rounds: round = %d\n", partial_rounds_idx);
-        print_state("poseidon2: cpu: hash_single: partial_rounds: round_constants = ", rounds_constants);
-        print_state("poseidon2: cpu: hash_single: partial_rounds: tmp_fields before round_constants: ", tmp_fields);
         tmp_fields[0] = tmp_fields[0] + *rounds_constants++;
-        print_state("poseidon2: cpu: hash_single: partial_rounds: tmp_fields after round_constants: ", tmp_fields);
         // S box
         tmp_fields[0] = S::pow(tmp_fields[0], alpha);
-        print_state("poseidon2: cpu: hash_single: partial_rounds: tmp_fields after S-box: ", tmp_fields);
         // Multiplication by partial (sparse) matrix.
         partial_matrix_diagonal_m1_mul_by_vector(tmp_fields, partial_matrix_diagonal_m1, tmp_fields);
-        print_state("poseidon2: cpu: hash_single: partial_rounds: tmp_fields after partial_matrix: ", tmp_fields);
-        printf("\n");
       }
-      // print_state("tmp_fields after partial rounds", tmp_fields);
 
       // Bottom full rounds.
       full_rounds(nof_bottom_full_rounds, tmp_fields, rounds_constants);
-      // print_state("tmp_fields after bottom full rounds", tmp_fields);
 
       memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
-      std::cout << "Single hash output (cpu) = " << std::hex << tmp_fields[1] << std::endl;
 
       delete[] tmp_fields;
       tmp_fields = nullptr;
@@ -355,22 +335,16 @@ namespace icicle {
       unsigned int alpha = poseidon2_constants[T].alpha;
       S* mds_matrix = poseidon2_constants[T].mds_matrix;
       for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds; full_rounds_idx++) {
-        printf("poseidon2: cpu: hash_single: full_rounds: round %d\n", full_rounds_idx);
-        print_state("poseidon2: cpu: hash_single: full_rounds: rounds_constants = ", rounds_constants);
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // Add round constants
           in_out_fields[state_idx] = in_out_fields[state_idx] + *rounds_constants++;
         }
-        print_state("poseidon2: cpu: hash_single: full_rounds: in_out_fields after rounds_constants = ", in_out_fields);
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // S box
           in_out_fields[state_idx] = S::pow(in_out_fields[state_idx], alpha);
         }
-        print_state("poseidon2: cpu: hash_single: full_rounds: in_out_fields after s-box = ", in_out_fields);
         // Multiplication by matrix
         full_matrix_mul_by_vector(in_out_fields, mds_matrix, in_out_fields);
-        print_state("poseidon2: cpu: hash_single: full_rounds: in_out_fields after mds matrix", in_out_fields);
-        printf("\n");
       }
     }   // void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
 

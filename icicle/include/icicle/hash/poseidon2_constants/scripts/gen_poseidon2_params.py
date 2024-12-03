@@ -15,7 +15,7 @@ fields = [
   ["bls12_377",  [2, 3, 4, 8], 0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001],
   ["bls12_381",  [2, 3, 4, 8], 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001],
   ["grumkin",    [2, 3, 4, 8], 0x30644E72E131A029B85045B68181585D97816A916871CA8D3C208C16D87CFD47],
-  ["bw6-761",    [2, 3, 4, 8], 0x1AE3A4617C510EAC63B05C06CA1493B1A22D9F300F5138F1EF3622FBA094800170B5D44300000008508C00000000001]
+  ["bw6_761",    [2, 3, 4, 8], 0x1AE3A4617C510EAC63B05C06CA1493B1A22D9F300F5138F1EF3622FBA094800170B5D44300000008508C00000000001]
 ]
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +47,7 @@ for field in fields:
       FILE_cpp_tmp.write(f'int half_full_rounds_{hash_width} =    0;\n')
       FILE_cpp_tmp.write(f'int partial_rounds_{hash_width} =      0;\n')
       FILE_cpp_tmp.write(f'int alpha_{hash_width} =               0;\n')
-      FILE_cpp_tmp.write(f'static const std::string round_constants_{hash_width}[] = {{}};\n')
+      FILE_cpp_tmp.write(f'static const std::string rounds_constants_{hash_width}[] = {{}};\n')
       FILE_cpp_tmp.write(f'static const std::string mds_matrix_{hash_width}[]      = {{}};\n')
       FILE_cpp_tmp.write(f'static const std::string partial_matrix_diagonal_{hash_width}[]  = {{}};\n\n')
       FILE_cpp_tmp.write(f'static const std::string partial_matrix_diagonal_m1_{hash_width}[]  = {{}};\n\n')

@@ -189,35 +189,35 @@ def init_generator(field, sbox, n, t, R_F, R_P):
     INIT_SEQUENCE = [int(_) for _ in INIT_SEQUENCE]
 
 def generate_constants(field, n, t, R_F, R_P, prime_number):
-    round_constants = []
+    rounds_constants = []
     # num_constants = (R_F + R_P) * t # Poseidon
     num_constants = (R_F * t) + R_P # Poseidon2
 
     if field == 0:
         for i in range(0, num_constants):
             random_int = grain_random_bits(n)
-            round_constants.append(random_int)
+            rounds_constants.append(random_int)
     elif field == 1:
         for i in range(0, num_constants):
             random_int = grain_random_bits(n)
             while random_int >= prime_number:
                 # print("[Info] Round constant is not in prime field! Taking next one.")
                 random_int = grain_random_bits(n)
-            round_constants.append(random_int)
+            rounds_constants.append(random_int)
             # Add (t-1) zeroes for Poseidon2 if partial round
             if i >= ((R_F/2) * t) and i < (((R_F/2) * t) + R_P):
-                round_constants.extend([0] * (t-1))
-    return round_constants
+                rounds_constants.extend([0] * (t-1))
+    return rounds_constants
 
-def print_round_constants(round_constants, n, field):
-    print("Number of round constants:", len(round_constants))
+def print_rounds_constants(rounds_constants, n, field):
+    print("Number of round constants:", len(rounds_constants))
 
     if field == 0:
         print("Round constants for GF(2^n):")
     elif field == 1:
         print("Round constants for GF(p):")
     hex_length = int(ceil(float(n) / 4)) + 2 # +2 for "0x"
-    print(["{0:#0{1}x}".format(entry, hex_length) for entry in round_constants])
+    print(["{0:#0{1}x}".format(entry, hex_length) for entry in rounds_constants])
 
 def create_mds_p(n, t):
     M = matrix(F, t, t)
@@ -555,11 +555,11 @@ def calc_equivalent_constants(constants, MDS_matrix_field):
 
     return constants_temp
 
-def poseidon(input_words, matrix, round_constants):
+def poseidon(input_words, matrix, rounds_constants):
 
     R_f = int(R_F_FIXED / 2)
 
-    round_constants_counter = 0
+    rounds_constants_counter = 0
 
     state_words = list(input_words)
 
@@ -567,8 +567,8 @@ def poseidon(input_words, matrix, round_constants):
     for r in range(0, R_f):
         # Round constants, nonlinear layer, matrix multiplication
         for i in range(0, t):
-            state_words[i] = state_words[i] + round_constants[round_constants_counter]
-            round_constants_counter += 1
+            state_words[i] = state_words[i] + rounds_constants[rounds_constants_counter]
+            rounds_constants_counter += 1
         for i in range(0, t):
             state_words[i] = (state_words[i])^alpha
         state_words = list(matrix * vector(state_words))
@@ -577,8 +577,8 @@ def poseidon(input_words, matrix, round_constants):
     for r in range(0, R_P_FIXED):
         # Round constants, nonlinear layer, matrix multiplication
         for i in range(0, t):
-            state_words[i] = state_words[i] + round_constants[round_constants_counter]
-            round_constants_counter += 1
+            state_words[i] = state_words[i] + rounds_constants[rounds_constants_counter]
+            rounds_constants_counter += 1
         state_words[0] = (state_words[0])^alpha
         state_words = list(matrix * vector(state_words))
 
@@ -586,8 +586,8 @@ def poseidon(input_words, matrix, round_constants):
     for r in range(0, R_f):
         # Round constants, nonlinear layer, matrix multiplication
         for i in range(0, t):
-            state_words[i] = state_words[i] + round_constants[round_constants_counter]
-            round_constants_counter += 1
+            state_words[i] = state_words[i] + rounds_constants[rounds_constants_counter]
+            rounds_constants_counter += 1
         for i in range(0, t):
             state_words[i] = (state_words[i])^alpha
         state_words = list(matrix * vector(state_words))
@@ -612,11 +612,11 @@ def print_matrix(f, message, matrix):
       if row != (matrix.nrows()) - 1 or col != (matrix.nrows()) - 1:
         f.write(f',')
     f.write(f'\n')
-def poseidon2(f, input_words, matrix_full, matrix_partial, round_constants):
+def poseidon2(f, input_words, matrix_full, matrix_partial, rounds_constants):
 
     R_f = int(R_F_FIXED / 2)
 
-    round_constants_counter = 0
+    rounds_constants_counter = 0
 
     state_words = list(input_words)
 
@@ -648,12 +648,12 @@ def poseidon2(f, input_words, matrix_full, matrix_partial, round_constants):
     for r in range(0, R_f):
         # Round constants, nonlinear layer, matrix multiplication
         print("Upper full round number: ",r)
-        print(round_constants[round_constants_counter:round_constants_counter+t])
+        print(rounds_constants[rounds_constants_counter:rounds_constants_counter+t])
         f.write(f'Upper full round {r}\n')
-        print_state(f, f'Round constants: ', round_constants[round_constants_counter:round_constants_counter+t])
+        print_state(f, f'Round constants: ', rounds_constants[rounds_constants_counter:rounds_constants_counter+t])
         for i in range(0, t):
-            state_words[i] = state_words[i] + round_constants[round_constants_counter]
-            round_constants_counter += 1
+            state_words[i] = state_words[i] + rounds_constants[rounds_constants_counter]
+            rounds_constants_counter += 1
         print_state(f, f'U.F.R. {r}: Output of add round constants', state_words)
         f.write(f'alpha = {alpha}\n')
         for i in range(0, t):
@@ -671,11 +671,11 @@ def poseidon2(f, input_words, matrix_full, matrix_partial, round_constants):
         # Round constants, nonlinear layer, matrix multiplication
         f.write(f'Partial round {r}\n')
         print("Middle partial round number: ",r)
-        print(round_constants[round_constants_counter:round_constants_counter+t])          
-        print_state(f, f'Round constants: ', round_constants[round_constants_counter:round_constants_counter+t])
+        print(rounds_constants[rounds_constants_counter:rounds_constants_counter+t])          
+        print_state(f, f'Round constants: ', rounds_constants[rounds_constants_counter:rounds_constants_counter+t])
         for i in range(0, t):
-            state_words[i] = state_words[i] + round_constants[round_constants_counter]         
-            round_constants_counter += 1
+            state_words[i] = state_words[i] + rounds_constants[rounds_constants_counter]         
+            rounds_constants_counter += 1
         print_state(f, f'P.R. {r}: Output of add round constants', state_words)
         state_words[0] = (state_words[0])^alpha
         print_state(f, f'P.R. {r}: S-box result', state_words)
@@ -692,10 +692,10 @@ def poseidon2(f, input_words, matrix_full, matrix_partial, round_constants):
         # Round constants, nonlinear layer, matrix multiplication
         print("Last full round number: ",r)
         f.write(f'Bottom full round {r}\n')
-        print(round_constants[round_constants_counter:round_constants_counter+t])
+        print(rounds_constants[rounds_constants_counter:rounds_constants_counter+t])
         for i in range(0, t):
-            state_words[i] = state_words[i] + round_constants[round_constants_counter]
-            round_constants_counter += 1
+            state_words[i] = state_words[i] + rounds_constants[rounds_constants_counter]
+            rounds_constants_counter += 1
         print_state(f, f'B.F.R. {r}: Output of add round constants', state_words)
         for i in range(0, t):
             state_words[i] = (state_words[i])^alpha
@@ -711,20 +711,20 @@ def poseidon2(f, input_words, matrix_full, matrix_partial, round_constants):
 init_generator(FIELD, SBOX, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED)
 
 # Round constants
-round_constants = generate_constants(FIELD, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED, PRIME_NUMBER)
-# print_round_constants(round_constants, FIELD_SIZE, FIELD)
-print(f'type(round_constants) = {type(round_constants)}')
-print(f'len(round_constants) = {len(round_constants)}')
-print(f'round_constants = {round_constants}')
-FILE_cpp.write(f'static const std::string round_constants_{t}[] = {{\n')
+rounds_constants = generate_constants(FIELD, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED, PRIME_NUMBER)
+# print_rounds_constants(rounds_constants, FIELD_SIZE, FIELD)
+print(f'type(rounds_constants) = {type(rounds_constants)}')
+print(f'len(rounds_constants) = {len(rounds_constants)}')
+print(f'rounds_constants = {rounds_constants}')
+FILE_cpp.write(f'static const std::string rounds_constants_{t}[] = {{\n')
 R_F_FIXED_HALF = R_F_FIXED / 2
 for rc_idx in range(R_F_FIXED_HALF * t):
-  FILE_cpp.write(f'  "{hex(round_constants[rc_idx])}",\n')
+  FILE_cpp.write(f'  "{hex(rounds_constants[rc_idx])}",\n')
 for rc_idx in range(R_F_FIXED_HALF * t, R_F_FIXED_HALF * t + R_P_FIXED * t):
   if rc_idx % t == 0:
-    FILE_cpp.write(f'  "{hex(round_constants[rc_idx])}",\n')
+    FILE_cpp.write(f'  "{hex(rounds_constants[rc_idx])}",\n')
 for rc_idx in range(R_F_FIXED_HALF * t + R_P_FIXED * t, R_F_FIXED * t + R_P_FIXED * t):
-  FILE_cpp.write(f'  "{hex(round_constants[rc_idx])}"')
+  FILE_cpp.write(f'  "{hex(rounds_constants[rc_idx])}"')
   if rc_idx != R_F_FIXED * t + R_P_FIXED * t - 1:
     FILE_cpp.write(f',')
   FILE_cpp.write(f'\n')
@@ -768,8 +768,8 @@ def to_hex(value):
 
 FILE_run_dump = open(f"run_dump.txt", 'w')   # Alpha is needed to communicate with a parent python script.
 state_in  = vector([F(i) for i in range(t)])
-# state_out = poseidon(state_in, MDS, round_constants)
-state_out = poseidon2(FILE_run_dump, state_in, MATRIX_FULL, MATRIX_PARTIAL, round_constants)
+# state_out = poseidon(state_in, MDS, rounds_constants)
+state_out = poseidon2(FILE_run_dump, state_in, MATRIX_FULL, MATRIX_PARTIAL, rounds_constants)
 
 FILE_cpp.close()
 FILE_run_dump.close()

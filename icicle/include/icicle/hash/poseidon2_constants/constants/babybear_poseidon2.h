@@ -16,7 +16,7 @@ int half_full_rounds_2 =    6;
 int partial_rounds_2 =      24;
 int alpha_2 =               7;
 
-static const std::string round_constants_2[] = {
+static const std::string rounds_constants_2[] = {
   "0x76a8932a",
   "0xbb32543",
   "0x54a11a80",
@@ -82,7 +82,7 @@ int half_full_rounds_3 =    6;
 int partial_rounds_3 =      17;
 int alpha_3 =               7;
 
-static const std::string round_constants_3[] = {
+static const std::string rounds_constants_3[] = {
   "0x460c6c97",
   "0x763f1345",
   "0x354fb969",
@@ -154,7 +154,7 @@ int half_full_rounds_4 =    4;
 int partial_rounds_4 =      21;
 int alpha_4 =               7;
 
-static const std::string round_constants_4[] = {
+static const std::string rounds_constants_4[] = {
   "0x1b149b6a",
   "0x550ada3b",
   "0x22880f72",
@@ -227,7 +227,7 @@ int half_full_rounds_8 =    4;
 int partial_rounds_8 =      12;
 int alpha_8 =               7;
 
-static const std::string round_constants_8[] = {
+static const std::string rounds_constants_8[] = {
   "0x11978cde",
   "0x531baacd",
   "0x62fc3e61",
@@ -327,7 +327,7 @@ int half_full_rounds_12 =    4;
 int partial_rounds_12 =      10;
 int alpha_12 =               7;
 
-static const std::string round_constants_12[] = {
+static const std::string rounds_constants_12[] = {
   "0x44d3bb88",
   "0x774148c9",
   "0x1562425e",
@@ -461,7 +461,7 @@ int half_full_rounds_16 =    4;
 int partial_rounds_16 =      13;
 int alpha_16 =               7;
 
-static const std::string round_constants_16[] = {
+static const std::string rounds_constants_16[] = {
   "0x69cbb6af",
   "0x46ad93f9",
   "0x60a00f4e",
@@ -634,7 +634,7 @@ int half_full_rounds_20 =    4;
 int partial_rounds_20 =      18;
 int alpha_20 =               7;
 
-static const std::string round_constants_20[] = {
+static const std::string rounds_constants_20[] = {
   "0x30cd4497",
   "0x67cf7d92",
   "0x113ca786",
@@ -848,7 +848,7 @@ int half_full_rounds_24 =    4;
 int partial_rounds_24 =      21;
 int alpha_24 =               7;
 
-static const std::string round_constants_24[] = {
+static const std::string rounds_constants_24[] = {
   "0xfa20c37",
   "0x795bb97",
   "0x12c60b9c",
