@@ -134,10 +134,6 @@ Any combination of hashers is valid including **Poseidon** that computes on fiel
 
 ## Padding
 
-:::note
-Padding feature is not yet supported in **v3.1** and is planned for **v3.2**.
-:::
-
 When the input for **layer 0** is smaller than expected, ICICLE can apply **padding** to align the data.
 
 **Padding Schemes:**
