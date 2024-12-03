@@ -86,6 +86,7 @@ namespace ntt_cpu {
     uint32_t nof_pending_tasks = 0; // the current count of tasks that are pending execution
 
   private:
+    const uint32_t logn;                             // log of the NTT size
     const NttSubLogn& ntt_sub_logn;                  // Reference to NttSubLogn
     std::vector<TasksDependenciesCounters> counters; // Dependencies counters by layer
     std::vector<NttTaskCoordinates> task_buffer;     // Buffer holding task coordinates for pending tasks
@@ -212,7 +213,7 @@ namespace ntt_cpu {
    */
   template <typename S, typename E>
   NttTasksManager<S, E>::NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn)
-      : ntt_sub_logn(ntt_sub_logn_ref),
+      : logn(logn), ntt_sub_logn(ntt_sub_logn_ref),
         counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_logn_ref, 0)),
         task_buffer(1 << (logn)), // Pre-allocate buffer
         head(0), tail(0), nof_pending_tasks(0)
@@ -231,7 +232,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   bool NttTasksManager<S, E>::is_full() const
   {
-    return (tail + 1) % (1 << (ntt_sub_logn.logn)) == head;
+    return (tail + 1) % (1 << (logn)) == head;
   }
 
   /**
@@ -257,7 +258,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttTasksManager<S, E>::increment(size_t& index)
   {
-    index = (index + 1) % (1 << (ntt_sub_logn.logn));
+    index = (index + 1) % (1 << (logn));
   }
 
   /**
@@ -270,7 +271,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttTasksManager<S, E>::decrement(size_t& index)
   {
-    index = (index - 1) % (1 << (ntt_sub_logn.logn));
+    index = (index - 1) % (1 << (logn));
   }
 
   /**

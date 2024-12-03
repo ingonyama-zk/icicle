@@ -1,7 +1,6 @@
 #pragma once
 #include "icicle/utils/log.h"
 #include "ntt_cpu.h"
-#include "ntt_cpu_non_parallel.h"
 #include <iostream>
 
 using namespace field_config;
@@ -49,15 +48,8 @@ namespace ntt_cpu {
     uint32_t log_batch_size = uint32_t(log2(config.batch_size));
     uint32_t scalar_size = sizeof(S);
 
-    bool parallel = is_parallel(log_size, log_batch_size, scalar_size);
-
-    if (!parallel) {
-      NttCpuNonParallel<S, E> ntt(log_size, direction, config, input, output);
-      ntt.run();
-    } else {
-      NttCpu<S, E> ntt(log_size, direction, config, input, output);
-      ntt.run();
-    }
+    NttCpu<S, E> ntt(log_size, direction, config, input, output);
+    ntt.run();
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu

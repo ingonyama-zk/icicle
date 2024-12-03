@@ -67,6 +67,5 @@ namespace ntt_cpu {
       return false;
     }
     return true;
-
-  } 
-}// namespace ntt_cpu
+  }
+} // namespace ntt_cpu
