@@ -235,7 +235,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   eIcicleError NttTask<S, E>::hierarchy_0_cpu_ntt()
   {
-    uint32_t subntt_size_log =
+    const uint32_t subntt_size_log =
       ntt_data->is_parallel
         ? ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
                                                             [ntt_task_coordinates->hierarchy_0_layer_idx]
@@ -1284,7 +1284,6 @@ namespace ntt_cpu {
       subntt_size = 1 << subntt_size_log;
     } else {
       subntt_elements = ntt_data->elements;
-      last_layer = false;
       subntt_size = ntt_data->size;
       subntt_size_log = ntt_data->logn;
     }
