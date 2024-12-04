@@ -347,7 +347,8 @@ namespace ntt_cpu {
          (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
                                                             [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
       if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->ntt_sub_logn.logn);
+        const S* inv_log_sizes = CpuNttDomain<S>::s_ntt_domain.get_inv_log_sizes();
+        S inv_size = inv_log_sizes[ntt_data->ntt_sub_logn.logn];
         for (uint64_t i = 0; i < 8; ++i) {
           current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
         }
@@ -524,7 +525,8 @@ namespace ntt_cpu {
          (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
                                                             [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
       if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->ntt_sub_logn.logn);
+        const S* inv_log_sizes = CpuNttDomain<S>::s_ntt_domain.get_inv_log_sizes();
+        S inv_size = inv_log_sizes[ntt_data->ntt_sub_logn.logn];
         for (uint64_t i = 0; i < 16; ++i) {
           current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
         }
@@ -1190,7 +1192,8 @@ namespace ntt_cpu {
          (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
                                                             [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
       if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->ntt_sub_logn.logn);
+        const S* inv_log_sizes = CpuNttDomain<S>::s_ntt_domain.get_inv_log_sizes();
+        S inv_size = inv_log_sizes[ntt_data->ntt_sub_logn.logn];
         for (uint64_t i = 0; i < 32; ++i) {
           current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
         }
