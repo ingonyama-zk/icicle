@@ -1,6 +1,7 @@
 use crate::hash::Hasher;
 use crate::sumcheck::{Sumcheck, SumcheckConstructor, SumcheckOps, SumcheckTranscriptConfig};
 use crate::traits::{FieldImpl, GenerateRandom};
+use icicle_runtime::memory::HostSlice;
 
 pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
 where
@@ -55,7 +56,8 @@ where
     );
 
     let sumcheck = Sumcheck::new::<F>(&config).unwrap();
-    let proof = sumcheck.prove();
+    let dummy_input: Vec<F> = F::Config::generate_random(5);
+    let proof = sumcheck.prove(HostSlice::from_slice(&dummy_input));
     println!("proof = {}", proof);
     let _valid = sumcheck.verify(&proof);
 }

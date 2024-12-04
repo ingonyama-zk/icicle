@@ -3,7 +3,7 @@ pub mod tests;
 
 use crate::hash::Hasher;
 use crate::traits::FieldImpl;
-use icicle_runtime::eIcicleError;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub struct SumcheckTranscriptConfig<'a, S> {
     pub hash: &'a Hasher,
@@ -14,13 +14,16 @@ pub struct SumcheckTranscriptConfig<'a, S> {
     pub seed_rng: S,
 }
 // This trait is implemented on FieldConfig to enable Sumcheck struct to create a sumcheck prover
+
 pub trait SumcheckConstructor<F> {
+    // TODO Yuval:  instead of returning an 'impl SumcheckOps<F>' I could return a Box<dyn SumcheckOps<F>>.
+    //              This will make it runtime polymorphism but allow the returned object to be stored in a user struct. REQUIRED?
     fn new(transcript_config: &SumcheckTranscriptConfig<F>) -> Result<impl SumcheckOps<F>, eIcicleError>;
 }
 
 pub trait SumcheckOps<F> {
     // TODO replace with sumcheck proof type
-    fn prove(&self) -> String;
+    fn prove(&self, input: &(impl HostOrDeviceSlice<F> + ?Sized)) -> String;
     fn verify(&self, proof: &str) -> bool;
 }
 
@@ -97,7 +100,7 @@ macro_rules! impl_sumcheck {
     ) => {
         use icicle_core::sumcheck::{SumcheckConstructor, SumcheckOps, SumcheckTranscriptConfig};
         use icicle_core::traits::FieldImpl;
-        use icicle_runtime::eIcicleError;
+        use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
 
         pub type SumcheckHandle = *const c_void;
@@ -126,7 +129,7 @@ macro_rules! impl_sumcheck {
         }
 
         impl SumcheckOps<$field> for SumcheckInternal {
-            fn prove(&self) -> String {
+            fn prove(&self, input: &(impl HostOrDeviceSlice<$field> + ?Sized)) -> String {
                 String::from("hello")
             }
 
