@@ -15,6 +15,7 @@
 #include "icicle/backend/ntt_config.h"
 
 #include "test_base.h"
+#include "icicle/utils/rand_gen.h"
 
 using namespace curve_config;
 using namespace icicle;
@@ -36,8 +37,8 @@ public:
   {
     const int logn = 12;
     const int batch = 3;
-    const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
-    const int precompute_factor = (rand() & 7) + 1;  // between 1 and 8
+    const int N = (1 << logn) - rand_int(0, 5 * logn); // make it not always power of two
+    const int precompute_factor = rand_int(0, 7) + 1;  // between 1 and 8
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -90,8 +91,8 @@ public:
     // As such the default amount of tasks and 1 thread shouldn't be enough and the program should readjust the task
     // number per thread.
     const int batch = 3;
-    const int N = (1 << logn) - rand() % (5 * logn); // make it not always power of two
-    const int precompute_factor = 1;                 // Precompute is 1 to increase number of BMs
+    const int N = (1 << logn) - rand_int(0, 5 * logn); // make it not always power of two
+    const int precompute_factor = 1;                   // Precompute is 1 to increase number of BMs
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);

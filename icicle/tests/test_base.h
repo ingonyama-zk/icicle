@@ -28,10 +28,6 @@ public:
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()
   {
-    unsigned seed = time(NULL);
-    srand(seed);
-    ICICLE_LOG_INFO << "Seed for tests is: " << seed;
-    seed_rand_generator(seed);
 #ifdef BACKEND_BUILD_DIR
     setenv("ICICLE_BACKEND_INSTALL_DIR", BACKEND_BUILD_DIR, 0 /*=replace*/);
 #endif
@@ -53,7 +49,13 @@ public:
   static void TearDownTestSuite() {}
 
   // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
+  void SetUp() override
+  {
+    unsigned seed = time(NULL);
+    srand(seed);
+    ICICLE_LOG_INFO << "Seed for tests is: " << seed;
+    seed_rand_generator(seed);
+  }
   void TearDown() override {}
 
   bool is_main_device_available() const { return s_main_device != UNKOWN_DEVICE && s_main_device != "CPU"; }
