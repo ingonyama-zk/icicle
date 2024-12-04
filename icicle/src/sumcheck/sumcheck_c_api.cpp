@@ -11,6 +11,7 @@ namespace icicle {
 
   SumcheckHandle* CONCAT_EXPAND(FIELD, sumcheck_create)()
   {
+    ICICLE_LOG_INFO << "hello world";
     // TODO Yuval update params and implement
     return nullptr;
   }

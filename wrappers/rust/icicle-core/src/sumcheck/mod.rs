@@ -2,6 +2,8 @@
 pub mod tests;
 
 use crate::hash::Hasher;
+use crate::traits::FieldImpl;
+use icicle_runtime::eIcicleError;
 
 pub struct SumcheckTranscriptConfig<'a, S> {
     pub hash: &'a Hasher,
@@ -11,6 +13,21 @@ pub struct SumcheckTranscriptConfig<'a, S> {
     pub little_endian: bool,
     pub seed_rng: S,
 }
+// This trait is implemented on FieldConfig to enable Sumcheck struct to create a sumcheck prover
+pub trait SumcheckConstructor<F> {
+    fn new(transcript_config: &SumcheckTranscriptConfig<F>) -> Result<impl SumcheckOps<F>, eIcicleError>;
+}
+
+pub trait SumcheckOps<F> {
+    // TODO replace with sumcheck proof type
+    fn prove(&self) -> String;
+    fn verify(&self, proof: &str) -> bool;
+}
+
+// This struct is used simply to construct a sumcheck instance that implements sumcheck ops in a generic way
+pub struct Sumcheck;
+
+/*******************/
 
 impl<'a, S> SumcheckTranscriptConfig<'a, S> {
     /// Constructor for `SumcheckTranscriptConfig` with explicit parameters.
@@ -58,7 +75,17 @@ impl<'a, S> SumcheckTranscriptConfig<'a, S> {
     }
 }
 
-// TODO Yuval: add a Sumcheck trait and implement it in the macro per field
+impl Sumcheck {
+    fn new<'a, F: FieldImpl>(
+        transcript_config: &'a SumcheckTranscriptConfig<'a, F>,
+    ) -> Result<impl SumcheckOps<F> + 'a, eIcicleError>
+    where
+        F: FieldImpl,
+        F::Config: SumcheckConstructor<F>,
+    {
+        <<F as FieldImpl>::Config as SumcheckConstructor<F>>::new(&transcript_config)
+    }
+}
 
 #[macro_export]
 macro_rules! impl_sumcheck {
@@ -68,13 +95,13 @@ macro_rules! impl_sumcheck {
         $field:ident,
         $field_cfg:ident
     ) => {
-        use icicle_core::sumcheck::SumcheckTranscriptConfig;
+        use icicle_core::sumcheck::{SumcheckConstructor, SumcheckOps, SumcheckTranscriptConfig};
         use icicle_core::traits::FieldImpl;
         use icicle_runtime::eIcicleError;
         use std::ffi::c_void;
 
-        type SumcheckHandle = *const c_void;
-        pub struct Sumcheck {
+        pub type SumcheckHandle = *const c_void;
+        pub struct SumcheckInternal {
             handle: SumcheckHandle,
         }
 
@@ -83,13 +110,28 @@ macro_rules! impl_sumcheck {
             fn create() -> SumcheckHandle;
         }
 
-        impl Sumcheck {
-            pub fn new<S: FieldImpl>(transcript_config: &SumcheckTranscriptConfig<S>) -> Result<Self, eIcicleError> {
-                unsafe {
-                    // TODO real call
-                    create();
-                }
-                Err(eIcicleError::UnknownError)
+        impl SumcheckConstructor<$field> for $field_cfg {
+            fn new(
+                transcript_config: &SumcheckTranscriptConfig<$field>,
+            ) -> Result<impl SumcheckOps<$field>, eIcicleError> {
+                let handle: SumcheckHandle = unsafe {
+                    // TODO add params
+                    create()
+                };
+                // if handle.is_null() {
+                //     return Err(eIcicleError::UnknownError);
+                // }
+                Ok(SumcheckInternal { handle })
+            }
+        }
+
+        impl SumcheckOps<$field> for SumcheckInternal {
+            fn prove(&self) -> String {
+                String::from("hello")
+            }
+
+            fn verify(&self, _: &str) -> bool {
+                true
             }
         }
     };
@@ -105,6 +147,12 @@ macro_rules! impl_sumcheck_tests {
         fn test_sumcheck_transcript_config() {
             let hash = Keccak256::new(0).unwrap();
             check_sumcheck_transcript_config::<$field>(&hash)
+        }
+
+        #[test]
+        fn test_sumcheck_simple() {
+            let hash = Keccak256::new(0).unwrap();
+            check_sumcheck_simple::<$field>(&hash)
         }
     };
 }

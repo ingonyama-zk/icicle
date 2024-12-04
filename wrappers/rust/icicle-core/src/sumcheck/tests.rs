@@ -1,5 +1,5 @@
 use crate::hash::Hasher;
-use crate::sumcheck::SumcheckTranscriptConfig;
+use crate::sumcheck::{Sumcheck, SumcheckConstructor, SumcheckOps, SumcheckTranscriptConfig};
 use crate::traits::{FieldImpl, GenerateRandom};
 
 pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
@@ -39,4 +39,23 @@ where
     assert_eq!(config2.round_challenge_label, b"ChallengeLabel");
     assert!(!config2.little_endian);
     assert_eq!(config2.seed_rng, seed_rng);
+}
+
+pub fn check_sumcheck_simple<F: FieldImpl>(hash: &Hasher)
+where
+    <F as FieldImpl>::Config: GenerateRandom<F> + SumcheckConstructor<F>,
+{
+    let config = SumcheckTranscriptConfig::new(
+        hash,
+        b"DomainLabel".to_vec(),
+        b"PolyLabel".to_vec(),
+        b"ChallengeLabel".to_vec(),
+        true, // little endian
+        F::zero(),
+    );
+
+    let sumcheck = Sumcheck::new::<F>(&config).unwrap();
+    let proof = sumcheck.prove();
+    println!("proof = {}", proof);
+    let _valid = sumcheck.verify(&proof);
 }
