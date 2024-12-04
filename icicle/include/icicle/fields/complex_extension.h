@@ -48,12 +48,12 @@ public:
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
+    return ComplexExtensionField{FF::to_montgomery(xs.real), FF::to_montgomery(xs.imaginary)};
   }
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField from_montgomery(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r_inv}, xs.imaginary * FF{CONFIG::montgomery_r_inv}};
+    return ComplexExtensionField{FF::from_montgomery(xs.real), FF::from_montgomery(xs.imaginary)};
   }
 
   static HOST_INLINE ComplexExtensionField rand_host()
@@ -110,7 +110,6 @@ public:
     return ComplexExtensionField{xs.real - ys, xs.imaginary};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
@@ -122,23 +121,19 @@ public:
     return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const ComplexExtensionField& xs, const FF& ys)
   {
     return ExtensionWide{FF::mul_wide(xs.real, ys), FF::mul_wide(xs.imaginary, ys)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const ComplexExtensionField& ys)
   {
     return mul_wide(ys, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce(const ExtensionWide& xs)
   {
-    return ComplexExtensionField{
-      FF::template reduce<MODULUS_MULTIPLE>(xs.real), FF::template reduce<MODULUS_MULTIPLE>(xs.imaginary)};
+    return ComplexExtensionField{FF::reduce(xs.real), FF::reduce(xs.imaginary)};
   }
 
   template <class T1, class T2>
@@ -156,6 +151,60 @@ public:
   friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     return !(xs == ys);
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE FF mul_weierstrass_b_real(const FF& xs)
+  {
+    FF r = {};
+    if constexpr (Gen::is_b_u32_g2_re) {
+      r = FF::template mul_unsigned<FF{Gen::weierstrass_b_g2_re}.limbs_storage.limbs[0], FF>(xs);
+      if constexpr (Gen::is_b_neg_g2_re)
+        return FF::neg(r);
+      else {
+        return r;
+      }
+    } else {
+#ifdef BARRET
+      return FF{Gen::weierstrass_b_g2_re} * xs;
+#else
+      return FF{Gen::weierstrass_b_mont_g2_re} * xs;
+#endif
+    }
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE FF mul_weierstrass_b_imag(const FF& xs)
+  {
+    FF r = {};
+    if constexpr (Gen::is_b_u32_g2_im) {
+      r = FF::template mul_unsigned<FF{Gen::weierstrass_b_g2_im}.limbs_storage.limbs[0], FF>(xs);
+      if constexpr (Gen::is_b_neg_g2_im)
+        return FF::neg(r);
+      else {
+        return r;
+      }
+    } else {
+#ifdef BARRET
+      return FF{Gen::weierstrass_b_g2_im} * xs;
+#else
+      return FF{Gen::weierstrass_b_mont_g2_im} * xs;
+#endif
+    }
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE ComplexExtensionField mul_weierstrass_b(const ComplexExtensionField& xs)
+  {
+    const FF xs_real = xs.real;
+    const FF xs_imaginary = xs.imaginary;
+    FF real_prod = mul_weierstrass_b_real<Gen>(xs_real);
+    FF imaginary_prod = mul_weierstrass_b_imag<Gen>(xs_imaginary);
+    FF re_im = mul_weierstrass_b_real<Gen>(xs_imaginary);
+    FF im_re = mul_weierstrass_b_imag<Gen>(xs_real);
+    FF nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
+    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
+    return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
   }
 
   template <const ComplexExtensionField& multiplier>
@@ -180,21 +229,18 @@ public:
     return {FF::template mul_unsigned<multiplier>(xs.real), FF::template mul_unsigned<multiplier>(xs.imaginary)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const ComplexExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(xs, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField sqr(const ComplexExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
     return xs * xs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField neg(const ComplexExtensionField& xs)
   {
     return ComplexExtensionField{FF::neg(xs.real), FF::neg(xs.imaginary)};

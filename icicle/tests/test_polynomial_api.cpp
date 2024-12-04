@@ -47,6 +47,11 @@ public:
       auto init_domain_config = default_ntt_init_domain_config();
       ntt_init_domain(scalar_t::omega(MAX_NTT_LOG_SIZE), init_domain_config);
     }
+#ifdef BARRET
+    ICICLE_LOG_INFO << "USING BARRET MULT\n";
+#else
+    ICICLE_LOG_INFO << "USING MONTGOMERY MULT\n";
+#endif
   }
 
   static void TearDownTestSuite() {}
