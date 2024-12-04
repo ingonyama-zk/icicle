@@ -7,6 +7,7 @@ pub mod msm;
 pub mod ntt;
 pub mod polynomials;
 pub mod poseidon;
+pub mod sumcheck;
 pub mod vec_ops;
 
 #[doc(hidden)]
