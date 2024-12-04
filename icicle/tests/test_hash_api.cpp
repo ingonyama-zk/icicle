@@ -1084,9 +1084,9 @@ public:
 TEST_F(SumcheckTest, InitializeWithConstChar)
 {
   auto hasher = Keccak256::create();
-  const char* domain_separator = "domain_separator";
-  const char* round_poly = "round_poly";
-  const char* round_challenge = "round_challenge";
+  const char* domain_separator = "DomainLabel";
+  const char* round_poly = "PolyLabel";
+  const char* round_challenge = "ChallengeLabel";
   auto seed = scalar_t::rand_host();
 
   SumcheckTranscriptConfig config(hasher, domain_separator, round_poly, round_challenge, seed);
