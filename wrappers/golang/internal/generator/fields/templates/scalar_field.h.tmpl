@@ -12,6 +12,10 @@ typedef struct VecOpsConfig VecOpsConfig;
 
 void {{.Field}}_generate_scalars(scalar_t* scalars, int size);
 int {{.Field}}_scalar_convert_montgomery(const scalar_t* d_in, size_t n, bool is_into, const VecOpsConfig* ctx, scalar_t* d_out);
+void {{.Field}}_add(const scalar_t* a, const scalar_t* b, scalar_t* result);
+void {{.Field}}_sub(const scalar_t* a, const scalar_t* b, scalar_t* result);
+void {{.Field}}_mul(const scalar_t* a, const scalar_t* b, scalar_t* result);
+void {{.Field}}_inv(const scalar_t* a, scalar_t* result);
 
 #ifdef __cplusplus
 }

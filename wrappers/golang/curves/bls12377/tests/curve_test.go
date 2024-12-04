@@ -86,6 +86,18 @@ func testProjectiveFromLimbs(suite *suite.Suite) {
 	suite.ElementsMatch(randLimbs3, projective.Z.GetLimbs())
 }
 
+func testProjectiveArithmetic(suite *suite.Suite) {
+	points := bls12_377.GenerateProjectivePoints(2)
+
+	point1 := points[0]
+	point2 := points[1]
+
+	add := point1.Add(&point2)
+	sub := add.Sub(&point2)
+
+	suite.True(point1.ProjectiveEq(&sub))
+}
+
 func testProjectiveFromAffine(suite *suite.Suite) {
 	randLimbs := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
 	randLimbs2 := test_helpers.GenerateRandomLimb(int(BASE_LIMBS))
@@ -114,6 +126,7 @@ func (s *CurveTestSuite) TestCurve() {
 	s.Run("TestProjectiveZero", testWrapper(&s.Suite, testProjectiveZero))
 	s.Run("TestProjectiveFromLimbs", testWrapper(&s.Suite, testProjectiveFromLimbs))
 	s.Run("TestProjectiveFromAffine", testWrapper(&s.Suite, testProjectiveFromAffine))
+	s.Run("TestProjectiveArithmetic", testWrapper(&s.Suite, testProjectiveArithmetic))
 }
 
 func TestSuiteCurve(t *testing.T) {

@@ -1,7 +1,7 @@
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
-    traits::{FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+    traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -16,6 +16,32 @@ pub fn check_field_equality<F: FieldImpl>() {
     assert_eq!(left, right);
 }
 
+pub fn check_field_arithmetic<F>()
+where
+    F: FieldImpl + Arithmetic,
+    F::Config: GenerateRandom<F>,
+{
+    let size = 1 << 10;
+    let scalars_a = F::Config::generate_random(size);
+    let scalars_b = F::Config::generate_random(size);
+
+    for i in 0..size {
+        let result1 = scalars_a[i] + scalars_b[i];
+        let result2 = result1 - scalars_b[i];
+        assert_eq!(result2, scalars_a[i]);
+    }
+
+    let scalar_a = scalars_a[0];
+    let square = scalar_a.sqr();
+    let mul = scalar_a.mul(scalar_a);
+
+    assert_eq!(square, mul);
+
+    let inv = scalar_a.inv();
+    let one = scalar_a.mul(inv);
+    assert_eq!(one, F::one());
+}
+
 pub fn check_affine_projective_convert<C: Curve>() {
     let size = 1 << 10;
     let affine_points = C::generate_random_affine_points(size);
@@ -27,6 +53,18 @@ pub fn check_affine_projective_convert<C: Curve>() {
     for projective_point in projective_points {
         let affine_eqivalent: Affine<C> = projective_point.into();
         assert_eq!(projective_point, affine_eqivalent.into());
+    }
+}
+
+pub fn check_point_arithmetic<C: Curve>() {
+    let size = 1 << 10;
+    let projective_points_a = C::generate_random_projective_points(size);
+    let projective_points_b = C::generate_random_projective_points(size);
+
+    for i in 0..size {
+        let result1 = projective_points_a[i] + projective_points_b[i];
+        let result2 = result1 - projective_points_b[i];
+        assert_eq!(result2, projective_points_a[i]);
     }
 }
 
