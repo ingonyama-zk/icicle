@@ -122,10 +122,10 @@ func testScalarFieldArithmetic(suite *suite.Suite) {
 	inv := scalarA.Inv()
 
 	one := scalarA.Mul(&inv)
-	expectedOne := scalarsA[1]
+	expectedOne := grumpkin.GenerateScalars(1)[0]
 	expectedOne.One()
 
-	suite.Equal(one, expectedOne)
+	suite.Equal(expectedOne, one)
 }
 
 func testGrumpkinMongtomeryConversion(suite *suite.Suite) {

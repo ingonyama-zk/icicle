@@ -392,7 +392,6 @@ macro_rules! impl_curve_tests {
 
             #[test]
             fn test_point_arithmetic() {
-                // initialize(); TODO emir: no need for backend here right?
                 check_point_arithmetic::<$curve>();
             }
         }

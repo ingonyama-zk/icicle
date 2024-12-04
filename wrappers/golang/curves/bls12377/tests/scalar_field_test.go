@@ -122,10 +122,10 @@ func testScalarFieldArithmetic(suite *suite.Suite) {
 	inv := scalarA.Inv()
 
 	one := scalarA.Mul(&inv)
-	expectedOne := scalarsA[1]
+	expectedOne := bls12_377.GenerateScalars(1)[0]
 	expectedOne.One()
 
-	suite.Equal(one, expectedOne)
+	suite.Equal(expectedOne, one)
 }
 
 func testBls12_377MongtomeryConversion(suite *suite.Suite) {

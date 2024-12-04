@@ -389,7 +389,6 @@ macro_rules! impl_field_tests {
 
             #[test]
             fn test_field_arithmetic() {
-                initialize();
                 check_field_arithmetic::<$field_name>()
             }
         }
