@@ -93,19 +93,20 @@ namespace icicle {
  * 1. Both Prover and Verifier use this configuration to ensure deterministic randomness generation.
  * 2. Messages (e.g., field elements, strings) are encoded in little/big-endian format based on
  `SumcheckTranscriptConfig.little_endian`.
-
- *
+ * message structure:
+ * encoded_round_msg = [label||length(prover_msg)||round_number||prover_msg_in_round]
+ * hash(public||prev_challenge||round_challenge_label||encoded_round_msg)
  * Protocol Workflow:
  *
  * (1) Initialize Transcript:
  * - entry_DS = [domain_separator_label || proof.num_vars || proof.degree || public (hardcoded?) || claimed_sum]
  *
  * (2) First Round:
- * - entry_0 = [round_poly_label || r_0[x].len() || k=0 || r_0[x]]
+ * - entry_0 = [round_poly_label || r_0[x].len() || m=0 || r_0[x]]
  * - alpha_0 = Hash(entry_DS || seed_rng || round_challenge_label || entry_0).to_field()
  *
  * (3) Round i > 0:
- * - entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
+ * - entry_i = [round_poly_label || r_i[x].len() || m=i || r_i[x]]
  * - alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
  *
  */
