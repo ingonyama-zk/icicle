@@ -60,7 +60,7 @@ namespace ntt_cpu {
   NttCpu<S, E>::NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
       : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config)),
         ntt_tasks_manager(
-          ntt_data.is_parallel ? std::optional<NttTasksManager<S, E>>(std::in_place, ntt_data.ntt_sub_logn, logn)
+          ntt_data.is_parallel ? std::optional<NttTasksManager<S, E>>(std::in_place, ntt_data.ntt_sub_hierarchies, logn)
                                : std::nullopt),
         tasks_manager(
           ntt_data.is_parallel ? std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1)
@@ -76,13 +76,13 @@ namespace ntt_cpu {
       if (ntt_data.logn > HIERARCHY_1) {
         for (uint32_t hierarchy_1_layer_idx = 0; hierarchy_1_layer_idx < 2; hierarchy_1_layer_idx++) {
           const uint32_t sunbtt_plus_batch_logn =
-            ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] +
+            ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] +
             uint32_t(log2(ntt_data.config.batch_size));
           const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel =
             sunbtt_plus_batch_logn < HIERARCHY_1 ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
           const uint32_t nof_hierarchy_1_subntts_todo_in_parallel = 1 << log_nof_hierarchy_1_subntts_todo_in_parallel;
           const uint32_t log_nof_subntts_chunks =
-            ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] -
+            ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] -
             log_nof_hierarchy_1_subntts_todo_in_parallel;
           const uint32_t nof_subntts_chunks = 1 << log_nof_subntts_chunks;
           for (uint32_t hierarchy_1_subntts_chunck_idx = 0; hierarchy_1_subntts_chunck_idx < nof_subntts_chunks;
@@ -148,8 +148,8 @@ namespace ntt_cpu {
 
     if (logn > HIERARCHY_1) {
       // Apply input's reorder logic depending on the configuration
-      uint32_t cur_ntt_log_size = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
-      uint32_t next_ntt_log_size = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
+      uint32_t cur_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
+      uint32_t next_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
 
       for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
         const E* input_batch = ntt_data.config.columns_batch ? (input + batch) : (input + batch * ntt_data.size);
@@ -211,8 +211,8 @@ namespace ntt_cpu {
 
         // Adjust the index if reorder logic was applied on the input
         if (needs_reorder_input) {
-          uint32_t cur_ntt_log_size = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
-          uint32_t next_ntt_log_size = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
+          uint32_t cur_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
+          uint32_t next_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
           uint32_t subntt_idx = i >> cur_ntt_log_size;
           uint32_t element = i & ((1 << cur_ntt_log_size) - 1);
           idx = subntt_idx + (element << next_ntt_log_size);
@@ -238,8 +238,8 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttCpu<S, E>::hierarchy_1_reorder()
   {
-    const uint32_t sntt_size = 1 << ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
-    const uint32_t nof_sntts = 1 << ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
+    const uint32_t sntt_size = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
+    const uint32_t nof_sntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     const uint64_t temp_elements_size = ntt_data.size * ntt_data.config.batch_size;
 
@@ -272,8 +272,8 @@ namespace ntt_cpu {
   {
     uint32_t columns_batch_reps = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     uint32_t rows_batch_reps = ntt_data.config.columns_batch ? 1 : ntt_data.config.batch_size;
-    uint32_t s0 = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
-    uint32_t s1 = ntt_data.ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
+    uint32_t s0 = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
+    uint32_t s1 = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     for (uint32_t row_batch = 0; row_batch < rows_batch_reps;
          ++row_batch) { // if columns_batch=false, then elements pointer is shifted by batch*size
@@ -349,22 +349,22 @@ namespace ntt_cpu {
     }
 
     uint32_t nof_hierarchy_0_layers =
-      (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)   ? 3
-      : (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2
-                                                                                           : 1;
+      (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)   ? 3
+      : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2
+                                                                                                  : 1;
     uint64_t nof_blocks;
     uint64_t nof_subntts;
     for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
       if (hierarchy_0_layer_idx == 0) {
-        nof_blocks = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-        nof_subntts = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
+        nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+        nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
       } else if (hierarchy_0_layer_idx == 1) {
-        nof_blocks = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-        nof_subntts = 1 << ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
+        nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+        nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
       } else {
         nof_blocks = 1
-                     << (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
-                         ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
+                     << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
+                         ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
         nof_subntts = 1;
       }
       for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
@@ -410,8 +410,8 @@ namespace ntt_cpu {
     // std::deque<NttTaskCoordinates> completed_tasks_list;
 
     uint32_t nof_subntts_l1 = 1
-                              << ((ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
-                                  (ntt_data.ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
+                              << ((ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
+                                  (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
     while (ntt_tasks_manager->tasks_to_do()) {
       // There are tasks that are available or waiting
 

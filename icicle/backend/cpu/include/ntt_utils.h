@@ -46,26 +46,4 @@ namespace ntt_cpu {
     }
     return rev;
   };
-
-  /**
-   * @brief Determines if the NTT computation should be parallelized.
-   *
-   * This function determines if the NTT computation should be parallelized based on the size of the NTT, the batch
-   * size, and the size of the scalars.
-   *
-   * @param log_size The log of the size of the NTT.
-   * @param log_batch_size The log of the batch size.
-   * @param scalar_size The size of the scalars.
-   * @return bool Returns true if the NTT computation should be parallelized, or false otherwise.
-   */
-  bool is_parallel(uint32_t log_size, uint32_t log_batch_size, uint32_t scalar_size)
-  {
-    // for small scalars, the threshold for when it is faster to use parallel NTT is higher
-    if (
-      (scalar_size >= 32 && (log_size + log_batch_size) <= 13) ||
-      (scalar_size < 32 && (log_size + log_batch_size) <= 16)) {
-      return false;
-    }
-    return true;
-  }
 } // namespace ntt_cpu

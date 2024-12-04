@@ -44,9 +44,7 @@ namespace ntt_cpu {
     ICICLE_ASSERT(size <= CpuNttDomain<S>::s_ntt_domain.get_max_size())
       << "Size is too large for domain. size = " << size
       << ", domain_max_size = " << CpuNttDomain<S>::s_ntt_domain.get_max_size();
-    uint32_t log_size = uint32_t(log2(size));
-    uint32_t log_batch_size = uint32_t(log2(config.batch_size));
-    uint32_t scalar_size = sizeof(S);
+    const uint32_t log_size = uint32_t(log2(size));
 
     NttCpu<S, E> ntt(log_size, direction, config, input, output);
     ntt.run();

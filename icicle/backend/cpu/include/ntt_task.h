@@ -73,15 +73,11 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttTask<S, E>::execute()
   {
-    if (!ntt_data->is_parallel) {
+    if (!ntt_data->is_parallel || !ntt_task_coordinates->reorder) {
       hierarchy_0_cpu_ntt();
     } else {
-      if (!ntt_task_coordinates->reorder) {
-        hierarchy_0_cpu_ntt();
-      } else {
-        // if all hierarchy_0_subntts are done, and at least 2 layers in hierarchy 0 - reorder the subntt's output
-        reorder_and_refactor_if_needed();
-      }
+      // if all hierarchy_0_subntts are done, and at least 2 layers in hierarchy 0 - reorder the subntt's output
+      reorder_and_refactor_if_needed();
     }
   }
 
@@ -106,21 +102,24 @@ namespace ntt_cpu {
     for (uint32_t row_batch = 0; row_batch < rows_batch_reps;
          ++row_batch) { // if columns_batch=false, then elements pointer is shifted by batch*size
       E* elements = ntt_data->elements + row_batch * ntt_data->size;
-      bool is_only_hierarchy_0 = ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[0] == 0;
+      bool is_only_hierarchy_0 = ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0] == 0;
       const bool refactor_pre_hierarchy_1_next_layer =
         (!is_only_hierarchy_0) && (ntt_task_coordinates->hierarchy_1_layer_idx == 0);
       uint64_t size =
         (is_only_hierarchy_0)
           ? ntt_data->size
-          : 1 << ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx];
+          : 1 << ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx];
       uint64_t temp_output_size = ntt_data->config.columns_batch ? size * ntt_data->config.batch_size : size;
       auto temp_output = std::make_unique<E[]>(temp_output_size);
       uint64_t new_idx = 0;
       uint32_t subntt_idx;
       uint32_t element;
-      uint32_t s0 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0];
-      uint32_t s1 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1];
-      uint32_t s2 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2];
+      uint32_t s0 =
+        ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0];
+      uint32_t s1 =
+        ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1];
+      uint32_t s2 =
+        ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2];
       uint32_t p0, p1, p2;
       const uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
       uint32_t rep = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
@@ -129,7 +128,7 @@ namespace ntt_cpu {
       E* hierarchy_1_subntt_output =
         elements +
         stride * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                  << ntt_data->ntt_sub_logn
+                  << ntt_data->ntt_sub_hierarchies
                        .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx
                                                                                                    // * subntt_size
       for (uint32_t col_batch = 0; col_batch < columns_batch_reps; ++col_batch) {
@@ -188,20 +187,23 @@ namespace ntt_cpu {
     E* current_elements, const std::vector<uint32_t>& index_in_mem, const S* twiddles)
   {
     uint32_t current_subntt_size =
-      1 << ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                             [ntt_task_coordinates->hierarchy_0_layer_idx];
+      1 << ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                    [ntt_task_coordinates->hierarchy_0_layer_idx];
     uint32_t subntt_idx;
-    uint32_t s0 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0];
-    uint32_t s1 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1];
-    uint32_t s2 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2];
+    uint32_t s0 =
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0];
+    uint32_t s1 =
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1];
+    uint32_t s2 =
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2];
     uint32_t p0, p1, p2;
     for (uint32_t i = 0; i < current_subntt_size; i++) {
       uint64_t new_idx = i;
       uint64_t idx = idx_in_mem(ntt_task_coordinates, i); // don't need to multiply by stride here
       // Adjust the index if reorder logic was applied on the input
       if (ntt_data->logn > HIERARCHY_1) {
-        uint32_t cur_ntt_log_size = ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[0];
-        uint32_t next_ntt_log_size = ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[1];
+        uint32_t cur_ntt_log_size = ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
+        uint32_t next_ntt_log_size = ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
         uint32_t subntt_idx = index_in_mem[i] >> cur_ntt_log_size;
         uint32_t element = index_in_mem[i] & ((1 << cur_ntt_log_size) - 1);
         idx = subntt_idx + (element << next_ntt_log_size);
@@ -237,8 +239,8 @@ namespace ntt_cpu {
   {
     const uint32_t subntt_size_log =
       ntt_data->is_parallel
-        ? ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                            [ntt_task_coordinates->hierarchy_0_layer_idx]
+        ? ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                   [ntt_task_coordinates->hierarchy_0_layer_idx]
         : ntt_data->logn;
     switch (subntt_size_log) {
     case 3:
@@ -258,8 +260,8 @@ namespace ntt_cpu {
 
     if (
       ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx != 2 &&
-      ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                        [ntt_task_coordinates->hierarchy_0_layer_idx + 1] != 0) {
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                               [ntt_task_coordinates->hierarchy_0_layer_idx + 1] != 0) {
       refactor_output_hierarchy_0();
     }
     return eIcicleError::SUCCESS;
@@ -295,10 +297,11 @@ namespace ntt_cpu {
       }
       last_layer =
         (ntt_task_coordinates->hierarchy_1_layer_idx == 1 ||
-         (ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[1] == 0)) &&
+         (ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1] == 0)) &&
         (ntt_task_coordinates->hierarchy_0_layer_idx == 2 ||
-         (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                            [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
+         (ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                   [ntt_task_coordinates->hierarchy_0_layer_idx + 1] ==
+          0));
       const bool first_layer =
         ntt_task_coordinates->hierarchy_1_layer_idx == 0 && ntt_task_coordinates->hierarchy_0_layer_idx == 0;
       need_to_apply_coset_multiplication =
@@ -306,7 +309,7 @@ namespace ntt_cpu {
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                  << ntt_data->ntt_sub_logn
+                  << ntt_data->ntt_sub_hierarchies
                        .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx
                                                                                                    // * // subntt_size
     } else {
@@ -400,10 +403,11 @@ namespace ntt_cpu {
       }
       last_layer =
         (ntt_task_coordinates->hierarchy_1_layer_idx == 1 ||
-         (ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[1] == 0)) &&
+         (ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1] == 0)) &&
         (ntt_task_coordinates->hierarchy_0_layer_idx == 2 ||
-         (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                            [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
+         (ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                   [ntt_task_coordinates->hierarchy_0_layer_idx + 1] ==
+          0));
       const bool first_layer =
         ntt_task_coordinates->hierarchy_1_layer_idx == 0 && ntt_task_coordinates->hierarchy_0_layer_idx == 0;
       need_to_apply_coset_multiplication =
@@ -411,7 +415,7 @@ namespace ntt_cpu {
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                  << ntt_data->ntt_sub_logn
+                  << ntt_data->ntt_sub_hierarchies
                        .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx
                                                                                                    // * // subntt_size
     } else {
@@ -592,10 +596,11 @@ namespace ntt_cpu {
       }
       last_layer =
         (ntt_task_coordinates->hierarchy_1_layer_idx == 1 ||
-         (ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[1] == 0)) &&
+         (ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1] == 0)) &&
         (ntt_task_coordinates->hierarchy_0_layer_idx == 2 ||
-         (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                            [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
+         (ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                   [ntt_task_coordinates->hierarchy_0_layer_idx + 1] ==
+          0));
       const bool first_layer =
         ntt_task_coordinates->hierarchy_1_layer_idx == 0 && ntt_task_coordinates->hierarchy_0_layer_idx == 0;
       need_to_apply_coset_multiplication =
@@ -603,7 +608,7 @@ namespace ntt_cpu {
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                  << ntt_data->ntt_sub_logn
+                  << ntt_data->ntt_sub_hierarchies
                        .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx
                                                                                                    // * // subntt_size
     } else {
@@ -1264,10 +1269,11 @@ namespace ntt_cpu {
     if (ntt_data->is_parallel) {
       last_layer =
         (ntt_task_coordinates->hierarchy_1_layer_idx == 1 ||
-         (ntt_data->ntt_sub_logn.hierarchy_1_layers_sub_logn[1] == 0)) &&
+         (ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1] == 0)) &&
         (ntt_task_coordinates->hierarchy_0_layer_idx == 2 ||
-         (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                            [ntt_task_coordinates->hierarchy_0_layer_idx + 1] == 0));
+         (ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                   [ntt_task_coordinates->hierarchy_0_layer_idx + 1] ==
+          0));
       const bool first_layer =
         ntt_task_coordinates->hierarchy_1_layer_idx == 0 && ntt_task_coordinates->hierarchy_0_layer_idx == 0;
       need_to_apply_coset_multiplication =
@@ -1276,11 +1282,12 @@ namespace ntt_cpu {
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                  << ntt_data->ntt_sub_logn
+                  << ntt_data->ntt_sub_hierarchies
                        .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx
                                                                                                    // * subntt_size
-      subntt_size_log = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                                          [ntt_task_coordinates->hierarchy_0_layer_idx];
+      subntt_size_log =
+        ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                 [ntt_task_coordinates->hierarchy_0_layer_idx];
       subntt_size = 1 << subntt_size_log;
     } else {
       subntt_elements = ntt_data->elements;
@@ -1349,15 +1356,15 @@ namespace ntt_cpu {
     E* subntt_elements =
       ntt_data->elements +
       offset * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                << ntt_data->ntt_sub_logn
+                << ntt_data->ntt_sub_hierarchies
                      .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx *
                                                                                                  // subntt_size
     uint64_t subntt_size =
-      1 << ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                             [ntt_task_coordinates->hierarchy_0_layer_idx];
+      1 << ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                    [ntt_task_coordinates->hierarchy_0_layer_idx];
     uint32_t subntt_log_size =
-      ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                        [ntt_task_coordinates->hierarchy_0_layer_idx];
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                               [ntt_task_coordinates->hierarchy_0_layer_idx];
     uint64_t original_size = (1 << ntt_data->logn);
     uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
@@ -1412,21 +1419,25 @@ namespace ntt_cpu {
   void NttTask<S, E>::refactor_output_hierarchy_0()
   {
     uint32_t hierarchy_0_subntt_size =
-      1 << ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
-                                                             [ntt_task_coordinates->hierarchy_0_layer_idx];
+      1 << ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]
+                                                                    [ntt_task_coordinates->hierarchy_0_layer_idx];
     uint32_t hierarchy_0_nof_subntts =
-      1 << ntt_data->ntt_sub_logn
+      1 << ntt_data->ntt_sub_hierarchies
              .hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0]; // only relevant for layer 1
     uint32_t i, j, i_0;
-    uint32_t ntt_size =
-      ntt_task_coordinates->hierarchy_0_layer_idx == 0
-        ? 1
-            << (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0] +
-                ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1])
-        : 1
-            << (ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0] +
-                ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1] +
-                ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2]);
+    uint32_t ntt_size = ntt_task_coordinates->hierarchy_0_layer_idx == 0
+                          ? 1
+                              << (ntt_data->ntt_sub_hierarchies
+                                    .hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0] +
+                                  ntt_data->ntt_sub_hierarchies
+                                    .hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1])
+                          : 1
+                              << (ntt_data->ntt_sub_hierarchies
+                                    .hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0] +
+                                  ntt_data->ntt_sub_hierarchies
+                                    .hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1] +
+                                  ntt_data->ntt_sub_hierarchies
+                                    .hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2]);
     uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     uint64_t original_size = (1 << ntt_data->logn);
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
@@ -1434,7 +1445,7 @@ namespace ntt_cpu {
       E* hierarchy_1_subntt_elements =
         ntt_data->elements +
         stride * (ntt_task_coordinates->hierarchy_1_subntt_idx
-                  << ntt_data->ntt_sub_logn
+                  << ntt_data->ntt_sub_hierarchies
                        .hierarchy_1_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx]); // input + subntt_idx
                                                                                                    // * subntt_size
       E* elements_of_current_batch = ntt_data->config.columns_batch
@@ -1475,9 +1486,12 @@ namespace ntt_cpu {
   template <typename S, typename E>
   uint64_t NttTask<S, E>::idx_in_mem(NttTaskCoordinates* ntt_task_coordinates, uint32_t element_idx)
   {
-    uint32_t s0 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0];
-    uint32_t s1 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1];
-    uint32_t s2 = ntt_data->ntt_sub_logn.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2];
+    uint32_t s0 =
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][0];
+    uint32_t s1 =
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][1];
+    uint32_t s2 =
+      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates->hierarchy_1_layer_idx][2];
     switch (ntt_task_coordinates->hierarchy_0_layer_idx) {
     case 0:
       return ntt_task_coordinates->hierarchy_0_block_idx +

@@ -41,14 +41,14 @@ namespace ntt_cpu {
    * @param hierarchy_0_layers_sub_logn Log sizes of sub-NTTs for hierarchy_0 layers.
    * @param hierarchy_1_layers_sub_logn Log sizes of sub-NTTs for hierarchy_1 layers.
    *
-   * @method NttSubLogn(uint32_t logn) Initializes the struct based on the given `logn`.
+   * @method NttSubHierarchies(uint32_t logn) Initializes the struct based on the given `logn`.
    */
-  struct NttSubLogn {
+  struct NttSubHierarchies {
     std::vector<std::vector<uint32_t>> hierarchy_0_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 0 layers
     std::vector<uint32_t> hierarchy_1_layers_sub_logn;              // Log sizes of sub-NTTs in hierarchy 1 layers
 
     // Constructor to initialize the struct
-    NttSubLogn(uint32_t logn)
+    NttSubHierarchies(uint32_t logn)
     {
       if (logn > HIERARCHY_1) {
         // Initialize hierarchy_1_layers_sub_logn
@@ -72,18 +72,18 @@ namespace ntt_cpu {
 
   template <typename S = scalar_t, typename E = scalar_t>
   struct NttData {
-    const uint32_t logn;           // log of the original NTT size.
-    const uint32_t size;           // Size of the original NTT problem.
-    const NttSubLogn ntt_sub_logn; // Log sizes of sub-NTTs based on the original NTT log size.
-    E* const elements;             // Pointer to the output elements array.
-    const NTTConfig<S>& config;    // Configuration settings for the NTT computation.
-    const NTTDir direction;        // Direction of the NTT computation (forward or inverse).
-    const bool is_parallel;        // Flag indicating if the NTT computation is parallel.
-    uint32_t coset_stride = 0;     // Stride value for coset multiplication, retrieved from the NTT domain.
+    const uint32_t logn;                         // log of the original NTT size.
+    const uint32_t size;                         // Size of the original NTT problem.
+    const NttSubHierarchies ntt_sub_hierarchies; // Log sizes of sub-NTTs based on the original NTT log size.
+    E* const elements;                           // Pointer to the output elements array.
+    const NTTConfig<S>& config;                  // Configuration settings for the NTT computation.
+    const NTTDir direction;                      // Direction of the NTT computation (forward or inverse).
+    const bool is_parallel;                      // Flag indicating if the NTT computation is parallel.
+    uint32_t coset_stride = 0; // Stride value for coset multiplication, retrieved from the NTT domain.
     std::unique_ptr<S[]> arbitrary_coset = nullptr; // Array holding arbitrary coset values if needed.
     NttData(uint32_t logn, E* elements, const NTTConfig<S>& config, NTTDir direction, bool is_parallel)
-        : logn(logn), size(1 << logn), ntt_sub_logn(logn), elements(elements), config(config), direction(direction),
-          is_parallel(is_parallel)
+        : logn(logn), size(1 << logn), ntt_sub_hierarchies(logn), elements(elements), config(config),
+          direction(direction), is_parallel(is_parallel)
     {
       if (config.coset_gen != S::one()) {
         try {

@@ -20,8 +20,8 @@ namespace ntt_cpu {
    * @param hierarchy_1_counters A vector of shared pointers to counters for each sub-NTT in hierarchy_1 layers, used to
    * signal when an hierarchy_1_subntt is ready for reordering.
    *
-   * @method TasksDependenciesCounters(NttSubLogn ntt_sub_logn, uint32_t hierarchy_1_layer_idx) Constructor that
-   * initializes the counters based on NTT structure.
+   * @method TasksDependenciesCounters(NttSubHierarchies ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx)
+   * Constructor that initializes the counters based on NTT structure.
    * @method bool decrement_counter(NttTaskCoordinates ntt_task_coordinates) Decrements the counter for a given task and
    * returns true if the task is ready to execute.
    * @method uint32_t get_dependent_subntt_count(uint32_t hierarchy_0_layer_idx) Returns the number of counters pointing
@@ -33,7 +33,7 @@ namespace ntt_cpu {
   {
   public:
     // Constructor that initializes the counters
-    TasksDependenciesCounters(const NttSubLogn& ntt_sub_logn, uint32_t hierarchy_1_layer_idx);
+    TasksDependenciesCounters(const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx);
 
     // Function to decrement the counter for a given task and check if it is ready to execute. if so, return true
     bool decrement_counter(NttTaskCoordinates ntt_task_coordinates);
@@ -71,7 +71,7 @@ namespace ntt_cpu {
   class NttTasksManager
   {
   public:
-    NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn);
+    NttTasksManager(const NttSubHierarchies& ntt_sub_logn_ref, uint32_t logn);
 
     // Add a new task to the ntt_task_manager
     eIcicleError push_task(const NttTaskCoordinates& ntt_task_coordinates);
@@ -87,7 +87,7 @@ namespace ntt_cpu {
 
   private:
     const uint32_t logn;                             // log of the NTT size
-    const NttSubLogn& ntt_sub_logn;                  // Reference to NttSubLogn
+    const NttSubHierarchies& ntt_sub_hierarchies;    // Reference to NttSubHierarchies
     std::vector<TasksDependenciesCounters> counters; // Dependencies counters by layer
     std::vector<NttTaskCoordinates> task_buffer;     // Buffer holding task coordinates for pending tasks
     size_t head; // Head index for the task buffer (used in circular buffer implementation)
@@ -107,19 +107,20 @@ namespace ntt_cpu {
    * Initializes dependency counters based on the provided NTT structure and hierarchy layer. It sets up
    * counters for each sub-NTT in hierarchy 1 and initializes counters for hierarchy 0 layers.
    *
-   * @param ntt_sub_logn The structure containing logarithmic sizes of sub-NTTs.
+   * @param ntt_sub_hierarchies The structure containing logarithmic sizes of sub-NTTs.
    * @param hierarchy_1_layer_idx The index of the current hierarchy 1 layer.
    */
-  TasksDependenciesCounters::TasksDependenciesCounters(const NttSubLogn& ntt_sub_logn, uint32_t hierarchy_1_layer_idx)
+  TasksDependenciesCounters::TasksDependenciesCounters(
+    const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx)
       : hierarchy_0_counters(
-          1 << ntt_sub_logn.hierarchy_1_layers_sub_logn
+          1 << ntt_sub_hierarchies.hierarchy_1_layers_sub_logn
                  [1 - hierarchy_1_layer_idx]), // nof_hierarchy_1_subntts =
                                                // hierarchy_1_layers_sub_logn[1-hierarchy_1_layer_idx].
-        hierarchy_1_counters(1 << ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx])
+        hierarchy_1_counters(1 << ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx])
   {
-    nof_hierarchy_0_layers = ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2]
+    nof_hierarchy_0_layers = ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2]
                                ? 3
-                               : (ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] ? 2 : 1);
+                               : (ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] ? 2 : 1);
     dependent_subntt_count.resize(nof_hierarchy_0_layers);
     dependent_subntt_count[0] = 1;
     uint32_t l1_counter_size;
@@ -128,19 +129,19 @@ namespace ntt_cpu {
     uint32_t l2_nof_counters;
     if (nof_hierarchy_0_layers > 1) {
       // Initialize counters for layer 1 - N2 counters initialized with N1.
-      dependent_subntt_count[1] = 1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
-      l1_nof_counters = 1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-      l1_counter_size = 1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
+      dependent_subntt_count[1] = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
+      l1_nof_counters = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+      l1_counter_size = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
     }
     if (nof_hierarchy_0_layers > 2) {
       // Initialize counters for layer 2 - N0 counters initialized with N2.
-      dependent_subntt_count[2] = 1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
-      l2_nof_counters = 1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
-      l2_counter_size = 1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+      dependent_subntt_count[2] = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
+      l2_nof_counters = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
+      l2_counter_size = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
     }
 
     for (uint32_t hierarchy_1_subntt_idx = 0;
-         hierarchy_1_subntt_idx < (1 << ntt_sub_logn.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx]);
+         hierarchy_1_subntt_idx < (1 << ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx]);
          ++hierarchy_1_subntt_idx) {
       hierarchy_0_counters[hierarchy_1_subntt_idx].resize(3); // 3 possible layers (0, 1, 2)
       // Initialize counters for layer 0 - 1 counter1 initialized with 0.
@@ -164,9 +165,9 @@ namespace ntt_cpu {
       }
       // Initialize hierarchy_1_counters with N0 * N1
       uint32_t hierarchy_1_counter_size =
-        nof_hierarchy_0_layers == 3 ? (1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) *
-                                        (1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1])
-        : nof_hierarchy_0_layers == 2 ? (1 << ntt_sub_logn.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0])
+        nof_hierarchy_0_layers == 3 ? (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) *
+                                        (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1])
+        : nof_hierarchy_0_layers == 2 ? (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0])
                                       : 0;
       hierarchy_1_counters[hierarchy_1_subntt_idx] = hierarchy_1_counter_size;
     }
@@ -212,8 +213,8 @@ namespace ntt_cpu {
    * @param logn The log2(size) of the NTT problem.
    */
   template <typename S, typename E>
-  NttTasksManager<S, E>::NttTasksManager(const NttSubLogn& ntt_sub_logn_ref, uint32_t logn)
-      : logn(logn), ntt_sub_logn(ntt_sub_logn_ref),
+  NttTasksManager<S, E>::NttTasksManager(const NttSubHierarchies& ntt_sub_logn_ref, uint32_t logn)
+      : logn(logn), ntt_sub_hierarchies(ntt_sub_logn_ref),
         counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_logn_ref, 0)),
         task_buffer(1 << (logn)), // Pre-allocate buffer
         head(0), tail(0), nof_pending_tasks(0)
