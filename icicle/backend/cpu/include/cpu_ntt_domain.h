@@ -104,8 +104,7 @@ namespace ntt_cpu {
       }
 
       s_ntt_domain.inv_log_sizes = std::make_unique<S[]>(s_ntt_domain.max_log_size);
-      for (int i = 0; i < s_ntt_domain.max_log_size; i++)
-      {
+      for (int i = 0; i < s_ntt_domain.max_log_size; i++) {
         s_ntt_domain.inv_log_sizes[i] = S::inv_log_size(i);
       }
 
@@ -136,10 +135,9 @@ namespace ntt_cpu {
         S basic_tw = s_ntt_domain.twiddles[basic_tw_idx];
         temp_win8_twiddles[0] = basic_tw * basic_tw;
         temp_win8_twiddles[1] = (basic_tw + temp_win8_twiddles[0] * basic_tw) * inv2;
-        temp_win8_twiddles[2] =
-          (basic_tw - temp_win8_twiddles[0] * basic_tw) * inv2;   // = temp_win8_twiddles_inv[2]
-        basic_tw = s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx]; // for inverse ntt
-        temp_win8_twiddles_inv[0] = basic_tw * basic_tw;                        // temp_win8_twiddles_inv[0]
+        temp_win8_twiddles[2] = (basic_tw - temp_win8_twiddles[0] * basic_tw) * inv2; // = temp_win8_twiddles_inv[2]
+        basic_tw = s_ntt_domain.twiddles[s_ntt_domain.max_size - basic_tw_idx];       // for inverse ntt
+        temp_win8_twiddles_inv[0] = basic_tw * basic_tw;                              // temp_win8_twiddles_inv[0]
         temp_win8_twiddles_inv[1] =
           (basic_tw + temp_win8_twiddles_inv[0] * basic_tw) * inv2; // temp_win8_twiddles_inv[1]
         temp_win8_twiddles_inv[2] = temp_win8_twiddles[2];

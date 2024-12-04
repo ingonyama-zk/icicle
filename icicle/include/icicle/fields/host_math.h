@@ -386,9 +386,11 @@ namespace host_math {
   {
     // Forces us to think more carefully about the last carry bit if we use a modulus with fewer than 2 leading zeroes
     // of slack static_assert(!(CONFIG::modulus.limbs[NLIMBS - 1] >> 30));
-    multiply_mont<NLIMBS>(xs, xs, modulus, mont_inv_modulus, rs); // after reduce_twopass, tmp's low NLIMBS limbs should represent a value in [0, 2*mod)
+    multiply_mont<NLIMBS>(
+      xs, xs, modulus, mont_inv_modulus,
+      rs); // after reduce_twopass, tmp's low NLIMBS limbs should represent a value in [0, 2*mod)
   }
-  
+
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static HOST_INLINE void
   multiply_raw_64(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)

@@ -600,14 +600,15 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field sqr(const Field& xs)
   {
-// #ifdef BARRET
+    // #ifdef BARRET
     return xs * xs;
-// #else
-//     Field r = {};
-//     base_math::template sqr_mont<TLC>(
-//       xs.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage); // TODO: change to a more efficient squaring on host
-//     return mont_sub_modulus(r);
-// #endif
+    // #else
+    //     Field r = {};
+    //     base_math::template sqr_mont<TLC>(
+    //       xs.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage); // TODO: change to a more
+    //       efficient squaring on host
+    //     return mont_sub_modulus(r);
+    // #endif
   }
 #ifdef BARRET
   static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
