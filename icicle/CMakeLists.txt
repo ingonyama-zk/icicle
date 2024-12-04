@@ -20,6 +20,7 @@ option(BUILD_HASH "Build hash functions" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(DCCT "Build circle fft instead of ntt" OFF)
+option(DEVMODE "Enable dev mode for fast compilation" ON)
 # add options here
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
