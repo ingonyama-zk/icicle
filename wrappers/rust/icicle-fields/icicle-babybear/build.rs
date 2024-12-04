@@ -43,7 +43,7 @@ fn main() {
 
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
     println!("cargo:rustc-link-lib=icicle_field_babybear");
-    println!("cargo:rustc-link-lib=icicle_hash"); // not ideal to have this dependency here but need it for poseidon general Hasher APIs
+    println!("cargo:rustc-link-lib=icicle_hash"); // not ideal to have this dependency here but need it for poseidon/poseidon2 general Hasher APIs
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir

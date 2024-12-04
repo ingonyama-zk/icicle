@@ -31,12 +31,13 @@ namespace icicle {
     S* rounds_constants; ///< Round constants (both of the full and the partial rounds). The order of the constants in
                          ///< the memory is according to the rounds order.
     S* mds_matrix;       ///> MDS matrix is used in the full rounds. The same matrix is used for all such rounds.
-    // S* partial_matrix_diagonal;   ///< Partial matrix is used in the partial rounds. The same matrix is used for all such rounds.
+    // S* partial_matrix_diagonal;   ///< Partial matrix is used in the partial rounds. The same matrix is used for all
+    // such rounds.
     //                               ///< Only M[i,i] member are different from 1. These members are here.
-    S* partial_matrix_diagonal_m1;   ///< This partial matrix is used in the partial rounds instead of partial_matrix_diagonal 
-                                  ///< (using this matrix improves the performance of the partial rounds). The same matrix
-                                  ///< is used for all such rounds. Only M[i,i] member are different from 1. 
-                                  ///< These members are here. 
+    S* partial_matrix_diagonal_m1; ///< This partial matrix is used in the partial rounds instead of
+                                   ///< partial_matrix_diagonal (using this matrix improves the performance of the
+                                   ///< partial rounds). The same matrix is used for all such rounds. Only M[i,i] member
+                                   ///< are different from 1. These members are here.
     Poseidon2ConstantsOptions() {}
   };
 
@@ -51,10 +52,10 @@ namespace icicle {
   // poseidon2 init constants
   void register_create_poseidon2(const std::string& deviceType, CreatePoseidon2Impl impl);
 
-#define REGISTER_CREATE_POSEIDON2_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+#define REGISTER_CREATE_POSEIDON2_BACKEND(DEVICE_TYPE, FUNC)                                                           \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_create_poseidon2) = []() -> bool {                                                          \
-      register_create_poseidon2(DEVICE_TYPE, FUNC);                                                                     \
+    static bool UNIQUE(_reg_create_poseidon2) = []() -> bool {                                                         \
+      register_create_poseidon2(DEVICE_TYPE, FUNC);                                                                    \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

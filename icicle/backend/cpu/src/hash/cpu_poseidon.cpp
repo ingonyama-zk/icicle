@@ -4,28 +4,28 @@
 #include <vector>
 
 #if FIELD_ID == BN254
-  #include "poseidon/constants/bn254_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/bn254_poseidon.h"
 using namespace poseidon_constants_bn254;
 #elif FIELD_ID == BLS12_381
-  #include "poseidon/constants/bls12_381_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/bls12_381_poseidon.h"
 using namespace poseidon_constants_bls12_381;
 #elif FIELD_ID == BLS12_377
-  #include "poseidon/constants/bls12_377_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/bls12_377_poseidon.h"
 using namespace poseidon_constants_bls12_377;
 #elif FIELD_ID == BW6_761
-  #include "poseidon/constants/bw6_761_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/bw6_761_poseidon.h"
 using namespace poseidon_constants_bw6_761;
 #elif FIELD_ID == GRUMPKIN
-  #include "poseidon/constants/grumpkin_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/grumpkin_poseidon.h"
 using namespace poseidon_constants_grumpkin;
 #elif FIELD_ID == M31
-  #include "poseidon/constants/m31_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/m31_poseidon.h"
 using namespace poseidon_constants_m31;
 #elif FIELD_ID == BABY_BEAR
-  #include "poseidon/constants/babybear_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/babybear_poseidon.h"
 using namespace poseidon_constants_babybear;
 #elif FIELD_ID == STARK_252
-  #include "poseidon/constants/stark252_poseidon.h"
+  #include "icicle/hash/poseidon2_constants/constants/stark252_poseidon.h"
 using namespace poseidon_constants_stark252;
 #endif
 

@@ -83,17 +83,20 @@ public:
     return omega;
   }
 
-  static HOST_INLINE Field hex_str2scalar(const std::string& in_str)   // The input string should be in a hex format - 0xABCD....
+  static HOST_INLINE Field
+  hex_str2scalar(const std::string& in_str) // The input string should be in a hex format - 0xABCD....
   {
     assert(in_str.substr(0, 2) == "0x" && "The input string is not in hex format!");
-    std::string tmp_str = in_str.substr(2);  // Stript "0x" from the string.
+    std::string tmp_str = in_str.substr(2); // Stript "0x" from the string.
     int length = tmp_str.length();
     // Split string into chuncks of 8 chars (for uint32_t) and store in scalar storage.
     storage<TLC> scalar{};
-    // for (int str_idx=((int)((length-8)/8))*8, limb_idx = 0; str_idx>=0; str_idx-=8, limb_idx++) {   // ((int)((length-8)/8))*8 is for case if length<8.
-    for (int str_idx=length-8, limb_idx = 0; str_idx>=-7; str_idx-=8, limb_idx++) {   // ((int)((length-8)/8))*8 is for case if length<8.
+    // for (int str_idx=((int)((length-8)/8))*8, limb_idx = 0; str_idx>=0; str_idx-=8, limb_idx++) {   //
+    // ((int)((length-8)/8))*8 is for case if length<8.
+    for (int str_idx = length - 8, limb_idx = 0; str_idx >= -7;
+         str_idx -= 8, limb_idx++) { // ((int)((length-8)/8))*8 is for case if length<8.
       if (str_idx < 0) {
-        scalar.limbs[limb_idx] = strtoul(tmp_str.substr(0, str_idx+8).c_str(), nullptr, 16);
+        scalar.limbs[limb_idx] = strtoul(tmp_str.substr(0, str_idx + 8).c_str(), nullptr, 16);
       } else {
         scalar.limbs[limb_idx] = strtoul(tmp_str.substr(str_idx, 8).c_str(), nullptr, 16);
       }
