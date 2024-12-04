@@ -36,9 +36,9 @@ namespace icicle {
   static unsigned int poseidon2_legal_width[] = {2, 3, 4, 8, 12, 16, 20, 24};
 
   static Poseidon2ConstantsOptions<scalar_t>
-    poseidon2_constants[POSEIDON2_MAX_t + 1]; // The size of this array is POSEIDON2_MAX_t + 1 because Poseidon2 max t is 24. Only
-                                            // terms in poseidon2_legal_width are filled with data. Rest of the terms are not
-                                            // relevant.
+    poseidon2_constants[POSEIDON2_MAX_t + 1]; // The size of this array is POSEIDON2_MAX_t + 1 because Poseidon2 max t
+                                              // is 24. Only terms in poseidon2_legal_width are filled with data. Rest
+                                              // of the terms are not relevant.
   static bool s_cpu_backend_poseidon2_constants_initialized = false;
 
   static eIcicleError init_default_constants()
@@ -60,111 +60,112 @@ namespace icicle {
     for (int t_idx = 0; t_idx < std::size(poseidon2_legal_width); t_idx++) {
       unsigned int T = poseidon2_legal_width[t_idx]; // Single poseidon2 hash width
       switch (T) {
-        case 2:
-          alpha = alpha_2;
-          rounds_constants = rounds_constants_2;
-          mds_matrix = mds_matrix_2;
-          partial_matrix_diagonal = partial_matrix_diagonal_2;
-          partial_rounds = partial_rounds_2;
-          full_rounds = full_rounds_2;
-          upper_full_rounds = half_full_rounds_2;
-          bottom_full_rounds = half_full_rounds_2;
-          break;
-        case 3:
-          alpha = alpha_3;   
-          rounds_constants = rounds_constants_3;
-          mds_matrix = mds_matrix_3;
-          partial_matrix_diagonal = partial_matrix_diagonal_3;
-          partial_rounds = partial_rounds_3;
-          full_rounds = full_rounds_3;
-          upper_full_rounds = half_full_rounds_3;
-          bottom_full_rounds = half_full_rounds_3;
-          break;
-        case 4:
-          alpha = alpha_4;
-          rounds_constants = rounds_constants_4;
-          mds_matrix = mds_matrix_4;
-          partial_matrix_diagonal = partial_matrix_diagonal_4;
-          partial_rounds = partial_rounds_4;
-          full_rounds = full_rounds_4;
-          upper_full_rounds = half_full_rounds_4;
-          bottom_full_rounds = half_full_rounds_4;
-          break;
-        case 8:
-          alpha = alpha_8;
-          rounds_constants = rounds_constants_8;
-          mds_matrix = mds_matrix_8;
-          partial_matrix_diagonal = partial_matrix_diagonal_8;
-          partial_rounds = partial_rounds_8;
-          full_rounds = full_rounds_8;
-          upper_full_rounds = half_full_rounds_8;
-          bottom_full_rounds = half_full_rounds_8;
-          break;
-        case 12:
-          alpha = alpha_12;
-          rounds_constants = rounds_constants_12;
-          mds_matrix = mds_matrix_12;
-          partial_matrix_diagonal = partial_matrix_diagonal_12;
-          partial_rounds = partial_rounds_12;
-          full_rounds = full_rounds_12;
-          upper_full_rounds = half_full_rounds_12;
-          bottom_full_rounds = half_full_rounds_12;
-          break;
-        case 16:
-          alpha = alpha_16;
-          rounds_constants = rounds_constants_16;
-          mds_matrix = mds_matrix_16;
-          partial_matrix_diagonal = partial_matrix_diagonal_16;
-          partial_rounds = partial_rounds_16;
-          full_rounds = full_rounds_16;
-          upper_full_rounds = half_full_rounds_16;
-          bottom_full_rounds = half_full_rounds_16;
-          break;
-        case 20:
-          alpha = alpha_20;
-          rounds_constants = rounds_constants_20;
-          mds_matrix = mds_matrix_20;
-          partial_matrix_diagonal = partial_matrix_diagonal_20;
-          partial_rounds = partial_rounds_20;
-          full_rounds = full_rounds_20;
-          upper_full_rounds = half_full_rounds_20;
-          bottom_full_rounds = half_full_rounds_20;
-          break;
-        case 24:
-          alpha = alpha_24;
-          rounds_constants = rounds_constants_24;
-          mds_matrix = mds_matrix_24;
-          partial_matrix_diagonal = partial_matrix_diagonal_24;
-          partial_rounds = partial_rounds_24;
-          full_rounds = full_rounds_24;
-          upper_full_rounds = half_full_rounds_24;
-          bottom_full_rounds = half_full_rounds_24;
-          break;
-        default:
-          ICICLE_LOG_ERROR << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]\n";
-          return eIcicleError::INVALID_ARGUMENT;
-      }   // switch (T) {
-      if (full_rounds == 0 && partial_rounds == 0) {    // All arrays are empty in this case.
+      case 2:
+        alpha = alpha_2;
+        rounds_constants = rounds_constants_2;
+        mds_matrix = mds_matrix_2;
+        partial_matrix_diagonal = partial_matrix_diagonal_2;
+        partial_rounds = partial_rounds_2;
+        full_rounds = full_rounds_2;
+        upper_full_rounds = half_full_rounds_2;
+        bottom_full_rounds = half_full_rounds_2;
+        break;
+      case 3:
+        alpha = alpha_3;
+        rounds_constants = rounds_constants_3;
+        mds_matrix = mds_matrix_3;
+        partial_matrix_diagonal = partial_matrix_diagonal_3;
+        partial_rounds = partial_rounds_3;
+        full_rounds = full_rounds_3;
+        upper_full_rounds = half_full_rounds_3;
+        bottom_full_rounds = half_full_rounds_3;
+        break;
+      case 4:
+        alpha = alpha_4;
+        rounds_constants = rounds_constants_4;
+        mds_matrix = mds_matrix_4;
+        partial_matrix_diagonal = partial_matrix_diagonal_4;
+        partial_rounds = partial_rounds_4;
+        full_rounds = full_rounds_4;
+        upper_full_rounds = half_full_rounds_4;
+        bottom_full_rounds = half_full_rounds_4;
+        break;
+      case 8:
+        alpha = alpha_8;
+        rounds_constants = rounds_constants_8;
+        mds_matrix = mds_matrix_8;
+        partial_matrix_diagonal = partial_matrix_diagonal_8;
+        partial_rounds = partial_rounds_8;
+        full_rounds = full_rounds_8;
+        upper_full_rounds = half_full_rounds_8;
+        bottom_full_rounds = half_full_rounds_8;
+        break;
+      case 12:
+        alpha = alpha_12;
+        rounds_constants = rounds_constants_12;
+        mds_matrix = mds_matrix_12;
+        partial_matrix_diagonal = partial_matrix_diagonal_12;
+        partial_rounds = partial_rounds_12;
+        full_rounds = full_rounds_12;
+        upper_full_rounds = half_full_rounds_12;
+        bottom_full_rounds = half_full_rounds_12;
+        break;
+      case 16:
+        alpha = alpha_16;
+        rounds_constants = rounds_constants_16;
+        mds_matrix = mds_matrix_16;
+        partial_matrix_diagonal = partial_matrix_diagonal_16;
+        partial_rounds = partial_rounds_16;
+        full_rounds = full_rounds_16;
+        upper_full_rounds = half_full_rounds_16;
+        bottom_full_rounds = half_full_rounds_16;
+        break;
+      case 20:
+        alpha = alpha_20;
+        rounds_constants = rounds_constants_20;
+        mds_matrix = mds_matrix_20;
+        partial_matrix_diagonal = partial_matrix_diagonal_20;
+        partial_rounds = partial_rounds_20;
+        full_rounds = full_rounds_20;
+        upper_full_rounds = half_full_rounds_20;
+        bottom_full_rounds = half_full_rounds_20;
+        break;
+      case 24:
+        alpha = alpha_24;
+        rounds_constants = rounds_constants_24;
+        mds_matrix = mds_matrix_24;
+        partial_matrix_diagonal = partial_matrix_diagonal_24;
+        partial_rounds = partial_rounds_24;
+        full_rounds = full_rounds_24;
+        upper_full_rounds = half_full_rounds_24;
+        bottom_full_rounds = half_full_rounds_24;
+        break;
+      default:
+        ICICLE_LOG_ERROR
+          << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]\n";
+        return eIcicleError::INVALID_ARGUMENT;
+      } // switch (T) {
+      if (full_rounds == 0 && partial_rounds == 0) { // All arrays are empty in this case.
         continue;
       }
 
       scalar_t* h_rounds_constants = new scalar_t[full_rounds * T + partial_rounds];
-      for (int i=0; i<(full_rounds * T + partial_rounds); i++) {
+      for (int i = 0; i < (full_rounds * T + partial_rounds); i++) {
         h_rounds_constants[i] = scalar_t::hex_str2scalar(rounds_constants[i]);
       }
 
       scalar_t* h_mds_matrix = new scalar_t[T * T];
-      for (int i=0; i<(T * T); i++) {
-        h_mds_matrix[i] = scalar_t::hex_str2scalar(mds_matrix[i]); 
+      for (int i = 0; i < (T * T); i++) {
+        h_mds_matrix[i] = scalar_t::hex_str2scalar(mds_matrix[i]);
       }
 
       scalar_t* h_partial_matrix_diagonal = new scalar_t[T];
       scalar_t* h_partial_matrix_diagonal_m1 = new scalar_t[T];
-      for (int i=0; i<T; i++) {
+      for (int i = 0; i < T; i++) {
         h_partial_matrix_diagonal[i] = scalar_t::hex_str2scalar(partial_matrix_diagonal[i]);
         h_partial_matrix_diagonal_m1[i] = h_partial_matrix_diagonal[i] - scalar_t::from(1);
       }
-  
+
       poseidon2_constants[T].t = T;
       poseidon2_constants[T].alpha = alpha;
       poseidon2_constants[T].nof_upper_full_rounds = upper_full_rounds;
@@ -173,7 +174,7 @@ namespace icicle {
       poseidon2_constants[T].rounds_constants = h_rounds_constants;
       poseidon2_constants[T].mds_matrix = h_mds_matrix;
       poseidon2_constants[T].partial_matrix_diagonal_m1 = h_partial_matrix_diagonal_m1;
-    }   // for (int t_idx = 0; t_idx < std::size(poseidon2_legal_width); t_idx++) 
+    } // for (int t_idx = 0; t_idx < std::size(poseidon2_legal_width); t_idx++)
 
     s_cpu_backend_poseidon2_constants_initialized = true;
     return eIcicleError::SUCCESS;
@@ -205,8 +206,7 @@ namespace icicle {
       // Call hash_single config.batch times.
       for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
         eIcicleError err = hash_single(input, output);
-        if (err != eIcicleError::SUCCESS)
-          return err;
+        if (err != eIcicleError::SUCCESS) return err;
         input += arity * sizeof(S);
         output += sizeof(S);
       }
@@ -291,7 +291,7 @@ namespace icicle {
       tmp_fields = nullptr;
 
       return eIcicleError::SUCCESS;
-    }   // eIcicleError hash_single(const std::byte* input, std::byte* output) const
+    } // eIcicleError hash_single(const std::byte* input, std::byte* output) const
 
     // This function performs a partial_matrix_diagonal_m1 matrix by vector multiplication.
     // Note that in order to increase the performance the partial matrix diagonal values
@@ -309,7 +309,7 @@ namespace icicle {
                                                       // actually the same storage when calling to the function.
         result[col_idx] = tmp_col_res[col_idx];
       }
-    }   // void partial_matrix_diagonal_m1_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
+    } // void partial_matrix_diagonal_m1_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
 
     // This function performs a full matrix by vector multiplication.
     void full_matrix_mul_by_vector(const S* vec_in, const S* matrix_in, S* result) const
@@ -326,7 +326,7 @@ namespace icicle {
                                                       // actually the same storage when calling to the function.
         result[col_idx] = tmp_col_res[col_idx];
       }
-    }   // eIcicleError hash_single(const std::byte* input, std::byte* output) const
+    } // eIcicleError hash_single(const std::byte* input, std::byte* output) const
 
     // This function performs a needed number of full rounds calculations.
     void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
@@ -346,7 +346,7 @@ namespace icicle {
         // Multiplication by matrix
         full_matrix_mul_by_vector(in_out_fields, mds_matrix, in_out_fields);
       }
-    }   // void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
+    } // void full_rounds(const unsigned int nof_full_rounds, S* in_out_fields, S*& rounds_constants) const
 
     const bool m_use_domain_tag;
     const S m_domain_tag;

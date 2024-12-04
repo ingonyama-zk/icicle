@@ -4,7 +4,7 @@
 
 ICICLE’s hashing system is designed to be flexible, efficient, and optimized for both general-purpose and cryptographic operations. Hash functions are essential in operations such as generating commitments, constructing Merkle trees, executing the Sumcheck protocol, and more.
 
-ICICLE provides an easy-to-use interface for hashing on both CPU and GPU, with transparent backend selection. You can choose between several hash algorithms such as Keccak-256, Keccak-512, SHA3-256, SHA3-512, Blake2s, Poseidon and more, which are optimized for processing both general data and cryptographic field elements or elliptic curve points.
+ICICLE provides an easy-to-use interface for hashing on both CPU and GPU, with transparent backend selection. You can choose between several hash algorithms such as Keccak-256, Keccak-512, SHA3-256, SHA3-512, Blake2s, Poseidon, Poseidon2 and more, which are optimized for processing both general data and cryptographic field elements or elliptic curve points.
 
 ## Hashing Logic
 
@@ -24,6 +24,7 @@ ICICLE supports the following hash functions:
 4.	**SHA3-512**
 5.	**Blake2s**
 6.	**Poseidon**
+7.	**Poseidon2**
 
 :::info
 Additional hash functions might be added in the future. Stay tuned!
@@ -50,6 +51,12 @@ Currently the Poseidon implementation is the Optimized Poseidon (https://hackmd.
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
+
+### Poseidon2
+
+[Poseidon2](https://eprint.iacr.org/2023/323.pdf) is a cryptographic hash function designed specifically for field elements. It is a Faster Version of the Poseidon
+Hash Function (https://eprint.iacr.org/2019/458). The rest of description could be taken from Poseidon hash description above.
+
 ## Using Hash API
 
 ### 1. Creating a Hasher Object
@@ -60,6 +67,7 @@ First, you need to create a hasher object for the specific hash function you wan
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
 #include "icicle/hash/poseidon.h"
+#include "icicle/hash/poseidon2.h"
 
 // Create hasher instances for different algorithms
 auto keccak256 = Keccak256::create();
@@ -73,6 +81,14 @@ auto poseidon = Poseidon::create<scalar_t>(t);
 // The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
 scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
 auto poseidon_with_domain_tag = Poseidon::create<scalar_t>(t, &domain_tag);
+// This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
+// Poseidon2 requires specifying the field-type and t parameter (supported 2, 3, 4, 8, 12, 16, 20, 24) as defined by
+// the Poseidon2 paper. For large fields (field width >= 254) the supported values of t are 2, 3, 4.
+auto poseidon2 = Poseidon2::create<scalar_t>(t); 
+// Optionally, Poseidon2 can accept a domain-tag, which is a field element used to separate applications or contexts.
+// The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
+scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
+auto poseidon2_with_domain_tag = Poseidon2::create<scalar_t>(t, &domain_tag);
 // This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
 ```
 
@@ -139,9 +155,13 @@ auto output = std::make_unique<std::byte[]>(32 * config.batch); // Allocate outp
 eIcicleErr err = keccak256.hash(input.data(), input.size() / config.batch, config, output.get());
 ```
 
-### 4. Posidon sponge function
+### 4. Poseidon sponge function
 
-Currently the poseidon sponge function (Sec 2.1 of https://eprint.iacr.org/2019/458.pdf ) isn't implemented.
+Currently the poseidon sponge function (sponge function description could be found in Sec 2.1 of https://eprint.iacr.org/2019/458.pdf ) isn't implemented.
+
+### 5. Poseidon2 sponge function
+
+Currently the poseidon2 sponge function (sponge function description could be found in Sec 2.1 of https://eprint.iacr.org/2019/458.pdf ) isn't implemented.
 
 ### Supported Bindings
 
