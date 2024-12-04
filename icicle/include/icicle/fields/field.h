@@ -115,6 +115,37 @@ public:
       assert(false);
     }
 #endif // __CUDA_ARCH__
+//     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
+// #ifdef BARRET
+//     return Field{inv.storages[logn - 1]};
+// #else
+//     return to_montgomery(Field{inv.storages[logn - 1]});
+// #endif
+    Field rs = {1};
+    for (int i = 0; i < logn; i++) {
+      if (rs.limbs_storage.limbs[0] & 1) base_math::template add_sub_limbs<TLC, false, false, true>(rs.limbs_storage, get_modulus(), rs.limbs_storage);
+      rs.limbs_storage = base_math::template right_shift<TLC, 1>(rs.limbs_storage);
+    }
+    #ifdef BARRET
+    return rs;
+#else
+    return to_montgomery(rs);
+#endif
+  }
+
+
+  static HOST_DEVICE_INLINE Field inv_log_size_dep(uint32_t logn)
+  {
+    if (logn == 0) { return one(); }
+#ifndef __CUDA_ARCH__
+    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid inv index");
+#else
+    if (logn > CONFIG::omegas_count) {
+      printf(
+        "CUDA ERROR: field.h: error on inv_log_size(logn): logn(=%u) > omegas_count (=%u)", logn, CONFIG::omegas_count);
+      assert(false);
+    }
+#endif // __CUDA_ARCH__
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
 #ifdef BARRET
     return Field{inv.storages[logn - 1]};
