@@ -934,10 +934,10 @@ TEST_F(HashApiTest, poseidon2_3_batch_without_dt)
 // p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
 
   #include "icicle/fields/field_config.h"
-  #include "poseidon/constants/bn254_poseidon.h"
+  // #include "poseidon/constants/bn254_poseidon.h"
 
 using namespace field_config;
-using namespace poseidon_constants_bn254;
+// using namespace poseidon_constants_bn254;
 
   #include "icicle/hash/poseidon.h"
 
