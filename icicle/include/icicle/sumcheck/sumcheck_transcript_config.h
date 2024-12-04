@@ -41,9 +41,9 @@ namespace icicle {
    * - The hashing function used to derive randomness.
    * - A seed for initializing the random number generator (RNG).
    *
-   * @tparam S Type of the field element (e.g., prime field or extension field elements).
+   * @tparam F Type of the field element (e.g., prime field or extension field elements).
    */
-  template <typename S>
+  template <typename F>
   class SumcheckTranscriptConfig
   {
   public:
@@ -57,7 +57,7 @@ namespace icicle {
       std::vector<std::byte>&& domain_label,
       std::vector<std::byte>&& poly_label,
       std::vector<std::byte>&& challenge_label,
-      S seed,
+      F seed,
       bool little_endian = true)
         : m_hasher(std::move(hasher)), m_domain_separator_label(domain_label), m_round_poly_label(poly_label),
           m_round_challenge_label(challenge_label), m_little_endian(little_endian), m_seed_rng(seed)
@@ -70,7 +70,7 @@ namespace icicle {
       const char* domain_label,
       const char* poly_label,
       const char* challenge_label,
-      S seed,
+      F seed,
       bool little_endian = true)
         : m_hasher(std::move(hasher)), m_domain_separator_label(cstr_to_bytes(domain_label)),
           m_round_poly_label(cstr_to_bytes(poly_label)), m_round_challenge_label(cstr_to_bytes(challenge_label)),
@@ -92,7 +92,7 @@ namespace icicle {
     const std::vector<std::byte>& get_round_poly_label() const { return m_round_poly_label; }
     const std::vector<std::byte>& get_round_challenge_label() const { return m_round_challenge_label; }
     bool is_little_endian() const { return m_little_endian; }
-    const S& get_seed_rng() const { return m_seed_rng; }
+    const F& get_seed_rng() const { return m_seed_rng; }
 
   private:
     Hash m_hasher;                                         ///< Hash function used for randomness generation.
@@ -100,7 +100,7 @@ namespace icicle {
     const std::vector<std::byte> m_round_poly_label;       ///< Label for round polynomials in the transcript.
     const std::vector<std::byte> m_round_challenge_label;  ///< Label for round challenges in the transcript.
     const bool m_little_endian = true;                     ///< Encoding endianness (default: little-endian).
-    S m_seed_rng;                                          ///< Seed for initializing the RNG.
+    F m_seed_rng;                                          ///< Seed for initializing the RNG.
 
     static inline std::vector<std::byte> cstr_to_bytes(const char* str)
     {

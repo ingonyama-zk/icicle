@@ -58,11 +58,46 @@ impl<'a, S> SumcheckTranscriptConfig<'a, S> {
     }
 }
 
+// TODO Yuval: add a Sumcheck trait and implement it in the macro per field
+
+#[macro_export]
+macro_rules! impl_sumcheck {
+    (
+        $field_prefix:literal,
+        $field_prefix_ident:ident,
+        $field:ident,
+        $field_cfg:ident
+    ) => {
+        use icicle_core::sumcheck::SumcheckTranscriptConfig;
+        use icicle_core::traits::FieldImpl;
+        use icicle_runtime::eIcicleError;
+        use std::ffi::c_void;
+
+        type SumcheckHandle = *const c_void;
+        pub struct Sumcheck {
+            handle: SumcheckHandle,
+        }
+
+        extern "C" {
+            #[link_name = concat!($field_prefix, "_sumcheck_create")]
+            fn create() -> SumcheckHandle;
+        }
+
+        impl Sumcheck {
+            pub fn new<S: FieldImpl>(transcript_config: &SumcheckTranscriptConfig<S>) -> Result<Self, eIcicleError> {
+                unsafe {
+                    // TODO real call
+                    create();
+                }
+                Err(eIcicleError::UnknownError)
+            }
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! impl_sumcheck_tests {
-    (
-        $field:ident
-      ) => {
+    ($field:ident) => {
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
 
