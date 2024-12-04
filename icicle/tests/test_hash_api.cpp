@@ -1069,7 +1069,8 @@ TEST_F(HashApiTest, poseidon_tree)
 #endif // POSEIDON
 
 /*======================= (TODO) Move to Sumcheck test-suite =======================*/
-#include "icicle/sumcheck/sumcheck_transcript_config.h"
+#ifdef SUMCHECK
+  #include "icicle/sumcheck/sumcheck_transcript_config.h"
 
 class SumcheckTest : public IcicleTestBase
 {
@@ -1115,3 +1116,4 @@ TEST_F(SumcheckTest, InitializeWithByteVector)
   EXPECT_TRUE(config.is_little_endian());
   EXPECT_EQ(config.get_seed_rng(), seed);
 }
+#endif // SUMCHECK

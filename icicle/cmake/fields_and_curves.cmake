@@ -10,7 +10,7 @@ set(ICICLE_FIELDS
 # Define available curves with an index and their supported features
 # Format: index:curve:features
 set(ICICLE_CURVES
-  1:bn254:NTT,MSM,G2,ECNTT,POSEIDON
+  1:bn254:NTT,MSM,G2,ECNTT,POSEIDON,SUMCHECK
   2:bls12_381:NTT,MSM,G2,ECNTT,POSEIDON
   3:bls12_377:NTT,MSM,G2,ECNTT,POSEIDON
   4:bw6_761:NTT,MSM,G2,ECNTT,POSEIDON
