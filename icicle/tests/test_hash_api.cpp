@@ -15,6 +15,7 @@
 #include <cmath>
 
 #include "test_base.h"
+#include "icicle/utils/rand_gen.h"
 
 using namespace icicle;
 
@@ -27,15 +28,10 @@ public:
   template <typename T>
   static void randomize(T* arr, uint64_t size)
   {
-    // Create a random number generator
-    std::random_device rd;                                       // Non-deterministic random number generator
-    std::mt19937 gen(rd());                                      // Mersenne Twister engine seeded with rd()
-    std::uniform_int_distribution<uint32_t> dist(0, UINT32_MAX); // Range of random numbers
-
     // Fill the array with random values
     uint32_t* u32_arr = (uint32_t*)arr;
     for (int i = 0; i < (size * sizeof(T) / sizeof(uint32_t)); ++i) {
-      u32_arr[i] = dist(gen);
+      u32_arr[i] = rand_uint_32b();
     }
   }
 
@@ -472,7 +468,7 @@ void test_merkle_tree(
 
     uint8_t new_worng_val;
     do {
-      new_worng_val = rand();
+      new_worng_val = rand_uint_32b(0, UINT8_MAX);
     } while (new_worng_val == wrong_leaves_byte_ptr[wrong_byte_index]);
 
     wrong_leaves_byte_ptr[wrong_byte_index] = new_worng_val;
@@ -756,7 +752,7 @@ TEST_F(HashApiTest, MerkleTreeMixMediumSize)
 
     const std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash, layer4_hash};
 
-    const int output_store_min_layer = rand() % hashes.size();
+    const int output_store_min_layer = rand_uint_32b(0, hashes.size() - 1);
     ICICLE_LOG_DEBUG << "Min store layer:\t" << output_store_min_layer;
 
     test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves.get());

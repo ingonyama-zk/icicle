@@ -44,10 +44,10 @@ namespace ntt_cpu {
     ICICLE_ASSERT(size <= CpuNttDomain<S>::s_ntt_domain.get_max_size())
       << "Size is too large for domain. size = " << size
       << ", domain_max_size = " << CpuNttDomain<S>::s_ntt_domain.get_max_size();
+    const uint32_t log_size = uint32_t(log2(size));
 
-    NttCpu<S, E> ntt(uint32_t(log2(size)), direction, config, input, output);
+    NttCpu<S, E> ntt(log_size, direction, config, input, output);
     ntt.run();
-
     return eIcicleError::SUCCESS;
   }
 } // namespace ntt_cpu
