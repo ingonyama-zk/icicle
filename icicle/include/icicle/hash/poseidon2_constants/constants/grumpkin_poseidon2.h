@@ -473,5 +473,5 @@ namespace poseidon2_constants_grumpkin {
 
   static const std::string partial_matrix_diagonal_m1_24[] = {};
 
-} // namespace poseidon2_constants_grumPkin
+} // namespace poseidon2_constants_grumpkin
 #endif
