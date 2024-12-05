@@ -1153,7 +1153,7 @@ using namespace field_config;
 // Test check single hash without domain tag.
 TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
 {
-  const unsigned t = 3;
+  const unsigned t = 20;
   auto config = default_hash_config();
   config.batch = 1;
 
@@ -1172,7 +1172,6 @@ TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
 
     START_TIMER(POSEIDON2_sync)
     for (int i = 0; i < iters; ++i) {
-      std::cout << "poseidon2_3_batch_without_dt: t = " << std::dec << t << std::endl;
       ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
     }
     END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
@@ -1185,6 +1184,32 @@ TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
   run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
+}
+
+TEST_F(HashApiTest, poseidon2_invalid_t)
+{
+  // Large fields do not support some t's at this moment.
+  // This is testing that a correct error is returned for invalid t
+  const unsigned t = 20;
+  auto config = default_hash_config();
+
+  auto input = std::make_unique<scalar_t[]>(t * config.batch);
+  auto output = std::make_unique<scalar_t[]>(config.batch);
+  scalar_t::rand_host_many(input.get(), t * config.batch);
+
+  const bool large_field = sizeof(scalar_t) > 4;
+
+  for (const auto& device : s_registered_devices) {
+    icicle_set_device(device);
+
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
+    auto err = poseidon2.hash(input.get(), t, config, output.get());
+    if (large_field) {
+      EXPECT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
+    } else {
+      EXPECT_EQ(err, eIcicleError::SUCCESS);
+    }
+  }
 }
 
 // Currently there is no support for batch > 1 and domain_tag != nullpotr.

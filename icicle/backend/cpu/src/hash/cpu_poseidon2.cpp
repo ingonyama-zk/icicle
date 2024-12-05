@@ -238,8 +238,8 @@ namespace icicle {
       const unsigned int T = m_t;
       bool is_unsupported_T_for_this_field = poseidon2_constants[T].nof_upper_full_rounds == 0;
       if (is_unsupported_T_for_this_field) {
-        ICICLE_LOG_ERROR << "Unsupported hash width (" << T << ") for this field!\n";
-        return eIcicleError::INVALID_ARGUMENT;
+        ICICLE_LOG_ERROR << "Unsupported poseidon width (t=" << T << ") for this field! Planned for next version";
+        return eIcicleError::API_NOT_IMPLEMENTED;
       }
 
       unsigned int alpha = poseidon2_constants[T].alpha;
