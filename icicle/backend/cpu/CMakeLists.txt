@@ -15,6 +15,9 @@ if (FIELD)
     if (POSEIDON)
         target_sources(icicle_field PRIVATE src/hash/cpu_poseidon.cpp)
     endif()
+    if (POSEIDON2)
+        target_sources(icicle_field PRIVATE src/hash/cpu_poseidon2.cpp)
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 

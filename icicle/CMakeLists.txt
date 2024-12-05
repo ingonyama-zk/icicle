@@ -69,6 +69,7 @@ option(G2 "Build G2 MSM" ON)
 option(EXT_FIELD "Build extension field" ON)
 option(HASH "Build hashes and tree builders" ON)
 option(POSEIDON "Build poseidon hash" ON)
+option(POSEIDON2 "Build poseidon2 hash" ON)
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
@@ -180,3 +181,4 @@ endif()
 if (BUILD_TESTS)
   add_subdirectory(tests)
 endif()
+

@@ -88,3 +88,4 @@ Bn254TreeBuilder::build_merkle_tree(
 )
 .unwrap();
 ```
+
