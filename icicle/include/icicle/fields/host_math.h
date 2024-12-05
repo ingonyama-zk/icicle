@@ -241,7 +241,7 @@ namespace host_math {
   /**
    * @brief Return upper/lower half of x (into r).
    * @tparam NLIMBS Number of 32bit limbs in r.
-   * @tparam HIGHER what half to be returned. deafult is true=upper.
+   * @tparam HIGHER what half to be returned. default is true=upper.
    * @param x 2*NLIMBS sized multiprecision input.
    * @param r NLIMBS sized multiprecision upper/lower half output.
    */
@@ -286,14 +286,14 @@ namespace host_math {
   /**
    * @brief Return upper/lower half of x (into r).
    * @tparam NLIMBS Number of 32bit limbs in r.
-   * @tparam HIGHER what half to be returned. deafult is true=upper.
+   * @tparam HIGHER what half to be returned. default is true=upper.
    * @param x 2*NLIMBS sized multiprecision input.
    * @param r NLIMBS sized multiprecision upper/lower half output.
    */
   template <unsigned NLIMBS, bool HIGHER = true>
   static HOST_INLINE void get_half_64(const uint64_t* x, uint64_t* r)
   {
-    const unsigned nlimbs64 = NLIMBS / 2; // NLIMBS reffer to number of 32bit limbs
+    const unsigned nlimbs64 = NLIMBS / 2; // NLIMBS refer to number of 32bit limbs
     for (unsigned i = 0; i < nlimbs64; i++) {
       r[i] = x[HIGHER ? i + nlimbs64 : i];
     }
