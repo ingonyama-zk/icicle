@@ -3,6 +3,7 @@ using namespace field_config;
 
 #include "fri.cu"
 #include "utils/utils.h"
+#include "fields/point.cuh"
 
 namespace fri {
   /**
@@ -29,6 +30,19 @@ namespace fri {
     return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
   };
 
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line_new)(
+    q_extension_t* line_eval,
+    uint64_t line_domain_initial_index,
+    uint32_t line_domain_log_size,
+    q_extension_t alpha,
+    q_extension_t* folded_evals,
+    uint64_t n,
+    FriConfig& cfg)
+  {
+    circle_math::LineDomain<fp_config, scalar_t> line_domain = circle_math::LineDomain<fp_config, scalar_t>(line_domain_initial_index, line_domain_log_size);
+    return fri::fold_line_new<scalar_t, q_extension_t, circle_math::LineDomain<fp_config, scalar_t>>(line_eval, line_domain, alpha, folded_evals, n, cfg);
+  };
+
   /**
    * Extern "C" version of [fold_circle_into_line](@ref fold_circle_into_line) function with the following values of
    * template parameters (where the field is given by `-DFIELD` env variable during build):
@@ -51,5 +65,18 @@ namespace fri {
     FriConfig& cfg)
   {
     return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);
+  };
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line_new)(
+    q_extension_t* circle_evals,
+    uint64_t domain_initial_index,
+    uint32_t domain_log_size,
+    q_extension_t alpha,
+    q_extension_t* folded_line_evals,
+    uint64_t n,
+    FriConfig& cfg)
+  {
+    domain_t domain(coset_t(domain_initial_index, domain_log_size));
+    return fri::fold_circle_into_line_new<scalar_t, q_extension_t, domain_t>(circle_evals, domain, alpha, folded_line_evals, n, cfg);
   };
 } // namespace fri

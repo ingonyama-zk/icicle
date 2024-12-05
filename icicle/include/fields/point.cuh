@@ -126,6 +126,11 @@ namespace circle_math {
       return *this + *this;
     }
 
+    static HOST_DEVICE_INLINE FF dbl_x(FF x) {
+      x = FF::sqr(x);
+      return x + x - FF::one();
+    }
+
     static HOST_DEVICE_INLINE CirclePoint index_to_point(uint32_t index) {
       return CirclePoint::mul_scalar(CirclePoint::generator(), index);
     }
@@ -143,16 +148,16 @@ namespace circle_math {
   class CircleCoset {
   typedef CirclePoint<CONFIG, T> Point;
   private:
-    CircleCoset(size_t index, Point point, size_t step_size, Point step_point, size_t log_size)
+    HOST_DEVICE_INLINE CircleCoset(uint64_t index, Point point, uint64_t step_size, Point step_point, uint64_t log_size)
           : initial_index(index), initial_point(point), step_size(step_size), step(step_point), log_size(log_size) {}
   public:
-    size_t initial_index;
+    uint64_t initial_index;
     Point initial_point;
-    size_t step_size;
+    uint64_t step_size;
     Point step;
-    size_t log_size;
+    uint32_t log_size;
 
-    HOST_DEVICE_INLINE CircleCoset(size_t initial_index, uint32_t log_size) {
+    HOST_DEVICE_INLINE CircleCoset(uint64_t initial_index, uint32_t log_size) {
       assert(log_size <= CONFIG::modulus_bit_count);
       this->initial_index = initial_index;
       this->log_size = log_size;
@@ -180,15 +185,15 @@ namespace circle_math {
       return coset_shifted(2, log_size); // log 4
     }
 
-    size_t HOST_DEVICE_INLINE lg_size() const {
+    HOST_DEVICE_INLINE uint32_t lg_size() const {
       return this->log_size;
     }
 
-    size_t HOST_DEVICE_INLINE size() const {
+    HOST_DEVICE_INLINE uint64_t size() const {
       return 1 << this->lg_size();
     }
 
-    CircleCoset HOST_DEVICE_INLINE dbl() const {
+    HOST_DEVICE_INLINE CircleCoset dbl() const {
       assert(this->log_size);
       return CircleCoset{
         this->initial_index * 2, 
@@ -198,16 +203,16 @@ namespace circle_math {
         this->log_size? this->log_size - 1 : 0 };
     }
 
-    size_t HOST_DEVICE_INLINE index_at(size_t index) const {
+    HOST_DEVICE_INLINE uint64_t index_at(uint64_t index) const {
       return this->initial_index + ((this->step_size * index) & (CONFIG::modulus.limbs[0]));
     }
 
-    Point HOST_DEVICE_INLINE at(size_t index) const {
+    HOST_DEVICE_INLINE Point at(uint64_t index) const {
       return Point::index_to_point(this->index_at(index));
     }
 
-    CircleCoset HOST_DEVICE_INLINE shift(size_t shift_size) const {
-      size_t initial_index = this->initial_index + shift_size;
+    HOST_DEVICE_INLINE CircleCoset shift(uint64_t shift_size) const {
+      uint64_t initial_index = this->initial_index + shift_size;
       return CircleCoset{
         initial_index,
         Point::index_to_point(initial_index),
@@ -217,9 +222,9 @@ namespace circle_math {
       };
     }
 
-    CircleCoset HOST_DEVICE_INLINE conjugate() const {
-      size_t initial_index = ((CONFIG::modulus.limbs[0] + 1) - this->initial_index) & (CONFIG::modulus.limbs[0]);
-      size_t step_size = ((CONFIG::modulus.limbs[0] + 1) - this->step_size) & (CONFIG::modulus.limbs[0]);
+    HOST_DEVICE_INLINE CircleCoset conjugate() const {
+      uint64_t initial_index = ((CONFIG::modulus.limbs[0] + 1) - this->initial_index) & (CONFIG::modulus.limbs[0]);
+      uint64_t step_size = ((CONFIG::modulus.limbs[0] + 1) - this->step_size) & (CONFIG::modulus.limbs[0]);
       return CircleCoset{
         initial_index,
         Point::index_to_point(initial_index),
@@ -250,16 +255,16 @@ namespace circle_math {
     CircleDomain<CONFIG, T>(uint32_t log_size) : coset(CircleCoset<CONFIG, T>::half_odds(log_size - 1)) {}
 
     // Override log_size method
-    size_t HOST_DEVICE_INLINE lg_size() const {
+    HOST_DEVICE_INLINE uint32_t lg_size() const {
       return coset.lg_size() + 1;
     }
 
     // Forward other methods to coset
-    size_t HOST_DEVICE_INLINE size() const {
+    HOST_DEVICE_INLINE uint64_t size() const {
       return 1 << this->lg_size();
     }
 
-    size_t HOST_DEVICE_INLINE index_at(size_t index) const {
+    HOST_DEVICE_INLINE uint64_t index_at(uint64_t index) const {
       if (index < coset.size()) {
         return coset.index_at(index);
       } else {
@@ -268,20 +273,72 @@ namespace circle_math {
       }
     }
 
-    Point HOST_DEVICE_INLINE at(size_t index) const {
+    HOST_DEVICE_INLINE Point at(uint64_t index) const {
       return Point::index_to_point(this->index_at(index));
     }
 
-    CircleDomain HOST_DEVICE_INLINE shift(size_t shift_size) const {
+    HOST_DEVICE_INLINE CircleDomain shift(uint64_t shift_size) const {
       return CircleDomain(coset.shift(shift_size));
     }
 
-    CircleDomain HOST_DEVICE_INLINE split(size_t log_parts, size_t* shifts) const {
+    HOST_DEVICE_INLINE CircleDomain split(uint64_t log_parts, uint64_t* shifts) const {
       CircleDomain<CONFIG, T> subdomain = CircleDomain<CONFIG, T>(CircleCoset<CONFIG, T>(coset.initial_index, coset.log_size - log_parts));
-      for (size_t i = 0; i < (1 << log_parts); ++i) {
+      for (uint64_t i = 0; i < (1 << log_parts); ++i) {
         shifts[i] = coset.step_size * i;
       }
       return subdomain;
+    }
+  };
+
+  template <typename CONFIG, class T>
+  class LineDomain {
+  private:
+    static HOST_DEVICE_INLINE uint32_t log_order(T x) {
+      uint32_t result = 0;
+      T one = T::one();
+      while (x != one) {
+        x = Point::dbl_x(x);
+        ++result;
+      }
+      return result;
+    }
+  public:
+    typedef CirclePoint<CONFIG, T> Point;
+    CircleCoset<CONFIG, T> coset;
+    HOST_DEVICE_INLINE LineDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {
+      uint64_t size = coset.size();
+      if (size > 2) {
+        assert(LineDomain::log_order(coset.initial_point.x) >= LineDomain::log_order(coset.step.x) + 2);
+      }
+      if (size == 2) {
+        assert(coset.initial_point.x != T::zero());
+      }
+    }
+
+    HOST_DEVICE_INLINE LineDomain<CONFIG, T>(uint64_t initial_index, uint32_t log_size) : coset(CircleCoset<CONFIG, T>(initial_index, log_size)) {
+      uint64_t size = coset.size();
+      if (size > 2) {
+        assert(LineDomain::log_order(coset.initial_point.x) >= LineDomain::log_order(coset.step.x) + 2);
+      }
+      if (size == 2) {
+        assert(coset.initial_point.x != T::zero());
+      }
+    }
+
+    HOST_DEVICE_INLINE uint32_t lg_size() const {
+      return coset.lg_size();
+    }
+
+    HOST_DEVICE_INLINE T at(uint64_t index) const {
+      return coset.at(index).x;
+    }
+
+    HOST_DEVICE_INLINE uint64_t size() const {
+      return coset.size();
+    }
+
+    HOST_DEVICE_INLINE LineDomain dbl() const {
+      return LineDomain(coset.dbl());
     }
   };
 }
