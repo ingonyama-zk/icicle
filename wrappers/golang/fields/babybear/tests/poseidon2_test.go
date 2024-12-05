@@ -16,8 +16,12 @@ import (
 func testPoseidon2Hash(s *suite.Suite) {
 	batch := 1 << 4
 	domainTag := babybear.GenerateScalars(1)[0]
-	// TODO add  8, 12, 16, 20, 24 for large fields once all is supported
-	for _, t := range []int{2, 3, 4} {
+	for _, t := range []int{2, 3, 4, 8, 12, 16, 20, 24} {
+		// TODO Danny add  8, 12, 16, 20, 24 for large fields once all is supported
+		var largeField babybear.ScalarField
+		if largeField.Size() > 4 && t > 4 {
+			continue // TODO Danny remove this
+		}
 		for _, domainTag := range []*babybear.ScalarField{nil, &domainTag} {
 			var inputsSize int
 			if domainTag != nil {
