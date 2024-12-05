@@ -79,7 +79,7 @@ macro_rules! impl_poseidon2_tests {
     ) => {
         use super::*;
 
-        use icicle_core::test_utilities;
+        use icicle_runtime::test_utilities;
         use std::sync::Once;
 
         static INIT: Once = Once::new();
