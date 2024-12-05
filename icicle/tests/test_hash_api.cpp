@@ -1153,7 +1153,7 @@ using namespace field_config;
 // Test check single hash without domain tag.
 TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
 {
-  const unsigned t = 20;
+  const unsigned t = 3;
   auto config = default_hash_config();
   config.batch = 1;
 
