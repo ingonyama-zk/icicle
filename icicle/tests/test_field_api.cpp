@@ -944,7 +944,7 @@ TYPED_TEST(FieldApiTest, ntt)
 
 // define program
 using MlePoly = Symbol<scalar_t>;
-MlePoly combine_func(std::vector<MlePoly>& inputs)
+MlePoly combine_func(const std::vector<MlePoly>& inputs)
 {
   const MlePoly& A = inputs[0];
   const MlePoly& B = inputs[1];
@@ -955,9 +955,6 @@ MlePoly combine_func(std::vector<MlePoly>& inputs)
 
 TEST_F(FieldApiTestBase, CpuProgramExecutor)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
 
   // randomize input vectors
   const int total_size = 100000;
@@ -972,15 +969,11 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
 
   //----- element wise operation ----------------------
   auto out_element_wise = std::make_unique<scalar_t[]>(total_size);
-  std::ostringstream oss;
-  oss << "Strait forward function (Element wise) time: ";
-
   START_TIMER(element_wise_op)
   for (int i = 0; i < 100000; ++i) {
     out_element_wise[i] = in_eq[i] * (in_a[i] * in_b[i] - in_c[i]);
   }
-  // std::cout << "Strait forward function (Element wise) time: ";
-  END_TIMER(element_wise_op, oss.str().c_str(), true);
+  END_TIMER(element_wise_op, "Straight forward function (Element wise) time: ", true);
 
   //----- written program ----------------------
   Program<scalar_t> program_written(&combine_func, 4);
@@ -996,9 +989,6 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
   prog_exe_written.m_variable_ptrs[3] = in_eq.get();
   prog_exe_written.m_variable_ptrs[4] = out_written_program.get();
 
-  oss.str("");
-  oss.clear();
-  oss << "Program executor time: ";
   // run on all vectors
   START_TIMER(written_program)
   for (int i = 0; i < total_size; ++i) {
@@ -1009,7 +999,7 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
     (prog_exe_written.m_variable_ptrs[3])++;
     (prog_exe_written.m_variable_ptrs[4])++;
   }
-  END_TIMER(written_program, oss.str().c_str(), true);
+  END_TIMER(written_program, "Program executor time: ", true);
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_written_program.get(), total_size * sizeof(scalar_t)));
@@ -1028,9 +1018,6 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
   prog_exe_predef.m_variable_ptrs[3] = in_eq.get();
   prog_exe_predef.m_variable_ptrs[4] = out_predef_program.get();
 
-  oss.str("");
-  oss.clear();
-  oss << "Program predefined time: ";
   // run on all vectors
   START_TIMER(predef_program)
   for (int i = 0; i < total_size; ++i) {
@@ -1041,24 +1028,20 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
     (prog_exe_predef.m_variable_ptrs[3])++;
     (prog_exe_predef.m_variable_ptrs[4])++;
   }
-  END_TIMER(predef_program, oss.str().c_str(), true);
+  END_TIMER(predef_program, "Program predefined time: ", true);
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_predef_program.get(), total_size * sizeof(scalar_t)));
 
   //----- Vecops operation ----------------------
   auto config = default_vec_ops_config();
-  oss.str("");
-  oss.clear();
-  oss << "Vec ops time: ";
-
   auto out_vec_ops = std::make_unique<scalar_t[]>(total_size);
 
   START_TIMER(vecop)
   vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
   vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
   vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
-  END_TIMER(predef_program, oss.str().c_str(), true);
+  END_TIMER(predef_program, "Vec ops time: ", true);
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
