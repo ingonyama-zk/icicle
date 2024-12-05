@@ -411,7 +411,7 @@ bool is_valid_tree(
  * @param explict_leaf_size_in_bytes - Optional. Size of each leaf element in case that leaves is given as a byte array.
  * @note Test will fail if this value isn't default (1) and T != std::byte
  * @param partial_leaves_size - size of input leaves in bytes in case not a whole number of leaves is given
- * @note Test will fail if this value is differe
+ * @note Test will fail if this value is set (not 0) and T != std::byte, or if it is larger than leaves size.
  */
 template <typename T>
 void test_merkle_tree(
@@ -428,6 +428,8 @@ void test_merkle_tree(
 
   const unsigned leaf_size = explict_leaf_size_in_bytes > 1 ? explict_leaf_size_in_bytes : sizeof(T);
   const unsigned leaves_size = nof_leaves * leaf_size;
+
+  ASSERT_TRUE((partial_leaves_size == 0 || std::is_same<T, std::byte>::value) && (partial_leaves_size < leaves_size));
 
   T* device_leaves;
   if (config.is_leaves_on_device) {
@@ -574,7 +576,7 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
 {
   for (const auto& device : s_registered_devices) {
-    ICICLE_LOG_INFO << "MerkleTreeLastValuePadding test on device=" << device;
+    ICICLE_LOG_INFO << "MerkleTreeZeroPadding test on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
     constexpr int leaf_size = 250;
@@ -615,7 +617,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
 TEST_F(HashApiTest, MerkleTreeZeroPaddingLeavesOnDevice)
 {
   for (const auto& device : s_registered_devices) {
-    ICICLE_LOG_INFO << "MerkleTreeLastValuePadding test on device=" << device;
+    ICICLE_LOG_INFO << "MerkleTreeZeroPaddingLeavesOnDevice test on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
     constexpr int leaf_size = 250;
@@ -694,7 +696,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
 TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
 {
   for (const auto& device : s_registered_devices) {
-    ICICLE_LOG_INFO << "MerkleTreeLastValuePadding test on device=" << device;
+    ICICLE_LOG_INFO << "MerkleTreeLastValuePaddingLeavesOnDevice test on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
     constexpr int leaf_size = 320;
