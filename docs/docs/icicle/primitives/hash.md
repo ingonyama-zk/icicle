@@ -54,8 +54,11 @@ The optional `domain_tag` pointer parameter enables domain separation, allowing 
 
 ### Poseidon2
 
-[Poseidon2](https://eprint.iacr.org/2023/323.pdf) is a cryptographic hash function designed specifically for field elements. It is a Faster Version of the Poseidon
-Hash Function (https://eprint.iacr.org/2019/458). The rest of description could be taken from Poseidon hash description above.
+[Poseidon2](https://eprint.iacr.org/2023/323.pdf) is a cryptographic hash function designed specifically for field elements.
+It is an improved version of the original [Poseidon](https://eprint.iacr.org/2019/458) hash, offering better performance on modern hardware. Poseidon2 is optimized for use with elliptic curve cryptography and finite fields, making it ideal for decentralized systems like blockchain. Its main advantage is balancing strong security with efficient computation, which is crucial for applications that require fast, reliable hashing.
+
+The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
+
 
 ## Using Hash API
 
