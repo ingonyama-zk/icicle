@@ -26,7 +26,7 @@ pub struct Poseidon2;
 impl Poseidon2 {
     pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
     where
-        F: FieldImpl,                 // F must implement the FieldImpl trait
+        F: FieldImpl,                  // F must implement the FieldImpl trait
         F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
     {
         create_poseidon2_hasher::<F>(t, domain_tag)
