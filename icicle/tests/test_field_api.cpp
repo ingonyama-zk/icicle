@@ -907,7 +907,7 @@ TYPED_TEST(FieldApiTest, ntt)
 
 // define program
 using MlePoly = Symbol<scalar_t>;
-MlePoly combine_func(const std::vector<MlePoly>& inputs)
+MlePoly lambda_single_result(const std::vector<MlePoly>& inputs)
 {
   const MlePoly& A = inputs[0];
   const MlePoly& B = inputs[1];
@@ -916,7 +916,7 @@ MlePoly combine_func(const std::vector<MlePoly>& inputs)
   return (EQ * (A * B - C));
 }
 
-TEST_F(FieldApiTestBase, CpuProgramExecutor)
+TEST_F(FieldApiTestBase, CpuProgramExecutorSingleRes)
 {
   // randomize input vectors
   const int total_size = 100000;
@@ -937,34 +937,33 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
   }
   END_TIMER(element_wise_op, "Straight forward function (Element wise) time: ", true);
 
-  //----- written program ----------------------
-  Program<scalar_t> program_written(&combine_func, 4);
-  // program_written.print_program();
+  //----- explicit program ----------------------
+  Program<scalar_t> program_explicit(&lambda_single_result, 4);
 
-  CpuProgramExecutor<scalar_t> prog_exe_written(program_written);
-  auto out_written_program = std::make_unique<scalar_t[]>(total_size);
+  CpuProgramExecutor<scalar_t> prog_exe_explicit(program_explicit);
+  auto out_explicit_program = std::make_unique<scalar_t[]>(total_size);
 
   // init program
-  prog_exe_written.m_variable_ptrs[0] = in_a.get();
-  prog_exe_written.m_variable_ptrs[1] = in_b.get();
-  prog_exe_written.m_variable_ptrs[2] = in_c.get();
-  prog_exe_written.m_variable_ptrs[3] = in_eq.get();
-  prog_exe_written.m_variable_ptrs[4] = out_written_program.get();
+  prog_exe_explicit.m_variable_ptrs[0] = in_a.get();
+  prog_exe_explicit.m_variable_ptrs[1] = in_b.get();
+  prog_exe_explicit.m_variable_ptrs[2] = in_c.get();
+  prog_exe_explicit.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_explicit.m_variable_ptrs[4] = out_explicit_program.get();
 
   // run on all vectors
-  START_TIMER(written_program)
+  START_TIMER(explicit_program)
   for (int i = 0; i < total_size; ++i) {
-    prog_exe_written.execute();
-    (prog_exe_written.m_variable_ptrs[0])++;
-    (prog_exe_written.m_variable_ptrs[1])++;
-    (prog_exe_written.m_variable_ptrs[2])++;
-    (prog_exe_written.m_variable_ptrs[3])++;
-    (prog_exe_written.m_variable_ptrs[4])++;
+    prog_exe_explicit.execute();
+    (prog_exe_explicit.m_variable_ptrs[0])++;
+    (prog_exe_explicit.m_variable_ptrs[1])++;
+    (prog_exe_explicit.m_variable_ptrs[2])++;
+    (prog_exe_explicit.m_variable_ptrs[3])++;
+    (prog_exe_explicit.m_variable_ptrs[4])++;
   }
-  END_TIMER(written_program, "Program executor time: ", true);
+  END_TIMER(explicit_program, "Explicit program executor time: ", true);
 
   // check correctness
-  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_written_program.get(), total_size * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_explicit_program.get(), total_size * sizeof(scalar_t)));
 
   //----- predefined program ----------------------
   Program<scalar_t> predef_program(EQ_X_AB_MINUS_C);
@@ -1007,6 +1006,48 @@ TEST_F(FieldApiTestBase, CpuProgramExecutor)
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
+
+
+void lambda_multi_result(std::vector<MlePoly>& inputs, std::vector<MlePoly>& outputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  outputs[0] = EQ * (A * B - C) + scalar_t::from(9);
+  outputs[1] = A * B - !C;
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
+{
+  scalar_t a = scalar_t::rand_host();
+  scalar_t b = scalar_t::rand_host();
+  scalar_t c = scalar_t::rand_host();
+  scalar_t eq = scalar_t::rand_host();
+  scalar_t res_0;
+  scalar_t res_1;
+
+  Program<scalar_t> program(&lambda_multi_result, 4, 2);
+  CpuProgramExecutor<scalar_t> prog_exe(program);
+
+  // init program
+  prog_exe.m_variable_ptrs[0] = &a;
+  prog_exe.m_variable_ptrs[1] = &b;
+  prog_exe.m_variable_ptrs[2] = &c;
+  prog_exe.m_variable_ptrs[3] = &eq;
+  prog_exe.m_variable_ptrs[4] = &res_0;
+  prog_exe.m_variable_ptrs[5] = &res_1;
+
+  // execute
+  prog_exe.execute();
+
+  // check correctness
+  scalar_t expected_res_0 = eq * (a * b - c) + scalar_t::from(9);
+  ASSERT_EQ(res_0, expected_res_0);
+
+  scalar_t expected_res_1 = a * b - scalar_t::inverse(c);
+  ASSERT_EQ(res_1, expected_res_1);
 }
 
 int main(int argc, char** argv)

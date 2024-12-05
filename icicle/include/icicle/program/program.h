@@ -28,13 +28,24 @@ namespace icicle {
   class Program
   {
   public:
-    // Generate a program based on a lambda function
+    // Generate a program based on a lambda function with multiple inputs and 1 output as a return value
     Program(std::function<Symbol<S>(std::vector<Symbol<S>>&)> program_func, const int nof_inputs)
     {
-      std::vector<Symbol<S>> program_inputs(nof_inputs);
+      std::vector<Symbol<S> > program_inputs(nof_inputs);
+      std::vector<Symbol<S> > program_outputs(1);
       set_as_inputs(program_inputs);
-      Symbol<S> result = program_func(program_inputs);
-      generate_program(result);
+      program_outputs[0] = program_func(program_inputs);
+      generate_program(program_outputs);
+    }
+
+    // Generate a program based on a lambda function with multiple inputs and multiple outputs
+    Program(std::function<void(std::vector<Symbol<S>>&, std::vector<Symbol<S>>&)> program_func, const int nof_inputs, const int nof_outputs)
+    {
+      std::vector<Symbol<S> > program_inputs(nof_inputs);
+      std::vector<Symbol<S> > program_outputs(nof_outputs);
+      set_as_inputs(program_inputs);
+      program_func(program_inputs, program_outputs);
+      generate_program(program_outputs);
     }
 
     // Generate a program based on a PreDefinedPrograms
@@ -64,15 +75,26 @@ namespace icicle {
       }
     }
 
-    // run over the DFG held by result and gemerate the program
-    void generate_program(Symbol<S>& result)
+    // run over the DFG held by program_outputs and gemerate the program
+    void generate_program(std::vector<Symbol<S> >& program_outputs)
     {
-      m_nof_outputs = 1;
-      result.m_operation->m_variable_idx = m_nof_inputs;
+      m_nof_outputs = program_outputs.size();
+      // set for each output operation the location at the variables
+      for (int output_idx = 0; output_idx < m_nof_outputs; output_idx++) {
+        program_outputs[output_idx].m_operation->m_variable_idx = m_nof_inputs + output_idx;
+      }
+
+      // run over the graph and allocate location for all constants
       Operation<S>::reset_visit();
-      allocate_constants(result.m_operation);
+      for (auto& result : program_outputs) {
+        allocate_constants(result.m_operation);
+      }
+
+      // run over the graph and generate the program
       Operation<S>::reset_visit();
-      generate_program(result.m_operation);
+      for (auto& result : program_outputs) {
+        generate_program(result.m_operation);
+      }
     }
 
     // Program
