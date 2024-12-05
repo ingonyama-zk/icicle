@@ -12,20 +12,7 @@ fi
 
 # Run clang-format on CUDA, C, and CPP files
 # clang-format writes to stderr in dry-run mode. In order to capture the output to detect if there are changes needed we redirect stderr to stdin
-if [[ $(find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -ferror-limit=1 -style=file 2>&1) ]];
-then
-    echo "🚨 There are files in Icicle Core that need formatting."
-    echo ""
-    echo "Please format all .c, .cpp, .h, .cu, .cuh files using the following command:"
-    echo "find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format -i -style=file"
-    echo ""
-    echo "If you only want to see what formatting is required please run:"
-    echo "find ./ \( -path ./icicle/build -prune -o -path ./**/target -prune -o -path ./examples -prune \) -iname *.h -or -iname *.cuh -or -iname *.cu -or -iname *.c -or -iname *.cpp | xargs clang-format --dry-run -style=file"
-    echo ""
-    status=1
-else
-    echo "🟩 Icicle Core format is fine"
-fi
+./scripts/format_all.sh . --exclude "build|wrappers" --check
 
 # Run go fmt across all Golang packages
 if [[ $(go list ./... | xargs go fmt) ]];

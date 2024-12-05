@@ -16,3 +16,8 @@ cuda = ["icicle-runtime/cuda_backend",
         "icicle-babybear/cuda_backend",
         "icicle-hash/cuda_backend",            
 ]
+
+metal = ["icicle-runtime/metal_backend",
+        "icicle-babybear/metal_backend",
+        "icicle-hash/metal_backend",            
+]

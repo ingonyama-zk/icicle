@@ -1,10 +1,11 @@
-use crate::traits::{FieldConfig, FieldImpl, MontgomeryConvertible};
+use crate::traits::{Arithmetic, FieldConfig, FieldImpl, MontgomeryConvertible};
 use hex::FromHex;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
+use std::ops::{Add, Mul, Sub};
 
 #[derive(PartialEq, Copy, Clone)]
 #[repr(C)]
@@ -106,6 +107,61 @@ pub trait MontgomeryConvertibleField<F: FieldImpl> {
     fn from_mont(values: &mut (impl HostOrDeviceSlice<F> + ?Sized), stream: &IcicleStream) -> eIcicleError;
 }
 
+#[doc(hidden)]
+pub trait FieldArithmetic<F: FieldImpl> {
+    fn add(first: F, second: F) -> F;
+    fn sub(first: F, second: F) -> F;
+    fn mul(first: F, second: F) -> F;
+    fn sqr(first: F) -> F;
+    fn inv(first: F) -> F;
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    fn sqr(self) -> Self {
+        F::sqr(self)
+    }
+
+    fn inv(self) -> Self {
+        F::inv(self)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Add for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn add(self, second: Self) -> Self {
+        F::add(self, second)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Sub for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn sub(self, second: Self) -> Self {
+        F::sub(self, second)
+    }
+}
+
+impl<const NUM_LIMBS: usize, F: FieldConfig> Mul for Field<NUM_LIMBS, F>
+where
+    F: FieldArithmetic<Self>,
+{
+    type Output = Self;
+
+    fn mul(self, second: Self) -> Self {
+        F::mul(self, second)
+    }
+}
+
 impl<const NUM_LIMBS: usize, F: FieldConfig> MontgomeryConvertible for Field<NUM_LIMBS, F>
 where
     F: MontgomeryConvertibleField<Self>,
@@ -148,7 +204,7 @@ macro_rules! impl_scalar_field {
 
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
-            use icicle_core::vec_ops::VecOpsConfig;
+            use icicle_core::{traits::FieldImpl, vec_ops::VecOpsConfig};
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
 
@@ -164,6 +220,18 @@ macro_rules! impl_scalar_field {
                     config: &VecOpsConfig,
                     output: *mut $field_name,
                 ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_add")]
+                pub(crate) fn add(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_sub")]
+                pub(crate) fn sub(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_mul")]
+                pub(crate) fn mul(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_inv")]
+                pub(crate) fn inv(a: *const $field_name, result: *mut $field_name);
             }
 
             pub(crate) fn convert_scalars_montgomery(
@@ -173,6 +241,69 @@ macro_rules! impl_scalar_field {
                 config: &VecOpsConfig,
             ) -> eIcicleError {
                 unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
+            }
+        }
+
+        impl icicle_core::field::FieldArithmetic<$field_name> for $field_cfg {
+            fn add(first: $field_name, second: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::add(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn sub(first: $field_name, second: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::sub(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn mul(first: $field_name, second: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::mul(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn sqr(first: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::mul(
+                        &first as *const $field_name,
+                        &first as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn inv(first: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::inv(&first as *const $field_name, &mut result as *mut $field_name);
+                }
+
+                result
             }
         }
 
@@ -237,7 +368,7 @@ macro_rules! impl_field_tests {
     ) => {
         pub mod test_field {
             use super::*;
-            use icicle_core::test_utilities;
+            use icicle_runtime::test_utilities;
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();
@@ -254,6 +385,11 @@ macro_rules! impl_field_tests {
             fn test_field_equality() {
                 initialize();
                 check_field_equality::<$field_name>()
+            }
+
+            #[test]
+            fn test_field_arithmetic() {
+                check_field_arithmetic::<$field_name>()
             }
         }
     };

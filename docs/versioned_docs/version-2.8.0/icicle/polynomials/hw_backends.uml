@@ -1,0 +1,86 @@
+@startuml
+
+' Define Interface for Polynomial Backend Operations
+interface IPolynomialBackend {
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
+}
+
+' Define Interface for Polynomial Context (State Management)
+interface IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
+}
+
+' PolynomialAPI now uses two strategies: Backend and Context
+class PolynomialAPI {
+    -backendStrategy: IPolynomialBackend
+    -contextStrategy: IPolynomialContext
+    -setBackendStrategy(IPolynomialBackend)
+    -setContextStrategy(IPolynomialContext)
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
+}
+
+' Backend Implementations
+class GPUPolynomialBackend implements IPolynomialBackend {
+    #gpuResources: Resource
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
+}
+
+class ZPUPolynomialBackend implements IPolynomialBackend {
+    #zpuResources: Resource
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
+}
+
+class TracerPolynomialBackend implements IPolynomialBackend {
+    #traceData: Data
+    +add()
+    +subtract()
+    +multiply()
+    +divide()
+    +evaluate()
+}
+
+' Context Implementations (Placeholder for actual implementation)
+class GPUContext implements IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
+}
+
+class ZPUContext implements IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
+}
+
+class TracerContext implements IPolynomialContext {
+    +initFromCoeffs()
+    +initFromEvals()
+    +getCoeffs()
+    +getEvals()
+}
+
+' Relationships
+PolynomialAPI o-- IPolynomialBackend : uses
+PolynomialAPI o-- IPolynomialContext : uses
+@enduml

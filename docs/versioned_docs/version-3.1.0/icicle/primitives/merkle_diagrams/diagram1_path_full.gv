@@ -1,0 +1,113 @@
+digraph MerkleTree {
+    rankdir = BT;
+    node [shape = circle; style = filled; color = lightblue; fontname = "Helvetica"; fontsize = 10;];
+    
+    // Root node
+    Root [label = "Root\n (Commitment)";];
+    
+    L1_0 [label = "path.6";fillcolor = yellow;];
+    L1_1 [label = "path.7";fillcolor = yellow;];
+    
+    L2_0 [label = "path.4";fillcolor = yellow;];
+    L2_1 [label = "path.5";fillcolor = yellow;];
+    L2_2 [label = "";];
+    L2_3 [label = "";];
+    
+    L3_0 [label = "path.2";fillcolor = yellow;];
+    L3_1 [label = "path.3";fillcolor = yellow;];
+    L3_2 [label = "";];
+    L3_3 [label = "";];
+    L3_4 [label = "";];
+    L3_5 [label = "";];
+    L3_6 [label = "";];
+    L3_7 [label = "";];
+    
+    L4_0 [label = "";];
+    L4_1 [label = "";];
+    L4_2 [label = "path.0";fillcolor = yellow;];
+    L4_3 [label = "path.1";fillcolor = yellow;];
+    L4_4 [label = "";];
+    L4_5 [label = "";];
+    L4_6 [label = "";];
+    L4_7 [label = "";];
+    L4_8 [label = "";];
+    L4_9 [label = "";];
+    L4_10 [label = "";];
+    L4_11 [label = "";];
+    L4_12 [label = "";];
+    L4_13 [label = "";];
+    L4_14 [label = "";];
+    L4_15 [label = "";];
+    
+    node [style = filled; fillcolor = lightgreen; shape = rect;];
+    Leaf_0 [label = "Leaf-0";];
+    Leaf_1 [label = "Leaf-1";];
+    Leaf_2 [label = "Leaf-2";];
+    Leaf_3 [label = "Leaf-3";fillcolor = yellow;];
+    Leaf_4 [label = "Leaf-4";];
+    Leaf_5 [label = "Leaf-5";];
+    Leaf_6 [label = "Leaf-6";];
+    Leaf_7 [label = "Leaf-7";];
+    Leaf_8 [label = "Leaf-8";];
+    Leaf_9 [label = "Leaf-9";];
+    Leaf_10 [label = "Leaf-10";];
+    Leaf_11 [label = "Leaf-11";];
+    Leaf_12 [label = "Leaf-12";];
+    Leaf_13 [label = "Leaf-13";];
+    Leaf_14 [label = "Leaf-14";];
+    Leaf_15 [label = "Leaf-15";];
+    
+    
+    // Connections: Reverse direction from leaves to root
+    L4_0 -> L3_0;
+    L4_1 -> L3_0;
+    L4_2 -> L3_1;
+    L4_3 -> L3_1;
+    L4_4 -> L3_2;
+    L4_5 -> L3_2;
+    L4_6 -> L3_3;
+    L4_7 -> L3_3;
+    L4_8 -> L3_4;
+    L4_9 -> L3_4;
+    L4_10 -> L3_5;
+    L4_11 -> L3_5;
+    L4_12 -> L3_6;
+    L4_13 -> L3_6;
+    L4_14 -> L3_7;
+    L4_15 -> L3_7;
+    
+    L3_0 -> L2_0;
+    L3_1 -> L2_0;
+    L3_2 -> L2_1;
+    L3_3 -> L2_1;
+    L3_4 -> L2_2;
+    L3_5 -> L2_2;
+    L3_6 -> L2_3;
+    L3_7 -> L2_3;
+    
+    L2_0 -> L1_0;
+    L2_1 -> L1_0;
+    L2_2 -> L1_1;
+    L2_3 -> L1_1;
+    
+    L1_0 -> Root;
+    L1_1 -> Root;
+    
+    // Leaves connected to layer 4
+    Leaf_0 -> L4_0;
+    Leaf_1 -> L4_1;
+    Leaf_2 -> L4_2;
+    Leaf_3 -> L4_3;
+    Leaf_4 -> L4_4;
+    Leaf_5 -> L4_5;
+    Leaf_6 -> L4_6;
+    Leaf_7 -> L4_7;
+    Leaf_8 -> L4_8;
+    Leaf_9 -> L4_9;
+    Leaf_10 -> L4_10;
+    Leaf_11 -> L4_11;
+    Leaf_12 -> L4_12;
+    Leaf_13 -> L4_13;
+    Leaf_14 -> L4_14;
+    Leaf_15 -> L4_15;
+}

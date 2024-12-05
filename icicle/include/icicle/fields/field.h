@@ -24,6 +24,7 @@
 #endif // __CUDACC__
 
 #include "icicle/errors.h"
+#include "icicle/utils/rand_gen.h"
 #include "host_math.h"
 #include "storage.h"
 
@@ -711,14 +712,14 @@ public:
     return rv;
   }
 
+  // NOTE this function is used for test and examples - it assumed it is executed on a single-thread (no two threads
+  // accessing rand_generator at the same time)
   static HOST_INLINE Field rand_host()
   {
-    std::random_device rd;
-    std::mt19937_64 generator(rd());
     std::uniform_int_distribution<unsigned> distribution;
     Field value{};
     for (unsigned i = 0; i < TLC; i++)
-      value.limbs_storage.limbs[i] = distribution(generator);
+      value.limbs_storage.limbs[i] = distribution(rand_generator);
     while (lt(Field{get_modulus()}, value))
       value = value - Field{get_modulus()};
     return value;
