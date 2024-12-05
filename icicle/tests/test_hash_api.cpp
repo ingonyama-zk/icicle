@@ -481,7 +481,7 @@ void test_merkle_tree(
     // int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
     int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
     ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx "
-                    << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
+                     << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
 
     // get root and merkle-path for a leaf
     auto [root, root_size] = prover_tree.get_merkle_root();

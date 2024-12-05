@@ -419,10 +419,10 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
 
 TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
-  const int R =
-    1 << rand_uint_32b(2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
-  const int C =
-    1 << rand_uint_32b(2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+  const int R = 1 << rand_uint_32b(
+                  2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+  const int C = 1 << rand_uint_32b(
+                  2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
   const int batch_size = 1 << rand_uint_32b(0, 3);
   const bool columns_batch = rand_uint_32b(0, 1);
   const bool is_in_place = IcicleTestBase::is_main_device_available() ? 0 : rand_uint_32b(0, 1);

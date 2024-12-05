@@ -92,7 +92,7 @@ public:
     // number per thread.
     const int batch = 3;
     const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
-    const int precompute_factor = 1;                   // Precompute is 1 to increase number of BMs
+    const int precompute_factor = 1;                        // Precompute is 1 to increase number of BMs
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
