@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GRUMKIN_POSEIDON2_H
-  #define GRUMKIN_POSEIDON2_H
+#ifndef GRUMPKIN_POSEIDON2_H
+  #define GRUMPKIN_POSEIDON2_H
 
   #include <string>
 
-namespace poseidon2_constants_grumkin {
+namespace poseidon2_constants_grumpkin {
 
   /**
    * This inner namespace contains constants for running Poseidon2.
@@ -473,5 +473,5 @@ namespace poseidon2_constants_grumkin {
 
   static const std::string partial_matrix_diagonal_m1_24[] = {};
 
-} // namespace poseidon2_constants_grumkin
+} // namespace poseidon2_constants_grumPkin
 #endif
