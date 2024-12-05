@@ -13,7 +13,8 @@ where
 {
     let batch = 1 << 4;
     let domain_tag = F::Config::generate_random(1)[0];
-    for t in [2, 3, 4] { // TODO add  8, 12, 16, 20, 24 for large fields once all is suppoerted
+    for t in [2, 3, 4] {
+        // TODO add  8, 12, 16, 20, 24 for large fields once all is suppoerted
         for domain_tag in [None, Some(&domain_tag)] {
             let inputs: Vec<F> = if domain_tag != None {
                 F::Config::generate_random(batch * (t - 1))
@@ -50,7 +51,7 @@ where
     }
 }
 
-// TODO uncomment once Poseidon2 sponge function is ready 
+// TODO uncomment once Poseidon2 sponge function is ready
 // pub fn check_poseidon2_hash_sponge<F: FieldImpl>()
 // where
 //     <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
