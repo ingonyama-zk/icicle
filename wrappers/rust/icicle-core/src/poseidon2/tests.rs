@@ -2,10 +2,9 @@ use crate::{
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     poseidon2::{Poseidon2, Poseidon2Hasher},
-    test_utilities,
     traits::{FieldImpl, GenerateRandom},
 };
-use icicle_runtime::{errors::eIcicleError, memory::HostSlice};
+use icicle_runtime::{errors::eIcicleError, memory::HostSlice, test_utilities};
 use std::mem;
 
 pub fn check_poseidon2_hash<F: FieldImpl>()
