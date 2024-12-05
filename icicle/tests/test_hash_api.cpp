@@ -497,7 +497,7 @@ void test_merkle_tree(
     auto [root, root_size] = prover_tree.get_merkle_root();
     MerkleProof merkle_proof{};
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      leaves, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false,
+      leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false,
       config, merkle_proof));
 
     // Test valid proof
@@ -518,7 +518,7 @@ void test_merkle_tree(
     // Same for pruned proof
     verification_valid = false;
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      leaves, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true,
+      leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true,
       config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_TRUE(verification_valid) << "Pruned proof of valid inputs at index " << leaf_idx
@@ -575,7 +575,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
     ICICLE_LOG_INFO << "MerkleTreeZeroPadding test on device=" << device;
     ICICLE_CHECK(icicle_set_device(device));
 
-    constexpr int leaf_size = 320; // TODO: should be 250 after fix
+    constexpr int leaf_size = 250;
     constexpr int nof_leaves = 100;
     const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
                                                           32, 70, 99, 100}; // those cases will be tested with padding
@@ -584,10 +584,10 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
     randomize(leaves, input_size);
 
     // define the merkle tree
-    auto layer0_hash = Keccak256::create(leaf_size); // TODO: should be 2 * leaf_size after fix
-    auto layer1_hash = Keccak256::create(2 * 32);    // TODO: should be 32 after fix
-    auto layer2_hash = Keccak256::create(5 * 32);
-    auto layer3_hash = Keccak256::create(10 * 32);
+    auto layer0_hash = Blake2s::create(2 * leaf_size);
+    auto layer1_hash = Blake2s::create(32);
+    auto layer2_hash = Blake2s::create(5 * 32);
+    auto layer3_hash = Blake2s::create(10 * 32);
 
     std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
     int output_store_min_layer = 0;
