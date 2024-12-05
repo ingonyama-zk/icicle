@@ -955,7 +955,6 @@ MlePoly combine_func(const std::vector<MlePoly>& inputs)
 
 TEST_F(FieldApiTestBase, CpuProgramExecutor)
 {
-
   // randomize input vectors
   const int total_size = 100000;
   auto in_a = std::make_unique<scalar_t[]>(total_size);
