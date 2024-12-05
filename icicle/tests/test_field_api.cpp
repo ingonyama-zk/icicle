@@ -591,10 +591,10 @@ TYPED_TEST(FieldApiTest, bitReverse)
 
 TYPED_TEST(FieldApiTest, Slice)
 {
-  const uint64_t size_in = 1 << rand_uint_32b(3, 17);
+  const uint64_t size_in = 1 << rand_uint_32b(4, 17);
   const uint64_t offset = rand_uint_32b(0, 14);
   const uint64_t stride = rand_uint_32b(1, 4);
-  const uint64_t size_out = rand_uint_32b(0, ((size_in - offset) / stride) - 1);
+  const uint64_t size_out = rand_uint_32b(0, (size_in - offset) / stride);
   const int batch_size = 1 << rand_uint_32b(0, 4);
   const bool columns_batch = rand_uint_32b(0, 1);
 
