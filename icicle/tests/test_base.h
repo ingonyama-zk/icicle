@@ -1,8 +1,11 @@
 #pragma once
+#include <time.h>
+#include <random>
 
 #include <gtest/gtest.h>
 #include "icicle/runtime.h"
 #include "icicle/utils/log.h"
+#include "icicle/utils/rand_gen.h"
 
 using FpMiliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
@@ -46,7 +49,12 @@ public:
   static void TearDownTestSuite() {}
 
   // SetUp/TearDown are called before and after each test
-  void SetUp() override {}
+  void SetUp() override
+  {
+    unsigned seed = time(NULL);
+    ICICLE_LOG_INFO << "Seed for test is: " << seed;
+    seed_rand_generator(seed);
+  }
   void TearDown() override {}
 
   bool is_main_device_available() const { return s_main_device != UNKOWN_DEVICE && s_main_device != "CPU"; }

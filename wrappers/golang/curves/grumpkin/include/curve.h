@@ -12,6 +12,8 @@ typedef struct affine_t affine_t;
 typedef struct VecOpsConfig VecOpsConfig;
 
 bool grumpkin_eq(projective_t* point1, projective_t* point2);
+void grumpkin_ecadd(projective_t* point, projective_t* point2, projective_t* res); 
+void grumpkin_ecsub(projective_t* point, projective_t* point2, projective_t* res); 
 void grumpkin_to_affine(projective_t* point, affine_t* point_out);
 void grumpkin_from_affine(affine_t* point, projective_t* point_out);
 void grumpkin_generate_projective_points(projective_t* points, int size);
