@@ -62,9 +62,9 @@ So for Poseidon of arity 2 and input of size 1024 * 2, we would expect 1024 elem
 
 Poseidon is extremely customizable and using different constants will produce different hashes, security levels and performance results.
 
-We support pre-calculated and optimized constants for each of the [supported curves](../libraries#supported-curves-and-operations).The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/icicle/hash/poseidon_constants) and are labeled clearly per curve `<curve_name>_poseidon.h`.
+We support pre-calculated and optimized constants for each of the [supported curves](../libraries#supported-curves-and-operations).The constants can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants) and are labeled clearly per curve `<curve_name>_poseidon.h`.
 
-If you wish to generate your own constants you can use our python script which can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/icicle/hash/poseidon_constants/generate_parameters.py).
+If you wish to generate your own constants you can use our python script which can be found [here](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/poseidon/constants/generate_parameters.py).
 
 Prerequisites:
 
