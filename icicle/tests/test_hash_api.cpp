@@ -28,12 +28,10 @@ public:
   template <typename T>
   static void randomize(T* arr, uint64_t size)
   {
-    std::uniform_int_distribution<uint32_t> dist(0, UINT32_MAX); // Range of random numbers
-
     // Fill the array with random values
     uint32_t* u32_arr = (uint32_t*)arr;
     for (int i = 0; i < (size * sizeof(T) / sizeof(uint32_t)); ++i) {
-      u32_arr[i] = dist(rand_generator);
+      u32_arr[i] = rand_uint_32b();
     }
   }
 
@@ -461,7 +459,7 @@ void test_merkle_tree(
 
     uint8_t new_worng_val;
     do {
-      new_worng_val = rand_int(0, UINT8_MAX);
+      new_worng_val = rand_uint_32b(0, UINT8_MAX);
     } while (new_worng_val == wrong_leaves_byte_ptr[wrong_byte_index]);
 
     wrong_leaves_byte_ptr[wrong_byte_index] = new_worng_val;
@@ -482,7 +480,7 @@ void test_merkle_tree(
   for (int i = 0; i < nof_indices_modified; i++) {
     // int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
     int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
-    ICICLE_LOG_INFO << "Checking proof of index " << leaf_idx << " (Byte idx "
+    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx "
                     << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
 
     // get root and merkle-path for a leaf
@@ -608,12 +606,12 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
 
   ICICLE_LOG_DEBUG << "A whole number of hashes is missing";
-  int nof_hashes = rand_int(1, total_nof_input_hashes - 1);
+  int nof_hashes = rand_uint_32b(1, total_nof_input_hashes - 1);
   ICICLE_LOG_DEBUG << "Number of used hashes: " << nof_hashes << " / " << total_nof_input_hashes;
   test_merkle_tree(hashes, config, output_store_min_layer, nof_hashes * nof_leaves_in_hash, leaves);
 
   ICICLE_LOG_DEBUG << "Random amount of leaves";
-  int nof_partial_leaves = rand_int(0, nof_leaves - 1);
+  int nof_partial_leaves = rand_uint_32b(0, nof_leaves - 1);
   ICICLE_LOG_DEBUG << "Random amount of leaves: " << nof_partial_leaves << " / " << nof_leaves;
   test_merkle_tree(hashes, config, output_store_min_layer, nof_partial_leaves, leaves);
 
@@ -621,7 +619,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
   int byte_size;
   do {
-    byte_size = rand_int(1, nof_leaves * leaf_size);
+    byte_size = rand_uint_32b(1, nof_leaves * leaf_size);
   } while (byte_size % leaf_size == 0);
   byte_size = 327;
   ICICLE_LOG_DEBUG << "Size of input in bytes: " << byte_size << "\t(" << float(byte_size) / leaf_size << " / "
@@ -640,7 +638,7 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
   auto wrong_bytes = std::make_unique<std::byte[]>(byte_size);
   memcpy(wrong_bytes.get(), byte_leaves, byte_size);
   // Modify the last byte as the only difference of this test from the previous is proof for the partial index
-  wrong_bytes[byte_size - 1] = static_cast<std::byte>(rand_int(0, UINT8_MAX));
+  wrong_bytes[byte_size - 1] = static_cast<std::byte>(rand_uint_32b(0, UINT8_MAX));
 
   int leaf_idx = byte_size / leaf_size;
   ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx " << leaf_idx * leaf_size << ")";
@@ -729,12 +727,12 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
 
   ICICLE_LOG_DEBUG << "A whole number of hashes is missing";
-  int nof_hashes = rand_int(1, total_nof_input_hashes - 1);
+  int nof_hashes = rand_uint_32b(1, total_nof_input_hashes - 1);
   ICICLE_LOG_DEBUG << "Number of used hashes: " << nof_hashes << " / " << total_nof_input_hashes;
   test_merkle_tree(hashes, config, output_store_min_layer, nof_hashes * nof_leaves_in_hash, leaves);
 
   ICICLE_LOG_DEBUG << "Random amount of leaves";
-  int nof_partial_leaves = rand_int(1, nof_leaves - 1);
+  int nof_partial_leaves = rand_uint_32b(1, nof_leaves - 1);
   ICICLE_LOG_DEBUG << "Random amount of leaves: " << nof_partial_leaves << " / " << nof_leaves;
   test_merkle_tree(hashes, config, output_store_min_layer, nof_partial_leaves, leaves);
 
@@ -742,7 +740,7 @@ TEST_F(HashApiTest, MerkleTreeLastValuePadding)
   auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
   int byte_size;
   do {
-    byte_size = rand_int(1, nof_leaves * leaf_size - 1);
+    byte_size = rand_uint_32b(1, nof_leaves * leaf_size - 1);
   } while (byte_size % leaf_size == 0);
   byte_size = 327;
   ICICLE_LOG_DEBUG << "Size of input in bytes: " << byte_size << "\t(" << float(byte_size) / leaf_size << " / "
@@ -780,7 +778,7 @@ TEST_F(HashApiTest, MerkleTreeMixMediumSize)
 
     const std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash, layer4_hash};
 
-    const int output_store_min_layer = rand_int(0, hashes.size() - 1);
+    const int output_store_min_layer = rand_uint_32b(0, hashes.size() - 1);
     ICICLE_LOG_DEBUG << "Min store layer:\t" << output_store_min_layer;
 
     test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves.get());

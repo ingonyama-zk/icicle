@@ -184,7 +184,7 @@ TEST_F(DeviceApiTest, memoryTracker)
   START_TIMER(lookup);
   for (auto& it : allocated_addresses) {
     // identify addresses identified correctly (to active device)
-    const void* addr = (void*)((size_t)it + rand_int(0, RAND_MAX) % ALLOC_SIZE);
+    const void* addr = (void*)((size_t)it + rand_uint_32b(0, RAND_MAX) % ALLOC_SIZE);
     ICICLE_CHECK(icicle_is_active_device_memory(addr));
   }
   END_TIMER_AVERAGE(lookup, "memory-tracker: lookup (and compare) average", true, NOF_ALLOCS);
@@ -196,7 +196,7 @@ TEST_F(DeviceApiTest, memoryTracker)
 
   // test that we still identify correctly after switching device
   icicle_set_device({"CPU", 0});
-  const void* addr = (void*)((size_t)*allocated_addresses.begin() + rand_int(0, RAND_MAX) % ALLOC_SIZE);
+  const void* addr = (void*)((size_t)*allocated_addresses.begin() + rand_uint_32b(0, RAND_MAX) % ALLOC_SIZE);
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(addr));
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
   auto it = tracker.identify(addr);

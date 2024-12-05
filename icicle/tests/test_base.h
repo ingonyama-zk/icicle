@@ -52,8 +52,7 @@ public:
   void SetUp() override
   {
     unsigned seed = time(NULL);
-    srand(seed);
-    ICICLE_LOG_INFO << "Seed for tests is: " << seed;
+    ICICLE_LOG_INFO << "Seed for test is: " << seed;
     seed_rand_generator(seed);
   }
   void TearDown() override {}
