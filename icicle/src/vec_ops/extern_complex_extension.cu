@@ -34,16 +34,16 @@ namespace vec_ops {
    * `E` being the [extension field](@ref c_extension_t) of the base field given by `-DFIELD` env variable during build.
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
-  extern "C" cudaError_t
-  CONCAT_EXPAND(FIELD, c_extension_accumulate_cuda)(c_extension_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config)
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_accumulate_cuda)(
+    c_extension_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config)
   {
     return add<c_extension_t>(vec_a, vec_b, n, config, vec_a);
   }
 
-    extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_stwo_convert_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_stwo_convert_cuda)(
     uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, c_extension_t* result)
   {
-    return  stwo_convert<c_extension_t>(vec_a, vec_b, vec_c, vec_d, n, result, true);
+    return stwo_convert<c_extension_t>(vec_a, vec_b, vec_c, vec_d, n, result, true);
   }
 
   /**
@@ -78,5 +78,11 @@ namespace vec_ops {
     const c_extension_t* input, uint64_t n, BitReverseConfig& config, c_extension_t* output)
   {
     return bit_reverse<c_extension_t>(input, n, config, output);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_fold_cuda)(
+    scalar_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config, c_extension_t* result)
+  {
+    return fold<c_extension_t, scalar_t>(vec_a, vec_b, n, config, result);
   }
 } // namespace vec_ops

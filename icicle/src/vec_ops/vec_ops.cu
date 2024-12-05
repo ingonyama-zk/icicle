@@ -25,6 +25,23 @@ namespace vec_ops {
       if (tid < n) { result[tid] = element_vec[tid] * (scalar); }
     }
 
+    constexpr int SIZE_OF_BITS = sizeof(int) * 8 - 1;
+
+    template <typename E, typename S>
+    __global__ void fold_kernel(S* values, const E* folding_factors, int n, const int nlog2, E* result)
+    {
+      int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+      for (int level = nlog2 - 1; level >= 0; --level) {
+        int step = 1 << level;
+        if (idx < step) {
+          int offset = idx + step;
+          //values[idx] = values[idx] + folding_factors[level] * values[offset];
+        }
+        __syncthreads();
+      }
+    }
+
     template <typename E>
     __global__ void div_element_wise_kernel(const E* element_vec1, const E* element_vec2, int n, E* result)
     {
@@ -153,6 +170,61 @@ namespace vec_ops {
     return vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
   }
 
+  template <typename E, typename S>
+  cudaError_t fold(S* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  // TODO: asap modify vec_op template so it can accomodate minor flexibility without spreading the copypaste
+  {
+    CHK_INIT_IF_RETURN();
+
+    int nlog2 = log2(n);
+
+    // Set the grid and block dimensions
+    int num_threads = MAX_THREADS_PER_BLOCK;
+    int num_blocks = (n + num_threads - 1) / num_threads;
+
+    E* d_result;
+    S *d_vec_a, *d_alloc_vec_a;
+    E* d_alloc_vec_b;
+    const E* d_vec_b;
+    if (!config.is_a_on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_a, n * sizeof(S), config.ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_alloc_vec_a, vec_a, n * sizeof(S), cudaMemcpyHostToDevice, config.ctx.stream));
+      d_vec_a = d_alloc_vec_a;
+    } else {
+      d_vec_a = vec_a;
+    }
+
+    if (!config.is_b_on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_alloc_vec_b, nlog2 * sizeof(E), config.ctx.stream));
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(d_alloc_vec_b, vec_b, nlog2 * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
+      d_vec_b = d_alloc_vec_b;
+    } else {
+      d_vec_b = vec_b;
+    }
+
+    if (!config.is_result_on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, (size_t)sizeof(E), config.ctx.stream));
+    } else {
+      d_result = result;
+    }
+
+    // Call the kernel to perform element-wise operation
+    fold_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, n, nlog2, d_result);
+
+    if (!config.is_result_on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(&result, &d_result, (size_t)sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(&d_result, config.ctx.stream));
+    }
+
+    if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_a, config.ctx.stream)); }
+    if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_alloc_vec_b, config.ctx.stream)); }
+
+    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
+
+    return CHK_LAST();
+  }
+
   template <typename E>
   cudaError_t
   stwo_convert(uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, E* result, bool is_async)
@@ -182,7 +254,7 @@ namespace vec_ops {
     CHK_IF_RETURN(cudaStreamSynchronize(stream2));
     CHK_IF_RETURN(cudaStreamSynchronize(stream3));
     CHK_IF_RETURN(cudaStreamSynchronize(stream4));
-    
+
     CHK_IF_RETURN(cudaStreamDestroy(stream1));
     CHK_IF_RETURN(cudaStreamDestroy(stream2));
     CHK_IF_RETURN(cudaStreamDestroy(stream3));

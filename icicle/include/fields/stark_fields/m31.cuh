@@ -312,7 +312,7 @@ namespace m31 {
   typedef MersenneField<fp_config> scalar_t;
 
   /**
-   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   * Complex extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
 
@@ -334,16 +334,13 @@ namespace m31 {
   }
 
   /**
-   * Extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
    */
   typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
-  typedef q_extension_t extension_t;
+  typedef q_extension_t extension_t; //TODO: split, so no implicit extension_t
 
   typedef circle_math::CirclePoint<fp_config, scalar_t> point_t;
   typedef circle_math::CirclePoint<fp_config, q_extension_t> secure_point_t;
-
-  // typedef circle_math::CircleCoset<fp_config, scalar_t> coset_t; //TODO: somehow stopped building with this line :(
-
 } // namespace m31
 
 template <typename CONFIG>
