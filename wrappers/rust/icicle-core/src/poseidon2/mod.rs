@@ -96,11 +96,12 @@ macro_rules! impl_poseidon2_tests {
             check_poseidon2_hash::<$field>();
         }
 
-        #[test]
-        fn test_poseidon2_hash_sponge() {
-            initialize();
-            check_poseidon2_hash_sponge::<$field>();
-        }
+        // TODO uncomment when feature is ready
+        // #[test]
+        // fn test_poseidon2_hash_sponge() {
+        //     initialize();
+        //     check_poseidon2_hash_sponge::<$field>();
+        // }
 
         #[test]
         fn test_poseidon2_hash_multi_device() {

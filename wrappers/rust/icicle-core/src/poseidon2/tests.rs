@@ -13,7 +13,7 @@ where
 {
     let batch = 1 << 4;
     let domain_tag = F::Config::generate_random(1)[0];
-    for t in [3, 5, 9, 12] {
+    for t in [2, 3, 4] { // TODO add  8, 12, 16, 20, 24 for large fields once all is suppoerted
         for domain_tag in [None, Some(&domain_tag)] {
             let inputs: Vec<F> = if domain_tag != None {
                 F::Config::generate_random(batch * (t - 1))
@@ -50,44 +50,45 @@ where
     }
 }
 
-pub fn check_poseidon2_hash_sponge<F: FieldImpl>()
-where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
-{
-    for t in [3, 5, 9, 12] {
-        let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
-        let mut outputs_main = vec![F::zero(); 1];
-        let mut outputs_ref = vec![F::zero(); 1];
+// TODO uncomment once Poseidon2 sponge function is ready 
+// pub fn check_poseidon2_hash_sponge<F: FieldImpl>()
+// where
+//     <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+// {
+//     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
+//         let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
+//         let mut outputs_main = vec![F::zero(); 1];
+//         let mut outputs_ref = vec![F::zero(); 1];
 
-        test_utilities::test_set_main_device();
-        let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+//         test_utilities::test_set_main_device();
+//         let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        poseidon_hasher_main
-            .hash(
-                HostSlice::from_slice(&inputs),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
-            )
-            .unwrap();
+//         poseidon_hasher_main
+//             .hash(
+//                 HostSlice::from_slice(&inputs),
+//                 &HashConfig::default(),
+//                 HostSlice::from_mut_slice(&mut outputs_main),
+//             )
+//             .unwrap();
 
-        // Sponge poseidon is planned for v3.2. Not supported in v3.1
-        test_utilities::test_set_ref_device();
-        let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+//         // Sponge poseidon is planned for v3.2. Not supported in v3.1
+//         test_utilities::test_set_ref_device();
+//         let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let err = poseidon_hasher_ref.hash(
-            HostSlice::from_slice(&inputs),
-            &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_ref),
-        );
-        assert_eq!(err, Err(eIcicleError::InvalidArgument));
-    }
-}
+//         let err = poseidon_hasher_ref.hash(
+//             HostSlice::from_slice(&inputs),
+//             &HashConfig::default(),
+//             HostSlice::from_mut_slice(&mut outputs_ref),
+//         );
+//         assert_eq!(err, Err(eIcicleError::InvalidArgument));
+//     }
+// }
 
 pub fn check_poseidon2_hash_multi_device<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
 {
-    let t = 9; // t=9 is for Poseidon9 hash (t is the paper's terminology)
+    let t = 4; // t=4 is for Poseidon hash (t is the paper's terminology)
     let inputs: Vec<F> = F::Config::generate_random(t);
     let mut outputs_main_0 = vec![F::zero(); 1];
     let mut outputs_main_1 = vec![F::zero(); 1];
@@ -136,9 +137,9 @@ pub fn check_poseidon2_tree<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: Poseidon2Hasher<F>,
 {
-    let t = 9;
+    let t = 4;
     let nof_layers = 4;
-    let num_elements = 9_u32.pow(nof_layers);
+    let num_elements = 4_u32.pow(nof_layers);
     let mut leaves: Vec<F> = (0..num_elements)
         .map(|i| F::from_u32(i))
         .collect();
