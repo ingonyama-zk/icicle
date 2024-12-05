@@ -1008,7 +1008,6 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorSingleRes)
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
 }
 
-
 void lambda_multi_result(std::vector<MlePoly>& inputs, std::vector<MlePoly>& outputs)
 {
   const MlePoly& A = inputs[0];

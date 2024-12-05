@@ -31,18 +31,21 @@ namespace icicle {
     // Generate a program based on a lambda function with multiple inputs and 1 output as a return value
     Program(std::function<Symbol<S>(std::vector<Symbol<S>>&)> program_func, const int nof_inputs)
     {
-      std::vector<Symbol<S> > program_inputs(nof_inputs);
-      std::vector<Symbol<S> > program_outputs(1);
+      std::vector<Symbol<S>> program_inputs(nof_inputs);
+      std::vector<Symbol<S>> program_outputs(1);
       set_as_inputs(program_inputs);
       program_outputs[0] = program_func(program_inputs);
       generate_program(program_outputs);
     }
 
     // Generate a program based on a lambda function with multiple inputs and multiple outputs
-    Program(std::function<void(std::vector<Symbol<S>>&, std::vector<Symbol<S>>&)> program_func, const int nof_inputs, const int nof_outputs)
+    Program(
+      std::function<void(std::vector<Symbol<S>>&, std::vector<Symbol<S>>&)> program_func,
+      const int nof_inputs,
+      const int nof_outputs)
     {
-      std::vector<Symbol<S> > program_inputs(nof_inputs);
-      std::vector<Symbol<S> > program_outputs(nof_outputs);
+      std::vector<Symbol<S>> program_inputs(nof_inputs);
+      std::vector<Symbol<S>> program_outputs(nof_outputs);
       set_as_inputs(program_inputs);
       program_func(program_inputs, program_outputs);
       generate_program(program_outputs);
@@ -76,7 +79,7 @@ namespace icicle {
     }
 
     // run over the DFG held by program_outputs and gemerate the program
-    void generate_program(std::vector<Symbol<S> >& program_outputs)
+    void generate_program(std::vector<Symbol<S>>& program_outputs)
     {
       m_nof_outputs = program_outputs.size();
       // set for each output operation the location at the variables
