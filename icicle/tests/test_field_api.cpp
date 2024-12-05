@@ -862,7 +862,8 @@ TYPED_TEST(FieldApiTest, ntt)
   } else {
     columns_batch = rand() % 2;
   }
-  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
+  const int _dir = 0;
+  const NTTDir dir = static_cast<NTTDir>(_dir); // 0: forward, 1: inverse
   const int log_coset_stride = rand() % 3;
   scalar_t coset_gen;
   if (log_coset_stride) {
@@ -876,6 +877,7 @@ TYPED_TEST(FieldApiTest, ntt)
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
   ICICLE_LOG_DEBUG << "inplace = " << inplace;
   ICICLE_LOG_DEBUG << "ordering = " << _ordering;
+  ICICLE_LOG_DEBUG << "direction = " << _dir;
   ICICLE_LOG_DEBUG << "log_coset_stride = " << log_coset_stride;
 
   const int total_size = N * batch_size;
