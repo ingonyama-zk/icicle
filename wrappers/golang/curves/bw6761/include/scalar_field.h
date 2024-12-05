@@ -1,11 +1,11 @@
 #include <stdbool.h>
 
 #ifndef _BW6_761_FIELD_H
-  #define _BW6_761_FIELD_H
+#define _BW6_761_FIELD_H
 
-  #ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-  #endif
+#endif
 
 typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
