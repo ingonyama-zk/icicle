@@ -11,6 +11,9 @@
 #include "icicle/utils/log.h"
 #include "icicle/backend/ntt_config.h"
 
+#include "icicle/program/symbol.h"
+#include "icicle/program/program.h"
+#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "test_base.h"
 
 using namespace field_config;
@@ -901,6 +904,110 @@ TYPED_TEST(FieldApiTest, ntt)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT
+
+// define program
+using MlePoly = Symbol<scalar_t>;
+MlePoly combine_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return (EQ * (A * B - C));
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutor)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  //----- element wise operation ----------------------
+  auto out_element_wise = std::make_unique<scalar_t[]>(total_size);
+  START_TIMER(element_wise_op)
+  for (int i = 0; i < 100000; ++i) {
+    out_element_wise[i] = in_eq[i] * (in_a[i] * in_b[i] - in_c[i]);
+  }
+  END_TIMER(element_wise_op, "Straight forward function (Element wise) time: ", true);
+
+  //----- written program ----------------------
+  Program<scalar_t> program_written(&combine_func, 4);
+  // program_written.print_program();
+
+  CpuProgramExecutor<scalar_t> prog_exe_written(program_written);
+  auto out_written_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_written.m_variable_ptrs[0] = in_a.get();
+  prog_exe_written.m_variable_ptrs[1] = in_b.get();
+  prog_exe_written.m_variable_ptrs[2] = in_c.get();
+  prog_exe_written.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_written.m_variable_ptrs[4] = out_written_program.get();
+
+  // run on all vectors
+  START_TIMER(written_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_written.execute();
+    (prog_exe_written.m_variable_ptrs[0])++;
+    (prog_exe_written.m_variable_ptrs[1])++;
+    (prog_exe_written.m_variable_ptrs[2])++;
+    (prog_exe_written.m_variable_ptrs[3])++;
+    (prog_exe_written.m_variable_ptrs[4])++;
+  }
+  END_TIMER(written_program, "Program executor time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_written_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- predefined program ----------------------
+  Program<scalar_t> predef_program(EQ_X_AB_MINUS_C);
+  // predef_program.print_program();
+
+  CpuProgramExecutor<scalar_t> prog_exe_predef(predef_program);
+  auto out_predef_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_predef.m_variable_ptrs[0] = in_a.get();
+  prog_exe_predef.m_variable_ptrs[1] = in_b.get();
+  prog_exe_predef.m_variable_ptrs[2] = in_c.get();
+  prog_exe_predef.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_predef.m_variable_ptrs[4] = out_predef_program.get();
+
+  // run on all vectors
+  START_TIMER(predef_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_predef.execute();
+    (prog_exe_predef.m_variable_ptrs[0])++;
+    (prog_exe_predef.m_variable_ptrs[1])++;
+    (prog_exe_predef.m_variable_ptrs[2])++;
+    (prog_exe_predef.m_variable_ptrs[3])++;
+    (prog_exe_predef.m_variable_ptrs[4])++;
+  }
+  END_TIMER(predef_program, "Program predefined time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_predef_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- Vecops operation ----------------------
+  auto config = default_vec_ops_config();
+  auto out_vec_ops = std::make_unique<scalar_t[]>(total_size);
+
+  START_TIMER(vecop)
+  vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
+  vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
+  vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
+  END_TIMER(predef_program, "Vec ops time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
 
 int main(int argc, char** argv)
 {
