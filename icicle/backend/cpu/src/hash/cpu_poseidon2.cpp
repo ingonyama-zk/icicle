@@ -144,7 +144,7 @@ namespace icicle {
         ICICLE_LOG_ERROR
           << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]\n";
         return eIcicleError::INVALID_ARGUMENT;
-      } // switch (T) {
+      }                                              // switch (T) {
       if (full_rounds == 0 && partial_rounds == 0) { // All arrays are empty in this case.
         continue;
       }
