@@ -23,11 +23,11 @@ namespace icicle {
   template <typename S>
   struct Poseidon2ConstantsOptions {
     unsigned int t = 0;
-    unsigned int alpha = 5;              ///< Sbox power.
-    bool use_all_zeroes_padding = true;  ///< If true use [0,0,..,0] for padding. Otherwise use [1,0,..,0].
-    unsigned int nof_upper_full_rounds;  ///< Number of upper full rounds of a single hash.
-    unsigned int nof_partial_rounds;     ///< Number of partial rounds of a single hash.
-    unsigned int nof_bottom_full_rounds; ///< Number of bottom full rounds of a single hash.
+    unsigned int alpha = 5;                  ///< Sbox power.
+    bool use_all_zeroes_padding = true;      ///< If true use [0,0,..,0] for padding. Otherwise use [1,0,..,0].
+    unsigned int nof_upper_full_rounds = 0;  ///< Number of upper full rounds of a single hash.
+    unsigned int nof_partial_rounds = 0;     ///< Number of partial rounds of a single hash.
+    unsigned int nof_bottom_full_rounds = 0; ///< Number of bottom full rounds of a single hash.
     S* rounds_constants; ///< Round constants (both of the full and the partial rounds). The order of the constants in
                          ///< the memory is according to the rounds order.
     S* mds_matrix;       ///> MDS matrix is used in the full rounds. The same matrix is used for all such rounds.
