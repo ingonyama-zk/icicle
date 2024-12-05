@@ -584,8 +584,8 @@ TEST_F(HashApiTest, MerkleTreeZeroPadding)
     randomize(leaves, input_size);
 
     // define the merkle tree
-    auto layer0_hash = Keccak256::create(leaf_size);  // TODO: should be 2 * leaf_size after fix
-    auto layer1_hash = Keccak256::create(2 * 32); // TODO: should be 32 after fix
+    auto layer0_hash = Keccak256::create(leaf_size); // TODO: should be 2 * leaf_size after fix
+    auto layer1_hash = Keccak256::create(2 * 32);    // TODO: should be 32 after fix
     auto layer2_hash = Keccak256::create(5 * 32);
     auto layer3_hash = Keccak256::create(10 * 32);
 
@@ -625,8 +625,8 @@ TEST_F(HashApiTest, MerkleTreeZeroPaddingLeavesOnDevice)
     randomize(leaves, input_size);
 
     // define the merkle tree
-    auto layer0_hash = Keccak256::create(leaf_size);  // TODO: should be 2 * leaf_size after fix
-    auto layer1_hash = Keccak256::create(2 * 32); // TODO: should be 32 after fix
+    auto layer0_hash = Keccak256::create(leaf_size); // TODO: should be 2 * leaf_size after fix
+    auto layer1_hash = Keccak256::create(2 * 32);    // TODO: should be 32 after fix
     auto layer2_hash = Keccak256::create(5 * 32);
     auto layer3_hash = Keccak256::create(10 * 32);
 
