@@ -80,7 +80,7 @@ namespace icicle {
 
     // Move Constructor
     SumcheckTranscriptConfig(SumcheckTranscriptConfig&& other) noexcept
-        : m_domain_separator_label(std::move(other.m_domain_separator_label)),
+        : m_hasher(other.m_hasher), m_domain_separator_label(std::move(other.m_domain_separator_label)),
           m_round_poly_label(std::move(other.m_round_poly_label)),
           m_round_challenge_label(std::move(other.m_round_challenge_label)), m_little_endian(other.m_little_endian),
           m_seed_rng(other.m_seed_rng)
