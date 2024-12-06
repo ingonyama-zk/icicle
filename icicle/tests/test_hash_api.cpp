@@ -389,10 +389,12 @@ bool is_valid_tree(
   int nof_inputs,
   const T* inputs,
   const std::vector<Hash>& hashes,
-  const MerkleTreeConfig& config)
+  const MerkleTreeConfig& config,
+  unsigned explicit_leaf_size = 1)
 {
   return is_valid_tree(
-    tree, nof_inputs * sizeof(T), sizeof(T), reinterpret_cast<const std::byte*>(inputs), hashes, config);
+    tree, nof_inputs * sizeof(T), sizeof(T) * explicit_leaf_size, reinterpret_cast<const std::byte*>(inputs), hashes,
+    config);
 }
 
 /**
@@ -404,7 +406,9 @@ bool is_valid_tree(
  * @param nof_leaves - Size of the T leaves array.
  * @param leaves - Aforementioned leaves array.
  * @param explict_leaf_size_in_bytes - Optional. Size of each leaf element in case that leaves is given as a byte array.
- * NOTE test will fail if this value isn't default (1) and T != std::byte
+ * @note Test will fail if this value isn't default (1) and T != std::byte
+ * @param partial_leaves_size - size of input leaves in bytes in case not a whole number of leaves is given
+ * @note Test will fail if this value is set (not 0) and T != std::byte, or if it is larger than leaves size.
  */
 template <typename T>
 void test_merkle_tree(
@@ -413,13 +417,16 @@ void test_merkle_tree(
   const int output_store_min_layer,
   int nof_leaves,
   const T* leaves,
-  unsigned explict_leaf_size_in_bytes = 1)
+  unsigned explict_leaf_size_in_bytes = 1,
+  unsigned partial_leaves_size = 0)
 {
   ASSERT_TRUE((explict_leaf_size_in_bytes == 1 || std::is_same<T, std::byte>::value))
     << "Explicit leaf size should only be given when the given leaves array is a bytes array.";
 
   const unsigned leaf_size = explict_leaf_size_in_bytes > 1 ? explict_leaf_size_in_bytes : sizeof(T);
   const unsigned leaves_size = nof_leaves * leaf_size;
+
+  ASSERT_TRUE((partial_leaves_size == 0 || std::is_same<T, std::byte>::value) && (partial_leaves_size < leaves_size));
 
   T* device_leaves;
   if (config.is_leaves_on_device) {
@@ -429,7 +436,6 @@ void test_merkle_tree(
   const T* leaves4tree = config.is_leaves_on_device ? device_leaves : leaves;
 
   auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-  auto prover_tree2 = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
   auto verifier_tree = MerkleTree::create(hashes, leaf_size);
 
   // assert that incorrect size fails
@@ -441,10 +447,13 @@ void test_merkle_tree(
   }
   // build tree
   START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(prover_tree.build(leaves4tree, nof_leaves * explict_leaf_size_in_bytes, config));
-  END_TIMER(MerkleTree_build, "Merkle Tree build time", true)
+  ICICLE_CHECK(prover_tree.build(
+    leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, config));
+  // END_TIMER(MerkleTree_build, "Merkle Tree build time", true)
 
-  ASSERT_TRUE(is_valid_tree<T>(prover_tree, nof_leaves * explict_leaf_size_in_bytes, leaves, hashes, config))
+  ASSERT_TRUE(is_valid_tree<T>(
+    prover_tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaves, hashes,
+    config, explict_leaf_size_in_bytes))
     << "Tree wasn't built correctly.";
 
   // Create wrong input leaves by taking the original input and swapping some leaves by random values
@@ -454,7 +463,7 @@ void test_merkle_tree(
   unsigned int wrong_indices[nof_indices_modified];
   HashApiTest::randomize(wrong_indices, nof_indices_modified);
   for (int i = 0; i < nof_indices_modified; i++) {
-    int wrong_byte_index = wrong_indices[i] % (nof_leaves * leaf_size);
+    int wrong_byte_index = wrong_indices[i] % (partial_leaves_size ? partial_leaves_size : nof_leaves * leaf_size);
 
     uint8_t* wrong_leaves_byte_ptr = reinterpret_cast<uint8_t*>(wrong_leaves.get());
 
@@ -466,8 +475,8 @@ void test_merkle_tree(
     wrong_leaves_byte_ptr[wrong_byte_index] = new_worng_val;
 
     int wrong_leaf_idx = wrong_byte_index / leaf_size;
-    ICICLE_LOG_DEBUG << "Wrong input is modified at leaf " << wrong_leaf_idx << " (modified at byte "
-                     << wrong_byte_index % leaf_size << ")";
+    ICICLE_LOG_VERBOSE << "Wrong input is modified at leaf " << wrong_leaf_idx << " (modified at byte "
+                       << wrong_byte_index % leaf_size << ")";
   }
 
   T* wrong_device_leaves;
@@ -480,15 +489,17 @@ void test_merkle_tree(
   // Test the paths at the random indices (Both that the original input is valid and the modified input isn't)
   for (int i = 0; i < nof_indices_modified; i++) {
     // int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
-    int leaf_idx = (wrong_indices[i] % (nof_leaves * leaf_size)) / leaf_size;
-    ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx "
-                     << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
+    int leaf_idx =
+      (wrong_indices[i] % (partial_leaves_size ? partial_leaves_size : nof_leaves * leaf_size)) / leaf_size;
+    ICICLE_LOG_VERBOSE << "Checking proof of index " << leaf_idx << " (Byte idx "
+                       << (wrong_indices[i] % (nof_leaves * leaf_size)) << ")";
 
     // get root and merkle-path for a leaf
     auto [root, root_size] = prover_tree.get_merkle_root();
     MerkleProof merkle_proof{};
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      leaves, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false, config, merkle_proof));
+      leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false,
+      config, merkle_proof));
 
     // Test valid proof
     bool verification_valid = false;
@@ -499,7 +510,8 @@ void test_merkle_tree(
     // Test invalid proof (By modifying random data in the leaves)
     verification_valid = true;
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      wrong_leaves4tree, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, false, config, merkle_proof));
+      wrong_leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx,
+      false, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
@@ -507,7 +519,8 @@ void test_merkle_tree(
     // Same for pruned proof
     verification_valid = false;
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      leaves, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true, config, merkle_proof));
+      leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true,
+      config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_TRUE(verification_valid) << "Pruned proof of valid inputs at index " << leaf_idx
                                     << " is invalid (And should be valid).";
@@ -515,7 +528,8 @@ void test_merkle_tree(
     // Test invalid proof (By modifying random data in the leaves)
     verification_valid = true;
     ICICLE_CHECK(prover_tree.get_merkle_proof(
-      wrong_leaves4tree, nof_leaves * explict_leaf_size_in_bytes, leaf_idx, true, config, merkle_proof));
+      wrong_leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaf_idx,
+      true, config, merkle_proof));
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
@@ -558,200 +572,160 @@ TEST_F(HashApiTest, MerkleTreeBasic)
 
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
 {
-  // TODO:add loop on devices (and change hash to one supported on gpu)
-  const int leaf_size = sizeof(uint32_t);
-  const int nof_leaves = 100;
-  uint32_t leaves[nof_leaves];
-  randomize(leaves, nof_leaves);
-  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeZeroPadding test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
 
-  // define the merkle tree
-  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
-  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf   160B ->  40B
-  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf     40B  ->  40B
-  auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size);    // in 10 leaves, out 1 leaf     40B  ->   4B
+    constexpr int leaf_size = 250;
+    constexpr int nof_leaves = 100;
+    const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
+                                                          32, 70, 99, 100}; // those cases will be tested with padding
+    constexpr int input_size = nof_leaves * leaf_size;
+    std::byte leaves[input_size];
+    randomize(leaves, input_size);
 
-  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.default_input_chunk_size();
-  std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
-  int output_store_min_layer = 0;
+    // define the merkle tree
+    auto layer0_hash = Blake2s::create(2 * leaf_size);
+    auto layer1_hash = Blake2s::create(32);
+    auto layer2_hash = Blake2s::create(5 * 32);
+    auto layer3_hash = Blake2s::create(10 * 32);
 
-  auto config = default_merkle_tree_config();
-  // Test zero padding
-  config.padding_policy = PaddingPolicy::ZeroPadding;
+    std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+    int output_store_min_layer = 0;
 
-  ICICLE_LOG_DEBUG << "Full tree";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
+    auto config = default_merkle_tree_config();
+    config.padding_policy = PaddingPolicy::ZeroPadding;
 
-  ICICLE_LOG_DEBUG << "Last hash isn't full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
+    // test various cases of missing leaves in input, requiring padding.
+    for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+    }
 
-  const unsigned nof_leaves_in_hash = layer0_hash.default_input_chunk_size() / leaf_size;
+    // Test tree with a fractional amount of leaves as input
+    const unsigned partial_leaf_bytes = (rand() % (leaf_size - 1)) + 1;
+    const unsigned nof_whole_leaves = rand() % nof_leaves;
+    const unsigned partial_leaves_size_in_bytes = nof_whole_leaves * leaf_size + partial_leaf_bytes;
+    ICICLE_LOG_VERBOSE << "Partial leaves byte size: " << partial_leaves_size_in_bytes;
+    test_merkle_tree(
+      hashes, config, output_store_min_layer, nof_leaves, leaves, leaf_size, partial_leaves_size_in_bytes);
+  }
+}
 
-  ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - last hash not full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash - 1, leaves);
+TEST_F(HashApiTest, MerkleTreeZeroPaddingLeavesOnDevice)
+{
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeZeroPaddingLeavesOnDevice test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
 
-  ICICLE_LOG_DEBUG << "16 hashes (Batch size) - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "16 hashes (Batch size) - last hash not full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
-  ICICLE_LOG_DEBUG << "17 hashes (Batch size + 1) - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "17 hashes (Batch size + 1) - last hash not full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash - 1, leaves);
+    constexpr int leaf_size = 320; // TODO: should be 250 after fix
+    constexpr int nof_leaves = 100;
+    const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
+                                                          32, 70, 99, 100}; // those cases will be tested with padding
+    constexpr int input_size = nof_leaves * leaf_size;
+    std::byte leaves[input_size];
+    randomize(leaves, input_size);
 
-  ICICLE_LOG_DEBUG << "1 hash - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "1 leaf in tree";
-  test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
+    // define the merkle tree
+    auto layer0_hash = Keccak256::create(leaf_size); // TODO: should be 2 * leaf_size after fix
+    auto layer1_hash = Keccak256::create(2 * 32);    // TODO: should be 32 after fix
+    auto layer2_hash = Keccak256::create(5 * 32);
+    auto layer3_hash = Keccak256::create(10 * 32);
 
-  ICICLE_LOG_DEBUG << "A whole number of hashes is missing";
-  int nof_hashes = rand_uint_32b(1, total_nof_input_hashes - 1);
-  ICICLE_LOG_DEBUG << "Number of used hashes: " << nof_hashes << " / " << total_nof_input_hashes;
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_hashes * nof_leaves_in_hash, leaves);
+    std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+    int output_store_min_layer = 0;
 
-  ICICLE_LOG_DEBUG << "Random amount of leaves";
-  int nof_partial_leaves = rand_uint_32b(0, nof_leaves - 1);
-  ICICLE_LOG_DEBUG << "Random amount of leaves: " << nof_partial_leaves << " / " << nof_leaves;
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_partial_leaves, leaves);
+    auto config = default_merkle_tree_config();
+    config.is_leaves_on_device = true;
+    config.padding_policy = PaddingPolicy::ZeroPadding;
 
-  ICICLE_LOG_DEBUG << "Last leaf isn't fully occupied";
-  auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
-  int byte_size;
-  do {
-    byte_size = rand_uint_32b(1, nof_leaves * leaf_size);
-  } while (byte_size % leaf_size == 0);
-  byte_size = 327;
-  ICICLE_LOG_DEBUG << "Size of input in bytes: " << byte_size << "\t(" << float(byte_size) / leaf_size << " / "
-                   << nof_leaves << " leaves)";
+    // test various cases of missing leaves in input, requiring padding.
+    for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+    }
 
-  auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-  auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-
-  // build tree
-  START_TIMER(MerkleTree_build)
-  ICICLE_CHECK(prover_tree.build(byte_leaves, byte_size, config));
-  END_TIMER(MerkleTree_build, "Merkle Tree CPU", true)
-
-  ASSERT_TRUE(is_valid_tree(prover_tree, byte_size, byte_leaves, hashes, config)) << "Tree wasn't built correctly.";
-
-  auto wrong_bytes = std::make_unique<std::byte[]>(byte_size);
-  memcpy(wrong_bytes.get(), byte_leaves, byte_size);
-  // Modify the last byte as the only difference of this test from the previous is proof for the partial index
-  wrong_bytes[byte_size - 1] = static_cast<std::byte>(rand_uint_32b(0, UINT8_MAX));
-
-  int leaf_idx = byte_size / leaf_size;
-  ICICLE_LOG_DEBUG << "Checking proof of index " << leaf_idx << " (Byte idx " << leaf_idx * leaf_size << ")";
-
-  // get root and merkle-path for a leaf
-  auto [root, root_size] = prover_tree.get_merkle_root();
-  MerkleProof merkle_proof{};
-  ICICLE_CHECK(prover_tree.get_merkle_proof(byte_leaves, byte_size, leaf_idx, false, config, merkle_proof));
-
-  // Test valid proof
-  bool verification_valid = false;
-  ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-  ASSERT_TRUE(verification_valid) << "Proof of valid inputs at index " << leaf_idx
-                                  << " is invalid (And should be valid).";
-
-  // Test invalid proof (By modifying random data in the leaves)
-  verification_valid = true;
-  ICICLE_CHECK(prover_tree.get_merkle_proof(wrong_bytes.get(), byte_size, leaf_idx, false, config, merkle_proof));
-  ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-  ASSERT_FALSE(verification_valid) << "Proof of invalid inputs at index " << leaf_idx
-                                   << " is valid (And should be invalid).";
-
-  // Same for pruned proof
-  verification_valid = false;
-  ICICLE_CHECK(prover_tree.get_merkle_proof(byte_leaves, byte_size, leaf_idx, true, config, merkle_proof));
-  ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-  ASSERT_TRUE(verification_valid) << "Pruned proof of valid inputs at index " << leaf_idx
-                                  << " is invalid (And should be valid).";
-
-  // Test invalid proof (By modifying random data in the leaves)
-  verification_valid = true;
-  ICICLE_CHECK(prover_tree.get_merkle_proof(wrong_bytes.get(), byte_size, leaf_idx, true, config, merkle_proof));
-  ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
-  ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
-                                   << " is valid (And should be invalid).";
+    // Test tree with a fractional amount of leaves as input
+    const unsigned partial_leaf_bytes = (rand() % (leaf_size - 1)) + 1;
+    const unsigned nof_whole_leaves = rand() % nof_leaves;
+    const unsigned partial_leaves_size_in_bytes = nof_whole_leaves * leaf_size + partial_leaf_bytes;
+    ICICLE_LOG_VERBOSE << "Partial leaves byte size: " << partial_leaves_size_in_bytes;
+    test_merkle_tree(
+      hashes, config, output_store_min_layer, nof_leaves, leaves, leaf_size, partial_leaves_size_in_bytes);
+  }
 }
 
 TEST_F(HashApiTest, MerkleTreeLastValuePadding)
 {
-  // TODO add loop on devices (and change hash to one supported on gpu)
-  const int leaf_size = sizeof(uint32_t);
-  const int nof_leaves = 100;
-  uint32_t leaves[nof_leaves];
-  randomize(leaves, nof_leaves);
-  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeLastValuePadding test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
 
-  // define the merkle tree
-  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves 400B -> 160B
-  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf   160B ->  40B
-  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf     40B  ->  40B
-  auto layer3_hash = HashSumBackend::create(10 * leaf_size, leaf_size);    // in 10 leaves, out 1 leaf     40B  ->   4B
+    constexpr int leaf_size = 320;
+    constexpr int nof_leaves = 100;
+    const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
+                                                          32, 70, 99, 100}; // those cases will be tested with padding
+    constexpr int input_size = nof_leaves * leaf_size;
+    std::byte leaves[input_size];
+    randomize(leaves, input_size);
 
-  int total_nof_input_hashes = nof_leaves * leaf_size / layer0_hash.default_input_chunk_size();
-  std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
-  int output_store_min_layer = 0;
+    // define the merkle tree
+    auto layer0_hash = Keccak256::create(leaf_size);
+    auto layer1_hash = Keccak256::create(2 * 32);
+    auto layer2_hash = Keccak256::create(5 * 32);
+    auto layer3_hash = Keccak256::create(10 * 32);
 
-  auto config = default_merkle_tree_config();
-  // Test zero padding
-  config.padding_policy = PaddingPolicy::LastValue;
+    std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+    int output_store_min_layer = 0;
 
-  ICICLE_LOG_DEBUG << "Full tree";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
+    auto config = default_merkle_tree_config();
+    config.padding_policy = PaddingPolicy::LastValue;
 
-  ICICLE_LOG_DEBUG << "Last hash isn't full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - 1, leaves);
+    // test various cases of missing leaves in input, requiring padding.
+    for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+    }
 
-  const unsigned nof_leaves_in_hash = layer0_hash.default_input_chunk_size() / leaf_size;
+    // Test that leaf_size divides input size for this kind of padding
+    auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+    ASSERT_EQ(prover_tree.build(leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+  }
+}
 
-  ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "19 hashes (Total hashes in layer 0 - 1) - last hash not full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves - nof_leaves_in_hash - 1, leaves);
+TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
+{
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "MerkleTreeLastValuePaddingLeavesOnDevice test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
 
-  ICICLE_LOG_DEBUG << "16 hashes (Batch size) - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "16 hashes (Batch size) - last hash not full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 16 * nof_leaves_in_hash - 1, leaves);
-  ICICLE_LOG_DEBUG << "17 hashes (Batch size + 1) - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "17 hashes (Batch size + 1) - last hash not full";
-  test_merkle_tree(hashes, config, output_store_min_layer, 17 * nof_leaves_in_hash - 1, leaves);
+    constexpr int leaf_size = 320;
+    constexpr int nof_leaves = 100;
+    const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
+                                                          32, 70, 99, 100}; // those cases will be tested with padding
+    constexpr int input_size = nof_leaves * leaf_size;
+    std::byte leaves[input_size];
+    randomize(leaves, input_size);
 
-  ICICLE_LOG_DEBUG << "1 hash - full";
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_in_hash, leaves);
-  ICICLE_LOG_DEBUG << "1 leaf in tree";
-  test_merkle_tree(hashes, config, output_store_min_layer, 1, leaves);
+    // define the merkle tree
+    auto layer0_hash = Keccak256::create(leaf_size);
+    auto layer1_hash = Keccak256::create(2 * 32);
+    auto layer2_hash = Keccak256::create(5 * 32);
+    auto layer3_hash = Keccak256::create(10 * 32);
 
-  ICICLE_LOG_DEBUG << "A whole number of hashes is missing";
-  int nof_hashes = rand_uint_32b(1, total_nof_input_hashes - 1);
-  ICICLE_LOG_DEBUG << "Number of used hashes: " << nof_hashes << " / " << total_nof_input_hashes;
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_hashes * nof_leaves_in_hash, leaves);
+    std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+    int output_store_min_layer = 0;
 
-  ICICLE_LOG_DEBUG << "Random amount of leaves";
-  int nof_partial_leaves = rand_uint_32b(1, nof_leaves - 1);
-  ICICLE_LOG_DEBUG << "Random amount of leaves: " << nof_partial_leaves << " / " << nof_leaves;
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_partial_leaves, leaves);
+    auto config = default_merkle_tree_config();
+    config.is_leaves_on_device = true;
+    config.padding_policy = PaddingPolicy::LastValue;
 
-  ICICLE_LOG_DEBUG << "Last leaf isn't fully occupied - check that build should fail";
-  auto byte_leaves = reinterpret_cast<const std::byte*>(leaves);
-  int byte_size;
-  do {
-    byte_size = rand_uint_32b(1, nof_leaves * leaf_size - 1);
-  } while (byte_size % leaf_size == 0);
-  byte_size = 327;
-  ICICLE_LOG_DEBUG << "Size of input in bytes: " << byte_size << "\t(" << float(byte_size) / leaf_size << " / "
-                   << nof_leaves << " leaves)";
+    // test various cases of missing leaves in input, requiring padding.
+    for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+    }
 
-  auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-  auto verifier_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-
-  // build should fail when byte size isn't a whole amount of leaves and padding policy is LastValue
-  ASSERT_EQ(prover_tree.build(byte_leaves, byte_size, config), eIcicleError::INVALID_ARGUMENT);
+    // Test that leaf_size divides input size for this kind of padding
+    auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
+    ASSERT_EQ(prover_tree.build(leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+  }
 }
 
 TEST_F(HashApiTest, MerkleTreeMixMediumSize)
