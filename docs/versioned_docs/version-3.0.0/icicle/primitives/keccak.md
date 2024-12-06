@@ -20,7 +20,7 @@ ICICLE Keccak supports batch hashing, which can be utilized for constructing a m
 
 ### Supported Bindings
 
-- [Golang](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/hash/keccak)
+- [Golang](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/golang/hash/keccak.go)
 - [Rust](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-hash)
 
 ### Example usage
