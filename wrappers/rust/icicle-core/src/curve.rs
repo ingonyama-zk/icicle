@@ -43,28 +43,28 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     ) -> CudaError;
     #[doc(hidden)]
     fn add(
-        point1: Projective<Self>,
-        point2: Projective<Self>,
+        point1: &Projective<Self>,
+        point2: &Projective<Self>,
     ) -> Projective<Self>;
     #[doc(hidden)]
     fn sub(
-        point1: Projective<Self>,
-        point2: Projective<Self>,
+        point1: &Projective<Self>,
+        point2: &Projective<Self>,
     ) -> Projective<Self>;
     #[doc(hidden)]
     fn mul_scalar(
-        point1: Projective<Self>,
-        scalar: Self::ScalarField,
+        point1: &Projective<Self>,
+        scalar: &Self::ScalarField,
     ) -> Projective<Self>;
     #[doc(hidden)]
     fn mul_two_scalar(
-        scalar1: Self::ScalarField,
-        scalar2: Self::ScalarField,
+        scalar1: &Self::ScalarField,
+        scalar2: &Self::ScalarField,
     ) -> Self::ScalarField;
     #[doc(hidden)]
     fn add_two_scalar(
-        scalar1: Self::ScalarField,
-        scalar2: Self::ScalarField,
+        scalar1: &Self::ScalarField,
+        scalar2: &Self::ScalarField,
     ) -> Self::ScalarField;
     #[cfg(feature = "arkworks")]
     type ArkSWConfig: SWCurveConfig;
@@ -366,13 +366,13 @@ macro_rules! impl_curve {
                 unsafe { $curve_prefix_ident::proj_from_affine(point, point_out) };
             }
 
-            fn add(point1: $projective_type, point2: $projective_type) -> $projective_type {
+            fn add(point1: &$projective_type, point2: &$projective_type) -> $projective_type {
                 let mut result = $projective_type::zero();
 
                 unsafe {
                     $curve_prefix_ident::add(
-                        &point1 as *const $projective_type,
-                        &point2 as *const $projective_type,
+                        point1 as *const $projective_type,
+                        point2 as *const $projective_type,
                         &mut result as *mut _ as *mut $projective_type
                     );
                 };
@@ -380,13 +380,13 @@ macro_rules! impl_curve {
                 result
             }
 
-            fn sub(point1: $projective_type, point2: $projective_type) -> $projective_type {
+            fn sub(point1: &$projective_type, point2: &$projective_type) -> $projective_type {
                 let mut result = $projective_type::zero();
 
                 unsafe {
                     $curve_prefix_ident::sub(
-                        &point1 as *const $projective_type,
-                        &point2 as *const $projective_type,
+                        point1 as *const $projective_type,
+                        point2 as *const $projective_type,
                         &mut result as *mut _ as *mut $projective_type
                     );
                 };
@@ -394,13 +394,13 @@ macro_rules! impl_curve {
                 result
             }
 
-            fn mul_scalar(point1: $projective_type, scalar: $scalar_field) -> $projective_type {
+            fn mul_scalar(point1: &$projective_type, scalar: &$scalar_field) -> $projective_type {
                 let mut result = $projective_type::zero();
 
                 unsafe {
                     $curve_prefix_ident::mul_scalar(
-                        &point1 as *const $projective_type,
-                        &scalar as *const $scalar_field,
+                        point1 as *const $projective_type,
+                        scalar as *const $scalar_field,
                         &mut result as *mut _ as *mut $projective_type
                     );
                 };
@@ -408,13 +408,13 @@ macro_rules! impl_curve {
                 result
             }
 
-            fn mul_two_scalar(scalar1: $scalar_field, scalar2: $scalar_field) -> $scalar_field {
+            fn mul_two_scalar(scalar1: &$scalar_field, scalar2: &$scalar_field) -> $scalar_field {
                 let mut result = $scalar_field::zero();
 
                 unsafe {
                     $curve_prefix_ident::mul_two_scalar(
-                        &scalar1 as *const $scalar_field,
-                        &scalar2 as *const $scalar_field,
+                        scalar1 as *const $scalar_field,
+                        scalar2 as *const $scalar_field,
                         &mut result as *mut _ as *mut $scalar_field
                     );
                 };
@@ -422,13 +422,13 @@ macro_rules! impl_curve {
                 result
             }
 
-            fn add_two_scalar(scalar1: $scalar_field, scalar2: $scalar_field) -> $scalar_field {
+            fn add_two_scalar(scalar1: &$scalar_field, scalar2: &$scalar_field) -> $scalar_field {
                 let mut result = $scalar_field::zero();
 
                 unsafe {
                     $curve_prefix_ident::add_two_scalar(
-                        &scalar1 as *const $scalar_field,
-                        &scalar2 as *const $scalar_field,
+                        scalar1 as *const $scalar_field,
+                        scalar2 as *const $scalar_field,
                         &mut result as *mut _ as *mut $scalar_field
                     );
                 };
