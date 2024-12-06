@@ -14,7 +14,7 @@ namespace icicle {
   };
 
   /**
-   * @brief A class that convert the function described by user into a program that can be executed
+   * @brief A class that convert the function described by user into a program that can be executed.
    *
    * This class receives a Symbol instance that contains a DFG representing the required calculation.
    * It generates a vector of instructions that represent the calculation.
