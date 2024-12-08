@@ -3,6 +3,7 @@
 #   (1) loops over all examples (msm, ntt, etc.) and
 #   (2) runs ./run.sh in each directory.
 # Each script should return 0 for success and 1 otherwise.
+# Testing
 
 name: Examples
 
