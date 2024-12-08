@@ -11,6 +11,9 @@
 #include "icicle/utils/log.h"
 #include "icicle/backend/ntt_config.h"
 
+#include "icicle/program/symbol.h"
+#include "icicle/program/program.h"
+#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "test_base.h"
 
 using namespace field_config;
@@ -61,12 +64,9 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
 
 TYPED_TEST(FieldApiTest, vectorVectorOps)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -179,13 +179,10 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
 
 TYPED_TEST(FieldApiTest, montgomeryConversion)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
-  const bool is_to_montgomery = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const bool is_to_montgomery = rand_uint_32b(0, 1);
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
@@ -234,12 +231,9 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 
 TEST_F(FieldApiTestBase, VectorReduceOps)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
   const int total_size = N * batch_size;
 
   ICICLE_LOG_DEBUG << "N = " << N;
@@ -319,12 +313,9 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
 
 TEST_F(FieldApiTestBase, scalarVectorOps)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -431,20 +422,13 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
 
 TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const int R =
-    1
-    << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
-  const int C =
-    1
-    << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
-  const int batch_size = 1 << (rand() % 4);
-  const bool columns_batch = rand() % 2;
-  const bool is_in_place = IcicleTestBase::is_main_device_available()
-                             ? 0
-                             : rand() % 2; // TODO - fix inplace (Hadar: I'm not sure we should support it)
+  const int R = 1 << rand_uint_32b(
+                  2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+  const int C = 1 << rand_uint_32b(
+                  2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+  const int batch_size = 1 << rand_uint_32b(0, 3);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const bool is_in_place = IcicleTestBase::is_main_device_available() ? 0 : rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "rows = " << R;
   ICICLE_LOG_DEBUG << "cols = " << C;
@@ -537,13 +521,10 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 
 TYPED_TEST(FieldApiTest, bitReverse)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
-  const bool is_in_place = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const bool is_in_place = rand_uint_32b(0, 1);
   const int total_size = N * batch_size;
 
   ICICLE_LOG_DEBUG << "N = " << N;
@@ -613,15 +594,12 @@ TYPED_TEST(FieldApiTest, bitReverse)
 
 TYPED_TEST(FieldApiTest, Slice)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t size_in = 1 << (rand() % 15 + 5);
-  const uint64_t offset = rand() % 15;
-  const uint64_t stride = rand() % 4 + 1;
-  const uint64_t size_out = rand() % (((size_in - offset) / stride) - 1) + 1;
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t size_in = 1 << rand_uint_32b(4, 17);
+  const uint64_t offset = rand_uint_32b(0, 14);
+  const uint64_t stride = rand_uint_32b(1, 4);
+  const uint64_t size_out = rand_uint_32b(0, (size_in - offset) / stride);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "size_in = " << size_in;
   ICICLE_LOG_DEBUG << "size_out = " << size_out;
@@ -677,12 +655,9 @@ TYPED_TEST(FieldApiTest, Slice)
 
 TEST_F(FieldApiTestBase, highestNonZeroIdx)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
   const int total_size = N * batch_size;
 
   auto in_a = std::make_unique<scalar_t[]>(total_size);
@@ -718,13 +693,10 @@ TEST_F(FieldApiTestBase, highestNonZeroIdx)
 
 TEST_F(FieldApiTestBase, polynomialEval)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t coeffs_size = 1 << (rand() % 10 + 4);
-  const uint64_t domain_size = 1 << (rand() % 8 + 2);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t coeffs_size = 1 << rand_uint_32b(4, 13);
+  const uint64_t domain_size = 1 << rand_uint_32b(2, 9);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "coeffs_size = " << coeffs_size;
   ICICLE_LOG_DEBUG << "domain_size = " << domain_size;
@@ -766,13 +738,11 @@ TEST_F(FieldApiTestBase, polynomialEval)
 
 TEST_F(FieldApiTestBase, polynomialDivision)
 {
-  int seed = time(0);
-  srand(seed);
-  const uint64_t numerator_size = 1 << (rand() % 3 + 5);
-  const uint64_t denominator_size = 1 << (rand() % 2 + 3);
+  const uint64_t numerator_size = 1 << rand_uint_32b(5, 7);
+  const uint64_t denominator_size = 1 << rand_uint_32b(3, 4);
   const uint64_t q_size = numerator_size - denominator_size + 1;
   const uint64_t r_size = numerator_size;
-  const int batch_size = 10 + rand() % 10;
+  const int batch_size = rand_uint_32b(10, 19);
 
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
@@ -844,26 +814,22 @@ TEST_F(FieldApiTestBase, polynomialDivision)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
-
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const bool inplace = rand() % 2;
-  const int logn = rand() % 15 + 3;
+  const bool inplace = rand_uint_32b(0, 1);
+  const int logn = rand_uint_32b(3, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
-  const int log_batch_size = rand() % 3;
+  const int log_batch_size = rand_uint_32b(0, 2);
   const int batch_size = 1 << log_batch_size;
-  const int _ordering = rand() % 4;
+  const int _ordering = rand_uint_32b(0, 3);
   const Ordering ordering = static_cast<Ordering>(_ordering);
   bool columns_batch;
   if (logn == 7 || logn < 4) {
     columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
   } else {
-    columns_batch = rand() % 2;
+    columns_batch = rand_uint_32b(0, 1);
   }
-  const NTTDir dir = static_cast<NTTDir>(rand() % 2); // 0: forward, 1: inverse
-  const int log_coset_stride = rand() % 3;
+  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
+  const int log_coset_stride = rand_uint_32b(0, 2);
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
@@ -938,6 +904,110 @@ TYPED_TEST(FieldApiTest, ntt)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT
+
+// define program
+using MlePoly = Symbol<scalar_t>;
+MlePoly combine_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return (EQ * (A * B - C));
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutor)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  //----- element wise operation ----------------------
+  auto out_element_wise = std::make_unique<scalar_t[]>(total_size);
+  START_TIMER(element_wise_op)
+  for (int i = 0; i < 100000; ++i) {
+    out_element_wise[i] = in_eq[i] * (in_a[i] * in_b[i] - in_c[i]);
+  }
+  END_TIMER(element_wise_op, "Straight forward function (Element wise) time: ", true);
+
+  //----- written program ----------------------
+  Program<scalar_t> program_written(&combine_func, 4);
+  // program_written.print_program();
+
+  CpuProgramExecutor<scalar_t> prog_exe_written(program_written);
+  auto out_written_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_written.m_variable_ptrs[0] = in_a.get();
+  prog_exe_written.m_variable_ptrs[1] = in_b.get();
+  prog_exe_written.m_variable_ptrs[2] = in_c.get();
+  prog_exe_written.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_written.m_variable_ptrs[4] = out_written_program.get();
+
+  // run on all vectors
+  START_TIMER(written_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_written.execute();
+    (prog_exe_written.m_variable_ptrs[0])++;
+    (prog_exe_written.m_variable_ptrs[1])++;
+    (prog_exe_written.m_variable_ptrs[2])++;
+    (prog_exe_written.m_variable_ptrs[3])++;
+    (prog_exe_written.m_variable_ptrs[4])++;
+  }
+  END_TIMER(written_program, "Program executor time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_written_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- predefined program ----------------------
+  Program<scalar_t> predef_program(EQ_X_AB_MINUS_C);
+  // predef_program.print_program();
+
+  CpuProgramExecutor<scalar_t> prog_exe_predef(predef_program);
+  auto out_predef_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_predef.m_variable_ptrs[0] = in_a.get();
+  prog_exe_predef.m_variable_ptrs[1] = in_b.get();
+  prog_exe_predef.m_variable_ptrs[2] = in_c.get();
+  prog_exe_predef.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_predef.m_variable_ptrs[4] = out_predef_program.get();
+
+  // run on all vectors
+  START_TIMER(predef_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_predef.execute();
+    (prog_exe_predef.m_variable_ptrs[0])++;
+    (prog_exe_predef.m_variable_ptrs[1])++;
+    (prog_exe_predef.m_variable_ptrs[2])++;
+    (prog_exe_predef.m_variable_ptrs[3])++;
+    (prog_exe_predef.m_variable_ptrs[4])++;
+  }
+  END_TIMER(predef_program, "Program predefined time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_predef_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- Vecops operation ----------------------
+  auto config = default_vec_ops_config();
+  auto out_vec_ops = std::make_unique<scalar_t[]>(total_size);
+
+  START_TIMER(vecop)
+  vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
+  vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
+  vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
+  END_TIMER(predef_program, "Vec ops time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
 
 int main(int argc, char** argv)
 {

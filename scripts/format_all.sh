@@ -18,7 +18,7 @@ show_help() {
 # Default values
 DIRECTORY="."
 CHECK_ONLY=false
-EXCLUDE_REGEX="^$" # Matches nothing by default
+EXCLUDE_REGEX="build|wrappers"
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
