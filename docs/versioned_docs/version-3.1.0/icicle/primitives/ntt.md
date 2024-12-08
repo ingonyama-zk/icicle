@@ -288,7 +288,7 @@ Mixed radix on the other hand works better for larger NTTs with larger input siz
 
 Performance really depends on logn size, batch size, ordering, inverse, coset, coeff-field and which GPU you are using.
 
-For this reason we implemented our [heuristic auto-selection](https://github.com/ingonyama-zk/icicle/blob/main/icicle/src/ntt/ntt.cu#L573) which should choose the most efficient algorithm in most cases.
+For this reason we implemented our [heuristic auto-selection](https://github.com/ingonyama-zk/icicle/blob/release-1.5.1/icicle/appUtils/ntt/ntt.cu#L573) which should choose the most efficient algorithm in most cases.
 
 We still recommend you benchmark for your specific use case if you think a different configuration would yield better results.
 
