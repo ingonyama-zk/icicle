@@ -91,6 +91,10 @@ pub fn dcct(
     cfg: &NTTConfig<ScalarField>,
     output: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
 ) -> IcicleResult<()> {
+    if input.len() <= 3 || input.len() == 7 {
+        todo!("length <= 3 or 7 not implemented for DCCT");
+    }
+
     if input.len() != output.len() {
         panic!(
             "input and output lengths {}; {} do not match",

@@ -1214,7 +1214,8 @@ namespace mxntt {
           ntt16_dcct<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
             i ? out : in, out, basic_twiddles, log_size, tw_log_size, columns_batch ? batch_size : 0, nof_ntt_blocks,
             1 << stride_log, stride_log, i ? (1 << stride_log) : 0, i || columns_batch, twiddles_offset, inv, dit);
-        twiddles_offset += nof_ntt_blocks / (columns_batch ? ((batch_size + 31) / 32) * 32 : batch_size) * stage_size * (1 << stage_size - 1);
+        twiddles_offset += nof_ntt_blocks / (columns_batch ? ((batch_size + 31) / 32) * 32 : batch_size) * stage_size *
+                           (1 << stage_size - 1);
 #else
         if (stage_size == 6)
           ntt64<<<nof_blocks, 64, 8 * 64 * sizeof(E), cuda_stream>>>(
@@ -1310,6 +1311,10 @@ namespace mxntt {
 
     const uint64_t total_nof_elements = uint64_t(ntt_size) * batch_size;
     const uint64_t logn = uint64_t(log2(ntt_size));
+    
+    if (logn <= 3 || logn == 7)
+      throw IcicleError(IcicleError_t::InvalidArgument, "Not supported for given NTT size");
+
     const uint64_t NOF_BLOCKS_64b = (total_nof_elements + 64 - 1) / 64;
     const uint32_t NOF_THREADS = total_nof_elements < 64 ? total_nof_elements : 64;
     // CUDA grid is 32b fields. Assert that I don't need a larger grid.

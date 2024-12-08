@@ -11,7 +11,7 @@ set_gpu_env()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-option(DEVMODE "Enable development mode" OFF)
+option(DEVMODE "Enable development mode" OFF) 
 option(EXT_FIELD "Build extension field" OFF)
 option(G2 "Build G2" OFF)
 option(MSM "Build MSM" ON)
@@ -20,7 +20,7 @@ option(BUILD_HASH "Build hash functions" OFF)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(DCCT "Build circle fft instead of ntt" OFF)
-option(DEVMODE "Enable dev mode for fast compilation" ON)
+
 # add options here
 
 if((DEFINED CURVE) AND (DEFINED FIELD))
