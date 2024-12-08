@@ -101,7 +101,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
