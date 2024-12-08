@@ -44,9 +44,9 @@ jobs:
       id: cuda-flag
       run: |
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          echo "ICICLE_BACKEND_INSTALL_DIR=" >> $GITHUB_OUTPUT
-        else
           echo "ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib" >> $GITHUB_OUTPUT
+        else
+          echo "ICICLE_BACKEND_INSTALL_DIR=" >> $GITHUB_OUTPUT
         fi
     - name: c++ examples
       working-directory: ./examples/c++
