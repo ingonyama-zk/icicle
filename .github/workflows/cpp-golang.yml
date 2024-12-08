@@ -65,12 +65,20 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.0'
+    - name: Set CUDA backend flag
+      id: cuda-flag
+      run: |
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+        else
+          echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+        fi
     - name: Build curve
       working-directory: ./icicle
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -DCUDA_BACKEND=local -S . -B build
+    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} -S . -B build
         cmake --build build --target install -j
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
@@ -134,7 +142,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -DCUDA_BACKEND=local -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} -S . -B build
         cmake --build build --target install -j
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
