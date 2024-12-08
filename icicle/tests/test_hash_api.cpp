@@ -1341,3 +1341,53 @@ TEST_F(HashApiTest, poseidon2_3_batch_without_dt)
 //   ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 // }
 #endif // POSEIDON2
+
+#ifdef SUMCHECK
+/*======================= (TODO??) Move to Sumcheck test-suite =======================*/
+  #include "icicle/sumcheck/sumcheck_transcript_config.h"
+
+class SumcheckTest : public IcicleTestBase
+{
+public:
+  // Helper function to convert a byte vector to a string for comparison
+  static std::string bytes_to_string(const std::vector<std::byte>& bytes)
+  {
+    return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+  }
+};
+
+TEST_F(SumcheckTest, InitializeWithConstChar)
+{
+  auto hasher = Keccak256::create();
+  const char* domain_separator = "DomainLabel";
+  const char* round_poly = "PolyLabel";
+  const char* round_challenge = "ChallengeLabel";
+  auto seed = scalar_t::rand_host();
+
+  SumcheckTranscriptConfig config(hasher, domain_separator, round_poly, round_challenge, seed);
+
+  EXPECT_EQ(bytes_to_string(config.get_domain_separator_label()), domain_separator);
+  EXPECT_EQ(bytes_to_string(config.get_round_poly_label()), round_poly);
+  EXPECT_EQ(bytes_to_string(config.get_round_challenge_label()), round_challenge);
+  EXPECT_TRUE(config.is_little_endian());
+  EXPECT_EQ(config.get_seed_rng(), seed);
+}
+
+TEST_F(SumcheckTest, InitializeWithByteVector)
+{
+  auto hasher = Keccak256::create();
+  std::vector<std::byte> domain_label = {std::byte('d'), std::byte('s')};
+  std::vector<std::byte> poly_label = {std::byte('p'), std::byte('l')};
+  std::vector<std::byte> challenge_label = {std::byte('c'), std::byte('h')};
+  auto seed = scalar_t::rand_host();
+
+  SumcheckTranscriptConfig config(
+    hasher, std::move(domain_label), std::move(poly_label), std::move(challenge_label), seed);
+
+  EXPECT_EQ(bytes_to_string(config.get_domain_separator_label()), "ds");
+  EXPECT_EQ(bytes_to_string(config.get_round_poly_label()), "pl");
+  EXPECT_EQ(bytes_to_string(config.get_round_challenge_label()), "ch");
+  EXPECT_TRUE(config.is_little_endian());
+  EXPECT_EQ(config.get_seed_rng(), seed);
+}
+#endif // SUMCHECK
