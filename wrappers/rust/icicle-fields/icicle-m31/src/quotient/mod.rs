@@ -196,8 +196,6 @@ fn check_quotient_args<'a, F: std::clone::Clone, S>(
 }
 
 pub fn accumulate_quotients(
-    half_coset_initial_index: u32,
-    half_coset_step_size: u32,
     domain_log_size: u32,
     columns: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
     random_coef: QuarticExtensionField,
@@ -209,8 +207,6 @@ pub fn accumulate_quotients(
     let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
     unsafe {
         _quotient::accumulate_quotients(
-            half_coset_initial_index,
-            half_coset_step_size,
             domain_log_size,
             columns.as_ptr(),
             (columns.len() / (1 << domain_log_size)) as u32,
@@ -226,8 +222,6 @@ pub fn accumulate_quotients(
 }
 
 pub fn accumulate_quotients_wrapped(
-    half_coset_initial_index: u32,
-    half_coset_step_size: u32,
     domain_log_size: u32,
     columns: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
     random_coef: QuarticExtensionField,
@@ -244,8 +238,6 @@ pub fn accumulate_quotients_wrapped(
         .map(|x| x.size)
         .sum();
     accumulate_quotients(
-        half_coset_initial_index,
-        half_coset_step_size,
         domain_log_size,
         columns,
         random_coef,
@@ -262,8 +254,6 @@ mod _quotient {
     extern "C" {
         #[link_name = "m31_accumulate_quotients"]
         pub(crate) fn accumulate_quotients(
-            half_coset_initial_index: u32,
-            half_coset_step_size: u32,
             domain_log_size: u32,
             columns: *const ScalarField, // 2d number_of_columns * domain_size elements
             number_of_columns: u32,
@@ -284,8 +274,6 @@ pub(crate) mod tests {
 
     #[test]
     fn test_quotients() {
-        let half_coset_initial_index = 4194304;
-        let half_coset_step_size = 16777216;
         let domain_log_size = 8;
         let columns_raw: Vec<ScalarField> = [
             1062746970, 1062779738, 93332098, 93364866, 284850447, 284883215, 2077028039, 2077060807, 2128136358,
@@ -374,8 +362,6 @@ pub(crate) mod tests {
         let result = HostSlice::from_mut_slice(result_raw.as_mut_slice());
         let cfg = QuotientConfig::default();
         let err = accumulate_quotients_wrapped(
-            half_coset_initial_index,
-            half_coset_step_size,
             domain_log_size,
             columns,
             rand_coef,
