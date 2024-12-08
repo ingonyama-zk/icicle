@@ -54,8 +54,6 @@ namespace fri {
       }
     }
 
-    //__device__ int lock = 0;
-
     template <typename S, typename E>
     __global__ void fold_circle_into_line_kernel(E* eval, S* domain_ys, E alpha, E alpha_sq, E* folded_eval, uint64_t n)
     {
@@ -68,32 +66,6 @@ namespace fri {
         ibutterfly(f0_px, f1_px, domain_ys[folded_eval_idx]);
         E f_prime = f0_px + alpha * f1_px;
         folded_eval[folded_eval_idx] = folded_eval[folded_eval_idx] * alpha_sq + f_prime;
-
-        // __syncthreads();
-        // if (idx == 0) {
-        //   while (atomicCAS(&lock, 0, 1) != 0)
-        //     ;
-        //   printf("\n  input: ");
-        //   for (int i = 0; i < n; i++) {
-        //     auto ival = (const uint32_t*)eval[i];
-        //     printf(" 0x%08x%08x%08x%08x, ", ival[0], ival[1], ival[2], ival[3]);
-        //   }
-        //   printf("\n  output:");
-
-        //   for (int i = 0; i < n / 2; i++) {
-        //     auto ival = (const uint32_t*)folded_eval[i];
-        //     printf(" 0x%08x%08x%08x%08x, ", ival[0], ival[1], ival[2], ival[3]);
-        //   }
-        //   printf("\n  domain:");
-
-        //   for (int i = 0; i < n / 2; i++) {
-        //     printf(" 0x%08x, ", domain_ys[i].get_limb());
-        //   }
-        //   printf("\n ******************************** \n");
-
-        //   // Release lock
-        //   atomicExch(&lock, 0);
-        // }
       }
     }
 
@@ -242,8 +214,6 @@ namespace fri {
     }
 
     E alpha_sq = alpha * alpha;
-    // auto alpha_ptr = (const uint32_t*)alpha;
-    // auto alpha_sqr_ptr = (const uint32_t*)alpha_sq;
 
     uint64_t num_threads = max(1, min(unsigned(n), 256));
     uint64_t num_blocks = (n + num_threads - 1) / num_threads;
@@ -289,8 +259,6 @@ namespace fri {
     }
 
     E alpha_sq = alpha * alpha;
-    // auto alpha_ptr = (const uint32_t*)alpha;
-    // auto alpha_sqr_ptr = (const uint32_t*)alpha_sq;
 
     uint64_t num_threads = max(1, min(unsigned(n), 256));
     uint64_t num_blocks = (n + num_threads - 1) / num_threads;
