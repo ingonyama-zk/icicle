@@ -7,19 +7,19 @@ use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 use std::ffi::c_void;
 
 /// Configuration for the Sumcheck protocol's transcript.
-pub struct SumcheckTranscriptConfig<'a, S> {
+pub struct SumcheckTranscriptConfig<'a, F> {
     pub hash: &'a Hasher,
     pub domain_separator_label: Vec<u8>,
     pub round_poly_label: Vec<u8>,
     pub round_challenge_label: Vec<u8>,
     pub little_endian: bool,
-    pub seed_rng: S,
+    pub seed_rng: F,
 }
 
 /// Trait for constructing a Sumcheck prover instance.
 pub trait SumcheckConstructor<F> {
     /// Creates a new Sumcheck prover instance.
-    /// Optionally, consider returning `Box<dyn SumcheckOps<F>>` for runtime polymorphism.
+    /// Optionally, consider returning `Box<dyn SumcheckOps<F>>`
     fn new(transcript_config: &SumcheckTranscriptConfig<F>) -> Result<impl SumcheckOps<F>, eIcicleError>;
 }
 
