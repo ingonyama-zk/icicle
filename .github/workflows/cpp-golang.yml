@@ -70,21 +70,25 @@ jobs:
       run: |
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          echo "CMAKE_INSTALL_PREFIX=" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib" >> $GITHUB_OUTPUT
         else
           echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=/tmp/local/" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=/tmp/local/lib" >> $GITHUB_OUTPUT
         fi
     - name: Build curve
       working-directory: ./icicle
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
         cmake --build build --target install -j
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         ctest
 
     # - name: Run C++ examples
@@ -92,7 +96,7 @@ jobs:
     #   if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
     #   run: |
     #     CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-    #     export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+    #     export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
     #     for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
     #         if [ -d "$dir" ]; then
     #             echo "Running command in $dir"
@@ -107,7 +111,7 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
 
 
@@ -144,13 +148,13 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
         cmake --build build --target install -j
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         ctest --output-on-failure
 
     # - name: Run C++ examples
@@ -158,7 +162,7 @@ jobs:
     #   if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
     #   run: |
     #     FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
-    #     export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+    #     export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
     #     for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
     #         if [ -d "$dir" ]; then
     #             echo "Running command in $dir"
@@ -174,7 +178,7 @@ jobs:
       # if: matrix.field.name == 'babybear'
       run: |
         FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v
 
 
@@ -208,11 +212,11 @@ jobs:
       working-directory: ./wrappers/golang/hash
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
     - name: Test GoLang Merkle Tree
       working-directory: ./wrappers/golang/merkle-tree
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
