@@ -63,11 +63,11 @@ jobs:
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.0'
     - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
       run: |
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
@@ -81,7 +81,7 @@ jobs:
         fi
     - name: Build curve
       working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
@@ -146,9 +146,22 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.0'
+    - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: cuda-flag
+      run: |
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          echo "CMAKE_INSTALL_PREFIX=" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib" >> $GITHUB_OUTPUT
+        else
+          echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=/tmp/local/" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=/tmp/local/lib" >> $GITHUB_OUTPUT
+        fi
     - name: Build field
       working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
