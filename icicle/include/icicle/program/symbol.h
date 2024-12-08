@@ -155,7 +155,7 @@ namespace icicle {
     }
 
     // inverse
-    Symbol inverse()
+    Symbol inverse() const
     {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S>>(OP_INV, m_operation);
