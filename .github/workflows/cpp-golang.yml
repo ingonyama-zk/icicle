@@ -83,7 +83,9 @@ jobs:
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       # if: needs.check-changed-files.outputs.cpp == 'true'
-      run: ctest
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        ctest
 
     - name: Run C++ examples
       working-directory: ./examples/c++
@@ -147,7 +149,9 @@ jobs:
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       # if: needs.check-changed-files.outputs.cpp == 'true'
-      run: ctest --output-on-failure
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        ctest --output-on-failure
 
     - name: Run C++ examples
       working-directory: ./examples/c++
