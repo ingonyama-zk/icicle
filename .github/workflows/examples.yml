@@ -53,7 +53,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
         # loop over all directories in the current directory
-        export ${{ steps.cuda-flag.outputs.CUDA_FLAG }}
+        export ${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
@@ -67,7 +67,7 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
         # loop over all directories in the current directory
-        export ${{ steps.cuda-flag.outputs.CUDA_FLAG }}        
+        export ${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}        
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
