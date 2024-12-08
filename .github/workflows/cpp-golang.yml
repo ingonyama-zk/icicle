@@ -24,7 +24,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Check clang-format
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       run: ./scripts/format_all.sh . --check --exclude "build|wrappers"
 
   extract-cuda-backend-branch:
@@ -54,7 +54,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -67,18 +67,18 @@ jobs:
         go-version: '1.22.0'
     - name: Build curve
       working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} -DCUDA_BACKEND=local -S . -B build
         cmake --build build --target install -j
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest
     - name: Run Golang curve Tests
       working-directory: ./wrappers/golang/curves
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
@@ -101,7 +101,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -114,18 +114,18 @@ jobs:
         go-version: '1.22.0'
     - name: Build field
       working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -DCUDA_BACKEND=local -S . -B build
         cmake --build build --target install -j
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest --output-on-failure
     - name: Run Golang field Tests
       working-directory: ./wrappers/golang/fields
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
@@ -141,7 +141,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -154,19 +154,19 @@ jobs:
         go-version: '1.22.0'
     - name: Build
       working-directory: ./wrappers/golang
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       # builds the hash and merkle tree lib using a local copy of the CUDA backend
       run:  |
         ./build.sh -cuda_backend=local
     - name: Test Hashes
       working-directory: ./wrappers/golang/hash
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
     - name: Test Merkle Tree
       working-directory: ./wrappers/golang/merkle-tree
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
