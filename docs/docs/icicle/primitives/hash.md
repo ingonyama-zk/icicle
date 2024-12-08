@@ -59,6 +59,10 @@ It is an improved version of the original [Poseidon](https://eprint.iacr.org/201
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
+The supported values of number of states (***t*** or ***T*** as defined in https://eprint.iacr.org/2023/323.pdf) are 2, 3, 4, 8, 12, 16, 20 and 24. Note that ***t*** of 8, 12, 16, 20 and 24 is supported only for the small fields (babybear and m31).
+The alpha, number of full rounds and partial rounds, rounds constants, MDS matrix, and partial matrix for each field and ***t*** could be found in the appropriate file in the https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/icicle/hash/poseidon2_constants/constants folder.
+
+In the current version the padding is not supported and should be performed by the user.
 
 ## Using Hash API
 
@@ -84,15 +88,14 @@ auto poseidon = Poseidon::create<scalar_t>(t);
 // The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
 scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
 auto poseidon_with_domain_tag = Poseidon::create<scalar_t>(t, &domain_tag);
-// This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
 // Poseidon2 requires specifying the field-type and t parameter (supported 2, 3, 4, 8, 12, 16, 20, 24) as defined by
-// the Poseidon2 paper. For large fields (field width >= 254) the supported values of t are 2, 3, 4.
+// the Poseidon2 paper. For large fields (field width >= 252) the supported values of t are 2, 3, 4.
 auto poseidon2 = Poseidon2::create<scalar_t>(t); 
 // Optionally, Poseidon2 can accept a domain-tag, which is a field element used to separate applications or contexts.
 // The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
 scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
 auto poseidon2_with_domain_tag = Poseidon2::create<scalar_t>(t, &domain_tag);
-// This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
+// This version of the hasher with a domain tag expects t-1 inputs per hasher.
 ```
 
 ### 2. Hashing Data
