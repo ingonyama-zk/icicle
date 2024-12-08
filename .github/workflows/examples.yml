@@ -40,19 +40,19 @@ jobs:
         path: ./icicle/backend/cuda
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
-    - name: c++ examples
-      working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
-      run: |
-        # loop over all directories in the current directory
-        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-          if [ -d "$dir" ]; then
-            echo "Running command in $dir"
-            cd $dir
-            ./run.sh -d CUDA
-            cd -
-          fi
-        done
+    # - name: c++ examples
+    #   working-directory: ./examples/c++
+    #   if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+    #   run: |
+    #     # loop over all directories in the current directory
+    #     for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+    #       if [ -d "$dir" ]; then
+    #         echo "Running command in $dir"
+    #         cd $dir
+    #         ./run.sh -d CUDA
+    #         cd -
+    #       fi
+    #     done
     - name: Rust examples
       working-directory: ./examples/rust
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'

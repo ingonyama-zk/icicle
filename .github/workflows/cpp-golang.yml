@@ -1,4 +1,4 @@
-name: C++/CUDA/GoLang
+name: C++/CUDA/GoLang & Examples
 
 on:
   pull_request:
@@ -76,6 +76,22 @@ jobs:
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest
+
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d CUDA
+                cd -
+            fi
+        done
+
     - name: Run Golang curve Tests
       working-directory: ./wrappers/golang/curves
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
@@ -83,6 +99,7 @@ jobs:
         CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
         go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
+
 
   test-linux-field:
     name: Test field on Linux
@@ -123,6 +140,22 @@ jobs:
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest --output-on-failure
+
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
+        for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d CUDA
+                cd -
+            fi
+        done
+
     - name: Run Golang field Tests (babybear only)
       working-directory: ./wrappers/golang/fields
       if: (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.field.name == 'babybear'
