@@ -101,7 +101,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      # if: needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -114,19 +114,19 @@ jobs:
         go-version: '1.22.0'
     - name: Build field
       working-directory: ./icicle
-      # if: needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -DCUDA_BACKEND=local -S . -B build
         cmake --build build --target install -j
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
-      # if: needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true'
       run: ctest --output-on-failure
-    - name: Run Golang field Tests
+    - name: Run Golang field Tests (babybear only)
       working-directory: ./wrappers/golang/fields
-      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      if: matrix.field.name == 'babybear'
+      if: (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.field.name == 'babybear'
+      # if: matrix.field.name == 'babybear'
       run: |
         FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=/usr/local/lib
