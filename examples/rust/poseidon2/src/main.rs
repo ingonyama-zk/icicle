@@ -1,10 +1,12 @@
 use icicle_core::{
     hash::{HashConfig, Hasher}, 
+    merkle::{MerkleTree, MerkleTreeConfig,MerkleProof,PaddingPolicy},
     poseidon2::Poseidon2, traits::FieldImpl
 };
+use std::convert::TryInto;
 use icicle_babybear::field::ScalarField as Frbb;
 use icicle_m31::field::ScalarField as Frm31;
-
+use rand::{random, Rng};
 use icicle_runtime::memory::HostSlice;
 
 pub fn hash_test<F:FieldImpl>(
@@ -20,6 +22,29 @@ hash.hash(input_slice, &config, out_init_slice).unwrap();
 println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 
 }
+
+pub fn compute_binary_tree<F:FieldImpl>(
+    mut test_vec: Vec<F>,
+    leaf_size: u64,
+    hasher: Hasher,
+    compress: Hasher,
+    mut tree_config: MerkleTreeConfig,
+) -> MerkleTree
+{
+let tree_height: usize = test_vec.len().ilog2() as usize;
+tree_config.padding_policy = PaddingPolicy::ZeroPadding;
+let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
+    .chain(std::iter::repeat(&compress).take(tree_height))
+    .collect();
+//binary tree
+let vec_slice: &mut HostSlice<F> = HostSlice::from_mut_slice(&mut test_vec[..]);
+let merkle_tree: MerkleTree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
+
+let _ = merkle_tree
+    .build(vec_slice,&tree_config);
+merkle_tree
+}
+
 pub fn main(){
 // digest = output_state[1]
 // Sage output Baby bear
@@ -98,4 +123,30 @@ for (t,digest) in t_vec.iter().zip(expected_digest_m31.iter()){
     println!(" ");
 }
 
+println!("\n Merkle tree test with poseidon 2: m31");
+
+
+// for binary tree Poseidon(t1,t2) -> n1 
+let poseidon_state_size = 2; 
+let leaf_size:u64 = 4;// each leaf is a 32 bit element 32/8 = 4 bytes
+
+let mut test_vec = vec![Frm31::from_u32(random::<u32>()); 1024* (poseidon_state_size as usize)];   
+println!("Generated random vector of size {:?}", 1024* (poseidon_state_size as usize));
+//to use later for merkle proof
+let mut binding = test_vec.clone();
+let test_vec_slice = HostSlice::from_mut_slice(&mut binding);
+//define hash and compression functions
+let hasher :Hasher = Poseidon2::new::<Frm31>(poseidon_state_size.try_into().unwrap(),None).unwrap();
+let compress: Hasher = Poseidon2::new::<Frm31>((hasher.output_size()*2).try_into().unwrap(),None).unwrap();
+//tree config
+let tree_config = MerkleTreeConfig::default();
+let merk_tree = compute_binary_tree(test_vec.clone(), leaf_size, hasher, compress,tree_config.clone());
+println!("computed Merkle root {:?}", merk_tree.get_root::<Frm31>().unwrap());
+
+let random_test_index = rand::thread_rng().gen_range(0..1024*(leaf_size as usize));
+print!("Generating proof for element {:?} at random test index {:?} ",test_vec[random_test_index], random_test_index);
+let merkle_proof = merk_tree.get_proof::<Frm31>(test_vec_slice, random_test_index.try_into().unwrap(), false, &tree_config).unwrap();
+
+assert!(merk_tree.verify(&merkle_proof).unwrap());
+println!("\n Merkle proof verified successfully!");
 }
