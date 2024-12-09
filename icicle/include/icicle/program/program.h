@@ -29,16 +29,16 @@ namespace icicle {
   {
   public:
     // Generate a program based on a lambda function with multiple inputs and multiple outputs
-    Program(std::function<void(std::vector<Symbol<S>>&)> program_func, int nof_paramaters)
-        : m_nof_paramaters(nof_paramaters)
+    Program(std::function<void(std::vector<Symbol<S>>&)> program_func, const int nof_parameters)
+        : m_nof_parameters(nof_parameters)
     {
       // Generate the DFG
-      std::vector<Symbol<S>> program_paramaters(m_nof_paramaters);
-      set_as_inputs(program_paramaters);
-      program_func(program_paramaters);
+      std::vector<Symbol<S>> program_parameters(m_nof_parameters);
+      set_as_inputs(program_parameters);
+      program_func(program_parameters);
 
       // based on the DFG, generate the instructions
-      generate_program(program_paramaters);
+      generate_program(program_parameters);
     }
 
     // Generate a program based on a PreDefinedPrograms
@@ -47,10 +47,10 @@ namespace icicle {
       // set number of parameters
       switch (pre_def) {
       case AB_MINUS_C:
-        m_nof_paramaters = 4;
+        m_nof_parameters = 4;
         break;
       case EQ_X_AB_MINUS_C:
-        m_nof_paramaters = 5;
+        m_nof_parameters = 5;
         break;
       default:
         ICICLE_LOG_ERROR << "Illegal opcode: " << int(pre_def);
@@ -61,48 +61,48 @@ namespace icicle {
     }
 
     // run over all inputs at the vector and set their operands to OP_INPUT
-    void set_as_inputs(std::vector<Symbol<S>>& program_paramaters)
+    void set_as_inputs(std::vector<Symbol<S>>& program_parameters)
     {
-      for (int paramater_idx = 0; paramater_idx < program_paramaters.size(); paramater_idx++) {
-        program_paramaters[paramater_idx].set_as_input(paramater_idx);
+      for (int parameter_idx = 0; parameter_idx < program_parameters.size(); parameter_idx++) {
+        program_parameters[parameter_idx].set_as_input(parameter_idx);
       }
     }
 
-    // run over the DFG held by program_paramaters and generate the program
-    void generate_program(std::vector<Symbol<S>>& program_paramaters)
+    // run over the DFG held by program_parameters and generate the program
+    void generate_program(std::vector<Symbol<S>>& program_parameters)
     {
       // run over the graph and allocate location for all constants
       Operation<S>::reset_visit();
-      for (auto& result : program_paramaters) {
+      for (auto& result : program_parameters) {
         allocate_constants(result.m_operation);
       }
 
       // run over the graph and generate the program
       Operation<S>::reset_visit();
-      for (int paramater_idx = 0; paramater_idx < program_paramaters.size(); paramater_idx++) {
-        Symbol<S>& cur_symbol = program_paramaters[paramater_idx];
+      for (int parameter_idx = 0; parameter_idx < program_parameters.size(); parameter_idx++) {
+        Symbol<S>& cur_symbol = program_parameters[parameter_idx];
         // the operation not yet calculated
         if (cur_symbol.m_operation->m_variable_idx == -1) {
-          // set the operation location to the current paramater_idx
-          cur_symbol.m_operation->m_variable_idx = paramater_idx;
+          // set the operation location to the current parameter_idx
+          cur_symbol.m_operation->m_variable_idx = parameter_idx;
           generate_program(cur_symbol.m_operation);
           continue;
         }
         // the operation already calculated but on a different location
-        if (cur_symbol.m_operation->m_variable_idx != paramater_idx)
+        if (cur_symbol.m_operation->m_variable_idx != parameter_idx)
           // copy it to this parameter
-          push_copy_instruction(cur_symbol.m_operation->m_variable_idx, paramater_idx);
+          push_copy_instruction(cur_symbol.m_operation->m_variable_idx, parameter_idx);
       }
     }
 
     // Program
     std::vector<InstructionType> m_instructions; // vector of instructions to execute
     std::vector<S> m_constants;                  // vector of constants to use
-    int m_nof_paramaters = 0;
+    int m_nof_parameters = 0;
     int m_nof_constants = 0;
     int m_nof_intermidiates = 0;
 
-    const int get_nof_vars() const { return m_nof_paramaters + m_nof_constants + m_nof_intermidiates; }
+    const int get_nof_vars() const { return m_nof_parameters + m_nof_constants + m_nof_intermidiates; }
 
     static inline const int INST_OPCODE = 0;
     static inline const int INST_OPERAND1 = 1;
@@ -140,8 +140,8 @@ namespace icicle {
       }
     }
 
-    int allocate_constant() { return (m_nof_paramaters + m_nof_constants++); }
-    int allocate_intermidiate() { return (m_nof_paramaters + m_nof_constants + m_nof_intermidiates++); }
+    int allocate_constant() { return (m_nof_parameters + m_nof_constants++); }
+    int allocate_intermidiate() { return (m_nof_parameters + m_nof_constants + m_nof_intermidiates++); }
 
     // Build an instruction
     void push_instruction(std::shared_ptr<Operation<S>> operation)
@@ -189,7 +189,7 @@ namespace icicle {
   public:
     void print_program()
     {
-      std::cout << "nof_paramaters: " << m_nof_paramaters << std::endl;
+      std::cout << "nof_parameters: " << m_nof_parameters << std::endl;
       std::cout << "nof_constants: " << m_nof_constants << std::endl;
       std::cout << "nof_intermidiates: " << m_nof_intermidiates << std::endl;
       std::cout << "Constants:: " << std::endl;

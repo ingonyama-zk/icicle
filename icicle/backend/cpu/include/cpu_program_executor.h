@@ -15,7 +15,7 @@ namespace icicle {
         : m_program(program), m_variable_ptrs(program.get_nof_vars()), m_intermediates(program.m_nof_intermidiates)
     {
       // initialize m_variable_ptrs vector
-      int variable_ptrs_idx = program.m_nof_paramaters;
+      int variable_ptrs_idx = program.m_nof_parameters;
       for (int idx = 0; idx < program.m_nof_constants; ++idx) {
         m_variable_ptrs[variable_ptrs_idx++] = (S*)(&(program.m_constants[idx]));
       }
