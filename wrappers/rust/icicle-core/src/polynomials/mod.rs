@@ -1,13 +1,11 @@
-use crate::traits::{FieldConfig, FieldImpl};
+use crate::traits::FieldImpl;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
 pub trait UnivariatePolynomial
 where
     Self::Field: FieldImpl,
-    Self::FieldConfig: FieldConfig,
 {
     type Field;
-    type FieldConfig;
 
     fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self;
     fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self;
@@ -38,8 +36,7 @@ macro_rules! impl_univariate_polynomial_api {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
         use icicle_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
@@ -150,7 +147,6 @@ macro_rules! impl_univariate_polynomial_api {
 
         impl UnivariatePolynomial for DensePolynomial {
             type Field = $field;
-            type FieldConfig = $field_cfg;
 
             fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self {
                 unsafe {
@@ -426,9 +422,9 @@ macro_rules! impl_polynomial_tests {
 
         type Poly = DensePolynomial;
 
-        pub fn init_domain<F: FieldImpl>(max_size: u64, fast_twiddles_mode: bool)
+        pub fn init_domain<F>(max_size: u64, fast_twiddles_mode: bool)
         where
-            <F as FieldImpl>::Config: NTTDomain<F>,
+            F: FieldImpl + NTTDomain<F>,
         {
             let config = NTTInitDomainConfig::default();
             config
@@ -438,11 +434,11 @@ macro_rules! impl_polynomial_tests {
             initialize_domain(rou, &config).unwrap();
         }
 
-        fn randomize_coeffs<F: FieldImpl>(size: usize) -> Vec<F>
+        fn randomize_coeffs<F>(size: usize) -> Vec<F>
         where
-            <F as FieldImpl>::Config: GenerateRandom<F>,
+            F: FieldImpl + GenerateRandom,
         {
-            F::Config::generate_random(size)
+            F::generate_random(size)
         }
 
         fn rand() -> $field {

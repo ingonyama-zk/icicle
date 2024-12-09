@@ -1,9 +1,9 @@
 [package]
-name = "icicle-bls12-377"
+name = "icicle-test-curve"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Rust wrapper for the CUDA implementation of BLS12-377 pairing friendly elliptic curve by Ingonyama"
+description = "Rust wrapper for the CUDA implementation of BN254 pairing friendly elliptic curve by Ingonyama"
 homepage.workspace = true
 repository.workspace = true
 
@@ -11,7 +11,6 @@ repository.workspace = true
 hex = "0.4"
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
-icicle-hash = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.3"
@@ -24,23 +23,19 @@ cmake = "0.1.50"
 default = []
 no_g2 = []
 no_ecntt = []
-bw6-761 = []
-no_bw6_g2 = []
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 metal_backend = ["icicle-runtime/metal_backend"]
 pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
 
+# [[bench]]
+# name = "ntt"
+# harness = false
 
-[[bench]]
-name = "ntt"
-harness = false
+# [[bench]]
+# name = "msm"
+# harness = false
 
-[[bench]]
-name = "msm"
-harness = false
-
-[[bench]]
-name = "ecntt"
-harness = false
-
+# [[bench]]
+# name = "ecntt"
+# harness = false

@@ -1,7 +1,6 @@
 use crate::{
     curve::{Affine, Curve, Projective},
-    field::Field,
-    traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+    traits::{FieldImpl, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -14,32 +13,6 @@ pub fn check_field_equality<F: FieldImpl>() {
     assert_ne!(left, right);
     let left = F::from_bytes_le(&[1]);
     assert_eq!(left, right);
-}
-
-pub fn check_field_arithmetic<F>()
-where
-    F: FieldImpl + Arithmetic,
-    F::Config: GenerateRandom<F>,
-{
-    let size = 1 << 10;
-    let scalars_a = F::Config::generate_random(size);
-    let scalars_b = F::Config::generate_random(size);
-
-    for i in 0..size {
-        let result1 = scalars_a[i] + scalars_b[i];
-        let result2 = result1 - scalars_b[i];
-        assert_eq!(result2, scalars_a[i]);
-    }
-
-    let scalar_a = scalars_a[0];
-    let square = scalar_a.sqr();
-    let mul = scalar_a.mul(scalar_a);
-
-    assert_eq!(square, mul);
-
-    let inv = scalar_a.inv();
-    let one = scalar_a.mul(inv);
-    assert_eq!(one, F::one());
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
@@ -56,30 +29,18 @@ pub fn check_affine_projective_convert<C: Curve>() {
     }
 }
 
-pub fn check_point_arithmetic<C: Curve>() {
-    let size = 1 << 10;
-    let projective_points_a = C::generate_random_projective_points(size);
-    let projective_points_b = C::generate_random_projective_points(size);
-
-    for i in 0..size {
-        let result1 = projective_points_a[i] + projective_points_b[i];
-        let result2 = result1 - projective_points_b[i];
-        assert_eq!(result2, projective_points_a[i]);
-    }
-}
-
-pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
+pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldImpl<Repr = [u32; BASE_LIMBS]>, C>()
 where
-    C: Curve<BaseField = Field<BASE_LIMBS, F>>,
+    C: Curve<BaseField = F>,
 {
     let left = Projective::<C>::zero();
     let right = Projective::<C>::zero();
     assert_eq!(left, right);
     let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
     assert_eq!(left, right);
-    let mut z = [0; BASE_LIMBS];
-    z[0] = 2;
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], z);
+    // let mut z = [0; BASE_LIMBS];
+    // z[0] = 2;
+    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], C::BaseField::from_u32(2).into());
     assert_ne!(left, right);
     let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
     assert_eq!(left, right);
@@ -87,13 +48,12 @@ where
 
 pub fn check_field_convert_montgomery<F>()
 where
-    F: FieldImpl + MontgomeryConvertible,
-    F::Config: GenerateRandom<F>,
+    F: FieldImpl + MontgomeryConvertible + GenerateRandom,
 {
     let mut stream = IcicleStream::create().unwrap();
 
     let size = 1 << 10;
-    let scalars = F::Config::generate_random(size);
+    let scalars = F::generate_random(size);
 
     let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
     d_scalars
@@ -163,4 +123,36 @@ where
         .unwrap();
 
     assert_eq!(proj_points, projective_copy);
+}
+
+pub fn check_field_arithmetic<F>()
+where
+    F: FieldImpl + GenerateRandom,
+{
+    let size = 1 << 10;
+    let scalars_a = F::generate_random(size);
+    let scalars_b = F::generate_random(size);
+    for i in 0..size {
+        let result1 = scalars_a[i] + scalars_b[i];
+        let result2 = result1 - scalars_b[i];
+        assert_eq!(result2, scalars_a[i]);
+    }
+    let scalar_a = scalars_a[0];
+    let square = scalar_a.sqr();
+    let mul = scalar_a.mul(scalar_a);
+    assert_eq!(square, mul);
+    let inv = scalar_a.inv();
+    let one = scalar_a.mul(inv);
+    assert_eq!(one, F::one());
+}
+
+pub fn check_point_arithmetic<C: Curve>() {
+    let size = 1 << 10;
+    let projective_points_a = C::generate_random_projective_points(size);
+    let projective_points_b = C::generate_random_projective_points(size);
+    for i in 0..size {
+        let result1 = projective_points_a[i] + projective_points_b[i];
+        let result2 = result1 - projective_points_b[i];
+        assert_eq!(result2, projective_points_a[i]);
+    }
 }

@@ -35,14 +35,13 @@ macro_rules! impl_ecntt {
         $field_prefix:literal,
         $field_prefix_ident:ident,
         $field:ident,
-        $field_config:ident,
         $curve:ident
     ) => {
         mod $field_prefix_ident {
             use crate::curve;
-            use crate::curve::BaseCfg;
+            use crate::curve::BaseField;
             use crate::ecntt::Projective;
-            use crate::ecntt::{$curve, $field, $field_config};
+            use crate::ecntt::{$curve, $field};
             use icicle_core::ecntt::{ECNTTUnchecked, ECNTT};
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
@@ -52,13 +51,12 @@ macro_rules! impl_ecntt {
             impl_ntt_without_domain!(
                 $field_prefix,
                 $field,
-                $field_config,
                 ECNTTUnchecked,
                 "_ecntt",
                 ProjectiveC
             );
 
-            impl ECNTT<$curve> for $field_config {}
+            impl ECNTT<$curve> for $field {}
         }
     };
 }
@@ -81,10 +79,9 @@ pub fn ecntt<C: Curve>(
     output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    C::ScalarField: FieldImpl,
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    C::ScalarField: FieldImpl + ECNTT<C>,
 {
-    <<C::ScalarField as FieldImpl>::Config as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_unchecked(
+    <C::ScalarField as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_unchecked(
         input, dir, &cfg, output,
     )
 }
@@ -104,10 +101,9 @@ pub fn ecntt_inplace<C: Curve>(
     cfg: &NTTConfig<C::ScalarField>,
 ) -> Result<(), eIcicleError>
 where
-    C::ScalarField: FieldImpl,
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    C::ScalarField: FieldImpl + ECNTT<C>
 {
-    <<C::ScalarField as FieldImpl>::Config as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_inplace_unchecked(
+    <C::ScalarField as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_inplace_unchecked(
         inout, dir, &cfg,
     )
 }
@@ -204,8 +200,7 @@ macro_rules! impl_ecntt_bench {
 
         fn benchmark_ecntt<C: Curve>(c: &mut Criterion)
         where
-            <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
-            <C::ScalarField as FieldImpl>::Config: NTTDomain<C::ScalarField>,
+            C::ScalarField: ECNTT<C> + NTTDomain<C::ScalarField>,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;

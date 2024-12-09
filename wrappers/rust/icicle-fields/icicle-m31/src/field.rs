@@ -1,20 +1,23 @@
-use icicle_core::field::{Field, MontgomeryConvertibleField};
-use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
+use icicle_core::traits::{FieldImpl, ScalarImpl, GenerateRandom, MontgomeryConvertible};
+use icicle_core::vec_ops::VecOpsConfig;
 use icicle_core::{impl_field, impl_scalar_field};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
+use std::fmt::{Debug, Display};
+use std::ops::{Mul, Add, Sub};
+use hex::FromHex;
 
 pub(crate) const SCALAR_LIMBS: usize = 1;
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
-impl_scalar_field!("m31", m31, SCALAR_LIMBS, ScalarField, ScalarCfg);
+impl_scalar_field!("m31", m31_f, m31_sf, ScalarField, SCALAR_LIMBS);
 impl_scalar_field!(
     "m31_extension",
-    m31_extension,
-    EXTENSION_LIMBS,
+    m31_extension_f,
+    m31_extension_sf,
     ExtensionField,
-    ExtensionCfg
+    EXTENSION_LIMBS
 );
 
 #[cfg(test)]

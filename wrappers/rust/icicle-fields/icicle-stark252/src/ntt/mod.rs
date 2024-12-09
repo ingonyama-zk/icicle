@@ -1,10 +1,11 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
+use icicle_core::traits::FieldImpl;
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_ntt!("stark252", stark252, ScalarField, ScalarCfg);
+impl_ntt!("stark252", stark252, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {
@@ -48,7 +49,7 @@ pub(crate) mod tests {
         for log_size in log_sizes {
             let ntt_size = 1 << log_size;
 
-            let mut scalars: Vec<ScalarField> = <ScalarField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut scalars: Vec<ScalarField> = ScalarField::generate_random(ntt_size);
             let scalars_lw: Vec<FE> = scalars
                 .iter()
                 .map(|x| FieldElement::from_bytes_le(&x.to_bytes_le()).unwrap())

@@ -7,18 +7,18 @@ use crate::{
 use icicle_runtime::{errors::eIcicleError, memory::HostSlice, test_utilities};
 use std::mem;
 
-pub fn check_poseidon_hash<F: FieldImpl>()
+pub fn check_poseidon_hash<F>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+    F: FieldImpl + PoseidonHasher<F> + GenerateRandom,
 {
     let batch = 1 << 4;
-    let domain_tag = F::Config::generate_random(1)[0];
+    let domain_tag = F::generate_random(1)[0];
     for t in [3, 5, 9, 12] {
         for domain_tag in [None, Some(&domain_tag)] {
             let inputs: Vec<F> = if domain_tag != None {
-                F::Config::generate_random(batch * (t - 1))
+                F::generate_random(batch * (t - 1))
             } else {
-                F::Config::generate_random(batch * t)
+                F::generate_random(batch * t)
             };
             let mut outputs_main = vec![F::zero(); batch];
             let mut outputs_ref = vec![F::zero(); batch];
@@ -50,12 +50,12 @@ where
     }
 }
 
-pub fn check_poseidon_hash_sponge<F: FieldImpl>()
+pub fn check_poseidon_hash_sponge<F>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+    F: FieldImpl + PoseidonHasher<F> + GenerateRandom,
 {
     for t in [3, 5, 9, 12] {
-        let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
+        let inputs: Vec<F> = F::generate_random(t * 8 - 2);
         let mut outputs_main = vec![F::zero(); 1];
         let mut outputs_ref = vec![F::zero(); 1];
 
@@ -83,12 +83,12 @@ where
     }
 }
 
-pub fn check_poseidon_hash_multi_device<F: FieldImpl>()
+pub fn check_poseidon_hash_multi_device<F>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+    F: FieldImpl + PoseidonHasher<F> + GenerateRandom,
 {
     let t = 9; // t=9 is for Poseidon9 hash (t is the paper's terminology)
-    let inputs: Vec<F> = F::Config::generate_random(t);
+    let inputs: Vec<F> = F::generate_random(t);
     let mut outputs_main_0 = vec![F::zero(); 1];
     let mut outputs_main_1 = vec![F::zero(); 1];
     let mut outputs_ref = vec![F::zero(); 1];
@@ -132,9 +132,9 @@ where
     assert_eq!(outputs_ref, outputs_main_0);
 }
 
-pub fn check_poseidon_tree<F: FieldImpl>()
+pub fn check_poseidon_tree<F>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F>,
+    F: FieldImpl + PoseidonHasher<F>
 {
     let t = 9;
     let nof_layers = 4;

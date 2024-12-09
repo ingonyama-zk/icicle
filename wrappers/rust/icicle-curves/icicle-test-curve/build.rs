@@ -24,8 +24,8 @@ fn main() {
         PathBuf::from(format!("{}/icicle/", deps_dir.display()))
     };
     config
-        .define("FIELD", "babybear")
-        .define("HASH", "ON")
+        .define("CURVE", "bn254")
+        .define("HASH", "OFF")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.
@@ -40,6 +40,13 @@ fn main() {
     } else if cfg!(feature = "pull_metal_backend") {
         config.define("METAL_BACKEND", "main");
     }
+    // Optional Features that are default ON (so that default matches any backend)
+    if cfg!(feature = "no_g2") {
+        config.define("G2", "OFF");
+    }
+    if cfg!(feature = "no_ecntt") {
+        config.define("ECNTT", "OFF");
+    }
 
     // Build
     let _ = config
@@ -47,10 +54,12 @@ fn main() {
         .build();
 
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
-    println!("cargo:rustc-link-lib=icicle_field_babybear");
-    println!("cargo:rustc-link-lib=icicle_hash"); // not ideal to have this dependency here but need it for poseidon/poseidon2 general Hasher APIs
+    println!("cargo:rustc-link-lib=icicle_field_bn254");
+    println!("cargo:rustc-link-lib=icicle_curve_bn254");
+    println!("cargo:rustc-link-lib=icicle_hash");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
+    // default backends dir
     // default backends dir
     if cfg!(feature = "cuda_backend")
         || cfg!(feature = "pull_cuda_backend")

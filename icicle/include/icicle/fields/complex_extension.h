@@ -46,6 +46,11 @@ public:
     return ComplexExtensionField{FF::one(), FF::zero()};
   }
 
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(uint32_t val)
+  {
+    return ComplexExtensionField{FF::from(val), FF::zero()};
+  }
+
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
   {
     return ComplexExtensionField{FF::to_montgomery(xs.real), FF::to_montgomery(xs.imaginary)};

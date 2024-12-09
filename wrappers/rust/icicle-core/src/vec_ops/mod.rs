@@ -34,102 +34,102 @@ impl VecOpsConfig {
 }
 
 #[doc(hidden)]
-pub trait VecOps<F> {
+pub trait VecOps {
     fn add(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn accumulate(
-        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        a: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn sub(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn mul(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn div(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn sum(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn product(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn scalar_add(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn scalar_sub(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn scalar_mul(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        b: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        a: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        b: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn transpose(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
         nof_rows: u32,
         nof_cols: u32,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn bit_reverse(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn bit_reverse_inplace(
-        input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        input: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> Result<(), eIcicleError>;
+    ) -> Result<(), eIcicleError> where Self: Sized;
 
     fn slice(
-        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
         offset: u64,
         stride: u64,
         size_in: u64,
         size_out: u64,
         cfg: &VecOpsConfig,
-        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    ) -> Result<(), eIcicleError>;
+        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+    ) -> Result<(), eIcicleError> where Self: Sized;
 }
 
 fn check_vec_ops_args<'a, F>(
@@ -172,11 +172,10 @@ pub fn add_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::add(a, b, result, &cfg)
+    <F as VecOps>::add(a, b, result, &cfg)
 }
 
 pub fn accumulate_scalars<F>(
@@ -185,11 +184,10 @@ pub fn accumulate_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, a, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
+    <F as VecOps>::accumulate(a, b, &cfg)
 }
 
 pub fn sub_scalars<F>(
@@ -199,11 +197,10 @@ pub fn sub_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::sub(a, b, result, &cfg)
+    <F as VecOps>::sub(a, b, result, &cfg)
 }
 
 pub fn mul_scalars<F>(
@@ -213,11 +210,10 @@ pub fn mul_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
+    <F as VecOps>::mul(a, b, result, &cfg)
 }
 
 pub fn div_scalars<F>(
@@ -227,11 +223,10 @@ pub fn div_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::div(a, b, result, &cfg)
+    <F as VecOps>::div(a, b, result, &cfg)
 }
 
 pub fn sum_scalars<F>(
@@ -240,11 +235,10 @@ pub fn sum_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, a, result, cfg); //TODO: emirsoyturk
-    <<F as FieldImpl>::Config as VecOps<F>>::sum(a, result, &cfg)
+    <F as VecOps>::sum(a, result, &cfg)
 }
 
 pub fn product_scalars<F>(
@@ -253,11 +247,10 @@ pub fn product_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(a, a, result, cfg); //TODO: emirsoyturk
-    <<F as FieldImpl>::Config as VecOps<F>>::product(a, result, &cfg)
+    <F as VecOps>::product(a, result, &cfg)
 }
 
 pub fn scalar_add<F>(
@@ -267,11 +260,10 @@ pub fn scalar_add<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(b, b, result, cfg); //TODO: emirsoyturk
-    <<F as FieldImpl>::Config as VecOps<F>>::scalar_add(a, b, result, &cfg)
+    <F as VecOps>::scalar_add(a, b, result, &cfg)
 }
 
 pub fn scalar_sub<F>(
@@ -281,11 +273,10 @@ pub fn scalar_sub<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(b, b, result, cfg); //TODO: emirsoyturk
-    <<F as FieldImpl>::Config as VecOps<F>>::scalar_sub(a, b, result, &cfg)
+    <F as VecOps>::scalar_sub(a, b, result, &cfg)
 }
 
 pub fn scalar_mul<F>(
@@ -295,11 +286,10 @@ pub fn scalar_mul<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(b, b, result, cfg); //TODO: emirsoyturk
-    <<F as FieldImpl>::Config as VecOps<F>>::scalar_mul(a, b, result, &cfg)
+    <F as VecOps>::scalar_mul(a, b, result, &cfg)
 }
 
 pub fn transpose_matrix<F>(
@@ -310,10 +300,9 @@ pub fn transpose_matrix<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
-    <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
+    <F as VecOps>::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
 pub fn bit_reverse<F>(
@@ -322,11 +311,10 @@ pub fn bit_reverse<F>(
     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse(input, &cfg, output)
+    <F as VecOps>::bit_reverse(input, &cfg, output)
 }
 
 pub fn bit_reverse_inplace<F>(
@@ -334,11 +322,10 @@ pub fn bit_reverse_inplace<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
     let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse_inplace(input, &cfg)
+    <F as VecOps>::bit_reverse_inplace(input, &cfg)
 }
 
 pub fn slice<F>(
@@ -351,149 +338,147 @@ pub fn slice<F>(
     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F>,
+    F: FieldImpl + VecOps,
 {
-    <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
+    <F as VecOps>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
-        $field_prefix:literal,
+        $field_name:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_config:ident
+        $field_type:ident
     ) => {
         mod $field_prefix_ident {
 
-            use crate::vec_ops::{$field, HostOrDeviceSlice};
+            use crate::vec_ops::{$field_type, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "_vector_add")]
+                #[link_name = concat!($field_name, "_vector_add")]
                 pub(crate) fn vector_add_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_vector_accumulate")]
+                #[link_name = concat!($field_name, "_vector_accumulate")]
                 pub(crate) fn vector_accumulate_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_vector_sub")]
+                #[link_name = concat!($field_name, "_vector_sub")]
                 pub(crate) fn vector_sub_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_vector_mul")]
+                #[link_name = concat!($field_name, "_vector_mul")]
                 pub(crate) fn vector_mul_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_vector_div")]
+                #[link_name = concat!($field_name, "_vector_div")]
                 pub(crate) fn vector_div_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_vector_sum")]
+                #[link_name = concat!($field_name, "_vector_sum")]
                 pub(crate) fn vector_sum_ffi(
-                    a: *const $field,
+                    a: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_vector_product")]
+                #[link_name = concat!($field_name, "_vector_product")]
                 pub(crate) fn vector_product_ffi(
-                    a: *const $field,
+                    a: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_scalar_add_vec")]
+                #[link_name = concat!($field_name, "_scalar_add_vec")]
                 pub(crate) fn scalar_add_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_scalar_sub_vec")]
+                #[link_name = concat!($field_name, "_scalar_sub_vec")]
                 pub(crate) fn scalar_sub_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_scalar_mul_vec")]
+                #[link_name = concat!($field_name, "_scalar_mul_vec")]
                 pub(crate) fn scalar_mul_ffi(
-                    a: *const $field,
-                    b: *const $field,
+                    a: *const $field_type,
+                    b: *const $field_type,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    result: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_matrix_transpose")]
+                #[link_name = concat!($field_name, "_matrix_transpose")]
                 pub(crate) fn matrix_transpose_ffi(
-                    input: *const $field,
+                    input: *const $field_type,
                     nof_rows: u32,
                     nof_cols: u32,
                     cfg: *const VecOpsConfig,
-                    output: *mut $field,
+                    output: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_bit_reverse")]
+                #[link_name = concat!($field_name, "_bit_reverse")]
                 pub(crate) fn bit_reverse_ffi(
-                    input: *const $field,
+                    input: *const $field_type,
                     size: u64,
                     config: *const VecOpsConfig,
-                    output: *mut $field,
+                    output: *mut $field_type,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_slice")]
+                #[link_name = concat!($field_name, "_slice")]
                 pub(crate) fn slice_ffi(
-                    input: *const $field,
+                    input: *const $field_type,
                     offset: u64,
                     stride: u64,
                     size_in: u64,
                     size_out: u64,
                     cfg: *const VecOpsConfig,
-                    output: *mut $field,
+                    output: *mut $field_type,
                 ) -> eIcicleError;
             }
         }
 
-        impl VecOps<$field> for $field_config {
+        impl VecOps for $field_type {
             fn add(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -509,8 +494,8 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn accumulate(
-                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -525,9 +510,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn sub(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -543,9 +528,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn mul(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -561,9 +546,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn div(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -579,8 +564,8 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn sum(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -595,8 +580,8 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn product(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -611,9 +596,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn scalar_add(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -629,9 +614,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn scalar_sub(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -647,9 +632,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn scalar_mul(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                a: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -665,10 +650,10 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn transpose(
-                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
                 nof_rows: u32,
                 nof_cols: u32,
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -684,9 +669,9 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn bit_reverse(
-                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
             ) -> Result<(), eIcicleError> {
                 unsafe {
                     $field_prefix_ident::bit_reverse_ffi(
@@ -700,7 +685,7 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn bit_reverse_inplace(
-                input: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                input: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
@@ -715,13 +700,13 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn slice(
-                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                input: &(impl HostOrDeviceSlice<$field_type> + ?Sized),
                 offset: u64,
                 stride: u64,
                 size_in: u64,
                 size_out: u64,
                 cfg: &VecOpsConfig,
-                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
             ) -> Result<(), eIcicleError> {
                 unsafe {
                     $field_prefix_ident::slice_ffi(
@@ -743,7 +728,7 @@ macro_rules! impl_vec_ops_field {
 #[macro_export]
 macro_rules! impl_vec_ops_tests {
     (
-      $field:ident
+      $field_type:ident
     ) => {
         pub(crate) mod test_vecops {
             use super::*;
@@ -759,31 +744,31 @@ macro_rules! impl_vec_ops_tests {
             #[test]
             pub fn test_vec_ops_scalars() {
                 initialize();
-                check_vec_ops_scalars::<$field>()
+                check_vec_ops_scalars::<$field_type>()
             }
 
             #[test]
             pub fn test_matrix_transpose() {
                 initialize();
-                check_matrix_transpose::<$field>()
+                check_matrix_transpose::<$field_type>()
             }
 
             #[test]
             pub fn test_bit_reverse() {
                 initialize();
-                check_bit_reverse::<$field>()
+                check_bit_reverse::<$field_type>()
             }
 
             #[test]
             pub fn test_bit_reverse_inplace() {
                 initialize();
-                check_bit_reverse_inplace::<$field>()
+                check_bit_reverse_inplace::<$field_type>()
             }
 
             #[test]
             pub fn test_slice() {
                 initialize();
-                check_slice::<$field>()
+                check_slice::<$field_type>()
             }
         }
     };
