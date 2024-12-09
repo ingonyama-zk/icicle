@@ -90,7 +90,7 @@ namespace icicle {
         }
         // the operation already calculated but on a different location
         if (cur_symbol.m_operation->m_variable_idx != paramater_idx)
-          // copy it to this paramater
+          // copy it to this parameter
           push_copy_instruction(cur_symbol.m_operation->m_variable_idx, paramater_idx);
       }
     }
@@ -114,7 +114,7 @@ namespace icicle {
     // default constructor
     Program() {}
 
-    // run recursivly on the DFG and push instruction per operation
+    // run recursively on the DFG and push instruction per operation
     void generate_program(std::shared_ptr<Operation<S>> operation)
     {
       if (
@@ -127,7 +127,7 @@ namespace icicle {
       push_instruction(operation);
     }
 
-    // run over the DFG and collectall the constans.
+    // run over the DFG and collectall the constants.
     void allocate_constants(std::shared_ptr<Operation<S>> operation)
     {
       if (operation == nullptr || operation->is_visited(true)) return;
