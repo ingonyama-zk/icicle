@@ -26,11 +26,11 @@ namespace icicle {
    */
   template <typename S>
   class Program
-  {    
+  {
   public:
     // Generate a program based on a lambda function with multiple inputs and multiple outputs
-    Program(std::function<void(std::vector<Symbol<S>>&)> program_func, int nof_paramaters) :
-      m_nof_paramaters(nof_paramaters)       
+    Program(std::function<void(std::vector<Symbol<S>>&)> program_func, int nof_paramaters)
+        : m_nof_paramaters(nof_paramaters)
     {
       // Generate the DFG
       std::vector<Symbol<S>> program_paramaters(m_nof_paramaters);
@@ -96,8 +96,8 @@ namespace icicle {
     }
 
     // Program
-    std::vector<InstructionType> m_instructions;  // vector of instructions to execute
-    std::vector<S> m_constants;                   // vector of constants to use
+    std::vector<InstructionType> m_instructions; // vector of instructions to execute
+    std::vector<S> m_constants;                  // vector of constants to use
     int m_nof_paramaters = 0;
     int m_nof_constants = 0;
     int m_nof_intermidiates = 0;
@@ -135,16 +135,17 @@ namespace icicle {
       allocate_constants(operation->m_operand2);
       // if constant located
       if (operation->m_opcode == OP_CONST) {
-        m_constants.push_back(*(operation->m_constant));  // push it to constant vector
-        operation->m_variable_idx = allocate_constant();  // set its location after the parameters
+        m_constants.push_back(*(operation->m_constant)); // push it to constant vector
+        operation->m_variable_idx = allocate_constant(); // set its location after the parameters
       }
     }
 
     int allocate_constant() { return (m_nof_paramaters + m_nof_constants++); }
     int allocate_intermidiate() { return (m_nof_paramaters + m_nof_constants + m_nof_intermidiates++); }
-    
+
     // Build an instruction
-    void push_instruction(std::shared_ptr<Operation<S>> operation) {
+    void push_instruction(std::shared_ptr<Operation<S>> operation)
+    {
       // Build an instruction on the array
       std::byte int_arr[sizeof(InstructionType)] = {};
       // Set instruction::opcode
@@ -169,20 +170,21 @@ namespace icicle {
       m_instructions.push_back(instruction);
     }
 
-  void push_copy_instruction(const int source_idx, const int dest_idx) {
-    // Build an instruction on the array
-    std::byte int_arr[sizeof(InstructionType)] = {};
-    // Set instruction::opcode
-    int_arr[INST_OPCODE] = std::byte(ProgramOpcode::OP_COPY);
-    // Set instruction::operand1
-    int_arr[INST_OPERAND1] = std::byte(source_idx);
+    void push_copy_instruction(const int source_idx, const int dest_idx)
+    {
+      // Build an instruction on the array
+      std::byte int_arr[sizeof(InstructionType)] = {};
+      // Set instruction::opcode
+      int_arr[INST_OPCODE] = std::byte(ProgramOpcode::OP_COPY);
+      // Set instruction::operand1
+      int_arr[INST_OPERAND1] = std::byte(source_idx);
 
-    // Set instruction::operand2
-    int_arr[INST_RESULT] = std::byte(dest_idx);
-    InstructionType instruction;
-    std::memcpy(&instruction, int_arr, sizeof(InstructionType));
-    m_instructions.push_back(instruction);
-  }
+      // Set instruction::operand2
+      int_arr[INST_RESULT] = std::byte(dest_idx);
+      InstructionType instruction;
+      std::memcpy(&instruction, int_arr, sizeof(InstructionType));
+      m_instructions.push_back(instruction);
+    }
 
   public:
     void print_program()
