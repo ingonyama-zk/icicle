@@ -10,7 +10,8 @@ namespace icicle {
    *
    */
   enum ProgramOpcode {
-    OP_ADD = 0,
+    OP_COPY = 0,
+    OP_ADD,
     OP_MULT,
     OP_SUB,
     OP_INV,
