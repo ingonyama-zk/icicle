@@ -110,6 +110,64 @@ func GenerateScalars(size int) core.HostSlice[ExtensionField] {
 	return scalarSlice
 }
 
+func (f ExtensionField) Add(f2 *ExtensionField) ExtensionField {
+	var res ExtensionField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.babybear_extension_add(cF, cF2, cRes)
+
+	return res
+}
+
+func (f ExtensionField) Sub(f2 *ExtensionField) ExtensionField {
+	var res ExtensionField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.babybear_extension_sub(cF, cF2, cRes)
+
+	return res
+}
+
+func (f ExtensionField) Mul(f2 *ExtensionField) ExtensionField {
+	var res ExtensionField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.babybear_extension_mul(cF, cF2, cRes)
+
+	return res
+}
+
+func (f ExtensionField) Inv() ExtensionField {
+	var res ExtensionField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.babybear_extension_inv(cF, cRes)
+
+	return res
+}
+
+func (f ExtensionField) Sqr() ExtensionField {
+	var res ExtensionField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.babybear_extension_mul(cF, cF, cRes)
+
+	return res
+}
+
 func convertScalarsMontgomery(scalars core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
 	cValues, _, _, cCfg, cSize := core.VecOpCheck(scalars, scalars, scalars, &defaultCfg)

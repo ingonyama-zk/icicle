@@ -16,6 +16,7 @@ import (
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/ntt"
 	poly "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/polynomial"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/poseidon"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/poseidon2"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/tests"
 	vecops "github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/generator/vecOps"
 )
@@ -54,6 +55,9 @@ func generateFiles() {
 		if curve.SupportsPoseidon {
 			poseidon.Generate(curveDir, curve.Curve)
 		}
+		if curve.SupportsPoseidon2 {
+			poseidon2.Generate(curveDir, curve.Curve)
+		}
 
 		tests.Generate(curveDir, curve.Curve, scalarFieldPrefix, curve.GnarkImport, 0, curve.SupportsNTT)
 	}
@@ -80,6 +84,10 @@ func generateFiles() {
 
 		if field.SupportsPoseidon {
 			poseidon.Generate(fieldDir, field.Field)
+		}
+
+		if field.SupportsPoseidon2 {
+			poseidon2.Generate(fieldDir, field.Field)
 		}
 
 		tests.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, field.SupportsNTT)

@@ -155,7 +155,7 @@ pub struct MerkleTree {
 // External C functions
 extern "C" {
     fn icicle_merkle_tree_create(
-        layer_hashes: *const MerkleTreeHandle, // expecting c-style-array of those
+        layer_hashes: *const HasherHandle, // expecting c-style-array of those
         layer_hashes_len: u64,
         leaf_element_size: u64,
         output_store_min_layer: u64,

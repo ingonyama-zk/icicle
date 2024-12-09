@@ -12,6 +12,8 @@ typedef struct {{toCName .CurvePrefix}}affine_t {{toCName .CurvePrefix}}affine_t
 typedef struct VecOpsConfig VecOpsConfig;
 
 bool {{.Curve}}{{toCNameBackwards .CurvePrefix}}_eq({{toCName .CurvePrefix}}projective_t* point1, {{toCName .CurvePrefix}}projective_t* point2);
+void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_ecadd({{toCName .CurvePrefix}}projective_t* point, {{toCName .CurvePrefix}}projective_t* point2, {{toCName .CurvePrefix}}projective_t* res); 
+void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_ecsub({{toCName .CurvePrefix}}projective_t* point, {{toCName .CurvePrefix}}projective_t* point2, {{toCName .CurvePrefix}}projective_t* res); 
 void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_to_affine({{toCName .CurvePrefix}}projective_t* point, {{toCName .CurvePrefix}}affine_t* point_out);
 void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_from_affine({{toCName .CurvePrefix}}affine_t* point, {{toCName .CurvePrefix}}projective_t* point_out);
 void {{.Curve}}{{toCNameBackwards .CurvePrefix}}_generate_projective_points({{toCName .CurvePrefix}}projective_t* points, int size);

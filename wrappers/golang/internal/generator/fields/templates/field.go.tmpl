@@ -113,6 +113,64 @@ func GenerateScalars(size int) core.HostSlice[{{.FieldPrefix}}Field] {
 	return scalarSlice
 }
 
+func (f {{.FieldPrefix}}Field) Add(f2 *{{.FieldPrefix}}Field) {{.FieldPrefix}}Field {
+	var res {{.FieldPrefix}}Field
+	
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+    cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+    cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.{{.Field}}_add(cF, cF2, cRes)
+	
+	return res
+}
+
+func (f {{.FieldPrefix}}Field) Sub(f2 *{{.FieldPrefix}}Field) {{.FieldPrefix}}Field {
+	var res {{.FieldPrefix}}Field
+	
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+    cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+    cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.{{.Field}}_sub(cF, cF2, cRes)
+	
+	return res
+}
+
+func (f {{.FieldPrefix}}Field) Mul(f2 *{{.FieldPrefix}}Field) {{.FieldPrefix}}Field {
+	var res {{.FieldPrefix}}Field
+	
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+    cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+    cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.{{.Field}}_mul(cF, cF2, cRes)
+	
+	return res
+}
+
+func (f {{.FieldPrefix}}Field) Inv() {{.FieldPrefix}}Field {
+	var res {{.FieldPrefix}}Field
+	
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+    cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.{{.Field}}_inv(cF, cRes)
+	
+	return res
+}
+
+func (f {{.FieldPrefix}}Field) Sqr() {{.FieldPrefix}}Field {
+	var res {{.FieldPrefix}}Field
+	
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+    cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.{{.Field}}_mul(cF, cF, cRes)
+	
+	return res
+}
+
 func convertScalarsMontgomery(scalars core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
 	cValues, _, _, cCfg, cSize := core.VecOpCheck(scalars, scalars, scalars, &defaultCfg)

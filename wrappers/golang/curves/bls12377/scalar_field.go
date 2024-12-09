@@ -110,6 +110,64 @@ func GenerateScalars(size int) core.HostSlice[ScalarField] {
 	return scalarSlice
 }
 
+func (f ScalarField) Add(f2 *ScalarField) ScalarField {
+	var res ScalarField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_add(cF, cF2, cRes)
+
+	return res
+}
+
+func (f ScalarField) Sub(f2 *ScalarField) ScalarField {
+	var res ScalarField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_sub(cF, cF2, cRes)
+
+	return res
+}
+
+func (f ScalarField) Mul(f2 *ScalarField) ScalarField {
+	var res ScalarField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cF2 := (*C.scalar_t)(unsafe.Pointer(f2))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_mul(cF, cF2, cRes)
+
+	return res
+}
+
+func (f ScalarField) Inv() ScalarField {
+	var res ScalarField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_inv(cF, cRes)
+
+	return res
+}
+
+func (f ScalarField) Sqr() ScalarField {
+	var res ScalarField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.bls12_377_mul(cF, cF, cRes)
+
+	return res
+}
+
 func convertScalarsMontgomery(scalars core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
 	cValues, _, _, cCfg, cSize := core.VecOpCheck(scalars, scalars, scalars, &defaultCfg)

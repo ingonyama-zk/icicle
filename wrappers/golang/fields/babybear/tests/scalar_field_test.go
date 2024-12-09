@@ -100,6 +100,34 @@ func testBabybearGenerateScalars(suite *suite.Suite) {
 	suite.NotContains(scalars, zeroScalar)
 }
 
+func testScalarFieldArithmetic(suite *suite.Suite) {
+	const size = 1 << 10
+
+	scalarsA := babybear.GenerateScalars(size)
+	scalarsB := babybear.GenerateScalars(size)
+
+	for i := 0; i < size; i++ {
+		result1 := scalarsA[i].Add(&scalarsB[i])
+		result2 := result1.Sub(&scalarsB[i])
+
+		suite.Equal(scalarsA[i], result2, "Addition and subtraction do not yield the original value")
+	}
+
+	scalarA := scalarsA[0]
+	square := scalarA.Sqr()
+	mul := scalarA.Mul(&scalarA)
+
+	suite.Equal(square, mul, "Square and multiplication do not yield the same value")
+
+	inv := scalarA.Inv()
+
+	one := scalarA.Mul(&inv)
+	expectedOne := babybear.GenerateScalars(1)[0]
+	expectedOne.One()
+
+	suite.Equal(expectedOne, one)
+}
+
 func testBabybearMongtomeryConversion(suite *suite.Suite) {
 	size := 1 << 20
 	scalars := babybear.GenerateScalars(size)
@@ -133,6 +161,7 @@ func (s *ScalarFieldTestSuite) TestScalarField() {
 	s.Run("TestScalarFieldAsPointer", testWrapper(&s.Suite, testScalarFieldAsPointer))
 	s.Run("TestScalarFieldFromBytes", testWrapper(&s.Suite, testScalarFieldFromBytes))
 	s.Run("TestScalarFieldToBytes", testWrapper(&s.Suite, testScalarFieldToBytes))
+	s.Run("TestScalarFieldArithmetic", testWrapper(&s.Suite, testScalarFieldArithmetic))
 	s.Run("TestBabybearGenerateScalars", testWrapper(&s.Suite, testBabybearGenerateScalars))
 	s.Run("TestBabybearMongtomeryConversion", testWrapper(&s.Suite, testBabybearMongtomeryConversion))
 }

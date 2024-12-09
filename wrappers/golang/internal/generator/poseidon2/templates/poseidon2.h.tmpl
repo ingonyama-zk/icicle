@@ -1,0 +1,19 @@
+#include <stdint.h>
+
+#ifndef _{{toUpper .Field}}_POSEIDON2
+  #define _{{toUpper .Field}}_POSEIDON2
+
+  #ifdef __cplusplus
+extern "C" {
+  #endif
+
+typedef struct scalar_t scalar_t;
+typedef struct Hash Hash;
+
+Hash* {{.Field}}_create_poseidon2_hasher(unsigned t, const scalar_t* domain_tag);
+
+  #ifdef __cplusplus
+}
+  #endif
+
+#endif

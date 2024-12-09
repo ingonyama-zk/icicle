@@ -8,8 +8,7 @@ We use docker to represent the target environment for the release. Each Docker i
 To build all tars:
 ```bash
 # from icicle root dir
-mkdir -p release_output && rm -rf release_output/* # output dir where tars will be placed
-./scripts/release/build_all.sh release_output # release_output is the output dir where tar files will be generated to
+./scripts/release/build_all.sh 3.2.0 <optional: output-dir> # replace with any version
 ```
 
 ### Build Docker Image
