@@ -48,7 +48,7 @@ println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 ## The Tree Builder
 
 Similar to Poseidon1, you can use Poseidon2 in a tree builder.
-(DANNY please update)
+(To update to V3.2)
 
 ```rust
 use icicle_bn254::tree::Bn254TreeBuilder;
@@ -79,5 +79,4 @@ Bn254TreeBuilder::build_merkle_tree(
     &config,
 )
 .unwrap();
-```
-
+``
