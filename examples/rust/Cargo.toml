@@ -5,7 +5,7 @@ members = [
     "ntt",
     "polynomials",
     "arkworks-icicle-conversions",
-    "hash-and-merkle",
+    "hash-and-merkle", "poseidon2",
 ]
 
 [workspace.dependencies]
@@ -15,6 +15,7 @@ icicle-core = { path = "../../wrappers/rust/icicle-core" }
 icicle-bn254 = { path = "../../wrappers/rust/icicle-curves/icicle-bn254" }
 icicle-bls12-377 = { path = "../../wrappers/rust/icicle-curves/icicle-bls12-377" }
 icicle-babybear = { path = "../../wrappers/rust/icicle-fields/icicle-babybear" }
+icicle-m31 = {path = "../../wrappers/rust/icicle-fields/icicle-m31" }
 rand = "0.8"
 clap = { version = "<=4.4.12", features = ["derive"] }
 
