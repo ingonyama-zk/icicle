@@ -118,7 +118,6 @@ public:
     return QuarticExtensionField{xs.real - ys, xs.im1, xs.im2, xs.im3};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide
   mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
@@ -146,26 +145,21 @@ public:
           FF::mul_wide(xs.im3, ys.real)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const QuarticExtensionField& xs, const FF& ys)
   {
     return ExtensionWide{
       FF::mul_wide(xs.real, ys), FF::mul_wide(xs.im1, ys), FF::mul_wide(xs.im2, ys), FF::mul_wide(xs.im3, ys)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const QuarticExtensionField& ys)
   {
     return ExtensionWide{
       FF::mul_wide(xs, ys.real), FF::mul_wide(xs, ys.im1), FF::mul_wide(xs, ys.im2), FF::mul_wide(xs, ys.im3)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce(const ExtensionWide& xs)
   {
-    return QuarticExtensionField{
-      FF::template reduce<MODULUS_MULTIPLE>(xs.real), FF::template reduce<MODULUS_MULTIPLE>(xs.im1),
-      FF::template reduce<MODULUS_MULTIPLE>(xs.im2), FF::template reduce<MODULUS_MULTIPLE>(xs.im3)};
+    return QuarticExtensionField{FF::reduce(xs.real), FF::reduce(xs.im1), FF::reduce(xs.im2), FF::reduce(xs.im3)};
   }
 
   template <class T1, class T2>
@@ -193,21 +187,18 @@ public:
       FF::template mul_unsigned<multiplier>(xs.im2), FF::template mul_unsigned<multiplier>(xs.im3)};
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const QuarticExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(xs, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField sqr(const QuarticExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
     return xs * xs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField neg(const QuarticExtensionField& xs)
   {
     return {FF::neg(xs.real), FF::neg(xs.im1), FF::neg(xs.im2), FF::neg(xs.im3)};
