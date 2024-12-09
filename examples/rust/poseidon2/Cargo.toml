@@ -1,0 +1,14 @@
+[package]
+name = "poseidon2"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+icicle-core = {path = "../../../wrappers/rust/icicle-core" }
+icicle-runtime = {path = "../../../wrappers/rust/icicle-runtime" }
+icicle-hash = {path = "../../../wrappers/rust/icicle-hash" }
+icicle-babybear = {path = "../../../wrappers/rust/icicle-fields/icicle-babybear" }
+icicle-m31 = {path = "../../../wrappers/rust/icicle-fields/icicle-m31" }
+hex = "0.4" 
+rand = "0.8"
+clap = { version = "<=4.4.12", features = ["derive"] }
