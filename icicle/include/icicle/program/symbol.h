@@ -10,7 +10,8 @@ namespace icicle {
    *
    */
   enum ProgramOpcode {
-    OP_ADD = 0,
+    OP_COPY = 0,
+    OP_ADD,
     OP_MULT,
     OP_SUB,
     OP_INV,
@@ -155,7 +156,7 @@ namespace icicle {
     }
 
     // inverse
-    Symbol inverse()
+    Symbol inverse() const
     {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S>>(OP_INV, m_operation);
