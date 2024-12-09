@@ -1,10 +1,11 @@
-use crate::traits::{FieldImpl, MontgomeryConvertible};
+use crate::traits::{FieldImpl, ScalarImpl, MontgomeryConvertible, GenerateRandom};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
+use std::ops::{Add, Mul, Sub};
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
     type BaseField: FieldImpl;
-    type ScalarField: FieldImpl;
+    type ScalarField: ScalarImpl;
 
     #[doc(hidden)]
     fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> bool;
@@ -28,6 +29,12 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         is_into: bool,
         stream: &IcicleStream,
     ) -> eIcicleError;
+    #[doc(hidden)]
+    fn add(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
+    #[doc(hidden)]
+    fn sub(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
+    #[doc(hidden)]
+    fn mul_scalar(point1: Projective<Self>, point2: Self::ScalarField) -> Projective<Self>;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -37,44 +44,6 @@ pub struct Projective<C: Curve> {
     pub x: C::BaseField,
     pub y: C::BaseField,
     pub z: C::BaseField,
-}
-
-/// An [affine](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) elliptic curve point.
-#[derive(Debug, PartialEq, Clone, Copy)]
-#[repr(C)]
-pub struct Affine<C: Curve> {
-    pub x: C::BaseField,
-    pub y: C::BaseField,
-}
-
-impl<C: Curve> Affine<C> {
-    // While this is not a true zero point and not even a valid point, it's still useful
-    // both as a handy default as well as a representation of zero points in other codebases
-    pub fn zero() -> Self {
-        Affine {
-            x: C::BaseField::zero(),
-            y: C::BaseField::zero(),
-        }
-    }
-
-    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr) -> Self {
-        Affine {
-            x: C::BaseField::from(x),
-            y: C::BaseField::from(y),
-        }
-    }
-
-    pub fn to_projective(&self) -> Projective<C> {
-        if *self == (Affine::<C>::zero()) {
-            return Projective::<C>::zero();
-        }
-
-        Projective {
-            x: self.x,
-            y: self.y,
-            z: C::BaseField::one(),
-        }
-    }
 }
 
 impl<C: Curve> From<Affine<C>> for Projective<C> {
@@ -118,27 +87,9 @@ impl<C: Curve> PartialEq for Projective<C> {
     }
 }
 
-impl<C: Curve> From<Projective<C>> for Affine<C> {
-    fn from(proj: Projective<C>) -> Self {
-        let mut aff = Self::zero();
-        C::to_affine(&proj as *const Projective<C>, &mut aff as *mut Self);
-        aff
-    }
-}
-
-impl<C: Curve> MontgomeryConvertible for Affine<C> {
-    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device() {
-            panic!("values not allocated on an inactive device");
-        }
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
-    }
-
-    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device() {
-            panic!("values not allocated on an inactive device");
-        }
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
+impl<C: Curve> GenerateRandom for Projective<C> {
+    fn generate_random(size: usize) -> Vec<Projective<C>> {
+        C::generate_random_projective_points(size)
     }
 }
 
@@ -155,6 +106,93 @@ impl<C: Curve> MontgomeryConvertible for Projective<C> {
             panic!("values not allocated on an inactive device");
         }
         C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
+    }
+}
+
+impl<C: Curve> Add for Projective<C> {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        C::add(self, other)
+    }
+}
+impl<C: Curve> Sub for Projective<C> {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        C::sub(self, other)
+    }
+}
+impl<C: Curve> Mul<<C as Curve>::ScalarField> for Projective<C> {
+    type Output = Self;
+    fn mul(self, other: <C as Curve>::ScalarField) -> Self {
+        C::mul_scalar(self, other)
+    }
+}
+
+/// An [affine](https://hyperelliptic.org/EFD/g1p/auto-shortw.html) elliptic curve point.
+#[derive(Debug, PartialEq, Clone, Copy)]
+#[repr(C)]
+pub struct Affine<C: Curve> {
+    pub x: C::BaseField,
+    pub y: C::BaseField,
+}
+
+impl<C: Curve> Affine<C> {
+    // While this is not a true zero point and not even a valid point, it's still useful
+    // both as a handy default as well as a representation of zero points in other codebases
+    pub fn zero() -> Self {
+        Affine {
+            x: C::BaseField::zero(),
+            y: C::BaseField::zero(),
+        }
+    }
+
+    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr) -> Self {
+        Affine {
+            x: C::BaseField::from(x),
+            y: C::BaseField::from(y),
+        }
+    }
+
+    pub fn to_projective(&self) -> Projective<C> {
+        if *self == (Affine::<C>::zero()) {
+            return Projective::<C>::zero();
+        }
+
+        Projective {
+            x: self.x,
+            y: self.y,
+            z: C::BaseField::one(),
+        }
+    }
+}
+
+impl<C: Curve> From<Projective<C>> for Affine<C> {
+    fn from(proj: Projective<C>) -> Self {
+        let mut aff = Self::zero();
+        C::to_affine(&proj as *const Projective<C>, &mut aff as *mut Self);
+        aff
+    }
+}
+
+impl<C: Curve> GenerateRandom for Affine<C> {
+    fn generate_random(size: usize) -> Vec<Affine<C>> {
+        C::generate_random_affine_points(size)
+    }
+}
+
+impl<C: Curve> MontgomeryConvertible for Affine<C> {
+    fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+        if !values.is_on_active_device() {
+            panic!("values not allocated on an inactive device");
+        }
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
+    }
+
+    fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
+        if !values.is_on_active_device() {
+            panic!("values not allocated on an inactive device");
+        }
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
     }
 }
 
@@ -176,7 +214,7 @@ macro_rules! impl_curve {
         pub type $projective_type = Projective<$curve>;
 
         mod $curve_prefix_ident {
-            use super::{eIcicleError, $affine_type, $projective_type, IcicleStream, VecOpsConfig};
+            use super::{eIcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
 
             extern "C" {
                 #[link_name = concat!($curve_prefix, "_eq")]
@@ -187,6 +225,24 @@ macro_rules! impl_curve {
                 pub(crate) fn generate_projective_points(points: *mut $projective_type, size: usize);
                 #[link_name = concat!($curve_prefix, "_generate_affine_points")]
                 pub(crate) fn generate_affine_points(points: *mut $affine_type, size: usize);
+                #[link_name = concat!($curve_prefix, "_ecadd")]
+                pub(crate) fn add(
+                    point1: *const $projective_type,
+                    point2: *const $projective_type,
+                    result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_ecsub")]
+                pub(crate) fn sub(
+                    point1: *const $projective_type,
+                    point2: *const $projective_type,
+                    result: *mut $projective_type,
+                );
+                #[link_name = concat!($curve_prefix, "_mul_scalar")]
+                pub(crate) fn mul_scalar(
+                    point1: *const $projective_type,
+                    point2: *const $scalar_field,
+                    result: *mut $projective_type,
+                );
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
                     input: *const $affine_type,
@@ -216,6 +272,40 @@ macro_rules! impl_curve {
 
             fn to_affine(point: *const $projective_type, point_out: *mut $affine_type) {
                 unsafe { $curve_prefix_ident::proj_to_affine(point, point_out) };
+            }
+
+            fn add(point1: $projective_type, point2: $projective_type) -> $projective_type {
+                let mut result = $projective_type::zero();
+                unsafe {
+                    $curve_prefix_ident::add(
+                        &point1 as *const $projective_type,
+                        &point2 as *const $projective_type,
+                        &mut result as *mut _ as *mut $projective_type,
+                    );
+                };
+                result
+            }
+            fn sub(point1: $projective_type, point2: $projective_type) -> $projective_type {
+                let mut result = $projective_type::zero();
+                unsafe {
+                    $curve_prefix_ident::sub(
+                        &point1 as *const $projective_type,
+                        &point2 as *const $projective_type,
+                        &mut result as *mut _ as *mut $projective_type,
+                    );
+                };
+                result
+            }
+            fn mul_scalar(point1: $projective_type, point2: $scalar_field) -> $projective_type {
+                let mut result = $projective_type::zero();
+                unsafe {
+                    $curve_prefix_ident::mul_scalar(
+                        &point1 as *const $projective_type,
+                        &point2 as *const $scalar_field,
+                        &mut result as *mut _ as *mut $projective_type,
+                    );
+                };
+                result
             }
 
             fn generate_random_projective_points(size: usize) -> Vec<$projective_type> {
@@ -290,13 +380,18 @@ macro_rules! impl_curve_tests {
             #[test]
             fn test_point_equality() {
                 initialize();
-                check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as FieldImpl>::Config, $curve>()
+                check_point_equality::<$base_limbs, <$curve as Curve>::BaseField, $curve>()
             }
 
             #[test]
             fn test_points_convert_montgomery() {
                 initialize();
                 check_points_convert_montgomery::<$curve>()
+            }
+
+            #[test]
+            fn test_point_arithmetic() {
+                check_point_arithmetic::<$curve>();
             }
         }
     };

@@ -14,7 +14,7 @@ use rand::Rng;
 
 pub fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zeroes: usize) -> Vec<Affine<C>> {
     let mut rng = thread_rng();
-    let mut points = C::generate_random_affine_points(size);
+    let mut points = Affine::generate_random(size);
     for _ in 0..num_zeroes {
         points[rng.gen_range(0..size)] = Affine::<C>::zero();
     }
@@ -22,9 +22,6 @@ pub fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zero
 }
 
 pub fn check_msm<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
-    C::ScalarField: MontgomeryConvertible,
 {
     test_utilities::test_set_main_device();
     let device_count = runtime::get_device_count().unwrap();
@@ -43,7 +40,7 @@ where
             let mut msm_results = DeviceVec::<Projective<C>>::device_malloc_async(1, &stream).unwrap();
             for test_size in test_sizes {
                 let points = generate_random_affine_points_with_zeroes::<C>(test_size, 2);
-                let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
+                let scalars = C::ScalarField::generate_random(test_size);
 
                 // (1) async msm on main device
                 test_utilities::test_set_main_device_with_id(device_id);
@@ -95,8 +92,6 @@ where
 }
 
 pub fn check_msm_batch_shared<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
     let test_sizes = [1000, 1 << 14];
     let batch_sizes = [1, 3, 1 << 4];
@@ -121,7 +116,7 @@ where
             DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
         precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
-            let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
+            let scalars = C::ScalarField::generate_random(test_size * batch_size);
             let scalars_h = HostSlice::from_slice(&scalars);
 
             let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
@@ -171,8 +166,6 @@ where
 }
 
 pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
     let test_sizes = [1000, 1 << 14];
     let batch_sizes = [1, 3, 1 << 4];
@@ -193,7 +186,7 @@ where
         test_utilities::test_set_main_device();
         for batch_size in batch_sizes {
             cfg.precompute_factor = precompute_factor;
-            let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
+            let scalars = C::ScalarField::generate_random(test_size * batch_size);
             let scalars_h = HostSlice::from_slice(&scalars);
 
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 10);
@@ -252,8 +245,6 @@ where
 }
 
 pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
 {
     let test_sizes = [1 << 10, 10000];
     let test_threshold = 1 << 11;
@@ -269,7 +260,7 @@ where
             }
             for _ in test_threshold..test_size {
                 scalars[rng.gen_range(0..test_size * batch_size)] =
-                    <<C::ScalarField as FieldImpl>::Config as GenerateRandom<C::ScalarField>>::generate_random(1)[0];
+                    C::ScalarField::generate_random(1)[0];
             }
 
             let mut cfg = MSMConfig::default();

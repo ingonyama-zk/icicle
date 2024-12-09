@@ -8,6 +8,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+hex = "0.4"
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 icicle-hash = { workspace = true }
@@ -28,14 +29,14 @@ pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 metal_backend = ["icicle-runtime/metal_backend"]
 pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
 
-[[bench]]
-name = "ntt"
-harness = false
+# [[bench]]
+# name = "ntt"
+# harness = false
 
-[[bench]]
-name = "msm"
-harness = false
+# [[bench]]
+# name = "msm"
+# harness = false
 
-[[bench]]
-name = "ecntt"
-harness = false
+# [[bench]]
+# name = "ecntt"
+# harness = false

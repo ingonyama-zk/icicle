@@ -49,6 +49,11 @@ public:
     return QuarticExtensionField{FF::one(), FF::zero(), FF::zero(), FF::zero()};
   }
 
+  static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(uint32_t val)
+  {
+    return QuarticExtensionField{FF::from(val), FF::zero(), FF::zero(), FF::zero()};
+  }
+
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField to_montgomery(const QuarticExtensionField& xs)
   {
     return QuarticExtensionField{
