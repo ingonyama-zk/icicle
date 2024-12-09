@@ -134,6 +134,7 @@ where
     let scalars_b = F::generate_random(size);
     for i in 0..size {
         let result1 = scalars_a[i] + scalars_b[i];
+        // println!("result1: {:?}", result1);
         let result2 = result1 - scalars_b[i];
         assert_eq!(result2, scalars_a[i]);
     }
