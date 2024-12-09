@@ -4,8 +4,9 @@ TODO update for V3
 
 [Poseidon2](https://eprint.iacr.org/2023/323) is a recently released optimized version of Poseidon1. The two versions differ in two crucial points. First, Poseidon is a sponge hash function, while Poseidon2 can be either a sponge or a compression function depending on the use case. Secondly, Poseidon2 is instantiated by new and more efficient linear layers with respect to Poseidon. These changes decrease the number of multiplications in the linear layer by up to 90% and the number of constraints in Plonk circuits by up to 70%. This makes Poseidon2 currently the fastest arithmetization-oriented hash function without lookups.
 
-
 ## Using Poseidon2
+
+(Danny pls update)
 
 ICICLE Poseidon2 is implemented for GPU and parallelization is performed for each state.
 We calculate multiple hash-sums over multiple pre-images in parallel, rather than going block by block over the input vector.
@@ -26,37 +27,28 @@ You can also use your own set of constants as shown [here](https://github.com/in
 
 ### Rust API
 
-This is the most basic way to use the Poseidon2 API.
+This is the most basic way to use the Poseidon2 API. See examples/poseidon2
 
 ```rust
-let test_size = 1 << 10;
-let width = 16;
-let rate = 8;
-let ctx = get_default_device_context();
-let poseidon = Poseidon2::load(width, rate, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();
+let test_size = 4;
+let poseidon = Poseidon2::new::<F>(test_size,None).unwrap();
 let config = HashConfig::default();
+let inputs = vec![F::one(); test_size];
+let input_slice = HostSlice::from_slice(&inputs);
+//digest is a single element
+let out_init:F = F::zero();
+let mut binding = [out_init];
+let out_init_slice = HostSlice::from_mut_slice(&mut binding);
 
-let inputs = vec![F::one(); test_size * rate as usize];
-let outputs = vec![F::zero(); test_size];
-let mut input_slice = HostOrDeviceSlice::on_host(inputs);
-let mut output_slice = HostOrDeviceSlice::on_host(outputs);
+poseidon.hash(input_slice, &config, out_init_slice).unwrap();
+println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 
-poseidon.hash_many::<F>(
-    &mut input_slice,
-    &mut output_slice,
-    test_size as u32,
-    rate as u32,
-    8, // Output length
-    &config,
-)
-.unwrap();
 ```
-
-In the example above `Poseidon2::load(width, rate, MdsType::Default, DiffusionStrategy::Default, &ctx).unwrap();` is used to load the correct constants based on width and curve. Here, the default MDS matrices and diffusion are used. If you want to get a Plonky3 compliant version, set them to `MdsType::Plonky` and `DiffusionStrategy::Montgomery` respectively.
 
 ## The Tree Builder
 
 Similar to Poseidon1, you can use Poseidon2 in a tree builder.
+(DANNY please update)
 
 ```rust
 use icicle_bn254::tree::Bn254TreeBuilder;
