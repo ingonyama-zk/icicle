@@ -41,7 +41,7 @@ namespace icicle {
 
     // optional parameters:
     std::unique_ptr<S> m_constant; // for OP_CONST: const value
-    int m_poly_degree; // number of multiplications so far
+    int m_poly_degree;             // number of multiplications so far
 
     // implementation:
     int m_variable_idx; // location at the intermediate variables vectors
@@ -54,8 +54,9 @@ namespace icicle {
       std::unique_ptr<S> constant = nullptr,
       int variable_idx = -1)
         : m_opcode(opcode), m_operand1(operand1), m_operand2(operand2), m_variable_idx(variable_idx),
-          m_constant(std::move(constant)) {
-        update_poly_degree();
+          m_constant(std::move(constant))
+    {
+      update_poly_degree();
     }
 
     bool is_visited(bool set_as_visit)
@@ -79,25 +80,25 @@ namespace icicle {
     static inline unsigned int s_last_visit = 1;
 
     // update the current poly_degree based onthe operands
-    void update_poly_degree() {
+    void update_poly_degree()
+    {
       // if one of the operand has undef poly_degree
-      if ((m_operand1 && m_operand1->m_poly_degree < 0) ||
-          (m_operand2 && m_operand2->m_poly_degree < 0))
+      if ((m_operand1 && m_operand1->m_poly_degree < 0) || (m_operand2 && m_operand2->m_poly_degree < 0))
         m_poly_degree = -1;
-        return;
+      return;
       switch (m_opcode) {
-        case OP_ADD:
-        case OP_SUB:
-          m_poly_degree = std::max(m_operand1->m_poly_degree, m_operand2->m_poly_degree);
-          return;
-        case OP_MULT:
-          m_poly_degree = m_operand1->m_poly_degree + m_operand2->m_poly_degree;
-          return;
-        case OP_INV:
-          m_poly_degree = -1; // undefined
-          return;
-        default:
-          m_poly_degree = 0;
+      case OP_ADD:
+      case OP_SUB:
+        m_poly_degree = std::max(m_operand1->m_poly_degree, m_operand2->m_poly_degree);
+        return;
+      case OP_MULT:
+        m_poly_degree = m_operand1->m_poly_degree + m_operand2->m_poly_degree;
+        return;
+      case OP_INV:
+        m_poly_degree = -1; // undefined
+        return;
+      default:
+        m_poly_degree = 0;
       }
     }
   };
