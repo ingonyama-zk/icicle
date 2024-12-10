@@ -5,7 +5,8 @@ members = [
     "ntt",
     "polynomials",
     "arkworks-icicle-conversions",
-    "hash-and-merkle", "poseidon2",
+    "hash-and-merkle", 
+    "poseidon2",
 ]
 
 [workspace.dependencies]

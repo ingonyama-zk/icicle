@@ -12,3 +12,11 @@ icicle-m31 = {path = "../../../wrappers/rust/icicle-fields/icicle-m31" }
 hex = "0.4" 
 rand = "0.8"
 clap = { version = "<=4.4.12", features = ["derive"] }
+
+[features]
+cuda = [
+  "icicle-runtime/cuda_backend",
+  "icicle-hash/cuda_backend",
+  "icicle-babybear/cuda_backend",
+  "icicle-m31/cuda_backend",
+]
