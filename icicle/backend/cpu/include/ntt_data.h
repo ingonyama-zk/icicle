@@ -5,6 +5,7 @@
 
 // #include <_types/_uint32_t.h>
 #include <csetjmp>
+#include <cstdint>
 #include <sys/types.h>
 #include <deque>
 #include <functional>
@@ -25,8 +26,8 @@ namespace ntt_cpu {
    * layer, 13 for the second, and 0 for the third.
    */
   constexpr uint32_t layers_sub_logn[31][3] = {
-    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},  {4, 3, 0},
-    {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},  {5, 5, 5},
+    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},  {2, 5, 0},
+    {3, 5, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},  {5, 5, 5},
     {5, 5, 6},   {5, 5, 7},   {5, 5, 8},   {5, 5, 9},   {5, 5, 10},  {5, 5, 11},  {5, 5, 12}, {12, 11, 0},
     {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
 
@@ -79,11 +80,12 @@ namespace ntt_cpu {
     const NTTConfig<S>& config;                  // Configuration settings for the NTT computation.
     const NTTDir direction;                      // Direction of the NTT computation (forward or inverse).
     const bool is_parallel;                      // Flag indicating if the NTT computation is parallel.
+    const uint32_t nof_elems_per_cacheline;            // Number of elements per cacheline
     uint32_t coset_stride = 0; // Stride value for coset multiplication, retrieved from the NTT domain.
     std::unique_ptr<S[]> arbitrary_coset = nullptr; // Array holding arbitrary coset values if needed.
-    NttData(uint32_t logn, E* elements, const NTTConfig<S>& config, NTTDir direction, bool is_parallel)
+    NttData(uint32_t logn, E* elements, const NTTConfig<S>& config, NTTDir direction, bool is_parallel, const uint32_t nof_elems_per_cacheline)
         : logn(logn), size(1 << logn), ntt_sub_hierarchies(logn), elements(elements), config(config),
-          direction(direction), is_parallel(is_parallel)
+          direction(direction), is_parallel(is_parallel), nof_elems_per_cacheline(nof_elems_per_cacheline)
     {
       if (config.coset_gen != S::one()) {
         try {

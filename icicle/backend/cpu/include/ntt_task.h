@@ -30,6 +30,12 @@ namespace ntt_cpu {
     void execute();
     NttTaskCoordinates* get_coordinates() const
     {
+      ICICLE_LOG_DEBUG << "get_coordinates: << " 
+                       << ntt_task_coordinates->hierarchy_1_layer_idx << ", "
+                       << ntt_task_coordinates->hierarchy_1_subntt_idx << ", " 
+                       << ntt_task_coordinates->hierarchy_0_layer_idx << ", " 
+                       << ntt_task_coordinates->hierarchy_0_block_idx << ", "
+                       << ntt_task_coordinates->hierarchy_0_subntt_idx;
       return ntt_task_coordinates;
     } // Returns a pointer to the `NttTaskCoordinates` structure that specifies the task's position within the NTT
       // computation hierarchy.
@@ -618,627 +624,636 @@ namespace ntt_cpu {
       }
     }
 
-    for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
-      E* current_elements =
-        ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
+      ICICLE_LOG_DEBUG << "index_in_mem[0] = " << index_in_mem[0];
+      for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
+        E* current_elements =
+          ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
 
-      if (need_to_apply_coset_multiplication) {
-        apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
+        if (need_to_apply_coset_multiplication) {
+          apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
+        }
+
+        /*  Stage s00  */
+        temp_0[0] = current_elements[index_in_mem[0]];
+        temp_0[1] = current_elements[index_in_mem[2]];
+        temp_0[2] = current_elements[index_in_mem[4]];
+        temp_0[3] = current_elements[index_in_mem[6]];
+        temp_0[4] = current_elements[index_in_mem[8]];
+        temp_0[5] = current_elements[index_in_mem[10]];
+        temp_0[6] = current_elements[index_in_mem[12]];
+        temp_0[7] = current_elements[index_in_mem[14]];
+        temp_0[8] = current_elements[index_in_mem[16]];
+        temp_0[9] = current_elements[index_in_mem[18]];
+        temp_0[10] = current_elements[index_in_mem[20]];
+        temp_0[11] = current_elements[index_in_mem[22]];
+        temp_0[12] = current_elements[index_in_mem[24]];
+        temp_0[13] = current_elements[index_in_mem[26]];
+        temp_0[14] = current_elements[index_in_mem[28]];
+        temp_0[15] = current_elements[index_in_mem[30]];
+        temp_0[16] = current_elements[index_in_mem[1]];
+        temp_0[17] = current_elements[index_in_mem[3]];
+        temp_0[18] = current_elements[index_in_mem[5]];
+        temp_0[19] = current_elements[index_in_mem[7]];
+        temp_0[20] = current_elements[index_in_mem[9]];
+        temp_0[21] = current_elements[index_in_mem[11]];
+        temp_0[22] = current_elements[index_in_mem[13]];
+        temp_0[23] = current_elements[index_in_mem[15]];
+        temp_0[24] = current_elements[index_in_mem[17]];
+        temp_0[25] = current_elements[index_in_mem[19]];
+        temp_0[26] = current_elements[index_in_mem[21]];
+        temp_0[27] = current_elements[index_in_mem[23]];
+        temp_0[28] = current_elements[index_in_mem[25]];
+        temp_0[29] = current_elements[index_in_mem[27]];
+        temp_0[30] = current_elements[index_in_mem[29]];
+        temp_0[31] = current_elements[index_in_mem[31]];
+
+        /*  Stage s01  */
+
+        temp_1[0] = temp_0[0];
+        temp_1[1] = temp_0[2];
+        temp_1[2] = temp_0[4];
+        temp_1[3] = temp_0[6];
+        temp_1[4] = temp_0[8];
+        temp_1[5] = temp_0[10];
+        temp_1[6] = temp_0[12];
+        temp_1[7] = temp_0[14];
+        temp_1[8] = temp_0[1];
+        temp_1[9] = temp_0[3];
+        temp_1[10] = temp_0[5];
+        temp_1[11] = temp_0[7];
+        temp_1[12] = temp_0[9];
+        temp_1[13] = temp_0[11];
+        temp_1[14] = temp_0[13];
+        temp_1[15] = temp_0[15];
+        temp_1[16] = temp_0[16] + temp_0[24];
+        temp_1[17] = temp_0[17] + temp_0[25];
+        temp_1[18] = temp_0[18] + temp_0[26];
+        temp_1[19] = temp_0[19] + temp_0[27];
+        temp_1[20] = temp_0[20] + temp_0[28];
+        temp_1[21] = temp_0[21] + temp_0[29];
+        temp_1[22] = temp_0[22] + temp_0[30];
+        temp_1[23] = temp_0[23] + temp_0[31];
+        temp_1[24] = temp_0[16] - temp_0[24];
+        temp_1[25] = temp_0[17] - temp_0[25];
+        temp_1[26] = temp_0[18] - temp_0[26];
+        temp_1[27] = temp_0[19] - temp_0[27];
+        temp_1[28] = temp_0[20] - temp_0[28];
+        temp_1[29] = temp_0[21] - temp_0[29];
+        temp_1[30] = temp_0[22] - temp_0[30];
+        temp_1[31] = temp_0[23] - temp_0[31];
+
+        /*  Stage s02  */
+
+        temp_0[0] = temp_1[0];
+        temp_0[1] = temp_1[2];
+        temp_0[2] = temp_1[4];
+        temp_0[3] = temp_1[6];
+        temp_0[4] = temp_1[1];
+        temp_0[5] = temp_1[3];
+        temp_0[6] = temp_1[5];
+        temp_0[7] = temp_1[7];
+        temp_0[8] = temp_1[8];
+        temp_0[9] = temp_1[9];
+        temp_0[10] = temp_1[10];
+        temp_0[11] = temp_1[11];
+        temp_0[12] = temp_1[12];
+        temp_0[13] = temp_1[13];
+        temp_0[14] = temp_1[14];
+        temp_0[15] = temp_1[15];
+        temp_0[16] = temp_1[16];
+        temp_0[17] = temp_1[17];
+        temp_0[18] = temp_1[18];
+        temp_0[19] = temp_1[19];
+        temp_0[20] = temp_1[20];
+        temp_0[21] = temp_1[21];
+        temp_0[22] = temp_1[22];
+        temp_0[23] = temp_1[23];
+        temp_0[24] = temp_1[24];
+        temp_0[25] = temp_1[25];
+        temp_0[26] = temp_1[26];
+        temp_0[27] = temp_1[27];
+        temp_0[28] = temp_1[31];
+        temp_0[29] = temp_1[30];
+        temp_0[30] = temp_1[29];
+        temp_0[31] = temp_1[28];
+
+        /*  Stage s03  */
+
+        temp_1[0] = temp_0[0];
+        temp_1[1] = temp_0[1];
+        temp_1[2] = temp_0[2];
+        temp_1[3] = temp_0[3];
+        temp_1[4] = temp_0[4];
+        temp_1[5] = temp_0[5];
+        temp_1[6] = temp_0[6];
+        temp_1[7] = temp_0[7];
+        temp_1[8] = temp_0[12] + temp_0[8];
+        temp_1[9] = temp_0[13] + temp_0[9];
+        temp_1[10] = temp_0[10] + temp_0[14];
+        temp_1[11] = temp_0[11] + temp_0[15];
+        temp_1[12] = temp_0[8] - temp_0[12];
+        temp_1[13] = temp_0[9] - temp_0[13];
+        temp_1[14] = temp_0[10] - temp_0[14];
+        temp_1[15] = temp_0[11] - temp_0[15];
+        temp_1[16] = temp_0[16] + temp_0[20];
+        temp_1[17] = temp_0[17] + temp_0[21];
+        temp_1[18] = temp_0[18] + temp_0[22];
+        temp_1[19] = temp_0[19] + temp_0[23];
+        temp_1[20] = temp_0[16] - temp_0[20];
+        temp_1[21] = temp_0[17] - temp_0[21];
+        temp_1[22] = temp_0[18] - temp_0[22];
+        temp_1[23] = temp_0[19] - temp_0[23];
+        temp_1[24] = temp_0[24] + temp_0[28];
+        temp_1[25] = temp_0[25] + temp_0[29];
+        temp_1[26] = temp_0[26] + temp_0[30];
+        temp_1[27] = temp_0[27] + temp_0[31];
+        temp_1[28] = temp_0[24] - temp_0[28];
+        temp_1[29] = temp_0[25] - temp_0[29];
+        temp_1[30] = temp_0[26] - temp_0[30];
+        temp_1[31] = temp_0[27] - temp_0[31];
+
+        /*  Stage s04  */
+
+        temp_0[0] = temp_1[0];
+        temp_0[1] = temp_1[2];
+        temp_0[2] = temp_1[1];
+        temp_0[3] = temp_1[3];
+        temp_0[4] = temp_1[4];
+        temp_0[5] = temp_1[5];
+        temp_0[6] = temp_1[6];
+        temp_0[7] = temp_1[7];
+        temp_0[8] = temp_1[8];
+        temp_0[9] = temp_1[9];
+        temp_0[10] = temp_1[10];
+        temp_0[11] = temp_1[11];
+        temp_0[12] = temp_1[12];
+        temp_0[13] = temp_1[13];
+        temp_0[14] = temp_1[15];
+        temp_0[15] = temp_1[14];
+        temp_0[16] = temp_1[16];
+        temp_0[17] = temp_1[17];
+        temp_0[18] = temp_1[18];
+        temp_0[19] = temp_1[19];
+        temp_0[20] = temp_1[20];
+        temp_0[21] = temp_1[21];
+        temp_0[22] = temp_1[23];
+        temp_0[23] = temp_1[22];
+        temp_0[24] = temp_1[24];
+        temp_0[25] = temp_1[27];
+        temp_0[26] = temp_1[26];
+        temp_0[27] = temp_1[25];
+        temp_0[28] = temp_1[28];
+        temp_0[29] = temp_1[31];
+        temp_0[30] = temp_1[30];
+        temp_0[31] = temp_1[29];
+
+        /*  Stage s05  */
+
+        temp_1[0] = temp_0[0];
+        temp_1[1] = temp_0[1];
+        temp_1[2] = temp_0[2];
+        temp_1[3] = temp_0[3];
+        temp_1[4] = temp_0[4] + temp_0[6];
+        temp_1[5] = temp_0[5] + temp_0[7];
+        temp_1[6] = temp_0[4] - temp_0[6];
+        temp_1[7] = temp_0[5] - temp_0[7];
+        temp_1[8] = temp_0[10] + temp_0[8];
+        temp_1[9] = temp_0[11] + temp_0[9];
+        temp_1[10] = temp_0[8] - temp_0[10];
+        temp_1[11] = temp_0[9] - temp_0[11];
+        temp_1[12] = temp_0[12] + temp_0[14];
+        temp_1[13] = temp_0[13] + temp_0[15];
+        temp_1[14] = temp_0[12] - temp_0[14];
+        temp_1[15] = temp_0[13] - temp_0[15];
+        temp_1[16] = temp_0[16] + temp_0[18];
+        temp_1[17] = temp_0[17] + temp_0[19];
+        temp_1[18] = temp_0[16] - temp_0[18];
+        temp_1[19] = temp_0[17] - temp_0[19];
+        temp_1[20] = temp_0[20] + temp_0[22];
+        temp_1[21] = temp_0[21] + temp_0[23];
+        temp_1[22] = temp_0[20] - temp_0[22];
+        temp_1[23] = temp_0[21] - temp_0[23];
+        temp_1[24] = temp_0[24];
+        temp_1[25] = temp_0[25];
+        temp_1[26] = temp_0[26];
+        temp_1[27] = temp_0[27];
+        temp_1[28] = temp_0[24] + temp_0[26];
+        temp_1[29] = temp_0[25] + temp_0[27];
+        temp_1[30] = temp_0[28];
+        temp_1[31] = temp_0[29];
+        temp_1[32] = temp_0[30];
+        temp_1[33] = temp_0[31];
+        temp_1[34] = temp_0[28] + temp_0[30];
+        temp_1[35] = temp_0[29] + temp_0[31];
+
+        /*  Stage s06  */
+
+        temp_0[0] = temp_1[0] + temp_1[1];
+        temp_0[1] = temp_1[0] - temp_1[1];
+        temp_0[2] = temp_1[2] + temp_1[3];
+        temp_0[3] = temp_1[2] - temp_1[3];
+        temp_0[4] = temp_1[4] + temp_1[5];
+        temp_0[5] = temp_1[4] - temp_1[5];
+        temp_0[6] = temp_1[6] + temp_1[7];
+        temp_0[7] = temp_1[6] - temp_1[7];
+        temp_0[8] = temp_1[8] + temp_1[9];
+        temp_0[9] = temp_1[8] - temp_1[9];
+        temp_0[10] = temp_1[10] + temp_1[11];
+        temp_0[11] = temp_1[10] - temp_1[11];
+        temp_0[12] = temp_1[12];
+        temp_0[13] = temp_1[13];
+        temp_0[14] = temp_1[14];
+        temp_0[15] = temp_1[15];
+        temp_0[16] = temp_1[16] + temp_1[17];
+        temp_0[17] = temp_1[16] - temp_1[17];
+        temp_0[18] = temp_1[18] + temp_1[19];
+        temp_0[19] = temp_1[18] - temp_1[19];
+        temp_0[20] = temp_1[20];
+        temp_0[21] = temp_1[21];
+        temp_0[22] = temp_1[22];
+        temp_0[23] = temp_1[23];
+        temp_0[24] = temp_1[24];
+        temp_0[25] = temp_1[25];
+        temp_0[26] = temp_1[26];
+        temp_0[27] = temp_1[27];
+        temp_0[28] = temp_1[28];
+        temp_0[29] = temp_1[29];
+        temp_0[30] = temp_1[30];
+        temp_0[31] = temp_1[31];
+        temp_0[32] = temp_1[32];
+        temp_0[33] = temp_1[33];
+        temp_0[34] = temp_1[34];
+        temp_0[35] = temp_1[35];
+
+        /*  Stage s07  */
+
+        temp_1[0] = temp_0[0];
+        temp_1[1] = temp_0[1];
+        temp_1[2] = temp_0[2];
+        temp_1[3] = temp_0[3];
+        temp_1[4] = temp_0[4];
+        temp_1[5] = temp_0[5];
+        temp_1[6] = temp_0[6];
+        temp_1[7] = temp_0[7];
+        temp_1[8] = temp_0[8];
+        temp_1[9] = temp_0[9];
+        temp_1[10] = temp_0[10];
+        temp_1[11] = temp_0[11];
+        temp_1[12] = temp_0[12];
+        temp_1[13] = temp_0[13];
+        temp_1[14] = temp_0[12] + temp_0[13];
+        temp_1[15] = temp_0[14];
+        temp_1[16] = temp_0[15];
+        temp_1[17] = temp_0[14] + temp_0[15];
+        temp_1[18] = temp_0[16];
+        temp_1[19] = temp_0[17];
+        temp_1[20] = temp_0[18];
+        temp_1[21] = temp_0[19];
+        temp_1[22] = temp_0[20];
+        temp_1[23] = temp_0[21];
+        temp_1[24] = temp_0[20] + temp_0[21];
+        temp_1[25] = temp_0[22];
+        temp_1[26] = temp_0[23];
+        temp_1[27] = temp_0[22] + temp_0[23];
+        temp_1[28] = temp_0[24];
+        temp_1[29] = temp_0[25];
+        temp_1[30] = temp_0[24] + temp_0[25];
+        temp_1[31] = temp_0[26];
+        temp_1[32] = temp_0[27];
+        temp_1[33] = temp_0[26] + temp_0[27];
+        temp_1[34] = temp_0[28];
+        temp_1[35] = temp_0[29];
+        temp_1[36] = temp_0[28] + temp_0[29];
+        temp_1[37] = temp_0[30];
+        temp_1[38] = temp_0[31];
+        temp_1[39] = temp_0[30] + temp_0[31];
+        temp_1[40] = temp_0[32];
+        temp_1[41] = temp_0[33];
+        temp_1[42] = temp_0[32] + temp_0[33];
+        temp_1[43] = temp_0[34];
+        temp_1[44] = temp_0[35];
+        temp_1[45] = temp_0[34] + temp_0[35];
+
+        /*  Stage s08  */
+
+        // multiply by winograd twiddles, skip if twiddle is 1
+        for (uint32_t i = 0; i < 3; i++) {
+          temp_0[i] = temp_1[i];
+        }
+        temp_0[3] = temp_1[3] * twiddles[3];
+        temp_0[4] = temp_1[4];
+        for (uint32_t i = 5; i < 8; i++) {
+          temp_0[i] = temp_1[i] * twiddles[i];
+        }
+        temp_0[8] = temp_1[8];
+        for (uint32_t i = 9; i < 18; i++) {
+          temp_0[i] = temp_1[i] * twiddles[i];
+        }
+        temp_0[18] = temp_1[18];
+        for (uint32_t i = 19; i < 46; i++) {
+          temp_0[i] = temp_1[i] * twiddles[i];
+        }
+
+        /*  Stage s09  */
+
+        temp_1[0] = temp_0[0];
+        temp_1[1] = temp_0[1];
+        temp_1[2] = temp_0[2];
+        temp_1[3] = temp_0[3];
+        temp_1[4] = temp_0[4];
+        temp_1[5] = temp_0[5];
+        temp_1[6] = temp_0[6];
+        temp_1[7] = temp_0[7];
+        temp_1[8] = temp_0[8];
+        temp_1[9] = temp_0[9];
+        temp_1[10] = temp_0[10];
+        temp_1[11] = temp_0[11];
+        temp_1[12] = temp_0[12] + temp_0[14];
+        temp_1[13] = temp_0[13] + temp_0[14];
+        temp_1[14] = temp_0[15] + temp_0[17];
+        temp_1[15] = temp_0[16] + temp_0[17];
+        temp_1[16] = temp_0[18];
+        temp_1[17] = temp_0[19];
+        temp_1[18] = temp_0[20];
+        temp_1[19] = temp_0[21];
+        temp_1[20] = temp_0[22] + temp_0[24];
+        temp_1[21] = temp_0[23] + temp_0[24];
+        temp_1[22] = temp_0[25] + temp_0[27];
+        temp_1[23] = temp_0[26] + temp_0[27];
+        temp_1[24] = temp_0[28] + temp_0[30];
+        temp_1[25] = temp_0[29] + temp_0[30];
+        temp_1[26] = temp_0[31] + temp_0[33];
+        temp_1[27] = temp_0[32] + temp_0[33];
+        temp_1[28] = temp_0[34] + temp_0[36];
+        temp_1[29] = temp_0[35] + temp_0[36];
+        temp_1[30] = temp_0[37] + temp_0[39];
+        temp_1[31] = temp_0[38] + temp_0[39];
+        temp_1[32] = temp_0[40] + temp_0[42];
+        temp_1[33] = temp_0[41] + temp_0[42];
+        temp_1[34] = temp_0[43] + temp_0[45];
+        temp_1[35] = temp_0[44] + temp_0[45];
+
+        /*  Stage s10  */
+
+        temp_0[0] = temp_1[0];
+        temp_0[1] = temp_1[1];
+        temp_0[2] = temp_1[2];
+        temp_0[3] = temp_1[3];
+        temp_0[4] = temp_1[4];
+        temp_0[5] = temp_1[5];
+        temp_0[6] = temp_1[6] + temp_1[7];
+        temp_0[7] = temp_1[6] - temp_1[7];
+        temp_0[8] = temp_1[8];
+        temp_0[9] = temp_1[9];
+        temp_0[10] = temp_1[10] + temp_1[11];
+        temp_0[11] = temp_1[10] - temp_1[11];
+        temp_0[12] = temp_1[12];
+        temp_0[13] = temp_1[13];
+        temp_0[14] = temp_1[14];
+        temp_0[15] = temp_1[15];
+        temp_0[16] = temp_1[16];
+        temp_0[17] = temp_1[17];
+        temp_0[18] = temp_1[18] + temp_1[19];
+        temp_0[19] = temp_1[18] - temp_1[19];
+        temp_0[20] = temp_1[20];
+        temp_0[21] = temp_1[21];
+        temp_0[22] = temp_1[22];
+        temp_0[23] = temp_1[23];
+        temp_0[24] = temp_1[24];
+        temp_0[25] = temp_1[25];
+        temp_0[26] = temp_1[26];
+        temp_0[27] = temp_1[27];
+        temp_0[28] = temp_1[28];
+        temp_0[29] = temp_1[29];
+        temp_0[30] = temp_1[30];
+        temp_0[31] = temp_1[31];
+        temp_0[32] = temp_1[32];
+        temp_0[33] = temp_1[33];
+        temp_0[34] = temp_1[34];
+        temp_0[35] = temp_1[35];
+
+        /*  Stage s11  */
+
+        temp_1[0] = temp_0[0] + temp_0[2];
+        temp_1[1] = temp_0[1] + temp_0[3];
+        temp_1[2] = temp_0[0] - temp_0[2];
+        temp_1[3] = temp_0[1] - temp_0[3];
+        temp_1[4] = temp_0[4];
+        temp_1[5] = temp_0[5];
+        temp_1[6] = temp_0[6];
+        temp_1[7] = temp_0[7];
+        temp_1[8] = temp_0[8];
+        temp_1[9] = temp_0[9];
+        temp_1[10] = temp_0[10];
+        temp_1[11] = temp_0[11];
+        temp_1[12] = temp_0[12] + temp_0[14];
+        temp_1[13] = temp_0[13] + temp_0[15];
+        temp_1[14] = temp_0[12] - temp_0[14];
+        temp_1[15] = temp_0[13] - temp_0[15];
+        temp_1[16] = temp_0[16];
+        temp_1[17] = temp_0[17];
+        temp_1[18] = temp_0[18];
+        temp_1[19] = temp_0[19];
+        temp_1[20] = temp_0[20] + temp_0[22];
+        temp_1[21] = temp_0[21] + temp_0[23];
+        temp_1[22] = temp_0[20] - temp_0[22];
+        temp_1[23] = temp_0[21] - temp_0[23];
+        temp_1[24] = temp_0[26] + temp_0[28];
+        temp_1[25] = temp_0[27] + temp_0[29];
+        temp_1[26] = temp_0[24] + temp_0[28];
+        temp_1[27] = temp_0[25] + temp_0[29];
+        temp_1[28] = temp_0[32] + temp_0[34];
+        temp_1[29] = temp_0[33] + temp_0[35];
+        temp_1[30] = temp_0[30] + temp_0[34];
+        temp_1[31] = temp_0[31] + temp_0[35];
+
+        /*  Stage s12  */
+
+        temp_0[0] = temp_1[0];
+        temp_0[1] = temp_1[1];
+        temp_0[2] = temp_1[2];
+        temp_0[3] = temp_1[3];
+        temp_0[4] = temp_1[4];
+        temp_0[5] = temp_1[6];
+        temp_0[6] = temp_1[5];
+        temp_0[7] = temp_1[7];
+        temp_0[8] = temp_1[8];
+        temp_0[9] = temp_1[10];
+        temp_0[10] = temp_1[9];
+        temp_0[11] = temp_1[11];
+        temp_0[12] = temp_1[12];
+        temp_0[13] = temp_1[13];
+        temp_0[14] = temp_1[15];
+        temp_0[15] = temp_1[14];
+        temp_0[16] = temp_1[16];
+        temp_0[17] = temp_1[18];
+        temp_0[18] = temp_1[17];
+        temp_0[19] = temp_1[19];
+        temp_0[20] = temp_1[20];
+        temp_0[21] = temp_1[21];
+        temp_0[22] = temp_1[23];
+        temp_0[23] = temp_1[22];
+        temp_0[24] = temp_1[26];
+        temp_0[25] = temp_1[25];
+        temp_0[26] = temp_1[24];
+        temp_0[27] = temp_1[27];
+        temp_0[28] = temp_1[30];
+        temp_0[29] = temp_1[29];
+        temp_0[30] = temp_1[28];
+        temp_0[31] = temp_1[31];
+
+        /*  Stage s13  */
+
+        temp_1[0] = temp_0[0] + temp_0[4];
+        temp_1[1] = temp_0[1] + temp_0[5];
+        temp_1[2] = temp_0[2] + temp_0[6];
+        temp_1[3] = temp_0[3] + temp_0[7];
+        temp_1[4] = temp_0[0] - temp_0[4];
+        temp_1[5] = temp_0[1] - temp_0[5];
+        temp_1[6] = temp_0[2] - temp_0[6];
+        temp_1[7] = temp_0[3] - temp_0[7];
+        temp_1[8] = temp_0[8];
+        temp_1[9] = temp_0[9];
+        temp_1[10] = temp_0[10];
+        temp_1[11] = temp_0[11];
+        temp_1[12] = temp_0[12];
+        temp_1[13] = temp_0[13];
+        temp_1[14] = temp_0[14];
+        temp_1[15] = temp_0[15];
+        temp_1[16] = temp_0[16];
+        temp_1[17] = temp_0[17];
+        temp_1[18] = temp_0[18];
+        temp_1[19] = temp_0[19];
+        temp_1[20] = temp_0[20];
+        temp_1[21] = temp_0[21];
+        temp_1[22] = temp_0[22];
+        temp_1[23] = temp_0[23];
+        temp_1[24] = temp_0[24] + temp_0[28];
+        temp_1[25] = temp_0[25] + temp_0[29];
+        temp_1[26] = temp_0[26] + temp_0[30];
+        temp_1[27] = temp_0[27] + temp_0[31];
+        temp_1[28] = temp_0[24] - temp_0[28];
+        temp_1[29] = temp_0[25] - temp_0[29];
+        temp_1[30] = temp_0[26] - temp_0[30];
+        temp_1[31] = temp_0[27] - temp_0[31];
+
+        /*  Stage s14  */
+
+        temp_0[0] = temp_1[0];
+        temp_0[1] = temp_1[1];
+        temp_0[2] = temp_1[2];
+        temp_0[3] = temp_1[3];
+        temp_0[4] = temp_1[4];
+        temp_0[5] = temp_1[5];
+        temp_0[6] = temp_1[6];
+        temp_0[7] = temp_1[7];
+        temp_0[8] = temp_1[8];
+        temp_0[9] = temp_1[12];
+        temp_0[10] = temp_1[9];
+        temp_0[11] = temp_1[13];
+        temp_0[12] = temp_1[10];
+        temp_0[13] = temp_1[14];
+        temp_0[14] = temp_1[11];
+        temp_0[15] = temp_1[15];
+        temp_0[16] = temp_1[16];
+        temp_0[17] = temp_1[20];
+        temp_0[18] = temp_1[17];
+        temp_0[19] = temp_1[21];
+        temp_0[20] = temp_1[18];
+        temp_0[21] = temp_1[22];
+        temp_0[22] = temp_1[19];
+        temp_0[23] = temp_1[23];
+        temp_0[24] = temp_1[24];
+        temp_0[25] = temp_1[25];
+        temp_0[26] = temp_1[26];
+        temp_0[27] = temp_1[27];
+        temp_0[28] = temp_1[31];
+        temp_0[29] = temp_1[30];
+        temp_0[30] = temp_1[29];
+        temp_0[31] = temp_1[28];
+
+        /*  Stage s15  */
+
+        temp_1[0] = temp_0[0] + temp_0[8];
+        temp_1[1] = temp_0[1] + temp_0[9];
+        temp_1[2] = temp_0[10] + temp_0[2];
+        temp_1[3] = temp_0[11] + temp_0[3];
+        temp_1[4] = temp_0[12] + temp_0[4];
+        temp_1[5] = temp_0[13] + temp_0[5];
+        temp_1[6] = temp_0[14] + temp_0[6];
+        temp_1[7] = temp_0[15] + temp_0[7];
+        temp_1[8] = temp_0[0] - temp_0[8];
+        temp_1[9] = temp_0[1] - temp_0[9];
+        temp_1[10] = temp_0[2] - temp_0[10];
+        temp_1[11] = temp_0[3] - temp_0[11];
+        temp_1[12] = temp_0[4] - temp_0[12];
+        temp_1[13] = temp_0[5] - temp_0[13];
+        temp_1[14] = temp_0[6] - temp_0[14];
+        temp_1[15] = temp_0[7] - temp_0[15];
+        temp_1[16] = temp_0[16];
+        temp_1[17] = temp_0[24];
+        temp_1[18] = temp_0[17];
+        temp_1[19] = temp_0[25];
+        temp_1[20] = temp_0[18];
+        temp_1[21] = temp_0[26];
+        temp_1[22] = temp_0[19];
+        temp_1[23] = temp_0[27];
+        temp_1[24] = temp_0[20];
+        temp_1[25] = temp_0[28];
+        temp_1[26] = temp_0[21];
+        temp_1[27] = temp_0[29];
+        temp_1[28] = temp_0[22];
+        temp_1[29] = temp_0[30];
+        temp_1[30] = temp_0[23];
+        temp_1[31] = temp_0[31];
+
+        /*  Stage s16  */
+
+        current_elements[index_in_mem[0]] = temp_1[0] + temp_1[16];
+        current_elements[index_in_mem[1]] = temp_1[1] + temp_1[17];
+        current_elements[index_in_mem[2]] = temp_1[18] + temp_1[2];
+        current_elements[index_in_mem[3]] = temp_1[19] + temp_1[3];
+        current_elements[index_in_mem[4]] = temp_1[20] + temp_1[4];
+        current_elements[index_in_mem[5]] = temp_1[21] + temp_1[5];
+        current_elements[index_in_mem[6]] = temp_1[22] + temp_1[6];
+        current_elements[index_in_mem[7]] = temp_1[23] + temp_1[7];
+        current_elements[index_in_mem[8]] = temp_1[24] + temp_1[8];
+        current_elements[index_in_mem[9]] = temp_1[25] + temp_1[9];
+        current_elements[index_in_mem[10]] = temp_1[10] + temp_1[26];
+        current_elements[index_in_mem[11]] = temp_1[11] + temp_1[27];
+        current_elements[index_in_mem[12]] = temp_1[12] + temp_1[28];
+        current_elements[index_in_mem[13]] = temp_1[13] + temp_1[29];
+        current_elements[index_in_mem[14]] = temp_1[14] + temp_1[30];
+        current_elements[index_in_mem[15]] = temp_1[15] + temp_1[31];
+        current_elements[index_in_mem[16]] = temp_1[0] - temp_1[16];
+        current_elements[index_in_mem[17]] = temp_1[1] - temp_1[17];
+        current_elements[index_in_mem[18]] = temp_1[2] - temp_1[18];
+        current_elements[index_in_mem[19]] = temp_1[3] - temp_1[19];
+        current_elements[index_in_mem[20]] = temp_1[4] - temp_1[20];
+        current_elements[index_in_mem[21]] = temp_1[5] - temp_1[21];
+        current_elements[index_in_mem[22]] = temp_1[6] - temp_1[22];
+        current_elements[index_in_mem[23]] = temp_1[7] - temp_1[23];
+        current_elements[index_in_mem[24]] = temp_1[8] - temp_1[24];
+        current_elements[index_in_mem[25]] = temp_1[9] - temp_1[25];
+        current_elements[index_in_mem[26]] = temp_1[10] - temp_1[26];
+        current_elements[index_in_mem[27]] = temp_1[11] - temp_1[27];
+        current_elements[index_in_mem[28]] = temp_1[12] - temp_1[28];
+        current_elements[index_in_mem[29]] = temp_1[13] - temp_1[29];
+        current_elements[index_in_mem[30]] = temp_1[14] - temp_1[30];
+        current_elements[index_in_mem[31]] = temp_1[15] - temp_1[31];
+
+        if (last_layer && ntt_data->direction == NTTDir::kInverse) {
+          S inv_size = S::inv_log_size(ntt_data->logn);
+          for (uint64_t i = 0; i < 32; ++i) {
+            current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+          }
+        }
       }
-
-      /*  Stage s00  */
-      temp_0[0] = current_elements[index_in_mem[0]];
-      temp_0[1] = current_elements[index_in_mem[2]];
-      temp_0[2] = current_elements[index_in_mem[4]];
-      temp_0[3] = current_elements[index_in_mem[6]];
-      temp_0[4] = current_elements[index_in_mem[8]];
-      temp_0[5] = current_elements[index_in_mem[10]];
-      temp_0[6] = current_elements[index_in_mem[12]];
-      temp_0[7] = current_elements[index_in_mem[14]];
-      temp_0[8] = current_elements[index_in_mem[16]];
-      temp_0[9] = current_elements[index_in_mem[18]];
-      temp_0[10] = current_elements[index_in_mem[20]];
-      temp_0[11] = current_elements[index_in_mem[22]];
-      temp_0[12] = current_elements[index_in_mem[24]];
-      temp_0[13] = current_elements[index_in_mem[26]];
-      temp_0[14] = current_elements[index_in_mem[28]];
-      temp_0[15] = current_elements[index_in_mem[30]];
-      temp_0[16] = current_elements[index_in_mem[1]];
-      temp_0[17] = current_elements[index_in_mem[3]];
-      temp_0[18] = current_elements[index_in_mem[5]];
-      temp_0[19] = current_elements[index_in_mem[7]];
-      temp_0[20] = current_elements[index_in_mem[9]];
-      temp_0[21] = current_elements[index_in_mem[11]];
-      temp_0[22] = current_elements[index_in_mem[13]];
-      temp_0[23] = current_elements[index_in_mem[15]];
-      temp_0[24] = current_elements[index_in_mem[17]];
-      temp_0[25] = current_elements[index_in_mem[19]];
-      temp_0[26] = current_elements[index_in_mem[21]];
-      temp_0[27] = current_elements[index_in_mem[23]];
-      temp_0[28] = current_elements[index_in_mem[25]];
-      temp_0[29] = current_elements[index_in_mem[27]];
-      temp_0[30] = current_elements[index_in_mem[29]];
-      temp_0[31] = current_elements[index_in_mem[31]];
-
-      /*  Stage s01  */
-
-      temp_1[0] = temp_0[0];
-      temp_1[1] = temp_0[2];
-      temp_1[2] = temp_0[4];
-      temp_1[3] = temp_0[6];
-      temp_1[4] = temp_0[8];
-      temp_1[5] = temp_0[10];
-      temp_1[6] = temp_0[12];
-      temp_1[7] = temp_0[14];
-      temp_1[8] = temp_0[1];
-      temp_1[9] = temp_0[3];
-      temp_1[10] = temp_0[5];
-      temp_1[11] = temp_0[7];
-      temp_1[12] = temp_0[9];
-      temp_1[13] = temp_0[11];
-      temp_1[14] = temp_0[13];
-      temp_1[15] = temp_0[15];
-      temp_1[16] = temp_0[16] + temp_0[24];
-      temp_1[17] = temp_0[17] + temp_0[25];
-      temp_1[18] = temp_0[18] + temp_0[26];
-      temp_1[19] = temp_0[19] + temp_0[27];
-      temp_1[20] = temp_0[20] + temp_0[28];
-      temp_1[21] = temp_0[21] + temp_0[29];
-      temp_1[22] = temp_0[22] + temp_0[30];
-      temp_1[23] = temp_0[23] + temp_0[31];
-      temp_1[24] = temp_0[16] - temp_0[24];
-      temp_1[25] = temp_0[17] - temp_0[25];
-      temp_1[26] = temp_0[18] - temp_0[26];
-      temp_1[27] = temp_0[19] - temp_0[27];
-      temp_1[28] = temp_0[20] - temp_0[28];
-      temp_1[29] = temp_0[21] - temp_0[29];
-      temp_1[30] = temp_0[22] - temp_0[30];
-      temp_1[31] = temp_0[23] - temp_0[31];
-
-      /*  Stage s02  */
-
-      temp_0[0] = temp_1[0];
-      temp_0[1] = temp_1[2];
-      temp_0[2] = temp_1[4];
-      temp_0[3] = temp_1[6];
-      temp_0[4] = temp_1[1];
-      temp_0[5] = temp_1[3];
-      temp_0[6] = temp_1[5];
-      temp_0[7] = temp_1[7];
-      temp_0[8] = temp_1[8];
-      temp_0[9] = temp_1[9];
-      temp_0[10] = temp_1[10];
-      temp_0[11] = temp_1[11];
-      temp_0[12] = temp_1[12];
-      temp_0[13] = temp_1[13];
-      temp_0[14] = temp_1[14];
-      temp_0[15] = temp_1[15];
-      temp_0[16] = temp_1[16];
-      temp_0[17] = temp_1[17];
-      temp_0[18] = temp_1[18];
-      temp_0[19] = temp_1[19];
-      temp_0[20] = temp_1[20];
-      temp_0[21] = temp_1[21];
-      temp_0[22] = temp_1[22];
-      temp_0[23] = temp_1[23];
-      temp_0[24] = temp_1[24];
-      temp_0[25] = temp_1[25];
-      temp_0[26] = temp_1[26];
-      temp_0[27] = temp_1[27];
-      temp_0[28] = temp_1[31];
-      temp_0[29] = temp_1[30];
-      temp_0[30] = temp_1[29];
-      temp_0[31] = temp_1[28];
-
-      /*  Stage s03  */
-
-      temp_1[0] = temp_0[0];
-      temp_1[1] = temp_0[1];
-      temp_1[2] = temp_0[2];
-      temp_1[3] = temp_0[3];
-      temp_1[4] = temp_0[4];
-      temp_1[5] = temp_0[5];
-      temp_1[6] = temp_0[6];
-      temp_1[7] = temp_0[7];
-      temp_1[8] = temp_0[12] + temp_0[8];
-      temp_1[9] = temp_0[13] + temp_0[9];
-      temp_1[10] = temp_0[10] + temp_0[14];
-      temp_1[11] = temp_0[11] + temp_0[15];
-      temp_1[12] = temp_0[8] - temp_0[12];
-      temp_1[13] = temp_0[9] - temp_0[13];
-      temp_1[14] = temp_0[10] - temp_0[14];
-      temp_1[15] = temp_0[11] - temp_0[15];
-      temp_1[16] = temp_0[16] + temp_0[20];
-      temp_1[17] = temp_0[17] + temp_0[21];
-      temp_1[18] = temp_0[18] + temp_0[22];
-      temp_1[19] = temp_0[19] + temp_0[23];
-      temp_1[20] = temp_0[16] - temp_0[20];
-      temp_1[21] = temp_0[17] - temp_0[21];
-      temp_1[22] = temp_0[18] - temp_0[22];
-      temp_1[23] = temp_0[19] - temp_0[23];
-      temp_1[24] = temp_0[24] + temp_0[28];
-      temp_1[25] = temp_0[25] + temp_0[29];
-      temp_1[26] = temp_0[26] + temp_0[30];
-      temp_1[27] = temp_0[27] + temp_0[31];
-      temp_1[28] = temp_0[24] - temp_0[28];
-      temp_1[29] = temp_0[25] - temp_0[29];
-      temp_1[30] = temp_0[26] - temp_0[30];
-      temp_1[31] = temp_0[27] - temp_0[31];
-
-      /*  Stage s04  */
-
-      temp_0[0] = temp_1[0];
-      temp_0[1] = temp_1[2];
-      temp_0[2] = temp_1[1];
-      temp_0[3] = temp_1[3];
-      temp_0[4] = temp_1[4];
-      temp_0[5] = temp_1[5];
-      temp_0[6] = temp_1[6];
-      temp_0[7] = temp_1[7];
-      temp_0[8] = temp_1[8];
-      temp_0[9] = temp_1[9];
-      temp_0[10] = temp_1[10];
-      temp_0[11] = temp_1[11];
-      temp_0[12] = temp_1[12];
-      temp_0[13] = temp_1[13];
-      temp_0[14] = temp_1[15];
-      temp_0[15] = temp_1[14];
-      temp_0[16] = temp_1[16];
-      temp_0[17] = temp_1[17];
-      temp_0[18] = temp_1[18];
-      temp_0[19] = temp_1[19];
-      temp_0[20] = temp_1[20];
-      temp_0[21] = temp_1[21];
-      temp_0[22] = temp_1[23];
-      temp_0[23] = temp_1[22];
-      temp_0[24] = temp_1[24];
-      temp_0[25] = temp_1[27];
-      temp_0[26] = temp_1[26];
-      temp_0[27] = temp_1[25];
-      temp_0[28] = temp_1[28];
-      temp_0[29] = temp_1[31];
-      temp_0[30] = temp_1[30];
-      temp_0[31] = temp_1[29];
-
-      /*  Stage s05  */
-
-      temp_1[0] = temp_0[0];
-      temp_1[1] = temp_0[1];
-      temp_1[2] = temp_0[2];
-      temp_1[3] = temp_0[3];
-      temp_1[4] = temp_0[4] + temp_0[6];
-      temp_1[5] = temp_0[5] + temp_0[7];
-      temp_1[6] = temp_0[4] - temp_0[6];
-      temp_1[7] = temp_0[5] - temp_0[7];
-      temp_1[8] = temp_0[10] + temp_0[8];
-      temp_1[9] = temp_0[11] + temp_0[9];
-      temp_1[10] = temp_0[8] - temp_0[10];
-      temp_1[11] = temp_0[9] - temp_0[11];
-      temp_1[12] = temp_0[12] + temp_0[14];
-      temp_1[13] = temp_0[13] + temp_0[15];
-      temp_1[14] = temp_0[12] - temp_0[14];
-      temp_1[15] = temp_0[13] - temp_0[15];
-      temp_1[16] = temp_0[16] + temp_0[18];
-      temp_1[17] = temp_0[17] + temp_0[19];
-      temp_1[18] = temp_0[16] - temp_0[18];
-      temp_1[19] = temp_0[17] - temp_0[19];
-      temp_1[20] = temp_0[20] + temp_0[22];
-      temp_1[21] = temp_0[21] + temp_0[23];
-      temp_1[22] = temp_0[20] - temp_0[22];
-      temp_1[23] = temp_0[21] - temp_0[23];
-      temp_1[24] = temp_0[24];
-      temp_1[25] = temp_0[25];
-      temp_1[26] = temp_0[26];
-      temp_1[27] = temp_0[27];
-      temp_1[28] = temp_0[24] + temp_0[26];
-      temp_1[29] = temp_0[25] + temp_0[27];
-      temp_1[30] = temp_0[28];
-      temp_1[31] = temp_0[29];
-      temp_1[32] = temp_0[30];
-      temp_1[33] = temp_0[31];
-      temp_1[34] = temp_0[28] + temp_0[30];
-      temp_1[35] = temp_0[29] + temp_0[31];
-
-      /*  Stage s06  */
-
-      temp_0[0] = temp_1[0] + temp_1[1];
-      temp_0[1] = temp_1[0] - temp_1[1];
-      temp_0[2] = temp_1[2] + temp_1[3];
-      temp_0[3] = temp_1[2] - temp_1[3];
-      temp_0[4] = temp_1[4] + temp_1[5];
-      temp_0[5] = temp_1[4] - temp_1[5];
-      temp_0[6] = temp_1[6] + temp_1[7];
-      temp_0[7] = temp_1[6] - temp_1[7];
-      temp_0[8] = temp_1[8] + temp_1[9];
-      temp_0[9] = temp_1[8] - temp_1[9];
-      temp_0[10] = temp_1[10] + temp_1[11];
-      temp_0[11] = temp_1[10] - temp_1[11];
-      temp_0[12] = temp_1[12];
-      temp_0[13] = temp_1[13];
-      temp_0[14] = temp_1[14];
-      temp_0[15] = temp_1[15];
-      temp_0[16] = temp_1[16] + temp_1[17];
-      temp_0[17] = temp_1[16] - temp_1[17];
-      temp_0[18] = temp_1[18] + temp_1[19];
-      temp_0[19] = temp_1[18] - temp_1[19];
-      temp_0[20] = temp_1[20];
-      temp_0[21] = temp_1[21];
-      temp_0[22] = temp_1[22];
-      temp_0[23] = temp_1[23];
-      temp_0[24] = temp_1[24];
-      temp_0[25] = temp_1[25];
-      temp_0[26] = temp_1[26];
-      temp_0[27] = temp_1[27];
-      temp_0[28] = temp_1[28];
-      temp_0[29] = temp_1[29];
-      temp_0[30] = temp_1[30];
-      temp_0[31] = temp_1[31];
-      temp_0[32] = temp_1[32];
-      temp_0[33] = temp_1[33];
-      temp_0[34] = temp_1[34];
-      temp_0[35] = temp_1[35];
-
-      /*  Stage s07  */
-
-      temp_1[0] = temp_0[0];
-      temp_1[1] = temp_0[1];
-      temp_1[2] = temp_0[2];
-      temp_1[3] = temp_0[3];
-      temp_1[4] = temp_0[4];
-      temp_1[5] = temp_0[5];
-      temp_1[6] = temp_0[6];
-      temp_1[7] = temp_0[7];
-      temp_1[8] = temp_0[8];
-      temp_1[9] = temp_0[9];
-      temp_1[10] = temp_0[10];
-      temp_1[11] = temp_0[11];
-      temp_1[12] = temp_0[12];
-      temp_1[13] = temp_0[13];
-      temp_1[14] = temp_0[12] + temp_0[13];
-      temp_1[15] = temp_0[14];
-      temp_1[16] = temp_0[15];
-      temp_1[17] = temp_0[14] + temp_0[15];
-      temp_1[18] = temp_0[16];
-      temp_1[19] = temp_0[17];
-      temp_1[20] = temp_0[18];
-      temp_1[21] = temp_0[19];
-      temp_1[22] = temp_0[20];
-      temp_1[23] = temp_0[21];
-      temp_1[24] = temp_0[20] + temp_0[21];
-      temp_1[25] = temp_0[22];
-      temp_1[26] = temp_0[23];
-      temp_1[27] = temp_0[22] + temp_0[23];
-      temp_1[28] = temp_0[24];
-      temp_1[29] = temp_0[25];
-      temp_1[30] = temp_0[24] + temp_0[25];
-      temp_1[31] = temp_0[26];
-      temp_1[32] = temp_0[27];
-      temp_1[33] = temp_0[26] + temp_0[27];
-      temp_1[34] = temp_0[28];
-      temp_1[35] = temp_0[29];
-      temp_1[36] = temp_0[28] + temp_0[29];
-      temp_1[37] = temp_0[30];
-      temp_1[38] = temp_0[31];
-      temp_1[39] = temp_0[30] + temp_0[31];
-      temp_1[40] = temp_0[32];
-      temp_1[41] = temp_0[33];
-      temp_1[42] = temp_0[32] + temp_0[33];
-      temp_1[43] = temp_0[34];
-      temp_1[44] = temp_0[35];
-      temp_1[45] = temp_0[34] + temp_0[35];
-
-      /*  Stage s08  */
-
-      // multiply by winograd twiddles, skip if twiddle is 1
-      for (uint32_t i = 0; i < 3; i++) {
-        temp_0[i] = temp_1[i];
-      }
-      temp_0[3] = temp_1[3] * twiddles[3];
-      temp_0[4] = temp_1[4];
-      for (uint32_t i = 5; i < 8; i++) {
-        temp_0[i] = temp_1[i] * twiddles[i];
-      }
-      temp_0[8] = temp_1[8];
-      for (uint32_t i = 9; i < 18; i++) {
-        temp_0[i] = temp_1[i] * twiddles[i];
-      }
-      temp_0[18] = temp_1[18];
-      for (uint32_t i = 19; i < 46; i++) {
-        temp_0[i] = temp_1[i] * twiddles[i];
-      }
-
-      /*  Stage s09  */
-
-      temp_1[0] = temp_0[0];
-      temp_1[1] = temp_0[1];
-      temp_1[2] = temp_0[2];
-      temp_1[3] = temp_0[3];
-      temp_1[4] = temp_0[4];
-      temp_1[5] = temp_0[5];
-      temp_1[6] = temp_0[6];
-      temp_1[7] = temp_0[7];
-      temp_1[8] = temp_0[8];
-      temp_1[9] = temp_0[9];
-      temp_1[10] = temp_0[10];
-      temp_1[11] = temp_0[11];
-      temp_1[12] = temp_0[12] + temp_0[14];
-      temp_1[13] = temp_0[13] + temp_0[14];
-      temp_1[14] = temp_0[15] + temp_0[17];
-      temp_1[15] = temp_0[16] + temp_0[17];
-      temp_1[16] = temp_0[18];
-      temp_1[17] = temp_0[19];
-      temp_1[18] = temp_0[20];
-      temp_1[19] = temp_0[21];
-      temp_1[20] = temp_0[22] + temp_0[24];
-      temp_1[21] = temp_0[23] + temp_0[24];
-      temp_1[22] = temp_0[25] + temp_0[27];
-      temp_1[23] = temp_0[26] + temp_0[27];
-      temp_1[24] = temp_0[28] + temp_0[30];
-      temp_1[25] = temp_0[29] + temp_0[30];
-      temp_1[26] = temp_0[31] + temp_0[33];
-      temp_1[27] = temp_0[32] + temp_0[33];
-      temp_1[28] = temp_0[34] + temp_0[36];
-      temp_1[29] = temp_0[35] + temp_0[36];
-      temp_1[30] = temp_0[37] + temp_0[39];
-      temp_1[31] = temp_0[38] + temp_0[39];
-      temp_1[32] = temp_0[40] + temp_0[42];
-      temp_1[33] = temp_0[41] + temp_0[42];
-      temp_1[34] = temp_0[43] + temp_0[45];
-      temp_1[35] = temp_0[44] + temp_0[45];
-
-      /*  Stage s10  */
-
-      temp_0[0] = temp_1[0];
-      temp_0[1] = temp_1[1];
-      temp_0[2] = temp_1[2];
-      temp_0[3] = temp_1[3];
-      temp_0[4] = temp_1[4];
-      temp_0[5] = temp_1[5];
-      temp_0[6] = temp_1[6] + temp_1[7];
-      temp_0[7] = temp_1[6] - temp_1[7];
-      temp_0[8] = temp_1[8];
-      temp_0[9] = temp_1[9];
-      temp_0[10] = temp_1[10] + temp_1[11];
-      temp_0[11] = temp_1[10] - temp_1[11];
-      temp_0[12] = temp_1[12];
-      temp_0[13] = temp_1[13];
-      temp_0[14] = temp_1[14];
-      temp_0[15] = temp_1[15];
-      temp_0[16] = temp_1[16];
-      temp_0[17] = temp_1[17];
-      temp_0[18] = temp_1[18] + temp_1[19];
-      temp_0[19] = temp_1[18] - temp_1[19];
-      temp_0[20] = temp_1[20];
-      temp_0[21] = temp_1[21];
-      temp_0[22] = temp_1[22];
-      temp_0[23] = temp_1[23];
-      temp_0[24] = temp_1[24];
-      temp_0[25] = temp_1[25];
-      temp_0[26] = temp_1[26];
-      temp_0[27] = temp_1[27];
-      temp_0[28] = temp_1[28];
-      temp_0[29] = temp_1[29];
-      temp_0[30] = temp_1[30];
-      temp_0[31] = temp_1[31];
-      temp_0[32] = temp_1[32];
-      temp_0[33] = temp_1[33];
-      temp_0[34] = temp_1[34];
-      temp_0[35] = temp_1[35];
-
-      /*  Stage s11  */
-
-      temp_1[0] = temp_0[0] + temp_0[2];
-      temp_1[1] = temp_0[1] + temp_0[3];
-      temp_1[2] = temp_0[0] - temp_0[2];
-      temp_1[3] = temp_0[1] - temp_0[3];
-      temp_1[4] = temp_0[4];
-      temp_1[5] = temp_0[5];
-      temp_1[6] = temp_0[6];
-      temp_1[7] = temp_0[7];
-      temp_1[8] = temp_0[8];
-      temp_1[9] = temp_0[9];
-      temp_1[10] = temp_0[10];
-      temp_1[11] = temp_0[11];
-      temp_1[12] = temp_0[12] + temp_0[14];
-      temp_1[13] = temp_0[13] + temp_0[15];
-      temp_1[14] = temp_0[12] - temp_0[14];
-      temp_1[15] = temp_0[13] - temp_0[15];
-      temp_1[16] = temp_0[16];
-      temp_1[17] = temp_0[17];
-      temp_1[18] = temp_0[18];
-      temp_1[19] = temp_0[19];
-      temp_1[20] = temp_0[20] + temp_0[22];
-      temp_1[21] = temp_0[21] + temp_0[23];
-      temp_1[22] = temp_0[20] - temp_0[22];
-      temp_1[23] = temp_0[21] - temp_0[23];
-      temp_1[24] = temp_0[26] + temp_0[28];
-      temp_1[25] = temp_0[27] + temp_0[29];
-      temp_1[26] = temp_0[24] + temp_0[28];
-      temp_1[27] = temp_0[25] + temp_0[29];
-      temp_1[28] = temp_0[32] + temp_0[34];
-      temp_1[29] = temp_0[33] + temp_0[35];
-      temp_1[30] = temp_0[30] + temp_0[34];
-      temp_1[31] = temp_0[31] + temp_0[35];
-
-      /*  Stage s12  */
-
-      temp_0[0] = temp_1[0];
-      temp_0[1] = temp_1[1];
-      temp_0[2] = temp_1[2];
-      temp_0[3] = temp_1[3];
-      temp_0[4] = temp_1[4];
-      temp_0[5] = temp_1[6];
-      temp_0[6] = temp_1[5];
-      temp_0[7] = temp_1[7];
-      temp_0[8] = temp_1[8];
-      temp_0[9] = temp_1[10];
-      temp_0[10] = temp_1[9];
-      temp_0[11] = temp_1[11];
-      temp_0[12] = temp_1[12];
-      temp_0[13] = temp_1[13];
-      temp_0[14] = temp_1[15];
-      temp_0[15] = temp_1[14];
-      temp_0[16] = temp_1[16];
-      temp_0[17] = temp_1[18];
-      temp_0[18] = temp_1[17];
-      temp_0[19] = temp_1[19];
-      temp_0[20] = temp_1[20];
-      temp_0[21] = temp_1[21];
-      temp_0[22] = temp_1[23];
-      temp_0[23] = temp_1[22];
-      temp_0[24] = temp_1[26];
-      temp_0[25] = temp_1[25];
-      temp_0[26] = temp_1[24];
-      temp_0[27] = temp_1[27];
-      temp_0[28] = temp_1[30];
-      temp_0[29] = temp_1[29];
-      temp_0[30] = temp_1[28];
-      temp_0[31] = temp_1[31];
-
-      /*  Stage s13  */
-
-      temp_1[0] = temp_0[0] + temp_0[4];
-      temp_1[1] = temp_0[1] + temp_0[5];
-      temp_1[2] = temp_0[2] + temp_0[6];
-      temp_1[3] = temp_0[3] + temp_0[7];
-      temp_1[4] = temp_0[0] - temp_0[4];
-      temp_1[5] = temp_0[1] - temp_0[5];
-      temp_1[6] = temp_0[2] - temp_0[6];
-      temp_1[7] = temp_0[3] - temp_0[7];
-      temp_1[8] = temp_0[8];
-      temp_1[9] = temp_0[9];
-      temp_1[10] = temp_0[10];
-      temp_1[11] = temp_0[11];
-      temp_1[12] = temp_0[12];
-      temp_1[13] = temp_0[13];
-      temp_1[14] = temp_0[14];
-      temp_1[15] = temp_0[15];
-      temp_1[16] = temp_0[16];
-      temp_1[17] = temp_0[17];
-      temp_1[18] = temp_0[18];
-      temp_1[19] = temp_0[19];
-      temp_1[20] = temp_0[20];
-      temp_1[21] = temp_0[21];
-      temp_1[22] = temp_0[22];
-      temp_1[23] = temp_0[23];
-      temp_1[24] = temp_0[24] + temp_0[28];
-      temp_1[25] = temp_0[25] + temp_0[29];
-      temp_1[26] = temp_0[26] + temp_0[30];
-      temp_1[27] = temp_0[27] + temp_0[31];
-      temp_1[28] = temp_0[24] - temp_0[28];
-      temp_1[29] = temp_0[25] - temp_0[29];
-      temp_1[30] = temp_0[26] - temp_0[30];
-      temp_1[31] = temp_0[27] - temp_0[31];
-
-      /*  Stage s14  */
-
-      temp_0[0] = temp_1[0];
-      temp_0[1] = temp_1[1];
-      temp_0[2] = temp_1[2];
-      temp_0[3] = temp_1[3];
-      temp_0[4] = temp_1[4];
-      temp_0[5] = temp_1[5];
-      temp_0[6] = temp_1[6];
-      temp_0[7] = temp_1[7];
-      temp_0[8] = temp_1[8];
-      temp_0[9] = temp_1[12];
-      temp_0[10] = temp_1[9];
-      temp_0[11] = temp_1[13];
-      temp_0[12] = temp_1[10];
-      temp_0[13] = temp_1[14];
-      temp_0[14] = temp_1[11];
-      temp_0[15] = temp_1[15];
-      temp_0[16] = temp_1[16];
-      temp_0[17] = temp_1[20];
-      temp_0[18] = temp_1[17];
-      temp_0[19] = temp_1[21];
-      temp_0[20] = temp_1[18];
-      temp_0[21] = temp_1[22];
-      temp_0[22] = temp_1[19];
-      temp_0[23] = temp_1[23];
-      temp_0[24] = temp_1[24];
-      temp_0[25] = temp_1[25];
-      temp_0[26] = temp_1[26];
-      temp_0[27] = temp_1[27];
-      temp_0[28] = temp_1[31];
-      temp_0[29] = temp_1[30];
-      temp_0[30] = temp_1[29];
-      temp_0[31] = temp_1[28];
-
-      /*  Stage s15  */
-
-      temp_1[0] = temp_0[0] + temp_0[8];
-      temp_1[1] = temp_0[1] + temp_0[9];
-      temp_1[2] = temp_0[10] + temp_0[2];
-      temp_1[3] = temp_0[11] + temp_0[3];
-      temp_1[4] = temp_0[12] + temp_0[4];
-      temp_1[5] = temp_0[13] + temp_0[5];
-      temp_1[6] = temp_0[14] + temp_0[6];
-      temp_1[7] = temp_0[15] + temp_0[7];
-      temp_1[8] = temp_0[0] - temp_0[8];
-      temp_1[9] = temp_0[1] - temp_0[9];
-      temp_1[10] = temp_0[2] - temp_0[10];
-      temp_1[11] = temp_0[3] - temp_0[11];
-      temp_1[12] = temp_0[4] - temp_0[12];
-      temp_1[13] = temp_0[5] - temp_0[13];
-      temp_1[14] = temp_0[6] - temp_0[14];
-      temp_1[15] = temp_0[7] - temp_0[15];
-      temp_1[16] = temp_0[16];
-      temp_1[17] = temp_0[24];
-      temp_1[18] = temp_0[17];
-      temp_1[19] = temp_0[25];
-      temp_1[20] = temp_0[18];
-      temp_1[21] = temp_0[26];
-      temp_1[22] = temp_0[19];
-      temp_1[23] = temp_0[27];
-      temp_1[24] = temp_0[20];
-      temp_1[25] = temp_0[28];
-      temp_1[26] = temp_0[21];
-      temp_1[27] = temp_0[29];
-      temp_1[28] = temp_0[22];
-      temp_1[29] = temp_0[30];
-      temp_1[30] = temp_0[23];
-      temp_1[31] = temp_0[31];
-
-      /*  Stage s16  */
-
-      current_elements[index_in_mem[0]] = temp_1[0] + temp_1[16];
-      current_elements[index_in_mem[1]] = temp_1[1] + temp_1[17];
-      current_elements[index_in_mem[2]] = temp_1[18] + temp_1[2];
-      current_elements[index_in_mem[3]] = temp_1[19] + temp_1[3];
-      current_elements[index_in_mem[4]] = temp_1[20] + temp_1[4];
-      current_elements[index_in_mem[5]] = temp_1[21] + temp_1[5];
-      current_elements[index_in_mem[6]] = temp_1[22] + temp_1[6];
-      current_elements[index_in_mem[7]] = temp_1[23] + temp_1[7];
-      current_elements[index_in_mem[8]] = temp_1[24] + temp_1[8];
-      current_elements[index_in_mem[9]] = temp_1[25] + temp_1[9];
-      current_elements[index_in_mem[10]] = temp_1[10] + temp_1[26];
-      current_elements[index_in_mem[11]] = temp_1[11] + temp_1[27];
-      current_elements[index_in_mem[12]] = temp_1[12] + temp_1[28];
-      current_elements[index_in_mem[13]] = temp_1[13] + temp_1[29];
-      current_elements[index_in_mem[14]] = temp_1[14] + temp_1[30];
-      current_elements[index_in_mem[15]] = temp_1[15] + temp_1[31];
-      current_elements[index_in_mem[16]] = temp_1[0] - temp_1[16];
-      current_elements[index_in_mem[17]] = temp_1[1] - temp_1[17];
-      current_elements[index_in_mem[18]] = temp_1[2] - temp_1[18];
-      current_elements[index_in_mem[19]] = temp_1[3] - temp_1[19];
-      current_elements[index_in_mem[20]] = temp_1[4] - temp_1[20];
-      current_elements[index_in_mem[21]] = temp_1[5] - temp_1[21];
-      current_elements[index_in_mem[22]] = temp_1[6] - temp_1[22];
-      current_elements[index_in_mem[23]] = temp_1[7] - temp_1[23];
-      current_elements[index_in_mem[24]] = temp_1[8] - temp_1[24];
-      current_elements[index_in_mem[25]] = temp_1[9] - temp_1[25];
-      current_elements[index_in_mem[26]] = temp_1[10] - temp_1[26];
-      current_elements[index_in_mem[27]] = temp_1[11] - temp_1[27];
-      current_elements[index_in_mem[28]] = temp_1[12] - temp_1[28];
-      current_elements[index_in_mem[29]] = temp_1[13] - temp_1[29];
-      current_elements[index_in_mem[30]] = temp_1[14] - temp_1[30];
-      current_elements[index_in_mem[31]] = temp_1[15] - temp_1[31];
-
-      if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->logn);
-        for (uint64_t i = 0; i < 32; ++i) {
-          current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+      if (ntt_data->is_parallel && subntt_idx_in_task < nof_subntts_per_task-1){
+        for (uint32_t i = 0; i < 32; i++) {
+          index_in_mem[i] = index_in_mem[i] + stride ;
         }
       }
     }
@@ -1265,6 +1280,7 @@ namespace ntt_cpu {
     uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     uint32_t subntt_size_log;
     uint64_t subntt_size;
+    uint32_t original_subntt_first_idx; //FIXME SHANIE remove
 
     if (ntt_data->is_parallel) {
       last_layer =
@@ -1298,39 +1314,51 @@ namespace ntt_cpu {
     for (uint32_t i = 0; i < subntt_size; i++) {
       index_in_mem[i] = ntt_data->is_parallel ? stride * idx_in_mem(ntt_task_coordinates, i) : stride * i;
     }
+    original_subntt_first_idx = index_in_mem[0];
+    
+    
+    
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
+      ICICLE_LOG_DEBUG << "original_subntt_first_idx = " << original_subntt_first_idx << ", index_in_mem[0] = " << index_in_mem[0];
+      for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
+        E* current_elements =
+          ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
+        if (need_to_apply_coset_multiplication) { apply_coset_multiplication(current_elements, index_in_mem, twiddles); }
 
-    for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
-      E* current_elements =
-        ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
-      if (need_to_apply_coset_multiplication) { apply_coset_multiplication(current_elements, index_in_mem, twiddles); }
-
-      for (uint32_t len = 2; len <= subntt_size; len <<= 1) {
-        uint32_t half_len = len / 2;
-        uint32_t step = (subntt_size / len) * (CpuNttDomain<S>::s_ntt_domain.get_max_size() >> subntt_size_log);
-        for (uint32_t i = 0; i < subntt_size; i += len) {
-          for (uint32_t j = 0; j < half_len; ++j) {
-            uint64_t u_mem_idx = index_in_mem[i + j];
-            uint64_t v_mem_idx = index_in_mem[i + j + half_len];
-            E u = current_elements[u_mem_idx];
-            E v;
-            if (j == 0) {
-              v = current_elements[v_mem_idx];
-            } else {
-              uint32_t tw_idx = (ntt_data->direction == NTTDir::kForward)
-                                  ? j * step
-                                  : CpuNttDomain<S>::s_ntt_domain.get_max_size() - j * step;
-              v = current_elements[v_mem_idx] * twiddles[tw_idx];
+        for (uint32_t len = 2; len <= subntt_size; len <<= 1) {
+          uint32_t half_len = len / 2;
+          uint32_t step = (subntt_size / len) * (CpuNttDomain<S>::s_ntt_domain.get_max_size() >> subntt_size_log);
+          for (uint32_t i = 0; i < subntt_size; i += len) {
+            for (uint32_t j = 0; j < half_len; ++j) {
+              uint64_t u_mem_idx = index_in_mem[i + j];
+              uint64_t v_mem_idx = index_in_mem[i + j + half_len];
+              E u = current_elements[u_mem_idx];
+              E v;
+              if (j == 0) {
+                v = current_elements[v_mem_idx];
+              } else {
+                uint32_t tw_idx = (ntt_data->direction == NTTDir::kForward)
+                                    ? j * step
+                                    : CpuNttDomain<S>::s_ntt_domain.get_max_size() - j * step;
+                v = current_elements[v_mem_idx] * twiddles[tw_idx];
+              }
+              current_elements[u_mem_idx] = u + v;
+              current_elements[v_mem_idx] = u - v;
             }
-            current_elements[u_mem_idx] = u + v;
-            current_elements[v_mem_idx] = u - v;
+          }
+        }
+
+        if (last_layer && ntt_data->direction == NTTDir::kInverse) {
+          S inv_size = S::inv_log_size(ntt_data->logn);
+          for (uint64_t i = 0; i < subntt_size; ++i) {
+            current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
           }
         }
       }
-
-      if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->logn);
-        for (uint64_t i = 0; i < subntt_size; ++i) {
-          current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+      if (ntt_data->is_parallel && subntt_idx_in_task < nof_subntts_per_task-1){
+        for (uint32_t i = 0; i < subntt_size; i++) {
+          index_in_mem[i] += stride ;
         }
       }
     }

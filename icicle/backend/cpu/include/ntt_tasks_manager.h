@@ -33,7 +33,7 @@ namespace ntt_cpu {
   {
   public:
     // Constructor that initializes the counters
-    TasksDependenciesCounters(const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx);
+    TasksDependenciesCounters(const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx, const uint32_t nof_elems_per_cacheline);
 
     // Function to decrement the counter for a given task and check if it is ready to execute. if so, return true
     bool decrement_counter(NttTaskCoordinates ntt_task_coordinates);
@@ -71,7 +71,7 @@ namespace ntt_cpu {
   class NttTasksManager
   {
   public:
-    NttTasksManager(const NttSubHierarchies& ntt_sub_logn_ref, uint32_t logn);
+    NttTasksManager(const NttSubHierarchies& ntt_sub_hierarchies, const uint32_t logn, uint32_t nof_elems_per_cacheline);
 
     // Add a new task to the ntt_task_manager
     eIcicleError push_task(const NttTaskCoordinates& ntt_task_coordinates);
@@ -88,6 +88,7 @@ namespace ntt_cpu {
   private:
     const uint32_t logn;                             // log of the NTT size
     const NttSubHierarchies& ntt_sub_hierarchies;    // Reference to NttSubHierarchies
+    uint32_t nof_elems_per_cacheline;                // Number of elements per cacheline
     std::vector<TasksDependenciesCounters> counters; // Dependencies counters by layer
     std::vector<NttTaskCoordinates> task_buffer;     // Buffer holding task coordinates for pending tasks
     size_t head; // Head index for the task buffer (used in circular buffer implementation)
@@ -96,7 +97,6 @@ namespace ntt_cpu {
     bool is_full() const;
     bool is_empty() const;
     void increment(size_t& index);
-    void decrement(size_t& index);
   };
 
   //////////////////////////// TasksDependenciesCounters Implementation ////////////////////////////
@@ -111,7 +111,7 @@ namespace ntt_cpu {
    * @param hierarchy_1_layer_idx The index of the current hierarchy 1 layer.
    */
   TasksDependenciesCounters::TasksDependenciesCounters(
-    const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx)
+    const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx, const uint32_t nof_elems_per_cacheline)
       : hierarchy_0_counters(
           1 << ntt_sub_hierarchies.hierarchy_1_layers_sub_logn
                  [1 - hierarchy_1_layer_idx]), // nof_hierarchy_1_subntts =
@@ -131,7 +131,7 @@ namespace ntt_cpu {
       // Initialize counters for layer 1 - N2 counters initialized with N1.
       dependent_subntt_count[1] = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
       l1_nof_counters = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-      l1_counter_size = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
+      l1_counter_size = (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1])/nof_elems_per_cacheline;
     }
     if (nof_hierarchy_0_layers > 2) {
       // Initialize counters for layer 2 - N0 counters initialized with N2.
@@ -213,14 +213,14 @@ namespace ntt_cpu {
    * @param logn The log2(size) of the NTT problem.
    */
   template <typename S, typename E>
-  NttTasksManager<S, E>::NttTasksManager(const NttSubHierarchies& ntt_sub_logn_ref, uint32_t logn)
-      : logn(logn), ntt_sub_hierarchies(ntt_sub_logn_ref),
-        counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_logn_ref, 0)),
+  NttTasksManager<S, E>::NttTasksManager(const NttSubHierarchies& ntt_sub_hierarchies, uint32_t logn,const uint32_t nof_elems_per_cacheline)
+      : logn(logn), ntt_sub_hierarchies(ntt_sub_hierarchies),
+        counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_hierarchies, 0, nof_elems_per_cacheline)),
         task_buffer(1 << (logn)), // Pre-allocate buffer
         head(0), tail(0), nof_pending_tasks(0)
 
   {
-    if (logn > HIERARCHY_1) { counters[1] = TasksDependenciesCounters(ntt_sub_logn_ref, 1); }
+    if (logn > HIERARCHY_1) { counters[1] = TasksDependenciesCounters(ntt_sub_hierarchies, 1, nof_elems_per_cacheline); }
   }
 
   /**
@@ -260,19 +260,6 @@ namespace ntt_cpu {
   void NttTasksManager<S, E>::increment(size_t& index)
   {
     index = (index + 1) % (1 << (logn));
-  }
-
-  /**
-   * @brief Decrements a buffer index in a circular manner.
-   *
-   * Moves the given index to the previous position in the circular buffer, wrapping around if necessary.
-   *
-   * @param index Reference to the index to be decremented.
-   */
-  template <typename S, typename E>
-  void NttTasksManager<S, E>::decrement(size_t& index)
-  {
-    index = (index - 1) % (1 << (logn));
   }
 
   /**
@@ -325,6 +312,13 @@ namespace ntt_cpu {
     }
     NttTaskCoordinates* task = &task_buffer[head];
     increment(head);
+    // ICICLE_LOG_DEBUG << "Popping task: " 
+    //                  << task->hierarchy_1_layer_idx << ", "
+    //                  << task->hierarchy_1_subntt_idx << ", " 
+    //                  << task->hierarchy_0_layer_idx << ", " 
+    //                  << task->hierarchy_0_block_idx << ", "
+    //                  << task->hierarchy_0_subntt_idx;
+    // ICICLE_LOG_DEBUG << "head: " << head;
     return task;
   }
 
@@ -338,6 +332,9 @@ namespace ntt_cpu {
   template <typename S, typename E>
   bool NttTasksManager<S, E>::tasks_to_do() const
   {
+    ICICLE_LOG_DEBUG << "nof_pending_tasks: " << nof_pending_tasks;
+    ICICLE_LOG_DEBUG << "head: " << head;
+    ICICLE_LOG_DEBUG << "tail: " << tail;
     return head != tail || nof_pending_tasks != 0;
   }
 
@@ -390,6 +387,12 @@ namespace ntt_cpu {
                                                      ? task_c.hierarchy_0_block_idx
                                                      : task_c.hierarchy_0_subntt_idx + stride * i;
           next_task_c_ptr->hierarchy_0_subntt_idx = (task_c.hierarchy_0_layer_idx == 0) ? i : 0;
+          ICICLE_LOG_DEBUG << "Pushing task: " 
+                           << next_task_c_ptr->hierarchy_1_layer_idx << ", "
+                           << next_task_c_ptr->hierarchy_1_subntt_idx << ", " 
+                           << next_task_c_ptr->hierarchy_0_layer_idx << ", " 
+                           << next_task_c_ptr->hierarchy_0_block_idx << ", "
+                           << next_task_c_ptr->hierarchy_0_subntt_idx;
           if (i == 0) {
             completed_task->set_coordinates(get_available_task());
             completed_task->dispatch();
@@ -407,6 +410,13 @@ namespace ntt_cpu {
         next_task_c_ptr->hierarchy_0_block_idx = 0;
         next_task_c_ptr->hierarchy_0_subntt_idx = 0;
         next_task_c_ptr->reorder = true;
+        ICICLE_LOG_DEBUG << "Pushing task: " 
+                  << next_task_c_ptr->hierarchy_1_layer_idx << ", "
+                  << next_task_c_ptr->hierarchy_1_subntt_idx << ", " 
+                  << next_task_c_ptr->hierarchy_0_layer_idx << ", " 
+                  << next_task_c_ptr->hierarchy_0_block_idx << ", "
+                  << next_task_c_ptr->hierarchy_0_subntt_idx << ", "
+                  << "Reorder";
         completed_task->set_coordinates(get_available_task());
         completed_task->dispatch();
         task_dispatched = true;

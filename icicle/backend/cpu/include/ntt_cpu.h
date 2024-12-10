@@ -1,6 +1,7 @@
 #pragma once
 #include "icicle/errors.h"
 #include "icicle/utils/log.h"
+#include "icicle/utils/cacheline_size.h"
 #include "ntt_tasks_manager.h"
 #include "ntt_utils.h"
 // #include <_types/_uint32_t.h>
@@ -58,14 +59,16 @@ namespace ntt_cpu {
    */
   template <typename S, typename E>
   NttCpu<S, E>::NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
-      : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config)),
+      : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config), get_cache_line_size()/ sizeof(E)), 
         ntt_tasks_manager(
-          ntt_data.is_parallel ? std::optional<NttTasksManager<S, E>>(std::in_place, ntt_data.ntt_sub_hierarchies, logn)
+          ntt_data.is_parallel ? std::optional<NttTasksManager<S, E>>(std::in_place, ntt_data.ntt_sub_hierarchies, logn, ntt_data.nof_elems_per_cacheline)
                                : std::nullopt),
         tasks_manager(
-          ntt_data.is_parallel ? std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1)
+          ntt_data.is_parallel ? std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 2)
                                : nullptr)
   {
+        ICICLE_LOG_DEBUG << "Number of elements per cacheline: " << ntt_data.nof_elems_per_cacheline;
+        ICICLE_LOG_DEBUG << "NOF WORKERS " << std::thread::hardware_concurrency() - 2;
   }
 
   template <typename S, typename E>
@@ -368,7 +371,8 @@ namespace ntt_cpu {
         nof_subntts = 1;
       }
       for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
-        for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
+        // for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
+        for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx+=ntt_data.nof_elems_per_cacheline) {
           if (hierarchy_0_layer_idx == 0) {
             NttTaskCoordinates* ntt_task_coordinates = ntt_tasks_manager->get_slot_for_next_task_coordinates();
             ntt_task_coordinates->hierarchy_1_layer_idx = hierarchy_1_layer_idx;
@@ -377,8 +381,14 @@ namespace ntt_cpu {
             ntt_task_coordinates->hierarchy_0_block_idx = hierarchy_0_block_idx;
             ntt_task_coordinates->hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
             ntt_task_coordinates->reorder = false;
+            ICICLE_LOG_DEBUG << "Pushing task: " << ntt_task_coordinates->hierarchy_1_layer_idx << ", "
+                             << ntt_task_coordinates->hierarchy_1_subntt_idx << ", "
+                             << ntt_task_coordinates->hierarchy_0_layer_idx << ", "
+                             << ntt_task_coordinates->hierarchy_0_block_idx << ", "
+                             << ntt_task_coordinates->hierarchy_0_subntt_idx;
           } else {
-            ntt_tasks_manager->nof_pending_tasks++;
+            ntt_tasks_manager->nof_pending_tasks+=ntt_data.nof_elems_per_cacheline;
+            ICICLE_LOG_DEBUG << "no pending tasks: " << ntt_tasks_manager->nof_pending_tasks;
           }
         }
       }
@@ -444,6 +454,11 @@ namespace ntt_cpu {
       if (task_slot == nullptr) {
         break;
       } else {
+        // ICICLE_LOG_DEBUG << "Task completed: " << task_slot->get_coordinates()->hierarchy_1_layer_idx << ", "
+        //                  << task_slot->get_coordinates()->hierarchy_1_subntt_idx << ", "
+        //                  << task_slot->get_coordinates()->hierarchy_0_layer_idx << ", "
+        //                  << task_slot->get_coordinates()->hierarchy_0_block_idx << ", "
+        //                  << task_slot->get_coordinates()->hierarchy_0_subntt_idx;
         task_slot->set_idle();
       }
     }
@@ -463,12 +478,11 @@ namespace ntt_cpu {
   template <typename S, typename E>
   bool NttCpu<S, E>::compute_if_is_parallel(uint32_t logn, const NTTConfig<S>& config)
   {
-    uint32_t log_batch_size = uint32_t(log2(config.batch_size));
-    uint32_t scalar_size = sizeof(S);
-    // for small scalars, the threshold for when it is faster to use parallel NTT is higher
-    if ((scalar_size >= 32 && (logn + log_batch_size) <= 13) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
-      return false;
-    }
+    // uint32_t log_batch_size = uint32_t(log2(config.batch_size));
+    // // for small scalars, the threshold for when it is faster to use parallel NTT is higher
+    // if ((scalar_size >= 32 && (logn + log_batch_size) <= 13) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
+    //   return false;
+    // }
     return true;
   }
 
