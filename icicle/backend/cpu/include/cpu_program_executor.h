@@ -15,7 +15,7 @@ namespace icicle {
         : m_program(program), m_variable_ptrs(program.get_nof_vars()), m_intermediates(program.m_nof_intermidiates)
     {
       // initialize m_variable_ptrs vector
-      int variable_ptrs_idx = program.m_nof_inputs + program.m_nof_outputs;
+      int variable_ptrs_idx = program.m_nof_parameters;
       for (int idx = 0; idx < program.m_nof_constants; ++idx) {
         m_variable_ptrs[variable_ptrs_idx++] = (S*)(&(program.m_constants[idx]));
       }
@@ -41,6 +41,13 @@ namespace icicle {
     std::vector<S> m_intermediates;
 
     // exe functions
+    void exe_copy(const InstructionType instruction)
+    {
+      const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
+      *m_variable_ptrs[(int)inst_arr[Program<S>::INST_RESULT]] =
+        *m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]];
+    }
+
     void exe_add(const InstructionType instruction)
     {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
@@ -90,6 +97,7 @@ namespace icicle {
 
     using FunctionPtr = void (CpuProgramExecutor::*)(const InstructionType);
     inline static const FunctionPtr m_function_arr[] = {
+      &CpuProgramExecutor::exe_copy,    // OP_COPY
       &CpuProgramExecutor::exe_add,     // OP_ADD
       &CpuProgramExecutor::exe_mult,    // OP_MULT
       &CpuProgramExecutor::exe_sub,     // OP_SUB
