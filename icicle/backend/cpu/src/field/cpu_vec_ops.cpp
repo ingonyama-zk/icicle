@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "icicle/program/program.h"
-#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
+#include "cpu_program_executor.h"
 
 using namespace field_config;
 using namespace icicle;
