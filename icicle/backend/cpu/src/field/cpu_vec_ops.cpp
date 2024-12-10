@@ -10,6 +10,9 @@
 #include <sys/types.h>
 #include <vector>
 
+#include "icicle/program/program.h"
+#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
+
 using namespace field_config;
 using namespace icicle;
 
@@ -32,7 +35,7 @@ enum VecOperation {
   REPLACE_ELEMENTS,
   OUT_OF_PLACE_MATRIX_TRANSPOSE,
 
-  NOF_OPERATIONS
+  NOF_VECOPS_OPERATIONS
 };
 
 /**
@@ -329,7 +332,7 @@ private:
 
   // An array of available function pointers arranged according to the VecOperation enum
   using FunctionPtr = void (VectorOpTask::*)();
-  static constexpr std::array<FunctionPtr, static_cast<int>(NOF_OPERATIONS)> functionPtrs = {
+  static constexpr std::array<FunctionPtr, static_cast<int>(NOF_VECOPS_OPERATIONS)> functionPtrs = {
     &VectorOpTask::vector_add,              // VECTOR_ADD,
     &VectorOpTask::vector_sub,              // VECTOR_SUB,
     &VectorOpTask::vector_mul,              // VECTOR_MUL,
@@ -837,6 +840,39 @@ eIcicleError cpu_highest_non_zero_idx(
 }
 
 REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CPU", cpu_highest_non_zero_idx<scalar_t>);
+
+
+
+/*********************************** Execute program ***********************************/
+template <typename T>
+eIcicleError cpu_execute_program(
+  std::vector<T*>& data,
+    Program<T>& program,
+    uint64_t size,
+    const VecOpsConfig& config)
+{
+  if (data.size() != program.m_nof_parameters) {
+    ICICLE_LOG_ERROR << "Program has " << program.m_nof_parameters << " while data has " << data.size() <<  " parameters";
+    return eIcicleError::INVALID_ARGUMENT;
+  } 
+  const uint64_t total_nof_operations = size * config.batch_size;
+  CpuProgramExecutor prog_executor(program);
+  // init prog_executor to point to data vectors
+  for (int param_idx = 0; param_idx<program.m_nof_parameters; ++ param_idx) {
+    prog_executor.m_variable_ptrs[param_idx] = data[param_idx];
+  }
+
+  // run over all elements in the arrays and execute the program
+  for (uint64_t i = 0; i < total_nof_operations; i ++) {
+    prog_executor.execute();
+    for (auto& var_ptr : prog_executor.m_variable_ptrs) {
+      var_ptr++;
+    }
+  }
+  return eIcicleError::SUCCESS;
+}
+
+// REGISTER_EXECUTE_PROGRAM_BACKEND("CPU", cpu_execute_program<scalar_t>);
 
 /*********************************** Polynomial evaluation ***********************************/
 
