@@ -367,6 +367,26 @@ public:
     return sub_limbs<TLC, true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
   }
 
+    static constexpr HOST_DEVICE_INLINE Field mont_sub_modulus(const Field& xs)
+  {
+    // Field r = xs;
+    // Field p = Field{get_modulus<1>()};
+    // if (p.limbs_storage.limbs[TLC - 1] > r.limbs_storage.limbs[TLC - 1]) return r;
+    const ff_storage p = get_modulus<1>();
+    #ifndef __CUDA_ARCH__
+    if (p.limbs[TLC - 1] > xs.limbs_storage.limbs[TLC - 1]) return xs;
+    #endif
+    // printf("*** %x %x ***\n", p.limbs_storage.limbs[TLC - 1], r.limbs_storage.limbs[TLC - 1]);
+    Field rs = {};
+    return sub_limbs<TLC, true>(xs.limbs_storage, p, rs.limbs_storage) ? xs : rs;
+    // Field r = xs;
+    // ff_storage r_reduced = {};
+    // uint64_t carry = 0;
+    // carry = sub_limbs<TLC, true>(r.limbs_storage, p, r_reduced);
+    // if (carry == 0) r = Field{r_reduced};
+    // return r;
+  }
+
   friend std::ostream& operator<<(std::ostream& os, const Field& xs)
   {
     std::stringstream hex_string;
@@ -477,29 +497,19 @@ public:
   static constexpr HOST_INLINE Field barret_mult(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
+    return barret_reduce(xy);          // reduce mod p
   }
 
-#endif
-
-  static constexpr HOST_DEVICE_INLINE Field mont_sub_modulus(const Field& xs, bool get_higher = false)
-  {
-    Field r = xs;
-    Field p = Field{get_modulus<1>()};
-    if (p.limbs_storage.limbs[TLC - 1] > r.limbs_storage.limbs[TLC - 1]) return r;
-    ff_storage r_reduced = {};
-    uint64_t carry = 0;
-    carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (carry == 0) r = Field{r_reduced};
-    return r;
-  }
+// #endif
 
   static constexpr HOST_DEVICE_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
     Field r = {};
     base_math::template multiply_mont<TLC>(
       xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
+    // return r;
     return mont_sub_modulus(r);
+    // return sub_modulus(r);
   }
 
   static constexpr HOST_DEVICE_INLINE Field mont_reduce(Wide t)
