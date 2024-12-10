@@ -364,19 +364,14 @@ namespace icicle {
    *
    * @tparam T Type of the elements in the vectors.
    * @param data_vec vector of arrays. Those arrays contains the parameters for the program.
-   * @param program a class that decribes the functionality to run on each set of entries at the vectors.
+   * @param program a class that describes the functionality to run on each set of entries at the vectors.
    * @param size Size of each arrays. The program will be executed size times
    * @param config Configuration for the operation.
    * @return eIcicleError Error code indicating success or failure.
    */
 
   template <typename T>
-  eIcicleError execute_program(
-    std::vector<T*>& data,
-    Program<T>& program,
-    uint64_t size,
-    const VecOpsConfig& config);
-
+  eIcicleError execute_program(std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config);
 
   /**
    * @brief Evaluates a polynomial at given domain points.

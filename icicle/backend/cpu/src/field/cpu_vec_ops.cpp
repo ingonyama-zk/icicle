@@ -841,29 +841,24 @@ eIcicleError cpu_highest_non_zero_idx(
 
 REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CPU", cpu_highest_non_zero_idx<scalar_t>);
 
-
-
 /*********************************** Execute program ***********************************/
 template <typename T>
-eIcicleError cpu_execute_program(
-  std::vector<T*>& data,
-    Program<T>& program,
-    uint64_t size,
-    const VecOpsConfig& config)
+eIcicleError cpu_execute_program(std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config)
 {
   if (data.size() != program.m_nof_parameters) {
-    ICICLE_LOG_ERROR << "Program has " << program.m_nof_parameters << " while data has " << data.size() <<  " parameters";
+    ICICLE_LOG_ERROR << "Program has " << program.m_nof_parameters << " while data has " << data.size()
+                     << " parameters";
     return eIcicleError::INVALID_ARGUMENT;
-  } 
+  }
   const uint64_t total_nof_operations = size * config.batch_size;
   CpuProgramExecutor prog_executor(program);
   // init prog_executor to point to data vectors
-  for (int param_idx = 0; param_idx<program.m_nof_parameters; ++ param_idx) {
+  for (int param_idx = 0; param_idx < program.m_nof_parameters; ++param_idx) {
     prog_executor.m_variable_ptrs[param_idx] = data[param_idx];
   }
 
   // run over all elements in the arrays and execute the program
-  for (uint64_t i = 0; i < total_nof_operations; i ++) {
+  for (uint64_t i = 0; i < total_nof_operations; i++) {
     prog_executor.execute();
     for (auto& var_ptr : prog_executor.m_variable_ptrs) {
       var_ptr++;
