@@ -531,7 +531,6 @@ public:
       xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
     // return r;
     return mont_sub_modulus(r);
-    // return sub_modulus(r);
   }
 
   static constexpr HOST_DEVICE_INLINE Field mont_reduce(Wide t)
