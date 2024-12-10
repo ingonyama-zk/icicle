@@ -918,7 +918,7 @@ void lambda_multi_result(std::vector<MlePoly>& vars)
   const MlePoly& C = vars[2];
   const MlePoly& EQ = vars[3];
   vars[4] = EQ * (A * B - C) + scalar_t::from(9);
-  vars[5] = A * B - !C;
+  vars[5] = A * B - C.inverse();
   vars[6] = vars[5];
 }
 
