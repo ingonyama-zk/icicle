@@ -483,6 +483,9 @@ namespace ntt_cpu {
     // if ((scalar_size >= 32 && (logn + log_batch_size) <= 13) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
     //   return false;
     // }
+    if (logn <= 5) {
+      return false;
+    }
     return true;
   }
 

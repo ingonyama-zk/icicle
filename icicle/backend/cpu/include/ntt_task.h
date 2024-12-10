@@ -324,58 +324,66 @@ namespace ntt_cpu {
         index_in_mem[i] = stride * i;
       }
     }
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
+      for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
+        E* current_elements =
+          ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
 
-    for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
-      E* current_elements =
-        ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
+        if (need_to_apply_coset_multiplication) {
+          apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
+        }
 
-      if (need_to_apply_coset_multiplication) {
-        apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
-      }
+        T = current_elements[index_in_mem[3]] - current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[2]] + current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] - current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[4]];
 
-      T = current_elements[index_in_mem[3]] - current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[2]] + current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] - current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[4]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] * twiddles[0];
 
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] * twiddles[0];
+        current_elements[index_in_mem[4]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[3]] + T;
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] - T;
+        T = current_elements[index_in_mem[5]] + current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] - current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[2]];
 
-      current_elements[index_in_mem[4]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[3]] + T;
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] - T;
-      T = current_elements[index_in_mem[5]] + current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] - current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[2]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[1]] * twiddles[1];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] * twiddles[0];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] * twiddles[2];
 
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[1]] * twiddles[1];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] * twiddles[0];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] * twiddles[2];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[5]];
 
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[3]];
 
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[3]];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[7]] + current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[7]] - current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[4]] + T;
+        current_elements[index_in_mem[4]] = current_elements[index_in_mem[4]] - T;
 
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[7]] + current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[7]] - current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[3]];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[3]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[4]] + T;
-      current_elements[index_in_mem[4]] = current_elements[index_in_mem[4]] - T;
-
-      if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->logn);
-        for (uint64_t i = 0; i < 8; ++i) {
-          current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+        if (last_layer && ntt_data->direction == NTTDir::kInverse) {
+          S inv_size = S::inv_log_size(ntt_data->logn);
+          for (uint64_t i = 0; i < 8; ++i) {
+            current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+          }
         }
       }
+      if (ntt_data->is_parallel && subntt_idx_in_task < nof_subntts_per_task-1){
+        for (uint32_t i = 0; i < 8; i++) {
+          index_in_mem[i] = index_in_mem[i] + stride ;
+        }
+      }
+  
     }
   }
 
@@ -431,140 +439,149 @@ namespace ntt_cpu {
       }
     }
 
-    for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
-      E* current_elements =
-        ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
+      for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
+        E* current_elements =
+          ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
 
-      if (need_to_apply_coset_multiplication) {
-        apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
+        if (need_to_apply_coset_multiplication) {
+          apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
+        }
+
+        T = current_elements[index_in_mem[0]] + current_elements[index_in_mem[8]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[8]];
+        current_elements[index_in_mem[8]] = current_elements[index_in_mem[4]] + current_elements[index_in_mem[12]];
+        current_elements[index_in_mem[4]] = current_elements[index_in_mem[4]] - current_elements[index_in_mem[12]];
+        current_elements[index_in_mem[12]] = current_elements[index_in_mem[2]] + current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] - current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[10]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[14]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[9]] = current_elements[index_in_mem[5]] + current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] - current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[13]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[11]];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] - current_elements[index_in_mem[11]];
+        current_elements[index_in_mem[11]] = current_elements[index_in_mem[7]] + current_elements[index_in_mem[15]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[7]] - current_elements[index_in_mem[15]];
+        current_elements[index_in_mem[4]] = twiddles[3] * current_elements[index_in_mem[4]];
+
+        // 2
+        current_elements[index_in_mem[15]] = T + current_elements[index_in_mem[8]];
+        T = T - current_elements[index_in_mem[8]];
+        current_elements[index_in_mem[8]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[4]] = current_elements[index_in_mem[12]] + current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[12]] = current_elements[index_in_mem[12]] - current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[10]] = current_elements[index_in_mem[2]] + current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] - current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[14]] + current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[14]] = current_elements[index_in_mem[14]] - current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[9]] = current_elements[index_in_mem[13]] + current_elements[index_in_mem[11]];
+        current_elements[index_in_mem[13]] = current_elements[index_in_mem[13]] - current_elements[index_in_mem[11]];
+        current_elements[index_in_mem[11]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] - current_elements[index_in_mem[5]];
+
+        current_elements[index_in_mem[12]] = twiddles[5] * current_elements[index_in_mem[12]];
+        current_elements[index_in_mem[10]] = twiddles[6] * current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[2]] = twiddles[7] * current_elements[index_in_mem[2]];
+
+        // 3
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[10]] + current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[10]] = current_elements[index_in_mem[10]] - current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[9]] = current_elements[index_in_mem[14]] + current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[14]] = current_elements[index_in_mem[14]] - current_elements[index_in_mem[13]];
+
+        current_elements[index_in_mem[13]] = current_elements[index_in_mem[11]] + current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[13]] = twiddles[14] * current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[11]] =
+          twiddles[12] * current_elements[index_in_mem[11]] + current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[7]] =
+          twiddles[13] * current_elements[index_in_mem[7]] + current_elements[index_in_mem[13]];
+
+        current_elements[index_in_mem[13]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[13]] = twiddles[17] * current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[1]] =
+          twiddles[15] * current_elements[index_in_mem[1]] + current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[3]] =
+          twiddles[16] * current_elements[index_in_mem[3]] + current_elements[index_in_mem[13]];
+
+        // 4
+        current_elements[index_in_mem[13]] = current_elements[index_in_mem[15]] + current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[15]] = current_elements[index_in_mem[15]] - current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[4]] = T + current_elements[index_in_mem[12]];
+        T = T - current_elements[index_in_mem[12]];
+        current_elements[index_in_mem[12]] = current_elements[index_in_mem[8]] + current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[8]] = current_elements[index_in_mem[8]] - current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[10]];
+
+        current_elements[index_in_mem[6]] = twiddles[9] * current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[9]] = twiddles[10] * current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[14]] = twiddles[11] * current_elements[index_in_mem[14]];
+
+        current_elements[index_in_mem[10]] = current_elements[index_in_mem[9]] + current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[9]] = current_elements[index_in_mem[9]] - current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[14]] = current_elements[index_in_mem[11]] + current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[11]] = current_elements[index_in_mem[11]] - current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[7]] + current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[7]] - current_elements[index_in_mem[3]];
+
+        // 5
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[13]] + current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[13]] = current_elements[index_in_mem[13]] - current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[15]] + current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[15]] = current_elements[index_in_mem[15]] - current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[4]] + current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[4]] = current_elements[index_in_mem[4]] - current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[10]] = T + current_elements[index_in_mem[9]];
+        T = T - current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[9]] = current_elements[index_in_mem[12]] + current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[12]] = current_elements[index_in_mem[12]] - current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[14]] = current_elements[index_in_mem[8]] + current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[8]] = current_elements[index_in_mem[8]] - current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[5]] + current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] - current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[11]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[11]];
+
+        // reorder + return
+        current_elements[index_in_mem[11]] = current_elements[index_in_mem[0]];
+        current_elements[index_in_mem[0]] = current_elements[index_in_mem[3]];
+        current_elements[index_in_mem[3]] = current_elements[index_in_mem[7]];
+        current_elements[index_in_mem[7]] = current_elements[index_in_mem[1]];
+        current_elements[index_in_mem[1]] = current_elements[index_in_mem[9]];
+        current_elements[index_in_mem[9]] = current_elements[index_in_mem[12]];
+        current_elements[index_in_mem[12]] = current_elements[index_in_mem[15]];
+        current_elements[index_in_mem[15]] = current_elements[index_in_mem[11]];
+        current_elements[index_in_mem[11]] = current_elements[index_in_mem[5]];
+        current_elements[index_in_mem[5]] = current_elements[index_in_mem[14]];
+        current_elements[index_in_mem[14]] = T;
+        T = current_elements[index_in_mem[8]];
+        current_elements[index_in_mem[8]] = current_elements[index_in_mem[13]];
+        current_elements[index_in_mem[13]] = T;
+        T = current_elements[index_in_mem[4]];
+        current_elements[index_in_mem[4]] = current_elements[index_in_mem[2]];
+        current_elements[index_in_mem[2]] = current_elements[index_in_mem[6]];
+        current_elements[index_in_mem[6]] = current_elements[index_in_mem[10]];
+        current_elements[index_in_mem[10]] = T;
+
+        if (last_layer && ntt_data->direction == NTTDir::kInverse) {
+          S inv_size = S::inv_log_size(ntt_data->logn);
+          for (uint64_t i = 0; i < 16; ++i) {
+            current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+          }
+        }
       }
-
-      T = current_elements[index_in_mem[0]] + current_elements[index_in_mem[8]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[8]];
-      current_elements[index_in_mem[8]] = current_elements[index_in_mem[4]] + current_elements[index_in_mem[12]];
-      current_elements[index_in_mem[4]] = current_elements[index_in_mem[4]] - current_elements[index_in_mem[12]];
-      current_elements[index_in_mem[12]] = current_elements[index_in_mem[2]] + current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] - current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[10]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[14]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[9]] = current_elements[index_in_mem[5]] + current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] - current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[13]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[11]];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] - current_elements[index_in_mem[11]];
-      current_elements[index_in_mem[11]] = current_elements[index_in_mem[7]] + current_elements[index_in_mem[15]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[7]] - current_elements[index_in_mem[15]];
-      current_elements[index_in_mem[4]] = twiddles[3] * current_elements[index_in_mem[4]];
-
-      // 2
-      current_elements[index_in_mem[15]] = T + current_elements[index_in_mem[8]];
-      T = T - current_elements[index_in_mem[8]];
-      current_elements[index_in_mem[8]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[4]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[4]];
-      current_elements[index_in_mem[4]] = current_elements[index_in_mem[12]] + current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[12]] = current_elements[index_in_mem[12]] - current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[10]] = current_elements[index_in_mem[2]] + current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[2]] - current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[14]] + current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[14]] = current_elements[index_in_mem[14]] - current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[9]] = current_elements[index_in_mem[13]] + current_elements[index_in_mem[11]];
-      current_elements[index_in_mem[13]] = current_elements[index_in_mem[13]] - current_elements[index_in_mem[11]];
-      current_elements[index_in_mem[11]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[1]] - current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[3]] - current_elements[index_in_mem[5]];
-
-      current_elements[index_in_mem[12]] = twiddles[5] * current_elements[index_in_mem[12]];
-      current_elements[index_in_mem[10]] = twiddles[6] * current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[2]] = twiddles[7] * current_elements[index_in_mem[2]];
-
-      // 3
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[10]] + current_elements[index_in_mem[2]];
-      current_elements[index_in_mem[10]] = current_elements[index_in_mem[10]] - current_elements[index_in_mem[2]];
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[6]] + current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[6]] - current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[9]] = current_elements[index_in_mem[14]] + current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[14]] = current_elements[index_in_mem[14]] - current_elements[index_in_mem[13]];
-
-      current_elements[index_in_mem[13]] = current_elements[index_in_mem[11]] + current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[13]] = twiddles[14] * current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[11]] =
-        twiddles[12] * current_elements[index_in_mem[11]] + current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[7]] =
-        twiddles[13] * current_elements[index_in_mem[7]] + current_elements[index_in_mem[13]];
-
-      current_elements[index_in_mem[13]] = current_elements[index_in_mem[1]] + current_elements[index_in_mem[3]];
-      current_elements[index_in_mem[13]] = twiddles[17] * current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[1]] =
-        twiddles[15] * current_elements[index_in_mem[1]] + current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[3]] =
-        twiddles[16] * current_elements[index_in_mem[3]] + current_elements[index_in_mem[13]];
-
-      // 4
-      current_elements[index_in_mem[13]] = current_elements[index_in_mem[15]] + current_elements[index_in_mem[4]];
-      current_elements[index_in_mem[15]] = current_elements[index_in_mem[15]] - current_elements[index_in_mem[4]];
-      current_elements[index_in_mem[4]] = T + current_elements[index_in_mem[12]];
-      T = T - current_elements[index_in_mem[12]];
-      current_elements[index_in_mem[12]] = current_elements[index_in_mem[8]] + current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[8]] = current_elements[index_in_mem[8]] - current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[10]];
-
-      current_elements[index_in_mem[6]] = twiddles[9] * current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[9]] = twiddles[10] * current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[14]] = twiddles[11] * current_elements[index_in_mem[14]];
-
-      current_elements[index_in_mem[10]] = current_elements[index_in_mem[9]] + current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[9]] = current_elements[index_in_mem[9]] - current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[14]] = current_elements[index_in_mem[11]] + current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[11]] = current_elements[index_in_mem[11]] - current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[7]] + current_elements[index_in_mem[3]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[7]] - current_elements[index_in_mem[3]];
-
-      // 5
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[13]] + current_elements[index_in_mem[2]];
-      current_elements[index_in_mem[13]] = current_elements[index_in_mem[13]] - current_elements[index_in_mem[2]];
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[15]] + current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[15]] = current_elements[index_in_mem[15]] - current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[4]] + current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[4]] = current_elements[index_in_mem[4]] - current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[10]] = T + current_elements[index_in_mem[9]];
-      T = T - current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[9]] = current_elements[index_in_mem[12]] + current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[12]] = current_elements[index_in_mem[12]] - current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[14]] = current_elements[index_in_mem[8]] + current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[8]] = current_elements[index_in_mem[8]] - current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[5]] + current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[5]] - current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[0]] + current_elements[index_in_mem[11]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[11]];
-
-      // reorder + return
-      current_elements[index_in_mem[11]] = current_elements[index_in_mem[0]];
-      current_elements[index_in_mem[0]] = current_elements[index_in_mem[3]];
-      current_elements[index_in_mem[3]] = current_elements[index_in_mem[7]];
-      current_elements[index_in_mem[7]] = current_elements[index_in_mem[1]];
-      current_elements[index_in_mem[1]] = current_elements[index_in_mem[9]];
-      current_elements[index_in_mem[9]] = current_elements[index_in_mem[12]];
-      current_elements[index_in_mem[12]] = current_elements[index_in_mem[15]];
-      current_elements[index_in_mem[15]] = current_elements[index_in_mem[11]];
-      current_elements[index_in_mem[11]] = current_elements[index_in_mem[5]];
-      current_elements[index_in_mem[5]] = current_elements[index_in_mem[14]];
-      current_elements[index_in_mem[14]] = T;
-      T = current_elements[index_in_mem[8]];
-      current_elements[index_in_mem[8]] = current_elements[index_in_mem[13]];
-      current_elements[index_in_mem[13]] = T;
-      T = current_elements[index_in_mem[4]];
-      current_elements[index_in_mem[4]] = current_elements[index_in_mem[2]];
-      current_elements[index_in_mem[2]] = current_elements[index_in_mem[6]];
-      current_elements[index_in_mem[6]] = current_elements[index_in_mem[10]];
-      current_elements[index_in_mem[10]] = T;
-
-      if (last_layer && ntt_data->direction == NTTDir::kInverse) {
-        S inv_size = S::inv_log_size(ntt_data->logn);
-        for (uint64_t i = 0; i < 16; ++i) {
-          current_elements[index_in_mem[i]] = current_elements[index_in_mem[i]] * inv_size;
+        
+      if (ntt_data->is_parallel && subntt_idx_in_task < nof_subntts_per_task-1){
+        for (uint32_t i = 0; i < 16; i++) {
+          index_in_mem[i] = index_in_mem[i] + stride ;
         }
       }
     }
@@ -626,7 +643,6 @@ namespace ntt_cpu {
 
     const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
     for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
-      ICICLE_LOG_DEBUG << "index_in_mem[0] = " << index_in_mem[0];
       for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
         E* current_elements =
           ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
@@ -1380,6 +1396,7 @@ namespace ntt_cpu {
       reorder_by_bit_reverse_non_parallel();
       return;
     }
+    const uint32_t nof_subntts_per_task = ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
     uint32_t offset = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     E* subntt_elements =
       ntt_data->elements +
@@ -1410,7 +1427,9 @@ namespace ntt_cpu {
           if (i_mem_idx < ntt_data->size && rev_mem_idx < ntt_data->size) { // Ensure indices
                                                                             // are
                                                                             // within bounds
-            std::swap(current_elements[stride * i_mem_idx], current_elements[stride * rev_mem_idx]);
+            for (uint32_t subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
+              std::swap(current_elements[stride * (i_mem_idx + subntt_idx_in_task)], current_elements[stride * (rev_mem_idx + subntt_idx_in_task)]);
+            }
           } else {
             // Handle out-of-bounds error
             ICICLE_LOG_ERROR << "i=" << i << ", rev=" << rev << ", original_size=" << ntt_data->size;
@@ -1469,6 +1488,7 @@ namespace ntt_cpu {
     uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     uint64_t original_size = (1 << ntt_data->logn);
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
       E* hierarchy_1_subntt_elements =
         ntt_data->elements +
@@ -1480,17 +1500,20 @@ namespace ntt_cpu {
                                        ? hierarchy_1_subntt_elements + batch
                                        : hierarchy_1_subntt_elements + batch * original_size;
       for (uint32_t elem = 0; elem < hierarchy_0_subntt_size; elem++) {
-        uint64_t elem_mem_idx = stride * idx_in_mem(ntt_task_coordinates, elem);
+        uint64_t elem_mem_idx = idx_in_mem(ntt_task_coordinates, elem);
         i = (ntt_task_coordinates->hierarchy_0_layer_idx == 0)
               ? elem
               : elem * hierarchy_0_nof_subntts + ntt_task_coordinates->hierarchy_0_subntt_idx;
-        j = (ntt_task_coordinates->hierarchy_0_layer_idx == 0) ? ntt_task_coordinates->hierarchy_0_subntt_idx
-                                                               : ntt_task_coordinates->hierarchy_0_block_idx;
-        uint64_t tw_idx = (ntt_data->direction == NTTDir::kForward)
-                            ? ((CpuNttDomain<S>::s_ntt_domain.get_max_size() / ntt_size) * j * i)
-                            : CpuNttDomain<S>::s_ntt_domain.get_max_size() -
-                                ((CpuNttDomain<S>::s_ntt_domain.get_max_size() / ntt_size) * j * i);
-        elements_of_current_batch[elem_mem_idx] = elements_of_current_batch[elem_mem_idx] * twiddles[tw_idx];
+        for (uint32_t subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
+          j = (ntt_task_coordinates->hierarchy_0_layer_idx == 0) ? (ntt_task_coordinates->hierarchy_0_subntt_idx + subntt_idx_in_task)
+                                                                : ntt_task_coordinates->hierarchy_0_block_idx;
+          uint64_t tw_idx = (ntt_data->direction == NTTDir::kForward)
+                              ? ((CpuNttDomain<S>::s_ntt_domain.get_max_size() / ntt_size) * j * i)
+                              : CpuNttDomain<S>::s_ntt_domain.get_max_size() -
+                                  ((CpuNttDomain<S>::s_ntt_domain.get_max_size() / ntt_size) * j * i);
+          elements_of_current_batch[stride * (elem_mem_idx + subntt_idx_in_task)] = elements_of_current_batch[stride * (elem_mem_idx + subntt_idx_in_task)] * twiddles[tw_idx];
+          ICICLE_LOG_DEBUG<<"elements_of_current_batch["<<stride * (elem_mem_idx + subntt_idx_in_task)<<"] = " << elements_of_current_batch[stride * (elem_mem_idx + subntt_idx_in_task)];
+        }
       }
     }
   }
