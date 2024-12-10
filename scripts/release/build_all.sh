@@ -29,16 +29,11 @@ if [[ ! -d "./icicle" || ! -d "./scripts" ]]; then
   exit 1
 fi
 
-# Build Docker images
-echo "Building Docker images..."
-# Ubuntu 22.04, CUDA 12.2.2
-docker build -t icicle-release-ubuntu22-cuda122 -f ./scripts/release/Dockerfile.ubuntu22 .
-# Ubuntu 20.04, CUDA 12.2.2
-docker build -t icicle-release-ubuntu20-cuda122 -f ./scripts/release/Dockerfile.ubuntu20 .
-# ubi8 (rhel compatible), CUDA 12.2.2
-docker build -t icicle-release-ubi8-cuda122 -f ./scripts/release/Dockerfile.ubi8 .
-# ubi9 (rhel compatible), CUDA 12.2.2
-docker build -t icicle-release-ubi9-cuda122 -f ./scripts/release/Dockerfile.ubi9 .
+# Download latest build images
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu22-cuda122:latest
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu20-cuda122:latest
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122:latest
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122:latest
 
 # Compile and tar release in each
 
@@ -71,9 +66,13 @@ docker run --rm --gpus all                  \
             -v ./scripts:/scripts           \
             icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi8 cuda122 &
 
+# NOTE: The last command should not be run in the background,
+# otherwise the script completes and the github action continues 
+# and may exit before the builds finish
+
 # ubi 9 (rhel compatible)
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122 &
+            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122

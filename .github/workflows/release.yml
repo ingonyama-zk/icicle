@@ -16,7 +16,7 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: [self-hosted, Linux, X64, icicle]    
+    runs-on: [self-hosted, Linux, X64, icicle]  
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,26 +30,26 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh-key: ${{ secrets.CUDA_PULL_KEY }}
           ref: main
-      # - name: Setup Cache
-      #   id: cache
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ~/.cargo/bin/
-      #       ~/.cargo/registry/index/
-      #       ~/.cargo/registry/cache/
-      #       ~/.cargo/git/db/
-      #     key: ${{ runner.os }}-cargo-${{ hashFiles('~/.cargo/bin/cargo-workspaces') }}
-      # - name: Install cargo-workspaces
-      #   if: steps.cache.outputs.cache-hit != 'true'
-      #   run: cargo install cargo-workspaces
-      # - name: Bump rust crate versions, commit, and tag
-      #   working-directory: wrappers/rust
-      #   # https://github.com/pksunkara/cargo-workspaces?tab=readme-ov-file#version
-      #   run: |
-      #     git config user.name release-bot
-      #     git config user.email release-bot@ingonyama.com
-      #     cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags --no-git-push -m "Bump rust crates' version"
+      - name: Setup Cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('~/.cargo/bin/cargo-workspaces') }}
+      - name: Install cargo-workspaces
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-workspaces
+      - name: Bump rust crate versions, commit, and tag
+        working-directory: wrappers/rust
+        # https://github.com/pksunkara/cargo-workspaces?tab=readme-ov-file#version
+        run: |
+          git config user.name release-bot
+          git config user.email release-bot@ingonyama.com
+          cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags --no-git-push -m "Bump rust crates' version" --allow-branch fix-release-script
       - uses: actions/setup-node@v4
         with:
           node-version: 18
@@ -59,17 +59,24 @@ jobs:
         working-directory: ./docs
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
-          LATEST_VERSION=$LATEST_TAG:0:1
+          LATEST_VERSION=${LATEST_TAG:1}
+          npm install
           npm run docusaurus docs:version $LATEST_VERSION
           git add --all
           git commit -m "Bump docs version"
-        # git push
-      # - name: Create draft release
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |          
-      #     LATEST_TAG=$(git describe --tags --abbrev=0)
-      #     gh release create $LATEST_TAG --generate-notes -d --verify-tag -t "Release $LATEST_TAG"
+          git push
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |          
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          gh release create $LATEST_TAG --generate-notes -d --verify-tag -t "Release $LATEST_TAG"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload release tars
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,6 +84,6 @@ jobs:
           mkdir -p release_output && rm -rf ./release_output/*
           LATEST_TAG=$(git describe --tags --abbrev=0)
           ./scripts/release/build_all.sh ./release_output $LATEST_TAG
-      # for file in ./release_output/*.tar.gz; do
-      #   gh release upload $LATEST_TAG "$file"
-      # done
+          for file in ./release_output/*.tar.gz; do
+            gh release upload $LATEST_TAG "$file"
+          done
