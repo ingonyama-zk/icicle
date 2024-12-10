@@ -522,7 +522,7 @@ public:
     return barret_reduce(xy);   // reduce mod p
   }
 
-  #endif
+#endif
 
   static constexpr HOST_DEVICE_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
@@ -553,11 +553,11 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
-  #ifdef BARRET
+#ifdef BARRET
     return barret_reduce(xs);
-  #else
+#else
     return mont_reduce(xs);
-  #endif
+#endif
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
@@ -570,11 +570,11 @@ public:
 
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
-  #ifdef BARRET
+#ifdef BARRET
     return barret_mult(xs, ys);
-  #else
+#else
     return mont_mult(xs, ys);
-  #endif
+#endif
   }
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
@@ -599,11 +599,11 @@ public:
     if constexpr (is_u32) {
       return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
     } else {
-  #ifdef BARRET
+#ifdef BARRET
       return multiplier * xs;
-  #else
+#else
       return to_montgomery(multiplier) * xs;
-  #endif
+#endif
     }
   }
 
@@ -619,11 +619,11 @@ public:
         return r;
       }
     } else {
-  #ifdef BARRET
+#ifdef BARRET
       return Field{Gen::weierstrass_b} * xs;
-  #else
+#else
       return Field{Gen::weierstrass_b_mont} * xs;
-  #endif
+#endif
     }
   }
 
@@ -633,11 +633,11 @@ public:
     T rs = {};
     T temp = xs;
     bool is_zero = true;
-  #ifdef __CUDA_ARCH__
+#ifdef __CUDA_ARCH__
     UNROLL
-  #else
-    #pragma unroll
-  #endif
+#else
+  #pragma unroll
+#endif
     for (unsigned i = 0; i < 32; i++) {
       if (multiplier & (1 << i)) {
         rs = is_zero ? temp : (rs + temp);
@@ -667,19 +667,19 @@ public:
     //     return mont_sub_modulus(r);
     // #endif
   }
-  #ifdef BARRET
+#ifdef BARRET
   static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
   static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
   {
     return xs * Field{CONFIG::montgomery_r_inv};
   }
-  #else
+#else
   static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs)
   {
     return xs * Field{CONFIG::montgomery_r_sqr};
   }
   static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) { return xs * Field{CONFIG::one}; }
-  #endif
+#endif
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Field neg(const Field& xs)
@@ -698,17 +698,17 @@ public:
     Field rs = {};
     uint32_t* r = rs.limbs_storage.limbs;
     if constexpr (TLC > 1) {
-  #ifdef __CUDA_ARCH__
+#ifdef __CUDA_ARCH__
       UNROLL
-  #else
-    #pragma unroll
-  #endif
+#else
+  #pragma unroll
+#endif
       for (unsigned i = 0; i < TLC - 1; i++) {
-  #ifdef __CUDA_ARCH__
+#ifdef __CUDA_ARCH__
         r[i] = __funnelshift_rc(x[i], x[i + 1], 1);
-  #else
+#else
         r[i] = (x[i] >> 1) | (x[i + 1] << 31);
-  #endif
+#endif
       }
     }
     r[TLC - 1] = x[TLC - 1] >> 1;
@@ -731,11 +731,11 @@ public:
     if (xs == zero()) return zero();
     constexpr Field one = {1};
     constexpr ff_storage modulus = CONFIG::modulus;
-  #ifdef BARRET
+#ifdef BARRET
     Field u = xs;
-  #else
+#else
     Field u = from_montgomery(xs);
-  #endif
+#endif
     Field v = Field{modulus};
     Field b = one;
     Field c = {};
@@ -758,11 +758,11 @@ public:
         c = c - b;
       }
     }
-  #ifdef BARRET
+#ifdef BARRET
     return (u == one) ? b : c;
-  #else
+#else
     return (u == one) ? to_montgomery(b) : to_montgomery(c);
-  #endif
+#endif
   }
 
   static constexpr HOST_DEVICE Field pow(Field base, int exp)
@@ -790,7 +790,7 @@ struct std::hash<Field<CONFIG>> {
   }
 };
 
-  #ifdef __CUDACC__
+#ifdef __CUDACC__
 template <class CONFIG>
 struct SharedMemory<Field<CONFIG>> {
   __device__ Field<CONFIG>* getPointer()
@@ -800,4 +800,4 @@ struct SharedMemory<Field<CONFIG>> {
   }
 };
 
-  #endif // __CUDACC__
+#endif // __CUDACC__
