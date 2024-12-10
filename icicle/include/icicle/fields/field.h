@@ -522,7 +522,7 @@ public:
     return barret_reduce(xy);   // reduce mod p
   }
 
-  // #endif
+  #endif
 
   static constexpr HOST_DEVICE_INLINE Field mont_mult(const Field& xs, const Field& ys)
   {
