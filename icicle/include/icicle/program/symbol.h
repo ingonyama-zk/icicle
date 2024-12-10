@@ -79,7 +79,7 @@ namespace icicle {
     unsigned int m_visit_idx = 0;
     static inline unsigned int s_last_visit = 1;
 
-    // update the current poly_degree based onthe operands
+    // update the current poly_degree based on the operands
     void update_poly_degree()
     {
       // if one of the operand has undef poly_degree
