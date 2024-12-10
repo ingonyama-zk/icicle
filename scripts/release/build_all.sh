@@ -2,20 +2,24 @@
 
 set -e 
 
-# Use provided release_output directory or default to "release_output"
-output_dir="${1:-./release_output}"
-version="$2"
-
-if [[ -z $version ]]; then
-  echo "Usage: You must supply a version for release tar files"
+# Check if sufficient arguments are provided
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <version> [output_dir]"
+  echo
+  echo "Arguments:"
+  echo "  <version>       The version for release tar files (required)."
+  echo "  [output_dir]    The directory to store release output files (optional, defaults to './release_output')."
   exit 1
 fi
+
+# Use provided release_output directory or default to "release_output"
+version="$1"
+output_dir="${2:-./release_output}"
 
 first_char=${version:0:1}
 if [[ "${first_char,,}" == "v" ]]; then
     version="${version:1}"
 fi
-
 
 version="${version//./_}"
 
@@ -26,7 +30,7 @@ if [[ ! -d "./icicle" || ! -d "./scripts" ]]; then
 fi
 
 # Build Docker images
-
+echo "Building Docker images..."
 # Ubuntu 22.04, CUDA 12.2.2
 docker build -t icicle-release-ubuntu22-cuda122 -f ./scripts/release/Dockerfile.ubuntu22 .
 # Ubuntu 20.04, CUDA 12.2.2
@@ -37,6 +41,11 @@ docker build -t icicle-release-ubi8-cuda122 -f ./scripts/release/Dockerfile.ubi8
 docker build -t icicle-release-ubi9-cuda122 -f ./scripts/release/Dockerfile.ubi9 .
 
 # Compile and tar release in each
+
+# Inform the user of what is being done
+echo "Preparing release files..."
+echo "Version: $version"
+echo "Output Directory: $output_dir"
 
 # Create the output directory if it doesn't exist, and clean it
 mkdir -p "$output_dir" && rm -rf "$output_dir/*"

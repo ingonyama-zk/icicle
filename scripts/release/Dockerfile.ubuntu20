@@ -13,7 +13,19 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     libarchive-dev \
     zlib1g-dev \
-    ninja-build
+    ninja-build \
+    software-properties-common \
+    gnupg \
+    && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+    && add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal main" \
+    && apt-get update && apt-get install -y \
+    clang \
+    lldb \
+    lld \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Verify installations
+RUN clang --version && lldb --version
 
 # Install the latest stable version of CMake from source
 RUN CMAKE_VERSION=3.27.4 \
@@ -28,3 +40,6 @@ RUN CMAKE_VERSION=3.27.4 \
 
 # Set CMake as the default version
 RUN ln -sf /usr/local/bin/cmake /usr/bin/cmake
+
+# Verify CMake installation
+RUN cmake --version

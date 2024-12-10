@@ -51,6 +51,8 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   handle_ntt(icicle_field "${FEATURES_LIST}")
   handle_ext_field(icicle_field "${FEATURES_LIST}")
   handle_poseidon(icicle_field "${FEATURES_LIST}")
+  handle_poseidon2(icicle_field "${FEATURES_LIST}")
+  handle_sumcheck(icicle_field "${FEATURES_LIST}")
   # Add additional feature handling calls here
 
   set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")

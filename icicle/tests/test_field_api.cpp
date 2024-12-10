@@ -11,6 +11,9 @@
 #include "icicle/utils/log.h"
 #include "icicle/backend/ntt_config.h"
 
+#include "icicle/program/symbol.h"
+#include "icicle/program/program.h"
+#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "test_base.h"
 
 using namespace field_config;
@@ -61,12 +64,9 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
 
 TYPED_TEST(FieldApiTest, vectorVectorOps)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -115,8 +115,6 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   }
   run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-
-  return;
 
   // accumulate
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
@@ -179,13 +177,10 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
 
 TYPED_TEST(FieldApiTest, montgomeryConversion)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
-  const bool is_to_montgomery = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const bool is_to_montgomery = rand_uint_32b(0, 1);
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
@@ -234,12 +229,9 @@ TYPED_TEST(FieldApiTest, montgomeryConversion)
 
 TEST_F(FieldApiTestBase, VectorReduceOps)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
   const int total_size = N * batch_size;
 
   ICICLE_LOG_DEBUG << "N = " << N;
@@ -319,12 +311,9 @@ TEST_F(FieldApiTestBase, VectorReduceOps)
 
 TEST_F(FieldApiTestBase, scalarVectorOps)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -431,20 +420,13 @@ TEST_F(FieldApiTestBase, scalarVectorOps)
 
 TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const int R =
-    1
-    << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
-  const int C =
-    1
-    << (rand() % 8 + 2); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
-  const int batch_size = 1 << (rand() % 4);
-  const bool columns_batch = rand() % 2;
-  const bool is_in_place = IcicleTestBase::is_main_device_available()
-                             ? 0
-                             : rand() % 2; // TODO - fix inplace (Hadar: I'm not sure we should support it)
+  const int R = 1 << rand_uint_32b(
+                  2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+  const int C = 1 << rand_uint_32b(
+                  2, 9); // cpu implementation for out of place transpose also supports sizes which are not powers of 2
+  const int batch_size = 1 << rand_uint_32b(0, 3);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const bool is_in_place = IcicleTestBase::is_main_device_available() ? 0 : rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "rows = " << R;
   ICICLE_LOG_DEBUG << "cols = " << C;
@@ -537,13 +519,10 @@ TYPED_TEST(FieldApiTest, matrixAPIsAsync)
 
 TYPED_TEST(FieldApiTest, bitReverse)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
-  const bool is_in_place = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const bool is_in_place = rand_uint_32b(0, 1);
   const int total_size = N * batch_size;
 
   ICICLE_LOG_DEBUG << "N = " << N;
@@ -613,15 +592,12 @@ TYPED_TEST(FieldApiTest, bitReverse)
 
 TYPED_TEST(FieldApiTest, Slice)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t size_in = 1 << (rand() % 15 + 5);
-  const uint64_t offset = rand() % 15;
-  const uint64_t stride = rand() % 4 + 1;
-  const uint64_t size_out = rand() % (((size_in - offset) / stride) - 1) + 1;
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t size_in = 1 << rand_uint_32b(4, 17);
+  const uint64_t offset = rand_uint_32b(0, 14);
+  const uint64_t stride = rand_uint_32b(1, 4);
+  const uint64_t size_out = rand_uint_32b(0, (size_in - offset) / stride);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "size_in = " << size_in;
   ICICLE_LOG_DEBUG << "size_out = " << size_out;
@@ -677,12 +653,9 @@ TYPED_TEST(FieldApiTest, Slice)
 
 TEST_F(FieldApiTestBase, highestNonZeroIdx)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t N = 1 << (rand() % 15 + 3);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
   const int total_size = N * batch_size;
 
   auto in_a = std::make_unique<scalar_t[]>(total_size);
@@ -718,13 +691,10 @@ TEST_F(FieldApiTestBase, highestNonZeroIdx)
 
 TEST_F(FieldApiTestBase, polynomialEval)
 {
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const uint64_t coeffs_size = 1 << (rand() % 10 + 4);
-  const uint64_t domain_size = 1 << (rand() % 8 + 2);
-  const int batch_size = 1 << (rand() % 5);
-  const bool columns_batch = rand() % 2;
+  const uint64_t coeffs_size = 1 << rand_uint_32b(4, 13);
+  const uint64_t domain_size = 1 << rand_uint_32b(2, 9);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "coeffs_size = " << coeffs_size;
   ICICLE_LOG_DEBUG << "domain_size = " << domain_size;
@@ -766,13 +736,11 @@ TEST_F(FieldApiTestBase, polynomialEval)
 
 TEST_F(FieldApiTestBase, polynomialDivision)
 {
-  int seed = time(0);
-  srand(seed);
-  const uint64_t numerator_size = 1 << (rand() % 3 + 5);
-  const uint64_t denominator_size = 1 << (rand() % 2 + 3);
+  const uint64_t numerator_size = 1 << rand_uint_32b(5, 7);
+  const uint64_t denominator_size = 1 << rand_uint_32b(3, 4);
   const uint64_t q_size = numerator_size - denominator_size + 1;
   const uint64_t r_size = numerator_size;
-  const int batch_size = 10 + rand() % 10;
+  const int batch_size = rand_uint_32b(10, 19);
 
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
@@ -844,27 +812,23 @@ TEST_F(FieldApiTestBase, polynomialDivision)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
-
-  int seed = time(0);
-  srand(seed);
-  ICICLE_LOG_DEBUG << "seed = " << seed;
-  const bool inplace = rand() % 2;
-  const int logn = rand() % 15 + 3;
+  const bool inplace = rand_uint_32b(0, 1);
+  const int logn = rand_uint_32b(3, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
-  const int log_batch_size = rand() % 3;
+  const int log_batch_size = rand_uint_32b(0, 2);
   const int batch_size = 1 << log_batch_size;
-  const int _ordering = rand() % 4;
+  const int _ordering = rand_uint_32b(0, 3);
   const Ordering ordering = static_cast<Ordering>(_ordering);
   bool columns_batch;
   if (logn == 7 || logn < 4) {
     columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
   } else {
-    columns_batch = rand() % 2;
+    columns_batch = rand_uint_32b(0, 1);
   }
-  const int _dir = 0;
+  const int _dir = rand_uint_32b(0, 1);
   const NTTDir dir = static_cast<NTTDir>(_dir); // 0: forward, 1: inverse
-  const int log_coset_stride = rand() % 3;
+  const int log_coset_stride = rand_uint_32b(0, 2);
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
@@ -940,6 +904,50 @@ TYPED_TEST(FieldApiTest, ntt)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 #endif // NTT
+
+// define program
+using MlePoly = Symbol<scalar_t>;
+
+void lambda_multi_result(std::vector<MlePoly>& vars)
+{
+  const MlePoly& A = vars[0];
+  const MlePoly& B = vars[1];
+  const MlePoly& C = vars[2];
+  const MlePoly& EQ = vars[3];
+  vars[4] = EQ * (A * B - C) + scalar_t::from(9);
+  vars[5] = A * B - !C;
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
+{
+  scalar_t a = scalar_t::rand_host();
+  scalar_t b = scalar_t::rand_host();
+  scalar_t c = scalar_t::rand_host();
+  scalar_t eq = scalar_t::rand_host();
+  scalar_t res_0;
+  scalar_t res_1;
+
+  Program<scalar_t> program(lambda_multi_result, 6);
+  CpuProgramExecutor<scalar_t> prog_exe(program);
+
+  // init program
+  prog_exe.m_variable_ptrs[0] = &a;
+  prog_exe.m_variable_ptrs[1] = &b;
+  prog_exe.m_variable_ptrs[2] = &c;
+  prog_exe.m_variable_ptrs[3] = &eq;
+  prog_exe.m_variable_ptrs[4] = &res_0;
+  prog_exe.m_variable_ptrs[5] = &res_1;
+
+  // execute
+  prog_exe.execute();
+
+  // check correctness
+  scalar_t expected_res_0 = eq * (a * b - c) + scalar_t::from(9);
+  ASSERT_EQ(res_0, expected_res_0);
+
+  scalar_t expected_res_1 = a * b - scalar_t::inverse(c);
+  ASSERT_EQ(res_1, expected_res_1);
+}
 
 int main(int argc, char** argv)
 {

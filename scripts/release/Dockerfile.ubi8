@@ -1,7 +1,28 @@
-# Use the official NVIDIA CUDA development image for ubi8 - rhel compatible
+# Use the official NVIDIA CUDA development image for UBI8 (RHEL-compatible)
 FROM nvidia/cuda:12.2.2-devel-ubi8
 
-# install cmake
-RUN dnf update -y && dnf install -y cmake
-# install ninja-build
-RUN dnf install -y ninja-build
+# Set non-interactive mode for package installations
+ENV DNF_YES_CLEAN_ALL=1
+
+# Install necessary tools and dependencies
+RUN dnf update -y && dnf install -y \
+    cmake \
+    ninja-build \
+    wget \
+    gnupg2 \
+    && dnf clean all
+
+# Add the RPM-based LLVM repository for Clang
+# RUN wget https://rpm.llvm.org/llvm-snapshot.gpg.key -O /etc/pki/rpm-gpg/RPM-GPG-KEY-clang && \
+#     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-clang && \
+#     echo -e "[llvm]\nname=LLVM\nbaseurl=https://rpm.llvm.org/centos8/\nenabled=1\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-clang" > /etc/yum.repos.d/llvm.repo
+
+# Install Clang, LLDB, and LLD
+RUN dnf update -y && dnf install -y \
+    clang \
+    lldb \
+    lld \
+    && dnf clean all
+
+# Verify installations
+RUN clang --version && cmake --version && ninja --version
