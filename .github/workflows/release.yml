@@ -50,6 +50,9 @@ jobs:
           git config user.name release-bot
           git config user.email release-bot@ingonyama.com
           cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags --no-git-push -m "Bump rust crates' version"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
       - name: Bump docs version
         id: bump-docs-version
         if: inputs.releaseType != 'patch'
