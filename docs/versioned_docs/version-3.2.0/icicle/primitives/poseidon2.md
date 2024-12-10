@@ -1,17 +1,6 @@
 # Poseidon2
 
-TODO update for V3
-
-[Poseidon2](https://eprint.iacr.org/2023/323) is a recently released optimized version of Poseidon1. The two versions differ in two crucial points. First, Poseidon is a sponge hash function, while Poseidon2 can be either a sponge or a compression function depending on the use case. Secondly, Poseidon2 is instantiated by new and more efficient linear layers with respect to Poseidon. These changes decrease the number of multiplications in the linear layer by up to 90% and the number of constraints in Plonk circuits by up to 70%. This makes Poseidon2 currently the fastest arithmetization-oriented hash function without lookups.
-
-## Using Poseidon2
-
-(Danny pls update)
-
-ICICLE Poseidon2 is implemented for GPU and parallelization is performed for each state.
-We calculate multiple hash-sums over multiple pre-images in parallel, rather than going block by block over the input vector.
-
-For example, for Poseidon2 of width 16, input rate 8, output elements 8 and input of size 1024 * 8, we would expect 1024 * 8 elements of output. Which means each input block would be of size 8, resulting in 1024 Poseidon2 hashes being performed.
+[Poseidon2](https://eprint.iacr.org/2023/323) is a recently released optimized version of Poseidon. The two versions differ in two crucial points. First, Poseidon is a sponge hash function, while Poseidon2 can be either a sponge or a compression function depending on the use case. Secondly, Poseidon2 is instantiated by new and more efficient linear layers with respect to Poseidon. These changes decrease the number of multiplications in the linear layer by up to 90% and the number of constraints in Plonk circuits by up to 70%. This makes Poseidon2 currently the fastest arithmetization-oriented hash function without lookups. Since the compression mode is efficient it is ideal for use in Merkle trees as well. 
 
 ### Supported Bindings
 
@@ -27,7 +16,7 @@ You can also use your own set of constants as shown [here](https://github.com/in
 
 ### Rust API
 
-This is the most basic way to use the Poseidon2 API. See [examples/poseidon2](examples/rust/poseidon2)
+This is the most basic way to use the Poseidon2 API. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code
 
 ```rust
 let test_size = 4;
@@ -47,7 +36,7 @@ println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 
 ## The Tree Builder
 
-Similar to Poseidon1, you can use Poseidon2 in a tree builder. See [examples/poseidon2](examples/rust/poseidon2)
+Similar to Poseidon1, you can use Poseidon2 in a tree builder. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code.
 
 ```rust
 pub fn compute_binary_tree<F:FieldImpl>(

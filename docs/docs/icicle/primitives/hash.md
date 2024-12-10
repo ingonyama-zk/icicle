@@ -57,8 +57,17 @@ It is an improved version of the original [Poseidon](https://eprint.iacr.org/201
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
-The supported values of number of states ***t*** or ***T*** as defined in [eprint 2023/323](https://eprint.iacr.org/2023/323.pdf) are 2, 3, 4, 8, 12, 16, 20 and 24. Note that ***t*** of 8, 12, 16, 20 and 24 is supported only for the small fields (babybear and m31).
-The alpha, number of full rounds and partial rounds, rounds constants, MDS matrix, and partial matrix for each field and ***t*** could be found in the appropriate file in this [folder](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/icicle/hash/poseidon2_constants/constants).
+:::info
+
+The supported values of state size ***t*** as defined in [eprint 2023/323](https://eprint.iacr.org/2023/323.pdf) are 2, 3, 4, 8, 12, 16, 20 and 24. Note that ***t*** sizes 8, 12, 16, 20 and 24 are supported only for small fields (babybear and m31).
+
+:::
+
+:::info
+
+The S box power alpha, number of full rounds and partial rounds, rounds constants, MDS matrix, and partial matrix for each field and ***t*** can be found in this [folder](https://github.com/ingonyama-zk/icicle/tree/9b1506cda9eab30fc6a8d0a338e2cfab877402f7/icicle/include/icicle/hash/poseidon2_constants/constants).
+
+:::
 
 In the current version the padding is not supported and should be performed by the user.
 
