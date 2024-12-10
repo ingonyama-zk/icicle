@@ -25,7 +25,6 @@ Allowed values of $\alpha$ for a given prime is the smallest integer such that $
 For ICICLE supported curves/fields
 
 * Mersene $\alpha = 5$
-* Goldilocks $\alpha =7$
 * Babybear $\alpha=7$
 * Bls12-377 $\alpha =11$
 * Bls12-381 $\alpha=5$
