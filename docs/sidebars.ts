@@ -78,6 +78,11 @@ const cppApi = [
   },
   {
     type: "doc",
+    label: "Poseidon2",
+    id: "icicle/primitives/poseidon2",
+  },
+  {
+    type: "doc",
     label: "Merkle-Tree",
     id: "icicle/primitives/merkle",
   }
