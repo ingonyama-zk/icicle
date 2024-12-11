@@ -35,7 +35,7 @@ enum VecOperation {
   REPLACE_ELEMENTS,
   OUT_OF_PLACE_MATRIX_TRANSPOSE,
 
-  NOF_VECOPS_OPERATIONS
+  NOF_VECTOR_OPERATIONS
 };
 
 /**
@@ -332,7 +332,7 @@ private:
 
   // An array of available function pointers arranged according to the VecOperation enum
   using FunctionPtr = void (VectorOpTask::*)();
-  static constexpr std::array<FunctionPtr, static_cast<int>(NOF_VECOPS_OPERATIONS)> functionPtrs = {
+  static constexpr std::array<FunctionPtr, static_cast<int>(NOF_VECTOR_OPERATIONS)> functionPtrs = {
     &VectorOpTask::vector_add,              // VECTOR_ADD,
     &VectorOpTask::vector_sub,              // VECTOR_SUB,
     &VectorOpTask::vector_mul,              // VECTOR_MUL,
