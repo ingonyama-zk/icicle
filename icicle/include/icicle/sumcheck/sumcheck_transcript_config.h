@@ -48,8 +48,10 @@ namespace icicle {
   {
   public:
     // Default Constructor
-    SumcheckTranscriptConfig() : m_little_endian(true), m_seed_rng(F::from(0)), m_hasher(std::move(create_keccak_256_hash())) {}
-
+    SumcheckTranscriptConfig()
+        : m_little_endian(true), m_seed_rng(F::from(0)), m_hasher(std::move(create_keccak_256_hash()))
+    {
+    }
 
     // Constructor with byte vector for labels
     SumcheckTranscriptConfig(
