@@ -52,12 +52,17 @@ docker run --rm --gpus all                  \
             -v ./scripts:/scripts           \
             icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubuntu22 cuda122 &
 
+# obtain the last backgrounded process' pid
+pid_ubuntu22=$!
+
 # ubuntu 20
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
             icicle-release-ubuntu20-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubuntu20 cuda122 &
+
+pid_ubuntu20=$!
 
 # ubi 8 (rhel compatible)
 docker run --rm --gpus all                  \
@@ -66,13 +71,21 @@ docker run --rm --gpus all                  \
             -v ./scripts:/scripts           \
             icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi8 cuda122 &
 
-# NOTE: The last command should not be run in the background,
-# otherwise the script completes and the github action continues 
-# and may exit before the builds finish
+pid_ubi8=$!
 
 # ubi 9 (rhel compatible)
 docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122
+            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122 &
+
+pid_ubi9=$!
+
+# NOTE: After launching all builds in background tasks, we wait for all to complete
+# otherwise the script completes and the calling process (potentially github actions)
+# continues and may exit before the builds finish
+wait $pid_ubuntu22
+wait $pid_ubuntu20
+wait $pid_ubi8
+wait $pid_ubi9
