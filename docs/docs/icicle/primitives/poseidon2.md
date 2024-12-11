@@ -38,35 +38,30 @@ There are only two matrices: There is one type of matrix for full round and anot
 
 #### $t=4\cdot t'$ where $t'$ is an integer
 
-**Full Matrix** $M_{full}$ (Referred in paper as $M_{\mathcal{E}}$). These are hard coded (same for all primes $p>2^{30}$) for any fixed state size $t=4\cdot t'$ where $t'$ is an integer. 
- 
-$$
-M_{4} = \begin{pmatrix}
+**Full Matrix** $M_{full}$ (Referred in paper as $M_{\mathcal{E}}$). These are hard coded (same for all primes $p>2^{30}$) for any fixed state size $t=4\cdot t'$ where $t'$ is an integer.
+$$M_{4} = \begin{pmatrix}
 5 & 7 & 1 & 3 \\
 4& 6 & 1 & 1 \\
 1 & 3 & 5 & 7\\
 1 & 1 & 4 & 6\\
-\end{pmatrix} $$
+\end{pmatrix}$$
 
 As per the [paper](https://eprint.iacr.org/2023/323.pdf) this structure is always maintained and is always MDS for any prime $p>2^{30}$. 
 
 eg for $t=8$ the matrix looks like
-
-$$
-M_{full}^{8\times 8} = \begin{pmatrix}
+$$M_{full}^{8\times 8} = \begin{pmatrix}
 2\cdot M_4 & M_4 \\
 M_4 & 2\cdot M_4 \\
-\end{pmatrix} $$
+\end{pmatrix}$$
 
 **Partial Matrix** $M_{partial}$(referred in paper as $M_{\mathcal{I}}$) - There is only ONE partial matrix for all the partial rounds and has non zero diagonal entries along the diagonal and $1$ everywhere else.
 
-$$
-M_{Partial}^{t\times t} = \begin{pmatrix}
+$$M_{Partial}^{t\times t} = \begin{pmatrix}
 \mu_0 &1 & \ldots & 1 \\
 1 &\mu_1 & \ldots & 1 \\
 \vdots & \vdots & \ddots & \vdots \\
  1 & 1 &\ldots & \mu_{t-1}\\
-\end{pmatrix} $$
+\end{pmatrix}$$
 
 where $\mu_i \in \mathbb{F}$. In general this matrix is different for each prime since one has to find values that satisfy some inequalities in a field. However unlike Poseidon there is only one $M_{partial}$ for all partial rounds.
 
@@ -120,7 +115,7 @@ println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 
 # Merkle Tree Builder
 
-Similar to Poseidon1, you can use Poseidon2 in a tree builder. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code.
+You can use Poseidon2 in a Merkle tree builder. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code.
 
 ```rust
 pub fn compute_binary_tree<F:FieldImpl>(

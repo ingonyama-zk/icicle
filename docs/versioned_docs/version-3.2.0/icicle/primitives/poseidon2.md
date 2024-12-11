@@ -25,7 +25,6 @@ Allowed values of $\alpha$ for a given prime is the smallest integer such that $
 For ICICLE supported curves/fields
 
 * Mersene $\alpha = 5$
-* Goldilocks $\alpha =7$
 * Babybear $\alpha=7$
 * Bls12-377 $\alpha =11$
 * Bls12-381 $\alpha=5$
@@ -40,9 +39,7 @@ There are only two matrices: There is one type of matrix for full round and anot
 #### $t=4\cdot t'$ where $t'$ is an integer
 
 **Full Matrix** $M_{full}$ (Referred in paper as $M_{\mathcal{E}}$). These are hard coded (same for all primes $p>2^{30}$) for any fixed state size $t=4\cdot t'$ where $t'$ is an integer.
-
-$$
-M_{4} = \begin{pmatrix}
+$$M_{4} = \begin{pmatrix}
 5 & 7 & 1 & 3 \\
 4& 6 & 1 & 1 \\
 1 & 3 & 5 & 7\\
@@ -52,7 +49,6 @@ M_{4} = \begin{pmatrix}
 As per the [paper](https://eprint.iacr.org/2023/323.pdf) this structure is always maintained and is always MDS for any prime $p>2^{30}$.
 
 eg for $t=8$ the matrix looks like
-
 $$M_{full}^{8\times 8} = \begin{pmatrix}
 2\cdot M_4 & M_4 \\
 M_4 & 2\cdot M_4 \\
@@ -72,7 +68,6 @@ where $\mu_i \in \mathbb{F}$. In general this matrix is different for each prime
 #### $t=2,3$
 
 These are special state sizes. In all ICICLE supported curves/fields the matrices for $t=3$ are
-
 $$M_{full} = \begin{pmatrix}
 2 & 1 &  1 \\
 1 & 2 & 1 \\
@@ -84,7 +79,6 @@ $$M_{full} = \begin{pmatrix}
 \end{pmatrix}$$
 
 and the matrices for $t=2$ are
-
 $$M_{full} = \begin{pmatrix}
 2 & 1 \\
 1 & 2 \\
@@ -119,7 +113,7 @@ println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 
 # Merkle Tree Builder
 
-Similar to Poseidon1, you can use Poseidon2 in a tree builder. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code.
+You can use Poseidon2 in a Merkle tree builder. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code.
 
 ```rust
 pub fn compute_binary_tree<F:FieldImpl>(
