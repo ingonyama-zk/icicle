@@ -53,7 +53,8 @@ $$
 As per the [paper](https://eprint.iacr.org/2023/323.pdf) this structure is always maintained and is always MDS for any prime $p>2^{30}$.
 
 eg for $t=8$ the matrix looks like
-$$M_{full}^{8\times 8} = \begin{pmatrix}
+$$
+M_{full}^{8\times 8} = \begin{pmatrix}
 2\cdot M_4 & M_4 \\
 M_4 & 2\cdot M_4 \\
 \end{pmatrix}
@@ -61,7 +62,8 @@ $$
 
 **Partial Matrix** $M_{partial}$(referred in paper as $M_{\mathcal{I}}$) - There is only ONE partial matrix for all the partial rounds and has non zero diagonal entries along the diagonal and $1$ everywhere else.
 
-$$M_{Partial}^{t\times t} = \begin{pmatrix}
+$$
+M_{Partial}^{t\times t} = \begin{pmatrix}
 \mu_0 &1 & \ldots & 1 \\
 1 &\mu_1 & \ldots & 1 \\
 \vdots & \vdots & \ddots & \vdots \\

@@ -128,3 +128,28 @@ In order to update docs for old versions, the files under the specific version's
 ### Updating docs across versions
 
 If docs need updating across multiple versions, including future versions, they need to be updated in each previous version's [versioned_docs](./versioned_docs/) and the next version's docs under the [docs](./docs/) directory
+
+## Adding or removing docs from rendering
+
+Each version has its own sidebar.json file located in the [versioned_sidebars](./versioned_sidebars/) directory.
+
+The next version's sidebar is found in [sidebar.ts](./sidebars.ts).
+
+You can add or remove a doc from there to change the sidebar and include or prevent docs from rendering.
+
+## Troubleshooting
+
+### Latex isn't rendering correctly
+
+Latex formula must have the `$$` on a separate line:
+
+```mdx
+$$
+M_{4} = \begin{pmatrix}
+5 & 7 & 1 & 3 \\
+4& 6 & 1 & 1 \\
+1 & 3 & 5 & 7\\
+1 & 1 & 4 & 6\\
+\end{pmatrix}
+$$
+```
