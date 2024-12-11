@@ -234,7 +234,7 @@ macro_rules! impl_ecntt_bench {
                         continue;
                     }
 
-                    let points = C::generate_random_projective_points(test_size);
+                    let points = Projective::<C>::generate_random(test_size);
                     let points = HostSlice::from_slice(&points);
                     let mut batch_ntt_result = vec![Projective::<C>::zero(); full_size];
                     let batch_ntt_result = HostSlice::from_mut_slice(&mut batch_ntt_result);

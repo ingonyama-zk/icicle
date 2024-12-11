@@ -220,18 +220,6 @@ macro_rules! impl_scalar_field {
                     config: &VecOpsConfig,
                     output: *mut $field_type,
                 ) -> eIcicleError;
-
-                #[link_name = concat!($field_prefix, "_add")]
-                pub(crate) fn add(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
-
-                #[link_name = concat!($field_prefix, "_sub")]
-                pub(crate) fn sub(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
-
-                #[link_name = concat!($field_prefix, "_mul")]
-                pub(crate) fn mul(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
-
-                #[link_name = concat!($field_prefix, "_inv")]
-                pub(crate) fn inv(a: *const $field_name, result: *mut $field_name);
             }
         }
 
@@ -314,11 +302,6 @@ macro_rules! impl_field_tests {
             #[test]
             fn test_field_arithmetic() {
                 check_field_arithmetic::<$field_type>()
-            }
-
-            #[test]
-            fn test_field_arithmetic() {
-                check_field_arithmetic::<$field_name>()
             }
         }
     };

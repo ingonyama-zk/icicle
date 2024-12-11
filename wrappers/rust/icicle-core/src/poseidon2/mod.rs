@@ -15,10 +15,9 @@ pub trait Poseidon2Hasher<F: FieldImpl> {
 /// Delegates the creation to the `new` method of the `Poseidon2Hasher` trait.
 pub fn create_poseidon2_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: Poseidon2Hasher<F>, // Requires that the `Config` associated with `F` implements `Poseidon2Hasher`.
+    F: FieldImpl + Poseidon2Hasher<F>,
 {
-    <<F as FieldImpl>::Config as Poseidon2Hasher<F>>::new(t, domain_tag)
+    <F as Poseidon2Hasher<F>>::new(t, domain_tag)
 }
 
 pub struct Poseidon2;
@@ -26,8 +25,7 @@ pub struct Poseidon2;
 impl Poseidon2 {
     pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
     where
-        F: FieldImpl,                  // F must implement the FieldImpl trait
-        F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
+        F: FieldImpl + Poseidon2Hasher<F>,
     {
         create_poseidon2_hasher::<F>(t, domain_tag)
     }
@@ -38,11 +36,10 @@ macro_rules! impl_poseidon2 {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon2::{$field, $field_cfg};
+            use crate::poseidon2::$field;
             use icicle_core::{
                 hash::{Hasher, HasherHandle},
                 poseidon2::Poseidon2Hasher,
@@ -57,7 +54,7 @@ macro_rules! impl_poseidon2 {
             }
 
             // Implement the `Poseidon2Hasher` trait for the given field configuration.
-            impl Poseidon2Hasher<$field> for $field_cfg {
+            impl Poseidon2Hasher<$field> for $field {
                 fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon2_hasher(t, domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field))

@@ -7,12 +7,12 @@ use crate::{
 use icicle_runtime::{memory::HostSlice, test_utilities};
 use std::mem;
 
-pub fn check_poseidon2_hash<F: FieldImpl>()
+pub fn check_poseidon2_hash<F>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+    F: FieldImpl + Poseidon2Hasher<F> + GenerateRandom,
 {
     let batch = 1 << 4;
-    let domain_tag = F::Config::generate_random(1)[0];
+    let domain_tag = F::generate_random(1)[0];
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
         let large_field = mem::size_of::<F>() > 4;
         let skip_case = large_field && t > 4; // TODO Danny add  8, 12, 16, 20, 24 for large fields once all is supported
@@ -21,9 +21,9 @@ where
         };
         for domain_tag in [None, Some(&domain_tag)] {
             let inputs: Vec<F> = if domain_tag != None {
-                F::Config::generate_random(batch * (t - 1))
+                F::generate_random(batch * (t - 1))
             } else {
-                F::Config::generate_random(batch * t)
+                F::generate_random(batch * t)
             };
             let mut outputs_main = vec![F::zero(); batch];
             let mut outputs_ref = vec![F::zero(); batch];
@@ -89,12 +89,12 @@ where
 //     }
 // }
 
-pub fn check_poseidon2_hash_multi_device<F: FieldImpl>()
+pub fn check_poseidon2_hash_multi_device<F>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+    F: FieldImpl + Poseidon2Hasher<F> + GenerateRandom,
 {
     let t = 4; // t=4 is for Poseidon hash (t is the paper's terminology)
-    let inputs: Vec<F> = F::Config::generate_random(t);
+    let inputs: Vec<F> = F::generate_random(t);
     let mut outputs_main_0 = vec![F::zero(); 1];
     let mut outputs_main_1 = vec![F::zero(); 1];
     let mut outputs_ref = vec![F::zero(); 1];
@@ -138,9 +138,9 @@ where
     assert_eq!(outputs_ref, outputs_main_0);
 }
 
-pub fn check_poseidon2_tree<F: FieldImpl>()
+pub fn check_poseidon2_tree<F>()
 where
-    <F as FieldImpl>::Config: Poseidon2Hasher<F>,
+    F: FieldImpl + Poseidon2Hasher<F>,
 {
     let t = 4;
     let nof_layers = 4;

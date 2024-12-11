@@ -464,10 +464,9 @@ macro_rules! impl_ntt_bench {
             println!("ICICLE benchmark with {:?}", device);
         }
 
-        fn benchmark_ntt<T, F: FieldImpl>(c: &mut Criterion)
+        fn benchmark_ntt<T, F>(c: &mut Criterion)
         where
-        <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
-        <F as FieldImpl>::Config: VecOps<F>,
+            F: FieldImpl + NTT<F, F> + GenerateRandom + VecOps,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;
@@ -491,7 +490,7 @@ macro_rules! impl_ntt_bench {
 
             INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, FAST_TWIDDLES_MODE));
 
-            let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+            let coset_generators = [F::one(), F::generate_random(1)[0]];
             let mut config = NTTConfig::<F>::default();
 
             for test_size_log2 in (13u32..=max_log2) {
@@ -504,7 +503,7 @@ macro_rules! impl_ntt_bench {
                         continue;
                     }
 
-                    let scalars = F::Config::generate_random(full_size);
+                    let scalars = F::generate_random(full_size);
                     let input = HostSlice::from_slice(&scalars);
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
