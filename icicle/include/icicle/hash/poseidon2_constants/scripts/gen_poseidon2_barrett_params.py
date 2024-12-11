@@ -53,7 +53,7 @@ for field in fields:
       FILE_cpp_tmp.write(f'static const std::string partial_matrix_diagonal_m1_{hash_width}[]  = {{}};\n\n')
       FILE_cpp_tmp.close()
     else:
-      gen_constants_cmd = f'sage poseidon2_params.sage {field[0]} {hash_width} {hex(field[2])}'
+      gen_constants_cmd = f'sage poseidon2_barrett_params.sage {field[0]} {hash_width} {hex(field[2])}'
       print(f'command: {gen_constants_cmd}')
       result = subprocess.run([gen_constants_cmd], shell=True, capture_output=True, text=True)
       output_lines = result.stdout.strip().split('\n')
