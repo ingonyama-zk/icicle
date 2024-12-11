@@ -29,6 +29,6 @@ jobs:
           # See more: https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package
           labels: |
             org.opencontainers.image.source=https://github.com/ingonyama-zk/icicle
-          file: ./Dockerfile.${{ matrix.images }}
+          file: ./scripts/release/Dockerfile.${{ matrix.images }}
           tags: ghcr.io/ingonyama-zk/icicle-release-${{ matrix.images }}-cuda122:latest
           push: true
