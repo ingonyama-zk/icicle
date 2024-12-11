@@ -13,6 +13,7 @@
 
 #include "icicle/program/symbol.h"
 #include "icicle/program/program.h"
+#include "icicle/program/returning_value_program.h"
 #include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "test_base.h"
 
@@ -906,6 +907,8 @@ TYPED_TEST(FieldApiTest, ntt)
 // define program
 using MlePoly = Symbol<scalar_t>;
 
+// define program
+using MlePoly = Symbol<scalar_t>;
 void lambda_multi_result(std::vector<MlePoly>& vars)
 {
   const MlePoly& A = vars[0];
@@ -913,7 +916,8 @@ void lambda_multi_result(std::vector<MlePoly>& vars)
   const MlePoly& C = vars[2];
   const MlePoly& EQ = vars[3];
   vars[4] = EQ * (A * B - C) + scalar_t::from(9);
-  vars[5] = A * B - !C;
+  vars[5] = A * B - C.inverse();
+  vars[6] = vars[5];
 }
 
 TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
@@ -924,8 +928,9 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
   scalar_t eq = scalar_t::rand_host();
   scalar_t res_0;
   scalar_t res_1;
+  scalar_t res_2;
 
-  Program<scalar_t> program(lambda_multi_result, 6);
+  Program<scalar_t> program(lambda_multi_result, 7);
   CpuProgramExecutor<scalar_t> prog_exe(program);
 
   // init program
@@ -935,6 +940,7 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
   prog_exe.m_variable_ptrs[3] = &eq;
   prog_exe.m_variable_ptrs[4] = &res_0;
   prog_exe.m_variable_ptrs[5] = &res_1;
+  prog_exe.m_variable_ptrs[6] = &res_2;
 
   // execute
   prog_exe.execute();
@@ -945,6 +951,107 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
 
   scalar_t expected_res_1 = a * b - scalar_t::inverse(c);
   ASSERT_EQ(res_1, expected_res_1);
+  ASSERT_EQ(res_2, res_1);
+}
+
+MlePoly returning_value_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return (EQ * (A * B - C));
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  //----- element wise operation ----------------------
+  auto out_element_wise = std::make_unique<scalar_t[]>(total_size);
+  START_TIMER(element_wise_op)
+  for (int i = 0; i < 100000; ++i) {
+    out_element_wise[i] = in_eq[i] * (in_a[i] * in_b[i] - in_c[i]);
+  }
+  END_TIMER(element_wise_op, "Straight forward function (Element wise) time: ", true);
+
+  //----- explicit program ----------------------
+  ReturningValueProgram<scalar_t> program_explicit(returning_value_func, 4);
+
+  CpuProgramExecutor<scalar_t> prog_exe_explicit(program_explicit);
+  auto out_explicit_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_explicit.m_variable_ptrs[0] = in_a.get();
+  prog_exe_explicit.m_variable_ptrs[1] = in_b.get();
+  prog_exe_explicit.m_variable_ptrs[2] = in_c.get();
+  prog_exe_explicit.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_explicit.m_variable_ptrs[4] = out_explicit_program.get();
+
+  // run on all vectors
+  START_TIMER(explicit_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_explicit.execute();
+    (prog_exe_explicit.m_variable_ptrs[0])++;
+    (prog_exe_explicit.m_variable_ptrs[1])++;
+    (prog_exe_explicit.m_variable_ptrs[2])++;
+    (prog_exe_explicit.m_variable_ptrs[3])++;
+    (prog_exe_explicit.m_variable_ptrs[4])++;
+  }
+  END_TIMER(explicit_program, "Explicit program executor time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_explicit_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- predefined program ----------------------
+  Program<scalar_t> predef_program(EQ_X_AB_MINUS_C);
+
+  CpuProgramExecutor<scalar_t> prog_exe_predef(predef_program);
+  auto out_predef_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_predef.m_variable_ptrs[0] = in_a.get();
+  prog_exe_predef.m_variable_ptrs[1] = in_b.get();
+  prog_exe_predef.m_variable_ptrs[2] = in_c.get();
+  prog_exe_predef.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_predef.m_variable_ptrs[4] = out_predef_program.get();
+
+  // run on all vectors
+  START_TIMER(predef_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_predef.execute();
+    (prog_exe_predef.m_variable_ptrs[0])++;
+    (prog_exe_predef.m_variable_ptrs[1])++;
+    (prog_exe_predef.m_variable_ptrs[2])++;
+    (prog_exe_predef.m_variable_ptrs[3])++;
+    (prog_exe_predef.m_variable_ptrs[4])++;
+  }
+  END_TIMER(predef_program, "Program predefined time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_predef_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- Vecops operation ----------------------
+  auto config = default_vec_ops_config();
+  auto out_vec_ops = std::make_unique<scalar_t[]>(total_size);
+
+  START_TIMER(vecop)
+  vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
+  vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
+  vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
+  END_TIMER(predef_program, "Vec ops time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
 }
 
 int main(int argc, char** argv)
