@@ -10,7 +10,7 @@ If node.js or npm aren't installed, its suggested to use [nvm](https://github.co
 
 ## Install
 
-```
+```sh
 npm install
 ```
 
@@ -45,25 +45,58 @@ This command will:
 
 ### Removing old versions
 
-1. Remove the version from versions.json.
+- Remove the version from versions.json.
 
-[
-  "3.2.0",
-  "3.1.0",
-  "3.0.0",
-  "2.8.0",
-- "1.10.1"
-]
+```json
+  [
+    "3.2.0",
+    "3.1.0",
+    "3.0.0",
+    "2.8.0",
+  - "1.10.1"
+  ]
+```
 
+- Delete the versioned docs directory for that version. Example: versioned_docs/version-1.10.1.
+- Delete the versioned sidebars file. Example: versioned_sidebars/version-1.10.1-sidebars.json.
 
-2. Delete the versioned docs directory for that version. Example: versioned_docs/version-1.10.1.
-3. Delete the versioned sidebars file. Example: versioned_sidebars/version-1.10.1-sidebars.json.
+## Static assets
+
+Static assets like images should be placed in the top level [static](./static/) directory **regardless** of which version it will be used in.
+
+Docusaurus adds all of the files in the directories listed as `staticDirectories` in the config to the root of the build output so they can be accessed directly from the root path.
+
+Read more on this [here](https://docusaurus.io/docs/static-assets)
+
+### Adding a new static directory
+
+To update where Docusaurus looks for static directories, add the directory name to the `statidDirectories` list in the config:
+
+```ts
+const config: Config = {
+  .
+  .
+  .
+  staticDirectories: ['static'/*, "another static dir" */],
+  .
+  .
+  .
+}
+```
+
+### Linking to static assets in docs
+
+Since the static assets are at the root of the build output, static assets can be linked to directly from the root, maintaining the directory hierarchy they have in the static directory.
+
+For example:
+
+If an image is located at `static/images/poseidon.png`, it should be linked to as `/images/poseidon.png`
 
 ## Local development
 
 To render the site, run the following
 
-```
+```sh
 npm start
 ```
 
