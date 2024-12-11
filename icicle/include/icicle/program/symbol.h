@@ -83,9 +83,10 @@ namespace icicle {
     void update_poly_degree()
     {
       // if one of the operand has undef poly_degree
-      if ((m_operand1 && m_operand1->m_poly_degree < 0) || (m_operand2 && m_operand2->m_poly_degree < 0))
+      if ((m_operand1 && m_operand1->m_poly_degree < 0) || (m_operand2 && m_operand2->m_poly_degree < 0)) {
         m_poly_degree = -1;
-      return;
+        return;
+      }
       switch (m_opcode) {
       case OP_ADD:
       case OP_SUB:

@@ -117,8 +117,6 @@ TYPED_TEST(FieldApiTest, vectorVectorOps)
   run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
-  return;
-
   // accumulate
   FieldApiTest<TypeParam>::random_samples(in_a.get(), total_size);
   FieldApiTest<TypeParam>::random_samples(in_b.get(), total_size);
