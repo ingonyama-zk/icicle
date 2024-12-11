@@ -102,7 +102,7 @@ namespace icicle {
     int m_nof_constants = 0;
     int m_nof_intermidiates = 0;
 
-    const int get_nof_vars() const { return m_nof_parameters + m_nof_constants + m_nof_intermidiates; }
+    int get_nof_vars() const { return m_nof_parameters + m_nof_constants + m_nof_intermidiates; }
 
     static inline const int INST_OPCODE = 0;
     static inline const int INST_OPERAND1 = 1;
