@@ -113,7 +113,11 @@ namespace quotient {
 
             // Calculate Column Line Coeffs
             line_coeffs_sizes[tid] = sample_batches[tid].size;
-            size_t sample_batches_offset = tid * line_coeffs_sizes[tid] * 3; 
+            size_t sample_batches_offset = 0;
+            for (int i = 0; i < tid; ++i) {
+                sample_batches_offset += line_coeffs_sizes[i];
+            }
+            sample_batches_offset *= 3;
 
             QF alpha = QF::one();
 
