@@ -1,5 +1,5 @@
-use icicle_bls12_377::curve::{ScalarCfg as BLS12377ScalarCfg, ScalarField as BLS12377ScalarField};
-use icicle_bn254::curve::{ScalarCfg as Bn254ScalarCfg, ScalarField as Bn254ScalarField};
+use icicle_bls12_377::curve::ScalarField as BLS12377ScalarField;
+use icicle_bn254::curve::ScalarField as Bn254ScalarField;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 use clap::Parser;
@@ -47,12 +47,12 @@ fn main() {
 
     // Setting Bn254 points and scalars
     println!("Generating random inputs on host for bn254...");
-    let scalars = Bn254ScalarCfg::generate_random(size);
+    let scalars = Bn254ScalarField::generate_random(size);
     let mut ntt_results = DeviceVec::<Bn254ScalarField>::device_malloc(size).unwrap();
 
     // Setting bls12377 points and scalars
     println!("Generating random inputs on host for bls12377...");
-    let scalars_bls12377 = BLS12377ScalarCfg::generate_random(size);
+    let scalars_bls12377 = BLS12377ScalarField::generate_random(size);
     let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::device_malloc(size).unwrap();
 
     println!("Setting up bn254 Domain...");

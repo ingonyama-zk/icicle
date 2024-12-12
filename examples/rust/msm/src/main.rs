@@ -5,12 +5,28 @@ use icicle_runtime::{
 
 // Using both bn254 and bls12-377 curves
 use icicle_bls12_377::curve::{
-    CurveCfg as BLS12377CurveCfg, G1Projective as BLS12377G1Projective, ScalarCfg as BLS12377ScalarCfg,
+    Bls12377Curve,
+    G1Projective as BLS12377G1Projective,
+    ScalarField as BLS12377ScalarField
 };
-use icicle_bn254::curve::{CurveCfg, G1Projective, G2CurveCfg, G2Projective, ScalarCfg};
+use icicle_bn254::curve::{
+    Bn254Curve,
+    G1Projective as Bn254G1Projective,
+    Bn254G2Curve,
+    G2Projective as Bn254G2Projective,
+    ScalarField as Bn254ScalarField
+};
 
 use clap::Parser;
-use icicle_core::{curve::Curve, msm, traits::GenerateRandom};
+use icicle_core::{
+    curve::{
+        Curve,
+        Affine,
+        Projective
+    },
+    msm,
+    traits::GenerateRandom
+};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -49,13 +65,13 @@ fn main() {
     let upper_size = 1 << upper_bound;
 
     println!("Generating random inputs on host for bn254...");
-    let upper_points = CurveCfg::generate_random_affine_points(upper_size);
-    let g2_upper_points = G2CurveCfg::generate_random_affine_points(upper_size);
-    let upper_scalars = ScalarCfg::generate_random(upper_size);
+    let upper_points = Affine::<Bn254Curve>::generate_random(upper_size);
+    let g2_upper_points = Affine::<Bn254G2Curve>::generate_random(upper_size);
+    let upper_scalars = Bn254ScalarField::generate_random(upper_size);
 
     println!("Generating random inputs on host for bls12377...");
-    let upper_points_bls12377 = BLS12377CurveCfg::generate_random_affine_points(upper_size);
-    let upper_scalars_bls12377 = BLS12377ScalarCfg::generate_random(upper_size);
+    let upper_points_bls12377 = Affine::<Bls12377Curve>::generate_random(upper_size);
+    let upper_scalars_bls12377 = BLS12377ScalarField::generate_random(upper_size);
 
     for i in lower_bound..=upper_bound {
         let log_size = i;
@@ -75,8 +91,8 @@ fn main() {
         let scalars_bls12377 = HostSlice::from_slice(&upper_scalars_bls12377[..size]);
 
         println!("Configuring bn254 MSM...");
-        let mut msm_results = DeviceVec::<G1Projective>::device_malloc(1).unwrap();
-        let mut g2_msm_results = DeviceVec::<G2Projective>::device_malloc(1).unwrap();
+        let mut msm_results = DeviceVec::<Bn254G1Projective>::device_malloc(1).unwrap();
+        let mut g2_msm_results = DeviceVec::<Bn254G2Projective>::device_malloc(1).unwrap();
         let mut stream = IcicleStream::create().unwrap();
         let mut g2_stream = IcicleStream::create().unwrap();
         let mut cfg = msm::MSMConfig::default();
@@ -107,8 +123,8 @@ fn main() {
         .unwrap();
 
         println!("Moving results to host...");
-        let mut msm_host_result = vec![G1Projective::zero(); 1];
-        let mut g2_msm_host_result = vec![G2Projective::zero(); 1];
+        let mut msm_host_result = vec![Bn254G1Projective::zero(); 1];
+        let mut g2_msm_host_result = vec![Bn254G2Projective::zero(); 1];
         let mut msm_host_result_bls12377 = vec![BLS12377G1Projective::zero(); 1];
 
         stream

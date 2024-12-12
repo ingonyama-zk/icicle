@@ -380,40 +380,40 @@ macro_rules! impl_ntt_tests {
             check_ntt::<$field>()
         }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_coset_from_subgroup() {
-        //     initialize();
-        //     check_ntt_coset_from_subgroup::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_coset_from_subgroup() {
+            initialize();
+            check_ntt_coset_from_subgroup::<$field>()
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_coset_interpolation_nm() {
-        //     initialize();
-        //     check_ntt_coset_interpolation_nm::<$field>();
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_coset_interpolation_nm() {
+            initialize();
+            check_ntt_coset_interpolation_nm::<$field>();
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_arbitrary_coset() {
-        //     initialize();
-        //     check_ntt_arbitrary_coset::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_arbitrary_coset() {
+            initialize();
+            check_ntt_arbitrary_coset::<$field>()
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_batch() {
-        //     initialize();
-        //     check_ntt_batch::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_batch() {
+            initialize();
+            check_ntt_batch::<$field>()
+        }
 
-        // #[test]
-        // #[parallel]
-        // fn test_ntt_device_async() {
-        //     initialize();
-        //     check_ntt_device_async::<$field>()
-        // }
+        #[test]
+        #[parallel]
+        fn test_ntt_device_async() {
+            initialize();
+            check_ntt_device_async::<$field>()
+        }
 
         // problematic test since cannot have it execute last
         // also not testing much

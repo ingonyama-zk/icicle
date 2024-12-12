@@ -58,8 +58,8 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |        
         # loop over all directories in the current directory
-        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
-          if [ -d "$dir" ]; then
+        for dir in */; do
+          if [ "$dir" != "target/" ]; then
             echo "Running command in $dir"
             cd $dir
             ./run.sh -d CUDA

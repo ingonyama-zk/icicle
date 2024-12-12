@@ -1,6 +1,6 @@
 use clap::Parser;
 use hex;
-use icicle_babybear::field::ScalarCfg as BabybearCfg;
+use icicle_babybear::field::ScalarField as BabybearScalarField;
 use icicle_core::{
     hash::{HashConfig, Hasher},
     merkle::{MerkleTree, MerkleTreeConfig, PaddingPolicy},
@@ -55,7 +55,7 @@ fn keccak_hash_example() {
     assert_eq!(expected_hash, output_as_hex_str);
 
     // 3. Hash field elements (Babybear field elements)
-    let input_field_elements = BabybearCfg::generate_random(128); // Generate random field elements
+    let input_field_elements = BabybearScalarField::generate_random(128); // Generate random field elements
     let mut output = vec![0u8; 32]; // Output buffer for the hash
 
     keccak_hasher
@@ -74,7 +74,7 @@ fn keccak_hash_example() {
     let batch = 1 << 10; // 1024
     let single_hash_nof_elements = 1 << 12; // 4096
     let total_input_elements = batch * single_hash_nof_elements;
-    let input_field_elements_batch = BabybearCfg::generate_random(total_input_elements);
+    let input_field_elements_batch = BabybearScalarField::generate_random(total_input_elements);
 
     // The size of the output determines the batch size for the hash function
     let mut output = vec![0u8; 32 * batch]; // Output buffer for batch hashing. Doesn't have to be u8.
