@@ -132,6 +132,7 @@ namespace host_math {
   {
     uint32_t carry = 0;
     carry_chain<NLIMBS, false, CARRY_OUT> chain;
+#pragma unroll
     for (unsigned i = 0; i < NLIMBS; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
     return CARRY_OUT ? carry : 0;
@@ -142,6 +143,7 @@ namespace host_math {
   {
     uint64_t carry = 0;
     carry_chain<NLIMBS, false, CARRY_OUT> chain;
+#pragma unroll
     for (unsigned i = 0; i < NLIMBS / 2; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
     return CARRY_OUT ? carry : 0;
@@ -178,8 +180,10 @@ namespace host_math {
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
     uint32_t* r = rs.limbs;
+#pragma unroll
     for (unsigned i = 0; i < NLIMBS_B; i++) {
       uint32_t carry = 0;
+#pragma unroll
       for (unsigned j = 0; j < NLIMBS_A; j++)
         r[j + i] = host_math::madc_cc(a[j], b[i], r[j + i], carry);
       r[NLIMBS_A + i] = carry;
@@ -189,8 +193,10 @@ namespace host_math {
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
   static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
+#pragma unroll
     for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
       uint64_t carry = 0;
+#pragma unroll
       for (unsigned j = 0; j < NLIMBS_A / 2; j++)
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
       r[NLIMBS_A / 2 + i] = carry;
@@ -247,6 +253,7 @@ namespace host_math {
       storage<NLIMBS> out{};
       if constexpr (LIMBS_GAP < NLIMBS) {
         out.limbs[LIMBS_GAP] = xs.limbs[0] << BITS32;
+#pragma unroll
         for (unsigned i = 1; i < NLIMBS - LIMBS_GAP; i++)
           out.limbs[i + LIMBS_GAP] = (xs.limbs[i] << BITS32) + (xs.limbs[i - 1] >> (32 - BITS32));
       }
@@ -264,6 +271,7 @@ namespace host_math {
       constexpr unsigned LIMBS_GAP = BITS / 32;
       storage<NLIMBS> out{};
       if constexpr (LIMBS_GAP < NLIMBS - 1) {
+#pragma unroll
         for (unsigned i = 0; i < NLIMBS - LIMBS_GAP - 1; i++)
           out.limbs[i] = (xs.limbs[i + LIMBS_GAP] >> BITS32) + (xs.limbs[i + LIMBS_GAP + 1] << (32 - BITS32));
       }
@@ -281,7 +289,9 @@ namespace host_math {
     const storage<NLIMBS_NUM>& num, const storage<NLIMBS_DENOM>& denom, storage<NLIMBS_Q>& q, storage<NLIMBS_DENOM>& r)
   {
     storage<NLIMBS_DENOM> temp = {};
+#pragma unroll
     for (int limb_idx = NLIMBS_NUM - 1; limb_idx >= 0; limb_idx--) {
+#pragma unroll
       for (int bit_idx = 31; bit_idx >= 0; bit_idx--) {
         r = left_shift<NLIMBS_DENOM, 1>(r);
         r.limbs[0] |= ((num.limbs[limb_idx] >> bit_idx) & 1);
