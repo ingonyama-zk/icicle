@@ -512,6 +512,23 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, highest_non_zero_idx)(input, size, &config, out_idx);
   }
 
+  /*********************************** EXECUTE PROGRAM ***********************************/
+
+  ICICLE_DISPATCHER_INST(ExecuteProgramDispatcher, execute_program, programExecutionImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, execute_program)(
+    std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+  {
+    return ExecuteProgramDispatcher::execute(data, program, size, config);
+  }
+
+  template <>
+  eIcicleError
+  execute_program(std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+  {
+    return CONCAT_EXPAND(FIELD, execute_program)(data, program, size, config);
+  }
+
   /*********************************** POLY EVAL ***********************************/
 
   ICICLE_DISPATCHER_INST(ScalarPolyEvalDispatcher, poly_eval, scalarPolyEvalImpl)

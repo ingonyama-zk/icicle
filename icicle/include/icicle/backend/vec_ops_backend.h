@@ -53,6 +53,9 @@ namespace icicle {
   using scalarHighNonZeroIdxOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)>;
 
+  using programExecutionImpl = std::function<eIcicleError(
+    const Device& device, std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)>;
+
   using scalarPolyEvalImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* coeffs,
@@ -239,6 +242,16 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_poly_division) = []() -> bool {                                                            \
       register_poly_division(DEVICE_TYPE, FUNC);                                                                       \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+  
+  void register_execute_program(const std::string& deviceType, programExecutionImpl);
+
+#define REGISTER_EXECUTE_PROGRAM_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_program_execution) = []() -> bool {                                                        \
+      register_execute_program(DEVICE_TYPE, FUNC);                                                                     \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
