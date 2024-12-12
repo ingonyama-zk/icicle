@@ -25,7 +25,7 @@ fn main() {
     };
     config
         .define("CURVE", "grumpkin")
-        .define("HASH", "OFF")
+        .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.

@@ -12,6 +12,7 @@ icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 icicle-hash = { workspace = true }
 icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"] }
+hex = "0.4"
 
 [dev-dependencies]
 criterion = "0.3"

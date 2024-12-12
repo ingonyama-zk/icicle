@@ -2,6 +2,7 @@ use icicle_runtime::{memory::HostSlice, test_utilities};
 
 use crate::curve::Curve;
 use crate::curve::*;
+use crate::traits::GenerateRandom;
 use crate::{
     ecntt::*,
     ntt::{NTTConfig, NTTDir, Ordering},
@@ -10,14 +11,14 @@ use crate::{
 
 pub fn check_ecntt<C: Curve>()
 where
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    C::ScalarField: ECNTT<C>,
 {
     let test_sizes = [1 << 4, 1 << 9, 1 << 11];
     for test_size in test_sizes {
         for dir in [NTTDir::kForward, NTTDir::kInverse] {
             let config: NTTConfig<C::ScalarField> = NTTConfig::default();
 
-            let points = C::generate_random_projective_points(test_size);
+            let points = Projective::generate_random(test_size);
             let mut ecntt_result = vec![Projective::<C>::zero(); test_size];
             let mut ecntt_result_ref = vec![Projective::<C>::zero(); test_size];
 
@@ -57,7 +58,7 @@ where
 
 pub fn check_ecntt_batch<C: Curve>()
 where
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    C::ScalarField: ECNTT<C>,
 {
     test_utilities::test_set_main_device();
 
@@ -66,7 +67,7 @@ where
     for test_size in test_sizes {
         let mut config: NTTConfig<C::ScalarField> = NTTConfig::default();
         for batch_size in batch_sizes {
-            let slice = &C::generate_random_projective_points(test_size * batch_size);
+            let slice = &Projective::<C>::generate_random(test_size * batch_size);
             let points = HostSlice::from_slice(slice);
 
             for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {

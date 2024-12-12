@@ -4,12 +4,12 @@ use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::HostSlice;
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
-pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
+pub fn check_sumcheck_transcript_config<F>(hash: &Hasher)
 where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+    F: FieldImpl + GenerateRandom,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::generate_random(1)[0];
 
     // Test `new` constructor
     let config1 = SumcheckTranscriptConfig::new(
@@ -47,12 +47,12 @@ where
 }
 
 /// Tests the `Sumcheck` struct's basic functionality, including proving and verifying.
-pub fn check_sumcheck_simple<F: FieldImpl>(hash: &Hasher)
+pub fn check_sumcheck_simple<F>(hash: &Hasher)
 where
-    <F as FieldImpl>::Config: GenerateRandom<F> + SumcheckConstructor<F>,
+    F: FieldImpl + GenerateRandom + SumcheckConstructor<F>,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -68,7 +68,7 @@ where
     let sumcheck = Sumcheck::new::<F>(&config).unwrap();
 
     // Generate dummy input data.
-    let dummy_input: Vec<F> = F::Config::generate_random(5);
+    let dummy_input: Vec<F> = F::generate_random(5);
 
     // Generate a proof using the `prove` method.
     let proof = sumcheck.prove(HostSlice::from_slice(&dummy_input));

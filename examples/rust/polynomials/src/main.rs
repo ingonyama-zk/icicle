@@ -53,11 +53,10 @@ fn init_ntt_domain(max_ntt_size: u64) {
 fn randomize_poly<P>(size: usize, from_coeffs: bool) -> P
 where
     P: UnivariatePolynomial,
-    P::Field: FieldImpl,
-    P::FieldConfig: GenerateRandom<P::Field>,
+    P::Field: FieldImpl + GenerateRandom,
 {
     println!("Randomizing polynomial of size {} (from_coeffs: {})", size, from_coeffs);
-    let coeffs_or_evals = P::FieldConfig::generate_random(size);
+    let coeffs_or_evals = P::Field::generate_random(size);
     let p = if from_coeffs {
         P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
     } else {

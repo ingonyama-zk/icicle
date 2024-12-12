@@ -25,7 +25,7 @@ fn main() {
     };
     config
         .define("FIELD", "stark252")
-        .define("HASH", "OFF")
+        .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     if cfg!(feature = "cuda_backend") {

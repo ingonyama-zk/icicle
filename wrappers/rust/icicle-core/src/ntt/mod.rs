@@ -164,8 +164,7 @@ pub fn ntt<T, F>(
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<T, F>,
+    F: FieldImpl + NTT<T, F>,
 {
     if input.len() != output.len() {
         panic!(
@@ -187,7 +186,7 @@ where
     local_cfg.are_inputs_on_device = input.is_on_device();
     local_cfg.are_outputs_on_device = output.is_on_device();
 
-    <<F as FieldImpl>::Config as NTT<T, F>>::ntt_unchecked(input, dir, &local_cfg, output)
+    F::ntt_unchecked(input, dir, &local_cfg, output)
 }
 
 /// Computes the NTT, or a batch of several NTTs inplace.
@@ -205,14 +204,13 @@ pub fn ntt_inplace<T, F>(
     cfg: &NTTConfig<F>,
 ) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTT<T, F>,
+    F: FieldImpl + NTT<T, F>,
 {
     let mut local_cfg = cfg.clone();
     local_cfg.are_inputs_on_device = inout.is_on_device();
     local_cfg.are_outputs_on_device = inout.is_on_device();
 
-    <<F as FieldImpl>::Config as NTT<T, F>>::ntt_inplace_unchecked(inout, dir, &local_cfg)
+    F::ntt_inplace_unchecked(inout, dir, &local_cfg)
 }
 
 /// Generates twiddle factors which will be used to compute NTTs.
@@ -225,40 +223,36 @@ where
 ///
 pub fn initialize_domain<F>(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: FieldImpl + NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTTDomain<F>>::initialize_domain(primitive_root, config)
+    F::initialize_domain(primitive_root, config)
 }
 
 pub fn release_domain<F>() -> Result<(), eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: FieldImpl + NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTTDomain<F>>::release_domain()
+    F::release_domain()
 }
 
 pub fn get_root_of_unity<F>(max_size: u64) -> F
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: FieldImpl + NTTDomain<F>,
 {
-    <<F as FieldImpl>::Config as NTTDomain<F>>::get_root_of_unity(max_size)
+    F::get_root_of_unity(max_size)
 }
 
 #[macro_export]
 macro_rules! impl_ntt_without_domain {
     (
-      $field_prefix:literal,
+      $field_name:literal,
       $domain_field:ident,
-      $domain_config:ident,
       $ntt_type:ident,
       $ntt_type_lit:literal,
       $inout:ident
     ) => {
         extern "C" {
-            #[link_name = concat!($field_prefix, $ntt_type_lit)]
+            #[link_name = concat!($field_name, $ntt_type_lit)]
             fn ntt_ffi(
                 input: *const $inout,
                 size: i32,
@@ -268,7 +262,7 @@ macro_rules! impl_ntt_without_domain {
             ) -> eIcicleError;
         }
 
-        impl $ntt_type<$inout, $domain_field> for $domain_config {
+        impl $ntt_type<$inout, $domain_field> for $domain_field {
             fn ntt_unchecked(
                 input: &(impl HostOrDeviceSlice<$inout> + ?Sized),
                 dir: NTTDir,
@@ -310,27 +304,26 @@ macro_rules! impl_ntt_without_domain {
 #[macro_export]
 macro_rules! impl_ntt {
     (
-      $field_prefix:literal,
+      $field_name:literal,
       $field_prefix_ident:ident,
-      $field:ident,
-      $field_config:ident
+      $field_type:ident
     ) => {
         mod $field_prefix_ident {
             use crate::ntt::*;
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "_ntt_init_domain")]
-                fn initialize_ntt_domain(primitive_root: &$field, config: &NTTInitDomainConfig) -> eIcicleError;
+                #[link_name = concat!($field_name, "_ntt_init_domain")]
+                fn initialize_ntt_domain(primitive_root: &$field_type, config: &NTTInitDomainConfig) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_ntt_release_domain")]
+                #[link_name = concat!($field_name, "_ntt_release_domain")]
                 fn release_ntt_domain() -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_get_root_of_unity")]
-                fn get_root_of_unity(max_size: u64, rou: *mut $field) -> eIcicleError;
+                #[link_name = concat!($field_name, "_get_root_of_unity")]
+                fn get_root_of_unity(max_size: u64, rou: *mut $field_type) -> eIcicleError;
             }
 
-            impl NTTDomain<$field> for $field_config {
-                fn initialize_domain(primitive_root: $field, config: &NTTInitDomainConfig) -> Result<(), eIcicleError> {
+            impl NTTDomain<$field_type> for $field_type {
+                fn initialize_domain(primitive_root: $field_type, config: &NTTInitDomainConfig) -> Result<(), eIcicleError> {
                     unsafe { initialize_ntt_domain(&primitive_root, config).wrap() }
                 }
 
@@ -338,16 +331,16 @@ macro_rules! impl_ntt {
                     unsafe { release_ntt_domain().wrap() }
                 }
 
-                fn get_root_of_unity(max_size: u64) -> $field {
-                    let mut rou = std::mem::MaybeUninit::<$field>::uninit(); // Prepare uninitialized memory for rou
+                fn get_root_of_unity(max_size: u64) -> $field_type {
+                    let mut rou = <$field_type>::zero();
                     unsafe {
-                        get_root_of_unity(max_size, rou.as_mut_ptr());
-                        return rou.assume_init();
+                        get_root_of_unity(max_size, &mut rou as *mut $field_type);
+                        return rou;
                     }
                 }
             }
 
-            impl_ntt_without_domain!($field_prefix, $field, $field_config, NTT, "_ntt", $field);
+            impl_ntt_without_domain!($field_name, $field_type, NTT, "_ntt", $field_type);
         }
     };
 }
@@ -469,10 +462,9 @@ macro_rules! impl_ntt_bench {
             println!("ICICLE benchmark with {:?}", device);
         }
 
-        fn benchmark_ntt<T, F: FieldImpl>(c: &mut Criterion)
+        fn benchmark_ntt<T, F>(c: &mut Criterion)
         where
-        <F as FieldImpl>::Config: NTT<F, F> + GenerateRandom<F>,
-        <F as FieldImpl>::Config: VecOps<F>,
+            F: FieldImpl + NTT<F, F> + GenerateRandom + VecOps,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;
@@ -496,7 +488,7 @@ macro_rules! impl_ntt_bench {
 
             INIT.get_or_init(move || init_domain::<$field>(1 << max_log2, FAST_TWIDDLES_MODE));
 
-            let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+            let coset_generators = [F::one(), F::generate_random(1)[0]];
             let mut config = NTTConfig::<F>::default();
 
             for test_size_log2 in (13u32..=max_log2) {
@@ -509,7 +501,7 @@ macro_rules! impl_ntt_bench {
                         continue;
                     }
 
-                    let scalars = F::Config::generate_random(full_size);
+                    let scalars = F::generate_random(full_size);
                     let input = HostSlice::from_slice(&scalars);
 
                     let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];

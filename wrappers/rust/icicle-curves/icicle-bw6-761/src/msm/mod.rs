@@ -1,6 +1,6 @@
-use crate::curve::CurveCfg;
+use crate::curve::Bw6761Curve;
 #[cfg(not(feature = "no_g2"))]
-use crate::curve::G2CurveCfg;
+use crate::curve::Bw6761G2Curve;
 use icicle_core::{
     curve::{Affine, Curve, Projective},
     impl_msm,
@@ -11,22 +11,22 @@ use icicle_runtime::{
     memory::{DeviceSlice, HostOrDeviceSlice},
 };
 
-impl_msm!("bw6_761", bw6_761, CurveCfg);
+impl_msm!("bw6_761", bw6_761, Bw6761Curve);
 #[cfg(not(feature = "no_g2"))]
-impl_msm!("bw6_761_g2", bw6_761_g2, G2CurveCfg);
+impl_msm!("bw6_761_g2", bw6_761_g2, Bw6761G2Curve);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::curve::CurveCfg;
+    use crate::curve::Bw6761Curve;
     #[cfg(not(feature = "no_g2"))]
-    use crate::curve::G2CurveCfg;
+    use crate::curve::Bw6761G2Curve;
     use icicle_core::impl_msm_tests;
     use icicle_core::msm::tests::*;
 
-    impl_msm_tests!(CurveCfg);
+    impl_msm_tests!(Bw6761Curve);
     #[cfg(not(feature = "no_g2"))]
     mod g2 {
         use super::*;
-        impl_msm_tests!(G2CurveCfg);
+        impl_msm_tests!(Bw6761G2Curve);
     }
 }

@@ -1,7 +1,7 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::impl_poseidon;
 
-impl_poseidon!("grumpkin", grumpkin, ScalarField, ScalarCfg);
+impl_poseidon!("grumpkin", grumpkin, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

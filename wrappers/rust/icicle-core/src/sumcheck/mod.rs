@@ -37,10 +37,9 @@ impl Sumcheck {
         transcript_config: &'a SumcheckTranscriptConfig<'a, F>,
     ) -> Result<impl SumcheckOps<F> + 'a, eIcicleError>
     where
-        F: FieldImpl,
-        F::Config: SumcheckConstructor<F>,
+        F: FieldImpl + SumcheckConstructor<F>,
     {
-        <<F as FieldImpl>::Config as SumcheckConstructor<F>>::new(&transcript_config)
+        <F as SumcheckConstructor<F>>::new(&transcript_config)
     }
 }
 
@@ -140,7 +139,11 @@ where
 /// Macro to implement Sumcheck functionality for a specific field.
 #[macro_export]
 macro_rules! impl_sumcheck {
-    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
+    (
+        $field_prefix:literal, 
+        $field_prefix_ident:ident, 
+        $field:ident
+    ) => {
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, SumcheckConstructor, SumcheckOps, SumcheckTranscriptConfig,
         };
@@ -162,7 +165,7 @@ macro_rules! impl_sumcheck {
             fn icicle_sumcheck_delete(handle: SumcheckHandle) -> eIcicleError;
         }
 
-        impl SumcheckConstructor<$field> for $field_cfg {
+        impl SumcheckConstructor<$field> for $field {
             fn new(
                 transcript_config: &SumcheckTranscriptConfig<$field>,
             ) -> Result<impl SumcheckOps<$field>, eIcicleError> {
