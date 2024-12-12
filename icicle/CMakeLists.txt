@@ -125,6 +125,11 @@ if (HASH)
   setup_hash_target()
 endif()
 
+option(BARRET "Use Barret representation" OFF)
+if(BARRET)
+  add_compile_definitions(BARRET)
+endif()
+
 if (CPU_BACKEND)
   add_subdirectory(backend/cpu)
 endif()

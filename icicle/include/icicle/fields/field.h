@@ -20,12 +20,12 @@
 
 #ifdef __CUDACC__
   #include "gpu-utils/sharedmem.h"
-  #include "ptx.h"
+  #include "device_math.h"
 #endif // __CUDACC__
+#include "host_math.h"
 
 #include "icicle/errors.h"
 #include "icicle/utils/rand_gen.h"
-#include "host_math.h"
 #include "storage.h"
 
 #include <iomanip>
@@ -37,6 +37,12 @@
 
 using namespace icicle;
 
+#ifdef __CUDA_ARCH__
+namespace base_math = device_math;
+#else
+namespace base_math = host_math;
+#endif
+
 template <class CONFIG>
 class Field
 {
@@ -46,7 +52,11 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Field zero() { return Field{CONFIG::zero}; }
 
+#ifdef BARRET
   static constexpr HOST_DEVICE_INLINE Field one() { return Field{CONFIG::one}; }
+#else
+  static constexpr HOST_DEVICE_INLINE Field one() { return Field{CONFIG::montgomery_r}; }
+#endif
 
   static constexpr HOST_DEVICE_INLINE Field from(uint32_t value)
   {
@@ -55,16 +65,23 @@ public:
     for (int i = 1; i < TLC; i++) {
       scalar.limbs[i] = 0;
     }
+#ifdef BARRET
     return Field{scalar};
+#else
+    return to_montgomery(Field{scalar});
+#endif
   }
 
   static HOST_INLINE Field omega(uint32_t logn)
   {
-    if (logn == 0) { return Field{CONFIG::one}; }
+    if (logn == 0) { return one(); }
 
     if (logn > CONFIG::omegas_count) { THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega index"); }
-
+#ifdef BARRET
     Field omega = Field{CONFIG::rou};
+#else
+    Field omega = to_montgomery(Field{CONFIG::rou});
+#endif
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -72,13 +89,16 @@ public:
 
   static HOST_INLINE Field omega_inv(uint32_t logn)
   {
-    if (logn == 0) { return Field{CONFIG::one}; }
+    if (logn == 0) { return one(); }
 
     if (logn > CONFIG::omegas_count) {
       THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid omega_inv index");
     }
-
+#ifdef BARRET
     Field omega = inverse(Field{CONFIG::rou});
+#else
+    Field omega = inverse(to_montgomery(Field{CONFIG::rou}));
+#endif
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
       omega = sqr(omega);
     return omega;
@@ -107,7 +127,7 @@ public:
 
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
   {
-    if (logn == 0) { return Field{CONFIG::one}; }
+    if (logn == 0) { return one(); }
 #ifndef __CUDA_ARCH__
     if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid inv index");
 #else
@@ -118,7 +138,11 @@ public:
     }
 #endif // __CUDA_ARCH__
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
+#ifdef BARRET
     return Field{inv.storages[logn - 1]};
+#else
+    return to_montgomery(Field{inv.storages[logn - 1]});
+#endif
   }
 
   static constexpr HOST_INLINE unsigned get_omegas_count()
@@ -145,6 +169,10 @@ public:
    */
   static constexpr HOST_DEVICE_INLINE ff_storage get_neg_modulus() { return CONFIG::neg_modulus; }
 
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_inv_modulus() { return CONFIG::mont_inv_modulus; }
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_r() { return CONFIG::montgomery_r; }
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_r_sqr() { return CONFIG::montgomery_r_sqr; }
+  static constexpr HOST_DEVICE_INLINE ff_storage get_mont_r_inv() { return CONFIG::montgomery_r_inv; }
   /**
    * A new addition to the config file - the number of times to reduce in [reduce](@ref reduce) function.
    */
@@ -160,6 +188,8 @@ public:
       Wide out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
@@ -171,6 +201,8 @@ public:
       Field out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
@@ -182,6 +214,8 @@ public:
       Field out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
@@ -191,18 +225,7 @@ public:
     static constexpr Field HOST_DEVICE_INLINE get_higher_with_slack(const Wide& xs)
     {
       Field out{};
-#ifdef __CUDA_ARCH__
-      UNROLL
-#endif
-      for (unsigned i = 0; i < TLC; i++) {
-#ifdef __CUDA_ARCH__
-        out.limbs_storage.limbs[i] =
-          __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], 2 * slack_bits);
-#else
-        out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << 2 * slack_bits) +
-                                     (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - 2 * slack_bits));
-#endif
-      }
+      base_math::get_higher_with_slack(xs.limbs_storage, out.limbs_storage, slack_bits);
       return out;
     }
 
@@ -277,422 +300,23 @@ public:
     }
   }
 
-#ifdef __CUDACC__
-  template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr DEVICE_INLINE uint32_t add_sub_u32_device(const uint32_t* x, const uint32_t* y, uint32_t* r)
-  {
-    r[0] = SUBTRACT ? ptx::sub_cc(x[0], y[0]) : ptx::add_cc(x[0], y[0]);
-    for (unsigned i = 1; i < NLIMBS; i++)
-      r[i] = SUBTRACT ? ptx::subc_cc(x[i], y[i]) : ptx::addc_cc(x[i], y[i]);
-    if (!CARRY_OUT) {
-      ptx::addc(0, 0);
-      return 0;
-    }
-    return SUBTRACT ? ptx::subc(0, 0) : ptx::addc(0, 0);
-  }
-
-  template <unsigned NLIMBS, bool SUBTRACT, bool CARRY_OUT>
-  static constexpr DEVICE_INLINE uint32_t
-  add_sub_limbs_device(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
-  {
-    const uint32_t* x = xs.limbs;
-    const uint32_t* y = ys.limbs;
-    uint32_t* r = rs.limbs;
-    return add_sub_u32_device<NLIMBS, SUBTRACT, CARRY_OUT>(x, y, r);
-  }
-#endif // __CUDACC__
   template <unsigned NLIMBS, bool CARRY_OUT>
   static constexpr HOST_DEVICE_INLINE uint32_t
   add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-#ifdef __CUDA_ARCH__
-    return add_sub_limbs_device<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
-#else
-    return host_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
-#endif
+    return base_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
   static constexpr HOST_DEVICE_INLINE uint32_t
   sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-#ifdef __CUDA_ARCH__
-    return add_sub_limbs_device<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
-#else
-    return host_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
-#endif
+    return base_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
   }
 
-#ifdef __CUDACC__
-  static DEVICE_INLINE void mul_n(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
-  {
-    UNROLL
-    for (size_t i = 0; i < n; i += 2) {
-      acc[i] = ptx::mul_lo(a[i], bi);
-      acc[i + 1] = ptx::mul_hi(a[i], bi);
-    }
-  }
-
-  static DEVICE_INLINE void mul_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC, size_t start_i = 0)
-  {
-    UNROLL
-    for (size_t i = start_i; i < n; i += 2) {
-      acc[i] = ptx::mul_lo(a[i], bi);
-      acc[i + 1] = ptx::mul_hi(a[i], bi);
-    }
-  }
-
-  template <bool CARRY_IN = false>
-  static DEVICE_INLINE void
-  cmad_n(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC, uint32_t optional_carry = 0)
-  {
-    if (CARRY_IN) ptx::add_cc(UINT32_MAX, optional_carry);
-    acc[0] = CARRY_IN ? ptx::madc_lo_cc(a[0], bi, acc[0]) : ptx::mad_lo_cc(a[0], bi, acc[0]);
-    acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
-
-    UNROLL
-    for (size_t i = 2; i < n; i += 2) {
-      acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
-      acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
-    }
-  }
-
-  template <bool EVEN_PHASE>
-  static DEVICE_INLINE void cmad_n_msb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
-  {
-    if (EVEN_PHASE) {
-      acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
-      acc[1] = ptx::madc_hi_cc(a[0], bi, acc[1]);
-    } else {
-      acc[1] = ptx::mad_hi_cc(a[0], bi, acc[1]);
-    }
-
-    UNROLL
-    for (size_t i = 2; i < n; i += 2) {
-      acc[i] = ptx::madc_lo_cc(a[i], bi, acc[i]);
-      acc[i + 1] = ptx::madc_hi_cc(a[i], bi, acc[i + 1]);
-    }
-  }
-
-  static DEVICE_INLINE void cmad_n_lsb(uint32_t* acc, const uint32_t* a, uint32_t bi, size_t n = TLC)
-  {
-    if (n > 1)
-      acc[0] = ptx::mad_lo_cc(a[0], bi, acc[0]);
-    else
-      acc[0] = ptx::mad_lo(a[0], bi, acc[0]);
-
-    size_t i;
-    UNROLL
-    for (i = 1; i < n - 1; i += 2) {
-      acc[i] = ptx::madc_hi_cc(a[i - 1], bi, acc[i]);
-      if (i == n - 2)
-        acc[i + 1] = ptx::madc_lo(a[i + 1], bi, acc[i + 1]);
-      else
-        acc[i + 1] = ptx::madc_lo_cc(a[i + 1], bi, acc[i + 1]);
-    }
-    if (i == n - 1) acc[i] = ptx::madc_hi(a[i - 1], bi, acc[i]);
-  }
-
-  template <bool CARRY_OUT = false, bool CARRY_IN = false>
-  static DEVICE_INLINE uint32_t mad_row(
-    uint32_t* odd,
-    uint32_t* even,
-    const uint32_t* a,
-    uint32_t bi,
-    size_t n = TLC,
-    uint32_t ci = 0,
-    uint32_t di = 0,
-    uint32_t carry_for_high = 0,
-    uint32_t carry_for_low = 0)
-  {
-    cmad_n<CARRY_IN>(odd, a + 1, bi, n - 2, carry_for_low);
-    odd[n - 2] = ptx::madc_lo_cc(a[n - 1], bi, ci);
-    odd[n - 1] = CARRY_OUT ? ptx::madc_hi_cc(a[n - 1], bi, di) : ptx::madc_hi(a[n - 1], bi, di);
-    uint32_t cr = CARRY_OUT ? ptx::addc(0, 0) : 0;
-    cmad_n(even, a, bi, n);
-    if (CARRY_OUT) {
-      odd[n - 1] = ptx::addc_cc(odd[n - 1], carry_for_high);
-      cr = ptx::addc(cr, 0);
-    } else
-      odd[n - 1] = ptx::addc(odd[n - 1], carry_for_high);
-    return cr;
-  }
-
-  template <bool EVEN_PHASE>
-  static DEVICE_INLINE void mad_row_msb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
-  {
-    cmad_n_msb<!EVEN_PHASE>(odd, EVEN_PHASE ? a : (a + 1), bi, n - 2);
-    odd[EVEN_PHASE ? (n - 1) : (n - 2)] = ptx::madc_lo_cc(a[n - 1], bi, 0);
-    odd[EVEN_PHASE ? n : (n - 1)] = ptx::madc_hi(a[n - 1], bi, 0);
-    cmad_n_msb<EVEN_PHASE>(even, EVEN_PHASE ? (a + 1) : a, bi, n - 1);
-    odd[EVEN_PHASE ? n : (n - 1)] = ptx::addc(odd[EVEN_PHASE ? n : (n - 1)], 0);
-  }
-
-  static DEVICE_INLINE void mad_row_lsb(uint32_t* odd, uint32_t* even, const uint32_t* a, uint32_t bi, size_t n = TLC)
-  {
-    // bi here is constant so we can do a compile-time check for zero (which does happen once for bls12-381 scalar field
-    // modulus)
-    if (bi != 0) {
-      if (n > 1) cmad_n_lsb(odd, a + 1, bi, n - 1);
-      cmad_n_lsb(even, a, bi, n);
-    }
-    return;
-  }
-
-  static DEVICE_INLINE uint32_t
-  mul_n_and_add(uint32_t* acc, const uint32_t* a, uint32_t bi, uint32_t* extra, size_t n = (TLC >> 1))
-  {
-    acc[0] = ptx::mad_lo_cc(a[0], bi, extra[0]);
-
-    UNROLL
-    for (size_t i = 1; i < n - 1; i += 2) {
-      acc[i] = ptx::madc_hi_cc(a[i - 1], bi, extra[i]);
-      acc[i + 1] = ptx::madc_lo_cc(a[i + 1], bi, extra[i + 1]);
-    }
-
-    acc[n - 1] = ptx::madc_hi_cc(a[n - 2], bi, extra[n - 1]);
-    return ptx::addc(0, 0);
-  }
-
-  /**
-   * A function that computes wide product \f$ rs = as \cdot bs \f$ that's correct for the higher TLC + 1 limbs with a
-   * small maximum error.
-   *
-   * The way this function saves computations (as compared to regular school-book multiplication) is by not including
-   * terms that are too small. Namely, limb product \f$ a_i \cdot b_j \f$ is excluded if \f$ i + j < TLC - 2 \f$ and
-   * only the higher half is included if \f$ i + j = TLC - 2 \f$. All other limb products are included. So, the error
-   * i.e. difference between true product and the result of this function written to `rs` is exactly the sum of all
-   * dropped limbs products, which we can bound: \f$ a_0 \cdot b_0 + 2^{32}(a_0 \cdot b_1 + a_1 \cdot b_0) + \dots +
-   * 2^{32(TLC - 3)}(a_{TLC - 3} \cdot b_0 + \dots + a_0 \cdot b_{TLC - 3}) + 2^{32(TLC - 2)}(\floor{\frac{a_{TLC - 2}
-   * \cdot b_0}{2^{32}}} + \dots + \floor{\frac{a_0 \cdot b_{TLC - 2}}{2^{32}}}) \leq 2^{64} + 2\cdot 2^{96} + \dots +
-   * (TLC - 2) \cdot 2^{32(TLC - 1)} + (TLC - 1) \cdot 2^{32(TLC - 1)} \leq 2(TLC - 1) \cdot 2^{32(TLC - 1)}\f$.
-   */
-  static DEVICE_INLINE void multiply_msb_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-    if constexpr (TLC > 1) {
-      const uint32_t* a = as.limbs;
-      const uint32_t* b = bs.limbs;
-      uint32_t* even = rs.limbs;
-      __align__(16) uint32_t odd[2 * TLC - 2];
-
-      even[TLC - 1] = ptx::mul_hi(a[TLC - 2], b[0]);
-      odd[TLC - 2] = ptx::mul_lo(a[TLC - 1], b[0]);
-      odd[TLC - 1] = ptx::mul_hi(a[TLC - 1], b[0]);
-      size_t i;
-      UNROLL
-      for (i = 2; i < TLC - 1; i += 2) {
-        mad_row_msb<true>(&even[TLC - 2], &odd[TLC - 2], &a[TLC - i - 1], b[i - 1], i + 1);
-        mad_row_msb<false>(&odd[TLC - 2], &even[TLC - 2], &a[TLC - i - 2], b[i], i + 2);
-      }
-      mad_row(&even[TLC], &odd[TLC - 2], a, b[TLC - 1]);
-
-      // merge |even| and |odd|
-      ptx::add_cc(even[TLC - 1], odd[TLC - 2]);
-      for (i = TLC - 1; i < 2 * TLC - 2; i++)
-        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-      even[i + 1] = ptx::addc(even[i + 1], 0);
-    } else {
-      multiply_raw_device(as, bs, rs);
-    }
-  }
-
-  /**
-   * A function that computes the low half of the fused multiply-and-add \f$ rs = as \cdot bs + cs \f$ where
-   * \f$ bs = 2^{32*nof_limbs} \f$.
-   *
-   * For efficiency, this method does not include terms that are too large. Namely, limb product \f$ a_i \cdot b_j \f$
-   * is excluded if \f$ i + j > TLC - 1 \f$ and only the lower half is included if \f$ i + j = TLC - 1 \f$. All other
-   * limb products are included.
-   */
-  static DEVICE_INLINE void
-  multiply_and_add_lsb_neg_modulus_raw_device(const ff_storage& as, ff_storage& cs, ff_storage& rs)
-  {
-    ff_storage bs = get_neg_modulus();
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
-    uint32_t* c = cs.limbs;
-    uint32_t* even = rs.limbs;
-
-    if constexpr (TLC > 2) {
-      __align__(16) uint32_t odd[TLC - 1];
-      size_t i;
-      // `b[0]` is \f$ 2^{32} \f$ minus the last limb of prime modulus. Because most scalar (and some base) primes
-      // are necessarily NTT-friendly, `b[0]` often turns out to be \f$ 2^{32} - 1 \f$. This actually leads to
-      // less efficient SASS generated by nvcc, so this case needed separate handling.
-      if (b[0] == UINT32_MAX) {
-        add_sub_u32_device<TLC, true, false>(c, a, even);
-        for (i = 0; i < TLC - 1; i++)
-          odd[i] = a[i];
-      } else {
-        mul_n_and_add(even, a, b[0], c, TLC);
-        mul_n(odd, a + 1, b[0], TLC - 1);
-      }
-      mad_row_lsb(&even[2], &odd[0], a, b[1], TLC - 1);
-      UNROLL
-      for (i = 2; i < TLC - 1; i += 2) {
-        mad_row_lsb(&odd[i], &even[i], a, b[i], TLC - i);
-        mad_row_lsb(&even[i + 2], &odd[i], a, b[i + 1], TLC - i - 1);
-      }
-
-      // merge |even| and |odd|
-      even[1] = ptx::add_cc(even[1], odd[0]);
-      for (i = 1; i < TLC - 2; i++)
-        even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-      even[i + 1] = ptx::addc(even[i + 1], odd[i]);
-    } else if (TLC == 2) {
-      even[0] = ptx::mad_lo(a[0], b[0], c[0]);
-      even[1] = ptx::mad_hi(a[0], b[0], c[0]);
-      even[1] = ptx::mad_lo(a[0], b[1], even[1]);
-      even[1] = ptx::mad_lo(a[1], b[0], even[1]);
-    } else if (TLC == 1) {
-      even[0] = ptx::mad_lo(a[0], b[0], c[0]);
-    }
-  }
-
-  /**
-   * This method multiplies `a` and `b` (both assumed to have TLC / 2 limbs) and adds `in1` and `in2` (TLC limbs each)
-   * to the result which is written to `even`.
-   *
-   * It is used to compute the "middle" part of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} =
-   * (a_{hi} - a_{lo})(b_{lo} - b_{hi}) + a_{lo} \cdot b_{lo} + a_{hi} \cdot b_{hi} \f$. Currently this method assumes
-   * that the top bit of \f$ a_{hi} \f$ and \f$ b_{hi} \f$ are unset. This ensures correctness by allowing to keep the
-   * result inside TLC limbs and ignore the carries from the highest limb.
-   */
-  static DEVICE_INLINE void
-  multiply_and_add_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even, uint32_t* in1, uint32_t* in2)
-  {
-    __align__(16) uint32_t odd[TLC - 2];
-    uint32_t first_row_carry = mul_n_and_add(even, a, b[0], in1);
-    uint32_t carry = mul_n_and_add(odd, a + 1, b[0], &in2[1]);
-
-    size_t i;
-    UNROLL
-    for (i = 2; i < ((TLC >> 1) - 1); i += 2) {
-      carry = mad_row<true, false>(
-        &even[i], &odd[i - 2], a, b[i - 1], TLC >> 1, in1[(TLC >> 1) + i - 2], in1[(TLC >> 1) + i - 1], carry);
-      carry =
-        mad_row<true, false>(&odd[i], &even[i], a, b[i], TLC >> 1, in2[(TLC >> 1) + i - 1], in2[(TLC >> 1) + i], carry);
-    }
-    mad_row<false, true>(
-      &even[TLC >> 1], &odd[(TLC >> 1) - 2], a, b[(TLC >> 1) - 1], TLC >> 1, in1[TLC - 2], in1[TLC - 1], carry,
-      first_row_carry);
-    // merge |even| and |odd| plus the parts of `in2` we haven't added yet (first and last limbs)
-    even[0] = ptx::add_cc(even[0], in2[0]);
-    for (i = 0; i < (TLC - 2); i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], in2[i + 1]);
-  }
-
-  /**
-   * This method multiplies `a` and `b` and writes the result into `even`. It assumes that `a` and `b` are TLC/2 limbs
-   * long. The usual schoolbook algorithm is used.
-   */
-  static DEVICE_INLINE void multiply_short_raw_device(const uint32_t* a, const uint32_t* b, uint32_t* even)
-  {
-    __align__(16) uint32_t odd[TLC - 2];
-    mul_n(even, a, b[0], TLC >> 1);
-    mul_n(odd, a + 1, b[0], TLC >> 1);
-    mad_row(&even[2], &odd[0], a, b[1], TLC >> 1);
-
-    size_t i;
-    UNROLL
-    for (i = 2; i < ((TLC >> 1) - 1); i += 2) {
-      mad_row(&odd[i], &even[i], a, b[i], TLC >> 1);
-      mad_row(&even[i + 2], &odd[i], a, b[i + 1], TLC >> 1);
-    }
-    // merge |even| and |odd|
-    even[1] = ptx::add_cc(even[1], odd[0]);
-    for (i = 1; i < TLC - 2; i++)
-      even[i + 1] = ptx::addc_cc(even[i + 1], odd[i]);
-    even[i + 1] = ptx::addc(even[i + 1], 0);
-  }
-
-  /**
-   * This method multiplies `as` and `bs` and writes the (wide) result into `rs`.
-   *
-   * It is assumed that the highest bits of `as` and `bs` are unset which is true for all the numbers icicle had to deal
-   * with so far. This method implements [subtractive
-   * Karatsuba](https://en.wikipedia.org/wiki/Karatsuba_algorithm#Implementation).
-   */
-  static DEVICE_INLINE void multiply_raw_device(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-    const uint32_t* a = as.limbs;
-    const uint32_t* b = bs.limbs;
-    uint32_t* r = rs.limbs;
-    if constexpr (TLC > 2) {
-      // Next two lines multiply high and low halves of operands (\f$ a_{lo} \cdot b_{lo}; a_{hi} \cdot b_{hi} \$f) and
-      // write the results into `r`.
-      multiply_short_raw_device(a, b, r);
-      multiply_short_raw_device(&a[TLC >> 1], &b[TLC >> 1], &r[TLC]);
-      __align__(16) uint32_t middle_part[TLC];
-      __align__(16) uint32_t diffs[TLC];
-      // Differences of halves \f$ a_{hi} - a_{lo}; b_{lo} - b_{hi} \$f are written into `diffs`, signs written to
-      // `carry1` and `carry2`.
-      uint32_t carry1 = add_sub_u32_device<(TLC >> 1), true, true>(&a[TLC >> 1], a, diffs);
-      uint32_t carry2 = add_sub_u32_device<(TLC >> 1), true, true>(b, &b[TLC >> 1], &diffs[TLC >> 1]);
-      // Compute the "middle part" of Karatsuba: \f$ a_{lo} \cdot b_{hi} + b_{lo} \cdot a_{hi} \f$.
-      // This is where the assumption about unset high bit of `a` and `b` is relevant.
-      multiply_and_add_short_raw_device(diffs, &diffs[TLC >> 1], middle_part, r, &r[TLC]);
-      // Corrections that need to be performed when differences are negative.
-      // Again, carry doesn't need to be propagated due to unset high bits of `a` and `b`.
-      if (carry1)
-        add_sub_u32_device<(TLC >> 1), true, false>(&middle_part[TLC >> 1], &diffs[TLC >> 1], &middle_part[TLC >> 1]);
-      if (carry2) add_sub_u32_device<(TLC >> 1), true, false>(&middle_part[TLC >> 1], diffs, &middle_part[TLC >> 1]);
-      // Now that middle part is fully correct, it can be added to the result.
-      add_sub_u32_device<TLC, false, true>(&r[TLC >> 1], middle_part, &r[TLC >> 1]);
-
-      // Carry from adding middle part has to be propagated to the highest limb.
-      for (size_t i = TLC + (TLC >> 1); i < 2 * TLC; i++)
-        r[i] = ptx::addc_cc(r[i], 0);
-    } else if (TLC == 2) {
-      __align__(8) uint32_t odd[2];
-      r[0] = ptx::mul_lo(a[0], b[0]);
-      r[1] = ptx::mul_hi(a[0], b[0]);
-      r[2] = ptx::mul_lo(a[1], b[1]);
-      r[3] = ptx::mul_hi(a[1], b[1]);
-      odd[0] = ptx::mul_lo(a[0], b[1]);
-      odd[1] = ptx::mul_hi(a[0], b[1]);
-      odd[0] = ptx::mad_lo(a[1], b[0], odd[0]);
-      odd[1] = ptx::mad_hi(a[1], b[0], odd[1]);
-      r[1] = ptx::add_cc(r[1], odd[0]);
-      r[2] = ptx::addc_cc(r[2], odd[1]);
-      r[3] = ptx::addc(r[3], 0);
-    } else if (TLC == 1) {
-      r[0] = ptx::mul_lo(a[0], b[0]);
-      r[1] = ptx::mul_hi(a[0], b[0]);
-    }
-  }
-
-#endif // __CUDACC__
   static HOST_DEVICE_INLINE void multiply_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
-#ifdef __CUDA_ARCH__
-    return multiply_raw_device(as, bs, rs);
-#else
-    return host_math::template multiply_raw<TLC>(as, bs, rs);
-#endif
-  }
-
-  static HOST_DEVICE_INLINE void
-  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
-  {
-#ifdef __CUDA_ARCH__
-    return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
-#else
-    Wide r_wide = {};
-    host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
-    Field r = Wide::get_lower(r_wide);
-    add_limbs<TLC, false>(cs, r.limbs_storage, rs);
-#endif
-  }
-
-  static HOST_DEVICE_INLINE void multiply_msb_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-#ifdef __CUDA_ARCH__
-    return multiply_msb_raw_device(as, bs, rs);
-#else
-    return host_math::template multiply_raw<TLC>(as, bs, rs);
-#endif
+    return base_math::template multiply_raw<TLC>(as, bs, rs);
   }
 
 public:
@@ -740,6 +364,26 @@ public:
     return sub_limbs<TLC, true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
   }
 
+  static constexpr HOST_DEVICE_INLINE Field mont_sub_modulus(const Field& xs)
+  {
+    // Field r = xs;
+    // Field p = Field{get_modulus<1>()};
+    // if (p.limbs_storage.limbs[TLC - 1] > r.limbs_storage.limbs[TLC - 1]) return r;
+    const ff_storage p = get_modulus<1>();
+#ifndef __CUDA_ARCH__
+    if (p.limbs[TLC - 1] > xs.limbs_storage.limbs[TLC - 1]) return xs;
+#endif
+    // printf("*** %x %x ***\n", p.limbs_storage.limbs[TLC - 1], r.limbs_storage.limbs[TLC - 1]);
+    Field rs = {};
+    return sub_limbs<TLC, true>(xs.limbs_storage, p, rs.limbs_storage) ? xs : rs;
+    // Field r = xs;
+    // ff_storage r_reduced = {};
+    // uint64_t carry = 0;
+    // carry = sub_limbs<TLC, true>(r.limbs_storage, p, r_reduced);
+    // if (carry == 0) r = Field{r_reduced};
+    // return r;
+  }
+
   friend std::ostream& operator<<(std::ostream& os, const Field& xs)
   {
     std::stringstream hex_string;
@@ -770,12 +414,35 @@ public:
     return rs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide mul_wide(const Field& xs, const Field& ys)
   {
     Wide rs = {};
     multiply_raw(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return rs;
+  }
+
+#ifdef BARRET
+
+  static HOST_DEVICE_INLINE void
+  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
+  {
+  #ifdef __CUDA_ARCH__
+    return base_math::template multiply_and_add_lsb_neg_modulus_raw(as, get_neg_modulus(), cs, rs);
+  #else
+    Wide r_wide = {};
+    base_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
+    Field r = Wide::get_lower(r_wide);
+    add_limbs<TLC, false>(cs, r.limbs_storage, rs);
+  #endif
+  }
+
+  static HOST_DEVICE_INLINE void multiply_msb_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
+  {
+  #ifdef __CUDA_ARCH__
+    return base_math::template multiply_msb_raw(as, bs, rs);
+  #else
+    return base_math::template multiply_raw<TLC>(as, bs, rs);
+  #endif
   }
 
   /**
@@ -799,8 +466,7 @@ public:
    * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
    * will cause only 1 reduction to be performed.
    */
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
+  static constexpr HOST_DEVICE_INLINE Field barret_reduce(const Wide& xs) // TODO = add reduce_mont_inplace
   {
     // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
     Field xs_hi = Wide::get_higher_with_slack(xs);
@@ -825,6 +491,49 @@ public:
     return r;
   }
 
+  static constexpr HOST_INLINE Field barret_mult(const Field& xs, const Field& ys)
+  {
+    Wide xy = mul_wide(xs, ys); // full mult
+    return barret_reduce(xy);   // reduce mod p
+  }
+
+#endif
+
+  static constexpr HOST_DEVICE_INLINE Field mont_mult(const Field& xs, const Field& ys)
+  {
+    Field r = {};
+    base_math::template multiply_mont<TLC>(
+      xs.limbs_storage, ys.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage);
+    // return r;
+    return mont_sub_modulus(r);
+  }
+
+  static constexpr HOST_DEVICE_INLINE Field mont_reduce(Wide t)
+  {
+    // #ifdef __CUDA_ARCH__
+    //     Wide r = t;
+    //     base_math::template reduce_mont_inplace<TLC>(r.limbs_storage, get_modulus<1>(), get_mont_inv_modulus());
+    //     return mont_sub_modulus(Wide::get_lower(r));
+    // #else
+    //     Field r = {};
+    //     base_math::template sos_mont_reduction<TLC>(
+    //       t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
+    //     return mont_sub_modulus(r);
+    // #endif
+    Field r = {};
+    base_math::template reduce_mont<TLC>(t.limbs_storage, get_modulus<1>(), get_mont_inv_modulus(), r.limbs_storage);
+    return mont_sub_modulus(r);
+  }
+
+  static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
+  {
+#ifdef BARRET
+    return barret_reduce(xs);
+#else
+    return mont_reduce(xs);
+#endif
+  }
+
   HOST_DEVICE Field& operator=(Field const& other)
   {
     for (int i = 0; i < TLC; i++) {
@@ -835,25 +544,16 @@ public:
 
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
-    Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
+#ifdef BARRET
+    return barret_mult(xs, ys);
+#else
+    return mont_mult(xs, ys);
+#endif
   }
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
   {
-#ifdef __CUDA_ARCH__
-    const uint32_t* x = xs.limbs_storage.limbs;
-    const uint32_t* y = ys.limbs_storage.limbs;
-    uint32_t limbs_or = x[0] ^ y[0];
-    UNROLL
-    for (unsigned i = 1; i < TLC; i++)
-      limbs_or |= x[i] ^ y[i];
-    return limbs_or == 0;
-#else
-    for (unsigned i = 0; i < TLC; i++)
-      if (xs.limbs_storage.limbs[i] != ys.limbs_storage.limbs[i]) return false;
-    return true;
-#endif
+    return base_math::template is_equal<TLC>(xs.limbs_storage, ys.limbs_storage);
   }
 
   friend HOST_DEVICE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
@@ -861,16 +561,44 @@ public:
   template <const Field& multiplier>
   static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
   {
-    Field mul = multiplier;
-    static bool is_u32 = true;
-#ifdef __CUDA_ARCH__
-    UNROLL
-#endif
-    for (unsigned i = 1; i < TLC; i++)
-      is_u32 &= (mul.limbs_storage.limbs[i] == 0);
+    constexpr bool is_u32 = []() constexpr
+    {
+      for (unsigned i = 1; i < TLC; i++) {
+        if (multiplier.limbs_storage.limbs[i] != 0) { return false; }
+      }
+      return true;
+    }
+    ();
 
-    if (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
-    return mul * xs;
+    if constexpr (is_u32) {
+      return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
+    } else {
+#ifdef BARRET
+      return multiplier * xs;
+#else
+      return to_montgomery(multiplier) * xs;
+#endif
+    }
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE Field mul_weierstrass_b(const Field& xs)
+  {
+    Field r = {};
+    if constexpr (Gen::is_b_u32) {
+      r = mul_unsigned<Field{Gen::weierstrass_b}.limbs_storage.limbs[0], Field>(xs);
+      if constexpr (Gen::is_b_neg)
+        return neg(r);
+      else {
+        return r;
+      }
+    } else {
+#ifdef BARRET
+      return Field{Gen::weierstrass_b} * xs;
+#else
+      return Field{Gen::weierstrass_b_mont} * xs;
+#endif
+    }
   }
 
   template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
@@ -881,6 +609,8 @@ public:
     bool is_zero = true;
 #ifdef __CUDA_ARCH__
     UNROLL
+#else
+  #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
       if (multiplier & (1 << i)) {
@@ -893,26 +623,37 @@ public:
     return rs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const Field& xs)
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(xs, xs);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field sqr(const Field& xs)
   {
-    // TODO: change to a more efficient squaring
+    // #ifdef BARRET
     return xs * xs;
+    // #else
+    //     Field r = {};
+    //     base_math::template sqr_mont<TLC>(
+    //       xs.limbs_storage, get_mont_inv_modulus(), get_modulus<1>(), r.limbs_storage); // TODO: change to a more
+    //       efficient squaring on host
+    //     return mont_sub_modulus(r);
+    // #endif
   }
-
+#ifdef BARRET
   static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs) { return xs * Field{CONFIG::montgomery_r}; }
-
   static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs)
   {
     return xs * Field{CONFIG::montgomery_r_inv};
   }
+#else
+  static constexpr HOST_DEVICE_INLINE Field to_montgomery(const Field& xs)
+  {
+    return xs * Field{CONFIG::montgomery_r_sqr};
+  }
+  static constexpr HOST_DEVICE_INLINE Field from_montgomery(const Field& xs) { return xs * Field{CONFIG::one}; }
+#endif
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Field neg(const Field& xs)
@@ -933,6 +674,8 @@ public:
     if constexpr (TLC > 1) {
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC - 1; i++) {
 #ifdef __CUDA_ARCH__
@@ -960,9 +703,13 @@ public:
   static constexpr HOST_DEVICE Field inverse(const Field& xs)
   {
     if (xs == zero()) return zero();
-    constexpr Field one = Field{CONFIG::one};
+    constexpr Field one = {1};
     constexpr ff_storage modulus = CONFIG::modulus;
+#ifdef BARRET
     Field u = xs;
+#else
+    Field u = from_montgomery(xs);
+#endif
     Field v = Field{modulus};
     Field b = one;
     Field c = {};
@@ -985,7 +732,11 @@ public:
         c = c - b;
       }
     }
+#ifdef BARRET
     return (u == one) ? b : c;
+#else
+    return (u == one) ? to_montgomery(b) : to_montgomery(c);
+#endif
   }
 
   static constexpr HOST_DEVICE Field pow(Field base, int exp)
