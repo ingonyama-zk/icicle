@@ -38,8 +38,6 @@ where
     assert_eq!(left, right);
     let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
     assert_eq!(left, right);
-    // let mut z = [0; BASE_LIMBS];
-    // z[0] = 2;
     let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], C::BaseField::from_u32(2).into());
     assert_ne!(left, right);
     let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
@@ -134,7 +132,6 @@ where
     let scalars_b = F::generate_random(size);
     for i in 0..size {
         let result1 = scalars_a[i] + scalars_b[i];
-        // println!("result1: {:?}", result1);
         let result2 = result1 - scalars_b[i];
         assert_eq!(result2, scalars_a[i]);
     }

@@ -4,7 +4,6 @@ pub mod field;
 pub mod hash;
 pub mod merkle;
 pub mod msm;
-// TODO - NTT has some invalid configuration issue in CUDA Backend
 pub mod ntt;
 pub mod polynomials;
 pub mod poseidon;

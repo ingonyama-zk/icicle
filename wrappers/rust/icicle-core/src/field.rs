@@ -200,7 +200,6 @@ macro_rules! impl_scalar_field {
         $field_type:ident,
         $num_limbs:ident
     ) => {
-        // TODO - make sure curves base fields use the same base_field specifier as in cpp for $field_mod_extern
         impl_field!($field_name, $field_mod_extern, $field_type, $num_limbs);
 
         mod $scalar_field_mod_extern {

@@ -125,7 +125,6 @@ impl NTTInitDomainConfig {
 }
 
 #[doc(hidden)]
-// TODO - Can change to using Self + Sized?
 pub trait NTTDomain<F: FieldImpl> {
     fn get_root_of_unity(max_size: u64) -> F;
     fn initialize_domain(primitive_root: F, config: &NTTInitDomainConfig) -> Result<(), eIcicleError>;
@@ -133,7 +132,6 @@ pub trait NTTDomain<F: FieldImpl> {
 }
 
 #[doc(hidden)]
-//  TODO - Should change from FieldImpl to ScalarImpl ????
 pub trait NTT<T, F: FieldImpl>: NTTDomain<F> {
     fn ntt_unchecked(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
