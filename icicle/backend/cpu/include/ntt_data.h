@@ -47,6 +47,7 @@ namespace ntt_cpu {
   struct NttSubHierarchies {
     std::vector<std::vector<uint32_t>> hierarchy_0_layers_sub_logn; // Log sizes of sub-NTTs in hierarchy 0 layers
     std::vector<uint32_t> hierarchy_1_layers_sub_logn;              // Log sizes of sub-NTTs in hierarchy 1 layers
+    uint32_t hier0_layer_counts_in_hier1[2] = {0, 0};               // Number of layers in hierarchy 0 in hierarchy 1
 
     // Constructor to initialize the struct
     NttSubHierarchies(uint32_t logn)
@@ -63,10 +64,13 @@ namespace ntt_cpu {
           std::vector<uint32_t>(
             std::begin(layers_sub_logn[hierarchy_1_layers_sub_logn[1]]),
             std::end(layers_sub_logn[hierarchy_1_layers_sub_logn[1]]))};
+        hier0_layer_counts_in_hier1[0] = hierarchy_0_layers_sub_logn[0][2] != 0 ? 3 : hierarchy_0_layers_sub_logn[0][1] != 0 ? 2 : 1;
+        hier0_layer_counts_in_hier1[1] = hierarchy_0_layers_sub_logn[1][2] != 0 ? 3 : hierarchy_0_layers_sub_logn[1][1] != 0 ? 2 : 1;
       } else {
         hierarchy_1_layers_sub_logn = {0, 0, 0};
         hierarchy_0_layers_sub_logn = {
           std::vector<uint32_t>(std::begin(layers_sub_logn[logn]), std::end(layers_sub_logn[logn])), {0, 0, 0}};
+        hier0_layer_counts_in_hier1[0] = hierarchy_0_layers_sub_logn[0][2] != 0 ? 3 : hierarchy_0_layers_sub_logn[0][1] != 0 ? 2 : 1;
       }
     }
   };

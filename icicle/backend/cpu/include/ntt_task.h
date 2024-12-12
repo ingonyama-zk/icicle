@@ -324,7 +324,9 @@ namespace ntt_cpu {
         index_in_mem[i] = stride * i;
       }
     }
-    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+
+    const uint32_t nof_hierarchy_0_layers = ntt_data->ntt_sub_hierarchies.hier0_layer_counts_in_hier1[ntt_task_coordinates->hierarchy_1_layer_idx];
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < (nof_hierarchy_0_layers-1) ? ntt_data->nof_elems_per_cacheline : 1;
     for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
       for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
         E* current_elements =
@@ -439,7 +441,8 @@ namespace ntt_cpu {
       }
     }
 
-    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    const uint32_t nof_hierarchy_0_layers = ntt_data->ntt_sub_hierarchies.hier0_layer_counts_in_hier1[ntt_task_coordinates->hierarchy_1_layer_idx];
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < (nof_hierarchy_0_layers-1) ? ntt_data->nof_elems_per_cacheline : 1;
     for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
       for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
         E* current_elements =
@@ -641,7 +644,8 @@ namespace ntt_cpu {
       }
     }
 
-    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    const uint32_t nof_hierarchy_0_layers = ntt_data->ntt_sub_hierarchies.hier0_layer_counts_in_hier1[ntt_task_coordinates->hierarchy_1_layer_idx];
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < (nof_hierarchy_0_layers-1) ? ntt_data->nof_elems_per_cacheline : 1;
     for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
       for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
         E* current_elements =
@@ -1334,7 +1338,8 @@ namespace ntt_cpu {
     
     
     
-    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    const uint32_t nof_hierarchy_0_layers = ntt_data->ntt_sub_hierarchies.hier0_layer_counts_in_hier1[ntt_task_coordinates->hierarchy_1_layer_idx];
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < (nof_hierarchy_0_layers-1) ? ntt_data->nof_elems_per_cacheline : 1;
     for (uint subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
       ICICLE_LOG_DEBUG << "original_subntt_first_idx = " << original_subntt_first_idx << ", index_in_mem[0] = " << index_in_mem[0];
       for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
@@ -1396,7 +1401,8 @@ namespace ntt_cpu {
       reorder_by_bit_reverse_non_parallel();
       return;
     }
-    const uint32_t nof_subntts_per_task = ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    const uint32_t nof_hierarchy_0_layers = ntt_data->ntt_sub_hierarchies.hier0_layer_counts_in_hier1[ntt_task_coordinates->hierarchy_1_layer_idx];
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < (nof_hierarchy_0_layers-1) ? ntt_data->nof_elems_per_cacheline : 1;
     uint32_t offset = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     E* subntt_elements =
       ntt_data->elements +
@@ -1488,7 +1494,8 @@ namespace ntt_cpu {
     uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     uint64_t original_size = (1 << ntt_data->logn);
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
-    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < 1 ? ntt_data->nof_elems_per_cacheline : 1; //FIXME SHANIE ntt_task_coordinates->hierarchy_0_layer_idx < nof layers
+    const uint32_t nof_hierarchy_0_layers = ntt_data->ntt_sub_hierarchies.hier0_layer_counts_in_hier1[ntt_task_coordinates->hierarchy_1_layer_idx];
+    const uint32_t nof_subntts_per_task = ntt_data->is_parallel && ntt_task_coordinates->hierarchy_0_layer_idx < (nof_hierarchy_0_layers-1) ? ntt_data->nof_elems_per_cacheline : 1;
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
       E* hierarchy_1_subntt_elements =
         ntt_data->elements +
@@ -1505,8 +1512,13 @@ namespace ntt_cpu {
               ? elem
               : elem * hierarchy_0_nof_subntts + ntt_task_coordinates->hierarchy_0_subntt_idx;
         for (uint32_t subntt_idx_in_task = 0; subntt_idx_in_task < nof_subntts_per_task; subntt_idx_in_task++){
-          j = (ntt_task_coordinates->hierarchy_0_layer_idx == 0) ? (ntt_task_coordinates->hierarchy_0_subntt_idx + subntt_idx_in_task)
-                                                                : ntt_task_coordinates->hierarchy_0_block_idx;
+          if (nof_hierarchy_0_layers <= 2) {
+            j = (ntt_task_coordinates->hierarchy_0_layer_idx == 0) ? (ntt_task_coordinates->hierarchy_0_subntt_idx + subntt_idx_in_task)
+                                                                  : ntt_task_coordinates->hierarchy_0_block_idx;
+          } else {
+            j = (ntt_task_coordinates->hierarchy_0_layer_idx == 0) ? ntt_task_coordinates->hierarchy_0_subntt_idx
+                                                                  : ntt_task_coordinates->hierarchy_0_block_idx + subntt_idx_in_task;
+          }
           uint64_t tw_idx = (ntt_data->direction == NTTDir::kForward)
                               ? ((CpuNttDomain<S>::s_ntt_domain.get_max_size() / ntt_size) * j * i)
                               : CpuNttDomain<S>::s_ntt_domain.get_max_size() -

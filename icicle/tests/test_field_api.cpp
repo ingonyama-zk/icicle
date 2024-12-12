@@ -814,12 +814,12 @@ TEST_F(FieldApiTestBase, polynomialDivision)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
-  // for (int logn=3; logn<25; logn++){
-  for (int i=0; i<1000; i++){
+  for (int logn=3; logn<23; logn++){
+  // for (int i=0; i<1; i++){
   // sleep(1);
   // int a = pow(13, i%11);
   const bool inplace = 0;
-  const int logn = 8;
+  // const int logn = 7;
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn;
   const int log_batch_size = 0;
@@ -841,6 +841,7 @@ TYPED_TEST(FieldApiTest, ntt)
     coset_gen = scalar_t::one();
   }
 
+  ICICLE_LOG_INFO << "logn = " << logn;
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
@@ -854,6 +855,7 @@ TYPED_TEST(FieldApiTest, ntt)
   // for (int i = 0; i < total_size; i++) {
   //   scalars[i] = scalar_t::from(i);
   // }
+
 
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
@@ -907,12 +909,19 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
   // run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
-  // run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  // run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);;
-
-  run(IcicleTestBase::reference_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  // ASSERT_EQ(out_main[0], scalar_t::from(0x1fc0));
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);;
+  // std::cout << "out_main: ";
+  // for (int j=0; j< 10; j++){
+  //   std::cout << out_main[j] << " ";
+  // }
+  // std::cout << std::endl;
+  // std::cout << "out_ref: ";
+  // for (int j=0; j< 10; j++){
+  //   std::cout << out_ref[j] << " ";
+  // }
+  // std::cout << std::endl;
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 }
 #endif // NTT

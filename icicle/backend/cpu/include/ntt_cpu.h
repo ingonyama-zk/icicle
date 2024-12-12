@@ -60,15 +60,16 @@ namespace ntt_cpu {
   template <typename S, typename E>
   NttCpu<S, E>::NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
       : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config), get_cache_line_size()/ sizeof(E)), 
+      // : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config), 1), 
         ntt_tasks_manager(
           ntt_data.is_parallel ? std::optional<NttTasksManager<S, E>>(std::in_place, ntt_data.ntt_sub_hierarchies, logn, ntt_data.nof_elems_per_cacheline)
                                : std::nullopt),
         tasks_manager(
-          ntt_data.is_parallel ? std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 2)
+          ntt_data.is_parallel ? std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1)
                                : nullptr)
   {
         ICICLE_LOG_DEBUG << "Number of elements per cacheline: " << ntt_data.nof_elems_per_cacheline;
-        ICICLE_LOG_DEBUG << "NOF WORKERS " << std::thread::hardware_concurrency() - 2;
+        ICICLE_LOG_DEBUG << "NOF WORKERS " << std::thread::hardware_concurrency() - 1;
   }
 
   template <typename S, typename E>
@@ -351,46 +352,42 @@ namespace ntt_cpu {
       return eIcicleError::UNKNOWN_ERROR; // Handle case where no task manager is available
     }
 
-    uint32_t nof_hierarchy_0_layers =
-      (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)   ? 3
-      : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2
-                                                                                                  : 1;
-    uint64_t nof_blocks;
-    uint64_t nof_subntts;
+    uint32_t nof_hierarchy_0_layers = ntt_data.ntt_sub_hierarchies.hier0_layer_counts_in_hier1[hierarchy_1_layer_idx];
     for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
       if (hierarchy_0_layer_idx == 0) {
-        nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-        nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
-      } else if (hierarchy_0_layer_idx == 1) {
-        nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-        nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
-      } else {
-        nof_blocks = 1
-                     << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
-                         ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
-        nof_subntts = 1;
-      }
-      for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
-        // for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
-        for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx+=ntt_data.nof_elems_per_cacheline) {
-          if (hierarchy_0_layer_idx == 0) {
-            NttTaskCoordinates* ntt_task_coordinates = ntt_tasks_manager->get_slot_for_next_task_coordinates();
-            ntt_task_coordinates->hierarchy_1_layer_idx = hierarchy_1_layer_idx;
-            ntt_task_coordinates->hierarchy_1_subntt_idx = hierarchy_1_subntt_idx;
-            ntt_task_coordinates->hierarchy_0_layer_idx = hierarchy_0_layer_idx;
-            ntt_task_coordinates->hierarchy_0_block_idx = hierarchy_0_block_idx;
-            ntt_task_coordinates->hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
-            ntt_task_coordinates->reorder = false;
-            ICICLE_LOG_DEBUG << "Pushing task: " << ntt_task_coordinates->hierarchy_1_layer_idx << ", "
-                             << ntt_task_coordinates->hierarchy_1_subntt_idx << ", "
-                             << ntt_task_coordinates->hierarchy_0_layer_idx << ", "
-                             << ntt_task_coordinates->hierarchy_0_block_idx << ", "
-                             << ntt_task_coordinates->hierarchy_0_subntt_idx;
-          } else {
-            ntt_tasks_manager->nof_pending_tasks+=ntt_data.nof_elems_per_cacheline;
-            ICICLE_LOG_DEBUG << "no pending tasks: " << ntt_tasks_manager->nof_pending_tasks;
+        const uint64_t nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+        const uint64_t nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
+        const uint32_t nof_blocks_per_task = nof_hierarchy_0_layers == 3? ntt_data.nof_elems_per_cacheline : 1;
+        const uint32_t nof_subntts_per_task = nof_hierarchy_0_layers == 2? ntt_data.nof_elems_per_cacheline : 1;
+        for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < nof_blocks; hierarchy_0_block_idx += nof_blocks_per_task) {
+          for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < nof_subntts; hierarchy_0_subntt_idx += nof_subntts_per_task) {
+              NttTaskCoordinates* ntt_task_coordinates = ntt_tasks_manager->get_slot_for_next_task_coordinates();
+              ntt_task_coordinates->hierarchy_1_layer_idx = hierarchy_1_layer_idx;
+              ntt_task_coordinates->hierarchy_1_subntt_idx = hierarchy_1_subntt_idx;
+              ntt_task_coordinates->hierarchy_0_layer_idx = hierarchy_0_layer_idx;
+              ntt_task_coordinates->hierarchy_0_block_idx = hierarchy_0_block_idx;
+              ntt_task_coordinates->hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
+              ntt_task_coordinates->reorder = false;
+              ICICLE_LOG_DEBUG << "Pushing task: " << ntt_task_coordinates->hierarchy_1_layer_idx << ", "
+                              << ntt_task_coordinates->hierarchy_1_subntt_idx << ", "
+                              << ntt_task_coordinates->hierarchy_0_layer_idx << ", "
+                              << ntt_task_coordinates->hierarchy_0_block_idx << ", "
+                              << ntt_task_coordinates->hierarchy_0_subntt_idx;
           }
         }
+      } else if (hierarchy_0_layer_idx == 1) {
+        const uint64_t nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+        const uint64_t nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
+        const uint64_t nof_layer_1_pending_tasks = nof_hierarchy_0_layers==3? (nof_blocks * nof_subntts) / ntt_data.nof_elems_per_cacheline : nof_blocks * nof_subntts;
+        ntt_tasks_manager->nof_pending_tasks += nof_layer_1_pending_tasks;
+        ICICLE_LOG_DEBUG << "no pending tasks: " << ntt_tasks_manager->nof_pending_tasks;
+      } else {
+        const uint64_t nof_blocks = 1
+                     << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
+                         ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
+        const uint64_t nof_subntts = 1;
+        ntt_tasks_manager->nof_pending_tasks+=nof_blocks*nof_subntts;
+        ICICLE_LOG_DEBUG << "no pending tasks: " << ntt_tasks_manager->nof_pending_tasks;
       }
     }
     if (nof_hierarchy_0_layers > 1) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data

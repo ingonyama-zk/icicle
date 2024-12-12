@@ -36,12 +36,11 @@ namespace ntt_cpu {
     TasksDependenciesCounters(const NttSubHierarchies& ntt_sub_hierarchies, uint32_t hierarchy_1_layer_idx, const uint32_t nof_elems_per_cacheline);
 
     // Function to decrement the counter for a given task and check if it is ready to execute. if so, return true
-    bool decrement_counter(NttTaskCoordinates ntt_task_coordinates);
+    bool decrement_counter(NttTaskCoordinates ntt_task_coordinates, const uint32_t nof_elems_per_cacheline);
     uint32_t get_dependent_subntt_count(uint32_t hierarchy_0_layer_idx)
     {
       return dependent_subntt_count[hierarchy_0_layer_idx];
     }
-    uint32_t get_nof_hierarchy_0_layers() { return nof_hierarchy_0_layers; }
 
   private:
     uint32_t hierarchy_1_layer_idx;               // Index of the current hierarchy 1 layer.
@@ -118,26 +117,28 @@ namespace ntt_cpu {
                                                // hierarchy_1_layers_sub_logn[1-hierarchy_1_layer_idx].
         hierarchy_1_counters(1 << ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx])
   {
-    nof_hierarchy_0_layers = ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2]
-                               ? 3
-                               : (ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] ? 2 : 1);
+    nof_hierarchy_0_layers = ntt_sub_hierarchies.hier0_layer_counts_in_hier1[hierarchy_1_layer_idx];
     dependent_subntt_count.resize(nof_hierarchy_0_layers);
     dependent_subntt_count[0] = 1;
     uint32_t l1_counter_size;
     uint32_t l2_counter_size;
     uint32_t l1_nof_counters;
     uint32_t l2_nof_counters;
-    if (nof_hierarchy_0_layers > 1) {
+    if (nof_hierarchy_0_layers == 2) {
+      // Initialize counters for layer 1 - N2 counters initialized with N1.
+      dependent_subntt_count[1] = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]; //when the counter is 0 this is the number of subntts that are ready to execute
+      l1_nof_counters = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2]; // number of counters in the layer
+      l1_counter_size = (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1])/nof_elems_per_cacheline; // number of tasks to be done before the dependent tasks are ready
+    }
+    if (nof_hierarchy_0_layers == 3) {
       // Initialize counters for layer 1 - N2 counters initialized with N1.
       dependent_subntt_count[1] = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
-      l1_nof_counters = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-      l1_counter_size = (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1])/nof_elems_per_cacheline;
-    }
-    if (nof_hierarchy_0_layers > 2) {
+      l1_nof_counters = (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2])/nof_elems_per_cacheline;
+      l1_counter_size = (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
       // Initialize counters for layer 2 - N0 counters initialized with N2.
       dependent_subntt_count[2] = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
       l2_nof_counters = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
-      l2_counter_size = 1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
+      l2_counter_size = (1 << ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2])/nof_elems_per_cacheline;
     }
 
     for (uint32_t hierarchy_1_subntt_idx = 0;
@@ -182,14 +183,14 @@ namespace ntt_cpu {
    * @param task_c The coordinates of the task whose counter is to be decremented.
    * @return `true` if the dependent task is ready to execute, `false` otherwise.
    */
-  bool TasksDependenciesCounters::decrement_counter(NttTaskCoordinates task_c)
+  bool TasksDependenciesCounters::decrement_counter(NttTaskCoordinates task_c, const uint32_t nof_elems_per_cacheline)
   {
     if (nof_hierarchy_0_layers == 1) { return false; }
     if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
       // Extract the coordinates from the task
       uint32_t counter_group_idx =
-        task_c.hierarchy_0_layer_idx == 0 ? task_c.hierarchy_0_block_idx :
-                                          /*task_c.hierarchy_0_layer_idx==1*/ task_c.hierarchy_0_subntt_idx;
+        task_c.hierarchy_0_layer_idx == 0 ? (nof_hierarchy_0_layers ==2 ? task_c.hierarchy_0_block_idx : task_c.hierarchy_0_block_idx / nof_elems_per_cacheline):
+      /*task_c.hierarchy_0_layer_idx==1*/   task_c.hierarchy_0_subntt_idx;
 
       uint32_t& counter_ref =
         hierarchy_0_counters[task_c.hierarchy_1_subntt_idx][task_c.hierarchy_0_layer_idx + 1][counter_group_idx];
@@ -214,7 +215,7 @@ namespace ntt_cpu {
    */
   template <typename S, typename E>
   NttTasksManager<S, E>::NttTasksManager(const NttSubHierarchies& ntt_sub_hierarchies, uint32_t logn,const uint32_t nof_elems_per_cacheline)
-      : logn(logn), ntt_sub_hierarchies(ntt_sub_hierarchies),
+      : logn(logn), ntt_sub_hierarchies(ntt_sub_hierarchies), nof_elems_per_cacheline(nof_elems_per_cacheline),
         counters(logn > HIERARCHY_1 ? 2 : 1, TasksDependenciesCounters(ntt_sub_hierarchies, 0, nof_elems_per_cacheline)),
         task_buffer(1 << (logn)), // Pre-allocate buffer
         head(0), tail(0), nof_pending_tasks(0)
@@ -367,9 +368,9 @@ namespace ntt_cpu {
   {
     bool task_dispatched = false;
     NttTaskCoordinates task_c = *completed_task->get_coordinates();
-    uint32_t nof_hierarchy_0_layers = counters[task_c.hierarchy_1_layer_idx].get_nof_hierarchy_0_layers();
+    uint32_t nof_hierarchy_0_layers = ntt_sub_hierarchies.hier0_layer_counts_in_hier1[task_c.hierarchy_1_layer_idx];
     // Update dependencies in counters
-    if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c)) {
+    if (counters[task_c.hierarchy_1_layer_idx].decrement_counter(task_c, nof_elems_per_cacheline)) {
       if (task_c.hierarchy_0_layer_idx < nof_hierarchy_0_layers - 1) {
         NttTaskCoordinates* next_task_c_ptr = nullptr;
         uint32_t nof_new_ready_tasks =
@@ -387,7 +388,7 @@ namespace ntt_cpu {
                                                      ? task_c.hierarchy_0_block_idx
                                                      : task_c.hierarchy_0_subntt_idx + stride * i;
           next_task_c_ptr->hierarchy_0_subntt_idx = (task_c.hierarchy_0_layer_idx == 0) ? i : 0;
-          ICICLE_LOG_DEBUG << "Pushing task: " 
+          ICICLE_LOG_DEBUG << "Pushing new task: " 
                            << next_task_c_ptr->hierarchy_1_layer_idx << ", "
                            << next_task_c_ptr->hierarchy_1_subntt_idx << ", " 
                            << next_task_c_ptr->hierarchy_0_layer_idx << ", " 
