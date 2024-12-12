@@ -56,7 +56,7 @@ namespace icicle {
      * @param round_polynomial a vector of MLE polynomials evaluated at x=0,1,2...
      * @return alpha
      */
-    F get_alpha(std::vector<F>& round_polynomial) = 0;
+    virtual F get_alpha(std::vector<F>& round_polynomial) = 0;
 
     const F& get_claimed_sum() const { return m_claimed_sum; }
 
