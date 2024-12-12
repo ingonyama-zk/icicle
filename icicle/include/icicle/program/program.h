@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <vector>
 #include <functional>
 #include "icicle/program/symbol.h"
