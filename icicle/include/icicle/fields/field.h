@@ -160,49 +160,48 @@ public:
       Wide out{};
 #ifdef __CUDA_ARCH__
       UNROLL
+#else
+  #pragma unroll
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
       return out;
     }
 
-    static constexpr Field HOST_DEVICE_INLINE get_lower(const Wide& xs)
+    // WARNING: taking views is zero copy but unsafe
+    constexpr const Field& get_lower_view() const { return *reinterpret_cast<const Field*>(limbs_storage.limbs); }
+    constexpr const Field& get_higher_view() const
     {
-      Field out{};
-#ifdef __CUDA_ARCH__
-      UNROLL
-#endif
-      for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
-      return out;
+      return *reinterpret_cast<const Field*>(limbs_storage.limbs + TLC);
     }
 
-    static constexpr Field HOST_DEVICE_INLINE get_higher(const Wide& xs)
-    {
-      Field out{};
-#ifdef __CUDA_ARCH__
-      UNROLL
-#endif
-      for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
-      return out;
-    }
-
+    // This is not zero copy
     static constexpr Field HOST_DEVICE_INLINE get_higher_with_slack(const Wide& xs)
     {
       Field out{};
 #ifdef __CUDA_ARCH__
       UNROLL
-#endif
       for (unsigned i = 0; i < TLC; i++) {
-#ifdef __CUDA_ARCH__
         out.limbs_storage.limbs[i] =
           __funnelshift_lc(xs.limbs_storage.limbs[i + TLC - 1], xs.limbs_storage.limbs[i + TLC], 2 * slack_bits);
-#else
-        out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << 2 * slack_bits) +
-                                     (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - 2 * slack_bits));
-#endif
       }
+#else
+      // CPU: for even number of limbs, read and shift 64b limbs, otherwise 32b
+      if constexpr (TLC % 2 == 0) {
+  #pragma unroll
+        for (unsigned i = 0; i < TLC / 2; i++) { // Ensure valid indexing
+          out.limbs_storage.limbs64[i] = (xs.limbs_storage.limbs64[i + TLC / 2] << 2 * slack_bits) |
+                                         (xs.limbs_storage.limbs64[i + TLC / 2 - 1] >> (64 - 2 * slack_bits));
+        }
+      } else {
+  #pragma unroll
+        for (unsigned i = 0; i < TLC; i++) { // Ensure valid indexing
+          out.limbs_storage.limbs[i] = (xs.limbs_storage.limbs[i + TLC] << 2 * slack_bits) +
+                                       (xs.limbs_storage.limbs[i + TLC - 1] >> (32 - 2 * slack_bits));
+        }
+      }
+#endif
+
       return out;
     }
 
@@ -440,7 +439,7 @@ public:
   }
 
   static DEVICE_INLINE uint32_t
-  mul_n_and_add(uint32_t* acc, const uint32_t* a, uint32_t bi, uint32_t* extra, size_t n = (TLC >> 1))
+  mul_n_and_add(uint32_t* acc, const uint32_t* a, uint32_t bi, const uint32_t* extra, size_t n = (TLC >> 1))
   {
     acc[0] = ptx::mad_lo_cc(a[0], bi, extra[0]);
 
@@ -505,12 +504,12 @@ public:
    * limb products are included.
    */
   static DEVICE_INLINE void
-  multiply_and_add_lsb_neg_modulus_raw_device(const ff_storage& as, ff_storage& cs, ff_storage& rs)
+  multiply_and_add_lsb_neg_modulus_raw_device(const ff_storage& as, const ff_storage& cs, ff_storage& rs)
   {
     ff_storage bs = get_neg_modulus();
     const uint32_t* a = as.limbs;
     const uint32_t* b = bs.limbs;
-    uint32_t* c = cs.limbs;
+    const uint32_t* c = cs.limbs;
     uint32_t* even = rs.limbs;
 
     if constexpr (TLC > 2) {
@@ -674,15 +673,15 @@ public:
   }
 
   static HOST_DEVICE_INLINE void
-  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, ff_storage& cs, ff_storage& rs)
+  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, const ff_storage& cs, ff_storage& rs)
   {
 #ifdef __CUDA_ARCH__
     return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
 #else
     Wide r_wide = {};
     host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
-    Field r = Wide::get_lower(r_wide);
-    add_limbs<TLC, false>(cs, r.limbs_storage, rs);
+    const Field& r_low_view = r_wide.get_lower_view();
+    add_limbs<TLC, false>(cs, r_low_view.limbs_storage, rs);
 #endif
   }
 
@@ -806,16 +805,17 @@ public:
     Field xs_hi = Wide::get_higher_with_slack(xs);
     Wide l = {};
     multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
-    Field l_hi = Wide::get_higher(l);
+    // Note: taking views is zero copy but unsafe
+    const Field& l_hi = l.get_higher_view();
+    const Field& xs_lo = xs.get_lower_view();
     Field r = {};
-    Field xs_lo = Wide::get_lower(xs);
     // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
     multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
     ff_storage r_reduced = {};
     uint32_t carry = 0;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
-    if (num_of_reductions() == 2) {
+    if constexpr (num_of_reductions() == 2) {
       carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
       if (carry == 0) r = Field{r_reduced};
     }
@@ -827,6 +827,7 @@ public:
 
   HOST_DEVICE Field& operator=(Field const& other)
   {
+#pragma unroll
     for (int i = 0; i < TLC; i++) {
       this->limbs_storage.limbs[i] = other.limbs_storage.limbs[i];
     }
@@ -850,6 +851,7 @@ public:
       limbs_or |= x[i] ^ y[i];
     return limbs_or == 0;
 #else
+  #pragma unroll
     for (unsigned i = 0; i < TLC; i++)
       if (xs.limbs_storage.limbs[i] != ys.limbs_storage.limbs[i]) return false;
     return true;
@@ -861,16 +863,18 @@ public:
   template <const Field& multiplier>
   static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
   {
-    Field mul = multiplier;
-    static bool is_u32 = true;
-#ifdef __CUDA_ARCH__
-    UNROLL
-#endif
-    for (unsigned i = 1; i < TLC; i++)
-      is_u32 &= (mul.limbs_storage.limbs[i] == 0);
+    constexpr bool is_u32 = []() {
+      bool is_u32 = true;
+      for (unsigned i = 1; i < TLC; i++)
+        is_u32 &= (multiplier.limbs_storage.limbs[i] == 0);
+      return is_u32;
+    }();
 
-    if (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
-    return mul * xs;
+    if constexpr (is_u32) return mul_unsigned<multiplier.limbs_storage.limbs[0], Field>(xs);
+
+    // This is not really a copy but required for CUDA compilation since the template param is not in the device memory
+    Field mult = multiplier;
+    return mult * xs;
   }
 
   template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
@@ -881,6 +885,8 @@ public:
     bool is_zero = true;
 #ifdef __CUDA_ARCH__
     UNROLL
+#else
+  #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
       if (multiplier & (1 << i)) {
