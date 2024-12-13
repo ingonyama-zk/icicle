@@ -382,7 +382,7 @@ namespace icicle {
         // calculate the actual number of hashes to execute based on leaves_size
         const uint64_t hash_input_size = cur_layer.m_hash.default_input_chunk_size();
         const uint64_t hash_output_size = cur_layer.m_hash.output_size();
-        // round up the the number of hashes and add 1 more for last hash that is fully padded
+        // round up the number of hashes and add 1 more for last hash that is fully padded
         const uint64_t nof_hashes_2_execute = (leaves_size + hash_input_size - 1) / hash_input_size + 1;
         // make sure you don't exceed m_nof_hashes
         cur_layer.m_nof_hashes_2_execute = std::min(cur_layer.m_nof_hashes, nof_hashes_2_execute);
