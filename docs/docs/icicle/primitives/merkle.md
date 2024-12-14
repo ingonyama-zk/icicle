@@ -179,7 +179,7 @@ A Merkle proof contains:
 - **Index** (leaf_idx): The position of the leaf in the original dataset.
 - **Path**: A sequence of sibling hashes (tree nodes) needed to recompute the path from the leaf to the root.
 
-![Merkle Pruned Phat Diagram](./merkle_diagrams/diagram1_path.png)
+![Merkle Pruned Path Diagram](./merkle_diagrams/diagram1_path.png)
 
 
 ```cpp
