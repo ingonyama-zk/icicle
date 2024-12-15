@@ -29,6 +29,12 @@ namespace vec_ops {
     return add<q_extension_t>(vec_a, vec_b, n, config, result);
   }
 
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, q_extension_fold_cuda)(
+    scalar_t* vec_a, q_extension_t* vec_b, int n, VecOpsConfig& config, q_extension_t* result)
+  {
+    return fold<q_extension_t, scalar_t>(vec_a, vec_b, n, config, result);
+  }
+
   /**
    *  Accumulate (as vec_a[i] += vec_b[i]) function with the template parameter
    * `E` being the [extension field](@ref q_extension_t) of the base field given by `-DFIELD` env variable during build.
@@ -44,12 +50,6 @@ namespace vec_ops {
     uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, q_extension_t* result)
   {
     return stwo_convert<q_extension_t>(vec_a, vec_b, vec_c, vec_d, n, result, true);
-  }
-
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, q_extension_fold_cuda)(
-    scalar_t* vec_a, q_extension_t* vec_b, int n, VecOpsConfig& config, q_extension_t* result)
-  {
-    return fold<q_extension_t, scalar_t>(vec_a, vec_b, n, config, result);
   }
 
   /**

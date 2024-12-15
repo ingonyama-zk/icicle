@@ -135,8 +135,9 @@ pub trait VecOps<F> {
     fn fold<S: FieldImpl>(
         a: &(impl HostOrDeviceSlice<S> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
-    ) -> IcicleResult<F>;
+    ) -> IcicleResult<()>;
 }
 
 fn check_vec_ops_args<'a, F>(
@@ -176,6 +177,7 @@ fn check_vec_ops_args<'a, F>(
     res_cfg.is_result_on_device = result.is_on_device();
     res_cfg
 }
+
 fn check_bit_reverse_args<'a, F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &BitReverseConfig<'a>,
@@ -213,6 +215,43 @@ fn check_bit_reverse_args<'a, F>(
     res_cfg
 }
 
+fn check_fold_args<'a, F, S>(
+    a: &(impl HostOrDeviceSlice<S> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig<'a>,
+) -> VecOpsConfig<'a> {
+    if a.len() != (1 << b.len()) {
+        panic!(
+            "left, right and output lengths {}; {}; {} are incorrect",
+            a.len(),
+            b.len(),
+            result.len()
+        );
+    }
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = a.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in a and context are different");
+    }
+    if let Some(device_id) = b.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in b and context are different");
+    }
+    if let Some(device_id) = result.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in result and context are different"
+        );
+    }
+    check_device(ctx_device_id);
+
+    let mut res_cfg = cfg.clone();
+    res_cfg.is_a_on_device = a.is_on_device();
+    res_cfg.is_b_on_device = b.is_on_device();
+    res_cfg.is_result_on_device = result.is_on_device();
+    res_cfg
+}
 pub fn add_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -323,6 +362,23 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::bit_reverse_inplace(input, &cfg)
 }
 
+pub fn fold_scalars<F, S>(
+    a: &(impl HostOrDeviceSlice<S> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+    S: FieldImpl,
+    <S as FieldImpl>::Config: VecOps<S>,
+{
+    
+    let cfg = check_fold_args(a, b, result, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::fold(a, b, result, &cfg)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -340,6 +396,15 @@ macro_rules! impl_vec_ops_field {
                 #[link_name = concat!($field_prefix, "_add_cuda")]
                 pub(crate) fn add_scalars_cuda(
                     a: *const $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                ) -> CudaError;
+
+                #[link_name = concat!($field_prefix, "_fold_cuda")]
+                pub(crate) fn fold_cuda(
+                    a: *const std::ffi::c_void, // TODO: scalar and extension fields as parameters
                     b: *const $field,
                     size: u32,
                     cfg: *const VecOpsConfig,
@@ -364,15 +429,6 @@ macro_rules! impl_vec_ops_field {
                     result: *mut u32,
                     ctx: &DeviceContext,
                     is_async: bool,
-                ) -> CudaError;
-
-                #[link_name = concat!($field_prefix, "_fold_cuda")]
-                pub(crate) fn fold_cuda(
-                    a: *const std::ffi::c_void, // TODO: scalar and extension fields as parameters
-                    b: *const $field,
-                    size: u32,
-                    cfg: *const VecOpsConfig,
-                    result: *mut $field,
                 ) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_sub_cuda")]
@@ -474,21 +530,21 @@ macro_rules! impl_vec_ops_field {
             fn fold<S: icicle_core::traits::FieldImpl>(
                 a: &(impl HostOrDeviceSlice<S> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
-            ) -> IcicleResult<$field> {
-                let mut result = MaybeUninit::<$field>::uninit();
+            ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::fold_cuda(
-                        a.as_ptr() as *const std::ffi::c_void,
+                        a.as_ptr() as *const _,
                         b.as_ptr(),
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
                     )
                     .wrap()
-                    .and(Ok(result.assume_init()))
                 }
             }
+
             fn sub(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),

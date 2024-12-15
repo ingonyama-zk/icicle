@@ -11,6 +11,7 @@ repository.workspace = true
 icicle-core = { workspace = true }
 icicle-cuda-runtime = { workspace = true }
 criterion = "0.3"
+rayon = "1.8.1"
 
 [build-dependencies]
 cmake = "0.1.50"

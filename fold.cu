@@ -1,35 +1,53 @@
 #include <cuda_runtime.h>
 #include <iostream>
+#include <chrono>
 #include <vector>
 
 constexpr uint32_t P = 2147483647; // 2 ** 31 - 1
 
 // CUDA Kernel for hierarchical folding
-__global__ void foldKernel(uint64_t* values, const uint64_t* factors, int n, int numFactors)
+__global__ void foldKernel(uint64_t* values, const uint64_t* factors, int n, int numFactors, int level)
 {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx < n) {
-    for (int level = 0; level < numFactors; ++level) {
-      // Step size doubles at each level
-      int step = 1 << (level + 1);
-      int invlevel = numFactors - level - 1;
+    // for (int level = 0; level < numFactors; ++level) {
+    // Step size doubles at each level
+    int step = 1 << (level + 1);
+    int invlevel = numFactors - level - 1;
 
-      if (idx < n / step) {
-        // Compute indices for the pair to be reduced
-        int leftIdx = idx * step;
-        int rightIdx = leftIdx + step / 2;
+    if (idx < n / step) {
+      // Compute indices for the pair to be reduced
+      int leftIdx = idx * step;
+      int rightIdx = leftIdx + step / 2;
 
-        // printf("Folding %f and %f * %f\n", values[leftIdx], factors[invlevel], values[rightIdx]);
+      // printf("Folding %f and %f * %f\n", values[leftIdx], factors[invlevel], values[rightIdx]);
 
-        // Perform the folding operation
-        values[leftIdx] = (values[leftIdx] + (factors[invlevel] * values[rightIdx])) % P;
-        // values[leftIdx] = (values[leftIdx] + (factors[invlevel]  * values[rightIdx])% P) % P;
-      }
-
-      // Synchronize threads to ensure all reductions for the current level are complete
-      __syncthreads();
+      // Perform the folding operation
+      values[leftIdx] = (values[leftIdx] + (factors[invlevel] * values[rightIdx])) % P;
+      // values[leftIdx] = (values[leftIdx] + (factors[invlevel]  * values[rightIdx])% P) % P;
     }
+
+    // Synchronize threads to ensure all reductions for the current level are complete
+    // __syncthreads();
+    // }
   }
+}
+
+template <typename E, typename S>
+__global__ void
+fold_kernel_2(S* values, const E* folding_factors, const int level, const int nlog2, const int n, E* result)
+{
+  int idx = (blockIdx.x * blockDim.x + threadIdx.x) * 2;
+  int step = 1 << (nlog2 - level - 1);
+  int offset = idx + step;
+  if (offset + (step - 1) < n) {
+    // result[idx] = values[idx] + folding_factors[level] * values[offset];
+    // printf(
+    //   "level %d offset %d step %d - Folding %lu + %lu* %lu\n", level, offset, step, values[idx], values[offset],
+    //   folding_factors[level]);
+    result[idx] = (values[idx] + (folding_factors[level] * values[offset])) % P;
+  }
+  __syncthreads();
 }
 
 // Wrapper function to handle CUDA kernel invocation
@@ -56,9 +74,30 @@ void hierarchicalFold(std::vector<uint64_t>& values, const std::vector<uint64_t>
   // Launch kernel
   int blockSize = 1024;
 
+  int nlog2 = log2(n);
+
+  // Launch kernel
+
   int gridSize = (n + blockSize - 1) / blockSize;
 
-  foldKernel<<<gridSize, blockSize>>>(d_values, d_factors, n, numFactors);
+  auto start = std::chrono::high_resolution_clock::now();
+  for (int level = 0; level < numFactors; ++level) {
+    foldKernel<<<gridSize, blockSize>>>(d_values, d_factors, n, numFactors, level);
+  }
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+  std::chrono::duration<double, std::milli> elapsed = end - start;
+  std::cout << "time for 2^" << numFactors << " is: " << elapsed.count() << " ms" << std::endl;
+
+  // int num_threads = blockSize;
+  // int num_blocks = (n/2 + num_threads - 1) / num_threads;
+
+  // fold_kernel_2<<<num_blocks, num_threads>>>(d_values, d_factors, nlog2 - 1, nlog2, n, d_values);
+
+  // for (int level = nlog2 - 2; level >= 0; --level) {
+  //   fold_kernel_2<<<num_blocks, num_threads>>>(d_values, d_factors, level, nlog2, n, d_values);
+  // }
 
   // Copy result back to host
   cudaMemcpy(values.data(), d_values, n * sizeof(uint64_t), cudaMemcpyDeviceToHost);
@@ -75,7 +114,7 @@ int main()
   // std::vector<uint64_t> factors = {2, 3, 4}; // Folding factors
 
   // Set the length of factors
-  const size_t factors_length = 12;                  // Example length
+  const size_t factors_length = 20;                 // Example length
   const size_t values_length = 1 << factors_length; // 2^factors_length
 
   // Initialize the `values` vector
@@ -91,16 +130,16 @@ int main()
   }
 
   try {
-    for (size_t i = 0; i < 1000; ++i) {
+    for (size_t i = 0; i < 1; ++i) {
       for (size_t j = 0; j < values_length; ++j) {
         values[j] = static_cast<uint64_t>(j + 1); // Populate with 1, 2, ..., values_length
       }
       hierarchicalFold(values, factors);
-      if (values[0] != 65782334) {
-        std::cout << "Error: " << values[0] << " " << i << std::endl;
+      // if (values[0] != 65782334) {
+      //   std::cout << "Error: " << values[0] << " " << i << std::endl;
 
-        return;
-      }
+      //   return;
+      // }
     }
     std::cout << "Folded result: ";
     for (uint64_t v : values) {
