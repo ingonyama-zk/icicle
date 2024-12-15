@@ -97,10 +97,10 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "COMMIT_FILE exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
             echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "COMMIT_FILE does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -213,10 +213,10 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "COMMIT_FILE exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
             echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "COMMIT_FILE does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -327,10 +327,10 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "COMMIT_FILE exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
             echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "COMMIT_FILE does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
