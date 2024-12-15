@@ -3,6 +3,7 @@
 #include "gpu-utils/device_context.cuh"
 #include "vec_ops/vec_ops.cuh"
 #include "fields/stark_fields/m31.cuh"
+#include "fields/point.cuh"
 #include "quotient/quotient.cuh"
 
 namespace quotient {
@@ -75,18 +76,6 @@ namespace quotient {
                 flat_denominators[i] = CF::inverse(result);
             }
         }
-
-        template <typename P, typename F>
-        static HOST_DEVICE_INLINE P get_domain_by_index(uint32_t half_coset_initial_index, uint32_t half_coset_step_size, uint32_t index, uint32_t domain_size) {
-        uint32_t half_coset_size = domain_size >> 1;
-        if (index < half_coset_size) {
-            uint64_t global_index = (uint64_t) half_coset_initial_index + (uint64_t) half_coset_step_size * (uint64_t) index;
-            return P::get_point_by_index(global_index & F::get_modulus().limbs[0]);
-        } else {
-            uint64_t global_index = (uint64_t) half_coset_initial_index + (uint64_t) half_coset_step_size * (uint64_t) (index - half_coset_size);
-            return P::get_point_by_index(((F::get_modulus().limbs[0] - global_index) + 1) & F::get_modulus().limbs[0]);
-        }
-        }
     }
 
     template <typename QP, typename QF>
@@ -140,11 +129,9 @@ namespace quotient {
         }
     }
 
-    template <typename QP, typename QF, typename CF, typename F, typename P>
+    template <typename QP, typename QF, typename CF, typename F, typename P, typename D>
     __global__ void accumulate_quotients_kernel(
-        uint32_t half_coset_initial_index,
-        uint32_t half_coset_step_size,
-        uint32_t domain_log_size,
+        D domain,
         uint32_t domain_size,
         F *columns,
         uint32_t number_of_columns,
@@ -159,8 +146,8 @@ namespace quotient {
         int row = threadIdx.x + blockDim.x * blockIdx.x;
         if (row < domain_size) {
             CF *denominator_inverses_local = &denominator_inverses[row * sample_size];
-            uint32_t index = __brev(row) >> (32 - domain_log_size);
-            P point = get_domain_by_index<P, F>(half_coset_initial_index, half_coset_step_size, index, domain_size);
+            uint32_t index = __brev(row) >> (32 - domain.lg_size());
+            P point = domain.at(index);
             denominator_inverse<QP, QF, CF>(
                 samples,
                 sample_size,
@@ -206,11 +193,9 @@ namespace quotient {
         }
     }
 
-    template <typename QP, typename QF, typename CF, typename F, typename P>
+    template <typename QP, typename QF, typename CF, typename F, typename P, typename D>
     cudaError_t accumulate_quotients(
-        uint32_t half_coset_initial_index,
-        uint32_t half_coset_step_size,
-        uint32_t domain_log_size,
+        D &domain,
         F *columns, // 2d number_of_columns * domain_size elements
         uint32_t number_of_columns,
         QF &random_coefficient,
@@ -224,7 +209,7 @@ namespace quotient {
 
         cudaStream_t stream = cfg.ctx.stream;
 
-        uint32_t domain_size = 1 << domain_log_size;
+        uint32_t domain_size = domain.size();
         F *d_columns;
         if (cfg.are_columns_on_device) {
             d_columns = columns;
@@ -316,10 +301,8 @@ namespace quotient {
 
         block_dim = 512;
         num_blocks = (domain_size + block_dim - 1) / block_dim;
-        accumulate_quotients_kernel<QP, QF, CF, F, P><<<num_blocks, block_dim, 0, stream>>>(
-                half_coset_initial_index,
-                half_coset_step_size,
-                domain_log_size,
+        accumulate_quotients_kernel<QP, QF, CF, F, P, D><<<num_blocks, block_dim, 0, stream>>>(
+                domain,
                 domain_size,
                 d_columns,
                 number_of_columns,

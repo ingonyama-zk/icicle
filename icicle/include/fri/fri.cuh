@@ -34,6 +34,9 @@ namespace fri {
   template <typename S, typename E>
   cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
 
+  template <typename S, typename E, typename D>
+  cudaError_t fold_line_new(E* eval, D& line_domain, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
+
   /**
    * @brief Folds a layer of FRI evaluations from a circle into a line.
    *
@@ -58,6 +61,9 @@ namespace fri {
 
   template <typename S, typename E>
   cudaError_t fold_circle_into_line(E* eval, S* domain_ys, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
+
+  template <typename S, typename E, typename D>
+  cudaError_t fold_circle_into_line_new(E* eval, D& domain, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
 
 } // namespace fri
 

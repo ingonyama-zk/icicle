@@ -109,6 +109,73 @@ pub fn fold_line(
     }
 }
 
+fn check_fri_args_new<'a, F>(
+    eval: &(impl HostOrDeviceSlice<F> + ?Sized),
+    log_size: u32,
+    folded_eval: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &FriConfig<'a>,
+) -> FriConfig<'a> {
+    if eval.len() != 1 << log_size {
+        panic!(
+            "Number of domain elements is not half of the evaluation's domain size; {} != {}",
+            eval.len(),
+            1 << log_size
+        );
+    }
+
+    if eval.len() / 2 != folded_eval.len() {
+        panic!(
+            "Folded poly degree is not half of the evaluation poly's degree; {} != {} / 2",
+            eval.len(),
+            folded_eval.len()
+        );
+    }
+
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+
+    if let Some(device_id) = eval.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in eval and context are different");
+    }
+    if let Some(device_id) = folded_eval.device_id() {
+        assert_eq!(
+            device_id, ctx_device_id,
+            "Device ids in folded_eval and context are different"
+        );
+    }
+    check_device(ctx_device_id);
+
+    let mut res_cfg = cfg.clone();
+    res_cfg.are_evals_on_device = eval.is_on_device();
+    res_cfg.are_domain_elements_on_device = false;
+    res_cfg.are_results_on_device = folded_eval.is_on_device();
+    res_cfg
+}
+
+pub fn fold_line_new(
+    eval: &(impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
+    initial_index: u64,
+    log_size: u32,
+    folded_eval: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
+    alpha: QuarticExtensionField,
+    cfg: &FriConfig,
+) -> IcicleResult<()> {
+    let cfg = check_fri_args_new(eval, log_size, folded_eval, cfg);
+    unsafe {
+        _fri::fold_line_new(
+            eval.as_ptr(),
+            initial_index,
+            log_size,
+            &alpha,
+            folded_eval.as_mut_ptr(),
+            eval.len() as u64,
+            &cfg as *const FriConfig,
+        )
+        .wrap()
+    }
+}
+
 pub fn fold_circle_into_line(
     eval: &(impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     domain_elements: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
@@ -121,6 +188,29 @@ pub fn fold_circle_into_line(
         _fri::fold_circle_into_line(
             eval.as_ptr(),
             domain_elements.as_ptr(),
+            &alpha,
+            folded_eval.as_mut_ptr(),
+            eval.len() as u64,
+            &cfg as *const FriConfig,
+        )
+        .wrap()
+    }
+}
+
+pub fn fold_circle_into_line_new(
+    eval: &(impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
+    initial_index: u64,
+    half_coset_log_size: u32,
+    folded_eval: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
+    alpha: QuarticExtensionField,
+    cfg: &FriConfig,
+) -> IcicleResult<()> {
+    let cfg = check_fri_args_new(eval, half_coset_log_size + 1, folded_eval, cfg);
+    unsafe {
+        _fri::fold_circle_into_line_new(
+            eval.as_ptr(),
+            initial_index,
+            half_coset_log_size,
             &alpha,
             folded_eval.as_mut_ptr(),
             eval.len() as u64,
@@ -148,6 +238,28 @@ mod _fri {
         pub(crate) fn fold_circle_into_line(
             circle_eval: *const QuarticExtensionField,
             domain_elements: *const ScalarField,
+            alpha: &QuarticExtensionField,
+            folded_line_eval: *mut QuarticExtensionField,
+            n: u64,
+            cfg: *const FriConfig,
+        ) -> CudaError;
+
+        #[link_name = "m31_fold_line_new"]
+        pub(crate) fn fold_line_new(
+            line_eval: *const QuarticExtensionField,
+            initial_index: u64,
+            log_size: u32,
+            alpha: &QuarticExtensionField,
+            folded_eval: *mut QuarticExtensionField,
+            n: u64,
+            cfg: *const FriConfig,
+        ) -> CudaError;
+
+        #[link_name = "m31_fold_circle_into_line_new"]
+        pub(crate) fn fold_circle_into_line_new(
+            circle_eval: *const QuarticExtensionField,
+            initial_index: u64,
+            log_size: u32,
             alpha: &QuarticExtensionField,
             folded_line_eval: *mut QuarticExtensionField,
             n: u64,
