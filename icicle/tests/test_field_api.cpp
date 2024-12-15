@@ -1064,13 +1064,13 @@ TEST_F(FieldApiTestBase, Sumcheck)
   scalar_t claimed_sum = scalar_t::from(8);
 
   // create transcript_config
-  const SumcheckTranscriptConfig<scalar_t> transcript_config;
+  SumcheckTranscriptConfig<scalar_t> transcript_config; // TODO Miki: define labels?
 
   // create sumcheck
-  Sumcheck sumcheck = create_sumcheck(claimed_sum, std::move(transcript_config));
+  auto sumcheck = Sumcheck<scalar_t>::create(claimed_sum, std::move(transcript_config));
 
   // generate inputs
-  std::vector< std::vector<scalar_t>* > mle_polynomials(nof_mle_poly);
+  std::vector<std::vector<scalar_t>*> mle_polynomials(nof_mle_poly);
   for (auto& mle_poly_ptr : mle_polynomials) {
     mle_poly_ptr = std::make_shared<std::vector<scalar_t>>(mle_poly_size).get();
     scalar_t::rand_host_many(mle_poly_ptr->data(), mle_poly_size);
@@ -1081,7 +1081,7 @@ TEST_F(FieldApiTestBase, Sumcheck)
 
   sumcheck.get_proof(mle_polynomials, combine_func, config, sumcheck_proof);
 }
-#endif
+#endif // SUMCHECK
 
 int main(int argc, char** argv)
 {

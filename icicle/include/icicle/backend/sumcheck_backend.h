@@ -7,6 +7,8 @@
 #include "icicle/sumcheck/sumcheck_config.h"
 #include "icicle/sumcheck/sumcheck_proof.h"
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
+#include "icicle/fields/field_config.h"
+using namespace field_config;
 
 template <typename F>
 using CombineFunction = ReturningValueProgram<F>;
@@ -61,7 +63,7 @@ namespace icicle {
     const F& get_claimed_sum() const { return m_claimed_sum; }
 
   protected:
-    F m_claimed_sum;                                   ///< Vector of hash functions for each layer.
+    const F m_claimed_sum;                             ///< Vector of hash functions for each layer.
     SumcheckTranscriptConfig<F>&& m_transcript_config; ///< Size of each leaf element in bytes.
   };
 
@@ -69,7 +71,7 @@ namespace icicle {
   template <typename F>
   using SumcheckFactoryImpl = std::function<eIcicleError(
     const Device& device,
-    F& claimed_sum,
+    const F& claimed_sum,
     SumcheckTranscriptConfig<F>&& transcript_config,
     std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
 

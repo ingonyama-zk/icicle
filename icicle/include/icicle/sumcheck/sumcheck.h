@@ -10,25 +10,16 @@ namespace icicle {
   template <typename F>
   class Sumcheck;
 
-  // ICICLE_DISPATCHER_INST(SumcheckDispatcher, sumcheck_factory, SumcheckFactoryImpl);
-
-  // template <typename F> class Sumcheck;
-  // /**
-  //  * @brief Static factory method to create a Sumcheck instance.
-  //  *
-  //  * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
-  //  * when evaluated over all possible Boolean input combinations
-  //  * @param transcript_config Configuration for encoding and hashing prover messages.
-  //  * @return A Sumcheck object initialized with the specified backend.
-  //  */
+  /**
+   * @brief Static factory method to create a Sumcheck instance.
+   *
+   * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
+   * when evaluated over all possible Boolean input combinations
+   * @param transcript_config Configuration for encoding and hashing prover messages.
+   * @return A Sumcheck object initialized with the specified backend.
+   */
   template <typename F>
-  Sumcheck<F> create_sumcheck(F& claimed_sum, const SumcheckTranscriptConfig<F>&& transcript_config)
-  {
-    std::shared_ptr<SumcheckBackend<F>> backend;
-    // ICICLE_CHECK(SumcheckDispatcher::execute(claimed_sum, std::move(transcript_config)));
-    Sumcheck<F> sumcheck{backend};
-    return sumcheck;
-  }
+  Sumcheck<F> create_sumcheck(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config);
 
   /**
    * @brief Class for performing Sumcheck operations.
@@ -51,7 +42,7 @@ namespace icicle {
      * @param transcript_config Configuration for encoding and hashing prover messages.
      * @return A Sumcheck object initialized with the specified backend.
      */
-    static Sumcheck<F> create(F& claimed_sum, const SumcheckTranscriptConfig<F>&& transcript_config)
+    static Sumcheck<F> create(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config)
     {
       return create_sumcheck(claimed_sum, std::move(transcript_config));
     }
@@ -123,7 +114,7 @@ namespace icicle {
       m_backend; ///< Shared pointer to the backend responsible for Sumcheck operations.
 
     // Receive the polynomial in evaluation on x=0,1,2...
-    // retuרn the evaluation of the polynomial at x
+    // return the evaluation of the polynomial at x
     F lagrange_interpolation(const std::vector<F>& poly_evaluations, const F& x)
     {
       uint poly_degree = poly_evaluations.size();

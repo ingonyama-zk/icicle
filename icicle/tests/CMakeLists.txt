@@ -41,6 +41,15 @@ if (FIELD)
         target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_field)
         gtest_discover_tests(test_polynomial_api)    
     endif()
+
+    if(SUMCHECK)
+        # Sumcheck relies on hash so this is mandatory
+        if(HASH)
+            target_link_libraries(test_field_api PRIVATE icicle_hash)
+        else()
+            message(FATAL_ERROR "SUMCHECK is enabled, but HASH is not enabled. Please enable HASH to proceed.")
+        endif()
+    endif()
 endif()
 
 #curve API test
