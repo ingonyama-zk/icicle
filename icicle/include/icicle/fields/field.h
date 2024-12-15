@@ -678,10 +678,20 @@ public:
 #ifdef __CUDA_ARCH__
     return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
 #else
-    Wide r_wide = {};
-    host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
-    const Field& r_low_view = r_wide.get_lower_view();
-    add_limbs<TLC, false>(cs, r_low_view.limbs_storage, rs);
+
+    // NOTE: basically we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
+    // seems that after inlining, the compiler eliminates the msb limbs since they are unused.
+    // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same)
+    if constexpr (TLC > 1) {
+      Field r_low = {};
+      host_math::template lsb_multiply_raw_64<TLC>(as.limbs64, get_neg_modulus().limbs64, r_low.limbs_storage.limbs64);
+      add_limbs<TLC, false>(cs, r_low.limbs_storage, rs);
+    } else {
+      Wide r_wide = {};
+      host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
+      const Field& r_low_view = r_wide.get_lower_view();
+      add_limbs<TLC, false>(cs, r_low_view.limbs_storage, rs);
+    }
 #endif
   }
 
@@ -813,14 +823,16 @@ public:
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
     multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
     ff_storage r_reduced = {};
-    uint32_t carry = 0;
+    uint32_t borrow = 0;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if constexpr (num_of_reductions() == 2) {
-      carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
-      if (carry == 0) r = Field{r_reduced};
+      borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
+      // If r-2p has no borrow then we are done
+      if (borrow == 0) return Field{r_reduced};
     }
-    carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (carry == 0) r = Field{r_reduced};
+    // if r-2p has borrow then we need to either subtract p or we are already  in [0,p)
+    borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
+    if (borrow == 0) return Field{r_reduced};
 
     return r;
   }
