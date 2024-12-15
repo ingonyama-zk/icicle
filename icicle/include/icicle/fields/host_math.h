@@ -213,13 +213,13 @@ namespace host_math {
   static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
-    for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
+    for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
       uint64_t carry = 0;
 #pragma unroll
-      for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
+      for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
       }
-      r[NLIMBS_A / 2 + i] = carry;
+      r[NLIMBS_A / 2 + j] = carry;
     }
   }
 
@@ -228,10 +228,10 @@ namespace host_math {
   static HOST_INLINE void lsb_multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
-    for (unsigned i = 0; i < NLIMBS / 2; i++) {
+    for (unsigned j = 0; j < NLIMBS / 2; j++) {
       uint64_t carry = 0;
 #pragma unroll
-      for (unsigned j = 0; j < NLIMBS / 2 - i; j++) {
+      for (unsigned i = 0; i < NLIMBS / 2 - j; i++) {
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
       }
     }
