@@ -131,7 +131,7 @@ jobs:
       working-directory: ./examples/c++
       # if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
-        CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        CURVE=${{ matrix.curve.name }}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
             if [ -d "$dir" ]; then
@@ -145,11 +145,12 @@ jobs:
       working-directory: ./wrappers/golang/curves
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
-        go test ./$CURVE/tests -count=1 -failfast -p 2 -timeout 60m -v
+        go test ./$CURVE_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
 
 
   test-linux-field:
@@ -247,7 +248,7 @@ jobs:
       working-directory: ./examples/c++
       # if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |
-        FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        FIELD=${{ matrix.field.name }}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
             if [ -d "$dir" ]; then
@@ -263,15 +264,16 @@ jobs:
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       # if: matrix.field.name == 'babybear' #&& matrix.field.name == 'babybear'
       run: |
-        FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$FIELD -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         if [ -d "./$FIELD/tests" ]; then
           echo "Running tests for $FIELD..."
-          go test ./$FIELD/tests -count=1 -failfast -p 2 -timeout 60m -v
+          go test ./$FIELD_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
         else
-          echo "Folder ./$FIELD/tests does not exist. Skipping tests for $FIELD."
+          echo "Folder ./$FIELD_DIR/tests does not exist. Skipping tests for $FIELD."
         fi
 
 
