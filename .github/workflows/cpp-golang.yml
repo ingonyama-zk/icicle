@@ -77,7 +77,7 @@ jobs:
         CURVE=${{ matrix.curve.name }}
         COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve
           echo "INSTALL_PATH=/usr/local/ci" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
@@ -192,7 +192,7 @@ jobs:
         FIELD=${{ matrix.field.name }}
         COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../field
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/field
           echo "INSTALL_PATH=/usr/local/ci" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
@@ -305,7 +305,7 @@ jobs:
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
         COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../hash
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
           echo "INSTALL_PATH=/usr/local/ci" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
@@ -344,7 +344,9 @@ jobs:
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       # builds the hash and merkle tree lib using a local copy of the CUDA backend
       run:  |
-        ./build.sh -cuda_backend=local
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release  -DHASH=ON ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
     - name: Test GoLang Hashes
