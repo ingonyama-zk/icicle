@@ -65,7 +65,8 @@ where
     );
 
     // Create a Sumcheck instance using the transcript configuration.
-    let sumcheck = Sumcheck::new::<F>(&config).unwrap();
+    let claimed_sum = F::from_u32(7); //dummy
+    let sumcheck = Sumcheck::new::<F>(&claimed_sum, &config).unwrap();
 
     // Generate dummy input data.
     let dummy_input: Vec<F> = F::Config::generate_random(5);
