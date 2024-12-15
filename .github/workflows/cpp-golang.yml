@@ -68,12 +68,7 @@ jobs:
       run: |
         CUDA_BACKEND_SHA=$(git rev-parse HEAD)
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
-        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_ENV
-    - name: Setup go
-      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22.0'
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
     - name: Set CUDA backend flag
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
@@ -111,6 +106,12 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         fi
+    - name: Setup go
+      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+
     - name: Build curve
       working-directory: ./icicle
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
@@ -181,11 +182,6 @@ jobs:
         CUDA_BACKEND_SHA=$(git rev-parse HEAD)
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
         echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
-    - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22.0'
     - name: Set CUDA backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
@@ -199,6 +195,12 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=/tmp/local/" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=/tmp/local/lib" >> $GITHUB_OUTPUT
         fi
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+
     - name: Build field
       working-directory: ./icicle
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
@@ -261,12 +263,7 @@ jobs:
       run: |
         CUDA_BACKEND_SHA=$(git rev-parse HEAD)
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
-        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_ENV
-    - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22.0'
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
     - name: Set CUDA backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
@@ -280,6 +277,11 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=/tmp/local/" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=/tmp/local/lib" >> $GITHUB_OUTPUT
         fi
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
     - name: Build
       working-directory: ./wrappers/golang
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
