@@ -811,30 +811,30 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
+    Wide l = {}; // the approximation of l for a*b = l*p + r mod p
+    Field r = {};
+
     // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
-    Field xs_hi = Wide::get_higher_with_slack(xs);
-    Wide l = {};
+    const Field xs_hi = Wide::get_higher_with_slack(xs);
     multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
     // Note: taking views is zero copy but unsafe
     const Field& l_hi = l.get_higher_view();
     const Field& xs_lo = xs.get_lower_view();
-    Field r = {};
     // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
     multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
-    ff_storage r_reduced = {};
-    uint32_t borrow = 0;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if constexpr (num_of_reductions() == 2) {
-      borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
+      Field r_reduced = {};
+      const auto borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced.limbs_storage);
       // If r-2p has no borrow then we are done
-      if (borrow == 0) return Field{r_reduced};
+      if (!borrow) return r_reduced;
     }
-    // if r-2p has borrow then we need to either subtract p or we are already  in [0,p)
-    borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (borrow == 0) return Field{r_reduced};
-
-    return r;
+    // if r-2p has borrow then we need to either subtract p or we are already in [0,p).
+    // so we subtract p and based on the borrow bit we know which case it is
+    Field r_reduced = {};
+    const auto borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced.limbs_storage);
+    return borrow ? r : r_reduced;
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
@@ -849,7 +849,35 @@ public:
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
+
+#if 1
+    return reduce(xy); // reduce mod p
+#else
+    // `xy` is left-shifted by `2 * slack_bits` and higher half is written to `xy_hi`
+    Field xy_hi = Wide::get_higher_with_slack(xy);
+    Wide l = {};
+    multiply_msb_raw(xy_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
+    // Note: taking views is zero copy but unsafe
+    const Field& l_hi = l.get_higher_view();
+    const Field& xy_lo = xy.get_lower_view();
+    Field r = {};
+    // Here we need to compute the lsb of `xy - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
+    // `xy + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
+    multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xy_lo.limbs_storage, r.limbs_storage);
+    ff_storage r_reduced = {};
+    uint32_t borrow = 0;
+    // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
+    if constexpr (num_of_reductions() == 2) {
+      borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
+      // If r-2p has no borrow then we are done
+      if (borrow == 0) return Field{r_reduced};
+    }
+    // if r-2p has borrow then we need to either subtract p or we are already  in [0,p)
+    borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
+    if (borrow == 0) return Field{r_reduced};
+
+    return r;
+#endif
   }
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
