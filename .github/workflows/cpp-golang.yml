@@ -78,7 +78,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib" >> $GITHUB_OUTPUT
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
@@ -92,8 +92,8 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/ci/curve
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/ci" >> $GITHUB_OUTPUT
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
@@ -193,7 +193,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/field
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib" >> $GITHUB_OUTPUT
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
@@ -207,8 +207,8 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/ci/field
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/ci" >> $GITHUB_OUTPUT
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
@@ -306,7 +306,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib" >> $GITHUB_OUTPUT
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
@@ -320,8 +320,8 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/ci/hash
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/ci" >> $GITHUB_OUTPUT
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
