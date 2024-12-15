@@ -191,7 +191,7 @@ public:
 
     Projective res = zero();
 
-    const int nof_windows = (SCALAR_FF::NBITS + window_size - 1) / window_size;
+    constexpr int nof_windows = (SCALAR_FF::NBITS + window_size - 1) / window_size;
     bool res_is_not_zero = false;
     for (int w = nof_windows - 1; w >= 0; w -= 1) {
       // Extract the next window_size bits from the scalar
