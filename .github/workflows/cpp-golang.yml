@@ -61,6 +61,16 @@ jobs:
         path: ./icicle/backend/cuda
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_ENV
+        
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/setup-go@v5
@@ -86,6 +96,7 @@ jobs:
         mkdir -p build && rm -rf build/*
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
         cmake --build build --target install -j
+        
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
@@ -93,20 +104,20 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         ctest
 
-    # - name: Run C++ examples
-    #   working-directory: ./examples/c++
-    #   if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
-    #   run: |
-    #     CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-    #     export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-    #     for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
-    #         if [ -d "$dir" ]; then
-    #             echo "Running command in $dir"
-    #             cd $dir
-    #             ./run.sh -d CUDA
-    #             cd -
-    #         fi
-    #     done
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        CURVE=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d CUDA
+                cd -
+            fi
+        done
 
     - name: Run Golang curve Tests
       working-directory: ./wrappers/golang/curves
@@ -141,6 +152,14 @@ jobs:
         path: ./icicle/backend/cuda
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_ENV
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/setup-go@v5
@@ -173,20 +192,20 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         ctest --output-on-failure
 
-    # - name: Run C++ examples
-    #   working-directory: ./examples/c++
-    #   if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
-    #   run: |
-    #     FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
-    #     export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-    #     for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
-    #         if [ -d "$dir" ]; then
-    #             echo "Running command in $dir"
-    #             cd $dir
-    #             ./run.sh -d CUDA
-    #             cd -
-    #         fi
-    #     done
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        FIELD=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d CUDA
+                cd -
+            fi
+        done
 
     - name: Run Golang field Tests (babybear only)
       working-directory: ./wrappers/golang/fields
@@ -214,6 +233,14 @@ jobs:
         path: ./icicle/backend/cuda
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_ENV
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/setup-go@v5
