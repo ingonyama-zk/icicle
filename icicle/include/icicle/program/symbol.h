@@ -10,7 +10,8 @@ namespace icicle {
    *
    */
   enum ProgramOpcode {
-    OP_ADD = 0,
+    OP_COPY = 0,
+    OP_ADD,
     OP_MULT,
     OP_SUB,
     OP_INV,
@@ -40,6 +41,7 @@ namespace icicle {
 
     // optional parameters:
     std::unique_ptr<S> m_constant; // for OP_CONST: const value
+    int m_poly_degree;             // number of multiplications so far
 
     // implementation:
     int m_variable_idx; // location at the intermediate variables vectors
@@ -54,6 +56,7 @@ namespace icicle {
         : m_opcode(opcode), m_operand1(operand1), m_operand2(operand2), m_variable_idx(variable_idx),
           m_constant(std::move(constant))
     {
+      update_poly_degree();
     }
 
     bool is_visited(bool set_as_visit)
@@ -75,6 +78,30 @@ namespace icicle {
   private:
     unsigned int m_visit_idx = 0;
     static inline unsigned int s_last_visit = 1;
+
+    // update the current poly_degree based on the operands
+    void update_poly_degree()
+    {
+      // if one of the operand has undef poly_degree
+      if ((m_operand1 && m_operand1->m_poly_degree < 0) || (m_operand2 && m_operand2->m_poly_degree < 0)) {
+        m_poly_degree = -1;
+        return;
+      }
+      switch (m_opcode) {
+      case OP_ADD:
+      case OP_SUB:
+        m_poly_degree = std::max(m_operand1->m_poly_degree, m_operand2->m_poly_degree);
+        return;
+      case OP_MULT:
+        m_poly_degree = m_operand1->m_poly_degree + m_operand2->m_poly_degree;
+        return;
+      case OP_INV:
+        m_poly_degree = -1; // undefined
+        return;
+      default:
+        m_poly_degree = 0;
+      }
+    }
   };
 
   /**
@@ -116,7 +143,14 @@ namespace icicle {
     Symbol operator*(const S& operand) const { return multiply(Symbol(operand)); }
     Symbol operator*=(const Symbol& operand) { return assign(multiply(operand)); }
     Symbol operator*=(const S& operand) { return assign(multiply(Symbol(operand))); }
-    Symbol operator!() const { return inverse(); }
+
+    // inverse
+    Symbol inverse() const
+    {
+      Symbol rv;
+      rv.m_operation = std::make_shared<Operation<S>>(OP_INV, m_operation);
+      return rv;
+    }
 
     void set_as_input(int input_idx)
     {
@@ -151,14 +185,6 @@ namespace icicle {
     {
       Symbol rv;
       rv.m_operation = std::make_shared<Operation<S>>(OP_SUB, m_operation, operand.m_operation);
-      return rv;
-    }
-
-    // inverse
-    Symbol inverse()
-    {
-      Symbol rv;
-      rv.m_operation = std::make_shared<Operation<S>>(OP_INV, m_operation);
       return rv;
     }
 

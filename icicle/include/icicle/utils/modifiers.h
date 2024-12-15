@@ -16,13 +16,12 @@
   #define DEVICE_INLINE      __device__ INLINE_MACRO
   #define HOST_DEVICE        __host__ __device__
   #define HOST_DEVICE_INLINE HOST_DEVICE INLINE_MACRO
-#else // not CUDA
-  #define INLINE_MACRO
+#else // not NVCC
   #define UNROLL
-  #define HOST_INLINE
-  #define DEVICE_INLINE
   #define HOST_DEVICE
-  #define HOST_DEVICE_INLINE
+  #define HOST_INLINE __attribute__((always_inline))
+  #define DEVICE_INLINE
+  #define HOST_DEVICE_INLINE HOST_INLINE
   #define __host__
   #define __device__
 #endif
