@@ -679,14 +679,17 @@ public:
     return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
 #else
 
-    // NOTE: basically we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
-    // seems that after inlining, the compiler eliminates the msb limbs since they are unused.
-    // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same)
+    // NOTE: we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
+    // seems that after optimization (inlining probalby), the compiler eliminates the msb limbs since they are unused.
+    // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same for
+    // optimized code, but not for debug).
     if constexpr (TLC > 1) {
+      // LSB multiplier, computed only TLC output limbs
       Field r_low = {};
       host_math::template lsb_multiply_raw_64<TLC>(as.limbs64, get_neg_modulus().limbs64, r_low.limbs_storage.limbs64);
       add_limbs<TLC, false>(cs, r_low.limbs_storage, rs);
     } else {
+      // case of one limb is using a single 32b multiplier anyway
       Wide r_wide = {};
       host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
       const Field& r_low_view = r_wide.get_lower_view();
@@ -849,35 +852,7 @@ public:
   friend HOST_DEVICE Field operator*(const Field& xs, const Field& ys)
   {
     Wide xy = mul_wide(xs, ys); // full mult
-
-#if 1
-    return reduce(xy); // reduce mod p
-#else
-    // `xy` is left-shifted by `2 * slack_bits` and higher half is written to `xy_hi`
-    Field xy_hi = Wide::get_higher_with_slack(xy);
-    Wide l = {};
-    multiply_msb_raw(xy_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
-    // Note: taking views is zero copy but unsafe
-    const Field& l_hi = l.get_higher_view();
-    const Field& xy_lo = xy.get_lower_view();
-    Field r = {};
-    // Here we need to compute the lsb of `xy - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
-    // `xy + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
-    multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xy_lo.limbs_storage, r.limbs_storage);
-    ff_storage r_reduced = {};
-    uint32_t borrow = 0;
-    // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
-    if constexpr (num_of_reductions() == 2) {
-      borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
-      // If r-2p has no borrow then we are done
-      if (borrow == 0) return Field{r_reduced};
-    }
-    // if r-2p has borrow then we need to either subtract p or we are already  in [0,p)
-    borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (borrow == 0) return Field{r_reduced};
-
-    return r;
-#endif
+    return reduce(xy);          // reduce mod p
   }
 
   friend HOST_DEVICE bool operator==(const Field& xs, const Field& ys)
