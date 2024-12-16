@@ -18,6 +18,14 @@ if (FIELD)
     if (POSEIDON2)
         target_sources(icicle_field PRIVATE src/hash/cpu_poseidon2.cpp)
     endif()
+    if(SUMCHECK)
+        # Sumcheck relies on hash so this is mandatory
+        if(HASH)
+        target_sources(icicle_field PRIVATE src/field/sumcheck.cpp)
+        else()
+            message(FATAL_ERROR "SUMCHECK is enabled, but HASH is not enabled. Please enable HASH to proceed.")
+        endif()
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 
@@ -44,4 +52,5 @@ if (HASH)
     )
     target_include_directories(icicle_hash PUBLIC include)
 endif()
+
 

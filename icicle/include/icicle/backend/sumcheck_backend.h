@@ -32,7 +32,7 @@ namespace icicle {
      * when evaluated over all possible Boolean input combinations
      * @param transcript_config Configuration for encoding and hashing prover messages.
      */
-    SumcheckBackend(F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config = SumcheckTranscriptConfig<F>())
+    SumcheckBackend(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config = SumcheckTranscriptConfig<F>())
         : m_claimed_sum(claimed_sum), m_transcript_config(transcript_config)
     {
     }
@@ -71,7 +71,7 @@ namespace icicle {
   template <typename F>
   using SumcheckFactoryImpl = std::function<eIcicleError(
     const Device& device,
-    const F& claimed_sum,
+    const F& claimed_sum, 
     SumcheckTranscriptConfig<F>&& transcript_config,
     std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
 

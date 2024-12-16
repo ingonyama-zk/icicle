@@ -1,8 +1,10 @@
 #pragma once
 
+#include <iostream>
 #include <cstring>
 #include <vector>
 #include <functional>
+#include "icicle/errors.h"
 #include "icicle/program/symbol.h"
 
 namespace icicle {
