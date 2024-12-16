@@ -1048,10 +1048,70 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
   vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
   vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
   vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
-  END_TIMER(predef_program, "Vec ops time: ", true);
+  END_TIMER(vecop, "Vec ops time: ", true);
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
+
+MlePoly ex_x_ab_minus_c_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return EQ * (A * B - C);
+}
+
+TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, 4);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  auto run = [&](const std::string& dev_type, std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const char* msg) {
+  Device dev = {dev_type, 0};
+  icicle_set_device(dev);
+  auto config = default_vec_ops_config();
+
+  std::ostringstream oss;
+  oss << dev_type << " " << msg;
+
+  START_TIMER(executeProgram)
+  ICICLE_CHECK(execute_program(data, program, size, config)); 
+  END_TIMER(executeProgram, oss.str().c_str(), true);
+  };
+  
+  // initialize data vector for main device
+  auto out_main = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(5);
+  data_main[0] = in_a.get();
+  data_main[1] = in_b.get();
+  data_main[2] = in_c.get();
+  data_main[3] = in_eq.get();
+  data_main[4] = out_main.get();
+
+  // initialize data vector for referance device
+  auto out_ref = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(5);
+  data_ref[0] = in_a.get();
+  data_ref[1] = in_b.get();
+  data_ref[2] = in_c.get();
+  data_ref[3] = in_eq.get();
+  data_ref[4] = out_ref.get();
+
+  // run on both devices and compare
+  run(IcicleTestBase::main_device(), data_main, prog, total_size, "execute_program");
+  run(IcicleTestBase::reference_device(), data_ref, prog, total_size, "execute_program");
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
 int main(int argc, char** argv)
