@@ -32,8 +32,8 @@ namespace icicle {
      * when evaluated over all possible Boolean input combinations
      * @param transcript_config Configuration for encoding and hashing prover messages.
      */
-    SumcheckBackend(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config = SumcheckTranscriptConfig<F>())
-        : m_claimed_sum(claimed_sum), m_transcript_config(transcript_config)
+    SumcheckBackend(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config)
+        : m_claimed_sum(claimed_sum), m_transcript_config(std::move(transcript_config))
     {
     }
 
@@ -63,15 +63,15 @@ namespace icicle {
     const F& get_claimed_sum() const { return m_claimed_sum; }
 
   protected:
-    const F m_claimed_sum;                             ///< Vector of hash functions for each layer.
-    SumcheckTranscriptConfig<F>&& m_transcript_config; ///< Size of each leaf element in bytes.
+    const F m_claimed_sum;                                 ///< Vector of hash functions for each layer.
+    const SumcheckTranscriptConfig<F> m_transcript_config; ///< Size of each leaf element in bytes.
   };
 
   /*************************** Backend Factory Registration ***************************/
   template <typename F>
   using SumcheckFactoryImpl = std::function<eIcicleError(
     const Device& device,
-    const F& claimed_sum, 
+    const F& claimed_sum,
     SumcheckTranscriptConfig<F>&& transcript_config,
     std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
 
@@ -81,8 +81,7 @@ namespace icicle {
    * @param deviceType String identifier for the device type.
    * @param impl Factory function that creates tSumcheckBackend.
    */
-  template <typename F>
-  void register_sumcheck_factory(const std::string& deviceType, SumcheckFactoryImpl<F> impl);
+  void register_sumcheck_factory(const std::string& deviceType, SumcheckFactoryImpl<scalar_t> impl);
 
   /**
    * @brief Macro to register a Sumcheck backend factory.

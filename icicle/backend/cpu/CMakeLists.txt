@@ -21,7 +21,7 @@ if (FIELD)
     if(SUMCHECK)
         # Sumcheck relies on hash so this is mandatory
         if(HASH)
-        target_sources(icicle_field PRIVATE src/field/sumcheck.cpp)
+        target_sources(icicle_field PRIVATE src/field/cpu_sumcheck.cpp)
         else()
             message(FATAL_ERROR "SUMCHECK is enabled, but HASH is not enabled. Please enable HASH to proceed.")
         endif()

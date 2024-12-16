@@ -90,6 +90,7 @@ namespace icicle {
     }
 
     // Accessors
+    const Hash& get_hasher() const { return m_hasher; }
     const std::vector<std::byte>& get_domain_separator_label() const { return m_domain_separator_label; }
     const std::vector<std::byte>& get_round_poly_label() const { return m_round_poly_label; }
     const std::vector<std::byte>& get_round_challenge_label() const { return m_round_challenge_label; }
