@@ -680,7 +680,7 @@ public:
 #else
 
     // NOTE: we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
-    // seems that after optimization (inlining probalby), the compiler eliminates the msb limbs since they are unused.
+    // seems that after optimization (inlining probably), the compiler eliminates the msb limbs since they are unused.
     // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same for
     // optimized code, but not for debug).
     if constexpr (TLC > 1) {
