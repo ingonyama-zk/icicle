@@ -678,10 +678,23 @@ public:
 #ifdef __CUDA_ARCH__
     return multiply_and_add_lsb_neg_modulus_raw_device(as, cs, rs);
 #else
-    Wide r_wide = {};
-    host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
-    const Field& r_low_view = r_wide.get_lower_view();
-    add_limbs<TLC, false>(cs, r_low_view.limbs_storage, rs);
+
+    // NOTE: we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
+    // seems that after optimization (inlining probably), the compiler eliminates the msb limbs since they are unused.
+    // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same for
+    // optimized code, but not for debug).
+    if constexpr (TLC > 1) {
+      // LSB multiplier, computed only TLC output limbs
+      Field r_low = {};
+      host_math::template lsb_multiply_raw_64<TLC>(as.limbs64, get_neg_modulus().limbs64, r_low.limbs_storage.limbs64);
+      add_limbs<TLC, false>(cs, r_low.limbs_storage, rs);
+    } else {
+      // case of one limb is using a single 32b multiplier anyway
+      Wide r_wide = {};
+      host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
+      const Field& r_low_view = r_wide.get_lower_view();
+      add_limbs<TLC, false>(cs, r_low_view.limbs_storage, rs);
+    }
 #endif
   }
 
@@ -801,28 +814,30 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
+    Wide l = {}; // the approximation of l for a*b = l*p + r mod p
+    Field r = {};
+
     // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
-    Field xs_hi = Wide::get_higher_with_slack(xs);
-    Wide l = {};
+    const Field xs_hi = Wide::get_higher_with_slack(xs);
     multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
     // Note: taking views is zero copy but unsafe
     const Field& l_hi = l.get_higher_view();
     const Field& xs_lo = xs.get_lower_view();
-    Field r = {};
     // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
     // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
     multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
-    ff_storage r_reduced = {};
-    uint32_t carry = 0;
     // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
     if constexpr (num_of_reductions() == 2) {
-      carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced);
-      if (carry == 0) r = Field{r_reduced};
+      Field r_reduced = {};
+      const auto borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced.limbs_storage);
+      // If r-2p has no borrow then we are done
+      if (!borrow) return r_reduced;
     }
-    carry = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced);
-    if (carry == 0) r = Field{r_reduced};
-
-    return r;
+    // if r-2p has borrow then we need to either subtract p or we are already in [0,p).
+    // so we subtract p and based on the borrow bit we know which case it is
+    Field r_reduced = {};
+    const auto borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced.limbs_storage);
+    return borrow ? r : r_reduced;
   }
 
   HOST_DEVICE Field& operator=(Field const& other)

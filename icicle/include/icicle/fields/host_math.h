@@ -13,53 +13,71 @@ namespace host_math {
 
   // return x + y with T operands
   template <typename T>
-  static constexpr __host__ T add(const T x, const T y)
+  static constexpr HOST_INLINE T add(const T x, const T y)
   {
     return x + y;
   }
 
   // return x + y + carry with T operands
   template <typename T>
-  static constexpr __host__ T addc(const T x, const T y, const T carry)
+  static constexpr HOST_INLINE T addc(const T x, const T y, const T carry)
   {
     return x + y + carry;
   }
 
   // return x + y and carry out with T operands
   template <typename T>
-  static constexpr __host__ T add_cc(const T x, const T y, T& carry)
+  static constexpr HOST_INLINE T add_cc(const T x, const T y, T& carry)
   {
     T result = x + y;
     carry = x > result;
     return result;
   }
 
+  template <>
+  HOST_INLINE uint64_t add_cc(const uint64_t x, const uint64_t y, uint64_t& carry)
+  {
+    __uint128_t res_128 = static_cast<__uint128_t>(x) + y;
+    carry = (uint64_t)(res_128 >> 64);
+    uint64_t result = static_cast<uint64_t>(res_128);
+    return result;
+  }
+
   // return x + y + carry and carry out  with T operands
   template <typename T>
-  static constexpr __host__ T addc_cc(const T x, const T y, T& carry)
+  static constexpr HOST_INLINE T addc_cc(const T x, const T y, T& carry)
   {
     const T result = x + y + carry;
     carry = carry && x >= result || !carry && x > result;
     return result;
   }
 
+  template <>
+  HOST_INLINE uint64_t addc_cc(const uint64_t x, const uint64_t y, uint64_t& carry)
+  {
+    __uint128_t res_128 = static_cast<__uint128_t>(x) + y + carry;
+    carry = (uint64_t)(res_128 >> 64);
+    uint64_t result = static_cast<uint64_t>(res_128);
+    return result;
+  }
+
   // return x - y with T operands
   template <typename T>
-  static constexpr __host__ T sub(const T x, const T y)
+  static constexpr HOST_INLINE T sub(const T x, const T y)
   {
     return x - y;
   }
 
   //    return x - y - borrow with T operands
   template <typename T>
-  static constexpr __host__ T subc(const T x, const T y, const T borrow)
+  static constexpr HOST_INLINE T subc(const T x, const T y, const T borrow)
   {
     return x - y - borrow;
   }
 
   //    return x - y and borrow out with T operands
   template <typename T>
-  static constexpr __host__ T sub_cc(const T x, const T y, T& borrow)
+  static constexpr HOST_INLINE T sub_cc(const T x, const T y, T& borrow)
   {
     T result = x - y;
     borrow = x < result;
@@ -68,7 +86,7 @@ namespace host_math {
 
   //    return x - y - borrow and borrow out with T operands
   template <typename T>
-  static constexpr __host__ T subc_cc(const T x, const T y, T& borrow)
+  static constexpr HOST_INLINE T subc_cc(const T x, const T y, T& borrow)
   {
     const T result = x - y - borrow;
     borrow = borrow && x <= result || !borrow && x < result;
@@ -76,7 +94,7 @@ namespace host_math {
   }
 
   // return x * y + z + carry and carry out with uint32_t operands
-  static constexpr __host__ uint32_t madc_cc(const uint32_t x, const uint32_t y, const uint32_t z, uint32_t& carry)
+  static constexpr HOST_INLINE uint32_t madc_cc(const uint32_t x, const uint32_t y, const uint32_t z, uint32_t& carry)
   {
     uint64_t r = static_cast<uint64_t>(x) * y + z + carry;
     carry = (uint32_t)(r >> 32);
@@ -84,7 +102,8 @@ namespace host_math {
     return result;
   }
 
-  static constexpr __host__ uint64_t madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
+  static constexpr HOST_INLINE uint64_t
+  madc_cc_64(const uint64_t x, const uint64_t y, const uint64_t z, uint64_t& carry)
   {
     __uint128_t r = static_cast<__uint128_t>(x) * y + z + carry;
     carry = (uint64_t)(r >> 64);
@@ -194,23 +213,28 @@ namespace host_math {
   static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
-    for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
+    for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
       uint64_t carry = 0;
 #pragma unroll
-      for (unsigned j = 0; j < NLIMBS_A / 2; j++)
+      for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
-      r[NLIMBS_A / 2 + i] = carry;
+      }
+      r[NLIMBS_A / 2 + j] = carry;
     }
   }
 
-  template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A>
-  static HOST_INLINE void
-  multiply_raw_64(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
+  // This multiplies only the LSB limbs and ignores the MSB ones so we output NLIMBS rather than 2*NLIMBS
+  template <unsigned NLIMBS /*32b limbs*/>
+  static HOST_INLINE void lsb_multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
-    const uint64_t* a = as.limbs64;
-    const uint64_t* b = bs.limbs64;
-    uint64_t* r = rs.limbs64;
-    multiply_raw_64<NLIMBS_A, NLIMBS_B>(a, b, r);
+#pragma unroll
+    for (unsigned j = 0; j < NLIMBS / 2; j++) {
+      uint64_t carry = 0;
+#pragma unroll
+      for (unsigned i = 0; i < NLIMBS / 2 - j; i++) {
+        r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
+      }
+    }
   }
 
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
@@ -238,7 +262,7 @@ namespace host_math {
       r[0] = host_math::madc_cc_64(a[0], b[0], 0, r[1]);
       return;
     } else {
-      multiply_raw_64<NLIMBS_A, NLIMBS_B>(as, bs, rs);
+      multiply_raw_64<NLIMBS_A, NLIMBS_B>(as.limbs64, bs.limbs64, rs.limbs64);
     }
   }
 
