@@ -1,4 +1,4 @@
-# Icicle example: Muli-Scalar Multiplication (MSM)
+# Icicle example: Multi-Scalar Multiplication (MSM)
 
 ## Key-Takeaway
 
