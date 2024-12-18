@@ -56,7 +56,7 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   # Add additional feature handling calls here
 
   set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")
-  target_link_libraries(icicle_field PUBLIC icicle_device pthread)
+  target_link_libraries(icicle_field PUBLIC icicle_device pthread OpenMP::OpenMP_CXX)
 
   # Ensure FIELD is defined in the cache for backends to see
   set(FIELD "${FIELD}" CACHE STRING "")

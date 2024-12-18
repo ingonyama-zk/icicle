@@ -10,7 +10,7 @@ function(setup_hash_target)
     src/hash/merkle_c_api.cpp
   )
   
-  target_link_libraries(icicle_hash PUBLIC icicle_device)
+  target_link_libraries(icicle_hash PUBLIC icicle_device OpenMP::OpenMP_CXX)
 
   install(TARGETS icicle_hash
     RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"

@@ -58,7 +58,7 @@ function(setup_curve_target CURVE CURVE_INDEX FEATURES_STRING)
   # Add additional feature handling calls here
 
   set_target_properties(icicle_curve PROPERTIES OUTPUT_NAME "icicle_curve_${CURVE}")
-  target_link_libraries(icicle_curve PUBLIC icicle_device icicle_field pthread)
+  target_link_libraries(icicle_curve PUBLIC icicle_device icicle_field pthread OpenMP::OpenMP_CXX)
 
   # Ensure CURVE is defined in the cache for backends to see
   set(CURVE "${CURVE}" CACHE STRING "")
