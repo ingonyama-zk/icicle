@@ -860,8 +860,8 @@ eIcicleError cpu_execute_program(const Device& device, std::vector<T*>& data, Pr
   // run over all elements in the arrays and execute the program
   for (uint64_t i = 0; i < total_nof_operations; i++) {
     prog_executor.execute();
-    for (auto& var_ptr : prog_executor.m_variable_ptrs) {
-      var_ptr++;
+    for (int param_idx = 0; param_idx < program.m_nof_parameters; ++param_idx) {
+      (prog_executor.m_variable_ptrs[param_idx])++;
     }
   }
   return eIcicleError::SUCCESS;
