@@ -85,13 +85,66 @@ namespace ntt_cpu {
       NttTask<S, E> task;
       task.set_data(ntt_data);
       task.execute();
+    } else if (__builtin_expect((ntt_data.logn <= HIERARCHY_1),1)){      
+      uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2] != 0) ? 3 : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1] != 0) ? 2 : 1;
+      for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
+        uint64_t nof_blocks;
+        uint64_t nof_subntts;
+        if (hierarchy_0_layer_idx == 0) {
+          nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2];
+          nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1];
+        } else if (hierarchy_0_layer_idx == 1) {
+          nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2];
+          nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0];
+        } else {
+          nof_blocks = 1 << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0] + ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1]);
+          nof_subntts = 1;
+        }
+        #pragma omp parallel for collapse(2) schedule(dynamic)
+        for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
+          for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
+            NttTask<S, E> task;
+            NttTaskCoordinates ntt_task_coordinates;
+            task.set_data(ntt_data);
+            ntt_task_coordinates.hierarchy_1_layer_idx = 0;
+            ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
+            ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
+            ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx;
+            ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
+            ntt_task_coordinates.reorder = false;
+            task.set_coordinates(&ntt_task_coordinates);
+            task.execute();
+            // ntt_task_coordinates.hierarchy_1_layer_idx = 0;
+            // ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
+            // ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
+            // ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
+            // ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
+            // ntt_task_coordinates.reorder = false;
+            // task.set_coordinates(&ntt_task_coordinates);
+            // task.execute();
+          }
+        }
+        if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data
+                                                                                                    // is in the correct order for the next hierarchy 1 layer
+          NttTask<S, E> task;
+          NttTaskCoordinates ntt_task_coordinates;
+          task.set_data(ntt_data);
+          ntt_task_coordinates.hierarchy_1_layer_idx = 0;
+          ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
+          ntt_task_coordinates.hierarchy_0_layer_idx = nof_hierarchy_0_layers;
+          ntt_task_coordinates.hierarchy_0_block_idx = 0;
+          ntt_task_coordinates.hierarchy_0_subntt_idx = 0;
+          ntt_task_coordinates.reorder = true;
+          task.set_coordinates(&ntt_task_coordinates);
+          task.execute();
+        }
+      }
     } else {
-      uint32_t nof_hierarchy_1_layers = ntt_data.logn > HIERARCHY_1? 2 : 1;
-      for (uint32_t hierarchy_1_layer_idx = 0; hierarchy_1_layer_idx < nof_hierarchy_1_layers; hierarchy_1_layer_idx++) {
+      for (uint32_t hierarchy_1_layer_idx = 0; hierarchy_1_layer_idx < 2; hierarchy_1_layer_idx++) {
         const uint32_t sunbtt_plus_batch_logn = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] + uint32_t(log2(ntt_data.config.batch_size));
-        const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel = ((sunbtt_plus_batch_logn < HIERARCHY_1) && (ntt_data.logn > HIERARCHY_1)) ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
+        const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel = (sunbtt_plus_batch_logn < HIERARCHY_1) ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
         const uint32_t nof_hierarchy_1_subntts_todo_in_parallel = 1 << log_nof_hierarchy_1_subntts_todo_in_parallel;
-        const uint32_t log_nof_subntts_chunks = (ntt_data.logn > HIERARCHY_1) ? ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] - log_nof_hierarchy_1_subntts_todo_in_parallel : 0;
+        const uint32_t log_nof_subntts_chunks = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] - log_nof_hierarchy_1_subntts_todo_in_parallel;
         const uint32_t nof_subntts_chunks = 1 << log_nof_subntts_chunks;
         
         for (uint32_t hierarchy_1_subntts_chunck_idx = 0; hierarchy_1_subntts_chunck_idx < nof_subntts_chunks; hierarchy_1_subntts_chunck_idx++) {
@@ -110,9 +163,9 @@ namespace ntt_cpu {
               nof_blocks = 1 << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] + ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
               nof_subntts = 1;
             }
+            #pragma omp parallel for collapse(3) schedule(dynamic, 512)
             for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
-              #pragma omp parallel for collapse(2) schedule(dynamic)
-              for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
+              for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx+=2) {
                 for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
                   NttTask<S, E> task;
                   NttTaskCoordinates ntt_task_coordinates;
@@ -125,14 +178,14 @@ namespace ntt_cpu {
                   ntt_task_coordinates.reorder = false;
                   task.set_coordinates(&ntt_task_coordinates);
                   task.execute();
-                  // ntt_task_coordinates.hierarchy_1_layer_idx = hierarchy_1_layer_idx;
-                  // ntt_task_coordinates.hierarchy_1_subntt_idx = hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck;
-                  // ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
-                  // ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
-                  // ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
-                  // ntt_task_coordinates.reorder = false;
-                  // task.set_coordinates(&ntt_task_coordinates);
-                  // task.execute();
+                  ntt_task_coordinates.hierarchy_1_layer_idx = hierarchy_1_layer_idx;
+                  ntt_task_coordinates.hierarchy_1_subntt_idx = hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck;
+                  ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
+                  ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
+                  ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
+                  ntt_task_coordinates.reorder = false;
+                  task.set_coordinates(&ntt_task_coordinates);
+                  task.execute();
                 }
               }
             }
@@ -155,9 +208,9 @@ namespace ntt_cpu {
             }
           }
         }
-        if ((ntt_data.logn > HIERARCHY_1) && (hierarchy_1_layer_idx == 0)) { hierarchy_1_reorder(); }
+        if (hierarchy_1_layer_idx == 0) { hierarchy_1_reorder(); }
       }
-      if (ntt_data.logn > HIERARCHY_1){ reorder_output(); }
+      reorder_output();
     }
     if (ntt_data.direction == NTTDir::kInverse && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
 
