@@ -1067,7 +1067,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
 {
   // randomize input vectors
   const int total_size = 100000;
-  ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, 4);
+  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, 4);
   auto in_a = std::make_unique<scalar_t[]>(total_size);
   scalar_t::rand_host_many(in_a.get(), total_size);
   auto in_b = std::make_unique<scalar_t[]>(total_size);
@@ -1077,7 +1077,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
   auto in_eq = std::make_unique<scalar_t[]>(total_size);
   scalar_t::rand_host_many(in_eq.get(), total_size);
 
-  auto run = [&](const std::string& dev_type, std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const char* msg) {
+  auto run = [&](const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const char* msg) {
   Device dev = {dev_type, 0};
   icicle_set_device(dev);
   auto config = default_vec_ops_config();

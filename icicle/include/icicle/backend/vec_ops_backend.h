@@ -54,7 +54,7 @@ namespace icicle {
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)>;
 
   using programExecutionImpl = std::function<eIcicleError(
-    const Device& device, std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)>;
+    const Device& device, std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)>;
 
   using scalarPolyEvalImpl = std::function<eIcicleError(
     const Device& device,

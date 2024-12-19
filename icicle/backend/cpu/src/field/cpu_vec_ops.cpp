@@ -843,7 +843,7 @@ REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CPU", cpu_highest_non_zero_idx<scalar_t>)
 
 /*********************************** Execute program ***********************************/
 template <typename T>
-eIcicleError cpu_execute_program(const Device& device, std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config)
+eIcicleError cpu_execute_program(const Device& device, std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config)
 {
   if (data.size() != program.m_nof_parameters) {
     ICICLE_LOG_ERROR << "Program has " << program.m_nof_parameters << " while data has " << data.size()

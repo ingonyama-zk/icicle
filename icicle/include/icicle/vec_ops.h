@@ -371,7 +371,7 @@ namespace icicle {
    */
 
   template <typename T>
-  eIcicleError execute_program(std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config);
+  eIcicleError execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config);
 
   /**
    * @brief Evaluates a polynomial at given domain points.

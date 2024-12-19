@@ -517,14 +517,14 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(ExecuteProgramDispatcher, execute_program, programExecutionImpl)
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, execute_program)(
-    std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+    std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
   {
     return ExecuteProgramDispatcher::execute(data, program, size, config);
   }
 
   template <>
   eIcicleError
-  execute_program(std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+  execute_program(std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
   {
     return CONCAT_EXPAND(FIELD, execute_program)(data, program, size, config);
   }
