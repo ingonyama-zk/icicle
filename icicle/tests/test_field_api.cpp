@@ -1056,7 +1056,6 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
 }
 
-
 TEST_F(FieldApiTestBase, Sumcheck)
 {
   int mle_poly_size = 1 << 13;
