@@ -1,7 +1,7 @@
 #pragma once
 #include "icicle/errors.h"
 #include "icicle/utils/log.h"
-#include "ntt_tasks_manager.h"
+#include "ntt_task.h"
 #include "ntt_utils.h"
 #include <cstdint>
 #include <deque>
@@ -42,18 +42,12 @@ namespace ntt_cpu {
     const E* input;
     NttData<S, E> ntt_data;
 
-    // Parallel-specific members
-    std::optional<NttTasksManager<S, E>> ntt_tasks_manager;
-    std::unique_ptr<TasksManager<NttTask<S, E>>> tasks_manager;
-
     bool compute_if_is_parallel(uint32_t logn, const NTTConfig<S>& config);
     void coset_mul();
     void reorder_by_bit_reverse();
     void copy_and_reorder_if_needed(const E* input, E* output);
 
     // Parallel-specific methods
-    eIcicleError hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx);
-    eIcicleError handle_pushed_tasks(uint32_t hierarchy_1_layer_idx);
     void hierarchy_1_reorder();
     eIcicleError reorder_output();
 
@@ -66,13 +60,7 @@ namespace ntt_cpu {
    */
   template <typename S, typename E>
   NttCpu<S, E>::NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
-      : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config)),
-        ntt_tasks_manager(
-          ntt_data.is_parallel ? std::optional<NttTasksManager<S, E>>(std::in_place, ntt_data.ntt_sub_hierarchies, logn)
-                               : std::nullopt),
-        tasks_manager(
-          ntt_data.is_parallel ? std::make_unique<TasksManager<NttTask<S, E>>>(std::thread::hardware_concurrency() - 1)
-                               : nullptr)
+      : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config))
   {
   }
 
@@ -82,8 +70,8 @@ namespace ntt_cpu {
     copy_and_reorder_if_needed(input, ntt_data.elements);
     if (!ntt_data.is_parallel) {
       if (ntt_data.direction == NTTDir::kForward && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
-      NttTask<S, E> task;
-      task.set_data(ntt_data);
+      NttTaskCoordinates ntt_task_coordinates(0, 0, 0, 0, 0, false);
+      NttTask<S, E> task(ntt_task_coordinates, ntt_data);
       task.execute();
     } else if (__builtin_expect((ntt_data.logn <= HIERARCHY_1),1)){      
       uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2] != 0) ? 3 : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1] != 0) ? 2 : 1;
@@ -103,39 +91,15 @@ namespace ntt_cpu {
         #pragma omp parallel for collapse(2) schedule(dynamic)
         for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
           for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
-            NttTask<S, E> task;
-            NttTaskCoordinates ntt_task_coordinates;
-            task.set_data(ntt_data);
-            ntt_task_coordinates.hierarchy_1_layer_idx = 0;
-            ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
-            ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
-            ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx;
-            ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
-            ntt_task_coordinates.reorder = false;
-            task.set_coordinates(&ntt_task_coordinates);
+            NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
+            NttTask<S, E> task(ntt_task_coordinates, ntt_data);
             task.execute();
-            // ntt_task_coordinates.hierarchy_1_layer_idx = 0;
-            // ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
-            // ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
-            // ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
-            // ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
-            // ntt_task_coordinates.reorder = false;
-            // task.set_coordinates(&ntt_task_coordinates);
-            // task.execute();
           }
         }
         if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data
                                                                                                     // is in the correct order for the next hierarchy 1 layer
-          NttTask<S, E> task;
-          NttTaskCoordinates ntt_task_coordinates;
-          task.set_data(ntt_data);
-          ntt_task_coordinates.hierarchy_1_layer_idx = 0;
-          ntt_task_coordinates.hierarchy_1_subntt_idx = 0;
-          ntt_task_coordinates.hierarchy_0_layer_idx = nof_hierarchy_0_layers;
-          ntt_task_coordinates.hierarchy_0_block_idx = 0;
-          ntt_task_coordinates.hierarchy_0_subntt_idx = 0;
-          ntt_task_coordinates.reorder = true;
-          task.set_coordinates(&ntt_task_coordinates);
+          NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, 0, 0, true);
+          NttTask<S, E> task(ntt_task_coordinates, ntt_data);
           task.execute();
         }
       }
@@ -167,25 +131,13 @@ namespace ntt_cpu {
             for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
               for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx+=2) {
                 for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
-                  NttTask<S, E> task;
-                  NttTaskCoordinates ntt_task_coordinates;
-                  task.set_data(ntt_data);
-                  ntt_task_coordinates.hierarchy_1_layer_idx = hierarchy_1_layer_idx;
-                  ntt_task_coordinates.hierarchy_1_subntt_idx = hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck;
-                  ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
-                  ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx;
-                  ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
-                  ntt_task_coordinates.reorder = false;
-                  task.set_coordinates(&ntt_task_coordinates);
+                  NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
+                  NttTask<S, E> task(ntt_task_coordinates, ntt_data);
                   task.execute();
-                  ntt_task_coordinates.hierarchy_1_layer_idx = hierarchy_1_layer_idx;
-                  ntt_task_coordinates.hierarchy_1_subntt_idx = hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck;
-                  ntt_task_coordinates.hierarchy_0_layer_idx = hierarchy_0_layer_idx;
                   ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
-                  ntt_task_coordinates.hierarchy_0_subntt_idx = hierarchy_0_subntt_idx;
-                  ntt_task_coordinates.reorder = false;
-                  task.set_coordinates(&ntt_task_coordinates);
-                  task.execute();
+                  // task.set_coordinates(ntt_task_coordinates);
+                  NttTask<S, E> task_with_elements_in_the_same_cachline(ntt_task_coordinates, ntt_data);
+                  task_with_elements_in_the_same_cachline.execute();
                 }
               }
             }
@@ -193,16 +145,8 @@ namespace ntt_cpu {
                                                                                                         // is in the correct order for the next hierarchy 1 layer
               #pragma omp parallel for
               for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
-                NttTask<S, E> task;
-                NttTaskCoordinates ntt_task_coordinates;
-                task.set_data(ntt_data);
-                ntt_task_coordinates.hierarchy_1_layer_idx = hierarchy_1_layer_idx;
-                ntt_task_coordinates.hierarchy_1_subntt_idx = hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck;
-                ntt_task_coordinates.hierarchy_0_layer_idx = nof_hierarchy_0_layers;
-                ntt_task_coordinates.hierarchy_0_block_idx = 0;
-                ntt_task_coordinates.hierarchy_0_subntt_idx = 0;
-                ntt_task_coordinates.reorder = true;
-                task.set_coordinates(&ntt_task_coordinates);
+                NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck, nof_hierarchy_0_layers, 0, 0, true);
+                NttTask<S, E> task(ntt_task_coordinates, ntt_data);
                 task.execute();
               }
             }
@@ -432,89 +376,6 @@ namespace ntt_cpu {
       }
     }
   }
-
-  /**
-   * @brief Schedules tasks for the first hierarchy layer of the NTT computation.
-   *
-   * This function organizes and pushes tasks corresponding to a specific hierarchy 1 layer
-   * and sub-NTT index into the task manager. It calculates the number of blocks and sub-NTTs
-   * based on the layer indices and logs, then schedules tasks accordingly. If multiple hierarchy 0
-   * layers are involved, it also schedules a reorder task after processing.
-   *
-   * @param hierarchy_1_layer_idx    Index of the current hierarchy 1 layer.
-   * @param hierarchy_1_subntt_idx   Index of the sub-NTT within the hierarchy 1 layer.
-   * @return eIcicleError            Returns SUCCESS if tasks are successfully scheduled, or an error code otherwise.
-   */
-  template <typename S, typename E>
-  eIcicleError NttCpu<S, E>::hierarchy1_push_tasks(uint32_t hierarchy_1_layer_idx, uint32_t hierarchy_1_subntt_idx)
-  {
-    if (!ntt_tasks_manager) {
-      return eIcicleError::UNKNOWN_ERROR; // Handle case where no task manager is available
-    }
-
-    return eIcicleError::SUCCESS;
-  }
-
-  /**
-   * @brief Manages the execution and completion of scheduled tasks.
-   *
-   * This function handles the lifecycle of tasks at a given hierarchy level. It retrieves
-   * available tasks from the task manager, dispatches them for execution, and processes
-   * their completion. The function ensures that all tasks are executed and dependencies
-   * are correctly managed, including idle states for waiting tasks.
-   *
-   * @param hierarchy_1_layer_idx Index of the current hierarchy 1 layer being processed.
-   * @return eIcicleError         Returns SUCCESS if all tasks are successfully handled, or an error code otherwise.
-   */
-  template <typename S, typename E>
-  eIcicleError NttCpu<S, E>::handle_pushed_tasks(uint32_t hierarchy_1_layer_idx)
-  {
-    if (!ntt_tasks_manager) { return eIcicleError::UNKNOWN_ERROR; }
-
-    NttTask<S, E>* task_slot = nullptr;
-    // std::deque<NttTaskCoordinates> completed_tasks_list;
-
-    uint32_t nof_subntts_l1 = 1
-                              << ((ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0]) +
-                                  (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]));
-    while (ntt_tasks_manager->tasks_to_do()) {
-      // There are tasks that are available or waiting
-
-      if (ntt_tasks_manager->available_tasks()) {
-        // Task is available to dispatch
-        task_slot = tasks_manager->get_idle_or_completed_task();
-        if (task_slot->is_completed()) {
-          if (ntt_tasks_manager->handle_completed(task_slot, nof_subntts_l1)) { continue; }
-        } else {
-          task_slot->set_data(ntt_data);
-        }
-        NttTaskCoordinates next_task_c_ptr = ntt_tasks_manager->get_available_task();
-        task_slot->set_coordinates(next_task_c_ptr);
-        task_slot->dispatch();
-      } else {
-        // Wait for available tasks
-        task_slot = tasks_manager->get_completed_task();
-        if (ntt_tasks_manager->handle_completed(task_slot, nof_subntts_l1)) { continue; }
-        if (ntt_tasks_manager->available_tasks()) {
-          NttTaskCoordinates next_task_c_ptr = ntt_tasks_manager->get_available_task();
-          task_slot->set_coordinates(next_task_c_ptr);
-          task_slot->dispatch();
-        } else {
-          task_slot->set_idle();
-        }
-      }
-    }
-    while (true) {
-      task_slot = tasks_manager->get_completed_task();
-      if (task_slot == nullptr) {
-        break;
-      } else {
-        task_slot->set_idle();
-      }
-    }
-    return eIcicleError::SUCCESS;
-  }
-
   /**
    * @brief Determines if the NTT computation should be parallelized.
    *
