@@ -15,6 +15,8 @@
 #include "icicle/program/program.h"
 #include "icicle/program/returning_value_program.h"
 #include "../../icicle/backend/cpu/include/cpu_program_executor.h"
+#include "icicle/sumcheck/sumcheck.h"
+
 #include "test_base.h"
 
 using namespace field_config;
@@ -1052,6 +1054,31 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTestBase, Sumcheck)
+{
+  int mle_poly_size = 1 << 13;
+  int nof_mle_poly = 4;
+  scalar_t claimed_sum = scalar_t::from(8);
+
+  // create transcript_config
+  SumcheckTranscriptConfig<scalar_t> transcript_config; // TODO Miki: define labels?
+
+  // create sumcheck
+  auto sumcheck = Sumcheck<scalar_t>::create(claimed_sum, std::move(transcript_config));
+
+  // generate inputs
+  std::vector<std::vector<scalar_t>*> mle_polynomials(nof_mle_poly);
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    mle_poly_ptr = new std::vector<scalar_t>(mle_poly_size);
+    scalar_t::rand_host_many(mle_poly_ptr->data(), mle_poly_size);
+  }
+  CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
+  SumCheckConfig config;
+  SumCheckProof<scalar_t> sumcheck_proof(nof_mle_poly, 2);
+
+  sumcheck.get_proof(mle_polynomials, combine_func, config, sumcheck_proof);
 }
 
 int main(int argc, char** argv)
