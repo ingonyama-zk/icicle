@@ -129,7 +129,7 @@ jobs:
         CURVE_DIR=icicle-${CURVE//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         cd ./$CURVE_DIR
-        cargo test --release -vv
+        cargo test --release --verbose
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       # if: needs.check-changed-files.outputs.cpp == 'true'
@@ -203,7 +203,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field//$FIELD" >> $GITHUB_OUTPUT
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
@@ -254,7 +254,7 @@ jobs:
         FIELD_DIR=icicle-${FIELD//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         cd ./$FIELD_DIR
-        cargo test --release -vv
+        cargo test --release --verbose
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       # if: needs.check-changed-files.outputs.cpp == 'true'
@@ -296,7 +296,7 @@ jobs:
 
 
   test-linux-hash:
-    name: Build and test Go hash on Linux
+    name: Build and test Go & RUST hash on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     steps:
@@ -374,7 +374,7 @@ jobs:
       # if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
-        cargo test --release -vv
+        cargo test --release --verbose
     - name: Test GoLang Hashes
       working-directory: ./wrappers/golang/hash
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
