@@ -121,14 +121,14 @@ jobs:
         cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
-    - name: Run RUST curve Tests
+    - name: Run RUST Curve Tests
       working-directory: ./wrappers/rust/icicle-curves
       # if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=icicle-${CURVE//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
-        cd ./$CURVE_DIR/tests
+        cd ./$CURVE_DIR
         cargo test --release -vv
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
@@ -246,6 +246,15 @@ jobs:
         cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.field.name }}*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+    - name: Run RUST Field Tests
+      working-directory: ./wrappers/rust/icicle-fields
+      # if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=icicle-${FIELD//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cd ./$FIELD_DIR
+        cargo test --release -vv
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       # if: needs.check-changed-files.outputs.cpp == 'true'
@@ -360,6 +369,12 @@ jobs:
         cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+    - name: Run RUST Hash Tests
+      working-directory: ./wrappers/rust/icicle-hash
+      # if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cargo test --release -vv
     - name: Test GoLang Hashes
       working-directory: ./wrappers/golang/hash
       # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
