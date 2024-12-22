@@ -1,4 +1,4 @@
-name: C++/CUDA/GoLang & Examples
+name: C++/CUDA/Go/RUST & Examples
 
 on:
   pull_request:
@@ -121,6 +121,15 @@ jobs:
         cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+    - name: Run RUST curve Tests
+      working-directory: ./wrappers/rust/icicle-curves
+      # if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=icicle-${CURVE//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cd ./$CURVE_DIR/tests
+        cargo test --release -vv
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       # if: needs.check-changed-files.outputs.cpp == 'true'
