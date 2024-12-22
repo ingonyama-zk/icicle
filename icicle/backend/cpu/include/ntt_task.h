@@ -59,7 +59,7 @@ namespace ntt_cpu {
   template <typename S, typename E>
   void NttTask<S, E>::execute()
   {
-    if (!ntt_data->is_parallel || !ntt_task_coordinates.reorder) {
+    if (__builtin_expect((!ntt_data->is_parallel || !ntt_task_coordinates.reorder),1)) {
       hierarchy_0_cpu_ntt();
     } else {
       // if all hierarchy_0_subntts are done, and at least 2 layers in hierarchy 0 - reorder the subntt's output
@@ -1359,6 +1359,7 @@ namespace ntt_cpu {
       uint64_t rev;
       uint64_t i_mem_idx;
       uint64_t rev_mem_idx;
+      #pragma omp parallel for
       for (uint64_t i = 0; i < subntt_size; ++i) {
         // rev = NttUtils<S, E>::bit_reverse(i, subntt_log_size);
         rev = bit_reverse(i, subntt_log_size);

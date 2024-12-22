@@ -396,7 +396,7 @@ namespace ntt_cpu {
     } else {
       uint32_t scalar_size = sizeof(S);
       // for small scalars, the threshold for when it is faster to use parallel NTT is higher
-      if ((scalar_size >= 32 && (logn + log_batch_size) <= 13) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
+      if ((scalar_size >= 32 && (logn + log_batch_size) <= 11) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
         return false;
       }
     }
