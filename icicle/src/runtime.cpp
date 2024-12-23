@@ -14,6 +14,8 @@ using namespace icicle;
 
 extern "C" eIcicleError icicle_set_device(const Device& device) { return DeviceAPI::set_thread_local_device(device); }
 
+extern "C" eIcicleError icicle_set_default_device(const Device& device) { return DeviceAPI::set_default_device(device); }
+
 extern "C" eIcicleError icicle_get_active_device(icicle::Device& device)
 {
   const Device& active_device = DeviceAPI::get_thread_local_device();

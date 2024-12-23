@@ -1,5 +1,6 @@
 
 #include <gtest/gtest.h>
+#include <thread>
 #include <iostream>
 
 #include "icicle/runtime.h"
@@ -17,6 +18,36 @@ TEST_F(DeviceApiTest, UnregisteredDeviceError)
 {
   icicle::Device dev = {"INVALID_DEVICE", 2};
   EXPECT_ANY_THROW(get_deviceAPI(dev));
+}
+
+TEST_F(DeviceApiTest, SetDefaultDevice)
+{
+  icicle::Device active_dev = {UNKOWN_DEVICE, -1};
+
+  icicle::Device cpu_dev = {s_ref_device, 0};
+  EXPECT_NO_THROW(icicle_set_device(cpu_dev));
+  EXPECT_NO_THROW(icicle_get_active_device(active_dev));
+
+  ASSERT_EQ(cpu_dev, active_dev);
+
+  active_dev = {UNKOWN_DEVICE, -1};
+
+  icicle::Device gpu_dev = {s_main_device, 0};
+  EXPECT_NO_THROW(icicle_set_default_device(gpu_dev));
+
+  // setting a new default device doesn't override already set local thread devices
+  EXPECT_NO_THROW(icicle_get_active_device(active_dev));
+  ASSERT_EQ(cpu_dev, active_dev);
+
+  active_dev = {UNKOWN_DEVICE, -1};
+  auto thread_func = [&active_dev, &gpu_dev]() {
+    EXPECT_NO_THROW(icicle_get_active_device(active_dev));
+    ASSERT_EQ(gpu_dev, active_dev);
+  };
+
+  std::thread worker_thread(thread_func);
+
+  worker_thread.join();
 }
 
 TEST_F(DeviceApiTest, MemoryCopySync)

@@ -11,6 +11,7 @@ extern "C" {
     fn icicle_load_backend(path: *const c_char, is_recursive: bool) -> eIcicleError;
     fn icicle_load_backend_from_env_or_default() -> eIcicleError;
     fn icicle_set_device(device: &Device) -> eIcicleError;
+    fn icicle_set_default_device(device: &Device) -> eIcicleError;
     fn icicle_get_active_device(device: &mut Device) -> eIcicleError;
     fn icicle_is_host_memory(ptr: *const c_void) -> eIcicleError;
     fn icicle_is_active_device_memory(ptr: *const c_void) -> eIcicleError;
@@ -59,6 +60,15 @@ pub fn load_backend_non_recursive(path: &str) -> Result<(), eIcicleError> {
 
 pub fn set_device(device: &Device) -> Result<(), eIcicleError> {
     let result = unsafe { icicle_set_device(device) };
+    if result == eIcicleError::Success {
+        Ok(())
+    } else {
+        Err(result)
+    }
+}
+
+pub fn set_default_device(device: &Device) -> Result<(), eIcicleError> {
+    let result = unsafe { icicle_set_default_device(device) };
     if result == eIcicleError::Success {
         Ok(())
     } else {

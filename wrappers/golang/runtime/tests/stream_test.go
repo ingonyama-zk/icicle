@@ -8,19 +8,15 @@ import (
 )
 
 func TestCreateStream(t *testing.T) {
-	err := runtime.LoadBackendFromEnvOrDefault()
-	assert.Equal(t, runtime.Success, err)
 	dev := runtime.CreateDevice("CUDA", 0)
 	assert.True(t, runtime.IsDeviceAvailable(&dev))
-	err = runtime.SetDevice(&dev)
+	err := runtime.SetDevice(&dev)
 	assert.Equal(t, runtime.Success, err)
 	_, err = runtime.CreateStream()
 	assert.Equal(t, runtime.Success, err, "Unable to create stream due to %d", err)
 }
 
 func TestDestroyStream(t *testing.T) {
-	err := runtime.LoadBackendFromEnvOrDefault()
-	assert.Equal(t, runtime.Success, err)
 	dev := runtime.CreateDevice("CUDA", 0)
 	assert.True(t, runtime.IsDeviceAvailable(&dev))
 	stream, err := runtime.CreateStream()
@@ -31,8 +27,6 @@ func TestDestroyStream(t *testing.T) {
 }
 
 func TestSyncStream(t *testing.T) {
-	err := runtime.LoadBackendFromEnvOrDefault()
-	assert.Equal(t, runtime.Success, err)
 	dev := runtime.CreateDevice("CUDA", 0)
 	assert.True(t, runtime.IsDeviceAvailable(&dev))
 	runtime.SetDevice(&dev)

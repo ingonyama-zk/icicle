@@ -13,6 +13,7 @@ typedef struct DeviceProperties DeviceProperties;
 int icicle_load_backend(const char* path, bool is_recursive);
 int icicle_load_backend_from_env_or_default();
 int icicle_set_device(const Device* device);
+int icicle_set_default_device(const Device* device);
 int icicle_get_active_device(Device* device);
 int icicle_is_host_memory(const void* ptr);
 int icicle_is_active_device_memory(const void* ptr);

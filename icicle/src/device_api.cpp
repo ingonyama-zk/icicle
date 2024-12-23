@@ -58,6 +58,15 @@ namespace icicle {
 
     const Device& get_default_device() { return m_default_device; }
 
+    eIcicleError set_default_device(const Device& dev)
+    {
+      if (!is_device_registered(dev.type)) {
+        THROW_ICICLE_ERR(eIcicleError::INVALID_DEVICE, "Device type " + std::string(dev.type) + " has not been registered");
+      }
+      m_default_device = dev;
+      return eIcicleError::SUCCESS;
+    }
+
     std::vector<std::string> get_registered_devices_list()
     {
       std::vector<std::string> registered_devices;
@@ -114,6 +123,11 @@ namespace icicle {
                                       "icicle_set_device(const icicle::Device& device)");
     }
     return default_deviceAPI.get();
+  }
+
+  eIcicleError DeviceAPI::set_default_device(const Device& dev)
+  {
+    return DeviceAPIRegistry::Global().set_default_device(dev);
   }
 
   /********************************************************************************** */

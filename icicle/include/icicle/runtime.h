@@ -37,6 +37,14 @@ extern "C" eIcicleError icicle_load_backend_from_env_or_default();
 extern "C" eIcicleError icicle_set_device(const icicle::Device& device);
 
 /**
+ * @brief Set default device for all threads
+ *
+
+ * @return eIcicleError::SUCCESS if successful, otherwise throws INVALID_DEVICE
+ */
+extern "C" eIcicleError icicle_set_default_device(const icicle::Device& device);
+
+/**
  * @brief Get active device for thread
  *
 
