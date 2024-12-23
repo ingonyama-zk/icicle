@@ -252,7 +252,7 @@ public:
     // Approximation for optimal c size while ignoring memory limitation.
     int optimal_c = precompute_factor > 1
                       ? std::max((int)std::log2(msm_size) + (int)std::log2(precompute_factor) - 5, 8)
-                      : std::max((int)std::log2(msm_size) - 5, 8);
+                      : std::max((int)std::log2(msm_size) - 5, 5);
 
     // Get physical memory limitation (by some factor < 1 - chosen to be 3/4)
     uint64_t point_size = 3 * scalar_t::NBITS; // NOTE this is valid under the assumption of projective points in BMs
@@ -730,12 +730,10 @@ void Msm<A, P>::phase3_thread(std::vector<BmSumSegment> segments, P* result)
  * @param nof_workers - Number of worker-threads
  */
 template <typename A, typename P>
-eIcicleError
+static eIcicleError
 cpu_main(const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results, int nof_workers)
 {
-  int c = config.c;
-  if (c < 1) { c = Msm<A, P>::get_optimal_c(msm_size, config.precompute_factor); }
-
+  const int c = (config.c <= 0) ? Msm<A, P>::get_optimal_c(msm_size, config.precompute_factor) : config.c;
   auto msm = Msm<A, P>{config, c, nof_workers};
 
   for (int i = 0; i < config.batch_size; i++) {
@@ -752,13 +750,11 @@ static eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
   // TODO: batch and precompute not supported currently with this top level msm
-  int nof_threads = std::thread::hardware_concurrency();
+  const unsigned max_nof_threads =
+    static_cast<int>(std::max(1, msm_size >> 5)); // Hueristic that accounts scales workers with size in 32 quants
+  unsigned nof_threads = std::min(max_nof_threads, std::thread::hardware_concurrency());
   if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
-    nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
-  }
-  if (nof_threads <= 0) {
-    ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
-    nof_threads = 1;
+    nof_threads = std::min(1, config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS));
   }
   ICICLE_LOG_VERBOSE << "nof_threads=" << nof_threads;
 
@@ -768,8 +764,10 @@ static eIcicleError cpu_msm(
   } else {
     // Heuristic: around 4-8 threads usually are the sweet spot, and also typically works better when group size divides
     // nof-threads
-    nof_workers_per_msm = (nof_threads % 5 == 0) ? 5 : (nof_threads % 4 == 0) ? 4 : 2;
+    nof_workers_per_msm = (nof_threads % 5 == 0) ? 5 : (nof_threads % 4 == 0) ? 4 : nof_threads;
   }
+  ICICLE_ASSERT(nof_threads > 0 && nof_workers_per_msm > 0 && nof_workers_per_msm <= nof_threads)
+    << "MSM cpu failed to infer correct number of worker thread assignment";
   const int nof_top_level_msms = (int)std::ceil((float)nof_threads / nof_workers_per_msm);
   std::vector<P> sub_results(nof_top_level_msms, P::zero()); // Results for each thread
   std::vector<std::thread> threads;
@@ -790,35 +788,48 @@ static eIcicleError cpu_msm(
     const int nof_threads_for_sub_msm =
       last_msm ? (nof_threads - (nof_top_level_msms - 1) * nof_workers_per_msm) : nof_workers_per_msm;
 
-    ICICLE_LOG_VERBOSE << "msm_size=" << msm_size << ", nof_workers_per_msm=" << nof_workers_per_msm << "i=" << i
+    ICICLE_LOG_VERBOSE << "msm_size=" << msm_size << ", nof_workers_per_msm=" << nof_workers_per_msm << ", i=" << i
                        << ", last=" << last_msm << ", size=" << single_msm_size
                        << ", nof_threads_for_sub_msm=" << nof_threads_for_sub_msm;
 
-    threads.emplace_back(
-      cpu_main<A, P>,
-      scalars + i * stride,                    // Scalars for this thread
-      bases + i * stride,                      // Bases for this thread
-      single_msm_size,                         // Size for this thread
-      config,                                  // Config
-      &sub_results[i],                         // Output to the sub-results array
-      std::max(1, nof_threads_for_sub_msm - 1) // Number of workers
-    );
+    ICICLE_LOG_VERBOSE << "bases offset = " << i * stride * config.precompute_factor;
+
+    if (last_msm) {
+      // Reuse thread for last piece. This Is also useful when have one piece
+      cpu_main(
+        scalars + i * stride,                          // Scalars for this thread
+        bases + i * stride * config.precompute_factor, // Bases for this thread
+        single_msm_size,                               // Size for this thread
+        config,                                        // Config
+        results,                                       // Output to the sub-results array
+        std::max(1, nof_threads_for_sub_msm - 1));     // Number of workers
+    } else {
+      // dispatch thread
+      threads.emplace_back(
+        cpu_main<A, P>,
+        scalars + i * stride,                          // Scalars for this thread
+        bases + i * stride * config.precompute_factor, // Bases for this thread
+        single_msm_size,                               // Size for this thread
+        config,                                        // Config
+        &sub_results[i],                               // Output to the sub-results array
+        std::max(1, nof_threads_for_sub_msm - 1)       // Number of workers
+      );
+    }
   }
 
   // Wait for threads and accumulate
-  bool first_iter = true;
+  // Note that the current thread's result is already in 'results'
   int sub_msm_idx = 0;
   for (auto& thread : threads) {
     if (thread.joinable()) { thread.join(); }
-    *results = first_iter ? sub_results[sub_msm_idx++] : *results + sub_results[sub_msm_idx++];
-    first_iter = false;
+    *results = *results + sub_results[sub_msm_idx++];
   }
 
   return eIcicleError::SUCCESS;
 }
 
 /**
- * @brief Function to precompute basess multiplications - trading memory for MSM performance.
+ * @brief Function to precompute bases multiplications - trading memory for MSM performance.
  * @param device - Icicle API parameter stating the device being ran on. In this case - CPU.
  * @param input_bases - bases (EC points) to precompute.
  * @param nof_bases - Size of the above array, as it is given as a Per.

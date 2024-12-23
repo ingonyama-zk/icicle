@@ -35,10 +35,10 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 20;
+    const int logn = 10;
     const int batch = 1;
     const int N = (1 << logn);       // - rand_uint_32b(0, 5 * logn); // make it not always power of two
-    const int precompute_factor = 1; // rand_uint_32b(0, 7) + 1;  // between 1 and 8
+    const int precompute_factor = 2; // rand_uint_32b(0, 7) + 1;  // between 1 and 8
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -67,22 +67,22 @@ public:
       ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
 
       // while (true) {
-      for (int groupsize = 1; groupsize <= 10; ++groupsize) {
-        ext.set(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE, groupsize);
-        ICICLE_LOG_INFO << "groupsize=" << groupsize;
-        START_TIMER(MSM_sync)
-        ICICLE_CHECK(msm(scalars.get(), precomp_bases.get(), N, config, result));
-        END_TIMER(MSM_sync, oss.str().c_str(), measure);
-      }
+      // for (int groupsize = 1; groupsize <= 10; ++groupsize) {
+      // ext.set(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE, groupsize);
+      // ICICLE_LOG_INFO << "groupsize=" << groupsize;
+      START_TIMER(MSM_sync)
+      ICICLE_CHECK(msm(scalars.get(), precomp_bases.get(), N, config, result));
+      END_TIMER(MSM_sync, oss.str().c_str(), measure);
+      // }
       // }
     };
 
-    // run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      // ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
+      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
       ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
-      // ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
+      ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
 
