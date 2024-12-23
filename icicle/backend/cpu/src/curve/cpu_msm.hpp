@@ -745,6 +745,13 @@ cpu_main(const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig&
   return eIcicleError::SUCCESS;
 }
 
+// Note: This implementation is a workaround for work division across thread groups
+// and threads. It addresses the issue where the manager thread struggles (chokes)
+// with effectively handling a small number of workers. By manually dividing the workload
+// into thread groups and dispatching tasks directly to threads, this approach bypasses
+// the limitations of the current manager thread. Once the manager thread is optimized
+// to handle small worker counts efficiently, this workaround can be deprecated and use cpu_main() directly.
+
 // Work division across batch dimension
 template <typename A, typename P>
 static eIcicleError cpu_msm_workdivision_batch_dim(
@@ -756,26 +763,31 @@ static eIcicleError cpu_msm_workdivision_batch_dim(
   int nof_threadgroups,
   int threadgroup_size)
 {
+  // Limit the number of thread groups to the batch size
   nof_threadgroups = std::min(nof_threadgroups, config.batch_size);
-  const int total_nof_threads = nof_threadgroups * threadgroup_size;
-  std::vector<std::thread> threads;
 
-  const int batch_stride = (int)std::ceil((float)config.batch_size * threadgroup_size / total_nof_threads);
-  // const int batch_stride = batch_stride_unit * threadgroup_size;
+  // Total number of threads used
+  const int total_nof_threads = nof_threadgroups * threadgroup_size;
+
+  // Compute batch stride for thread groups
+  const int batch_stride =
+    static_cast<int>(std::ceil(static_cast<float>(config.batch_size) * threadgroup_size / total_nof_threads));
 
   ICICLE_LOG_VERBOSE << "msm-size=" << msm_size << ", threadgroup_size=" << threadgroup_size
                      << ", nof_threadgroups=" << nof_threadgroups << ", batch_stride=" << batch_stride;
 
-  // Launch threadgroups
+  std::vector<std::thread> threads;
+
+  // Launch thread groups
   for (int i = 0; i < nof_threadgroups; ++i) {
-    // compute single msm size and workers. Note that last msm can be smaller and use less threads
-    const bool last_threadgroup = i == (nof_threadgroups - 1);
+    const bool last_threadgroup = (i == nof_threadgroups - 1);
     const int threadgroup_batch_size = std::min(config.batch_size - i * batch_stride, batch_stride);
     const int nof_threads_in_group = std::min(total_nof_threads - i * threadgroup_size, threadgroup_size);
 
     ICICLE_LOG_VERBOSE << "threadgroup-id=" << i << ": threadgroup_size=" << threadgroup_size
                        << ", batch=" << threadgroup_batch_size;
 
+    // Prepare thread group-specific configuration
     auto config_clone = config;
     config_clone.batch_size = threadgroup_batch_size;
     auto threadgroup_scalars = scalars + i * msm_size * threadgroup_batch_size;
@@ -785,19 +797,19 @@ static eIcicleError cpu_msm_workdivision_batch_dim(
     auto threadgroup_results = results + i * threadgroup_batch_size;
 
     if (last_threadgroup) {
-      // Reuse thread for last threagroup main
+      // Reuse the current thread for the last thread group
       cpu_main(
         threadgroup_scalars, threadgroup_bases, msm_size, config_clone, threadgroup_results,
-        std::max(1, nof_threads_in_group - 1 /* -1 to account for manager thread*/));
+        std::max(1, nof_threads_in_group - 1 /* Account for manager thread */));
     } else {
-      // dispatch threadgroup
+      // Dispatch thread group
       threads.emplace_back(
         cpu_main<A, P>, threadgroup_scalars, threadgroup_bases, msm_size, config_clone, threadgroup_results,
-        std::max(1, nof_threads_in_group - 1 /* -1 to account for manager thread*/));
+        std::max(1, nof_threads_in_group - 1 /* Account for manager thread */));
     }
   }
 
-  // Wait for threadgroups
+  // Wait for all thread groups to finish
   for (auto& thread : threads) {
     if (thread.joinable()) { thread.join(); }
   }
@@ -805,7 +817,7 @@ static eIcicleError cpu_msm_workdivision_batch_dim(
   return eIcicleError::SUCCESS;
 }
 
-// work division across size dimension
+// Work division across size dimension
 template <typename A, typename P>
 static eIcicleError cpu_msm_workdivision_size_dim(
   const scalar_t* scalars,
@@ -816,6 +828,7 @@ static eIcicleError cpu_msm_workdivision_size_dim(
   int nof_threadgroups,
   int threadgroup_size)
 {
+  // Validation checks
   if (config.precompute_factor > 1 && nof_threadgroups > 1) {
     ICICLE_LOG_ERROR << "cpu_msm_workdivision_size_dim() does not support precomputation with multiple threadgroups";
     return eIcicleError::INVALID_ARGUMENT;
@@ -824,23 +837,21 @@ static eIcicleError cpu_msm_workdivision_size_dim(
     ICICLE_LOG_ERROR << "cpu_msm_workdivision_size_dim() does not expect batch-msm";
     return eIcicleError::INVALID_ARGUMENT;
   }
+
   const int total_nof_threads = nof_threadgroups * threadgroup_size;
-  std::vector<P> sub_results(nof_threadgroups, P::zero()); // Results for each thread
+  std::vector<P> sub_results(nof_threadgroups, P::zero()); // Results for each thread group
   std::vector<std::thread> threads;
 
-  // we divide the workload on the threads evenly so consider stride_unit stride for a single thread
-  // for example if we have 10 workers and 1500 elements, we want stride_unit=1500/10=150
-  // Then each group has to account for the number of workers it has
-  const int stride_unit = (int)std::ceil((float)msm_size / total_nof_threads);
+  // Calculate stride for workload division
+  const int stride_unit = static_cast<int>(std::ceil(static_cast<float>(msm_size) / total_nof_threads));
   const int stride = stride_unit * threadgroup_size;
 
   ICICLE_LOG_VERBOSE << "msm-size=" << msm_size << ", threadgroup_size=" << threadgroup_size
                      << ", nof_threadgroups=" << nof_threadgroups << ", stride=" << stride;
 
-  // Launch threadgroups
+  // Launch thread groups
   for (int i = 0; i < nof_threadgroups; ++i) {
-    // compute single msm size and workers. Note that last msm can be smaller and use less threads
-    const bool last_msm = i == (nof_threadgroups - 1);
+    const bool last_msm = (i == nof_threadgroups - 1);
     const int threadgroup_msm_size = last_msm ? (msm_size - (nof_threadgroups - 1) * stride) : stride;
     const int nof_threads_in_group =
       last_msm ? (total_nof_threads - (nof_threadgroups - 1) * threadgroup_size) : threadgroup_size;
@@ -849,20 +860,19 @@ static eIcicleError cpu_msm_workdivision_size_dim(
                        << ", threadgroup_msm_size=" << threadgroup_msm_size;
 
     if (last_msm) {
-      // Reuse thread for last threagroup main
+      // Reuse the current thread for the last thread group
       cpu_main(
         scalars + i * stride, bases + i * stride, threadgroup_msm_size, config, results,
-        std::max(1, nof_threads_in_group - 1 /* -1 to account for manager thread*/));
+        std::max(1, nof_threads_in_group - 1 /* Account for manager thread */));
     } else {
-      // dispatch threadgroup
+      // Dispatch thread group
       threads.emplace_back(
         cpu_main<A, P>, scalars + i * stride, bases + i * stride, threadgroup_msm_size, config, &sub_results[i],
-        std::max(1, nof_threads_in_group - 1 /* -1 to account for manager thread*/));
+        std::max(1, nof_threads_in_group - 1 /* Account for manager thread */));
     }
   }
 
-  // Wait for threadgroups and accumulate
-  // Note that the current thread's result is already in 'results'
+  // Wait for all thread groups and combine results
   int sub_msm_idx = 0;
   for (auto& thread : threads) {
     if (thread.joinable()) { thread.join(); }
@@ -876,49 +886,34 @@ template <typename A, typename P>
 static eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  // Description: Here we split the MSM to sub-msm in one of two ways:
-  // if batched-msm --> divide the batch dimension
-  // else --> divide the size dimension
-  // threadgroups are computing msm pieces, based on the work division.
-  // Note: for precompute without batch we will fallback to single threagroup to avoid conflicts of c value
   const bool with_precompute = config.precompute_factor > 1;
   const bool batch_msm = config.batch_size > 1;
 
-  // set total number of threads for the computation
+  // Determine the number of threads
   const unsigned max_nof_threads = static_cast<int>(std::max(1, msm_size >> 5)) * config.batch_size;
-  int nof_threads = -1;
-  if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
-    nof_threads = std::min(1, config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS));
-  } else { // not user defined
-    // Hueristic that accounts for msm size
-    nof_threads = std::min(max_nof_threads, std::thread::hardware_concurrency());
-  }
+  int nof_threads = config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
+                      ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                      : std::min(max_nof_threads, std::thread::hardware_concurrency());
+
   ICICLE_LOG_VERBOSE << "nof_threads=" << nof_threads;
 
-  // set size of a single threadgroup
-  int threadgroup_size = -1;
-  if (config.ext && config.ext->has(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE)) {
-    threadgroup_size = config.ext->get<int>(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE);
-  } else { // not user defined
-    // Heuristic: around 4-8 threads usually are the sweet spot, and also typically works better when group size divides
-    // nof-threads
-    threadgroup_size = with_precompute          ? nof_threads
-                       : (nof_threads % 5 == 0) ? 5
-                       : (nof_threads % 4 == 0) ? 4
-                                                : nof_threads;
-  }
-
+  // Determine thread group size
+  // Heuristic: around 4-8 threads usually are the sweet spot, and also typically works better when group size divides
+  int threadgroup_size = config.ext && config.ext->has(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE)
+                           ? config.ext->get<int>(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE)
+                         : with_precompute        ? nof_threads
+                         : (nof_threads % 5 == 0) ? 5
+                         : (nof_threads % 4 == 0) ? 4
+                                                  : nof_threads;
   ICICLE_ASSERT(nof_threads > 0 && threadgroup_size > 0 && threadgroup_size <= nof_threads)
     << "MSM cpu failed to infer correct number of worker thread assignment";
+  const int nof_threadgroups = static_cast<int>(std::ceil(static_cast<float>(nof_threads) / threadgroup_size));
 
-  const int nof_threadgroups = (int)std::ceil((float)nof_threads / threadgroup_size);
-  // If have batch, divide this dimension
-  if (config.batch_size > 1) {
-    return cpu_msm_workdivision_batch_dim(
-      scalars, bases, msm_size, config, results, nof_threadgroups, threadgroup_size);
-  }
-  // else divide the size dimension to threadgroups
-  return cpu_msm_workdivision_size_dim(scalars, bases, msm_size, config, results, nof_threadgroups, threadgroup_size);
+  // Dispatch appropriate work division method
+  return batch_msm ? cpu_msm_workdivision_batch_dim(
+                       scalars, bases, msm_size, config, results, nof_threadgroups, threadgroup_size)
+                   : cpu_msm_workdivision_size_dim(
+                       scalars, bases, msm_size, config, results, nof_threadgroups, threadgroup_size);
 }
 
 /**
