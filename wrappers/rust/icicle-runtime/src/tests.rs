@@ -6,6 +6,7 @@ mod tests {
     use crate::test_utilities;
     use crate::*;
     use std::sync::Once;
+    use std::thread;
 
     static INIT: Once = Once::new();
 
@@ -26,6 +27,37 @@ mod tests {
 
         test_utilities::test_set_main_device();
         test_utilities::test_set_ref_device();
+    }
+
+    #[test]
+    fn test_set_default_device() {
+        initialize();
+
+        // block scope is necessary in order to free the mutex lock
+        // to be used by the spawned thread
+        let outer_thread_id = thread::current().id();
+        {
+            let main_device = test_utilities::TEST_MAIN_DEVICE
+                .lock()
+                .unwrap();
+            set_default_device(&main_device).unwrap();
+
+            let active_device = get_active_device().unwrap();
+            assert_eq!(*main_device, active_device);
+        }
+
+        let handle = thread::spawn(move || {
+            let inner_thread_id = thread::current().id();
+            assert_ne!(outer_thread_id, inner_thread_id);
+
+            let active_device = get_active_device().unwrap();
+            let main_device = test_utilities::TEST_MAIN_DEVICE
+                .lock()
+                .unwrap();
+            assert_eq!(*main_device, active_device);
+        });
+
+        let _ = handle.join();
     }
 
     #[test]

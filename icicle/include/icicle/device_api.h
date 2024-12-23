@@ -188,6 +188,7 @@ namespace icicle {
 
   public:
     static eIcicleError set_thread_local_device(const Device& device);
+    static eIcicleError set_default_device(const Device& device);
     static const Device& get_thread_local_device();
     static const DeviceAPI* get_thread_local_deviceAPI();
     static DeviceTracker& get_global_memory_tracker() { return sMemTracker; }

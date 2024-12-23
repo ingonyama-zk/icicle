@@ -4,7 +4,7 @@ use std::os::raw::c_char;
 
 const MAX_TYPE_SIZE: usize = 64;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 #[repr(C)]
 pub struct Device {
     device_type: [c_char; MAX_TYPE_SIZE],

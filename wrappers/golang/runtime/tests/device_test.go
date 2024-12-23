@@ -1,70 +1,122 @@
 package tests
 
 import (
+	"fmt"
 	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
 
-	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+	icicle_runtime "github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetDeviceType(t *testing.T) {
 	expectedDeviceName := "test"
-	config := runtime.CreateDevice(expectedDeviceName, 0)
+	config := icicle_runtime.CreateDevice(expectedDeviceName, 0)
 	assert.Equal(t, expectedDeviceName, config.GetDeviceType())
 
 	expectedDeviceNameLong := "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttest"
-	configLargeName := runtime.CreateDevice(expectedDeviceNameLong, 1)
+	configLargeName := icicle_runtime.CreateDevice(expectedDeviceNameLong, 1)
 	assert.NotEqual(t, expectedDeviceNameLong, configLargeName.GetDeviceType())
 }
 
 func TestIsDeviceAvailable(t *testing.T) {
-	runtime.LoadBackendFromEnvOrDefault()
-	dev := runtime.CreateDevice("CUDA", 0)
-	_ = runtime.SetDevice(&dev)
-	res, err := runtime.GetDeviceCount()
+	dev := icicle_runtime.CreateDevice("CUDA", 0)
+	_ = icicle_runtime.SetDevice(&dev)
+	res, err := icicle_runtime.GetDeviceCount()
 
-	expectedNumDevices, error := exec.Command("nvidia-smi", "-L", "|", "wc", "-l").Output()
-	if error != nil {
-		t.Skip("Failed to get number of devices")
+	smiCommand := exec.Command("nvidia-smi", "-L")
+	smiCommandStdout, _ := smiCommand.StdoutPipe()
+	wcCommand := exec.Command("wc", "-l")
+	wcCommand.Stdin = smiCommandStdout
+
+	smiCommand.Start()
+
+	expectedNumDevicesRaw, wcErr := wcCommand.Output()
+	smiCommand.Wait()
+
+	expectedNumDevicesAsString := strings.TrimRight(string(expectedNumDevicesRaw), " \n\r\t")
+	expectedNumDevices, _ := strconv.Atoi(expectedNumDevicesAsString)
+	if wcErr != nil {
+		t.Skip("Failed to get number of devices:", wcErr)
 	}
 
-	assert.Equal(t, runtime.Success, err)
+	assert.Equal(t, icicle_runtime.Success, err)
 	assert.Equal(t, expectedNumDevices, res)
 
-	err = runtime.LoadBackendFromEnvOrDefault()
-	assert.Equal(t, runtime.Success, err)
-	devCuda := runtime.CreateDevice("CUDA", 0)
-	assert.True(t, runtime.IsDeviceAvailable(&devCuda))
-	devCpu := runtime.CreateDevice("CPU", 0)
-	assert.True(t, runtime.IsDeviceAvailable(&devCpu))
-	devInvalid := runtime.CreateDevice("invalid", 0)
-	assert.False(t, runtime.IsDeviceAvailable(&devInvalid))
+	assert.Equal(t, icicle_runtime.Success, err)
+	devCuda := icicle_runtime.CreateDevice("CUDA", 0)
+	assert.True(t, icicle_runtime.IsDeviceAvailable(&devCuda))
+	devCpu := icicle_runtime.CreateDevice("CPU", 0)
+	assert.True(t, icicle_runtime.IsDeviceAvailable(&devCpu))
+	devInvalid := icicle_runtime.CreateDevice("invalid", 0)
+	assert.False(t, icicle_runtime.IsDeviceAvailable(&devInvalid))
+}
+
+func TestSetDefaultDevice(t *testing.T) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	tidOuter := syscall.Gettid()
+
+	gpuDevice := icicle_runtime.CreateDevice("CUDA", 0)
+	icicle_runtime.SetDefaultDevice(&gpuDevice)
+
+	activeDevice, err := icicle_runtime.GetActiveDevice()
+	assert.Equal(t, icicle_runtime.Success, err)
+	assert.Equal(t, gpuDevice, *activeDevice)
+
+	done := make(chan struct{}, 1)
+	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
+		// Ensure we are operating on an OS thread other than the original one
+		tidInner := syscall.Gettid()
+		for tidInner == tidOuter {
+			fmt.Println("Locked thread is the same as original, getting new locked thread")
+			runtime.UnlockOSThread()
+			runtime.LockOSThread()
+			tidInner = syscall.Gettid()
+		}
+
+		activeDevice, err := icicle_runtime.GetActiveDevice()
+		assert.Equal(t, icicle_runtime.Success, err)
+		assert.Equal(t, gpuDevice, *activeDevice)
+
+		close(done)
+	}()
+
+	<-done
+
+	cpuDevice := icicle_runtime.CreateDevice("CPU", 0)
+	icicle_runtime.SetDefaultDevice(&cpuDevice)
 }
 
 func TestRegisteredDevices(t *testing.T) {
-	err := runtime.LoadBackendFromEnvOrDefault()
-	assert.Equal(t, runtime.Success, err)
-	devices, _ := runtime.GetRegisteredDevices()
+	devices, _ := icicle_runtime.GetRegisteredDevices()
 	assert.Equal(t, []string{"CUDA", "CPU"}, devices)
 }
 
 func TestDeviceProperties(t *testing.T) {
-	_, err := runtime.GetDeviceProperties()
-	assert.Equal(t, runtime.Success, err)
+	_, err := icicle_runtime.GetDeviceProperties()
+	assert.Equal(t, icicle_runtime.Success, err)
 }
 
 func TestActiveDevice(t *testing.T) {
-	runtime.SetDevice(&DEVICE)
-	activeDevice, err := runtime.GetActiveDevice()
-	assert.Equal(t, runtime.Success, err)
-	assert.Equal(t, DEVICE, *activeDevice)
-	memory1, err := runtime.GetAvailableMemory()
-	if err == runtime.ApiNotImplemented {
-		t.Skipf("GetAvailableMemory() function is not implemented on %s device", DEVICE.GetDeviceType())
+	devCpu := icicle_runtime.CreateDevice("CUDA", 0)
+	icicle_runtime.SetDevice(&devCpu)
+	activeDevice, err := icicle_runtime.GetActiveDevice()
+	assert.Equal(t, icicle_runtime.Success, err)
+	assert.Equal(t, devCpu, *activeDevice)
+	memory1, err := icicle_runtime.GetAvailableMemory()
+	if err == icicle_runtime.ApiNotImplemented {
+		t.Skipf("GetAvailableMemory() function is not implemented on %s device", devCpu.GetDeviceType())
 	}
-	assert.Equal(t, runtime.Success, err)
+	assert.Equal(t, icicle_runtime.Success, err)
 	assert.Greater(t, memory1.Total, uint(0))
 	assert.Greater(t, memory1.Free, uint(0))
 }
