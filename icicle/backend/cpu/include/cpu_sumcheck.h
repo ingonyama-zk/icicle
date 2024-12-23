@@ -28,16 +28,6 @@ namespace icicle {
 
     F get_alpha(std::vector<F>& round_polynomial) override
     {
-      // TODO miki fix
-      // const std::vector<std::byte>& round_poly_label = this->m_transcript_config.get_round_poly_label();
-      // std::vector<std::byte> hash_input;
-
-      // hash hash_input and return alpha
-      // std::vector<std::byte> hash_result(this->m_transcript_config.get_hasher().output_size());
-      // this->m_transcript_config.get_hasher().hash(
-      //   hash_input.data(), hash_input.size(), this->m_config, hash_result.data());
-      // this->m_prev_alpha = F::reduce(hash_result.data()); // TODO fix that
-      // return this->m_prev_alpha;
       return F::zero();
     }
   };
