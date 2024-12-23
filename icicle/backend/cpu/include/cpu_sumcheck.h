@@ -26,10 +26,7 @@ namespace icicle {
       return eIcicleError::API_NOT_IMPLEMENTED;
     }
 
-    F get_alpha(std::vector<F>& round_polynomial) override
-    {
-      return F::zero();
-    }
+    F get_alpha(std::vector<F>& round_polynomial) override { return F::zero(); }
   };
 
 } // namespace icicle
