@@ -137,7 +137,7 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        ctest
+        ctest --output-on-failure
     - name: Run C++ examples
       working-directory: ./examples/c++
       if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
