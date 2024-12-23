@@ -59,47 +59,6 @@ fn main() {
     println!("cargo:rustc-link-lib=icicle_curve_bls12_377");
     println!("cargo:rustc-link-lib=icicle_hash");
 
-    // if cfg!(feature = "bw6-761") {
-    //     // Base config
-    //     let mut config_bw = Config::new(format!("{}", icicle_src_dir.display()));
-    //     config_bw
-    //         .define("CURVE", "bw6_761")
-    //         .define("FIELD", "bw6_761")
-    //         .define("HASH", "OFF")
-    //         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
-
-    //     // build (or pull and build) cuda backend if feature enabled.
-    //     // Note: this requires access to the repo
-    //     if cfg!(feature = "cuda_backend") {
-    //         config_bw.define("CUDA_BACKEND", "local");
-    //     } else if cfg!(feature = "pull_cuda_backend") {
-    //         config_bw.define("CUDA_BACKEND", "main");
-    //     }
-    //     if cfg!(feature = "metal_backend") {
-    //         config_bw.define("METAL_BACKEND", "local");
-    //     } else if cfg!(feature = "pull_metal_backend") {
-    //         config_bw.define("METAL_BACKEND", "main");
-    //     }
-
-    //     // Optional Features that are default ON (so that default matches any backend)
-    //     if cfg!(feature = "no_bw6_g2") {
-    //         config_bw.define("G2", "OFF");
-    //     }
-    //     // if cfg!(feature = "no_ecntt") {
-    //     config_bw.define("ECNTT", "OFF");
-    //     // }
-
-    //     // Build
-    //     let _ = config_bw
-    //         .build_target("install")
-    //         .build();
-
-    //     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
-    //     println!("cargo:rustc-link-lib=icicle_field_bw6_761");
-    //     println!("cargo:rustc-link-lib=icicle_curve_bw6_761");
-    //     println!("cargo:rustc-link-lib=icicle_hash");
-    // }
-
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir
