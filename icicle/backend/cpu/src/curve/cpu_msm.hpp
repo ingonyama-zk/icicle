@@ -41,7 +41,8 @@ public:
    */
   EcAddTask()
       : TaskBase(), m_a_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()), m_b_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()),
-        m_b_point_ptrs(NOF_EC_ADDITIONS_IN_BATCH, nullptr), m_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, A::zero()),
+        m_negate_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, false),
+        m_b_point_ptrs(NOF_EC_ADDITIONS_IN_BATCH, nullptr), m_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH,  nullptr),
         m_return_idx(NOF_EC_ADDITIONS_IN_BATCH, -1), m_opcodes(NOF_EC_ADDITIONS_IN_BATCH, ADD_P1_P2_BY_VALUE),
         m_is_line(NOF_EC_ADDITIONS_IN_BATCH, true), m_nof_valid_points(0)
   {
@@ -62,7 +63,9 @@ public:
         m_a_points[i] = m_a_points[i] + *(m_b_point_ptrs[i]);
         continue;
       case ADD_P1_AND_P2_AFFINE:
-        m_a_points[i] = m_a_points[i] + m_b_affine_points[i];
+        const A p2 = m_are_points_mont ? A::from_montgomery(*(m_b_affine_points[i])) : *(m_b_affine_points[i]);
+        m_negate_b_affine_points[i] ? A::neg(p2) : p2;
+        m_a_points[i] = m_a_points[i] + (m_negate_b_affine_points[i] ? A::neg(p2) : p2);
         // continue;
       }
     }
@@ -85,12 +88,14 @@ public:
    * @param negate_affine - flag to indicate that the base needs to be subbed instead of added.
    * @param is_montgomery - flag to indicate that the base is in Montgomery form and first needs to be converted.
    */
-  void set_phase1_addition_with_affine(const P& bucket, const A& base, int bucket_idx)
+  void set_phase1_addition_with_affine(const P& bucket, bool negate_base, const A* base, int bucket_idx, bool are_points_mont)
   {
     m_a_points[m_nof_valid_points] = bucket;
     m_b_affine_points[m_nof_valid_points] = base;
+    m_negate_b_affine_points[m_nof_valid_points] = negate_base;
     m_return_idx[m_nof_valid_points] = bucket_idx;
     m_opcodes[m_nof_valid_points] = ADD_P1_AND_P2_AFFINE;
+    m_are_points_mont = are_points_mont;
 
     m_nof_valid_points++;
     if (m_nof_valid_points == NOF_EC_ADDITIONS_IN_BATCH) { dispatch(); }
@@ -178,7 +183,7 @@ public:
   }
 
   int m_nof_valid_points;
-
+  bool m_are_points_mont;
   std::vector<P> m_a_points; // One of the addends that also stores addition results.
 
   std::vector<int> m_return_idx; // Idx allowing manager to figure out where the result belong to.
@@ -187,7 +192,8 @@ public:
 private:
   // Variations of the second addend which will be used depending on the opcode below
   std::vector<P> m_b_points;
-  std::vector<A> m_b_affine_points;
+  std::vector<const A*> m_b_affine_points;
+  std::vector<bool> m_negate_b_affine_points;
   std::vector<P*> m_b_point_ptrs;
 
   enum eAddType { ADD_P1_P2_BY_VALUE, ADD_P1_AND_P2_POINTER, ADD_P1_AND_P2_AFFINE };
@@ -335,7 +341,7 @@ private:
    * @param base - the P from the input bases
    * @param negate_base - flag to signal the task to subtract base instead of adding it.
    */
-  void phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base);
+  void phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, bool negate_base, const A* base);
   /**
    * @brief Handles the final results of phase 1 (after no other planned additions are required).
    * The function also handles the potential collision similarly to push_addition above.
@@ -452,10 +458,7 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
     if (negate_p_and_s) { scalar = scalar_t::neg(scalar); }
     for (int j = 0; j < m_precompute_factor; j++) {
       // Handle required preprocess of base P
-      A base =
-        m_are_points_mont ? A::from_montgomery(bases[m_precompute_factor * i + j]) : bases[m_precompute_factor * i + j];
-      if (base == A::zero()) { continue; }
-      if (negate_p_and_s) { base = A::neg(base); }
+      const A* base = &(bases[m_precompute_factor * i + j]);
 
       for (int k = 0; k < m_num_bms; k++) {
         // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
@@ -476,10 +479,10 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
           // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
           if (m_bkts_occupancy[bkt_idx]) {
             m_bkts_occupancy[bkt_idx] = false;
-            phase1_push_addition(bkt_idx, m_buckets[bkt_idx], carry > 0 ? A::neg(base) : base);
+            phase1_push_addition(bkt_idx, m_buckets[bkt_idx], negate_p_and_s ^ (carry > 0), base);
           } else {
             m_bkts_occupancy[bkt_idx] = true;
-            m_buckets[bkt_idx] = carry > 0 ? P::neg(P::from_affine(base)) : P::from_affine(base);
+            m_buckets[bkt_idx] = (negate_p_and_s ^ (carry > 0)) ? P::neg(P::from_affine(*base)) : P::from_affine(*base);
           }
         } else {
           // Handle edge case where coeff = 1 << c due to carry overflow which means:
@@ -493,7 +496,7 @@ void Msm<A, P>::phase1_bucket_accumulator(const scalar_t* scalars, const A* base
 }
 
 template <typename A, typename P>
-void Msm<A, P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, const A base)
+void Msm<A, P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bkt, bool negate_base, const A* base)
 {
   while (m_curr_task == nullptr) {
     // Use the search for an available (idle or completed) task as an opportunity to handle the existing results.
@@ -518,7 +521,7 @@ void Msm<A, P>::phase1_push_addition(const unsigned int task_bkt_idx, const P bk
     if (!m_curr_task->is_idle()) { m_curr_task = nullptr; }
   }
   // After handling the result a new one can be set.
-  m_curr_task->set_phase1_addition_with_affine(bkt, base, task_bkt_idx);
+  m_curr_task->set_phase1_addition_with_affine(bkt, negate_base, base, task_bkt_idx, m_are_points_mont);
   if (!m_curr_task->is_idle()) { m_curr_task = nullptr; }
 }
 
