@@ -169,7 +169,7 @@ To compute a batch, set the `batch_size` and `columns_batch` fields of the confi
 
 ### Example
 
-The following example demonstartes how to use ntt and how pass custom configurations to the CUDA backend. Details are discussed below.
+The following example demonstrates how to use ntt and how pass custom configurations to the CUDA backend. Details are discussed below.
 
 ```cpp
 #include "icicle/backend/ntt_config.h"
