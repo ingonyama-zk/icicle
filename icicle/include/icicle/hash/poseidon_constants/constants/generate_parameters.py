@@ -24,6 +24,11 @@ arities = [3, 5, 9, 12]
 # prime_bit_len = 32
 # field_bytes = 4
 #=======
+field = "coalabear"
+p = 2**31 - 2**24 + 1
+prime_bit_len = 32
+field_bytes = 4
+#=======
 # field = "bn254"
 # p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 # bn254
 # prime_bit_len = 254
@@ -39,10 +44,10 @@ arities = [3, 5, 9, 12]
 # prime_bit_len = 377
 # field_bytes = 48
 #=======
-field = "bls12_381"
-p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
-prime_bit_len = 381
-field_bytes = 48
+# field = "bls12_381"
+# p = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
+# prime_bit_len = 381
+# field_bytes = 48
 #=======
 # field = "bw6_761"
 # p = 0x1ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d44300000008508c00000000001

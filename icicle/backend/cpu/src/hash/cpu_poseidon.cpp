@@ -27,6 +27,9 @@ using namespace poseidon_constants_babybear;
 #elif FIELD_ID == STARK_252
   #include "icicle/hash/poseidon_constants/constants/stark252_poseidon.h"
 using namespace poseidon_constants_stark252;
+#elif FIELD_ID == COALA_BEAR
+  #include "icicle/hash/poseidon_constants/constants/coalabear_poseidon.h"
+using namespace poseidon_constants_coalabear;
 #endif
 
 namespace icicle {

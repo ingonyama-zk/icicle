@@ -1,0 +1,17 @@
+
+int full_rounds_3        12
+int half_full_rounds_3        6
+int partial_rounds_3        7
+
+int full_rounds_5        8
+int half_full_rounds_5        4
+int partial_rounds_5        11
+
+int full_rounds_9        8
+int half_full_rounds_9        4
+int partial_rounds_9        12
+
+int full_rounds_12        8
+int half_full_rounds_12        4
+int partial_rounds_12        12
+

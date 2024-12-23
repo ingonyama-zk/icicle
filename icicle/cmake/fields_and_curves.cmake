@@ -5,6 +5,7 @@ set(ICICLE_FIELDS
   1001:babybear:NTT,EXT_FIELD,POSEIDON,POSEIDON2
   1002:stark252:NTT,POSEIDON,POSEIDON2
   1003:m31:EXT_FIELD,POSEIDON,POSEIDON2
+  1004:coalabear:NTT,POSEIDON,POSEIDON2
 )
 
 # Define available curves with an index and their supported features

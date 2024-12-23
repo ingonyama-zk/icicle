@@ -34,4 +34,7 @@ namespace field_config = stark252;
 #elif FIELD_ID == M31
   #include "icicle/fields/stark_fields/m31.h"
 namespace field_config = m31;
+#elif FIELD_ID == COALA_BEAR
+  #include "icicle/fields/stark_fields/coalabear.h"
+namespace field_config = coalabear;
 #endif
