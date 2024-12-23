@@ -48,7 +48,7 @@ jobs:
           - name: bw6_761
             build_args: -DG2=ON -DECNTT=ON
           - name: grumpkin
-            build_args:
+            build_args: -DG2=ON -DECNTT=ON
 
     steps:
     - name: Checkout Repo
