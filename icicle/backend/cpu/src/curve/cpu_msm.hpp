@@ -727,70 +727,8 @@ void Msm<A, P>::phase3_thread(std::vector<BmSumSegment> segments, P* result)
  * @param config - configuration containing parameters for the MSM.
  * @param results - Per to P array in which to store the results. NOTE: the user is expected to preallocate the
  *                  results array.
+ * @param nof_workers - Number of worker-threads
  */
-template <typename A, typename P>
-eIcicleError cpu_msm(
-  const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
-{
-  int nof_threads = std::thread::hardware_concurrency();
-  if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
-    nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
-  }
-  if (nof_threads <= 0) {
-    ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
-    nof_threads = 1;
-  }
-  ICICLE_LOG_INFO << "nof_threads=" << nof_threads;
-
-  constexpr int nof_workers_per_msm = 8;
-  const int nof_top_level_msms =
-    (int)std::ceil((float)nof_threads / nof_workers_per_msm); // 4 workers per msm to avoid too much load
-  std::vector<P> sub_results(nof_top_level_msms, P::zero());  // Results for each thread
-  std::vector<std::thread> threads;
-
-  const int stride = (int)std::ceil((float)msm_size / nof_top_level_msms); // Workload per thread
-
-  ICICLE_LOG_INFO << "msm_size=" << msm_size << ", nof_workers_per_msm=" << nof_workers_per_msm
-                  << ", nof_top_level_msms=" << nof_top_level_msms << ", stride=" << stride;
-
-  // Launch threads
-  for (int i = 0; i < nof_top_level_msms; ++i) {
-    const bool last_msm = i == nof_top_level_msms - 1;
-    const int single_msm_size = last_msm ? (msm_size - (nof_top_level_msms - 1) * stride) : stride;
-
-    // ICICLE_LOG_INFO << msm_size << " - "
-    //                 << "(" << nof_top_level_msms << " - 1) * " << stride;
-    ICICLE_LOG_INFO << "i=" << i << ", last=" << last_msm << ", size=" << single_msm_size;
-
-    threads.emplace_back([&, i] { // Capture by reference (&) and index by value (i)
-      cpu_main(
-        scalars + i * stride, // Scalars for this thread
-        bases + i * stride,   // Bases for this thread
-        single_msm_size,      // Size for this thread
-        config,               // Config
-        &sub_results[i],      // Output to the sub-results array
-        nof_workers_per_msm /*for main*/);
-    });
-
-    // When not commented out, this is waiting for each sub-msm and proves the top level is correct
-    // threads.back().join(); // TODO remove
-    // threads.clear();
-  }
-
-  // Wait for threads
-  for (auto& thread : threads) {
-    if (thread.joinable()) { thread.join(); }
-  }
-
-  // Combine results
-  *results = sub_results[0];
-  for (int i = 1; i < sub_results.size(); ++i) {
-    *results = *results + sub_results[i];
-  }
-
-  return eIcicleError::SUCCESS;
-}
-
 template <typename A, typename P>
 eIcicleError
 cpu_main(const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results, int nof_workers)
@@ -805,6 +743,77 @@ cpu_main(const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig&
     int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
     msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
   }
+
+  return eIcicleError::SUCCESS;
+}
+
+template <typename A, typename P>
+static eIcicleError cpu_msm(
+  const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
+{
+  // TODO: batch and precompute not supported currently with this top level msm
+  int nof_threads = std::thread::hardware_concurrency();
+  if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
+    nof_threads = config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
+  }
+  if (nof_threads <= 0) {
+    ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+    nof_threads = 1;
+  }
+  ICICLE_LOG_VERBOSE << "nof_threads=" << nof_threads;
+
+  int nof_workers_per_msm = -1;
+  if (config.ext && config.ext->has(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE)) {
+    nof_workers_per_msm = config.ext->get<int>(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE);
+  } else {
+    // Heuristic: around 4-8 threads usually are the sweet spot, and also typically works better when group size divides
+    // nof-threads
+    nof_workers_per_msm = (nof_threads % 5 == 0) ? 5 : (nof_threads % 4 == 0) ? 4 : 2;
+  }
+  const int nof_top_level_msms = (int)std::ceil((float)nof_threads / nof_workers_per_msm);
+  std::vector<P> sub_results(nof_top_level_msms, P::zero()); // Results for each thread
+  std::vector<std::thread> threads;
+
+  // we divide the workload on the threads evenly so consider stride_unit stride for a single thread
+  // for example if we have 10 workers and 1500 elements, we want stride_unit=1500/10=150
+  // Then each group has to account for the number of workers it has
+  const int stride_unit = (int)std::ceil((float)msm_size / nof_threads);
+  const int stride = stride_unit * nof_workers_per_msm;
+
+  ICICLE_LOG_VERBOSE << "msm_size=" << msm_size << ", nof_workers_per_msm=" << nof_workers_per_msm
+                     << ", nof_top_level_msms=" << nof_top_level_msms << ", stride=" << stride;
+
+  // Launch threads
+  for (int i = 0; i < nof_top_level_msms; ++i) {
+    const bool last_msm = i == nof_top_level_msms - 1;
+    const int single_msm_size = last_msm ? (msm_size - (nof_top_level_msms - 1) * stride) : stride;
+    const int nof_threads_for_sub_msm =
+      last_msm ? (nof_threads - (nof_top_level_msms - 1) * nof_workers_per_msm) : nof_workers_per_msm;
+
+    ICICLE_LOG_VERBOSE << "msm_size=" << msm_size << ", nof_workers_per_msm=" << nof_workers_per_msm << "i=" << i
+                       << ", last=" << last_msm << ", size=" << single_msm_size
+                       << ", nof_threads_for_sub_msm=" << nof_threads_for_sub_msm;
+
+    threads.emplace_back(
+      cpu_main<A, P>,
+      scalars + i * stride,                    // Scalars for this thread
+      bases + i * stride,                      // Bases for this thread
+      single_msm_size,                         // Size for this thread
+      config,                                  // Config
+      &sub_results[i],                         // Output to the sub-results array
+      std::max(1, nof_threads_for_sub_msm - 1) // Number of workers
+    );
+  }
+
+  // Wait for threads and accumulate
+  bool first_iter = true;
+  int sub_msm_idx = 0;
+  for (auto& thread : threads) {
+    if (thread.joinable()) { thread.join(); }
+    *results = first_iter ? sub_results[sub_msm_idx++] : *results + sub_results[sub_msm_idx++];
+    first_iter = false;
+  }
+
   return eIcicleError::SUCCESS;
 }
 

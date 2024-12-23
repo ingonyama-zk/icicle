@@ -54,6 +54,8 @@ public:
     config.batch_size = batch;
     config.are_points_shared_in_batch = true;
     config.precompute_factor = precompute_factor;
+    ConfigExtension ext;
+    config.ext = &ext;
 
     auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
       Device dev = {dev_type, 0};
@@ -64,11 +66,15 @@ public:
 
       ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
 
-      while (true) {
+      // while (true) {
+      for (int groupsize = 1; groupsize <= 10; ++groupsize) {
+        ext.set(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE, groupsize);
+        ICICLE_LOG_INFO << "groupsize=" << groupsize;
         START_TIMER(MSM_sync)
         ICICLE_CHECK(msm(scalars.get(), precomp_bases.get(), N, config, result));
         END_TIMER(MSM_sync, oss.str().c_str(), measure);
       }
+      // }
     };
 
     // run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);

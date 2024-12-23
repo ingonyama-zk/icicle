@@ -189,7 +189,7 @@ private:
 #endif
   };
 
-  std::vector<Worker*> m_workers; // Vector of workers/threads to be ran simultaneously.
+  std::vector<std::unique_ptr<Worker>> m_workers; // Vector of workers/threads to be ran simultaneously.
   int m_next_worker_idx;
 };
 
@@ -305,15 +305,7 @@ TasksManager<Task>::TasksManager(int nof_workers, int min_nof_tasks) : m_workers
   ICICLE_ASSERT(nof_workers > 0) << "Number of workers must be at least 1.";
   int nof_tasks_per_worker = std::max((min_nof_tasks + nof_workers - 1) / nof_workers, TASKS_PER_THREAD);
   for (int i = 0; i < nof_workers; i++) {
-    m_workers[i] = new Worker(nof_tasks_per_worker);
-  }
-}
-
-template <class Task>
-TasksManager<Task>::~TasksManager()
-{
-  for (auto&& worker : m_workers) {
-    delete worker;
+    m_workers[i] = std::make_unique<Worker>(nof_tasks_per_worker);
   }
 }
 
@@ -369,7 +361,7 @@ Task* TasksManager<Task>::get_completed_task()
 template <class Task>
 void TasksManager<Task>::wait_done()
 {
-  for (Worker*& worker : m_workers) {
+  for (auto& worker : m_workers) {
     worker->wait_done();
   }
 }
