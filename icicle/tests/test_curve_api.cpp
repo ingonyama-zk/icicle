@@ -35,10 +35,10 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 10;
-    const int batch = 1;
-    const int N = (1 << logn);       // - rand_uint_32b(0, 5 * logn); // make it not always power of two
-    const int precompute_factor = 2; // rand_uint_32b(0, 7) + 1;  // between 1 and 8
+    const int logn = 12;
+    const int batch = 3;
+    const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
+    const int precompute_factor = rand_uint_32b(0, 7) + 1;  // between 1 and 8
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -54,8 +54,6 @@ public:
     config.batch_size = batch;
     config.are_points_shared_in_batch = true;
     config.precompute_factor = precompute_factor;
-    ConfigExtension ext;
-    config.ext = &ext;
 
     auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
       Device dev = {dev_type, 0};
@@ -66,15 +64,11 @@ public:
 
       ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
 
-      // while (true) {
-      // for (int groupsize = 1; groupsize <= 10; ++groupsize) {
-      // ext.set(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE, groupsize);
-      // ICICLE_LOG_INFO << "groupsize=" << groupsize;
       START_TIMER(MSM_sync)
-      ICICLE_CHECK(msm(scalars.get(), precomp_bases.get(), N, config, result));
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(msm(scalars.get(), precomp_bases.get(), N, config, result));
+      }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
-      // }
-      // }
     };
 
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
@@ -188,7 +182,7 @@ public:
 };
 
 #ifdef MSM
-TEST_F(CurveApiTest, msmOnly) { MSM_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, msm) { MSM_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }
@@ -359,56 +353,6 @@ TYPED_TEST(CurveSanity, ScalarMultTest)
   END_TIMER(ref, "scalar mult double-and-add", true);
 
   ASSERT_EQ(mult, expected_mult);
-}
-
-TYPED_TEST(CurveSanity, ECarith)
-{
-  constexpr int n = 1 << 10;
-  auto a = std::make_unique<TypeParam[]>(n);
-  auto b = std::make_unique<TypeParam[]>(n);
-  auto c = std::make_unique<TypeParam[]>(n);
-
-  auto scalars = std::make_unique<scalar_t[]>(n);
-  auto d = std::make_unique<TypeParam[]>(n);
-
-  TypeParam::rand_host_many(a.get(), n);
-  TypeParam::rand_host_many(b.get(), n);
-  scalar_t::rand_host_many(scalars.get(), n);
-
-  START_TIMER(add);
-  for (int i = 0; i < n; ++i) {
-    c[i] = a[i] + b[i];
-  }
-  END_TIMER(add, "ADD", true);
-  START_TIMER(dbl);
-  for (int i = 0; i < n; ++i) {
-    c[i] = TypeParam::dbl(c[i]);
-  }
-  END_TIMER(dbl, "DOUBLE", true);
-
-  START_TIMER(scalarmult);
-  for (int i = 0; i < n; ++i) {
-    d[i] = c[i] * scalars[i];
-  }
-  END_TIMER(scalarmult, "SCALAR-EC-MULT", true);
-}
-
-TYPED_TEST(CurveSanity, FieldArith)
-{
-  constexpr int n = 1 << 20;
-
-  auto scalars = std::make_unique<scalar_t[]>(n);
-  auto scalars2 = std::make_unique<scalar_t[]>(n);
-  auto scalars3 = std::make_unique<scalar_t[]>(n);
-
-  scalar_t::rand_host_many(scalars.get(), n);
-  scalar_t::rand_host_many(scalars2.get(), n);
-
-  START_TIMER(scalarScalarmult);
-  for (int i = 0; i < n; ++i) {
-    scalars3[i] = scalars2[i] * scalars[i];
-  }
-  END_TIMER(scalarScalarmult, "SCALAR-SCALAR-MULT", true);
 }
 
 int main(int argc, char** argv)
