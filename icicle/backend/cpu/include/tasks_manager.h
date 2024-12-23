@@ -87,12 +87,6 @@ public:
   TasksManager(int nof_workers, int min_nof_tasks = 0);
 
   /**
-   * @brief Destructor of `TasksManager`.
-   * Frees the worker pointer.
-   */
-  ~TasksManager();
-
-  /**
    * @brief Get free slot to insert new task to be executed. This is a blocking function - until a free task is found.
    * @return Task* - pointer to allow the user to edit in the new task. nullptr if no task is available.
    * NOTE: the users should check if the returned task is completed, and if they wish to handle the existing result.
