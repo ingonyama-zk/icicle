@@ -41,10 +41,10 @@ public:
    */
   EcAddTask()
       : TaskBase(), m_a_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()), m_b_points(NOF_EC_ADDITIONS_IN_BATCH, P::zero()),
-        m_negate_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, false),
-        m_b_point_ptrs(NOF_EC_ADDITIONS_IN_BATCH, nullptr), m_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH,  nullptr),
-        m_return_idx(NOF_EC_ADDITIONS_IN_BATCH, -1), m_opcodes(NOF_EC_ADDITIONS_IN_BATCH, ADD_P1_P2_BY_VALUE),
-        m_is_line(NOF_EC_ADDITIONS_IN_BATCH, true), m_nof_valid_points(0)
+        m_negate_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, false), m_b_point_ptrs(NOF_EC_ADDITIONS_IN_BATCH, nullptr),
+        m_b_affine_points(NOF_EC_ADDITIONS_IN_BATCH, nullptr), m_return_idx(NOF_EC_ADDITIONS_IN_BATCH, -1),
+        m_opcodes(NOF_EC_ADDITIONS_IN_BATCH, ADD_P1_P2_BY_VALUE), m_is_line(NOF_EC_ADDITIONS_IN_BATCH, true),
+        m_nof_valid_points(0)
   {
   }
 
@@ -88,7 +88,8 @@ public:
    * @param negate_affine - flag to indicate that the base needs to be subbed instead of added.
    * @param is_montgomery - flag to indicate that the base is in Montgomery form and first needs to be converted.
    */
-  void set_phase1_addition_with_affine(const P& bucket, bool negate_base, const A* base, int bucket_idx, bool are_points_mont)
+  void set_phase1_addition_with_affine(
+    const P& bucket, bool negate_base, const A* base, int bucket_idx, bool are_points_mont)
   {
     m_a_points[m_nof_valid_points] = bucket;
     m_b_affine_points[m_nof_valid_points] = base;
