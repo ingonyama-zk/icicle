@@ -61,7 +61,8 @@ namespace icicle {
     eIcicleError set_default_device(const Device& dev)
     {
       if (!is_device_registered(dev.type)) {
-        THROW_ICICLE_ERR(eIcicleError::INVALID_DEVICE, "Device type " + std::string(dev.type) + " has not been registered");
+        THROW_ICICLE_ERR(
+          eIcicleError::INVALID_DEVICE, "Device type " + std::string(dev.type) + " has not been registered");
       }
       m_default_device = dev;
       return eIcicleError::SUCCESS;
