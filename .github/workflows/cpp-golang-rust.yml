@@ -1,0 +1,402 @@
+name: C++/CUDA/Go/RUST & Examples
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-changed-files:
+    uses: ./.github/workflows/check-changed-files.yml
+
+  check-format:
+    name: Check Code Format
+    runs-on: ubuntu-22.04
+    needs: check-changed-files
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Check clang-format
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: ./scripts/format_all.sh . --check --exclude "build|wrappers"
+
+  extract-cuda-backend-branch:
+    uses: ./.github/workflows/extract-backends.yml
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+
+  test-linux-curve:
+    name: Test curve on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    strategy:
+      matrix:
+        curve:
+          - name: bn254
+            build_args: -DG2=ON -DECNTT=ON
+          - name: bls12_381
+            build_args: -DG2=ON -DECNTT=ON
+          - name: bls12_377
+            build_args: -DG2=ON -DECNTT=ON
+          - name: bw6_761
+            build_args: -DG2=ON -DECNTT=ON
+          - name: grumpkin
+            build_args: -DG2=OFF -DECNTT=OFF
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: cuda-flag
+      run: |
+        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        CURVE=${{ matrix.curve.name }}
+        COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        fi
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+
+    - name: Build curve
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake --build build --target install -j
+        rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
+        touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+    - name: Run RUST Curve Tests
+      working-directory: ./wrappers/rust/icicle-curves
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=icicle-${CURVE//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cd ./$CURVE_DIR
+        cargo test --release --verbose
+    - name: Run C++ curve Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        ctest --output-on-failure
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d CUDA
+                cd -
+            fi
+        done
+    - name: Run Golang curve Tests
+      working-directory: ./wrappers/golang/curves
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        go test ./$CURVE_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
+
+
+  test-linux-field:
+    name: Test field on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    strategy:
+      matrix:
+        field:
+          - name: babybear
+            build_args: -DEXT_FIELD=ON
+          - name: stark252
+            build_args: -DEXT_FIELD=OFF
+          - name: m31
+            build_args: -DEXT_FIELD=ON
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: cuda-flag
+      run: |
+        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        FIELD=${{ matrix.field.name }}
+        COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        fi
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+
+    - name: Build field
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake --build build --target install -j
+        rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.field.name }}*
+        touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+    - name: Run RUST Field Tests
+      working-directory: ./wrappers/rust/icicle-fields
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=icicle-${FIELD//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cd ./$FIELD_DIR
+        cargo test --release --verbose
+    - name: Run C++ field Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        ctest --output-on-failure
+
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d CUDA
+                cd -
+            fi
+        done
+
+    - name: Run Golang field Tests (babybear only)
+      working-directory: ./wrappers/golang/fields
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # if: matrix.field.name == 'babybear' #&& matrix.field.name == 'babybear'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$FIELD -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        if [ -d "./$FIELD/tests" ]; then
+          echo "Running tests for $FIELD..."
+          go test ./$FIELD_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
+        else
+          echo "Folder ./$FIELD_DIR/tests does not exist. Skipping tests for $FIELD."
+        fi
+
+
+  test-linux-hash:
+    name: Build and test Go & RUST hash on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: cuda-flag
+      run: |
+        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        fi
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+    - name: Build
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      # builds the hash and merkle tree lib using a local copy of the CUDA backend
+      run:  |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release  -DHASH=ON ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake --build build --target install -j
+        rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
+        touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+    - name: Run RUST Hash Tests
+      working-directory: ./wrappers/rust/icicle-hash
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cargo test --release --verbose
+    - name: Test GoLang Hashes
+      working-directory: ./wrappers/golang/hash
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
+    - name: Test GoLang Merkle Tree
+      working-directory: ./wrappers/golang/merkle-tree
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
