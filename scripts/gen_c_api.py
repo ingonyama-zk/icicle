@@ -65,6 +65,8 @@ FIELDS_CONFIG = {
         "vec_ops_ext.template",
         "ntt_ext.template",
     },
+    "koalabear": {
+    }
     # "m31": {
     #     "ntt_ext.template",
     #     "ntt.template",
