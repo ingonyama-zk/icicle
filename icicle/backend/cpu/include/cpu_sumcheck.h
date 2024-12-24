@@ -18,9 +18,9 @@ namespace icicle {
     }
 
     eIcicleError get_proof(
-      const std::vector<std::vector<F>*>& input_polynomials,
+      const std::vector<std::shared_ptr<std::vector<F>>>& mle_polynomials,
       const CombineFunction<F>& combine_function,
-      SumCheckConfig& config,
+      const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) const override
     {
       return eIcicleError::API_NOT_IMPLEMENTED;

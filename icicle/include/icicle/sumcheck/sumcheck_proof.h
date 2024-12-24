@@ -21,7 +21,7 @@ namespace icicle {
   {
   public:
     // Constructor
-    SumCheckProof(uint nof_round_polynomials, uint round_polynomial_degree)
+    SumCheckProof(int nof_round_polynomials, int round_polynomial_degree)
         : m_round_polynomials(nof_round_polynomials, std::vector<S>(round_polynomial_degree + 1))
     {
       if (nof_round_polynomials == 0) {
@@ -30,7 +30,7 @@ namespace icicle {
     }
 
     // set the value of polynomial round_polynomial_idx at x = evaluation_idx
-    void set_round_polynomial_value(int round_polynomial_idx, int evaluation_idx, S& value)
+    void set_round_polynomial_value(int round_polynomial_idx, int evaluation_idx, const S& value)
     {
       m_round_polynomials[round_polynomial_idx][evaluation_idx] = value;
     }

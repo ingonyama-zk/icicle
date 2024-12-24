@@ -34,18 +34,6 @@ namespace icicle {
   class Sumcheck
   {
   public:
-    /**
-     * @brief Static factory method to create a Sumcheck instance.
-     *
-     * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
-     * when evaluated over all possible Boolean input combinations
-     * @param transcript_config Configuration for encoding and hashing prover messages.
-     * @return A Sumcheck object initialized with the specified backend.
-     */
-    static Sumcheck<F> create(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config)
-    {
-      return create_sumcheck(claimed_sum, std::move(transcript_config));
-    }
 
     /**
      * @brief Constructor for the Sumcheck class.
@@ -55,7 +43,7 @@ namespace icicle {
 
     /**
      * @brief Calculate the sumcheck based on the inputs and retrieve the Sumcheck proof.
-     * @param input_polynomials a vector of MLE polynomials to process.
+     * @param mle_polynomials a vector of MLE polynomials to process.
      * F(X_1,X_2,X_3) = a_0 (1-X_1) (1-X_2) (1-X_3) + a_1 (1-X_1)(1-X_2) X_3 + a_2 (1-X_1) X_2 (1-X_3) + 
      * a_3 (1-X_1) X_2 X_3 + a_4 X_1 (1-X_2) (1-X_3) + a_5 X_1 (1-X_2) X_3+ a_6 X_1 X_2 (1-X_3) + a_7 X_1 X_2 X_3
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
@@ -64,12 +52,12 @@ namespace icicle {
      * @return Error code of type eIcicleError.
      */
     eIcicleError get_proof(
-      const std::vector<std::vector<F>*>& input_polynomials,
+      const std::vector<std::shared_ptr<std::vector<F>>>& mle_polynomials,
       const CombineFunction<F>& combine_function,
-      SumCheckConfig& config,
+      const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) const
     {
-      return m_backend->get_proof(input_polynomials, combine_function, config, sumcheck_proof);
+      return m_backend->get_proof(mle_polynomials, combine_function, config, sumcheck_proof);
     }
 
     /**
