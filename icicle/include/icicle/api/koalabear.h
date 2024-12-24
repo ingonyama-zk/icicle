@@ -11,25 +11,45 @@
 
 extern "C" void koalabear_extension_generate_scalars(koalabear::extension_t* scalars, int size);
 
-extern "C" eIcicleError koalabear_extension_scalar_convert_montgomery(  
-  const koalabear::extension_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, koalabear::extension_t* output);
+extern "C" eIcicleError koalabear_extension_scalar_convert_montgomery(
+  const koalabear::extension_t* input,
+  uint64_t size,
+  bool is_into,
+  const VecOpsConfig* config,
+  koalabear::extension_t* output);
 
-extern "C" eIcicleError koalabear_ntt_init_domain(
-  koalabear::scalar_t* primitive_root, const NTTInitDomainConfig* config);
+extern "C" eIcicleError
+koalabear_ntt_init_domain(koalabear::scalar_t* primitive_root, const NTTInitDomainConfig* config);
 
 extern "C" eIcicleError koalabear_ntt(
-  const koalabear::scalar_t* input, int size, NTTDir dir, const NTTConfig<koalabear::scalar_t>* config, koalabear::scalar_t* output);
+  const koalabear::scalar_t* input,
+  int size,
+  NTTDir dir,
+  const NTTConfig<koalabear::scalar_t>* config,
+  koalabear::scalar_t* output);
 
 extern "C" eIcicleError koalabear_ntt_release_domain();
 
 extern "C" eIcicleError koalabear_extension_vector_mul(
-  const koalabear::extension_t* vec_a, const koalabear::extension_t* vec_b, uint64_t n, const VecOpsConfig* config, koalabear::extension_t* result);
+  const koalabear::extension_t* vec_a,
+  const koalabear::extension_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  koalabear::extension_t* result);
 
 extern "C" eIcicleError koalabear_extension_vector_add(
-  const koalabear::extension_t* vec_a, const koalabear::extension_t* vec_b, uint64_t n, const VecOpsConfig* config, koalabear::extension_t* result);
+  const koalabear::extension_t* vec_a,
+  const koalabear::extension_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  koalabear::extension_t* result);
 
 extern "C" eIcicleError koalabear_extension_vector_sub(
-  const koalabear::extension_t* vec_a, const koalabear::extension_t* vec_b, uint64_t n, const VecOpsConfig* config, koalabear::extension_t* result);
+  const koalabear::extension_t* vec_a,
+  const koalabear::extension_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  koalabear::extension_t* result);
 
 extern "C" eIcicleError koalabear_extension_matrix_transpose(
   const koalabear::extension_t* input,
@@ -41,24 +61,42 @@ extern "C" eIcicleError koalabear_extension_matrix_transpose(
 extern "C" eIcicleError koalabear_extension_bit_reverse(
   const koalabear::extension_t* input, uint64_t n, const VecOpsConfig* config, koalabear::extension_t* output);
 
-
 extern "C" eIcicleError koalabear_extension_ntt(
-  const koalabear::extension_t* input, int size, NTTDir dir, const NTTConfig<koalabear::scalar_t>* config, koalabear::extension_t* output);
-
+  const koalabear::extension_t* input,
+  int size,
+  NTTDir dir,
+  const NTTConfig<koalabear::scalar_t>* config,
+  koalabear::extension_t* output);
 
 extern "C" void koalabear_generate_scalars(koalabear::scalar_t* scalars, int size);
 
 extern "C" void koalabear_scalar_convert_montgomery(
-  const koalabear::scalar_t* input, uint64_t size, bool is_into, const VecOpsConfig* config, koalabear::scalar_t* output);
+  const koalabear::scalar_t* input,
+  uint64_t size,
+  bool is_into,
+  const VecOpsConfig* config,
+  koalabear::scalar_t* output);
 
 extern "C" eIcicleError koalabear_vector_mul(
-  const koalabear::scalar_t* vec_a, const koalabear::scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, koalabear::scalar_t* result);
+  const koalabear::scalar_t* vec_a,
+  const koalabear::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  koalabear::scalar_t* result);
 
 extern "C" eIcicleError koalabear_vector_add(
-  const koalabear::scalar_t* vec_a, const koalabear::scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, koalabear::scalar_t* result);
+  const koalabear::scalar_t* vec_a,
+  const koalabear::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  koalabear::scalar_t* result);
 
 extern "C" eIcicleError koalabear_vector_sub(
-  const koalabear::scalar_t* vec_a, const koalabear::scalar_t* vec_b, uint64_t n, const VecOpsConfig* config, koalabear::scalar_t* result);
+  const koalabear::scalar_t* vec_a,
+  const koalabear::scalar_t* vec_b,
+  uint64_t n,
+  const VecOpsConfig* config,
+  koalabear::scalar_t* result);
 
 extern "C" eIcicleError koalabear_matrix_transpose(
   const koalabear::scalar_t* input,
@@ -69,5 +107,3 @@ extern "C" eIcicleError koalabear_matrix_transpose(
 
 extern "C" eIcicleError koalabear_bit_reverse(
   const koalabear::scalar_t* input, uint64_t n, const VecOpsConfig* config, koalabear::scalar_t* output);
-
-

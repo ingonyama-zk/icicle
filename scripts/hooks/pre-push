@@ -2,7 +2,7 @@
 
 status=0
 
-if [[ $(codespell --skip ./**/target,./**/build,./docs/*.js,./docs/*.json -I .codespellignore 2>&1) ]];
+if [[ $(codespell --skip ./**/target,./**/build,./docs/*.js,./docs/*.json,*.svg -I .codespellignore 2>&1) ]];
 then
     echo "There are typos in some of the files you've changed. Please run the following to check what they are:"
     echo "codespell --skip ./**/target,./**/build,./docs/*.js,./docs/*.json -I .codespellignore"
