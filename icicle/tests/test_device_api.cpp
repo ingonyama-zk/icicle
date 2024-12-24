@@ -27,7 +27,7 @@ TEST_F(DeviceApiTest, MemoryCopySync)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
-    icicle_set_device(dev);
+    ICICLE_CHECK(icicle_set_device(dev));
 
     void* dev_mem = nullptr;
     ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(input)));
@@ -47,7 +47,7 @@ TEST_F(DeviceApiTest, MemoryCopySyncWithOffset)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
-    icicle_set_device(dev);
+    ICICLE_CHECK(icicle_set_device(dev));
 
     int* dev_mem = nullptr;
     ICICLE_CHECK(
@@ -68,7 +68,7 @@ TEST_F(DeviceApiTest, MemoryCopyAsync)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
-    icicle_set_device(dev);
+    ICICLE_CHECK(icicle_set_device(dev));
     void* dev_mem = nullptr;
 
     icicleStreamHandle stream;
@@ -90,7 +90,7 @@ TEST_F(DeviceApiTest, CopyDeviceInference)
     int output[2] = {0, 0};
 
     icicle::Device dev = {device_type, 0};
-    icicle_set_device(dev);
+    ICICLE_CHECK(icicle_set_device(dev));
     void* dev_mem = nullptr;
 
     ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(input)));
@@ -107,9 +107,8 @@ TEST_F(DeviceApiTest, Memest)
   for (const auto& device_type : s_registered_devices) {
     char host_mem[2] = {0, 0};
 
-    // icicle::Device dev = {device_type, 0};
-    icicle::Device dev = {"CPU", 0};
-    icicle_set_device(dev);
+    icicle::Device dev = {device_type, 0};
+    ICICLE_CHECK(icicle_set_device(dev));
     char* dev_mem = nullptr;
 
     ICICLE_CHECK(icicle_malloc((void**)&dev_mem, sizeof(host_mem)));
@@ -125,7 +124,7 @@ TEST_F(DeviceApiTest, ApiError)
 {
   for (const auto& device_type : s_registered_devices) {
     icicle::Device dev = {device_type, 0};
-    icicle_set_device(dev);
+    ICICLE_CHECK(icicle_set_device(dev));
     void* dev_mem = nullptr;
     EXPECT_ANY_THROW(ICICLE_CHECK(icicle_malloc(&dev_mem, -1)));
   }
@@ -137,7 +136,7 @@ TEST_F(DeviceApiTest, AvailableMemory)
   const bool is_cuda_registered = eIcicleError::SUCCESS == icicle_is_device_available(dev);
   if (!is_cuda_registered) { GTEST_SKIP(); } // most devices do not support this
 
-  icicle_set_device(dev);
+  ICICLE_CHECK(icicle_set_device(dev));
   size_t total, free;
   ASSERT_EQ(eIcicleError::SUCCESS, icicle_get_available_memory(total, free));
 
@@ -165,7 +164,7 @@ TEST_F(DeviceApiTest, memoryTracker)
   MemoryTracker<Device> tracker{};
   ICICLE_ASSERT(s_main_device != UNKOWN_DEVICE) << "memoryTracker test assumes more than one device";
   Device main_device = {s_main_device, 0};
-  icicle_set_device(main_device);
+  ICICLE_CHECK(icicle_set_device(main_device));
 
   std::vector<void*> allocated_addresses(NOF_ALLOCS, nullptr);
 
@@ -195,7 +194,7 @@ TEST_F(DeviceApiTest, memoryTracker)
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
 
   // test that we still identify correctly after switching device
-  icicle_set_device({"CPU", 0});
+  ICICLE_CHECK(icicle_set_device({"CPU", 0}));
   const void* addr = (void*)((size_t)*allocated_addresses.begin() + rand_uint_32b(0, RAND_MAX) % ALLOC_SIZE);
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(addr));
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
