@@ -733,13 +733,24 @@ template <typename A, typename P>
 static eIcicleError
 cpu_main(const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results, int nof_workers)
 {
-  const int c = (config.c <= 0) ? Msm<A, P>::get_optimal_c(msm_size, config.precompute_factor) : config.c;
-  auto msm = Msm<A, P>{config, c, nof_workers};
+  try {
+    const int c = (config.c <= 0) ? Msm<A, P>::get_optimal_c(msm_size, config.precompute_factor) : config.c;
+    // Constructor might throw (probably memory allocation)
+    auto msm = Msm<A, P>{config, c, nof_workers};
 
-  for (int i = 0; i < config.batch_size; i++) {
-    int batch_start_idx = msm_size * i;
-    int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
-    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
+    for (int i = 0; i < config.batch_size; i++) {
+      int batch_start_idx = msm_size * i;
+      int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
+
+      msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, i, &results[i]);
+    }
+    return eIcicleError::SUCCESS;
+  } catch (const std::bad_alloc& e) {
+    ICICLE_LOG_ERROR << "Memory allocation failed: " << e.what();
+    return eIcicleError::OUT_OF_MEMORY;
+  } catch (...) {
+    ICICLE_LOG_ERROR << "Unknown error occurred during MSM execution.";
+    return eIcicleError::UNKNOWN_ERROR;
   }
 
   return eIcicleError::SUCCESS;
