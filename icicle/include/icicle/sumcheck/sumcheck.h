@@ -34,7 +34,6 @@ namespace icicle {
   class Sumcheck
   {
   public:
-
     /**
      * @brief Constructor for the Sumcheck class.
      * @param backend Shared pointer to the backend responsible for Sumcheck operations.
@@ -44,7 +43,7 @@ namespace icicle {
     /**
      * @brief Calculate the sumcheck based on the inputs and retrieve the Sumcheck proof.
      * @param mle_polynomials a vector of MLE polynomials to process.
-     * F(X_1,X_2,X_3) = a_0 (1-X_1) (1-X_2) (1-X_3) + a_1 (1-X_1)(1-X_2) X_3 + a_2 (1-X_1) X_2 (1-X_3) + 
+     * F(X_1,X_2,X_3) = a_0 (1-X_1) (1-X_2) (1-X_3) + a_1 (1-X_1)(1-X_2) X_3 + a_2 (1-X_1) X_2 (1-X_3) +
      * a_3 (1-X_1) X_2 X_3 + a_4 X_1 (1-X_2) (1-X_3) + a_5 X_1 (1-X_2) X_3+ a_6 X_1 X_2 (1-X_3) + a_7 X_1 X_2 X_3
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
      * @param config Configuration for the Sumcheck operation.
