@@ -1,8 +1,8 @@
 #pragma once
-#ifndef COALABEAR_POSEIDON_H
-  #define COALABEAR_POSEIDON_H
+#ifndef KOALABEAR_POSEIDON_H
+  #define KOALABEAR_POSEIDON_H
 
-namespace poseidon_constants_coalabear {
+namespace poseidon_constants_koalabear {
   /**
    * This inner namespace contains optimized constants for running Poseidon.
    * These constants were generated using an algorithm defined at
@@ -522,5 +522,5 @@ namespace poseidon_constants_coalabear {
     0x9f, 0xe7, 0x79, 0x3c, 0xbb, 0xe8, 0x22, 0x62, 0x70, 0x7a, 0xd3, 0x52
   };
 
-} // namespace poseidon_constants_coalabear
+} // namespace poseidon_constants_koalabear
 #endif

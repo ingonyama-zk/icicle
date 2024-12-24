@@ -1,10 +1,10 @@
 #pragma once
-#ifndef COALABEAR_POSEIDON2_H
-#define COALABEAR_POSEIDON2_H
+#ifndef KOALABEAR_POSEIDON2_H
+#define KOALABEAR_POSEIDON2_H
 
 #include <string>
 
-namespace poseidon2_constants_coalabear {
+namespace poseidon2_constants_koalabear {
 
   /**
    * This inner namespace contains constants for running Poseidon2.
@@ -1147,5 +1147,5 @@ static const std::string partial_matrix_diagonal_24[] = {
 };
 
 
-}   // namespace poseidon2_constants_coalabear
+}   // namespace poseidon2_constants_koalabear
 #endif

@@ -24,7 +24,7 @@ arities = [3, 5, 9, 12]
 # prime_bit_len = 32
 # field_bytes = 4
 #=======
-field = "coalabear"
+field = "koalabear"
 p = 2**31 - 2**24 + 1
 prime_bit_len = 32
 field_bytes = 4

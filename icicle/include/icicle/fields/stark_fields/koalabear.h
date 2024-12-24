@@ -4,7 +4,7 @@
 #include "icicle/fields/field.h"
 #include "icicle/fields/params_gen.h"
 
-namespace coalabear {
+namespace koalabear {
   struct fp_config {
     static constexpr storage<1> modulus = {0x7f000001};
     PARAMS(modulus)
@@ -19,4 +19,4 @@ namespace coalabear {
    */
   typedef Field<fp_config> scalar_t;
 
-} // namespace coalabear
+} // namespace koalabear

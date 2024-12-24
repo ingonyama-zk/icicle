@@ -7,7 +7,7 @@ use icicle_runtime::stream::IcicleStream;
 
 pub(crate) const SCALAR_LIMBS: usize = 1;
 
-impl_scalar_field!("coalabear", coalabear, SCALAR_LIMBS, ScalarField, ScalarCfg);
+impl_scalar_field!("koalabear", koalabear, SCALAR_LIMBS, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 mod tests {

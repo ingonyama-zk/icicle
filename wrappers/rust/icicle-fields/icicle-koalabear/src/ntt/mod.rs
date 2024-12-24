@@ -4,7 +4,7 @@ use icicle_core::{impl_ntt, impl_ntt_without_domain};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_ntt!("coalabear", coalabear, ScalarField, ScalarCfg);
+impl_ntt!("koalabear", koalabear, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {

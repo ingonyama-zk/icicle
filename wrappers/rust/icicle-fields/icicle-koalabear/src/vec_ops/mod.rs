@@ -5,7 +5,7 @@ use icicle_core::vec_ops::{VecOps, VecOpsConfig};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_vec_ops_field!("coalabear", coalabear, ScalarField, ScalarCfg);
+impl_vec_ops_field!("koalabear", koalabear, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
