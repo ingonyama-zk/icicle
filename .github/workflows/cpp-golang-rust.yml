@@ -132,7 +132,9 @@ jobs:
         CURVE_DIR=icicle-${CURVE//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         cd ./$CURVE_DIR
-        cargo test --release --verbose
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
@@ -260,7 +262,9 @@ jobs:
         FIELD_DIR=icicle-${FIELD//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         cd ./$FIELD_DIR
-        cargo test --release --verbose
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
