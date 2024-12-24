@@ -14,6 +14,8 @@ func TestVecOpsDefaultConfig(t *testing.T) {
 		false,               // isBOnDevice
 		false,               // isResultOnDevice
 		false,               // IsAsync
+		1,                   // BatchSize
+		false,               // ColumnsBatch
 		actual.Ext,          // Ext
 	}
 

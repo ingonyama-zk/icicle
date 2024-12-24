@@ -16,7 +16,7 @@ BUILD_CURVES=( )
 BUILD_FIELDS=( )
 
 SUPPORTED_CURVES=("bn254" "bls12_377" "bls12_381" "bw6_761", "grumpkin")
-SUPPORTED_FIELDS=("babybear")
+SUPPORTED_FIELDS=("babybear", "koalabear")
 CUDA_BACKEND=OFF
 
 BUILD_DIR="${ICICLE_BUILD_DIR:-$(realpath "$PWD/../../icicle/build")}"
