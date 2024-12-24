@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y \
     && add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal main" \
     && apt-get update && apt-get install -y \
     clang \
-    lldb \
     lld \
+    lldb \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Verify installations

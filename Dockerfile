@@ -3,10 +3,10 @@ FROM nvidia/cuda:12.0.0-devel-ubuntu22.04
 
 # Update and install dependencies
 RUN apt-get update && apt-get install -y \
-    cmake \
-    protobuf-compiler \
-    curl \
     build-essential \
+cmake \
+curl \
+protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust
