@@ -899,12 +899,13 @@ static eIcicleError cpu_msm(
 
   // Determine thread group size
   // Heuristic: around 4-8 threads usually are the sweet spot, and also typically works better when group size divides
+  // nof_threads
   int threadgroup_size = config.ext && config.ext->has(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE)
                            ? config.ext->get<int>(CpuBackendConfig::CPU_MSM_THREADGROUP_SIZE)
                          : with_precompute        ? nof_threads
                          : (nof_threads % 5 == 0) ? 5
                          : (nof_threads % 4 == 0) ? 4
-                                                  : nof_threads;
+                                                  : nof_threads; // default case is 1 threadgroup with nof_threads
   ICICLE_ASSERT(nof_threads > 0 && threadgroup_size > 0 && threadgroup_size <= nof_threads)
     << "MSM cpu failed to infer correct number of worker thread assignment";
   const int nof_threadgroups = static_cast<int>(std::ceil(static_cast<float>(nof_threads) / threadgroup_size));
