@@ -4,6 +4,7 @@
 namespace CpuBackendConfig {
   // Backend-specific configuration flags as constexpr strings
   constexpr const char* CPU_NOF_THREADS = "n_threads";
+  constexpr const char* CPU_MSM_THREADGROUP_SIZE = "threadgroup-size";
 } // namespace CpuBackendConfig
 /********* CUDA Backend Configurations *********/
 
