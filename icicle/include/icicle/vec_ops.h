@@ -367,6 +367,9 @@ namespace icicle {
    * @param program a class that describes the functionality to run on each set of entries at the vectors.
    * @param size Size of each arrays. The program will be executed size times
    * @param config Configuration for the operation.
+   * @note Using the CUDA backend you can use config.ext to tell the function where each vector resides (device or host).
+   * If you do that be including the ext field of config you should have a key "is_<id>_on_device" for the #id vector in data_vec.
+   * The value for this key should be boolean and determine whether the vector is on the host (false) or on the device (true).
    * @return eIcicleError Error code indicating success or failure.
    */
 
