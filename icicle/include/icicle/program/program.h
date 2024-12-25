@@ -3,6 +3,7 @@
 #include <vector>
 #include <functional>
 #include "icicle/program/symbol.h"
+#include "icicle/utils/log.h"
 
 namespace icicle {
 
