@@ -523,8 +523,8 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError
-  execute_program(std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+  eIcicleError execute_program(
+    std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
   {
     return CONCAT_EXPAND(FIELD, execute_program)(data, program, size, config);
   }

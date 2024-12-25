@@ -54,7 +54,11 @@ namespace icicle {
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)>;
 
   using programExecutionImpl = std::function<eIcicleError(
-    const Device& device, std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)>;
+    const Device& device,
+    std::vector<scalar_t*>& data,
+    const Program<scalar_t>& program,
+    uint64_t size,
+    const VecOpsConfig& config)>;
 
   using scalarPolyEvalImpl = std::function<eIcicleError(
     const Device& device,
@@ -245,7 +249,7 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
-  
+
   void register_execute_program(const std::string& deviceType, programExecutionImpl);
 
 #define REGISTER_EXECUTE_PROGRAM_BACKEND(DEVICE_TYPE, FUNC)                                                            \

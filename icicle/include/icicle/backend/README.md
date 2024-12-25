@@ -29,7 +29,7 @@ The registration function (`register_execute_program` at the example above) shou
 ```cpp
   void register_execute_program(const std::string& deviceType, programExecutionImpl);
 ```
-It should have `void` as it return type and its name should be `register_<user-facing-function's-name>` (it can be infered that the user facing function of the example above is `execute_program`). Wrong function name here will cause a linking error at compilation time.
+It should have `void` as it return type and its name should be `register_<user-facing-function's-name>` (it can be inferred that the user facing function of the example above is `execute_program`). Wrong function name here will cause a linking error at compilation time.
 
 ### Define function signature
 Now the function signature should be defined (the `programExecutionImpl` at the example above). It should be the signature of the backend specific functions, and should be defined at the same file as the registration macro.

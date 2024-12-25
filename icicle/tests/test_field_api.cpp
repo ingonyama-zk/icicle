@@ -1077,19 +1077,21 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
   auto in_eq = std::make_unique<scalar_t[]>(total_size);
   scalar_t::rand_host_many(in_eq.get(), total_size);
 
-  auto run = [&](const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const char* msg) {
-  Device dev = {dev_type, 0};
-  icicle_set_device(dev);
-  auto config = default_vec_ops_config();
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program,
+               uint64_t size, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    auto config = default_vec_ops_config();
 
-  std::ostringstream oss;
-  oss << dev_type << " " << msg;
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
-  START_TIMER(executeProgram)
-  ICICLE_CHECK(execute_program(data, program, size, config)); 
-  END_TIMER(executeProgram, oss.str().c_str(), true);
+    START_TIMER(executeProgram)
+    ICICLE_CHECK(execute_program(data, program, size, config));
+    END_TIMER(executeProgram, oss.str().c_str(), true);
   };
-  
+
   // initialize data vector for main device
   auto out_main = std::make_unique<scalar_t[]>(total_size);
   std::vector<scalar_t*> data_main = std::vector<scalar_t*>(5);
@@ -1099,7 +1101,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
   data_main[3] = in_eq.get();
   data_main[4] = out_main.get();
 
-  // initialize data vector for referance device
+  // initialize data vector for reference device
   auto out_ref = std::make_unique<scalar_t[]>(total_size);
   std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(5);
   data_ref[0] = in_a.get();
@@ -1119,7 +1121,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
   // randomize input vectors
   const int total_size = 100000;
   const int num_of_params = 5;
-  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, num_of_params-1);
+  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, num_of_params - 1);
   auto in_a = std::make_unique<scalar_t[]>(total_size);
   scalar_t::rand_host_many(in_a.get(), total_size);
   auto in_b = std::make_unique<scalar_t[]>(total_size);
@@ -1129,18 +1131,20 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
   auto in_eq = std::make_unique<scalar_t[]>(total_size);
   scalar_t::rand_host_many(in_eq.get(), total_size);
 
-  auto run = [&](const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, VecOpsConfig config, const char* msg) {
-  Device dev = {dev_type, 0};
-  icicle_set_device(dev);
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program,
+               uint64_t size, VecOpsConfig config, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
 
-  std::ostringstream oss;
-  oss << dev_type << " " << msg;
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
-  START_TIMER(executeProgram)
-  ICICLE_CHECK(execute_program(data, program, size, config)); 
-  END_TIMER(executeProgram, oss.str().c_str(), true);
+    START_TIMER(executeProgram)
+    ICICLE_CHECK(execute_program(data, program, size, config));
+    END_TIMER(executeProgram, oss.str().c_str(), true);
   };
-  
+
   bool is_vec_on_device[num_of_params];
   std::uniform_int_distribution<int> dis(0, 1);
   for (int idx = 0; idx < num_of_params; ++idx)
@@ -1154,9 +1158,8 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
   data_main[2] = in_c.get();
   data_main[3] = in_eq.get();
   data_main[4] = out_main.get();
-  
 
-  // initialize data vector for referance device
+  // initialize data vector for reference device
   auto out_ref = std::make_unique<scalar_t[]>(total_size);
   std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(num_of_params);
   data_ref[0] = in_a.get();
@@ -1191,8 +1194,8 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
 
   run(IcicleTestBase::main_device(), data_main, prog, total_size, config, "execute_program");
 
-  if (is_vec_on_device[num_of_params-1]) {
-    icicle_copy_to_host(out_main.get(), data_main[num_of_params-1], total_size * sizeof(scalar_t));
+  if (is_vec_on_device[num_of_params - 1]) {
+    icicle_copy_to_host(out_main.get(), data_main[num_of_params - 1], total_size * sizeof(scalar_t));
   }
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
