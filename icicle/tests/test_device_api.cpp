@@ -29,12 +29,15 @@ TEST_F(DeviceApiTest, MemoryCopySync)
     icicle::Device dev = {device_type, 0};
     ICICLE_CHECK(icicle_set_device(dev));
 
-    void* dev_mem = nullptr;
-    ICICLE_CHECK(icicle_malloc(&dev_mem, sizeof(input)));
-    ICICLE_CHECK(icicle_copy_to_device(dev_mem, input, sizeof(input)));
-    ICICLE_CHECK(icicle_copy_to_host(output, dev_mem, sizeof(input)));
-    ICICLE_CHECK(icicle_free(dev_mem));
-
+    void* dev_memA = nullptr;
+    void* dev_memB = nullptr;
+    // test copy host->device->device->host
+    ICICLE_CHECK(icicle_malloc(&dev_memA, sizeof(input)));
+    ICICLE_CHECK(icicle_malloc(&dev_memB, sizeof(input)));
+    ICICLE_CHECK(icicle_copy_to_device(dev_memA, input, sizeof(input)));
+    ICICLE_CHECK(icicle_copy(dev_memB, dev_memA, sizeof(input)));
+    ICICLE_CHECK(icicle_copy_to_host(output, dev_memB, sizeof(input)));
+    ICICLE_CHECK(icicle_free(dev_memB));
     ASSERT_EQ(0, memcmp(input, output, sizeof(input)));
   }
 }
@@ -42,22 +45,22 @@ TEST_F(DeviceApiTest, MemoryCopySync)
 TEST_F(DeviceApiTest, MemoryCopySyncWithOffset)
 {
   int input[4] = {1, 2, 3, 4};
+  int expected[4] = {3, 4, 1, 2};
 
   for (const auto& device_type : s_registered_devices) {
-    int output[2] = {0, 0};
+    int output[4] = {0, 0, 0, 0};
 
     icicle::Device dev = {device_type, 0};
     ICICLE_CHECK(icicle_set_device(dev));
 
     int* dev_mem = nullptr;
-    ICICLE_CHECK(
-      icicle_malloc((void**)&dev_mem, sizeof(input))); // allocating larger memory to have offset on this buffer to copy
-                                                       // 2 values from offset (that is copy {2,3} only)
-    ICICLE_CHECK(icicle_copy_to_device(dev_mem + 1, input + 1, sizeof(output)));
-    ICICLE_CHECK(icicle_copy_to_host(output, dev_mem + 1, sizeof(output)));
+    ICICLE_CHECK(icicle_malloc((void**)&dev_mem, 4 * sizeof(int)));
+    ICICLE_CHECK(icicle_copy_to_device(dev_mem, input + 2, 2 * sizeof(int)));
+    ICICLE_CHECK(icicle_copy_to_device(dev_mem + 2, input, 2 * sizeof(int)));
+    ICICLE_CHECK(icicle_copy_to_host(output, dev_mem, 4 * sizeof(int)));
     ICICLE_CHECK(icicle_free(dev_mem));
 
-    ASSERT_EQ(0, memcmp(input + 1, output, sizeof(output)));
+    ASSERT_EQ(0, memcmp(expected, output, 4 * sizeof(int)));
   }
 }
 
@@ -101,7 +104,7 @@ TEST_F(DeviceApiTest, CopyDeviceInference)
   }
 }
 
-TEST_F(DeviceApiTest, Memest)
+TEST_F(DeviceApiTest, Memset)
 {
   char expected[2] = {1, 2};
   for (const auto& device_type : s_registered_devices) {
@@ -158,7 +161,7 @@ TEST_F(DeviceApiTest, memoryTracker)
 {
   // need two devices for this test
   if (s_registered_devices.size() == 1) { return; }
-  const int NOF_ALLOCS = 1000;
+  const int NOF_ALLOCS = 200; // Note that some backends have a bound (typically 256) on allocations
   const int ALLOC_SIZE = 1 << 20;
 
   MemoryTracker<Device> tracker{};
@@ -200,6 +203,23 @@ TEST_F(DeviceApiTest, memoryTracker)
   ASSERT_EQ(eIcicleError::INVALID_POINTER, icicle_is_active_device_memory(host_mem.get()));
   auto it = tracker.identify(addr);
   ASSERT_EQ(*it->first, main_device);
+
+  ICICLE_CHECK(icicle_set_device(main_device));
+  START_TIMER(remove);
+  for (auto& it : allocated_addresses) {
+    tracker.remove_allocation(it);
+  }
+  END_TIMER_AVERAGE(remove, "memory-tracker: remove average", true, NOF_ALLOCS);
+
+  START_TIMER(free);
+  for (auto& it : allocated_addresses) {
+    icicle_free(it);
+  }
+  END_TIMER_AVERAGE(free, "memory-tracker: free average", true, NOF_ALLOCS);
+
+  void* mem;
+  ICICLE_CHECK(icicle_malloc(&mem, ALLOC_SIZE));
+  ICICLE_CHECK(icicle_free(mem));
 }
 
 int main(int argc, char** argv)
