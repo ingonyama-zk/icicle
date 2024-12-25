@@ -813,7 +813,7 @@ TEST_F(FieldApiTestBase, polynomialDivision)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
-  for(int logn=3; logn<25; logn++){
+  for(int logn=3; logn<26; logn++){
   const bool inplace = 0;
   // const int logn = rand_uint_32b(3, 17);
   const uint64_t N = 1 << logn;
@@ -837,7 +837,7 @@ TYPED_TEST(FieldApiTest, ntt)
     coset_gen = scalar_t::one();
   }
 
-  ICICLE_LOG_DEBUG << "LOGN = " << logn;
+  ICICLE_LOG_DEBUG << "logn = " << logn;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
   ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
   ICICLE_LOG_DEBUG << "inplace = " << inplace;
@@ -885,7 +885,7 @@ TYPED_TEST(FieldApiTest, ntt)
         ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
       }
     }
-    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+    END_TIMER_AVERAGE(NTT_sync, oss.str().c_str(), measure, iters);
 
     if (inplace) {
       ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
@@ -900,7 +900,7 @@ TYPED_TEST(FieldApiTest, ntt)
   };
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }}
 #endif // NTT

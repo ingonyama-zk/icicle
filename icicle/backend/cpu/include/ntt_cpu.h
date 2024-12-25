@@ -127,10 +127,12 @@ namespace ntt_cpu {
               nof_blocks = 1 << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] + ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
               nof_subntts = 1;
             }
-            #pragma omp parallel for collapse(3) schedule(dynamic, 512)
+            nof_blocks = nof_blocks>>1;
+            #pragma omp parallel for collapse(3) schedule(dynamic)
             for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
-              for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx+=2) {
+              for (uint32_t hierarchy_0_block_idx_half = 0; hierarchy_0_block_idx_half < (nof_blocks); hierarchy_0_block_idx_half++) {
                 for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
+                  uint32_t hierarchy_0_block_idx = hierarchy_0_block_idx_half<<1;
                   NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
                   NttTask<S, E> task(ntt_task_coordinates, ntt_data);
                   task.execute();
