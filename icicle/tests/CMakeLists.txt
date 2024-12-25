@@ -41,6 +41,10 @@ if (FIELD)
         target_link_libraries(test_polynomial_api PRIVATE GTest::gtest_main icicle_field)
         gtest_discover_tests(test_polynomial_api)    
     endif()
+
+    if(SUMCHECK OR HASH)
+        target_link_libraries(test_field_api PRIVATE icicle_hash)
+    endif()
 endif()
 
 #curve API test

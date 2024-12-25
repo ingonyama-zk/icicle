@@ -20,7 +20,10 @@ pub struct SumcheckTranscriptConfig<'a, F> {
 pub trait SumcheckConstructor<F> {
     /// Creates a new Sumcheck prover instance.
     /// Optionally, consider returning `Box<dyn SumcheckOps<F>>`
-    fn new(transcript_config: &SumcheckTranscriptConfig<F>) -> Result<impl SumcheckOps<F>, eIcicleError>;
+    fn new(
+        claimed_sum: &F,
+        transcript_config: &SumcheckTranscriptConfig<F>,
+    ) -> Result<impl SumcheckOps<F>, eIcicleError>;
 }
 
 /// Trait for Sumcheck operations, including proving and verification.
@@ -34,13 +37,14 @@ pub struct Sumcheck;
 
 impl Sumcheck {
     fn new<'a, F: FieldImpl>(
+        claimed_sum: &'a F,
         transcript_config: &'a SumcheckTranscriptConfig<'a, F>,
     ) -> Result<impl SumcheckOps<F> + 'a, eIcicleError>
     where
         F: FieldImpl,
         F::Config: SumcheckConstructor<F>,
     {
-        <<F as FieldImpl>::Config as SumcheckConstructor<F>>::new(&transcript_config)
+        <<F as FieldImpl>::Config as SumcheckConstructor<F>>::new(&claimed_sum, &transcript_config)
     }
 }
 
@@ -156,7 +160,10 @@ macro_rules! impl_sumcheck {
 
         extern "C" {
             #[link_name = concat!($field_prefix, "_sumcheck_create")]
-            fn icicle_sumcheck_create(config: *const FFISumcheckTranscriptConfig<$field>) -> SumcheckHandle;
+            fn icicle_sumcheck_create(
+                claimed_sum: *const $field,
+                config: *const FFISumcheckTranscriptConfig<$field>,
+            ) -> SumcheckHandle;
 
             #[link_name = concat!($field_prefix, "_sumcheck_delete")]
             fn icicle_sumcheck_delete(handle: SumcheckHandle) -> eIcicleError;
@@ -164,9 +171,10 @@ macro_rules! impl_sumcheck {
 
         impl SumcheckConstructor<$field> for $field_cfg {
             fn new(
+                claimed_sum: &$field,
                 transcript_config: &SumcheckTranscriptConfig<$field>,
             ) -> Result<impl SumcheckOps<$field>, eIcicleError> {
-                let handle = unsafe { icicle_sumcheck_create(&transcript_config.into()) };
+                let handle = unsafe { icicle_sumcheck_create(claimed_sum, &transcript_config.into()) };
                 if handle.is_null() {
                     return Err(eIcicleError::UnknownError);
                 }
