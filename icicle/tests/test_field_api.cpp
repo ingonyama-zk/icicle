@@ -1069,16 +1069,20 @@ TEST_F(FieldApiTestBase, Sumcheck)
   auto sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
 
   // generate inputs
-  std::vector<std::shared_ptr<std::vector<scalar_t>>> mle_polynomials(nof_mle_poly);
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
   for (auto& mle_poly_ptr : mle_polynomials) {
-    mle_poly_ptr = std::make_shared<std::vector<scalar_t>>(mle_poly_size);
-    scalar_t::rand_host_many(mle_poly_ptr->data(), mle_poly_size);
+    mle_poly_ptr = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_poly_ptr, mle_poly_size);
   }
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumCheckConfig config;
   SumCheckProof<scalar_t> sumcheck_proof(nof_mle_poly, 2);
 
-  sumcheck.get_proof(mle_polynomials, combine_func, config, sumcheck_proof);
+  sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+   delete[] mle_poly_ptr;
+  }
 }
 
 int main(int argc, char** argv)

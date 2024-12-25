@@ -45,18 +45,20 @@ namespace icicle {
      * @param mle_polynomials a vector of MLE polynomials to process.
      * F(X_1,X_2,X_3) = a_0 (1-X_1) (1-X_2) (1-X_3) + a_1 (1-X_1)(1-X_2) X_3 + a_2 (1-X_1) X_2 (1-X_3) +
      * a_3 (1-X_1) X_2 X_3 + a_4 X_1 (1-X_2) (1-X_3) + a_5 X_1 (1-X_2) X_3+ a_6 X_1 X_2 (1-X_3) + a_7 X_1 X_2 X_3
+     * @param mle_polynomial_size the size of each MLE polynomial
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
      * @param config Configuration for the Sumcheck operation.
      * @param sumcheck_proof Reference to the SumCheckProof object where all round polynomials will be stored.
      * @return Error code of type eIcicleError.
      */
     eIcicleError get_proof(
-      const std::vector<std::shared_ptr<std::vector<F>>>& mle_polynomials,
+      const std::vector<F*>& mle_polynomials,
+      const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
       const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) const
     {
-      return m_backend->get_proof(mle_polynomials, combine_function, config, sumcheck_proof);
+      return m_backend->get_proof(mle_polynomials, mle_polynomial_size, combine_function, config, sumcheck_proof);
     }
 
     /**

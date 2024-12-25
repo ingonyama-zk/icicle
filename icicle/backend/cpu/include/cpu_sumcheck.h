@@ -18,7 +18,8 @@ namespace icicle {
     }
 
     eIcicleError get_proof(
-      const std::vector<std::shared_ptr<std::vector<F>>>& mle_polynomials,
+      const std::vector<F*>& mle_polynomials,
+      const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
       const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) const override

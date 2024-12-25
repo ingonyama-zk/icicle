@@ -42,13 +42,15 @@ namespace icicle {
     /**
      * @brief Calculate the sumcheck based on the inputs and retrieve the Sumcheck proof.
      * @param mle_polynomials a vector of MLE polynomials to process
+     * @param mle_polynomial_size the size of each MLE polynomial
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
      * @param config Configuration for the Sumcheck operation.
      * @param sumcheck_proof Reference to the SumCheckProof object where all round polynomials will be stored.
      * @return Error code of type eIcicleError.
      */
     virtual eIcicleError get_proof(
-      const std::vector<std::shared_ptr<std::vector<F>>>& mle_polynomials,
+      const std::vector<F*>& mle_polynomials,
+      const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
       const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) const = 0;
