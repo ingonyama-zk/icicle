@@ -1,6 +1,6 @@
 # How to Register a New Function
 
-For users to be able to use a backend function (whenever it's a CPU/GPU one), the function should be exposed to the user and be register to the matching backend. We do not let the user call the backend function directly, instead a wrapping function, with identical signature to all backend, is created as a user-facing function. Then, the backend specific functions are registered to their respective beckends in such a way that a dispatcher will know to call the appropriate function (acoorfing to the device used) whenever the user facing function is used.
+For users to be able to use a backend function (whenever it's a CPU/GPU one), the function should be exposed to the user and be registered to the matching backend. We do not let the user call the backend function directly, instead a wrapping function, with identical signature to all backend, is created as a user-facing function. Then, the backend specific functions are registered to their respective backends in such a way that a dispatcher will know to call the appropriate function (according to the device used) whenever the user facing function is used.
 Here is a step-by-step explanation of how to do that registration process right.
 
 ## The backend specific function
