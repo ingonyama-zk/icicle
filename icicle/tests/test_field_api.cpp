@@ -1081,7 +1081,7 @@ TEST_F(FieldApiTestBase, Sumcheck)
   sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
 
   for (auto& mle_poly_ptr : mle_polynomials) {
-   delete[] mle_poly_ptr;
+    delete[] mle_poly_ptr;
   }
 }
 
