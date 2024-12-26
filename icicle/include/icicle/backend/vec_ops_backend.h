@@ -252,6 +252,14 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
+  using scalarExtVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)>;
+
   using extFieldVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device, extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
@@ -284,6 +292,15 @@ namespace icicle {
         register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                       \
         return true;                                                                                                   \
       }();                                                                                                             \
+    }
+
+  void register_vector_mul_scalar_ext(const std::string& deviceType, scalarExtVectorOpImpl impl);
+  #define REGISTER_VECTOR_MUL_SCALAR_EXT_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+    namespace {                                                                                                          \
+      static bool UNIQUE(_reg_vec_mul) = []() -> bool {                                                                  \
+        register_vector_mul_scalar_ext(DEVICE_TYPE, FUNC);                                                                          \
+        return true;                                                                                                     \
+      }();                                                                                                               \
     }
 
   void register_extension_vector_sub(const std::string& deviceType, extFieldVectorOpImpl impl);
