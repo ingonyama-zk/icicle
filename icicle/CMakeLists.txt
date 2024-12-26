@@ -10,14 +10,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 find_program(CLANG_COMPILER clang++)
 find_program(CLANG_C_COMPILER clang)
 
-if(CLANG_COMPILER AND CLANG_C_COMPILER)
-    set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "Clang++ compiler" FORCE)
-    set(CMAKE_C_COMPILER ${CLANG_C_COMPILER} CACHE STRING "Clang compiler" FORCE)
-    message(STATUS "Using Clang++ as the C++ compiler: ${CLANG_COMPILER}")
-    message(STATUS "Using Clang as the C compiler: ${CLANG_C_COMPILER}")    
-else()
-    message(WARNING "ICICLE CPU works best with clang++ and clang. Defaulting to ${CLANG_COMPILER}")        
-endif()
+# if(CLANG_COMPILER AND CLANG_C_COMPILER)
+#     set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "Clang++ compiler" FORCE)
+#     set(CMAKE_C_COMPILER ${CLANG_C_COMPILER} CACHE STRING "Clang compiler" FORCE)
+#     message(STATUS "Using Clang++ as the C++ compiler: ${CLANG_COMPILER}")
+#     message(STATUS "Using Clang as the C compiler: ${CLANG_C_COMPILER}")    
+# else()
+#     message(WARNING "ICICLE CPU works best with clang++ and clang. Defaulting to ${CLANG_COMPILER}")        
+# endif()
 
 
 
