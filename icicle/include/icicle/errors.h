@@ -5,6 +5,11 @@
 #include <sstream>
 #include "icicle/utils/log.h"
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#define LOG_TAG "Icicle"
+#endif
+
 namespace icicle {
 
   /**
@@ -71,6 +76,19 @@ namespace icicle {
     }
   }
 
+#ifdef __ANDROID__
+#define ICICLE_CHECK(api_call)                                                                                         \
+  do {                                                                                                                 \
+    using namespace icicle;                                                                                            \
+    eIcicleError rv = (api_call);                                                                                      \
+    if (rv != eIcicleError::SUCCESS) {                                                                                 \
+      std::string error_message =                                                                                      \
+        "Icicle API fails with code " + std::string(get_error_string(rv)) + " in " + __FILE__ + ":" +                  \
+        std::to_string(__LINE__);                                                                                      \
+      __android_log_print(ANDROID_LOG_ERROR, "Icicle", "%s", error_message.c_str());                                   \
+    }                                                                                                                  \
+  } while (0)
+#else
 #define ICICLE_CHECK(api_call)                                                                                         \
   do {                                                                                                                 \
     using namespace icicle;                                                                                            \
@@ -81,6 +99,7 @@ namespace icicle {
         std::to_string(__LINE__));                                                                                     \
     }                                                                                                                  \
   } while (0)
+#endif
 
   void inline throw_icicle_error(
     eIcicleError err, const char* const reason, const char* const func, const char* const file, const int line)
