@@ -171,6 +171,7 @@ void example_reduce(
 
 int main(int argc, char** argv)
 {
+  Log::set_min_log_level(Log::eLogLevel::Verbose);
   try_load_and_set_backend_device(argc, argv);
   
   int N_LOG = 24;
