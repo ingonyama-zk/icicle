@@ -171,8 +171,8 @@ void example_reduce(
 
 int main(int argc, char** argv)
 {
-  // try_load_and_set_backend_device(argc, argv);
-
+  try_load_and_set_backend_device(argc, argv);
+  
   int N_LOG = 24;
   int N = 1 << N_LOG;
   int offset = 1;
