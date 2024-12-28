@@ -252,7 +252,7 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  using scalarExtVectorOpImpl = std::function<eIcicleError(
+  using scalarExtFieldVectorOpImpl = std::function<eIcicleError(
     const Device& device,
     const extension_t* scalar_a,
     const scalar_t* vec_b,
@@ -265,14 +265,6 @@ namespace icicle {
 
   using extFieldVectorReduceOpImpl = std::function<eIcicleError(
     const Device& device, const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)>;
-
-  using extFieldVectorOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const extension_t* scalar_a,
-    const extension_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig& config,
-    extension_t* output)>;
 
   void register_extension_vector_add(const std::string& deviceType, extFieldVectorOpImpl impl);
 
@@ -294,15 +286,6 @@ namespace icicle {
       }();                                                                                                             \
     }
 
-  void register_vector_mul_scalar_ext(const std::string& deviceType, scalarExtVectorOpImpl impl);
-  #define REGISTER_VECTOR_MUL_SCALAR_EXT_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
-    namespace {                                                                                                          \
-      static bool UNIQUE(_reg_vec_mul) = []() -> bool {                                                                  \
-        register_vector_mul_scalar_ext(DEVICE_TYPE, FUNC);                                                                          \
-        return true;                                                                                                     \
-      }();                                                                                                               \
-    }
-
   void register_extension_vector_sub(const std::string& deviceType, extFieldVectorOpImpl impl);
   #define REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
     namespace {                                                                                                        \
@@ -318,6 +301,16 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
         register_extension_vector_mul(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+  
+  void register_extension_vector_scalar_mul(const std::string& deviceType, scalarExtFieldVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_MUL_EXT_FIELD_SCALAR_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_scalar_mul(DEVICE_TYPE, FUNC);                                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
