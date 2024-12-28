@@ -40,7 +40,13 @@ namespace vec_ops {
     return add<c_extension_t>(vec_a, vec_b, n, config, vec_a);
   }
 
-    extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_stwo_convert_cuda)(
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_fold_cuda)(
+    scalar_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config, c_extension_t* result)
+  {
+    return fold<c_extension_t, scalar_t>(vec_a, vec_b, n, config, result);
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_stwo_convert_cuda)(
     uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, c_extension_t* result)
   {
     return  stwo_convert<c_extension_t>(vec_a, vec_b, vec_c, vec_d, n, result, true);

@@ -100,6 +100,11 @@ extern "C" cudaError_t m31_q_extension_transpose_matrix_cuda(
 extern "C" cudaError_t m31_q_extension_bit_reverse_cuda(
   const m31::extension_t* input, uint64_t n, vec_ops::BitReverseConfig& config, m31::extension_t* output);
 
+extern "C" cudaError_t
+  m31_c_extension_fold_cuda(scalar_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config, c_extension_t* result);
+
+extern "C" cudaError_t
+  m31_q_extension_fold_cuda(scalar_t* vec_a, q_extension_t* vec_b, int n, VecOpsConfig& config, q_extension_t* result);
 //////////////////
 extern "C" void m31_c_extension_generate_scalars(m31::c_extension_t* scalars, int size);
 

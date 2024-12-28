@@ -15,6 +15,7 @@ pub mod tests;
 pub mod traits;
 pub mod tree;
 pub mod vec_ops;
+pub use rayon;
 
 pub trait SNARKCurve: curve::Curve + msm::MSM<Self>
 where

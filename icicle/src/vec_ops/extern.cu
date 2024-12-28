@@ -30,6 +30,12 @@ namespace vec_ops {
     return add<scalar_t>(vec_a, vec_b, n, config, result);
   }
 
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_cuda)(
+    scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+  {
+    return fold<scalar_t, scalar_t>(vec_a, vec_b, n, config, result);
+  }
+
   /**
    * Accumulate (as vec_a[i] += vec_b[i]) function with the template parameter
    * `E` being the [field](@ref scalar_t) (either scalar field of the curve given by `-DCURVE`
