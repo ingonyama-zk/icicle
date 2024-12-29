@@ -1054,6 +1054,29 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
 }
 
+#include <omp.h>
+
+TEST_F(FieldApiTestBase, openMP)
+{
+  // Initialize an array with values 1 to 1000
+  const int size = 1000;
+  std::vector<int> numbers(size);
+  for (int i = 0; i < size; ++i) {
+    numbers[i] = i + 1;
+  }
+
+  int total_sum = 0;
+
+// Parallelize the summation using OpenMP
+#pragma omp parallel for reduction(+ : total_sum)
+  for (int i = 0; i < size; ++i) {
+    total_sum += numbers[i];
+  }
+
+  // Print the result
+  std::cout << "The sum of numbers from 1 to " << size << " is: " << total_sum << std::endl;
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
