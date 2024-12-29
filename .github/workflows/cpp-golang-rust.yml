@@ -1,4 +1,4 @@
-name: C++/CUDA/Go/RUST & Examples
+name: C++/CUDA/Go/RUST & C++ Examples
 
 on:
   pull_request:
