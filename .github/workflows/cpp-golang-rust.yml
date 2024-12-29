@@ -132,8 +132,10 @@ jobs:
         CURVE_DIR=icicle-${CURVE//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         cd ./$CURVE_DIR
-        cargo test --release --verbose
-    - name: Run C++ curve Tests
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
+    - name: Run C++ Curve Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
@@ -260,7 +262,9 @@ jobs:
         FIELD_DIR=icicle-${FIELD//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         cd ./$FIELD_DIR
-        cargo test --release --verbose
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
@@ -383,7 +387,9 @@ jobs:
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
-        cargo test --release --verbose
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
     - name: Test GoLang Hashes
       working-directory: ./wrappers/golang/hash
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
