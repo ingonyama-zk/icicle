@@ -1116,7 +1116,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
-TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
+TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
 {
   // randomize input vectors
   const int total_size = 100000;
@@ -1145,11 +1145,6 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
     END_TIMER(executeProgram, oss.str().c_str(), true);
   };
 
-  bool is_vec_on_device[num_of_params];
-  std::uniform_int_distribution<int> dis(0, 1);
-  for (int idx = 0; idx < num_of_params; ++idx)
-    is_vec_on_device[idx] = dis(rand_generator);
-
   // initialize data vector for main device
   auto out_main = std::make_unique<scalar_t[]>(total_size);
   std::vector<scalar_t*> data_main = std::vector<scalar_t*>(num_of_params);
@@ -1169,34 +1164,26 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDifferentDevices)
   data_ref[4] = out_ref.get();
 
   auto config = default_vec_ops_config();
+  config.is_a_on_device = 1;
 
   // run on both devices and compare
   run(IcicleTestBase::reference_device(), data_ref, prog, total_size, config, "execute_program");
 
   icicle_set_device(IcicleTestBase::main_device());
 
-  for (int vec_ind = 0; vec_ind < num_of_params; ++vec_ind) {
-    if (is_vec_on_device[vec_ind]) {
+  if (config.is_a_on_device) {
+    for (int idx = 0; idx < num_of_params; ++idx) {
       scalar_t* tmp = nullptr;
-      icicle_malloc_async((void**)&tmp, total_size * sizeof(scalar_t), config.stream);
-      icicle_copy_to_device_async(tmp, data_main[vec_ind], total_size * sizeof(scalar_t), config.stream);
-      data_main[vec_ind] = tmp;
+      icicle_malloc((void**)&tmp, total_size * sizeof(scalar_t));
+      icicle_copy_to_device(tmp, data_main[idx], total_size * sizeof(scalar_t));
+      data_main[idx] = tmp;
     }
   }
 
-  ConfigExtension config_ext = ConfigExtension();
-  config_ext.set("is_0_on_device", is_vec_on_device[0]);
-  config_ext.set("is_1_on_device", is_vec_on_device[1]);
-  config_ext.set("is_2_on_device", is_vec_on_device[2]);
-  config_ext.set("is_3_on_device", is_vec_on_device[3]);
-  config_ext.set("is_4_on_device", is_vec_on_device[4]);
-  config.ext = &config_ext;
-
   run(IcicleTestBase::main_device(), data_main, prog, total_size, config, "execute_program");
 
-  if (is_vec_on_device[num_of_params - 1]) {
+  if (config.is_a_on_device)
     icicle_copy_to_host(out_main.get(), data_main[num_of_params - 1], total_size * sizeof(scalar_t));
-  }
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
