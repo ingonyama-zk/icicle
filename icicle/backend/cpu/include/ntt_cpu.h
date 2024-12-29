@@ -40,6 +40,8 @@ namespace ntt_cpu {
 
   private:
     const E* input;
+    E* output;
+    std::unique_ptr<E[]> temp_elements;
     NttData<S, E> ntt_data;
 
     bool compute_if_is_parallel(uint32_t logn, const NTTConfig<S>& config);
@@ -60,16 +62,20 @@ namespace ntt_cpu {
    */
   template <typename S, typename E>
   NttCpu<S, E>::NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
-      : input(input), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config))
+      : input(input), output(output), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config))
   {
+      if (logn > HIERARCHY_1) {
+        // Allocate temporary storage to handle reordering
+        temp_elements = std::make_unique<E[]>(ntt_data.size * config.batch_size);
+      }
   }
 
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::run()
   {
     copy_and_reorder_if_needed(input, ntt_data.elements);
+    if (ntt_data.direction == NTTDir::kForward && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
     if (!ntt_data.is_parallel) {
-      if (ntt_data.direction == NTTDir::kForward && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
       NttTaskCoordinates ntt_task_coordinates(0, 0, 0, 0, 0, false);
       NttTask<S, E> task(ntt_task_coordinates, ntt_data);
       task.execute();
@@ -190,7 +196,11 @@ namespace ntt_cpu {
     E* temp_output = output;
     std::unique_ptr<E[]> temp_storage;
     if (input == output) {
-      // Allocate temporary storage to handle in-place reordering
+      if (!(logn > HIERARCHY_1 || bit_rev)) {
+        // no reordering needed, and input and output are the same
+        return;
+      }
+      // Allocate temporary storage to handle in-place reordering, can't be done inplace when input and output are the same
       temp_storage = std::make_unique<E[]>(total_memory_size);
       temp_output = temp_storage.get();
     }
@@ -254,7 +264,8 @@ namespace ntt_cpu {
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
       E* current_elements =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
-
+      
+      #pragma omp parallel for
       for (uint64_t i = 1; i < ntt_data.size; ++i) {
         uint64_t idx = i;
 
@@ -292,7 +303,6 @@ namespace ntt_cpu {
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     const uint64_t temp_elements_size = ntt_data.size * ntt_data.config.batch_size;
 
-    auto temp_elements = std::make_unique<E[]>(temp_elements_size);
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
       E* cur_layer_output =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
@@ -306,7 +316,13 @@ namespace ntt_cpu {
         }
       }
     }
-    std::copy(temp_elements.get(), temp_elements.get() + temp_elements_size, ntt_data.elements);
+    // printf("[hierarchy_1_reorder] output = %p\n", (void*)output);
+    // printf("[hierarchy_1_reorder] ntt_data.elements = %p\n", (void*)ntt_data.elements);
+    // printf("[hierarchy_1_reorder] temp_elements.get = %p\n", (void*)temp_elements.get());
+
+    ntt_data.elements = temp_elements.get();
+    // printf("hierarchy_1_reorder OK\n");
+    // printf("[hierarchy_1_reorder] ntt_data.elements = %p\n", (void*)ntt_data.elements);
   }
 
   /**
@@ -320,6 +336,11 @@ namespace ntt_cpu {
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::reorder_output()
   {
+    // printf("reorder_output.....\n");
+    // printf("[hierarchy_1_reorder] output = %p\n", (void*)output);
+    // printf("[hierarchy_1_reorder] ntt_data.elements = %p\n", (void*)ntt_data.elements);
+    // printf("[hierarchy_1_reorder] temp_elements.get = %p\n", (void*)temp_elements.get());
+
     uint32_t columns_batch_reps = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     uint32_t rows_batch_reps = ntt_data.config.columns_batch ? 1 : ntt_data.config.batch_size;
     uint32_t s0 = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
@@ -328,9 +349,6 @@ namespace ntt_cpu {
     for (uint32_t row_batch = 0; row_batch < rows_batch_reps;
          ++row_batch) { // if columns_batch=false, then elements pointer is shifted by batch*size
       E* elements = ntt_data.elements + row_batch * ntt_data.size;
-      uint64_t temp_output_size =
-        ntt_data.config.columns_batch ? ntt_data.size * ntt_data.config.batch_size : ntt_data.size;
-      auto temp_output = std::make_unique<E[]>(temp_output_size);
       uint64_t new_idx = 0;
       uint32_t subntt_idx;
       uint32_t element;
@@ -339,7 +357,7 @@ namespace ntt_cpu {
           ntt_data.config.columns_batch
             ? elements + col_batch
             : elements; // if columns_batch=true, then elements pointer is shifted by 1 for each batch
-        E* current_temp_output = ntt_data.config.columns_batch ? temp_output.get() + col_batch : temp_output.get();
+        E* current_temp_output = ntt_data.config.columns_batch ? output + col_batch : output;
         for (uint64_t i = 0; i < ntt_data.size; i++) {
           subntt_idx = i >> s1;
           element = i & ((1 << s1) - 1);
@@ -347,11 +365,9 @@ namespace ntt_cpu {
           current_temp_output[stride * new_idx] = current_elements[stride * i];
         }
       }
-      std::copy(
-        temp_output.get(), temp_output.get() + temp_output_size,
-        elements); // columns_batch=false: for each row in the batch, copy the reordered elements back to the elements
-                   // array
     }
+    ntt_data.elements = output;
+    // printf("reorder_output OK\n");
     return eIcicleError::SUCCESS;
   }
 

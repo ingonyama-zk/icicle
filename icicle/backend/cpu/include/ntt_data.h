@@ -75,7 +75,7 @@ namespace ntt_cpu {
     const uint32_t logn;                         // log of the original NTT size.
     const uint32_t size;                         // Size of the original NTT problem.
     const NttSubHierarchies ntt_sub_hierarchies; // Log sizes of sub-NTTs based on the original NTT log size.
-    E* const elements;                           // Pointer to the output elements array.
+    E* elements;                                 // Pointer to the output elements array.
     const NTTConfig<S>& config;                  // Configuration settings for the NTT computation.
     const NTTDir direction;                      // Direction of the NTT computation (forward or inverse).
     const bool is_parallel;                      // Flag indicating if the NTT computation is parallel.

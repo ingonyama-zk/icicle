@@ -33,7 +33,6 @@ namespace ntt_cpu {
     NttTaskCoordinates ntt_task_coordinates;
     NttData<S, E>* ntt_data = nullptr;
     eIcicleError reorder_and_refactor_if_needed();
-    void apply_coset_multiplication(E* current_elements, const std::vector<uint32_t>& index_in_mem, const S* twiddles);
     eIcicleError hierarchy_0_cpu_ntt();
     void ntt8win();
     void ntt16win();
@@ -155,58 +154,6 @@ namespace ntt_cpu {
     return eIcicleError::SUCCESS;
   }
 
-  /**
-   * @brief Applies coset multiplication to the current elements of the NTT computation.
-   *
-   * This function multiplies the current elements with the appropriate coset factors based on
-   * their indices. It handles both predefined and arbitrary coset multiplications depending
-   * on the availability of coset stride information.
-   *
-   * @param current_elements Pointer to the array of current elements being processed.
-   * @param index_in_mem Vector containing the memory indices of the elements to be multiplied.
-   * @param twiddles Pointer to the array of twiddle factors used for multiplication.
-   *
-   * @return void
-   */
-  template <typename S, typename E>
-  void NttTask<S, E>::apply_coset_multiplication(
-    E* current_elements, const std::vector<uint32_t>& index_in_mem, const S* twiddles)
-  {
-    uint32_t current_subntt_size =
-      1 << ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates.hierarchy_1_layer_idx]
-                                                                    [ntt_task_coordinates.hierarchy_0_layer_idx];
-    uint32_t subntt_idx;
-    uint32_t s0 =
-      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates.hierarchy_1_layer_idx][0];
-    uint32_t s1 =
-      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates.hierarchy_1_layer_idx][1];
-    uint32_t s2 =
-      ntt_data->ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[ntt_task_coordinates.hierarchy_1_layer_idx][2];
-    uint32_t p0, p1, p2;
-    for (uint32_t i = 0; i < current_subntt_size; i++) {
-      uint64_t new_idx = i;
-      uint64_t idx = idx_in_mem(ntt_task_coordinates, i); // don't need to multiply by stride here
-      // Adjust the index if reorder logic was applied on the input
-      if (ntt_data->logn > HIERARCHY_1) {
-        uint32_t cur_ntt_log_size = ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
-        uint32_t next_ntt_log_size = ntt_data->ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
-        uint32_t subntt_idx = index_in_mem[i] >> cur_ntt_log_size;
-        uint32_t element = index_in_mem[i] & ((1 << cur_ntt_log_size) - 1);
-        idx = subntt_idx + (element << next_ntt_log_size);
-      }
-      // Apply coset multiplication based on the available coset information
-      if (ntt_data->arbitrary_coset) {
-        current_elements[index_in_mem[new_idx]] =
-          current_elements[index_in_mem[new_idx]] * ntt_data->arbitrary_coset[idx];
-      } else {
-        uint32_t twiddle_idx = ntt_data->coset_stride * idx;
-        twiddle_idx = ntt_data->direction == NTTDir::kForward
-                        ? twiddle_idx
-                        : CpuNttDomain<S>::s_ntt_domain.get_max_size() - twiddle_idx;
-        current_elements[index_in_mem[new_idx]] = current_elements[index_in_mem[new_idx]] * twiddles[twiddle_idx];
-      }
-    }
-  }
 
   /**
    * @brief Executes the NTT on a sub-NTT at the hierarchy_0 level.
@@ -269,7 +216,6 @@ namespace ntt_cpu {
     E* subntt_elements;
     E T;
     bool last_layer = true;
-    bool need_to_apply_coset_multiplication = false;
     std::vector<uint32_t> index_in_mem(8);
     uint32_t offset = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     const S* twiddles = ntt_data->direction == NTTDir::kForward
@@ -290,8 +236,6 @@ namespace ntt_cpu {
           0));
       const bool first_layer =
         ntt_task_coordinates.hierarchy_1_layer_idx == 0 && ntt_task_coordinates.hierarchy_0_layer_idx == 0;
-      need_to_apply_coset_multiplication =
-        first_layer && ntt_data->config.coset_gen != S::one() && ntt_data->direction == NTTDir::kForward;
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates.hierarchy_1_subntt_idx
@@ -308,10 +252,6 @@ namespace ntt_cpu {
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
       E* current_elements =
         ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
-
-      if (need_to_apply_coset_multiplication) {
-        apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
-      }
 
       T = current_elements[index_in_mem[3]] - current_elements[index_in_mem[7]];
       current_elements[index_in_mem[7]] = current_elements[index_in_mem[3]] + current_elements[index_in_mem[7]];
@@ -375,7 +315,6 @@ namespace ntt_cpu {
     E* subntt_elements;
     E T;
     bool last_layer = true;
-    bool need_to_apply_coset_multiplication = false;
     std::vector<uint32_t> index_in_mem(16);
     uint32_t offset = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     const S* twiddles = ntt_data->direction == NTTDir::kForward
@@ -396,8 +335,6 @@ namespace ntt_cpu {
           0));
       const bool first_layer =
         ntt_task_coordinates.hierarchy_1_layer_idx == 0 && ntt_task_coordinates.hierarchy_0_layer_idx == 0;
-      need_to_apply_coset_multiplication =
-        first_layer && ntt_data->config.coset_gen != S::one() && ntt_data->direction == NTTDir::kForward;
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates.hierarchy_1_subntt_idx
@@ -414,10 +351,6 @@ namespace ntt_cpu {
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
       E* current_elements =
         ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
-
-      if (need_to_apply_coset_multiplication) {
-        apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
-      }
 
       T = current_elements[index_in_mem[0]] + current_elements[index_in_mem[8]];
       current_elements[index_in_mem[0]] = current_elements[index_in_mem[0]] - current_elements[index_in_mem[8]];
@@ -568,7 +501,6 @@ namespace ntt_cpu {
     std::vector<E> temp_0(46);
     std::vector<E> temp_1(46);
     bool last_layer = true;
-    bool need_to_apply_coset_multiplication = false;
     std::vector<uint32_t> index_in_mem(32);
     uint32_t offset = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     const S* twiddles = ntt_data->direction == NTTDir::kForward
@@ -589,8 +521,6 @@ namespace ntt_cpu {
           0));
       const bool first_layer =
         ntt_task_coordinates.hierarchy_1_layer_idx == 0 && ntt_task_coordinates.hierarchy_0_layer_idx == 0;
-      need_to_apply_coset_multiplication =
-        first_layer && ntt_data->config.coset_gen != S::one() && ntt_data->direction == NTTDir::kForward;
       subntt_elements =
         ntt_data->elements +
         offset * (ntt_task_coordinates.hierarchy_1_subntt_idx
@@ -607,10 +537,6 @@ namespace ntt_cpu {
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
       E* current_elements =
         ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
-
-      if (need_to_apply_coset_multiplication) {
-        apply_coset_multiplication(current_elements, index_in_mem, CpuNttDomain<S>::s_ntt_domain.get_twiddles());
-      }
 
       /*  Stage s00  */
       temp_0[0] = current_elements[index_in_mem[0]];
@@ -1245,7 +1171,6 @@ namespace ntt_cpu {
     E* subntt_elements;
     E T;
     bool last_layer = true;
-    bool need_to_apply_coset_multiplication = false;
     uint32_t offset = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
     uint32_t stride = ntt_data->config.columns_batch ? ntt_data->config.batch_size : 1;
@@ -1262,8 +1187,6 @@ namespace ntt_cpu {
           0));
       const bool first_layer =
         ntt_task_coordinates.hierarchy_1_layer_idx == 0 && ntt_task_coordinates.hierarchy_0_layer_idx == 0;
-      need_to_apply_coset_multiplication =
-        first_layer && ntt_data->config.coset_gen != S::one() && ntt_data->direction == NTTDir::kForward;
 
       subntt_elements =
         ntt_data->elements +
@@ -1288,7 +1211,6 @@ namespace ntt_cpu {
     for (uint32_t batch = 0; batch < ntt_data->config.batch_size; ++batch) {
       E* current_elements =
         ntt_data->config.columns_batch ? subntt_elements + batch : subntt_elements + batch * (ntt_data->size);
-      if (need_to_apply_coset_multiplication) { apply_coset_multiplication(current_elements, index_in_mem, twiddles); }
 
       for (uint32_t len = 2; len <= subntt_size; len <<= 1) {
         uint32_t half_len = len / 2;

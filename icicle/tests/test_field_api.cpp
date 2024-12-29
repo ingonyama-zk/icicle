@@ -813,23 +813,41 @@ TEST_F(FieldApiTestBase, polynomialDivision)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
-  for(int logn=3; logn<26; logn++){
-  const bool inplace = 0;
+  for (int log_coset_stride=0; log_coset_stride<3; log_coset_stride++){
+  ICICLE_LOG_INFO << "log_coset_stride = " << log_coset_stride;
+  for (int _dir=0; _dir<2; _dir++){
+  ICICLE_LOG_INFO << "_dir = " << _dir;
+  for (int columns_batch=1; columns_batch<2; columns_batch++){
+  ICICLE_LOG_INFO << "columns_batch = " << columns_batch;
+  for (int _ordering=0; _ordering<4; _ordering++){
+  ICICLE_LOG_INFO << "_ordering = " << _ordering;
+  for (int inplace=0; inplace<2; inplace++){
+  ICICLE_LOG_INFO << "inplace = " << inplace;
+  for(int log_batch_size=0; log_batch_size<10; log_batch_size++){
+  ICICLE_LOG_INFO << "log_batch_size = " << log_batch_size;
+  int max_logn = 27 - log_batch_size;
+  for(int logn=3; logn<max_logn; logn++){
+  // const bool inplace = false;
   // const int logn = rand_uint_32b(3, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn;
-  const int log_batch_size = 0;
+  // const int log_batch_size = 0;
   const int batch_size = 1 << log_batch_size;
-  const int _ordering = 0;
+  // const int _ordering = 0;
   const Ordering ordering = static_cast<Ordering>(_ordering);
-  bool columns_batch = false;
+  // bool columns_batch = false;
   // if (logn == 7 || logn < 4) {
   //   columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
   // } else {
   //   columns_batch = rand_uint_32b(0, 1);
   // }
-  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
-  const int log_coset_stride = 0;
+  if (columns_batch) {
+    if (logn == 7 || logn < 4) {
+      continue;
+    }
+  }
+  const NTTDir dir = static_cast<NTTDir>(_dir); // 0: forward, 1: inverse
+  // const int log_coset_stride = 0;
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
@@ -898,11 +916,11 @@ TYPED_TEST(FieldApiTest, ntt)
     ICICLE_CHECK(icicle_destroy_stream(stream));
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
-  // run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  // run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/);
-  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
-}}
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+}}}}}}}}
 #endif // NTT
 
 // define program
