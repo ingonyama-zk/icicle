@@ -14,16 +14,14 @@ using namespace icicle;
  * hierarchy, and memory management for efficient computation.
  *
  * The NTT problem is given at a specific size and is divided into subproblems to enable
- * parallel solving of independent tasks, ensuring that the number of problems solved
- * simultaneously does not exceed cache size. The original problem is divided into hierarchies
+ * parallel solving of independent tasks. The original problem is divided into hierarchies
  * of subproblems. Beyond a certain size, the problem is divided into two layers of sub-NTTs in
  * hierarchy 1. Within hierarchy 1, the problem is further divided into 1-3 layers of sub-NTTs
  * belonging to hierarchy 0. The division into hierarchies and the sizes of the sub-NTTs are
  * determined by the original problem size.
  *
  * The sub-NTTs within hierarchy 0 are the units of work that are assigned to individual threads.
- * The overall computation is executed in a multi-threaded fashion, with the degree of parallelism
- * determined by the number of available hardware cores.
+ * The overall computation is executed in a multi-threaded fashion.
  *
  * @param device The device on which the NTT is being performed.
  * @param input Pointer to the input data.

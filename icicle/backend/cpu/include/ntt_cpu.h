@@ -48,8 +48,6 @@ namespace ntt_cpu {
     void coset_mul();
     void reorder_by_bit_reverse();
     void copy_and_reorder_if_needed(const E* input, E* output);
-
-    // Parallel-specific methods
     void hierarchy_1_reorder();
     eIcicleError reorder_output();
 
@@ -102,8 +100,7 @@ namespace ntt_cpu {
             task.execute();
           }
         }
-        if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data
-                                                                                                    // is in the correct order for the next hierarchy 1 layer
+        if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
           NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, 0, 0, true);
           NttTask<S, E> task(ntt_task_coordinates, ntt_data);
           task.execute();
@@ -143,14 +140,12 @@ namespace ntt_cpu {
                   NttTask<S, E> task(ntt_task_coordinates, ntt_data);
                   task.execute();
                   ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
-                  // task.set_coordinates(ntt_task_coordinates);
                   NttTask<S, E> task_with_elements_in_the_same_cachline(ntt_task_coordinates, ntt_data);
                   task_with_elements_in_the_same_cachline.execute();
                 }
               }
             }
-            if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // all ntt tasks in hierarchy 1 are pushed, now push reorder task so that the data
-                                                                                                        // is in the correct order for the next hierarchy 1 layer
+            if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
               #pragma omp parallel for
               for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
                 NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck, nof_hierarchy_0_layers, 0, 0, true);
@@ -230,7 +225,6 @@ namespace ntt_cpu {
         E* output_batch = ntt_data.config.columns_batch ? (temp_output + batch) : (temp_output + batch * ntt_data.size);
 
         for (uint64_t i = 0; i < ntt_data.size; ++i) {
-          // uint64_t rev = NttUtils<S, E>::bit_reverse(i, logn);
           uint64_t rev = bit_reverse(i, logn);
           output_batch[stride * i] = input_batch[stride * rev];
         }
@@ -316,13 +310,7 @@ namespace ntt_cpu {
         }
       }
     }
-    // printf("[hierarchy_1_reorder] output = %p\n", (void*)output);
-    // printf("[hierarchy_1_reorder] ntt_data.elements = %p\n", (void*)ntt_data.elements);
-    // printf("[hierarchy_1_reorder] temp_elements.get = %p\n", (void*)temp_elements.get());
-
     ntt_data.elements = temp_elements.get();
-    // printf("hierarchy_1_reorder OK\n");
-    // printf("[hierarchy_1_reorder] ntt_data.elements = %p\n", (void*)ntt_data.elements);
   }
 
   /**
@@ -336,11 +324,6 @@ namespace ntt_cpu {
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::reorder_output()
   {
-    // printf("reorder_output.....\n");
-    // printf("[hierarchy_1_reorder] output = %p\n", (void*)output);
-    // printf("[hierarchy_1_reorder] ntt_data.elements = %p\n", (void*)ntt_data.elements);
-    // printf("[hierarchy_1_reorder] temp_elements.get = %p\n", (void*)temp_elements.get());
-
     uint32_t columns_batch_reps = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     uint32_t rows_batch_reps = ntt_data.config.columns_batch ? 1 : ntt_data.config.batch_size;
     uint32_t s0 = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
@@ -367,7 +350,6 @@ namespace ntt_cpu {
       }
     }
     ntt_data.elements = output;
-    // printf("reorder_output OK\n");
     return eIcicleError::SUCCESS;
   }
 
