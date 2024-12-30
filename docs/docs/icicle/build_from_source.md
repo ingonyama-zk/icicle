@@ -24,7 +24,7 @@ ICICLE can be built and tested in C++ using CMake. The build process is straight
    ```
 
 :::info
-To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252, m31.
+To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252, m31, koalabear.
 
 To specify a curve, use the flag -DCURVE=curve, where curve can be one of the following: bn254, bls12_377, bls12_381, bw6_761, grumpkin.
 :::
