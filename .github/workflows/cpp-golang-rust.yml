@@ -410,7 +410,7 @@ jobs:
 
 
   run-rust-examples:
-    runs-on: [self-hosted, Linux, X64, icicle, examples]
+    runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     steps:
     - name: Checkout Repo
