@@ -43,7 +43,7 @@ The macro should look like that:
 ```
 
 ## Create a dispatcher
-The last step of preperations is to create the dispatcher. It should be placed at C++ file in `icicle/source` (vec_ops.cpp in our example). This is how the dispatcher should looks like:
+The last step of preparations is to create the dispatcher. It should be placed at C++ file in `icicle/source` (vec_ops.cpp in our example). This is how the dispatcher should looks like:
 ```cpp
   ICICLE_DISPATCHER_INST(ExecuteProgramDispatcher, execute_program, programExecutionImpl)
 
@@ -72,4 +72,4 @@ After writing the backend function we register our function to the corresponding
 ```cpp
 REGISTER_EXECUTE_PROGRAM_BACKEND("CPU", cpu_execute_program<scalar_t>);
 ```
-This macro call should come after the backend function you implemented (in this example this happend in cpu_vec_ops.cpp).
+This macro call should come after the backend function you implemented (in this example this happened in cpu_vec_ops.cpp).
