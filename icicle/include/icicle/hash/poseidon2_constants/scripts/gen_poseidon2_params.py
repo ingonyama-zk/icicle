@@ -8,13 +8,14 @@ small_field_max_width = 64
 fields = [
   # <field_name>, <is_field> <hash_width>, <prime>
   ["babybear",   [2, 3, 4, 8, 12, 16, 20, 24], 0x78000001],    # 15 * 2^27 + 1
+  ["koalabear",  [2, 3, 4, 8, 12, 16, 20, 24], 0x7f000001],    # 2^31 - 2^24 + 1
   ["m31",        [2, 3, 4, 8, 12, 16, 20, 24], 0x7fffffff],   # 2^31 - 1
   # ["goldilocks", [2, 3, 4, 8, 12, 16, 20, 24], 0xffffffff00000001],    # 2^64 - 2^32 + 1
   ["stark252",   [2, 3, 4, 8], 0x800000000000011000000000000000000000000000000000000000000000001],    # 2^251 + 17 * 2^192 + 1
   ["bn254",      [2, 3, 4, 8], 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001],
   ["bls12_377",  [2, 3, 4, 8], 0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001],
   ["bls12_381",  [2, 3, 4, 8], 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001],
-  ["grumpkin",    [2, 3, 4, 8], 0x30644E72E131A029B85045B68181585D97816A916871CA8D3C208C16D87CFD47],
+  ["grumpkin",   [2, 3, 4, 8], 0x30644E72E131A029B85045B68181585D97816A916871CA8D3C208C16D87CFD47],
   ["bw6_761",    [2, 3, 4, 8], 0x1AE3A4617C510EAC63B05C06CA1493B1A22D9F300F5138F1EF3622FBA094800170B5D44300000008508C00000000001]
 ]
 
@@ -43,10 +44,10 @@ for field in fields:
     alpha = 0
     if not gen_constants:   # generate empty file to be concat later
       FILE_cpp_tmp = open(f'{field[0]}_poseidon2_{hash_width}_{alpha}.h', 'w')    # alpha = 0 just for later concatenation
-      FILE_cpp_tmp.write(f'int full_rounds_{hash_width} =         0;\n')
-      FILE_cpp_tmp.write(f'int half_full_rounds_{hash_width} =    0;\n')
-      FILE_cpp_tmp.write(f'int partial_rounds_{hash_width} =      0;\n')
-      FILE_cpp_tmp.write(f'int alpha_{hash_width} =               0;\n')
+      FILE_cpp_tmp.write(f'constexpr int full_rounds_{hash_width} =         0;\n')
+      FILE_cpp_tmp.write(f'constexpr int half_full_rounds_{hash_width} =    0;\n')
+      FILE_cpp_tmp.write(f'constexpr int partial_rounds_{hash_width} =      0;\n')
+      FILE_cpp_tmp.write(f'constexpr int alpha_{hash_width} =               0;\n')
       FILE_cpp_tmp.write(f'static const std::string rounds_constants_{hash_width}[] = {{}};\n')
       FILE_cpp_tmp.write(f'static const std::string mds_matrix_{hash_width}[]      = {{}};\n')
       FILE_cpp_tmp.write(f'static const std::string partial_matrix_diagonal_{hash_width}[]  = {{}};\n\n')

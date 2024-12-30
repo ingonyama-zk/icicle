@@ -134,10 +134,10 @@ R_F_FIXED, R_P_FIXED, _, _ = poseidon_calc_final_numbers_fixed(p, t, alpha, 128,
 print("++++++ R_F = {0}, R_P = {1} +++".format(R_F_FIXED, R_P_FIXED))
 print(f"RESULT: {R_F_FIXED} {R_P_FIXED} {alpha}")     # Alpha needed in the parent python script in order to know what file to concatenate.
 FILE_cpp = open(f"{FIELD_NAME}_poseidon2_{t}_{alpha}.h", 'w')   # Alpha is needed to communicate with a parent python script.
-FILE_cpp.write(f'int full_rounds_{t} =         {R_F_FIXED};\n')
-FILE_cpp.write(f'int half_full_rounds_{t} =    {R_F_FIXED/2};\n')
-FILE_cpp.write(f'int partial_rounds_{t} =      {R_P_FIXED};\n')
-FILE_cpp.write(f'int alpha_{t} =               {alpha};\n\n')
+FILE_cpp.write(f'constexpr int full_rounds_{t} =         {R_F_FIXED};\n')
+FILE_cpp.write(f'constexpr int half_full_rounds_{t} =    {R_F_FIXED/2};\n')
+FILE_cpp.write(f'constexpr int partial_rounds_{t} =      {R_P_FIXED};\n')
+FILE_cpp.write(f'constexpr int alpha_{t} =               {alpha};\n\n')
 
 INIT_SEQUENCE = []
 

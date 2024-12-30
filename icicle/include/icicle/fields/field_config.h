@@ -28,6 +28,9 @@ namespace field_config = grumpkin;
 #elif FIELD_ID == BABY_BEAR
   #include "icicle/fields/stark_fields/babybear.h"
 namespace field_config = babybear;
+#elif FIELD_ID == KOALA_BEAR
+  #include "icicle/fields/stark_fields/koalabear.h"
+namespace field_config = koalabear;
 #elif FIELD_ID == STARK_252
   #include "icicle/fields/stark_fields/stark252.h"
 namespace field_config = stark252;
