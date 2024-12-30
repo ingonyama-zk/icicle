@@ -1,4 +1,4 @@
-name: C++/CUDA/Go/RUST & C++ Examples
+name: Spell Check, C++/CUDA/Go/RUST & Examples
 
 on:
   pull_request:
