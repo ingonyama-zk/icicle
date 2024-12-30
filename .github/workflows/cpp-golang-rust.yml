@@ -406,3 +406,80 @@ jobs:
         export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
+
+
+
+  run-rust-examples:
+    runs-on: [self-hosted, Linux, X64, icicle, examples]
+    needs: [check-changed-files, extract-cuda-backend-branch]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+    - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      working-directory: ./icicle/backend/cuda
+      id: extract-cuda-sha
+      run: |
+        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
+        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: cuda-flag
+      run: |
+        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/rust-examples
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/rust-examples" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/rust-examples
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/rust-examples" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
+            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
+            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        fi
+    - name: Rust examples
+      working-directory: ./examples/rust
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |        
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export RUST_ICICLE_BACKEND_INSTALL_DIR=$ICICLE_BACKEND_INSTALL_DIR/backend
+        # loop over all directories in the current directory
+        for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+          if [ -d "$dir" ]; then
+            echo "Running command in $dir"
+            cd $dir
+            ./run.sh -d CUDA -b $RUST_ICICLE_INSTALL_DIR
+            cd -
+          fi
+        done
