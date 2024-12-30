@@ -171,6 +171,18 @@ func (f {{.FieldPrefix}}Field) Sqr() {{.FieldPrefix}}Field {
 	return res
 }
 
+func (f {{.FieldPrefix}}Field) Pow(exp int) {{.FieldPrefix}}Field {
+	var res {{.FieldPrefix}}Field
+	
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cExp := (*C.int)(unsafe.Pointer(&exp))
+    cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.{{.Field}}_pow(cF, cExp, cRes)
+	
+	return res
+}
+
 func convertScalarsMontgomery(scalars core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
 	cValues, _, _, cCfg, cSize := core.VecOpCheck(scalars, scalars, scalars, &defaultCfg)
