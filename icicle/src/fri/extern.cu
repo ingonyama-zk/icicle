@@ -78,6 +78,7 @@ namespace fri {
   {
     domain_t domain(coset_t(domain_initial_index, domain_log_size));
     scalar_t* domain_elements;
+    domain.compute_twiddles();
     domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
     return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);

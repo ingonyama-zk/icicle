@@ -280,27 +280,13 @@ namespace circle_math {
 
   template <typename CONFIG, class T>
   class CircleDomain {
-  private:
-    static HOST_INLINE void compute_twiddles(const CircleDomain<CONFIG, T>& domain) {
-      if (!CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(domain.coset)) {
-        auto size = domain.coset.size();
-        T *d_twiddles;
-        cudaMalloc(&d_twiddles, size);
-        int block_dim = size < 512 ? size : 512; 
-        int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
-        compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(domain, size, d_twiddles);
-        CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[domain.coset] = d_twiddles;
-      }
-    }
   public:
     typedef CirclePoint<CONFIG, T> Point;
     CircleCoset<CONFIG, T> coset;
     static std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> twiddles_inversed_reversed_index;
     CircleDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {
-      compute_twiddles(*this);
     }
     CircleDomain<CONFIG, T>(uint32_t log_size) : coset(CircleCoset<CONFIG, T>::half_odds(log_size - 1)) {
-      compute_twiddles(*this);
     }
 
     // Override log_size method
@@ -336,6 +322,18 @@ namespace circle_math {
         shifts[i] = coset.step_size * i;
       }
       return subdomain;
+    }
+
+    HOST_INLINE void compute_twiddles() {
+      if (!CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(this->coset)) {
+        auto size = this->coset.size();
+        T *d_twiddles;
+        cudaMalloc(&d_twiddles, size);
+        int block_dim = size < 512 ? size : 512; 
+        int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
+        compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
+        CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset] = d_twiddles;
+      }
     }
 
     HOST_INLINE void get_twiddles(T **twiddles) const {
