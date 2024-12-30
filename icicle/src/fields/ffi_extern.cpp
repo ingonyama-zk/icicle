@@ -30,7 +30,7 @@ extern "C" void CONCAT_EXPAND(FIELD, inv)(scalar_t* scalar1, scalar_t* result)
 
 extern "C" void CONCAT_EXPAND(FIELD, pow)(scalar_t* base, int exp, scalar_t* result)
 {
-  *result = scalar_t::pow(*base, num);
+  *result = scalar_t::pow(*base, exp);
 }
 
 #ifdef EXT_FIELD
@@ -59,8 +59,8 @@ extern "C" void CONCAT_EXPAND(FIELD, extension_inv)(extension_t* scalar1, extens
   *result = extension_t::inverse(*scalar1);
 }
 
-extern "C" void CONCAT_EXPAND(FIELD, extension_pow)(scalar_t* base, int exp, scalar_t* result)
+extern "C" void CONCAT_EXPAND(FIELD, extension_pow)(extension_t* base, int exp, extension_t* result)
 {
-  *result = extension_t::pow(*base, num);
+  *result = extension_t::pow(*base, exp);
 }
 #endif // EXT_FIELD
