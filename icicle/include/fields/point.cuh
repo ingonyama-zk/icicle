@@ -98,7 +98,7 @@ namespace circle_math {
       return !(xs == ys);
     }
 
-    static HOST_DEVICE_INLINE CirclePoint mul_scalar(CirclePoint base, uint32_t scalar)
+    static HOST_DEVICE_INLINE CirclePoint mul_scalar(CirclePoint base, uint64_t scalar)
     {
       CirclePoint res = zero();
       CirclePoint cur = base;
@@ -163,13 +163,13 @@ namespace circle_math {
       assert(log_size <= CONFIG::modulus_bit_count);
       this->initial_index = initial_index;
       this->log_size = log_size;
-      this->step_size = 1 << (CONFIG::modulus_bit_count - log_size);
+      this->step_size = ((uint64_t)1) << (CONFIG::modulus_bit_count - log_size);
       this->initial_point = Point::index_to_point(initial_index);
       this->step = Point::index_to_point(step_size);
     }
 
     static HOST_DEVICE_INLINE CircleCoset coset_shifted(uint32_t log_shift, uint32_t log_size) {
-      return CircleCoset(1 << (CONFIG::modulus_bit_count - log_size - log_shift), log_size);
+      return CircleCoset(((uint64_t)1) << (CONFIG::modulus_bit_count - log_size - log_shift), log_size);
     }
 
     // Creates a coset of the form <G_n>.
@@ -192,7 +192,7 @@ namespace circle_math {
     }
 
     HOST_DEVICE_INLINE uint64_t size() const {
-      return 1 << this->lg_size();
+      return ((uint64_t)1) << this->lg_size();
     }
 
     HOST_DEVICE_INLINE CircleCoset dbl() const {
@@ -206,7 +206,7 @@ namespace circle_math {
     }
 
     HOST_DEVICE_INLINE uint64_t index_at(uint64_t index) const {
-      return this->initial_index + ((this->step_size * index) & (CONFIG::modulus.limbs[0]));
+      return this->initial_index + ((this->step_size * index) & ((uint64_t)CONFIG::modulus.limbs[0]));
     }
 
     HOST_DEVICE_INLINE Point at(uint64_t index) const {
@@ -256,9 +256,9 @@ namespace circle_math {
 
   template <typename CONFIG, class T>
   struct CircleCosetHash {
-    std::size_t operator()(const CircleCoset<CONFIG, T>& coset) const {
-      std::size_t h1 = std::hash<uint64_t>{}(coset.initial_index);
-      std::size_t h2 = std::hash<uint32_t>{}(coset.log_size);
+    std::uint64_t operator()(const CircleCoset<CONFIG, T>& coset) const {
+      std::uint64_t h1 = std::hash<uint64_t>{}(coset.initial_index);
+      std::uint64_t h2 = std::hash<uint32_t>{}(coset.log_size);
       return h1 ^ (h2 << 1);
     }
   };
@@ -272,7 +272,7 @@ namespace circle_math {
 
   template <typename D, typename T>
   __global__ void compute_domain_twiddles(D domain, size_t size, T *twiddles_inversed_reversed_index) {
-    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    uint64_t idx = threadIdx.x + blockDim.x * blockIdx.x;
     if (idx < size) {
       twiddles_inversed_reversed_index[idx] = T::inverse(domain.at(bit_reverse_index(idx << 1, domain.lg_size())).y);
     }
@@ -283,7 +283,7 @@ namespace circle_math {
   public:
     typedef CirclePoint<CONFIG, T> Point;
     CircleCoset<CONFIG, T> coset;
-    static std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> twiddles_inversed_reversed_index;
+    // static std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> twiddles_inversed_reversed_index;
     CircleDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {
     }
     CircleDomain<CONFIG, T>(uint32_t log_size) : coset(CircleCoset<CONFIG, T>::half_odds(log_size - 1)) {
@@ -296,7 +296,7 @@ namespace circle_math {
 
     // Forward other methods to coset
     HOST_DEVICE_INLINE uint64_t size() const {
-      return 1 << this->lg_size();
+      return ((uint64_t)1) << this->lg_size();
     }
 
     HOST_DEVICE_INLINE uint64_t index_at(uint64_t index) const {
@@ -304,7 +304,7 @@ namespace circle_math {
         return coset.index_at(index);
       } else {
         // assume field log size <= 32
-        return (((uint32_t)1 << CONFIG::modulus_bit_count) - coset.index_at(index - coset.size())); // reduce is not neccesary
+        return (((uint64_t)1 << CONFIG::modulus_bit_count) - coset.index_at(index - coset.size())); // reduce is not neccesary
       }
     }
 
@@ -324,25 +324,28 @@ namespace circle_math {
       return subdomain;
     }
 
-    HOST_INLINE void compute_twiddles() {
-      if (!CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(this->coset)) {
-        auto size = this->coset.size();
-        T *d_twiddles;
-        cudaMalloc(&d_twiddles, size);
-        int block_dim = size < 512 ? size : 512; 
-        int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
-        compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
-        CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset] = d_twiddles;
-      }
-    }
+    // HOST_INLINE void compute_twiddles() {
+    //   if (!CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(this->coset)) {
+    //     auto size = this->coset.size();
+    //     T *d_twiddles;
+    //     cudaMalloc(&d_twiddles, size);
+    //     int block_dim = size < 512 ? size : 512; 
+    //     int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
+    //     compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
+    //     CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset] = d_twiddles;
+    //   }
+    // }
 
-    HOST_INLINE void get_twiddles(T **twiddles) const {
-      *twiddles = CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.at(this->coset);
+    HOST_INLINE void get_twiddles(T *d_twiddles) const {
+      uint64_t size = this->coset.size();
+      uint64_t block_dim = size < 512 ? size : 512; 
+      uint64_t num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
+      compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
     }
   };
 
-  template <typename CONFIG, class T>
-  std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index;
+  // template <typename CONFIG, class T>
+  // std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index;
 
   template <typename CONFIG, class T>
   class LineDomain {
