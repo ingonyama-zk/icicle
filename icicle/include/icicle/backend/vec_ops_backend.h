@@ -304,13 +304,13 @@ namespace icicle {
         return true;                                                                                                   \
       }();                                                                                                             \
     }
-  
+
   void register_extension_vector_scalar_mul(const std::string& deviceType, scalarExtFieldVectorOpImpl impl);
 
-  #define REGISTER_VECTOR_MUL_EXT_FIELD_SCALAR_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+  #define REGISTER_VECTOR_MUL_EXT_FIELD_SCALAR_BACKEND(DEVICE_TYPE, FUNC)                                              \
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
-        register_extension_vector_scalar_mul(DEVICE_TYPE, FUNC);                                                              \
+        register_extension_vector_scalar_mul(DEVICE_TYPE, FUNC);                                                       \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
