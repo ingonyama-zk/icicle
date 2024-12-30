@@ -25,7 +25,7 @@ jobs:
           skip: ./**/target,./**/build,./docs/*.js,./docs/*.json,./*.svg
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-ignore_words_file
           ignore_words_file: .codespellignore
-          
+
   check-changed-files:
     uses: ./.github/workflows/check-changed-files.yml
 
@@ -423,6 +423,7 @@ jobs:
 
 
   run-rust-examples:
+    name: Run Rust Examples
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
     steps:
