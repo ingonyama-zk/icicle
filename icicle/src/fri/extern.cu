@@ -40,7 +40,11 @@ namespace fri {
     FriConfig& cfg)
   {
     circle_math::LineDomain<fp_config, scalar_t> line_domain = circle_math::LineDomain<fp_config, scalar_t>(line_domain_initial_index, line_domain_log_size);
-    return fri::fold_line_new<scalar_t, q_extension_t, circle_math::LineDomain<fp_config, scalar_t>>(line_eval, line_domain, alpha, folded_evals, n, cfg);
+    scalar_t* domain_elements;
+    cudaMalloc(&domain_elements, line_domain.coset.size() * sizeof(scalar_t));
+    line_domain.get_twiddles(domain_elements);
+    cfg.are_domain_elements_on_device = true;
+    return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
   };
 
   /**
