@@ -3,6 +3,7 @@
 #include "icicle/utils/log.h"
 #include "ntt_task.h"
 #include "ntt_utils.h"
+#include <taskflow/taskflow.hpp>
 #include <cstdint>
 #include <deque>
 #include <omp.h>
@@ -78,6 +79,8 @@ namespace ntt_cpu {
       NttTask<S, E> task(ntt_task_coordinates, ntt_data);
       task.execute();
     } else if (__builtin_expect((ntt_data.logn <= HIERARCHY_1),1)){      
+      tf::Taskflow taskflow;
+      tf::Executor executor;
       uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2] != 0) ? 3 : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1] != 0) ? 2 : 1;
       for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
         uint64_t nof_blocks;
@@ -92,14 +95,26 @@ namespace ntt_cpu {
           nof_blocks = 1 << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0] + ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1]);
           nof_subntts = 1;
         }
-        #pragma omp parallel for collapse(2) schedule(dynamic)
-        for (uint32_t hierarchy_0_block_idx = 0; hierarchy_0_block_idx < (nof_blocks); hierarchy_0_block_idx++) {
-          for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
-            NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
-            NttTask<S, E> task(ntt_task_coordinates, ntt_data);
-            task.execute();
-          }
+        // #pragma omp parallel for collapse(2) schedule(dynamic)
+        size_t num_chunks = std::thread::hardware_concurrency(); // Adjust based on the number of threads
+        // size_t num_chunks = 2; // Adjust based on the number of threads
+        size_t chunk_size = (nof_blocks*nof_subntts + num_chunks - 1) / num_chunks;
+
+        for (size_t i = 0; i < num_chunks; ++i) {
+          size_t start_index = i * chunk_size;
+          size_t end_index = std::min(start_index + chunk_size, nof_blocks*nof_subntts);
+          taskflow.emplace([&, hierarchy_0_layer_idx, start_index, end_index, nof_subntts]() {
+            for (uint32_t j = start_index; j < (end_index); j++) {
+              uint32_t hierarchy_0_block_idx = j / nof_subntts;
+              uint32_t hierarchy_0_subntt_idx = j % nof_subntts;
+              NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
+              NttTask<S, E> task(ntt_task_coordinates, ntt_data);
+              task.execute();
+            }
+          });
         }
+        executor.run(taskflow).wait();
+        taskflow.clear(); 
         if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
           NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, 0, 0, true);
           NttTask<S, E> task(ntt_task_coordinates, ntt_data);
@@ -131,7 +146,7 @@ namespace ntt_cpu {
               nof_subntts = 1;
             }
             nof_blocks = nof_blocks>>1;
-            #pragma omp parallel for collapse(3) schedule(dynamic)
+            // #pragma omp parallel for collapse(3) schedule(dynamic)
             for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
               for (uint32_t hierarchy_0_block_idx_half = 0; hierarchy_0_block_idx_half < (nof_blocks); hierarchy_0_block_idx_half++) {
                 for (uint32_t hierarchy_0_subntt_idx = 0; hierarchy_0_subntt_idx < (nof_subntts); hierarchy_0_subntt_idx++) {
@@ -146,7 +161,7 @@ namespace ntt_cpu {
               }
             }
             if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
-              #pragma omp parallel for
+              // #pragma omp parallel for
               for (uint32_t hierarchy_1_subntt_idx_in_chunck = 0; hierarchy_1_subntt_idx_in_chunck < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunck++) {
                 NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunck_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunck, nof_hierarchy_0_layers, 0, 0, true);
                 NttTask<S, E> task(ntt_task_coordinates, ntt_data);
@@ -259,7 +274,7 @@ namespace ntt_cpu {
       E* current_elements =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
       
-      #pragma omp parallel for
+      // #pragma omp parallel for
       for (uint64_t i = 1; i < ntt_data.size; ++i) {
         uint64_t idx = i;
 
@@ -302,7 +317,7 @@ namespace ntt_cpu {
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
       E* cur_temp_elements =
         ntt_data.config.columns_batch ? temp_elements.get() + batch : temp_elements.get() + batch * ntt_data.size;
-      #pragma omp parallel for collapse(2)
+      // #pragma omp parallel for collapse(2)
       for (uint32_t sntt_idx = 0; sntt_idx < nof_sntts; sntt_idx++) {
         for (uint32_t elem = 0; elem < sntt_size; elem++) {
           cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =

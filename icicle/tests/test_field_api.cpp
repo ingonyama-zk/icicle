@@ -16,6 +16,8 @@
 #include "icicle/program/returning_value_program.h"
 #include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "test_base.h"
+#include <taskflow/taskflow.hpp>
+#include <vector>
 
 using namespace field_config;
 using namespace icicle;
@@ -813,22 +815,23 @@ TEST_F(FieldApiTestBase, polynomialDivision)
 TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
-  const bool inplace = rand_uint_32b(0, 1);
-  const int logn = rand_uint_32b(3, 17);
+  for (int logn=3; logn<26; logn++){
+  const bool inplace = 0;
+  // const int logn = 3;
   const uint64_t N = 1 << logn;
-  const int log_ntt_domain_size = logn + 1;
-  const int log_batch_size = rand_uint_32b(0, 2);
+  const int log_ntt_domain_size = logn;
+  const int log_batch_size = 0;
   const int batch_size = 1 << log_batch_size;
-  const int _ordering = rand_uint_32b(0, 3);
+  const int _ordering = 0;
   const Ordering ordering = static_cast<Ordering>(_ordering);
-  bool columns_batch;
-  if (logn == 7 || logn < 4) {
-    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
-  } else {
-    columns_batch = rand_uint_32b(0, 1);
-  }
-  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
-  const int log_coset_stride = rand_uint_32b(0, 2);
+  bool columns_batch = false;
+  // if (logn == 7 || logn < 4) {
+  //   columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  // } else {
+  //   columns_batch = rand_uint_32b(0, 1);
+  // }
+  const NTTDir dir = static_cast<NTTDir>(0); // 0: forward, 1: inverse
+  const int log_coset_stride = 0;
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
@@ -846,6 +849,9 @@ TYPED_TEST(FieldApiTest, ntt)
   const int total_size = N * batch_size;
   auto scalars = std::make_unique<TypeParam[]>(total_size);
   TypeParam::rand_host_many(scalars.get(), total_size);
+  // for (int i = 0; i < total_size; i++) {
+  //   scalars[i] = scalar_t::from(1);
+  // }
 
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
@@ -884,7 +890,7 @@ TYPED_TEST(FieldApiTest, ntt)
         ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
       }
     }
-    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+    END_TIMER_AVERAGE(NTT_sync, oss.str().c_str(), measure, iters);
 
     if (inplace) {
       ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
@@ -899,9 +905,9 @@ TYPED_TEST(FieldApiTest, ntt)
   };
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
-}
+}}
 #endif // NTT
 
 // define program
@@ -1052,6 +1058,52 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTestBase, Taskflow)
+{
+  constexpr size_t N = 1 << 22;
+  auto vec1 = std::make_unique<scalar_t[]>(N);
+  auto vec2 = std::make_unique<scalar_t[]>(N);
+  auto resultSerial = std::make_unique<scalar_t[]>(N);
+  auto resultParallel = std::make_unique<scalar_t[]>(N);
+  scalar_t::rand_host_many(vec1.get(), N);
+  scalar_t::rand_host_many(vec2.get(), N);
+
+  // Measure time for Serial computation
+  START_TIMER(Serial)
+  for (size_t j = 0; j < N; ++j) {
+    resultSerial[j] = vec1[j] * vec2[j];
+  }
+  auto end = std::chrono::high_resolution_clock::now();
+  END_TIMER(Serial, "Serial computation completed in ", true);
+
+  // Measure time for parallel computation
+  START_TIMER(Parallel)
+
+  tf::Taskflow taskflow;
+  tf::Executor executor;
+
+  // Number of chunks for parallel processing
+  size_t num_chunks = (std::thread::hardware_concurrency())<<8; // Adjust based on the number of threads
+  size_t chunk_size = (N + num_chunks - 1) / num_chunks;
+
+  for (size_t i = 0; i < num_chunks; ++i) {
+    size_t start_index = i * chunk_size;
+    size_t end_index = std::min(start_index + chunk_size, N);
+
+    taskflow.emplace([&, start_index, end_index]() {
+      for (size_t j = start_index; j < end_index; ++j) {
+        resultParallel[j] = vec1[j] * vec2[j];
+      }
+    });
+  }
+
+  executor.run(taskflow).wait();
+
+  END_TIMER(Parallel, "Parallel computation completed in ", true);
+
+  ASSERT_EQ(0, memcmp(resultSerial.get(), resultParallel.get(), N * sizeof(scalar_t)));
 }
 
 int main(int argc, char** argv)

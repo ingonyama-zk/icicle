@@ -1276,7 +1276,7 @@ namespace ntt_cpu {
       uint64_t rev;
       uint64_t i_mem_idx;
       uint64_t rev_mem_idx;
-#pragma omp parallel for
+// #pragma omp parallel for
       for (uint64_t i = 0; i < subntt_size; ++i) {
         rev = bit_reverse(i, subntt_log_size);
         i_mem_idx = idx_in_mem(ntt_task_coordinates, i);
