@@ -172,7 +172,7 @@ func (f ExtensionField) Pow(exp int) ExtensionField {
 	var res ExtensionField
 
 	cF := (*C.scalar_t)(unsafe.Pointer(&f))
-	cExp := (*C.int)(unsafe.Pointer(&exp))
+	cExp := (C.int)(exp)
 	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
 
 	C.babybear_extension_pow(cF, cExp, cRes)

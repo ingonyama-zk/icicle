@@ -119,6 +119,11 @@ func testScalarFieldArithmetic(suite *suite.Suite) {
 
 	suite.Equal(square, mul, "Square and multiplication do not yield the same value")
 
+	pow4 := scalarA.Pow(4)
+	mulBySelf := mul.Mul(&mul)
+
+	suite.Equal(pow4, mulBySelf, "Square and multiplication do not yield the same value")
+
 	inv := scalarA.Inv()
 
 	one := scalarA.Mul(&inv)

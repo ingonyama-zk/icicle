@@ -175,7 +175,7 @@ func (f {{.FieldPrefix}}Field) Pow(exp int) {{.FieldPrefix}}Field {
 	var res {{.FieldPrefix}}Field
 	
 	cF := (*C.scalar_t)(unsafe.Pointer(&f))
-	cExp := (*C.int)(unsafe.Pointer(&exp))
+	cExp := (C.int)(exp)
     cRes := (*C.scalar_t)(unsafe.Pointer(&res))
 
 	C.{{.Field}}_pow(cF, cExp, cRes)

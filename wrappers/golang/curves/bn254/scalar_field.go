@@ -172,7 +172,7 @@ func (f ScalarField) Pow(exp int) ScalarField {
 	var res ScalarField
 
 	cF := (*C.scalar_t)(unsafe.Pointer(&f))
-	cExp := (*C.int)(unsafe.Pointer(&exp))
+	cExp := (C.int)(exp)
 	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
 
 	C.bn254_pow(cF, cExp, cRes)
