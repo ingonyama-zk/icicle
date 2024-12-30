@@ -479,7 +479,7 @@ jobs:
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
             cd $dir
-            ./run.sh -d CUDA -b $RUST_ICICLE_BACKEND_INSTALL_DIR
+            ./run.sh -d CUDA
             cd -
           fi
         done
