@@ -1054,6 +1054,56 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
 }
 
+#include <taskflow/taskflow.hpp> // Taskflow library
+#include <iostream>
+#include <vector>
+
+TEST_F(FieldApiTestBase, Taskflow)
+{
+  constexpr size_t N = 1 << 20;
+  auto vec1 = std::make_unique<scalar_t[]>(N);
+  auto vec2 = std::make_unique<scalar_t[]>(N);
+  auto resultSerial = std::make_unique<scalar_t[]>(N);
+  auto resultParallel = std::make_unique<scalar_t[]>(N);
+  scalar_t::rand_host_many(vec1.get(), N);
+  scalar_t::rand_host_many(vec2.get(), N);
+
+  // Measure time for Serial computation
+  START_TIMER(Serial)
+  for (size_t j = 0; j < N; ++j) {
+    resultSerial[j] = vec1[j] * vec2[j];
+  }
+  auto end = std::chrono::high_resolution_clock::now();
+  END_TIMER(Serial, "Serial computation completed in ", true);
+
+  // Measure time for parallel computation
+  START_TIMER(Parallel)
+
+  tf::Taskflow taskflow;
+  tf::Executor executor;
+
+  // Number of chunks for parallel processing
+  size_t num_chunks = 8; // Adjust based on the number of threads
+  size_t chunk_size = (N + num_chunks - 1) / num_chunks;
+
+  for (size_t i = 0; i < num_chunks; ++i) {
+    size_t start_index = i * chunk_size;
+    size_t end_index = std::min(start_index + chunk_size, N);
+
+    taskflow.emplace([&, start_index, end_index]() {
+      for (size_t j = start_index; j < end_index; ++j) {
+        resultParallel[j] = vec1[j] * vec2[j];
+      }
+    });
+  }
+
+  executor.run(taskflow).wait();
+
+  END_TIMER(Parallel, "Parallel computation completed in ", true);
+
+  ASSERT_EQ(0, memcmp(resultSerial.get(), resultParallel.get(), N * sizeof(scalar_t)));
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
