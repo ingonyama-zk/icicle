@@ -13,7 +13,7 @@
 #include "icicle/curves/projective.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
-#include "tasks_manager.h"
+#include <taskflow/taskflow.hpp>
 #include "icicle/backend/msm_config.h"
 // #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
@@ -49,15 +49,18 @@ class Msm {
     // #pragma omp parallel for
     std::vector<std::thread> threads;
     for(int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
+      m_taskflow.emplace([=]() {
       const int scalars_start_idx = worker_msm_size * worker_i;
       const int bases_start_idx  = scalars_start_idx * m_precompute_factor;
       const int cur_worker_msm_size = std::min(worker_msm_size, msm_size-worker_i*worker_msm_size);
-      // worker_run_phase1(worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size);
-      threads.emplace_back(std::bind(&Msm::worker_run_phase1, this, worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size));
+      worker_run_phase1(worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size);
+      });
+      //threads.emplace_back(std::bind(&Msm::worker_run_phase1, this, worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size));
     }
-    for(auto& thread : threads) {
-        thread.join();
-    }
+    run_workers_and_wait();
+    // for(auto& thread : threads) {
+    //     thread.join();
+    // }
     // Collapse all the workers buckets into one
     collapse_all_workers_result();
 
@@ -82,6 +85,8 @@ class Msm {
       P triangle_sum;
     };
 
+    tf::Taskflow       m_taskflow;
+    tf::Executor       m_executor;
     const int          m_msm_size;
     const MSMConfig&   m_config;
     uint32_t           m_scalar_size;
@@ -131,7 +136,10 @@ class Msm {
       }
     }
 
-
+    void run_workers_and_wait() {
+      m_executor.run(m_taskflow).wait();
+      m_taskflow.clear();
+    }
     // each worker run this function and update its buckets
     void worker_run_phase1 (const int worker_idx, const scalar_t* scalars, const A* bases, const unsigned int msm_size) {
       std::vector<Bucket>&  buckets = m_workers_buckets[worker_idx];
@@ -191,17 +199,21 @@ class Msm {
 
     void collapse_all_workers_result() {
   //      #pragma omp parallel for
-      std::vector<std::thread> threads;    
+      //std::vector<std::thread> threads;    
       int bucket_start = 0;
       const int nof_buckets_per_thread = (m_nof_total_buckets+m_nof_workers-1)/m_nof_workers;
       for(int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
         const int nof_buckets = std::min(nof_buckets_per_thread, (int)m_nof_total_buckets-worker_i*nof_buckets_per_thread);
-        threads.emplace_back(std::bind(&Msm::worker_collapse_all_workers_result, this, bucket_start, nof_buckets));
+        //threads.emplace_back(std::bind(&Msm::worker_collapse_all_workers_result, this, bucket_start, nof_buckets));
+        m_taskflow.emplace([this, bucket_start, nof_buckets]() {
+          worker_collapse_all_workers_result(bucket_start, nof_buckets);
+        });
         bucket_start += nof_buckets_per_thread;
       }
-      for(auto& thread : threads) {
-          thread.join();
-      }
+      run_workers_and_wait();
+      // for(auto& thread : threads) {
+      //     thread.join();
+      // }
     }
 
     void worker_collapse_all_workers_result(const int bucket_start, const int nof_buckets) {
@@ -218,10 +230,15 @@ class Msm {
 
     void phase2_collapse_segments() {
       uint64_t bucket_start = 0;
-      for (auto& segment : m_segments) {
-        worker_collapse_segment(segment, bucket_start, std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size));
+      for (int segment_idx = 0; segment_idx < m_segments.size(); segment_idx++) {
+        m_taskflow.emplace([=]() {
+        const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
+        // worker_collapse_all_workers_result(bucket_start, segment_size);
+        worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
+        });
         bucket_start += m_segment_size;
       }
+      run_workers_and_wait();
     }
 
     void worker_collapse_segment(Segment& segment, const int64_t bucket_start, const uint32_t segment_size) {
