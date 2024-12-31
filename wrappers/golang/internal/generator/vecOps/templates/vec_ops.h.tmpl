@@ -7,6 +7,51 @@
 extern "C" {
 #endif
 
+{{ if eq .FieldPrefix "Extension" }}
+typedef struct extension_t extension_t;
+typedef struct scalar_t scalar_t;
+typedef struct VecOpsConfig VecOpsConfig;
+typedef struct DeviceContext DeviceContext;
+
+int {{.Field}}_vector_mul(
+  extension_t* vec_a,
+  extension_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  extension_t* result
+);
+
+int {{.Field}}_vector_add(
+  extension_t* vec_a,
+  extension_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  extension_t* result
+);
+
+int {{.Field}}_vector_sub(
+  extension_t* vec_a,
+  extension_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  extension_t* result
+);
+
+int {{.Field}}_matrix_transpose(
+  extension_t* mat_in,
+  int row_size,
+  int column_size,
+  VecOpsConfig* config,
+  extension_t* mat_out
+);
+int {{.Field}}_vector_cross_mul(
+  extension_t* vec_a,
+  scalar_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  extension_t* result
+);
+{{ else }}
 typedef struct scalar_t scalar_t;
 typedef struct VecOpsConfig VecOpsConfig;
 typedef struct DeviceContext DeviceContext;
@@ -42,15 +87,7 @@ int {{.Field}}_matrix_transpose(
   VecOpsConfig* config,
   scalar_t* mat_out
 );
-{{if eq .FieldPrefix "Extension"}}
-int {{.Field}}_vector_cross_mul(
-  scalar_t* vec_a,
-  scalar_t* vec_b,
-  int n,
-  VecOpsConfig* config,
-  scalar_t* result
-);
-{{end}}
+{{ end }}
 #ifdef __cplusplus
 }
 #endif
