@@ -239,7 +239,7 @@ macro_rules! impl_scalar_field {
                 pub(crate) fn inv(a: *const $field_name, result: *mut $field_name);
 
                 #[link_name = concat!($field_prefix, "_pow")]
-                pub(crate) fn pow(a: *const $field_name, exp: usize ,result: *mut $field_name);
+                pub(crate) fn pow(a: *const $field_name, exp: usize, result: *mut $field_name);
             }
 
             pub(crate) fn convert_scalars_montgomery(
