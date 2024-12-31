@@ -42,11 +42,7 @@ public:
     m_transcript_config.hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
     m_prev_alpha = S::reduce(hash_result.data()); TODO fix that
     return m_prev_alpha;
-
   }    
-
-
-
 
   // reset the transcript
   voiud reset() {

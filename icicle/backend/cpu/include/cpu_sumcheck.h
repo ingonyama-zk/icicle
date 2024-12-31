@@ -10,11 +10,6 @@
 
 namespace icicle {
 
-
-
-
-
-
   template <typename F>
   class CpuSumcheckBackend : public SumcheckBackend<F>
   {
@@ -49,10 +44,18 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    F get_alpha(std::vector<F>& round_polynomial) override { return F::zero(); }
+    // caculate alpha for the next round based on the round_polynomial of the current round
+    F get_alpha(std::vector<F>& round_polynomial) override {
+      return m_cpu_sumcheck_transcript.get_alpha(round_polynomial);
+    }
 
 
   private:
+    // memebers
+    CpuSumCheckTranscript   m_cpu_sumcheck_transcript;
+    std::vector<F*> m_round_polynomial;
+    std::vector<std::vector<F*>> m_folded_polynomials;
+
     void calc_round_polynomial(const std::vector<F*>& input_polynomials, bool fold, S& alpha) {
       const uint64_t polynomial_size = fold ? input_polynomials[0].size()/4 : input_polynomials[0].size()/2;
       const uint nof_polynomials = input_polynomials.size();
@@ -112,9 +115,6 @@ namespace icicle {
         }
       }
     }
-
-
-
   };
 
 } // namespace icicle
