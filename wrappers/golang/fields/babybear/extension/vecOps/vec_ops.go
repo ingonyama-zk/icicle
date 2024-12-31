@@ -46,9 +46,9 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, co
 func CrossVecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret runtime.EIcicleError) {
 	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
 
-	cA := (*C.scalar_t)(aPointer)
+	cA := (*C.extension_t)(aPointer)
 	cB := (*C.scalar_t)(bPointer)
-	cOut := (*C.scalar_t)(outPointer)
+	cOut := (*C.extension_t)(outPointer)
 	cConfig := (*C.VecOpsConfig)(cfgPointer)
 	cSize := (C.int)(size)
 
