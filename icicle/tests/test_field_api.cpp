@@ -814,7 +814,7 @@ TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
   const bool inplace = rand_uint_32b(0, 1);
-  const int logn = rand_uint_32b(3, 17);
+  const int logn = rand_uint_32b(0, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
   const int log_batch_size = rand_uint_32b(0, 2);
