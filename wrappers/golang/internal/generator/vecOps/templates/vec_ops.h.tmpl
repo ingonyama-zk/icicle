@@ -42,7 +42,15 @@ int {{.Field}}_matrix_transpose(
   VecOpsConfig* config,
   scalar_t* mat_out
 );
-
+{{if eq .FieldPrefix "Extension"}}
+int {{.Field}}_vector_cross_mul(
+  scalar_t* vec_a,
+  scalar_t* vec_b,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+{{end}}
 #ifdef __cplusplus
 }
 #endif
