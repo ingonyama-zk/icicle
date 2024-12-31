@@ -66,7 +66,7 @@ func testBabybear_extensionTranspose(suite *suite.Suite) {
 }
 
 func testBabybear_extensionCrossVecOps(suite *suite.Suite) {
-	testSize := 1 << 2
+	testSize := 1 << 14
 
 	a := babybear_extension.GenerateScalars(testSize)
 	var scalar babybear.ScalarField

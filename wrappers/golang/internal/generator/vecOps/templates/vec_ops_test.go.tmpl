@@ -67,7 +67,7 @@ func test{{capitalize .Field}}Transpose(suite *suite.Suite) {
 
 {{if eq .FieldPrefix "Extension"}}
 func test{{capitalize .Field}}CrossVecOps(suite *suite.Suite) {
-	testSize := 1 << 13
+	testSize := 1 << 14
 
 	a := {{.Field}}.GenerateScalars(testSize)
 	var scalar {{.SecondField}}.ScalarField
