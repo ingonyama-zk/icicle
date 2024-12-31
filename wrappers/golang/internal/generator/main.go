@@ -30,7 +30,7 @@ func generateFiles() {
 		fields.Generate(curveDir, curve.PackageName, curve.Curve, scalarFieldPrefix, true, curve.ScalarFieldNumLimbs)
 		fields.Generate(curveDir, curve.PackageName, curve.Curve, "Base", false, curve.BaseFieldNumLimbs)
 		curves.Generate(curveDir, curve.PackageName, curve.Curve, "")
-		vecops.Generate(curveDir, curve.Curve, scalarFieldPrefix)
+		vecops.Generate(curveDir, curveDir, curve.Curve, scalarFieldPrefix, curve.Curve)
 
 		lib_linker.Generate(curveDir, curve.PackageName, curve.Curve, lib_linker.CURVE, 0)
 
@@ -66,7 +66,7 @@ func generateFiles() {
 		fieldDir := path.Join("fields", field.PackageName)
 		scalarFieldPrefix := "Scalar"
 		fields.Generate(fieldDir, field.PackageName, field.Field, scalarFieldPrefix, true, field.LimbsNum)
-		vecops.Generate(fieldDir, field.Field, scalarFieldPrefix)
+		vecops.Generate(fieldDir, fieldDir, field.Field, scalarFieldPrefix, field.Field)
 		if field.SupportsNTT {
 			ntt.Generate(fieldDir, "", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, true, "", "")
 			poly.Generate(fieldDir, field.Field, scalarFieldPrefix, field.GnarkImport)
@@ -78,7 +78,7 @@ func generateFiles() {
 			extensionField := field.Field + "_extension"
 			extensionFieldPrefix := "Extension"
 			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
-			vecops.Generate(extensionsDir, extensionField, extensionFieldPrefix)
+			vecops.Generate(extensionsDir, fieldDir, extensionField, extensionFieldPrefix, field.Field)
 			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
 		}
 
