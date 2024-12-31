@@ -1,12 +1,9 @@
 #pragma once
 #include "icicle/errors.h"
-#include "icicle/utils/log.h"
 #include "ntt_task.h"
 #include "ntt_utils.h"
 #include <taskflow/taskflow.hpp>
 #include <cstdint>
-#include <deque>
-#include <omp.h>
 
 #ifdef CURVE_ID
   #include "icicle/curves/curve_config.h"
@@ -105,7 +102,7 @@ namespace ntt_cpu {
 
         for (size_t i = 0; i < num_chunks; ++i) {
           size_t start_index = i * chunk_size;
-          size_t end_index = std::min(start_index + chunk_size, nof_blocks * nof_subntts);
+          size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(nof_blocks * nof_subntts));
           taskflow.emplace([&, hierarchy_0_layer_idx, start_index, end_index, nof_subntts]() {
             for (uint32_t j = start_index; j < (end_index); j++) {
               uint32_t hierarchy_0_block_idx = j / nof_subntts;
@@ -117,7 +114,7 @@ namespace ntt_cpu {
             }
           });
         }
-        executor.run(taskflow).wait();
+        executor.run(taskflow).wait(); // TODO: Explore using task dependencies to optimize parallel execution
         taskflow.clear();
         if ((hierarchy_0_layer_idx != 0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in
                                                                                                      // hierarchy 1 have
@@ -173,7 +170,7 @@ namespace ntt_cpu {
             for (size_t i = 0; i < num_chunks; ++i) {
               size_t start_index = i * chunk_size;
               size_t end_index =
-                std::min(start_index + chunk_size, nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel);
+                std::min(start_index + chunk_size, static_cast<size_t>(nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel));
               taskflow.emplace([this, start_index, end_index, nof_blocks, hierarchy_1_layer_idx,
                                 hierarchy_1_subntts_chunk_idx, hierarchy_0_layer_idx, nof_subntts,
                                 nof_hierarchy_1_subntts_todo_in_parallel]() {
@@ -321,35 +318,48 @@ namespace ntt_cpu {
     uint32_t batch_stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     const bool needs_reorder_input = ntt_data.direction == NTTDir::kForward && (ntt_data.logn > HIERARCHY_1);
     const S* twiddles = CpuNttDomain<S>::s_ntt_domain.get_twiddles();
+    tf::Executor executor;
+    tf::Taskflow taskflow;
 
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
       E* current_elements =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
 
-      // #pragma omp parallel for
-      for (uint64_t i = 1; i < ntt_data.size; ++i) {
-        uint64_t idx = i;
+      size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      size_t chunk_size = (ntt_data.size + num_chunks - 1) / num_chunks;
 
-        // Adjust the index if reorder logic was applied on the input
-        if (needs_reorder_input) {
-          uint32_t cur_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
-          uint32_t next_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
-          uint32_t subntt_idx = i >> cur_ntt_log_size;
-          uint32_t element = i & ((1 << cur_ntt_log_size) - 1);
-          idx = subntt_idx + (element << next_ntt_log_size);
-        }
+      for (size_t cunk = 0; cunk < num_chunks; ++cunk) {
+        size_t start_index = cunk * chunk_size;
+        size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(ntt_data.size));
+        taskflow.emplace([&, needs_reorder_input, twiddles, current_elements, batch_stride, 
+                             start_index, end_index]() {
+          for (uint64_t i = start_index; i < end_index; i++) {
+            uint64_t idx = i;
 
-        // Apply coset multiplication based on the available coset information
-        if (ntt_data.arbitrary_coset) {
-          current_elements[batch_stride * i] = current_elements[batch_stride * i] * ntt_data.arbitrary_coset[idx];
-        } else {
-          uint32_t twiddle_idx = ntt_data.coset_stride * idx;
-          twiddle_idx = ntt_data.direction == NTTDir::kForward
-                          ? twiddle_idx
-                          : CpuNttDomain<S>::s_ntt_domain.get_max_size() - twiddle_idx;
-          current_elements[batch_stride * i] = current_elements[batch_stride * i] * twiddles[twiddle_idx];
-        }
+            // Adjust the index if reorder logic was applied on the input
+            if (needs_reorder_input) {
+              uint32_t cur_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
+              uint32_t next_ntt_log_size = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1];
+              uint32_t subntt_idx = i >> cur_ntt_log_size;
+              uint32_t element = i & ((1 << cur_ntt_log_size) - 1);
+              idx = subntt_idx + (element << next_ntt_log_size);
+            }
+
+            // Apply coset multiplication based on the available coset information
+            if (ntt_data.arbitrary_coset) {
+              current_elements[batch_stride * i] = current_elements[batch_stride * i] * ntt_data.arbitrary_coset[idx];
+            } else {
+              uint32_t twiddle_idx = ntt_data.coset_stride * idx;
+              twiddle_idx = ntt_data.direction == NTTDir::kForward
+                              ? twiddle_idx
+                              : CpuNttDomain<S>::s_ntt_domain.get_max_size() - twiddle_idx;
+              current_elements[batch_stride * i] = current_elements[batch_stride * i] * twiddles[twiddle_idx];
+            }
+          }
+        });
       }
+      executor.run(taskflow).wait();
+      taskflow.clear();
     }
   }
 
@@ -363,19 +373,30 @@ namespace ntt_cpu {
     const uint32_t nof_sntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[0];
     const uint32_t stride = ntt_data.config.columns_batch ? ntt_data.config.batch_size : 1;
     const uint64_t temp_elements_size = ntt_data.size * ntt_data.config.batch_size;
+    tf::Executor executor;
+    tf::Taskflow taskflow;
 
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
       E* cur_layer_output =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
       E* cur_temp_elements =
         ntt_data.config.columns_batch ? temp_elements.get() + batch : temp_elements.get() + batch * ntt_data.size;
-      // #pragma omp parallel for collapse(2)
-      for (uint32_t sntt_idx = 0; sntt_idx < nof_sntts; sntt_idx++) {
-        for (uint32_t elem = 0; elem < sntt_size; elem++) {
-          cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =
-            cur_layer_output[stride * (elem * nof_sntts + sntt_idx)];
-        }
+      size_t num_chunks = std::thread::hardware_concurrency(); // Adjust based on the number of threads
+      size_t chunk_size = (static_cast<size_t>(nof_sntts * sntt_size) + num_chunks - 1) / num_chunks; 
+      for (size_t chunk = 0; chunk < num_chunks; ++chunk) {
+        size_t start_index = chunk * chunk_size;
+        size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(nof_sntts * sntt_size));
+        taskflow.emplace([this, stride, cur_layer_output, cur_temp_elements, nof_sntts, sntt_size, start_index, end_index]() {
+          for (size_t j = start_index; j < end_index; ++j) {
+              uint32_t sntt_idx = j / sntt_size;
+              uint32_t elem = j % sntt_size;
+              cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =
+                cur_layer_output[stride * (elem * nof_sntts + sntt_idx)];
+          }
+        });
       }
+      executor.run(taskflow).wait();
+      taskflow.clear();
     }
     ntt_data.elements = temp_elements.get();
   }

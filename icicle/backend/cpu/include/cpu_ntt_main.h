@@ -1,9 +1,6 @@
 #pragma once
-#include "icicle/utils/log.h"
 #include "ntt_cpu.h"
-#include <iostream>
 
-using namespace field_config;
 using namespace icicle;
 
 /**

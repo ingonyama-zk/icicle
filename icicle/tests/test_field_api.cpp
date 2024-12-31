@@ -16,8 +16,6 @@
 #include "icicle/program/returning_value_program.h"
 #include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "test_base.h"
-#include <taskflow/taskflow.hpp>
-#include <vector>
 
 using namespace field_config;
 using namespace icicle;

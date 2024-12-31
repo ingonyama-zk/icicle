@@ -4,9 +4,7 @@
 #include "ntt_utils.h"
 #include "ntt_data.h"
 #include <cstdint>
-#include <random>
 
-using namespace field_config;
 using namespace icicle;
 namespace ntt_cpu {
 

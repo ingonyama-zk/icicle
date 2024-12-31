@@ -1,13 +1,8 @@
 #pragma once
-#include "icicle/utils/log.h"
-#include "tasks_manager.h"
 #include "cpu_ntt_domain.h"
 
-// #include <_types/_uint32_t.h>
-#include <csetjmp>
 #include <sys/types.h>
 #include <deque>
-#include <functional>
 #include <unordered_map>
 
 #define HIERARCHY_1 26
