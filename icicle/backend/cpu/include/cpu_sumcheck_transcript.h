@@ -1,18 +1,15 @@
 
 
-
-
   template <typename S>
   struct SumcheckTranscriptConfig {
     Hash hasher; ///< Hash function used for randomness generation.
-    // TODO: Should labels be user-configurable or hardcoded?
     const char* domain_separator_label; ///< Label for the domain separator in the transcript.
     const char* round_poly_label;       ///< Label for round polynomials in the transcript.
     const char* round_challenge_label;  ///< Label for round challenges in the transcript.
     const bool little_endian = true;    ///< Encoding endianness (default: little-endian).
     S seed_rng;                         ///< Seed for initializing the RNG.
   };
-  
+ 
 
 
 template <typename S>
@@ -35,7 +32,6 @@ public:
     vector<std::byte> hash_input;
     (poly_degree == 0) ? build_hash_input_round_0(hash_input, round_poly) :
                          build_hash_input_round_i(hash_input, round_poly);
-
 
     // hash hash_input and return alpha
     vector<std::byte> hash_result(transcript_config.hasher.output_size());
