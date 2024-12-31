@@ -13,8 +13,7 @@
 #include "icicle/curves/projective.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
-//#include "tasks_manager.h"
-#include <taskflow/taskflow.hpp>
+#include "tasks_manager.h"
 #include "icicle/backend/msm_config.h"
 // #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
@@ -60,7 +59,7 @@ class Msm {
         thread.join();
     }
     // Collapse all the workers buckets into one
-    // collapse_all_workers_result();
+    collapse_all_workers_result();
 
     phase2_collapse_segments();
 
@@ -190,33 +189,22 @@ class Msm {
       }
     }
 
-    void phase2_collapse_segments() {
+    void collapse_all_workers_result() {
+  //      #pragma omp parallel for
       std::vector<std::thread> threads;    
-      int segment_start = 0;
-      const int nof_segments_per_thread = (m_segments.size()+m_nof_workers-1)/m_nof_workers;
+      int bucket_start = 0;
+      const int nof_buckets_per_thread = (m_nof_total_buckets+m_nof_workers-1)/m_nof_workers;
       for(int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
-        const int nof_segments = std::min(nof_segments_per_thread, (int)m_segments.size()-worker_i*nof_segments_per_thread);
-        threads.emplace_back(std::bind(&Msm::worker_collapse_segments, this, segment_start, nof_segments));
-        segment_start += nof_segments_per_thread;
+        const int nof_buckets = std::min(nof_buckets_per_thread, (int)m_nof_total_buckets-worker_i*nof_buckets_per_thread);
+        threads.emplace_back(std::bind(&Msm::worker_collapse_all_workers_result, this, bucket_start, nof_buckets));
+        bucket_start += nof_buckets_per_thread;
       }
       for(auto& thread : threads) {
           thread.join();
       }
     }
 
-    void worker_collapse_segments(int segment_start, const int nof_segments) {
-      uint64_t bucket_start = segment_start * m_segment_size;
-      for (int segment_i = segment_start; segment_i < segment_start + nof_segments ; segment_i++) {
-        int segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
-        Segment& segment = m_segments[segment_i];
-        collapse_workers_buckets(bucket_start, segment_size);
-        worker_collapse_segment(m_segments[segment_i], bucket_start, segment_size);
-        bucket_start += m_segment_size;
-      }
-    }
-    
-    // collapse 
-    void collapse_workers_buckets(const int bucket_start, const int nof_buckets) {
+    void worker_collapse_all_workers_result(const int bucket_start, const int nof_buckets) {
       for(int bucket_i = bucket_start; bucket_i < bucket_start + nof_buckets; bucket_i++) {
         for(int worker_i = 1; worker_i < m_nof_workers; worker_i++) {
           if (m_workers_buckets_busy[worker_i][bucket_i]) {
@@ -225,17 +213,15 @@ class Msm {
             m_workers_buckets_busy[0][bucket_i] = true;
           }
         }
-        // if (bucket_start == 0) {
-        //   std::cout << "bkt " << bucket_i << " = " << m_workers_buckets[0][bucket_i].point.to_affine() << std::endl;
-        // }
       }
     }
 
-    void process_segment(int segment_idx) {
-      const int bucket_start = segment_idx * m_segment_size;
-      const int segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
-      collapse_workers_buckets(bucket_start, segment_size);
-      
+    void phase2_collapse_segments() {
+      uint64_t bucket_start = 0;
+      for (auto& segment : m_segments) {
+        worker_collapse_segment(segment, bucket_start, std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size));
+        bucket_start += m_segment_size;
+      }
     }
 
     void worker_collapse_segment(Segment& segment, const int64_t bucket_start, const uint32_t segment_size) {
@@ -248,8 +234,16 @@ class Msm {
       segment.line_sum = segment.triangle_sum;
       for (int64_t bucket_i = last_bucket_i-1; bucket_i > bucket_start; bucket_i--) {
         if (buckets_busy[bucket_i]) {
+          // if (bucket_start == 608*128) {
+          //   std::cout << "line = " << segment.line_sum.to_affine() << std::endl;
+          //   std::cout << "line += " << bucket_i << ":" << buckets[bucket_i].point.to_affine() << std::endl;
+          // }
           segment.line_sum = segment.line_sum + buckets[bucket_i].point; // TBD: inplace
          }
+        // if (bucket_start == 608*128) {
+        //   std::cout << "tri = " << segment.triangle_sum.to_affine() << std::endl;
+        //   std::cout << "tri += " << segment.line_sum.to_affine() << std::endl;
+        // }
         segment.triangle_sum = segment.triangle_sum + segment.line_sum; // TBD: inplace
       }
     }
