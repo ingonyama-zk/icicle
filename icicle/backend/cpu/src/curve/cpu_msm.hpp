@@ -41,36 +41,13 @@ class Msm {
   }
 
   // run MSM
-  void run_msm(const scalar_t* scalars, const A* bases, const int msm_size, P* results) {
+  void run_msm(const scalar_t* scalars, const A* bases, P* results) {
+    // initialize all buckets to not busy
     init_workers_buckets_busy();
-    // round up
-    const int worker_msm_size = (msm_size+m_nof_workers-1)/m_nof_workers;
-    
-    // Run workers to build their buckets on a subset of the scalars and bases
-    // #pragma omp parallel for
-    std::vector<std::thread> threads;
-    for(int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
-      m_taskflow.emplace([=]() {
-      const int scalars_start_idx = worker_msm_size * worker_i;
-      const int bases_start_idx  = scalars_start_idx * m_precompute_factor;
-      const int cur_worker_msm_size = std::min(worker_msm_size, msm_size-worker_i*worker_msm_size);
-      worker_run_phase1(worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size);
-      });
-      //threads.emplace_back(std::bind(&Msm::worker_run_phase1, this, worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size));
-    }
-    run_workers_and_wait();
-    // for(auto& thread : threads) {
-    //     thread.join();
-    // }
-    // Collapse all the workers buckets into one
-    collapse_all_workers_result();
+
+    phase1_populate_buckets(scalars, bases);
 
     phase2_collapse_segments();
-
-    // for (int i=0; i<m_segments.size(); ++i) {
-    //   std::cout << "Seg: " << i << ", triangle_sum=" << m_segments[i].triangle_sum.to_affine() << std::endl;
-    //   std::cout << "Seg: " << i <<  ", line_sum=" << m_segments[i].line_sum.to_affine() << std::endl;
-    // }
 
     phase3_final_accumulator(results);
     std::cout << "Final result: " << results->to_affine() << std::endl;
@@ -78,14 +55,18 @@ class Msm {
   }
 
   private: 
+    // A single bucket data base
     struct Bucket {
       P point;
     };
+
+    // A single segment data base
     struct Segment {
       P line_sum;
       P triangle_sum;
     };
 
+    // members
     tf::Taskflow       m_taskflow;
     tf::Executor       m_executor;
     const int          m_msm_size;
@@ -141,6 +122,27 @@ class Msm {
       m_executor.run(m_taskflow).wait();
       m_taskflow.clear();
     }
+
+    // phase 1: Each worker process a portion of the inputs and populate its buckets
+    void phase1_populate_buckets(const scalar_t* scalars, const A* bases) {
+      // divide the msm problem to workers
+      const int worker_msm_size = (m_msm_size+m_nof_workers-1)/m_nof_workers; // round up
+      
+      // Run workers to build their buckets on a subset of the scalars and bases
+      for(int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
+        m_taskflow.emplace([=]() {
+        const int scalars_start_idx = worker_msm_size * worker_i;
+        const int bases_start_idx  = scalars_start_idx * m_precompute_factor;
+        const int cur_worker_msm_size = std::min(worker_msm_size, m_msm_size-worker_i*worker_msm_size);
+        worker_run_phase1(worker_i, scalars+scalars_start_idx, bases+bases_start_idx, cur_worker_msm_size);
+        });
+      }
+      run_workers_and_wait();
+
+      // Collapse all the workers buckets into one
+      collapse_all_workers_result();
+    }
+
     // each worker run this function and update its buckets
     void worker_run_phase1 (const int worker_idx, const scalar_t* scalars, const A* bases, const unsigned int msm_size) {
       std::vector<Bucket>&  buckets = m_workers_buckets[worker_idx];
@@ -199,8 +201,6 @@ class Msm {
     }
 
     void collapse_all_workers_result() {
-  //      #pragma omp parallel for
-      //std::vector<std::thread> threads;    
       int bucket_start = 0;
       const int nof_buckets_per_thread = (m_nof_total_buckets+m_nof_workers-1)/m_nof_workers;
       for(int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
@@ -212,9 +212,6 @@ class Msm {
         bucket_start += nof_buckets_per_thread;
       }
       run_workers_and_wait();
-      // for(auto& thread : threads) {
-      //     thread.join();
-      // }
     }
 
     void worker_collapse_all_workers_result(const int bucket_start, const int nof_buckets) {
@@ -344,7 +341,7 @@ eIcicleError cpu_msm(
   for (int batch_i = 0; batch_i < config.batch_size; batch_i++) {
     const int batch_start_idx = msm_size * batch_i;
     const int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
-    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], msm_size, &results[batch_i]);
+    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i]);
   }
   return eIcicleError::SUCCESS;
 }
