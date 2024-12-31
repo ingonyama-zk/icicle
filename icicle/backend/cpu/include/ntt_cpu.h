@@ -169,8 +169,9 @@ namespace ntt_cpu {
               (nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel + num_chunks - 1) / num_chunks;
             for (size_t i = 0; i < num_chunks; ++i) {
               size_t start_index = i * chunk_size;
-              size_t end_index =
-                std::min(start_index + chunk_size, static_cast<size_t>(nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel));
+              size_t end_index = std::min(
+                start_index + chunk_size,
+                static_cast<size_t>(nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel));
               taskflow.emplace([this, start_index, end_index, nof_blocks, hierarchy_1_layer_idx,
                                 hierarchy_1_subntts_chunk_idx, hierarchy_0_layer_idx, nof_subntts,
                                 nof_hierarchy_1_subntts_todo_in_parallel]() {
@@ -331,8 +332,7 @@ namespace ntt_cpu {
       for (size_t cunk = 0; cunk < num_chunks; ++cunk) {
         size_t start_index = cunk * chunk_size;
         size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(ntt_data.size));
-        taskflow.emplace([&, needs_reorder_input, twiddles, current_elements, batch_stride, 
-                             start_index, end_index]() {
+        taskflow.emplace([&, needs_reorder_input, twiddles, current_elements, batch_stride, start_index, end_index]() {
           for (uint64_t i = start_index; i < end_index; i++) {
             uint64_t idx = i;
 
@@ -382,18 +382,19 @@ namespace ntt_cpu {
       E* cur_temp_elements =
         ntt_data.config.columns_batch ? temp_elements.get() + batch : temp_elements.get() + batch * ntt_data.size;
       size_t num_chunks = std::thread::hardware_concurrency(); // Adjust based on the number of threads
-      size_t chunk_size = (static_cast<size_t>(nof_sntts * sntt_size) + num_chunks - 1) / num_chunks; 
+      size_t chunk_size = (static_cast<size_t>(nof_sntts * sntt_size) + num_chunks - 1) / num_chunks;
       for (size_t chunk = 0; chunk < num_chunks; ++chunk) {
         size_t start_index = chunk * chunk_size;
         size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(nof_sntts * sntt_size));
-        taskflow.emplace([this, stride, cur_layer_output, cur_temp_elements, nof_sntts, sntt_size, start_index, end_index]() {
-          for (size_t j = start_index; j < end_index; ++j) {
+        taskflow.emplace(
+          [this, stride, cur_layer_output, cur_temp_elements, nof_sntts, sntt_size, start_index, end_index]() {
+            for (size_t j = start_index; j < end_index; ++j) {
               uint32_t sntt_idx = j / sntt_size;
               uint32_t elem = j % sntt_size;
               cur_temp_elements[stride * (sntt_idx * sntt_size + elem)] =
                 cur_layer_output[stride * (elem * nof_sntts + sntt_idx)];
-          }
-        });
+            }
+          });
       }
       executor.run(taskflow).wait();
       taskflow.clear();
