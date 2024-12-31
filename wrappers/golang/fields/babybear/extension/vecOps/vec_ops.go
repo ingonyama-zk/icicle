@@ -42,3 +42,20 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, co
 	err := (C.babybear_extension_matrix_transpose(cIn, cRowSize, cColumnSize, cConfig, cOut))
 	return runtime.EIcicleError(err)
 }
+
+func CrossVecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret runtime.EIcicleError) {
+	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
+
+	cA := (*C.scalar_t)(aPointer)
+	cB := (*C.scalar_t)(bPointer)
+	cOut := (*C.scalar_t)(outPointer)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cSize := (C.int)(size)
+
+	switch op {
+	case core.Mul:
+		ret = (runtime.EIcicleError)(C.babybear_extension_vector_mul(cA, cB, cSize, cConfig, cOut))
+	}
+
+	return ret
+}
