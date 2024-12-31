@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
 	babybear_extension "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/extension"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/extension/vecOps"
 	"github.com/stretchr/testify/suite"
@@ -64,6 +65,23 @@ func testBabybear_extensionTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testBabybear_extensionCrossVecOps(suite *suite.Suite) {
+	testSize := 1 << 2
+
+	a := babybear_extension.GenerateScalars(testSize)
+	var scalar babybear.ScalarField
+	scalar.One()
+	ones := core.HostSliceWithValue(scalar, testSize)
+
+	out := make(core.HostSlice[babybear_extension.ExtensionField], testSize)
+
+	cfg := core.DefaultVecOpsConfig()
+
+	vecOps.CrossVecOp(a, ones, out, cfg, core.Mul)
+
+	suite.Equal(a, out)
+}
+
 type Babybear_extensionVecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +89,7 @@ type Babybear_extensionVecOpsTestSuite struct {
 func (s *Babybear_extensionVecOpsTestSuite) TestBabybear_extensionVecOps() {
 	s.Run("TestBabybear_extensionVecOps", testWrapper(&s.Suite, testBabybear_extensionVecOps))
 	s.Run("TestBabybear_extensionTranspose", testWrapper(&s.Suite, testBabybear_extensionTranspose))
+	s.Run("TestBabybear_extensionCrossVecOps", testWrapper(&s.Suite, testBabybear_extensionCrossVecOps))
 }
 
 func TestSuiteBabybear_extensionVecOps(t *testing.T) {

@@ -12,17 +12,21 @@ var vecOpsTemplates = map[string]string{
 	"header": "vecOps/templates/vec_ops.h.tmpl",
 }
 
-func Generate(baseDir, field, fieldPrefix string) {
+func Generate(baseDir, secondDir, field, fieldPrefix string, secondField string) {
 	data := struct {
-		PackageName    string
-		Field          string
-		FieldPrefix    string
-		BaseImportPath string
+		PackageName      string
+		Field            string
+		FieldPrefix      string
+		BaseImportPath   string
+		SecondField      string
+		SecondImportPath string
 	}{
 		"vecOps",
 		field,
 		fieldPrefix,
 		baseDir,
+		secondField,
+		secondDir,
 	}
 
 	testDir := "tests"
