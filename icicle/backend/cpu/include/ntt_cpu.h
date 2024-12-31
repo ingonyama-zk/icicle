@@ -63,10 +63,10 @@ namespace ntt_cpu {
   NttCpu<S, E>::NttCpu(uint32_t logn, NTTDir direction, const NTTConfig<S>& config, const E* input, E* output)
       : input(input), output(output), ntt_data(logn, output, config, direction, compute_if_is_parallel(logn, config))
   {
-      if (logn > HIERARCHY_1) {
-        // Allocate temporary storage to handle reordering
-        temp_elements = std::make_unique<E[]>(ntt_data.size * config.batch_size);
-      }
+    if (logn > HIERARCHY_1) {
+      // Allocate temporary storage to handle reordering
+      temp_elements = std::make_unique<E[]>(ntt_data.size * config.batch_size);
+    }
   }
 
   template <typename S, typename E>
@@ -78,11 +78,14 @@ namespace ntt_cpu {
       NttTaskCoordinates ntt_task_coordinates(0, 0, 0, 0, 0, false);
       NttTask<S, E> task(ntt_task_coordinates, ntt_data);
       task.execute();
-    } else if (__builtin_expect((ntt_data.logn <= HIERARCHY_1),1)){      
+    } else if (__builtin_expect((ntt_data.logn <= HIERARCHY_1), 1)) {
       tf::Taskflow taskflow;
       tf::Executor executor;
-      uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2] != 0) ? 3 : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1] != 0) ? 2 : 1;
-      for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
+      uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2] != 0)   ? 3
+                                        : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1] != 0) ? 2
+                                                                                                                : 1;
+      for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers;
+           hierarchy_0_layer_idx++) {
         uint64_t nof_blocks;
         uint64_t nof_subntts;
         if (hierarchy_0_layer_idx == 0) {
@@ -92,28 +95,35 @@ namespace ntt_cpu {
           nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2];
           nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0];
         } else {
-          nof_blocks = 1 << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0] + ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1]);
+          nof_blocks = 1
+                       << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0] +
+                           ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1]);
           nof_subntts = 1;
         }
-        size_t num_chunks = (std::thread::hardware_concurrency())<<1; // Adjust based on the number of threads
-        size_t chunk_size = (nof_blocks*nof_subntts + num_chunks - 1) / num_chunks;
+        size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+        size_t chunk_size = (nof_blocks * nof_subntts + num_chunks - 1) / num_chunks;
 
         for (size_t i = 0; i < num_chunks; ++i) {
           size_t start_index = i * chunk_size;
-          size_t end_index = std::min(start_index + chunk_size, nof_blocks*nof_subntts);
+          size_t end_index = std::min(start_index + chunk_size, nof_blocks * nof_subntts);
           taskflow.emplace([&, hierarchy_0_layer_idx, start_index, end_index, nof_subntts]() {
             for (uint32_t j = start_index; j < (end_index); j++) {
               uint32_t hierarchy_0_block_idx = j / nof_subntts;
               uint32_t hierarchy_0_subntt_idx = j % nof_subntts;
-              NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
+              NttTaskCoordinates ntt_task_coordinates(
+                0, 0, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
               NttTask<S, E> task(ntt_task_coordinates, ntt_data);
               task.execute();
             }
           });
         }
         executor.run(taskflow).wait();
-        taskflow.clear(); 
-        if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
+        taskflow.clear();
+        if ((hierarchy_0_layer_idx != 0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in
+                                                                                                     // hierarchy 1 have
+                                                                                                     // been executed;
+                                                                                                     // now executing
+                                                                                                     // the reorder task
           NttTaskCoordinates ntt_task_coordinates(0, 0, hierarchy_0_layer_idx, 0, 0, true);
           NttTask<S, E> task(ntt_task_coordinates, ntt_data);
           task.execute();
@@ -123,16 +133,25 @@ namespace ntt_cpu {
       tf::Taskflow taskflow;
       tf::Executor executor;
       for (uint32_t hierarchy_1_layer_idx = 0; hierarchy_1_layer_idx < 2; hierarchy_1_layer_idx++) {
-        const uint32_t sunbtt_plus_batch_logn = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] + uint32_t(log2(ntt_data.config.batch_size));
-        const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel = (sunbtt_plus_batch_logn < HIERARCHY_1) ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
+        const uint32_t sunbtt_plus_batch_logn =
+          ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[hierarchy_1_layer_idx] +
+          uint32_t(log2(ntt_data.config.batch_size));
+        const uint32_t log_nof_hierarchy_1_subntts_todo_in_parallel =
+          (sunbtt_plus_batch_logn < HIERARCHY_1) ? HIERARCHY_1 - sunbtt_plus_batch_logn : 0;
         const uint32_t nof_hierarchy_1_subntts_todo_in_parallel = 1 << log_nof_hierarchy_1_subntts_todo_in_parallel;
-        const uint32_t log_nof_subntts_chunks = ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] - log_nof_hierarchy_1_subntts_todo_in_parallel;
+        const uint32_t log_nof_subntts_chunks =
+          ntt_data.ntt_sub_hierarchies.hierarchy_1_layers_sub_logn[1 - hierarchy_1_layer_idx] -
+          log_nof_hierarchy_1_subntts_todo_in_parallel;
         const uint32_t nof_subntts_chunks = 1 << log_nof_subntts_chunks;
-        
-        for (uint32_t hierarchy_1_subntts_chunk_idx = 0; hierarchy_1_subntts_chunk_idx < nof_subntts_chunks; hierarchy_1_subntts_chunk_idx++) {
-            
-          uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0) ? 3 : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2 : 1;
-          for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers; hierarchy_0_layer_idx++) {
+
+        for (uint32_t hierarchy_1_subntts_chunk_idx = 0; hierarchy_1_subntts_chunk_idx < nof_subntts_chunks;
+             hierarchy_1_subntts_chunk_idx++) {
+          uint32_t nof_hierarchy_0_layers =
+            (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)   ? 3
+            : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2
+                                                                                                        : 1;
+          for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers;
+               hierarchy_0_layer_idx++) {
             uint64_t nof_blocks;
             uint64_t nof_subntts;
             if (hierarchy_0_layer_idx == 0) {
@@ -142,26 +161,35 @@ namespace ntt_cpu {
               nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
               nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
             } else {
-              nof_blocks = 1 << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] + ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
+              nof_blocks = 1
+                           << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
+                               ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
               nof_subntts = 1;
             }
-            nof_blocks = nof_blocks>>1;
-            size_t num_chunks = (std::thread::hardware_concurrency())<<5; // Adjust based on the number of threads
-            size_t chunk_size = (nof_blocks*nof_subntts*nof_hierarchy_1_subntts_todo_in_parallel + num_chunks - 1) / num_chunks;
+            nof_blocks = nof_blocks >> 1;
+            size_t num_chunks = (std::thread::hardware_concurrency()) << 5; // Adjust based on the number of threads
+            size_t chunk_size =
+              (nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel + num_chunks - 1) / num_chunks;
             for (size_t i = 0; i < num_chunks; ++i) {
               size_t start_index = i * chunk_size;
-              size_t end_index = std::min(start_index + chunk_size, nof_blocks*nof_subntts*nof_hierarchy_1_subntts_todo_in_parallel);
-              taskflow.emplace([this, start_index, end_index, nof_blocks, hierarchy_1_layer_idx, hierarchy_1_subntts_chunk_idx, hierarchy_0_layer_idx, 
-              nof_subntts, nof_hierarchy_1_subntts_todo_in_parallel]() {
+              size_t end_index =
+                std::min(start_index + chunk_size, nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel);
+              taskflow.emplace([this, start_index, end_index, nof_blocks, hierarchy_1_layer_idx,
+                                hierarchy_1_subntts_chunk_idx, hierarchy_0_layer_idx, nof_subntts,
+                                nof_hierarchy_1_subntts_todo_in_parallel]() {
                 for (uint32_t j = start_index; j < (end_index); j++) {
-                  uint32_t hierarchy_1_subntt_idx_in_chunk = j / (nof_subntts*nof_blocks);
+                  uint32_t hierarchy_1_subntt_idx_in_chunk = j / (nof_subntts * nof_blocks);
                   uint32_t hierarchy_0_block_idx_half = (j / nof_subntts) % nof_blocks;
-                  uint32_t hierarchy_0_block_idx = hierarchy_0_block_idx_half<<1;
+                  uint32_t hierarchy_0_block_idx = hierarchy_0_block_idx_half << 1;
                   uint32_t hierarchy_0_subntt_idx = j % nof_subntts;
-                  NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunk_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunk, hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
+                  NttTaskCoordinates ntt_task_coordinates(
+                    hierarchy_1_layer_idx,
+                    hierarchy_1_subntts_chunk_idx * nof_hierarchy_1_subntts_todo_in_parallel +
+                      hierarchy_1_subntt_idx_in_chunk,
+                    hierarchy_0_layer_idx, hierarchy_0_block_idx, hierarchy_0_subntt_idx, false);
                   NttTask<S, E> task(ntt_task_coordinates, ntt_data);
                   task.execute();
-                  ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx+1;
+                  ntt_task_coordinates.hierarchy_0_block_idx = hierarchy_0_block_idx + 1;
                   NttTask<S, E> task_with_elements_in_the_same_cachline(ntt_task_coordinates, ntt_data);
                   task_with_elements_in_the_same_cachline.execute();
                 }
@@ -169,10 +197,21 @@ namespace ntt_cpu {
             }
             executor.run(taskflow).wait();
             taskflow.clear();
-            if ((hierarchy_0_layer_idx !=0) && (hierarchy_0_layer_idx == nof_hierarchy_0_layers - 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
-              taskflow.emplace([this, hierarchy_1_layer_idx, hierarchy_1_subntts_chunk_idx, nof_hierarchy_1_subntts_todo_in_parallel, nof_hierarchy_0_layers]() {
-                for (uint32_t hierarchy_1_subntt_idx_in_chunk = 0; hierarchy_1_subntt_idx_in_chunk < nof_hierarchy_1_subntts_todo_in_parallel; hierarchy_1_subntt_idx_in_chunk++) {
-                  NttTaskCoordinates ntt_task_coordinates(hierarchy_1_layer_idx, hierarchy_1_subntts_chunk_idx * nof_hierarchy_1_subntts_todo_in_parallel + hierarchy_1_subntt_idx_in_chunk, nof_hierarchy_0_layers, 0, 0, true);
+            if (
+              (hierarchy_0_layer_idx != 0) &&
+              (hierarchy_0_layer_idx ==
+               nof_hierarchy_0_layers -
+                 1)) { // All NTT tasks in hierarchy 1 have been executed; now executing the reorder task
+              taskflow.emplace([this, hierarchy_1_layer_idx, hierarchy_1_subntts_chunk_idx,
+                                nof_hierarchy_1_subntts_todo_in_parallel, nof_hierarchy_0_layers]() {
+                for (uint32_t hierarchy_1_subntt_idx_in_chunk = 0;
+                     hierarchy_1_subntt_idx_in_chunk < nof_hierarchy_1_subntts_todo_in_parallel;
+                     hierarchy_1_subntt_idx_in_chunk++) {
+                  NttTaskCoordinates ntt_task_coordinates(
+                    hierarchy_1_layer_idx,
+                    hierarchy_1_subntts_chunk_idx * nof_hierarchy_1_subntts_todo_in_parallel +
+                      hierarchy_1_subntt_idx_in_chunk,
+                    nof_hierarchy_0_layers, 0, 0, true);
                   NttTask<S, E> task(ntt_task_coordinates, ntt_data);
                   task.execute();
                 }
@@ -222,7 +261,8 @@ namespace ntt_cpu {
         // no reordering needed, and input and output are the same
         return;
       }
-      // Allocate temporary storage to handle in-place reordering, can't be done inplace when input and output are the same
+      // Allocate temporary storage to handle in-place reordering, can't be done inplace when input and output are the
+      // same
       temp_storage = std::make_unique<E[]>(total_memory_size);
       temp_output = temp_storage.get();
     }
@@ -285,7 +325,7 @@ namespace ntt_cpu {
     for (uint32_t batch = 0; batch < ntt_data.config.batch_size; ++batch) {
       E* current_elements =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
-      
+
       // #pragma omp parallel for
       for (uint64_t i = 1; i < ntt_data.size; ++i) {
         uint64_t idx = i;
