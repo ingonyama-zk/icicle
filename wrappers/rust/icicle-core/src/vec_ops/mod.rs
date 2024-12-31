@@ -775,7 +775,7 @@ macro_rules! impl_vec_ops_cross_field {
     ) => {
         mod $field_prefix_ident {
 
-            use crate::vec_ops::{$field, $ext_field, HostOrDeviceSlice};
+            use crate::vec_ops::{$ext_field, $field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 

@@ -1,9 +1,9 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mul_scalars, cross_mul_scalars, product_scalars,
-    scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl, VecOps, CrossVecOps,
-    VecOpsConfig,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, cross_mul_scalars, div_scalars, mul_scalars,
+    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix,
+    CrossVecOps, FieldImpl, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
@@ -54,7 +54,7 @@ pub fn check_cross_vec_ops_scalars<F: FieldImpl, T: FieldImpl>()
 where
     <F as FieldImpl>::Config: CrossVecOps<F, T>,
     <T as FieldImpl>::Config: GenerateRandom<T>,
-    <F as FieldImpl>::Config: GenerateRandom<F>
+    <F as FieldImpl>::Config: GenerateRandom<F>,
 {
     let test_size = 1 << 14;
 
