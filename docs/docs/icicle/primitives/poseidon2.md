@@ -32,6 +32,7 @@ For ICICLE supported curves/fields
 * BN254 $\alpha = 5$
 * Grumpkin $\alpha = 5$
 * Stark252 $\alpha=3$
+* Koalabear $\alpha=3$
 
 ### MDS matrix structure
 

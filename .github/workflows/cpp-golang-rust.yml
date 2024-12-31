@@ -178,6 +178,8 @@ jobs:
             build_args: -DEXT_FIELD=OFF
           - name: m31
             build_args: -DEXT_FIELD=ON
+          - name: koalabear
+            build_args: -DEXT_FIELD=ON
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -283,7 +285,7 @@ jobs:
             fi
         done
 
-    - name: Run Golang field Tests (babybear only)
+    - name: Run Golang field Tests
       working-directory: ./wrappers/golang/fields
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       # if: matrix.field.name == 'babybear' #&& matrix.field.name == 'babybear'

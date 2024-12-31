@@ -130,7 +130,7 @@ chmod +x build.sh
 ```
 
 > [!NOTE]
-> To specify the field, use the flag -field=<field>, where <field> can be one of the following: babybear, stark252, m31.
+> To specify the field, use the flag -field=<field>, where <field> can be one of the following: babybear, stark252, m31, koalabear.
 > To specify a curve, use the flag -curve=<curve>, where <curve> can be one of the following: bn254, bls12_377, bls12_381, bw6_761, grumpkin.
 
 Once ICICLE has been built, you can add specific packages when you need them in your application:
@@ -163,7 +163,7 @@ cmake -S icicle -B build -DFIELD=babybear
 ```
 
 > [!NOTE]
-> To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252, m31.
+> To specify the field, use the flag -DFIELD=field, where field can be one of the following: babybear, stark252, m31, koalabear.
 > To specify a curve, use the flag -DCURVE=curve, where curve can be one of the following: bn254, bls12_377, bls12_381, bw6_761, grumpkin.
 
 **Build the project:**
@@ -333,6 +333,7 @@ See [LICENSE-MIT][LMIT] for details.
 [babybear]: ./icicle/fields/
 [stark252]: ./icicle/fields/
 [m31]: ./icicle/fields/
+[koalabear]: ./icicle/fields/
 [LMIT]: ./LICENSE
 [DISCORD]: https://discord.gg/Y4SkbDf2Ff
 [googletest]: https://github.com/google/googletest/
