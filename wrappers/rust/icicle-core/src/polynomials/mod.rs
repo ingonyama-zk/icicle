@@ -282,7 +282,7 @@ macro_rules! impl_univariate_polynomial_api {
             fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S) {
                 let coeffs_len = coeffs.len() as u64;
                 let nof_coeffs = self.get_nof_coeffs();
-                let end_idx = cmp::min(nof_coeffs, start_idx + coeffs_len - 1);
+                let end_idx = cmp::min(nof_coeffs - 1, start_idx + coeffs_len - 1);
 
                 unsafe {
                     copy_coeffs(self.handle, coeffs.as_mut_ptr(), start_idx, end_idx);
@@ -625,6 +625,11 @@ macro_rules! impl_polynomial_tests {
             let mut host_mem = vec![$field::zero(); coeffs.len()];
             f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem));
             assert_eq!(host_mem, coeffs);
+
+            // read into larger buffer
+            let mut host_mem_large = vec![$field::zero(); coeffs.len() + 10];
+            f.copy_coeffs(0, HostSlice::from_mut_slice(&mut host_mem_large));
+            assert_eq!(host_mem_large[..coeffs.len()], coeffs);
 
             // read coeffs to device memory
             let mut device_mem = DeviceVec::<$field>::device_malloc(coeffs.len()).unwrap();
