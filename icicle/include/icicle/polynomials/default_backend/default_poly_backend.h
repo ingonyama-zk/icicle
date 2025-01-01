@@ -259,7 +259,10 @@ namespace icicle {
 
       const int64_t deg_a = degree(a);
       const int64_t deg_b = degree(b);
-      ICICLE_ASSERT(deg_b >= 0) << "Polynomial division:  divide by zero polynomial";
+      if (deg_b < 0) {
+        ICICLE_LOG_ERROR << "Polynomial division:  divide by zero polynomial. Skipping computation.";
+        return;
+      }
 
       // init: Q=0, R=a
       Q->allocate(deg_a - deg_b + 1, State::Coefficients, true /*=memset zeros*/);
@@ -346,7 +349,10 @@ namespace icicle {
       numerator->transform_to_coefficients();
       auto numerator_coeffs = get_context_storage_mutable(numerator);
       const auto N = numerator->get_nof_elements();
-      ICICLE_ASSERT(vanishing_poly_degree <= N) << "divide_by_vanishing_polynomial(): degree is too large";
+      if (vanishing_poly_degree > N) {
+        ICICLE_LOG_ERROR << "divide_by_vanishing_polynomial(): degree is too large. Skipping computation.";
+        return;
+      }
 
       out->allocate(N, State::Coefficients, true /*=set zeros*/);
       add_monomial_inplace(out, C::zero() - C::one(), 0);         //-1
@@ -384,8 +390,10 @@ namespace icicle {
     void divide_by_vanishing_case_2N(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree)
     {
       // in that special case the numertaor has 2N elements and output will be N elements
-      ICICLE_ASSERT(numerator->get_nof_elements() == 2 * vanishing_poly_degree)
-        << "invalid input size. Expecting numerator to be of size 2N";
+      if (numerator->get_nof_elements() != 2 * vanishing_poly_degree) {
+        ICICLE_LOG_ERROR << "divide_by_vanishing_case_2N(): invalid input size. Skipping computation.";
+        return;
+      }
 
       // In the case where deg(P)=2N, I can transform numerator to Reversed-evals -> The second half is
       // a reversed-coset of size N with coset-gen the 2N-th root of unity.
@@ -423,8 +431,10 @@ namespace icicle {
     void divide_by_vanishing_case_N(PolyContext out, PolyContext numerator, uint64_t vanishing_poly_degree)
     {
       // in that special case the numertaor has N elements and output will be N elements
-      ICICLE_ASSERT(numerator->get_nof_elements() == vanishing_poly_degree)
-        << "invalid input size. Expecting numerator to be of size N";
+      if (numerator->get_nof_elements() != vanishing_poly_degree) {
+        ICICLE_LOG_ERROR << "divide_by_vanishing_case_N(): invalid input size. Skipping computation.";
+        return;
+      }
 
       const int N = vanishing_poly_degree;
       numerator->transform_to_coefficients(N);
@@ -572,7 +582,8 @@ namespace icicle {
           ntt(d_evals, poly_size, NTTDir::kForward, ntt_config, d_evals);
         } break;
         default:
-          ICICLE_ASSERT(false) << "Invalid state to compute evaluations";
+          ICICLE_LOG_ERROR << "Panic: Invalid state to compute evaluations";
+          ICICLE_ASSERT(false);
           break;
         }
       }
@@ -596,8 +607,9 @@ namespace icicle {
       const bool is_valid_end_idx = end_idx < nof_coeffs && end_idx >= start_idx;
       const bool is_valid_indices = is_valid_start_idx && is_valid_end_idx;
       if (!is_valid_indices) {
-        // return -1 instead? I could but 'get_coeff()' cannot with its current declaration
-        ICICLE_ASSERT(false) << "copy_coeffs() invalid indices";
+        ICICLE_LOG_ERROR << "copy_coeffs() invalid indices (start=" << start_idx << ", end=" << end_idx
+                         << ", nof_coeffs=" << nof_coeffs << "). Skipping copy...";
+        return 0;
       }
 
       op->transform_to_coefficients();
