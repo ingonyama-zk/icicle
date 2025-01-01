@@ -307,10 +307,10 @@ namespace icicle {
 
   void register_extension_vector_mixed_mul(const std::string& deviceType, mixedVectorOpImpl impl);
 
-  #define REGISTER_VECTOR_MIXED_MUL_BACKEND(DEVICE_TYPE, FUNC)                                              \
+  #define REGISTER_VECTOR_MIXED_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                         \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_vec_mixed_mul) = []() -> bool {                                                      \
-        register_extension_vector_mixed_mul(DEVICE_TYPE, FUNC);                                                       \
+      static bool UNIQUE(_reg_vec_mixed_mul) = []() -> bool {                                                          \
+        register_extension_vector_mixed_mul(DEVICE_TYPE, FUNC);                                                        \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
