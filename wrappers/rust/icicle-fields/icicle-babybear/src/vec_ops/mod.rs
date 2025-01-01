@@ -1,7 +1,7 @@
 use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
 
 use icicle_core::vec_ops::{MixedVecOps, VecOps, VecOpsConfig};
-use icicle_core::{impl_vec_ops_mixed_field, impl_vec_ops_field};
+use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
