@@ -396,7 +396,7 @@ eIcicleError cpu_msm_precompute_bases(
   for (int i = 0; i < nof_bases; i++) {
     output_bases[precompute_factor * i] = input_bases[i];
     P point = P::from_affine(is_mont ? A::from_montgomery(input_bases[i]) : input_bases[i]);
-    for (int j = 1; j < precompute_factor; j++) { // TBD paralleize this
+    for (int j = 1; j < precompute_factor; j++) { // TBD parallelize this
       for (int k = 0; k < shift; k++) {
         point = P::dbl(point);
       }
