@@ -1,16 +1,11 @@
 #pragma once
-#include "icicle/utils/log.h"
-#include "tasks_manager.h"
 #include "cpu_ntt_domain.h"
 
-// #include <_types/_uint32_t.h>
-#include <csetjmp>
 #include <sys/types.h>
 #include <deque>
-#include <functional>
 #include <unordered_map>
 
-#define HIERARCHY_1 22
+#define HIERARCHY_1 26
 
 namespace ntt_cpu {
 
@@ -25,10 +20,10 @@ namespace ntt_cpu {
    * layer, 13 for the second, and 0 for the third.
    */
   constexpr uint32_t layers_sub_logn[31][3] = {
-    {0, 0, 0},   {1, 0, 0},   {2, 0, 0},   {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},  {4, 3, 0},
-    {4, 4, 0},   {5, 4, 0},   {5, 5, 0},   {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},  {5, 5, 5},
-    {5, 5, 6},   {5, 5, 7},   {5, 5, 8},   {5, 5, 9},   {5, 5, 10},  {5, 5, 11},  {5, 5, 12}, {12, 11, 0},
-    {12, 12, 0}, {13, 12, 0}, {13, 13, 0}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
+    {0, 0, 0},  {1, 0, 0},  {2, 0, 0},  {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},  {4, 3, 0},
+    {4, 4, 0},  {5, 4, 0},  {5, 5, 0},  {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},  {5, 5, 5},
+    {5, 5, 6},  {5, 5, 7},  {5, 5, 8},  {5, 5, 9},   {5, 5, 10},  {5, 5, 11},  {5, 5, 12}, {5, 5, 13},
+    {5, 5, 14}, {5, 5, 15}, {5, 5, 16}, {14, 13, 0}, {14, 14, 0}, {15, 14, 0}, {15, 15, 0}};
 
   /**
    * @brief Represents the log sizes of sub-NTTs in the NTT computation hierarchy.
@@ -36,8 +31,6 @@ namespace ntt_cpu {
    * This struct stores the log sizes of the sub-NTTs for both hierarchy_0 and hierarchy_1  layers,
    * based on the overall log size (`logn`) of the NTT problem.
    *
-   * @param logn The log size of the entire NTT problem.
-   * @param size The size of the NTT problem, calculated as `1 << logn`.
    * @param hierarchy_0_layers_sub_logn Log sizes of sub-NTTs for hierarchy_0 layers.
    * @param hierarchy_1_layers_sub_logn Log sizes of sub-NTTs for hierarchy_1 layers.
    *
@@ -75,7 +68,7 @@ namespace ntt_cpu {
     const uint32_t logn;                         // log of the original NTT size.
     const uint32_t size;                         // Size of the original NTT problem.
     const NttSubHierarchies ntt_sub_hierarchies; // Log sizes of sub-NTTs based on the original NTT log size.
-    E* const elements;                           // Pointer to the output elements array.
+    E* elements;                                 // Pointer to the elements array.
     const NTTConfig<S>& config;                  // Configuration settings for the NTT computation.
     const NTTDir direction;                      // Direction of the NTT computation (forward or inverse).
     const bool is_parallel;                      // Flag indicating if the NTT computation is parallel.
