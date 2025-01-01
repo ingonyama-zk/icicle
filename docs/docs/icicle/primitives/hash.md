@@ -71,11 +71,11 @@ The S box power alpha, number of full rounds and partial rounds, rounds constant
 
 In the current version the padding is not supported and should be performed by the user.
 
-## Supported Bindings
+#### Supported Bindings
 
 [`Rust`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-core/src/poseidon2)
 
-## Rust API
+#### Rust API
 
 This is the most basic way to use the Poseidon2 API. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code
 
@@ -94,7 +94,7 @@ poseidon.hash(input_slice, &config, out_init_slice).unwrap();
 println!("computed digest: {:?} ",out_init_slice.as_slice().to_vec()[0]);
 ```
 
-## Merkle Tree Builder
+#### Merkle Tree Builder
 
 You can use Poseidon2 in a Merkle tree builder. See the [examples/poseidon2](https://github.com/ingonyama-zk/icicle/tree/b12d83e6bcb8ee598409de78015bd118458a55d0/examples/rust/poseidon2) folder for the relevant code.
 
