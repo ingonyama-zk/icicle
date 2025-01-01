@@ -843,7 +843,8 @@ REGISTER_HIGHEST_NON_ZERO_IDX_BACKEND("CPU", cpu_highest_non_zero_idx<scalar_t>)
 
 /*********************************** Execute program ***********************************/
 template <typename T>
-eIcicleError cpu_execute_program(std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config)
+eIcicleError cpu_execute_program(
+  const Device& device, std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config)
 {
   if (data.size() != program.m_nof_parameters) {
     ICICLE_LOG_ERROR << "Program has " << program.m_nof_parameters << " while data has " << data.size()
@@ -860,14 +861,14 @@ eIcicleError cpu_execute_program(std::vector<T*>& data, Program<T>& program, uin
   // run over all elements in the arrays and execute the program
   for (uint64_t i = 0; i < total_nof_operations; i++) {
     prog_executor.execute();
-    for (auto& var_ptr : prog_executor.m_variable_ptrs) {
-      var_ptr++;
+    for (int param_idx = 0; param_idx < program.m_nof_parameters; ++param_idx) {
+      (prog_executor.m_variable_ptrs[param_idx])++;
     }
   }
   return eIcicleError::SUCCESS;
 }
 
-// REGISTER_EXECUTE_PROGRAM_BACKEND("CPU", cpu_execute_program<scalar_t>);
+REGISTER_EXECUTE_PROGRAM_BACKEND("CPU", cpu_execute_program<scalar_t>);
 
 /*********************************** Polynomial evaluation ***********************************/
 
