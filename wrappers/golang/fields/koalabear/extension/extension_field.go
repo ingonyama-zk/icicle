@@ -168,6 +168,18 @@ func (f ExtensionField) Sqr() ExtensionField {
 	return res
 }
 
+func (f ExtensionField) Pow(exp int) ExtensionField {
+	var res ExtensionField
+
+	cF := (*C.scalar_t)(unsafe.Pointer(&f))
+	cExp := (C.int)(exp)
+	cRes := (*C.scalar_t)(unsafe.Pointer(&res))
+
+	C.koalabear_extension_pow(cF, cExp, cRes)
+
+	return res
+}
+
 func convertScalarsMontgomery(scalars core.HostOrDeviceSlice, isInto bool) runtime.EIcicleError {
 	defaultCfg := core.DefaultVecOpsConfig()
 	cValues, _, _, cCfg, cSize := core.VecOpCheck(scalars, scalars, scalars, &defaultCfg)

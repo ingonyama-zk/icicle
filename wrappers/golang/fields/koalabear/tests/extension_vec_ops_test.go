@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	koalabear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear"
 	koalabear_extension "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear/extension"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear/extension/vecOps"
 	"github.com/stretchr/testify/suite"
@@ -64,6 +65,23 @@ func testKoalabear_extensionTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testKoalabear_extensionMixedVecOps(suite *suite.Suite) {
+	testSize := 1 << 14
+
+	a := koalabear_extension.GenerateScalars(testSize)
+	var scalar koalabear.ScalarField
+	scalar.One()
+	ones := core.HostSliceWithValue(scalar, testSize)
+
+	out := make(core.HostSlice[koalabear_extension.ExtensionField], testSize)
+
+	cfg := core.DefaultVecOpsConfig()
+
+	vecOps.MixedVecOp(a, ones, out, cfg, core.Mul)
+
+	suite.Equal(a, out)
+}
+
 type Koalabear_extensionVecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +89,7 @@ type Koalabear_extensionVecOpsTestSuite struct {
 func (s *Koalabear_extensionVecOpsTestSuite) TestKoalabear_extensionVecOps() {
 	s.Run("TestKoalabear_extensionVecOps", testWrapper(&s.Suite, testKoalabear_extensionVecOps))
 	s.Run("TestKoalabear_extensionTranspose", testWrapper(&s.Suite, testKoalabear_extensionTranspose))
+	s.Run("TestKoalabear_extensionMixedVecOps", testWrapper(&s.Suite, testKoalabear_extensionMixedVecOps))
 }
 
 func TestSuiteKoalabear_extensionVecOps(t *testing.T) {
