@@ -978,7 +978,7 @@ REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CPU", cpu_vector_add<extension_t>);
 REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND("CPU", cpu_vector_accumulate<extension_t>);
 REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CPU", cpu_vector_sub<extension_t>);
 REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CPU", (cpu_vector_mul<extension_t, extension_t>));
-REGISTER_VECTOR_MUL_EXT_FIELD_SCALAR_BACKEND("CPU", (cpu_vector_mul<extension_t, scalar_t>));
+REGISTER_VECTOR_MIXED_MUL_BACKEND("CPU", (cpu_vector_mul<extension_t, scalar_t>));
 REGISTER_VECTOR_DIV_EXT_FIELD_BACKEND("CPU", cpu_vector_div<extension_t>);
 REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND("CPU", cpu_convert_montgomery<extension_t>);
 REGISTER_VECTOR_SUM_EXT_FIELD_BACKEND("CPU", cpu_vector_sum<extension_t>);

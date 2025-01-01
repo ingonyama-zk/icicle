@@ -252,7 +252,7 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
-  using scalarExtFieldVectorOpImpl = std::function<eIcicleError(
+  using mixedVectorOpImpl = std::function<eIcicleError(
     const Device& device,
     const extension_t* scalar_a,
     const scalar_t* vec_b,
@@ -305,12 +305,12 @@ namespace icicle {
       }();                                                                                                             \
     }
 
-  void register_extension_vector_scalar_mul(const std::string& deviceType, scalarExtFieldVectorOpImpl impl);
+  void register_extension_vector_mixed_mul(const std::string& deviceType, mixedVectorOpImpl impl);
 
-  #define REGISTER_VECTOR_MUL_EXT_FIELD_SCALAR_BACKEND(DEVICE_TYPE, FUNC)                                              \
+  #define REGISTER_VECTOR_MIXED_MUL_BACKEND(DEVICE_TYPE, FUNC)                                              \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
-        register_extension_vector_scalar_mul(DEVICE_TYPE, FUNC);                                                       \
+      static bool UNIQUE(_reg_vec_mixed_mul) = []() -> bool {                                                      \
+        register_extension_vector_mixed_mul(DEVICE_TYPE, FUNC);                                                       \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

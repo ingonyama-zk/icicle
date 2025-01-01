@@ -43,7 +43,7 @@ int {{.Field}}_matrix_transpose(
   scalar_t* mat_out
 );
 {{ if eq .FieldPrefix "Extension" }}
-int {{.Field}}_vector_scalar_mul(
+int {{.Field}}_vector_mixed_mul(
   scalar_t* vec_a,
   scalar_t* vec_b,
   int n,

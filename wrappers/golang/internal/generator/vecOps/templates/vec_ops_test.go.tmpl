@@ -66,7 +66,7 @@ func test{{capitalize .Field}}Transpose(suite *suite.Suite) {
 }
 
 {{if eq .FieldPrefix "Extension"}}
-func test{{capitalize .Field}}CrossVecOps(suite *suite.Suite) {
+func test{{capitalize .Field}}MixedVecOps(suite *suite.Suite) {
 	testSize := 1 << 14
 
 	a := {{.Field}}.GenerateScalars(testSize)
@@ -78,7 +78,7 @@ func test{{capitalize .Field}}CrossVecOps(suite *suite.Suite) {
 
 	cfg := core.DefaultVecOpsConfig()
 
-	vecOps.CrossVecOp(a, ones, out, cfg, core.Mul)
+	vecOps.MixedVecOp(a, ones, out, cfg, core.Mul)
 
 	suite.Equal(a, out)
 }
@@ -91,7 +91,7 @@ type {{capitalize .Field}}VecOpsTestSuite struct {
 func (s *{{capitalize .Field}}VecOpsTestSuite) Test{{capitalize .Field}}VecOps() {
 	s.Run("Test{{capitalize .Field}}VecOps", testWrapper(&s.Suite, test{{capitalize .Field}}VecOps))
 	s.Run("Test{{capitalize .Field}}Transpose", testWrapper(&s.Suite, test{{capitalize .Field}}Transpose))
-	{{if eq .FieldPrefix "Extension"}}s.Run("Test{{capitalize .Field}}CrossVecOps", testWrapper(&s.Suite, test{{capitalize .Field}}CrossVecOps)){{end}}
+	{{if eq .FieldPrefix "Extension"}}s.Run("Test{{capitalize .Field}}MixedVecOps", testWrapper(&s.Suite, test{{capitalize .Field}}MixedVecOps)){{end}}
 }
 
 func TestSuite{{capitalize .Field}}VecOps(t *testing.T) {

@@ -65,7 +65,7 @@ func testBabybear_extensionTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
-func testBabybear_extensionCrossVecOps(suite *suite.Suite) {
+func testBabybear_extensionMixedVecOps(suite *suite.Suite) {
 	testSize := 1 << 14
 
 	a := babybear_extension.GenerateScalars(testSize)
@@ -77,7 +77,7 @@ func testBabybear_extensionCrossVecOps(suite *suite.Suite) {
 
 	cfg := core.DefaultVecOpsConfig()
 
-	vecOps.CrossVecOp(a, ones, out, cfg, core.Mul)
+	vecOps.MixedVecOp(a, ones, out, cfg, core.Mul)
 
 	suite.Equal(a, out)
 }
@@ -89,7 +89,7 @@ type Babybear_extensionVecOpsTestSuite struct {
 func (s *Babybear_extensionVecOpsTestSuite) TestBabybear_extensionVecOps() {
 	s.Run("TestBabybear_extensionVecOps", testWrapper(&s.Suite, testBabybear_extensionVecOps))
 	s.Run("TestBabybear_extensionTranspose", testWrapper(&s.Suite, testBabybear_extensionTranspose))
-	s.Run("TestBabybear_extensionCrossVecOps", testWrapper(&s.Suite, testBabybear_extensionCrossVecOps))
+	s.Run("TestBabybear_extensionMixedVecOps", testWrapper(&s.Suite, testBabybear_extensionMixedVecOps))
 }
 
 func TestSuiteBabybear_extensionVecOps(t *testing.T) {

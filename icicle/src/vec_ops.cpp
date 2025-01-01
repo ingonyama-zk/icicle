@@ -195,19 +195,19 @@ namespace icicle {
     return CONCAT_EXPAND(FIELD, extension_vector_mul)(vec_a, vec_b, size, &config, output);
   }
 
-  ICICLE_DISPATCHER_INST(VectorMulExtFieldScalarDispatcher, extension_vector_scalar_mul, scalarExtFieldVectorOpImpl);
+  ICICLE_DISPATCHER_INST(VectorMixedMulDispatcher, extension_vector_mixed_mul, mixedVectorOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_scalar_mul)(
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_mixed_mul)(
     const extension_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
   {
-    return VectorMulExtFieldScalarDispatcher::execute(vec_a, vec_b, size, *config, output);
+    return VectorMixedMulDispatcher::execute(vec_a, vec_b, size, *config, output);
   }
 
   template <>
   eIcicleError vector_mul(
     const extension_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_vector_scalar_mul)(vec_a, vec_b, size, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_mixed_mul)(vec_a, vec_b, size, &config, output);
   }
 #endif // EXT_FIELD
 
