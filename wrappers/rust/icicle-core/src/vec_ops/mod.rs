@@ -133,7 +133,7 @@ pub trait VecOps<F> {
 }
 
 #[doc(hidden)]
-pub trait CrossVecOps<F, T> {
+pub trait MixedVecOps<F, T> {
     fn mul(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<T> + ?Sized),
@@ -230,7 +230,7 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
-pub fn cross_mul_scalars<F, T>(
+pub fn mixed_mul_scalars<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -238,10 +238,10 @@ pub fn cross_mul_scalars<F, T>(
 ) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: CrossVecOps<F, T>,
+    <F as FieldImpl>::Config: MixedVecOps<F, T>,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as FieldImpl>::Config as CrossVecOps<F, T>>::mul(a, b, result, &cfg)
+    <<F as FieldImpl>::Config as MixedVecOps<F, T>>::mul(a, b, result, &cfg)
 }
 
 pub fn div_scalars<F>(
@@ -765,7 +765,7 @@ macro_rules! impl_vec_ops_field {
 }
 
 #[macro_export]
-macro_rules! impl_vec_ops_cross_field {
+macro_rules! impl_vec_ops_mixed_field {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
@@ -780,7 +780,7 @@ macro_rules! impl_vec_ops_cross_field {
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "_vector_scalar_mul")]
+                #[link_name = concat!($field_prefix, "_vector_mixed_mul")]
                 pub(crate) fn vector_mul_ffi(
                     a: *const $ext_field,
                     b: *const $field,
@@ -791,7 +791,7 @@ macro_rules! impl_vec_ops_cross_field {
             }
         }
 
-        impl CrossVecOps<$ext_field, $field> for $ext_field_config {
+        impl MixedVecOps<$ext_field, $field> for $ext_field_config {
             fn mul(
                 a: &(impl HostOrDeviceSlice<$ext_field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
@@ -863,12 +863,12 @@ macro_rules! impl_vec_ops_tests {
 }
 
 #[macro_export]
-macro_rules! impl_cross_vec_ops_tests {
+macro_rules! impl_mixed_vec_ops_tests {
     (
       $ext_field:ident,
       $field:ident
     ) => {
-        pub(crate) mod test_cross_vecops {
+        pub(crate) mod test_mixed_vecops {
             use super::*;
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
@@ -880,9 +880,9 @@ macro_rules! impl_cross_vec_ops_tests {
             }
 
             #[test]
-            pub fn test_cross_vec_ops_scalars() {
+            pub fn test_mixed_vec_ops_scalars() {
                 initialize();
-                check_cross_vec_ops_scalars::<$ext_field, $field>()
+                check_mixed_vec_ops_scalars::<$ext_field, $field>()
             }
         }
     };
