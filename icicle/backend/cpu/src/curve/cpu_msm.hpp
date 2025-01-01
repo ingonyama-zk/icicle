@@ -388,8 +388,8 @@ eIcicleError cpu_msm_precompute_bases(
 {
   int c = Msm<A, P>::get_optimal_c(nof_bases, config);
 
-  int precompute_factor = config.precompute_factor;
-  bool is_mont = config.are_points_montgomery_form;
+  const int precompute_factor = config.precompute_factor;
+  const bool is_mont = config.are_points_montgomery_form;
   const uint scalar_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
   const unsigned int num_bms_no_precomp = (scalar_size - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
