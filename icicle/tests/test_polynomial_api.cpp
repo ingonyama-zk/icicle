@@ -457,7 +457,7 @@ TEST_F(PolynomialTest, divisionLarge)
 {
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    const int size_0 = 1 << 12, size_1 = 1 << 2;
+    const int size_0 = 1 << 13, size_1 = 1 << 2;
     auto a = randomize_polynomial(size_0);
     auto b = randomize_polynomial(size_1);
 
