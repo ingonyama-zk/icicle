@@ -367,11 +367,14 @@ namespace icicle {
    * @param program a class that describes the functionality to run on each set of entries at the vectors.
    * @param size Size of each arrays. The program will be executed size times
    * @param config Configuration for the operation.
+   * @note The config field is_a_on_device determines if the input is on device and whethere or not to move data_vec to
+   * the device after the calculation is done. The fields is_b_on_device and is_result_on_device are ignored.
    * @return eIcicleError Error code indicating success or failure.
    */
 
   template <typename T>
-  eIcicleError execute_program(std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config);
+  eIcicleError
+  execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config);
 
   /**
    * @brief Evaluates a polynomial at given domain points.
