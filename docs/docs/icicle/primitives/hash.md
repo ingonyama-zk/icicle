@@ -74,6 +74,8 @@ In the current version the padding is not supported and should be performed by t
 #### Supported Bindings
 
 [`Rust`](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/rust/icicle-core/src/poseidon2)
+[`Go`](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/golang/curves/bn254/poseidon2/poseidon2.go)
+
 
 #### Rust API
 
