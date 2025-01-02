@@ -303,44 +303,37 @@ private:
     int nof_segments_left = m_segments.size();
     for (int i = 0; i < m_nof_buckets_module; i++) {
       const int cur_bm_nof_segments = std::min(nof_segments_per_bm, nof_segments_left);
-      const int log_nof_segments_per_bm = std::log2(cur_bm_nof_segments);
+      const int log_nof_segments_per_bm = std::log2(nof_segments_per_bm); // (m_c - 1) -
       // Weighted sum of all the lines for each bm - summed in a similar fashion of the triangle sum of phase 2
-      P partial_sum = m_segments[cur_bm_nof_segments * (i + 1) - 1].line_sum;
-      P total_sum = m_segments[cur_bm_nof_segments * (i + 1) - 1].line_sum;
+      P partial_sum = nof_segments_per_bm * (i + 1) - 1 < m_segments.size()
+                        ? m_segments[nof_segments_per_bm * (i + 1) - 1].line_sum
+                        : P::zero();
+      P total_sum = partial_sum;
       for (int j = cur_bm_nof_segments - 2; j > 0; j--) {
-        partial_sum = partial_sum + m_segments[cur_bm_nof_segments * i + j].line_sum;
+        partial_sum = partial_sum + m_segments[nof_segments_per_bm * i + j].line_sum;
         total_sum = total_sum + partial_sum;
       }
-      m_segments[cur_bm_nof_segments * i].line_sum = total_sum;
-      // std::cout << "i=" << i << ", total_sum = " << total_sum.to_affine() << std::endl;
+      m_segments[nof_segments_per_bm * i].line_sum = total_sum;
 
       // Convert weighted lines sum to rectangles sum by doubling
       int num_doubles = m_c - 1 - log_nof_segments_per_bm;
       for (int k = 0; k < num_doubles; k++) {
-        m_segments[cur_bm_nof_segments * i].line_sum = P::dbl(m_segments[cur_bm_nof_segments * i].line_sum);
+        m_segments[nof_segments_per_bm * i].line_sum = P::dbl(m_segments[nof_segments_per_bm * i].line_sum);
       }
-      // std::cout << "i=" << i << ", m_segments[cur_bm_nof_segments * i].line_sum = " << m_segments[cur_bm_nof_segments
-      // * i].line_sum.to_affine() << std::endl;
 
       // Sum triangles within bm linearly
-      for (int j = 1; j < cur_bm_nof_segments && cur_bm_nof_segments * i + j < m_segments.size(); j++) {
-        m_segments[cur_bm_nof_segments * i].triangle_sum =
-          m_segments[cur_bm_nof_segments * i].triangle_sum + m_segments[cur_bm_nof_segments * i + j].triangle_sum;
+      for (int j = 1; j < cur_bm_nof_segments && nof_segments_per_bm * i + j < m_segments.size(); j++) {
+        m_segments[nof_segments_per_bm * i].triangle_sum =
+          m_segments[nof_segments_per_bm * i].triangle_sum + m_segments[nof_segments_per_bm * i + j].triangle_sum;
       }
-      // std::cout << "i=" << i << ", m_segments[cur_bm_nof_segments * i].triangle_sum = " <<
-      // m_segments[cur_bm_nof_segments * i].triangle_sum.to_affine() << std::endl; After which add the lines and
-      // triangle sums to one sum of the entire BM
+
+      // After which add the lines and triangle sums to one sum of the entire BM
       if (cur_bm_nof_segments > 1) {
-        // std::cout << "i=" << i << ", adding = " << m_segments[cur_bm_nof_segments * i].line_sum.to_affine() <<
-        // std::endl;
-        m_segments[cur_bm_nof_segments * i].triangle_sum =
-          m_segments[cur_bm_nof_segments * i].triangle_sum + m_segments[cur_bm_nof_segments * i].line_sum;
+        m_segments[nof_segments_per_bm * i].triangle_sum =
+          m_segments[nof_segments_per_bm * i].triangle_sum + m_segments[nof_segments_per_bm * i].line_sum;
       }
       nof_segments_left -= nof_segments_per_bm;
-      // std::cout << "i=" << i << ", m_segments[cur_bm_nof_segments * i].triangle_sum = " <<
-      // m_segments[cur_bm_nof_segments * i].triangle_sum.to_affine() << std::endl;
     }
-
     // Sum BM sums together
     *result = m_segments[(m_nof_buckets_module - 1) * nof_segments_per_bm].triangle_sum;
     for (int i = m_nof_buckets_module - 2; i >= 0; i--) {
@@ -351,7 +344,6 @@ private:
       *result = *result + m_segments[nof_segments_per_bm * i].triangle_sum;
     }
   }
-
 }; // end of class Msm
 
 /**
