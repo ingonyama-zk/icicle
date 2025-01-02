@@ -29,6 +29,10 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
+    // std::cout << "msm_size = " << msm_size << std::endl;
+    // std::cout << "c = " << config.c << std::endl;
+    // std::cout << "precompute_factor = " << config.precompute_factor << std::endl;
+    // std::cout << "batch_size = " << config.batch_size << std::endl;
     calc_optimal_parameters();
 
     // resize the thread buckets according to the parameters
@@ -47,6 +51,9 @@ public:
     init_workers_buckets_busy();
 
     phase1_populate_buckets(scalars, bases);
+    // for (int i=0; i<m_workers_buckets[0].size();++i) {
+    //   std::cout << "bkt " << i << " : " << m_workers_buckets_busy[0][i] << ", val = " << m_workers_buckets[0][i].point.to_affine() << std::endl;
+    // }
 
     phase2_collapse_segments();
 
@@ -114,7 +121,7 @@ private:
       m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
     m_nof_total_buckets = (m_nof_buckets_module - 1) * m_bm_size + last_bm_size;
 
-    m_segment_size = 1 << (uint32_t)(std::log2(m_nof_total_buckets / m_nof_workers) - 4);
+    m_segment_size = std::min(m_bm_size, (uint32_t)(1 << (uint32_t)(std::log2(m_nof_total_buckets / m_nof_workers) - 4)));
     std::cout << "m_segment_size = " << m_segment_size << std::endl;
     const int nof_segments = (m_nof_total_buckets + m_segment_size - 1) / m_segment_size;
     m_segments.resize(nof_segments);
