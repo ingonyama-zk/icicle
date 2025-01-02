@@ -231,7 +231,7 @@ public:
   {
     if (is_zero(point)) return true;
     bool eq_holds =
-      (FF::template mul_const<Gen::weierstrass_b>(FF::sqr(point.z) * point.z) + FF::sqr(point.x) * point.x ==
+      (FF::template mul_weierstrass_b<Gen>(FF::sqr(point.z) * point.z) + FF::sqr(point.x) * point.x ==
        point.z * FF::sqr(point.y));
     return point.z != FF::zero() && eq_holds;
   }
