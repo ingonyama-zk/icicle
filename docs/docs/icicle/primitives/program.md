@@ -65,3 +65,17 @@ enum PreDefinedPrograms {
 `AB_MINUS_C` - the pre-defined program `AB - C` for the input vectors `A`, `B` and `C`
 
 `EQ_X_AB_MINUS_C` - the pre-defined program `EQ(AB - C)` for the input vectors `A`, `B`, `C` and `EQ`
+
+
+### Executing program
+To execute the program the `execute_program` function from the vector operation API should be used. This operation is supported by the CPU and CUDA backends.
+
+```cpp
+template <typename T>
+eIcicleError
+execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config);
+```
+
+The `data` vector is a vector of pointers to the inputs and output vectors, `program` is the program to execute, `size` is the length of the vectors and `config` is the configuration of the operation.
+
+For the configuration the field `is_a_on_device` determined whethere the data (*inputs and outputs*) is on device or not. After the execution `data` will reside in the same place as it did before (i.e. the field `is_result_on_device` is irelevant.)

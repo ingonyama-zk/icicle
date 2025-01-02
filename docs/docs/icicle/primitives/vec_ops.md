@@ -208,6 +208,21 @@ template <typename T>
 eIcicleError polynomial_division(const T* numerator, int64_t numerator_deg, const T* denumerator, int64_t denumerator_deg, const VecOpsConfig& config, T* q_out /*OUT*/, uint64_t q_size, T* r_out /*OUT*/, uint64_t r_size);
 ```
 
+#### `execute_program`
+
+Execute a user-defined lambda function with arbitrary number of input and output vectors.
+
+```cpp
+template <typename T>
+eIcicleError
+execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config);
+```
+
+is_result_on_device of VecOpsConfig is not used here.
+
+For more details see [program](./program.md).
+
+
 ### Rust and Go bindings
 
 - [Golang](../golang-bindings/vec-ops.md)
