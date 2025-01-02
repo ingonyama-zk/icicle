@@ -1,9 +1,9 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mul_scalars, product_scalars,
-    scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl, VecOps,
-    VecOpsConfig,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mixed_mul_scalars, mul_scalars,
+    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl,
+    MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
@@ -48,6 +48,17 @@ where
     check_vec_ops_scalars_sub_scalar::<F>(test_size);
     check_vec_ops_scalars_mul_scalar::<F>(test_size);
     check_vec_ops_scalars_accumulate::<F>(test_size);
+}
+
+pub fn check_mixed_vec_ops_scalars<F: FieldImpl, T: FieldImpl>()
+where
+    <F as FieldImpl>::Config: MixedVecOps<F, T>,
+    <T as FieldImpl>::Config: GenerateRandom<T>,
+    <F as FieldImpl>::Config: GenerateRandom<F>,
+{
+    let test_size = 1 << 14;
+
+    check_vec_ops_mixed_scalars_mul::<F, T>(test_size);
 }
 
 pub fn check_vec_ops_scalars_add<F: FieldImpl>(test_size: usize)
@@ -435,4 +446,30 @@ where
         .copy_to_host(HostSlice::from_mut_slice(&mut result_host[..]))
         .unwrap();
     assert_eq!(input.as_slice(), result_host.as_slice());
+}
+
+pub fn check_vec_ops_mixed_scalars_mul<F: FieldImpl, T: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: MixedVecOps<F, T> + GenerateRandom<F>,
+    <T as FieldImpl>::Config: GenerateRandom<T>,
+{
+    let a_main = F::Config::generate_random(test_size);
+    let b = T::Config::generate_random(test_size);
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::zero(); test_size];
+
+    let a_main = HostSlice::from_slice(&a_main);
+    let b = HostSlice::from_slice(&b);
+    let result_main = HostSlice::from_mut_slice(&mut result_main);
+    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+
+    let cfg = VecOpsConfig::default();
+
+    test_utilities::test_set_main_device();
+    mixed_mul_scalars(a_main, b, result_main, &cfg).unwrap();
+
+    test_utilities::test_set_ref_device();
+    mixed_mul_scalars(a_main, b, result_ref, &cfg).unwrap();
+
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
 }

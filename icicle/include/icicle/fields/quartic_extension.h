@@ -251,6 +251,17 @@ public:
       FF::reduce(FF::mul_wide(xs.im1, x2) - FF::mul_wide(xs.im3, x0)),
     };
   }
+
+  static constexpr HOST_DEVICE QuarticExtensionField pow(QuarticExtensionField base, int exp)
+  {
+    QuarticExtensionField res = one();
+    while (exp > 0) {
+      if (exp & 1) res = res * base;
+      base = base * base;
+      exp >>= 1;
+    }
+    return res;
+  }
 };
 #if __CUDACC__
 template <class CONFIG, class T>

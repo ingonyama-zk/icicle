@@ -71,6 +71,7 @@ type BabybearVecOpsTestSuite struct {
 func (s *BabybearVecOpsTestSuite) TestBabybearVecOps() {
 	s.Run("TestBabybearVecOps", testWrapper(&s.Suite, testBabybearVecOps))
 	s.Run("TestBabybearTranspose", testWrapper(&s.Suite, testBabybearTranspose))
+
 }
 
 func TestSuiteBabybearVecOps(t *testing.T) {

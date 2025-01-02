@@ -1,22 +1,14 @@
 #pragma once
 #include "icicle/backend/ntt_backend.h"
 #include "icicle/errors.h"
-#include "icicle/runtime.h"
 #include "icicle/utils/log.h"
-#include "icicle/fields/field_config.h"
-#include "icicle/vec_ops.h"
 
-#include <thread>
-#include <vector>
-#include <chrono>
 #include <algorithm>
-#include <iostream>
 #include <cmath>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 
-using namespace field_config;
 using namespace icicle;
 namespace ntt_cpu {
 

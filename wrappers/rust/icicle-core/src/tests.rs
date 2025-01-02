@@ -31,11 +31,16 @@ where
         assert_eq!(result2, scalars_a[i]);
     }
 
+    // Test field multiplication API
     let scalar_a = scalars_a[0];
     let square = scalar_a.sqr();
-    let mul = scalar_a.mul(scalar_a);
+    let mul_by_self = scalar_a.mul(scalar_a);
+    assert_eq!(square, mul_by_self);
 
-    assert_eq!(square, mul);
+    // Test field pow API
+    let pow_4 = scalar_a.pow(4);
+    let mul_mul = mul_by_self.mul(mul_by_self);
+    assert_eq!(pow_4, mul_mul);
 
     let inv = scalar_a.inv();
     let one = scalar_a.mul(inv);
