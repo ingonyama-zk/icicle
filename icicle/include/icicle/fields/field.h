@@ -875,6 +875,38 @@ public:
 
   friend HOST_DEVICE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
 
+template <typename Gen>
+  static HOST_DEVICE_INLINE Field mul_weierstrass_b(const Field& xs)
+  {
+    Field r = {};
+    if constexpr (Gen::is_b_u32) {
+      r = mul_unsigned<Field{Gen::weierstrass_b}.limbs_storage.limbs[0], Field>(xs);
+      if constexpr (Gen::is_b_neg)
+        return neg(r);
+      else {
+        return r;
+      }
+    } else {
+      return Field{Gen::weierstrass_b} * xs;
+    }
+  }
+
+  template <typename Gen>
+  static HOST_DEVICE_INLINE Field mul_weierstrass_3b(const Field& xs)
+  {
+    Field r = {};
+    if constexpr (Gen::is_b_u32) {
+      r = mul_unsigned<Field{Gen::weierstrass_3b}.limbs_storage.limbs[0], Field>(xs);
+      if constexpr (Gen::is_b_neg)
+        return neg(r);
+      else {
+        return r;
+      }
+    } else {
+      return Field{Gen::weierstrass_3b} * xs;
+    }
+  }
+
   template <const Field& multiplier>
   static HOST_DEVICE_INLINE Field mul_const(const Field& xs)
   {
