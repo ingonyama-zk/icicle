@@ -86,6 +86,7 @@ add_library(icicle_device SHARED
   src/config_extension.cpp
 )
 target_link_libraries(icicle_device PUBLIC dl)
+
 include_directories(include)
 
 # Define the install directory (default is /usr/local)

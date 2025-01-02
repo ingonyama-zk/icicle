@@ -3,8 +3,9 @@ package tests
 import (
 	"testing"
 
-	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
+	{{if eq .FieldPrefix "Extension"}}{{.SecondField}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.SecondImportPath}}"{{end}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/vecOps"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,6 +65,25 @@ func test{{capitalize .Field}}Transpose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+{{if eq .FieldPrefix "Extension"}}
+func test{{capitalize .Field}}MixedVecOps(suite *suite.Suite) {
+	testSize := 1 << 14
+
+	a := {{.Field}}.GenerateScalars(testSize)
+	var scalar {{.SecondField}}.ScalarField
+	scalar.One()
+	ones := core.HostSliceWithValue(scalar, testSize)
+
+	out := make(core.HostSlice[{{.Field}}.{{.FieldPrefix}}Field], testSize)
+
+	cfg := core.DefaultVecOpsConfig()
+
+	vecOps.MixedVecOp(a, ones, out, cfg, core.Mul)
+
+	suite.Equal(a, out)
+}
+{{end}}
+
 type {{capitalize .Field}}VecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +91,7 @@ type {{capitalize .Field}}VecOpsTestSuite struct {
 func (s *{{capitalize .Field}}VecOpsTestSuite) Test{{capitalize .Field}}VecOps() {
 	s.Run("Test{{capitalize .Field}}VecOps", testWrapper(&s.Suite, test{{capitalize .Field}}VecOps))
 	s.Run("Test{{capitalize .Field}}Transpose", testWrapper(&s.Suite, test{{capitalize .Field}}Transpose))
+	{{if eq .FieldPrefix "Extension"}}s.Run("Test{{capitalize .Field}}MixedVecOps", testWrapper(&s.Suite, test{{capitalize .Field}}MixedVecOps)){{end}}
 }
 
 func TestSuite{{capitalize .Field}}VecOps(t *testing.T) {
