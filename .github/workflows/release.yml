@@ -64,7 +64,9 @@ jobs:
           npm run docusaurus docs:version $LATEST_VERSION
           git add --all
           git commit -m "Bump docs version"
-          git push
+      - name: Push to github branch main
+        run: |
+          git push origin main --tags
       - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
