@@ -85,6 +85,7 @@ ICICLE provides a device abstraction layer that allows you to interact with diff
 
 - **Loading Backends**: Backends are loaded dynamically based on the environment configuration or a specified path.
 - **Setting Active Device**: The active device for a thread can be set, allowing for targeted computation on a specific device.
+- **Setting Default Device**: The default device for any thread without an active device can be set, removing the need to specify an alternative device on each thread. This is especially useful when running on a backend that is not the built-in CPU backend which is the default device to start.
 
 ## Streams
 

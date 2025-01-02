@@ -27,11 +27,26 @@ result := runtime.LoadBackend("/path/to/backend/installdir", true)
 You can set the active device for the current thread and retrieve it when needed:
 
 ```go
-device = runtime.CreateDevice("CUDA", 0) // or other
+device := runtime.CreateDevice("CUDA", 0) // or other
 result := runtime.SetDevice(device)
 // or query current (thread) device 
 activeDevice := runtime.GetActiveDevice()
 ```
+
+### Setting and Getting the Default Device
+
+You can set the default device for all threads:
+
+```go
+device := runtime.CreateDevice("CUDA", 0) // or other
+defaultDevice := runtime.SetDefaultDevice(device);
+```
+
+:::caution
+
+Setting a default device should be done **once** from the main thread of the application. If another device or backend is needed for a specific thread [runtime.SetDevice](#setting-and-getting-active-device) should be used instead.
+
+:::
 
 ### Querying Device Information
 

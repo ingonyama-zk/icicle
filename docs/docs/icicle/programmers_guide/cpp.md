@@ -32,6 +32,21 @@ eIcicleError result = icicle_set_device(device);
 eIcicleError result = icicle_get_active_device(device);
 ```
 
+### Setting and Getting the Default Device
+
+You can set the default device for all threads:
+
+```cpp
+icicle::Device device = {"CUDA", 0}; // or other
+eIcicleError result = icicle_set_default_device(device);
+```
+
+:::caution
+
+Setting a default device should be done **once** from the main thread of the application. If another device or backend is needed for a specific thread [icicle_set_device](#setting-and-getting-active-device) should be used instead.
+
+:::
+
 ### Querying Device Information
 
 Retrieve the number of available devices and check if a pointer is allocated on the host or on the active device:

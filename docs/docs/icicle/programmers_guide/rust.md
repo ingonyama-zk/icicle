@@ -55,6 +55,21 @@ icicle_runtime::set_device(&device).unwrap();
 let active_device = icicle_runtime::get_active_device().unwrap();
 ```
 
+### Setting and Getting the Default Device
+
+You can set the default device for all threads:
+
+```caution
+let device = Device::new("CUDA", 0); // or other
+let default_device = icicle_runtime::set_default_device(device);
+```
+
+:::note
+
+Setting a default device should be done **once** from the main thread of the application. If another device or backend is needed for a specific thread [icicle_runtime::set_device](#setting-and-getting-active-device) should be used instead.
+
+:::
+
 ### Querying Device Information
 
 Retrieve the number of available devices and check if a pointer is allocated on the host or on the active device:

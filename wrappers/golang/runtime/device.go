@@ -50,6 +50,12 @@ func SetDevice(device *Device) EIcicleError {
 	return EIcicleError(cErr)
 }
 
+func SetDefaultDevice(device *Device) EIcicleError {
+	cDevice := (*C.Device)(unsafe.Pointer(device))
+	cErr := C.icicle_set_default_device(cDevice)
+	return EIcicleError(cErr)
+}
+
 func GetActiveDevice() (*Device, EIcicleError) {
 	device := CreateDevice("invalid", -1)
 	cDevice := (*C.Device)(unsafe.Pointer(&device))
