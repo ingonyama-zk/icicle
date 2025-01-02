@@ -9,7 +9,7 @@ Program is a class that let users define costume lambda function on vectors that
 
 ### Symbol
 
-Symbol is the basic (template) class that allow users to define thier own program. The lambda function the user define will operate on symbols.
+Symbol is the basic (template) class that allow users to define their own program. The lambda function the user define will operate on symbols.
 
 ### Defining lambda function
 
@@ -27,7 +27,7 @@ void lambda_multi_result(std::vector<Symbols<scalar_t>>& vars)
 }
 ```
 
-Each symbols element at the vector argument `var` represent a *vector* input or output. The type od the symbol (`scalar_t` in this example) will be the type of the vectors' elements. In this example we craeted a lambda function with four inputs and three outputs.
+Each symbols element at the vector argument `var` represent a *vector* input or output. The type of the symbol (`scalar_t` in this example) will be the type of the vectors' elements. In this example we created a lambda function with four inputs and three outputs.
 
 Program support few pre-defined programs. The user can use those pre-defined programs without creating a lambda function, as will be explained in the next section.
 
@@ -78,4 +78,4 @@ execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size,
 
 The `data` vector is a vector of pointers to the inputs and output vectors, `program` is the program to execute, `size` is the length of the vectors and `config` is the configuration of the operation.
 
-For the configuration the field `is_a_on_device` determined whethere the data (*inputs and outputs*) is on device or not. After the execution `data` will reside in the same place as it did before (i.e. the field `is_result_on_device` is irelevant.)
+For the configuration the field `is_a_on_device` determined whethere the data (*inputs and outputs*) is on device or not. After the execution `data` will reside in the same place as it did before (i.e. the field `is_result_on_device` is irrelevant.)
