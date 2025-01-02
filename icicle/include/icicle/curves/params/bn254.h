@@ -25,7 +25,7 @@ namespace bn254 {
     static constexpr point_field_t weierstrass_b = {0x00000003, 0x00000000, 0x00000000, 0x00000000,
                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr point_field_t weierstrass_3b = {0x00000009, 0x00000000, 0x00000000, 0x00000000,
-                                                    0x00000000, 0x00000000, 0x00000000, 0x00000000};
+                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr bool is_b_u32 = true;
     static constexpr bool is_b_neg = false;
   }; // G1
@@ -43,6 +43,15 @@ namespace bn254 {
                                                           0x1be06ac3, 0x81be1899, 0xceb8aaae, 0x2b149d40};
     static constexpr point_field_t weierstrass_b_g2_im = {0x85c315d2, 0xe4a2bd06, 0xe52d1852, 0xa74fa084,
                                                           0xeed8fdf4, 0xcd2cafad, 0x3af0fed4, 0x009713b0};
+    static constexpr point_field_t weierstrass_3b_g2_re = {0xbce9b021, 0x1ef69c66, 0x3cb039cf, 0xf21b7c8d,
+                                                           0x509e8f8f, 0x1499be5e, 0xa9c6bfb8, 0x20753adc};
+    static constexpr point_field_t weierstrass_3b_g2_im = {0x91494176, 0xade83713, 0xaf8748f8, 0xf5eee18e,
+                                                           0xcc8af9dd, 0x67860f09, 0xb0d2fc7e, 0x01c53b10};
+
+    static constexpr bool is_b_u32_g2_re = false;
+    static constexpr bool is_b_neg_g2_re = false;
+    static constexpr bool is_b_u32_g2_im = false;
+    static constexpr bool is_b_neg_g2_im = false;
 
     static constexpr g2_point_field_t gen_x = {g2_gen_x_re, g2_gen_x_im};
     static constexpr g2_point_field_t gen_y = {g2_gen_y_re, g2_gen_y_im};
