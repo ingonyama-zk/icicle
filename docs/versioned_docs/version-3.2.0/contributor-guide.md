@@ -1,6 +1,6 @@
 # Contributor's Guide
 
-We welcome all contributions with open arms. At Ingonyama we take a village approach, believing it takes many hands and minds to build a ecosystem.
+We welcome all contributions with open arms. At Ingonyama we take a village approach, believing it takes many hands and minds to build an ecosystem.
 
 ## Contributing to ICICLE
 
