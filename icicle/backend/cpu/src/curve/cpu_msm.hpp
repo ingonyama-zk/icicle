@@ -187,7 +187,7 @@ private:
         // Handle required preprocess of base P
         A base = m_config.are_points_montgomery_form ? A::from_montgomery(bases[m_precompute_factor * i + j])
                                                      : bases[m_precompute_factor * i + j]; // TDB: avoid copy
-        if (base == A::zero()) { continue; } // TBD: why is that?
+        if (base == A::zero()) { continue; }                                               // TBD: why is that?
         A base_neg = A::neg(base);
 
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
