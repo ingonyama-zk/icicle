@@ -534,7 +534,7 @@ jobs:
           fi
         else
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash" >> $GITHUB_OUTPUT)
+          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash)" >> $GITHUB_OUTPUT)
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
