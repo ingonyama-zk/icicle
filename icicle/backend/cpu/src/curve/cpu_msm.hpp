@@ -155,7 +155,9 @@ private:
         const int scalars_start_idx = worker_msm_size * worker_i;
         const int bases_start_idx = scalars_start_idx * m_precompute_factor;
         const int cur_worker_msm_size = std::min(worker_msm_size, m_msm_size - worker_i * worker_msm_size);
-        worker_run_phase1(worker_i, scalars + scalars_start_idx, bases + bases_start_idx, cur_worker_msm_size);
+        if (cur_worker_msm_size > 0) { // TBD: better calc to avoid this condition
+          worker_run_phase1(worker_i, scalars + scalars_start_idx, bases + bases_start_idx, cur_worker_msm_size);
+        }
       });
     }
     run_workers_and_wait();
