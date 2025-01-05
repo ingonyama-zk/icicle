@@ -3,11 +3,11 @@ golang:
   - wrappers/golang/**/*.h
   - wrappers/golang/**/*.tmpl
   - go.mod
-  - .github/workflows/cpp-golang-rust.yml
+  - .github/workflows/cpp-golang-rust-v2.yml
 rust:
   - wrappers/rust/**/*
   - '!wrappers/rust/README.md'
-  - .github/workflows/cpp-golang-rust.yml
+  - .github/workflows/cpp-golang-rust-v2.yml
 cpp:
   - icicle/**/*.cu
   - icicle/**/*.cuh
@@ -17,8 +17,8 @@ cpp:
   - icicle/**/*.h
   - icicle/CMakeLists.txt
   - icicle/cmake/**/*.cmake
-  - .github/workflows/cpp-golang-rust.yml
+  - .github/workflows/cpp-golang-rust-v2.yml
 examples:
   - examples/**/*
-  - .github/workflows/cpp-golang-rust.yml
+  - .github/workflows/cpp-golang-rust-v2.yml
   - .github/workflows/rust-examples.yml
