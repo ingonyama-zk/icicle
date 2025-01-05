@@ -77,7 +77,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -85,7 +85,7 @@ jobs:
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Get CUDA Backend Commit SHA
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       working-directory: ./icicle/backend/cuda
       id: extract-cuda-sha
       run: |
@@ -93,7 +93,7 @@ jobs:
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
         echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
     - name: Check existing backend version
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: exists-flag
       run: |
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
@@ -138,7 +138,7 @@ jobs:
         merge-multiple: true
 
     - name: Set CUDA backend flag
-      # if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
       run: |
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
@@ -264,7 +264,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       uses: actions/checkout@v4
       with:
         repository: ingonyama-zk/icicle-cuda-backend
@@ -272,7 +272,7 @@ jobs:
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Get CUDA Backend Commit SHA
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       working-directory: ./icicle/backend/cuda
       id: extract-cuda-sha
       run: |
@@ -280,7 +280,7 @@ jobs:
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
         echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
     - name: Set CUDA backend flag
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
       run: |
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
