@@ -393,7 +393,7 @@ eIcicleError cpu_msm_precompute_bases(
 
   const int precompute_factor = config.precompute_factor;
   const bool is_mont = config.are_points_montgomery_form;
-  const uint scalar_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+  const uint scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
   const unsigned int num_bms_no_precomp = (scalar_size - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {
