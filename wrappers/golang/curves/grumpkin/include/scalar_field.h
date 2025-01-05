@@ -16,6 +16,7 @@ void grumpkin_add(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void grumpkin_sub(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void grumpkin_mul(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void grumpkin_inv(const scalar_t* a, scalar_t* result);
+void grumpkin_pow(const scalar_t* a, int exp, scalar_t* result);
 
 #ifdef __cplusplus
 }

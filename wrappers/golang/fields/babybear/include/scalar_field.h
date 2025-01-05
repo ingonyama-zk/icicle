@@ -16,6 +16,7 @@ void babybear_add(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void babybear_sub(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void babybear_mul(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void babybear_inv(const scalar_t* a, scalar_t* result);
+void babybear_pow(const scalar_t* a, int exp, scalar_t* result);
 
 #ifdef __cplusplus
 }

@@ -194,6 +194,21 @@ namespace icicle {
   {
     return CONCAT_EXPAND(FIELD, extension_vector_mul)(vec_a, vec_b, size, &config, output);
   }
+
+  ICICLE_DISPATCHER_INST(VectorMixedMulDispatcher, extension_vector_mixed_mul, mixedVectorOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_vector_mixed_mul)(
+    const extension_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config, extension_t* output)
+  {
+    return VectorMixedMulDispatcher::execute(vec_a, vec_b, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_mul(
+    const extension_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(FIELD, extension_vector_mixed_mul)(vec_a, vec_b, size, &config, output);
+  }
 #endif // EXT_FIELD
 
   /*********************************** DIV ***********************************/
@@ -510,6 +525,23 @@ namespace icicle {
   highest_non_zero_idx(const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx /*OUT*/)
   {
     return CONCAT_EXPAND(FIELD, highest_non_zero_idx)(input, size, &config, out_idx);
+  }
+
+  /*********************************** EXECUTE PROGRAM ***********************************/
+
+  ICICLE_DISPATCHER_INST(ExecuteProgramDispatcher, execute_program, programExecutionImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, execute_program)(
+    std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+  {
+    return ExecuteProgramDispatcher::execute(data, program, size, config);
+  }
+
+  template <>
+  eIcicleError execute_program(
+    std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+  {
+    return CONCAT_EXPAND(FIELD, execute_program)(data, program, size, config);
   }
 
   /*********************************** POLY EVAL ***********************************/

@@ -210,6 +210,17 @@ public:
     FF xs_norm_squared = FF::sqr(xs.real) - nonresidue_times_im;
     return xs_conjugate * ComplexExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
   }
+
+  static constexpr HOST_DEVICE ComplexExtensionField pow(ComplexExtensionField base, int exp)
+  {
+    ComplexExtensionField res = one();
+    while (exp > 0) {
+      if (exp & 1) res = res * base;
+      base = base * base;
+      exp >>= 1;
+    }
+    return res;
+  }
 };
 
 #ifdef __CUDACC__

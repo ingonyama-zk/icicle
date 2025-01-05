@@ -136,6 +136,26 @@ namespace icicle {
   eIcicleError vector_mul(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
+   * @brief Multiplies two vectors element-wise.
+   *
+   * @tparam T Type of the elements in the vectors.
+   * @param vec_a Pointer to the first input vector(s).
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously in memory.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param vec_b Pointer to the second input vector(s).
+   *              - The storage layout should match that of `vec_a`.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output vector(s) where the results will be stored.
+   *               The output array should have the same storage layout as the input vectors.
+   * @return eIcicleError Error code indicating success or failure.
+   */
+  template <typename T, typename U>
+  eIcicleError vector_mul(const T* vec_a, const U* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
+
+  /**
    * @brief Divides vector `a` by vector `b` element-wise.
    *
    * @tparam T Type of the elements in the vectors.
@@ -367,11 +387,14 @@ namespace icicle {
    * @param program a class that describes the functionality to run on each set of entries at the vectors.
    * @param size Size of each arrays. The program will be executed size times
    * @param config Configuration for the operation.
+   * @note The config field is_a_on_device determines if the input is on device and whethere or not to move data_vec to
+   * the device after the calculation is done. The fields is_b_on_device and is_result_on_device are ignored.
    * @return eIcicleError Error code indicating success or failure.
    */
 
   template <typename T>
-  eIcicleError execute_program(std::vector<T*>& data, Program<T>& program, uint64_t size, const VecOpsConfig& config);
+  eIcicleError
+  execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config);
 
   /**
    * @brief Evaluates a polynomial at given domain points.

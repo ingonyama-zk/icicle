@@ -132,9 +132,19 @@ pub trait VecOps<F> {
     ) -> Result<(), eIcicleError>;
 }
 
-fn check_vec_ops_args<'a, F>(
+#[doc(hidden)]
+pub trait MixedVecOps<F, T> {
+    fn mul(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<T> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+}
+
+fn check_vec_ops_args<'a, F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> VecOpsConfig {
@@ -220,6 +230,20 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
+pub fn mixed_mul_scalars<F, T>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: MixedVecOps<F, T>,
+{
+    let cfg = check_vec_ops_args(a, b, result, cfg);
+    <<F as FieldImpl>::Config as MixedVecOps<F, T>>::mul(a, b, result, &cfg)
+}
+
 pub fn div_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -243,7 +267,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(a, a, result, cfg); //TODO: emirsoyturk
+    let cfg = check_vec_ops_args(a, a, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::sum(a, result, &cfg)
 }
 
@@ -256,7 +280,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(a, a, result, cfg); //TODO: emirsoyturk
+    let cfg = check_vec_ops_args(a, a, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::product(a, result, &cfg)
 }
 
@@ -270,7 +294,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(b, b, result, cfg); //TODO: emirsoyturk
+    let cfg = check_vec_ops_args(b, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_add(a, b, result, &cfg)
 }
 
@@ -284,7 +308,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(b, b, result, cfg); //TODO: emirsoyturk
+    let cfg = check_vec_ops_args(b, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_sub(a, b, result, &cfg)
 }
 
@@ -298,7 +322,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(b, b, result, cfg); //TODO: emirsoyturk
+    let cfg = check_vec_ops_args(b, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_mul(a, b, result, &cfg)
 }
 
@@ -741,6 +765,55 @@ macro_rules! impl_vec_ops_field {
 }
 
 #[macro_export]
+macro_rules! impl_vec_ops_mixed_field {
+    (
+        $field_prefix:literal,
+        $field_prefix_ident:ident,
+        $ext_field:ident,
+        $field:ident,
+        $ext_field_config:ident
+    ) => {
+        mod $field_prefix_ident {
+
+            use crate::vec_ops::{$ext_field, $field, HostOrDeviceSlice};
+            use icicle_core::vec_ops::VecOpsConfig;
+            use icicle_runtime::errors::eIcicleError;
+
+            extern "C" {
+                #[link_name = concat!($field_prefix, "_vector_mixed_mul")]
+                pub(crate) fn vector_mul_ffi(
+                    a: *const $ext_field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $ext_field,
+                ) -> eIcicleError;
+            }
+        }
+
+        impl MixedVecOps<$ext_field, $field> for $ext_field_config {
+            fn mul(
+                a: &(impl HostOrDeviceSlice<$ext_field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$ext_field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_mul_ffi(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! impl_vec_ops_tests {
     (
       $field:ident
@@ -784,6 +857,32 @@ macro_rules! impl_vec_ops_tests {
             pub fn test_slice() {
                 initialize();
                 check_slice::<$field>()
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_mixed_vec_ops_tests {
+    (
+      $ext_field:ident,
+      $field:ident
+    ) => {
+        pub(crate) mod test_mixed_vecops {
+            use super::*;
+            use icicle_runtime::test_utilities;
+            use icicle_runtime::{device::Device, runtime};
+            use std::sync::Once;
+
+            fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            pub fn test_mixed_vec_ops_scalars() {
+                initialize();
+                check_mixed_vec_ops_scalars::<$ext_field, $field>()
             }
         }
     };
