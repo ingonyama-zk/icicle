@@ -101,9 +101,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=true"
@@ -115,9 +113,7 @@ jobs:
           fi
         else
           INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=true"
@@ -128,7 +124,6 @@ jobs:
             rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         fi
-
     - name: Get OS version
       id: os-version
       run: |
@@ -203,7 +198,7 @@ jobs:
         name: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
         path: |
           ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
-        retention-days: 1
+        retention-days: 5
         overwrite: true
 
 
@@ -284,6 +279,53 @@ jobs:
         CUDA_BACKEND_SHA=$(git rev-parse HEAD)
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
         echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
+
+    - name: Check existing backend version
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: exists-flag
+      run: |
+        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        FIELD=${{ matrix.field.name }}
+        COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=true"
+            echo "EXIST_FLAG=true" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=false"
+            echo "EXIST_FLAG=false" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
+          fi
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=true"
+            echo "EXIST_FLAG=true" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=false"
+            echo "EXIST_FLAG=false" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
+          fi
+        fi
+    - name: Get OS version
+      id: os-version
+      run: |
+        echo "OS_VERSION=$(lsb_release -d | awk -F'\t' '{print $2}' | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+    - name: Download ICICLE lib artifacts
+      uses: actions/download-artifact@v4
+      continue-on-error: true
+      # if: steps.exists-flag.outputs.EXIST_FLAG =='false'
+      with:
+        name: icicle-builds-field-${{ matrix.field.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
+        path: ${{steps.exists-flag.outputs.INSTALL_PATH}}
+        merge-multiple: true
+
+
     - name: Set CUDA backend flag
       if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
@@ -292,8 +334,8 @@ jobs:
         FIELD=${{ matrix.field.name }}
         COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD" >> $GITHUB_OUTPUT
+          INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/field/$FIELD)
+          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/field/$FIELD)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
@@ -305,11 +347,9 @@ jobs:
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
-          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
-          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD" >> $GITHUB_OUTPUT
+          INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/field/$FIELD)
+          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/field/$FIELD)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
@@ -320,9 +360,9 @@ jobs:
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
-          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
-          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         fi
+        echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+        echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       timeout-minutes: 15
@@ -339,6 +379,17 @@ jobs:
         cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.field.name }}*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+
+    - name: Upload ICICLE lib artifacts
+      uses: actions/upload-artifact@v4
+      # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
+      with:
+        name: icicle-builds-field-${{ matrix.field.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
+        path: |
+          ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
+        retention-days: 5
+        overwrite: true
+
     - name: Run RUST Field Tests
       working-directory: ./wrappers/rust/icicle-fields
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
@@ -413,6 +464,54 @@ jobs:
         CUDA_BACKEND_SHA=$(git rev-parse HEAD)
         echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
         echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
+
+
+    - name: Check existing backend version
+      if: needs.check-changed-files.outputs.golang == 'true' ||  needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      id: exists-flag
+      run: |
+
+        COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=true"
+            echo "EXIST_FLAG=true" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=false"
+            echo "EXIST_FLAG=false" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
+          fi
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=true"
+            echo "EXIST_FLAG=true" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=false"
+            echo "EXIST_FLAG=false" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
+          fi
+        fi
+    - name: Get OS version
+      id: os-version
+      run: |
+        echo "OS_VERSION=$(lsb_release -d | awk -F'\t' '{print $2}' | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+    - name: Download ICICLE lib artifacts
+      uses: actions/download-artifact@v4
+      continue-on-error: true
+      # if: steps.exists-flag.outputs.EXIST_FLAG =='false'
+      with:
+        name: icicle-builds-hash-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
+        path: ${{steps.exists-flag.outputs.INSTALL_PATH}}
+        merge-multiple: true
+
+
+
     - name: Set CUDA backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       id: cuda-flag
@@ -420,8 +519,8 @@ jobs:
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
         COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash" >> $GITHUB_OUTPUT
+          INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/hash)
+          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/hash)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
@@ -433,11 +532,9 @@ jobs:
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
-          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
-          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash" >> $GITHUB_OUTPUT
+          INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash)
+          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash" >> $GITHUB_OUTPUT)
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
@@ -448,9 +545,9 @@ jobs:
             echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
-          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
-          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         fi
+        echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+        echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       timeout-minutes: 15
@@ -467,6 +564,17 @@ jobs:
         cmake --build build --target install -j
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+
+    - name: Upload ICICLE lib artifacts
+      uses: actions/upload-artifact@v4
+      # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
+      with:
+        name: icicle-builds-hash-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
+        path: |
+          ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
+        retention-days: 5
+        overwrite: true
+
     - name: Run RUST Hash Tests
       working-directory: ./wrappers/rust/icicle-hash
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
