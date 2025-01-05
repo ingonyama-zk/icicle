@@ -112,7 +112,7 @@ private:
       ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
       m_nof_workers = 1;
     }
-    m_scalar_size = m_config.bitsize != 0 ? m_config.bitsize : scalar_t::NBITS;
+    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
     // calc optimal C
     m_c = get_optimal_c(m_msm_size, m_config);
     m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
