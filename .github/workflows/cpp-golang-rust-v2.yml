@@ -131,6 +131,7 @@ jobs:
 
     - name: Download ICICLE lib artifacts
       uses: actions/download-artifact@v4
+      continue-on-error: true
       if: steps.exists-flag.outputs.EXIST_FLAG =='false'
       with:
         name: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
