@@ -111,7 +111,7 @@ jobs:
           else
             echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=false"
             echo "EXIST_FLAG=false" >> $GITHUB_OUTPUT
-            rm -rf ${INSTALL_PATH} && mkdir ${INSTALL_PATH}
+            rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         else
           INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE
@@ -125,7 +125,7 @@ jobs:
           else
             echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting EXIST_FLAG=false"
             echo "EXIST_FLAG=false" >> $GITHUB_OUTPUT
-            rm -rf ${INSTALL_PATH} && mkdir ${INSTALL_PATH}
+            rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         fi
 
