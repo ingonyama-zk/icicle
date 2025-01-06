@@ -875,35 +875,39 @@ public:
 
   friend HOST_DEVICE bool operator!=(const Field& xs, const Field& ys) { return !(xs == ys); }
 
-  template <typename Gen>
+  template <typename Gen, bool IS_3B = false>
   static HOST_DEVICE_INLINE Field mul_weierstrass_b(const Field& xs)
   {
     Field r = {};
-    if constexpr (Gen::is_b_u32) {
-      r = mul_unsigned<Field{Gen::weierstrass_b}.limbs_storage.limbs[0], Field>(xs);
-      if constexpr (Gen::is_b_neg)
-        return neg(r);
-      else {
-        return r;
-      }
-    } else {
-      return Field{Gen::weierstrass_b} * xs;
-    }
-  }
+    constexpr Field b_mult = []() {
+      Field b_mult = Field{Gen::weierstrass_b};
+      if constexpr (!IS_3B) return b_mult;
+      ff_storage temp = {};
+      ff_storage modulus = get_modulus<>();
+      host_math::template add_sub_limbs<TLC, false, false, true>(
+        b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<TLC, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      host_math::template add_sub_limbs<TLC, false, false, true>(
+        b_mult.limbs_storage, Field{Gen::weierstrass_b}.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<TLC, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      return b_mult;
+    }();
 
-  template <typename Gen>
-  static HOST_DEVICE_INLINE Field mul_weierstrass_3b(const Field& xs)
-  {
-    Field r = {};
-    if constexpr (Gen::is_b_u32) {
-      r = mul_unsigned<Field{Gen::weierstrass_3b}.limbs_storage.limbs[0], Field>(xs);
+    if constexpr (Gen::is_b_u32) { // assumes that 3b is also u32
+      r = mul_unsigned<b_mult.limbs_storage.limbs[0], Field>(xs);
       if constexpr (Gen::is_b_neg)
         return neg(r);
       else {
         return r;
       }
     } else {
-      return Field{Gen::weierstrass_3b} * xs;
+      return b_mult * xs;
     }
   }
 

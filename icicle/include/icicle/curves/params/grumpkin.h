@@ -21,8 +21,7 @@ namespace grumpkin {
     // 0x8181585d, 0xb85045b6, 0xe131a029, 0x30644e72};
     static constexpr point_field_t weierstrass_b = {0x00000011, 0x00000000, 0x00000000, 0x00000000,
                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr point_field_t weierstrass_3b = {0x00000033, 0x00000000, 0x00000000, 0x00000000,
-                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
+
     static constexpr bool is_b_u32 = true;
     static constexpr bool is_b_neg = true;
   }; // G1

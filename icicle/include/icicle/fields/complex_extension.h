@@ -158,47 +158,85 @@ public:
     return !(xs == ys);
   }
 
-  template <typename Gen>
+  template <typename Gen, bool IS_3B = false>
   static HOST_DEVICE_INLINE FF mul_weierstrass_b_real(const FF& xs)
   {
     FF r = {};
+    constexpr FF b_mult = []() {
+      FF b_mult = FF{Gen::weierstrass_b_g2_re};
+      if constexpr (!IS_3B) return b_mult;
+      typename FF::ff_storage temp = {};
+      typename FF::ff_storage modulus = FF::get_modulus();
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, FF{Gen::weierstrass_b_g2_re}.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      return b_mult;
+    }();
     if constexpr (Gen::is_b_u32_g2_re) {
-      r = FF::template mul_unsigned<FF{Gen::weierstrass_b_g2_re}.limbs_storage.limbs[0], FF>(xs);
+      r = FF::template mul_unsigned<b_mult.limbs_storage.limbs[0], FF>(xs);
       if constexpr (Gen::is_b_neg_g2_re)
         return FF::neg(r);
       else {
         return r;
       }
     } else {
-      return FF{Gen::weierstrass_b_g2_re} * xs;
+      return b_mult * xs;
     }
   }
 
-  template <typename Gen>
+  template <typename Gen, bool IS_3B = false>
   static HOST_DEVICE_INLINE FF mul_weierstrass_b_imag(const FF& xs)
   {
     FF r = {};
+    constexpr FF b_mult = []() {
+      FF b_mult = FF{Gen::weierstrass_b_g2_im};
+      if constexpr (!IS_3B) return b_mult;
+      typename FF::ff_storage temp = {};
+      typename FF::ff_storage modulus = FF::get_modulus();
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, FF{Gen::weierstrass_b_g2_im}.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      return b_mult;
+    }();
     if constexpr (Gen::is_b_u32_g2_im) {
-      r = FF::template mul_unsigned<FF{Gen::weierstrass_b_g2_im}.limbs_storage.limbs[0], FF>(xs);
+      r = FF::template mul_unsigned<b_mult.limbs_storage.limbs[0], FF>(xs);
       if constexpr (Gen::is_b_neg_g2_im)
         return FF::neg(r);
       else {
         return r;
       }
     } else {
-      return FF{Gen::weierstrass_b_g2_im} * xs;
+      return b_mult * xs;
     }
   }
 
-  template <typename Gen>
+  template <typename Gen, bool IS_3B = false>
   static HOST_DEVICE_INLINE ComplexExtensionField mul_weierstrass_b(const ComplexExtensionField& xs)
   {
     const FF xs_real = xs.real;
     const FF xs_imaginary = xs.imaginary;
-    FF real_prod = mul_weierstrass_b_real<Gen>(xs_real);
-    FF imaginary_prod = mul_weierstrass_b_imag<Gen>(xs_imaginary);
-    FF re_im = mul_weierstrass_b_real<Gen>(xs_imaginary);
-    FF im_re = mul_weierstrass_b_imag<Gen>(xs_real);
+    FF real_prod = mul_weierstrass_b_real<Gen, IS_3B>(xs_real);
+    FF imaginary_prod = mul_weierstrass_b_imag<Gen, IS_3B>(xs_imaginary);
+    FF re_im = mul_weierstrass_b_real<Gen, IS_3B>(xs_imaginary);
+    FF im_re = mul_weierstrass_b_imag<Gen, IS_3B>(xs_real);
     FF nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
     nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
     return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};

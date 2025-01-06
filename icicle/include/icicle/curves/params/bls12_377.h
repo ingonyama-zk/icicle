@@ -25,9 +25,7 @@ namespace bls12_377 {
     static constexpr point_field_t weierstrass_b = {0x00000001, 0x00000000, 0x00000000, 0x00000000,
                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000,
                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr point_field_t weierstrass_3b = {0x00000003, 0x00000000, 0x00000000, 0x00000000,
-                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
+
     static constexpr bool is_b_u32 = true;
     static constexpr bool is_b_neg = false;
   }; // G1
@@ -51,12 +49,6 @@ namespace bls12_377 {
     static constexpr point_field_t weierstrass_b_g2_im = {0x9999999a, 0x1c9ed999, 0x1ccccccd, 0x0dd39e5c,
                                                           0x3c6bf800, 0x129207b6, 0xcd5fd889, 0xdc7b4f91,
                                                           0x7460c589, 0x43bd0373, 0xdb0fd6f3, 0x010222f6};
-    static constexpr point_field_t weierstrass_3b_g2_re = {0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000,
-                                                           0x00000000, 0x00000000, 0x00000000, 0x00000000};
-    static constexpr point_field_t weierstrass_3b_g2_im = {0xcccccccd, 0xd0d3cccc, 0x26666666, 0x126f7dd0,
-                                                           0xfb3aa000, 0x18c2b4f2, 0x672a760c, 0x7b4f14c2,
-                                                           0xf0810762, 0x04fc0499, 0x796a73ef, 0x01582e9e};
 
     static constexpr bool is_b_u32_g2_re = true;
     static constexpr bool is_b_neg_g2_re = false;
