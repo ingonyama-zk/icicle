@@ -1,4 +1,4 @@
-name: Spell Check, C++/CUDA/Go/RUST & Examples phase 2
+name: C++/CUDA/Go/RUST
 
 on:
   pull_request:
@@ -608,7 +608,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.0'
-        
+
     - name: Test GoLang Hashes
       working-directory: ./wrappers/golang/hash
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
