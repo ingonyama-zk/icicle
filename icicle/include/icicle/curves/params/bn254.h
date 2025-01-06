@@ -24,6 +24,9 @@ namespace bn254 {
                                             0x00000000, 0x00000000, 0x00000000, 0x00000000};
     static constexpr point_field_t weierstrass_b = {0x00000003, 0x00000000, 0x00000000, 0x00000000,
                                                     0x00000000, 0x00000000, 0x00000000, 0x00000000};
+
+    static constexpr bool is_b_u32 = true;
+    static constexpr bool is_b_neg = false;
   }; // G1
 
   struct G2 {
@@ -39,6 +42,11 @@ namespace bn254 {
                                                           0x1be06ac3, 0x81be1899, 0xceb8aaae, 0x2b149d40};
     static constexpr point_field_t weierstrass_b_g2_im = {0x85c315d2, 0xe4a2bd06, 0xe52d1852, 0xa74fa084,
                                                           0xeed8fdf4, 0xcd2cafad, 0x3af0fed4, 0x009713b0};
+
+    static constexpr bool is_b_u32_g2_re = false;
+    static constexpr bool is_b_neg_g2_re = false;
+    static constexpr bool is_b_u32_g2_im = false;
+    static constexpr bool is_b_neg_g2_im = false;
 
     static constexpr g2_point_field_t gen_x = {g2_gen_x_re, g2_gen_x_im};
     static constexpr g2_point_field_t gen_y = {g2_gen_y_re, g2_gen_y_im};

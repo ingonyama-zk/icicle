@@ -158,6 +158,90 @@ public:
     return !(xs == ys);
   }
 
+  template <typename Gen, bool IS_3B = false>
+  static HOST_DEVICE_INLINE FF mul_weierstrass_b_real(const FF& xs)
+  {
+    FF r = {};
+    constexpr FF b_mult = []() {
+      FF b_mult = FF{Gen::weierstrass_b_g2_re};
+      if constexpr (!IS_3B) return b_mult;
+      typename FF::ff_storage temp = {};
+      typename FF::ff_storage modulus = FF::get_modulus();
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, FF{Gen::weierstrass_b_g2_re}.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      return b_mult;
+    }();
+    if constexpr (Gen::is_b_u32_g2_re) {
+      r = FF::template mul_unsigned<b_mult.limbs_storage.limbs[0], FF>(xs);
+      if constexpr (Gen::is_b_neg_g2_re)
+        return FF::neg(r);
+      else {
+        return r;
+      }
+    } else {
+      return b_mult * xs;
+    }
+  }
+
+  template <typename Gen, bool IS_3B = false>
+  static HOST_DEVICE_INLINE FF mul_weierstrass_b_imag(const FF& xs)
+  {
+    FF r = {};
+    constexpr FF b_mult = []() {
+      FF b_mult = FF{Gen::weierstrass_b_g2_im};
+      if constexpr (!IS_3B) return b_mult;
+      typename FF::ff_storage temp = {};
+      typename FF::ff_storage modulus = FF::get_modulus();
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+        b_mult.limbs_storage, FF{Gen::weierstrass_b_g2_im}.limbs_storage, b_mult.limbs_storage);
+      b_mult.limbs_storage =
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+          ? b_mult.limbs_storage
+          : temp;
+      return b_mult;
+    }();
+    if constexpr (Gen::is_b_u32_g2_im) {
+      r = FF::template mul_unsigned<b_mult.limbs_storage.limbs[0], FF>(xs);
+      if constexpr (Gen::is_b_neg_g2_im)
+        return FF::neg(r);
+      else {
+        return r;
+      }
+    } else {
+      return b_mult * xs;
+    }
+  }
+
+  template <typename Gen, bool IS_3B = false>
+  static HOST_DEVICE_INLINE ComplexExtensionField mul_weierstrass_b(const ComplexExtensionField& xs)
+  {
+    const FF xs_real = xs.real;
+    const FF xs_imaginary = xs.imaginary;
+    FF real_prod = mul_weierstrass_b_real<Gen, IS_3B>(xs_real);
+    FF imaginary_prod = mul_weierstrass_b_imag<Gen, IS_3B>(xs_imaginary);
+    FF re_im = mul_weierstrass_b_real<Gen, IS_3B>(xs_imaginary);
+    FF im_re = mul_weierstrass_b_imag<Gen, IS_3B>(xs_real);
+    FF nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
+    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FF::neg(nonresidue_times_im) : nonresidue_times_im;
+    return ComplexExtensionField{real_prod + nonresidue_times_im, re_im + im_re};
+  }
+
   template <const ComplexExtensionField& multiplier>
   static HOST_DEVICE_INLINE ComplexExtensionField mul_const(const ComplexExtensionField& xs)
   {
@@ -209,6 +293,17 @@ public:
     // TODO: wide here
     FF xs_norm_squared = FF::sqr(xs.real) - nonresidue_times_im;
     return xs_conjugate * ComplexExtensionField{FF::inverse(xs_norm_squared), FF::zero()};
+  }
+
+  static constexpr HOST_DEVICE ComplexExtensionField pow(ComplexExtensionField base, int exp)
+  {
+    ComplexExtensionField res = one();
+    while (exp > 0) {
+      if (exp & 1) res = res * base;
+      base = base * base;
+      exp >>= 1;
+    }
+    return res;
   }
 };
 

@@ -21,3 +21,4 @@ cpp:
 examples:
   - examples/**/*
   - .github/workflows/cpp-golang-rust.yml
+  - .github/workflows/rust-examples.yml

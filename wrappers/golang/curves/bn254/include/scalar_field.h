@@ -16,6 +16,7 @@ void bn254_add(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void bn254_sub(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void bn254_mul(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void bn254_inv(const scalar_t* a, scalar_t* result);
+void bn254_pow(const scalar_t* a, int exp, scalar_t* result);
 
 #ifdef __cplusplus
 }
