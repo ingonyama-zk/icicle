@@ -143,7 +143,7 @@ jobs:
       id: cache-icicle-restore
       uses: actions/cache/restore@v4
       with:
-        path: ${{steps.exists-flag.outputs.INSTALL_PATH}}
+        path: /tmp/ci_cache
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
 
 
@@ -213,7 +213,7 @@ jobs:
       id: cache-icicle-save
       uses: actions/cache/save@v4
       with:
-        path: ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
+        path: /tmp/ci_cache
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
 
     - name: Run RUST Curve Tests
