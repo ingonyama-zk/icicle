@@ -80,7 +80,7 @@ eIcicleError vector_div(const T* vec_a, const T* vec_b, uint64_t size, const Vec
 
 #### `execute_program`
 
-Execute a user-defined lambda function with arbitrary number of input and output vectors.
+Execute a user-defined lambda function with arbitrary number of input and output variables.
 
 ```cpp
 template <typename T>
