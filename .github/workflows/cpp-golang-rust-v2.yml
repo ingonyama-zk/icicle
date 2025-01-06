@@ -382,12 +382,7 @@ jobs:
         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
         echo "COMMIT_FILE_PATH=$COMMIT_FILE_PATH" >> $GITHUB_OUTPUT
-    - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      timeout-minutes: 15
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22.0'
+
 
     - name: Build field
       working-directory: ./icicle
@@ -409,17 +404,7 @@ jobs:
         retention-days: 5
         overwrite: true
 
-    - name: Run RUST Field Tests
-      working-directory: ./wrappers/rust/icicle-fields
-      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      run: |
-        FIELD=${{ matrix.field.name }}
-        FIELD_DIR=icicle-${FIELD//_/-}
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
-        cd ./$FIELD_DIR
-        cargo test --release --verbose -- --skip phase
-        cargo test phase2 --release
-        cargo test phase3 --release
+
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
@@ -442,10 +427,28 @@ jobs:
             fi
         done
 
+    - name: Run RUST Field Tests
+      working-directory: ./wrappers/rust/icicle-fields
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=icicle-${FIELD//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cd ./$FIELD_DIR
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
+
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+
     - name: Run Golang field Tests
       working-directory: ./wrappers/golang/fields
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      # if: matrix.field.name == 'babybear' #&& matrix.field.name == 'babybear'
       run: |
         FIELD=${{ matrix.field.name }}
         FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
@@ -568,12 +571,7 @@ jobs:
         echo "COMMIT_FILE_PATH=$COMMIT_FILE_PATH" >> $GITHUB_OUTPUT
 
 
-    - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      timeout-minutes: 15
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22.0'
+
     - name: Build
       working-directory: ./icicle
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
@@ -603,6 +601,14 @@ jobs:
         cargo test --release --verbose -- --skip phase
         cargo test phase2 --release
         cargo test phase3 --release
+
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+        
     - name: Test GoLang Hashes
       working-directory: ./wrappers/golang/hash
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
