@@ -2,7 +2,7 @@
 
 ## Overview
 
-Program is a class that let users define expressions on vector elements, and have ICICLE compile it fot the backends for a fused implentation. This solves memory bottlenecks and also let users customize algorithms such as sumcheck. Program can create only element-wise lambda functions.
+Program is a class that let users define expressions on vector elements, and have ICICLE compile it for the backends for a fused implementation. This solves memory bottlenecks and also let users customize algorithms such as sumcheck. Program can create only element-wise lambda functions.
 
 
 ## C++ API
@@ -84,4 +84,4 @@ The `data` vector is a vector of pointers to the inputs and output vectors, `pro
 
 For the configuration the field `is_a_on_device` determined whethere the data (*inputs and outputs*) is on device or not. After the execution `data` will reside in the same place as it did before (i.e. the field `is_result_on_device` is irrelevant.)
 
-> **_NOTE:_**  Using program for executiong lambdas is recommended only while using the CUDA backend. Program's primary use is to let users to customize algorithms (such as sumcheck). 
+> **_NOTE:_**  Using program for executing lambdas is recommended only while using the CUDA backend. Program's primary use is to let users to customize algorithms (such as sumcheck). 
