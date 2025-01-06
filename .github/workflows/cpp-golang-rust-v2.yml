@@ -208,7 +208,7 @@ jobs:
       uses: actions/cache/save@v4
       # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
       with:
-        path: /tmp/ci_cache
+        path: /tmp/ci/cache
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
 
 
