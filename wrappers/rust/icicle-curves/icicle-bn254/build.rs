@@ -40,6 +40,11 @@ fn main() {
     } else if cfg!(feature = "pull_metal_backend") {
         config.define("METAL_BACKEND", "main");
     }
+    if cfg!(feature = "vulkan_backend") {
+        config.define("VULKAN_BACKEND", "local");
+    } else if cfg!(feature = "pull_vulkan_backend") {
+        config.define("VULKAN_BACKEND", "main");
+    }
     // Optional Features that are default ON (so that default matches any backend)
     if cfg!(feature = "no_g2") {
         config.define("G2", "OFF");
