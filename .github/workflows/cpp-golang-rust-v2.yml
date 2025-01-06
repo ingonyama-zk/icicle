@@ -100,7 +100,7 @@ jobs:
         CURVE=${{ matrix.curve.name }}
         COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE
+          INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/curve/$CURVE)
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
@@ -112,7 +112,7 @@ jobs:
             rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE
+          INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/curve/$CURVE)
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
@@ -124,6 +124,8 @@ jobs:
             rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         fi
+        echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
+
     - name: Get OS version
       id: os-version
       run: |
@@ -141,8 +143,7 @@ jobs:
       id: cache-icicle-restore
       uses: actions/cache/restore@v4
       with:
-        path: |
-          ${{steps.exists-flag.outputs.INSTALL_PATH}}
+        path: ${{steps.exists-flag.outputs.INSTALL_PATH}}
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
 
 
@@ -200,22 +201,21 @@ jobs:
         rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
         touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
  
-    - name: Upload ICICLE lib artifacts
-      uses: actions/upload-artifact@v4
-      # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
-      with:
-        name: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
-        path: |
-          ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
-        retention-days: 5
-        overwrite: true
+    # - name: Upload ICICLE lib artifacts
+    #   uses: actions/upload-artifact@v4
+    #   # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
+    #   with:
+    #     name: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
+    #     path: |
+    #       ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
+    #     retention-days: 5
+    #     overwrite: true
 
     - name: Cache ICICLE backend
       id: cache-pricicleimes-save
       uses: actions/cache/save@v4
       with:
-        path: |
-          ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
+        path: ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
 
     - name: Run RUST Curve Tests
