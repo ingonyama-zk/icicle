@@ -135,6 +135,7 @@ jobs:
     - name: Restore cached ICICLE backend
       id: cache-icicle-restore
       uses: actions/cache/restore@v4
+      if: steps.exists-flag.outputs.EXIST_FLAG == 'false'
       with:
         path: /tmp/ci/cache
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
@@ -342,6 +343,7 @@ jobs:
     - name: Restore cached ICICLE backend
       id: cache-icicle-restore
       uses: actions/cache/restore@v4
+      if: steps.exists-flag.outputs.EXIST_FLAG == 'false'
       with:
         path: /tmp/ci/cache
         key: icicle-builds-field-${{ matrix.field.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
@@ -580,6 +582,7 @@ jobs:
     - name: Restore cached ICICLE backend
       id: cache-icicle-restore
       uses: actions/cache/restore@v4
+      if: steps.exists-flag.outputs.EXIST_FLAG == 'false'
       with:
         path: /tmp/ci/cache
         key: icicle-builds-hash-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
