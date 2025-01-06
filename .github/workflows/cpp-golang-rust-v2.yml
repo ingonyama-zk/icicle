@@ -156,9 +156,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/curve/$CURVE)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/curve/$CURVE)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
@@ -170,9 +168,7 @@ jobs:
           fi
         else
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/curve/$CURVE)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/curve/$CURVE)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
             echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
@@ -184,6 +180,8 @@ jobs:
         fi
         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
+        echo "COMMIT_FILE_PATH=$COMMIT_FILE_PATH" >> $GITHUB_OUTPUT
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       timeout-minutes: 15
@@ -212,7 +210,7 @@ jobs:
     #     overwrite: true
 
     - name: Cache ICICLE backend
-      id: cache-pricicleimes-save
+      id: cache-icicle-save
       uses: actions/cache/save@v4
       with:
         path: ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/*
@@ -328,6 +326,8 @@ jobs:
             rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         fi
+        echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
+
     - name: Get OS version
       id: os-version
       run: |
@@ -351,9 +351,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/field/$FIELD)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/field/$FIELD)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
@@ -365,9 +363,7 @@ jobs:
           fi
         else
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/field/$FIELD)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/field/$FIELD)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
             echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
@@ -379,6 +375,8 @@ jobs:
         fi
         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
+        echo "COMMIT_FILE_PATH=$COMMIT_FILE_PATH" >> $GITHUB_OUTPUT
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       timeout-minutes: 15
@@ -513,6 +511,7 @@ jobs:
             rm -rf ${INSTALL_PATH} && mkdir -p ${INSTALL_PATH}
           fi
         fi
+        echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
     - name: Get OS version
       id: os-version
       run: |
@@ -536,9 +535,7 @@ jobs:
         COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
         if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/hash)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../main_lib/hash)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
@@ -550,9 +547,7 @@ jobs:
           fi
         else
           INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash)
-          echo "INSTALL_PATH=$(realpath ${{ github.workspace }}/../../temp_lib/hash)" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
             echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
             echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
@@ -564,6 +559,10 @@ jobs:
         fi
         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        echo "INSTALL_PATH=$INSTALL_PATH" >> $GITHUB_OUTPUT
+        echo "COMMIT_FILE_PATH=$COMMIT_FILE_PATH" >> $GITHUB_OUTPUT
+
+
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       timeout-minutes: 15
