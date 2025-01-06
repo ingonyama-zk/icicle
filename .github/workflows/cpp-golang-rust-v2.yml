@@ -204,10 +204,10 @@ jobs:
         cp -r ${{ steps.cuda-flag.outputs.INSTALL_PATH }} /tmp/ci/cache
  
 
-    - name: Cache ICICLE backend
+    - name: Upload Cached ICICLE backend
       id: cache-icicle-save
       uses: actions/cache/save@v4
-      # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
+      if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
       with:
         path: /tmp/ci/cache
         key: icicle-builds-curve-${{ matrix.curve.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
@@ -449,10 +449,10 @@ jobs:
         cp -r ${{ steps.cuda-flag.outputs.INSTALL_PATH }} /tmp/ci/cache
  
 
-    - name: Cache ICICLE backend
+    - name: Upload Cached ICICLE backend
       id: cache-icicle-save
       uses: actions/cache/save@v4
-      # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
+      if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
       with:
         path: /tmp/ci/cache
         key: icicle-builds-field-${{ matrix.field.name }}-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
@@ -689,10 +689,10 @@ jobs:
         cp -r ${{ steps.cuda-flag.outputs.INSTALL_PATH }} /tmp/ci/cache
 
 
-    - name: Cache ICICLE backend
+    - name: Upload Cached ICICLE backend
       id: cache-icicle-save
       uses: actions/cache/save@v4
-      # if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
+      if: steps.cuda-flag.outputs.CUDA_FLAG == '-DCUDA_BACKEND=local'
       with:
         path: /tmp/ci/cache
         key: icicle-builds-hash-${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}-${{ steps.os-version.outputs.OS_VERSION }}
