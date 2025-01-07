@@ -220,6 +220,15 @@ pub fn fold_circle_into_line_new(
     }
 }
 
+pub fn precompute_fri_twiddles(log_size: u32) -> IcicleResult<()> {
+    unsafe {
+        _fri::precompute_fri_twiddles(
+            log_size
+        )
+        .wrap()
+    }
+}
+
 mod _fri {
     use super::{CudaError, FriConfig, QuarticExtensionField, ScalarField};
 
@@ -264,6 +273,11 @@ mod _fri {
             folded_line_eval: *mut QuarticExtensionField,
             n: u64,
             cfg: *const FriConfig,
+        ) -> CudaError;
+
+        #[link_name = "m31_precompute_fri_twiddles"]
+        pub(crate) fn precompute_fri_twiddles(
+            log_size: u32,
         ) -> CudaError;
     }
 }

@@ -39,10 +39,10 @@ namespace fri {
     uint64_t n,
     FriConfig& cfg)
   {
-    circle_math::LineDomain<fp_config, scalar_t> line_domain = circle_math::LineDomain<fp_config, scalar_t>(line_domain_initial_index, line_domain_log_size);
+    line_t line_domain(line_domain_initial_index, line_domain_log_size);
+    line_t test_domain(coset_t::half_odds(line_domain_log_size));
     scalar_t* domain_elements;
-    cudaMalloc(&domain_elements, line_domain.coset.size() * sizeof(scalar_t));
-    line_domain.get_twiddles(domain_elements);
+    line_domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
     return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
   };
@@ -80,11 +80,26 @@ namespace fri {
     uint64_t n,
     FriConfig& cfg)
   {
+    domain_t test_domain(domain_log_size + 1);
     domain_t domain(coset_t(domain_initial_index, domain_log_size));
     scalar_t* domain_elements;
-    cudaMalloc(&domain_elements, domain.coset.size() * sizeof(scalar_t));
-    domain.get_twiddles(domain_elements);
+    domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
     return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);
+  };
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, precompute_fri_twiddles)(
+    uint32_t log_size
+    )
+  {
+    CHK_INIT_IF_RETURN();
+    for(uint32_t i = 2; i <= log_size; ++i) {
+      coset_t coset = coset_t::half_odds(i);
+      domain_t domain(coset);
+      domain.compute_twiddles();
+      line_t line_domain(coset);
+      line_domain.compute_twiddles();
+    }
+    return CHK_LAST();
   };
 } // namespace fri

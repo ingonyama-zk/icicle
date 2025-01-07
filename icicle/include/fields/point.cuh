@@ -283,7 +283,7 @@ namespace circle_math {
   public:
     typedef CirclePoint<CONFIG, T> Point;
     CircleCoset<CONFIG, T> coset;
-    // static std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> twiddles_inversed_reversed_index;
+    static std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> twiddles_inversed_reversed_index;
     CircleDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {
     }
     CircleDomain<CONFIG, T>(uint32_t log_size) : coset(CircleCoset<CONFIG, T>::half_odds(log_size - 1)) {
@@ -324,28 +324,28 @@ namespace circle_math {
       return subdomain;
     }
 
-    // HOST_INLINE void compute_twiddles() {
-    //   if (!CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(this->coset)) {
-    //     auto size = this->coset.size();
-    //     T *d_twiddles;
-    //     cudaMalloc(&d_twiddles, size);
-    //     int block_dim = size < 512 ? size : 512; 
-    //     int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
-    //     compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
-    //     CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset] = d_twiddles;
-    //   }
-    // }
+    HOST_INLINE cudaError_t compute_twiddles() const {
+      if (!CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(this->coset)) {
+        uint64_t size = this->coset.size();
+        T *d_twiddles;
+        CHK_IF_RETURN(cudaMalloc(&d_twiddles, size * sizeof(T)));
+        int block_dim = size < 512 ? size : 512; 
+        int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
+        compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
+        CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset] = d_twiddles;
+      }
+      return CHK_LAST();
+    }
 
-    HOST_INLINE void get_twiddles(T *d_twiddles) const {
-      uint64_t size = this->coset.size();
-      uint64_t block_dim = size < 512 ? size : 512; 
-      uint64_t num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
-      compute_domain_twiddles<CircleDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
+    HOST_INLINE cudaError_t get_twiddles(T **d_twiddles) const {
+      this->compute_twiddles();
+      *d_twiddles = CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset];
+      return CHK_LAST();
     }
   };
 
-  // template <typename CONFIG, class T>
-  // std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index;
+  template <typename CONFIG, class T>
+  std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> CircleDomain<CONFIG, T>::twiddles_inversed_reversed_index;
 
   template <typename D, typename T>
   __global__ void compute_line_domain_twiddles(D line_domain, size_t size, T *twiddles_inversed_reversed_index) {
@@ -369,6 +369,7 @@ namespace circle_math {
   public:
     typedef CirclePoint<CONFIG, T> Point;
     CircleCoset<CONFIG, T> coset;
+    static std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> twiddles_inversed_reversed_index;
     HOST_DEVICE_INLINE LineDomain<CONFIG, T>(const CircleCoset<CONFIG, T>& coset) : coset(coset) {
       uint64_t size = coset.size();
       if (size > 2) {
@@ -405,11 +406,26 @@ namespace circle_math {
       return LineDomain(coset.dbl());
     }
 
-    HOST_INLINE void get_twiddles(T *d_twiddles) const {
-      uint64_t size = this->coset.size();
-      uint64_t block_dim = size < 512 ? size : 512; 
-      uint64_t num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
-      compute_line_domain_twiddles<LineDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
+    HOST_INLINE cudaError_t compute_twiddles() const {
+      if (!LineDomain<CONFIG, T>::twiddles_inversed_reversed_index.count(this->coset)) {
+        uint64_t size = this->coset.size();
+        T *d_twiddles;
+        CHK_IF_RETURN(cudaMalloc(&d_twiddles, size * sizeof(T)));
+        int block_dim = size < 512 ? size : 512; 
+        int num_blocks = block_dim < 512 ? 1 : (size + block_dim - 1) / block_dim;
+        compute_line_domain_twiddles<LineDomain<CONFIG, T>, T><<<num_blocks, block_dim>>>(*this, size, d_twiddles);
+        LineDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset] = d_twiddles;
+      }
+      return CHK_LAST();
+    }
+
+    HOST_INLINE cudaError_t get_twiddles(T **d_twiddles) const {
+      this->compute_twiddles();
+      *d_twiddles = LineDomain<CONFIG, T>::twiddles_inversed_reversed_index[this->coset];
+      return CHK_LAST();
     }
   };
+
+  template <typename CONFIG, class T>
+  std::unordered_map<CircleCoset<CONFIG, T>, T*, CircleCosetHash<CONFIG, T>> LineDomain<CONFIG, T>::twiddles_inversed_reversed_index;
 }
