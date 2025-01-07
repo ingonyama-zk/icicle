@@ -57,7 +57,7 @@ public:
   // Calculate the optimal C based on the problem size, config and machine parameters.
   static unsigned get_optimal_c(unsigned msm_size, const MSMConfig& config)
   {
-    // TBD: optimize - condsider nof workers, do expiriments
+    // TBD: optimize - condsider nof workers, do experiments
     int optimal_c = config.c > 0 ? config.c :                                                   // c given by config.
                       std::max((int)(0.7 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
     return optimal_c;
@@ -273,7 +273,7 @@ private:
     uint64_t bucket_start = 0;
     for (int segment_idx = 0; segment_idx < m_segments.size();
          segment_idx++) { // TBD: divide the work among m_nof_workers only.
-      // Each thread is responsible for a signle thread
+      // Each thread is responsible for a sinעle thread
       m_taskflow.emplace([=]() {
         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
