@@ -40,6 +40,11 @@ fn main() {
     } else if cfg!(feature = "pull_metal_backend") {
         config.define("METAL_BACKEND", "main");
     }
+    if cfg!(feature = "vulkan_backend") {
+        config.define("VULKAN_BACKEND", "local");
+    } else if cfg!(feature = "pull_vulkan_backend") {
+        config.define("VULKAN_BACKEND", "main");
+    }
 
     // Build
     let _ = config

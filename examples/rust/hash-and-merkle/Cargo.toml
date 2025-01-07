@@ -4,20 +4,28 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-hex = "0.4" 
+hex = "0.4"
 clap = { version = "<=4.4.12", features = ["derive"] }
-icicle-core = {path = "../../../wrappers/rust/icicle-core" }
-icicle-runtime = {path = "../../../wrappers/rust/icicle-runtime" }
-icicle-hash = {path = "../../../wrappers/rust/icicle-hash" }
-icicle-babybear = {path = "../../../wrappers/rust/icicle-fields/icicle-babybear" }
+icicle-core = { path = "../../../wrappers/rust/icicle-core" }
+icicle-runtime = { path = "../../../wrappers/rust/icicle-runtime" }
+icicle-hash = { path = "../../../wrappers/rust/icicle-hash" }
+icicle-babybear = { path = "../../../wrappers/rust/icicle-fields/icicle-babybear" }
 
 [features]
-cuda = ["icicle-runtime/cuda_backend",
+cuda = [
+        "icicle-runtime/cuda_backend",
         "icicle-babybear/cuda_backend",
-        "icicle-hash/cuda_backend",            
+        "icicle-hash/cuda_backend",
 ]
 
-metal = ["icicle-runtime/metal_backend",
+metal = [
+        "icicle-runtime/metal_backend",
         "icicle-babybear/metal_backend",
-        "icicle-hash/metal_backend",            
+        "icicle-hash/metal_backend",
+]
+
+vulkan = [
+        "icicle-runtime/vulkan_backend",
+        "icicle-babybear/vulkan_backend",
+        "icicle-hash/vulkan_backend",
 ]
