@@ -13,7 +13,7 @@
 #include "icicle/curves/projective.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
-#include <taskflow/taskflow.hpp>
+#include "taskflow/taskflow.hpp"
 #include "icicle/backend/msm_config.h"
 #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
@@ -29,6 +29,7 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
+    // TBD: for sall size MSM - prefer double and add 
     calc_optimal_parameters();
 
     // Resize the thread buckets according to optimal parameters
@@ -168,7 +169,7 @@ private:
   }
 
   // Each worker run this function and update its buckets - this function needs re writing
-  void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, const unsigned int msm_size)
+  void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, const int msm_size)
   {
     // My buckets:
     std::vector<Bucket>& buckets = m_workers_buckets[worker_idx];
