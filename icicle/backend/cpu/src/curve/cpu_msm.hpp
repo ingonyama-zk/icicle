@@ -88,10 +88,10 @@ private:
   const int m_msm_size;          // number of scalars in the problem
   const MSMConfig& m_config;     // extra parameters for the problem
   uint32_t m_scalar_size;        // the number of bits at the scalar
-  uint32_t m_c;                  // the number of bits each bucket module is responsible forr
+  uint32_t m_c;                  // the number of bits each bucket module is responsible for
   uint32_t m_bm_size;            // number of buckets in a single bucket module.
   uint32_t m_nof_buckets_module; // number of bucket modules. Each BM contains m_bm_size buckets except for the last one
-  uint64_t m_nof_total_buckets;  // total number of buckets accross all bucket modules
+  uint64_t m_nof_total_buckets;  // total number of buckets accros all bucket modules
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
   uint32_t m_segment_size;
   uint32_t m_nof_workers; // number of threads in current machine
