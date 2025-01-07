@@ -252,18 +252,20 @@ private:
   {
     // run over all buckets under my responsibility.
     for (int bucket_i = bucket_start; bucket_i < bucket_start + nof_buckets; bucket_i++) {
-      // if the bucket
-      if (!m_workers_buckets_busy[0][bucket_i]) {
-        m_workers_buckets[0][bucket_i].point = P::zero();
-      } // TBD: avoid reset and look at busy flag
+      bool worker_0_bucket_busy = m_workers_buckets_busy[0][bucket_i];
 
       // run over all workers
       for (int worker_i = 1; worker_i < m_nof_workers; worker_i++) {
         if (m_workers_buckets_busy[worker_i][bucket_i]) {
           // add busy buckets to worker_0's bucket
-          m_workers_buckets[0][bucket_i].point =
-            m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point; // TBD add inplace
+          m_workers_buckets[0][bucket_i].point = worker_0_bucket_busy ? m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point :  // TBD add inplace
+                                                                        m_workers_buckets[worker_i][bucket_i].point;
+          worker_0_bucket_busy = true;
         }
+      }
+      // if the bucket is empty for all workers, reset it.
+      if (!worker_0_bucket_busy) {
+        m_workers_buckets[0][bucket_i].point = P::zero();
       }
     }
   }
