@@ -29,5 +29,5 @@ void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
     return;
   }
 
-  ICICLE_LOG_INFO << "Device " << selected_device << " is not available, falling back to CPU";
+  ICICLE_LOG_ERROR << "Device " << selected_device << " is not available, falling back to CPU";
 }
