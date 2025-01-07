@@ -29,7 +29,7 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
-    // TBD: for sall size MSM - prefer double and add 
+    // TBD: for sall size MSM - prefer double and add
     calc_optimal_parameters();
 
     // Resize the thread buckets according to optimal parameters
@@ -258,15 +258,15 @@ private:
       for (int worker_i = 1; worker_i < m_nof_workers; worker_i++) {
         if (m_workers_buckets_busy[worker_i][bucket_i]) {
           // add busy buckets to worker_0's bucket
-          m_workers_buckets[0][bucket_i].point = worker_0_bucket_busy ? m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point :  // TBD add inplace
-                                                                        m_workers_buckets[worker_i][bucket_i].point;
+          m_workers_buckets[0][bucket_i].point =
+            worker_0_bucket_busy ? m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point
+                                 : // TBD add inplace
+              m_workers_buckets[worker_i][bucket_i].point;
           worker_0_bucket_busy = true;
         }
       }
       // if the bucket is empty for all workers, reset it.
-      if (!worker_0_bucket_busy) {
-        m_workers_buckets[0][bucket_i].point = P::zero();
-      }
+      if (!worker_0_bucket_busy) { m_workers_buckets[0][bucket_i].point = P::zero(); }
     }
   }
 
