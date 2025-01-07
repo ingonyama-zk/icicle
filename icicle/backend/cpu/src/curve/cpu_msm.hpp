@@ -29,13 +29,9 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
-    // std::cout << "msm_size = " << msm_size << std::endl;
-    // std::cout << "c = " << config.c << std::endl;
-    // std::cout << "precompute_factor = " << config.precompute_factor << std::endl;
-    // std::cout << "batch_size = " << config.batch_size << std::endl;
     calc_optimal_parameters();
 
-    // resize the thread buckets according to the parameters
+    // Resize the thread buckets according to optimal parameters
     m_workers_buckets.resize(m_nof_workers);
     m_workers_buckets_busy.resize(m_nof_workers);
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
@@ -44,34 +40,32 @@ public:
     }
   }
 
-  // run MSM
+  // run MSM based on pippenger algorithm
   void run_msm(const scalar_t* scalars, const A* bases, P* results)
   {
-    // initialize all buckets to not busy
+    // TBD: move to threads
     init_workers_buckets_busy();
 
     phase1_populate_buckets(scalars, bases);
-    // for (int i=0; i<m_workers_buckets[0].size();++i) {
-    //   std::cout << "bkt " << i << " : " << m_workers_buckets_busy[0][i] << ", val = " <<
-    //   m_workers_buckets[0][i].point.to_affine() << std::endl;
-    // }
 
     phase2_collapse_segments();
 
+    // TBD: start the next task in batch in parallel to phase 3
     phase3_final_accumulator(results);
-    std::cout << "Final result: " << results->to_affine() << std::endl;
   }
 
   // Calculate the optimal C based on the problem size, config and machine parameters.
   static unsigned get_optimal_c(unsigned msm_size, const MSMConfig& config)
   {
-    // TBD: optimize - condsider batch size
-    int optimal_c = config.c > 0 ? config.c : std::max((int)(0.7 * std::log2(msm_size * config.precompute_factor)), 8);
+    // TBD: optimize - condsider nof workers, do expiriments
+    int optimal_c = config.c > 0 ? config.c :                                                   // c given by config.
+                      std::max((int)(0.7 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
     return optimal_c;
   }
 
 private:
   // A single bucket data base
+  // TBD: check adding a pointer to affine to reduce copies
   struct Bucket {
     P point;
   };
@@ -93,39 +87,44 @@ private:
   uint32_t m_nof_buckets_module; // number of bucket modules. Each BM contains m_bm_size buckets except for the last one
   uint64_t m_nof_total_buckets;  // total number of buckets across all bucket modules
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
-  uint32_t m_segment_size;
-  uint32_t m_nof_workers; // number of threads in current machine
+  uint32_t m_segment_size;       // segments size for phase 2.
+  uint32_t m_nof_workers;        // number of threads in current machine
 
-  // per worker, per
-  std::vector<std::vector<Bucket>> m_workers_buckets; // TBD check if structuring this affect performance
-  std::vector<std::vector<bool>> m_workers_buckets_busy;
+  // per worker:
+  std::vector<std::vector<Bucket>> m_workers_buckets;    // all buckets used by the worker
+  std::vector<std::vector<bool>> m_workers_buckets_busy; // for each bucket, an indication if it is busy
 
-  std::vector<Segment> m_segments;
+  std::vector<Segment> m_segments; // A vector of all segments for phase 2
 
   // set the parameters based on the problem size and the machine properties
   void calc_optimal_parameters()
   {
+    // set nof workers
     m_nof_workers = std::thread::hardware_concurrency();
     if (m_config.ext && m_config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
-      m_nof_workers = m_config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS);
+      m_nof_workers = m_config.ext && m_config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
+                        ? m_config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                        :                                    // number of threads provided by config
+                        std::thread::hardware_concurrency(); // check machine properties
     }
     if (m_nof_workers <= 0) {
       ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
       m_nof_workers = 1;
     }
+
+    // phase 1 properties
     m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-    // calc optimal C
     m_c = get_optimal_c(m_msm_size, m_config);
+    m_precompute_factor = m_config.precompute_factor;
     m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
-    m_precompute_factor = m_config.precompute_factor;
     const uint64_t last_bm_size =
       m_precompute_factor > 1 ? m_bm_size : 1 << (m_scalar_size - ((m_nof_buckets_module - 1) * m_c));
     m_nof_total_buckets = (m_nof_buckets_module - 1) * m_bm_size + last_bm_size;
 
+    // phase 2 properties
     m_segment_size =
       std::min(m_bm_size, (uint32_t)(1 << (uint32_t)(std::log2(m_nof_total_buckets / m_nof_workers) - 4)));
-    // std::cout << "m_segment_size = " << m_segment_size << std::endl;
     const int nof_segments = (m_nof_total_buckets + m_segment_size - 1) / m_segment_size;
     m_segments.resize(nof_segments);
   }
@@ -138,6 +137,7 @@ private:
     }
   }
 
+  // execute all tasks in taskfkow, wait for them to complete and clear taskflow.
   void run_workers_and_wait()
   {
     m_executor.run(m_taskflow).wait();
@@ -147,7 +147,7 @@ private:
   // phase 1: Each worker process a portion of the inputs and populate its buckets
   void phase1_populate_buckets(const scalar_t* scalars, const A* bases)
   {
-    // divide the msm problem to workers
+    // Divide the msm problem to workers
     const int worker_msm_size = (m_msm_size + m_nof_workers - 1) / m_nof_workers; // round up
 
     // Run workers to build their buckets on a subset of the scalars and bases
@@ -156,21 +156,21 @@ private:
         const int scalars_start_idx = worker_msm_size * worker_i;
         const int bases_start_idx = scalars_start_idx * m_precompute_factor;
         const int cur_worker_msm_size = std::min(worker_msm_size, m_msm_size - worker_i * worker_msm_size);
-        if (cur_worker_msm_size > 0) { // TBD: better calc to avoid this condition or move the condition befoe launch a
-                                       // thread
-          worker_run_phase1(worker_i, scalars + scalars_start_idx, bases + bases_start_idx, cur_worker_msm_size);
-        }
+        worker_run_phase1(worker_i, scalars + scalars_start_idx, bases + bases_start_idx, cur_worker_msm_size);
       });
     }
+
+    // TBD build a graph of dependencies for task flow to execute phase 2
     run_workers_and_wait();
 
     // Collapse all the workers buckets into one
-    collapse_all_workers_result();
+    collapse_all_workers_buckets();
   }
 
-  // each worker run this function and update its buckets
+  // Each worker run this function and update its buckets - this function needs re writing
   void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, const unsigned int msm_size)
   {
+    // My buckets:
     std::vector<Bucket>& buckets = m_workers_buckets[worker_idx];
     std::vector<bool>& buckets_busy = m_workers_buckets_busy[worker_idx];
 
@@ -191,7 +191,7 @@ private:
         // Handle required preprocess of base P
         A base = m_config.are_points_montgomery_form ? A::from_montgomery(bases[m_precompute_factor * i + j])
                                                      : bases[m_precompute_factor * i + j]; // TDB: avoid copy
-        if (base == A::zero()) { continue; }                                               // TBD: why is that?
+        if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
         A base_neg = A::neg(base);
 
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
@@ -209,10 +209,7 @@ private:
             } else {
               bkt_idx = m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit);
             }
-            //  if (bkt_idx == 277) {
-            //   // std::cout << "bkt_idx = " << bkt_idx << ", scalar = " << scalar <<  std::endl;
-            //   std::cout << i << ": bkt_idx = " << bkt_idx << ", base = " << base << std::endl;
-            //  }
+
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
             if (buckets_busy[bkt_idx]) {
               buckets[bkt_idx].point =
@@ -232,15 +229,15 @@ private:
     }
   }
 
-  void collapse_all_workers_result()
+  // Collapse all workers buckets into worker 0 buckets?
+  void collapse_all_workers_buckets()
   {
     int bucket_start = 0;
     const int nof_buckets_per_thread = (m_nof_total_buckets + m_nof_workers - 1) / m_nof_workers;
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
       const int nof_buckets =
         std::min(nof_buckets_per_thread, (int)m_nof_total_buckets - worker_i * nof_buckets_per_thread);
-      // threads.emplace_back(std::bind(&Msm::worker_collapse_all_workers_result, this, bucket_start, nof_buckets));
-      if (nof_buckets > 0) { // TBD add this condition to repo
+      if (nof_buckets > 0) {
         m_taskflow.emplace(
           [this, bucket_start, nof_buckets]() { worker_collapse_all_workers_result(bucket_start, nof_buckets); });
         bucket_start += nof_buckets_per_thread;
@@ -249,27 +246,36 @@ private:
     run_workers_and_wait();
   }
 
+  // A single thread functionality
   void worker_collapse_all_workers_result(const int bucket_start, const int nof_buckets)
   {
+    // run over all buckets under my responsibility.
     for (int bucket_i = bucket_start; bucket_i < bucket_start + nof_buckets; bucket_i++) {
-      if (!m_workers_buckets_busy[0][bucket_i]) { m_workers_buckets[0][bucket_i].point = P::zero(); }
+      // if the bucket
+      if (!m_workers_buckets_busy[0][bucket_i]) {
+        m_workers_buckets[0][bucket_i].point = P::zero();
+      } // TBD: avoid reset and look at busy flag
 
+      // run over all workers
       for (int worker_i = 1; worker_i < m_nof_workers; worker_i++) {
         if (m_workers_buckets_busy[worker_i][bucket_i]) {
+          // add busy buckets to worker_0's bucket
           m_workers_buckets[0][bucket_i].point =
-            m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point; // TBD inplace
+            m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point; // TBD add inplace
         }
       }
     }
   }
 
+  // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
   {
     uint64_t bucket_start = 0;
-    for (int segment_idx = 0; segment_idx < m_segments.size(); segment_idx++) {
+    for (int segment_idx = 0; segment_idx < m_segments.size();
+         segment_idx++) { // TBD: divide the work among m_nof_workers only.
+      // Each thread is responsible for a signle thread
       m_taskflow.emplace([=]() {
         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
-        // worker_collapse_all_workers_result(bucket_start, segment_size);
         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
       });
       bucket_start += m_segment_size;
@@ -277,9 +283,10 @@ private:
     run_workers_and_wait();
   }
 
+  // single worker task - accumulate a single segment
   void worker_collapse_segment(Segment& segment, const int64_t bucket_start, const uint32_t segment_size)
   {
-    // Assumption all buyckets are busy
+    // Assumption all buyckets are busy - no need to look at the busy flag
     std::vector<Bucket>& buckets = m_workers_buckets[0];
     const int64_t last_bucket_i = bucket_start + segment_size;
     const int64_t init_bucket_i = (last_bucket_i % m_bm_size) ? last_bucket_i
@@ -288,75 +295,55 @@ private:
     segment.triangle_sum = init_bucket_i < buckets.size() ? buckets[init_bucket_i].point : P::zero();
     segment.line_sum = segment.triangle_sum;
     for (int64_t bucket_i = last_bucket_i - 1; bucket_i > bucket_start; bucket_i--) {
-      // if (bucket_start == 608*128) {
-      //   std::cout << "line = " << segment.line_sum.to_affine() << std::endl;
-      //   std::cout << "line += " << bucket_i << ":" << buckets[bucket_i].point.to_affine() << std::endl;
-      // }
+      // Add the bucket to line sum
       segment.line_sum = segment.line_sum + buckets[bucket_i].point; // TBD: inplace
-
-      // if (bucket_start == 608*128) {
-      //   std::cout << "tri = " << segment.triangle_sum.to_affine() << std::endl;
-      //   std::cout << "tri += " << segment.line_sum.to_affine() << std::endl;
-      // }
+      // Add line_sum to triangle_sum
       segment.triangle_sum = segment.triangle_sum + segment.line_sum; // TBD: inplace
     }
   }
 
+  // Serial phase - accumulate all segments to final result
   void phase3_final_accumulator(P* result)
   {
     const int nof_segments_per_bm = m_bm_size / m_segment_size;
     int nof_segments_left = m_segments.size();
     for (int i = 0; i < m_nof_buckets_module; i++) {
       const int cur_bm_nof_segments = std::min(nof_segments_per_bm, nof_segments_left);
-      const int log_nof_segments_per_bm = std::log2(nof_segments_per_bm); // (m_c - 1) -
+      const int log_nof_segments_per_bm =
+        std::log2(nof_segments_per_bm); // TBD: avoid logn. can be calculated differently.
       // Weighted sum of all the lines for each bm - summed in a similar fashion of the triangle sum of phase 2
       P partial_sum = nof_segments_per_bm * (i + 1) - 1 < m_segments.size()
                         ? m_segments[nof_segments_per_bm * (i + 1) - 1].line_sum
                         : P::zero();
       P total_sum = partial_sum;
-      // if (i==31) {
-      //   std::cout << "m_num_bm_segments=" << cur_bm_nof_segments << ", nof_segments_per_bm=" << nof_segments_per_bm
-      //   << std::endl;
-      // }
+
+      // run over all segments in the BM
       for (int j = cur_bm_nof_segments - 2; j > 0; j--) {
+        // accumulate the partial sum
         partial_sum = partial_sum + m_segments[nof_segments_per_bm * i + j].line_sum;
+        // add the partial sum to the total sum
         total_sum = total_sum + partial_sum;
-        // if (i==31) {
-        //   std::cout << "line idx=" << nof_segments_per_bm * i + j << std::endl;
-        //   std::cout << "line=" << m_segments[nof_segments_per_bm * i + j].line_sum.to_affine() << std::endl;
-        //   std::cout << "line=" << m_segments[nof_segments_per_bm * i + j].line_sum << std::endl;
-        //   std::cout << "partial_sum=" << partial_sum.to_affine() << std::endl;
-        //   std::cout << "total_sum=" << total_sum.to_affine() << std::endl;
-        // }
       }
       m_segments[nof_segments_per_bm * i].line_sum = total_sum;
-      //      std::cout << "i=" << i << ", total_sum = " << total_sum.to_affine() << std::endl;
 
       // Convert weighted lines sum to rectangles sum by doubling
       int num_doubles = m_c - 1 - log_nof_segments_per_bm;
       for (int k = 0; k < num_doubles; k++) {
         m_segments[nof_segments_per_bm * i].line_sum = P::dbl(m_segments[nof_segments_per_bm * i].line_sum);
       }
-      //      std::cout << "i=" << i << ", m_segments[cur_bm_nof_segments * i].line_sum = " <<
-      //      m_segments[nof_segments_per_bm * i].line_sum.to_affine() << std::endl;
 
       // Sum triangles within bm linearly
       for (int j = 1; j < cur_bm_nof_segments && nof_segments_per_bm * i + j < m_segments.size(); j++) {
         m_segments[nof_segments_per_bm * i].triangle_sum =
           m_segments[nof_segments_per_bm * i].triangle_sum + m_segments[nof_segments_per_bm * i + j].triangle_sum;
       }
-      //      std::cout << "i=" << i << ", m_segments[cur_bm_nof_segments * i].triangle_sum = " <<
-      //      m_segments[nof_segments_per_bm * i].triangle_sum.to_affine() << std::endl;
+
       // After which add the lines and triangle sums to one sum of the entire BM
       if (cur_bm_nof_segments > 1) {
-        // std::cout << "i=" << i << ", adding = " << m_segments[nof_segments_per_bm * i].line_sum.to_affine() <<
-        // std::endl;
         m_segments[nof_segments_per_bm * i].triangle_sum =
           m_segments[nof_segments_per_bm * i].triangle_sum + m_segments[nof_segments_per_bm * i].line_sum;
       }
       nof_segments_left -= nof_segments_per_bm;
-      // std::cout << "i=" << i << ", m_segments[cur_bm_nof_segments * i].triangle_sum = " <<
-      // m_segments[nof_segments_per_bm * i].triangle_sum.to_affine() << std::endl;
     }
 
     // Sum BM sums together
