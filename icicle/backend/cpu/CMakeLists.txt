@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.18)
 
 message(STATUS "Fetching Taskflow v3.8.0 (CPU backend)")
+
+
 include(FetchContent)
+# Temporarily redefine message() to suppress output
+macro(message)
+endmacro()
 FetchContent_Declare(
   Taskflow
   GIT_REPOSITORY https://github.com/taskflow/taskflow.git
@@ -20,10 +25,12 @@ FetchContent_MakeAvailable(Taskflow)
 # Use icicle_device as interface for TaskFlow headers
 target_include_directories(icicle_device INTERFACE ${Taskflow_SOURCE_DIR})
 
+# Restore the original message behavior
+unset(message)
+
 # CPU backend is built directly into icicle library
 
 target_sources(icicle_device PRIVATE src/cpu_device_api.cpp)
-
 # field API library
 if (FIELD)
     target_sources(icicle_field PRIVATE
