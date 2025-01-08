@@ -25,13 +25,13 @@ list(APPEND FIELD_SOURCE ${SRC}/merkle-tree/extern_mmcs.cu)
 
 if(EXT_FIELD)
   # TODO: conditional extension based on field list
-  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_quartic_extension.cu)
   list(APPEND FIELD_SOURCE ${SRC}/fields/extern_complex_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/fields/extern_quartic_extension.cu)
   if (NOT FIELD IN_LIST SUPPORTED_FIELDS_WITHOUT_NTT)
     list(APPEND FIELD_SOURCE ${SRC}/ntt/extern_extension.cu)
   endif()
-  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_quartic_extension.cu)
   list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_complex_extension.cu)
+  list(APPEND FIELD_SOURCE ${SRC}/vec_ops/extern_quartic_extension.cu)
 endif()
 
 set(POLYNOMIAL_SOURCE_FILES 

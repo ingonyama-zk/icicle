@@ -649,12 +649,13 @@ macro_rules! impl_vec_add_tests {
         }
 
         #[test]
-        #[ignore]
+        #[ignore = "crashes on low-mem devices"]
         pub fn test_bit_reverse() {
             check_bit_reverse::<$field>()
         }
+        
         #[test]
-        #[ignore]
+        #[ignore = "crashes on low-mem devices"]
         pub fn test_bit_reverse_inplace() {
             check_bit_reverse_inplace::<$field>()
         }

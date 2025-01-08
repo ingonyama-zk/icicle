@@ -10,7 +10,6 @@ __global__ void foldKernel(uint64_t* values, const uint64_t* factors, int n, int
 {
   int idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx < n) {
-    // for (int level = 0; level < numFactors; ++level) {
     // Step size doubles at each level
     int step = 1 << (level + 1);
     int invlevel = numFactors - level - 1;
@@ -20,16 +19,9 @@ __global__ void foldKernel(uint64_t* values, const uint64_t* factors, int n, int
       int leftIdx = idx * step;
       int rightIdx = leftIdx + step / 2;
 
-      // printf("Folding %f and %f * %f\n", values[leftIdx], factors[invlevel], values[rightIdx]);
-
       // Perform the folding operation
       values[leftIdx] = (values[leftIdx] + (factors[invlevel] * values[rightIdx])) % P;
-      // values[leftIdx] = (values[leftIdx] + (factors[invlevel]  * values[rightIdx])% P) % P;
     }
-
-    // Synchronize threads to ensure all reductions for the current level are complete
-    // __syncthreads();
-    // }
   }
 }
 
@@ -41,10 +33,6 @@ fold_kernel_2(S* values, const E* folding_factors, const int level, const int nl
   int step = 1 << (nlog2 - level - 1);
   int offset = idx + step;
   if (offset + (step - 1) < n) {
-    // result[idx] = values[idx] + folding_factors[level] * values[offset];
-    // printf(
-    //   "level %d offset %d step %d - Folding %lu + %lu* %lu\n", level, offset, step, values[idx], values[offset],
-    //   folding_factors[level]);
     result[idx] = (values[idx] + (folding_factors[level] * values[offset])) % P;
   }
   __syncthreads();
@@ -71,34 +59,21 @@ void hierarchicalFold(std::vector<uint64_t>& values, const std::vector<uint64_t>
   cudaMemcpy(d_values, values.data(), n * sizeof(uint64_t), cudaMemcpyHostToDevice);
   cudaMemcpy(d_factors, factors.data(), numFactors * sizeof(uint64_t), cudaMemcpyHostToDevice);
 
-  // Launch kernel
   int blockSize = 1024;
 
   int nlog2 = log2(n);
 
   // Launch kernel
-
   int gridSize = (n + blockSize - 1) / blockSize;
 
   auto start = std::chrono::high_resolution_clock::now();
   for (int level = 0; level < numFactors; ++level) {
     foldKernel<<<gridSize, blockSize>>>(d_values, d_factors, n, numFactors, level);
   }
-
   auto end = std::chrono::high_resolution_clock::now();
 
   std::chrono::duration<double, std::milli> elapsed = end - start;
   std::cout << "time for 2^" << numFactors << " is: " << elapsed.count() << " ms" << std::endl;
-
-  // int num_threads = blockSize;
-  // int num_blocks = (n/2 + num_threads - 1) / num_threads;
-
-  // fold_kernel_2<<<num_blocks, num_threads>>>(d_values, d_factors, nlog2 - 1, nlog2, n, d_values);
-
-  // for (int level = nlog2 - 2; level >= 0; --level) {
-  //   fold_kernel_2<<<num_blocks, num_threads>>>(d_values, d_factors, level, nlog2, n, d_values);
-  // }
-
   // Copy result back to host
   cudaMemcpy(values.data(), d_values, n * sizeof(uint64_t), cudaMemcpyDeviceToHost);
 

@@ -34,7 +34,6 @@ namespace vec_ops {
       if (idx < n) {
         // TODO: this kernel is very basic - improve with shared mem and same
         //       optimizations as ntt, also result on first step can be n/2
-        //  for (int level = 0; level < nlog2; ++level) {
 
         // Step size doubles at each level
         int step = 1 << (level + 1);
@@ -222,7 +221,6 @@ namespace vec_ops {
     }
 
     // Call the kernel to perform element-wise operation
-    // for (int level = 0; level < nlog2; ++level) {
 
     // auto start = std::chrono::high_resolution_clock::now();
 

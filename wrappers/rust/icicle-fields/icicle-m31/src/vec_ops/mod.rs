@@ -93,9 +93,8 @@ pub(crate) mod tests {
         let values_length = 1 << folding_factors_length; // 2^folding_factors_length
 
         // Initialize the `values` vector
-
-        use rayon::iter::IntoParallelIterator;
-        use rayon::prelude::*;
+        use icicle_core::rayon::iter::IntoParallelIterator;
+        use icicle_core::rayon::prelude::*;
 
         let values: Vec<_> = (1..=values_length)
             .into_par_iter()
