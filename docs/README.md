@@ -6,7 +6,7 @@ The developer docs for ICICLE is a static website built using [Docusaurus](https
 
 Docusaurus is written in Typescript and distributed as npm packages. npm is a prerequisite as is node.js
 
-If node.js or npm aren't installed, its suggested to use [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) to [install both](https://github.com/nvm-sh/nvm?tab=readme-ov-file#usage) at the same time.
+If node.js or npm aren't installed, it's suggested to use [nvm](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating) to [install both](https://github.com/nvm-sh/nvm?tab=readme-ov-file#usage) at the same time.
 
 ## Install
 
@@ -70,7 +70,7 @@ Read more on this [here](https://docusaurus.io/docs/static-assets)
 
 ### Adding a new static directory
 
-To update where Docusaurus looks for static directories, add the directory name to the `statidDirectories` list in the config:
+To update where Docusaurus looks for static directories, add the directory name to the `staticDirectories` list in the config:
 
 ```ts
 const config: Config = {
@@ -109,7 +109,7 @@ const ingoPreset = {
   docs: {
     .
     .
-    includeCurrentVersion: false, // Update this to true to render the next verion's docs
+    includeCurrentVersion: false, // Update this to true to render the next version's docs
     .
     .
     .
