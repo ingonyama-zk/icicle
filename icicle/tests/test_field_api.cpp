@@ -1195,8 +1195,7 @@ TEST_F(FieldApiTestBase, Sumcheck)
   int log_mle_poly_size = 3;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
-  scalar_t claimed_sum = scalar_t::hex_str2scalar("0x00000000000000000000000000000000000000000000000000000000000616b0");
-
+  scalar_t claimed_sum = scalar_t::hex_str2scalar("0x000000000000000000000000000000000000000000000000000000000000348c");
   // create transcript_config
   SumcheckTranscriptConfig<scalar_t> transcript_config; // TODO Miki: define labels?
 
@@ -1210,6 +1209,16 @@ TEST_F(FieldApiTestBase, Sumcheck)
     mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
     for (int element_i = 0; element_i < mle_poly_size; element_i++) {
       mle_polynomials[poly_i][element_i] = scalar_t::from(poly_i*10 + element_i+1);
+      // if (poly_i == 3) {
+      //   mle_polynomials[poly_i][0] = scalar_t::from(2);
+      //   mle_polynomials[poly_i][1] = scalar_t::from(10);
+      //   mle_polynomials[poly_i][2] = scalar_t::from(1);
+      //   mle_polynomials[poly_i][3] = scalar_t::from(6);
+      //   mle_polynomials[poly_i][4] = scalar_t::from(9);
+      //   mle_polynomials[poly_i][5] = scalar_t::from(3);
+      //   mle_polynomials[poly_i][6] = scalar_t::from(8);
+      //   mle_polynomials[poly_i][7] = scalar_t::from(7);
+      // }
       std::cout << "mle_polynomials[" << poly_i << "][" << element_i << "] = " << mle_polynomials[poly_i][element_i] << std::endl;
     }
   }

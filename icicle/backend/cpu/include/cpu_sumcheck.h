@@ -96,7 +96,6 @@ namespace icicle {
       const int nof_polynomials = in_mle_polynomials.size();
       std::vector<F> combine_func_inputs(nof_polynomials);
       for (int poly_idx=0; poly_idx<nof_polynomials; ++poly_idx) {
-        combine_func_inputs[poly_idx] = in_mle_polynomials[poly_idx][0];
         program_executor.m_variable_ptrs[poly_idx] = &(combine_func_inputs[poly_idx]);
       }
       // init m_program_executor output pointer
@@ -105,6 +104,9 @@ namespace icicle {
       
       const int round_poly_size = round_polynomial.size();
       for (int element_idx=0; element_idx<mle_polynomial_size/2; ++element_idx) {
+        for (int poly_idx=0; poly_idx<nof_polynomials; ++poly_idx) {
+          combine_func_inputs[poly_idx] = in_mle_polynomials[poly_idx][element_idx];
+        }
         for (int k=0; k < round_poly_size; ++k) {
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
