@@ -22,11 +22,8 @@ enum blake3_flags {
 
 // This C implementation tries to support recent versions of GCC, Clang, and
 // MSVC.
-#if defined(_MSC_VER)
-  #define INLINE static __forceinline
-#else
-  #define INLINE static inline __attribute__((always_inline))
-#endif
+
+#define INLINE static inline __attribute__((always_inline))
 
 #if (defined(__x86_64__) || defined(_M_X64)) && !defined(_M_ARM64EC)
   #define IS_X86
@@ -40,12 +37,6 @@ enum blake3_flags {
 
 #if defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
   #define IS_AARCH64
-#endif
-
-#if defined(IS_X86)
-  #if defined(_MSC_VER)
-    #include <intrin.h>
-  #endif
 #endif
 
 #if !defined(BLAKE3_USE_NEON)
@@ -89,20 +80,6 @@ static unsigned int highest_one(uint64_t x)
 {
 #if defined(__GNUC__) || defined(__clang__)
   return 63 ^ (unsigned int)__builtin_clzll(x);
-#elif defined(_MSC_VER) && defined(IS_X86_64)
-  unsigned long index;
-  _BitScanReverse64(&index, x);
-  return index;
-#elif defined(_MSC_VER) && defined(IS_X86_32)
-  if (x >> 32) {
-    unsigned long index;
-    _BitScanReverse(&index, (unsigned long)(x >> 32));
-    return 32 + index;
-  } else {
-    unsigned long index;
-    _BitScanReverse(&index, (unsigned long)x);
-    return index;
-  }
 #else
   unsigned int c = 0;
   if (x & 0xffffffff00000000ULL) {
