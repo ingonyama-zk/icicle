@@ -103,7 +103,7 @@ func testBlake3(s *suite.Suite) {
 	const outputBytes = 32 // 32 bytes is output size of Blake3
 
 	// Known input string and expected hash
-	inputString := "Hello world I am blake32"
+	inputString := "Hello world I am blake3"
 	expectedHash := "cb46bdd080609257ba2cca93b21d1f72ff1737eb48790f3c17ceae83b6c74e42"
 
 	input := []byte(inputString)
