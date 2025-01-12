@@ -1208,7 +1208,7 @@ TEST_F(FieldApiTestBase, Sumcheck)
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
     mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
     for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-      mle_polynomials[poly_i][element_i] = scalar_t::from(poly_i*10 + element_i+1);
+      mle_polynomials[poly_i][element_i] = scalar_t::from(poly_i * 10 + element_i + 1);
       // if (poly_i == 3) {
       //   mle_polynomials[poly_i][0] = scalar_t::from(2);
       //   mle_polynomials[poly_i][1] = scalar_t::from(10);
@@ -1219,12 +1219,13 @@ TEST_F(FieldApiTestBase, Sumcheck)
       //   mle_polynomials[poly_i][6] = scalar_t::from(8);
       //   mle_polynomials[poly_i][7] = scalar_t::from(7);
       // }
-      std::cout << "mle_polynomials[" << poly_i << "][" << element_i << "] = " << mle_polynomials[poly_i][element_i] << std::endl;
+      std::cout << "mle_polynomials[" << poly_i << "][" << element_i << "] = " << mle_polynomials[poly_i][element_i]
+                << std::endl;
     }
   }
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumCheckConfig config;
-  SumCheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly-1);
+  SumCheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly - 1);
 
   prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
   sumcheck_proof.print_proof();
@@ -1237,10 +1238,8 @@ TEST_F(FieldApiTestBase, Sumcheck)
   auto verifier_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
   bool verification_pass;
   verifier_sumcheck.verify(sumcheck_proof, verification_pass);
-  
+
   ASSERT_EQ(true, verification_pass);
-
-
 }
 int main(int argc, char** argv)
 {

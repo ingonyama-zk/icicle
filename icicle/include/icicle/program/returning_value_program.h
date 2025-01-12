@@ -28,7 +28,8 @@ namespace icicle {
     }
 
     // Generate a program based on a PreDefinedPrograms
-    ReturningValueProgram(PreDefinedPrograms pre_def) : Program<S>(pre_def) {
+    ReturningValueProgram(PreDefinedPrograms pre_def) : Program<S>(pre_def)
+    {
       switch (pre_def) {
       case AB_MINUS_C:
         m_poly_degree = 2;
@@ -40,12 +41,10 @@ namespace icicle {
         ICICLE_LOG_ERROR << "Illegal opcode: " << int(pre_def);
       }
     }
-  
-    int get_polynomial_degee() const {
-      return m_poly_degree;
-    }
+
+    int get_polynomial_degee() const { return m_poly_degree; }
+
   private:
     int m_poly_degree = 0;
-
   };
 } // namespace icicle

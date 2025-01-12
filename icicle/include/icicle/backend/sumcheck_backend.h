@@ -57,7 +57,7 @@ namespace icicle {
 
     /**
      * @brief Initialize the transcript for the upcoming calculation of the FIat shamir.
-     * @param num_vars 
+     * @param num_vars
      * @param poly_degree the degree of the combine function
      */
 
@@ -69,7 +69,6 @@ namespace icicle {
      * @return alpha
      */
     virtual F get_alpha(std::vector<F>& round_polynomial) = 0;
-
 
     const F& get_claimed_sum() const { return m_claimed_sum; }
 

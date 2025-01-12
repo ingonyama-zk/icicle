@@ -36,32 +36,32 @@ namespace icicle {
     }
 
     // return a reference to the round polynomial generated at round # round_polynomial_idx
-    std::vector<S>& get_round_polynomial(int round_polynomial_idx) 
-    {
-      return m_round_polynomials[round_polynomial_idx];
-    }
+    std::vector<S>& get_round_polynomial(int round_polynomial_idx) { return m_round_polynomials[round_polynomial_idx]; }
 
     uint get_nof_round_polynomials() const { return m_round_polynomials.size(); }
     uint get_round_polynomial_size() const { return m_round_polynomials[0].size() + 1; }
 
     // Reset the proof to zeros
-    void reset() {
+    void reset()
+    {
       for (auto& round_poly : m_round_polynomials) {
         for (auto& element : round_poly) {
           element = S::zero();
         }
       }
     }
+
   private:
     std::vector<std::vector<S>> m_round_polynomials; // logN vectors of round_poly_degree elements
-  
+
   public:
     // for debug
     void print_proof()
     {
       std::cout << "Sumcheck Proof :" << std::endl;
       for (int round_poly_i = 0; round_poly_i < m_round_polynomials.size(); round_poly_i++) {
-        std::cout << "  Round polynomial " << round_poly_i << ":" << std::endl;;
+        std::cout << "  Round polynomial " << round_poly_i << ":" << std::endl;
+        ;
         for (auto& element : m_round_polynomials[round_poly_i]) {
           std::cout << "    " << element << std::endl;
         }
