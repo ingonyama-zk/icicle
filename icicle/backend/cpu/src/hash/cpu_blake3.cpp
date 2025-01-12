@@ -1,3 +1,5 @@
+/*BLAKE3 Hash function based on the original design by the BLAKE3 team https://github.com/BLAKE3-team/BLAKE3 */
+
 #include "blake3.h"
 #include "icicle/backend/hash/blake3_backend.h"
 #include "icicle/utils/modifiers.h"
