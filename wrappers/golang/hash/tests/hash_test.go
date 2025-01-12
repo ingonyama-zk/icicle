@@ -103,8 +103,8 @@ func testBlake3(s *suite.Suite) {
 	const outputBytes = 32 // 32 bytes is output size of Blake3
 
 	// Known input string and expected hash
-	inputString := "Hello world I am blake3, This is a semi-long Go test with alot of characters. 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	expectedHash := "967d126e8bf0541d6e393868f9f2f6b38ffe26b47f578deab96d0110f197ee9a"
+	inputString := "Hello world I am blake3. This is a semi-long Go test with a lot of characters. 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	expectedHash := "a2b794acb5a604bbd2c4c0380e935697e0b934ea6f194b9f5246fbb212ebe549"
 
 	input := []byte(inputString)
 
