@@ -44,6 +44,14 @@ namespace icicle {
     uint get_nof_round_polynomial() const { return m_round_polynomials.size(); }
     uint get_round_polynomial_size() const { return m_round_polynomials[0].size() + 1; }
 
+    // Reset the proof to zeros
+    void reset() {
+      for (auto& round_poly : m_round_polynomials) {
+        for (auto& element : round_poly) {
+          element = S::zero();
+        }
+      }
+    }
   private:
     std::vector<std::vector<S>> m_round_polynomials; // logN vectors of round_poly_degree elements
   };

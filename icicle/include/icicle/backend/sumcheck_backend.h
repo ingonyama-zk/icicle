@@ -56,11 +56,20 @@ namespace icicle {
       SumCheckProof<F>& sumcheck_proof /*out*/) const = 0;
 
     /**
+     * @brief Initialize the transcript for the upcoming calculation of the FIat shamir.
+     * @param num_vars 
+     * @param poly_degree the degree of the combine function
+     */
+
+    virtual void reset(const uint32_t num_vars, const uint32_t poly_degree) = 0;
+
+    /**
      * @brief Calculate alpha based on m_transcript_config and the round polynomial.
      * @param round_polynomial a vector of MLE polynomials evaluated at x=0,1,2...
      * @return alpha
      */
     virtual F get_alpha(std::vector<F>& round_polynomial) = 0;
+
 
     const F& get_claimed_sum() const { return m_claimed_sum; }
 
