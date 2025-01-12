@@ -24,9 +24,6 @@ namespace icicle {
         const std::byte* batch_input = input + batch_idx * single_input_size;
         uint64_t batch_size = single_input_size;
 
-        // Handle the case where the final batch might be smaller than the chunk size
-        if (batch_idx == config.batch - 1) { batch_size = size - batch_idx * single_input_size; }
-
         blake3_hasher_init(&hasher);
         blake3_hasher_update(&hasher, reinterpret_cast<const uint8_t*>(batch_input), batch_size);
 
