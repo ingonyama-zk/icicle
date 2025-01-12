@@ -7,6 +7,7 @@
 #endif
 
 #include <cstdint>
+#include <cstring>
 #include "icicle/utils/modifiers.h"
 #include "icicle/fields/storage.h"
 namespace host_math {
@@ -326,6 +327,29 @@ namespace host_math {
         }
       }
     }
+  }
+  template <unsigned NLIMBS>
+  static constexpr void get_higher_with_slack(const storage<2 * NLIMBS>& xs, storage<NLIMBS>& out, unsigned slack_bits)
+  {
+  // CPU: for even number of limbs, read and shift 64b limbs, otherwise 32b
+      if constexpr (NLIMBS % 2 == 0) {
+  #pragma unroll
+        for (unsigned i = 0; i < NLIMBS / 2; i++) { // Ensure valid indexing
+          out.limbs64[i] = (xs.limbs64[i + NLIMBS / 2] << 2 * slack_bits) |
+                                         (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * slack_bits));
+        }
+      } else {
+  #pragma unroll
+        for (unsigned i = 0; i < NLIMBS; i++) { // Ensure valid indexing
+          out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * slack_bits) +
+                                       (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * slack_bits));
+        }
+      }
+  }
+    template <unsigned NLIMBS>
+  static constexpr bool is_equal(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
+  {
+    return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
   }
 } // namespace host_math
 
