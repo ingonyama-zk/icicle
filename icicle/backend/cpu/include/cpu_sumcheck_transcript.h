@@ -2,28 +2,29 @@
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
 
 template <typename S>
-class CpuSumCheckTranscript {
+class CpuSumCheckTranscript
+{
 public:
-  CpuSumCheckTranscript(const S& claimed_sum, 
-                        SumcheckTranscriptConfig<S>&& transcript_config) :
-    m_claimed_sum(claimed_sum),
-    m_transcript_config( std::move(transcript_config)) {
-      reset(0, 0);
-    }
+  CpuSumCheckTranscript(const S& claimed_sum, SumcheckTranscriptConfig<S>&& transcript_config)
+      : m_claimed_sum(claimed_sum), m_transcript_config(std::move(transcript_config))
+  {
+    reset(0, 0);
+  }
 
   // add round polynomial to the transcript
-  S get_alpha(const std::vector <S>& round_poly) {
+  S get_alpha(const std::vector<S>& round_poly)
+  {
     // Make sure reset was called (Internal assertion)
     ICICLE_ASSERT(m_num_vars > 0) << "num_vars must reset with value > 0";
     ICICLE_ASSERT(m_poly_degree > 0) << "poly_degree must reset with value > 0";
 
-    for (int element_i = 0; element_i<round_poly.size(); element_i++) {
+    for (int element_i = 0; element_i < round_poly.size(); element_i++) {
       std::cout << "round_poly[" << m_round_idx << "][" << element_i << "] = " << round_poly[element_i] << std::endl;
     }
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
-    (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly) :
-                         build_hash_input_round_i(hash_input, round_poly);
+    (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly)
+                       : build_hash_input_round_i(hash_input, round_poly);
 
     // hash hash_input and return alpha
     const Hash& hasher = m_transcript_config.get_hasher();
@@ -32,49 +33,53 @@ public:
     m_round_idx++;
     S* hash_result_as_a_field = (S*)(hash_result.data());
     m_prev_alpha = (*hash_result_as_a_field) * S::one(); // TBD fix that to reduce
-    std::cout << "alpha[" << m_round_idx-1 << "] = " << m_prev_alpha << std::endl;
+    std::cout << "alpha[" << m_round_idx - 1 << "] = " << m_prev_alpha << std::endl;
     return m_prev_alpha;
-  }    
+  }
 
   // reset the transcript
-  void reset(const uint32_t num_vars, const uint32_t poly_degree) {
+  void reset(const uint32_t num_vars, const uint32_t poly_degree)
+  {
     m_num_vars = num_vars;
     m_poly_degree = poly_degree;
     m_entry_0.clear();
     m_round_idx = 0;
   }
 
-  private:
-  const SumcheckTranscriptConfig<S>   m_transcript_config;    // configuration how to build the transcript
-  HashConfig                          m_config;               // hash config - default
-  uint32_t                            m_round_idx;            // 
-  std::vector<std::byte>              m_entry_0;              // 
-  uint32_t                            m_num_vars = 0;
-  uint32_t                            m_poly_degree = 0;
-  const S                             m_claimed_sum;
-  S                                   m_prev_alpha;
-      
+private:
+  const SumcheckTranscriptConfig<S> m_transcript_config; // configuration how to build the transcript
+  HashConfig m_config;                                   // hash config - default
+  uint32_t m_round_idx;                                  //
+  std::vector<std::byte> m_entry_0;                      //
+  uint32_t m_num_vars = 0;
+  uint32_t m_poly_degree = 0;
+  const S m_claimed_sum;
+  S m_prev_alpha;
 
   // append to hash_input a stream of bytes received as chars
-  void append_data(std::vector<std::byte>& byte_vec, const std::vector<std::byte>& label) {
+  void append_data(std::vector<std::byte>& byte_vec, const std::vector<std::byte>& label)
+  {
     byte_vec.insert(byte_vec.end(), label.begin(), label.end());
   }
 
   // append an integer uint32_t to hash input
-  void append_u32(std::vector<std::byte>& byte_vec, const uint32_t data) {
+  void append_u32(std::vector<std::byte>& byte_vec, const uint32_t data)
+  {
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&data);
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(uint32_t));
   }
 
-  void append_field(std::vector<std::byte>& byte_vec, const S& field) {
+  void append_field(std::vector<std::byte>& byte_vec, const S& field)
+  {
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
   }
 
-
-  void build_hash_input_round_0(std::vector<std::byte>& hash_input, const std::vector <S>& round_poly) {
+  void build_hash_input_round_0(std::vector<std::byte>& hash_input, const std::vector<S>& round_poly)
+  {
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
-    // append entry_DS = [domain_separator_label || proof.num_vars || proof.degree || public (hardcoded?) || claimed_sum]
+    // append entry_DS = [domain_separator_label || proof.num_vars || proof.degree || public (hardcoded?) ||
+    // claimed_sum]
     append_data(hash_input, m_transcript_config.get_domain_separator_label());
     append_u32(hash_input, m_num_vars);
     append_u32(hash_input, m_poly_degree);
@@ -94,10 +99,11 @@ public:
       append_field(hash_input, r_i);
     }
 
-    // append entry_0 
+    // append entry_0
     append_data(hash_input, m_entry_0);
   }
-  void build_hash_input_round_i(std::vector<std::byte>& hash_input, const std::vector <S>& round_poly) {
+  void build_hash_input_round_i(std::vector<std::byte>& hash_input, const std::vector<S>& round_poly)
+  {
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     // entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
     // alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
@@ -108,7 +114,7 @@ public:
     append_data(hash_input, round_poly_label);
     append_u32(hash_input, round_poly.size());
     append_u32(hash_input, m_round_idx);
-    for (const S& r_i :round_poly) {
+    for (const S& r_i : round_poly) {
       append_field(hash_input, r_i);
     }
   }
