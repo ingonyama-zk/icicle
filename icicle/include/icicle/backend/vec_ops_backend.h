@@ -53,6 +53,13 @@ namespace icicle {
   using scalarHighNonZeroIdxOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, int64_t* out_idx)>;
 
+  using programExecutionImpl = std::function<eIcicleError(
+    const Device& device,
+    std::vector<scalar_t*>& data,
+    const Program<scalar_t>& program,
+    uint64_t size,
+    const VecOpsConfig& config)>;
+
   using scalarPolyEvalImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* coeffs,
@@ -243,6 +250,16 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  void register_execute_program(const std::string& deviceType, programExecutionImpl);
+
+#define REGISTER_EXECUTE_PROGRAM_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_program_execution) = []() -> bool {                                                        \
+      register_execute_program(DEVICE_TYPE, FUNC);                                                                     \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
 #ifdef EXT_FIELD
   using extFieldVectorOpImpl = std::function<eIcicleError(
     const Device& device,
@@ -252,19 +269,19 @@ namespace icicle {
     const VecOpsConfig& config,
     extension_t* output)>;
 
+  using mixedVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    extension_t* output)>;
+
   using extFieldVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device, extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
   using extFieldVectorReduceOpImpl = std::function<eIcicleError(
     const Device& device, const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)>;
-
-  using extFieldVectorOpImpl = std::function<eIcicleError(
-    const Device& device,
-    const extension_t* scalar_a,
-    const extension_t* vec_b,
-    uint64_t size,
-    const VecOpsConfig& config,
-    extension_t* output)>;
 
   void register_extension_vector_add(const std::string& deviceType, extFieldVectorOpImpl impl);
 
@@ -301,6 +318,16 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
         register_extension_vector_mul(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_extension_vector_mixed_mul(const std::string& deviceType, mixedVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_MIXED_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                         \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_mixed_mul) = []() -> bool {                                                          \
+        register_extension_vector_mixed_mul(DEVICE_TYPE, FUNC);                                                        \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

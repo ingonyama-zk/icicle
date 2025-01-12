@@ -18,13 +18,13 @@ For scenarios where large datasets need to be hashed efficiently, ICICLE support
 
 ICICLE supports the following hash functions:
 
-1.  **Keccak-256**
-2.	**Keccak-512**
-3.	**SHA3-256**
-4.	**SHA3-512**
-5.	**Blake2s**
-6.	**Poseidon**
-7.	**Poseidon2**
+1. **Keccak-256**
+2. **Keccak-512**
+3. **SHA3-256**
+4. **SHA3-512**
+5. **Blake2s**
+6. **Poseidon**
+7. **Poseidon2**
 
 :::info
 Additional hash functions might be added in the future. Stay tuned!
@@ -40,17 +40,15 @@ Keccak can take input messages of any length and produce a fixed-size hash. It u
 
 [Blake2s](https://www.rfc-editor.org/rfc/rfc7693.txt) is an optimized cryptographic hash function that provides high performance while ensuring strong security. Blake2s is ideal for hashing small data (such as field elements), especially when speed is crucial. It produces a 256-bit (32-byte) output and is often used in cryptographic protocols.
 
-
 ### Poseidon
 
 [Poseidon](https://eprint.iacr.org/2019/458) is a cryptographic hash function designed specifically for field elements. It is highly optimized for zero-knowledge proofs (ZKPs) and is commonly used in ZK-SNARK systems. Poseidon’s main strength lies in its arithmetization-friendly design, meaning it can be efficiently expressed as arithmetic constraints within a ZK-SNARK circuit.
 
 Traditional hash functions, such as SHA-2, are difficult to represent within ZK circuits because they involve complex bitwise operations that don’t translate efficiently into arithmetic operations. Poseidon, however, is specifically designed to minimize the number of constraints required in these circuits, making it significantly more efficient for use in ZK-SNARKs and other cryptographic protocols that require hashing over field elements.
 
-Currently the Poseidon implementation is the Optimized Poseidon (https://hackmd.io/@jake/poseidon-spec#Optimized-Poseidon). Optimized Poseidon significantly decreases the calculation time of the hash.
+Currently the Poseidon implementation is the [Optimized Poseidon](https://hackmd.io/@jake/poseidon-spec#Optimized-Poseidon). Optimized Poseidon significantly decreases the calculation time of the hash.
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
-
 
 ### Poseidon2
 
@@ -59,6 +57,10 @@ It is an improved version of the original [Poseidon](https://eprint.iacr.org/201
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
+The supported values of number of states ***t*** or ***T*** as defined in [eprint 2023/323](https://eprint.iacr.org/2023/323.pdf) are 2, 3, 4, 8, 12, 16, 20 and 24. Note that ***t*** of 8, 12, 16, 20 and 24 is supported only for the small fields (babybear and m31).
+The alpha, number of full rounds and partial rounds, rounds constants, MDS matrix, and partial matrix for each field and ***t*** could be found in the appropriate file in this [folder](https://github.com/ingonyama-zk/icicle/tree/main/icicle/include/icicle/hash/poseidon2_constants/constants).
+
+In the current version the padding is not supported and should be performed by the user.
 
 ## Using Hash API
 
@@ -84,21 +86,20 @@ auto poseidon = Poseidon::create<scalar_t>(t);
 // The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
 scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
 auto poseidon_with_domain_tag = Poseidon::create<scalar_t>(t, &domain_tag);
-// This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
 // Poseidon2 requires specifying the field-type and t parameter (supported 2, 3, 4, 8, 12, 16, 20, 24) as defined by
-// the Poseidon2 paper. For large fields (field width >= 254) the supported values of t are 2, 3, 4.
+// the Poseidon2 paper. For large fields (field width >= 252) the supported values of t are 2, 3, 4.
 auto poseidon2 = Poseidon2::create<scalar_t>(t); 
 // Optionally, Poseidon2 can accept a domain-tag, which is a field element used to separate applications or contexts.
 // The domain tag acts as the first input to the hash function, with the remaining t-1 inputs following it.
 scalar_t domain_tag = scalar_t::zero(); // Example using zero; this can be set to any valid field element.
 auto poseidon2_with_domain_tag = Poseidon2::create<scalar_t>(t, &domain_tag);
-// This version of the hasher with a domain tag expects t-1 additional inputs for hashing.
+// This version of the hasher with a domain tag expects t-1 inputs per hasher.
 ```
 
 ### 2. Hashing Data
 
 Once you have a hasher object, you can hash any input data by passing the input, its size, a configuration, and an output buffer:
-   
+
 ```cpp
 /**
  * @brief Perform a hash operation.
@@ -160,11 +161,11 @@ eIcicleErr err = keccak256.hash(input.data(), input.size() / config.batch, confi
 
 ### 4. Poseidon sponge function
 
-Currently the poseidon sponge function (sponge function description could be found in Sec 2.1 of https://eprint.iacr.org/2019/458.pdf ) isn't implemented.
+Currently the poseidon sponge mode (sponge function description could be found in Sec 2.1 of [eprint 2019/458](https://eprint.iacr.org/2019/458.pdf)) isn't implemented.
 
 ### 5. Poseidon2 sponge function
 
-Currently the poseidon2 sponge function (sponge function description could be found in Sec 2.1 of https://eprint.iacr.org/2019/458.pdf ) isn't implemented.
+Currently the poseidon2 is implemented in compression mode, the sponge mode discussed in [eprint 2023/323](https://eprint.iacr.org/2023/323.pdf) is not implemented.
 
 ### Supported Bindings
 

@@ -6,6 +6,7 @@
 #include <functional>
 #include "icicle/errors.h"
 #include "icicle/program/symbol.h"
+#include "icicle/utils/log.h"
 
 namespace icicle {
 

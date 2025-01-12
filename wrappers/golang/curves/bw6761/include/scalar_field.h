@@ -16,6 +16,7 @@ void bw6_761_add(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void bw6_761_sub(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void bw6_761_mul(const scalar_t* a, const scalar_t* b, scalar_t* result);
 void bw6_761_inv(const scalar_t* a, scalar_t* result);
+void bw6_761_pow(const scalar_t* a, int exp, scalar_t* result);
 
 #ifdef __cplusplus
 }

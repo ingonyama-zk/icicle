@@ -114,6 +114,7 @@ pub trait FieldArithmetic<F: FieldImpl> {
     fn mul(first: F, second: F) -> F;
     fn sqr(first: F) -> F;
     fn inv(first: F) -> F;
+    fn pow(first: F, exp: usize) -> F;
 }
 
 impl<const NUM_LIMBS: usize, F: FieldConfig> Arithmetic for Field<NUM_LIMBS, F>
@@ -126,6 +127,10 @@ where
 
     fn inv(self) -> Self {
         F::inv(self)
+    }
+
+    fn pow(self, exp: usize) -> Self {
+        F::pow(self, exp)
     }
 }
 
@@ -232,6 +237,9 @@ macro_rules! impl_scalar_field {
 
                 #[link_name = concat!($field_prefix, "_inv")]
                 pub(crate) fn inv(a: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_pow")]
+                pub(crate) fn pow(a: *const $field_name, exp: usize, result: *mut $field_name);
             }
 
             pub(crate) fn convert_scalars_montgomery(
@@ -301,6 +309,18 @@ macro_rules! impl_scalar_field {
                 let mut result = $field_name::zero();
                 unsafe {
                     $field_prefix_ident::inv(&first as *const $field_name, &mut result as *mut $field_name);
+                }
+
+                result
+            }
+            fn pow(first: $field_name, exp: usize) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::pow(
+                        &first as *const $field_name,
+                        exp as usize,
+                        &mut result as *mut $field_name,
+                    );
                 }
 
                 result

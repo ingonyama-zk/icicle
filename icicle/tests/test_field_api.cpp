@@ -816,7 +816,7 @@ TYPED_TEST(FieldApiTest, ntt)
 {
   // Randomize configuration
   const bool inplace = rand_uint_32b(0, 1);
-  const int logn = rand_uint_32b(3, 17);
+  const int logn = rand_uint_32b(0, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 1;
   const int log_batch_size = rand_uint_32b(0, 2);
@@ -1050,10 +1050,144 @@ TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
   vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
   vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
   vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
-  END_TIMER(predef_program, "Vec ops time: ", true);
+  END_TIMER(vecop, "Vec ops time: ", true);
 
   // check correctness
   ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
+
+MlePoly ex_x_ab_minus_c_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return EQ * (A * B - C);
+}
+
+TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, 4);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program,
+               uint64_t size, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    auto config = default_vec_ops_config();
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(executeProgram)
+    ICICLE_CHECK(execute_program(data, program, size, config));
+    END_TIMER(executeProgram, oss.str().c_str(), true);
+  };
+
+  // initialize data vector for main device
+  auto out_main = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(5);
+  data_main[0] = in_a.get();
+  data_main[1] = in_b.get();
+  data_main[2] = in_c.get();
+  data_main[3] = in_eq.get();
+  data_main[4] = out_main.get();
+
+  // initialize data vector for reference device
+  auto out_ref = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(5);
+  data_ref[0] = in_a.get();
+  data_ref[1] = in_b.get();
+  data_ref[2] = in_c.get();
+  data_ref[3] = in_eq.get();
+  data_ref[4] = out_ref.get();
+
+  // run on both devices and compare
+  run(IcicleTestBase::main_device(), data_main, prog, total_size, "execute_program");
+  run(IcicleTestBase::reference_device(), data_ref, prog, total_size, "execute_program");
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  const int num_of_params = 5;
+  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, num_of_params - 1);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program,
+               uint64_t size, VecOpsConfig config, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(executeProgram)
+    ICICLE_CHECK(execute_program(data, program, size, config));
+    END_TIMER(executeProgram, oss.str().c_str(), true);
+  };
+
+  // initialize data vector for main device
+  auto out_main = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(num_of_params);
+  data_main[0] = in_a.get();
+  data_main[1] = in_b.get();
+  data_main[2] = in_c.get();
+  data_main[3] = in_eq.get();
+  data_main[4] = out_main.get();
+
+  // initialize data vector for reference device
+  auto out_ref = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(num_of_params);
+  data_ref[0] = in_a.get();
+  data_ref[1] = in_b.get();
+  data_ref[2] = in_c.get();
+  data_ref[3] = in_eq.get();
+  data_ref[4] = out_ref.get();
+
+  auto config = default_vec_ops_config();
+  config.is_a_on_device = 1;
+
+  // run on both devices and compare
+  run(IcicleTestBase::reference_device(), data_ref, prog, total_size, config, "execute_program");
+
+  icicle_set_device(IcicleTestBase::main_device());
+
+  if (config.is_a_on_device) {
+    for (int idx = 0; idx < num_of_params; ++idx) {
+      scalar_t* tmp = nullptr;
+      icicle_malloc((void**)&tmp, total_size * sizeof(scalar_t));
+      icicle_copy_to_device(tmp, data_main[idx], total_size * sizeof(scalar_t));
+      data_main[idx] = tmp;
+    }
+  }
+
+  run(IcicleTestBase::main_device(), data_main, prog, total_size, config, "execute_program");
+
+  if (config.is_a_on_device)
+    icicle_copy_to_host(out_main.get(), data_main[num_of_params - 1], total_size * sizeof(scalar_t));
+
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
 TEST_F(FieldApiTestBase, Sumcheck)
@@ -1084,7 +1218,6 @@ TEST_F(FieldApiTestBase, Sumcheck)
     delete[] mle_poly_ptr;
   }
 }
-
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

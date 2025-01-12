@@ -14,8 +14,6 @@ ABS_METAL_DIR=$(realpath ${BACKEND_DIR})/metal
 
 echo "Trying to pull Metal backend commit '${METAL_BACKEND}' to '${ABS_METAL_DIR}'"
 
-exit 1
-
 if [ -d "${ABS_METAL_DIR}" ] && [ "$(ls -A ${ABS_METAL_DIR})" ]; then
     echo "Directory ${ABS_METAL_DIR} is not empty."
     read -p "Do you want to proceed with fetching and resetting? (y/n): " response
