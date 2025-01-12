@@ -91,14 +91,13 @@ mod tests {
 
     #[test]
     fn blake3_hashing() {
-   
         // Known input string and expected hash
         let input_string = "Hello world I am blake3";
         let expected_hash = "cb46bdd080609257ba2cca93b21d1f72ff1737eb48790f3c17ceae83b6c74e42";
-    
+
         let input = input_string.as_bytes();
         let mut output_ref = vec![0u8; 32]; // 32B (=256b) is the output size of blake3
-    
+
         test_utilities::test_set_ref_device();
         let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
         blake3_hasher
@@ -108,15 +107,20 @@ mod tests {
                 HostSlice::from_mut_slice(&mut output_ref),
             )
             .unwrap();
-    
-    
+
         // Convert output_ref to hex for comparison
-        let output_ref_hex: String = output_ref.iter().map(|b| format!("{:02x}", b)).collect();
-        assert_eq!(output_ref_hex, expected_hash, "Hash mismatch: got {}, expected {}", output_ref_hex, expected_hash);
-    
+        let output_ref_hex: String = output_ref
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        assert_eq!(
+            output_ref_hex, expected_hash,
+            "Hash mismatch: got {}, expected {}",
+            output_ref_hex, expected_hash
+        );
+
         println!("Test passed: Computed hash matches expected hash.");
     }
-    
 
     #[test]
     fn sha3_hashing() {
