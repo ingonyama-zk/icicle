@@ -23,9 +23,9 @@ ICICLE supports the following hash functions:
 3. **SHA3-256**
 4. **SHA3-512**
 5. **Blake2s**
-5. **Blake3**
-6. **Poseidon**
-7. **Poseidon2**
+6. **Blake3**
+7. **Poseidon**
+8. **Poseidon2**
 
 :::info
 Additional hash functions might be added in the future. Stay tuned!
