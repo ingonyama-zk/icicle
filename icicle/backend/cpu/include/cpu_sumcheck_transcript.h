@@ -17,6 +17,9 @@ public:
     ICICLE_ASSERT(m_num_vars > 0) << "num_vars must reset with value > 0";
     ICICLE_ASSERT(m_poly_degree > 0) << "poly_degree must reset with value > 0";
 
+    for (int element_i = 0; element_i<round_poly.size(); element_i++) {
+      std::cout << "round_poly[" << m_round_idx << "][" << element_i << "] = " << round_poly[element_i] << std::endl;
+    }
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
     (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly) :
@@ -29,6 +32,7 @@ public:
     m_round_idx++;
     S* hash_result_as_a_field = (S*)(hash_result.data());
     m_prev_alpha = (*hash_result_as_a_field) * S::one(); // TBD fix that to reduce
+    std::cout << "alpha[" << m_round_idx-1 << "] = " << m_prev_alpha << std::endl;
     return m_prev_alpha;
   }    
 
@@ -85,7 +89,7 @@ public:
     // build entry_0 = [round_poly_label || r_0[x].len() || k=0 || r_0[x]]
     append_data(m_entry_0, round_poly_label);
     append_u32(m_entry_0, round_poly.size());
-    append_u32(m_entry_0, m_round_idx++);
+    append_u32(m_entry_0, m_round_idx);
     for (const S& r_i : round_poly) {
       append_field(hash_input, r_i);
     }
@@ -103,7 +107,7 @@ public:
 
     append_data(hash_input, round_poly_label);
     append_u32(hash_input, round_poly.size());
-    append_u32(hash_input, m_round_idx++);
+    append_u32(hash_input, m_round_idx);
     for (const S& r_i :round_poly) {
       append_field(hash_input, r_i);
     }

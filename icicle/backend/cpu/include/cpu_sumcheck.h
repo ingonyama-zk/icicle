@@ -58,12 +58,14 @@ namespace icicle {
       
       for (int round_idx=0; round_idx < nof_rounds; ++round_idx) {
         const std::vector<F*>& in_mle_polynomials = (round_idx == 0) ? mle_polynomials : folded_mle_polynomials;
+        std::vector<F>& round_polynomial = sumcheck_proof.get_round_polynomial(round_idx);
+
         // run the next round and update the proof
-        build_round_polynomial(in_mle_polynomials, cur_mle_polynomial_size, program_executor, sumcheck_proof.get_round_polynomial(round_idx));
+        build_round_polynomial(in_mle_polynomials, cur_mle_polynomial_size, program_executor, round_polynomial);
 
         if (round_idx +1 < nof_rounds) {
           // calculate alpha for the next round
-          F alpha = get_alpha(sumcheck_proof.get_round_polynomial(round_idx-1));
+          F alpha = get_alpha(round_polynomial);
 
           fold_mle_polynomials(alpha, cur_mle_polynomial_size, in_mle_polynomials, folded_mle_polynomials);
         }
