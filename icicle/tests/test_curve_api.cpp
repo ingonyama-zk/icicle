@@ -83,27 +83,21 @@ public:
   template <typename A, typename P>
   void MSM_CPU_THREADS_test()
   {
-    const int logn = 10;
-    const int c = 11;
+    const int logn = 8;
+    const int c = 3;
     // Low c to have a large amount of tasks required in phase 2
     // For example for bn254: #bms = ceil(254/3)=85
     // #tasks in phase 2 = 2 * #bms = 170 > 64 = TASK_PER_THREAD
     // As such the default amount of tasks and 1 thread shouldn't be enough and the program should readjust the task
     // number per thread.
     const int batch = 3;
-    const int N = 64;                //(1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
-    const int precompute_factor = 1; // Precompute is 1 to increase number of BMs
+    const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
+    const int precompute_factor = 1;                        // Precompute is 1 to increase number of BMs
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
     auto bases = std::make_unique<A[]>(N);
     scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
-    scalars[0] = scalar_t::zero() - scalar_t::one();
-    scalars[1] = scalar_t::zero() - scalar_t::one();
-    scalars[2] = scalar_t::zero() - scalar_t::one();
-    scalars[3] = scalar_t::zero() - scalar_t::one();
-    scalars[4] = scalar_t::zero() - scalar_t::one();
-    // scalars[0] = scalar_t::get_modulus()-scalar_t::one();
     P::rand_host_many(bases.get(), N);
 
     auto result_multi_thread = std::make_unique<P[]>(batch);
