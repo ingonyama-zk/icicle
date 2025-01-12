@@ -1,10 +1,10 @@
 # Ingonyama Grant programs
 
-Ingonyama understands the importance of supporting and fostering a vibrant community of researchers and builders to advance ZK. To encourage progress, we are not only developing in the open but also sharing resources with researchers and builders through various programs.
+At Ingonyama, we recognize the importance of supporting and fostering a vibrant community of researchers and builders to advance ZK. To drive progress, we not only develop in the open but also share resources through dedicated programs designed for collaboration and innovation.
 
 ## ICICLE ZK-GPU Ecosystem Grant
 
-Ingonyama invites researchers and practitioners to collaborate in advancing ZK acceleration. We are allocating $100,000 for grants to support this initiative.
+Ingonyama invites researchers and practitioners to join us in advancing ZK acceleration. To support this initiative, we are offering $100,000 in grants for collaborative projects.
 
 ### Bounties & Grants
 
@@ -20,4 +20,4 @@ Eligibility for grants includes:
 
 For questions or submissions: [grants@ingonyama.com](mailto:grants@ingonyama.com)
 
-**Read the full article [here](https://www.ingonyama.com/blog/icicle-for-researchers-grants-challenges)**
+**Read more about our first grants program [here](https://www.ingonyama.com/blog/icicle-for-researchers-grants-challenges) or explore the details of our second grants program [here] (https://www.ingonyama.com/blog/ingonyama-research-grants-2025)**
