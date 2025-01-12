@@ -137,5 +137,4 @@ HasherHandle icicle_create_blake3(uint64_t input_chunk_size)
 {
   return new icicle::Hash(icicle::create_blake3_hash(input_chunk_size));
 }
-
 }

@@ -14,10 +14,10 @@ namespace icicle {
   // Blake3 256
   void register_blake3_factory(const std::string& deviceType, Blake3FactoryImpl impl);
 
-#define REGISTER_BLAKE3_FACTORY_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+#define REGISTER_BLAKE3_FACTORY_BACKEND(DEVICE_TYPE, FUNC)                                                             \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_blake3) = []() -> bool {                                                                  \
-      register_blake3_factory(DEVICE_TYPE, FUNC);                                                                     \
+    static bool UNIQUE(_reg_blake3) = []() -> bool {                                                                   \
+      register_blake3_factory(DEVICE_TYPE, FUNC);                                                                      \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
