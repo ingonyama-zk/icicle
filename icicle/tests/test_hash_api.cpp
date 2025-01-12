@@ -7,6 +7,7 @@
 #include "icicle/hash/hash.h"
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
+#include "icicle/hash/blake3.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/fields/field.h"
 
@@ -87,6 +88,28 @@ TEST_F(HashApiTest, Blake2s)
 
     auto blake2s = Blake2s::create();
     ICICLE_CHECK(blake2s.hash(input.data(), input.size() / config.batch, config, output.get()));
+    // Convert the output do a hex string and compare to expected output string
+    std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+    ASSERT_EQ(output_as_str, expected_output);
+  }
+}
+
+TEST_F(HashApiTest, Blake3)
+{
+  auto config = default_hash_config();
+
+  const std::string input = "Hello world I am blake3";
+  const std::string expected_output = "cb46bdd080609257ba2cca93b21d1f72ff1737eb48790f3c17ceae83b6c74e42";
+
+  const uint64_t output_size = 32;
+  auto output = std::make_unique<std::byte[]>(output_size);
+
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_DEBUG << "Blake3 test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+
+    auto blake3 = Blake3::create();
+    ICICLE_CHECK(blake3.hash(input.data(), input.size() / config.batch, config, output.get()));
     // Convert the output do a hex string and compare to expected output string
     std::string output_as_str = voidPtrToHexString(output.get(), output_size);
     ASSERT_EQ(output_as_str, expected_output);

@@ -67,6 +67,10 @@ if (HASH)
     target_sources(icicle_hash PRIVATE
         src/hash/cpu_keccak.cpp
         src/hash/cpu_blake2s.cpp
+        src/hash/cpu_blake3.cpp
+        src/hash/blake3.c
+        src/hash/blake3_dispatch.c
+        src/hash/blake3_portable.c
         src/hash/cpu_merkle_tree.cpp
     )
     target_include_directories(icicle_hash PUBLIC include)
