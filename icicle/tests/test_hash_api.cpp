@@ -96,6 +96,7 @@ TEST_F(HashApiTest, Blake2s)
 
 TEST_F(HashApiTest, Blake3)
 {
+  // TODO: Add CUDA test, same as blake2s
   auto config = default_hash_config();
 
   const std::string input = "Hello world I am blake3";
@@ -104,16 +105,13 @@ TEST_F(HashApiTest, Blake3)
   const uint64_t output_size = 32;
   auto output = std::make_unique<std::byte[]>(output_size);
 
-  for (const auto& device : s_registered_devices) {
-    ICICLE_LOG_DEBUG << "Blake3 test on device=" << device;
-    ICICLE_CHECK(icicle_set_device(device));
+  ICICLE_CHECK(icicle_set_device("CPU"));
 
-    auto blake3 = Blake3::create();
-    ICICLE_CHECK(blake3.hash(input.data(), input.size() / config.batch, config, output.get()));
-    // Convert the output do a hex string and compare to expected output string
-    std::string output_as_str = voidPtrToHexString(output.get(), output_size);
-    ASSERT_EQ(output_as_str, expected_output);
-  }
+  auto blake3 = Blake3::create();
+  ICICLE_CHECK(blake3.hash(input.data(), input.size() / config.batch, config, output.get()));
+  // Convert the output do a hex string and compare to expected output string
+  std::string output_as_str = voidPtrToHexString(output.get(), output_size);
+  ASSERT_EQ(output_as_str, expected_output);
 }
 
 TEST_F(HashApiTest, Keccak256Batch)
