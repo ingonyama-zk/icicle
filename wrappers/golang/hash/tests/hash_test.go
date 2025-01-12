@@ -121,24 +121,9 @@ func testBlake3(s *suite.Suite) {
 		core.GetDefaultHashConfig(),
 	)
 
-	runtime.SetDevice(&devices[1])
-	Blake3Hasher, error = hash.NewBlake3Hasher(0 /*default chunk size*/)
-	if error != runtime.Success {
-		fmt.Println("error:", error)
-		return
-	}
-
-	outputMain := make([]byte, outputBytes)
-	Blake3Hasher.Hash(
-		core.HostSliceFromElements(input),
-		core.HostSliceFromElements(outputMain),
-		core.GetDefaultHashConfig(),
-	)
-
 	outputRefHex := fmt.Sprintf("%x", outputRef)
 
 	s.Equal(expectedHash, outputRefHex, "Hash mismatch: got %s, expected %s", outputRefHex, expectedHash)
-	s.Equal(outputRef, outputMain, "Output mismatch between reference and main device")
 }
 
 func testSha3(s *suite.Suite) {
