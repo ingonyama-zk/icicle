@@ -99,6 +99,48 @@ func testBlake2s(s *suite.Suite) {
 	s.NotEqual(outputEmpty, outputMain)
 }
 
+func testBlake3(s *suite.Suite) {
+	const outputBytes = 32 // 32 bytes is output size of Blake3
+
+	// Known input string and expected hash
+	inputString := "Hello world I am blake3"
+	expectedHash := "cb46bdd080609257ba2cca93b21d1f72ff1737eb48790f3c17ceae83b6c74e42"
+
+	input := []byte(inputString)
+
+	Blake3Hasher, error := hash.NewBlake3Hasher(0 /*default chunk size*/)
+	if error != runtime.Success {
+		fmt.Println("error:", error)
+		return
+	}
+
+	outputRef := make([]byte, outputBytes)
+	Blake3Hasher.Hash(
+		core.HostSliceFromElements(input),
+		core.HostSliceFromElements(outputRef),
+		core.GetDefaultHashConfig(),
+	)
+
+	runtime.SetDevice(&devices[1])
+	Blake3Hasher, error = hash.NewBlake3Hasher(0 /*default chunk size*/)
+	if error != runtime.Success {
+		fmt.Println("error:", error)
+		return
+	}
+
+	outputMain := make([]byte, outputBytes)
+	Blake3Hasher.Hash(
+		core.HostSliceFromElements(input),
+		core.HostSliceFromElements(outputMain),
+		core.GetDefaultHashConfig(),
+	)
+
+	outputRefHex := fmt.Sprintf("%x", outputRef)
+
+	s.Equal(expectedHash, outputRefHex, "Hash mismatch: got %s, expected %s", outputRefHex, expectedHash)
+	s.Equal(outputRef, outputMain, "Output mismatch between reference and main device")
+}
+
 func testSha3(s *suite.Suite) {
 	singleHashInputSize := 1153
 	batch := 1
@@ -150,6 +192,7 @@ type HashTestSuite struct {
 func (s *HashTestSuite) TestHash() {
 	s.Run("TestKeccakBatch", testWrapper(&s.Suite, testKeccakBatch))
 	s.Run("TestBlake2s", testWrapper(&s.Suite, testBlake2s))
+	s.Run("TestBlake3", testWrapper(&s.Suite, testBlake3))
 	s.Run("TestSha3", testWrapper(&s.Suite, testSha3))
 }
 
