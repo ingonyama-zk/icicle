@@ -3,6 +3,10 @@
 #include <iostream>
 #include <sstream>
 
+#ifdef __ANDROID__
+  #include <android/log.h>
+#endif
+
 #define ICICLE_LOG_VERBOSE Log(Log::Verbose)
 #define ICICLE_LOG_DEBUG   Log(Log::Debug)
 #define ICICLE_LOG_INFO    Log(Log::Info)
@@ -21,7 +25,16 @@ public:
 
   ~Log()
   {
-    if (level >= s_min_log_level) { std::cerr << oss.str() << std::endl; }
+    if (level >= s_min_log_level) {
+#ifdef __ANDROID__
+      // Use Android logcat
+      android_LogPriority androidPriority = logLevelToAndroidPriority(level);
+      __android_log_print(androidPriority, "ICICLE", "%s", oss.str().c_str());
+#else
+      // Use standard error stream for other platforms
+      std::cerr << oss.str() << std::endl;
+#endif
+    }
   }
 
   template <typename T>
@@ -31,7 +44,7 @@ public:
     return *this;
   }
 
-  // Static method to set the log level
+  // Static method to set the minimum log level
   static void set_min_log_level(eLogLevel level) { s_min_log_level = level; }
 
 private:
@@ -43,7 +56,7 @@ private:
   {
     switch (level) {
     case Verbose:
-      return "DEBUG";
+      return "VERBOSE";
     case Debug:
       return "DEBUG";
     case Info:
@@ -57,7 +70,28 @@ private:
     }
   }
 
-  // logging message with level>=s_min_log_level
+#ifdef __ANDROID__
+  // Map custom log level to Android log priority
+  android_LogPriority logLevelToAndroidPriority(eLogLevel level) const
+  {
+    switch (level) {
+    case Verbose:
+      return ANDROID_LOG_VERBOSE;
+    case Debug:
+      return ANDROID_LOG_DEBUG;
+    case Info:
+      return ANDROID_LOG_INFO;
+    case Warning:
+      return ANDROID_LOG_WARN;
+    case Error:
+      return ANDROID_LOG_ERROR;
+    default:
+      return ANDROID_LOG_UNKNOWN;
+    }
+  }
+#endif
+
+  // Static member to hold the minimum log level
 #if defined(NDEBUG)
   static inline eLogLevel s_min_log_level = eLogLevel::Info;
 #else
