@@ -1,7 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
-#include <string.h>
-
 #include "blake3.h"
 #include "blake3_impl.h"
 
@@ -169,11 +166,6 @@ INLINE size_t left_len(size_t content_len)
 INLINE size_t compress_chunks_parallel(
   const uint8_t* input, size_t input_len, const uint32_t key[8], uint64_t chunk_counter, uint8_t flags, uint8_t* out)
 {
-#if defined(BLAKE3_TESTING)
-  assert(0 < input_len);
-  assert(input_len <= MAX_SIMD_DEGREE * BLAKE3_CHUNK_LEN);
-#endif
-
   const uint8_t* chunks_array[MAX_SIMD_DEGREE];
   size_t input_position = 0;
   size_t chunks_array_len = 0;
@@ -211,11 +203,6 @@ INLINE size_t compress_chunks_parallel(
 INLINE size_t compress_parents_parallel(
   const uint8_t* child_chaining_values, size_t num_chaining_values, const uint32_t key[8], uint8_t flags, uint8_t* out)
 {
-#if defined(BLAKE3_TESTING)
-  assert(2 <= num_chaining_values);
-  assert(num_chaining_values <= 2 * MAX_SIMD_DEGREE_OR_2);
-#endif
-
   const uint8_t* parents_array[MAX_SIMD_DEGREE_OR_2];
   size_t parents_array_len = 0;
   while (num_chaining_values - (2 * parents_array_len) >= 2) {
@@ -330,10 +317,6 @@ INLINE void compress_subtree_to_parent_node(
   uint8_t flags,
   uint8_t out[2 * BLAKE3_OUT_LEN])
 {
-#if defined(BLAKE3_TESTING)
-  assert(input_len > BLAKE3_CHUNK_LEN);
-#endif
-
   uint8_t cv_array[MAX_SIMD_DEGREE_OR_2 * BLAKE3_OUT_LEN];
   size_t num_cvs = blake3_compress_subtree_wide(input, input_len, key, chunk_counter, flags, cv_array);
   assert(num_cvs <= MAX_SIMD_DEGREE_OR_2);
