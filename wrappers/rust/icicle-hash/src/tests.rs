@@ -92,8 +92,8 @@ mod tests {
     #[test]
     fn blake3_hashing() {
         // Known input string and expected hash
-        let input_string = "Hello world I am blake3";
-        let expected_hash = "cb46bdd080609257ba2cca93b21d1f72ff1737eb48790f3c17ceae83b6c74e42";
+        let input_string = "Hello world I am blake3, This is a semi-long Rust test with alot of characters. 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let expected_hash = "747991ca462558dd98a28080d4d771f6bc6012e8bf3e58964cb01ce98f0f2869";
 
         let input = input_string.as_bytes();
         let mut output_ref = vec![0u8; 32]; // 32B (=256b) is the output size of blake3

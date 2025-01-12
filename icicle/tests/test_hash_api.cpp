@@ -99,8 +99,8 @@ TEST_F(HashApiTest, Blake3)
   // TODO: Add CUDA test, same as blake2s
   auto config = default_hash_config();
 
-  const std::string input = "Hello world I am blake3";
-  const std::string expected_output = "cb46bdd080609257ba2cca93b21d1f72ff1737eb48790f3c17ceae83b6c74e42";
+  const std::string input = "Hello world I am blake3, This is a semi-long C++ test with alot of characters. 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  const std::string expected_output = "87045fe5e279737961bc0c7948c109af5046300d7348badfaf9a0eb2a10c6b90";
 
   const uint64_t output_size = 32;
   auto output = std::make_unique<std::byte[]>(output_size);
