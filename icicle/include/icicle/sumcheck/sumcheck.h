@@ -70,8 +70,11 @@ namespace icicle {
     eIcicleError verify(SumCheckProof<F>& sumcheck_proof, bool& valid /*out*/)
     {
       const int nof_rounds = sumcheck_proof.get_nof_round_polynomials();
-      // verify that the sum of round_polynomial-0 is the clamed_sum
       const std::vector<F>& round_poly_0 = sumcheck_proof.get_round_polynomial(0);
+      const uint32_t poly_degree = round_poly_0.size() - 1;
+      m_backend->reset(nof_rounds, poly_degree);
+
+      // verify that the sum of round_polynomial-0 is the clamed_sum
       F round_poly_0_sum = round_poly_0[0];
       for (int round_idx = 1; round_idx < nof_rounds - 1; round_idx++) {
         round_poly_0_sum = round_poly_0_sum + round_poly_0[round_idx];
@@ -85,9 +88,9 @@ namespace icicle {
       }
 
       for (int round_idx = 0; round_idx < nof_rounds - 1; round_idx++) {
-        const std::vector<F>& round_poly = sumcheck_proof.get_round_polynomial(round_idx);
-        F alpha = m_backend->get_alpha(round_poly);
-        F alpha_value = lagrange_interpolation(round_poly, alpha);
+        std::vector<F>& round_poly = sumcheck_proof.get_round_polynomial(round_idx);
+        const F alpha = m_backend->get_alpha(round_poly);
+        const F alpha_value = lagrange_interpolation(round_poly, alpha);
         const std::vector<F>& next_round_poly = sumcheck_proof.get_round_polynomial(round_idx + 1);
         F expected_alpha_value = next_round_poly[0] + next_round_poly[1];
         if (alpha_value != expected_alpha_value) {
@@ -106,7 +109,7 @@ namespace icicle {
 
     // Receive the polynomial in evaluation on x=0,1,2...
     // return the evaluation of the polynomial at x
-    F lagrange_interpolation(const std::vector<F>& poly_evaluations, const F& x)
+    F lagrange_interpolation(const std::vector<F>& poly_evaluations, const F& x) const
     {
       uint poly_degree = poly_evaluations.size();
       F result = F::zero();

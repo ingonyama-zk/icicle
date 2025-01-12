@@ -1192,31 +1192,46 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
 
 TEST_F(FieldApiTestBase, Sumcheck)
 {
-  int mle_poly_size = 1 << 13;
+  int log_mle_poly_size = 3;
+  int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
-  scalar_t claimed_sum = scalar_t::from(8);
+  scalar_t claimed_sum = scalar_t::hex_str2scalar("0x00000000000000000000000000000000000000000000000000000000000616b0");
 
   // create transcript_config
   SumcheckTranscriptConfig<scalar_t> transcript_config; // TODO Miki: define labels?
 
+  // ===== Prover side ======
   // create sumcheck
-  auto sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
+  auto prover_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
 
   // generate inputs
   std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    mle_poly_ptr = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_poly_ptr, mle_poly_size);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+      mle_polynomials[poly_i][element_i] = scalar_t::from(poly_i*10 + element_i+1);
+      std::cout << "mle_polynomials[" << poly_i << "][" << element_i << "] = " << mle_polynomials[poly_i][element_i] << std::endl;
+    }
   }
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumCheckConfig config;
-  SumCheckProof<scalar_t> sumcheck_proof(nof_mle_poly, 2);
+  SumCheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly-1);
 
-  sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
-
+  prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
+  sumcheck_proof.print_proof();
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }
+
+  // ===== Verifier side ======
+  // create sumcheck
+  auto verifier_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
+  bool verification_pass;
+  verifier_sumcheck.verify(sumcheck_proof, verification_pass);
+  
+  ASSERT_EQ(true, verification_pass);
+
+
 }
 int main(int argc, char** argv)
 {

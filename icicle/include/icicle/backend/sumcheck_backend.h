@@ -53,7 +53,7 @@ namespace icicle {
       const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
       const SumCheckConfig& config,
-      SumCheckProof<F>& sumcheck_proof /*out*/) const = 0;
+      SumCheckProof<F>& sumcheck_proof /*out*/) = 0;
 
     /**
      * @brief Initialize the transcript for the upcoming calculation of the FIat shamir.

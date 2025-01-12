@@ -24,9 +24,28 @@ namespace icicle {
       this->set_as_inputs(program_parameters);
       program_parameters[nof_inputs] = program_func(program_parameters); // place the output after the all inputs
       this->generate_program(program_parameters);
+      m_poly_degree = program_parameters[nof_inputs].m_operation->m_poly_degree;
     }
 
     // Generate a program based on a PreDefinedPrograms
-    ReturningValueProgram(PreDefinedPrograms pre_def) : Program<S>(pre_def) {}
+    ReturningValueProgram(PreDefinedPrograms pre_def) : Program<S>(pre_def) {
+      switch (pre_def) {
+      case AB_MINUS_C:
+        m_poly_degree = 2;
+        break;
+      case EQ_X_AB_MINUS_C:
+        m_poly_degree = 3;
+        break;
+      default:
+        ICICLE_LOG_ERROR << "Illegal opcode: " << int(pre_def);
+      }
+    }
+  
+    int get_polynomial_degee() const {
+      return m_poly_degree;
+    }
+  private:
+    int m_poly_degree = 0;
+
   };
 } // namespace icicle

@@ -5,9 +5,9 @@ template <typename S>
 class CpuSumCheckTranscript {
 public:
   CpuSumCheckTranscript(const S& claimed_sum, 
-                        SumcheckTranscriptConfig<S>& transcript_config) :
+                        SumcheckTranscriptConfig<S>&& transcript_config) :
     m_claimed_sum(claimed_sum),
-    m_transcript_config(transcript_config) {
+    m_transcript_config( std::move(transcript_config)) {
       reset(0, 0);
     }
 
@@ -17,7 +17,6 @@ public:
     ICICLE_ASSERT(m_num_vars > 0) << "num_vars must reset with value > 0";
     ICICLE_ASSERT(m_poly_degree > 0) << "poly_degree must reset with value > 0";
 
-    if (m_num_vars)
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
     (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly) :
@@ -28,7 +27,8 @@ public:
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
     m_round_idx++;
-    m_prev_alpha = S::reduce(hash_result.data()); // TBD fix that    
+    S* hash_result_as_a_field = (S*)(hash_result.data());
+    m_prev_alpha = (*hash_result_as_a_field) * S::one(); // TBD fix that to reduce
     return m_prev_alpha;
   }    
 
@@ -41,15 +41,15 @@ public:
   }
 
   private:
-  SumcheckTranscriptConfig<S>& m_transcript_config;    // configuration how to build the transcript
-  HashConfig                   m_config;               // hash config - default
-  uint32_t                     m_round_idx;            // 
-  std::vector<std::byte>       m_entry_0;              // 
-  const uint32_t               m_num_vars;
-  const uint32_t               m_poly_degree;
-  const S                      m_claimed_sum;
-  S                            m_prev_alpha;
-
+  const SumcheckTranscriptConfig<S>   m_transcript_config;    // configuration how to build the transcript
+  HashConfig                          m_config;               // hash config - default
+  uint32_t                            m_round_idx;            // 
+  std::vector<std::byte>              m_entry_0;              // 
+  uint32_t                            m_num_vars = 0;
+  uint32_t                            m_poly_degree = 0;
+  const S                             m_claimed_sum;
+  S                                   m_prev_alpha;
+      
 
   // append to hash_input a stream of bytes received as chars
   void append_data(std::vector<std::byte>& byte_vec, const std::vector<std::byte>& label) {
@@ -63,7 +63,7 @@ public:
   }
 
   void append_field(std::vector<std::byte>& byte_vec, const S& field) {
-    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.get_limbs());
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
   }
 
@@ -77,7 +77,7 @@ public:
     append_field(hash_input, m_claimed_sum);
 
     // append seed_rng
-    append_data(hash_input, m_transcript_config.get_seed_rng());
+    append_field(hash_input, m_transcript_config.get_seed_rng());
 
     // append round_challenge_label
     append_data(hash_input, m_transcript_config.get_round_challenge_label());
@@ -86,7 +86,7 @@ public:
     append_data(m_entry_0, round_poly_label);
     append_u32(m_entry_0, round_poly.size());
     append_u32(m_entry_0, m_round_idx++);
-    for (S& r_i :round_poly) {
+    for (const S& r_i : round_poly) {
       append_field(hash_input, r_i);
     }
 
@@ -104,7 +104,7 @@ public:
     append_data(hash_input, round_poly_label);
     append_u32(hash_input, round_poly.size());
     append_u32(hash_input, m_round_idx++);
-    for (S& r_i :round_poly) {
+    for (const S& r_i :round_poly) {
       append_field(hash_input, r_i);
     }
   }
