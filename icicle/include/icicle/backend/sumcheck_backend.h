@@ -72,7 +72,7 @@ namespace icicle {
     const F& get_claimed_sum() const { return m_claimed_sum; }
 
   protected:
-    const F m_claimed_sum;                                 // claimed sum fof the mle polinomials
+    const F m_claimed_sum;                                 // claimed sum for the mle polynomials
     const SumcheckTranscriptConfig<F> m_transcript_config; // configuration how to build the transcript
   };
 
