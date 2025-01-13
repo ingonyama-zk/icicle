@@ -501,7 +501,7 @@ public:
   static constexpr HOST_DEVICE_INLINE Field div2(const Field& xs)
   {
     Field rs = {};
-    base_math::template div2(xs.limbs_storage, rs.limbs_storage);
+    base_math::template div2<TLC>(xs.limbs_storage, rs.limbs_storage);
     return sub_modulus<MODULUS_MULTIPLE>(rs);
   }
 
