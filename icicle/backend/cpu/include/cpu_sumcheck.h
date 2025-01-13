@@ -46,13 +46,13 @@ namespace icicle {
         return eIcicleError::INVALID_ARGUMENT;
       }
       // check that the combine function has a legal polynomial degree
-      int poly_degree = combine_function.get_polynomial_degee();
-      if (poly_degree < 0) {
-        ICICLE_LOG_ERROR << "Illegal polynomial degree (" << poly_degree << ") for provided combine function";
+      int combine_function_poly_degree = combine_function.get_polynomial_degee();
+      if (combine_function_poly_degree < 0) {
+        ICICLE_LOG_ERROR << "Illegal polynomial degree (" << combine_function_poly_degree << ") for provided combine function";
         return eIcicleError::INVALID_ARGUMENT;
       }
 
-      reset_transcript(nof_rounds, uint32_t(poly_degree)); // reset the transcript for the Fiat-Shamir
+      reset_transcript(nof_rounds, uint32_t(combine_function_poly_degree)); // reset the transcript for the Fiat-Shamir
       sumcheck_proof.reset(); // reset the sumcheck proof to accumulate the round polynomials
 
       // generate a program executor for the combine function
@@ -84,9 +84,9 @@ namespace icicle {
     }
 
     // Reset the sumcheck transcript before a new proof generation or verification
-    void reset_transcript(const uint32_t num_vars, const uint32_t poly_degree) override
+    void reset_transcript(const uint32_t mle_polynomial_size, const uint32_t combine_function_poly_degree) override
     {
-      m_cpu_sumcheck_transcript.reset(num_vars, poly_degree);
+      m_cpu_sumcheck_transcript.reset(mle_polynomial_size, combine_function_poly_degree);
     }
 
   private:
@@ -132,15 +132,16 @@ namespace icicle {
       }
     }
 
+    // Fold the MLE polynomials based on alpha
     void fold_mle_polynomials(
       const F& alpha,
       int& mle_polynomial_size,
-      const std::vector<F*>& in_mle_polynomials,
-      std::vector<F*>& folded_mle_polynomials)
+      const std::vector<F*>& in_mle_polynomials,  // input 
+      std::vector<F*>& folded_mle_polynomials)    // output
     {
       const int nof_polynomials = in_mle_polynomials.size();
       const F one_minus_alpha = F::one() - alpha;
-      mle_polynomial_size >>= 1;
+      mle_polynomial_size >>= 1;  // update the mle_polynomial size to /2 det to folding
 
       // run over all elements in all polynomials
       for (int element_idx = 0; element_idx < mle_polynomial_size; ++element_idx) {
@@ -152,66 +153,6 @@ namespace icicle {
         }
       }
     }
-
-    //   void calc_round_polynomial(const std::vector<F*>& input_polynomials, bool fold, S& alpha) {
-    //     const uint64_t polynomial_size = fold ? input_polynomials[0].size()/4 : input_polynomials[0].size()/2;
-    //     const uint nof_polynomials = input_polynomials.size();
-    //     const uint round_poly_degree = m_combine_prog.m_poly_degree;
-    //     m_round_polynomial.resize(round_poly_degree+1);
-    //     TODO:: init m_round_polynomial to zero;
-
-    //     // init m_program_executor input pointers
-    //     vector<std::vector<S> combine_func_inputs(m_combine_prog.m_nof_inputs);
-    //     for (int poly_idx=0; i<nof_polynomials; ++poly_idx) {
-    //       m_program_executor.m_variable_ptrs[poly_idx] = &(combine_func_inputs[poly_idx]);
-    //     }
-    //     // init m_program_executor output pointer
-    //     S combine_func_result;
-    //     m_program_executor.m_variable_ptrs[nof_polynomials] = combine_func_result;
-
-    //     const one_minus_alpha = (1-alpha);
-    //     // run over all elements in all polynomials
-    //     for (int element_idx=0; i<polynomial_size; ++element_idx) {
-    //       // init combine_func_inputs for k=0
-    //       for (int poly_idx=0; i<nof_polynomials; ++poly_idx) {
-    //         // when k=0, take the element i
-    //         if (fold) {
-    //           m_folded_polynomials[element_idx] =
-    //             one_minus_alpha * input_polynomials[element_idx] +
-    //             alpha *           input_polynomials[element_idx + 2*polynomial_size];
-    //           combine_func_inputs[poly_idx] = m_folded_polynomials[element_idx];
-    //         }
-    //         else {
-    //           combine_func_inputs[poly_idx] = input_polynomials[poly_idx][element_idx];
-    //         }
-    //       }
-
-    //       for (int k=0; k <= round_poly_degree; ++k) {
-    //         // execute the combine functions and append to the round polynomial
-    //         m_program_executor.execute();
-    //         m_round_polynomial[k] += combine_func_result;
-
-    //         // if this is not the last k
-    //         if (k < round_poly_degree) {
-    //           // update the combine program inputs for the next k
-    //           for (int poly_idx=0; i<nof_polynomials; ++poly_idx) {
-    //             if (fold) {
-    //               m_folded_polynomials[poly_idx] =
-    //                 m_folded_polynomials[poly_idx]
-    //                 - m_folded_polynomials[poly_idx][element_idx]
-    //                 + m_folded_polynomials[poly_idx][element_idx+polynomial_size];
-    //             }
-    //             else {
-    //               combine_func_inputs[poly_idx] =
-    //                 combine_func_inputs[poly_idx]
-    //                 - input_polynomials[poly_idx][element_idx]
-    //                 + input_polynomials[poly_idx][element_idx+polynomial_size];
-    //             }
-    //           }
-    //         }
-    //       }
-    //     }
-    //   }
   };
 
 } // namespace icicle

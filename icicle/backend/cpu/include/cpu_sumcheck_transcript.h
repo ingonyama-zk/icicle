@@ -15,8 +15,8 @@ public:
   S get_alpha(const std::vector<S>& round_poly)
   {
     // Make sure reset was called (Internal assertion)
-    ICICLE_ASSERT(m_num_vars > 0) << "num_vars must reset with value > 0";
-    ICICLE_ASSERT(m_poly_degree > 0) << "poly_degree must reset with value > 0";
+    ICICLE_ASSERT(m_mle_polynomial_size > 0) << "mle_polynomial_size must reset with value > 0";
+    ICICLE_ASSERT(m_combine_function_poly_degree > 0) << "combine_function_poly_degree must reset with value > 0";
 
     for (int element_i = 0; element_i < round_poly.size(); element_i++) {
       std::cout << "round_poly[" << m_round_idx << "][" << element_i << "] = " << round_poly[element_i] << std::endl;
@@ -37,10 +37,10 @@ public:
   }
 
   // reset the transcript
-  void reset(const uint32_t num_vars, const uint32_t poly_degree)
+  void reset(const uint32_t mle_polynomial_size, const uint32_t combine_function_poly_degree)
   {
-    m_num_vars = num_vars;
-    m_poly_degree = poly_degree;
+    m_mle_polynomial_size = mle_polynomial_size;
+    m_combine_function_poly_degree = combine_function_poly_degree;
     m_entry_0.clear();
     m_round_idx = 0;
   }
@@ -50,8 +50,8 @@ private:
   HashConfig m_config;                                   // hash config - default
   uint32_t m_round_idx;                                  //
   std::vector<std::byte> m_entry_0;                      //
-  uint32_t m_num_vars = 0;
-  uint32_t m_poly_degree = 0;
+  uint32_t m_mle_polynomial_size = 0;
+  uint32_t m_combine_function_poly_degree = 0;
   const S m_claimed_sum;
   S m_prev_alpha;
 
@@ -61,6 +61,7 @@ private:
     byte_vec.insert(byte_vec.end(), label.begin(), label.end());
   }
 
+  // convert a vector of bytes to a field
   void reduce_kash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result)
   {
     alpha = S::zero();
@@ -76,20 +77,22 @@ private:
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(uint32_t));
   }
 
+  // append a field to hash input
   void append_field(std::vector<std::byte>& byte_vec, const S& field)
   {
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
   }
 
+  // round 0 hash input
   void build_hash_input_round_0(std::vector<std::byte>& hash_input, const std::vector<S>& round_poly)
   {
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
-    // append entry_DS = [domain_separator_label || proof.num_vars || proof.degree || public (hardcoded?) ||
+    // append entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
     // claimed_sum]
     append_data(hash_input, m_transcript_config.get_domain_separator_label());
-    append_u32(hash_input, m_num_vars);
-    append_u32(hash_input, m_poly_degree);
+    append_u32(hash_input, m_mle_polynomial_size);
+    append_u32(hash_input, m_combine_function_poly_degree);
     append_field(hash_input, m_claimed_sum);
 
     // append seed_rng
@@ -109,6 +112,8 @@ private:
     // append entry_0
     append_data(hash_input, m_entry_0);
   }
+
+  // round !=0 hash input
   void build_hash_input_round_i(std::vector<std::byte>& hash_input, const std::vector<S>& round_poly)
   {
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();

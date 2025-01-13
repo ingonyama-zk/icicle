@@ -57,11 +57,10 @@ namespace icicle {
 
     /**
      * @brief Initialize the transcript for the upcoming calculation of the FIat shamir.
-     * @param num_vars
-     * @param poly_degree the degree of the combine function
+     * @param mle_polynomial_size the number of elements in an MLE polynomial
+     * @param combine_function_poly_degree the degree of the combine function
      */
-
-    virtual void reset_transcript(const uint32_t num_vars, const uint32_t poly_degree) = 0;
+    virtual void reset_transcript(const uint32_t mle_polynomial_size, const uint32_t combine_function_poly_degree) = 0;
 
     /**
      * @brief Calculate alpha based on m_transcript_config and the round polynomial.
