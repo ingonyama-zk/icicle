@@ -1213,11 +1213,11 @@ TEST_F(FieldApiTestBase, Sumcheck)
   // calculate the claimed sum
   scalar_t claimed_sum = scalar_t::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a  = mle_polynomials[0][element_i];
-    const scalar_t b  = mle_polynomials[1][element_i];
-    const scalar_t c  = mle_polynomials[2][element_i];
+    const scalar_t a = mle_polynomials[0][element_i];
+    const scalar_t b = mle_polynomials[1][element_i];
+    const scalar_t c = mle_polynomials[2][element_i];
     const scalar_t eq = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a*b-c)*eq;
+    claimed_sum = claimed_sum + (a * b - c) * eq;
   }
 
   // ===== Prover side ======

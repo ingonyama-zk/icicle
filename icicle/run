@@ -1,4 +1,0 @@
-rm -rf build
-cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DMSM=OFF -DSUMCHECK=ON -DHASH=ON -DG2=OFF -DECNTT=OFF -DEXT_FIELD=OFF -DFIELD=babybear -S . -B build
-cmake --build build -j
-build/tests/test_field_api --gtest_filter="*Sumcheck*"
