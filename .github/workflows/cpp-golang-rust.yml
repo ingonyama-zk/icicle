@@ -31,6 +31,8 @@ jobs:
     name: Check Code Format
     runs-on: ubuntu-22.04
     needs: check-changed-files
+    container:
+      image: silkeh/clang:19-bookworm # Replace with a container having the desired clang-format version
     steps:
     - name: Checkout
       uses: actions/checkout@v4
