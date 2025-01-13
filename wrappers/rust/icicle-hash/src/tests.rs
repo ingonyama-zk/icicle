@@ -90,6 +90,39 @@ mod tests {
     }
 
     #[test]
+    fn blake3_hashing_cpu_gpu() {
+        initialize();
+        let single_hash_input_size = 567;
+        let batch = 11;
+
+        let mut input = vec![0 as u8; single_hash_input_size * batch];
+        rand::thread_rng().fill(&mut input[..]);
+        let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake3
+        let mut output_main = vec![0 as u8; 32 * batch];
+
+        test_utilities::test_set_ref_device();
+        let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
+        blake3_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_ref),
+            )
+            .unwrap();
+
+        test_utilities::test_set_main_device();
+        let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
+        blake3_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_main),
+            )
+            .unwrap();
+        assert_eq!(output_ref, output_main);
+    }
+
+    #[test]
     fn blake3_hashing() {
         // Known input string and expected hash
         let input_string = "Hello world I am blake3. This is a semi-long Rust test with a lot of characters. 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";

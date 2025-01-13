@@ -99,6 +99,50 @@ func testBlake2s(s *suite.Suite) {
 	s.NotEqual(outputEmpty, outputMain)
 }
 
+func testBlake3_cpu_gpu(s *suite.Suite) {
+	singleHashInputSize := 567
+	batch := 11
+	const outputBytes = 32 // 32 bytes is output size of Blake3
+
+	input := make([]byte, singleHashInputSize*batch)
+	_, err := rand.Read(input)
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
+	Blake3Hasher, error := hash.NewBlake3Hasher(0 /*default chunk size*/)
+	if error != runtime.Success {
+		fmt.Println("error:", error)
+		return
+	}
+
+	outputRef := make([]byte, outputBytes*batch)
+	Blake3Hasher.Hash(
+		core.HostSliceFromElements(input),
+		core.HostSliceFromElements(outputRef),
+		core.GetDefaultHashConfig(),
+	)
+
+	runtime.SetDevice(&devices[1])
+	Blake3Hasher, error = hash.NewBlake3Hasher(0 /*default chunk size*/)
+	if error != runtime.Success {
+		fmt.Println("error:", error)
+		return
+	}
+
+	outputMain := make([]byte, outputBytes*batch)
+	Blake3Hasher.Hash(
+		core.HostSliceFromElements(input),
+		core.HostSliceFromElements(outputMain),
+		core.GetDefaultHashConfig(),
+	)
+
+	outputEmpty := make([]byte, outputBytes*batch)
+	s.Equal(outputRef, outputMain)
+	s.NotEqual(outputEmpty, outputMain)
+}
+
 func testBlake3(s *suite.Suite) {
 	const outputBytes = 32 // 32 bytes is output size of Blake3
 
@@ -177,6 +221,7 @@ type HashTestSuite struct {
 func (s *HashTestSuite) TestHash() {
 	s.Run("TestKeccakBatch", testWrapper(&s.Suite, testKeccakBatch))
 	s.Run("TestBlake2s", testWrapper(&s.Suite, testBlake2s))
+	s.Run("TestBlake3_CPU_GPU", testWrapper(&s.Suite, testBlake3_cpu_gpu))
 	s.Run("TestBlake3", testWrapper(&s.Suite, testBlake3))
 	s.Run("TestSha3", testWrapper(&s.Suite, testSha3))
 }
