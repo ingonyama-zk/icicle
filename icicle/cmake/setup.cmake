@@ -5,7 +5,7 @@ option(BUILD_FOR_ANDROID "Cross-compile for Android" OFF)
 if (BUILD_FOR_ANDROID)
     message(STATUS "Configuring for Android ARM64...")
 
-    set(ANDROID_MIN_API 29)
+    set(ANDROID_MIN_API 29) # Minimum API (29 is android 10)
     set(CMAKE_SYSTEM_NAME Android CACHE STRING "Target system name for cross-compilation")
     set(ANDROID_ABI arm64-v8a CACHE STRING "Default Android ABI")
     set(CMAKE_ANDROID_ARCH_ABI "${ANDROID_ABI}" CACHE STRING "Target ABI for Android") # deprecated??
@@ -23,12 +23,13 @@ if (BUILD_FOR_ANDROID)
     message(STATUS "CMAKE_ANDROID_NDK: ${CMAKE_ANDROID_NDK}")
     message(STATUS "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}")
     message(STATUS "CMAKE_SYSTEM_LIBRARY_PATH: ${CMAKE_SYSTEM_LIBRARY_PATH}")
+endif()
 
-    # Android-specific libraries
+# Platform specific libraries and compiler
+if (CMAKE_SYSTEM_NAME STREQUAL "Android")
     find_library(LOG_LIB log REQUIRED)  # Android log library
     set(PLATFORM_LIBS ${LOG_LIB})
 else()
-  # Native platform configuration
   message(STATUS "Configuring for native platform...")
   # Select the C++ compiler
   find_program(CLANG_COMPILER clang++)
