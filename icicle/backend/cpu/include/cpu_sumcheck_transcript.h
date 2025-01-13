@@ -28,7 +28,7 @@ public:
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
     m_round_idx++;
-    reduce_kash_result_to_field(m_prev_alpha, hash_result);
+    reduce_hash_result_to_field(m_prev_alpha, hash_result);
     return m_prev_alpha;
   }
 
@@ -58,7 +58,7 @@ private:
   }
 
   // convert a vector of bytes to a field
-  void reduce_kash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result)
+  void reduce_hash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result)
   {
     alpha = S::zero();
     const int nof_bytes_to_copy = std::min(sizeof(alpha), hash_result.size());
