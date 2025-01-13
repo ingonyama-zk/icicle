@@ -27,13 +27,15 @@ namespace icicle {
       const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) override
     {
-      // Allocate memory for the intermidiate calcultion: the folded mle polynomials
+      // Allocate memory for the intermediate calculation: the folded mle polynomials
       const int nof_mle_poly = mle_polynomials.size();
       std::vector<F*> folded_mle_polynomials(nof_mle_poly); // folded mle_polynomials with the same format as inputs
-      std::vector<F> folded_mle_polynomials_values(nof_mle_poly*mle_polynomial_size/2); // folded_mle_polynomials data itself
-      // init the folded_mle_polynomials pointers 
-      for (int mle_polynomial_idx=0; mle_polynomial_idx < nof_mle_poly; mle_polynomial_idx++) {
-        folded_mle_polynomials[mle_polynomial_idx] = &(folded_mle_polynomials_values[mle_polynomial_idx*mle_polynomial_size/2]);
+      std::vector<F> folded_mle_polynomials_values(
+        nof_mle_poly * mle_polynomial_size / 2); // folded_mle_polynomials data itself
+      // init the folded_mle_polynomials pointers
+      for (int mle_polynomial_idx = 0; mle_polynomial_idx < nof_mle_poly; mle_polynomial_idx++) {
+        folded_mle_polynomials[mle_polynomial_idx] =
+          &(folded_mle_polynomials_values[mle_polynomial_idx * mle_polynomial_size / 2]);
       }
 
       // Check that the size of the the proof feet the size of the mle polynomials.
@@ -50,7 +52,7 @@ namespace icicle {
         return eIcicleError::INVALID_ARGUMENT;
       }
 
-      reset_transcript(nof_rounds, uint32_t(poly_degree));  // reset the transcript for the Fiat-Shamir
+      reset_transcript(nof_rounds, uint32_t(poly_degree)); // reset the transcript for the Fiat-Shamir
       sumcheck_proof.reset(); // reset the sumcheck proof to accumulate the round polynomials
 
       // generate a program executor for the combine function

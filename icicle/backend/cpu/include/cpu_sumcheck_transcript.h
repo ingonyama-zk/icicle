@@ -61,7 +61,8 @@ private:
     byte_vec.insert(byte_vec.end(), label.begin(), label.end());
   }
 
-  void reduce_kash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result) {
+  void reduce_kash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result)
+  {
     alpha = S::zero();
     const int nof_bytes_to_copy = std::min(sizeof(alpha), hash_result.size());
     std::memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
