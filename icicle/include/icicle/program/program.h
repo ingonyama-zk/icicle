@@ -167,7 +167,7 @@ namespace icicle {
       // Set instruction::operand2
       int_arr[INST_RESULT] = std::byte(operation->m_variable_idx);
       InstructionType instruction;
-      memcpy(&instruction, int_arr, sizeof(InstructionType));
+      std::memcpy(&instruction, int_arr, sizeof(InstructionType));
       m_instructions.push_back(instruction);
     }
 
@@ -183,7 +183,7 @@ namespace icicle {
       // Set instruction::operand2
       int_arr[INST_RESULT] = std::byte(dest_idx);
       InstructionType instruction;
-      memcpy(&instruction, int_arr, sizeof(InstructionType));
+      std::memcpy(&instruction, int_arr, sizeof(InstructionType));
       m_instructions.push_back(instruction);
     }
 
