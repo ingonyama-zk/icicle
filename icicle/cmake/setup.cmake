@@ -5,24 +5,31 @@ option(BUILD_FOR_ANDROID "Cross-compile for Android" OFF)
 if (BUILD_FOR_ANDROID)
     message(STATUS "Configuring for Android ARM64...")
 
+    # Check for NDK in the environment variable
+    if (NOT DEFINED ENV{ANDROID_NDK} AND NOT DEFINED ANDROID_NDK)
+        message(FATAL_ERROR "ANDROID_NDK is not defined. Please set the environment variable or pass -DANDROID_NDK=<path>")
+    endif()
+
+    # Use the CMake option if specified; otherwise, use the environment variable
+    if (DEFINED ANDROID_NDK)
+        set(CMAKE_ANDROID_NDK ${ANDROID_NDK})
+    elseif (DEFINED ENV{ANDROID_NDK})
+        set(CMAKE_ANDROID_NDK $ENV{ANDROID_NDK})
+    endif()
+
+    # Debugging message for NDK path
+    message(STATUS "Using Android NDK: ${CMAKE_ANDROID_NDK}")
+
+    # Set toolchain and other options
     set(ANDROID_MIN_API 29) # Minimum API (29 is android 10)
     set(CMAKE_SYSTEM_NAME Android CACHE STRING "Target system name for cross-compilation")
     set(ANDROID_ABI arm64-v8a CACHE STRING "Default Android ABI")
-    set(CMAKE_ANDROID_ARCH_ABI "${ANDROID_ABI}" CACHE STRING "Target ABI for Android") # deprecated??
     set(ANDROID_PLATFORM "android-${ANDROID_MIN_API}" CACHE STRING "Android API level")
-    set(CMAKE_ANDROID_NDK /home/administrator/users/yuvals/icicle/icicle/backend/vulkan/android/cmdline-tools/ndk CACHE PATH "Path to Android NDK")
+    set(CMAKE_ANDROID_ARCH_ABI "${ANDROID_ABI}" CACHE STRING "Target ABI for Android") # deprecated??    
     set(CMAKE_ANDROID_STL_TYPE c++_shared CACHE STRING "Android STL type")
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake" CACHE FILEPATH "Path to the Android toolchain file")
-
     list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/${ANDROID_MIN_API}")    
 
-    # Debug messages to confirm settings
-    message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-    message(STATUS "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}")
-    message(STATUS "CMAKE_ANDROID_ARCH_ABI: ${CMAKE_ANDROID_ARCH_ABI}")
-    message(STATUS "CMAKE_ANDROID_NDK: ${CMAKE_ANDROID_NDK}")
-    message(STATUS "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}")
-    message(STATUS "CMAKE_SYSTEM_LIBRARY_PATH: ${CMAKE_SYSTEM_LIBRARY_PATH}")
 endif()
 
 # Platform specific libraries and compiler
