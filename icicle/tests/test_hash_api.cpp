@@ -239,7 +239,6 @@ TEST_F(HashApiTest, Blake2sLarge)
   ICICLE_CHECK(icicle_free(d_output));
 }
 
-
 TEST_F(HashApiTest, Blake3Large)
 {
   auto config = default_hash_config();
