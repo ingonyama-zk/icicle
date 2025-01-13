@@ -10,6 +10,7 @@
 #include <cstring>
 #include "icicle/utils/modifiers.h"
 #include "icicle/fields/storage.h"
+#include "icicle/errors.h"
 namespace host_math {
 
   // return x + y with T operands
@@ -167,6 +168,18 @@ namespace host_math {
     for (unsigned i = 0; i < NLIMBS / 2; i++)
       r[i] = SUBTRACT ? chain.sub(x[i], y[i], carry) : chain.add(x[i], y[i], carry);
     return CARRY_OUT ? carry : 0;
+  }
+
+  // WARNING: taking views is zero copy but unsafe
+  template <unsigned NLIMBS>
+  constexpr const storage<NLIMBS>& get_lower_view(const storage<2 * NLIMBS>& xs)
+  {
+    return *reinterpret_cast<const storage<NLIMBS>*>(xs.limbs);
+  }
+  template <unsigned NLIMBS>
+  constexpr const storage<NLIMBS>& get_higher_view(const storage<2 * NLIMBS>& xs)
+  {
+    return *reinterpret_cast<const storage<NLIMBS>*>(xs.limbs + NLIMBS);
   }
 
   template <
@@ -328,28 +341,126 @@ namespace host_math {
       }
     }
   }
-  template <unsigned NLIMBS>
-  static constexpr void get_higher_with_slack(const storage<2 * NLIMBS>& xs, storage<NLIMBS>& out, unsigned slack_bits)
+  template <unsigned NLIMBS, unsigned SLACK_BITS>
+  static constexpr void get_higher_with_slack(const storage<2 * NLIMBS>& xs, storage<NLIMBS>& out)
   {
-  // CPU: for even number of limbs, read and shift 64b limbs, otherwise 32b
-      if constexpr (NLIMBS % 2 == 0) {
-  #pragma unroll
-        for (unsigned i = 0; i < NLIMBS / 2; i++) { // Ensure valid indexing
-          out.limbs64[i] = (xs.limbs64[i + NLIMBS / 2] << 2 * slack_bits) |
-                                         (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * slack_bits));
-        }
-      } else {
-  #pragma unroll
-        for (unsigned i = 0; i < NLIMBS; i++) { // Ensure valid indexing
-          out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * slack_bits) +
-                                       (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * slack_bits));
-        }
+    // CPU: for even number of limbs, read and shift 64b limbs, otherwise 32b
+    if constexpr (NLIMBS % 2 == 0) {
+#pragma unroll
+      for (unsigned i = 0; i < NLIMBS / 2; i++) { // Ensure valid indexing
+        out.limbs64[i] =
+          (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) | (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS));
       }
+    } else {
+#pragma unroll
+      for (unsigned i = 0; i < NLIMBS; i++) { // Ensure valid indexing
+        out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS));
+      }
+    }
   }
-    template <unsigned NLIMBS>
+  template <unsigned NLIMBS>
   static constexpr bool is_equal(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
   {
     return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
+  }
+  static constexpr void inv_log_size_err(uint32_t logn, uint32_t omegas_count)
+  {
+    if (logn > omegas_count)
+      THROW_ICICLE_ERR(
+        icicle::eIcicleError::INVALID_ARGUMENT,
+        "Field: Invalid inv index" + std::to_string(logn) + ">" + std::to_string(omegas_count));
+  }
+
+  template <unsigned NLIMBS>
+  static constexpr void multiply_and_add_lsb_neg_modulus_raw(
+    const storage<NLIMBS>& as, const storage<NLIMBS>& neg_mod, const storage<NLIMBS>& cs, storage<NLIMBS>& rs)
+  {
+    // NOTE: we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
+    // seems that after optimization (inlining probably), the compiler eliminates the msb limbs since they are unused.
+    // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same for
+    // optimized code, but not for debug).
+    if constexpr (NLIMBS > 1) {
+      // LSB multiplier, computed only NLIMBS output limbs
+      storage<NLIMBS> r_low = {};
+      lsb_multiply_raw_64<NLIMBS>(as.limbs64, neg_mod.limbs64, r_low.limbs64);
+      add_sub_limbs<NLIMBS, false, false>(cs, r_low, rs);
+    } else {
+      // case of one limb is using a single 32b multiplier anyway
+      storage<2 * NLIMBS> r_wide = {};
+      multiply_raw<NLIMBS>(as, neg_mod, r_wide);
+      const storage<NLIMBS>& r_low_view = get_lower_view(r_wide);
+      add_sub_limbs<NLIMBS, false, false>(cs, r_low_view, rs);
+    }
+  }
+
+  /**
+   * This method reduces a Wide number `xs` modulo `p` and returns the result as a Field element.
+   *
+   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
+   * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+   * factor of `modulus_squared` first.
+   *
+   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
+   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work with
+   * them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx \floor{\frac{xs}{p}}
+   * \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an error (it's always less
+   * or equal than the real quotient). So the modulus `p` might need to be subtracted several times before the result is
+   * in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[ \frac{xs}{p} - l = \frac{xs}{p}
+   * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
+   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} + 2(TLC
+   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
+   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
+   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
+   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
+   * will cause only 1 reduction to be performed.
+   */
+  template <unsigned NLIMBS, unsigned SLACK_BITS, unsigned NOF_REDUCTIONS>
+  static constexpr HOST_DEVICE_INLINE storage<NLIMBS> barrett_reduce(
+    const storage<2 * NLIMBS>& xs,
+    const storage<NLIMBS>& ms,
+    const storage<NLIMBS>& mod1,
+    const storage<NLIMBS>& mod2,
+    const storage<NLIMBS>& neg_mod)
+  {
+    storage<2 * NLIMBS> l = {}; // the approximation of l for a*b = l*p + r mod p
+    storage<NLIMBS> r = {};
+
+    // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
+    storage<NLIMBS> xs_hi = {};
+    get_higher_with_slack<NLIMBS, SLACK_BITS>(xs, xs_hi);
+    multiply_raw<NLIMBS>(xs_hi, ms, l); // MSB mult by `m`. TODO - msb optimization
+    // Note: taking views is zero copy but unsafe
+    const storage<NLIMBS>& l_hi = get_higher_view<NLIMBS>(l);
+    const storage<NLIMBS>& xs_lo = get_lower_view<NLIMBS>(xs);
+    // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
+    // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
+    multiply_and_add_lsb_neg_modulus_raw(l_hi, neg_mod, xs_lo, r);
+    // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
+    if constexpr (NOF_REDUCTIONS == 2) {
+      storage<NLIMBS> r_reduced = {};
+      const auto borrow = add_sub_limbs<NLIMBS, true, true>(r, mod2, r_reduced);
+      // If r-2p has no borrow then we are done
+      if (!borrow) return r_reduced;
+    }
+    // if r-2p has borrow then we need to either subtract p or we are already in [0,p).
+    // so we subtract p and based on the borrow bit we know which case it is
+    storage<NLIMBS> r_reduced = {};
+    const auto borrow = add_sub_limbs<NLIMBS, true, true>(r, mod1, r_reduced);
+    return borrow ? r : r_reduced;
+  }
+
+  // Assumes the number is even!
+  template <unsigned NLIMBS>
+  static constexpr void div2(const storage<NLIMBS>& xs, storage<NLIMBS>& rs)
+  {
+    const uint32_t* x = xs.limbs;
+    uint32_t* r = rs.limbs;
+    if constexpr (NLIMBS > 1) {
+      for (unsigned i = 0; i < NLIMBS - 1; i++) {
+        r[i] = (x[i] >> 1) | (x[i + 1] << 31);
+      }
+    }
+    r[NLIMBS - 1] = x[NLIMBS - 1] >> 1;
   }
 } // namespace host_math
 

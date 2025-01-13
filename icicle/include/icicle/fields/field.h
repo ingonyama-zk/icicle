@@ -116,15 +116,7 @@ public:
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
-#ifndef __CUDA_ARCH__ // A device function cannot call the icicle error function
-    if (logn > CONFIG::omegas_count) THROW_ICICLE_ERR(eIcicleError::INVALID_ARGUMENT, "Field: Invalid inv index");
-#else
-    if (logn > CONFIG::omegas_count) {
-      printf(
-        "CUDA ERROR: field.h: error on inv_log_size(logn): logn(=%u) > omegas_count (=%u)", logn, CONFIG::omegas_count);
-      assert(false);
-    }
-#endif // __CUDA_ARCH__
+    base_math::inv_log_size_err(logn, CONFIG::omegas_count);
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
   }
@@ -173,49 +165,6 @@ public:
 #endif
       for (unsigned i = 0; i < TLC; i++)
         out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
-      return out;
-    }
-
-    // WARNING: taking views is zero copy but unsafe
-    constexpr const Field& get_lower_view() const { return *reinterpret_cast<const Field*>(limbs_storage.limbs); }
-    constexpr const Field& get_higher_view() const
-    {
-      return *reinterpret_cast<const Field*>(limbs_storage.limbs + TLC);
-    }
-
-    static constexpr Field HOST_DEVICE_INLINE get_lower(const Wide& xs)
-    {
-      Field out{};
-#ifdef __CUDA_ARCH__
-      UNROLL
-#else
-  #pragma unroll
-#endif
-      for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i];
-      return out;
-    }
-
-    static constexpr Field HOST_DEVICE_INLINE get_higher(const Wide& xs)
-    {
-      Field out{};
-#ifdef __CUDA_ARCH__
-      UNROLL
-#else
-  #pragma unroll
-#endif
-      for (unsigned i = 0; i < TLC; i++)
-        out.limbs_storage.limbs[i] = xs.limbs_storage.limbs[i + TLC];
-      return out;
-    }
-
-
-
-    // This is not zero copy
-    static constexpr Field HOST_DEVICE_INLINE get_higher_with_slack(const Wide& xs)
-    {
-      Field out{};
-      base_math::get_higher_with_slack(xs.limbs_storage, out.limbs_storage, slack_bits);
       return out;
     }
 
@@ -304,46 +253,9 @@ public:
     return base_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
   }
 
-
   static HOST_DEVICE_INLINE void multiply_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
     return base_math::template multiply_raw<TLC>(as, bs, rs);
-  }
-
-  static HOST_DEVICE_INLINE void
-  multiply_and_add_lsb_neg_modulus_raw(const ff_storage& as, const ff_storage& cs, ff_storage& rs)
-  {
-#ifdef __CUDA_ARCH__
-    const ff_storage bs = get_neg_modulus();
-    return base_math::template multiply_and_add_lsb_neg_modulus_raw(as, bs, cs, rs);
-#else // TODO: implement cpu logic in host math
-
-    // NOTE: we need an LSB-multiplier here so it's inefficient to do a full multiplier. Having said that it
-    // seems that after optimization (inlining probably), the compiler eliminates the msb limbs since they are unused.
-    // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same for
-    // optimized code, but not for debug).
-    if constexpr (TLC > 1) {
-      // LSB multiplier, computed only TLC output limbs
-      Field r_low = {};
-      host_math::template lsb_multiply_raw_64<TLC>(as.limbs64, get_neg_modulus().limbs64, r_low.limbs_storage.limbs64);
-      add_limbs<TLC, false>(cs, r_low.limbs_storage, rs);
-    } else {
-      // case of one limb is using a single 32b multiplier anyway
-      Wide r_wide = {};
-      host_math::template multiply_raw<TLC>(as, get_neg_modulus(), r_wide.limbs_storage);
-      const Field& r_low_view = r_wide.get_lower_view();
-      add_limbs<TLC, false>(cs, r_low_view.limbs_storage, rs);
-    }
-#endif
-  }
-
-  static HOST_DEVICE_INLINE void multiply_msb_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
-  {
-  #ifdef __CUDA_ARCH__
-    return base_math::template multiply_msb_raw(as, bs, rs);
-  #else
-    return base_math::template multiply_raw<TLC>(as, bs, rs); //TODO: implement cpu msb mult and unify function name
-  #endif
   }
 
 public:
@@ -453,30 +365,8 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field reduce(const Wide& xs)
   {
-    Wide l = {}; // the approximation of l for a*b = l*p + r mod p
-    Field r = {};
-
-    // `xs` is left-shifted by `2 * slack_bits` and higher half is written to `xs_hi`
-    const Field xs_hi = Wide::get_higher_with_slack(xs);
-    multiply_msb_raw(xs_hi.limbs_storage, get_m(), l.limbs_storage); // MSB mult by `m`
-    // Note: taking views is zero copy but unsafe
-    const Field& l_hi = l.get_higher_view();
-    const Field& xs_lo = xs.get_lower_view();
-    // Here we need to compute the lsb of `xs - l \cdot p` and to make use of fused multiply-and-add, we rewrite it as
-    // `xs + l \cdot (2^{32 \cdot TLC}-p)` which is the same as original (up to higher limbs which we don't care about).
-    multiply_and_add_lsb_neg_modulus_raw(l_hi.limbs_storage, xs_lo.limbs_storage, r.limbs_storage);
-    // As mentioned, either 2 or 1 reduction can be performed depending on the field in question.
-    if constexpr (num_of_reductions() == 2) {
-      Field r_reduced = {};
-      const auto borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<2>(), r_reduced.limbs_storage);
-      // If r-2p has no borrow then we are done
-      if (!borrow) return r_reduced;
-    }
-    // if r-2p has borrow then we need to either subtract p or we are already in [0,p).
-    // so we subtract p and based on the borrow bit we know which case it is
-    Field r_reduced = {};
-    const auto borrow = sub_limbs<TLC, true>(r.limbs_storage, get_modulus<1>(), r_reduced.limbs_storage);
-    return borrow ? r : r_reduced;
+    return Field{base_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
+      xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
@@ -610,22 +500,8 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Field div2(const Field& xs)
   {
-    const uint32_t* x = xs.limbs_storage.limbs;
     Field rs = {};
-    uint32_t* r = rs.limbs_storage.limbs;
-    if constexpr (TLC > 1) {
-#ifdef __CUDA_ARCH__
-      UNROLL
-#endif
-      for (unsigned i = 0; i < TLC - 1; i++) {
-#ifdef __CUDA_ARCH__ //TODO: move logic to base_math
-        r[i] = __funnelshift_rc(x[i], x[i + 1], 1);
-#else
-        r[i] = (x[i] >> 1) | (x[i + 1] << 31);
-#endif
-      }
-    }
-    r[TLC - 1] = x[TLC - 1] >> 1;
+    base_math::template div2(xs.limbs_storage, rs.limbs_storage);
     return sub_modulus<MODULUS_MULTIPLE>(rs);
   }
 
