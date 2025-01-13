@@ -61,7 +61,7 @@ namespace icicle {
      * @param poly_degree the degree of the combine function
      */
 
-    virtual void reset(const uint32_t num_vars, const uint32_t poly_degree) = 0;
+    virtual void reset_transcript(const uint32_t num_vars, const uint32_t poly_degree) = 0;
 
     /**
      * @brief Calculate alpha based on m_transcript_config and the round polynomial.

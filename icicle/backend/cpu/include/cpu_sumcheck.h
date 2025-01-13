@@ -27,10 +27,13 @@ namespace icicle {
       const SumCheckConfig& config,
       SumCheckProof<F>& sumcheck_proof /*out*/) override
     {
+      // Allocate memory for the intermidiate calcultion: the folded mle polynomials
       const int nof_mle_poly = mle_polynomials.size();
-      std::vector<F*> folded_mle_polynomials(nof_mle_poly);
-      for (auto& mle_poly_ptr : folded_mle_polynomials) {
-        mle_poly_ptr = new F[mle_polynomial_size / 2];
+      std::vector<F*> folded_mle_polynomials(nof_mle_poly); // folded mle_polynomials with the same format as inputs
+      std::vector<F> folded_mle_polynomials_values(nof_mle_poly*mle_polynomial_size/2); // folded_mle_polynomials data itself
+      // init the folded_mle_polynomials pointers 
+      for (int mle_polynomial_idx=0; mle_polynomial_idx < nof_mle_poly; mle_polynomial_idx++) {
+        folded_mle_polynomials[mle_polynomial_idx] = &(folded_mle_polynomials_values[mle_polynomial_idx*mle_polynomial_size/2]);
       }
 
       // Check that the size of the the proof feet the size of the mle polynomials.
@@ -46,29 +49,26 @@ namespace icicle {
         ICICLE_LOG_ERROR << "Illegal polynomial degree (" << poly_degree << ") for provided combine function";
         return eIcicleError::INVALID_ARGUMENT;
       }
-      reset(nof_rounds, uint32_t(poly_degree));
 
-      // reset the sumcheck proof to accumulate
-      sumcheck_proof.reset();
+      reset_transcript(nof_rounds, uint32_t(poly_degree));  // reset the transcript for the Fiat-Shamir
+      sumcheck_proof.reset(); // reset the sumcheck proof to accumulate the round polynomials
 
       // generate a program executor for the combine function
       CpuProgramExecutor program_executor(combine_function);
 
-      // calc the number of rounds = log2(poly_size)
-
+      // run log2(poly_size) rounds
       int cur_mle_polynomial_size = mle_polynomial_size;
-
       for (int round_idx = 0; round_idx < nof_rounds; ++round_idx) {
+        // For the first round work on the input mle_polynomials, else work on the folded
         const std::vector<F*>& in_mle_polynomials = (round_idx == 0) ? mle_polynomials : folded_mle_polynomials;
         std::vector<F>& round_polynomial = sumcheck_proof.get_round_polynomial(round_idx);
 
-        // run the next round and update the proof
+        // build round polynomial and update the proof
         build_round_polynomial(in_mle_polynomials, cur_mle_polynomial_size, program_executor, round_polynomial);
 
+        // if its not the last round, calculate alpha and fold the mle polynomials
         if (round_idx + 1 < nof_rounds) {
-          // calculate alpha for the next round
           F alpha = get_alpha(round_polynomial);
-
           fold_mle_polynomials(alpha, cur_mle_polynomial_size, in_mle_polynomials, folded_mle_polynomials);
         }
       }
@@ -81,8 +81,8 @@ namespace icicle {
       return m_cpu_sumcheck_transcript.get_alpha(round_polynomial);
     }
 
-    // Reset the sumcheck transcript with e
-    void reset(const uint32_t num_vars, const uint32_t poly_degree) override
+    // Reset the sumcheck transcript before a new proof generation or verification
+    void reset_transcript(const uint32_t num_vars, const uint32_t poly_degree) override
     {
       m_cpu_sumcheck_transcript.reset(num_vars, poly_degree);
     }

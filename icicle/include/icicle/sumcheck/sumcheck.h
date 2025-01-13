@@ -72,7 +72,7 @@ namespace icicle {
       const int nof_rounds = sumcheck_proof.get_nof_round_polynomials();
       const std::vector<F>& round_poly_0 = sumcheck_proof.get_round_polynomial(0);
       const uint32_t poly_degree = round_poly_0.size() - 1;
-      m_backend->reset(nof_rounds, poly_degree);
+      m_backend->reset_transcript(nof_rounds, poly_degree);
 
       // verify that the sum of round_polynomial-0 is the clamed_sum
       F round_poly_0_sum = round_poly_0[0];
