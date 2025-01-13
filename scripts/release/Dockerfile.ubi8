@@ -10,6 +10,7 @@ RUN dnf update -y && dnf install -y \
     ninja-build \
     wget \
     gnupg2 \
+    git \
     && dnf clean all
 
 # Add the RPM-based LLVM repository for Clang
