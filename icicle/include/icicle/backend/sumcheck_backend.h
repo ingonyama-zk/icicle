@@ -45,15 +45,15 @@ namespace icicle {
      * @param mle_polynomial_size the size of each MLE polynomial
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
      * @param config Configuration for the Sumcheck operation.
-     * @param sumcheck_proof Reference to the SumCheckProof object where all round polynomials will be stored.
+     * @param sumcheck_proof Reference to the SumcheckProof object where all round polynomials will be stored.
      * @return Error code of type eIcicleError.
      */
     virtual eIcicleError get_proof(
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
-      const SumCheckConfig& config,
-      SumCheckProof<F>& sumcheck_proof /*out*/) = 0;
+      const SumcheckConfig& config,
+      SumcheckProof<F>& sumcheck_proof /*out*/) = 0;
 
     /**
      * @brief Initialize the transcript for the upcoming calculation of the FIat shamir.
@@ -72,8 +72,8 @@ namespace icicle {
     const F& get_claimed_sum() const { return m_claimed_sum; }
 
   protected:
-    const F m_claimed_sum;                                 ///< Vector of hash functions for each layer.
-    const SumcheckTranscriptConfig<F> m_transcript_config; ///< Size of each leaf element in bytes.
+    const F m_claimed_sum;                                 // claimed sum fof the mle polinomials
+    const SumcheckTranscriptConfig<F> m_transcript_config; // configuration how to build the transcript
   };
 
   /*************************** Backend Factory Registration ***************************/

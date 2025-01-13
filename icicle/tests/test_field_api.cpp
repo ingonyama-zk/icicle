@@ -1223,8 +1223,8 @@ TEST_F(FieldApiTestBase, Sumcheck)
   auto prover_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
 
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
-  SumCheckConfig config;
-  SumCheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly - 1);
+  SumcheckConfig config;
+  SumcheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly - 1);
 
   prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
   for (auto& mle_poly_ptr : mle_polynomials) {

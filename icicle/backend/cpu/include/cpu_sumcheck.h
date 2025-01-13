@@ -24,8 +24,8 @@ namespace icicle {
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
-      const SumCheckConfig& config,
-      SumCheckProof<F>& sumcheck_proof /*out*/) override
+      const SumcheckConfig& config,
+      SumcheckProof<F>& sumcheck_proof /*out*/) override
     {
       // Allocate memory for the intermediate calculation: the folded mle polynomials
       const int nof_mle_poly = mle_polynomials.size();
@@ -92,7 +92,7 @@ namespace icicle {
 
   private:
     // members
-    CpuSumCheckTranscript<F> m_cpu_sumcheck_transcript; // Generates alpha for the next round (Fial-Shamir)
+    CpuSumcheckTranscript<F> m_cpu_sumcheck_transcript; // Generates alpha for the next round (Fial-Shamir)
 
     void build_round_polynomial(
       const std::vector<F*>& in_mle_polynomials,

@@ -13,7 +13,7 @@ namespace icicle {
    * execution modes, as well as backend-specific extensions.
    */
 
-  struct SumCheckConfig {
+  struct SumcheckConfig {
     icicleStreamHandle stream = nullptr; /**< Stream for asynchronous execution. Default is nullptr. */
     uint64_t batch = 1;                  /**< Number of input chunks to hash in batch. Default is 1. */
     bool are_inputs_on_device =
@@ -30,8 +30,8 @@ namespace icicle {
    * This function provides a default configuration for Sumcheck operations with synchronous execution
    * and all data (leaves, tree results, and paths) residing on the host (CPU).
    *
-   * @return A default SumCheckConfig with host-based execution and no backend-specific extensions.
+   * @return A default SumcheckConfig with host-based execution and no backend-specific extensions.
    */
-  static SumCheckConfig default_sumcheck_config() { return SumCheckConfig(); }
+  static SumcheckConfig default_sumcheck_config() { return SumcheckConfig(); }
 
 } // namespace icicle

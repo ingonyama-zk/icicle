@@ -2,10 +2,10 @@
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
 
 template <typename S>
-class CpuSumCheckTranscript
+class CpuSumcheckTranscript
 {
 public:
-  CpuSumCheckTranscript(const S& claimed_sum, SumcheckTranscriptConfig<S>&& transcript_config)
+  CpuSumcheckTranscript(const S& claimed_sum, SumcheckTranscriptConfig<S>&& transcript_config)
       : m_claimed_sum(claimed_sum), m_transcript_config(std::move(transcript_config))
   {
     reset(0, 0);

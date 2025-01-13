@@ -11,17 +11,17 @@ namespace icicle {
    * This class encapsulates the sumcheck proof, contains the evaluations of the round polynomials
    * for each layer at the sumcheck proof.
    * Evaluations are at x = 0, 1, 2 ... K
-   * Where K is the degree of the combiine function used at the sumcheck protocol.
+   * Where K is the degree of the combine function used at the sumcheck protocol.
    *
    * @tparam S Type of the field element (e.g., prime field or extension field elements).
    */
 
   template <typename S>
-  class SumCheckProof
+  class SumcheckProof
   {
   public:
     // Constructor
-    SumCheckProof(int nof_round_polynomials, int round_polynomial_degree)
+    SumcheckProof(int nof_round_polynomials, int round_polynomial_degree)
         : m_round_polynomials(nof_round_polynomials, std::vector<S>(round_polynomial_degree + 1))
     {
       if (nof_round_polynomials == 0) {

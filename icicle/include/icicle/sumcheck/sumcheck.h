@@ -48,26 +48,26 @@ namespace icicle {
      * @param mle_polynomial_size the size of each MLE polynomial
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
      * @param config Configuration for the Sumcheck operation.
-     * @param sumcheck_proof Reference to the SumCheckProof object where all round polynomials will be stored.
+     * @param sumcheck_proof Reference to the SumcheckProof object where all round polynomials will be stored.
      * @return Error code of type eIcicleError.
      */
     eIcicleError get_proof(
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
       const CombineFunction<F>& combine_function,
-      const SumCheckConfig& config,
-      SumCheckProof<F>& sumcheck_proof /*out*/) const
+      const SumcheckConfig& config,
+      SumcheckProof<F>& sumcheck_proof /*out*/) const
     {
       return m_backend->get_proof(mle_polynomials, mle_polynomial_size, combine_function, config, sumcheck_proof);
     }
 
     /**
      * @brief Verify an element against the Sumcheck round polynomial.
-     * @param sumcheck_proof The SumCheckProof object includes the round polynomials.
+     * @param sumcheck_proof The SumcheckProof object includes the round polynomials.
      * @param valid output valid bit. True if the Proof is valid, false otherwise.
      * @return Error code of type eIcicleError indicating success or failure.
      */
-    eIcicleError verify(SumCheckProof<F>& sumcheck_proof, bool& valid /*out*/)
+    eIcicleError verify(SumcheckProof<F>& sumcheck_proof, bool& valid /*out*/)
     {
       const int nof_rounds = sumcheck_proof.get_nof_round_polynomials();
       const std::vector<F>& round_poly_0 = sumcheck_proof.get_round_polynomial(0);
