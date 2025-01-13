@@ -18,9 +18,6 @@ public:
     ICICLE_ASSERT(m_mle_polynomial_size > 0) << "mle_polynomial_size must reset with value > 0";
     ICICLE_ASSERT(m_combine_function_poly_degree > 0) << "combine_function_poly_degree must reset with value > 0";
 
-    for (int element_i = 0; element_i < round_poly.size(); element_i++) {
-      std::cout << "round_poly[" << m_round_idx << "][" << element_i << "] = " << round_poly[element_i] << std::endl;
-    }
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
     (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly)
@@ -32,7 +29,6 @@ public:
     hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
     m_round_idx++;
     reduce_kash_result_to_field(m_prev_alpha, hash_result);
-    std::cout << "alpha[" << m_round_idx - 1 << "] = " << m_prev_alpha << std::endl;
     return m_prev_alpha;
   }
 

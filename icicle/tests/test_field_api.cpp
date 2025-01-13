@@ -1205,8 +1205,6 @@ TEST_F(FieldApiTestBase, Sumcheck)
     mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
     for (int element_i = 0; element_i < mle_poly_size; element_i++) {
       mle_polynomials[poly_i][element_i] = scalar_t::from(poly_i * 10 + element_i + 1);
-      std::cout << "mle_polynomials[" << poly_i << "][" << element_i << "] = " << mle_polynomials[poly_i][element_i]
-                << std::endl;
     }
   }
 
@@ -1229,7 +1227,6 @@ TEST_F(FieldApiTestBase, Sumcheck)
   SumCheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly - 1);
 
   prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
-  sumcheck_proof.print_proof();
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }
