@@ -451,9 +451,10 @@ void test_merkle_tree(
     leaves4tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, config));
   // END_TIMER(MerkleTree_build, "Merkle Tree build time", true)
 
-  ASSERT_TRUE(is_valid_tree<T>(
-    prover_tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaves, hashes,
-    config, explict_leaf_size_in_bytes))
+  ASSERT_TRUE(
+    is_valid_tree<T>(
+      prover_tree, partial_leaves_size ? partial_leaves_size : nof_leaves * explict_leaf_size_in_bytes, leaves, hashes,
+      config, explict_leaf_size_in_bytes))
     << "Tree wasn't built correctly.";
 
   // Create wrong input leaves by taking the original input and swapping some leaves by random values
