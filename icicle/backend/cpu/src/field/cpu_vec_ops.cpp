@@ -371,7 +371,7 @@ private:
 public:
   T m_intermidiate_res;    // pointer to the output. Can be a vector or scalar pointer
   uint64_t m_idx_in_batch; // index in the batch. Used in intermediate res tasks
-};                         // class VectorOpTask
+};
 
 #define NOF_OPERATIONS_PER_TASK 512
 #define CONFIG_NOF_THREADS_KEY  "n_threads"
@@ -381,8 +381,9 @@ int get_nof_workers(const VecOpsConfig& config)
 {
   if (config.ext && config.ext->has(CONFIG_NOF_THREADS_KEY)) { return config.ext->get<int>(CONFIG_NOF_THREADS_KEY); }
 
-  int hw_threads = std::thread::hardware_concurrency();
-  return ((hw_threads > 1) ? hw_threads - 1 : 1); // reduce 1 for the main
+  const int hw_threads = std::thread::hardware_concurrency();
+  // Note: no need to account for the main thread in vec-ops since it's doing little work
+  return std::max(1, hw_threads);
 }
 
 // Execute a full task from the type vector = vector (op) vector
@@ -390,7 +391,7 @@ template <typename T, typename U>
 eIcicleError
 cpu_2vectors_op(VecOperation op, const T* vec_a, const U* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T, U>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, U>> task_manager(get_nof_workers(config));
   const uint64_t total_nof_operations = size * config.batch_size;
   for (uint64_t i = 0; i < total_nof_operations; i += NOF_OPERATIONS_PER_TASK) {
     VectorOpTask<T, U>* task_p = task_manager.get_idle_or_completed_task();
@@ -406,7 +407,7 @@ template <typename T>
 eIcicleError cpu_scalar_vector_op(
   VecOperation op, const T* scalar_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   const uint64_t total_nof_operations = size;
   const uint32_t stride = config.columns_batch ? config.batch_size : 1;
   for (uint32_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
@@ -479,7 +480,7 @@ template <typename T>
 eIcicleError cpu_convert_montgomery(
   const Device& device, const T* input, uint64_t size, bool is_to_montgomery, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   const uint64_t total_nof_operations = size * config.batch_size;
   for (uint64_t i = 0; i < total_nof_operations; i += NOF_OPERATIONS_PER_TASK) {
     VectorOpTask<T, T>* task_p = task_manager.get_idle_or_completed_task();
@@ -499,7 +500,7 @@ REGISTER_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_montgomery<scalar_t>);
 template <typename T>
 eIcicleError cpu_vector_sum(const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   std::vector<bool> output_initialized = std::vector<bool>(config.batch_size, false);
   uint64_t vec_a_offset = 0;
   uint64_t idx_in_batch = 0;
@@ -539,7 +540,7 @@ template <typename T>
 eIcicleError
 cpu_vector_product(const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
 {
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   std::vector<bool> output_initialized = std::vector<bool>(config.batch_size, false);
   uint64_t vec_a_offset = 0;
   uint64_t idx_in_batch = 0;
@@ -610,7 +611,7 @@ template <typename T>
 eIcicleError out_of_place_matrix_transpose(
   const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
 {
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   uint32_t stride = config.columns_batch ? config.batch_size : 1;
   const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;
   const uint32_t NOF_ROWS_PER_TASK =
@@ -695,7 +696,7 @@ eIcicleError matrix_transpose_necklaces(
   std::vector<uint64_t> start_indices_in_mat; // Collect start indices
   gen_necklace<T>(1, 1, k, length, necklace, start_indices_in_mat);
 
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   for (uint64_t i = 0; i < start_indices_in_mat.size(); i += max_nof_operations) {
     uint64_t nof_operations = std::min((uint64_t)max_nof_operations, start_indices_in_mat.size() - i);
     for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
@@ -746,7 +747,7 @@ cpu_bit_reverse(const Device& device, const T* vec_in, uint64_t size, const VecO
   ICICLE_ASSERT((1ULL << logn) == size) << "Invalid argument - size is not a power of 2";
 
   // Perform the bit reverse
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
     for (uint64_t i = 0; i < size; i += NOF_OPERATIONS_PER_TASK) {
       VectorOpTask<T, T>* task_p = task_manager.get_idle_or_completed_task();
@@ -783,7 +784,7 @@ eIcicleError cpu_slice(
   ICICLE_ASSERT(vec_in != nullptr && vec_out != nullptr) << "Error: Invalid argument - input or output vector is null";
   ICICLE_ASSERT(offset + (size_out - 1) * stride < size_in) << "Error: Invalid argument - slice out of bound";
 
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config) - 1);
+  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
   for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
     for (uint64_t i = 0; i < size_out; i += NOF_OPERATIONS_PER_TASK) {
       VectorOpTask<T, T>* task_p = task_manager.get_idle_or_completed_task();
