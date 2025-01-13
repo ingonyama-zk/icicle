@@ -48,7 +48,8 @@ namespace icicle {
       // check that the combine function has a legal polynomial degree
       int combine_function_poly_degree = combine_function.get_polynomial_degee();
       if (combine_function_poly_degree < 0) {
-        ICICLE_LOG_ERROR << "Illegal polynomial degree (" << combine_function_poly_degree << ") for provided combine function";
+        ICICLE_LOG_ERROR << "Illegal polynomial degree (" << combine_function_poly_degree
+                         << ") for provided combine function";
         return eIcicleError::INVALID_ARGUMENT;
       }
 
@@ -136,12 +137,12 @@ namespace icicle {
     void fold_mle_polynomials(
       const F& alpha,
       int& mle_polynomial_size,
-      const std::vector<F*>& in_mle_polynomials,  // input 
-      std::vector<F*>& folded_mle_polynomials)    // output
+      const std::vector<F*>& in_mle_polynomials, // input
+      std::vector<F*>& folded_mle_polynomials)   // output
     {
       const int nof_polynomials = in_mle_polynomials.size();
       const F one_minus_alpha = F::one() - alpha;
-      mle_polynomial_size >>= 1;  // update the mle_polynomial size to /2 det to folding
+      mle_polynomial_size >>= 1; // update the mle_polynomial size to /2 det to folding
 
       // run over all elements in all polynomials
       for (int element_idx = 0; element_idx < mle_polynomial_size; ++element_idx) {
