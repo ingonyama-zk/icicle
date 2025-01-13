@@ -25,7 +25,7 @@ enum blake3_flags {
 // This C implementation tries to support recent versions of GCC, Clang, and
 // MSVC.
 
-#define INLINE static inline __attribute__((always_inline))
+#define INLINE          static inline __attribute__((always_inline))
 #define MAX_SIMD_DEGREE 1
 
 // There are some places where we want a static size that's equal to the
@@ -201,6 +201,5 @@ void blake3_hash_many_portable(
   uint8_t flags_start,
   uint8_t flags_end,
   uint8_t* out);
-
 
 #endif /* BLAKE3_IMPL_H */
