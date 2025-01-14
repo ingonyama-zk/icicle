@@ -23,8 +23,9 @@ ICICLE supports the following hash functions:
 3. **SHA3-256**
 4. **SHA3-512**
 5. **Blake2s**
-6. **Poseidon**
-7. **Poseidon2**
+6. **Blake3**
+7. **Poseidon**
+8. **Poseidon2**
 
 :::info
 Additional hash functions might be added in the future. Stay tuned!
@@ -39,6 +40,10 @@ Keccak can take input messages of any length and produce a fixed-size hash. It u
 ### Blake2s
 
 [Blake2s](https://www.rfc-editor.org/rfc/rfc7693.txt) is an optimized cryptographic hash function that provides high performance while ensuring strong security. Blake2s is ideal for hashing small data (such as field elements), especially when speed is crucial. It produces a 256-bit (32-byte) output and is often used in cryptographic protocols.
+
+### Blake3
+
+[Blake3](https://www.ietf.org/archive/id/draft-aumasson-blake3-00.html) is a high-performance cryptographic hash function designed for both small and large data. With a a tree-based design for efficient parallelism, it offers strong security, speed, and scalability for modern cryptographic applications.
 
 ### Poseidon
 

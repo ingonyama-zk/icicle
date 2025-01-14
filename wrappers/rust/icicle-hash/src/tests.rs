@@ -3,6 +3,7 @@ mod tests {
 
     use crate::{
         blake2s::Blake2s,
+        blake3::Blake3,
         keccak::{Keccak256, Keccak512},
         sha3::Sha3_256,
     };
@@ -86,6 +87,72 @@ mod tests {
             )
             .unwrap();
         assert_eq!(output_ref, output_main);
+    }
+
+    #[test]
+    fn blake3_hashing_cpu_gpu() {
+        initialize();
+        let single_hash_input_size = 567;
+        let batch = 11;
+
+        let mut input = vec![0 as u8; single_hash_input_size * batch];
+        rand::thread_rng().fill(&mut input[..]);
+        let mut output_ref = vec![0 as u8; 32 * batch]; // 32B (=256b) is the output size of blake3
+        let mut output_main = vec![0 as u8; 32 * batch];
+
+        test_utilities::test_set_ref_device();
+        let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
+        blake3_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_ref),
+            )
+            .unwrap();
+
+        test_utilities::test_set_main_device();
+        let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
+        blake3_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_main),
+            )
+            .unwrap();
+        assert_eq!(output_ref, output_main);
+    }
+
+    #[test]
+    fn blake3_hashing() {
+        // Known input string and expected hash
+        let input_string = "Hello world I am blake3. This is a semi-long Rust test with a lot of characters. 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        let expected_hash = "ee4941ff90437a4fd7489ffa6d559e644a68b2547e95a690949b902da128b273";
+
+        let input = input_string.as_bytes();
+        let mut output_ref = vec![0u8; 32]; // 32B (=256b) is the output size of blake3
+
+        test_utilities::test_set_ref_device();
+        let blake3_hasher = Blake3::new(0 /*default chunk size */).unwrap();
+        blake3_hasher
+            .hash(
+                HostSlice::from_slice(&input),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut output_ref),
+            )
+            .unwrap();
+
+        // Convert output_ref to hex for comparison
+        let output_ref_hex: String = output_ref
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        assert_eq!(
+            output_ref_hex, expected_hash,
+            "Hash mismatch: got {}, expected {}",
+            output_ref_hex, expected_hash
+        );
+
+        println!("Test passed: Computed hash matches expected hash.");
     }
 
     #[test]
