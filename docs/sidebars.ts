@@ -68,6 +68,11 @@ const cppApi = [
   },
   {
     type: "doc",
+    label: "Program",
+    id: "icicle/primitives/program",
+  },
+  {
+    type: "doc",
     label: "Polynomials",
     id: "icicle/polynomials/overview",
   },

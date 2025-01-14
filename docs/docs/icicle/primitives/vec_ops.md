@@ -78,6 +78,20 @@ template <typename T>
 eIcicleError vector_div(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 ```
 
+#### `execute_program`
+
+Execute a user-defined lambda function with arbitrary number of input and output variables.
+
+```cpp
+template <typename T>
+eIcicleError
+execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size, const VecOpsConfig& config);
+```
+
+`is_result_on_device` of VecOpsConfig is not used here.
+
+For more details see [program](./program.md).
+
 #### `vector_accumulate`
 
 Adds vector b to a, inplace.
@@ -207,6 +221,7 @@ Divides two polynomials. If VecOpsConfig specifies a batch_size greater than one
 template <typename T>
 eIcicleError polynomial_division(const T* numerator, int64_t numerator_deg, const T* denumerator, int64_t denumerator_deg, const VecOpsConfig& config, T* q_out /*OUT*/, uint64_t q_size, T* r_out /*OUT*/, uint64_t r_size);
 ```
+
 
 ### Rust and Go bindings
 
