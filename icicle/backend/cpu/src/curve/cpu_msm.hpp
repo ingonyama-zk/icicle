@@ -250,9 +250,15 @@ private:
     const int64_t init_bucket_i = (last_bucket_i % m_bm_size) ? last_bucket_i
                                                               : // bucket 0 at the BM contains the last element
                                     last_bucket_i - m_bm_size;
+
+    // Initialize segment sums to the first bucket
     segment.triangle_sum = P::zero();
-    accumulate_all_workers_buckets(init_bucket_i, segment.triangle_sum);
+    if (init_bucket_i < m_workers_buckets[0].size()) {
+      accumulate_all_workers_buckets(init_bucket_i, segment.triangle_sum);
+    }
     segment.line_sum = segment.triangle_sum;
+
+    // run over the buckets and accumulate the to the segment
     for (int64_t bucket_i = last_bucket_i - 1; bucket_i > bucket_start; bucket_i--) {
       // add busy buckets to line sum
       accumulate_all_workers_buckets(bucket_i, segment.line_sum);
