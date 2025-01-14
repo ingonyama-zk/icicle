@@ -1,58 +1,22 @@
 cmake_minimum_required(VERSION 3.18)
 
+include(cmake/setup.cmake)
+
 project(icicle)
 
 # Specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Select the C++ compiler
-find_program(CLANG_COMPILER clang++)
-find_program(CLANG_C_COMPILER clang)
-
-if(CLANG_COMPILER AND CLANG_C_COMPILER)
-    set(CMAKE_CXX_COMPILER ${CLANG_COMPILER} CACHE STRING "Clang++ compiler" FORCE)
-    set(CMAKE_C_COMPILER ${CLANG_C_COMPILER} CACHE STRING "Clang compiler" FORCE)
-    message(STATUS "Using Clang++ as the C++ compiler: ${CLANG_COMPILER}")
-    message(STATUS "Using Clang as the C compiler: ${CLANG_C_COMPILER}")    
-else()
-    message(WARNING "ICICLE CPU works best with clang++ and clang. Defaulting to ${CLANG_COMPILER}")        
-endif()
-
-
 
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/hash.cmake)
 
-# Set the default build type to Release if not specified
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build: Debug, Release, RelWithDebInfo, MinSizeRel." FORCE)
-endif()
-
-# Print the selected build type
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
 if(SANITIZE AND CUDA_BACKEND)
   message(FATAL_ERROR "Address sanitizer and Cuda cannot be enabled at the same time.")
 endif()
-
-# Find the ccache program
-find_program(CCACHE_PROGRAM ccache)
-# If ccache is found, use it as the compiler launcher
-if(CCACHE_PROGRAM)
-    message(STATUS "ccache found: ${CCACHE_PROGRAM}")
-
-    # Use ccache for C and C++ compilers
-    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_CUDA_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-else()
-    message(STATUS "ccache not found")
-endif()
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Build options
 option(BUILD_TESTS "Build unit test2s. Default=OFF" OFF)
@@ -87,8 +51,6 @@ add_library(icicle_device SHARED
   src/runtime.cpp
   src/config_extension.cpp
 )
-target_link_libraries(icicle_device PUBLIC dl)
-
 include_directories(include)
 
 # Define the install directory (default is /usr/local)
