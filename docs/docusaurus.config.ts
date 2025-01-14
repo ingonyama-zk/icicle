@@ -175,10 +175,10 @@ const config: Config = {
     announcementBar: {
       id: 'announcement', // Any value that will identify this message.
       content:
-        '<strong>❄️🎉 New Release! ICICLE v3.3! 🎉❄️</strong>',
-      backgroundColor: '#64f5ef', // Light blue background color.
-      textColor: '#000000', // Black text color.
-      isCloseable: true, // Defaults to `true`.
+      //   '<strong>❄️🎉 New Release! ICICLE v3.3! 🎉❄️</strong>',
+      // backgroundColor: '#64f5ef', // Light blue background color.
+      // textColor: '#000000', // Black text color.
+      // isCloseable: true, // Defaults to `true`.
     },
   } satisfies Preset.ThemeConfig,
 };
