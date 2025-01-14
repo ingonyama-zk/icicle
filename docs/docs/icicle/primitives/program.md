@@ -37,7 +37,7 @@ Program support few pre-defined programs. The user can use those pre-defined pro
 ### Creating program
 
 To execute the lambda function we just created we need to create a program from it.
-To create program from lambda function we can use the following constructor:\
+To create program from lambda function we can use the following constructor:
 
 ```cpp
 Program(std::function<void(std::vector<Symbol<S>>&)> program_func, const int nof_parameters)
