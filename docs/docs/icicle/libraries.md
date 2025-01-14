@@ -53,6 +53,7 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 | [Keccak](primitives/hash#keccak-and-sha3) |       supporting 256b and 512b digest        |
 | [SHA3](primitives/hash#keccak-and-sha3)   |       supporting 256b and 512b digest        |
 | [Blake2s](primitives/hash#blake2s)        |                digest is 256b                |
+| [Blake3](primitives/hash#blake3)        |                digest is 256b                |
 | [Merkle-Tree](primitives/merkle)          | works with any combination of hash functions |
 
 

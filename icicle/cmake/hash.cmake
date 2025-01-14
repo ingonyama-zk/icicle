@@ -5,6 +5,7 @@ function(setup_hash_target)
   target_sources(icicle_hash PRIVATE 
     src/hash/keccak.cpp
     src/hash/blake2s.cpp
+    src/hash/blake3.cpp
     src/hash/merkle_tree.cpp
     src/hash/hash_c_api.cpp
     src/hash/merkle_c_api.cpp
