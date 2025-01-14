@@ -388,7 +388,7 @@ namespace host_math {
       // case of one limb is using a single 32b multiplier anyway
       storage<2 * NLIMBS> r_wide = {};
       multiply_raw<NLIMBS>(as, neg_mod, r_wide);
-      const storage<NLIMBS>& r_low_view = get_lower_view(r_wide);
+      const storage<NLIMBS>& r_low_view = get_lower_view<NLIMBS>(r_wide);
       add_sub_limbs<NLIMBS, false, false>(cs, r_low_view, rs);
     }
   }
