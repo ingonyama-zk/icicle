@@ -163,9 +163,6 @@ private:
 
     // TBD build a graph of dependencies for task flow to execute phase 2
     run_workers_and_wait();
-
-    // Collapse all the workers buckets into one
-    collapse_all_workers_buckets();
   }
 
   // Each worker run this function and update its buckets - this function needs re writing
@@ -230,46 +227,6 @@ private:
     }
   }
 
-  // Collapse all workers buckets into worker 0 buckets?
-  void collapse_all_workers_buckets()
-  {
-    int bucket_start = 0;
-    const int nof_buckets_per_thread = (m_nof_total_buckets + m_nof_workers - 1) / m_nof_workers;
-    for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
-      const int nof_buckets =
-        std::min(nof_buckets_per_thread, (int)m_nof_total_buckets - worker_i * nof_buckets_per_thread);
-      if (nof_buckets > 0) {
-        m_taskflow.emplace(
-          [this, bucket_start, nof_buckets]() { worker_collapse_all_workers_result(bucket_start, nof_buckets); });
-        bucket_start += nof_buckets_per_thread;
-      }
-    }
-    run_workers_and_wait();
-  }
-
-  // A single thread functionality
-  void worker_collapse_all_workers_result(const int bucket_start, const int nof_buckets)
-  {
-    // run over all buckets under my responsibility.
-    for (int bucket_i = bucket_start; bucket_i < bucket_start + nof_buckets; bucket_i++) {
-      bool worker_0_bucket_busy = m_workers_buckets_busy[0][bucket_i];
-
-      // run over all workers
-      for (int worker_i = 1; worker_i < m_nof_workers; worker_i++) {
-        if (m_workers_buckets_busy[worker_i][bucket_i]) {
-          // add busy buckets to worker_0's bucket
-          m_workers_buckets[0][bucket_i].point =
-            worker_0_bucket_busy ? m_workers_buckets[0][bucket_i].point + m_workers_buckets[worker_i][bucket_i].point
-                                 : // TBD add inplace
-              m_workers_buckets[worker_i][bucket_i].point;
-          worker_0_bucket_busy = true;
-        }
-      }
-      // if the bucket is empty for all workers, reset it.
-      if (!worker_0_bucket_busy) { m_workers_buckets[0][bucket_i].point = P::zero(); }
-    }
-  }
-
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
   {
@@ -289,19 +246,28 @@ private:
   // single worker task - accumulate a single segment
   void worker_collapse_segment(Segment& segment, const int64_t bucket_start, const uint32_t segment_size)
   {
-    // Assumption all buyckets are busy - no need to look at the busy flag
-    std::vector<Bucket>& buckets = m_workers_buckets[0];
     const int64_t last_bucket_i = bucket_start + segment_size;
     const int64_t init_bucket_i = (last_bucket_i % m_bm_size) ? last_bucket_i
                                                               : // bucket 0 at the BM contains the last element
                                     last_bucket_i - m_bm_size;
-    segment.triangle_sum = init_bucket_i < buckets.size() ? buckets[init_bucket_i].point : P::zero();
+    segment.triangle_sum = P::zero();
+    accumulate_all_workers_buckets(init_bucket_i, segment.triangle_sum);
     segment.line_sum = segment.triangle_sum;
     for (int64_t bucket_i = last_bucket_i - 1; bucket_i > bucket_start; bucket_i--) {
-      // Add the bucket to line sum
-      segment.line_sum = segment.line_sum + buckets[bucket_i].point; // TBD: inplace
+      // add busy buckets to line sum
+      accumulate_all_workers_buckets(bucket_i, segment.line_sum);
       // Add line_sum to triangle_sum
       segment.triangle_sum = segment.triangle_sum + segment.line_sum; // TBD: inplace
+    }
+  }
+
+  // run over all workers and sum their bucket_idx to sum
+  void accumulate_all_workers_buckets(const uint64_t bucket_idx, P& sum)
+  {
+    for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
+      if (m_workers_buckets_busy[worker_i][bucket_idx]) {
+        sum = sum + m_workers_buckets[worker_i][bucket_idx].point; // TBD: inplace
+      }
     }
   }
 
