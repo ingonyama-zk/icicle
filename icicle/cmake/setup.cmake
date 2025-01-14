@@ -3,7 +3,7 @@
 option(BUILD_FOR_ANDROID "Cross-compile for Android" OFF)
 
 if (BUILD_FOR_ANDROID)
-    message(STATUS "Configuring for Android ARM64...")
+    message(STATUS "Configuring for Android...")
 
     # Check for NDK in the environment variable
     if (NOT DEFINED ENV{ANDROID_NDK} AND NOT DEFINED ANDROID_NDK)
@@ -21,14 +21,17 @@ if (BUILD_FOR_ANDROID)
     message(STATUS "Using Android NDK: ${CMAKE_ANDROID_NDK}")
 
     # Set toolchain and other options
-    set(ANDROID_MIN_API 29) # Minimum API (29 is android 10)
+    set(ANDROID_MIN_API 24) # Minimum API (24 is for android 7.0 and later)
     set(CMAKE_SYSTEM_NAME Android CACHE STRING "Target system name for cross-compilation")
     set(ANDROID_ABI arm64-v8a CACHE STRING "Default Android ABI")
     set(ANDROID_PLATFORM "android-${ANDROID_MIN_API}" CACHE STRING "Android API level")
-    set(CMAKE_ANDROID_ARCH_ABI "${ANDROID_ABI}" CACHE STRING "Target ABI for Android") # deprecated??    
+    set(CMAKE_ANDROID_ARCH_ABI "${ANDROID_ABI}" CACHE STRING "Target ABI for Android")
     set(CMAKE_ANDROID_STL_TYPE c++_shared CACHE STRING "Android STL type")
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake" CACHE FILEPATH "Path to the Android toolchain file")
-    list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/${ANDROID_MIN_API}")    
+    list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/${ANDROID_MIN_API}")
+
+    message(STATUS "Using ANDROID_MIN_API: ${ANDROID_MIN_API}")
+    message(STATUS "Using ANDROID_ABI: ${ANDROID_ABI}")
 
 endif()
 
