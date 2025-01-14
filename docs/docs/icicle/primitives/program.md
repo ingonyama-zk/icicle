@@ -24,6 +24,7 @@ void lambda_multi_result(std::vector<Symbol<scalar_t>>& vars)
   vars[4] = EQ * (A * B - C) + scalar_t::from(9);
   vars[5] = A * B - C.inverse();
   vars[6] = vars[5];
+  vars[3] = 2 * (var[0] + var[1]) // all variables can be both inputs and outputs
 }
 ```
 
