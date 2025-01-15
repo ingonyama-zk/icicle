@@ -21,12 +21,15 @@ namespace icicle {
   {
   public:
     // Constructor
-    SumcheckProof(int nof_round_polynomials, int round_polynomial_degree)
-        : m_round_polynomials(nof_round_polynomials, std::vector<S>(round_polynomial_degree + 1))
-    {
+    SumcheckProof() {
+    }
+
+    // Init the round polynomial values for the problem
+    void init(int nof_round_polynomials, int round_polynomial_degree) {
       if (nof_round_polynomials == 0) {
-        ICICLE_LOG_ERROR << "Number of round polynomials(" << nof_round_polynomials << ") in the proof must be >0";
+        ICICLE_LOG_ERROR << "Number of round polynomials(" << nof_round_polynomials << ") in the proof must be > 0";
       }
+      m_round_polynomials.resize(nof_round_polynomials, std::vector<S>(round_polynomial_degree + 1, S::zero()));
     }
 
     // set the value of polynomial round_polynomial_idx at x = evaluation_idx
@@ -40,16 +43,6 @@ namespace icicle {
 
     uint get_nof_round_polynomials() const { return m_round_polynomials.size(); }
     uint get_round_polynomial_size() const { return m_round_polynomials[0].size() + 1; }
-
-    // Reset the proof to zeros
-    void reset()
-    {
-      for (auto& round_poly : m_round_polynomials) {
-        for (auto& element : round_poly) {
-          element = S::zero();
-        }
-      }
-    }
 
   private:
     std::vector<std::vector<S>> m_round_polynomials; // logN vectors of round_poly_degree elements

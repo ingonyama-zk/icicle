@@ -1203,9 +1203,7 @@ TEST_F(FieldApiTestBase, Sumcheck)
   std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
     mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-      mle_polynomials[poly_i][element_i] = scalar_t::from(poly_i * 10 + element_i + 1);
-    }
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
@@ -1224,9 +1222,9 @@ TEST_F(FieldApiTestBase, Sumcheck)
 
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumcheckConfig config;
-  SumcheckProof<scalar_t> sumcheck_proof(log_mle_poly_size, nof_mle_poly - 1);
+  SumcheckProof<scalar_t> sumcheck_proof;
 
-  prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof);
+  ICICLE_CHECK(prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof));
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }
@@ -1234,8 +1232,8 @@ TEST_F(FieldApiTestBase, Sumcheck)
   // ===== Verifier side ======
   // create sumcheck
   auto verifier_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
-  bool verification_pass;
-  verifier_sumcheck.verify(sumcheck_proof, verification_pass);
+  bool verification_pass = false;
+  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 }

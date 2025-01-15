@@ -63,12 +63,15 @@ namespace icicle {
 
     /**
      * @brief Verify an element against the Sumcheck round polynomial.
+     * First round polynomial is verified agains the claimed sum. 
+     * Last round polynomial is not verified.
      * @param sumcheck_proof The SumcheckProof object includes the round polynomials.
      * @param valid output valid bit. True if the Proof is valid, false otherwise.
      * @return Error code of type eIcicleError indicating success or failure.
      */
     eIcicleError verify(SumcheckProof<F>& sumcheck_proof, bool& valid /*out*/)
     {
+      valid = false;
       const int nof_rounds = sumcheck_proof.get_nof_round_polynomials();
       const std::vector<F>& round_poly_0 = sumcheck_proof.get_round_polynomial(0);
       const uint32_t combine_function_poly_degree = round_poly_0.size() - 1;
@@ -94,7 +97,6 @@ namespace icicle {
         const std::vector<F>& next_round_poly = sumcheck_proof.get_round_polynomial(round_idx + 1);
         F expected_alpha_value = next_round_poly[0] + next_round_poly[1];
         if (alpha_value != expected_alpha_value) {
-          valid = false;
           ICICLE_LOG_ERROR << "verification failed on round: " << round_idx;
           return eIcicleError::SUCCESS;
         }

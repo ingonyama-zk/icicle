@@ -39,12 +39,8 @@ namespace icicle {
       }
 
       // Check that the size of the the proof feet the size of the mle polynomials.
-      const uint32_t nof_rounds = sumcheck_proof.get_nof_round_polynomials();
-      if (std::log2(mle_polynomial_size) != nof_rounds) {
-        ICICLE_LOG_ERROR << "Sumcheck proof size(" << nof_rounds << ") should be log of the mle polynomial size("
-                         << mle_polynomial_size << ")";
-        return eIcicleError::INVALID_ARGUMENT;
-      }
+      const uint32_t nof_rounds = std::log2(mle_polynomial_size);
+
       // check that the combine function has a legal polynomial degree
       int combine_function_poly_degree = combine_function.get_polynomial_degee();
       if (combine_function_poly_degree < 0) {
@@ -54,7 +50,7 @@ namespace icicle {
       }
 
       reset_transcript(nof_rounds, uint32_t(combine_function_poly_degree)); // reset the transcript for the Fiat-Shamir
-      sumcheck_proof.reset(); // reset the sumcheck proof to accumulate the round polynomials
+      sumcheck_proof.init(nof_rounds, uint32_t(combine_function_poly_degree)); // reset the sumcheck proof to accumulate the round polynomials
 
       // generate a program executor for the combine function
       CpuProgramExecutor program_executor(combine_function);

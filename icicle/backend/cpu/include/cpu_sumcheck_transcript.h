@@ -20,6 +20,7 @@ public:
 
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
+    hash_input.reserve(2048);
     (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly)
                        : build_hash_input_round_i(hash_input, round_poly);
 
