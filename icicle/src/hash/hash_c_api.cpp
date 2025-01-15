@@ -3,6 +3,7 @@
 #include "icicle/errors.h"
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
+#include "icicle/hash/blake3.h"
 
 extern "C" {
 // Define a type for the HasherHandle (which is a pointer to Hash)
@@ -122,5 +123,18 @@ HasherHandle icicle_create_sha3_512(uint64_t input_chunk_size)
 HasherHandle icicle_create_blake2s(uint64_t input_chunk_size)
 {
   return new icicle::Hash(icicle::create_blake2s_hash(input_chunk_size));
+}
+
+/**
+ * @brief Creates a Blake3 hash object.
+ *
+ * This function constructs a Hash object configured for Blake2s.
+ *
+ * @param input_chunk_size Size of the input in bytes for the Blake2s hash.
+ * @return HasherHandle A handle to the created Blake2s Hash object.
+ */
+HasherHandle icicle_create_blake3(uint64_t input_chunk_size)
+{
+  return new icicle::Hash(icicle::create_blake3_hash(input_chunk_size));
 }
 }
