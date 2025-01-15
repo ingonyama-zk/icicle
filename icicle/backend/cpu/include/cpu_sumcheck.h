@@ -27,6 +27,10 @@ namespace icicle {
       const SumcheckConfig& config,
       SumcheckProof<F>& sumcheck_proof /*out*/) override
     {
+      if (config.use_extension_field) {
+        ICICLE_LOG_ERROR << "SumcheckConfig::use_extension_field field = true is currently unsupported";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
       // Allocate memory for the intermediate calculation: the folded mle polynomials
       const int nof_mle_poly = mle_polynomials.size();
       std::vector<F*> folded_mle_polynomials(nof_mle_poly); // folded mle_polynomials with the same format as inputs
