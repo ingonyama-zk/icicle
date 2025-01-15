@@ -1,7 +1,9 @@
 #include <iostream>
 #include <cassert>
 
-#include "icicle/api/bn254.h"
+#include "icicle/ntt.h"
+#include "icicle/msm.h"
+#include "icicle/curves/params/bn254.h"
 #include "icicle/polynomials/polynomials.h"
 
 #include "examples_utils.h"

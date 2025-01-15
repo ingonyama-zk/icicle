@@ -23,7 +23,7 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, affine_convert_montgomery)(input, n, is_into, &config, output);
   }
 
-#ifdef G2
+#ifdef G2_ENABLED
   ICICLE_DISPATCHER_INST(AffineG2ConvertMont, g2_affine_convert_montgomery, AffineG2ConvertMontImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(CURVE, g2_affine_convert_montgomery)(
@@ -57,7 +57,7 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, projective_convert_montgomery)(input, n, is_into, &config, output);
   }
 
-#ifdef G2
+#ifdef G2_ENABLED
   ICICLE_DISPATCHER_INST(ProjectiveG2ConvertMont, g2_projective_convert_montgomery, ProjectiveG2ConvertMontImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(CURVE, g2_projective_convert_montgomery)(
