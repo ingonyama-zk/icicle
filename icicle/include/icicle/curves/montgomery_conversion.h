@@ -50,7 +50,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-#ifdef G2
+#ifdef G2_ENABLED
   using AffineG2ConvertMontImpl = std::function<eIcicleError(
     const Device& device,
     const g2_affine_t* input,
