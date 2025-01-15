@@ -15,8 +15,9 @@ namespace icicle {
 
   struct SumcheckConfig {
     icicleStreamHandle stream = nullptr; /**< Stream for asynchronous execution. Default is nullptr. */
-    bool use_extension_field = false;    /**< If true, then use extension field for the fiat shamir result. Recommended for small fields for security*/
-    uint64_t batch = 1;                  /**< Number of input chunks to hash in batch. Default is 1. */
+    bool use_extension_field = false; /**< If true, then use extension field for the fiat shamir result. Recommended for
+                                         small fields for security*/
+    uint64_t batch = 1;               /**< Number of input chunks to hash in batch. Default is 1. */
     bool are_inputs_on_device =
       false; /**< True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
     bool are_outputs_on_device =
