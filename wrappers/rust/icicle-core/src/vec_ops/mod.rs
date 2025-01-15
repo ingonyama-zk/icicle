@@ -228,7 +228,7 @@ fn check_vec_ops_args_slice<F>(
     output: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> VecOpsConfig {
-    if input.len() as u64 == size_in * cfg.batch_size as u64 {
+    if input.len() as u64 != size_in * cfg.batch_size as u64 {
         panic!(
             "Input size, size_in and batch_size {}; {}; {} do not match (input.len() != size_in * cfg.batch_size)",
             input.len(),
@@ -236,7 +236,7 @@ fn check_vec_ops_args_slice<F>(
             cfg.batch_size
         );
     }
-    if output.len() as u64 == size_out * cfg.batch_size as u64 {
+    if output.len() as u64 != size_out * cfg.batch_size as u64 {
         panic!(
             "Output size, size_out and batch_size {}; {}; {} do not match (output.len() != size_out * cfg.batch_size)",
             output.len(),

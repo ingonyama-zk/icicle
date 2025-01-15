@@ -165,15 +165,15 @@ pub fn check_vec_ops_scalars_sum<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
+    let cfg = VecOpsConfig::default();
+
     let a_main = F::Config::generate_random(test_size);
-    let mut result_main = vec![F::zero(); test_size];
-    let mut result_ref = vec![F::zero(); test_size];
+    let mut result_main = vec![F::zero(); cfg.batch_size as usize];
+    let mut result_ref = vec![F::zero(); cfg.batch_size as usize];
 
     let a_main = HostSlice::from_slice(&a_main);
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
-
-    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     sum_scalars(a_main, result_main, &cfg).unwrap();
@@ -188,15 +188,15 @@ pub fn check_vec_ops_scalars_product<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
+    let cfg = VecOpsConfig::default();
+    
     let a_main = F::Config::generate_random(test_size);
-    let mut result_main = vec![F::zero(); test_size];
-    let mut result_ref = vec![F::zero(); test_size];
+    let mut result_main = vec![F::zero(); cfg.batch_size as usize];
+    let mut result_ref = vec![F::zero(); cfg.batch_size as usize];
 
     let a_main = HostSlice::from_slice(&a_main);
     let result_main = HostSlice::from_mut_slice(&mut result_main);
     let result_ref = HostSlice::from_mut_slice(&mut result_ref);
-
-    let cfg = VecOpsConfig::default();
 
     test_utilities::test_set_main_device();
     product_scalars(a_main, result_main, &cfg).unwrap();
