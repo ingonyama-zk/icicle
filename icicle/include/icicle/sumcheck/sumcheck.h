@@ -78,10 +78,8 @@ namespace icicle {
       m_backend->reset_transcript(nof_rounds, combine_function_poly_degree);
 
       // verify that the sum of round_polynomial-0 is the clamed_sum
-      F round_poly_0_sum = round_poly_0[0];
-      for (int round_idx = 1; round_idx < nof_rounds - 1; round_idx++) {
-        round_poly_0_sum = round_poly_0_sum + round_poly_0[round_idx];
-      }
+      F round_poly_0_sum = round_poly_0[0] + round_poly_0[1];
+
       const F& claimed_sum = m_backend->get_claimed_sum();
       if (round_poly_0_sum != claimed_sum) {
         valid = false;
