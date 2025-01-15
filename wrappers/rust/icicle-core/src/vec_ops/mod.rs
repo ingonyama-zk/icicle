@@ -244,7 +244,7 @@ fn check_vec_ops_args_slice<F>(
             cfg.batch_size
         );
     }
-    if offset + (size_out - 1) * stride < size_in {
+    if offset + (size_out - 1) * stride >= size_in {
         panic!(
             "Slice exceed input size: offset + (size_out - 1) * stride >= size_in where offset={}, size_out={}, stride={}, size_in={}",
             offset,
