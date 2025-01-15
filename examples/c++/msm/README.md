@@ -11,7 +11,9 @@
 3. Call msm api
 
 ```c++
-#include "icicle/api/bn254.h"
+#include "icicle/msm.h"
+#include "icicle/curves/params/bn254.h"
+using namespace bn254;
 ...
 MSMConfig config = default_msm_config();
 ...

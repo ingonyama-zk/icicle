@@ -6,7 +6,8 @@
 
 #include "examples_utils.h"
 #include "icicle/polynomials/polynomials.h"
-#include "icicle/api/babybear.h"
+#include "icicle/ntt.h"
+#include "icicle/fields/stark_fields/babybear.h"
 
 using namespace babybear;
 
