@@ -187,7 +187,7 @@ TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }
 
-  #ifdef G2
+  #ifdef G2_ENABLED
 TEST_F(CurveApiTest, msmG2) { MSM_test<g2_affine_t, g2_projective_t>(); }
 TEST_F(CurveApiTest, MontConversionG2Affine) { mont_conversion_test<g2_affine_t, g2_projective_t>(); }
 TEST_F(CurveApiTest, MontConversionG2Projective) { mont_conversion_test<g2_projective_t, g2_projective_t>(); }
@@ -311,7 +311,7 @@ class CurveSanity : public ::testing::Test
 {
 };
 
-#ifdef G2
+#ifdef G2_ENABLED
 typedef testing::Types<projective_t, g2_projective_t> CTImplementations;
 #else
 typedef testing::Types<projective_t> CTImplementations;

@@ -1,7 +1,9 @@
 #include <iostream>
 #include <cassert>
 #include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
+
+#include "icicle/curves/params/bn254.h"
+#include "icicle/ntt.h"
 
 using namespace bn254; // This makes scalar_t a bn254 scalar instead of bn254::scalar_t
 

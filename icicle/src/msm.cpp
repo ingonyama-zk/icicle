@@ -22,7 +22,7 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, msm)(scalars, bases, msm_size, &config, results);
   }
 
-#ifdef G2
+#ifdef G2_ENABLED
   ICICLE_DISPATCHER_INST(MsmG2Dispatcher, g2_msm, MsmG2Impl);
 
   extern "C" eIcicleError CONCAT_EXPAND(CURVE, g2_msm)(
@@ -55,7 +55,7 @@ namespace icicle {
     return CONCAT_EXPAND(CURVE, msm_precompute_bases)(input_bases, nof_bases, &config, output_bases);
   }
 
-#ifdef G2
+#ifdef G2_ENABLED
   ICICLE_DISPATCHER_INST(MsmG2PreComputeDispatcher, g2_msm_precompute_bases, MsmG2PreComputeImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(CURVE, g2_msm_precompute_bases)(

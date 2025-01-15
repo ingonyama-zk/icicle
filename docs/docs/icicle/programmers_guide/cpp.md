@@ -183,15 +183,59 @@ struct DeviceProperties {
 
 ## Compute APIs
 
-### Multi-Scalar Multiplication (MSM) Example
+### Including Curves and Fields
+
+To use a specific elliptic curve (e.g., BN254) or its associated fields, include the relevant header files. For example:
+
+```cpp
+#include "icicle/msm.h"
+#include "icicle/curves/params/bn254.h"
+```
+
+The bn254 namespace includes key types like:
+
+- **scalar_t**: Scalar field elements.
+- **projective_t**: Points on the elliptic curve in projective coordinates.
+- **affine_t**: Points on the elliptic curve in affine coordinates.
+
+### Namespace Usage
+
+There are two ways to access types and functionality for a specific field or curve:
+
+1. **Bring the Namespace into Scope**
+This approach simplifies the code but may cause conflicts if multiple curves are used:
+
+```cpp
+using namespace bn254;
+
+scalar_t s;           // Scalar field element
+projective_t p;       // Point in projective coordinates
+affine_t a;           // Point in affine coordinates
+```
+
+2. **Use Fully Qualified Names**
+This is recommended if you are working with multiple curves or libraries to avoid namespace conflicts:
+
+```cpp
+bn254::scalar_t s;    // Scalar field element
+bn254::projective_t p; // Point in projective coordinates
+bn254::affine_t a;    // Point in affine coordinates
+```
+
+### Leveraging Template APIs
+
+ICICLE’s APIs are designed to work seamlessly with templated types, enabling flexibility and type safety. For example:
+
+#### Multi-Scalar Multiplication (MSM) Example
 
 Icicle provides high-performance compute APIs such as the Multi-Scalar Multiplication (MSM) for cryptographic operations. Here's a simple example of how to use the MSM API.
 
 ```cpp
 #include <iostream>
 #include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
 
+#include "icicle/curves/params/bn254.h"
+#include "icicle/msm.h"
 using namespace bn254;
 
 int main()
@@ -245,15 +289,16 @@ int main()
 }
 ```
 
-### Polynomial Operations Example
+#### Polynomial Operations Example
 
 Here's another example demonstrating polynomial operations using Icicle:
 
 ```cpp
 #include <iostream>
 #include "icicle/runtime.h"
+#include "icicle/curves/params/bn254.h"
+#include "icicle/ntt.h"
 #include "icicle/polynomials/polynomials.h"
-#include "icicle/api/bn254.h"
 
 using namespace bn254;
 
