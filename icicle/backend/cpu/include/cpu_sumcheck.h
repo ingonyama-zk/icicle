@@ -50,7 +50,9 @@ namespace icicle {
       }
 
       reset_transcript(nof_rounds, uint32_t(combine_function_poly_degree)); // reset the transcript for the Fiat-Shamir
-      sumcheck_proof.init(nof_rounds, uint32_t(combine_function_poly_degree)); // reset the sumcheck proof to accumulate the round polynomials
+      sumcheck_proof.init(
+        nof_rounds,
+        uint32_t(combine_function_poly_degree)); // reset the sumcheck proof to accumulate the round polynomials
 
       // generate a program executor for the combine function
       CpuProgramExecutor program_executor(combine_function);

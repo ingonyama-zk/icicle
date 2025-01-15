@@ -21,11 +21,11 @@ namespace icicle {
   {
   public:
     // Constructor
-    SumcheckProof() {
-    }
+    SumcheckProof() {}
 
     // Init the round polynomial values for the problem
-    void init(int nof_round_polynomials, int round_polynomial_degree) {
+    void init(int nof_round_polynomials, int round_polynomial_degree)
+    {
       if (nof_round_polynomials == 0) {
         ICICLE_LOG_ERROR << "Number of round polynomials(" << nof_round_polynomials << ") in the proof must be > 0";
       }

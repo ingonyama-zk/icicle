@@ -63,7 +63,7 @@ namespace icicle {
 
     /**
      * @brief Verify an element against the Sumcheck round polynomial.
-     * First round polynomial is verified agains the claimed sum. 
+     * First round polynomial is verified agains the claimed sum.
      * Last round polynomial is not verified.
      * @param sumcheck_proof The SumcheckProof object includes the round polynomials.
      * @param valid output valid bit. True if the Proof is valid, false otherwise.
