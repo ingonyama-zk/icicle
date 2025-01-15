@@ -35,6 +35,13 @@ docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu20-cuda122:latest
 docker pull ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122:latest
 docker pull ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122:latest
 
+# Alternatively, build the images locally
+# echo "Building Docker images..."
+# docker build -t icicle-release-ubuntu22-cuda122 -f ./scripts/release/Dockerfile.ubuntu22 .
+# docker build -t icicle-release-ubuntu20-cuda122 -f ./scripts/release/Dockerfile.ubuntu20 .
+# docker build -t icicle-release-ubi8-cuda122 -f ./scripts/release/Dockerfile.ubi8 .
+# docker build -t icicle-release-ubi9-cuda122 -f ./scripts/release/Dockerfile.ubi9 .
+
 # Compile and tar release in each
 
 # Inform the user of what is being done

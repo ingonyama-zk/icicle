@@ -4,7 +4,8 @@
 #include <chrono>
 
 #include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
+#include "icicle/ntt.h"
+#include "icicle/curves/params/bn254.h"
 using namespace bn254;
 
 #include "examples_utils.h"
@@ -116,8 +117,8 @@ int main(int argc, char* argv[])
   // Clean-up
   for (int i = 0; i < 2; i++) {
     ICICLE_CHECK(icicle_free(d_vec[i]));
-    delete[] (h_inp[i]);
-    delete[] (h_out[i]);
+    delete[](h_inp[i]);
+    delete[](h_out[i]);
   }
   ICICLE_CHECK(icicle_destroy_stream(stream_compute));
   ICICLE_CHECK(icicle_destroy_stream(stream_d2h));

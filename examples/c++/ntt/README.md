@@ -11,7 +11,9 @@
 3. Call ntt api
 
 ```c++
-#include "icicle/api/bn254.h"
+#include "icicle/ntt.h"
+#include "icicle/curves/params/bn254.h"
+using namespace bn254;
 ...
 auto ntt_init_domain_cfg = default_ntt_init_domain_config();
 ...
