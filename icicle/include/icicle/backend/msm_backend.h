@@ -43,7 +43,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-#ifdef G2
+#ifdef G2_ENABLED
   using MsmG2Impl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* scalars,

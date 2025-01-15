@@ -22,7 +22,7 @@ cpu_convert_mont(const Device& device, const T* input, size_t n, bool is_into, c
 REGISTER_AFFINE_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_mont<affine_t>);
 REGISTER_PROJECTIVE_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_mont<projective_t>);
 
-#ifdef G2
+#ifdef G2_ENABLED
 REGISTER_AFFINE_G2_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_mont<g2_affine_t>);
 REGISTER_PROJECTIVE_G2_CONVERT_MONTGOMERY_BACKEND("CPU", cpu_convert_mont<g2_projective_t>);
 #endif // G2
