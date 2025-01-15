@@ -147,7 +147,7 @@ namespace icicle {
         ICICLE_LOG_ERROR
           << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]\n";
         return eIcicleError::INVALID_ARGUMENT;
-      } // switch (T) {
+      }                                              // switch (T) {
       if (full_rounds == 0 && partial_rounds == 0) { // All arrays are empty in this case.
         continue;
       }
@@ -196,48 +196,33 @@ namespace icicle {
 
     // For merkle tree size should be equal to the arity of a single hasher multiplier by sizeof(S).
     // For sponge function it could be any number.
+    // Size parameter here is in bytes.
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
-      unsigned int arity = m_use_domain_tag ? m_t - 1 : m_t;
-
-      // Currently sponge and padding functionalities are not supported.
-      if (size != arity * sizeof(S)) {
+      const unsigned arity = m_use_domain_tag ? m_t - 1 : m_t;
+      bool is_sponge = false;
+      int size_in_scalars = size / sizeof(S);
+      if (size_in_scalars > (m_use_domain_tag ? m_t - 1 : m_t)) {    // Sponge function. Check input size granularity.
+        is_sponge = true;
+        // Capacity width (in scalars) = 1.
+        // Output width (in scalars) = 1.
+        if ((m_use_domain_tag ? size_in_scalars : size_in_scalars - 1) % (m_t - 1) != 0) {
+          ICICLE_LOG_ERROR
+            << "Padding isn't supported for sponge function hash. The following should be true: ((m_use_domain_tag ? size : size-1) % (m_t-1) != 0).\n";
+          return eIcicleError::INVALID_ARGUMENT;
+        }
+        if (config.batch != 1) {
+          ICICLE_LOG_ERROR
+            << "The only suppoorted value of config.batch is 1.\n";
+          return eIcicleError::INVALID_ARGUMENT;
+        }
+      } 
+      else if (size_in_scalars < (m_use_domain_tag ? m_t - 1 : m_t)) {
         ICICLE_LOG_ERROR
-          << "Sponge function still isn't supported. The following should be true: (size == T) but it is not.\n";
+          << "Padding isn't supported for sponge function hash. The following should be true: ((use_domain_tag ? size + 1 : size) % T = 0).\n";
         return eIcicleError::INVALID_ARGUMENT;
       }
-      // Call hash_single config.batch times.
-      for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
-        eIcicleError err = hash_single(input, output);
-        if (err != eIcicleError::SUCCESS) return err;
-        input += arity * sizeof(S);
-        output += sizeof(S);
-      }
 
-      return eIcicleError::SUCCESS;
-    }
-
-  private:
-    // // DEBUG start. Do not remove!!!
-    // void print_state(std::string str, S* state_to_print)  const {
-    //   std::cout << str << std::endl;
-    //   unsigned int T = m_t;
-    //   for (int state_idx = 0; state_idx < T; state_idx++) { // Columns of matrix.
-    //     std::cout << std::hex << state_to_print[state_idx] << std::endl;
-    //   }
-    // }
-    // void print_matrix(std::string str, S* matrix_to_print)  const {
-    //   std::cout << str << std::endl;
-    //   unsigned int T = m_t;
-    //   for (int matrix_idx = 0; matrix_idx < T*T; matrix_idx++) { // Columns of matrix.
-    //     std::cout << std::hex << matrix_to_print[matrix_idx] << std::endl;
-    //   }
-    // }
-    // // DEBUG end
-
-    // This function performs a single hash according to parameters in the poseidon2_constants[] struct.
-    eIcicleError hash_single(const std::byte* input, std::byte* output) const
-    {
       const unsigned int T = m_t;
       bool is_unsupported_T_for_this_field = poseidon2_constants[T].nof_upper_full_rounds == 0;
       if (is_unsupported_T_for_this_field) {
@@ -245,35 +230,164 @@ namespace icicle {
         return eIcicleError::API_NOT_IMPLEMENTED;
       }
 
-      unsigned int alpha = poseidon2_constants[T].alpha;
-      unsigned int nof_upper_full_rounds = poseidon2_constants[T].nof_upper_full_rounds;
-      unsigned int nof_partial_rounds = poseidon2_constants[T].nof_partial_rounds;
-      unsigned int nof_bottom_full_rounds = poseidon2_constants[T].nof_bottom_full_rounds;
-      // S* rounds_constants = poseidon2_constants[T].rounds_constants;
+      int alpha = poseidon2_constants[T].alpha;
+      int nof_upper_full_rounds = poseidon2_constants[T].nof_upper_full_rounds;
+      int nof_partial_rounds = poseidon2_constants[T].nof_partial_rounds;
+      int nof_bottom_full_rounds = poseidon2_constants[T].nof_bottom_full_rounds;
       S* rounds_constants = poseidon2_constants[T].rounds_constants;
       S* mds_matrix = poseidon2_constants[T].mds_matrix;
-      // S* partial_matrix_diagonal = poseidon2_constants[T].partial_matrix_diagonal;
       S* partial_matrix_diagonal_m1 = poseidon2_constants[T].partial_matrix_diagonal_m1;
-      // Allocate temporary memory for intermediate calcs.
-      S* tmp_fields = new S[T];
-      // Casting from bytes to scalar.
+
+      // Allocate temporary memory for intermediate calcs and in order not to change the input.
+      int sponge_nof_hashers = m_use_domain_tag ? (size_in_scalars / arity) :  ((size_in_scalars - 1) / (arity - 1));
+      int tmp_fields_nof_scalars = is_sponge ? (T * sponge_nof_hashers) : (T * config.batch);
+      // std::cout << "tmp_fields_nof_scalars = " << tmp_fields_nof_scalars << std::endl;
+      S* tmp_fields = new S[tmp_fields_nof_scalars];
+      std::cout << "tmp_fields (new) = " << tmp_fields << std::endl;
       const S* in_fields = (S*)(input);
-      // Copy input scalar to the output (as a temp storage) to be used in the rounds.
-      // *tmp_fields are used as a temp storage during the calculations in this function.
-      if (m_use_domain_tag) {
-        // in that case we hash [domain_tag, t-1 field elements]
-        memcpy(tmp_fields, &m_domain_tag, sizeof(S));
-        memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
-      } else {
-        // in that case we hash [t field elements]
-        memcpy(tmp_fields, in_fields, T * sizeof(S));
+      if (m_use_domain_tag) {      
+        if (is_sponge) {
+          // std::cout << "is_sponge sponge_nof_hashers = " << sponge_nof_hashers << std::endl;
+          // Domain tag exists only for the first hasher. For the rest of the hashers this
+          // input is undefined at this stage and its value will be set later.
+          // tmp_fields = {{dt, in0}, {undef, in1}, {undef, in2}, etc.}
+          memcpy(tmp_fields, &m_domain_tag, sizeof(S));   
+          for (int hasher_idx = 0; hasher_idx < sponge_nof_hashers; hasher_idx++) {
+            memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
+            in_fields += (T - 1);
+            tmp_fields += T;
+          }
+          tmp_fields -= T * sponge_nof_hashers;
+        }
+        else {    // Not a sponge function. Input of each hash should have domain tag at its input.
+          // tmp_fields = {{dt, in0}, {dt, in1}, {dt, in2}, etc.}
+          for (int batch_idx = 0; batch_idx < config.batch; batch_idx++) {
+            memcpy(tmp_fields, &m_domain_tag, sizeof(S));
+            memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
+            in_fields += (T - 1);
+            tmp_fields += T;
+          }
+          tmp_fields -= T * config.batch;
+        }
+      }
+      else {    // There is no domain tag.
+        if (is_sponge) {
+          // tmp_fields = {{in0 (T inputs)}, {undef, in1}, {under, in2}, etc.}
+          // std::cout << "is_sponge sponge_nof_hashers = " << sponge_nof_hashers << std::endl;
+          memcpy(tmp_fields, in_fields, T * sizeof(S)); // 1st hasher uses T inputs.
+          // print_state("tmp_fields 1st hasher external input: ", tmp_fields);
+          in_fields += T;
+          tmp_fields += T;
+          // Rest of the hashers use T-1 inputs and 1 output from the previous hasher.
+          // The value of the 1st input of each of these hashers is undef at this stage.
+          for (int hasher_idx = 1; hasher_idx < sponge_nof_hashers; hasher_idx++) {
+            memcpy(&tmp_fields[1], in_fields, (T - 1) * sizeof(S));
+            // print_state("tmp_fields 2nd hasher external input (1st scalar doesnt matter): ", tmp_fields);
+            in_fields += (T - 1);
+            tmp_fields += T;
+          }
+          tmp_fields -= T * sponge_nof_hashers;
+        }
+        else {
+          // tmp_fields = {{in0 (T inputs)}, {in1 (T inputs)}, {in2 (T inputs)}, etc.}
+          memcpy(tmp_fields, in_fields, T * config.batch * sizeof(S));
+        }
       }
 
-      // Pre-rounds full maatrix multiplication.
+      // std::cout << "tmp_fields (start processing) = " << tmp_fields << std::endl;
+      if (is_sponge) {
+        S* tmp_fields_tmp_ptr;    // This pointer is used to assist in addition of the hasher outputs
+                                  // with new inputs.
+        // Call hash_single for hasher[0]
+        // print_state("tmp_fields input to the first hasher: ", tmp_fields);        
+        eIcicleError err = hash_single(tmp_fields /* input */, tmp_fields /* output */,
+          alpha, nof_upper_full_rounds, nof_partial_rounds, nof_bottom_full_rounds,
+          rounds_constants, mds_matrix, partial_matrix_diagonal_m1);
+        // print_state("tmp_fields output of the first hasher: ", tmp_fields);          
+        tmp_fields[T] = tmp_fields[0];    // Current first output is an input to the next hasher.
+        tmp_fields_tmp_ptr = tmp_fields;  // Save current pointer.
+        tmp_fields += T;
+        for (int hasher_idx = 1; hasher_idx < sponge_nof_hashers; hasher_idx++) {
+          // std::cout << "hasher_idx = " << hasher_idx << std::endl;
+          // print_state("tmp_fields taken from external input (1st scalar doesnt matter): ", tmp_fields);
+          // print_state("tmp_fields taken from prev hasher: ", tmp_fields_tmp_ptr);          
+          // The first output of the prev hasher is the first input of the current hasher.
+          // The T-1 new inputs of the current hasher should be added to the T-1 outputs of the
+          // prev hasher (starting fom index 1).
+          for (int i = 1; i < T; i++) {
+            tmp_fields[i] = tmp_fields_tmp_ptr[i] + tmp_fields[i];
+          }
+          // print_state("tmp_fields after addition: ", tmp_fields);          
+          tmp_fields_tmp_ptr = tmp_fields;    // Save current pointer.
+          eIcicleError err = hash_single(tmp_fields /* input */, tmp_fields /* output */,
+            alpha, nof_upper_full_rounds, nof_partial_rounds, nof_bottom_full_rounds,
+            rounds_constants, mds_matrix, partial_matrix_diagonal_m1);
+          // print_state("tmp_fields output of the non-first hasher: ", tmp_fields);
+          if (err != eIcicleError::SUCCESS) return err;
+          if (hasher_idx != sponge_nof_hashers - 1)   // Not to do in the last loop to prevent mem leak.
+            tmp_fields[T] = tmp_fields[0];    // Current first output is an input to the next hasher.
+          tmp_fields += T;  // Proceed to the next hash.
+        }
+        tmp_fields -= T;    // Rollback to the last hasher output.
+        memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
+        tmp_fields -= T * (sponge_nof_hashers - 1);
+      }
+      else {    // Not a sponge function.
+        for (int batch_hash_idx = 0; batch_hash_idx < config.batch; batch_hash_idx++) {
+          // print_state("tmp_fields before hash_single: ", tmp_fields);
+          eIcicleError err = hash_single(tmp_fields /* input */, tmp_fields /* output */,
+            alpha, nof_upper_full_rounds, nof_partial_rounds, nof_bottom_full_rounds,
+            rounds_constants, mds_matrix, partial_matrix_diagonal_m1);
+          // print_state("tmp_fields after hash_single: ", tmp_fields);
+          if (err != eIcicleError::SUCCESS) return err;
+          memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
+          tmp_fields += T;
+          output += sizeof(S);
+        }
+        tmp_fields -= T * config.batch;
+      }
+
+      // std::cout << "tmp_fields (delete) = " << tmp_fields<< std::endl;
+      delete[] tmp_fields;
+      tmp_fields = nullptr;
+
+      return eIcicleError::SUCCESS;
+    }
+
+  private:
+    // DEBUG start. Do not remove!!!
+    void print_state(std::string str, S* state_to_print)  const {
+      std::cout << str << std::endl;
+      unsigned int T = m_t;
+      for (int state_idx = 0; state_idx < T; state_idx++) { // Columns of matrix.
+        std::cout << std::hex << state_to_print[state_idx] << std::endl;
+      }
+    }
+    void print_matrix(std::string str, S* matrix_to_print)  const {
+      std::cout << str << std::endl;
+      unsigned int T = m_t;
+      for (int matrix_idx = 0; matrix_idx < T*T; matrix_idx++) { // Columns of matrix.
+        std::cout << std::hex << matrix_to_print[matrix_idx] << std::endl;
+      }
+    }
+    // DEBUG end
+
+    // This function performs a single hash according to parameters in the poseidon2_constants[] struct.
+    // eIcicleError hash_single(const std::byte* input, std::byte* output) const
+    eIcicleError hash_single(S* tmp_fields, S* hasher_output, int alpha, int nof_upper_full_rounds,
+      int nof_partial_rounds, int nof_bottom_full_rounds,
+      S* rounds_constants, S* mds_matrix, S* partial_matrix_diagonal_m1) const
+    {
+      const unsigned int T = m_t;
+
+      // Pre-rounds full matrix multiplication.
       full_matrix_mul_by_vector(tmp_fields, mds_matrix, tmp_fields);
+      // print_matrix("mds_matrix: ", mds_matrix);
+      // print_state("Pre-rounds mds matrix multiplication: ", tmp_fields);
 
       // Upper full rounds.
       full_rounds(nof_upper_full_rounds, tmp_fields, rounds_constants);
+      // print_state("Upper full rounds: ", tmp_fields);
 
       // Partial rounds. Perform calculation only for the first element of *tmp_fields.
       for (int partial_rounds_idx = 0; partial_rounds_idx < nof_partial_rounds; partial_rounds_idx++) {
@@ -288,10 +402,11 @@ namespace icicle {
       // Bottom full rounds.
       full_rounds(nof_bottom_full_rounds, tmp_fields, rounds_constants);
 
-      memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
+      memcpy(hasher_output, (std::byte*)(tmp_fields), T * sizeof(S));
+      // memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
 
-      delete[] tmp_fields;
-      tmp_fields = nullptr;
+      // delete[] tmp_fields;
+      // tmp_fields = nullptr;
 
       return eIcicleError::SUCCESS;
     } // eIcicleError hash_single(const std::byte* input, std::byte* output) const

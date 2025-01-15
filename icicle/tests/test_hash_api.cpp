@@ -8,6 +8,7 @@
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
 #include "icicle/hash/blake3.h"
+#include "icicle/hash/poseidon2.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/fields/field.h"
 
@@ -1149,49 +1150,152 @@ TEST_F(HashApiTest, poseidon_tree)
 #endif // POSEIDON
 
 #ifdef POSEIDON2
-// p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
-
-  #include "icicle/fields/field_config.h"
-
-using namespace field_config;
-
-  #include "icicle/hash/poseidon2.h"
-
-// // DEBUG. This test could run only with bn254 curve. Dont remove!!!
+// DEBUG. This test could run only with bn254 curve. Dont remove!!!
 // bn254: p = 0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570
-// TEST_F(HashApiTest, poseidon2_3_single_hash_cpu_only)
-// {
-//   const unsigned t = 3;
-//   auto config = default_hash_config();
-//   config.batch = 1 << 10;
+#include "icicle/fields/field_config.h"
+using namespace field_config;
+#if FIELD_ID == BN254
+TEST_F(HashApiTest, poseidon2_3_single_hash_cpu_only)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
+  config.batch = 1 << 10;
 
-//   auto input = std::make_unique<scalar_t[]>(t);
-//   scalar_t::rand_host_many(input.get(), t);
+  auto input = std::make_unique<scalar_t[]>(config.batch * t);
+  // scalar_t::rand_host_many(input.get(), t);
+  // DEBUG - sets known inputs. Do not remove!!!
+  for (int i=0; i<config.batch * t; i++) {
+    input[i] = scalar_t::from(i % t);
+  }
+  for (int i = 0; i < config.batch * t; i++) {
+    // std::cout << "poseidon2_3_single_hash_cpu_only input " << input[i] << std::endl;
+  }
+  // DEBUG
 
-//   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
-//     Device dev = {dev_type, 0};
-//     icicle_set_device(dev);
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
 
-//     std::ostringstream oss;
-//     oss << dev_type << " " << msg;
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
 
-//     auto poseidon2 = Poseidon2::create<scalar_t>(t);
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
 
-//     START_TIMER(POSEIDON2_sync)
-//     for (int i = 0; i < iters; ++i) {
-//       ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
-//     }
-//     END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
-//   };
+    START_TIMER(POSEIDON2_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
+    }
+    END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
+  };
 
-//   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
 
-//   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-//   scalar_t expected_res =
-//   scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570"); std::cout << "End
-//   of test\n" << std::endl; ASSERT_EQ(expected_res, *(output_cpu.get()));
-// }
-// // DEBUG
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  scalar_t expected_res =
+  scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570");
+  std::cout << "End of test\n" << std::endl;
+  std::cout << "*(output_cpu.get()) = " << std::hex << *(output_cpu.get()) << std::endl;
+  std::cout << "expected_res = " << std::hex << expected_res << std::endl;
+  ASSERT_EQ(expected_res, *(output_cpu.get()));
+}   // poseidon2_3_single_hash_cpu_only
+// Test for CPU only.
+// Test to check correctness of the second hasher of the poseidon2_3_sponge_hash_2_without_dt_cpu_only test.
+TEST_F(HashApiTest, poseidon2_3_sponge_2nd_hasher_without_dt_cpu_only)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
+  config.batch = 1;
+
+  auto input = std::make_unique<scalar_t[]>(t);
+  // scalar_t::rand_host_many(input.get(), t);
+  // DEBUG - sets known inputs. Do not remove!!!
+  input[0] = scalar_t::hex_str2scalar("0x0bb61d24daca55eebcb1929a82650f328134334da98ea4f847f760054f4a3033");
+  input[1] = scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03571");
+  input[2] = scalar_t::hex_str2scalar("0x1ed25194542b12eef8617361c3ba7c52e660b145994427cc86296242cf766eca");
+  // for (int i=1; i<t; i++) {
+  //   input[i] = scalar_t::from(i % t);
+  // }
+  for (int i = 0; i < t; i++) {
+    // std::cout << "poseidon2_3_single_hash_cpu_only input " << input[i] << std::endl;
+  }
+  // DEBUG
+
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
+
+    START_TIMER(POSEIDON2_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
+    }
+    END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
+  };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  scalar_t expected_res =
+  scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570");
+  std::cout << "End of test\n" << std::endl;
+  std::cout << "*(output_cpu.get()) = " << std::hex << *(output_cpu.get()) << std::endl;
+  std::cout << "expected_res = " << std::hex << expected_res << std::endl;
+  // ASSERT_EQ(expected_res, *(output_cpu.get()));    // No need to compere.
+}   // poseidon2_3_sponge_2nd_hasher_without_dt_cpu_only
+TEST_F(HashApiTest, poseidon2_3_sponge_hash_2_without_dt_cpu_only)
+{
+  const unsigned t = 3;
+  auto config = default_hash_config();
+  int nof_hashers = 2;
+
+  auto input = std::make_unique<scalar_t[]>(nof_hashers * t);
+  // scalar_t::rand_host_many(input.get(), t);
+  // DEBUG - sets known inputs. Do not remove!!!
+  for (int i=0; i<t; i++) {    // First hasher has t inputs.
+    input[i] = scalar_t::from(i);
+  }
+  for (int hasher_idx=1; hasher_idx<nof_hashers; hasher_idx++) {
+    for (int i=1; i<t; i++) {   // Non-first hashers have t-1 inputs.
+      input[hasher_idx  * (t-1) + i] = scalar_t::from(i);
+    }
+  }
+  for (int i = 0; i < t + (nof_hashers-1) * (t-1); i++) {
+    // std::cout << "poseidon2_3_sponge_hash_2_without_dt_cpu_only input " << input[i] << std::endl;
+  }
+  // DEBUG
+
+  auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    auto poseidon2 = Poseidon2::create<scalar_t>(t);
+
+    START_TIMER(POSEIDON2_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(poseidon2.hash(input.get(), t + (nof_hashers-1) * (t-1), config, out));
+    }
+    END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
+  };
+
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  scalar_t expected_res =
+  scalar_t::hex_str2scalar("0x0d54b4b71781dc4f30afe3a90f76559379f6f75aea6968d4c986512e2711ad20");
+  std::cout << "End of test\n" << std::endl;
+  std::cout << "*(output_cpu.get()) = " << std::hex << *(output_cpu.get()) << std::endl;
+  std::cout << "expected_res = " << std::hex << expected_res << std::endl;
+  ASSERT_EQ(expected_res, *(output_cpu.get()));
+}   // poseidon2_3_sponge_hash_2_without_dt_cpu_only
+#endif
+// DEBUG
 
 // Test check single hash without domain tag.
 TEST_F(HashApiTest, poseidon2_3_single_hash_without_dt)
