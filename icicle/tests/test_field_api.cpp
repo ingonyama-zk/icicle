@@ -84,6 +84,7 @@ TYPED_TEST(FieldApiTest, FieldStorageTest)
   ICICLE_LOG_INFO << "res_storage: " << res_storage.limbs[0] << "," << res_storage.limbs[1];
   ICICLE_LOG_INFO << "res_wide: " << res_wide.limbs_storage.limbs[0] << "," << res_wide.limbs_storage.limbs[1];
   ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from(res_storage));
+  ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from2(res_storage));
 }
 
 TYPED_TEST(FieldApiTest, vectorVectorOps)

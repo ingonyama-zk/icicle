@@ -363,12 +363,12 @@ namespace host_math {
   {
     return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
   }
-  static constexpr void inv_log_size_err(uint32_t logn, uint32_t omegas_count)
+  static constexpr void index_err(uint32_t index, uint32_t max_index)
   {
-    if (logn > omegas_count)
+    if (index > max_index)
       THROW_ICICLE_ERR(
         icicle::eIcicleError::INVALID_ARGUMENT,
-        "Field: Invalid inv index" + std::to_string(logn) + ">" + std::to_string(omegas_count));
+        "Field: Invalid index" + std::to_string(index) + ">" + std::to_string(max_index));
   }
 
   template <unsigned NLIMBS>

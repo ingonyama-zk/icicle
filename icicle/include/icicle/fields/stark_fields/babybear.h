@@ -25,6 +25,7 @@ namespace babybear {
       {0x43dae013},
       {0x173e21fb},
       {0x5e6a622e}}};
+    static constexpr unsigned reduced_digits_count = 16;
     PARAMS(modulus)
 
     static constexpr storage<1> rou = {0x00000089};

@@ -116,7 +116,7 @@ public:
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
-    base_math::inv_log_size_err(logn, CONFIG::omegas_count);
+    base_math::index_err(logn, CONFIG::omegas_count);
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
   }
@@ -239,12 +239,10 @@ public:
     }
   }
 
-  // template <unsigned MULTIPLIER = 1>
-  static HOST_DEVICE_INLINE Field get_reduced_digit(int i) //TODO - template + check error
+  static HOST_DEVICE_INLINE Field get_reduced_digit(int i) //TODO - check error
   {
-    // if (logn == 0) { return Field{CONFIG::one}; }
-    // base_math::inv_log_size_err(logn, CONFIG::omegas_count);
-    storage_array<16, TLC> const reduced_digits = CONFIG::reduced_digits;
+    base_math::index_err(i, CONFIG::reduced_digits_count);
+    storage_array<CONFIG::reduced_digits_count, TLC> const reduced_digits = CONFIG::reduced_digits;
     return Field{reduced_digits.storages[i]};
   }
 
@@ -422,6 +420,42 @@ public:
         // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
         // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
         temp = mul_wide(xi, pi); //TODO - support 64
+        rs = rs + temp;
+      }
+      return reduce(rs);
+    }
+  }
+
+  template <unsigned NLIMBS>
+  static constexpr HOST_DEVICE_INLINE Field from2(const storage<NLIMBS>& xs)
+  {
+    if constexpr (NLIMBS <= 2*TLC){
+      return reduce(Wide{xs});
+    }
+    else { 
+      Wide rs = {};
+      Wide temp = {};
+      // storage<2*TLC + 1> temp2 = {};
+      int constexpr size = NLIMBS / TLC;
+      for (int i = 0; i < size; i++) // because we assume a maximum value for size anyway, this loop can be unrolled with potential performance benefits
+      {
+        const Field& xi = *reinterpret_cast<const Field*>(xs.limbs + i*TLC);
+        // for (int j = 0; j < std::min(TLC, NLIMBS - i*TLC); j++) //TODO - don't copy
+        // {
+          // xi.limbs_storage.limbs[j] = xs.limbs[i*TLC + j];
+        // }
+        Field pi = get_reduced_digit(i);
+        // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
+        // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
+        temp = mul_wide(xi, pi); //TODO - support 64
+        rs = rs + temp; //TODO - reduce together
+      }
+      int constexpr extra_limbs = NLIMBS - TLC * size;
+      if constexpr (extra_limbs) {
+        const storage<extra_limbs>& xi = *reinterpret_cast<const storage<extra_limbs>*>(xs.limbs + size*TLC);
+        Field pi = get_reduced_digit(size);
+        Wide temp2 = {}; //need to initialize top limbs so can't use same temp.
+        base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp2.limbs_storage);
         rs = rs + temp;
       }
       return reduce(rs);
