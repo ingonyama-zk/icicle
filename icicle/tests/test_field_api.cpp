@@ -63,6 +63,26 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+TYPED_TEST(FieldApiTest, FieldStorageTest)
+{
+  typename TypeParam::Wide res_wide = {};
+  typename TypeParam::Wide temp = {};
+  storage<2*TypeParam::TLC+2> res_storage = {};
+  for (int i = 0; i < 100; i++)
+  {
+    auto a = TypeParam::rand_host();
+    TypeParam::multiply_raw(a.limbs_storage, a.limbs_storage, temp.limbs_storage);
+    res_wide = res_wide + temp;
+    storage<2*TypeParam::TLC+2> temp2 = {};
+    for (int j = 0; j < 2*TypeParam::TLC; j++)
+    {
+      temp2.limbs[j] = temp.limbs_storage.limbs[j];
+    }
+    base_math::template add_sub_limbs<2*TypeParam::TLC+2, false, false, true>(res_storage, temp2, res_storage);
+  }
+  ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from(res_storage));
+}
+
 TYPED_TEST(FieldApiTest, vectorVectorOps)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
