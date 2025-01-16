@@ -239,6 +239,36 @@ public:
     }
   }
 
+  // template <unsigned MULTIPLIER = 1>
+  static HOST_DEVICE_INLINE Field get_reduced_digit(int i)
+  {
+    // if (logn == 0) { return Field{CONFIG::one}; }
+    // base_math::inv_log_size_err(logn, CONFIG::omegas_count);
+    storage_array<16, TLC> const reduced_digits = CONFIG::reduced_digits;
+    return Field{reduced_digits.storages[i - 1]};
+  }
+
+  //   template <unsigned MULTIPLIER = 1>
+  // static constexpr HOST_DEVICE_INLINE ff_wide_storage get_reduced_digit()
+  // {
+  //   switch (MULTIPLIER) {
+  //   case 0:
+  //     return CONFIG::reduced_digit_0;
+  //   case 1:
+  //     return CONFIG::reduced_digit_1;
+  //   case 0:
+  //     return CONFIG::reduced_digit_0;
+  //   case 0:
+  //     return CONFIG::reduced_digit_0;
+  //   case 0:
+  //     return CONFIG::reduced_digit_0;
+  //   case 0:
+  //     return CONFIG::reduced_digit_0;
+  //   default:
+  //     return {};
+  //   }
+  // }
+
   template <unsigned NLIMBS, bool CARRY_OUT>
   static constexpr HOST_DEVICE_INLINE uint32_t
   add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
@@ -367,6 +397,33 @@ public:
   {
     return Field{base_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
       xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
+  }
+
+  template <unsigned NLIMBS>
+  static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs)
+  {
+    if constexpr (NLIMBS <= 2*TLC){
+      return reduce(Wide{xs});
+    }
+    else { 
+      Wide rs = {};
+      Wide temp = {};
+      // storage<2*TLC + 1> temp2 = {};
+      int constexpr size = (NLIMBS + TLC - 1) / TLC;
+      for (int i = 0; i < size; i++)
+      {
+        Field xi = {};
+        // reinterpret_cast<storage<NLIMBS>>(xs.limbs + i*TLC);
+        for (int j = 0; j < std::min(TLC, NLIMBS - i*TLC); j++) //TODO - don't copy
+        {
+          xi.limbs_storage.limbs[j] = xs.limbs[i*TLC + j];
+        }
+        Field pi = get_reduced_digit(i);
+        temp = mul_wide(xi, pi); //TODO - support 64
+        rs = rs + temp;
+      }
+      return reduce(rs);
+    }
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
