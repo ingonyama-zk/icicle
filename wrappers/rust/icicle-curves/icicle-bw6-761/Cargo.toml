@@ -27,6 +27,8 @@ cuda_backend = ["icicle-bls12-377/cuda_backend"]
 pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
 metal_backend = ["icicle-bls12-377/metal_backend"]
 pull_metal_backend = ["icicle-bls12-377/pull_metal_backend"]
+vulkan_backend = ["icicle-bls12-377/vulkan_backend"]
+pull_vulkan_backend = ["icicle-bls12-377/pull_vulkan_backend"]
 
 [[bench]]
 name = "ntt"
