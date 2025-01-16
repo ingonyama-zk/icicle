@@ -19,7 +19,7 @@ Additionally, we’re encouraging researchers to reimplement algorithms from exi
 
 ### How to Apply
 
-Applying is straightforward. Here’s how it works:
+Applying is straightforward.
 
 1. [**Fill out the form:**](https://forms.monday.com/forms/d0ed9699146d61e3b5a649b56ba2c663?r=use1) Start by telling us about your idea through the form, which will ask you to briefly describe your proposal, e.g., “I want to implement Whir in ICICLE” (note: this one’s already taken by Giacomo).
 2. **Collaborate:** We’ll discuss and finalize the performance milestones together. Expect some back-and-forth to align on the project goals.
