@@ -26,6 +26,7 @@ Applying is straightforward.
 3. **Approval:** Once we’re aligned, we’ll greenlight the project.
 4. **Get started:** Begin your work with our support and drive it toward success!
 
-### Contact
-For further questions: **grants@ingonyama.com**
+### Get in Touch
+
+If you have any questions, email us at **grants@ingonyama.com** and we will get back to you
 
