@@ -240,12 +240,12 @@ public:
   }
 
   // template <unsigned MULTIPLIER = 1>
-  static HOST_DEVICE_INLINE Field get_reduced_digit(int i)
+  static HOST_DEVICE_INLINE Field get_reduced_digit(int i) //TODO - template + check error
   {
     // if (logn == 0) { return Field{CONFIG::one}; }
     // base_math::inv_log_size_err(logn, CONFIG::omegas_count);
     storage_array<16, TLC> const reduced_digits = CONFIG::reduced_digits;
-    return Field{reduced_digits.storages[i - 1]};
+    return Field{reduced_digits.storages[i]};
   }
 
   //   template <unsigned MULTIPLIER = 1>
@@ -419,6 +419,8 @@ public:
           xi.limbs_storage.limbs[j] = xs.limbs[i*TLC + j];
         }
         Field pi = get_reduced_digit(i);
+        // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
+        // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
         temp = mul_wide(xi, pi); //TODO - support 64
         rs = rs + temp;
       }
