@@ -3,7 +3,8 @@
 #include <iomanip>
 
 #include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
+#include "icicle/msm.h"
+#include "icicle/curves/params/bn254.h"
 using namespace bn254;
 
 #include "examples_utils.h"
@@ -38,7 +39,7 @@ int main(int argc, char* argv[])
   std::cout << "\nRunning MSM kernel with on-host inputs" << std::endl;
   // Execute the MSM kernel
   START_TIMER(MSM_host_mem);
-  ICICLE_CHECK(bn254_msm(scalars.get(), points.get(), msm_size, &config, &result));
+  ICICLE_CHECK(msm(scalars.get(), points.get(), msm_size, config, &result));
   END_TIMER(MSM_host_mem, "MSM from host-memory took");
   std::cout << projective_t::to_affine(result) << std::endl;
 
@@ -91,7 +92,7 @@ int main(int argc, char* argv[])
   config.are_points_on_device = false;
   g2_projective_t g2_result;
   START_TIMER(MSM_g2);
-  ICICLE_CHECK(bn254_g2_msm(scalars.get(), g2_points.get(), msm_size, &config, &g2_result));
+  ICICLE_CHECK(msm(scalars.get(), g2_points.get(), msm_size, config, &g2_result));
   END_TIMER(MSM_g2, "MSM G2 from host-memory took");
   std::cout << g2_projective_t::to_affine(g2_result) << std::endl;
 
