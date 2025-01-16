@@ -166,11 +166,11 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
-    let a_main = F::Config::generate_random(test_size * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); cfg.batch_size as usize];
+    let a_main = F::Config::generate_random(test_size * batch_size);
+    let mut result_main = vec![F::zero(); batch_size];
+    let mut result_ref = vec![F::zero(); batch_size];
 
     let a_main = HostSlice::from_slice(&a_main);
     let result_main = HostSlice::from_mut_slice(&mut result_main);
@@ -190,11 +190,11 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
-    let a_main = F::Config::generate_random(test_size * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); cfg.batch_size as usize];
+    let a_main = F::Config::generate_random(test_size * batch_size);
+    let mut result_main = vec![F::zero(); batch_size];
+    let mut result_ref = vec![F::zero(); batch_size];
 
     let a_main = HostSlice::from_slice(&a_main);
     let result_main = HostSlice::from_mut_slice(&mut result_main);
@@ -214,7 +214,7 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
     let a_main = F::Config::generate_random(cfg.batch_size as usize);
     let b = F::Config::generate_random(test_size * cfg.batch_size as usize);
@@ -240,12 +240,12 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
-    let a_main = F::Config::generate_random(cfg.batch_size as usize);
-    let b = F::Config::generate_random(test_size * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); test_size * cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); test_size * cfg.batch_size as usize];
+    let a_main = F::Config::generate_random(batch_size);
+    let b = F::Config::generate_random(test_size * batch_size);
+    let mut result_main = vec![F::zero(); test_size * batch_size];
+    let mut result_ref = vec![F::zero(); test_size * batch_size];
 
     let a_main = HostSlice::from_slice(&a_main);
     let b = HostSlice::from_slice(&b);
@@ -266,12 +266,12 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
-    let a_main = F::Config::generate_random(cfg.batch_size as usize);
-    let b = F::Config::generate_random(test_size * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); test_size * cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); test_size * cfg.batch_size as usize];
+    let a_main = F::Config::generate_random(batch_size);
+    let b = F::Config::generate_random(test_size * batch_size);
+    let mut result_main = vec![F::zero(); test_size * batch_size];
+    let mut result_ref = vec![F::zero(); test_size * batch_size];
 
     let a_main = HostSlice::from_slice(&a_main);
     let b = HostSlice::from_slice(&b);
@@ -316,10 +316,10 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
     let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
-    let test_size = (r * c * cfg.batch_size as u32) as usize;
+    let test_size = (r * c * batch_size) as usize;
 
     let input_matrix = F::Config::generate_random(test_size);
     let mut result_main = vec![F::zero(); test_size];
@@ -353,16 +353,16 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    cfg.batch_size = 3;
+    let batch_size = 3;
 
     let size_in: u64 = 1 << 10;
     let offset: u64 = 10;
     let stride: u64 = 3;
     let size_out: u64 = ((size_in - offset) / stride) - 1;
 
-    let input_matrix = F::Config::generate_random(size_in as usize * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); size_out as usize * cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); size_out as usize * cfg.batch_size as usize];
+    let input_matrix = F::Config::generate_random(size_in as usize * batch_size);
+    let mut result_main = vec![F::zero(); size_out as usize * batch_size];
+    let mut result_ref = vec![F::zero(); size_out as usize * batch_size];
 
     test_utilities::test_set_main_device();
     slice(
