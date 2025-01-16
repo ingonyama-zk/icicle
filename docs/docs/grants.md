@@ -3,6 +3,7 @@
 Exactly one year ago, we launched our first-ever grants program, offering $100,000 to support research involving ICICLE. Today, we’re excited to announce our second grants program — another $100,000 dedicated to researchers. Details below!
 
 ### ICICLE ZK-GPU Ecosystem Grant
+
 Ingonyama invites researchers and practitioners to collaborate in advancing ZK acceleration. We are allocating $100,000 for grants to support this initiative.
 
 ### Bounties & Grants
