@@ -8,7 +8,7 @@
 namespace babybear {
   struct fp_config {
     static constexpr storage<1> modulus = {0x78000001};
-    static constexpr storage_array<16, 1> reduced_digits = {{
+    static constexpr storage_array<17, 1> reduced_digits = {{
       {0x1},
       {0xffffffe},
       {0x45dddde3},
@@ -24,8 +24,9 @@ namespace babybear {
       {0x4cf166f8},
       {0x43dae013},
       {0x173e21fb},
-      {0x5e6a622e}}};
-    static constexpr unsigned reduced_digits_count = 16;
+      {0x5e6a622e},
+      {0x169483e4}}};
+    static constexpr unsigned reduced_digits_count = 17;
     PARAMS(modulus)
 
     static constexpr storage<1> rou = {0x00000089};
