@@ -61,7 +61,9 @@ namespace icicle {
       const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) const
     {
-      return m_backend->get_proof(mle_polynomials, mle_polynomial_size, claimed_sum, combine_function, std::move(transcript_config), sumcheck_config, sumcheck_proof);
+      return m_backend->get_proof(
+        mle_polynomials, mle_polynomial_size, claimed_sum, combine_function, std::move(transcript_config),
+        sumcheck_config, sumcheck_proof);
     }
 
     /**
@@ -73,9 +75,9 @@ namespace icicle {
      * @return Error code of type eIcicleError indicating success or failure.
      */
     eIcicleError verify(
-      SumcheckProof<F>& sumcheck_proof, 
+      SumcheckProof<F>& sumcheck_proof,
       const F& claimed_sum,
-      const SumcheckTranscriptConfig<F>&& transcript_config, 
+      const SumcheckTranscriptConfig<F>&& transcript_config,
       bool& valid /*out*/)
     {
       valid = false;
@@ -94,7 +96,8 @@ namespace icicle {
       }
 
       // create sumcheck_transcript for the Fiat-Shamir
-      CpuSumcheckTranscript sumcheck_transcript(claimed_sum, nof_rounds, combine_function_poly_degree, std::move(transcript_config)); 
+      CpuSumcheckTranscript sumcheck_transcript(
+        claimed_sum, nof_rounds, combine_function_poly_degree, std::move(transcript_config));
 
       for (int round_idx = 0; round_idx < nof_rounds - 1; round_idx++) {
         std::vector<F>& round_poly = sumcheck_proof.get_round_polynomial(round_idx);
