@@ -1223,7 +1223,9 @@ TEST_F(FieldApiTestBase, Sumcheck)
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumcheckConfig sumcheck_config;
   SumcheckProof<scalar_t> sumcheck_proof;
-  ICICLE_CHECK(prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config, sumcheck_proof));
+  ICICLE_CHECK(prover_sumcheck.get_proof(
+    mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+    sumcheck_proof));
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }

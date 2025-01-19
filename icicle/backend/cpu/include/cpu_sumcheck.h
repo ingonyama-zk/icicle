@@ -53,7 +53,8 @@ namespace icicle {
 
       // create sumcheck_transcript for the Fiat-Shamir
       const uint32_t combine_function_poly_degree_u = combine_function_poly_degree;
-      CpuSumcheckTranscript<F> sumcheck_transcript(claimed_sum, nof_rounds, combine_function_poly_degree_u, std::move(transcript_config)); 
+      CpuSumcheckTranscript<F> sumcheck_transcript(
+        claimed_sum, nof_rounds, combine_function_poly_degree_u, std::move(transcript_config));
       sumcheck_proof.init(
         nof_rounds,
         combine_function_poly_degree_u); // reset the sumcheck proof to accumulate the round polynomials
@@ -79,7 +80,6 @@ namespace icicle {
       }
       return eIcicleError::SUCCESS;
     }
-
 
   private:
     void build_round_polynomial(

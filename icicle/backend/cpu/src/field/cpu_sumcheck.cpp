@@ -6,9 +6,7 @@ using namespace field_config;
 namespace icicle {
 
   template <typename F>
-  eIcicleError cpu_create_sumcheck_backend(
-    const Device& device,
-    std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)
+  eIcicleError cpu_create_sumcheck_backend(const Device& device, std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)
   {
     backend = std::make_shared<CpuSumcheckBackend<F>>();
     return eIcicleError::SUCCESS;

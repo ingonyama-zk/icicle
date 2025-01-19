@@ -56,9 +56,8 @@ namespace icicle {
 
   /*************************** Backend Factory Registration ***************************/
   template <typename F>
-  using SumcheckFactoryImpl = std::function<eIcicleError(
-    const Device& device,
-    std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
+  using SumcheckFactoryImpl =
+    std::function<eIcicleError(const Device& device, std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
 
   /**
    * @brief Register a Sumcheck backend factory for a specific device type.
