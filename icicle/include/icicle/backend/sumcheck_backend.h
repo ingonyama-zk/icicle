@@ -27,15 +27,8 @@ namespace icicle {
   public:
     /**
      * @brief Constructor for the SumcheckBackend class.
-     *
-     * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
-     * when evaluated over all possible Boolean input combinations
-     * @param transcript_config Configuration for encoding and hashing prover messages.
      */
-    SumcheckBackend(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config)
-        : m_claimed_sum(claimed_sum), m_transcript_config(std::move(transcript_config))
-    {
-    }
+    SumcheckBackend() {}
 
     virtual ~SumcheckBackend() = default;
 
@@ -43,45 +36,28 @@ namespace icicle {
      * @brief Calculate the sumcheck based on the inputs and retrieve the Sumcheck proof.
      * @param mle_polynomials a vector of MLE polynomials to process
      * @param mle_polynomial_size the size of each MLE polynomial
+     * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
+     * when evaluated over all possible Boolean input combinations
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
-     * @param config Configuration for the Sumcheck operation.
+     * @param transcript_config Configuration for encoding and hashing prover messages.
+     * @param sumcheck_config Configuration for the Sumcheck operation.
      * @param sumcheck_proof Reference to the SumcheckProof object where all round polynomials will be stored.
      * @return Error code of type eIcicleError.
      */
     virtual eIcicleError get_proof(
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
+      const F& claimed_sum,
       const CombineFunction<F>& combine_function,
-      const SumcheckConfig& config,
+      const SumcheckTranscriptConfig<F>&& transcript_config,
+      const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) = 0;
-
-    /**
-     * @brief Initialize the transcript for the upcoming calculation of the FIat shamir.
-     * @param mle_polynomial_size the number of elements in an MLE polynomial
-     * @param combine_function_poly_degree the degree of the combine function
-     */
-    virtual void reset_transcript(const uint32_t mle_polynomial_size, const uint32_t combine_function_poly_degree) = 0;
-
-    /**
-     * @brief Calculate alpha based on m_transcript_config and the round polynomial.
-     * @param round_polynomial a vector of MLE polynomials evaluated at x=0,1,2...
-     * @return alpha
-     */
-    virtual F get_alpha(std::vector<F>& round_polynomial) = 0;
-
-    const F& get_claimed_sum() const { return m_claimed_sum; }
-
-  protected:
-    const F m_claimed_sum;                                 // claimed sum for the mle polynomials
-    const SumcheckTranscriptConfig<F> m_transcript_config; // configuration how to build the transcript
   };
 
   /*************************** Backend Factory Registration ***************************/
   template <typename F>
   using SumcheckFactoryImpl = std::function<eIcicleError(
     const Device& device,
-    const F& claimed_sum,
-    SumcheckTranscriptConfig<F>&& transcript_config,
     std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)>;
 
   /**

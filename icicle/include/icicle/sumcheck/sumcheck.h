@@ -6,20 +6,18 @@
 #include "icicle/sumcheck/sumcheck_config.h"
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
 #include "icicle/backend/sumcheck_backend.h"
+#include "cpu_sumcheck_transcript.h"
+
 namespace icicle {
   template <typename F>
   class Sumcheck;
 
   /**
    * @brief Static factory method to create a Sumcheck instance.
-   *
-   * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
-   * when evaluated over all possible Boolean input combinations
-   * @param transcript_config Configuration for encoding and hashing prover messages.
    * @return A Sumcheck object initialized with the specified backend.
    */
   template <typename F>
-  Sumcheck<F> create_sumcheck(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config);
+  Sumcheck<F> create_sumcheck();
 
   /**
    * @brief Class for performing Sumcheck operations.
@@ -46,19 +44,24 @@ namespace icicle {
      * F(X_1,X_2,X_3) = a_0 (1-X_1) (1-X_2) (1-X_3) + a_1 (1-X_1)(1-X_2) X_3 + a_2 (1-X_1) X_2 (1-X_3) +
      * a_3 (1-X_1) X_2 X_3 + a_4 X_1 (1-X_2) (1-X_3) + a_5 X_1 (1-X_2) X_3+ a_6 X_1 X_2 (1-X_3) + a_7 X_1 X_2 X_3
      * @param mle_polynomial_size the size of each MLE polynomial
+     * @param claimed_sum The total sum of the values of a multivariate polynomial f(x₁, x₂, ..., xₖ)
+     * when evaluated over all possible Boolean input combinations
      * @param combine_function a program that define how to fold all MLS polynomials into the round polynomial.
-     * @param config Configuration for the Sumcheck operation.
+     * @param transcript_config Configuration for encoding and hashing prover messages.
+     * @param sumcheck_config Configuration for the Sumcheck operation.
      * @param sumcheck_proof Reference to the SumcheckProof object where all round polynomials will be stored.
      * @return Error code of type eIcicleError.
      */
     eIcicleError get_proof(
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
+      const F& claimed_sum,
       const CombineFunction<F>& combine_function,
-      const SumcheckConfig& config,
+      const SumcheckTranscriptConfig<F>&& transcript_config,
+      const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) const
     {
-      return m_backend->get_proof(mle_polynomials, mle_polynomial_size, combine_function, config, sumcheck_proof);
+      return m_backend->get_proof(mle_polynomials, mle_polynomial_size, claimed_sum, combine_function, std::move(transcript_config), sumcheck_config, sumcheck_proof);
     }
 
     /**
@@ -69,18 +72,20 @@ namespace icicle {
      * @param valid output valid bit. True if the Proof is valid, false otherwise.
      * @return Error code of type eIcicleError indicating success or failure.
      */
-    eIcicleError verify(SumcheckProof<F>& sumcheck_proof, bool& valid /*out*/)
+    eIcicleError verify(
+      SumcheckProof<F>& sumcheck_proof, 
+      const F& claimed_sum,
+      const SumcheckTranscriptConfig<F>&& transcript_config, 
+      bool& valid /*out*/)
     {
       valid = false;
       const int nof_rounds = sumcheck_proof.get_nof_round_polynomials();
       const std::vector<F>& round_poly_0 = sumcheck_proof.get_round_polynomial(0);
       const uint32_t combine_function_poly_degree = round_poly_0.size() - 1;
-      m_backend->reset_transcript(nof_rounds, combine_function_poly_degree);
 
       // verify that the sum of round_polynomial-0 is the clamed_sum
       F round_poly_0_sum = round_poly_0[0] + round_poly_0[1];
 
-      const F& claimed_sum = m_backend->get_claimed_sum();
       if (round_poly_0_sum != claimed_sum) {
         valid = false;
         ICICLE_LOG_ERROR << "verification failed: sum of round polynomial 0 (" << round_poly_0_sum
@@ -88,9 +93,12 @@ namespace icicle {
         return eIcicleError::SUCCESS;
       }
 
+      // create sumcheck_transcript for the Fiat-Shamir
+      CpuSumcheckTranscript sumcheck_transcript(claimed_sum, nof_rounds, combine_function_poly_degree, std::move(transcript_config)); 
+
       for (int round_idx = 0; round_idx < nof_rounds - 1; round_idx++) {
         std::vector<F>& round_poly = sumcheck_proof.get_round_polynomial(round_idx);
-        const F alpha = m_backend->get_alpha(round_poly);
+        const F alpha = sumcheck_transcript.get_alpha(round_poly);
         const F alpha_value = lagrange_interpolation(round_poly, alpha);
         const std::vector<F>& next_round_poly = sumcheck_proof.get_round_polynomial(round_idx + 1);
         F expected_alpha_value = next_round_poly[0] + next_round_poly[1];

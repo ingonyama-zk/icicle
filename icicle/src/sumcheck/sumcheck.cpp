@@ -9,10 +9,10 @@ namespace icicle {
 
   template <>
   Sumcheck<scalar_t>
-  create_sumcheck(const scalar_t& claimed_sum, SumcheckTranscriptConfig<scalar_t>&& transcript_config)
+  create_sumcheck()
   {
     std::shared_ptr<SumcheckBackend<scalar_t>> backend;
-    ICICLE_CHECK(SumcheckDispatcher::execute(claimed_sum, std::move(transcript_config), backend));
+    ICICLE_CHECK(SumcheckDispatcher::execute(backend));
     Sumcheck<scalar_t> sumcheck{backend};
     return sumcheck;
   }

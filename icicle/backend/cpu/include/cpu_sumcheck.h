@@ -13,21 +13,19 @@ namespace icicle {
   class CpuSumcheckBackend : public SumcheckBackend<F>
   {
   public:
-    CpuSumcheckBackend(const F& claimed_sum, SumcheckTranscriptConfig<F>&& transcript_config)
-        : SumcheckBackend<F>(claimed_sum, std::move(transcript_config)),
-          m_cpu_sumcheck_transcript(claimed_sum, std::move(transcript_config))
-    {
-    }
+    CpuSumcheckBackend() : SumcheckBackend<F>() {}
 
     // Calculate a proof for the mle polynomials
     eIcicleError get_proof(
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
+      const F& claimed_sum,
       const CombineFunction<F>& combine_function,
-      const SumcheckConfig& config,
+      const SumcheckTranscriptConfig<F>&& transcript_config,
+      const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) override
     {
-      if (config.use_extension_field) {
+      if (sumcheck_config.use_extension_field) {
         ICICLE_LOG_ERROR << "SumcheckConfig::use_extension_field field = true is currently unsupported";
         return eIcicleError::INVALID_ARGUMENT;
       }
@@ -53,10 +51,12 @@ namespace icicle {
         return eIcicleError::INVALID_ARGUMENT;
       }
 
-      reset_transcript(nof_rounds, uint32_t(combine_function_poly_degree)); // reset the transcript for the Fiat-Shamir
+      // create sumcheck_transcript for the Fiat-Shamir
+      const uint32_t combine_function_poly_degree_u = combine_function_poly_degree;
+      CpuSumcheckTranscript<F> sumcheck_transcript(claimed_sum, nof_rounds, combine_function_poly_degree_u, std::move(transcript_config)); 
       sumcheck_proof.init(
         nof_rounds,
-        uint32_t(combine_function_poly_degree)); // reset the sumcheck proof to accumulate the round polynomials
+        combine_function_poly_degree_u); // reset the sumcheck proof to accumulate the round polynomials
 
       // generate a program executor for the combine function
       CpuProgramExecutor program_executor(combine_function);
@@ -73,29 +73,15 @@ namespace icicle {
 
         // if its not the last round, calculate alpha and fold the mle polynomials
         if (round_idx + 1 < nof_rounds) {
-          F alpha = get_alpha(round_polynomial);
+          F alpha = sumcheck_transcript.get_alpha(round_polynomial);
           fold_mle_polynomials(alpha, cur_mle_polynomial_size, in_mle_polynomials, folded_mle_polynomials);
         }
       }
       return eIcicleError::SUCCESS;
     }
 
-    // calculate alpha for the next round based on the round_polynomial of the current round
-    F get_alpha(std::vector<F>& round_polynomial) override
-    {
-      return m_cpu_sumcheck_transcript.get_alpha(round_polynomial);
-    }
-
-    // Reset the sumcheck transcript before a new proof generation or verification
-    void reset_transcript(const uint32_t mle_polynomial_size, const uint32_t combine_function_poly_degree) override
-    {
-      m_cpu_sumcheck_transcript.reset(mle_polynomial_size, combine_function_poly_degree);
-    }
 
   private:
-    // members
-    CpuSumcheckTranscript<F> m_cpu_sumcheck_transcript; // Generates alpha for the next round (Fial-Shamir)
-
     void build_round_polynomial(
       const std::vector<F*>& in_mle_polynomials,
       const int mle_polynomial_size,

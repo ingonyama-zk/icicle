@@ -8,11 +8,9 @@ namespace icicle {
   template <typename F>
   eIcicleError cpu_create_sumcheck_backend(
     const Device& device,
-    const F& claimed_sum,
-    SumcheckTranscriptConfig<F>&& transcript_config,
     std::shared_ptr<SumcheckBackend<F>>& backend /*OUT*/)
   {
-    backend = std::make_shared<CpuSumcheckBackend<F>>(claimed_sum, std::move(transcript_config));
+    backend = std::make_shared<CpuSumcheckBackend<F>>();
     return eIcicleError::SUCCESS;
   }
 

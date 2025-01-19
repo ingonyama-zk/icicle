@@ -56,7 +56,7 @@ CONCAT_EXPAND(FIELD, sumcheck_create)(const scalar_t* claimed_sum, const Transcr
                                   *ffi_transcript_config->seed_rng, ffi_transcript_config->little_endian};
 
   // Create and return the Sumcheck instance
-  return new icicle::Sumcheck<scalar_t>(icicle::create_sumcheck(*claimed_sum, std::move(config)));
+  return new icicle::Sumcheck<scalar_t>(icicle::create_sumcheck<scalar_t>());
 }
 
 /**

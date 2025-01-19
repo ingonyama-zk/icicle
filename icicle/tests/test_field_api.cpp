@@ -1218,22 +1218,21 @@ TEST_F(FieldApiTestBase, Sumcheck)
 
   // ===== Prover side ======
   // create sumcheck
-  auto prover_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
+  auto prover_sumcheck = create_sumcheck<scalar_t>();
 
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
-  SumcheckConfig config;
+  SumcheckConfig sumcheck_config;
   SumcheckProof<scalar_t> sumcheck_proof;
-
-  ICICLE_CHECK(prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, combine_func, config, sumcheck_proof));
+  ICICLE_CHECK(prover_sumcheck.get_proof(mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config, sumcheck_proof));
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }
 
   // ===== Verifier side ======
   // create sumcheck
-  auto verifier_sumcheck = create_sumcheck<scalar_t>(claimed_sum, std::move(transcript_config));
+  auto verifier_sumcheck = create_sumcheck<scalar_t>();
   bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, verification_pass));
+  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 }
