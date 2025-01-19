@@ -1,31 +1,31 @@
-# ICICLE integrated provers
+# ICICLE Integrated Provers
 
-ICICLE has been used by companies and projects such as [Celer Network](https://github.com/celer-network), [Consensys Gnark](https://github.com/Consensys/gnark), [EZKL](https://blog.ezkl.xyz/post/acceleration/), [ZKWASM](https://twitter.com/DelphinusLab/status/1762604988797513915) and others to accelerate their ZK proving pipeline.
+ICICLE has been used by companies and projects such as [Celer Network](https://github.com/celer-network), [Consensys Gnark](https://github.com/Consensys/gnark), [EZKL](https://blog.ezkl.xyz/post/acceleration/), [ZKWASM](https://twitter.com/DelphinusLab/status/1762604988797513915), [Tachyon by Kroma Network](https://blog.kroma.network/icicle-integration-into-tachyon-162b8425f14f), and others to accelerate their ZK proving pipeline.
 
-Many of these integrations have been a collaboration between Ingonyama and the integrating company. We have learned a lot about designing GPU based ZK provers.
+Many of these integrations have been collaborative efforts between Ingonyama and our partners, providing valuable insights into designing GPU-based ZK provers.
 
-If you're interested in understanding these integrations better or learning how you can use ICICLE to accelerate your existing ZK proving pipeline this is the place for you.
+If you want to dive deeper into these integrations or explore how ICICLE can accelerate your ZK proving pipeline, you’re in the right place.
 
-## A primer to building your own integrations
+## A Primer to Building Your Own Integrations
 
 Lets illustrate an ICICLE integration, so you can understand the core API and design overview of ICICLE.
 
 ![ICICLE architecture](/img/architecture-high-level.png)
 
-Engineers usually use a cryptographic library to implement their ZK protocols. These libraries implement efficient primitives which are used as building blocks for the protocol; ICICLE is such a library. The difference is that ICICLE is designed from the start to run on GPUs; the Rust and Golang APIs abstract away all low level CUDA details. Our goal was to allow developers with no GPU experience to quickly get started with ICICLE.
+Engineers typically rely on cryptographic libraries to implement ZK protocols, using efficient primitives as building blocks. ICICLE is one such library, uniquely designed from the ground up to run on GPUs. Its Rust and Golang APIs abstract away the complexities of CUDA, enabling developers with no GPU experience to get started quickly and efficiently.
 
-A developer may use ICICLE with two main approaches in mind.
+A developer may use ICICLE with two main approaches in mind:
 
 1. Drop-in replacement approach.
 2. End-to-End GPU replacement approach.
 
-The first approach for GPU-accelerating your Prover with ICICLE is quick to implement, but it has limitations, such as reduced memory optimization and limited protocol tuning for GPUs. It's a solid starting point, but those committed to fully leveraging GPU acceleration should consider a more comprehensive approach.
+The first approach to GPU-accelerating your Prover with ICICLE is quick to implement but comes with limitations, such as reduced memory optimization and limited protocol tuning for GPUs. While it’s a strong starting point, those looking to fully harness GPU acceleration should explore more advanced solutions.
 
-A End-to-End GPU replacement means performing the entire ZK proof on the GPU. This approach will reduce latency to a minimum and requires you to change the way you implement the protocol to be more GPU friendly. This approach will take full advantage of GPU acceleration. Redesigning your prover this way may take more engineering effort but we promise you that its worth it!
+An end-to-end GPU replacement involves performing the entire ZK proof on the GPU. This approach minimizes latency, fully leverages GPU acceleration, and requires adapting the protocol to be more GPU-friendly. While redesigning your prover this way demands additional engineering effort, the results are well worth it!
 
-## Using ICICLE integrated provers
+## Using ICICLE Integrated Provers
 
-Here we cover how a developer can run existing circuits on ICICLE integrated provers.
+This section explains how developers can run existing circuits on ICICLE-integrated provers.
 
 ### Gnark
 
