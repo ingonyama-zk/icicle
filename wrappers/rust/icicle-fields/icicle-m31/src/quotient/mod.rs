@@ -205,7 +205,7 @@ pub fn accumulate_quotients(
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
     // nvtx::range_push!("checking quotient args");
-    // let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
+    let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
     // nvtx::range_pop!();
     // nvtx::range_push!("CUDA: accumulate_quotients");
     unsafe {
@@ -217,7 +217,7 @@ pub fn accumulate_quotients(
             samples.as_ptr(),
             samples.len() as u32,
             flattened_line_coeffs_size,
-            cfg as *const QuotientConfig,
+            &cfg as *const QuotientConfig,
             result.as_mut_ptr(),
         )
         .wrap()
