@@ -207,7 +207,7 @@ pub fn accumulate_quotients(
     // nvtx::range_push!("checking quotient args");
     // let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
     // nvtx::range_pop!();
-    nvtx::range_push!("CUDA: accumulate_quotients");
+    // nvtx::range_push!("CUDA: accumulate_quotients");
     unsafe {
         _quotient::accumulate_quotients(
             domain_log_size,
