@@ -22,9 +22,9 @@ pub type SecurePoint = CirclePoint<QuarticExtensionField>;
 pub struct QuotientConfig<'a> {
     /// Details related to the device such as its id and stream id. See [DeviceContext](@ref device_context::DeviceContext).
     pub ctx: DeviceContext<'a>,
-    are_columns_on_device: bool,
-    are_sample_points_on_device: bool,
-    are_results_on_device: bool,
+    pub are_columns_on_device: bool,
+    pub are_sample_points_on_device: bool,
+    pub are_results_on_device: bool,
     /// Whether to run the vector operations asynchronously. If set to `true`, the functions will be non-blocking and you'd need to synchronize
     /// it explicitly by running `stream.synchronize()`. If set to false, the functions will block the current CPU thread.
     pub is_async: bool,
@@ -204,9 +204,9 @@ pub fn accumulate_quotients(
     flattened_line_coeffs_size: u32,
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
-    nvtx::range_push!("checking quotient args");
-    let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
-    nvtx::range_pop!();
+    // nvtx::range_push!("checking quotient args");
+    // let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
+    // nvtx::range_pop!();
     nvtx::range_push!("CUDA: accumulate_quotients");
     unsafe {
         _quotient::accumulate_quotients(
