@@ -217,7 +217,7 @@ pub fn accumulate_quotients(
             samples.as_ptr(),
             samples.len() as u32,
             flattened_line_coeffs_size,
-            &cfg as *const QuotientConfig,
+            cfg as *const QuotientConfig,
             result.as_mut_ptr(),
         )
         .wrap()
