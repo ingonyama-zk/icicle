@@ -228,7 +228,7 @@ pub fn accumulate_quotients_wrapped(
     domain_log_size: u32,
     columns: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
     random_coef: QuarticExtensionField,
-    samples: &[ColumnSampleBatch<QuarticExtensionField>],
+    samples: Vec<ColumnSampleBatch<QuarticExtensionField>>,
     result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
