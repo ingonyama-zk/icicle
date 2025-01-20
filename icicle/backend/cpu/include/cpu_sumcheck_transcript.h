@@ -1,5 +1,6 @@
 #pragma once
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
+#include <string.h>
 
 template <typename S>
 class CpuSumcheckTranscript
@@ -60,7 +61,7 @@ private:
   {
     alpha = S::zero();
     const int nof_bytes_to_copy = std::min(sizeof(alpha), hash_result.size());
-    std::memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
+    memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
     alpha = alpha * S::one();
   }
 
