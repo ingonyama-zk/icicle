@@ -62,17 +62,13 @@ It is an improved version of the original [Poseidon](https://eprint.iacr.org/201
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
-:::info
-
 The supported values of state size ***t*** as defined in [eprint 2023/323](https://eprint.iacr.org/2023/323.pdf) are 2, 3, 4, 8, 12, 16, 20 and 24. Note that ***t*** sizes 8, 12, 16, 20 and 24 are supported only for small fields (babybear and m31).
-
-:::
-
-:::info
 
 The S box power alpha, number of full rounds and partial rounds, rounds constants, MDS matrix, and partial matrix for each field and ***t*** can be found in this [folder](https://github.com/ingonyama-zk/icicle/tree/9b1506cda9eab30fc6a8d0a338e2cfab877402f7/icicle/include/icicle/hash/poseidon2_constants/constants).
 
-:::
+There are two modes for using the Poseidon2 hash - sponge function and non-sponge (merkle tree) function. The key difference between these modes is their execution pattern. The sponge function is inherently serial (each hash must wait for the previous hash to complete before starting its own process), while the non-sponge function (which consists of multiple independent hashes that don't share inputs) runs in parallel using GPU threads, with the number of threads equal to config.batch.
+
+The hash function automatically chooses between these modes based on the input size. It runs in sponge mode if the input size (including the domain_tag if present) is greater than the single hash width (in this case, config.batch should be set to one). Otherwise, it uses the non-sponge mode.
 
 In the current version the padding is not supported and should be performed by the user.
 
