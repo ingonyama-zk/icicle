@@ -398,7 +398,7 @@ public:
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs)
+  static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs) //naive
   {
     if constexpr (NLIMBS <= 2*TLC){
       return reduce(Wide{xs});
@@ -418,15 +418,39 @@ public:
         Field pi = get_reduced_digit(i);
         // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
         // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
+      //                                       std::cout << "xi mul: ";
+      // for (int i = 0; i < TLC; i++)
+      // {
+      //   std::cout << xi.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
+      //                             std::cout << "pi mul: ";
+      // for (int i = 0; i < TLC; i++)
+      // {
+      //   std::cout << pi.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
         Wide temp = mul_wide(xi, pi); //TODO - support 64
+      //                       std::cout << "from mul: ";
+      // for (int i = 0; i < 2*TLC+2; i++)
+      // {
+      //   std::cout << temp.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
         rs = rs + temp;
+      //                     std::cout << "from add: ";
+      // for (int i = 0; i < 2*TLC+2; i++)
+      // {
+      //   std::cout << rs.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
       }
       return reduce(rs);
     }
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE_INLINE Field from2(const storage<NLIMBS>& xs)
+  static constexpr HOST_DEVICE_INLINE Field from2(const storage<NLIMBS>& xs) //no copy
   {
     if constexpr (NLIMBS <= 2*TLC){
       return reduce(Wide{xs});
@@ -445,6 +469,18 @@ public:
         Field pi = get_reduced_digit(i);
         // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
         // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
+      //    std::cout << "xi mul: ";
+      // for (int i = 0; i < TLC; i++)
+      // {
+      //   std::cout << xi.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
+      //                             std::cout << "pi mul: ";
+      // for (int i = 0; i < TLC; i++)
+      // {
+      //   std::cout << pi.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
         Wide temp = mul_wide(xi, pi); //TODO - support 64
       //               std::cout << "from2 mul: ";
       // for (int i = 0; i < 2*TLC+2; i++)
@@ -466,7 +502,25 @@ public:
         Field pi = get_reduced_digit(size);
         Wide temp = {}; //need to initialize top limbs so can't use same temp.
         storage<extra_limbs+TLC>& temp_storage = *reinterpret_cast<storage<extra_limbs+TLC>*>(temp.limbs_storage.limbs);
+      //                               std::cout << "xi mul: ";
+      // for (int i = 0; i < extra_limbs; i++)
+      // {
+      //   std::cout << xi.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
+      //                             std::cout << "pi mul: ";
+      // for (int i = 0; i < TLC; i++)
+      // {
+      //   std::cout << pi.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
         base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage);
+      //                       std::cout << "from2 mul: ";
+      // for (int i = 0; i < 2*TLC+2; i++)
+      // {
+      //   std::cout << temp.limbs_storage.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
         // ICICLE_LOG_INFO << "xi: "<< xi;
         // ICICLE_LOG_INFO << "pi: "<< pi;
         // ICICLE_LOG_INFO << "temp2_storage: "<< temp2_storage;
@@ -483,7 +537,7 @@ public:
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE_INLINE Field from3(const storage<NLIMBS>& xs)
+  static constexpr HOST_DEVICE_INLINE Field from3(const storage<NLIMBS>& xs) //skip wide reductions in addition
   {
     if constexpr (NLIMBS <= 2*TLC){
       return reduce(Wide{xs});

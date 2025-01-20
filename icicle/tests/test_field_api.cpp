@@ -69,7 +69,7 @@ TYPED_TEST(FieldApiTest, FieldStorageTest)
   typename TypeParam::Wide temp = {};
   storage<2*TypeParam::TLC+2> res_storage = {};
   // storage<3*TypeParam::TLC> res_storage = {};
-  for (int i = 0; i < 100; i++)
+  for (int i = 0; i < 10000; i++)
   {
     auto a = TypeParam::rand_host();
     TypeParam::multiply_raw(a.limbs_storage, a.limbs_storage, temp.limbs_storage);

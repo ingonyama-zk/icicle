@@ -227,13 +227,13 @@ namespace host_math {
   static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
-    for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
+    for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
       uint64_t carry = 0;
 #pragma unroll
-      for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
+      for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
       }
-      r[NLIMBS_A / 2 + j] = carry;
+      r[NLIMBS_A / 2 + i] = carry;
     }
   }
 
