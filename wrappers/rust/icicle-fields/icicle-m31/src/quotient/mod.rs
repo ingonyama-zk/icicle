@@ -148,7 +148,7 @@ impl<'a> QuotientConfig<'a> {
     }
 }
 
-fn check_quotient_args<'a, F: std::clone::Clone, S>(
+pub fn check_quotient_args<'a, F: std::clone::Clone, S>(
     columns: &(impl HostOrDeviceSlice<S> + ?Sized),
     domain_size: usize,
     sample_batches: &(impl HostOrDeviceSlice<ColumnSampleBatchInternal<F>> + ?Sized),
