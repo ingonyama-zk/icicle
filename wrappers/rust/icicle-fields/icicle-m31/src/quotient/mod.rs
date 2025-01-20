@@ -228,15 +228,11 @@ pub fn accumulate_quotients_wrapped(
     domain_log_size: u32,
     columns: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
     random_coef: QuarticExtensionField,
-    samples: Vec<ColumnSampleBatch<QuarticExtensionField>>,
+    internal_samples: Vec<ColumnSampleBatchInternal<QuarticExtensionField>>,
     result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
     nvtx::range_push!("before accumulate_quotients");
-    let internal_samples: Vec<ColumnSampleBatchInternal<QuarticExtensionField>> = samples
-        .iter()
-        .map(|x| x.unpack()) // Perform the TryInto conversion
-        .collect();
     let flattened_line_coeffs_size: u32 = internal_samples
         .iter()
         .map(|x| x.size)
