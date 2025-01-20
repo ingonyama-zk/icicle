@@ -142,7 +142,7 @@ pub trait MixedVecOps<F, T> {
     ) -> Result<(), eIcicleError>;
 }
 
-fn check_vec_ops_args<'a, F, T>(
+fn check_vec_ops_args<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -156,7 +156,119 @@ fn check_vec_ops_args<'a, F, T>(
             result.len()
         );
     }
+    setup_config(a, b, result, cfg, 1 /* Placeholder no need for batch_size in this operation */)
+}
 
+fn check_vec_ops_args_scalar_ops<F, T>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> VecOpsConfig {
+    if b.len() != result.len() {
+        panic!(
+            "b.len() and result.len() do not match {} != {}",
+            b.len(),
+            result.len()
+        );
+    }
+    if b.len() % a.len() != 0 {
+        panic!(
+            "b.len(), a.len() do not match {} % {} != 0",
+            b.len(),
+            a.len(),
+        );
+    }
+    let batch_size = a.len();
+    setup_config(a, b, result, cfg, batch_size)
+}
+
+fn check_vec_ops_args_reduction_ops<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> VecOpsConfig {
+    if input.len() % result.len() != 0 {
+        panic!(
+            "input length and result length do not match {} % {} != 0",
+            input.len(),
+            cfg.batch_size,
+        );
+    }
+    let batch_size = result.len();
+    setup_config(input, input, result, cfg, batch_size)
+}
+
+fn check_vec_ops_args_transpose<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows: u32,
+    nof_cols: u32,
+    output: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> VecOpsConfig {
+    if input.len() != output.len() {
+        panic!(
+            "Input size, and output size do not match {} != {}",
+            input.len(),
+            output.len()
+        );
+    }
+    if input.len() as u32 % (nof_rows * nof_cols) != 0 {
+        panic!(
+            "Input size is not a whole multiple of matrix size (#rows * #cols), {} % ({} * {}) != 0",
+            input.len(),
+            nof_rows,
+            nof_cols,
+        );
+    }
+    let batch_size = input.len() / (nof_rows * nof_cols) as usize;
+    setup_config(input, input, output, cfg, batch_size)
+}
+
+fn check_vec_ops_args_slice<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    offset: u64,
+    stride: u64,
+    size_in: u64,
+    size_out: u64,
+    output: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> VecOpsConfig {
+    if input.len() as u64 % size_in != 0 {
+        panic!(
+            "size_in does not divide input size {} % {} != 0",
+            input.len(),
+            size_in,
+        );
+    }
+    if output.len() as u64 % size_out != 0 {
+        panic!(
+            "size_out does not divide output size {} % {} != 0",
+            output.len(),
+            size_out,
+        );
+    }
+    if offset + (size_out - 1) * stride >= size_in {
+        panic!(
+            "Slice exceed input size: offset + (size_out - 1) * stride >= size_in where offset={}, size_out={}, stride={}, size_in={}",
+            offset,
+            size_out,
+            stride,
+            size_in,
+        );
+    }
+    let batch_size = output.len() / size_out as usize;
+    setup_config(input, input, output, cfg, batch_size)
+}
+
+/// Modify VecopsConfig according to the given vectors
+fn setup_config<F, T>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<T> + ?Sized),
+    result: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+    batch_size: usize
+) -> VecOpsConfig {
     // check device slices are on active device
     if a.is_on_device() && !a.is_on_active_device() {
         panic!("input a is allocated on an inactive device");
@@ -169,6 +281,7 @@ fn check_vec_ops_args<'a, F, T>(
     }
 
     let mut res_cfg = cfg.clone();
+    res_cfg.batch_size = batch_size as i32;
     res_cfg.is_a_on_device = a.is_on_device();
     res_cfg.is_b_on_device = b.is_on_device();
     res_cfg.is_result_on_device = result.is_on_device();
@@ -267,7 +380,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(a, a, result, cfg);
+    let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::sum(a, result, &cfg)
 }
 
@@ -280,7 +393,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(a, a, result, cfg);
+    let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::product(a, result, &cfg)
 }
 
@@ -294,7 +407,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(b, b, result, cfg);
+    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_add(a, b, result, &cfg)
 }
 
@@ -308,7 +421,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(b, b, result, cfg);
+    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_sub(a, b, result, &cfg)
 }
 
@@ -322,7 +435,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(b, b, result, cfg);
+    let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::scalar_mul(a, b, result, &cfg)
 }
 
@@ -337,6 +450,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
+    let cfg = check_vec_ops_args_transpose(input, nof_rows, nof_cols, output, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
@@ -378,6 +492,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
+    let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
@@ -610,7 +725,7 @@ macro_rules! impl_vec_ops_field {
                 unsafe {
                     $field_prefix_ident::vector_sum_ffi(
                         a.as_ptr(),
-                        a.len() as u32,
+                        a.len() as u32 / cfg.batch_size as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
                     )
@@ -626,7 +741,7 @@ macro_rules! impl_vec_ops_field {
                 unsafe {
                     $field_prefix_ident::vector_sum_ffi(
                         a.as_ptr(),
-                        a.len() as u32,
+                        a.len() as u32 / cfg.batch_size as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
                     )
@@ -644,7 +759,7 @@ macro_rules! impl_vec_ops_field {
                     $field_prefix_ident::scalar_add_ffi(
                         a.as_ptr(),
                         b.as_ptr(),
-                        b.len() as u32,
+                        b.len() as u32 / cfg.batch_size as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
                     )
@@ -662,7 +777,7 @@ macro_rules! impl_vec_ops_field {
                     $field_prefix_ident::scalar_sub_ffi(
                         a.as_ptr(),
                         b.as_ptr(),
-                        b.len() as u32,
+                        b.len() as u32 / cfg.batch_size as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
                     )
@@ -680,7 +795,7 @@ macro_rules! impl_vec_ops_field {
                     $field_prefix_ident::scalar_mul_ffi(
                         a.as_ptr(),
                         b.as_ptr(),
-                        b.len() as u32,
+                        b.len() as u32 / cfg.batch_size as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
                     )
@@ -715,7 +830,7 @@ macro_rules! impl_vec_ops_field {
                 unsafe {
                     $field_prefix_ident::bit_reverse_ffi(
                         input.as_ptr(),
-                        input.len() as u64,
+                        input.len() as u64 / cfg.batch_size as u64,
                         cfg as *const VecOpsConfig,
                         output.as_mut_ptr(),
                     )
@@ -730,7 +845,7 @@ macro_rules! impl_vec_ops_field {
                 unsafe {
                     $field_prefix_ident::bit_reverse_ffi(
                         input.as_ptr(),
-                        input.len() as u64,
+                        input.len() as u64 / cfg.batch_size as u64,
                         cfg as *const VecOpsConfig,
                         input.as_mut_ptr(),
                     )
