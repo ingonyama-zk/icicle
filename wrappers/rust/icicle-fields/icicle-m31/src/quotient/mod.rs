@@ -204,7 +204,10 @@ pub fn accumulate_quotients(
     flattened_line_coeffs_size: u32,
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
+    nvtx::range_push!("checking quotient args");
     let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
+    nvtx::range_pop!();
+    nvtx::range_push!("CUDA: accumulate_quotients");
     unsafe {
         _quotient::accumulate_quotients(
             domain_log_size,
@@ -229,6 +232,7 @@ pub fn accumulate_quotients_wrapped(
     result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
+    nvtx::range_push!("before accumulate_quotients");
     let internal_samples: Vec<ColumnSampleBatchInternal<QuarticExtensionField>> = samples
         .iter()
         .map(|x| x.unpack()) // Perform the TryInto conversion
@@ -237,6 +241,7 @@ pub fn accumulate_quotients_wrapped(
         .iter()
         .map(|x| x.size)
         .sum();
+    nvtx::range_pop!();
     accumulate_quotients(
         domain_log_size,
         columns,
@@ -361,14 +366,7 @@ pub(crate) mod tests {
         let mut result_raw = vec![QuarticExtensionField::zero(); 1 << 8];
         let result = HostSlice::from_mut_slice(result_raw.as_mut_slice());
         let cfg = QuotientConfig::default();
-        let err = accumulate_quotients_wrapped(
-            domain_log_size,
-            columns,
-            rand_coef,
-            &samples,
-            result,
-            &cfg,
-        );
+        let err = accumulate_quotients_wrapped(domain_log_size, columns, rand_coef, &samples, result, &cfg);
         assert!(err.is_ok());
 
         let golden_data = vec![
