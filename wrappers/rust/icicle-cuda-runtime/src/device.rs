@@ -17,6 +17,15 @@ pub fn get_device_count() -> CudaResult<usize> {
     unsafe { cudaGetDeviceCount(&mut count) }.wrap_value(count as usize)
 }
 
+pub fn get_device_memory() -> CudaResult<(usize, usize)> {
+    let mut free_memory: usize = 0;
+    let mut total_memory: usize = 0;
+    unsafe {
+        cudaMemGetInfo(&mut free_memory as *mut usize, &mut total_memory as *mut usize).wrap()?;
+        Ok((free_memory, total_memory))
+    }
+}
+
 pub fn get_device() -> CudaResult<usize> {
     let mut device_id = 0;
     unsafe { cudaGetDevice(&mut device_id) }.wrap_value(device_id as usize)
