@@ -33,7 +33,10 @@ namespace icicle {
     }
 
     // return a reference to the round polynomial generated at round # round_polynomial_idx
-    const std::vector<S>& get_const_round_polynomial(int round_polynomial_idx) const { return m_round_polynomials[round_polynomial_idx]; }
+    const std::vector<S>& get_const_round_polynomial(int round_polynomial_idx) const
+    {
+      return m_round_polynomials[round_polynomial_idx];
+    }
 
     // return a reference to the round polynomial generated at round # round_polynomial_idx
     std::vector<S>& get_round_polynomial(int round_polynomial_idx) { return m_round_polynomials[round_polynomial_idx]; }
