@@ -214,7 +214,7 @@ namespace quotient {
                 // QF mult_result = scalar_mul<QF>(random_coefficient, uint32_t(30));
                 QF mult_result_2 = scalar_mul<QF>(random_coefficient, column_value);
 
-                numerator = numerator + mult_result;
+                numerator = numerator + mult_result_2;
 
                 // for(uint32_t j = 0; j < 1; ++j) {
                 //     QF a = line_coeffs[3 * j];
