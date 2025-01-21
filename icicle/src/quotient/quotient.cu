@@ -357,8 +357,9 @@ namespace quotient {
                 }
                 // Allocate device memory for columns and values for each struct
                 if (samples[i].size > 0) {
-                    cudaMallocAsync(&h_columns_ptrs[i], sizeof(uint32_t) * samples[i].size, stream);
-                    cudaMemcpyAsync(h_columns_ptrs[i], samples[i].columns, sizeof(uint32_t) * samples[i].size, cudaMemcpyHostToDevice, stream);
+                    h_columns_ptrs[i] = samples[i].columns;
+                    // cudaMallocAsync(&h_columns_ptrs[i], sizeof(uint32_t) * samples[i].size, stream);
+                    // cudaMemcpyAsync(h_columns_ptrs[i], samples[i].columns, sizeof(uint32_t) * samples[i].size, cudaMemcpyHostToDevice, stream);
 
                     cudaMallocAsync(&h_values_ptrs[i], sizeof(QF) * samples[i].size, stream);
                     cudaMemcpyAsync(h_values_ptrs[i], samples[i].values, sizeof(QF) * samples[i].size, cudaMemcpyHostToDevice, stream);
@@ -386,7 +387,7 @@ namespace quotient {
 
             // Launch the kernel
             printDeviceColumns<<<1, 1>>>(d_columns_ptrs, 4);
-            printDeviceColumns<<<1, 1>>>(h_columns_ptrs, 4);
+            // printDeviceColumns<<<1, 1>>>(h_columns_ptrs, 4);
 
             cudaError_t err7 = cudaGetLastError();
             if (err7 != cudaSuccess) {
