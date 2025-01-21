@@ -209,36 +209,37 @@ namespace quotient {
 
                 QF numerator = QF::zero();
 
-                uint32_t column_value = columns[0].limbs_storage.limbs[0];
-                QF casted_column_value = QF{column_value, 0, 0, 0};
-                // QF mult_result = scalar_mul<QF>(random_coefficient, uint32_t(30));
-                QF mult_result_2 = scalar_mul<QF>(random_coefficient, column_value);
+                // TODO: remove this
+                // uint32_t column_value = columns[0].limbs_storage.limbs[0];
+                // QF casted_column_value = QF{column_value, 0, 0, 0};
+                // // QF mult_result = scalar_mul<QF>(random_coefficient, uint32_t(30));
+                // QF mult_result_2 = scalar_mul<QF>(random_coefficient, column_value);
 
-                numerator = numerator + mult_result_2;
+                // numerator = numerator + mult_result_2;
 
-                // for(uint32_t j = 0; j < 1; ++j) {
-                //     QF a = line_coeffs[3 * j];
-                //     QF b = line_coeffs[3 * j + 1];
-                //     QF c = line_coeffs[3 * j + 2];
+                for(uint32_t j = 0; j < 1; ++j) {
+                    QF a = line_coeffs[3 * j];
+                    QF b = line_coeffs[3 * j + 1];
+                    QF c = line_coeffs[3 * j + 2];
 
-                //     uint32_t column_index = samples[i].columns[j];
-                //     // QF linear_term = scalar_mul<QF>(a, point.y.limbs_storage.limbs[0]) + b;
+                    uint32_t column_index = samples[i].columns[j];
+                    // QF linear_term = scalar_mul<QF>(a, point.y.limbs_storage.limbs[0]) + b;
 
-                //     // F col_value = columns[column_index * domain_size + row].limbs_storage.limbs[0];
+                    // F col_value = columns[column_index * domain_size + row].limbs_storage.limbs[0];
 
-                //     // printf("col_value = %d\n", col_value);
+                    // printf("col_value = %d\n", col_value);
 
-                //     printf("yuval only");
+                    // printf("yuval only");
 
-                //     F column_value = columns[column_index].limbs_storage.limbs[0];
-                //     QF mult_result = scalar_mul<QF>(random_coefficient, column_value);
+                    
+                    QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
-                //     // QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
+                    // QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
-                //     // printf("yuval value = %d\n", value);
+                    // printf("yuval value = %d\n", value);
 
-                //     numerator = mult_result;
-                // }
+                    numerator = numerator + mult_result;
+                }
 
                 // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 // alpha * f1(x)
