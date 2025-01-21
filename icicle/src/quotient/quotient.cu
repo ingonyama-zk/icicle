@@ -190,6 +190,7 @@ namespace quotient {
     __global__ void set_columns_and_values_pointers(ColumnSampleBatch<QP, QF> *d_samples, uint32_t **d_columns_ptrs, QF **d_values_ptrs, QP **d_point_ptrs, int sample_size) {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < sample_size) {
+            printf("Thread %d: data[%d] = %d\n", i, i, d_samples[i]);
 
             d_samples[i].columns = d_columns_ptrs[i];
             d_samples[i].values = d_values_ptrs[i];
