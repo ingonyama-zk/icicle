@@ -226,8 +226,8 @@ namespace quotient {
 
                 accumulator = (accumulator * batch_coeff) + mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 offset += line_coeffs_size;
-            }
-            result[row] = accumulator;
+            }            
+            result[row] = random_coefficient;
         }
     }
 
@@ -460,22 +460,22 @@ namespace quotient {
 
         printf("Launching acc kernel\n");
 
-        // block_dim = 512;
-        // num_blocks = (domain_size + block_dim - 1) / block_dim;
-        // accumulate_quotients_kernel<QP, QF, CF, F, P, D><<<num_blocks, block_dim, 0, stream>>>(
-        //         domain,
-        //         domain_size,
-        //         d_columns,
-        //         number_of_columns,
-        //         random_coefficient,
-        //         d_samples,
-        //         sample_size,
-        //         d_flattened_line_coeffs,
-        //         d_line_coeffs_sizes,
-        //         d_batch_random_coeffs,
-        //         d_denominator_inverses,
-        //         d_result
-        // );
+        block_dim = 512;
+        num_blocks = (domain_size + block_dim - 1) / block_dim;
+        accumulate_quotients_kernel<QP, QF, CF, F, P, D><<<num_blocks, block_dim, 0, stream>>>(
+                domain,
+                domain_size,
+                d_columns,
+                number_of_columns,
+                random_coefficient,
+                d_samples,
+                sample_size,
+                d_flattened_line_coeffs,
+                d_line_coeffs_sizes,
+                d_batch_random_coeffs,
+                d_denominator_inverses,
+                d_result
+        );
 
         printf("Finished acc kernel\n");
 
