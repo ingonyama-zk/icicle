@@ -302,6 +302,10 @@ namespace quotient {
         CF *d_denominator_inverses;
         CHK_IF_RETURN(cudaMallocAsync(&d_denominator_inverses, sizeof(CF) * sample_size * domain_size, stream));
 
+        cudaError_t err_before = cudaGetLastError();
+        if (err_before != cudaSuccess) {
+            printf("Before kernel launch: %s\n", cudaGetErrorString(err_before));
+        }
 
         block_dim = 512;
         num_blocks = (domain_size + block_dim - 1) / block_dim;
@@ -319,6 +323,11 @@ namespace quotient {
                 d_denominator_inverses,
                 d_result
         );
+
+        cudaError_t err_after = cudaGetLastError();
+        if (err_after != cudaSuccess) {
+            printf("After kernel launch: %s\n", cudaGetErrorString(err_after));
+        }
 
         if (!cfg.are_results_on_device) {
             CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, sizeof(QF) * domain_size, cudaMemcpyDeviceToHost, stream));
