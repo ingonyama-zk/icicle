@@ -232,7 +232,7 @@ namespace quotient {
                     // printf("yuval only");
 
                     
-                    QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index + row].limbs_storage.limbs[0]);
+                    QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index].limbs_storage.limbs[0]);
 
                     // QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
