@@ -101,7 +101,7 @@ namespace quotient {
 
     template <typename QP, typename QF>
     __device__ void debugPrintColumnSampleBatch(const ColumnSampleBatch<QP, QF>& batch) {
-        printf("ColumnSampleBatch {\n");
+        printf("YUVAL ColumnSampleBatch {\n");
         printf("  point: %d\n", batch.point);
 
         printf("  batch_size = %d\n", batch.size);
@@ -180,6 +180,7 @@ namespace quotient {
         if (row < domain_size) {
             if (row == 0)
             {
+                printf("HERE HERE HERE");
                 debugPrintColumnSampleBatch(samples[0]);
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[0]);
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[1]);
@@ -232,7 +233,7 @@ namespace quotient {
 
                     // printf("yuval only");
 
-                    printf("yuval col_index = %d\n", column_index);
+                    // printf("yuval col_index = %d\n", column_index);
                     
                     QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index].limbs_storage.limbs[0]);
 
