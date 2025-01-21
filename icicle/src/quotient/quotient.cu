@@ -384,7 +384,7 @@ namespace quotient {
             printf("h_col[0][1] = %d\n", samples[0].columns[1]);
             printf("h_col[0][2] = %d\n", samples[0].columns[2]);
             printf("h_col[0][3] = %d\n", samples[0].columns[3]);
-            printf("\nBREAK\n")
+            printf("\nBREAK\n");
 
             printf("h_col[0][0] = %d\n", h_columns_ptrs[0][0]);
             printf("h_col[0][1] = %d\n", h_columns_ptrs[0][1]);
