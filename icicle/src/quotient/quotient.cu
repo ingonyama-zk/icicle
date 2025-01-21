@@ -268,6 +268,14 @@ namespace quotient {
         }
     }
 
+    __global__ void printDeviceColumns(uint32_t** d_columns_ptrs, uint32_t numRows) {
+    printf("Printing columns from device memory:\n");
+    for (int i = 0; i < numRows; ++i) {
+        printf("d_col[%d] = %u\n", i, d_columns_ptrs[0][i]);
+    }
+}
+
+
     template <typename QP, typename QF, typename CF, typename F, typename P, typename D>
     cudaError_t accumulate_quotients(
         D &domain,
@@ -376,12 +384,8 @@ namespace quotient {
             CHK_IF_RETURN(cudaMemcpyAsync(d_values_ptrs, h_values_ptrs, sizeof(QF*) * sample_size, cudaMemcpyHostToDevice, stream));
             CHK_IF_RETURN(cudaMemcpyAsync(d_point_ptrs, h_point_ptrs, sizeof(QP*) * sample_size, cudaMemcpyHostToDevice, stream));
 
-            // M1: (*d_col_ptrs)
-            // M2: (*d_col_ptrs + 1)
-            printf("DEVICE: d_col[0]", d_columns_ptrs[0][0]);
-            printf("DEVICE: d_col[1]", d_columns_ptrs[0][1]);
-            printf("DEVICE: d_col[2]", d_columns_ptrs[0][2]);
-            printf("DEVICE: d_col[3]", d_columns_ptrs[0][3]);
+            // Launch the kernel
+            printDeviceColumns<<<1, 1>>>(d_columns_ptrs, 4);
 
             cudaError_t err7 = cudaGetLastError();
             if (err7 != cudaSuccess) {
