@@ -178,7 +178,6 @@ namespace quotient {
         QF *result ) {
         int row = threadIdx.x + blockDim.x * blockIdx.x;
         if (row < domain_size) {
-            printf("Thread %d: row = %d\n", threadIdx.x, row);
             if (row == 0)
             {
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[0]);
@@ -240,7 +239,6 @@ namespace quotient {
             d_samples[i].values = d_values_ptrs[i];
             d_samples[i].point = d_point_ptrs[i];
 
-            printf("Thread %d: data[%d] = %d\n", i, i, d_samples[i]);
             if (i == 0) { // Only one thread prints to avoid clutter
                 printf("after");
                 debugPrintColumnSampleBatch(*d_samples);
