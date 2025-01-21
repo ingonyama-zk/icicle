@@ -228,12 +228,18 @@ namespace quotient {
     __global__ void set_columns_and_values_pointers(ColumnSampleBatch<QP, QF> *d_samples, uint32_t **d_columns_ptrs, QF **d_values_ptrs, QP **d_point_ptrs, int sample_size) {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < sample_size) {
+            if (i == 0) { // Only one thread prints to avoid clutter
+                printf("before");
+                debugPrintColumnSampleBatch(*d_samples);
+            }
+
             d_samples[i].columns = d_columns_ptrs[i];
             d_samples[i].values = d_values_ptrs[i];
             d_samples[i].point = d_point_ptrs[i];
 
             printf("Thread %d: data[%d] = %d\n", i, i, d_samples[i]);
             if (i == 0) { // Only one thread prints to avoid clutter
+                printf("after");
                 debugPrintColumnSampleBatch(*d_samples);
             }
         }
@@ -261,8 +267,10 @@ namespace quotient {
         }
 
         uint32_t domain_size = domain.size();
+        printf("Domain size: %d\n", domain_size);
         F *d_columns;
         if (cfg.are_columns_on_device) {
+            printf("Columns are on device\n");
             d_columns = columns;
         }
         else {
@@ -277,9 +285,9 @@ namespace quotient {
         }
 
         ColumnSampleBatch<QP, QF> *d_samples;
-        uint32_t **d_columns_ptrs;
-        QF **d_values_ptrs;
-        QP **d_point_ptrs;
+        uint32_t **d_columns_ptrs; // columns indices [3]
+        QF **d_values_ptrs; // evaluations of columns col[3] ==> g(x) ==> g(gamma)
+        QP **d_point_ptrs; // eval points (gamma) ==> gamma
         uint32_t **h_columns_ptrs;
         QF **h_values_ptrs;
         QP **h_point_ptrs;
@@ -291,10 +299,16 @@ namespace quotient {
             }
         }
         else {
+            printf("Sample points are on host\n");
             cudaError_t err4 = cudaGetLastError();
             if (err4 != cudaSuccess) {
                 printf("Err 4: %s\n", cudaGetErrorString(err4));
             }
+            /// Struct: M = {a, b}
+            // Copy first a and b to device: d_a, d_b
+            // Move d_a and d_b to M
+            // M.a = d_a
+            // M.b = d_b
             CHK_IF_RETURN(cudaMallocAsync(&d_samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, stream));
             h_columns_ptrs = new uint32_t*[sample_size];
             h_values_ptrs = new QF*[sample_size];
