@@ -180,6 +180,7 @@ namespace quotient {
         if (row < domain_size) {
             if (row == 0)
             {
+                debugPrintColumnSampleBatch(samples[0]);
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[0]);
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[1]);
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[2]);
@@ -202,7 +203,7 @@ namespace quotient {
             QF accumulator = QF::zero();
             uint32_t offset = 0;
             for(uint32_t i = 0; i < sample_size; ++i) {
-                ColumnSampleBatch<QP, QF> sample_batch = samples[i];
+                // ColumnSampleBatch<QP, QF> sample_batch = samples[i];
                 QF *line_coeffs = &flattened_line_coeffs[offset * 3];
                 QF batch_coeff = batch_random_coeffs[i];
                 uint32_t line_coeffs_size = line_coeffs_sizes[i];
