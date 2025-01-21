@@ -376,10 +376,12 @@ namespace quotient {
             CHK_IF_RETURN(cudaMemcpyAsync(d_values_ptrs, h_values_ptrs, sizeof(QF*) * sample_size, cudaMemcpyHostToDevice, stream));
             CHK_IF_RETURN(cudaMemcpyAsync(d_point_ptrs, h_point_ptrs, sizeof(QP*) * sample_size, cudaMemcpyHostToDevice, stream));
 
-            printf("DEVICE: d_col[0]", (*d_columns_ptrs)[0]);
-            printf("DEVICE: d_col[1]", (*d_columns_ptrs)[1]);
-            printf("DEVICE: d_col[2]", (*d_columns_ptrs)[2]);
-            printf("DEVICE: d_col[3]", (*d_columns_ptrs)[3]);
+            // M1: (*d_col_ptrs)
+            // M2: (*d_col_ptrs + 1)
+            printf("DEVICE: d_col[0]", d_columns_ptrs[0][0]);
+            printf("DEVICE: d_col[1]", d_columns_ptrs[0][1]);
+            printf("DEVICE: d_col[2]", d_columns_ptrs[0][2]);
+            printf("DEVICE: d_col[3]", d_columns_ptrs[0][3]);
 
             cudaError_t err7 = cudaGetLastError();
             if (err7 != cudaSuccess) {
