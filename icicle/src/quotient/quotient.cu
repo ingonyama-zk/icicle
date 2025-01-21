@@ -158,6 +158,10 @@ namespace quotient {
         }
     }
 
+    /// r0: QF ==> [q0 0 0 0] [q0 q1 q2 q3]
+    ///            [q1 0 0 0] [0 0 0 0]
+    ///            [q2 0 0 0]
+    ///            [q3 0 0 0]
     template <typename QP, typename QF, typename CF, typename F, typename P, typename D>
     __global__ void accumulate_quotients_kernel(
         D domain,
@@ -212,6 +216,10 @@ namespace quotient {
 
                     uint32_t column_index = samples[i].columns[j];
                     QF linear_term = scalar_mul<QF>(a, point.y.limbs_storage.limbs[0]) + b;
+
+                    // columns[column_index * domain_size + row].limbs_storage.limbs[1] = 0
+                    // columns[column_index * domain_size + row].limbs_storage.limbs[2] = 0
+                    // columns[column_index * domain_size + row].limbs_storage.limbs[3] = 0
                     QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
                     numerator = numerator + (value - linear_term);
@@ -220,6 +228,16 @@ namespace quotient {
                 accumulator = (accumulator * batch_coeff) + mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 offset += line_coeffs_size;
             }
+            // row: [0, 2^n - 1]
+            // result: [0, (2^n - 1) * 4 * 4]
+            if (row == 1000)
+            {
+                printf("accumulator_1000[0] = %d\n", accumulator.limbs_storage.limbs[0]);
+                printf("accumulator_1000[1] = %d\n", accumulator.limbs_storage.limbs[1]);
+                printf("accumulator_1000[2] = %d\n", accumulator.limbs_storage.limbs[2]);
+                printf("accumulator_1000[3] = %d\n", accumulator.limbs_storage.limbs[3]);
+            }
+            
             result[row] = accumulator;
         }
     }
@@ -228,11 +246,6 @@ namespace quotient {
     __global__ void set_columns_and_values_pointers(ColumnSampleBatch<QP, QF> *d_samples, uint32_t **d_columns_ptrs, QF **d_values_ptrs, QP **d_point_ptrs, int sample_size) {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < sample_size) {
-            if (i == 0) { // Only one thread prints to avoid clutter
-                printf("before");
-                debugPrintColumnSampleBatch(*d_samples);
-            }
-
             d_samples[i].columns = d_columns_ptrs[i];
             d_samples[i].values = d_values_ptrs[i];
             d_samples[i].point = d_point_ptrs[i];
@@ -384,6 +397,11 @@ namespace quotient {
             printf("Err 10: %s\n", cudaGetErrorString(err10));
         }
         
+        // 15, 3
+        // alpha^15, alpha^3
+        // q1 = ... (1, alpha, alpha^2, alpha^3, ...)
+        // q2 = ...
+        // Q = q1 * alpha^3 + q2
         QF *d_batch_random_coeffs;
         CHK_IF_RETURN(cudaMallocAsync(&d_batch_random_coeffs, sizeof(QF) * sample_size, stream));
 
@@ -392,6 +410,8 @@ namespace quotient {
             printf("Err 11: %s\n", cudaGetErrorString(err11));
         }
 
+        // sample 1: z ==> (a, b, c)
+        // sample 2: zg ==> (a', b', c')
         uint32_t *d_line_coeffs_sizes;
         CHK_IF_RETURN(cudaMallocAsync(&d_line_coeffs_sizes, sizeof(uint32_t) * sample_size, stream));
 
@@ -431,6 +451,7 @@ namespace quotient {
         QF *d_result;
         if (cfg.are_results_on_device) {
             d_result = result;
+            printf("Results are on device\n");
         }
         else {
             CHK_IF_RETURN(cudaMallocAsync(&d_result, sizeof(QF) * domain_size, stream));
