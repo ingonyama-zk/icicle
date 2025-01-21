@@ -217,7 +217,7 @@ namespace quotient {
                     uint32_t column_index = samples[i].columns[j];
                     // QF linear_term = scalar_mul<QF>(a, point.y.limbs_storage.limbs[0]) + b;
 
-                    // QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
+                    QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
                     numerator = numerator + random_coefficient;
                 }
