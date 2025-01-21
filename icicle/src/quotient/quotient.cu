@@ -216,18 +216,15 @@ namespace quotient {
                     uint32_t column_index = samples[i].columns[j];
                     QF linear_term = scalar_mul<QF>(a, point.y.limbs_storage.limbs[0]) + b;
 
-                    // columns[column_index * domain_size + row].limbs_storage.limbs[1] = 0
-                    // columns[column_index * domain_size + row].limbs_storage.limbs[2] = 0
-                    // columns[column_index * domain_size + row].limbs_storage.limbs[3] = 0
                     QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
                     numerator = numerator + (value - linear_term);
                 }
 
-                accumulator = (accumulator * batch_coeff) + mul<QF, CF>(numerator, denominator_inverses_local[i]);
+                accumulator = (accumulator * batch_coeff); // + mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 offset += line_coeffs_size;
             }            
-            result[row] = mul<QF, CF>(random_coefficient, denominator_inverses_local[0]);
+            result[row] = accumulator;
         }
     }
 
