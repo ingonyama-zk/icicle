@@ -213,6 +213,11 @@ namespace quotient {
 
         cudaStream_t stream = cfg.ctx.stream;
 
+        cudaError_t err1 = cudaGetLastError();
+        if (err1 != cudaSuccess) {
+            printf("Err 1: %s\n", cudaGetErrorString(err1));
+        }
+
         uint32_t domain_size = domain.size();
         F *d_columns;
         if (cfg.are_columns_on_device) {
@@ -223,6 +228,12 @@ namespace quotient {
             CHK_IF_RETURN(
             cudaMemcpyAsync(d_columns, columns, sizeof(F) * number_of_columns * domain_size, cudaMemcpyHostToDevice, stream));
         }
+
+        cudaError_t err2 = cudaGetLastError();
+        if (err2 != cudaSuccess) {
+            printf("Err 2: %s\n", cudaGetErrorString(err2));
+        }
+
         ColumnSampleBatch<QP, QF> *d_samples;
         uint32_t **d_columns_ptrs;
         QF **d_values_ptrs;
@@ -232,14 +243,31 @@ namespace quotient {
         QP **h_point_ptrs;
         if (cfg.are_sample_points_on_device) {
             d_samples = samples;
+            cudaError_t err3 = cudaGetLastError();
+            if (err3 != cudaSuccess) {
+                printf("Err 3: %s\n", cudaGetErrorString(err3));
+            }
         }
         else {
+            cudaError_t err4 = cudaGetLastError();
+            if (err4 != cudaSuccess) {
+                printf("Err 4: %s\n", cudaGetErrorString(err4));
+            }
             CHK_IF_RETURN(cudaMallocAsync(&d_samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, stream));
             h_columns_ptrs = new uint32_t*[sample_size];
             h_values_ptrs = new QF*[sample_size];
             h_point_ptrs = new QP*[sample_size];
 
+            cudaError_t err5 = cudaGetLastError();
+            if (err5 != cudaSuccess) {
+                printf("Err 5: %s\n", cudaGetErrorString(err5));
+            }
+
             for (int i = 0; i < sample_size; ++i) {
+                cudaError_t erri = cudaGetLastError();
+                if (erri != cudaSuccess) {
+                    printf("Forloop err %d\n: %s\n", i, cudaGetErrorString(erri));
+                }
                 // Allocate device memory for columns and values for each struct
                 if (samples[i].size > 0) {
                     cudaMallocAsync(&h_columns_ptrs[i], sizeof(uint32_t) * samples[i].size, stream);
@@ -259,26 +287,66 @@ namespace quotient {
             CHK_IF_RETURN(cudaMallocAsync(&d_values_ptrs, sizeof(QF*) * sample_size, stream));
             CHK_IF_RETURN(cudaMallocAsync(&d_point_ptrs, sizeof(QP*) * sample_size, stream));
 
+            cudaError_t err6 = cudaGetLastError();
+            if (err6 != cudaSuccess) {
+                printf("Err 5: %s\n", cudaGetErrorString(err6));
+            }
+
             // Copy the host arrays of pointers to device memory
             CHK_IF_RETURN(cudaMemcpyAsync(d_columns_ptrs, h_columns_ptrs, sizeof(uint32_t*) * sample_size, cudaMemcpyHostToDevice, stream));
             CHK_IF_RETURN(cudaMemcpyAsync(d_values_ptrs, h_values_ptrs, sizeof(QF*) * sample_size, cudaMemcpyHostToDevice, stream));
             CHK_IF_RETURN(cudaMemcpyAsync(d_point_ptrs, h_point_ptrs, sizeof(QP*) * sample_size, cudaMemcpyHostToDevice, stream));
 
+            cudaError_t err7 = cudaGetLastError();
+            if (err7 != cudaSuccess) {
+                printf("Err 7: %s\n", cudaGetErrorString(err7));
+            }
+
             // Copy the struct array from host to device (with placeholder pointers)
             CHK_IF_RETURN(cudaMemcpyAsync(d_samples, samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, cudaMemcpyHostToDevice, stream));
 
+            cudaError_t err8 = cudaGetLastError();
+            if (err8 != cudaSuccess) {
+                printf("Err 8: %s\n", cudaGetErrorString(err8));
+            }
+
             // Kernel to set the `columns` and `values` pointers in the device struct array
             set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
+
+            cudaError_t err9 = cudaGetLastError();
+            if (err9 != cudaSuccess) {
+                printf("Err 9: %s\n", cudaGetErrorString(err9));
+            }
+        }
+
+        cudaError_t err10 = cudaGetLastError();
+        if (err10 != cudaSuccess) {
+            printf("Err 10: %s\n", cudaGetErrorString(err10));
         }
         
         QF *d_batch_random_coeffs;
         CHK_IF_RETURN(cudaMallocAsync(&d_batch_random_coeffs, sizeof(QF) * sample_size, stream));
 
+        cudaError_t err11 = cudaGetLastError();
+        if (err11 != cudaSuccess) {
+            printf("Err 11: %s\n", cudaGetErrorString(err11));
+        }
+
         uint32_t *d_line_coeffs_sizes;
         CHK_IF_RETURN(cudaMallocAsync(&d_line_coeffs_sizes, sizeof(uint32_t) * sample_size, stream));
 
+        cudaError_t err12 = cudaGetLastError();
+        if (err12 != cudaSuccess) {
+            printf("Err 12: %s\n", cudaGetErrorString(err12));
+        }
+
         QF *d_flattened_line_coeffs;
         CHK_IF_RETURN(cudaMallocAsync(&d_flattened_line_coeffs, sizeof(QF) * flattened_line_coeffs_size, stream));
+
+        cudaError_t err13 = cudaGetLastError();
+        if (err13 != cudaSuccess) {
+            printf("Err 13: %s\n", cudaGetErrorString(err13));
+        }
 
         int block_dim = sample_size < 512 ? sample_size : 512; 
         int num_blocks = block_dim < 512 ? 1 : (sample_size + block_dim - 1) / block_dim;
@@ -291,12 +359,22 @@ namespace quotient {
             d_batch_random_coeffs
         );
 
+        cudaError_t err14 = cudaGetLastError();
+        if (err14 != cudaSuccess) {
+            printf("Err 14: %s\n", cudaGetErrorString(err14));
+        }
+
         QF *d_result;
         if (cfg.are_results_on_device) {
             d_result = result;
         }
         else {
             CHK_IF_RETURN(cudaMallocAsync(&d_result, sizeof(QF) * domain_size, stream));
+        }
+
+        cudaError_t err15 = cudaGetLastError();
+        if (err15 != cudaSuccess) {
+            printf("Err 15: %s\n", cudaGetErrorString(err15));
         }
         
         CF *d_denominator_inverses;
@@ -338,6 +416,11 @@ namespace quotient {
         CHK_IF_RETURN(cudaFreeAsync(d_line_coeffs_sizes, stream));
         CHK_IF_RETURN(cudaFreeAsync(d_batch_random_coeffs, stream));
 
+        cudaError_t err16 = cudaGetLastError();
+        if (err16 != cudaSuccess) {
+            printf("Err 16: %s\n", cudaGetErrorString(err16));
+        }
+
         if (!cfg.are_sample_points_on_device) {
             for (int i = 0; i < sample_size; ++i) {
                 CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream));
@@ -353,8 +436,18 @@ namespace quotient {
             delete[] h_point_ptrs;
         }
 
+        cudaError_t err17 = cudaGetLastError();
+        if (err17 != cudaSuccess) {
+            printf("Err 17: %s\n", cudaGetErrorString(err17));
+        }
+
         if (!cfg.are_columns_on_device) {
             CHK_IF_RETURN(cudaFreeAsync(d_columns, stream));
+        }
+
+        cudaError_t err18 = cudaGetLastError();
+        if (err18 != cudaSuccess) {
+            printf("Err 18: %s\n", cudaGetErrorString(err18));
         }
 
         if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));
