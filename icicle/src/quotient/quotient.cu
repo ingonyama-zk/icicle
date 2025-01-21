@@ -99,6 +99,30 @@ namespace quotient {
         return os;
     }
 
+    template <typename QP, typename QF>
+    __device__ void debugPrintColumnSampleBatch(const ColumnSampleBatch<QP, QF>& batch) {
+        printf("ColumnSampleBatch {\n");
+        printf("  point: %d\n", batch.point);
+
+        printf("  columns: [");
+        for (uint32_t i = 0; i < batch.size; ++i) {
+            printf("%d", batch.columns[i]);
+            if (i < batch.size - 1) printf(", ");
+        }
+        printf("]\n");
+
+        printf("  values: [");
+        for (uint32_t i = 0; i < batch.size; ++i) {
+            printf("%d", batch.values[i]);
+            if (i < batch.size - 1) printf(", ");
+        }
+        printf("]\n");
+
+        printf("  size: %u\n", batch.size);
+        printf("}\n");
+    }
+
+
     template <typename QP, typename QF, typename F>
     __global__ void column_line_and_batch_random_coeffs(
         ColumnSampleBatch<QP, QF> *sample_batches,
@@ -191,6 +215,9 @@ namespace quotient {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if (i < sample_size) {
             printf("Thread %d: data[%d] = %d\n", i, i, d_samples[i]);
+            if (i == 0) { // Only one thread prints to avoid clutter
+                debugPrintColumnSampleBatch(*d_samples);
+            }
 
             d_samples[i].columns = d_columns_ptrs[i];
             d_samples[i].values = d_values_ptrs[i];
