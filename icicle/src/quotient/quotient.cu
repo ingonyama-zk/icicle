@@ -201,15 +201,18 @@ namespace quotient {
             );
             QF accumulator = QF::zero();
             uint32_t offset = 0;
+            printf("sample_size = %d\n", sample_size);
             for(uint32_t i = 0; i < sample_size; ++i) {
                 ColumnSampleBatch<QP, QF> sample_batch = samples[i];
                 QF *line_coeffs = &flattened_line_coeffs[offset * 3];
                 QF batch_coeff = batch_random_coeffs[i];
                 uint32_t line_coeffs_size = line_coeffs_sizes[i];
 
+                printf("line_coeffs_size = %d\n", line_coeffs_size);
+
                 QF numerator = QF::zero();
 
-                for(uint32_t j = 0; j < line_coeffs_size; ++j) {
+                for(uint32_t j = 0; j < 2; ++j) {
                     QF a = line_coeffs[3 * j];
                     QF b = line_coeffs[3 * j + 1];
                     QF c = line_coeffs[3 * j + 2];
@@ -225,7 +228,7 @@ namespace quotient {
                 // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 // alpha * f1(x)
                 accumulator = (accumulator * batch_coeff) + numerator;
-                // offset += line_coeffs_size;
+                offset += line_coeffs_size;
             }            
             result[row] = accumulator;
         }
