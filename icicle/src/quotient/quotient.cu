@@ -290,6 +290,11 @@ namespace quotient {
     ) {
         CHK_INIT_IF_RETURN();
 
+        printf("init_sample_cols[0][0] = %d\n", samples[0].columns[0]);
+        printf("init_sample_cols[0][1] = %d\n", samples[0].columns[1]);
+        printf("init_sample_cols[0][2] = %d\n", samples[0].columns[2]);
+        printf("init_sample_cols[0][3] = %d\n", samples[0].columns[3]);
+
         cudaStream_t stream = cfg.ctx.stream;
 
         cudaError_t err1 = cudaGetLastError();
