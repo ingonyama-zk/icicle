@@ -418,16 +418,16 @@ namespace quotient {
 
         printf("Launching column_line_and_batch_random_coeffs kernel\n");
 
-        // int block_dim = sample_size < 512 ? sample_size : 512; 
-        // int num_blocks = block_dim < 512 ? 1 : (sample_size + block_dim - 1) / block_dim;
-        // column_line_and_batch_random_coeffs<QP, QF, F><<<num_blocks, block_dim, 0, stream>>>(
-        //     d_samples, 
-        //     sample_size, 
-        //     random_coefficient,
-        //     d_flattened_line_coeffs, 
-        //     d_line_coeffs_sizes,
-        //     d_batch_random_coeffs
-        // );
+        int block_dim = sample_size < 512 ? sample_size : 512; 
+        int num_blocks = block_dim < 512 ? 1 : (sample_size + block_dim - 1) / block_dim;
+        column_line_and_batch_random_coeffs<QP, QF, F><<<num_blocks, block_dim, 0, stream>>>(
+            d_samples, 
+            sample_size, 
+            random_coefficient,
+            d_flattened_line_coeffs, 
+            d_line_coeffs_sizes,
+            d_batch_random_coeffs
+        );
 
         printf("Finished column_line_and_batch_random_coeffs kernel\n");
 
