@@ -104,6 +104,7 @@ namespace quotient {
         printf("ColumnSampleBatch {\n");
         printf("  point: %d\n", batch.point);
 
+        printf("  batch_size = %d\n", batch.size);
         printf("  columns: [");
         for (uint32_t i = 0; i < batch.size; ++i) {
             printf("%d", batch.columns[i]);
