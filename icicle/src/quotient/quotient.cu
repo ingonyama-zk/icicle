@@ -209,7 +209,7 @@ namespace quotient {
 
                 QF numerator = QF::zero();
 
-                F column_value = columns[0].limbs_storage.limbs[0];
+                uint32_t column_value = columns[0].limbs_storage.limbs[0];
                 QF casted_column_value = QF{column_value, 0, 0, 0};
                 // QF mult_result = scalar_mul<QF>(random_coefficient, uint32_t(30));
                 QF mult_result_2 = scalar_mul<QF>(random_coefficient, column_value);
