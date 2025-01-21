@@ -225,7 +225,7 @@ namespace quotient {
                 // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 // alpha * f1(x)
                 accumulator = (accumulator * batch_coeff) + numerator;
-                offset += line_coeffs_size;
+                // offset += line_coeffs_size;
             }            
             result[row] = accumulator;
         }
