@@ -263,6 +263,9 @@ namespace quotient {
             printf("Err 2: %s\n", cudaGetErrorString(err2));
         }
 
+        printf("d_columns[0]: %d\n", d_columns[0]);
+        printf("d_columns[1]: %d\n", d_columns[1]);
+
         ColumnSampleBatch<QP, QF> *d_samples;
         uint32_t **d_columns_ptrs;
         QF **d_values_ptrs;
