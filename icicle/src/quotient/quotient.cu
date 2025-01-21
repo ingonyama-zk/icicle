@@ -228,16 +228,6 @@ namespace quotient {
                 accumulator = (accumulator * batch_coeff) + mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 offset += line_coeffs_size;
             }
-            // row: [0, 2^n - 1]
-            // result: [0, (2^n - 1) * 4 * 4]
-            if (row == 1000)
-            {
-                printf("accumulator_1000[0] = %d\n", accumulator.limbs_storage.limbs[0]);
-                printf("accumulator_1000[1] = %d\n", accumulator.limbs_storage.limbs[1]);
-                printf("accumulator_1000[2] = %d\n", accumulator.limbs_storage.limbs[2]);
-                printf("accumulator_1000[3] = %d\n", accumulator.limbs_storage.limbs[3]);
-            }
-            
             result[row] = accumulator;
         }
     }
