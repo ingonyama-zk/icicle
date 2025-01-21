@@ -479,6 +479,8 @@ namespace quotient {
             printf("Err 18: %s\n", cudaGetErrorString(err18));
         }
 
+        printf("Success\n");
+
         if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));
         
         return CHK_LAST();
