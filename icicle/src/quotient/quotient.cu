@@ -174,6 +174,7 @@ namespace quotient {
         QF *result ) {
         int row = threadIdx.x + blockDim.x * blockIdx.x;
         if (row < domain_size) {
+            printf("Thread %d: row = %d\n", threadIdx.x, row);
             if (row == 0)
             {
                 printf("d_columns[0].0 = %d\n", columns[0].limbs_storage.limbs[0]);
