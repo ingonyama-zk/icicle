@@ -405,6 +405,9 @@ namespace quotient {
             // Kernel to set the `columns` and `values` pointers in the device struct array
             set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
 
+            printf("AGAIN d_col_ptrs:");
+            printDeviceColumns<<<1, 1>>>(d_columns_ptrs, 4);
+
             printf("Finished set_columns_and_values_pointers kernel\n");
 
             cudaError_t err9 = cudaGetLastError();
