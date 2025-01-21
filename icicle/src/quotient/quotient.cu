@@ -200,7 +200,8 @@ namespace quotient {
                 denominator_inverses_local
             );
             QF accumulator = QF::zero();
-            for(uint32_t i = 0, offset = 0; i < sample_size; ++i) {
+            uint32_t offset = 0;
+            for(uint32_t i = 0; i < sample_size; ++i) {
                 ColumnSampleBatch<QP, QF> sample_batch = samples[i];
                 QF *line_coeffs = &flattened_line_coeffs[offset * 3];
                 QF batch_coeff = batch_random_coeffs[i];
@@ -222,6 +223,7 @@ namespace quotient {
                 }
 
                 // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
+                // alpha * f1(x)
                 accumulator = (accumulator * batch_coeff) + numerator;
                 offset += line_coeffs_size;
             }            
