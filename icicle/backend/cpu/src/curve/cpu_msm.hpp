@@ -44,9 +44,6 @@ public:
   // run MSM based on pippenger algorithm
   void run_msm(const scalar_t* scalars, const A* bases, P* results)
   {
-    // TBD: move to threads
-    init_workers_buckets_busy();
-
     phase1_populate_buckets(scalars, bases);
 
     phase2_collapse_segments();
@@ -130,14 +127,6 @@ private:
     m_segments.resize(nof_segments);
   }
 
-  // init all the workers buckets to empty
-  void init_workers_buckets_busy() // TBD move to threads - note that not al threads are working
-  {
-    for (auto& buckets_busy : m_workers_buckets_busy) {
-      fill(buckets_busy.begin(), buckets_busy.end(), false);
-    }
-  }
-
   // execute all tasks in taskfkow, wait for them to complete and clear taskflow.
   void run_workers_and_wait()
   {
@@ -168,9 +157,10 @@ private:
   // Each worker run this function and update its buckets - this function needs re writing
   void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, const int msm_size)
   {
-    // My buckets:
+    // Init My buckets:
     std::vector<Bucket>& buckets = m_workers_buckets[worker_idx];
     std::vector<bool>& buckets_busy = m_workers_buckets_busy[worker_idx];
+    fill(buckets_busy.begin(), buckets_busy.end(), false);
 
     const int coeff_bit_mask_no_sign_bit = m_bm_size - 1;
     const int coeff_bit_mask_with_sign_bit = (1 << m_c) - 1;
