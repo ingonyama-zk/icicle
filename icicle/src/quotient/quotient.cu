@@ -211,9 +211,10 @@ namespace quotient {
 
                 F column_value = columns[0].limbs_storage.limbs[0];
                 QF casted_column_value = QF{column_value, 0, 0, 0};
-                // QF mult_result = scalar_mul<QF>(random_coefficient, casted_column_value);
+                QF mult_result = scalar_mul<QF>(random_coefficient, uint32_t(30));
+                // QF mult_result_2 = scalar_mul<QF>(random_coefficient, column_value);
 
-                numerator = casted_column_value;
+                numerator = numerator + mult_result;
 
                 // for(uint32_t j = 0; j < 1; ++j) {
                 //     QF a = line_coeffs[3 * j];
