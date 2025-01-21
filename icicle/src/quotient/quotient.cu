@@ -380,8 +380,14 @@ namespace quotient {
                 printf("Err 5: %s\n", cudaGetErrorString(err6));
             }
 
+            printf("h_col[0][0] = %d", h_columns_ptrs[0][0]);
+            printf("h_col[0][1] = %d", h_columns_ptrs[0][1]);
+            printf("h_col[0][2] = %d", h_columns_ptrs[0][2]);
+            printf("h_col[0][3] = %d", h_columns_ptrs[0][3]);
+
             // Copy the host arrays of pointers to device memory
             CHK_IF_RETURN(cudaMemcpyAsync(d_columns_ptrs, h_columns_ptrs, sizeof(uint32_t*) * sample_size, cudaMemcpyHostToDevice, stream));
+            printf("done mem cpy from h_ptr");
             CHK_IF_RETURN(cudaMemcpyAsync(d_values_ptrs, h_values_ptrs, sizeof(QF*) * sample_size, cudaMemcpyHostToDevice, stream));
             CHK_IF_RETURN(cudaMemcpyAsync(d_point_ptrs, h_point_ptrs, sizeof(QP*) * sample_size, cudaMemcpyHostToDevice, stream));
 
