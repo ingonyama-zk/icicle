@@ -219,6 +219,8 @@ namespace quotient {
 
                     QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
+                    printf("value = %d\n", value);
+
                     numerator = numerator + random_coefficient;
                 }
 
