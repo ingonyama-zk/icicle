@@ -209,7 +209,7 @@ pub fn accumulate_quotients(
     // nvtx::range_pop!();
     // nvtx::range_push!("CUDA: accumulate_quotients");
     unsafe {
-        _quotient::accumulate_quotients(
+        let return_value = _quotient::accumulate_quotients(
             domain_log_size,
             columns.as_ptr(),
             (columns.len() / (1 << domain_log_size)) as u32,
@@ -220,7 +220,9 @@ pub fn accumulate_quotients(
             &cfg as *const QuotientConfig,
             result.as_mut_ptr(),
         )
-        .wrap()
+        .wrap();
+        println!("{:?}", return_value);
+        return_value
     }
 }
 
