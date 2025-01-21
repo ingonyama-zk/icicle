@@ -231,6 +231,7 @@ namespace quotient {
 
                     // printf("yuval only");
 
+                    printf("yuval col_index = %d\n", column_index);
                     
                     QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index].limbs_storage.limbs[0]);
 
