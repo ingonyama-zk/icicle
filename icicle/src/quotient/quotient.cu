@@ -221,7 +221,9 @@ namespace quotient {
 
                     // printf("col_value = %d\n", col_value);
 
-                    printf("yuval columns[%d].0 = %d\n", column_index, columns[column_index].limbs_storage.limbs[0]);
+                    printf("yuval only");
+
+                    // printf("yuval columns[%d].0 = %d\n", column_index, columns[column_index].limbs_storage.limbs[0]);
 
                     // QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
