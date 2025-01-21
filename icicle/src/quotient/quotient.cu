@@ -538,7 +538,7 @@ namespace quotient {
 
         if (!cfg.are_sample_points_on_device) {
             for (int i = 0; i < sample_size; ++i) {
-                CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream));
+                // CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream));
                 CHK_IF_RETURN(cudaFreeAsync(h_values_ptrs[i], stream));
                 CHK_IF_RETURN(cudaFreeAsync(h_point_ptrs[i], stream));
             }
