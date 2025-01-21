@@ -221,8 +221,8 @@ namespace quotient {
                     numerator = numerator + (value - linear_term);
                 }
 
-                QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
-                accumulator = temp;
+                // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
+                accumulator = (accumulator * batch_coeff) + numerator;
                 offset += line_coeffs_size;
             }            
             result[row] = accumulator;
