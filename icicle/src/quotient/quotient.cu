@@ -351,8 +351,12 @@ namespace quotient {
                 printf("Err 8: %s\n", cudaGetErrorString(err8));
             }
 
+            printf("Launching set_columns_and_values_pointers kernel\n");
+
             // Kernel to set the `columns` and `values` pointers in the device struct array
             set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
+
+            printf("Finished set_columns_and_values_pointers kernel\n");
 
             cudaError_t err9 = cudaGetLastError();
             if (err9 != cudaSuccess) {
@@ -389,6 +393,8 @@ namespace quotient {
             printf("Err 13: %s\n", cudaGetErrorString(err13));
         }
 
+        printf("Launching column_line_and_batch_random_coeffs kernel\n");
+
         int block_dim = sample_size < 512 ? sample_size : 512; 
         int num_blocks = block_dim < 512 ? 1 : (sample_size + block_dim - 1) / block_dim;
         column_line_and_batch_random_coeffs<QP, QF, F><<<num_blocks, block_dim, 0, stream>>>(
@@ -399,6 +405,8 @@ namespace quotient {
             d_line_coeffs_sizes,
             d_batch_random_coeffs
         );
+
+        printf("Finished column_line_and_batch_random_coeffs kernel\n");
 
         cudaError_t err14 = cudaGetLastError();
         if (err14 != cudaSuccess) {
@@ -426,6 +434,8 @@ namespace quotient {
             printf("Before kernel launch: %s\n", cudaGetErrorString(err_before));
         }
 
+        printf("Launching acc kernel\n");
+
         block_dim = 512;
         num_blocks = (domain_size + block_dim - 1) / block_dim;
         accumulate_quotients_kernel<QP, QF, CF, F, P, D><<<num_blocks, block_dim, 0, stream>>>(
@@ -442,6 +452,8 @@ namespace quotient {
                 d_denominator_inverses,
                 d_result
         );
+
+        printf("Finished acc kernel\n");
 
         cudaError_t err_after = cudaGetLastError();
         if (err_after != cudaSuccess) {
