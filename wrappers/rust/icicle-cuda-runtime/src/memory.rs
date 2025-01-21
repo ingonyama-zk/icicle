@@ -276,6 +276,7 @@ impl<T> DeviceVec<T> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
+        println!("[WRAPPER] mem allocated: {}", size);
         if size == 0 {
             return Err(CudaError::cudaErrorMemoryAllocation); //TODO: only CUDA backend should return CudaError
         }
