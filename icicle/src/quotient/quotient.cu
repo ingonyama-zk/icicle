@@ -227,7 +227,7 @@ namespace quotient {
                 accumulator = (accumulator * batch_coeff) + mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 offset += line_coeffs_size;
             }            
-            result[row] = random_coefficient;
+            result[row] = mul<QF, CF>(random_coefficient, denominator_inverses_local[0]);
         }
     }
 
