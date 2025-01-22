@@ -241,7 +241,7 @@ namespace quotient {
 
                     // printf("yuval value = %d\n", value);
 
-                    numerator = numerator + random_coefficient;
+                    numerator = numerator + batch_coeff;
                 }
 
                 // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
