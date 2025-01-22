@@ -408,7 +408,7 @@ namespace quotient {
             CHK_IF_RETURN(cudaMemcpyAsync(d_point_ptrs, h_point_ptrs, sizeof(QP*) * sample_size, cudaMemcpyHostToDevice, stream));
 
             // Launch the kernel
-            printDeviceColumns<<<1, 1>>>(d_columns_ptrs, 4);
+            // printDeviceColumns<<<1, 1>>>(d_columns_ptrs, 4);
             // printDeviceColumns<<<1, 1>>>(h_columns_ptrs, 4);
 
             cudaError_t err7 = cudaGetLastError();
