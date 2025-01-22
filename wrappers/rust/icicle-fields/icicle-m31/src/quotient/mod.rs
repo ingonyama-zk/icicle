@@ -85,7 +85,13 @@ impl<F: std::clone::Clone> ColumnSampleBatch<F> {
 
         result
     }
+
 }
+
+pub fn to_internal_column_batch<F: std::clone::Clone>(samples: &[ColumnSampleBatch<F>]) -> Vec<ColumnSampleBatchInternal<F>> {
+    samples.iter().map(|x| x.unpack()).collect()
+}
+
 
 // impl<F: std::clone::Clone> TryInto<ColumnSampleBatchInternal<F>> for &ColumnSampleBatch<F> {
 //     type Error = String;
@@ -225,14 +231,10 @@ pub fn accumulate_quotients_wrapped(
     domain_log_size: u32,
     columns: &(impl HostOrDeviceSlice<ScalarField> + ?Sized),
     random_coef: QuarticExtensionField,
-    samples: &[ColumnSampleBatch<QuarticExtensionField>],
+    internal_samples: &[ColumnSampleBatchInternal<QuarticExtensionField>],
     result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
-    let internal_samples: Vec<ColumnSampleBatchInternal<QuarticExtensionField>> = samples
-        .iter()
-        .map(|x| x.unpack()) // Perform the TryInto conversion
-        .collect();
     let flattened_line_coeffs_size: u32 = internal_samples
         .iter()
         .map(|x| x.size)
@@ -354,6 +356,7 @@ pub(crate) mod tests {
             values: vec![a, b],
         };
         let samples = vec![sample.clone(), sample.clone(), sample.clone()];
+        let internal_samples = to_internal_column_batch(&samples);
         println!("{:?}", &samples);
         let sample_im = [sample.unpack()];
         let sample_host = HostSlice::from_slice(&sample_im);
@@ -365,7 +368,7 @@ pub(crate) mod tests {
             domain_log_size,
             columns,
             rand_coef,
-            &samples,
+            &internal_samples,
             result,
             &cfg,
         );
