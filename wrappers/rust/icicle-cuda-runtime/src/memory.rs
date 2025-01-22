@@ -273,6 +273,7 @@ impl<T> DeviceSlice<T> {
 
 impl<T> DeviceVec<T> {
     pub fn cuda_malloc(count: usize) -> CudaResult<Self> {
+        println!("[WRAPPER] sizeof T = {}", size_of::<T>());
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
