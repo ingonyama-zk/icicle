@@ -116,7 +116,7 @@ public:
   static HOST_DEVICE_INLINE Field inv_log_size(uint32_t logn)
   {
     if (logn == 0) { return Field{CONFIG::one}; }
-    base_math::index_err(logn, CONFIG::omegas_count);
+    base_math::index_err(logn, CONFIG::omegas_count); // check if the requested size is within the valid range
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Field{inv.storages[logn - 1]};
   }
@@ -241,7 +241,7 @@ public:
 
   static HOST_DEVICE_INLINE Field get_reduced_digit(int i)
   {
-    base_math::index_err(i, CONFIG::reduced_digits_count);
+    base_math::index_err(i, CONFIG::reduced_digits_count); // check if the requested size is within the valid range
     storage_array<CONFIG::reduced_digits_count, TLC> const reduced_digits = CONFIG::reduced_digits;
     return Field{reduced_digits.storages[i]};
   }
@@ -280,6 +280,16 @@ public:
     }
     rv &= ((1 << digit_width) - 1);
     return rv;
+  }
+
+  template <unsigned NLIMBS>
+  static HOST_INLINE storage<NLIMBS> rand_storage(unsigned non_zero_limbs = NLIMBS)
+  {
+    std::uniform_int_distribution<unsigned> distribution;
+    storage<NLIMBS> value{};
+    for (unsigned i = 0; i < non_zero_limbs; i++)
+      value.limbs[i] = distribution(rand_generator);
+    return value;
   }
 
   // NOTE this function is used for test and examples - it assumed it is executed on a single-thread (no two threads
@@ -381,22 +391,18 @@ public:
   template <unsigned NLIMBS>
   static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs)
   {
-    if constexpr (NLIMBS <= 2 * TLC - 1) { // if it's less than p^2 go straight to barret reduction
-      return reduce(Wide{xs});
-    } else {
-      Wide rs = {};
-      int constexpr size = (NLIMBS + TLC - 1) / TLC;
-      for (int i = 0; i < size; i++) {
-        Field xi = {}; // split into field size digits
-        for (int j = 0; j < std::min(TLC, NLIMBS - i * TLC); j++) {
-          xi.limbs_storage.limbs[j] = xs.limbs[i * TLC + j];
-        }
-        Field pi = get_reduced_digit(i); // use precomputed values - pi = 2^(TLC*32*i) % p
-        Wide temp = mul_wide(xi, pi);
-        rs = rs + temp; // wide addition keeps the result under p^2, subtracting p^2 after every addition if needed
+    Wide rs = {};
+    int constexpr size = (NLIMBS + TLC - 1) / TLC;
+    for (int i = 0; i < size; i++) {
+      Field xi = {}; // split into field size digits
+      for (int j = 0; j < std::min(TLC, NLIMBS - i * TLC); j++) {
+        xi.limbs_storage.limbs[j] = xs.limbs[i * TLC + j];
       }
-      return reduce(rs); // finally, use barret reduction
+      Field pi = get_reduced_digit(i); // use precomputed values - pi = 2^(TLC*32*i) % p
+      Wide temp = mul_wide(xi, pi);
+      rs = rs + temp; // wide addition keeps the result under p^2, subtracting p^2 after every addition if needed
     }
+    return reduce(rs); // finally, use barret reduction
   }
 
   HOST_DEVICE Field& operator=(Field const& other)

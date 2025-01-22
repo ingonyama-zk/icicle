@@ -66,7 +66,7 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
 }
 
 #ifndef EXT_FIELD
-TYPED_TEST(FieldApiTest, FieldStorageTest)
+TYPED_TEST(FieldApiTest, FieldStorageReduceTest)
 {
   typename TypeParam::Wide res_wide = {};
   typename TypeParam::Wide temp = {};
@@ -82,6 +82,28 @@ TYPED_TEST(FieldApiTest, FieldStorageTest)
     base_math::template add_sub_limbs<2 * TypeParam::TLC + 2, false, false, true>(res_storage, temp2, res_storage);
   }
   ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from(res_storage));
+}
+
+TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
+{
+  /*
+  SR - storage reduce
+  check that:
+  1. SR(x1) + SR(x1) = SR(x1+x2)
+  2. SR(INV(SR(x))*x) = 1
+  */
+  storage<18> a = TypeParam::template rand_storage<18>(17); // 17 so we don't have carry after addition
+  storage<18> b = TypeParam::template rand_storage<18>(17); // 17 so we don't have carry after addition
+  storage<18> sum = {};
+  const storage<18 - TypeParam::TLC> c =
+    TypeParam::template rand_storage<18 - TypeParam::TLC>(); // -TLC so wi don't overflow in multiplication
+  storage<18> product = {};
+  base_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+  auto c_red = TypeParam::from(c);
+  auto c_inv = TypeParam::inverse(c_red);
+  base_math::multiply_raw(c, c_inv.limbs_storage, product);
+  ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
+  ASSERT_EQ(TypeParam::from(product), TypeParam::one());
 }
 #endif
 

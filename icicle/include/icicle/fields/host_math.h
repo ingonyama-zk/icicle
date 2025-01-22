@@ -363,12 +363,13 @@ namespace host_math {
   {
     return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
   }
+  // this function checks if the given index is within the array range
   static constexpr void index_err(uint32_t index, uint32_t max_index)
   {
     if (index > max_index)
       THROW_ICICLE_ERR(
-        icicle::eIcicleError::INVALID_ARGUMENT,
-        "Field: Invalid index" + std::to_string(index) + ">" + std::to_string(max_index));
+        icicle::eIcicleError::INVALID_ARGUMENT, "Field: index out of range: given index -" + std::to_string(index) +
+                                                  "> max index - " + std::to_string(max_index));
   }
 
   template <unsigned NLIMBS>
