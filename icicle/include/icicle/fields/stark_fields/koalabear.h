@@ -28,6 +28,7 @@ namespace koalabear {
 {0x55a7320c}}};
     static constexpr unsigned reduced_digits_count = 17;
     PARAMS(modulus)
+    MOD_SQR_SUBS()
 
     static constexpr storage<1> rou = {0x6ac49f88};
     TWIDDLES(modulus, rou)

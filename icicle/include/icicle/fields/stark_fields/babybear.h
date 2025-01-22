@@ -28,6 +28,7 @@ namespace babybear {
       {0x169483e4}}};
     static constexpr unsigned reduced_digits_count = 17;
     PARAMS(modulus)
+    MOD_SQR_SUBS()
 
     static constexpr storage<1> rou = {0x00000089};
     TWIDDLES(modulus, rou)

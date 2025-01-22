@@ -231,6 +231,7 @@ namespace m31 {
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
     static constexpr bool nonresidue_is_negative = true;
+    MOD_SQR_SUBS()
   };
 
   /**

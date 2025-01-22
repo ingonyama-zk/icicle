@@ -93,6 +93,31 @@ namespace params_gen {
     }
     return invs;
   }
+
+  template <unsigned NLIMBS, unsigned reduced_digits_count, unsigned mod_sqr_bit_count>
+  constexpr storage_array<reduced_digits_count, NLIMBS+2> get_modulus_sqr_subs(const storage<NLIMBS>& modulus_sqr)
+  {
+    storage_array<reduced_digits_count, NLIMBS+2> mod_subs = {};
+    storage<NLIMBS+2> curr = {0};
+    storage<NLIMBS+2> mod_sqr_inc = {0};
+    storage<NLIMBS+2> next_mod_sqr_inc = {0};
+    storage<NLIMBS+2> mod_sqr_extended = {0};
+    for (int i = 0; i < NLIMBS; i++)
+    {
+      mod_sqr_extended.limbs[i] = modulus_sqr.limbs[i];
+    }
+    mod_subs.storages[0] = {0};
+    for (int i = 1; i < reduced_digits_count; i++) {
+      host_math::template add_sub_limbs<NLIMBS+2, false, false, true>(mod_sqr_inc, mod_sqr_extended, next_mod_sqr_inc);
+      storage<NLIMBS+2> next = host_math::template right_shift<NLIMBS+2, mod_sqr_bit_count>(next_mod_sqr_inc);
+      if (curr.limbs[0] != next.limbs[0]) { //only lsb limb is non-zero
+        mod_subs.storages[i] = curr;
+        curr = next;
+      }
+      mod_sqr_inc = next_mod_sqr_inc;
+    }
+    return mod_subs;
+  }
 } // namespace params_gen
 
 #define PARAMS(modulus)                                                                                                \
@@ -117,7 +142,11 @@ namespace params_gen {
   static constexpr storage<limbs_count> montgomery_r_inv =                                                             \
     params_gen::template get_montgomery_constant<limbs_count, true>(modulus);                                          \
   static constexpr unsigned num_of_reductions =                                                                        \
-    params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
+    params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);                            
+
+#define MOD_SQR_SUBS()    \
+  static constexpr storage_array<reduced_digits_count, 2 * limbs_count + 2> mod_sqr_subs =                                 \
+    params_gen::template get_modulus_sqr_subs<2 * limbs_count, reduced_digits_count, 2 * modulus_bit_count>(modulus_squared);
 
 #define TWIDDLES(modulus, rou)                                                                                         \
   static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \

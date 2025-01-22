@@ -239,7 +239,7 @@ public:
     }
   }
 
-  static HOST_DEVICE_INLINE Field get_reduced_digit(int i) //TODO - check error
+  static HOST_DEVICE_INLINE Field get_reduced_digit(int i)
   {
     base_math::index_err(i, CONFIG::reduced_digits_count);
     storage_array<CONFIG::reduced_digits_count, TLC> const reduced_digits = CONFIG::reduced_digits;
@@ -589,6 +589,70 @@ public:
       // }
       // std::cout << std::endl;
       //3 options - barrett with larger m, sub to wide, use from2
+      return from2(rs);
+      // return {};
+    }
+  }
+
+    template <unsigned NLIMBS>
+  static constexpr HOST_DEVICE_INLINE Field from4(const storage<NLIMBS>& xs) //skip wide reductions in addition
+  {
+    if constexpr (NLIMBS <= 2*TLC){
+      return reduce(Wide{xs});
+    }
+    else { 
+      storage<2*TLC+2> rs = {};
+      // storage<2*TLC + 1> temp2 = {};
+      int constexpr size = NLIMBS / TLC;
+      for (int i = 0; i < size; i++) // because we assume a maximum value for size anyway, this loop can be unrolled with potential performance benefits
+      {
+        const Field& xi = *reinterpret_cast<const Field*>(xs.limbs + i*TLC);
+        // for (int j = 0; j < std::min(TLC, NLIMBS - i*TLC); j++) //TODO - don't copy
+        // {
+          // xi.limbs_storage.limbs[j] = xs.limbs[i*TLC + j];
+        // }
+        Field pi = get_reduced_digit(i);
+        // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
+        // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
+        storage<2*TLC+2> temp = {};
+        storage<2*TLC>& temp_storage = *reinterpret_cast<storage<2*TLC>*>(temp.limbs);
+        base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage);
+      //         std::cout << "from3 mul: ";
+      // for (int i = 0; i < 2*TLC+2; i++)
+      // {
+      //   std::cout << temp.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
+        base_math::template add_sub_limbs<2*TLC+2,false, false>(rs, temp, rs);
+      //         std::cout << "from3 add: ";
+      // for (int i = 0; i < 2*TLC+2; i++)
+      // {
+      //   std::cout << rs.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
+      }
+      int constexpr extra_limbs = NLIMBS - TLC * size;
+      if constexpr (extra_limbs > 0) {
+        const storage<extra_limbs>& xi = *reinterpret_cast<const storage<extra_limbs>*>(xs.limbs + size*TLC);
+        Field pi = get_reduced_digit(size);
+        storage<2*TLC+2> temp = {}; //need to initialize top limbs so can't use same temp.
+        storage<extra_limbs+TLC>& temp_storage = *reinterpret_cast<storage<extra_limbs+TLC>*>(temp.limbs);
+        base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage);
+        base_math::template add_sub_limbs<2*TLC+2,false, false>(rs, temp, rs);
+      }
+      // std::cout << "from3 res: ";
+      // for (int i = 0; i < 2*TLC+2; i++)
+      // {
+      //   std::cout << rs.limbs[i] << ",";
+      // }
+      // std::cout << std::endl;
+      //3 options - barrett with larger m, sub to wide, use from2
+      
+      /*rs = rs - mod_sqr_sub(top_bits)
+      sub_mod_sqared
+      return reduce()
+      */
+
       return from2(rs);
       // return {};
     }

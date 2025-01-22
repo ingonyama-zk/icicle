@@ -17,6 +17,7 @@ namespace stark252 {
       {0x7e000401, 0xfffffd73, 0x330fffff, 0x00000001, 0xff6f8000, 0xffffffff, 0x5e008810, 0x07ffd4ab}}};
     static constexpr unsigned reduced_digits_count = 3;
     PARAMS(modulus)
+    MOD_SQR_SUBS()
 
     static constexpr storage<8> rou = {0x42f8ef94, 0x6070024f, 0xe11a6161, 0xad187148,
                                        0x9c8b0fa5, 0x3f046451, 0x87529cfa, 0x005282db};
