@@ -4,18 +4,6 @@
 
 namespace icicle {
 
-  // Blake3
-  ICICLE_DISPATCHER_INST(Blake3Dispatcher, blake3_factory, Blake3FactoryImpl);
-
-  Hash create_blake3_hash(uint64_t input_chunk_size)
-  {
-    std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(Blake3Dispatcher::execute(input_chunk_size, backend));
-    Hash blake3{backend};
-    return blake3;
-  }
-
-  // Blake3 pow
   ICICLE_DISPATCHER_INST(PowBlake3Dispatcher, pow_blake3, PowBlake3Impl);
 
   extern "C" eIcicleError some_pow_blake3(uint8_t* challenge, uint8_t bits, const PowConfig& config, bool* found, uint64_t* nonce, uint64_t* mined_hash) {

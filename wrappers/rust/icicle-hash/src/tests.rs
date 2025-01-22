@@ -3,7 +3,7 @@ mod tests {
 
     use crate::{
         blake2s::Blake2s,
-        blake3::Blake3,
+        blake3::{rust_some_pow_blake3, Blake3, PowConfig},
         keccak::{Keccak256, Keccak512},
         sha3::Sha3_256,
     };
@@ -11,7 +11,7 @@ mod tests {
         hash::{HashConfig, Hasher},
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     };
-    use icicle_runtime::{memory::HostSlice, test_utilities};
+    use icicle_runtime::{eIcicleError, memory::HostSlice, test_utilities};
     use rand::Rng;
     use std::sync::Once;
 
@@ -275,5 +275,20 @@ mod tests {
         // TODOs :
         // (1) test real backends: CPU + CUDA. Can also compare the proofs to see the root, path and leaf are the same.
         // (2) test different cases of input padding
+    }
+
+    #[test]
+    fn blake3_pow() {
+        initialize();
+        test_utilities::test_set_main_device();
+        let input: [u8; 32] = [17;32];
+        let input_host = HostSlice::from_slice(&input);
+        let cfg = PowConfig::default();
+        let mut found = false;
+        let mut nonce = 0;
+        let mut mined_hash = 0;
+        let err = rust_some_pow_blake3(input_host, 30, &cfg, &mut found, &mut nonce, &mut mined_hash);
+        assert_eq!(err, eIcicleError::Success);
+        println!("{} {} {}", found, nonce, mined_hash);
     }
 }
