@@ -187,24 +187,24 @@ namespace m31 {
     static constexpr unsigned num_of_reductions = 1;
 
     static constexpr storage<limbs_count> modulus = {0x7fffffff};
-            static constexpr storage_array<17, 1> reduced_digits = {{
-{0x00000001},
-{0x00000002},
-{0x00000004},
-{0x00000008},
-{0x00000010},
-{0x00000020},
-{0x00000040},
-{0x00000080},
-{0x00000100},
-{0x00000200},
-{0x00000400},
-{0x00000800},
-{0x00001000},
-{0x00002000},
-{0x00004000},
-{0x00008000},
-{0x00010000}}};
+    static constexpr storage_array<17, 1> reduced_digits = {
+      {{0x00000001},
+       {0x00000002},
+       {0x00000004},
+       {0x00000008},
+       {0x00000010},
+       {0x00000020},
+       {0x00000040},
+       {0x00000080},
+       {0x00000100},
+       {0x00000200},
+       {0x00000400},
+       {0x00000800},
+       {0x00001000},
+       {0x00002000},
+       {0x00004000},
+       {0x00008000},
+       {0x00010000}}};
     static constexpr unsigned reduced_digits_count = 17;
     static constexpr storage<limbs_count> modulus_2 = {0xfffffffe};
     static constexpr uint64_t modulus_3 = 0x17ffffffd;
@@ -231,7 +231,6 @@ namespace m31 {
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
     static constexpr bool nonresidue_is_negative = true;
-    MOD_SQR_SUBS()
   };
 
   /**

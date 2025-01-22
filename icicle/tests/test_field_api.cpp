@@ -67,34 +67,18 @@ TYPED_TEST(FieldApiTest, FieldStorageTest)
 {
   typename TypeParam::Wide res_wide = {};
   typename TypeParam::Wide temp = {};
-  storage<2*TypeParam::TLC+2> res_storage = {};
-  // storage<3*TypeParam::TLC> res_storage = {};
-  for (int i = 0; i < 10000; i++)
-  {
+  storage<2 * TypeParam::TLC + 2> res_storage = {};
+  for (int i = 0; i < 10000; i++) {
     auto a = TypeParam::rand_host();
     TypeParam::multiply_raw(a.limbs_storage, a.limbs_storage, temp.limbs_storage);
-    // ICICLE_LOG_INFO << "temp: " << temp.limbs_storage.limbs[0] << "," << temp.limbs_storage.limbs[1];
     res_wide = res_wide + temp;
-    storage<2*TypeParam::TLC+2> temp2 = {};
-    // storage<3*TypeParam::TLC> temp2 = {};
-    for (int j = 0; j < 2*TypeParam::TLC; j++)
-    {
+    storage<2 * TypeParam::TLC + 2> temp2 = {};
+    for (int j = 0; j < 2 * TypeParam::TLC; j++) {
       temp2.limbs[j] = temp.limbs_storage.limbs[j];
     }
-    base_math::template add_sub_limbs<2*TypeParam::TLC+2, false, false, true>(res_storage, temp2, res_storage);
-    // base_math::template add_sub_limbs<3*TypeParam::TLC, false, false, true>(res_storage, temp2, res_storage);
+    base_math::template add_sub_limbs<2 * TypeParam::TLC + 2, false, false, true>(res_storage, temp2, res_storage);
   }
-  // ICICLE_LOG_INFO << "res_storage: " << res_storage.limbs[0] << "," << res_storage.limbs[1];
-  // ICICLE_LOG_INFO << "res_wide: " << res_wide.limbs_storage.limbs[0] << "," << res_wide.limbs_storage.limbs[1];
-  // std::cout << "res_wide: ";
-  //     for (int i = 0; i < 2*TypeParam::TLC; i++)
-  //     {
-  //       std::cout << res_wide.limbs_storage.limbs[i] << ",";
-  //     }
-  //     std::cout << std::endl;
   ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from(res_storage));
-  ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from2(res_storage));
-  ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from3(res_storage));
 }
 
 TYPED_TEST(FieldApiTest, vectorVectorOps)
