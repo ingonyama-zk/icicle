@@ -46,7 +46,7 @@ pub struct ColumnSampleBatch<F: std::clone::Clone> {
     pub values: Vec<F>,
 }
 
-impl<F: std::clone::Clone> ColumnSampleBatch<F> {
+impl<F: std::clone::Clone + std::fmt::Debug> ColumnSampleBatch<F> {
     pub fn unpack(&self) -> ColumnSampleBatchInternal<F> {
         if self
             .columns
@@ -63,6 +63,19 @@ impl<F: std::clone::Clone> ColumnSampleBatch<F> {
                     .len()
             );
         }
+
+        println!("[IN UNPACK] Unpacking ColumnSampleBatch: {:#?}", self);
+        println!("    pointer of point: {:#?}", &self.point as *const CirclePoint<F>);
+        println!(
+            "    pointer of columns: {:#?}",
+            self.columns
+                .as_ptr()
+        );
+        println!(
+            "    pointer of values: {:#?}",
+            self.values
+                .as_ptr()
+        );
 
         let result = unsafe {
             ColumnSampleBatchInternal {
@@ -82,6 +95,32 @@ impl<F: std::clone::Clone> ColumnSampleBatch<F> {
                     .len() as u32,
             }
         };
+
+        println!("    Unpacked ColumnSampleBatch: {:#?}", result);
+        println!("    Unpacked ColumnSampleBatch: {:#?}", result.point);
+        println!("    Unpacked ColumnSampleBatch: {:#?}", result.columns);
+        println!("    Unpacked ColumnSampleBatch: {:#?}", result.values);
+
+        // print also the actual memory these ddresses point to
+        println!("    Unpacked ColumnSampleBatch: {:#?}", unsafe {
+            (*result.point).clone()
+        });
+
+        // print columns
+        println!(
+            "    Unpacked ColumnSampleBatch: {:#?}",
+            unsafe { std::slice::from_raw_parts(result.columns, result.size as usize) }
+                .iter()
+                .take(5)
+                .collect::<Vec<&u32>>()
+        );
+        println!(
+            "    Unpacked ColumnSampleBatch: {:#?}",
+            unsafe { std::slice::from_raw_parts(result.values, result.size as usize) }
+                .iter()
+                .take(5)
+                .collect::<Vec<&F>>()
+        );
 
         result
     }
