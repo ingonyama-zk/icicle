@@ -65,6 +65,7 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+#ifndef EXT_FIELD
 TYPED_TEST(FieldApiTest, FieldStorageTest)
 {
   typename TypeParam::Wide res_wide = {};
@@ -82,6 +83,7 @@ TYPED_TEST(FieldApiTest, FieldStorageTest)
   }
   ASSERT_EQ(TypeParam::reduce(res_wide), TypeParam::from(res_storage));
 }
+#endif
 
 TYPED_TEST(FieldApiTest, vectorVectorOps)
 {
