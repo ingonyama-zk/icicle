@@ -235,13 +235,13 @@ namespace quotient {
 
                     // printf("yuval col_index = %d\n", column_index);
                     
-                    QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index].limbs_storage.limbs[0]);
+                    // QF mult_result = scalar_mul<QF>(random_coefficient, columns[column_index].limbs_storage.limbs[0]);
 
                     // QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
 
                     // printf("yuval value = %d\n", value);
 
-                    numerator = numerator + mult_result;
+                    numerator = numerator + random_coefficient;
                 }
 
                 // QF temp = mul<QF, CF>(numerator, denominator_inverses_local[i]);
