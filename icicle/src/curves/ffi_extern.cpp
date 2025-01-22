@@ -51,7 +51,7 @@ extern "C" void CONCAT_EXPAND(CURVE, generate_affine_points)(affine_t* points, i
 }
 
 /********************************** G2 **********************************/
-#ifdef G2
+#ifdef G2_ENABLED
 extern "C" bool CONCAT_EXPAND(CURVE, g2_eq)(g2_projective_t* point1, g2_projective_t* point2)
 {
   return (*point1 == *point2) &&

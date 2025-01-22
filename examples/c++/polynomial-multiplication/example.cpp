@@ -3,7 +3,9 @@
 #include <memory>
 
 #include "icicle/runtime.h"
-#include "icicle/api/bn254.h"
+#include "icicle/ntt.h"
+#include "icicle/vec_ops.h"
+#include "icicle/curves/params/bn254.h"
 using namespace bn254;
 
 #include "examples_utils.h"
@@ -38,7 +40,7 @@ int main(int argc, char** argv)
   // init domain
   scalar_t basic_root = scalar_t::omega(NTT_LOG_SIZE);
   auto config = default_ntt_init_domain_config();
-  bn254_ntt_init_domain(&basic_root, &config);
+  ICICLE_CHECK(ntt_init_domain(basic_root, config));
 
   // (1) cpu allocation
   auto polyA = std::make_unique<scalar_t[]>(NTT_SIZE);
@@ -65,8 +67,8 @@ int main(int argc, char** argv)
     ntt_config.are_inputs_on_device = false;
     ntt_config.are_outputs_on_device = true;
     ntt_config.ordering = Ordering::kNM;
-    ICICLE_CHECK(bn254_ntt(polyA.get(), NTT_SIZE, NTTDir::kForward, &ntt_config, d_polyA));
-    ICICLE_CHECK(bn254_ntt(polyB.get(), NTT_SIZE, NTTDir::kForward, &ntt_config, d_polyB));
+    ICICLE_CHECK(ntt(polyA.get(), NTT_SIZE, NTTDir::kForward, ntt_config, d_polyA));
+    ICICLE_CHECK(ntt(polyB.get(), NTT_SIZE, NTTDir::kForward, ntt_config, d_polyB));
 
     // (4) multiply A,B
     VecOpsConfig config = default_vec_ops_config();
@@ -94,7 +96,7 @@ int main(int argc, char** argv)
   benchmark(false); // warmup
   benchmark(true);
 
-  ICICLE_CHECK(bn254_ntt_release_domain());
+  ntt_release_domain<scalar_t>();
 
   return 0;
 }

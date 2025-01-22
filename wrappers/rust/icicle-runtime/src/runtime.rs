@@ -15,7 +15,7 @@ extern "C" {
     fn icicle_get_active_device(device: &mut Device) -> eIcicleError;
     fn icicle_is_host_memory(ptr: *const c_void) -> eIcicleError;
     fn icicle_is_active_device_memory(ptr: *const c_void) -> eIcicleError;
-    fn icicle_get_device_count(device_count: &i32) -> eIcicleError;
+    fn icicle_get_device_count(device_count: &mut i32) -> eIcicleError;
     fn icicle_is_device_available(device: &Device) -> eIcicleError;
     pub fn icicle_malloc(ptr: *mut *mut c_void, size: usize) -> eIcicleError;
     pub fn icicle_malloc_async(ptr: *mut *mut c_void, size: usize, stream: IcicleStreamHandle) -> eIcicleError;

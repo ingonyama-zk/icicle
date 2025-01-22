@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Note: Different clang-format versions may produce slightly different results.
+# To ensure consistency, you can run clang-format inside a Docker container:
+# 
+# docker run --rm -v $(pwd):/icicle -w /icicle silkeh/clang:19-bookworm bash ./scripts/format_all.sh .
+#
+# Explanation:
+# - `--rm`: Automatically remove the container after it exits.
+# - `-v $(pwd):/icicle`: Mounts the current directory into the container at `/icicle`.
+# - `-w /icicle`: Sets the working directory inside the container to `/icicle`.
+# - `silkeh/clang:19-bookworm`: Specifies the Docker image with clang-format version 19.
+# - `bash ./scripts/format_all.sh .`: Executes the formatting script for all files in the current directory.
+
 # Exit immediately if a command exits with a non-zero status
 set -e
 

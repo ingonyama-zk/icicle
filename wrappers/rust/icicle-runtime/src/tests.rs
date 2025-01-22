@@ -30,6 +30,21 @@ mod tests {
     }
 
     #[test]
+    fn test_get_device_count() {
+        initialize();
+
+        test_utilities::test_set_main_device();
+        let device_count = get_device_count().unwrap();
+        assert!(device_count > 0);
+        for device_id in 0..device_count {
+            test_utilities::test_set_main_device_with_id(device_id); // This fails if not available
+        }
+        test_utilities::test_set_ref_device();
+        let device_count = get_device_count().unwrap();
+        assert!(device_count > 0);
+    }
+
+    #[test]
     fn test_set_default_device() {
         initialize();
 

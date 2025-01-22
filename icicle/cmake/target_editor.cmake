@@ -53,7 +53,7 @@ endfunction()
 
 function(handle_g2 TARGET FEATURE_LIST)
   if(G2 AND "G2" IN_LIST FEATURE_LIST)
-    target_compile_definitions(${TARGET} PUBLIC G2=${G2})
+    target_compile_definitions(${TARGET} PUBLIC G2_ENABLED=${G2})
     set(G2 "G2" CACHE BOOL "Enable G2 feature" FORCE)
   else()
     set(G2 OFF CACHE BOOL "G2 not available for this curve" FORCE)
