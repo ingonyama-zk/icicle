@@ -261,10 +261,10 @@ namespace quotient {
             d_samples[i].values = d_values_ptrs[i];
             d_samples[i].point = d_point_ptrs[i];
 
-            if (i == 0) { // Only one thread prints to avoid clutter
-                printf("after");
-                debugPrintColumnSampleBatch(*d_samples);
-            }
+            // if (i == 0) { // Only one thread prints to avoid clutter
+            //     printf("after");
+            //     debugPrintColumnSampleBatch(*d_samples);
+            // }
         }
     }
 
