@@ -323,6 +323,8 @@ namespace quotient {
                 d_result
         );
 
+        CHK_IF_RETURN(cudaStreamSynchronize(stream));
+
         if (!cfg.are_results_on_device) {
             printf("[BACKEND] Copying d_result to result\n");
             printf("[BACKEND] d_result = %p\n", d_result);
