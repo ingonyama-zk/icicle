@@ -14,6 +14,7 @@ namespace bls12_377 {
         0x4cf495bf, 0xe2fdf49a, 0x008d6661}}};
     static constexpr unsigned reduced_digits_count = 2;
     PARAMS(modulus)
+    MOD_SQR_SUBS()
 
     static constexpr storage<12> rou = {0xc563b9a1, 0x7eca603c, 0x06fe0bc3, 0x06df0a43, 0x0ddff8c6, 0xb44d994a,
                                         0x4512a3d4, 0x40fbe05b, 0x8aeffc9b, 0x30f15248, 0x05198a80, 0x0036a92e};

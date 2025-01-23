@@ -14,6 +14,7 @@ namespace bn254 {
        {0xae216da7, 0x1bb8e645, 0xe35c59e3, 0x53fe3ab1, 0x53bb8085, 0x8c49833d, 0x7f4e44a5, 0x0216d0b1}}};
     static constexpr unsigned reduced_digits_count = 3;
     PARAMS(modulus)
+    MOD_SQR_SUBS()
 
     static constexpr storage<8> rou = {0x725b19f0, 0x9bd61b6e, 0x41112ed4, 0x402d111e,
                                        0x8ef62abc, 0x00e0a7eb, 0xa58a7e85, 0x2a3c09f0};

@@ -227,6 +227,7 @@ namespace m31 {
 
     static constexpr storage_array<omegas_count, limbs_count> inv = {{{0x40000000}}};
 
+    MOD_SQR_SUBS()
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.

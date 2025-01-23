@@ -12,8 +12,8 @@ namespace bn254 {
        {0xc58f0d9d, 0xd35d438d, 0xf5c70b3d, 0x0a78eb28, 0x7879462c, 0x666ea36f, 0x9a07df2f, 0x0e0a77c1},
        {0x538afa89, 0xf32cfc5b, 0xd44501fb, 0xb5e71911, 0x0a417ff6, 0x47ab1eff, 0xcab8351f, 0x06d89f71}}};
     static constexpr unsigned reduced_digits_count = 3;
-
     PARAMS(modulus)
+    MOD_SQR_SUBS()
 
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 1;

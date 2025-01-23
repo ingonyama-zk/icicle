@@ -14,6 +14,8 @@ namespace bls12_377 {
        {0xb861857b, 0x25d577ba, 0x8860591f, 0xcc2c27b5, 0xe5dc8593, 0xa7cc008f, 0xeff1c939, 0x011fdae7}}};
     static constexpr unsigned reduced_digits_count = 3;
     PARAMS(modulus)
+    MOD_SQR_SUBS()
+    
     static constexpr storage<8> rou = {0xec2a895e, 0x476ef4a4, 0x63e3f04a, 0x9b506ee3,
                                        0xd1a8a12f, 0x60c69477, 0x0cb92cc1, 0x11d4b7f6};
     TWIDDLES(modulus, rou)
