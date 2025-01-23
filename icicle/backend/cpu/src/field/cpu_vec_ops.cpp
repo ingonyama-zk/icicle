@@ -211,7 +211,7 @@ private:
   void vector_inv()
   {
     for (uint64_t i = 0; i < m_nof_operations; ++i) {
-      m_output[i] = U::inverse(m_op_a[i]);
+      m_output[i] = T::inverse(m_op_a[i]);
     }
   }
   // Single worker functionality to execute conversion from barret to montgomery

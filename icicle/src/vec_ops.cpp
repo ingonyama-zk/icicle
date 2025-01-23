@@ -271,7 +271,7 @@ namespace icicle {
   template <>
   eIcicleError vector_inv(const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)
   {
-    return CONCAT_EXPAND(FIELD, extension_vector_inv)(vec_a, vec_b, size, &config, output);
+    return CONCAT_EXPAND(FIELD, extension_vector_inv)(vec_a, size, &config, output);
   }
 #endif // EXT_FIELD
 

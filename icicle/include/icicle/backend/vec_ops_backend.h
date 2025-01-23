@@ -313,7 +313,7 @@ namespace icicle {
       }();                                                                                                             \
     }
 
-  void register_extension_vector_inv(const std::string& deviceType, extFieldVectorOpImpl impl);
+  void register_extension_vector_inv(const std::string& deviceType, extFieldVectorReduceOpImpl impl);
 
   #define REGISTER_VECTOR_INV_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
     namespace {                                                                                                        \
