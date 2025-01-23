@@ -247,15 +247,14 @@ namespace icicle {
   /*********************************** INV ***********************************/
   ICICLE_DISPATCHER_INST(VectorInvDispatcher, vector_inv, VectorReduceOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, vector_inv)(
-    const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
+  extern "C" eIcicleError
+  CONCAT_EXPAND(FIELD, vector_inv)(const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
     return VectorInvDispatcher::execute(vec_a, size, *config, output);
   }
 
   template <>
-  eIcicleError
-  vector_inv(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  eIcicleError vector_inv(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
   {
     return CONCAT_EXPAND(FIELD, vector_inv)(vec_a, size, &config, output);
   }
@@ -270,8 +269,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError vector_inv(
-    const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  eIcicleError vector_inv(const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)
   {
     return CONCAT_EXPAND(FIELD, extension_vector_inv)(vec_a, vec_b, size, &config, output);
   }

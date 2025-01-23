@@ -103,14 +103,13 @@ namespace icicle {
 
   void register_vector_inv(const std::string& deviceType, VectorReduceOpImpl impl);
 
-#define REGISTER_VECTOR_INV_BACKEND(DEVICE_TYPE, FUNC)                                                             \
+#define REGISTER_VECTOR_INV_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_inv) = []() -> bool {                                                              \
-      register_vector_inv(DEVICE_TYPE, FUNC);                                                                      \
+    static bool UNIQUE(_reg_vec_inv) = []() -> bool {                                                                  \
+      register_vector_inv(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
-
 
   void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
@@ -318,8 +317,8 @@ namespace icicle {
 
   #define REGISTER_VECTOR_INV_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_vec_inv_ext_field) = []() -> bool {                                                  \
-        register_extension_vector_inv(DEVICE_TYPE, FUNC);                                                          \
+      static bool UNIQUE(_reg_vec_inv_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_inv(DEVICE_TYPE, FUNC);                                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

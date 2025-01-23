@@ -487,8 +487,7 @@ REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
 
 /*********************************** INV ***********************************/
 template <typename T>
-eIcicleError cpu_vector_inv(
-  const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
+eIcicleError cpu_vector_inv(const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
 {
   return cpu_2vectors_op(VecOperation::VECTOR_INV, vec_a, vec_a, size, config, output);
 }
