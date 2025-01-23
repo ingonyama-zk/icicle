@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <cuda_runtime.h>
+#include <nvToolsExt.h>
 #include "gpu-utils/device_context.cuh"
 #include "vec_ops/vec_ops.cuh"
 #include "fields/stark_fields/m31.cuh"
@@ -213,6 +214,8 @@ namespace quotient {
 
         cudaStream_t stream = cfg.ctx.stream;
 
+
+        nvtxRangePush("[CUDA] d_columns");
         uint32_t domain_size = domain.size();
         F *d_columns;
         if (cfg.are_columns_on_device) {
@@ -223,6 +226,9 @@ namespace quotient {
             CHK_IF_RETURN(
             cudaMemcpyAsync(d_columns, columns, sizeof(F) * number_of_columns * domain_size, cudaMemcpyHostToDevice, stream));
         }
+        nvtxRangePop();
+
+        nvtxRangePush("[CUDA] d_samples");
         ColumnSampleBatch<QP, QF> *d_samples;
         uint32_t **d_columns_ptrs;
         QF **d_values_ptrs;
@@ -234,11 +240,14 @@ namespace quotient {
             d_samples = samples;
         }
         else {
+            nvtxRangePush("[CUDA] malloc for d_samples");
             CHK_IF_RETURN(cudaMallocAsync(&d_samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, stream));
             h_columns_ptrs = new uint32_t*[sample_size];
             h_values_ptrs = new QF*[sample_size];
             h_point_ptrs = new QP*[sample_size];
+            nvtxRangePop();
 
+            nvtxRangePush("[CUDA] loop over samples malloc and memcpy");
             for (int i = 0; i < sample_size; ++i) {
                 // Allocate device memory for columns and values for each struct
                 if (samples[i].size > 0) {
@@ -254,6 +263,9 @@ namespace quotient {
                 cudaMallocAsync(&h_point_ptrs[i], sizeof(QP), stream);
                 cudaMemcpyAsync(h_point_ptrs[i], samples[i].point, sizeof(QP), cudaMemcpyHostToDevice, stream);
             }
+            nvtxRangePop();
+
+            nvtxRangePush("[CUDA] malloc for d_columns_ptrs, d_values_ptrs, d_point_ptrs");
             // Allocate device memory to store the arrays of pointers for columns and values
             CHK_IF_RETURN(cudaMallocAsync(&d_columns_ptrs, sizeof(uint32_t*) * sample_size, stream));
             CHK_IF_RETURN(cudaMallocAsync(&d_values_ptrs, sizeof(QF*) * sample_size, stream));
@@ -266,11 +278,16 @@ namespace quotient {
 
             // Copy the struct array from host to device (with placeholder pointers)
             CHK_IF_RETURN(cudaMemcpyAsync(d_samples, samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, cudaMemcpyHostToDevice, stream));
+            nvtxRangePop();
 
             // Kernel to set the `columns` and `values` pointers in the device struct array
+            nvtxRangePush("[CUDA] set_columns_and_values_pointers");
             set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
+            nvtxRangePop();
         }
+        nvtxRangePop();
         
+        nvtxRangePush("[CUDA] other data");  
         QF *d_batch_random_coeffs;
         CHK_IF_RETURN(cudaMallocAsync(&d_batch_random_coeffs, sizeof(QF) * sample_size, stream));
 
@@ -279,7 +296,9 @@ namespace quotient {
 
         QF *d_flattened_line_coeffs;
         CHK_IF_RETURN(cudaMallocAsync(&d_flattened_line_coeffs, sizeof(QF) * flattened_line_coeffs_size, stream));
+        nvtxRangePop();
 
+        nvtxRangePush("[CUDA] column_line_and_batch_random_coeffs");
         int block_dim = sample_size < 512 ? sample_size : 512; 
         int num_blocks = block_dim < 512 ? 1 : (sample_size + block_dim - 1) / block_dim;
         column_line_and_batch_random_coeffs<QP, QF, F><<<num_blocks, block_dim, 0, stream>>>(
@@ -290,7 +309,9 @@ namespace quotient {
             d_line_coeffs_sizes,
             d_batch_random_coeffs
         );
+        nvtxRangePop();
 
+        nvtxRangePush("[CUDA] malloc for d_result");
         QF *d_result;
         if (cfg.are_results_on_device) {
             d_result = result;
@@ -298,11 +319,15 @@ namespace quotient {
         else {
             CHK_IF_RETURN(cudaMallocAsync(&d_result, sizeof(QF) * domain_size, stream));
         }
+        nvtxRangePop();
         
+        nvtxRangePush("[CUDA] malloc for d_denominator_inverses");
         CF *d_denominator_inverses;
         CHK_IF_RETURN(cudaMallocAsync(&d_denominator_inverses, sizeof(CF) * sample_size * domain_size, stream));
+        nvtxRangePop();
 
 
+        nvtxRangePush("[CUDA] accumulate_quotients_kernel");
         block_dim = 512;
         num_blocks = (domain_size + block_dim - 1) / block_dim;
         accumulate_quotients_kernel<QP, QF, CF, F, P, D><<<num_blocks, block_dim, 0, stream>>>(
@@ -319,16 +344,23 @@ namespace quotient {
                 d_denominator_inverses,
                 d_result
         );
+        nvtxRangePop();
 
+        nvtxRangePush("[CUDA] copy result");
         if (!cfg.are_results_on_device) {
             CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, sizeof(QF) * domain_size, cudaMemcpyDeviceToHost, stream));
             CHK_IF_RETURN(cudaFreeAsync(d_result, stream));
         }
+        nvtxRangePop();
+
+        nvtxRangePush("[CUDA] free");
         CHK_IF_RETURN(cudaFreeAsync(d_denominator_inverses, stream));
         CHK_IF_RETURN(cudaFreeAsync(d_flattened_line_coeffs, stream));
         CHK_IF_RETURN(cudaFreeAsync(d_line_coeffs_sizes, stream));
         CHK_IF_RETURN(cudaFreeAsync(d_batch_random_coeffs, stream));
+        nvtxRangePop();
 
+        nvtxRangePush("[CUDA] conditional free");
         if (!cfg.are_sample_points_on_device) {
             for (int i = 0; i < sample_size; ++i) {
                 CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream));
@@ -347,8 +379,11 @@ namespace quotient {
         if (!cfg.are_columns_on_device) {
             CHK_IF_RETURN(cudaFreeAsync(d_columns, stream));
         }
+        nvtxRangePop();
 
+        nvtxRangePush("[CUDA] sync");
         if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));
+        nvtxRangePop();
         
         return CHK_LAST();
     }

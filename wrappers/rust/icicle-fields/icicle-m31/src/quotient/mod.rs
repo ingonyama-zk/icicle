@@ -85,13 +85,16 @@ impl<F: std::clone::Clone> ColumnSampleBatch<F> {
 
         result
     }
-
 }
 
-pub fn to_internal_column_batch<F: std::clone::Clone>(samples: &[ColumnSampleBatch<F>]) -> Vec<ColumnSampleBatchInternal<F>> {
-    samples.iter().map(|x| x.unpack()).collect()
+pub fn to_internal_column_batch<F: std::clone::Clone>(
+    samples: &[ColumnSampleBatch<F>],
+) -> Vec<ColumnSampleBatchInternal<F>> {
+    samples
+        .iter()
+        .map(|x| x.unpack())
+        .collect()
 }
-
 
 // impl<F: std::clone::Clone> TryInto<ColumnSampleBatchInternal<F>> for &ColumnSampleBatch<F> {
 //     type Error = String;
@@ -210,7 +213,10 @@ pub fn accumulate_quotients(
     flattened_line_coeffs_size: u32,
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
+    nvtx::range!("[BACK] check_quotient_args");
     let cfg = check_quotient_args(columns, 1 << domain_log_size, samples, result, cfg);
+    nvtx::range_pop!();
+    nvtx::range!("[BACK] _quotient::accumulate_quotients");
     unsafe {
         _quotient::accumulate_quotients(
             domain_log_size,
@@ -235,10 +241,13 @@ pub fn accumulate_quotients_wrapped(
     result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
+    nvtx::range!("[BACK] flattened_line_coeffs_size");
     let flattened_line_coeffs_size: u32 = internal_samples
         .iter()
         .map(|x| x.size)
         .sum();
+    nvtx::range_pop!();
+    nvtx::range!("[BACK] accumulate_quotients");
     accumulate_quotients(
         domain_log_size,
         columns,
@@ -364,14 +373,7 @@ pub(crate) mod tests {
         let mut result_raw = vec![QuarticExtensionField::zero(); 1 << 8];
         let result = HostSlice::from_mut_slice(result_raw.as_mut_slice());
         let cfg = QuotientConfig::default();
-        let err = accumulate_quotients_wrapped(
-            domain_log_size,
-            columns,
-            rand_coef,
-            &internal_samples,
-            result,
-            &cfg,
-        );
+        let err = accumulate_quotients_wrapped(domain_log_size, columns, rand_coef, &internal_samples, result, &cfg);
         assert!(err.is_ok());
 
         let golden_data = vec![
