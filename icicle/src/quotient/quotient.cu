@@ -297,8 +297,9 @@ namespace quotient {
         }
         else {
             CHK_IF_RETURN(cudaMallocAsync(&d_result, sizeof(QF) * domain_size, stream));
-            printf("Allocated d_result size = %d\n", sizeof(QF) * domain_size);
-            printf("Allocated d_result = %p\n", d_result);
+            printf("[BACKEND] domain size = %d\n", domain_size);
+            printf("[BACKEND] Allocated d_result size = %d\n", sizeof(QF) * domain_size);
+            printf("[BACKEND] Allocated d_result = %p\n", d_result);
         }
         
         CF *d_denominator_inverses;
@@ -323,9 +324,9 @@ namespace quotient {
         );
 
         if (!cfg.are_results_on_device) {
-            printf("Copying d_result to result\n");
-            printf("d_result = %p\n", d_result);
-            printf("result = %p\n", result);
+            printf("[BACKEND] Copying d_result to result\n");
+            printf("[BACKEND] d_result = %p\n", d_result);
+            printf("[BACKEND] result = %p\n", result);
             CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, sizeof(QF) * domain_size, cudaMemcpyDeviceToHost, stream));
             CHK_IF_RETURN(cudaFreeAsync(d_result, stream));
         }
