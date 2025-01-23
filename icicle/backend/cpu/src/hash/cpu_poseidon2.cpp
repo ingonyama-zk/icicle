@@ -239,48 +239,74 @@ namespace icicle {
       S* partial_matrix_diagonal_m1 = poseidon2_constants[T].partial_matrix_diagonal_m1;
 
       // Allocate temporary memory for intermediate calcs and in order not to change the input.
-      int sponge_nof_hashers = m_use_domain_tag ? (input_size_in_scalars / arity) :  ((input_size_in_scalars - 1) / (arity - 1));
-      int tmp_fields_nof_scalars = is_sponge ? (T * sponge_nof_hashers) : (T * config.batch);
-      S* tmp_fields = new S[tmp_fields_nof_scalars];
+      // int sponge_nof_hashers = m_use_domain_tag ? (input_size_in_scalars / arity) :  ((input_size_in_scalars - 1) / (arity - 1));
+      // int tmp_fields_nof_scalars = is_sponge ? (T * sponge_nof_hashers) : (T * config.batch);
+      // S* tmp_fields = new S[tmp_fields_nof_scalars];
+      S* tmp_fields;
+      int sponge_nof_hashers;
       const S* in_fields = (S*)(input);
-      if (m_use_domain_tag) {      
-        if (is_sponge) {
+      int padding_size = 0;
+      S* padding;
+      if (is_sponge) {
+        if (input_size_in_scalars <= T) {
+          sponge_nof_hashers = 1;
+          padding_size = T - (input_size_in_scalars + (m_use_domain_tag == 1));
+        } else {
+          sponge_nof_hashers = (input_size_in_scalars + (m_use_domain_tag == 1) + 1 /* for domain_tag */ - T + (T - 2)) / (T - 1);
+          padding_size = (input_size_in_scalars + (m_use_domain_tag == 1) - T) % (T - 1);
+        }
+        if (padding_size > 0) {   // Fill padding array with 1,0,0,...
+          padding = new S[padding_size];
+          padding[0] = S::from(1);
+          for (int i = 1; i < padding_size; i++) {
+            padding[i] = S::from(0);
+          }
+        }
+        tmp_fields = new S[T * sponge_nof_hashers];
+        if (m_use_domain_tag) {      
           // Domain tag exists only for the first hasher. For the rest of the hashers this
           // input is undefined at this stage and its value will be set later.
           // tmp_fields = {{dt, in0}, {undef, in1}, {undef, in2}, etc.}
           memcpy(tmp_fields, &m_domain_tag, sizeof(S));   
-          for (int hasher_idx = 0; hasher_idx < sponge_nof_hashers; hasher_idx++) {
-            memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
-            in_fields += (T - 1);
-            tmp_fields += T;
-          }
-          tmp_fields -= T * sponge_nof_hashers;
         }
-        else {    // Not a sponge function. Input of each hash should have domain tag at its input.
-          // tmp_fields = {{dt, in0 (T-1 inputs)}, {dt, in1 (T-1 inputs)}, {dt, in2 (T-1 inputs)}, etc.}
+        else {
+          // tmp_fields = {{in0 (T inputs)}, {undef, in1 (T-1 inputs)}, {under, in2 (T-1 inputs)}, etc.}
+          memcpy(tmp_fields, in_fields, T * sizeof(S)); // 1st hasher uses T inputs.
+          in_fields += T;
+          tmp_fields += T;
+        }
+        for (int hasher_idx = 0; hasher_idx < sponge_nof_hashers; hasher_idx++) {
+          if (hasher_idx == sponge_nof_hashers-1 && padding_size > 0) {
+            // Last hasher in the chain. Take care of padding.
+            if (hasher_idx == 0) {
+              memcpy(tmp_fields + 1, in_fields, (T - padding_size) * sizeof(S));
+              memcpy(tmp_fields + 1 + T - padding_size, in_fields, padding_size * sizeof(S));
+            }
+            else {
+              memcpy(tmp_fields + 1, in_fields, (T - padding_size - 1) * sizeof(S));
+              memcpy(tmp_fields + 1 + T - padding_size - 1, in_fields, padding_size * sizeof(S));
+            }
+          }
+          else {    // Not a last hasher in the chain. There is no padding.
+            memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
+          }
+          in_fields += (T - 1);
+          tmp_fields += T;
+        }
+        tmp_fields -= T * sponge_nof_hashers;
+      }     // if (is_sponge) {
+      else {    // Not a sponge function. The is no padding.
+        // Input of each hash should have domain tag at its input.
+        // tmp_fields = {{dt, in0 (T-1 inputs)}, {dt, in1 (T-1 inputs)}, {dt, in2 (T-1 inputs)}, etc.}
+        tmp_fields = new S[T * config.batch];
+        if (m_use_domain_tag) {      
           for (int batch_idx = 0; batch_idx < config.batch; batch_idx++) {
             memcpy(tmp_fields, &m_domain_tag, sizeof(S));
             memcpy(tmp_fields + 1, in_fields, (T - 1) * sizeof(S));
             in_fields += (T - 1);
             tmp_fields += T;
           }
-          tmp_fields -= T * config.batch;
-        }
-      }
-      else {    // There is no domain tag.
-        if (is_sponge) {
-          // tmp_fields = {{in0 (T inputs)}, {undef, in1 (T-1 inputs)}, {under, in2 (T-1 inputs)}, etc.}
-          memcpy(tmp_fields, in_fields, T * sizeof(S)); // 1st hasher uses T inputs.
-          in_fields += T;
-          tmp_fields += T;
-          // Rest of the hashers use T-1 inputs and 1 output from the previous hasher.
-          // The value of the 1st input of each of these hashers is undef at this stage.
-          for (int hasher_idx = 1; hasher_idx < sponge_nof_hashers; hasher_idx++) {
-            memcpy(&tmp_fields[1], in_fields, (T - 1) * sizeof(S));
-            in_fields += (T - 1);
-            tmp_fields += T;
-          }
-          tmp_fields -= T * sponge_nof_hashers;
+          tmp_fields -= T * config.batch;          
         }
         else {
           // tmp_fields = {{in0 (T inputs)}, {in1 (T inputs)}, {in2 (T inputs)}, etc.}
@@ -288,6 +314,7 @@ namespace icicle {
         }
       }
 
+      // Hashes processing.
       if (is_sponge) {
         S* tmp_fields_tmp_ptr;    // This pointer is used to assist in addition of the hasher outputs
                                   // with new inputs.
@@ -295,6 +322,7 @@ namespace icicle {
         eIcicleError err = hash_single(tmp_fields /* input */, tmp_fields /* output */,
           alpha, nof_upper_full_rounds, nof_partial_rounds, nof_bottom_full_rounds,
           rounds_constants, mds_matrix, partial_matrix_diagonal_m1);     
+        if (err != eIcicleError::SUCCESS) return err;
         tmp_fields[T] = tmp_fields[0];    // Current first output is an input to the next hasher.
         tmp_fields_tmp_ptr = tmp_fields;  // Save current pointer.
         tmp_fields += T;
@@ -311,9 +339,9 @@ namespace icicle {
             rounds_constants, mds_matrix, partial_matrix_diagonal_m1);
           if (err != eIcicleError::SUCCESS) return err;
           if (hasher_idx != sponge_nof_hashers - 1)   // Not to do in the last loop to prevent mem leak.
-            tmp_fields[T] = tmp_fields[0];    // Current first output is an input to the next hasher.
-          tmp_fields += T;  // Proceed to the next hash.
-        }
+            tmp_fields[T] = tmp_fields[0];    // Fill first scalar of the input to the next hasher.
+          tmp_fields += T;  // Proceed to the next hasher.
+        }   // for (int hasher_idx = 1; hasher_idx < sponge_nof_hashers; hasher_idx++) {   
         tmp_fields -= T;    // Rollback to the last hasher output.
         memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
         tmp_fields -= T * (sponge_nof_hashers - 1);
@@ -332,6 +360,7 @@ namespace icicle {
       }
 
       delete[] tmp_fields;
+      if (padding_size != 0) delete[] padding;
       tmp_fields = nullptr;
 
       return eIcicleError::SUCCESS;

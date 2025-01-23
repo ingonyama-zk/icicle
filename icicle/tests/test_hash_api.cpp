@@ -1205,7 +1205,7 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2nd_hasher_without_dt_cpu_only)
   input[1] = scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03571");
   input[2] = scalar_t::hex_str2scalar("0x1ed25194542b12eef8617361c3ba7c52e660b145994427cc86296242cf766eca");
   for (int i = 0; i < t; i++) {
-    // std::cout << "poseidon2_3_single_hash_cpu_only input " << input[i] << std::endl;
+    // std::cout << "poseidon2_3_sponge_2nd_hasher_without_dt_cpu_only input " << input[i] << std::endl;
   }
   // DEBUG
 
@@ -1248,7 +1248,7 @@ TEST_F(HashApiTest, poseidon2_3_sponge_hash_2_without_dt_cpu_only)
     }
   }
   for (int i = 0; i < t + (nof_hashers-1) * (t-1); i++) {
-    // std::cout << "poseidon2_3_sponge_hash_2_without_dt_cpu_only input " << input[i] << std::endl;
+    std::cout << "poseidon2_3_sponge_hash_2_without_dt_cpu_only input " << input[i] << std::endl;
   }
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
@@ -1267,7 +1267,7 @@ TEST_F(HashApiTest, poseidon2_3_sponge_hash_2_without_dt_cpu_only)
     END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
   };
 
-  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
+  auto output_cpu = std::make_unique<scalar_t[]>(config.batch);   // config.batch = 1 here.
 
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
   scalar_t expected_res =
