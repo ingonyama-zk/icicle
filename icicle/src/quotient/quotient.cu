@@ -323,7 +323,9 @@ namespace quotient {
                 d_result
         );
 
-        CHK_IF_RETURN(cudaStreamSynchronize(stream));
+        // print cuda error
+        printf("[BACKEND] Finished kernel with error \n");
+        printf("[BACKEND] cuda_err = %p\n", cudaGetErrorString(cudaGetLastError()));
 
         if (!cfg.are_results_on_device) {
             printf("[BACKEND] Copying d_result to result\n");
