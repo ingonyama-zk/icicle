@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mixed_mul_scalars, mul_scalars,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars, mul_scalars,
     product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl,
     MixedVecOps, VecOps, VecOpsConfig,
 };
@@ -42,6 +42,7 @@ where
     check_vec_ops_scalars_sub::<F>(test_size);
     check_vec_ops_scalars_mul::<F>(test_size);
     check_vec_ops_scalars_div::<F>(test_size);
+    check_vec_ops_scalars_inv::<F>(test_size);
     check_vec_ops_scalars_sum::<F>(test_size);
     check_vec_ops_scalars_product::<F>(test_size);
     check_vec_ops_scalars_add_scalar::<F>(test_size);
@@ -157,6 +158,31 @@ where
 
     test_utilities::test_set_ref_device();
     div_scalars(a_main, b, result_ref, &cfg).unwrap();
+
+    assert_eq!(result_main.as_slice(), result_ref.as_slice());
+}
+
+pub fn check_vec_ops_scalars_inv<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let cfg = VecOpsConfig::default();
+
+    let a = F::Config::generate_random(test_size);
+    let b = F::Config::generate_random(test_size);
+    let mut inv = vec![F::zero(); test_size];
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::one(); test_size];
+
+    let a = HostSlice::from_slice(&a);
+    let b = HostSlice::from_slice(&b);
+    let inv = HostSlice::from_mut_slice(&mut inv);
+    let result_main = HostSlice::from_mut_slice(&mut result_main);
+    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+
+    test_utilities::test_set_main_device();
+    inv_scalars(a, inv, &cfg).unwrap();
+    mul_scalars(a, inv, result_main, &cfg).unwrap();
 
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
 }
