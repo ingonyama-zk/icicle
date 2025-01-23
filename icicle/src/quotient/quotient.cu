@@ -228,7 +228,7 @@ namespace quotient {
         }
         nvtxRangePop();
 
-        nvtxRangePush("[CUDA] d_samples");
+        // nvtxRangePush("[CUDA] d_samples");
         ColumnSampleBatch<QP, QF> *d_samples;
         uint32_t **d_columns_ptrs;
         QF **d_values_ptrs;
@@ -285,7 +285,7 @@ namespace quotient {
             set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
             nvtxRangePop();
         }
-        nvtxRangePop();
+        // nvtxRangePop();
         
         nvtxRangePush("[CUDA] other data");  
         QF *d_batch_random_coeffs;
