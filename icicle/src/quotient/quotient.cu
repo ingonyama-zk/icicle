@@ -325,7 +325,10 @@ namespace quotient {
 
         // print cuda error
         printf("[BACKEND] Finished kernel with error \n");
-        printf("[BACKEND] cuda_err = %p\n", cudaGetErrorString(cudaGetLastError()));
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            printf("[BACKEND] cuda_err = %s\n", cudaGetErrorString(err));
+        }
 
         if (!cfg.are_results_on_device) {
             printf("[BACKEND] Copying d_result to result\n");
