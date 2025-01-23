@@ -2,7 +2,8 @@
 
 #include "icicle/runtime.h"
 
-#include "icicle/api/bn254.h"
+#include "icicle/ntt.h"
+#include "icicle/curves/params/bn254.h"
 using namespace bn254;
 
 #include "examples_utils.h"
