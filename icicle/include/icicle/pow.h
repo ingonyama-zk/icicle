@@ -15,7 +15,7 @@ namespace icicle {
     icicleStreamHandle stream = nullptr; /**< Stream for asynchronous execution. Default is nullptr. */
     bool is_challenge_on_device = false; /**< True if challenge reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
     bool is_result_on_device = false; /**< True if challenge reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
-    bool is_async = false; /**< True to run the pow solver asynchronously, false to run synchronously. Default is false. */
+    // bool is_async = false; /**< True to run the pow solver asynchronously, false to run synchronously. Default is false. */
     ConfigExtension* ext = nullptr; /**< Pointer to backend-specific configuration extensions. Default is nullptr. */
   };
   const uint8_t BLOCK_LEN = 64;
@@ -29,5 +29,5 @@ namespace icicle {
    */
   static PowConfig default_pow_config() { return PowConfig(); }
   
-  eIcicleError pow_blake3(uint8_t* challenge, uint8_t bits, const PowConfig& config, bool& found, uint64_t& nonce, uint64_t& mined_hash);
+  eIcicleError pow(uint8_t* challenge, uint8_t bits, const PowConfig& config, bool& found, uint64_t& nonce, uint64_t& mined_hash);
 }
