@@ -239,17 +239,17 @@ public:
     }
   }
 
+  // access precomputed values for first step of the from storage function (see below)
   static HOST_DEVICE_INLINE Field get_reduced_digit(int i)
   {
-    base_math::index_err(i, CONFIG::reduced_digits_count); // check if the requested size is within the valid range
     storage_array<CONFIG::reduced_digits_count, TLC> const reduced_digits = CONFIG::reduced_digits;
-    return Field{reduced_digits.storages[i]}; //todo-i-1
+    return Field{reduced_digits.storages[i]};
   }
 
-  static HOST_DEVICE_INLINE storage<2*TLC+2> get_mod_sub(int i)
+  // access precomputed values for second step of the from storage function (see below)
+  static HOST_DEVICE_INLINE storage<2 * TLC + 2> get_mod_sub(int i)
   {
-    base_math::index_err(i, CONFIG::mod_subs_count); // check if the requested size is within the valid range
-    storage_array<CONFIG::mod_subs_count, 2*TLC+2> const mod_subs = CONFIG::mod_subs;
+    storage_array<CONFIG::mod_subs_count, 2 * TLC + 2> const mod_subs = CONFIG::mod_subs;
     return mod_subs.storages[i];
   }
 
@@ -393,161 +393,50 @@ public:
       xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
   }
 
-  // // this function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
-  // // between 0 and p.
-  // template <unsigned NLIMBS>
-  // static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs)
-  // {
-  //   Wide rs = {};
-  //   int constexpr size = (NLIMBS + TLC - 1) / TLC;
-  //   for (int i = 0; i < size; i++) {
-  //     Field xi = {}; // split into field size digits
-  //     for (int j = 0; j < std::min(TLC, NLIMBS - i * TLC); j++) {
-  //       xi.limbs_storage.limbs[j] = xs.limbs[i * TLC + j];
-  //     }
-  //     Field pi = get_reduced_digit(i); // use precomputed values - pi = 2^(TLC*32*i) % p
-  //     Wide temp = mul_wide(xi, pi);
-  //     rs = rs + temp; // wide addition keeps the result under p^2, subtracting p^2 after every addition if needed
-  //   }
-  //   return reduce(rs); // finally, use barret reduction
-  // }
-
+  /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
+  between 0 and p. This is done using 3 steps:
+  1. Splitting the number into TLC sized digits - xs = x_i * p_i = x_i * 2^(TLC*32*i).
+  p_i are precomputed modulo p and so the first step is performed multiplying by p_i and accumultaing.
+  At the end of this step the number is reduced from NLIMBS to 2*TLC+1 (assuming less than 2^32 additions).
+  2. The second step subtracts a single precomputed multiple of p in ordr to reduce the number into the range 0<x<2^(2n)
+  where n is the modulus bit count. This step makes use of a look-up table that looks at the top bits of the number (it
+  is enough to look at the bits from 2*(2n-1) and above).
+  3. The final step is the regular barrett reduction that reduces from the range 0<x<2^(2n) down to 0<x<p. */
   template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs) //naive
+  static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs)
   {
-      Wide rs = {};
-      // storage<2*TLC + 1> temp2 = {};
-      int constexpr size = (NLIMBS + TLC - 1) / TLC;
-      for (int i = 0; i < size; i++)
-      {
-        Field xi = {};
-        // reinterpret_cast<storage<NLIMBS>>(xs.limbs + i*TLC);
-        for (int j = 0; j < std::min(TLC, NLIMBS - i*TLC); j++) //TODO - don't copy
-        {
-          xi.limbs_storage.limbs[j] = xs.limbs[i*TLC + j];
-        }
-        Field pi = get_reduced_digit(i);
-        // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
-        // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
-                                            std::cout << "xi mul: ";
-      for (int i = 0; i < TLC; i++)
-      {
-        std::cout << std::hex << xi.limbs_storage.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-                                  std::cout << "pi mul: ";
-      for (int i = 0; i < TLC; i++)
-      {
-        std::cout << std::hex << pi.limbs_storage.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-        Wide temp = mul_wide(xi, pi); //TODO - support 64
-                            std::cout << "from mul: ";
-      for (int i = 0; i < 2*TLC+2; i++)
-      {
-        std::cout << std::hex << temp.limbs_storage.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-        rs = rs + temp;
-                          std::cout << "from add: ";
-      for (int i = 0; i < 2*TLC+2; i++)
-      {
-        std::cout << std::hex << rs.limbs_storage.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-      }
-      return reduce(rs);
-  }
-
-    template <unsigned NLIMBS>
-  static constexpr HOST_DEVICE_INLINE Field from4(const storage<NLIMBS>& xs) //skip wide reductions in addition
-  {
-      static_assert(NLIMBS*32<=576); // for now we support up to 576 bits
-      storage<2*TLC+2> rs = {};
-      // storage<2*TLC + 1> temp2 = {};
-      int constexpr size = NLIMBS / TLC;
-      // for (int i = 0; i < TLC; i++)
-      // {
-      //   rs.limbs[i] = xs.limbs[i];
-      // }
-
-      for (int i = 0; i < size; i++) // because we assume a maximum value for size anyway, this loop can be unrolled with potential performance benefits
-      {
-        const Field& xi = *reinterpret_cast<const Field*>(xs.limbs + i*TLC);
-        // for (int j = 0; j < std::min(TLC, NLIMBS - i*TLC); j++) //TODO - don't copy
-        // {
-          // xi.limbs_storage.limbs[j] = xs.limbs[i*TLC + j];
-        // }
-        Field pi = get_reduced_digit(i);
-        std::cout << "xi mul: ";
-      for (int i = 0; i < TLC; i++)
-      {
-        std::cout << std::hex << xi.limbs_storage.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-                                  std::cout << "pi mul: ";
-      for (int i = 0; i < TLC; i++)
-      {
-        std::cout << std::hex << pi.limbs_storage.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-        // ICICLE_LOG_INFO << "xi: "<< xi.limbs_storage.limbs[0];
-        // ICICLE_LOG_INFO << "pi: "<< pi.limbs_storage.limbs[0];
-        storage<2*TLC+2> temp = {};
-        storage<2*TLC>& temp_storage = *reinterpret_cast<storage<2*TLC>*>(temp.limbs);
-        base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage);
-              std::cout << "from4 mul: ";
-      for (int i = 0; i < 2*TLC+2; i++)
-      {
-        std::cout << temp.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-        base_math::template add_sub_limbs<2*TLC+2,false, false>(rs, temp, rs);
-              std::cout << "from4 add: ";
-      for (int i = 0; i < 2*TLC+2; i++)
-      {
-        std::cout << rs.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-      }
-      int constexpr extra_limbs = NLIMBS - TLC * size;
-      if constexpr (extra_limbs > 0) {
-        const storage<extra_limbs>& xi = *reinterpret_cast<const storage<extra_limbs>*>(xs.limbs + size*TLC);
-        Field pi = get_reduced_digit(size);
-        storage<2*TLC+2> temp = {}; //need to initialize top limbs so can't use same temp.
-        storage<extra_limbs+TLC>& temp_storage = *reinterpret_cast<storage<extra_limbs+TLC>*>(temp.limbs);
-        base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage);
-        base_math::template add_sub_limbs<2*TLC+2,false, false>(rs, temp, rs);
-      }
-      std::cout << "from4 res: ";
-      for (int i = 0; i < 2*TLC+2; i++)
-      {
-        std::cout << rs.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-      //3 options - barrett with larger m, sub to wide, use from2
-      unsigned constexpr msbits_count = 2*TLC*32 - (2*NBITS-1);
-      std::cout << "TLC" << TLC << std::endl;
-      std::cout << "NBITS" << NBITS << std::endl;
-      std::cout << "msbits_count" << msbits_count << std::endl;
-      unsigned top_bits = (rs.limbs[2*TLC]<<msbits_count) + (rs.limbs[2*TLC-1]>>(32-msbits_count));
-      std::cout << "top_bits" << top_bits << std::endl;
-      base_math::template add_sub_limbs<2*TLC+2,true,false>(rs,get_mod_sub(top_bits),rs);
-      std::cout << "from4 final res: ";
-      for (int i = 0; i < 2*TLC+2; i++)
-      {
-        std::cout << rs.limbs[i] << ",";
-      }
-      std::cout << std::endl;
-      /*rs = rs - mod_sqr_sub(top_bits)
-      sub_mod_sqared
-      return reduce()
-      */
-
-      // return from2(rs);
-      storage<2*TLC>& res = *reinterpret_cast<storage<2*TLC>*>(rs.limbs);
-      return reduce(Wide{res});
-      // return {};
+    static_assert(NLIMBS * 32 <= 576); // for now we support up to 576 bits
+    storage<2 * TLC + 2> rs = {};
+    int constexpr size = NLIMBS / TLC;
+    // first reduction step:
+    for (int i = 0; i < size; i++) // future optimization - because we assume a maximum value for size anyway, this loop
+                                   // can be unrolled with potential performance benefits
+    {
+      const Field& xi = *reinterpret_cast<const Field*>(xs.limbs + i * TLC); // use casting instead of copying
+      Field pi = get_reduced_digit(i); // use precomputed values - pi = 2^(TLC*32*i) % p
+      storage<2 * TLC + 2> temp = {};
+      storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
+      base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
+      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);              // accumulation
+    }
+    int constexpr extra_limbs = NLIMBS - TLC * size;
+    if constexpr (extra_limbs > 0) { // handle the extra limbs (when TLC does not divide NLIMBS)
+      const storage<extra_limbs>& xi = *reinterpret_cast<const storage<extra_limbs>*>(xs.limbs + size * TLC);
+      Field pi = get_reduced_digit(size);
+      storage<2 * TLC + 2> temp = {};
+      storage<extra_limbs + TLC>& temp_storage = *reinterpret_cast<storage<extra_limbs + TLC>*>(temp.limbs);
+      base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage); // multiplication
+      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);             // accumulation
+    }
+    // second reduction step: - an alternative for this step would be to use the barret reduction straight away but with
+    // a larger value of m.
+    unsigned constexpr msbits_count = 2 * TLC * 32 - (2 * NBITS - 1);
+    unsigned top_bits = (rs.limbs[2 * TLC] << msbits_count) + (rs.limbs[2 * TLC - 1] >> (32 - msbits_count));
+    base_math::template add_sub_limbs<2 * TLC + 2, true, false>(
+      rs, get_mod_sub(top_bits), rs); // subtracting the precomputed multiple of p from the look-up table
+    // third and final step:
+    storage<2 * TLC>& res = *reinterpret_cast<storage<2 * TLC>*>(rs.limbs);
+    return reduce(Wide{res}); // finally, use barret reduction
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
