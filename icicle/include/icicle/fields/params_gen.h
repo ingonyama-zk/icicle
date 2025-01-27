@@ -94,27 +94,47 @@ namespace params_gen {
     return invs;
   }
 
-  template <unsigned NLIMBS, unsigned reduced_digits_count, unsigned mod_sqr_bit_count>
-  constexpr storage_array<reduced_digits_count, NLIMBS+2> get_modulus_sqr_subs(const storage<NLIMBS>& modulus_sqr)
+  // template <unsigned NLIMBS, unsigned reduced_digits_count, unsigned mod_sqr_bit_count>
+  // constexpr storage_array<reduced_digits_count, NLIMBS+2> get_modulus_sqr_subs(const storage<NLIMBS>& modulus_sqr)
+  // {
+  //   storage_array<reduced_digits_count, NLIMBS+2> mod_subs = {};
+  //   storage<NLIMBS+2> curr = {0};
+  //   storage<NLIMBS+2> mod_sqr_inc = {0};
+  //   storage<NLIMBS+2> next_mod_sqr_inc = {0};
+  //   storage<NLIMBS+2> mod_sqr_extended = {0};
+  //   for (int i = 0; i < NLIMBS; i++)
+  //   {
+  //     mod_sqr_extended.limbs[i] = modulus_sqr.limbs[i];
+  //   }
+  //   mod_subs.storages[0] = {0};
+  //   for (int i = 1; i < reduced_digits_count; i++) {
+  //     host_math::template add_sub_limbs<NLIMBS+2, false, false, true>(mod_sqr_inc, mod_sqr_extended, next_mod_sqr_inc);
+  //     storage<NLIMBS+2> next = host_math::template right_shift<NLIMBS+2, mod_sqr_bit_count>(next_mod_sqr_inc);
+  //     if (curr.limbs[0] != next.limbs[0]) { //only lsb limb is non-zero
+  //       mod_subs.storages[i] = curr;
+  //       curr = next;
+  //     }
+  //     mod_sqr_inc = next_mod_sqr_inc;
+  //   }
+  //   return mod_subs;
+  // }
+
+  template <unsigned NLIMBS, unsigned mod_subs_count, unsigned mod_bit_count>
+  constexpr storage_array<mod_subs_count, 2*NLIMBS+2> get_modulus_subs(const storage<NLIMBS>& modulus)
   {
-    storage_array<reduced_digits_count, NLIMBS+2> mod_subs = {};
-    storage<NLIMBS+2> curr = {0};
-    storage<NLIMBS+2> mod_sqr_inc = {0};
-    storage<NLIMBS+2> next_mod_sqr_inc = {0};
-    storage<NLIMBS+2> mod_sqr_extended = {0};
-    for (int i = 0; i < NLIMBS; i++)
-    {
-      mod_sqr_extended.limbs[i] = modulus_sqr.limbs[i];
-    }
+    storage_array<mod_subs_count, 2*NLIMBS+2> mod_subs = {};
+    unsigned constexpr bit_shift = 2*mod_bit_count-1;
     mod_subs.storages[0] = {0};
-    for (int i = 1; i < reduced_digits_count; i++) {
-      host_math::template add_sub_limbs<NLIMBS+2, false, false, true>(mod_sqr_inc, mod_sqr_extended, next_mod_sqr_inc);
-      storage<NLIMBS+2> next = host_math::template right_shift<NLIMBS+2, mod_sqr_bit_count>(next_mod_sqr_inc);
-      if (curr.limbs[0] != next.limbs[0]) { //only lsb limb is non-zero
-        mod_subs.storages[i] = curr;
-        curr = next;
-      }
-      mod_sqr_inc = next_mod_sqr_inc;
+    for (int i = 1; i < mod_subs_count; i++) {
+      storage<2*NLIMBS+2> temp = {};
+      storage<NLIMBS> rs = {};
+      storage<NLIMBS+2> mod_sub_factor = {};
+      temp.limbs[0] = i;
+      storage<2*NLIMBS+2> candidate = host_math::template left_shift<2*NLIMBS+2, bit_shift>(temp);
+      host_math::template integer_division<2*NLIMBS+2, NLIMBS, NLIMBS+2, true>(candidate, modulus, mod_sub_factor, rs);
+      storage<2*NLIMBS+2> temp2 = {};
+      host_math::template multiply_raw<NLIMBS+2, NLIMBS, true>(mod_sub_factor, modulus, temp2);
+      mod_subs.storages[i] = temp2;
     }
     return mod_subs;
   }
@@ -145,8 +165,9 @@ namespace params_gen {
     params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);                            
 
 #define MOD_SQR_SUBS()    \
-  static constexpr storage_array<reduced_digits_count, 2 * limbs_count + 2> mod_sqr_subs =                                 \
-    params_gen::template get_modulus_sqr_subs<2 * limbs_count, reduced_digits_count, 2 * modulus_bit_count>(modulus_squared);
+  static constexpr unsigned mod_subs_count = reduced_digits_count<<(limbs_count*32+1-modulus_bit_count); 
+  // static constexpr storage_array<mod_subs_count, 2 * limbs_count + 2> mod_subs =                                 \
+  //   params_gen::template get_modulus_subs<limbs_count, mod_subs_count, modulus_bit_count>(modulus);
 
 #define TWIDDLES(modulus, rou)                                                                                         \
   static constexpr unsigned omegas_count = params_gen::template two_adicity<limbs_count>(modulus);                     \

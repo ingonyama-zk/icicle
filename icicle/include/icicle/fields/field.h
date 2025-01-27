@@ -243,7 +243,14 @@ public:
   {
     base_math::index_err(i, CONFIG::reduced_digits_count); // check if the requested size is within the valid range
     storage_array<CONFIG::reduced_digits_count, TLC> const reduced_digits = CONFIG::reduced_digits;
-    return Field{reduced_digits.storages[i]};
+    return Field{reduced_digits.storages[i]}; //todo-i-1
+  }
+
+  static HOST_DEVICE_INLINE storage<2*TLC+2> get_mod_sub(int i)
+  {
+    base_math::index_err(i, CONFIG::mod_subs_count); // check if the requested size is within the valid range
+    storage_array<CONFIG::mod_subs_count, 2*TLC+2> const mod_subs = CONFIG::mod_subs;
+    return mod_subs.storages[i];
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
@@ -600,13 +607,14 @@ public:
     template <unsigned NLIMBS>
   static constexpr HOST_DEVICE_INLINE Field from4(const storage<NLIMBS>& xs) //skip wide reductions in addition
   {
-    if constexpr (NLIMBS <= 2*TLC){
-      return reduce(Wide{xs});
-    }
-    else { 
       storage<2*TLC+2> rs = {};
       // storage<2*TLC + 1> temp2 = {};
       int constexpr size = NLIMBS / TLC;
+      // for (int i = 0; i < NLIMBS; i++)
+      // {
+      //   rs.limbs[i] = xs.limbs[i];
+      // }
+
       for (int i = 0; i < size; i++) // because we assume a maximum value for size anyway, this loop can be unrolled with potential performance benefits
       {
         const Field& xi = *reinterpret_cast<const Field*>(xs.limbs + i*TLC);
@@ -650,15 +658,21 @@ public:
       // }
       // std::cout << std::endl;
       //3 options - barrett with larger m, sub to wide, use from2
-      
+      unsigned constexpr msbits_count = 2*TLC*32 - (2*NBITS-1);
+      std::cout << "TLC" << TLC << std::endl;
+      std::cout << "NBITS" << NBITS << std::endl;
+      std::cout << "msbits_count" << msbits_count << std::endl;
+      unsigned top_bits = (rs.limbs[2*TLC]<<msbits_count) + (rs.limbs[2*TLC-1]>>(32-msbits_count));
+      base_math::template add_sub_limbs<2*TLC+2,true,false>(rs,get_mod_sub(top_bits),rs);
       /*rs = rs - mod_sqr_sub(top_bits)
       sub_mod_sqared
       return reduce()
       */
 
-      return from2(rs);
+      // return from2(rs);
+      storage<2*TLC>& res = *reinterpret_cast<storage<2*TLC>*>(rs.limbs);
+      return reduce(Wide{res});
       // return {};
-    }
   }
 
   HOST_DEVICE Field& operator=(Field const& other)
