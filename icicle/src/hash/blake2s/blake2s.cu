@@ -376,4 +376,107 @@ namespace blake2s {
     return CHK_LAST();
   }
 
+  __global__ void hash_node_kernel(
+    const BYTE* prev_layer,
+    bool prev_layer_exists,
+    const Matrix<BYTE>* columns,
+    unsigned int number_of_columns,
+    unsigned int column_length,
+    BYTE* digests
+  ) {
+    int idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+    uint64_t number_of_nodes = d_next_pow_of_two(column_length);
+    if (idx >= number_of_nodes) { return; }
+
+    CUDA_BLAKE2S_CTX ctx;
+    cuda_blake2s_init(&ctx, nullptr, 0, (32 << 3));
+    memset(ctx.chain, 0, BLAKE2S_CHAIN_LENGTH);
+
+    if (prev_layer_exists) cuda_blake2s_compress(&ctx, &prev_layer[idx * BLAKE2S_BLOCK_LENGTH], 0);
+
+    cuda_blake2s_hash_2d(&ctx, columns, number_of_columns, idx);
+
+    memcpy(digests + idx * BLAKE2S_CHAIN_LENGTH, ctx.chain, BLAKE2S_CHAIN_LENGTH);
+  }
+
+  cudaError_t Blake2s::commit_layer(
+    const BYTE* prev_layer,
+    bool prev_layer_exists,
+    bool prev_layer_on_device,
+    const Matrix<BYTE>* columns,
+    bool columns_on_device,
+    unsigned int number_of_columns,
+    unsigned int column_length,
+    BYTE* digests
+  ) const
+  {
+    // Allocate and move prev layer digests to device
+    BYTE* d_prev_layer;
+    if (prev_layer_exists) {
+      if (!prev_layer_on_device) {
+        CHK_IF_RETURN(cudaMalloc(&d_prev_layer, column_length * 2 * 32));
+        CHK_IF_RETURN(cudaMemcpy(d_prev_layer, prev_layer, column_length * 2 * 32, cudaMemcpyHostToDevice));
+      } else {
+        d_prev_layer = const_cast<BYTE*>(prev_layer);
+      }
+    }
+
+    // Allocate current layer matrices mem on device
+    Matrix<BYTE>* d_matrices;
+    CHK_IF_RETURN(cudaMalloc(&d_matrices, number_of_columns * sizeof(Matrix<BYTE>)));
+    Matrix<BYTE>* h_matrices;
+    
+    if (!columns_on_device) {
+      // Allocate current layer matrices with device values mem on host
+      Matrix<BYTE>* matrices_with_device_vals = static_cast<Matrix<BYTE>*>(malloc(number_of_columns * sizeof(Matrix<BYTE>)));;
+
+      for (auto i = 0; i < number_of_columns; i++) {
+        BYTE* d_column;
+        // Allocate column mem on device
+        auto required_column_mem = column_length * 4 * sizeof(BYTE);
+        CHK_IF_RETURN(cudaMalloc(&d_column, required_column_mem));
+        // Copy column mem to device
+        auto current_column = columns + i;
+        CHK_IF_RETURN(cudaMemcpy(d_column, current_column->values, required_column_mem, cudaMemcpyHostToDevice));
+        // create host matrix with device values
+        matrices_with_device_vals[i] = {d_column, 4, column_length};
+      }
+
+      h_matrices = matrices_with_device_vals;
+    } else {
+      h_matrices = const_cast<Matrix<BYTE>*>(columns);
+    }
+    
+    // Copy all host matrices with device values to device
+    CHK_IF_RETURN(cudaMemcpy(d_matrices, h_matrices, number_of_columns * sizeof(Matrix<BYTE>), cudaMemcpyHostToDevice));
+    
+    // Assume digests are on device already
+    BYTE* d_digests = digests;
+
+    // calculate correct threads and blocks
+    WORD threads = 256;
+    WORD blocks = max(1, (column_length + threads - 1) / threads);
+    // call hash_node kernel
+    hash_node_kernel<<<blocks, threads>>>(
+      d_prev_layer,
+      prev_layer_exists,
+      d_matrices,
+      number_of_columns,
+      column_length,
+      d_digests
+    );
+
+    if (prev_layer_exists && !prev_layer_on_device) CHK_IF_RETURN(cudaFree(d_prev_layer));
+
+    if (!columns_on_device) {
+      for (auto i = 0; i < number_of_columns; i++) {
+        CHK_IF_RETURN(cudaFree(h_matrices[i].values));
+      }
+      CHK_IF_RETURN(cudaFree(d_matrices));
+      free(h_matrices);
+    }
+
+    return CHK_LAST();
+  }
+
 } // namespace blake2s

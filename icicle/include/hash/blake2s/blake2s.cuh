@@ -64,6 +64,17 @@ namespace blake2s {
       BYTE* next_layer,
       unsigned int digest_elements,
       const device_context::DeviceContext& ctx) const override;
+    
+    cudaError_t commit_layer(
+      const BYTE* prev_layer,
+      bool prev_layer_exists,
+      bool prev_layer_on_device,
+      const Matrix<BYTE>* columns,
+      bool columns_on_device,
+      unsigned int number_of_columns,
+      unsigned int column_length,
+      BYTE* digests
+    ) const;
 
     Blake2s(bool use_iv=true) : Hasher<BYTE, BYTE>(BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, BLAKE2S_STATE_SIZE * 4, 0), use_iv(use_iv) {}
   };
