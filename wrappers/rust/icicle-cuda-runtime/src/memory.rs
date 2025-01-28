@@ -132,6 +132,10 @@ impl<T> DeviceSlice<T> {
         &mut *(slice as *mut [T] as *mut Self)
     }
 
+    pub fn as_slice(&self) -> &[T] {
+        &self.0
+    }
+
     pub fn copy_from_host(&mut self, val: &HostSlice<T>) -> CudaResult<()> {
         assert!(
             self.len() == val.len(),

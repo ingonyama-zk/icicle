@@ -109,7 +109,8 @@ pub fn blake2s_commit_layer(
     unsafe { 
         blake2s_commit_layer_cuda(
             prev_layer.as_ptr(),
-            !prev_layer.is_empty(),
+            // Hacky since creating a DeviceVec of size 0 seems to not work
+            prev_layer.len() != 1,
             are_prev_layer_on_device,
             columns.as_ptr(),
             are_columns_on_device,
