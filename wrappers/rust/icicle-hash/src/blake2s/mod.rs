@@ -33,6 +33,17 @@ extern "C" {
         digests: *mut u8,
         tree_config: &TreeBuilderConfig,
     ) -> CudaError;
+
+    pub(crate) fn blake2s_commit_layer_cuda(
+        prev_layer: *const u8,
+        prev_layer_exists: bool,
+        are_prev_layer_on_device: bool,
+        columns: *const Matrix,
+        are_columns_on_device: bool,
+        number_of_columns: u32,
+        column_length: u32,
+        digests: *mut u8,
+    ) -> CudaError;
 }
 
 pub fn blake2s(
@@ -84,4 +95,28 @@ pub fn build_blake2s_mmcs(
     config: &TreeBuilderConfig,
 ) -> IcicleResult<()> {
     unsafe { blake2s_mmcs_commit_cuda(leaves.as_ptr(), leaves.len() as u32, digests.as_mut_ptr(), config).wrap() }
+}
+
+pub fn blake2s_commit_layer(
+    prev_layer: &(impl HostOrDeviceSlice<u8> + ?Sized),
+    are_prev_layer_on_device: bool,
+    columns: &Vec<Matrix>,
+    are_columns_on_device: bool,
+    number_of_columns: u32,
+    column_length: u32,
+    digests: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
+) -> IcicleResult<()> {
+    unsafe { 
+        blake2s_commit_layer_cuda(
+            prev_layer.as_ptr(),
+            !prev_layer.is_empty(),
+            are_prev_layer_on_device,
+            columns.as_ptr(),
+            are_columns_on_device,
+            number_of_columns,
+            column_length,
+            digests.as_mut_ptr(),
+        )
+        .wrap() 
+    }
 }
