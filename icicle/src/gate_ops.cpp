@@ -4,7 +4,7 @@
 namespace icicle {
 
   /*********************************** EVALUATE ************************/
-  ICICLE_DISPATCHER_INST(GateEvaluationDispatcher, gate_evaluation, GateEvaluationImpl);
+  ICICLE_DISPATCHER_INST(GateEvaluationDispatcher, gate_evaluation, gateEvaluationImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, gate_evaluation)(
     const scalar_t* constants,
