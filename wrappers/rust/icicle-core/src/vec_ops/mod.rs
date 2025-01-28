@@ -1,3 +1,5 @@
+use std::mem;
+
 use icicle_cuda_runtime::device::check_device;
 use icicle_cuda_runtime::{
     device_context::{DeviceContext, DEFAULT_DEVICE_ID},
@@ -178,6 +180,31 @@ fn check_vec_ops_args<'a, F>(
     res_cfg
 }
 
+fn check_eq_args<'a, F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig<'a>,
+) -> VecOpsConfig<'a> {
+    
+    let ctx_device_id = cfg
+        .ctx
+        .device_id;
+    if let Some(device_id) = a.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in a and context are different");
+    }
+    if let Some(device_id) = b.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in b and context are different");
+    }
+
+    check_device(ctx_device_id);
+
+    let mut res_cfg = cfg.clone();
+    res_cfg.is_a_on_device = a.is_on_device();
+    res_cfg.is_b_on_device = b.is_on_device();
+    res_cfg.is_result_on_device = false;
+    res_cfg
+}
+
 fn check_bit_reverse_args<'a, F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &BitReverseConfig<'a>,
@@ -252,6 +279,7 @@ fn check_fold_args<'a, F, S>(
     res_cfg.is_result_on_device = result.is_on_device();
     res_cfg
 }
+
 pub fn add_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -374,9 +402,38 @@ where
     S: FieldImpl,
     <S as FieldImpl>::Config: VecOps<S>,
 {
-    
+
     let cfg = check_fold_args(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::fold(a, b, result, &cfg)
+}
+
+pub fn are_bytes_equal<S>(
+    a: &(impl HostOrDeviceSlice<S> + ?Sized),
+    b: &(impl HostOrDeviceSlice<S> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> bool {
+    let mut result = false;
+    check_eq_args(a, b, cfg);
+    unsafe {
+        let _ = _eq_bytes::are_bytes_equal(
+            a.as_ptr() as *const u8,
+            b.as_ptr() as *const u8,
+            (a.len() * mem::size_of::<S>()) as u64,
+            cfg as *const VecOpsConfig,
+            &mut result as *mut bool,
+        );
+    }
+    result
+}
+
+mod _eq_bytes {
+    use icicle_cuda_runtime::error::CudaError;
+    use super::VecOpsConfig;
+
+    extern "C" {
+        #[link_name = "are_bytes_equal_cuda"]
+        pub(crate) fn are_bytes_equal(a: *const u8, b: *const u8, size: u64, cfg: *const VecOpsConfig, result: *mut bool) -> CudaError;
+    }
 }
 
 #[macro_export]
@@ -653,7 +710,7 @@ macro_rules! impl_vec_add_tests {
         pub fn test_bit_reverse() {
             check_bit_reverse::<$field>()
         }
-        
+
         #[test]
         #[ignore = "crashes on low-mem devices"]
         pub fn test_bit_reverse_inplace() {

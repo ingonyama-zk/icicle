@@ -361,14 +361,7 @@ pub(crate) mod tests {
         let mut result_raw = vec![QuarticExtensionField::zero(); 1 << 8];
         let result = HostSlice::from_mut_slice(result_raw.as_mut_slice());
         let cfg = QuotientConfig::default();
-        let err = accumulate_quotients_wrapped(
-            domain_log_size,
-            columns,
-            rand_coef,
-            &samples,
-            result,
-            &cfg,
-        );
+        let err = accumulate_quotients_wrapped(domain_log_size, columns, rand_coef, &samples, result, &cfg);
         assert!(err.is_ok());
 
         let golden_data = vec![

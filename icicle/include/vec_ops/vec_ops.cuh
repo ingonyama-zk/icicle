@@ -174,6 +174,9 @@ namespace vec_ops {
         data[(y + j) * width + x] = tile_s[threadIdx.x][threadIdx.y + j];
     }
   }
+
+  template <typename E>
+  cudaError_t are_equal(E* vec_a, E* vec_b, uint64_t size, VecOpsConfig& cfg, bool* output);
 } // namespace vec_ops
 
 #endif

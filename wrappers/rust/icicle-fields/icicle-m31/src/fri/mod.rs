@@ -221,12 +221,7 @@ pub fn fold_circle_into_line_new(
 }
 
 pub fn precompute_fri_twiddles(log_size: u32) -> IcicleResult<()> {
-    unsafe {
-        _fri::precompute_fri_twiddles(
-            log_size
-        )
-        .wrap()
-    }
+    unsafe { _fri::precompute_fri_twiddles(log_size).wrap() }
 }
 
 mod _fri {
@@ -276,9 +271,7 @@ mod _fri {
         ) -> CudaError;
 
         #[link_name = "m31_precompute_fri_twiddles"]
-        pub(crate) fn precompute_fri_twiddles(
-            log_size: u32,
-        ) -> CudaError;
+        pub(crate) fn precompute_fri_twiddles(log_size: u32) -> CudaError;
     }
 }
 

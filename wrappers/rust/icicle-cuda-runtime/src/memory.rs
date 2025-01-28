@@ -180,6 +180,54 @@ impl<T> DeviceSlice<T> {
         Ok(())
     }
 
+    pub fn copy_from_device(&mut self, val: &DeviceSlice<T>) -> CudaResult<()> {
+        assert!(
+            self.len() == val.len(),
+            "In copy from host, destination and source slices have different lengths"
+        );
+        check_device(
+            self.device_id()
+                .unwrap(),
+        );
+        let size = size_of::<T>() * self.len();
+        if size != 0 {
+            unsafe {
+                cudaMemcpy(
+                    self.as_mut_ptr() as *mut c_void,
+                    val.as_ptr() as *const c_void,
+                    size,
+                    cudaMemcpyKind::cudaMemcpyDeviceToDevice,
+                )
+                .wrap()?
+            }
+        }
+        Ok(())
+    }
+
+    pub fn copy_to_device(&self, val: &mut DeviceSlice<T>) -> CudaResult<()> {
+        assert!(
+            self.len() == val.len(),
+            "In copy to host, destination and source slices have different lengths"
+        );
+        check_device(
+            self.device_id()
+                .unwrap(),
+        );
+        let size = size_of::<T>() * self.len();
+        if size != 0 {
+            unsafe {
+                cudaMemcpy(
+                    val.as_mut_ptr() as *mut c_void,
+                    self.as_ptr() as *const c_void,
+                    size,
+                    cudaMemcpyKind::cudaMemcpyDeviceToDevice,
+                )
+                .wrap()?
+            }
+        }
+        Ok(())
+    }
+
     pub fn copy_from_host_async(&mut self, val: &HostSlice<T>, stream: &CudaStream) -> CudaResult<()> {
         assert!(
             self.len() == val.len(),

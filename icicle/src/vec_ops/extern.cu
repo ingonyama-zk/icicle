@@ -89,4 +89,9 @@ namespace vec_ops {
   {
     return bit_reverse<scalar_t>(input, n, config, output);
   }
+
+  extern "C" cudaError_t
+  are_bytes_equal_cuda(uint8_t* vec_a, uint8_t* vec_b, uint64_t size, VecOpsConfig& config, bool* result) {
+    return are_equal<uint8_t>(vec_a, vec_b, size, config, result);
+  }
 } // namespace vec_ops

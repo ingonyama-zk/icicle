@@ -104,6 +104,16 @@ namespace vec_ops {
         }
       }
     }
+    template <typename E>
+    __global__ void are_equal_kernel(const E* vec_a, const E* vec_b, uint64_t size, bool* result)
+    {
+      uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if (tid < size) {
+        if (vec_a[tid] != vec_b[tid]) {
+          *result = false;
+        }
+      }
+    }
   } // namespace
 
   template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
@@ -376,6 +386,52 @@ namespace vec_ops {
       CHK_IF_RETURN(cudaFreeAsync(d_output, cfg.ctx.stream));
     }
     if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(cfg.ctx.stream));
+    return CHK_LAST();
+  }
+
+  template <typename E>
+  cudaError_t are_equal(E* vec_a, E* vec_b, uint64_t n, VecOpsConfig& config, bool* result) {
+    CHK_INIT_IF_RETURN();
+    int num_threads = MAX_THREADS_PER_BLOCK;
+    int num_blocks = (n + num_threads - 1) / num_threads;
+
+    E* d_vec_a;
+    E* d_vec_b;
+
+    if (!config.is_a_on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_a, n * sizeof(E), config.ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_a, vec_a, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
+    } else {
+      d_vec_a = vec_a;
+    }
+
+    if (!config.is_b_on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_vec_b, n * sizeof(E), config.ctx.stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_vec_b, vec_b, n * sizeof(E), cudaMemcpyHostToDevice, config.ctx.stream));
+    } else {
+      d_vec_b = vec_b;
+    }
+
+    bool *d_result;
+    if (!config.is_a_on_device) {
+      CHK_IF_RETURN(cudaMallocAsync(&d_result, sizeof(bool), config.ctx.stream));
+    } else {
+      d_result = result;
+    }
+    CHK_IF_RETURN(cudaMemsetAsync(d_result, true, sizeof(bool), config.ctx.stream));
+
+    are_equal_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, n, d_result);
+
+    if (!config.is_result_on_device) {
+      CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, sizeof(bool), cudaMemcpyDeviceToHost, config.ctx.stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream));
+    }
+
+    if (!config.is_a_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_vec_a, config.ctx.stream)); }
+    if (!config.is_b_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_vec_b, config.ctx.stream)); }
+
+    if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
+
     return CHK_LAST();
   }
 } // namespace vec_ops
