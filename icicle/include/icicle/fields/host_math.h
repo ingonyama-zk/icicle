@@ -256,8 +256,8 @@ namespace host_math {
   multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
     static_assert(
-      (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
-      "odd number of limbs is not supported\n");
+      ((NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1)) || USE_32,
+      "odd number of limbs is not supported for 64 bit multiplication\n");
     if constexpr (USE_32) {
       multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
       return;

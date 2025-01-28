@@ -240,14 +240,14 @@ public:
   }
 
   // access precomputed values for first step of the from storage function (see below)
-  static HOST_DEVICE_INLINE Field get_reduced_digit(int i)
+  static HOST_DEVICE_INLINE Field get_reduced_digit_for_storage_reduction(int i)
   {
     storage_array<CONFIG::reduced_digits_count, TLC> const reduced_digits = CONFIG::reduced_digits;
     return Field{reduced_digits.storages[i]};
   }
 
   // access precomputed values for second step of the from storage function (see below)
-  static HOST_DEVICE_INLINE storage<2 * TLC + 2> get_mod_sub(int i)
+  static HOST_DEVICE_INLINE storage<2 * TLC + 2> get_mod_sub_for_storage_reduction(int i)
   {
     storage_array<CONFIG::mod_subs_count, 2 * TLC + 2> const mod_subs = CONFIG::mod_subs;
     return mod_subs.storages[i];
@@ -400,20 +400,21 @@ public:
   At the end of this step the number is reduced from NLIMBS to 2*TLC+1 (assuming less than 2^32 additions).
   2. The second step subtracts a single precomputed multiple of p in ordr to reduce the number into the range 0<x<2^(2n)
   where n is the modulus bit count. This step makes use of a look-up table that looks at the top bits of the number (it
-  is enough to look at the bits from 2*(2n-1) and above).
+  is enough to look at the bits from 2^(2n-1) and above).
   3. The final step is the regular barrett reduction that reduces from the range 0<x<2^(2n) down to 0<x<p. */
   template <unsigned NLIMBS>
   static constexpr HOST_DEVICE_INLINE Field from(const storage<NLIMBS>& xs)
   {
     static_assert(NLIMBS * 32 <= 576); // for now we support up to 576 bits
-    storage<2 * TLC + 2> rs = {};
+    storage<2 * TLC + 2> rs = {}; // we use 2*TLC+2 and not 2*TLC+1 because for now we don't support an odd number of
+                                  // limbs in the storage struct
     int constexpr size = NLIMBS / TLC;
     // first reduction step:
     for (int i = 0; i < size; i++) // future optimization - because we assume a maximum value for size anyway, this loop
                                    // can be unrolled with potential performance benefits
     {
       const Field& xi = *reinterpret_cast<const Field*>(xs.limbs + i * TLC); // use casting instead of copying
-      Field pi = get_reduced_digit(i); // use precomputed values - pi = 2^(TLC*32*i) % p
+      Field pi = get_reduced_digit_for_storage_reduction(i); // use precomputed values - pi = 2^(TLC*32*i) % p
       storage<2 * TLC + 2> temp = {};
       storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
       base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
@@ -422,7 +423,7 @@ public:
     int constexpr extra_limbs = NLIMBS - TLC * size;
     if constexpr (extra_limbs > 0) { // handle the extra limbs (when TLC does not divide NLIMBS)
       const storage<extra_limbs>& xi = *reinterpret_cast<const storage<extra_limbs>*>(xs.limbs + size * TLC);
-      Field pi = get_reduced_digit(size);
+      Field pi = get_reduced_digit_for_storage_reduction(size);
       storage<2 * TLC + 2> temp = {};
       storage<extra_limbs + TLC>& temp_storage = *reinterpret_cast<storage<extra_limbs + TLC>*>(temp.limbs);
       base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage); // multiplication
@@ -433,7 +434,8 @@ public:
     unsigned constexpr msbits_count = 2 * TLC * 32 - (2 * NBITS - 1);
     unsigned top_bits = (rs.limbs[2 * TLC] << msbits_count) + (rs.limbs[2 * TLC - 1] >> (32 - msbits_count));
     base_math::template add_sub_limbs<2 * TLC + 2, true, false>(
-      rs, get_mod_sub(top_bits), rs); // subtracting the precomputed multiple of p from the look-up table
+      rs, get_mod_sub_for_storage_reduction(top_bits),
+      rs); // subtracting the precomputed multiple of p from the look-up table
     // third and final step:
     storage<2 * TLC>& res = *reinterpret_cast<storage<2 * TLC>*>(rs.limbs);
     return reduce(Wide{res}); // finally, use barret reduction
