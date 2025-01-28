@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
-use crate::gate_ops::{GateOps, GateOpsConfig, FieldImpl};
+use crate::gate_ops::{gate_evaluation, GateOps, GateOpsConfig, FieldImpl};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
@@ -45,19 +45,72 @@ where
     let constants = F::Config::generate_random(test_size);
     let fixed = F::Config::generate_random(test_size);
     let advice = F::Config::generate_random(test_size);
-    let instants = F::Config::generate_random(test_size);
+    let instance = F::Config::generate_random(test_size);
+    let challenges = F::Config::generate_random(test_size);
 
-    let mut result_main = vec![F::zero(); test_size];
+    let rotations: Vec<i32> = (0..test_size as i32).collect(); 
+    let calculations: Vec<i32> = vec![0, 1, 2, 3]; 
+    let i_value_types: Vec<i32> = vec![0, 1, 2, 3]; 
+    let j_value_types: Vec<i32> = vec![1, 2, 3, 0];
+    let i_value_indices: Vec<i32> = vec![0, 1, 2, 3]; 
+    let j_value_indices: Vec<i32> = vec![3, 2, 1, 0];
+    let horner_value_types: Vec<i32> = vec![0, 1]; 
+    let i_horner_value_indices: Vec<i32> = vec![0, 1]; 
+    let j_horner_value_indices: Vec<i32> = vec![1, 0];
+    let horner_offsets: Vec<i32> = vec![0, 2];
+    let horner_sizes: Vec<i32> = vec![2, 2];
 
-    let _constants = HostSlice::from_slice(&constants);
-    let _fixed = HostSlice::from_slice(&fixed);
-    let _advice = HostSlice::from_slice(&advice);
-    let _instants = HostSlice::from_slice(&instants);
+    let mut result = vec![F::zero(); test_size];
 
-    let _result = HostSlice::from_mut_slice(&mut result_main);
+    let constants = HostSlice::from_slice(&constants);
+    let fixed = HostSlice::from_slice(&fixed);
+    let advice = HostSlice::from_slice(&advice);
+    let instance = HostSlice::from_slice(&instance);
+    let challenges = HostSlice::from_slice(&challenges);
+    let rotations = HostSlice::from_slice(&rotations);
+    let calculations = HostSlice::from_slice(&calculations);
+    let i_value_types = HostSlice::from_slice(&i_value_types);
+    let j_value_types = HostSlice::from_slice(&j_value_types);
+    let i_value_indices = HostSlice::from_slice(&i_value_indices);
+    let j_value_indices = HostSlice::from_slice(&j_value_indices);
+    let horner_value_types = HostSlice::from_slice(&horner_value_types);
+    let i_horner_value_indices = HostSlice::from_slice(&i_horner_value_indices);
+    let j_horner_value_indices = HostSlice::from_slice(&j_horner_value_indices);
+    let horner_offsets = HostSlice::from_slice(&horner_offsets);
+    let horner_sizes = HostSlice::from_slice(&horner_sizes);
 
-    let _cfg = GateOpsConfig::default();
+    let result = HostSlice::from_mut_slice(&mut result);
+
+    let cfg = GateOpsConfig::default();
 
     test_utilities::test_set_main_device();
-    // call evaluation 
+
+    let evaluation_result = gate_evaluation(
+        constants,
+        fixed,
+        advice,
+        instance,
+        challenges,
+        rotations,
+        result,
+        &cfg,
+        calculations,
+        i_value_types,
+        j_value_types,
+        i_value_indices,
+        j_value_indices,
+        horner_value_types,
+        i_horner_value_indices,
+        j_horner_value_indices,
+        horner_offsets,
+        horner_sizes,
+    );
+
+
+    assert!(evaluation_result.is_ok(), "Gate evaluation failed: {:?}", evaluation_result);
+
+   
+    for res in result.iter() {
+        println!("Result: {:?}", res);
+    }
 }

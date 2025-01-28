@@ -13,6 +13,8 @@ pub struct GateOpsConfig {
     pub is_fixed_on_device: bool,
     pub is_advice_on_device: bool,
     pub is_instance_on_device: bool,
+    pub is_challenges_on_device: bool,
+    pub is_rotations_on_device: bool,
     pub is_result_on_device: bool,
     pub is_async: bool,
     pub ext: ConfigExtension,
@@ -27,6 +29,8 @@ impl GateOpsConfig {
             is_advice_on_device: false,
             is_instance_on_device: false,
             is_result_on_device: false,
+            is_challenges_on_device: false,
+            is_rotations_on_device: false,
             is_async: false,
             ext: ConfigExtension::new(),
         }
@@ -40,8 +44,20 @@ pub trait GateOps<F> {
         fixed: &(impl HostOrDeviceSlice<F> + ?Sized),
         advice: &(impl HostOrDeviceSlice<F> + ?Sized),
         instance: &(impl HostOrDeviceSlice<F> + ?Sized),
+        challenges: &(impl HostOrDeviceSlice<F> + ?Sized),
+        rotations: &(impl HostOrDeviceSlice<i32> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &GateOpsConfig,
+        calculations: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        i_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        j_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        i_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        j_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        horner_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        i_horner_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        j_horner_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        horner_offsets: &(impl HostOrDeviceSlice<i32> + ?Sized),
+        horner_sizes: &(impl HostOrDeviceSlice<i32> + ?Sized),
     ) -> Result<(), eIcicleError>;
 }
 
@@ -65,7 +81,6 @@ fn setup_config<F>(
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &GateOpsConfig,
 ) -> GateOpsConfig {
-    // check device slices are on active device
     if constants.is_on_device() && !constants.is_on_active_device() {
         panic!("input constants is allocated on an inactive device");
     }
@@ -96,15 +111,46 @@ pub fn gate_evaluation<F>(
     fixed: &(impl HostOrDeviceSlice<F> + ?Sized),
     advice: &(impl HostOrDeviceSlice<F> + ?Sized),
     instance: &(impl HostOrDeviceSlice<F> + ?Sized),
+    challenges: &(impl HostOrDeviceSlice<F> + ?Sized),
+    rotations: &(impl HostOrDeviceSlice<i32> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &GateOpsConfig,
+    calculations: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    i_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    j_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    i_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    j_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    horner_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    i_horner_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    j_horner_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    horner_offsets: &(impl HostOrDeviceSlice<i32> + ?Sized),
+    horner_sizes: &(impl HostOrDeviceSlice<i32> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: GateOps<F>,
 {
     let cfg = check_gate_ops_args(constants, fixed, advice, instance, result, cfg);
-    <<F as FieldImpl>::Config as GateOps<F>>::gate_evaluation(constants, fixed, advice, instance, result, &cfg)
+    <<F as FieldImpl>::Config as GateOps<F>>::gate_evaluation(
+        constants,
+        fixed,
+        advice,
+        instance,
+        challenges,
+        rotations,
+        result,
+        &cfg,
+        calculations,
+        i_value_types,
+        j_value_types,
+        i_value_indices,
+        j_value_indices,
+        horner_value_types,
+        i_horner_value_indices,
+        j_horner_value_indices,
+        horner_offsets,
+        horner_sizes,
+    )
 }
 
 #[macro_export]
@@ -125,11 +171,29 @@ macro_rules! impl_gate_ops_field {
                 #[link_name = concat!($field_prefix, "_gate_evaluation")]
                 pub(crate) fn gate_evaluation_ffi(
                     constants: *const $field,
+                    num_constants: usize,
                     fixed: *const $field,
+                    num_fixed: usize,
                     advice: *const $field,
+                    num_advice: usize,
                     instance: *const $field,
+                    num_instance: usize,
+                    challenges: *const $field,
+                    num_challenges: usize,
+                    rotations: *const i32,
+                    num_rotations: usize,
                     cfg: *const GateOpsConfig,
                     result: *mut $field,
+                    calculations: *const i32,
+                    i_value_types: *const i32,
+                    j_value_types: *const i32,
+                    i_value_indices: *const i32,
+                    j_value_indices: *const i32,
+                    horner_value_types: *const i32,
+                    i_horner_value_indices: *const i32,
+                    j_horner_value_indices: *const i32,
+                    horner_offsets: *const i32,
+                    horner_sizes: *const i32,
                 ) -> eIcicleError;
             }
         }
@@ -140,17 +204,47 @@ macro_rules! impl_gate_ops_field {
                 fixed: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 advice: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 instance: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                challenges: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                rotations: &(impl HostOrDeviceSlice<i32> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &GateOpsConfig,
+                calculations: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                i_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                j_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                i_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                j_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                horner_value_types: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                i_horner_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                j_horner_value_indices: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                horner_offsets: &(impl HostOrDeviceSlice<i32> + ?Sized),
+                horner_sizes: &(impl HostOrDeviceSlice<i32> + ?Sized),
             ) -> Result<(), eIcicleError> {
                 unsafe {
                     $field_prefix_ident::gate_evaluation_ffi(
                         constants.as_ptr(),
+                        constants.len(),
                         fixed.as_ptr(),
+                        fixed.len(),
                         advice.as_ptr(),
+                        advice.len(),
                         instance.as_ptr(),
+                        instance.len(),
+                        challenges.as_ptr(),
+                        challenges.len(),
+                        rotations.as_ptr(),
+                        rotations.len(),
                         cfg as *const GateOpsConfig,
                         result.as_mut_ptr(),
+                        calculations.as_ptr(),
+                        i_value_types.as_ptr(),
+                        j_value_types.as_ptr(),
+                        i_value_indices.as_ptr(),
+                        j_value_indices.as_ptr(),
+                        horner_value_types.as_ptr(),
+                        i_horner_value_indices.as_ptr(),
+                        j_horner_value_indices.as_ptr(),
+                        horner_offsets.as_ptr(),
+                        horner_sizes.as_ptr(),
                     )
                     .wrap()
                 }
