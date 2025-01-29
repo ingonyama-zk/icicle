@@ -75,7 +75,7 @@ namespace icicle {
         num_elements,
         rot_scale,
         isize,
-        config,
+        *config,
         results
       );
   }

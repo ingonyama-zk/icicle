@@ -41,7 +41,7 @@ namespace icicle {
     size_t num_elements,
     int rot_scale,
     int isize,
-    const GateOpsConfig* config,
+    const GateOpsConfig& config,
     scalar_t* results)>;
 
 

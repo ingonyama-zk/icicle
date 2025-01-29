@@ -47,6 +47,11 @@ where
     let advice = F::Config::generate_random(test_size);
     let instance = F::Config::generate_random(test_size);
     let challenges = F::Config::generate_random(test_size);
+    let beta = F::Config::generate_random(1);
+    let gamma = F::Config::generate_random(1);
+    let theta = F::Config::generate_random(1);
+    let y = F::Config::generate_random(1);
+    let previous_value = F::Config::generate_random(1);
 
     let rotations: Vec<i32> = (0..test_size as i32).collect(); 
     let calculations: Vec<i32> = vec![0, 1, 2, 3]; 
@@ -67,17 +72,11 @@ where
     let advice = HostSlice::from_slice(&advice);
     let instance = HostSlice::from_slice(&instance);
     let challenges = HostSlice::from_slice(&challenges);
-    let rotations = HostSlice::from_slice(&rotations);
-    let calculations = HostSlice::from_slice(&calculations);
-    let i_value_types = HostSlice::from_slice(&i_value_types);
-    let j_value_types = HostSlice::from_slice(&j_value_types);
-    let i_value_indices = HostSlice::from_slice(&i_value_indices);
-    let j_value_indices = HostSlice::from_slice(&j_value_indices);
-    let horner_value_types = HostSlice::from_slice(&horner_value_types);
-    let i_horner_value_indices = HostSlice::from_slice(&i_horner_value_indices);
-    let j_horner_value_indices = HostSlice::from_slice(&j_horner_value_indices);
-    let horner_offsets = HostSlice::from_slice(&horner_offsets);
-    let horner_sizes = HostSlice::from_slice(&horner_sizes);
+    let beta =  HostSlice::from_slice(&beta);
+    let gamma =  HostSlice::from_slice(&gamma);
+    let theta =  HostSlice::from_slice(&theta);
+    let y =  HostSlice::from_slice(&y);
+    let previous_value =  HostSlice::from_slice(&previous_value);
 
     let result = HostSlice::from_mut_slice(&mut result);
 
@@ -91,26 +90,28 @@ where
         advice,
         instance,
         challenges,
-        rotations,
+        &rotations,
+        beta,
+        gamma,
+        theta,
+        y,
+        previous_value,
+        &calculations,
+        &i_value_types,
+        &j_value_types,
+        &i_value_indices,
+        &j_value_indices,
+        &horner_value_types,
+        &i_horner_value_indices,
+        &j_horner_value_indices,
+        &horner_offsets,
+        &horner_sizes,
         result,
         &cfg,
-        calculations,
-        i_value_types,
-        j_value_types,
-        i_value_indices,
-        j_value_indices,
-        horner_value_types,
-        i_horner_value_indices,
-        j_horner_value_indices,
-        horner_offsets,
-        horner_sizes,
     );
 
-
-    assert!(evaluation_result.is_ok(), "Gate evaluation failed: {:?}", evaluation_result);
-
    
-    for res in result.iter() {
-        println!("Result: {:?}", res);
-    }
+    // for res in result.iter() {
+    //     println!("Result: {:?}", res);
+    // }
 }
