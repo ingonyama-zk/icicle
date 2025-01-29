@@ -106,7 +106,7 @@ pub fn blake2s_commit_layer(
     column_length: u32,
     digests: &mut (impl HostOrDeviceSlice<u8> + ?Sized),
 ) -> IcicleResult<()> {
-    unsafe { 
+    unsafe {
         blake2s_commit_layer_cuda(
             prev_layer.as_ptr(),
             // Hacky since creating a DeviceVec of size 0 seems to not work
@@ -118,6 +118,6 @@ pub fn blake2s_commit_layer(
             column_length,
             digests.as_mut_ptr(),
         )
-        .wrap() 
+        .wrap()
     }
 }

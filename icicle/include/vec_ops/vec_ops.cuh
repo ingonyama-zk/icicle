@@ -4,7 +4,6 @@
 
 #include "gpu-utils/device_context.cuh"
 
-
 #include <cublas_v2.h>
 #define TILE_DIM   16
 #define BLOCK_ROWS 8 // 32

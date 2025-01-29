@@ -59,7 +59,10 @@ fn check_fri_args<'a, S>(
             eval4.len()
         );
     }
-    if !(folded_eval1.len() == folded_eval2.len() && folded_eval2.len() == folded_eval3.len() && folded_eval3.len() == folded_eval4.len()) {
+    if !(folded_eval1.len() == folded_eval2.len()
+        && folded_eval2.len() == folded_eval3.len()
+        && folded_eval3.len() == folded_eval4.len())
+    {
         panic!(
             "Eval sizes are different; eval1: {}, eval2: {}, eval3: {}, eval4: {}",
             folded_eval1.len(),
@@ -125,7 +128,18 @@ pub fn fold_line(
     alpha: QuarticExtensionField,
     cfg: &FriConfig,
 ) -> IcicleResult<()> {
-    let cfg = check_fri_args(eval1, eval2, eval3, eval4, domain_elements, folded_eval1, folded_eval2, folded_eval3, folded_eval4, cfg);
+    let cfg = check_fri_args(
+        eval1,
+        eval2,
+        eval3,
+        eval4,
+        domain_elements,
+        folded_eval1,
+        folded_eval2,
+        folded_eval3,
+        folded_eval4,
+        cfg,
+    );
     unsafe {
         _fri::fold_line(
             eval1.as_ptr(),
@@ -166,7 +180,10 @@ fn check_fri_args_new<'a, S>(
             eval4.len()
         );
     }
-    if !(folded_eval1.len() == folded_eval2.len() && folded_eval2.len() == folded_eval3.len() && folded_eval3.len() == folded_eval4.len()) {
+    if !(folded_eval1.len() == folded_eval2.len()
+        && folded_eval2.len() == folded_eval3.len()
+        && folded_eval3.len() == folded_eval4.len())
+    {
         panic!(
             "Eval sizes are different; eval1: {}, eval2: {}, eval3: {}, eval4: {}",
             folded_eval1.len(),
@@ -227,7 +244,18 @@ pub fn fold_line_new(
     alpha: QuarticExtensionField,
     cfg: &FriConfig,
 ) -> IcicleResult<()> {
-    let cfg = check_fri_args_new(eval1, eval2, eval3, eval4, log_size, folded_eval1, folded_eval2, folded_eval3, folded_eval4, cfg);
+    let cfg = check_fri_args_new(
+        eval1,
+        eval2,
+        eval3,
+        eval4,
+        log_size,
+        folded_eval1,
+        folded_eval2,
+        folded_eval3,
+        folded_eval4,
+        cfg,
+    );
     unsafe {
         _fri::fold_line_new(
             eval1.as_ptr(),
@@ -261,7 +289,18 @@ pub fn fold_circle_into_line(
     alpha: QuarticExtensionField,
     cfg: &FriConfig,
 ) -> IcicleResult<()> {
-    let cfg = check_fri_args(eval1, eval2, eval3, eval4, domain_elements, folded_eval1, folded_eval2, folded_eval3, folded_eval4, cfg);
+    let cfg = check_fri_args(
+        eval1,
+        eval2,
+        eval3,
+        eval4,
+        domain_elements,
+        folded_eval1,
+        folded_eval2,
+        folded_eval3,
+        folded_eval4,
+        cfg,
+    );
     unsafe {
         _fri::fold_circle_into_line(
             eval1.as_ptr(),
@@ -295,7 +334,18 @@ pub fn fold_circle_into_line_new(
     alpha: QuarticExtensionField,
     cfg: &FriConfig,
 ) -> IcicleResult<()> {
-    let cfg = check_fri_args_new(eval1, eval2, eval3, eval4, half_coset_log_size + 1, folded_eval1, folded_eval2, folded_eval3, folded_eval4, cfg);
+    let cfg = check_fri_args_new(
+        eval1,
+        eval2,
+        eval3,
+        eval4,
+        half_coset_log_size + 1,
+        folded_eval1,
+        folded_eval2,
+        folded_eval3,
+        folded_eval4,
+        cfg,
+    );
     unsafe {
         _fri::fold_circle_into_line_new(
             eval1.as_ptr(),
@@ -479,7 +529,19 @@ pub(crate) mod tests {
         let alpha = QuarticExtensionField::from_u32(19283);
         let cfg = FriConfig::default();
 
-        let res = fold_line(&d_eval1[..], &d_eval2[..], &d_eval3[..], &d_eval4[..], &d_domain_elements[..], &mut folded_eval1[..], &mut folded_eval2[..], &mut folded_eval3[..], &mut folded_eval4[..], alpha, &cfg);
+        let res = fold_line(
+            &d_eval1[..],
+            &d_eval2[..],
+            &d_eval3[..],
+            &d_eval4[..],
+            &d_domain_elements[..],
+            &mut folded_eval1[..],
+            &mut folded_eval2[..],
+            &mut folded_eval3[..],
+            &mut folded_eval4[..],
+            alpha,
+            &cfg,
+        );
 
         assert!(res.is_ok());
 

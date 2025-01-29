@@ -191,7 +191,6 @@ fn check_eq_args<'a, F>(
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig<'a>,
 ) -> VecOpsConfig<'a> {
-    
     let ctx_device_id = cfg
         .ctx
         .device_id;
@@ -421,7 +420,6 @@ where
     S: FieldImpl,
     <S as FieldImpl>::Config: VecOps<S>,
 {
-
     let cfg = check_fold_args(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::fold(a, b, result, &cfg)
 }
@@ -449,12 +447,18 @@ pub fn are_bytes_equal<S>(
 }
 
 mod _eq_bytes {
-    use icicle_cuda_runtime::error::CudaError;
     use super::VecOpsConfig;
+    use icicle_cuda_runtime::error::CudaError;
 
     extern "C" {
         #[link_name = "are_bytes_equal_cuda"]
-        pub(crate) fn are_bytes_equal(a: *const u8, b: *const u8, size: u64, cfg: *const VecOpsConfig, result: *mut bool) -> CudaError;
+        pub(crate) fn are_bytes_equal(
+            a: *const u8,
+            b: *const u8,
+            size: u64,
+            cfg: *const VecOpsConfig,
+            result: *mut bool,
+        ) -> CudaError;
     }
 }
 
