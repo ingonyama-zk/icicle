@@ -85,7 +85,13 @@ impl<F: std::clone::Clone> ColumnSampleBatch<F> {
 
         result
     }
+
 }
+
+pub fn to_internal_column_batch<F: std::clone::Clone>(samples: &[ColumnSampleBatch<F>]) -> Vec<ColumnSampleBatchInternal<F>> {
+    samples.iter().map(|x| x.unpack()).collect()
+}
+
 
 // impl<F: std::clone::Clone> TryInto<ColumnSampleBatchInternal<F>> for &ColumnSampleBatch<F> {
 //     type Error = String;
@@ -230,17 +236,13 @@ pub fn accumulate_quotients_wrapped(
     domain_log_size: u32,
     columns: &(impl HostOrDeviceSlice<*const ScalarField> + ?Sized),
     random_coef: QuarticExtensionField,
-    samples: &[ColumnSampleBatch<QuarticExtensionField>],
+    internal_samples: &[ColumnSampleBatchInternal<QuarticExtensionField>],
     result1: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
     result2: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
     result3: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
     result4: &mut (impl HostOrDeviceSlice<ScalarField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
-    let internal_samples: Vec<ColumnSampleBatchInternal<QuarticExtensionField>> = samples
-        .iter()
-        .map(|x| x.unpack()) // Perform the TryInto conversion
-        .collect();
     let flattened_line_coeffs_size: u32 = internal_samples
         .iter()
         .map(|x| x.size)
@@ -381,10 +383,8 @@ pub(crate) mod tests {
             values: vec![a, b],
         };
         let samples = vec![sample.clone(), sample.clone(), sample.clone()];
-        println!("{:?}", &samples);
-        let sample_im = [sample.unpack()];
-        let sample_host = HostSlice::from_slice(&sample_im);
-        println!("{:?}", sample_host);
+        let internal_samples = to_internal_column_batch(&samples);
+        
         let mut result_raw1 = vec![ScalarField::zero(); 1 << 8];
         let result1 = HostSlice::from_mut_slice(result_raw1.as_mut_slice());
         let mut result_raw2 = vec![ScalarField::zero(); 1 << 8];
@@ -395,7 +395,7 @@ pub(crate) mod tests {
         let result4 = HostSlice::from_mut_slice(result_raw4.as_mut_slice());
 
         let cfg = QuotientConfig::default();
-        let err = accumulate_quotients_wrapped(domain_log_size, columns, rand_coef, &samples, result1, result2, result3, result4, &cfg);
+        let err = accumulate_quotients_wrapped(domain_log_size, columns, rand_coef, &internal_samples, result1, result2, result3, result4, &cfg);
         assert!(err.is_ok());
 
         let result: Vec<ScalarField> = result_raw1.iter()
