@@ -339,4 +339,96 @@ namespace quotient {
 
     return CHK_LAST();
   }
+
+#include <chrono>
+#include <fstream>
+#include <iostream>
+#include "stwo.cuh"
+#include "fib_eval_t.cuh"
+
+  static constexpr uint32_t BLOCK_SIZE = 256;
+
+  // trace[3]
+  // preprocessing
+  // execution <---
+  // interaction
+
+  // m31_t execution_trace[row][col];
+
+  __global__ void k_eval_row(
+    const uint32_t total_constraints,
+    const uint32_t n_cols,
+    qm31_t* res,
+    const qm31_t* random_coeff_powers,
+    const m31_t* denom_inv,
+    const m31_t* trace)
+  {
+    const uint32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+    const m31_t* row = trace + thread_id * n_cols;
+    fib_eval_t eval(random_coeff_powers, row, total_constraints, n_cols);
+    eval.evaluate();
+    const qm31_t row_res = eval.get_row_res();
+    res[thread_id] = row_res * denom_inv[thread_id >> 20];
+  }
+
+  void generate_random_coeff_powers(qm31_t* random_coeff_powers, const qm31_t& x, const uint32_t n)
+  {
+    qm31_t acc = qm31_t::one();
+    for (uint32_t i = 0; i < n; i++) {
+      random_coeff_powers[i] = acc;
+      acc = acc * x;
+    }
+  }
+
+  m31_t coset_vanishing(const coset_t& coset, point_t p)
+  {
+    p = p - coset.initial_point + coset.at(coset.step_size >> 1);
+    m31_t x = p.x;
+    for (uint32_t i = 1; i < coset.log_size; i++) {
+      x = point_t::dbl_x(x);
+    }
+    return x;
+  }
+
+  static constexpr uint32_t BLOCK_SIZE = 256;
+
+  cudaError_t evaluate_constraint_quotients_on_domain(
+    const prover_ctx_t& prover, const component_ctx_t& component, QuotientConfig& cfg)
+  {
+    CHK_INIT_IF_RETURN();
+
+    cudaStream_t stream = cfg.ctx.stream;
+
+    const uint32_t expand_log_size = component.eval_log_size - component.domain_log_size;
+    const uint32_t domain_size = 1 << component.domain_log_size;
+    const uint32_t eval_size = 1 << component.eval_log_size;
+    const uint32_t expand_size = 1 << expand_log_size;
+    const domain_t trace_domain(component.domain_log_size);
+    const domain_t eval_domain(component.eval_log_size);
+    m31_t* denom_inv;
+    CHK_IF_RETURN(cudaMallocManaged(&denom_inv, sizeof(m31_t) * expand_size));
+
+    // TODO: bit reverse
+    for (int i = 0; i < expand_size; i++) {
+      denom_inv[i] = m31_t::inverse(coset_vanishing(trace_domain.coset, eval_domain.at(i)));
+    }
+
+    // CPU version
+    // for (int i = 0; i < component.execution_trace.n_rows; i++) {
+    //     const m31_t *row = component.execution_trace.get_row(i);
+    //     fib_eval_t eval(random_coeff_powers, row, total_constraints, component.execution_trace.n_cols);
+    //     eval.evaluate();
+    //     const qm31_t row_res = eval.get_row_res();
+    //     res[i] = row_res * denom_inv[i >> component.domain_log_size];
+    // }
+
+    // GPU version
+    k_eval_row<<<component.execution_trace.n_rows / BLOCK_SIZE, BLOCK_SIZE>>>(
+      prover.total_constraints, component.execution_trace.n_cols, prover.composition_poly, prover.random_coeff_powers,
+      denom_inv, component.execution_trace.trace);
+
+    if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));
+
+    return CHK_LAST();
+  }
 } // namespace quotient

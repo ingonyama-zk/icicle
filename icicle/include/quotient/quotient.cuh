@@ -18,6 +18,8 @@ namespace quotient {
     device_context::DeviceContext ctx;
     bool are_columns_on_device;
     bool are_sample_points_on_device;
+    bool is_prover_ctx_on_device;
+    bool is_component_ctx_on_device;
     bool are_results_on_device;
     bool is_async;
   };

@@ -229,14 +229,20 @@ pub fn accumulate_quotients_wrapped(
     result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
     cfg: &QuotientConfig,
 ) -> IcicleResult<()> {
+    nvtx::range_push!("quot acc internal_samples");
     let internal_samples: Vec<ColumnSampleBatchInternal<QuarticExtensionField>> = samples
         .iter()
         .map(|x| x.unpack()) // Perform the TryInto conversion
         .collect();
+    nvtx::range_pop!();
+
+    nvtx::range_push!("quot acc flattened_line_coeffs_size");
     let flattened_line_coeffs_size: u32 = internal_samples
         .iter()
         .map(|x| x.size)
         .sum();
+    nvtx::range_pop!();
+
     accumulate_quotients(
         domain_log_size,
         columns,
