@@ -18,88 +18,105 @@ namespace fri {
     }
 
     template <typename S, typename E>
-    __global__ void fold_line_kernel(E* eval, S* domain_xs, E alpha, E* folded_eval, uint64_t n)
-    {
+    __global__ void fold_line_kernel(
+      S *eval1,
+      S *eval2,
+      S *eval3,
+      S *eval4, 
+      S* domain_xs, 
+      E alpha, 
+      S *folded_eval1,
+      S *folded_eval2,
+      S *folded_eval3,
+      S *folded_eval4, 
+      uint64_t n
+    ){
       unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
       if (idx % 2 == 0 && idx < n) {
-        E f_x = eval[idx];         // even
-        E f_x_neg = eval[idx + 1]; // odd
+        E f_x{eval1[idx], eval2[idx], eval3[idx], eval4[idx]}; // even
+        E f_x_neg{eval1[idx + 1], eval2[idx + 1], eval3[idx + 1], eval4[idx + 1]}; // odd
         auto folded_eval_idx = idx / 2;
         ibutterfly(f_x, f_x_neg, domain_xs[folded_eval_idx]);
-        folded_eval[folded_eval_idx] = f_x + alpha * f_x_neg;
-      }
-    }
-
-    DEVICE_INLINE uint64_t bit_reverse_index(uint64_t index, uint32_t log_size) {
-      if (log_size == 0) {
-        return index;
-      }
-      return __brevll(index) >> ((sizeof(uint64_t) << 3) - log_size);
-    }
-
-    const uint32_t FOLD_STEP = 1; // can be changed in future stwo updates
-
-    template <typename S, typename E, typename D>
-    __global__ void fold_line_kernel_new(E* eval, D line_domain, E alpha, E* folded_eval, uint64_t n)
-    {
-      uint64_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-      if (idx % 2 == 0 && idx < n) {
-        E f_x = eval[idx];         // even
-        E f_x_neg = eval[idx + 1]; // odd
-        auto folded_eval_idx = idx / 2;
-
-        S domain_x = S::inverse(line_domain.at(bit_reverse_index(folded_eval_idx << FOLD_STEP, line_domain.lg_size())));
-        ibutterfly(f_x, f_x_neg, domain_x);
-        folded_eval[folded_eval_idx] = f_x + alpha * f_x_neg;
+        E res = f_x + alpha * f_x_neg;
+        folded_eval1[folded_eval_idx] = res.real;
+        folded_eval2[folded_eval_idx] = res.im1;
+        folded_eval3[folded_eval_idx] = res.im2;
+        folded_eval4[folded_eval_idx] = res.im3;
       }
     }
 
     template <typename S, typename E>
-    __global__ void fold_circle_into_line_kernel(E* eval, S* domain_ys, E alpha, E alpha_sq, E* folded_eval, uint64_t n)
-    {
+    __global__ void fold_circle_into_line_kernel(
+      S *eval1,
+      S *eval2,
+      S *eval3,
+      S *eval4,  
+      S* domain_ys, 
+      E alpha, 
+      E alpha_sq, 
+      S *folded_eval1,
+      S *folded_eval2,
+      S *folded_eval3,
+      S *folded_eval4, 
+      uint64_t n
+    ){
       unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
 
       if (idx % 2 == 0 && idx < n) {
-        E f0_px = eval[idx];
-        E f1_px = eval[idx + 1];
+        E f0_px{eval1[idx], eval2[idx], eval3[idx], eval4[idx]}; // even
+        E f1_px{eval1[idx + 1], eval2[idx + 1], eval3[idx + 1], eval4[idx + 1]}; // odd
         auto folded_eval_idx = idx / 2;
         ibutterfly(f0_px, f1_px, domain_ys[folded_eval_idx]);
         E f_prime = f0_px + alpha * f1_px;
-        folded_eval[folded_eval_idx] = folded_eval[folded_eval_idx] * alpha_sq + f_prime;
-      }
-    }
-
-    template <typename S, typename E, typename D>
-    __global__ void fold_circle_into_line_kernel_new(E* eval, D domain, E alpha, E alpha_sq, E* folded_eval, uint64_t n)
-    {
-      unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-      if (idx % 2 == 0 && idx < n) {
-        E f0_px = eval[idx];
-        E f1_px = eval[idx + 1];
-        auto folded_eval_idx = idx / 2;
-        S domain_y = S::inverse(domain.at(bit_reverse_index(folded_eval_idx << FOLD_STEP, domain.lg_size())).y);
-        ibutterfly(f0_px, f1_px, domain_y);
-        E f_prime = f0_px + alpha * f1_px;
-        folded_eval[folded_eval_idx] = folded_eval[folded_eval_idx] * alpha_sq + f_prime;
+        E res1{folded_eval1[folded_eval_idx], folded_eval2[folded_eval_idx], folded_eval3[folded_eval_idx], folded_eval4[folded_eval_idx]};
+        E res = res1 * alpha_sq + f_prime;
+        folded_eval1[folded_eval_idx] = res.real;
+        folded_eval2[folded_eval_idx] = res.im1;
+        folded_eval3[folded_eval_idx] = res.im2;
+        folded_eval4[folded_eval_idx] = res.im3;
       }
     }
   } // namespace
 
   template <typename S, typename E>
-  cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg)
-  {
+  cudaError_t fold_line(
+    S *eval1,
+    S *eval2,
+    S *eval3,
+    S *eval4, 
+    S* domain_xs,
+    E alpha,
+    S *folded_eval1,
+    S *folded_eval2,
+    S *folded_eval3,
+    S *folded_eval4,
+    uint64_t n,
+    FriConfig& cfg
+  ){
     CHK_INIT_IF_RETURN();
 
     cudaStream_t& stream = cfg.ctx.stream;
     // Allocate and move line domain evals to device if necessary
-    E* d_eval;
+    S* d_eval1;
+    S* d_eval2;
+    S* d_eval3;
+    S* d_eval4;
     if (!cfg.are_evals_on_device) {
-      auto data_size = sizeof(E) * n;
-      CHK_IF_RETURN(cudaMallocAsync(&d_eval, data_size, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_eval, eval, data_size, cudaMemcpyHostToDevice, stream));
+      size_t data_size = sizeof(S) * n;
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval1, data_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval2, data_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval3, data_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval4, data_size, stream));
+
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval1, eval1, data_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval2, eval2, data_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval3, eval3, data_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval4, eval4, data_size, cudaMemcpyHostToDevice, stream));
     } else {
-      d_eval = eval;
+      d_eval1 = eval1;
+      d_eval2 = eval2;
+      d_eval3 = eval3;
+      d_eval4 = eval4;
     }
 
     // Allocate and move domain's elements to device if necessary
@@ -113,65 +130,64 @@ namespace fri {
     }
 
     // Allocate folded_eval if pointer is not a device pointer
-    E* d_folded_eval;
+    S* d_folded_eval1;
+    S* d_folded_eval2;
+    S* d_folded_eval3;
+    S* d_folded_eval4;
     if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval, sizeof(E) * n / 2, stream));
+      auto result_size = sizeof(S) * n / 2;
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval1, result_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval2, result_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval3, result_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval4, result_size, stream));
+
+      CHK_IF_RETURN(cudaMemcpyAsync(d_folded_eval1, folded_eval1, result_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_folded_eval2, folded_eval2, result_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_folded_eval3, folded_eval3, result_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_folded_eval4, folded_eval4, result_size, cudaMemcpyHostToDevice, stream));
     } else {
-      d_folded_eval = folded_eval;
+      d_folded_eval1 = folded_eval1;
+      d_folded_eval2 = folded_eval2;
+      d_folded_eval3 = folded_eval3;
+      d_folded_eval4 = folded_eval4;
     }
 
     uint64_t num_threads = max(1, min(unsigned(n), 256));
     uint64_t num_blocks = (n + num_threads - 1) / num_threads;
-    fold_line_kernel<<<num_blocks, num_threads, 0, stream>>>(d_eval, d_domain_xs, alpha, d_folded_eval, n);
+    fold_line_kernel<S, E><<<num_blocks, num_threads, 0, stream>>>(
+      d_eval1, 
+      d_eval2, 
+      d_eval3, 
+      d_eval4, 
+      d_domain_xs,
+      alpha,
+      d_folded_eval1,
+      d_folded_eval2,
+      d_folded_eval3,
+      d_folded_eval4,
+      n
+    );
 
     // Move folded_eval back to host if requested
     if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
-      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
+      size_t result_size = sizeof(S) * n / 2;
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval1, d_folded_eval1, result_size, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval2, d_folded_eval2, result_size, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval3, d_folded_eval3, result_size, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval4, d_folded_eval4, result_size, cudaMemcpyDeviceToHost, stream));
+
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval1, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval2, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval3, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval4, stream));
     }
     if (!cfg.are_domain_elements_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_domain_xs, stream)); }
-    if (!cfg.are_evals_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_eval, stream)); }
-
-    // Sync if stream is default stream
-    if (stream == 0) CHK_IF_RETURN(cudaStreamSynchronize(stream));
-
-    return CHK_LAST();
-  }
-
-  template <typename S, typename E, typename D>
-  cudaError_t fold_line_new(E* eval, D& line_domain, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg)
-  {
-    CHK_INIT_IF_RETURN();
-    cudaStream_t& stream = cfg.ctx.stream;
-    // Allocate and move line domain evals to device if necessary
-    E* d_eval;
     if (!cfg.are_evals_on_device) {
-      auto data_size = sizeof(E) * n;
-      CHK_IF_RETURN(cudaMallocAsync(&d_eval, data_size, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_eval, eval, data_size, cudaMemcpyHostToDevice, stream));
-    } else {
-      d_eval = eval;
+      CHK_IF_RETURN(cudaFreeAsync(d_eval1, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_eval2, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_eval3, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_eval4, stream));
     }
-
-    // Allocate folded_eval if pointer is not a device pointer
-    E* d_folded_eval;
-    if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval, sizeof(E) * n / 2, stream));
-    } else {
-      d_folded_eval = folded_eval;
-    }
-
-    uint64_t num_threads = max(1, min(unsigned(n), 256));
-    uint64_t num_blocks = (n + num_threads - 1) / num_threads;
-    fold_line_kernel_new<S, E, D><<<num_blocks, num_threads, 0, stream>>>(d_eval, line_domain, alpha, d_folded_eval, n);
-
-    // Move folded_eval back to host if requested
-    if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
-      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
-    }
-
-    if (!cfg.are_evals_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_eval, stream)); }
 
     // Sync if stream is default stream
     if (stream == 0) CHK_IF_RETURN(cudaStreamSynchronize(stream));
@@ -180,19 +196,44 @@ namespace fri {
   }
 
   template <typename S, typename E>
-  cudaError_t fold_circle_into_line(E* eval, S* domain_ys, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg)
-  {
+  cudaError_t fold_circle_into_line(
+    S *eval1,
+    S *eval2,
+    S *eval3,
+    S *eval4, 
+    S* domain_ys,
+    E alpha,
+    S *folded_eval1,
+    S *folded_eval2,
+    S *folded_eval3,
+    S *folded_eval4,
+    uint64_t n,
+    FriConfig& cfg
+  ) {
     CHK_INIT_IF_RETURN();
 
     cudaStream_t& stream = cfg.ctx.stream;
     // Allocate and move circle domain evals to device if necessary
-    E* d_eval;
+    S* d_eval1;
+    S* d_eval2;
+    S* d_eval3;
+    S* d_eval4;
     if (!cfg.are_evals_on_device) {
-      auto data_size = sizeof(E) * n;
-      CHK_IF_RETURN(cudaMallocAsync(&d_eval, data_size, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_eval, eval, data_size, cudaMemcpyHostToDevice, stream));
+      size_t data_size = sizeof(S) * n;
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval1, data_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval2, data_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval3, data_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_eval4, data_size, stream));
+
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval1, eval1, data_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval2, eval2, data_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval3, eval3, data_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(d_eval4, eval4, data_size, cudaMemcpyHostToDevice, stream));
     } else {
-      d_eval = eval;
+      d_eval1 = eval1;
+      d_eval2 = eval2;
+      d_eval3 = eval3;
+      d_eval4 = eval4;
     }
 
     // Allocate and move domain's elements to device if necessary
@@ -206,71 +247,62 @@ namespace fri {
     }
 
     // Allocate folded_evals if pointer is not a device pointer
-    E* d_folded_eval;
+    S* d_folded_eval1;
+    S* d_folded_eval2;
+    S* d_folded_eval3;
+    S* d_folded_eval4;
     if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval, sizeof(E) * n / 2, stream));
+      auto result_size = sizeof(S) * n / 2;
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval1, result_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval2, result_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval3, result_size, stream));
+      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval4, result_size, stream));
     } else {
-      d_folded_eval = folded_eval;
+      d_folded_eval1 = folded_eval1;
+      d_folded_eval2 = folded_eval2;
+      d_folded_eval3 = folded_eval3;
+      d_folded_eval4 = folded_eval4;
     }
 
     E alpha_sq = alpha * alpha;
 
     uint64_t num_threads = max(1, min(unsigned(n), 256));
     uint64_t num_blocks = (n + num_threads - 1) / num_threads;
-    fold_circle_into_line_kernel<<<num_blocks, num_threads, 0, stream>>>(
-      d_eval, d_domain_ys, alpha, alpha_sq, d_folded_eval, n);
+    fold_circle_into_line_kernel<S, E><<<num_blocks, num_threads, 0, stream>>>(
+      d_eval1, 
+      d_eval2, 
+      d_eval3, 
+      d_eval4,
+      d_domain_ys,
+      alpha,
+      alpha_sq,
+      d_folded_eval1,
+      d_folded_eval2,
+      d_folded_eval3,
+      d_folded_eval4,
+      n
+    );
 
     // Move folded_evals back to host if requested
     if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
-      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
+      size_t result_size = sizeof(S) * n / 2;
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval1, d_folded_eval1, result_size, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval2, d_folded_eval2, result_size, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval3, d_folded_eval3, result_size, cudaMemcpyDeviceToHost, stream));
+      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval4, d_folded_eval4, result_size, cudaMemcpyDeviceToHost, stream));
+
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval1, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval2, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval3, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval4, stream));
     }
     if (!cfg.are_domain_elements_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_domain_ys, stream)); }
-    if (!cfg.are_evals_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_eval, stream)); }
-
-    // Sync if stream is default stream
-    if (stream == 0) CHK_IF_RETURN(cudaStreamSynchronize(stream));
-
-    return CHK_LAST();
-  }
-
-  template <typename S, typename E, typename D>
-  cudaError_t fold_circle_into_line_new(E* eval, D& domain, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg)
-  {
-    CHK_INIT_IF_RETURN();
-
-    cudaStream_t& stream = cfg.ctx.stream;
-    // Allocate and move circle domain evals to device if necessary
-    E* d_eval;
     if (!cfg.are_evals_on_device) {
-      auto data_size = sizeof(E) * n;
-      CHK_IF_RETURN(cudaMallocAsync(&d_eval, data_size, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(d_eval, eval, data_size, cudaMemcpyHostToDevice, stream));
-    } else {
-      d_eval = eval;
+      CHK_IF_RETURN(cudaFreeAsync(d_eval1, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_eval2, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_eval3, stream));
+      CHK_IF_RETURN(cudaFreeAsync(d_eval4, stream));
     }
-
-    // Allocate folded_evals if pointer is not a device pointer
-    E* d_folded_eval;
-    if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMallocAsync(&d_folded_eval, sizeof(E) * n / 2, stream));
-    } else {
-      d_folded_eval = folded_eval;
-    }
-
-    E alpha_sq = alpha * alpha;
-
-    uint64_t num_threads = max(1, min(unsigned(n), 256));
-    uint64_t num_blocks = (n + num_threads - 1) / num_threads;
-    fold_circle_into_line_kernel_new<S, E, D><<<num_blocks, num_threads, 0, stream>>>(
-      d_eval, domain, alpha, alpha_sq, d_folded_eval, n);
-
-    // Move folded_evals back to host if requested
-    if (!cfg.are_results_on_device) {
-      CHK_IF_RETURN(cudaMemcpyAsync(folded_eval, d_folded_eval, sizeof(E) * n / 2, cudaMemcpyDeviceToHost, stream));
-      CHK_IF_RETURN(cudaFreeAsync(d_folded_eval, stream));
-    }
-    if (!cfg.are_evals_on_device) { CHK_IF_RETURN(cudaFreeAsync(d_eval, stream)); }
 
     // Sync if stream is default stream
     if (stream == 0) CHK_IF_RETURN(cudaStreamSynchronize(stream));

@@ -20,22 +20,47 @@ namespace fri {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line)(
-    q_extension_t* line_eval,
+    scalar_t* line_eval1,
+    scalar_t* line_eval2,
+    scalar_t* line_eval3,
+    scalar_t* line_eval4,
     scalar_t* domain_elements,
     q_extension_t alpha,
-    q_extension_t* folded_evals,
+    scalar_t* folded_evals1,
+    scalar_t* folded_evals2,
+    scalar_t* folded_evals3,
+    scalar_t* folded_evals4,
     uint64_t n,
     FriConfig& cfg)
   {
-    return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
+    return fri::fold_line(
+      line_eval1, 
+      line_eval2, 
+      line_eval3, 
+      line_eval4, 
+      domain_elements, 
+      alpha, 
+      folded_evals1, 
+      folded_evals2, 
+      folded_evals3, 
+      folded_evals4, 
+      n, 
+      cfg
+    );
   };
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line_new)(
-    q_extension_t* line_eval,
+    scalar_t* line_eval1,
+    scalar_t* line_eval2,
+    scalar_t* line_eval3,
+    scalar_t* line_eval4,
     uint64_t line_domain_initial_index,
     uint32_t line_domain_log_size,
     q_extension_t alpha,
-    q_extension_t* folded_evals,
+    scalar_t* folded_evals1,
+    scalar_t* folded_evals2,
+    scalar_t* folded_evals3,
+    scalar_t* folded_evals4,
     uint64_t n,
     FriConfig& cfg)
   {
@@ -44,7 +69,20 @@ namespace fri {
     scalar_t* domain_elements;
     line_domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
-    return fri::fold_line(line_eval, domain_elements, alpha, folded_evals, n, cfg);
+    return fri::fold_line(
+      line_eval1, 
+      line_eval2, 
+      line_eval3, 
+      line_eval4, 
+      domain_elements, 
+      alpha, 
+      folded_evals1, 
+      folded_evals2, 
+      folded_evals3, 
+      folded_evals4, 
+      n, 
+      cfg
+    );
   };
 
   /**
@@ -61,22 +99,47 @@ namespace fri {
    * @return `cudaSuccess` if the execution was successful and an error code otherwise.
    */
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line)(
-    q_extension_t* circle_evals,
+    scalar_t* circle_evals1,
+    scalar_t* circle_evals2,
+    scalar_t* circle_evals3,
+    scalar_t* circle_evals4,
     scalar_t* domain_elements,
     q_extension_t alpha,
-    q_extension_t* folded_line_evals,
+    scalar_t* folded_line_evals1,
+    scalar_t* folded_line_evals2,
+    scalar_t* folded_line_evals3,
+    scalar_t* folded_line_evals4,
     uint64_t n,
     FriConfig& cfg)
   {
-    return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);
+    return fri::fold_circle_into_line(
+      circle_evals1,  
+      circle_evals2,  
+      circle_evals3,  
+      circle_evals4,  
+      domain_elements, 
+      alpha, 
+      folded_line_evals1, 
+      folded_line_evals2, 
+      folded_line_evals3, 
+      folded_line_evals4, 
+      n, 
+      cfg
+    );
   };
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line_new)(
-    q_extension_t* circle_evals,
+    scalar_t* circle_evals1,
+    scalar_t* circle_evals2,
+    scalar_t* circle_evals3,
+    scalar_t* circle_evals4,
     uint64_t domain_initial_index,
     uint32_t domain_log_size,
     q_extension_t alpha,
-    q_extension_t* folded_line_evals,
+    scalar_t* folded_line_evals1,
+    scalar_t* folded_line_evals2,
+    scalar_t* folded_line_evals3,
+    scalar_t* folded_line_evals4,
     uint64_t n,
     FriConfig& cfg)
   {
@@ -85,7 +148,20 @@ namespace fri {
     scalar_t* domain_elements;
     domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
-    return fri::fold_circle_into_line(circle_evals, domain_elements, alpha, folded_line_evals, n, cfg);
+    return fri::fold_circle_into_line(
+      circle_evals1,  
+      circle_evals2,  
+      circle_evals3,  
+      circle_evals4,  
+      domain_elements, 
+      alpha, 
+      folded_line_evals1, 
+      folded_line_evals2, 
+      folded_line_evals3, 
+      folded_line_evals4, 
+      n, 
+      cfg
+    );
   };
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, precompute_fri_twiddles)(

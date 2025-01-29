@@ -432,6 +432,9 @@ pub fn are_bytes_equal<S>(
     cfg: &VecOpsConfig,
 ) -> bool {
     let mut result = false;
+    if a.len() != b.len() {
+        return result;
+    }
     check_eq_args(a, b, cfg);
     unsafe {
         let _ = _eq_bytes::are_bytes_equal(

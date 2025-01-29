@@ -32,7 +32,20 @@ namespace fri {
    * evaluations by half.
    */
   template <typename S, typename E>
-  cudaError_t fold_line(E* eval, S* domain_xs, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
+  cudaError_t fold_line(
+    S *eval1,
+    S *eval2,
+    S *eval3,
+    S *eval4, 
+    S* domain_xs,
+    E alpha,
+    S *folded_eval1,
+    S *folded_eval2,
+    S *folded_eval3,
+    S *folded_eval4,
+    uint64_t n,
+    FriConfig& cfg
+  );
 
   template <typename S, typename E, typename D>
   cudaError_t fold_line_new(E* eval, D& line_domain, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
@@ -60,10 +73,20 @@ namespace fri {
    */
 
   template <typename S, typename E>
-  cudaError_t fold_circle_into_line(E* eval, S* domain_ys, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
-
-  template <typename S, typename E, typename D>
-  cudaError_t fold_circle_into_line_new(E* eval, D& domain, E alpha, E* folded_eval, uint64_t n, FriConfig& cfg);
+  cudaError_t fold_circle_into_line(
+    S *eval1,
+    S *eval2,
+    S *eval3,
+    S *eval4, 
+    S* domain_ys,
+    E alpha,
+    S *folded_eval1,
+    S *folded_eval2,
+    S *folded_eval3,
+    S *folded_eval4,
+    uint64_t n,
+    FriConfig& cfg
+  );
 
 } // namespace fri
 
