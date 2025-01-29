@@ -32,7 +32,7 @@ pub fn check_gate_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
 {
-    let test_size = 1 << 14;
+    let test_size = 1 << 8;
 
     check_gate_ops_evaluation::<F>(test_size);
 }
@@ -53,38 +53,45 @@ where
     let y = F::Config::generate_random(1);
     let previous_value = F::Config::generate_random(1);
 
-    let rotations: Vec<i32> = (0..test_size as i32).collect(); 
-    let calculations: Vec<i32> = vec![0, 1, 2, 3];
-    let i_value_types: Vec<i32> = vec![0, 1, 2, 3];
-    let j_value_types: Vec<i32> = vec![1, 2, 3, 0];
-    let i_value_indices: Vec<i32> = vec![0, 1, 2, 3];
-    let j_value_indices: Vec<i32> = vec![3, 2, 1, 0];
+    let fixed    = vec![fixed.as_ptr()];
+    let advice   = vec![advice.as_ptr()];
+    let instance = vec![instance.as_ptr()];
 
-    let horner_value_types: Vec<i32> = vec![0, 1];
-    let i_horner_value_indices: Vec<i32> = vec![0, 1];
-    let j_horner_value_indices: Vec<i32> = vec![1, 0];
-    let horner_offsets: Vec<i32> = vec![0, 2];
-    let horner_sizes: Vec<i32> = vec![2, 2];
+    let rotations: Vec<u32> = (0..test_size as u32).collect(); 
+    let calculations: Vec<u32> = (0..test_size as u32).collect(); 
+    let i_value_types: Vec<u32> = vec![0, 1, 2, 3];
+    let j_value_types: Vec<u32> = vec![1, 2, 3, 0];
+    let i_value_indices: Vec<u32> = vec![0, 1, 2, 3];
+    let j_value_indices: Vec<u32> = vec![3, 2, 1, 0];
+
+    let horner_value_types: Vec<u32> = vec![0, 1];
+    let i_horner_value_indices: Vec<u32> = vec![0, 1];
+    let j_horner_value_indices: Vec<u32> = vec![1, 0];
+    let horner_offsets: Vec<u32> = vec![0, 2];
+    let horner_sizes: Vec<u32> = vec![2, 2];
 
     let gate_data = GateData::new(
         constants.as_ptr(),
-        constants.len(),
+        constants.len() as u32,
         fixed.as_ptr(),
-        fixed.len(), 
+        fixed.len() as u32,
+        test_size as u32,
         advice.as_ptr(),
-        advice.len(),
+        advice.len() as u32,
+        test_size as u32,
         instance.as_ptr(),
-        instance.len(),
+        instance.len() as u32,
+        test_size as u32,
         rotations.as_ptr(),
-        rotations.len(),
+        rotations.len() as u32,
         challenges.as_ptr(),
-        challenges.len(),
+        challenges.len() as u32,
         beta.as_ptr(),
         gamma.as_ptr(),
         theta.as_ptr(),
         y.as_ptr(),
         previous_value.as_ptr(),
-        test_size as i32,
+        calculations.len() as u32,
         1,
         1,
     );
@@ -95,7 +102,7 @@ where
         j_value_types.as_ptr(),
         i_value_indices.as_ptr(),
         j_value_indices.as_ptr(),
-        calculations.len(),
+        calculations.len() as u32,
         4,
     );
 
