@@ -39,4 +39,26 @@ namespace blake2s {
     Blake2s folder(false);
     return merkle_tree::mmcs_commit<BYTE, BYTE>(leaves, number_of_inputs, digests, hasher, folder, tree_config);
   }
+
+  extern "C" cudaError_t blake2s_commit_layer_cuda(
+    const BYTE* prev_layer,
+    bool prev_layer_exists,
+    bool are_prev_layer_on_device,
+    const Matrix<BYTE>* columns,
+    bool are_columns_on_device,
+    unsigned int number_of_columns,
+    unsigned int column_length,
+    BYTE* digests
+  ){
+    return Blake2s().commit_layer(
+      prev_layer,
+      prev_layer_exists,
+      are_prev_layer_on_device,
+      columns,
+      are_columns_on_device,
+      number_of_columns,
+      column_length,
+      digests
+    );
+  }
 } // namespace blake2s

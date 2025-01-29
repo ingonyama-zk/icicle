@@ -22,6 +22,7 @@ criterion = "0.3"
 [features]
 default = []
 devmode = ["icicle-core/devmode"]
+arkworks = []
 
 [[bench]]
 name = "vec_bench"
