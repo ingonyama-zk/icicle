@@ -94,4 +94,10 @@ namespace vec_ops {
   are_bytes_equal_cuda(uint8_t* vec_a, uint8_t* vec_b, uint64_t size, VecOpsConfig& config, bool* result) {
     return are_equal<uint8_t>(vec_a, vec_b, size, config, result);
   }
+
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, inv_cuda)(scalar_t* vec_a, int n, VecOpsConfig& config, scalar_t* result)
+  {
+    return inv<scalar_t>(vec_a, n, config, result);
+  }
 } // namespace vec_ops

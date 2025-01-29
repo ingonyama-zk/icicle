@@ -113,6 +113,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
+    fn inv(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> IcicleResult<()>;
+
     fn transpose(
         input: &(impl HostOrDeviceSlice<F> + ?Sized),
         row_size: u32,
@@ -349,6 +355,19 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
+pub fn inv_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(a, a, result, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::inv(a, result, &cfg)
+}
+
 pub fn transpose_matrix<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     row_size: u32,
@@ -506,6 +525,14 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_inv_cuda")]
+                pub(crate) fn inv_scalars_cuda(
+                    a: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    result: *mut $field,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_transpose_matrix_cuda")]
                 pub(crate) fn transpose_cuda(
                     input: *const $field,
@@ -630,6 +657,22 @@ macro_rules! impl_vec_ops_field {
                     $field_prefix_ident::mul_scalars_cuda(
                         a.as_ptr(),
                         b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn inv(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::inv_scalars_cuda(
+                        a.as_ptr(),
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),

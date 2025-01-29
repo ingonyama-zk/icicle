@@ -176,6 +176,9 @@ namespace vec_ops {
   }
 
   template <typename E>
+  cudaError_t inv(E* vec_a, int n, VecOpsConfig& config, E* result);
+
+  template <typename E>
   cudaError_t are_equal(E* vec_a, E* vec_b, uint64_t size, VecOpsConfig& cfg, bool* output);
 } // namespace vec_ops
 

@@ -137,7 +137,7 @@ namespace quotient {
     __global__ void accumulate_quotients_kernel(
         D domain,
         uint32_t domain_size,
-        F *columns,
+        F **columns,
         uint32_t number_of_columns,
         QF random_coefficient,
         ColumnSampleBatch<QP, QF> *samples,
@@ -146,7 +146,10 @@ namespace quotient {
         uint32_t *line_coeffs_sizes,
         QF *batch_random_coeffs,
         CF *denominator_inverses,
-        QF *result ) {
+        F *result1, 
+        F *result2, 
+        F *result3, 
+        F *result4 ) {
         int row = threadIdx.x + blockDim.x * blockIdx.x;
         if (row < domain_size) {
             CF *denominator_inverses_local = &denominator_inverses[row * sample_size];
@@ -174,7 +177,7 @@ namespace quotient {
 
                     uint32_t column_index = samples[i].columns[j];
                     QF linear_term = scalar_mul<QF>(a, point.y.limbs_storage.limbs[0]) + b;
-                    QF value = scalar_mul<QF>(c, columns[column_index * domain_size + row].limbs_storage.limbs[0]);
+                    QF value = scalar_mul<QF>(c, columns[column_index][row].limbs_storage.limbs[0]);
 
                     numerator = numerator + (value - linear_term);
                 }
@@ -182,7 +185,10 @@ namespace quotient {
                 accumulator = (accumulator * batch_coeff) + mul<QF, CF>(numerator, denominator_inverses_local[i]);
                 offset += line_coeffs_size;
             }
-            result[row] = accumulator;
+            result1[row] = accumulator.real;
+            result2[row] = accumulator.im1;
+            result3[row] = accumulator.im2;
+            result4[row] = accumulator.im3;
         }
     }
 
@@ -200,28 +206,33 @@ namespace quotient {
     template <typename QP, typename QF, typename CF, typename F, typename P, typename D>
     cudaError_t accumulate_quotients(
         D &domain,
-        F *columns, // 2d number_of_columns * domain_size elements
+        F **columns, // array of ptrs (number_of_columns) to columns (domain_size)
         uint32_t number_of_columns,
         QF &random_coefficient,
         ColumnSampleBatch<QP, QF> *samples,
         uint32_t sample_size,
         uint32_t flattened_line_coeffs_size,
         QuotientConfig &cfg,
-        QF *result
+        F *result1,
+        F *result2,
+        F *result3,
+        F *result4
     ) {
         CHK_INIT_IF_RETURN();
 
         cudaStream_t stream = cfg.ctx.stream;
 
         uint32_t domain_size = domain.size();
-        F *d_columns;
+        // assuming column elements are already on device
+        F** d_columns;
+        // F *d_columns;
         if (cfg.are_columns_on_device) {
             d_columns = columns;
         }
         else {
-            CHK_IF_RETURN(cudaMallocAsync(&d_columns, sizeof(F) * number_of_columns * domain_size, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&d_columns, sizeof(F*) * number_of_columns, stream));
             CHK_IF_RETURN(
-            cudaMemcpyAsync(d_columns, columns, sizeof(F) * number_of_columns * domain_size, cudaMemcpyHostToDevice, stream));
+            cudaMemcpyAsync(d_columns, columns, sizeof(F*) * number_of_columns, cudaMemcpyHostToDevice, stream));
         }
         ColumnSampleBatch<QP, QF> *d_samples;
         uint32_t **d_columns_ptrs;
@@ -291,12 +302,21 @@ namespace quotient {
             d_batch_random_coeffs
         );
 
-        QF *d_result;
+        F *d_result1;
+        F *d_result2;
+        F *d_result3;
+        F *d_result4;
         if (cfg.are_results_on_device) {
-            d_result = result;
+            d_result1 = result1;
+            d_result2 = result2;
+            d_result3 = result3;
+            d_result4 = result4;
         }
         else {
-            CHK_IF_RETURN(cudaMallocAsync(&d_result, sizeof(QF) * domain_size, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&d_result1, sizeof(F) * domain_size, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&d_result2, sizeof(F) * domain_size, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&d_result3, sizeof(F) * domain_size, stream));
+            CHK_IF_RETURN(cudaMallocAsync(&d_result4, sizeof(F) * domain_size, stream));
         }
         
         CF *d_denominator_inverses;
@@ -317,12 +337,21 @@ namespace quotient {
                 d_line_coeffs_sizes,
                 d_batch_random_coeffs,
                 d_denominator_inverses,
-                d_result
+                d_result1,
+                d_result2,
+                d_result3,
+                d_result4
         );
 
         if (!cfg.are_results_on_device) {
-            CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, sizeof(QF) * domain_size, cudaMemcpyDeviceToHost, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_result, stream));
+            CHK_IF_RETURN(cudaMemcpyAsync(result1, d_result1, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_result1, stream));
+            CHK_IF_RETURN(cudaMemcpyAsync(result2, d_result2, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_result2, stream));
+            CHK_IF_RETURN(cudaMemcpyAsync(result3, d_result3, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_result3, stream));
+            CHK_IF_RETURN(cudaMemcpyAsync(result4, d_result4, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_result4, stream));
         }
         CHK_IF_RETURN(cudaFreeAsync(d_denominator_inverses, stream));
         CHK_IF_RETURN(cudaFreeAsync(d_flattened_line_coeffs, stream));

@@ -85,4 +85,10 @@ namespace vec_ops {
   {
     return bit_reverse<q_extension_t>(input, n, config, output);
   }
+
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, q_extension_inv_cuda)(q_extension_t* vec_a, int n, VecOpsConfig& config, q_extension_t* result)
+  {
+    return inv<q_extension_t>(vec_a, n, config, result);
+  }
 } // namespace vec_ops

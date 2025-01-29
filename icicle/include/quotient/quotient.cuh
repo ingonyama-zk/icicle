@@ -40,14 +40,17 @@ namespace quotient {
         uint32_t half_coset_initial_index,
         uint32_t half_coset_step_size,
         uint32_t domain_log_size,
-        F *columns, // 2d number_of_columns * domain_size elements
+        F **columns, // 2d number_of_columns * domain_size elements
         uint32_t number_of_columns,
         QF &random_coefficient,
         ColumnSampleBatch<QP, QF> *samples,
         uint32_t sample_size,
         uint32_t flattened_line_coeffs_size,
         QuotientConfig &cfg,
-        QF *result
+        F *result1,
+        F *result2,
+        F *result3,
+        F *result4
     );
 }
 #endif

@@ -105,6 +105,13 @@ namespace vec_ops {
       }
     }
     template <typename E>
+    __global__ void inv_kernel(const E* element_vec1, const E* element_vec2, int size, E* result)
+    {
+      uint64_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+      if (tid < size) { result[tid] = E::inverse(element_vec1[tid]); }
+    }
+
+    template <typename E>
     __global__ void are_equal_kernel(const E* vec_a, const E* vec_b, uint64_t size, bool* result)
     {
       uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
@@ -433,5 +440,11 @@ namespace vec_ops {
     if (!config.is_async) return CHK_STICKY(cudaStreamSynchronize(config.ctx.stream));
 
     return CHK_LAST();
+  }
+
+  template <typename E>
+  cudaError_t inv(E* vec_a, int n, VecOpsConfig& config, E* result)
+  {
+    return vec_op<E, inv_kernel>(vec_a, vec_a, n, config, result);
   }
 } // namespace vec_ops
