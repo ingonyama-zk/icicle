@@ -45,6 +45,9 @@ if (FIELD)
     if (POSEIDON2)
         target_sources(icicle_field PRIVATE src/hash/cpu_poseidon2.cpp)
     endif()
+    if(SUMCHECK)
+        target_sources(icicle_field PRIVATE src/field/cpu_sumcheck.cpp)
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 
@@ -75,4 +78,5 @@ if (HASH)
     )
     target_include_directories(icicle_hash PUBLIC include)
 endif()
+
 

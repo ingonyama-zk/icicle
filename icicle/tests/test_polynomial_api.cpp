@@ -579,7 +579,7 @@ TEST_F(PolynomialTest, slicing)
 using curve_config::affine_t;
 using curve_config::projective_t;
 
-  #ifdef G2
+  #ifdef G2_ENABLED
 using curve_config::g2_affine_t;
 using curve_config::g2_projective_t;
   #endif // G2
@@ -1045,7 +1045,7 @@ TEST_F(PolynomialTest, DummyGroth16)
   }
 }
 
-  #ifdef G2
+  #ifdef G2_ENABLED
 TEST_F(PolynomialTest, Groth16)
 {
   for (auto device : s_registered_devices) {

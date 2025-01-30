@@ -30,7 +30,7 @@ pub struct VecOpsConfig {
 - **`is_b_on_device: bool`**: Indicates whether the input b data has been preloaded on the device memory. If `false` inputs will be copied from host to device.
 - **`is_result_on_device: bool`**: Indicates whether the output data is preloaded in device memory. If `false` outputs will be copied from host to device.
 - **`is_async: bool`**: Specifies whether the NTT operation should be performed asynchronously.
-- **`batch_size: usize`**: Number of vector operations to process in a single batch. Each operation will be performed independently on each batch element.
+- **`batch_size: usize`**: Number of vector operations to process in a single batch. Each operation will be performed independently on each batch element. It is implicitly determined given the inputs and outputs to the vector operation.
 - **`columns_batch: bool`**: true if the batched vectors are stored as columns in a 2D array (i.e., the vectors are strided in memory as columns of a matrix). If false, the batched vectors are stored contiguously in memory (e.g., as rows or in a flat array).
 
 - **`ext: ConfigExtension`**: extended configuration for backend.
