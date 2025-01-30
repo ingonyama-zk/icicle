@@ -186,8 +186,8 @@ impl<T> DeviceSlice<T> {
 
     pub fn copy_from_device(&mut self, val: &DeviceSlice<T>) -> CudaResult<()> {
         assert!(
-            self.len() == val.len(),
-            "In copy from host, destination and source slices have different lengths"
+            self.len() >= val.len(),
+            "In copy from device, dst length is less than src length"
         );
         check_device(
             self.device_id()
@@ -210,8 +210,8 @@ impl<T> DeviceSlice<T> {
 
     pub fn copy_to_device(&self, val: &mut DeviceSlice<T>) -> CudaResult<()> {
         assert!(
-            self.len() == val.len(),
-            "In copy to host, destination and source slices have different lengths"
+            self.len() <= val.len(),
+            "In copy to device, dst length is less than src length"
         );
         check_device(
             self.device_id()
