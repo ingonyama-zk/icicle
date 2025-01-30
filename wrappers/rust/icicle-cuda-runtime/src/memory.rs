@@ -1,5 +1,5 @@
 use crate::bindings::{
-    cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind,
+    cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemset,
 };
 use crate::device::{check_device, get_device_from_pointer};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
@@ -11,6 +11,8 @@ use std::ops::{
 use std::os::raw::c_void;
 use std::slice::from_raw_parts_mut;
 use std::slice::SliceIndex;
+
+use crate::memory::cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
@@ -211,7 +213,7 @@ impl<T> DeviceSlice<T> {
     pub fn copy_to_device(&self, val: &mut DeviceSlice<T>) -> CudaResult<()> {
         assert!(
             self.len() == val.len(),
-            "In copy to host, destination and source slices have different lengths"
+            "In copy to device, destination and source slices have different lengths"
         );
         check_device(
             self.device_id()
@@ -338,6 +340,55 @@ impl<T> DeviceVec<T> {
             let res = Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
                 device_ptr.assume_init() as *mut T,
                 count,
+            ))));
+            Ok(res)
+        }
+    }
+
+    pub fn cuda_malloc_extend_with_zeros(vec_to_extend: &Self, count_zero_elements: usize) -> CudaResult<Self> {
+        let old_size = vec_to_extend.len();
+        let total_size = old_size + count_zero_elements;
+
+        println!(
+            "old size = {:?}, total_size = {:?} , count_zero_elements = {:?}",
+            old_size, total_size, count_zero_elements
+        );
+
+        let size = total_size
+            .checked_mul(size_of::<T>())
+            .ok_or(CudaError::cudaErrorMemoryAllocation)?; // Prevent overflow
+
+        if size == 0 {
+            return Err(CudaError::cudaErrorMemoryAllocation);
+        }
+
+        let mut new_device_ptr = MaybeUninit::<*mut c_void>::uninit();
+        unsafe {
+            // Allocate new memory block
+            cudaMalloc(new_device_ptr.as_mut_ptr(), size).wrap()?;
+            let new_device_ptr = new_device_ptr.assume_init() as *mut T;
+
+            // Copy existing data
+            cudaMemcpy(
+                new_device_ptr as *mut c_void,
+                vec_to_extend.as_ptr() as *mut c_void,
+                old_size * size_of::<T>(),
+                cudaMemcpyDeviceToDevice,
+            )
+            .wrap()?;
+
+            // Zero out the newly allocated portion
+            cudaMemset(
+                new_device_ptr.add(old_size) as *mut c_void,
+                0,
+                count_zero_elements * size_of::<T>(),
+            )
+            .wrap()?;
+
+            // Return new extended vector
+            let res = Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
+                new_device_ptr,
+                total_size,
             ))));
             Ok(res)
         }
