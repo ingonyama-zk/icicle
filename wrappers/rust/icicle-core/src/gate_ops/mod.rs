@@ -41,8 +41,7 @@ impl GateOpsConfig {
 #[derive(Debug, Clone)]
 pub struct HornerData {
     pub value_types: *const u32,
-    pub i_value_indices: *const u32,
-    pub j_value_indices: *const u32,
+    pub value_indices: *const u32,
     pub offsets: *const u32,
     pub sizes: *const u32,
 }
@@ -50,15 +49,13 @@ pub struct HornerData {
 impl HornerData {
     pub fn new(
         value_types: *const u32,
-        i_value_indices: *const u32,
-        j_value_indices: *const u32,
+        value_indices: *const u32,
         offsets: *const u32,
         sizes: *const u32,
     ) -> Self {
         Self {
             value_types,
-            i_value_indices,
-            j_value_indices,
+            value_indices,
             offsets,
             sizes,
         }
@@ -68,31 +65,25 @@ impl HornerData {
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct CalculationData {
+    pub calc_types: *const u32,
     pub value_types: *const u32,
-    pub i_value_types: *const u32,
-    pub j_value_types: *const u32,
-    pub i_value_indices: *const u32,
-    pub j_value_indices: *const u32,
+    pub value_indices: *const u32,
     pub num_calculations: u32,
     pub num_intermediates: u32,
 }
 
 impl CalculationData {
     pub fn new(
+        calc_types: *const u32,
         value_types: *const u32,
-        i_value_types: *const u32,
-        j_value_types: *const u32,
-        i_value_indices: *const u32,
-        j_value_indices: *const u32,
+        value_indices: *const u32,
         num_calculations: u32,
         num_intermediates: u32,
     ) -> Self {
         Self {
+            calc_types,
             value_types,
-            i_value_types,
-            j_value_types,
-            i_value_indices,
-            j_value_indices,
+            value_indices,
             num_calculations,
             num_intermediates,
         }
@@ -209,10 +200,10 @@ fn check_gate_ops_args<F>(
 
 
 fn setup_config<F>(
-    gate_data: &GateData<F>,
-    calc_data: &CalculationData,
-    horner_data: &HornerData,
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    _gate_data: &GateData<F>,
+    _calc_data: &CalculationData,
+    _horner_data: &HornerData,
+    _result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &GateOpsConfig,
 ) -> GateOpsConfig {
     // if gate_data.constants.is_on_device() && !gate_data.constants.is_on_active_device() {

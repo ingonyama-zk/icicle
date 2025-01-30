@@ -33,18 +33,15 @@ namespace icicle {
 
   struct HornerData {
     const uint32_t* value_types;      // Value types for Horner's method
-    const uint32_t* i_value_indices;  // Source indices for Horner's method
-    const uint32_t* j_value_indices;  // Secondary indices for Horner's method
+    const uint32_t* value_indices;  // Source indices for Horner's method
     const uint32_t* offsets;          // Horner offsets
     const uint32_t* sizes;            // Horner sizes
   };
 
   struct CalculationData {
-    const uint32_t* value_types;     // Array for calculation types (e.g., Add, Sub, Mul, etc.)
-    const uint32_t* i_value_types;    // Source value types (e.g., beta, advice, etc.)
-    const uint32_t* j_value_types;    // Secondary source value types
-    const uint32_t* i_value_indices;  // Source value indices
-    const uint32_t* j_value_indices;  // Secondary source value indices
+    const uint32_t* calc_types;     // Array for calculation types (e.g., Add, Sub, Mul, etc.)
+    const uint32_t* value_types;    // Source value types (e.g., beta, advice, etc.)
+    const uint32_t* value_indices;  // Source value indices
     uint32_t num_calculations;     // Number of calculations
     uint32_t num_intermediates;    // Number of intermediate values
   };

@@ -4,6 +4,7 @@ use crate::gate_ops::{gate_evaluation, GateOps, GateOpsConfig, GateData, Calcula
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
+use rand::Rng;
 
 #[test]
 fn test_gate_ops_config() {
@@ -42,12 +43,14 @@ pub fn check_gate_ops_evaluation<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
 {
+    let mut rng = rand::thread_rng();
+
     let constants = F::Config::generate_random(test_size);
     let fixed = F::Config::generate_random(test_size);
     let advice = F::Config::generate_random(test_size);
     let instance = F::Config::generate_random(test_size);
     let challenges = F::Config::generate_random(test_size);
-    let beta = F::Config::generate_random(1);
+    let beta = vec![F::from_u32(10)];
     let gamma = F::Config::generate_random(1);
     let theta = F::Config::generate_random(1);
     let y = F::Config::generate_random(1);
@@ -57,16 +60,13 @@ where
     let advice   = vec![advice.as_ptr()];
     let instance = vec![instance.as_ptr()];
 
-    let rotations: Vec<u32> = (0..test_size as u32).collect(); 
-    let calculations: Vec<u32> = (0..test_size as u32).collect(); 
-    let i_value_types: Vec<u32> = vec![0, 1, 2, 3];
-    let j_value_types: Vec<u32> = vec![1, 2, 3, 0];
-    let i_value_indices: Vec<u32> = vec![0, 1, 2, 3];
-    let j_value_indices: Vec<u32> = vec![3, 2, 1, 0];
+    let rotations: Vec<u32> = vec![0];
+    let calculations: Vec<u32> = (0..test_size).map(|_| rng.gen_range(0..8)).collect();
+    let value_types: Vec<u32> = (0..test_size * 2).map(|_| rng.gen_range(0..8)).collect();
+    let value_indices: Vec<u32> = (0..test_size * 4).map(|_| rng.gen_range(0..8)).collect();
 
     let horner_value_types: Vec<u32> = vec![0, 1];
-    let i_horner_value_indices: Vec<u32> = vec![0, 1];
-    let j_horner_value_indices: Vec<u32> = vec![1, 0];
+    let horner_value_indices: Vec<u32> = vec![0, 1];
     let horner_offsets: Vec<u32> = vec![0, 2];
     let horner_sizes: Vec<u32> = vec![2, 2];
 
@@ -98,18 +98,15 @@ where
 
     let calc_data = CalculationData::new(
         calculations.as_ptr(),
-        i_value_types.as_ptr(),
-        j_value_types.as_ptr(),
-        i_value_indices.as_ptr(),
-        j_value_indices.as_ptr(),
+        value_types.as_ptr(),
+        value_indices.as_ptr(),
         calculations.len() as u32,
-        4,
+        calculations.len() as u32,
     );
 
     let horner_data = HornerData::new(
         horner_value_types.as_ptr(),
-        i_horner_value_indices.as_ptr(),
-        j_horner_value_indices.as_ptr(),
+        horner_value_indices.as_ptr(),
         horner_offsets.as_ptr(),
         horner_sizes.as_ptr(),
     );
