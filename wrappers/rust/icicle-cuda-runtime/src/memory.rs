@@ -349,11 +349,6 @@ impl<T> DeviceVec<T> {
         let old_size = vec_to_extend.len();
         let total_size = old_size + count_zero_elements;
 
-        println!(
-            "old size = {:?}, total_size = {:?} , count_zero_elements = {:?}",
-            old_size, total_size, count_zero_elements
-        );
-
         let size = total_size
             .checked_mul(size_of::<T>())
             .ok_or(CudaError::cudaErrorMemoryAllocation)?; // Prevent overflow
