@@ -121,6 +121,43 @@ namespace vec_ops {
         }
       }
     }
+    
+    template <typename S, typename E>
+    __global__ void accumulate_stwo_kernel(
+      S* cols_a0,
+      S* cols_a1,
+      S* cols_a2,
+      S* cols_a3,
+      S* cols_b0,
+      S* cols_b1,
+      S* cols_b2,
+      S* cols_b3,
+      uint64_t n)
+    {
+      uint64_t tid = uint64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if (tid < n) {
+        E qm31_a = E{
+          cols_a0[tid],
+          cols_a1[tid],
+          cols_a2[tid],
+          cols_a3[tid],
+        };
+        
+        E qm31_b = E{
+          cols_b0[tid],
+          cols_b1[tid],
+          cols_b2[tid],
+          cols_b3[tid],
+        };
+
+        E qm31_a_out = qm31_a + qm31_b;
+
+        cols_a0[tid] = qm31_a_out.real;
+        cols_a1[tid] = qm31_a_out.im1;
+        cols_a2[tid] = qm31_a_out.im2;
+        cols_a3[tid] = qm31_a_out.im3;
+      }
+    }
   } // namespace
 
   template <typename E, void (*Kernel)(const E*, const E*, int, E*)>
@@ -193,6 +230,35 @@ namespace vec_ops {
   cudaError_t add(E* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   {
     return vec_op<E, add_kernel>(vec_a, vec_b, n, config, result);
+  }
+
+  template <typename S, typename E>
+  cudaError_t accumulate_stwo(
+    S** d_cols_a,
+    S** d_cols_b,
+    int n
+  )
+  {
+    CHK_INIT_IF_RETURN();
+
+    // Set the grid and block dimensions
+    int num_threads = MAX_THREADS_PER_BLOCK;
+    int num_blocks = (n + num_threads - 1) / num_threads;
+
+    // Call the kernel to perform element-wise operation
+    accumulate_stwo_kernel<S, E><<<num_blocks, num_threads>>>(
+      *d_cols_a,
+      *d_cols_a + sizeof(S*),
+      *d_cols_a + 2*sizeof(S*),
+      *d_cols_a + 3*sizeof(S*),
+      *d_cols_b,
+      *d_cols_b + sizeof(S*),
+      *d_cols_b + 2*sizeof(S*),
+      *d_cols_b + 3*sizeof(S*),
+      n
+    );
+
+    return CHK_LAST();
   }
 
   template <typename E, typename S>

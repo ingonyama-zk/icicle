@@ -48,6 +48,20 @@ namespace vec_ops {
     return add<scalar_t>(vec_a, vec_b, n, config, vec_a);
   }
 
+  extern "C" cudaError_t
+  CONCAT_EXPAND(FIELD, accumulate_stwo_cuda)(
+    scalar_t** d_cols_a,
+    scalar_t** d_cols_b,
+    int n
+  )
+  {
+    return accumulate_stwo<scalar_t, extension_t>(
+      d_cols_a,
+      d_cols_b,
+      n
+    );
+  }
+
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, stwo_convert_cuda)(
     uint32_t* vec_a, uint32_t* vec_b, uint32_t* vec_c, uint32_t* vec_d, int n, scalar_t* result)
   {

@@ -91,6 +91,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> IcicleResult<()>;
 
+    fn accumulate_stwo(
+        a: &(impl HostOrDeviceSlice<*const F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<*const F> + ?Sized),
+        length: u32,
+    ) -> IcicleResult<()>;
+
     fn stwo_convert(
         a: &(impl HostOrDeviceSlice<u32> + ?Sized),
         b: &(impl HostOrDeviceSlice<u32> + ?Sized),
@@ -326,6 +332,23 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::accumulate(a, b, &cfg)
 }
 
+pub fn accumulate_scalars_stwo<F>(
+    a: &(impl HostOrDeviceSlice<*const F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<*const F> + ?Sized),
+    length: u32,
+) -> IcicleResult<()>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    assert_eq!(a.len(), b.len());
+    <<F as FieldImpl>::Config as VecOps<F>>::accumulate_stwo(
+        a,
+        b,
+        length
+    )
+}
+
 pub fn sub_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -502,6 +525,13 @@ macro_rules! impl_vec_ops_field {
                     cfg: *const VecOpsConfig,
                 ) -> CudaError;
 
+                #[link_name = concat!($field_prefix, "_accumulate_stwo_cuda")]
+                pub(crate) fn accumulate_stwo_cuda(
+                    a: *const *const $field,
+                    b: *const *const $field,
+                    size: u32,
+                ) -> CudaError;
+
                 #[link_name = concat!($field_prefix, "_stwo_convert_cuda")]
                 pub(crate) fn stwo_convert_cuda(
                     a: *const u32,
@@ -591,6 +621,21 @@ macro_rules! impl_vec_ops_field {
                         b.as_ptr(),
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
+                    )
+                    .wrap()
+                }
+            }
+
+            fn accumulate_stwo(
+                a: &(impl HostOrDeviceSlice<*const $field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<*const $field> + ?Sized),
+                length: u32,
+            ) -> IcicleResult<()> {
+                unsafe {
+                    $field_prefix_ident::accumulate_stwo_cuda(
+                        a.as_ptr() as *const *const $field,
+                        b.as_ptr() as *const *const $field,
+                        length,
                     )
                     .wrap()
                 }
