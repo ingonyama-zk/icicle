@@ -33,7 +33,7 @@ pub fn check_gate_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
 {
-    let test_size = 1 << 8;
+    let test_size = 1 << 4;
 
     check_gate_ops_evaluation::<F>(test_size);
 }
@@ -45,12 +45,15 @@ where
 {
     let mut rng = rand::thread_rng();
 
-    let constants = F::Config::generate_random(test_size);
-    let fixed = F::Config::generate_random(test_size);
-    let advice = F::Config::generate_random(test_size);
-    let instance = F::Config::generate_random(test_size);
-    let challenges = F::Config::generate_random(test_size);
-    let beta = vec![F::from_u32(10)];
+    let table_size = 1 << 5;
+    let graph_size = 1 << 4;
+
+    let constants = F::Config::generate_random(table_size);
+    let fixed = F::Config::generate_random(table_size);
+    let advice = F::Config::generate_random(table_size);
+    let instance = F::Config::generate_random(table_size);
+    let challenges = F::Config::generate_random(table_size);
+    let beta = F::Config::generate_random(1);
     let gamma = F::Config::generate_random(1);
     let theta = F::Config::generate_random(1);
     let y = F::Config::generate_random(1);
@@ -61,9 +64,10 @@ where
     let instance = vec![instance.as_ptr()];
 
     let rotations: Vec<u32> = vec![0];
-    let calculations: Vec<u32> = (0..test_size).map(|_| rng.gen_range(0..8)).collect();
-    let value_types: Vec<u32> = (0..test_size * 2).map(|_| rng.gen_range(0..8)).collect();
-    let value_indices: Vec<u32> = (0..test_size * 4).map(|_| rng.gen_range(0..8)).collect();
+    let calculations: Vec<u32> = (0..graph_size).map(|_| rng.gen_range(0..8)).collect();
+    let targets: Vec<u32> = Vec::from_iter(0..graph_size as u32);
+    let value_types: Vec<u32> = (0..graph_size * 2).map(|_| rng.gen_range(0..8)).collect();
+    let value_indices: Vec<u32> = (0..graph_size * 4).map(|_| rng.gen_range(0..8)).collect();
 
     let horner_value_types: Vec<u32> = vec![0, 1];
     let horner_value_indices: Vec<u32> = vec![0, 1];
@@ -75,13 +79,13 @@ where
         constants.len() as u32,
         fixed.as_ptr(),
         fixed.len() as u32,
-        test_size as u32,
+        table_size as u32,
         advice.as_ptr(),
         advice.len() as u32,
-        test_size as u32,
+        table_size as u32,
         instance.as_ptr(),
         instance.len() as u32,
-        test_size as u32,
+        table_size as u32,
         rotations.as_ptr(),
         rotations.len() as u32,
         challenges.as_ptr(),
@@ -91,13 +95,14 @@ where
         theta.as_ptr(),
         y.as_ptr(),
         previous_value.as_ptr(),
-        calculations.len() as u32,
+        test_size as u32,
         1,
         1,
     );
 
     let calc_data = CalculationData::new(
         calculations.as_ptr(),
+        targets.as_ptr(),
         value_types.as_ptr(),
         value_indices.as_ptr(),
         calculations.len() as u32,
@@ -125,4 +130,6 @@ where
         &cfg,
     )
     .unwrap();
+
+    println!("result: {:?}", result);
 }

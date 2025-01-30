@@ -13,11 +13,12 @@ pub struct GateOpsConfig {
     pub is_fixed_on_device: bool,
     pub is_advice_on_device: bool,
     pub is_instance_on_device: bool,
-    pub is_challenges_on_device: bool,
     pub is_rotations_on_device: bool,
+    pub is_challenges_on_device: bool,
+    pub is_calculations_on_device: bool,
+    pub is_horners_on_device: bool,
     pub is_result_on_device: bool,
     pub is_async: bool,
-    pub ext: ConfigExtension,
 }
 
 impl GateOpsConfig {
@@ -28,11 +29,12 @@ impl GateOpsConfig {
             is_fixed_on_device: false,
             is_advice_on_device: false,
             is_instance_on_device: false,
-            is_result_on_device: false,
-            is_challenges_on_device: false,
             is_rotations_on_device: false,
+            is_challenges_on_device: false,
+            is_calculations_on_device: false,
+            is_horners_on_device: false,
+            is_result_on_device: false,
             is_async: false,
-            ext: ConfigExtension::new(),
         }
     }
 }
@@ -66,6 +68,7 @@ impl HornerData {
 #[derive(Debug, Clone)]
 pub struct CalculationData {
     pub calc_types: *const u32,
+    pub targets: *const u32,
     pub value_types: *const u32,
     pub value_indices: *const u32,
     pub num_calculations: u32,
@@ -75,6 +78,7 @@ pub struct CalculationData {
 impl CalculationData {
     pub fn new(
         calc_types: *const u32,
+        targets: *const u32,
         value_types: *const u32,
         value_indices: *const u32,
         num_calculations: u32,
@@ -82,6 +86,7 @@ impl CalculationData {
     ) -> Self {
         Self {
             calc_types,
+            targets,
             value_types,
             value_indices,
             num_calculations,

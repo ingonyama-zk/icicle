@@ -28,7 +28,6 @@ namespace icicle {
     bool is_horners_on_device;      /** True if `horners` array is on the device. Default: false. */
     bool is_result_on_device;       /** True to keep results on device. Default: false. */
     bool is_async;                  /** Async execution flag. Default: false. */
-    ConfigExtension* ext = nullptr; /** Backend-specific extension. */
   };
 
   struct HornerData {
@@ -40,10 +39,11 @@ namespace icicle {
 
   struct CalculationData {
     const uint32_t* calc_types;     // Array for calculation types (e.g., Add, Sub, Mul, etc.)
+    const uint32_t* targets;         // Source value types (e.g., beta, advice, etc.)
     const uint32_t* value_types;    // Source value types (e.g., beta, advice, etc.)
     const uint32_t* value_indices;  // Source value indices
-    uint32_t num_calculations;     // Number of calculations
-    uint32_t num_intermediates;    // Number of intermediate values
+    uint32_t num_calculations;      // Number of calculations
+    uint32_t num_intermediates;     // Number of intermediate values
   };
 
   template <typename T>
