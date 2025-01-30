@@ -1202,7 +1202,7 @@ TEST_F(HashApiTest, poseidon2_3_single_hasher)
   }
 } // poseidon2_3_single_hasher
 
-// Test used to generate expected result of the nd hasher.
+// Test used to generate expected result of any hasher ccording to the parameters inside.
 TEST_F(HashApiTest, poseidon2_3_gen_hasher_expected_result_cpu_only)
 {
   #if FIELD_ID == BN254

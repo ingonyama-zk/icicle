@@ -206,7 +206,7 @@ namespace icicle {
                                                                                                   // function.
         is_sponge = true;
         if (config.batch != 1) {
-          ICICLE_LOG_ERROR << "The only suppoorted value of config.batch for sponge functions is 1.\n";
+          ICICLE_LOG_ERROR << "The only supported value of config.batch for sponge functions is 1.\n";
           return eIcicleError::INVALID_ARGUMENT;
         }
       } // sponge function
@@ -324,7 +324,7 @@ namespace icicle {
         for (int hasher_idx = 1; hasher_idx < sponge_nof_hashers; hasher_idx++) {
           // The first output of the prev hasher is the first input of the current hasher.
           // The T-1 new inputs of the current hasher should be added to the T-1 outputs of the
-          // prev hasher (starting fom index 1).
+          // prev hasher (starting from index 1).
           for (int i = 1; i < T; i++) {
             tmp_fields[i] = tmp_fields_tmp_ptr[i] + tmp_fields[i];
           }
