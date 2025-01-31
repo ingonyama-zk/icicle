@@ -20,7 +20,7 @@ fn test_gate_ops_config() {
         5
     );
 
-    // just to test the stream can be set and used correctly
+
     let mut stream = IcicleStream::create().unwrap();
     gate_ops_config.stream_handle = *stream;
 
@@ -36,6 +36,8 @@ where
     let test_size = 1 << 4;
 
     check_gate_ops_evaluation::<F>(test_size);
+    check_horner_evaluation::<F>(1);
+    check_complex_gate_ops::<F>(1);
 }
 
 
@@ -130,6 +132,245 @@ where
         &cfg,
     )
     .unwrap();
+}
 
-    println!("result: {:?}", result);
+pub fn check_horner_evaluation<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
+{
+    let table_size = 8;
+
+    let constants = vec![
+        F::from_u32(5u32),
+        F::from_u32(7u32),
+        F::from_u32(100u32),
+        F::from_u32(200u32),
+    ];
+    let fixed_column = vec![
+        F::from_u32(11u32),
+        F::from_u32(11u32),
+        F::from_u32(11u32),
+        F::from_u32(11u32),
+    ];
+    let advice_column = vec![
+        F::from_u32(13u32),
+        F::from_u32(13u32),
+        F::from_u32(13u32),
+        F::from_u32(13u32),
+    ];
+    let instance_column = F::Config::generate_random(1);
+    let challenges      = F::Config::generate_random(1);
+
+    let beta            = F::Config::generate_random(1);
+    let gamma           = F::Config::generate_random(1);
+    let theta           = F::Config::generate_random(1);
+    let y               = F::Config::generate_random(1);
+    let previous_value  = F::Config::generate_random(1);
+
+    let fixed    = vec![fixed_column.as_ptr()];
+    let advice   = vec![advice_column.as_ptr()];
+    let instance = vec![instance_column.as_ptr()];
+
+    let rotations: Vec<u32> = vec![0];
+    let calculations: Vec<u32> = vec![6, 7];
+    let targets: Vec<u32> = vec![0, 1];
+    let value_types: Vec<u32> = vec![0, 0, 1, 1];
+    let value_indices: Vec<u32> = vec![0, 0, 1, 0, 0, 0, 0, 0]; 
+
+    // calc[0] = horner(constants[0], constants[1], [fixed[0][0], advice[0][0]]) -> target[0]
+    // calc[1] = store(intermediates[0]) -> target[1]
+
+    let horner_offsets: Vec<u32> = vec![0, 0];
+    let horner_sizes:   Vec<u32> = vec![2, 0];
+    let horner_value_types: Vec<u32> = vec![2, 3];
+    let horner_value_indices: Vec<u32> = vec![0, 0, 0, 0];
+
+    let gate_data = GateData::new(
+        constants.as_ptr(),
+        constants.len() as u32,
+        fixed.as_ptr(),
+        fixed.len() as u32,
+        table_size as u32,
+        advice.as_ptr(),
+        advice.len() as u32,
+        table_size as u32,
+        instance.as_ptr(),
+        instance.len() as u32,
+        table_size as u32,
+        rotations.as_ptr(),
+        rotations.len() as u32,
+        challenges.as_ptr(),
+        challenges.len() as u32,
+        beta.as_ptr(),
+        gamma.as_ptr(),
+        theta.as_ptr(),
+        y.as_ptr(),
+        previous_value.as_ptr(),
+        test_size as u32,
+        1,
+        2,
+    );
+
+    let calc_data = CalculationData::new(
+        calculations.as_ptr(),
+        targets.as_ptr(),
+        value_types.as_ptr(),
+        value_indices.as_ptr(),
+        calculations.len() as u32,
+        2,
+    );
+
+    let horner_data = HornerData::new(
+        horner_value_types.as_ptr(),
+        horner_value_indices.as_ptr(),
+        horner_offsets.as_ptr(),
+        horner_sizes.as_ptr(),
+    );
+
+    let mut result = vec![F::zero(); test_size];
+    let mut result_slice = HostSlice::from_mut_slice(&mut result);
+
+    test_utilities::test_set_main_device();
+
+    let cfg = GateOpsConfig::default();
+
+    gate_evaluation(
+        &gate_data,
+        &calc_data,
+        &horner_data,
+        result_slice,
+        &cfg,
+    )
+    .unwrap();
+
+    let expected = F::from_u32(335u32);
+    assert_eq!(result[0], expected, "Horner test did not match expected value");
+}
+
+pub fn check_complex_gate_ops<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
+{
+    let table_size = 8;
+
+    let constants = vec![
+        F::from_u32(5),
+        F::from_u32(7),
+        F::from_u32(3),
+        F::from_u32(200),
+    ];
+
+    let fixed_col = vec![
+        F::from_u32(11),
+        F::from_u32(111),
+        F::from_u32(111),
+        F::from_u32(111),
+        F::from_u32(111),
+        F::from_u32(111),
+        F::from_u32(111),
+        F::from_u32(111),
+    ];
+
+    let advice_col = vec![
+        F::from_u32(13),
+        F::from_u32(113),
+        F::from_u32(113),
+        F::from_u32(113),
+        F::from_u32(113),
+        F::from_u32(113),
+        F::from_u32(113),
+        F::from_u32(113),
+    ];
+
+    let instance_col = vec![
+        F::from_u32(17),
+        F::from_u32(117),
+        F::from_u32(117),
+        F::from_u32(117),
+        F::from_u32(117),
+        F::from_u32(117),
+        F::from_u32(117),
+        F::from_u32(117),
+    ];
+
+    let challenges = vec![F::from_u32(19)];
+
+    let beta           = vec![F::from_u32(101)];
+    let gamma          = vec![F::from_u32(102)];
+    let theta          = vec![F::from_u32(103)];
+    let y              = vec![F::from_u32(104)];
+    let previous_value = vec![F::from_u32(105)];
+
+    let fixed    = vec![fixed_col.as_ptr()];
+    let advice   = vec![advice_col.as_ptr()];
+    let instance = vec![instance_col.as_ptr()];
+
+    let rotations = vec![0];
+
+    let calculations = vec![0, 2, 3, 4, 7, 6];
+    let targets = vec![0, 1, 2, 3, 4, 5];
+    let value_types = vec![0, 0, 2, 3, 1, 1, 1, 1, 1, 1, 1, 0];
+    let value_indices = vec![0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 4, 0, 2, 0];
+
+    let mut horner_offsets = vec![0; 6];
+    let mut horner_sizes   = vec![0; 6];
+    horner_offsets[5] = 0; 
+    horner_sizes[5]   = 2;
+    let horner_value_types   = vec![4, 5];
+    let horner_value_indices = vec![0, 0, 0, 0];
+
+    // Build the GateData:
+    let gate_data = GateData::new(
+        constants.as_ptr(),
+        constants.len() as u32,
+        fixed.as_ptr(),
+        fixed.len() as u32,
+        table_size as u32,
+        advice.as_ptr(),
+        advice.len() as u32,
+        table_size as u32,
+        instance.as_ptr(),
+        instance.len() as u32,
+        table_size as u32,
+        rotations.as_ptr(),
+        rotations.len() as u32,
+        challenges.as_ptr(),
+        challenges.len() as u32,
+        beta.as_ptr(),
+        gamma.as_ptr(),
+        theta.as_ptr(),
+        y.as_ptr(),
+        previous_value.as_ptr(),
+        test_size as u32,
+        1,
+        6,
+    );
+
+    let calc_data = CalculationData::new(
+        calculations.as_ptr(),
+        targets.as_ptr(),
+        value_types.as_ptr(),
+        value_indices.as_ptr(),
+        calculations.len() as u32,
+        6,
+    );
+
+    let horner_data = HornerData::new(
+        horner_value_types.as_ptr(),
+        horner_value_indices.as_ptr(),
+        horner_offsets.as_ptr(),
+        horner_sizes.as_ptr(),
+    );
+
+    let mut result = vec![F::zero(); test_size];
+    let mut result_slice = HostSlice::from_mut_slice(&mut result);
+
+    test_utilities::test_set_main_device();
+    let cfg = GateOpsConfig::default();
+
+    gate_evaluation(&gate_data, &calc_data, &horner_data, result_slice, &cfg)
+        .expect("Gate evaluation failed");
+
+    let expected = F::from_u32(1366);
+    assert_eq!(result_slice[0], expected, "Final result mismatch!");
 }
