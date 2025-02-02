@@ -415,9 +415,6 @@ namespace icicle {
       memcpy(hasher_output, (std::byte*)(tmp_fields), T * sizeof(S));
       // memcpy(output, (std::byte*)(&tmp_fields[1]), sizeof(S));
 
-      // delete[] tmp_fields;
-      // tmp_fields = nullptr;
-
       return eIcicleError::SUCCESS;
     } // eIcicleError hash_single(const std::byte* input, std::byte* output) const
 
