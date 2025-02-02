@@ -23,7 +23,7 @@ void incremental_values(scalar_t* res, uint32_t count)
   }
 }
 
-// calcaulting polynomial multiplication A*B via NTT,pointwise-multiplication and INTT
+// calculating polynomial multiplication A*B via NTT,pointwise-multiplication and INTT
 // (1) allocate A,B on HOST. Randomize first half, zero second half
 // (2) allocate A,B,Res on device
 // (3) calc NTT for A and for B from host to device
