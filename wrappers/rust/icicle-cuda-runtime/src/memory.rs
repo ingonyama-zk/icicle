@@ -345,6 +345,34 @@ impl<T> DeviceVec<T> {
         }
     }
 
+    pub fn cuda_malloc_zeros(count: usize) -> CudaResult<Self> {
+        let size = count
+            .checked_mul(size_of::<T>())
+            .unwrap_or(0);
+        if size == 0 {
+            return Err(CudaError::cudaErrorMemoryAllocation); //TODO: only CUDA backend should return CudaError
+        }
+
+        let mut device_ptr = MaybeUninit::<*mut c_void>::uninit();
+        unsafe {
+            cudaMalloc(device_ptr.as_mut_ptr(), size).wrap()?;
+            let new_dev_ptr = device_ptr.assume_init() as *mut T;
+
+            cudaMemset(
+                new_dev_ptr as *mut c_void,
+                0,
+                count,
+            )
+            .wrap()?;
+
+            let res = Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
+                new_dev_ptr,
+                count,
+            ))));
+            Ok(res)
+        }
+    }
+
     pub fn cuda_malloc_extend_with_zeros(vec_to_extend: &Self, count_zero_elements: usize) -> CudaResult<Self> {
         let old_size = vec_to_extend.len();
         let total_size = old_size + count_zero_elements;
