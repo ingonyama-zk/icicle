@@ -1149,7 +1149,7 @@ TEST_F(HashApiTest, poseidon_tree)
 
 #endif // POSEIDON
 
-#ifdef POSEIDON2
+#ifdef POSEIDON2222
   // DEBUG. This test could run only with bn254 curve. Dont remove!!!
   // bn254: p = 0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570
   #include "icicle/fields/field_config.h"
