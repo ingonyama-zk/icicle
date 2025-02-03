@@ -92,6 +92,14 @@ TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
         c, c_inv.limbs_storage, product); // using 32-bit multiplication for small fields
       ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
       ASSERT_EQ(TypeParam::from(product), TypeParam::one());
+      std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
+      std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
+      std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
+      std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
+      ASSERT_EQ(TypeParam::from(a), TypeParam::from(a_bytes, 18 * 4));
+      ASSERT_EQ(
+        TypeParam::from(a_bytes, 18 * 4) + TypeParam::from(b_bytes, 18 * 4), TypeParam::from(sum_bytes, 18 * 4));
+      ASSERT_EQ(TypeParam::from(product_bytes, 4 * 4), TypeParam::one());
     } else {
       storage<18> a =                                           // 18 because we support up to 576 bits
         TypeParam::template rand_storage<18>(17);               // 17 so we don't have carry after addition
@@ -106,6 +114,14 @@ TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
       base_math::multiply_raw(c, c_inv.limbs_storage, product);
       ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
       ASSERT_EQ(TypeParam::from(product), TypeParam::one());
+      std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
+      std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
+      std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
+      std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
+      ASSERT_EQ(TypeParam::from(a), TypeParam::from(a_bytes, 18 * 4));
+      ASSERT_EQ(
+        TypeParam::from(a_bytes, 18 * 4) + TypeParam::from(b_bytes, 18 * 4), TypeParam::from(sum_bytes, 18 * 4));
+      ASSERT_EQ(TypeParam::from(product_bytes, 18 * 4), TypeParam::one());
     }
   }
   END_TIMER(StorageSanity, "storage sanity", true);

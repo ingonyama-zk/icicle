@@ -441,6 +441,49 @@ public:
     return reduce(Wide{res}); // finally, use barret reduction
   }
 
+  /* This is the non-template version of the from(storage) function above. It receives an array of bytes and its size
+  and returns a field element after modular reduction. For now we support up to 576 bits. */
+  static constexpr HOST_DEVICE_INLINE Field from(const std::byte* in, unsigned nof_bytes)
+  {
+    storage<2 * TLC + 2> rs = {}; // we use 2*TLC+2 and not 2*TLC+1 because for now we don't support an odd number of
+                                  // limbs in the storage struct
+    unsigned constexpr bytes_per_field = TLC * 4;
+    int size = nof_bytes / bytes_per_field;
+    // first reduction step:
+    for (int i = 0; i < size; i++) {
+      const Field& xi = *reinterpret_cast<const Field*>(in + i * bytes_per_field); // use casting instead of copying
+      Field pi = get_reduced_digit_for_storage_reduction(i); // use precomputed values - pi = 2^(TLC*32*i) % p
+      storage<2 * TLC + 2> temp = {};
+      storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
+      base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
+      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);              // accumulation
+    }
+    int extra_bytes = nof_bytes - bytes_per_field * size;
+    if (extra_bytes > 0) { // handle the extra limbs (when TLC does not divide NLIMBS)
+      std::byte final_bytes[bytes_per_field] = {};
+      for (int j = 0; j < extra_bytes; j++) // this copy cannot be avoided in the non-template version
+      {
+        final_bytes[j] = in[size * bytes_per_field + j];
+      }
+      const storage<TLC>& xi = *reinterpret_cast<const storage<TLC>*>(final_bytes);
+      Field pi = get_reduced_digit_for_storage_reduction(size);
+      storage<2 * TLC + 2> temp = {};
+      storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
+      base_math::template multiply_raw<TLC>(xi, pi.limbs_storage, temp_storage);  // multiplication
+      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs); // accumulation
+    }
+    // second reduction step: - an alternative for this step would be to use the barret reduction straight away but with
+    // a larger value of m.
+    unsigned constexpr msbits_count = 2 * TLC * 32 - (2 * NBITS - 1);
+    unsigned top_bits = (rs.limbs[2 * TLC] << msbits_count) + (rs.limbs[2 * TLC - 1] >> (32 - msbits_count));
+    base_math::template add_sub_limbs<2 * TLC + 2, true, false>(
+      rs, get_mod_sub_for_storage_reduction(top_bits),
+      rs); // subtracting the precomputed multiple of p from the look-up table
+    // third and final step:
+    storage<2 * TLC>& res = *reinterpret_cast<storage<2 * TLC>*>(rs.limbs);
+    return reduce(Wide{res}); // finally, use barret reduction
+  }
+
   HOST_DEVICE Field& operator=(Field const& other)
   {
 #pragma unroll
