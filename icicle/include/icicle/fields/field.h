@@ -583,3 +583,5 @@ struct SharedMemory<Field<CONFIG>> {
 };
 
 #endif // __CUDACC__
+
+// dummy
