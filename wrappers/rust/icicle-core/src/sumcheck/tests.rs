@@ -9,7 +9,7 @@ where
     <F as FieldImpl>::Config: GenerateRandom<F>,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::Config::generate_random(1)[0].clone();
 
     // Test `new` constructor
     let config1 = SumcheckTranscriptConfig::new(
@@ -18,7 +18,7 @@ where
         b"PolyLabel".to_vec(),
         b"ChallengeLabel".to_vec(),
         true, // little endian
-        seed_rng,
+        seed_rng.clone(),
     );
 
     // Verify that the fields are correctly initialized
@@ -35,7 +35,7 @@ where
         "PolyLabel",
         "ChallengeLabel",
         false, // big endian
-        seed_rng,
+        seed_rng.clone(),
     );
 
     // Verify that the fields are correctly initialized
@@ -52,7 +52,7 @@ where
     <F as FieldImpl>::Config: GenerateRandom<F> + SumcheckConstructor<F>,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::Config::generate_random(1)[0].clone();
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(

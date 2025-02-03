@@ -12,7 +12,7 @@ pub trait GenerateRandom<F> {
 #[doc(hidden)]
 pub trait FieldConfig: Debug + PartialEq + Copy + Clone {}
 
-pub trait FieldImpl: Display + Debug + PartialEq + Copy + Clone + Send + Sync {
+pub trait FieldImpl: Display + Debug + PartialEq + Clone + Send + Sync {
     #[doc(hidden)]
     type Config: FieldConfig;
     type Repr;

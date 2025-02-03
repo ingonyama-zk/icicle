@@ -12,7 +12,7 @@ where
     <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
 {
     let batch = 1 << 4;
-    let domain_tag = F::Config::generate_random(1)[0];
+    let domain_tag = F::Config::generate_random(1)[0].clone();
     for t in [3, 5, 9, 12] {
         for domain_tag in [None, Some(&domain_tag)] {
             let inputs: Vec<F> = if domain_tag != None {

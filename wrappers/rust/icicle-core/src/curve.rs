@@ -77,8 +77,12 @@ impl<C: Curve> Affine<C> {
         }
 
         Projective {
-            x: self.x,
-            y: self.y,
+            x: self
+                .x
+                .clone(),
+            y: self
+                .y
+                .clone(),
             z: C::BaseField::one(),
         }
     }

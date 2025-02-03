@@ -105,7 +105,6 @@ where
     for test_size in test_sizes {
         test_utilities::test_set_main_device();
         let small_size: usize = test_size >> 1;
-        let test_size_rou = get_root_of_unity::<F>(test_size as u64);
         let mut scalars: Vec<F> = F::Config::generate_random(small_size);
 
         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
@@ -125,7 +124,7 @@ where
 
             ntt(scalars_h, NTTDir::kForward, &config, ntt_result_half).unwrap();
             assert_ne!(*ntt_result_half.as_slice(), scalars);
-            config.coset_gen = test_size_rou;
+            config.coset_gen = get_root_of_unity::<F>(test_size as u64);
             ntt(scalars_h, NTTDir::kForward, &config, ntt_result_coset).unwrap();
 
             // compare coset ntt to ref-device
@@ -151,7 +150,7 @@ where
             assert_eq!(*ntt_result_coset.as_slice(), ntt_large_result.as_slice()[small_size..]);
 
             // intt back from coset
-            config.coset_gen = test_size_rou;
+            config.coset_gen = get_root_of_unity::<F>(test_size as u64);
             config.ordering = Ordering::kRN;
             let mut intt_result = vec![F::zero(); small_size];
             ntt(
@@ -174,7 +173,7 @@ where
     let test_sizes = [1 << 9, 1 << 10, 1 << 11, 1 << 13, 1 << 14, 1 << 16];
     for test_size in test_sizes {
         let test_size_rou = get_root_of_unity::<F>((test_size << 1) as u64);
-        let coset_generators = [test_size_rou, F::Config::generate_random(1)[0]];
+        let coset_generators = [test_size_rou, F::Config::generate_random(1)[0].clone()];
         let scalars: Vec<F> = F::Config::generate_random(test_size);
 
         for coset_gen in coset_generators {
@@ -236,7 +235,7 @@ where
     let test_sizes = [1 << 4, 1 << 17];
     for test_size in test_sizes {
         let coset_generators = [
-            F::Config::generate_random(1)[0],
+            F::Config::generate_random(1)[0].clone(),
             get_root_of_unity::<F>(test_size as u64),
             F::one(),
         ];
@@ -284,13 +283,13 @@ where
     let test_sizes = [1 << 4, 1 << 12];
     let batch_sizes = [1, 1 << 4, 100];
     for test_size in test_sizes {
-        let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+        let coset_generators = [F::one(), F::Config::generate_random(1)[0].clone()];
         let mut config = NTTConfig::<F>::default();
         for batch_size in batch_sizes {
             let scalars = F::Config::generate_random(test_size * batch_size);
             let scalars = HostSlice::from_slice(&scalars);
 
-            for coset_gen in coset_generators {
+            for coset_gen in coset_generators.iter() {
                 for is_inverse in [NTTDir::kInverse, NTTDir::kForward] {
                     for ordering in [
                         Ordering::kNN,
@@ -300,7 +299,7 @@ where
                         Ordering::kNM,
                         Ordering::kMN,
                     ] {
-                        config.coset_gen = coset_gen;
+                        config.coset_gen = coset_gen.clone();
                         config.ordering = ordering;
                         let mut batch_ntt_result = vec![F::zero(); batch_size * test_size];
                         for alg in [NttAlgorithm::Radix2, NttAlgorithm::MixedRadix] {
@@ -391,7 +390,7 @@ where
             let test_sizes = [1 << 4, 1 << 12];
             let batch_sizes = [1, 1 << 4, 100];
             for test_size in test_sizes {
-                let coset_generators = [F::one(), F::Config::generate_random(1)[0]];
+                let coset_generators = [F::one(), F::Config::generate_random(1)[0].clone()];
 
                 for batch_size in batch_sizes {
                     let scalars: Vec<F> = F::Config::generate_random(test_size * batch_size);
@@ -400,9 +399,9 @@ where
                         .copy_from_host(HostSlice::from_slice(&scalars))
                         .unwrap();
 
-                    for coset_gen in coset_generators {
+                    for coset_gen in coset_generators.iter() {
                         for ordering in [Ordering::kNN, Ordering::kRR] {
-                            config.coset_gen = coset_gen;
+                            config.coset_gen = coset_gen.clone();
                             config.ordering = ordering;
                             config.batch_size = batch_size as i32;
                             config.is_async = false;

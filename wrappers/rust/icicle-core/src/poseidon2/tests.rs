@@ -12,7 +12,7 @@ where
     <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
 {
     let batch = 1 << 4;
-    let domain_tag = F::Config::generate_random(1)[0];
+    let domain_tag = F::Config::generate_random(1)[0].clone();
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
         let large_field = mem::size_of::<F>() > 4;
         let skip_case = large_field && t > 4; // TODO Danny add  8, 12, 16, 20, 24 for large fields once all is supported

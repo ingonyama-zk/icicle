@@ -269,7 +269,8 @@ where
             }
             for _ in test_threshold..test_size {
                 scalars[rng.gen_range(0..test_size * batch_size)] =
-                    <<C::ScalarField as FieldImpl>::Config as GenerateRandom<C::ScalarField>>::generate_random(1)[0];
+                    <<C::ScalarField as FieldImpl>::Config as GenerateRandom<C::ScalarField>>::generate_random(1)[0]
+                        .clone();
             }
 
             let mut cfg = MSMConfig::default();
