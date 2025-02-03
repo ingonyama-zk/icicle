@@ -99,6 +99,13 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
         limbs[0] = val;
         Field { limbs, p: PhantomData }
     }
+
+    fn from_repr(repr: Self::Repr) -> Self {
+        Field {
+            limbs: repr,
+            p: PhantomData,
+        }
+    }
 }
 
 #[doc(hidden)]

@@ -12,9 +12,7 @@ pub trait GenerateRandom<F> {
 #[doc(hidden)]
 pub trait FieldConfig: Debug + PartialEq + Copy + Clone {}
 
-pub trait FieldImpl:
-    Display + Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> + Send + Sync
-{
+pub trait FieldImpl: Display + Debug + PartialEq + Copy + Clone + Send + Sync {
     #[doc(hidden)]
     type Config: FieldConfig;
     type Repr;
@@ -25,6 +23,7 @@ pub trait FieldImpl:
     fn zero() -> Self;
     fn one() -> Self;
     fn from_u32(val: u32) -> Self;
+    fn from_repr(repr: Self::Repr) -> Self;
 }
 
 pub trait MontgomeryConvertible: Sized {

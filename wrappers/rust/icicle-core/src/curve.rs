@@ -66,8 +66,8 @@ impl<C: Curve> Affine<C> {
 
     pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr) -> Self {
         Affine {
-            x: C::BaseField::from(x),
-            y: C::BaseField::from(y),
+            x: C::BaseField::from_repr(x),
+            y: C::BaseField::from_repr(y),
         }
     }
 
@@ -112,9 +112,9 @@ impl<C: Curve> Projective<C> {
         z: <C::BaseField as FieldImpl>::Repr,
     ) -> Self {
         Projective {
-            x: C::BaseField::from(x),
-            y: C::BaseField::from(y),
-            z: C::BaseField::from(z),
+            x: C::BaseField::from_repr(x),
+            y: C::BaseField::from_repr(y),
+            z: C::BaseField::from_repr(z),
         }
     }
 }
