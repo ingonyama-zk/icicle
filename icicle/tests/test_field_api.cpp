@@ -1192,6 +1192,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
 
 TEST_F(FieldApiTestBase, Sumcheck)
 {
+  icicle_set_device("CPU");    // Use CPU only for now.
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
