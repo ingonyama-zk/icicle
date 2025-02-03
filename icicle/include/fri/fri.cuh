@@ -3,6 +3,7 @@
 #define FRI_H
 
 #include <cuda_runtime.h>
+#include <cstdint>
 
 #include "gpu-utils/device_context.cuh"
 

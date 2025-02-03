@@ -150,6 +150,7 @@ namespace fri {
 
   __global__ void k_eval_row(
     const uint32_t total_constraints,
+    const uint32_t domain_log_size,
     const uint32_t m_cols,
     qm31_t* res,
     const qm31_t* random_coeff_powers,
@@ -161,7 +162,7 @@ namespace fri {
     fib_eval_t eval(random_coeff_powers, row, total_constraints, m_cols);
     eval.evaluate();
     const qm31_t row_res = eval.get_row_res();
-    res[thread_id] = row_res * denom_inv[thread_id >> 20];
+    res[thread_id] = row_res * denom_inv[thread_id >> domain_log_size];
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, compute_composition_polynomial)(
@@ -178,7 +179,7 @@ namespace fri {
     CHK_INIT_IF_RETURN();
 
     k_eval_row<<<trace_rows_dimension / BLOCK_SIZE, BLOCK_SIZE>>>(
-      total_constraints, trace_cols_dimension, composition_poly_result, random_coeff_powers,
+      total_constraints, domain_log_size, trace_cols_dimension, composition_poly_result, random_coeff_powers,
       denom_inv, execution_trace);
     cudaDeviceSynchronize();
 

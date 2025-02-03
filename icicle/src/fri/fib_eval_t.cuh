@@ -39,7 +39,7 @@ public:
         m31_t b = get_next_eval();
         for (uint32_t i = 0; i < trace_size - 2; i++) {
             const m31_t c = get_next_eval();
-            add_constraint(c - a + b);
+            add_constraint(c - (a * a + b * b));
             a = b;
             b = c;
         }
