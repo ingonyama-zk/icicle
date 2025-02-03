@@ -14,6 +14,7 @@
 #include "icicle/program/symbol.h"
 #include "icicle/program/program.h"
 #include "icicle/program/returning_value_program.h"
+#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "icicle/sumcheck/sumcheck.h"
 
 #include "test_base.h"
