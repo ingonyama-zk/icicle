@@ -52,7 +52,7 @@ TYPED_TEST_SUITE(FieldApiTest, FTImplementations);
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldApiTest, FieldSanityTest)
 {
-  icicle_set_device("CPU");    // Use CPU only for now.
+  icicle_set_device("CPU"); // Use CPU only for now.
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
   auto b_inv = TypeParam::inverse(b);
@@ -1193,7 +1193,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
 
 TEST_F(FieldApiTestBase, Sumcheck)
 {
-  icicle_set_device("CPU");    // Use CPU only for now.
+  icicle_set_device("CPU"); // Use CPU only for now.
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
