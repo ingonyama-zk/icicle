@@ -140,8 +140,8 @@ namespace fri {
   };
 
   ///
-// #include <cuda_runtime.h>
-// #include <cooperative_groups.h>
+  // #include <cuda_runtime.h>
+  // #include <cooperative_groups.h>
 
   // Define a simple CUDA hash table (basic implementation)
   struct HashMapEntry {
@@ -154,26 +154,26 @@ namespace fri {
     HashMapEntry* table;
     int capacity;
 
-    __device__ bool insert(uint64_t key, scalar_t* value) {
-        int index = key % capacity;
-        int start_index = index;  // To detect full table case
+    __device__ bool insert(uint64_t key, scalar_t* value)
+    {
+      int index = key % capacity;
+      int start_index = index; // To detect full table case
 
-        do {
-            if (table[index].valid == 0) { // Check if slot is free
-                int old_valid = atomicExch(&table[index].valid, 1); // Mark as taken
+      do {
+        if (table[index].valid == 0) {                        // Check if slot is free
+          int old_valid = atomicExch(&table[index].valid, 1); // Mark as taken
 
-                if (old_valid == 0) { // If successfully claimed, insert key-value
-                    table[index].key = key;
-                    table[index].value = value;
-                    return true;
-                }
-            }
-            index = (index + 1) % capacity; // Linear probing
-        } while (index != start_index); // Stop if we wrap around
+          if (old_valid == 0) { // If successfully claimed, insert key-value
+            table[index].key = key;
+            table[index].value = value;
+            return true;
+          }
+        }
+        index = (index + 1) % capacity; // Linear probing
+      } while (index != start_index); // Stop if we wrap around
 
-        return false; // Table is full
+      return false; // Table is full
     }
-
 
     __device__ scalar_t* retrieve(uint64_t key)
     {
@@ -195,13 +195,19 @@ namespace fri {
   __device__ HashTable* d_hash_table = nullptr;
 
   // Kernel to insert elements into the hash table
-  __global__ void insertKernel(uint64_t key, scalar_t* value) { d_hash_table->insert(key, value); }
+  __global__ void insertKernel(uint64_t key, scalar_t* value)
+  {
+    printf("=====================\n");
+    d_hash_table->insert(key, value);
+    for (int i = 0; i < key; i++) {
+      printf("%d ", value[i]);
+    }
+
+    printf("+++++++++++++++++\n");
+  }
 
   // Kernel to retrieve elements from the hash table
-  __global__ void retrieveKernel(uint64_t key, scalar_t* out_value)
-  {
-    out_value = d_hash_table->retrieve(key);
-  }
+  __global__ void retrieveKernel(uint64_t key, scalar_t* out_value) { out_value = d_hash_table->retrieve(key); }
 
   // CUDA function to initialize the hash table (only runs once)
   cudaError_t initialize_hash_table_once(int capacity)
@@ -243,14 +249,16 @@ namespace fri {
 
     CHK_IF_RETURN(initialize_hash_table_once(64)); // Initialize only once
 
+    printf("gpu trace size: %d\n", size);
+
     insertKernel<<<1, 1>>>(size, d_sub_trace_elements);
 
     return CHK_LAST();
   }
 
-// #include <chrono>
-// #include <fstream>
-// #include <iostream>
+  // #include <chrono>
+  // #include <fstream>
+  // #include <iostream>
 
   // #include "gpu-utils/device_context.cuh"
 
@@ -351,10 +359,12 @@ namespace fri {
     uint32_t eval_log_size,
     uint32_t domain_log_size,
     uint32_t trace_rows_dimension,
-    const qm31_t& random_coeff)
+    const qm31_t& random_coeff,
+    qm31_t* composition_poly_result)
   {
     prover_ctx_t prover;
     prover.total_constraints = total_constraints;
+    prover.composition_poly = composition_poly_result;
 
     component_ctx_t component;
     component.eval_log_size = eval_log_size;
@@ -455,10 +465,16 @@ namespace fri {
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, compute_composition_polynomial)(
     // const prover_ctx_t& prover, const component_ctx_t& component
-  )
+    uint32_t total_constraints,
+    uint32_t eval_log_size,
+    uint32_t domain_log_size,
+    uint32_t trace_rows_dimension,
+    const qm31_t& random_coeff,
+    qm31_t* composition_poly_result)
   {
     CHK_INIT_IF_RETURN();
-    //compute_composition_polynomial();
+    compute_composition_polynomial(
+      total_constraints, eval_log_size, domain_log_size, trace_rows_dimension, random_coeff, composition_poly_result);
 
     return CHK_LAST();
   }

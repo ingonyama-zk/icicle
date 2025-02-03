@@ -407,6 +407,7 @@ pub fn compute_polynomial(
     domain_log_size: u32,
     trace_rows_dimension: u32,
     random_coeff: QuarticExtensionField,
+    composition_poly_result: &mut (impl HostOrDeviceSlice<QuarticExtensionField> + ?Sized),
 ) -> IcicleResult<()> {
     unsafe {
         _fri::compute_composition_polynomial(
@@ -415,6 +416,7 @@ pub fn compute_polynomial(
             domain_log_size,
             trace_rows_dimension,
             &random_coeff,
+            composition_poly_result.as_mut_ptr()
         ).wrap()
     }
 }
@@ -496,12 +498,13 @@ mod _fri {
         pub(crate) fn preload_trace(sub_trace: *const ScalarField, size: u64) -> CudaError;
 
         #[link_name = "m31_compute_composition_polynomial"]
-        pub(crate)     fn compute_composition_polynomial(
+        pub(crate) fn compute_composition_polynomial(
             total_constraints: u32,
             eval_log_size: u32,
             domain_log_size: u32,
             trace_rows_dimension: u32,
             random_coeff: *const QuarticExtensionField,
+            composition_poly_result: *mut QuarticExtensionField,
         )-> CudaError;
     }
 }
