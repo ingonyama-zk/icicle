@@ -1,5 +1,6 @@
 #include <cuda.h>
 #include <stdexcept>
+#include <cassert>
 
 #include "vec_ops/vec_ops.cuh"
 #include "gpu-utils/device_context.cuh"
@@ -262,7 +263,8 @@ namespace vec_ops {
   }
 
   template <typename E, typename S>
-  cudaError_t fold(S* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
+  cudaError_t fold(S* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result, E* d_interim_results)
+  // cudaError_t fold(S* vec_a, const E* vec_b, int n, VecOpsConfig& config, E* result)
   // TODO: asap modify vec_op template so it can accomodate minor flexibility without spreading the copypaste
   {
     CHK_INIT_IF_RETURN();
@@ -274,8 +276,8 @@ namespace vec_ops {
     int num_blocks = (n + num_threads - 1) / num_threads;
 
     E* d_result;
-    E* d_tmp_result;
-    CHK_IF_RETURN(cudaMallocAsync(&d_tmp_result, n * sizeof(E), config.ctx.stream));
+    // E* d_tmp_result;
+    // CHK_IF_RETURN(cudaMallocAsync(&d_tmp_result, n * sizeof(E), config.ctx.stream));
 
     S *d_vec_a, *d_alloc_vec_a;
     E* d_alloc_vec_b;
@@ -303,26 +305,35 @@ namespace vec_ops {
       d_result = result;
     }
 
-    // Call the kernel to perform element-wise operation
+    // fold_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, 0, nlog2, n, d_tmp_result);
+    // for (int level = 1; level < nlog2; ++level) {
+    //   fold_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(
+    //     d_tmp_result, d_vec_b, level, nlog2, n, d_tmp_result);
+    // }
 
-    // auto start = std::chrono::high_resolution_clock::now();
-
-    fold_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, 0, nlog2, n, d_tmp_result);
-
-    for (int level = 1; level < nlog2; ++level) {
+    fold_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(d_vec_a, d_vec_b, 0, nlog2, n, d_interim_results);
+    for (int level_scratch = 1; level_scratch < nlog2; ++level_scratch) {
       fold_kernel<<<num_blocks, num_threads, 0, config.ctx.stream>>>(
-        d_tmp_result, d_vec_b, level, nlog2, n, d_tmp_result);
+        d_interim_results, d_vec_b, level_scratch, nlog2, n, d_interim_results);
     }
 
-    // auto end = std::chrono::high_resolution_clock::now();
+    // E* host_temp = static_cast<E*>(malloc(sizeof(E)));
+    // E* host_interim = static_cast<E*>(malloc(sizeof(E)));
 
-    // std::chrono::duration<double, std::milli> elapsed = end - start;
-    // std::cout << "time for 2^" << nlog2 << " is: " << elapsed.count() << " ms" << std::endl;
+    // CHK_IF_RETURN(cudaMemcpyAsync(host_temp, d_tmp_result, sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
+    // CHK_IF_RETURN(cudaMemcpyAsync(result, d_interim_results, sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
+    
+    // assert(host_interim[0] == host_temp[0]);
+    // std::cout << "host_interim == host_temp: \t" << host_interim[0] == host_temp[0] << std::endl;
+    // std::cout << "host_temp: \t" << host_temp[0] << "\n" << std::endl;
 
-    CHK_IF_RETURN(cudaMemcpyAsync(d_result, d_tmp_result, sizeof(E), cudaMemcpyDeviceToDevice, config.ctx.stream));
-    CHK_IF_RETURN(cudaFreeAsync(d_tmp_result, config.ctx.stream));
+    
+    // CHK_IF_RETURN(cudaMemcpyAsync(d_result, d_tmp_result, sizeof(E), cudaMemcpyDeviceToDevice, config.ctx.stream));
+    // CHK_IF_RETURN(cudaFreeAsync(d_tmp_result, config.ctx.stream));
+    CHK_IF_RETURN(cudaMemcpyAsync(d_result, d_interim_results, sizeof(E), cudaMemcpyDeviceToDevice, config.ctx.stream));
 
     if (!config.is_result_on_device) {
+      // std::cout << "copying result to host" << std::endl;
       CHK_IF_RETURN(cudaMemcpyAsync(result, d_result, (size_t)sizeof(E), cudaMemcpyDeviceToHost, config.ctx.stream));
       CHK_IF_RETURN(cudaFreeAsync(d_result, config.ctx.stream));
     }

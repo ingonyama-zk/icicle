@@ -151,6 +151,7 @@ pub trait VecOps<F> {
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
+        d_interim: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> IcicleResult<()>;
 }
 
@@ -258,6 +259,7 @@ fn check_fold_args<'a, F, S>(
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig<'a>,
+    d_interim: &(impl HostOrDeviceSlice<F> + ?Sized),
 ) -> VecOpsConfig<'a> {
     if a.len() != (1 << b.len()) {
         panic!(
@@ -267,6 +269,9 @@ fn check_fold_args<'a, F, S>(
             result.len()
         );
     }
+
+    assert!(d_interim.len() >= a.len() >> 1);
+
     let ctx_device_id = cfg
         .ctx
         .device_id;
@@ -281,6 +286,10 @@ fn check_fold_args<'a, F, S>(
             device_id, ctx_device_id,
             "Device ids in result and context are different"
         );
+    }
+
+    if let Some(device_id) = d_interim.device_id() {
+        assert_eq!(device_id, ctx_device_id, "Device ids in d_interim and context are different");
     }
     check_device(ctx_device_id);
 
@@ -436,6 +445,7 @@ pub fn fold_scalars<F, S>(
     b: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
+    d_interim: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> IcicleResult<()>
 where
     F: FieldImpl,
@@ -443,8 +453,10 @@ where
     S: FieldImpl,
     <S as FieldImpl>::Config: VecOps<S>,
 {
-    let cfg = check_fold_args(a, b, result, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::fold(a, b, result, &cfg)
+    let cfg = check_fold_args(a, b, result, cfg, d_interim);
+    <<F as FieldImpl>::Config as VecOps<F>>::fold(a, b, result, &cfg, d_interim)
+    // let cfg = check_fold_args(a, b, result, cfg);
+    // <<F as FieldImpl>::Config as VecOps<F>>::fold(a, b, result, &cfg)
 }
 
 pub fn are_bytes_equal<S>(
@@ -515,6 +527,7 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
+                    d_interim: *mut $field,
                 ) -> CudaError;
 
                 #[link_name = concat!($field_prefix, "_accumulate_cuda")]
@@ -668,6 +681,7 @@ macro_rules! impl_vec_ops_field {
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
+                d_interim: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
             ) -> IcicleResult<()> {
                 unsafe {
                     $field_prefix_ident::fold_cuda(
@@ -676,6 +690,7 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                        d_interim.as_mut_ptr(),
                     )
                     .wrap()
                 }

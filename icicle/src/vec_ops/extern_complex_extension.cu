@@ -41,9 +41,11 @@ namespace vec_ops {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_fold_cuda)(
-    scalar_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config, c_extension_t* result)
+    // scalar_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config, c_extension_t* result)
+    scalar_t* vec_a, c_extension_t* vec_b, int n, VecOpsConfig& config, c_extension_t* result, c_extension_t* d_interim_results)
   {
-    return fold<c_extension_t, scalar_t>(vec_a, vec_b, n, config, result);
+    // return fold<c_extension_t, scalar_t>(vec_a, vec_b, n, config, result);
+    return fold<c_extension_t, scalar_t>(vec_a, vec_b, n, config, result, d_interim_results);
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, c_extension_stwo_convert_cuda)(

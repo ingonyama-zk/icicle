@@ -31,9 +31,12 @@ namespace vec_ops {
   }
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_cuda)(
-    scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
+    scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result, scalar_t* d_interim_results)
+    // scalar_t* vec_a, scalar_t* vec_b, int n, VecOpsConfig& config, scalar_t* result)
   {
-    return fold<scalar_t, scalar_t>(vec_a, vec_b, n, config, result);
+    std::cout << "!!!!!!!!!!!!!! THIS SHOULD NOT PRINT EVER !!!!!!!!!!!!!!" << std::endl;
+    return fold<scalar_t, scalar_t>(vec_a, vec_b, n, config, result, d_interim_results);
+    // return fold<scalar_t, scalar_t>(vec_a, vec_b, n, config, result);
   }
 
   /**
