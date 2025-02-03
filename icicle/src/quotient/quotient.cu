@@ -343,38 +343,41 @@ namespace quotient {
                 d_result4
         );
 
+        cudaStream_t stream_free;
+        CHK_IF_RETURN(cudaStreamCreate(&stream_free));
+
         if (!cfg.are_results_on_device) {
-            CHK_IF_RETURN(cudaMemcpyAsync(result1, d_result1, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_result1, stream));
-            CHK_IF_RETURN(cudaMemcpyAsync(result2, d_result2, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_result2, stream));
-            CHK_IF_RETURN(cudaMemcpyAsync(result3, d_result3, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_result3, stream));
-            CHK_IF_RETURN(cudaMemcpyAsync(result4, d_result4, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_result4, stream));
+            CHK_IF_RETURN(cudaMemcpyAsync(result1, d_result1, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_result1, stream_free));
+            CHK_IF_RETURN(cudaMemcpyAsync(result2, d_result2, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_result2, stream_free));
+            CHK_IF_RETURN(cudaMemcpyAsync(result3, d_result3, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_result3, stream_free));
+            CHK_IF_RETURN(cudaMemcpyAsync(result4, d_result4, sizeof(F) * domain_size, cudaMemcpyDeviceToHost, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_result4, stream_free));
         }
-        CHK_IF_RETURN(cudaFreeAsync(d_denominator_inverses, stream));
-        CHK_IF_RETURN(cudaFreeAsync(d_flattened_line_coeffs, stream));
-        CHK_IF_RETURN(cudaFreeAsync(d_line_coeffs_sizes, stream));
-        CHK_IF_RETURN(cudaFreeAsync(d_batch_random_coeffs, stream));
+        CHK_IF_RETURN(cudaFreeAsync(d_denominator_inverses, stream_free));
+        CHK_IF_RETURN(cudaFreeAsync(d_flattened_line_coeffs, stream_free));
+        CHK_IF_RETURN(cudaFreeAsync(d_line_coeffs_sizes, stream_free));
+        CHK_IF_RETURN(cudaFreeAsync(d_batch_random_coeffs, stream_free));
 
         if (!cfg.are_sample_points_on_device) {
             for (int i = 0; i < sample_size; ++i) {
-                CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream));
-                CHK_IF_RETURN(cudaFreeAsync(h_values_ptrs[i], stream));
-                CHK_IF_RETURN(cudaFreeAsync(h_point_ptrs[i], stream));
+                CHK_IF_RETURN(cudaFreeAsync(h_columns_ptrs[i], stream_free));
+                CHK_IF_RETURN(cudaFreeAsync(h_values_ptrs[i], stream_free));
+                CHK_IF_RETURN(cudaFreeAsync(h_point_ptrs[i], stream_free));
             }
-            CHK_IF_RETURN(cudaFreeAsync(d_columns_ptrs, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_point_ptrs, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_values_ptrs, stream));
-            CHK_IF_RETURN(cudaFreeAsync(d_samples, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_columns_ptrs, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_point_ptrs, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_values_ptrs, stream_free));
+            CHK_IF_RETURN(cudaFreeAsync(d_samples, stream_free));
             delete[] h_columns_ptrs;
             delete[] h_values_ptrs;
             delete[] h_point_ptrs;
         }
 
         if (!cfg.are_columns_on_device) {
-            CHK_IF_RETURN(cudaFreeAsync(d_columns, stream));
+            CHK_IF_RETURN(cudaFreeAsync(d_columns, stream_free));
         }
 
         if (!cfg.is_async) CHK_IF_RETURN(cudaStreamSynchronize(stream));

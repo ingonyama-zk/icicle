@@ -65,7 +65,6 @@ namespace fri {
     FriConfig& cfg)
   {
     line_t line_domain(line_domain_initial_index, line_domain_log_size);
-    line_t test_domain(coset_t::half_odds(line_domain_log_size));
     scalar_t* domain_elements;
     line_domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
@@ -143,7 +142,6 @@ namespace fri {
     uint64_t n,
     FriConfig& cfg)
   {
-    domain_t test_domain(domain_log_size + 1);
     domain_t domain(coset_t(domain_initial_index, domain_log_size));
     scalar_t* domain_elements;
     domain.get_twiddles(&domain_elements);
