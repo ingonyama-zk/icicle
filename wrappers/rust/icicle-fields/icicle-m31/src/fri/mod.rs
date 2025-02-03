@@ -370,6 +370,55 @@ pub fn precompute_fri_twiddles(log_size: u32) -> IcicleResult<()> {
     unsafe { _fri::precompute_fri_twiddles(log_size).wrap() }
 }
 
+pub fn preload_trace(sub_trace: &(impl HostOrDeviceSlice<ScalarField> + ?Sized)) -> IcicleResult<()> {
+    unsafe { _fri::preload_trace(sub_trace.as_ptr(), sub_trace.len() as _).wrap() }
+}
+
+// use std::ptr;
+// use std::os::raw::c_uint;
+// use std::ffi::c_void;
+
+// #[repr(C)]
+// pub struct SubTrace {
+//     trace: *mut ScalarField,
+//     n_cols: c_uint,
+//     n_rows: c_uint,
+// }
+
+// #[repr(C)]
+// pub struct ComponentCtx {
+//     domain_log_size: c_uint,
+//     eval_log_size: c_uint,
+//     preprocessing_trace: SubTrace,
+//     execution_trace: SubTrace,
+//     interaction_trace: SubTrace,
+// }
+
+// #[repr(C)]
+// pub struct ProverCtx {
+//     total_constraints: c_uint,
+//     random_coeff_powers: *mut QuarticExtensionField,
+//     composition_poly: *mut QuarticExtensionField,
+// }
+
+pub fn compute_polynomial(
+    total_constraints: u32,
+    eval_log_size: u32,
+    domain_log_size: u32,
+    trace_rows_dimension: u32,
+    random_coeff: QuarticExtensionField,
+) -> IcicleResult<()> {
+    unsafe {
+        _fri::compute_composition_polynomial(
+            total_constraints,
+            eval_log_size,
+            domain_log_size,
+            trace_rows_dimension,
+            &random_coeff,
+        ).wrap()
+    }
+}
+
 mod _fri {
     use super::{CudaError, FriConfig, QuarticExtensionField, ScalarField};
 
@@ -442,6 +491,18 @@ mod _fri {
 
         #[link_name = "m31_precompute_fri_twiddles"]
         pub(crate) fn precompute_fri_twiddles(log_size: u32) -> CudaError;
+
+        #[link_name = "m31_preload_trace"]
+        pub(crate) fn preload_trace(sub_trace: *const ScalarField, size: u64) -> CudaError;
+
+        #[link_name = "m31_compute_composition_polynomial"]
+        pub(crate)     fn compute_composition_polynomial(
+            total_constraints: u32,
+            eval_log_size: u32,
+            domain_log_size: u32,
+            trace_rows_dimension: u32,
+            random_coeff: *const QuarticExtensionField,
+        )-> CudaError;
     }
 }
 
