@@ -354,8 +354,11 @@ namespace icicle {
       }
 
       delete[] tmp_fields;
-      if (padding_size != 0) delete[] padding;
       tmp_fields = nullptr;
+      if (padding_size != 0) {
+        delete[] padding;
+        padding = nullptr;
+      }
 
       return eIcicleError::SUCCESS;
     } // eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const
