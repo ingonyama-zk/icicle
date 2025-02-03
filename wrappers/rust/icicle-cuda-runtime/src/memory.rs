@@ -1,5 +1,5 @@
 use crate::bindings::{
-    cudaFree, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemset,
+    cudaFree, cudaFreeAsync, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemset,
 };
 use crate::device::{check_device, get_device_from_pointer};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
@@ -13,6 +13,13 @@ use std::slice::from_raw_parts_mut;
 use std::slice::SliceIndex;
 
 use crate::memory::cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+
+use std::sync::Once;
+
+static mut CUDA_FREE_STREAM: CudaStream = CudaStream {
+    handle: std::ptr::null_mut(),
+};
+static CREATE_STREAM: Once = Once::new();
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
@@ -582,10 +589,13 @@ impl<T> Drop for DeviceVec<T> {
         }
 
         unsafe {
+            CREATE_STREAM.call_once(|| {
+                CUDA_FREE_STREAM = CudaStream::create().unwrap();
+            });
             let ptr = self
                 .0
                 .as_mut_ptr() as *mut c_void;
-            cudaFree(ptr)
+            cudaFreeAsync(ptr, CUDA_FREE_STREAM.handle)
                 .wrap()
                 .unwrap();
         }
