@@ -1165,7 +1165,6 @@ TEST_F(HashApiTest, poseidon2_3_single_hasher)
   //   input[i] = scalar_t::from(i % t);
   // }
   scalar_t::rand_host_many(input.get(), t * config.batch);
-  bool use_random = true;
   // for (int i = 0; i < config.batch * t; i++) {
   // std::cout << "poseidon2_3_single_hasher input " << input[i] << std::endl;
   // }
@@ -1189,13 +1188,11 @@ TEST_F(HashApiTest, poseidon2_3_single_hasher)
   std::cout << "Run CPU only test " << std::endl;
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  #if FIELD_ID == BN254
-  if (!use_random) {
-    scalar_t expected_res =
-      scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570");
-    ASSERT_EQ(expected_res, *(output_cpu.get()));
-  }
-  #endif
+  // #if FIELD_ID == BN254
+  // scalar_t expected_res =
+  //   scalar_t::hex_str2scalar("0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570");
+  // ASSERT_EQ(expected_res, *(output_cpu.get()));
+  // #endif
 
   if (IcicleTestBase::main_device() == "CUDA") {
     std::cout << "Run CUDA test " << std::endl;
@@ -1266,7 +1263,6 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_without_dt)
   //   }
   // }
   scalar_t::rand_host_many(input.get(), nof_inputs);
-  bool use_random = true;
   // for (int i = 0; i < t + (nof_hashers-1) * (t-1); i++) {
   //   std::cout << "poseidon2_3_sponge_2_hashers_without_dt input " << input[i] << std::endl;
   // }
@@ -1290,13 +1286,11 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_without_dt)
   std::cout << "Run CPU test " << std::endl;
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  #if FIELD_ID == BN254
-  if (!use_random) {
-    scalar_t expected_res =
-      scalar_t::hex_str2scalar("0x0d54b4b71781dc4f30afe3a90f76559379f6f75aea6968d4c986512e2711ad20");
-    ASSERT_EQ(expected_res, *(output_cpu.get()));
-  }
-  #endif
+  // #if FIELD_ID == BN254
+  // scalar_t expected_res =
+  //   scalar_t::hex_str2scalar("0x0d54b4b71781dc4f30afe3a90f76559379f6f75aea6968d4c986512e2711ad20");
+  // ASSERT_EQ(expected_res, *(output_cpu.get()));
+  // #endif
 
   std::string main_device = IcicleTestBase::main_device();
   if (IcicleTestBase::main_device() == "CUDA") {
@@ -1324,7 +1318,6 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_with_dt)
   //   input[i] = scalar_t::from(5 + i);
   // }
   scalar_t::rand_host_many(input.get(), nof_valid_inputs);
-  bool use_random = true;
   // for (int i = 0; i < nof_valid_inputs; i++) {
   //   std::cout << "poseidon2_3_sponge_2_hashers_with_dt input " << input[i] << std::endl;
   // }
@@ -1348,13 +1341,11 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_with_dt)
   std::cout << "Run CPU test " << std::endl;
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  #if FIELD_ID == BN254
-  if (!use_random) {
-    scalar_t expected_res =
-      scalar_t::hex_str2scalar("0x286786cd695dbe838456c72a5edb4d2717a17a0971006671c26c0219c3de5abe");
-    ASSERT_EQ(expected_res, *(output_cpu.get()));
-  }
-  #endif
+  // #if FIELD_ID == BN254
+  // scalar_t expected_res =
+  //   scalar_t::hex_str2scalar("0x286786cd695dbe838456c72a5edb4d2717a17a0971006671c26c0219c3de5abe");
+  // ASSERT_EQ(expected_res, *(output_cpu.get()));
+  // #endif
 
   if (IcicleTestBase::main_device() == "CUDA") {
     std::cout << "Run CUDA test " << std::endl;
@@ -1377,7 +1368,6 @@ TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding)
   //   input[i] = scalar_t::from(4 + i);          // Valid inputs are 4,5
   // }
   scalar_t::rand_host_many(input.get(), nof_valid_inputs);
-  bool use_random = true;
   // for (int i = 0; i < nof_valid_inputs; i++) {
   //   std::cout << "poseidon2_3_sponge_1_hasher_without_dt_with_padding input " << input[i] << std::endl;
   // }
@@ -1401,13 +1391,11 @@ TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding)
   std::cout << "Run CPU test " << std::endl;
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  #if FIELD_ID == BN254
-  if (!use_random) {
-    scalar_t expected_res =
-      scalar_t::hex_str2scalar("0x2645a6e432f38bb4f197b1b4a69d6fac977cdb4927cfbb62f133a9e427dee146");
-    ASSERT_EQ(expected_res, *(output_cpu.get()));
-  }
-  #endif
+  // #if FIELD_ID == BN254
+  // scalar_t expected_res =
+  //   scalar_t::hex_str2scalar("0x2645a6e432f38bb4f197b1b4a69d6fac977cdb4927cfbb62f133a9e427dee146");
+  // ASSERT_EQ(expected_res, *(output_cpu.get()));
+  // #endif
 
   if (IcicleTestBase::main_device() == "CUDA") {
     std::cout << "Run CUDA test " << std::endl;
@@ -1430,7 +1418,6 @@ TEST_F(HashApiTest, poseidon2_4_sponge_2_hashers_without_dt_with_padding)
   //   input[i] = scalar_t::from(4 + i);          // Valid inputs are 4,5
   // }
   scalar_t::rand_host_many(input.get(), nof_valid_inputs);
-  bool use_random = true;
   // for (int i = 0; i < nof_valid_inputs; i++) {
   //   std::cout << "poseidon2_4_sponge_2_hashers_without_dt_with_padding input " << input[i] << std::endl;
   // }
@@ -1454,13 +1441,11 @@ TEST_F(HashApiTest, poseidon2_4_sponge_2_hashers_without_dt_with_padding)
   std::cout << "Run CPU test " << std::endl;
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  #if FIELD_ID == BN254
-  if (!use_random) {
-    scalar_t expected_res =
-      scalar_t::hex_str2scalar("0x0353fae9638ef80c9a80786ce24c42d6e087695a40cd5ca29207f20b72f25379");
-    ASSERT_EQ(expected_res, *(output_cpu.get()));
-  }
-  #endif
+  // #if FIELD_ID == BN254
+  // scalar_t expected_res =
+  //   scalar_t::hex_str2scalar("0x0353fae9638ef80c9a80786ce24c42d6e087695a40cd5ca29207f20b72f25379");
+  // ASSERT_EQ(expected_res, *(output_cpu.get()));
+  // #endif
 
   if (IcicleTestBase::main_device() == "CUDA") {
     std::cout << "Run CUDA test " << std::endl;
