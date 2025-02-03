@@ -4,6 +4,12 @@ using namespace field_config;
 #include "fri.cu"
 #include "utils/utils.h"
 #include "fields/point.cuh"
+#include "vec_ops/vec_ops.cuh"
+
+#include "stwo.cuh"
+// #include "api/m31.h"
+#include "fields/stark_fields/m31.cuh"
+#include "fib_eval_t.cuh"
 
 namespace fri {
   /**
@@ -34,19 +40,8 @@ namespace fri {
     FriConfig& cfg)
   {
     return fri::fold_line(
-      line_eval1, 
-      line_eval2, 
-      line_eval3, 
-      line_eval4, 
-      domain_elements, 
-      alpha, 
-      folded_evals1, 
-      folded_evals2, 
-      folded_evals3, 
-      folded_evals4, 
-      n, 
-      cfg
-    );
+      line_eval1, line_eval2, line_eval3, line_eval4, domain_elements, alpha, folded_evals1, folded_evals2,
+      folded_evals3, folded_evals4, n, cfg);
   };
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_line_new)(
@@ -69,19 +64,8 @@ namespace fri {
     line_domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
     return fri::fold_line(
-      line_eval1, 
-      line_eval2, 
-      line_eval3, 
-      line_eval4, 
-      domain_elements, 
-      alpha, 
-      folded_evals1, 
-      folded_evals2, 
-      folded_evals3, 
-      folded_evals4, 
-      n, 
-      cfg
-    );
+      line_eval1, line_eval2, line_eval3, line_eval4, domain_elements, alpha, folded_evals1, folded_evals2,
+      folded_evals3, folded_evals4, n, cfg);
   };
 
   /**
@@ -112,19 +96,8 @@ namespace fri {
     FriConfig& cfg)
   {
     return fri::fold_circle_into_line(
-      circle_evals1,  
-      circle_evals2,  
-      circle_evals3,  
-      circle_evals4,  
-      domain_elements, 
-      alpha, 
-      folded_line_evals1, 
-      folded_line_evals2, 
-      folded_line_evals3, 
-      folded_line_evals4, 
-      n, 
-      cfg
-    );
+      circle_evals1, circle_evals2, circle_evals3, circle_evals4, domain_elements, alpha, folded_line_evals1,
+      folded_line_evals2, folded_line_evals3, folded_line_evals4, n, cfg);
   };
 
   extern "C" cudaError_t CONCAT_EXPAND(FIELD, fold_circle_into_line_new)(
@@ -147,27 +120,14 @@ namespace fri {
     domain.get_twiddles(&domain_elements);
     cfg.are_domain_elements_on_device = true;
     return fri::fold_circle_into_line(
-      circle_evals1,  
-      circle_evals2,  
-      circle_evals3,  
-      circle_evals4,  
-      domain_elements, 
-      alpha, 
-      folded_line_evals1, 
-      folded_line_evals2, 
-      folded_line_evals3, 
-      folded_line_evals4, 
-      n, 
-      cfg
-    );
+      circle_evals1, circle_evals2, circle_evals3, circle_evals4, domain_elements, alpha, folded_line_evals1,
+      folded_line_evals2, folded_line_evals3, folded_line_evals4, n, cfg);
   };
 
-  extern "C" cudaError_t CONCAT_EXPAND(FIELD, precompute_fri_twiddles)(
-    uint32_t log_size
-    )
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, precompute_fri_twiddles)(uint32_t log_size)
   {
     CHK_INIT_IF_RETURN();
-    for(uint32_t i = 2; i <= log_size; ++i) {
+    for (uint32_t i = 2; i <= log_size; ++i) {
       coset_t coset = coset_t::half_odds(i);
       domain_t domain(coset);
       domain.compute_twiddles();
@@ -176,4 +136,52 @@ namespace fri {
     }
     return CHK_LAST();
   };
+
+  static constexpr uint32_t BLOCK_SIZE = 256;
+
+  // trace[3]
+  // preprocessing
+  // execution <---
+  // interaction
+
+  // m31_t execution_trace[row][col];
+
+  __global__ void k_eval_row(
+    const uint32_t total_constraints,
+    const uint32_t domain_log_size,
+    const uint32_t m_cols,
+    qm31_t* res,
+    const qm31_t* random_coeff_powers,
+    const m31_t* denom_inv,
+    const m31_t* trace)
+  {
+    const uint32_t thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+    const m31_t* row = trace + thread_id * m_cols;
+    fib_eval_t eval(random_coeff_powers, row, total_constraints, m_cols);
+    eval.evaluate();
+    const qm31_t row_res = eval.get_row_res();
+    res[thread_id] = row_res * denom_inv[thread_id >> domain_log_size];
+  }
+
+  extern "C" cudaError_t CONCAT_EXPAND(FIELD, compute_composition_polynomial)(
+    uint32_t total_constraints,
+    uint32_t eval_log_size,
+    uint32_t domain_log_size,
+    uint32_t trace_rows_dimension,
+    uint32_t trace_cols_dimension,
+    const m31_t* denom_inv,
+    const qm31_t* random_coeff_powers,
+    const m31_t* execution_trace,
+    qm31_t* composition_poly_result)
+  {
+    CHK_INIT_IF_RETURN();
+
+    k_eval_row<<<trace_rows_dimension / BLOCK_SIZE, BLOCK_SIZE>>>(
+      total_constraints, domain_log_size, trace_cols_dimension, composition_poly_result, random_coeff_powers,
+      denom_inv, execution_trace);
+    cudaDeviceSynchronize();
+
+    return CHK_LAST();
+  }
+
 } // namespace fri

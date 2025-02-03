@@ -6,6 +6,7 @@
 #include "gpu-utils/error_handler.cuh"
 #include "matrix/matrix.cuh"
 #include <cassert>
+#include <cstdint>
 
 using matrix::Matrix;
 
