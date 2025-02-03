@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 
 #include "errors.h"
@@ -35,6 +36,7 @@ namespace icicle {
     const uint32_t* value_indices;  // Source indices for Horner's method
     const uint32_t* offsets;          // Horner offsets
     const uint32_t* sizes;            // Horner sizes
+    uint32_t num_horner;
   };
 
   struct CalculationData {
@@ -50,13 +52,13 @@ namespace icicle {
   struct GateData {
     const T* constants;          // Constants array
     uint32_t num_constants;        // Number of constants
-    const T** fixed;              // Fixed columns array
+    const T* fixed;              // Fixed columns array
     uint32_t num_fixed_columns;    // Number of fixed columns
     uint32_t num_fixed_rows;    // Number of fixed columns
-    const T** advice;             // Advice columns array
+    const T* advice;             // Advice columns array
     uint32_t num_advice_columns;   // Number of advice columns
     uint32_t num_advice_rows;   // Number of advice columns
-    const T** instance;           // Instance columns array
+    const T* instance;           // Instance columns array
     uint32_t num_instance_columns; // Number of instance columns
     uint32_t num_instance_rows; // Number of instance columns
     const uint32_t* rotations;        // Rotations array

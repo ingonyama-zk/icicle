@@ -61,10 +61,6 @@ where
     let y = F::Config::generate_random(1);
     let previous_value = F::Config::generate_random(1);
 
-    let fixed    = vec![fixed.as_ptr()];
-    let advice   = vec![advice.as_ptr()];
-    let instance = vec![instance.as_ptr()];
-
     let rotations: Vec<u32> = vec![0];
     let calculations: Vec<u32> = (0..graph_size).map(|_| rng.gen_range(0..8)).collect();
     let targets: Vec<u32> = Vec::from_iter(0..graph_size as u32);
@@ -80,13 +76,13 @@ where
         constants.as_ptr(),
         constants.len() as u32,
         fixed.as_ptr(),
-        fixed.len() as u32,
+        1,
         table_size as u32,
         advice.as_ptr(),
-        advice.len() as u32,
+        1,
         table_size as u32,
         instance.as_ptr(),
-        instance.len() as u32,
+        1,
         table_size as u32,
         rotations.as_ptr(),
         rotations.len() as u32,
@@ -116,6 +112,7 @@ where
         horner_value_indices.as_ptr(),
         horner_offsets.as_ptr(),
         horner_sizes.as_ptr(),
+        horner_value_types.len() as u32
     );
 
     let mut result = vec![F::zero(); test_size];
@@ -146,19 +143,25 @@ where
         F::from_u32(100u32),
         F::from_u32(200u32),
     ];
-    let fixed_column = vec![
+    let fixed = vec![
         F::from_u32(11u32),
         F::from_u32(11u32),
         F::from_u32(11u32),
         F::from_u32(11u32),
     ];
-    let advice_column = vec![
+    let advice = vec![
         F::from_u32(13u32),
         F::from_u32(13u32),
         F::from_u32(13u32),
         F::from_u32(13u32),
     ];
-    let instance_column = F::Config::generate_random(1);
+
+    let instance = vec![
+        F::from_u32(13u32),
+        F::from_u32(13u32),
+        F::from_u32(13u32),
+        F::from_u32(13u32),
+    ];
     let challenges      = F::Config::generate_random(1);
 
     let beta            = F::Config::generate_random(1);
@@ -166,10 +169,6 @@ where
     let theta           = F::Config::generate_random(1);
     let y               = F::Config::generate_random(1);
     let previous_value  = F::Config::generate_random(1);
-
-    let fixed    = vec![fixed_column.as_ptr()];
-    let advice   = vec![advice_column.as_ptr()];
-    let instance = vec![instance_column.as_ptr()];
 
     let rotations: Vec<u32> = vec![0];
     let calculations: Vec<u32> = vec![6, 7];
@@ -189,13 +188,13 @@ where
         constants.as_ptr(),
         constants.len() as u32,
         fixed.as_ptr(),
-        fixed.len() as u32,
+        1,
         table_size as u32,
         advice.as_ptr(),
-        advice.len() as u32,
+        1,
         table_size as u32,
         instance.as_ptr(),
-        instance.len() as u32,
+        1,
         table_size as u32,
         rotations.as_ptr(),
         rotations.len() as u32,
@@ -225,6 +224,7 @@ where
         horner_value_indices.as_ptr(),
         horner_offsets.as_ptr(),
         horner_sizes.as_ptr(),
+        horner_value_types.len() as u32,
     );
 
     let mut result = vec![F::zero(); test_size];
@@ -260,7 +260,7 @@ where
         F::from_u32(200),
     ];
 
-    let fixed_col = vec![
+    let fixed = vec![
         F::from_u32(11),
         F::from_u32(111),
         F::from_u32(111),
@@ -271,7 +271,7 @@ where
         F::from_u32(111),
     ];
 
-    let advice_col = vec![
+    let advice = vec![
         F::from_u32(13),
         F::from_u32(113),
         F::from_u32(113),
@@ -282,7 +282,7 @@ where
         F::from_u32(113),
     ];
 
-    let instance_col = vec![
+    let instance = vec![
         F::from_u32(17),
         F::from_u32(117),
         F::from_u32(117),
@@ -300,10 +300,6 @@ where
     let theta          = vec![F::from_u32(103)];
     let y              = vec![F::from_u32(104)];
     let previous_value = vec![F::from_u32(105)];
-
-    let fixed    = vec![fixed_col.as_ptr()];
-    let advice   = vec![advice_col.as_ptr()];
-    let instance = vec![instance_col.as_ptr()];
 
     let rotations = vec![0];
 
@@ -324,13 +320,13 @@ where
         constants.as_ptr(),
         constants.len() as u32,
         fixed.as_ptr(),
-        fixed.len() as u32,
+        1,
         table_size as u32,
         advice.as_ptr(),
-        advice.len() as u32,
+        1,
         table_size as u32,
         instance.as_ptr(),
-        instance.len() as u32,
+        1,
         table_size as u32,
         rotations.as_ptr(),
         rotations.len() as u32,
@@ -360,6 +356,7 @@ where
         horner_value_indices.as_ptr(),
         horner_offsets.as_ptr(),
         horner_sizes.as_ptr(),
+        horner_value_types.len() as u32,
     );
 
     let mut result = vec![F::zero(); test_size];

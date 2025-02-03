@@ -46,6 +46,7 @@ pub struct HornerData {
     pub value_indices: *const u32,
     pub offsets: *const u32,
     pub sizes: *const u32,
+    pub num_horner: u32,
 }
 
 impl HornerData {
@@ -54,12 +55,14 @@ impl HornerData {
         value_indices: *const u32,
         offsets: *const u32,
         sizes: *const u32,
+        num_horner: u32,
     ) -> Self {
         Self {
             value_types,
             value_indices,
             offsets,
             sizes,
+            num_horner
         }
     }
 }
@@ -100,13 +103,13 @@ impl CalculationData {
 pub struct GateData<T> {
     pub constants: *const T,
     pub num_constants: u32,
-    pub fixed: *const *const T,
+    pub fixed: *const T,
     pub num_fixed_columns: u32,
     pub num_fixed_rows: u32,
-    pub advice: *const *const T,
+    pub advice: *const T,
     pub num_advice_columns: u32,
     pub num_advice_rows: u32,
-    pub instance: *const *const T,
+    pub instance: *const T,
     pub num_instance_columns: u32,
     pub num_instance_rows: u32,
     pub rotations: *const u32,
@@ -127,13 +130,13 @@ impl<T> GateData<T> {
     pub fn new(
         constants: *const T,
         num_constants: u32,
-        fixed: *const *const T,
+        fixed: *const T,
         num_fixed_columns: u32,
         num_fixed_rows: u32,
-        advice: *const *const T,
+        advice: *const T,
         num_advice_columns: u32,
         num_advice_rows: u32,
-        instance: *const *const T,
+        instance: *const T,
         num_instance_columns: u32,
         num_instance_rows: u32,
         rotations: *const u32,
@@ -227,7 +230,7 @@ fn setup_config<F>(
     //     panic!("output is allocated on an inactive device");
     // }
 
-    let mut res_cfg = cfg.clone();
+    let res_cfg = cfg.clone();
     // res_cfg.is_constants_on_device = gate_data.constants.is_on_device();
     // res_cfg.is_fixed_on_device = gate_data.fixed.is_on_device();
     // res_cfg.is_advice_on_device = gate_data.advice.is_on_device();
@@ -247,6 +250,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: GateOps<F>,
 {
+    println!("check_gate_ops_args");
     let cfg = check_gate_ops_args(
         gate_data,
         calc_data,
