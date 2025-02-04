@@ -181,7 +181,7 @@ namespace icicle {
 
     s_cpu_backend_poseidon2_constants_initialized = true;
     return eIcicleError::SUCCESS;
-  }
+  } // static eIcicleError init_default_constants()
 
   template <typename S>
   class Poseidon2BackendCPU : public HashBackend
@@ -354,8 +354,11 @@ namespace icicle {
       }
 
       delete[] tmp_fields;
-      if (padding_size != 0) delete[] padding;
       tmp_fields = nullptr;
+      if (padding_size != 0) {
+        delete[] padding;
+        padding = nullptr;
+      }
 
       return eIcicleError::SUCCESS;
     } // eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const
