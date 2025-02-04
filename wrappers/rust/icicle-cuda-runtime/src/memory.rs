@@ -1,5 +1,8 @@
 use crate::bindings::{
-    cudaFree, cudaFreeAsync, cudaMalloc, cudaMallocAsync, cudaMemPool_t, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemset,
+    cudaFree, cudaFreeAsync, cudaMalloc, cudaMallocAsync, cudaMemcpy, cudaMemcpyAsync, cudaMemcpyKind, cudaMemset
+};
+use crate::bindings::{
+    cudaDeviceGetDefaultMemPool, cudaMemPoolAttr, cudaMemPoolSetAttribute, cudaMemPool_t,
 };
 use crate::device::{check_device, get_device_from_pointer};
 use crate::error::{CudaError, CudaResult, CudaResultWrap};
@@ -20,6 +23,10 @@ static mut CUDA_FREE_STREAM: CudaStream = CudaStream {
     handle: std::ptr::null_mut(),
 };
 static CREATE_STREAM: Once = Once::new();
+
+static mut CUDA_DEFAULT_MEMPOOL: CudaMemPool = std::ptr::null_mut();
+
+static CREATE_MEMPOOL: Once = Once::new();
 
 #[derive(Debug)]
 pub struct HostSlice<T>([T]);
@@ -450,6 +457,16 @@ impl<T> DeviceVec<T> {
     pub fn cuda_malloc_async_for_device(count: usize, stream: &CudaStream, device_id: usize) -> CudaResult<Self> {
         check_device(device_id);
         Self::cuda_malloc_async(count, stream)
+    }
+}
+
+pub fn set_mempool_threshold() {
+    unsafe {
+            CREATE_MEMPOOL.call_once(|| {
+            let _ = cudaDeviceGetDefaultMemPool(&raw mut CUDA_DEFAULT_MEMPOOL, 0);
+            let mut threshold = std::u64::MAX;
+            let _ = cudaMemPoolSetAttribute(CUDA_DEFAULT_MEMPOOL, cudaMemPoolAttr::cudaMemPoolAttrReleaseThreshold, &mut threshold as *mut u64 as *mut c_void);
+        });
     }
 }
 

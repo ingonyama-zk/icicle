@@ -89,6 +89,8 @@ fn main() {
         .allowlist_function("cudaMemset")
         .allowlist_function("cudaMemsetAsync")
         .allowlist_function("cudaDeviceGetDefaultMemPool")
+        .allowlist_function("cudaMemPoolSetAttribute")
+        .rustified_enum("cudaMemPoolAttr")
         .allowlist_function("cudaMemGetInfo")
         .rustified_enum("cudaMemcpyKind")
         .allowlist_function("cudaHostAlloc")
