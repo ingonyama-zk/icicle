@@ -181,7 +181,7 @@ namespace icicle {
 
     s_cpu_backend_poseidon2_constants_initialized = true;
     return eIcicleError::SUCCESS;
-  }   // static eIcicleError init_default_constants()
+  } // static eIcicleError init_default_constants()
 
   template <typename S>
   class Poseidon2BackendCPU : public HashBackend
