@@ -453,8 +453,9 @@ namespace host_math {
   template <unsigned NLIMBS>
   static constexpr void div2(const storage<NLIMBS>& xs, storage<NLIMBS>& rs)
   {
-    const uint32_t* x = xs.limbs;
-    uint32_t* r = rs.limbs;
+    // Note: volatile is used to prevent compiler optimizations that assume strict aliasing rules.
+    volatile const uint32_t* x = xs.limbs;
+    volatile uint32_t* r = rs.limbs;
     if constexpr (NLIMBS > 1) {
       for (unsigned i = 0; i < NLIMBS - 1; i++) {
         r[i] = (x[i] >> 1) | (x[i + 1] << 31);
