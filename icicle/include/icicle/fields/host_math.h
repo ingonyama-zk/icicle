@@ -227,13 +227,13 @@ namespace host_math {
   static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
-    for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
+    for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
       uint64_t carry = 0;
 #pragma unroll
-      for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
+      for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
       }
-      r[NLIMBS_A / 2 + j] = carry;
+      r[NLIMBS_A / 2 + i] = carry;
     }
   }
 
@@ -256,8 +256,8 @@ namespace host_math {
   multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
     static_assert(
-      (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
-      "odd number of limbs is not supported\n");
+      ((NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1)) || USE_32,
+      "odd number of limbs is not supported for 64 bit multiplication\n");
     if constexpr (USE_32) {
       multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
       return;
@@ -363,12 +363,13 @@ namespace host_math {
   {
     return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
   }
-  static constexpr void inv_log_size_err(uint32_t logn, uint32_t omegas_count)
+  // this function checks if the given index is within the array range
+  static constexpr void index_err(uint32_t index, uint32_t max_index)
   {
-    if (logn > omegas_count)
+    if (index > max_index)
       THROW_ICICLE_ERR(
-        icicle::eIcicleError::INVALID_ARGUMENT,
-        "Field: Invalid inv index" + std::to_string(logn) + ">" + std::to_string(omegas_count));
+        icicle::eIcicleError::INVALID_ARGUMENT, "Field: index out of range: given index -" + std::to_string(index) +
+                                                  "> max index - " + std::to_string(max_index));
   }
 
   template <unsigned NLIMBS>

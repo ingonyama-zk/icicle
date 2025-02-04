@@ -65,6 +65,69 @@ TYPED_TEST(FieldApiTest, FieldSanityTest)
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
+#ifndef EXT_FIELD
+TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
+{
+  /*
+  SR - storage reduce
+  check that:
+  1. SR(x1) + SR(x1) = SR(x1+x2)
+  2. SR(INV(SR(x))*x) = 1
+  */
+  START_TIMER(StorageSanity)
+  for (int i = 0; i < 1001; i++) {
+    if constexpr (TypeParam::TLC == 1) {
+      if constexpr (TypeParam::get_modulus().limbs[0] == 0x7fffffff) return; // not supporting mersenne yet
+      storage<18> a =                                                        // 18 because we support up to 576 bits
+        TypeParam::template rand_storage<18>(17);                            // 17 so we don't have carry after addition
+      storage<18> b = TypeParam::template rand_storage<18>(17);              // 17 so we don't have carry after addition
+      storage<18> sum = {};
+      const storage<3> c =
+        TypeParam::template rand_storage<3>(); // 3 because we don't support higher odd number of limbs yet
+      storage<4> product = {};
+      base_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+      auto c_red = TypeParam::from(c);
+      auto c_inv = TypeParam::inverse(c_red);
+      base_math::multiply_raw<3, 1, true>(
+        c, c_inv.limbs_storage, product); // using 32-bit multiplication for small fields
+      ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
+      ASSERT_EQ(TypeParam::from(product), TypeParam::one());
+      std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
+      std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
+      std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
+      std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
+      ASSERT_EQ(TypeParam::from(a), TypeParam::from(a_bytes, 18 * 4));
+      ASSERT_EQ(
+        TypeParam::from(a_bytes, 18 * 4) + TypeParam::from(b_bytes, 18 * 4), TypeParam::from(sum_bytes, 18 * 4));
+      ASSERT_EQ(TypeParam::from(product_bytes, 4 * 4), TypeParam::one());
+    } else {
+      storage<18> a =                                           // 18 because we support up to 576 bits
+        TypeParam::template rand_storage<18>(17);               // 17 so we don't have carry after addition
+      storage<18> b = TypeParam::template rand_storage<18>(17); // 17 so we don't have carry after addition
+      storage<18> sum = {};
+      const storage<18 - TypeParam::TLC> c =
+        TypeParam::template rand_storage<18 - TypeParam::TLC>(); // -TLC so we don't overflow in multiplication
+      storage<18> product = {};
+      base_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+      auto c_red = TypeParam::from(c);
+      auto c_inv = TypeParam::inverse(c_red);
+      base_math::multiply_raw(c, c_inv.limbs_storage, product);
+      ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
+      ASSERT_EQ(TypeParam::from(product), TypeParam::one());
+      std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
+      std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
+      std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
+      std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
+      ASSERT_EQ(TypeParam::from(a), TypeParam::from(a_bytes, 18 * 4));
+      ASSERT_EQ(
+        TypeParam::from(a_bytes, 18 * 4) + TypeParam::from(b_bytes, 18 * 4), TypeParam::from(sum_bytes, 18 * 4));
+      ASSERT_EQ(TypeParam::from(product_bytes, 18 * 4), TypeParam::one());
+    }
+  }
+  END_TIMER(StorageSanity, "storage sanity", true);
+}
+#endif
+
 TYPED_TEST(FieldApiTest, vectorVectorOps)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
