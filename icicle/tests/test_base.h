@@ -51,8 +51,7 @@ public:
   // SetUp/TearDown are called before and after each test
   void SetUp() override
   {
-    // unsigned seed = time(NULL);
-    unsigned seed = 1738756763;
+    unsigned seed = time(NULL);
     ICICLE_LOG_INFO << "Seed for test is: " << seed;
     seed_rand_generator(seed);
   }
