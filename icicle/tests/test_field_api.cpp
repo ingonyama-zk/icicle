@@ -75,12 +75,11 @@ TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
   2. SR(INV(SR(x))*x) = 1
   */
   START_TIMER(StorageSanity)
-  for (int i = 0; i < 1001; i++) {
+  for (int i = 0; i < 1000; i++) {
     if constexpr (TypeParam::TLC == 1) {
-      if constexpr (TypeParam::get_modulus().limbs[0] == 0x7fffffff) return; // not supporting mersenne yet
-      storage<18> a =                                                        // 18 because we support up to 576 bits
-        TypeParam::template rand_storage<18>(17);                            // 17 so we don't have carry after addition
-      storage<18> b = TypeParam::template rand_storage<18>(17);              // 17 so we don't have carry after addition
+      storage<18> a =                                           // 18 because we support up to 576 bits
+        TypeParam::template rand_storage<18>(17);               // 17 so we don't have carry after addition
+      storage<18> b = TypeParam::template rand_storage<18>(17); // 17 so we don't have carry after addition
       storage<18> sum = {};
       const storage<3> c =
         TypeParam::template rand_storage<3>(); // 3 because we don't support higher odd number of limbs yet
