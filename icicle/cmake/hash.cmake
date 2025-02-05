@@ -9,6 +9,7 @@ function(setup_hash_target)
     src/hash/merkle_tree.cpp
     src/hash/hash_c_api.cpp
     src/hash/merkle_c_api.cpp
+    src/hash/pow.cpp
   )
   
   target_link_libraries(icicle_hash PUBLIC icicle_device)

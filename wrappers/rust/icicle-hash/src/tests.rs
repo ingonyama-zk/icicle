@@ -281,14 +281,17 @@ mod tests {
     fn blake3_pow() {
         initialize();
         test_utilities::test_set_main_device();
-        let input: [u8; 32] = [17;32];
+        let input: [u8; 32] = [99;32];
         let input_host = HostSlice::from_slice(&input);
         let cfg = PowConfig::default();
         let mut found = false;
         let mut nonce = 0;
         let mut mined_hash = 0;
+        
+        let hasher = Blake3::new(32).unwrap();
+
         let start = Instant::now();
-        let err = rust_some_pow_blake3(input_host, 1, &cfg, &mut found, &mut nonce, &mut mined_hash);
+        let err = rust_some_pow_blake3(&hasher, input_host, 34, &cfg, &mut found, &mut nonce, &mut mined_hash);
         let duration = start.elapsed();
         assert_eq!(err, eIcicleError::Success);
         println!("{} {} {}", found, nonce, mined_hash);
@@ -296,6 +299,24 @@ mod tests {
     }
 }
 
+// [INFO] Rust testing: registered_devices=["CUDA", "CPU"], Main-device=CUDA, Reference-device=CPU
+// true 548767758 6313614631
+// time: 7.895112174s
+
+// true 23906817091 916059913
+// time: 24.760634568s
+
+// true 50565854869 401485352
+// time: 52.313830025s
+
+// true 50565854869 401485352
+// time: 21.119585348s
+
+// blake specific 34 bits
+// time: 21.306890618s
+
+// hash agnostic
+// time: 53.731591372s
 
 // hash 0: 3a4e612b2a7563b5afed63d8ce532fdf773bbc82d4e5a92f48d85b8f6876d95f4d18c3a44c4544f282b661cca4adf49617f67d4d34284865634b9bb5b34bd02af29eaa3eb8cb8dce5643f7b8f5bf0cb2ad13f4536a9aac874f4199d888d6d858b5e598578a432aca6cab95f3ca288279594bb9d41e6a9e1d36f829f3af883416328dd2b0d28285b5fb7c2c572ecdb66cb356d3ae6b44f93908bc6b8c9a6ead53b70f361a12d77d1c9f95fc9efb57c6224f89eeadae927836e54d1d6b1372eca27e5d4d29b63e0d3996e8e52b524e3aac5f0fcf1dd5d47cfaa1f79f87cc10d21e530b29d7e788922d1ddffca6ae06419e82162e7fa464e7b35f
 // [DEBUG] hash 1: 1f1867328161a84e6a1b9f34ca2630ca974435d155b3a5a82ec761d7f65479554d57fb65fe20db65f3f41cf3a8a627cb8cb2ca53e7e204f7a2c398d33cc4f413eca3b373693165b03ac2678ea3a102652d199baad97ec8e6bdae13fd42ecd0ba197fb745e9612f47a28068dd5412bb59dfb0506f99e15b9777152562c2289b21ac3505ed1026ccd1a2ba7e4f65a76b86b75a62dd52c8417acc9a938a95c44ed2268a4a0fdde7415360614e27f06ff79e8a117462d1bee0e6f254c2e9c4e842f79fcc830a3a4baf6be825d5419b79d226591647f23a4f33a5d06a54348394264ee5500946d4d2eb19c5c5dacf361e77f75c2872e01b

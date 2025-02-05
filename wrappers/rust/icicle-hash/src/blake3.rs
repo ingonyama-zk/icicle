@@ -39,8 +39,11 @@ impl Default for PowConfig {
 }
 
 extern "C" {
-    pub fn some_pow_blake3(
+    pub fn pow(
+        hasher: HasherHandle,
         challenge: *const u8,
+        challenge_size: u32,
+        padding_size: u32,
         bits: u8,
         config: *const PowConfig,
         found: *mut bool,
@@ -50,6 +53,7 @@ extern "C" {
 }
 
 pub fn rust_some_pow_blake3(
+    hasher: &Hasher,
     challenge: &(impl HostOrDeviceSlice<u8> + ?Sized),
     bits: u8,
     config: &PowConfig,
@@ -60,8 +64,11 @@ pub fn rust_some_pow_blake3(
     // Ensure the challenge length matches what the C function expects
 
     let result = unsafe {
-        some_pow_blake3(
+        pow(
+            hasher.handle,
             challenge.as_ptr(),
+            challenge.len() as u32,
+            32,
             bits,
             config as *const PowConfig,
             found as *mut bool,
