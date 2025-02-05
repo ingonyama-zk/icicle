@@ -29,7 +29,7 @@ namespace m31 {
     /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
       between 0 and p. This is done using 2 steps:
       1. Splitting the number into TLC sized digits - xs = x_i * p_i = x_i * 2^(TLC*32*i).
-      In the case of Mersenne, p_i modulu p turn out to be 2^i, therefore, we can replace the multiplication with
+      In the case of Mersenne, p_i modulo p turn out to be 2^i, therefore, we can replace the multiplication with
       shifts. At the end of this step the number is reduced from to 48 bits max (for a 576 input).
       2. The second step uses Mersenne reduction (splitting into digitd of 31 bits and adding) twice.*/
     template <unsigned NLIMBS>
