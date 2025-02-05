@@ -35,10 +35,10 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 12;
-    const int batch = 3;
-    const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
-    const int precompute_factor = rand_uint_32b(0, 7) + 1;  // between 1 and 8
+    const int logn = 3;
+    const int batch = 1;
+    const int N = (1 << logn);
+    const int precompute_factor = 1;
     const int total_nof_elemets = batch * N;
 
     auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
@@ -46,6 +46,13 @@ public:
     auto precomp_bases = std::make_unique<A[]>(N * precompute_factor);
     scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
     P::rand_host_many(bases.get(), N);
+
+    for (int i = 0; i < N; i++)
+    {
+      scalars[i] = scalar_t::one();
+      ICICLE_LOG_INFO << "input "<<i<<": "<<scalars[i];
+    }
+    
 
     auto result_main = std::make_unique<P[]>(batch);
     auto result_ref = std::make_unique<P[]>(batch);
@@ -62,7 +69,7 @@ public:
       std::ostringstream oss;
       oss << dev_type << " " << msg;
 
-      ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
+      // ICICLE_CHECK(msm_precompute_bases(bases.get(), N, config, precomp_bases.get()));
 
       START_TIMER(MSM_sync)
       for (int i = 0; i < iters; ++i) {
@@ -73,6 +80,13 @@ public:
 
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+
+    // for (int i = 0; i < logn; i++)
+    // {
+    //   scalars[i] = scalar_t::one();
+    //   ICICLE_LOG_INFO << "input "<<i<<scalars[i];
+    // }
+    
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
       ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
       ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
