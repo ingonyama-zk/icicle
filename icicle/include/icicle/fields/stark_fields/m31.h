@@ -6,6 +6,10 @@
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
 
+#include <iostream>
+#include <cstddef>
+#include <iomanip>
+
 namespace m31 {
   template <class CONFIG>
   class MersenneField : public Field<CONFIG>
@@ -22,11 +26,56 @@ namespace m31 {
 
     static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) { return MersenneField(value); }
 
+    /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
+      between 0 and p. This is done using 2 steps:
+      1. Splitting the number into TLC sized digits - xs = x_i * p_i = x_i * 2^(TLC*32*i).
+      In the case of Mersenne, p_i modulo p turn out to be 2^i, therefore, we can replace the multiplication with
+      shifts. At the end of this step the number is reduced from to 48 bits max (for a 576 input).
+      2. The second step uses Mersenne reduction (splitting into digitd of 31 bits and adding) twice.*/
     template <unsigned NLIMBS>
     static constexpr HOST_DEVICE_INLINE MersenneField from(const storage<NLIMBS>& xs)
     {
-      printf("error: converting from storage to Field is currently not supported for mersenne field\n");
-      return MersenneField{CONFIG::zero};
+      static_assert(NLIMBS * 32 <= 576); // for now we support up to 576 bits
+      storage<2> rs = {};
+      // first reduction step:
+      for (int i = 0; i < NLIMBS; i++) {
+        const MersenneField& xi =
+          *reinterpret_cast<const MersenneField*>(xs.limbs + i); // use casting instead of copying
+        storage<2> temp = {};
+        temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
+        temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
+        base_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
+      }
+      // second reduction step:
+      const uint32_t modulus = MersenneField::get_modulus().limbs[0];
+      uint32_t tmp = ((rs.limbs[0] >> 31) | (rs.limbs[1] << 1)) +
+                     (rs.limbs[0] & modulus); // mersenne reduction - max: 2^17 + 2^31-1 <= 2^32
+      tmp = (tmp >> 31) + (tmp & modulus);    // max: 1 + 0 = 1
+      return MersenneField{{tmp == modulus ? 0 : tmp}};
+    }
+
+    /* This is the non-template version of the from(storage) function above. It receives an array of bytes and its size
+    and returns a field element after modular reduction. For now we support up to 576 bits. */
+    static constexpr HOST_DEVICE_INLINE MersenneField from(const std::byte* in, unsigned nof_bytes)
+    {
+      storage<2> rs = {};
+      unsigned constexpr bytes_per_field = 4;
+      int size = nof_bytes / bytes_per_field;
+      // first reduction step:
+      for (int i = 0; i < size; i++) {
+        const MersenneField& xi =
+          *reinterpret_cast<const MersenneField*>(in + i * bytes_per_field); // use casting instead of copying
+        storage<2> temp = {};
+        temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
+        temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
+        base_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
+      }
+      // second reduction step:
+      const uint32_t modulus = MersenneField::get_modulus().limbs[0];
+      uint32_t tmp = ((rs.limbs[0] >> 31) | (rs.limbs[1] << 1)) +
+                     (rs.limbs[0] & modulus); // mersenne reduction - max: 2^17 + 2^31-1 <= 2^32
+      tmp = (tmp >> 31) + (tmp & modulus);    // max: 1 + 0 = 1
+      return MersenneField{{tmp == modulus ? 0 : tmp}};
     }
 
     static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
@@ -194,26 +243,6 @@ namespace m31 {
     static constexpr unsigned num_of_reductions = 1;
 
     static constexpr storage<limbs_count> modulus = {0x7fffffff};
-    static constexpr unsigned reduced_digits_count = 18;
-    static constexpr storage_array<reduced_digits_count, 1> reduced_digits = {
-      {{0x00000001},
-       {0x00000002},
-       {0x00000004},
-       {0x00000008},
-       {0x00000010},
-       {0x00000020},
-       {0x00000040},
-       {0x00000080},
-       {0x00000100},
-       {0x00000200},
-       {0x00000400},
-       {0x00000800},
-       {0x00001000},
-       {0x00002000},
-       {0x00004000},
-       {0x00008000},
-       {0x00010000},
-       {0x00020000}}};
     static constexpr storage<limbs_count> modulus_2 = {0xfffffffe};
     static constexpr uint64_t modulus_3 = 0x17ffffffd;
     static constexpr storage<limbs_count> modulus_4 = {0xfffffffc};
@@ -234,45 +263,6 @@ namespace m31 {
     static constexpr storage_array<omegas_count, limbs_count> omega_inv = {{{0x7ffffffe}}};
 
     static constexpr storage_array<omegas_count, limbs_count> inv = {{{0x40000000}}};
-
-    MOD_SQR_SUBS()
-    static constexpr storage_array<mod_subs_count, 2 * limbs_count + 2> mod_subs = {
-      {{0x00000000, 0x00000000, 0x00000000, 0x00000000}, {0xc0000000, 0x1fffffff, 0x00000000, 0x00000000},
-       {0xffffffff, 0x3fffffff, 0x00000000, 0x00000000}, {0xbfffffff, 0x5fffffff, 0x00000000, 0x00000000},
-       {0xfffffffe, 0x7fffffff, 0x00000000, 0x00000000}, {0xbffffffe, 0x9fffffff, 0x00000000, 0x00000000},
-       {0xfffffffd, 0xbfffffff, 0x00000000, 0x00000000}, {0xbffffffd, 0xdfffffff, 0x00000000, 0x00000000},
-       {0xfffffffc, 0xffffffff, 0x00000000, 0x00000000}, {0xbffffffc, 0x1fffffff, 0x00000001, 0x00000000},
-       {0xfffffffb, 0x3fffffff, 0x00000001, 0x00000000}, {0xbffffffb, 0x5fffffff, 0x00000001, 0x00000000},
-       {0xfffffffa, 0x7fffffff, 0x00000001, 0x00000000}, {0xbffffffa, 0x9fffffff, 0x00000001, 0x00000000},
-       {0xfffffff9, 0xbfffffff, 0x00000001, 0x00000000}, {0xbffffff9, 0xdfffffff, 0x00000001, 0x00000000},
-       {0xfffffff8, 0xffffffff, 0x00000001, 0x00000000}, {0xbffffff8, 0x1fffffff, 0x00000002, 0x00000000},
-       {0xfffffff7, 0x3fffffff, 0x00000002, 0x00000000}, {0xbffffff7, 0x5fffffff, 0x00000002, 0x00000000},
-       {0xfffffff6, 0x7fffffff, 0x00000002, 0x00000000}, {0xbffffff6, 0x9fffffff, 0x00000002, 0x00000000},
-       {0xfffffff5, 0xbfffffff, 0x00000002, 0x00000000}, {0xbffffff5, 0xdfffffff, 0x00000002, 0x00000000},
-       {0xfffffff4, 0xffffffff, 0x00000002, 0x00000000}, {0xbffffff4, 0x1fffffff, 0x00000003, 0x00000000},
-       {0xfffffff3, 0x3fffffff, 0x00000003, 0x00000000}, {0xbffffff3, 0x5fffffff, 0x00000003, 0x00000000},
-       {0xfffffff2, 0x7fffffff, 0x00000003, 0x00000000}, {0xbffffff2, 0x9fffffff, 0x00000003, 0x00000000},
-       {0xfffffff1, 0xbfffffff, 0x00000003, 0x00000000}, {0xbffffff1, 0xdfffffff, 0x00000003, 0x00000000},
-       {0xfffffff0, 0xffffffff, 0x00000003, 0x00000000}, {0xbffffff0, 0x1fffffff, 0x00000004, 0x00000000},
-       {0xffffffef, 0x3fffffff, 0x00000004, 0x00000000}, {0xbfffffef, 0x5fffffff, 0x00000004, 0x00000000},
-       {0xffffffee, 0x7fffffff, 0x00000004, 0x00000000}, {0xbfffffee, 0x9fffffff, 0x00000004, 0x00000000},
-       {0xffffffed, 0xbfffffff, 0x00000004, 0x00000000}, {0xbfffffed, 0xdfffffff, 0x00000004, 0x00000000},
-       {0xffffffec, 0xffffffff, 0x00000004, 0x00000000}, {0xbfffffec, 0x1fffffff, 0x00000005, 0x00000000},
-       {0xffffffeb, 0x3fffffff, 0x00000005, 0x00000000}, {0xbfffffeb, 0x5fffffff, 0x00000005, 0x00000000},
-       {0xffffffea, 0x7fffffff, 0x00000005, 0x00000000}, {0xbfffffea, 0x9fffffff, 0x00000005, 0x00000000},
-       {0xffffffe9, 0xbfffffff, 0x00000005, 0x00000000}, {0xbfffffe9, 0xdfffffff, 0x00000005, 0x00000000},
-       {0xffffffe8, 0xffffffff, 0x00000005, 0x00000000}, {0xbfffffe8, 0x1fffffff, 0x00000006, 0x00000000},
-       {0xffffffe7, 0x3fffffff, 0x00000006, 0x00000000}, {0xbfffffe7, 0x5fffffff, 0x00000006, 0x00000000},
-       {0xffffffe6, 0x7fffffff, 0x00000006, 0x00000000}, {0xbfffffe6, 0x9fffffff, 0x00000006, 0x00000000},
-       {0xffffffe5, 0xbfffffff, 0x00000006, 0x00000000}, {0xbfffffe5, 0xdfffffff, 0x00000006, 0x00000000},
-       {0xffffffe4, 0xffffffff, 0x00000006, 0x00000000}, {0xbfffffe4, 0x1fffffff, 0x00000007, 0x00000000},
-       {0xffffffe3, 0x3fffffff, 0x00000007, 0x00000000}, {0xbfffffe3, 0x5fffffff, 0x00000007, 0x00000000},
-       {0xffffffe2, 0x7fffffff, 0x00000007, 0x00000000}, {0xbfffffe2, 0x9fffffff, 0x00000007, 0x00000000},
-       {0xffffffe1, 0xbfffffff, 0x00000007, 0x00000000}, {0xbfffffe1, 0xdfffffff, 0x00000007, 0x00000000},
-       {0xffffffe0, 0xffffffff, 0x00000007, 0x00000000}, {0xbfffffe0, 0x1fffffff, 0x00000008, 0x00000000},
-       {0xffffffdf, 0x3fffffff, 0x00000008, 0x00000000}, {0xbfffffdf, 0x5fffffff, 0x00000008, 0x00000000},
-       {0xffffffde, 0x7fffffff, 0x00000008, 0x00000000}, {0xbfffffde, 0x9fffffff, 0x00000008, 0x00000000},
-       {0xffffffdd, 0xbfffffff, 0x00000008, 0x00000000}, {0xbfffffdd, 0xdfffffff, 0x00000008, 0x00000000}}};
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
