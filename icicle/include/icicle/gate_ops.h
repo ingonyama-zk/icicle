@@ -39,19 +39,26 @@ namespace icicle {
     uint32_t num_horner;
   };
 
+  template <typename T>
   struct CalculationData {
     const uint32_t* calc_types;     // Array for calculation types (e.g., Add, Sub, Mul, etc.)
     const uint32_t* targets;         // Source value types (e.g., beta, advice, etc.)
     const uint32_t* value_types;    // Source value types (e.g., beta, advice, etc.)
     const uint32_t* value_indices;  // Source value indices
+    const T* constants;          // Constants array
+    uint32_t num_constants;        // Number of constants
+    const uint32_t* rotations;        // Rotations array
+    uint32_t num_rotations;        // Number of rotations
+    const T* previous_value;
     uint32_t num_calculations;      // Number of calculations
     uint32_t num_intermediates;     // Number of intermediate values
+    uint32_t num_elements;
+    uint32_t rot_scale;               // Rotation scale
+    uint32_t i_size;                  // Size of i
   };
 
   template <typename T>
   struct GateData {
-    const T* constants;          // Constants array
-    uint32_t num_constants;        // Number of constants
     const T* fixed;              // Fixed columns array
     uint32_t num_fixed_columns;    // Number of fixed columns
     uint32_t num_fixed_rows;    // Number of fixed columns
@@ -61,18 +68,12 @@ namespace icicle {
     const T* instance;           // Instance columns array
     uint32_t num_instance_columns; // Number of instance columns
     uint32_t num_instance_rows; // Number of instance columns
-    const uint32_t* rotations;        // Rotations array
-    uint32_t num_rotations;        // Number of rotations
     const T* challenges;         // Challenges array
     uint32_t num_challenges;       // Number of challenges
     const T* beta;
     const T* gamma;
     const T* theta;
     const T* y;
-    const T* previous_value;
-    uint32_t num_elements;
-    uint32_t rot_scale;               // Rotation scale
-    uint32_t i_size;                  // Size of i
   };
 
   /**
@@ -101,7 +102,7 @@ namespace icicle {
   template <typename T>
   eIcicleError gate_evaluation(
     const GateData<T>& gate_data, 
-    const CalculationData& calc_data,
+    const CalculationData<T>& calc_data,
     const HornerData& horner_data,
     const GateOpsConfig& config, 
     T* results

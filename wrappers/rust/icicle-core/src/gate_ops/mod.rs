@@ -1,6 +1,6 @@
 use crate::traits::FieldImpl;
 use icicle_runtime::{
-    config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
+    errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
 
 pub mod tests;
@@ -69,31 +69,55 @@ impl HornerData {
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct CalculationData {
+pub struct CalculationData<T> {
     pub calc_types: *const u32,
     pub targets: *const u32,
     pub value_types: *const u32,
     pub value_indices: *const u32,
+    pub constants: *const T,
+    pub num_constants: u32,
+    pub rotations: *const u32,
+    pub num_rotations: u32,
+    pub previous_value: *const T,
     pub num_calculations: u32,
     pub num_intermediates: u32,
+    pub num_elements: u32,
+    pub rot_scale: u32,
+    pub i_size: u32,
 }
 
-impl CalculationData {
+impl<T> CalculationData<T> {
     pub fn new(
         calc_types: *const u32,
         targets: *const u32,
         value_types: *const u32,
         value_indices: *const u32,
+        constants: *const T,
+        num_constants: u32,
+        rotations: *const u32,
+        num_rotations: u32,
+        previous_value: *const T,
         num_calculations: u32,
         num_intermediates: u32,
+        num_elements: u32,
+        rot_scale: u32,
+        i_size: u32,
     ) -> Self {
         Self {
             calc_types,
             targets,
             value_types,
             value_indices,
+            constants,
+            num_constants,
+            rotations,
+            num_rotations,
+            previous_value,
             num_calculations,
             num_intermediates,
+            num_elements,
+            rot_scale,
+            i_size,
         }
     }
 }
@@ -101,8 +125,6 @@ impl CalculationData {
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct GateData<T> {
-    pub constants: *const T,
-    pub num_constants: u32,
     pub fixed: *const T,
     pub num_fixed_columns: u32,
     pub num_fixed_rows: u32,
@@ -112,24 +134,16 @@ pub struct GateData<T> {
     pub instance: *const T,
     pub num_instance_columns: u32,
     pub num_instance_rows: u32,
-    pub rotations: *const u32,
-    pub num_rotations: u32,
     pub challenges: *const T,
     pub num_challenges: u32,
     pub beta: *const T,
     pub gamma: *const T,
     pub theta: *const T,
     pub y: *const T,
-    pub previous_value: *const T,
-    pub num_elements: u32,
-    pub rot_scale: u32,
-    pub i_size: u32,
 }
 
 impl<T> GateData<T> {
     pub fn new(
-        constants: *const T,
-        num_constants: u32,
         fixed: *const T,
         num_fixed_columns: u32,
         num_fixed_rows: u32,
@@ -139,22 +153,14 @@ impl<T> GateData<T> {
         instance: *const T,
         num_instance_columns: u32,
         num_instance_rows: u32,
-        rotations: *const u32,
-        num_rotations: u32,
         challenges: *const T,
         num_challenges: u32,
         beta: *const T,
         gamma: *const T,
         theta: *const T,
         y: *const T,
-        previous_value: *const T,
-        num_elements: u32,
-        rot_scale: u32,
-        i_size: u32,
     ) -> Self {
         Self {
-            constants,
-            num_constants,
             fixed,
             num_fixed_columns,
             num_fixed_rows,
@@ -164,18 +170,12 @@ impl<T> GateData<T> {
             instance,
             num_instance_columns,
             num_instance_rows,
-            rotations,
-            num_rotations,
             challenges,
             num_challenges,
             beta,
             gamma,
             theta,
             y,
-            previous_value,
-            num_elements,
-            rot_scale,
-            i_size,
         }
     }
 }
@@ -184,7 +184,7 @@ impl<T> GateData<T> {
 pub trait GateOps<F> {
     fn gate_evaluation(
         gate_data: &GateData<F>,
-        calc_data: &CalculationData,
+        calc_data: &CalculationData<F>,
         horner_data: &HornerData,
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &GateOpsConfig,
@@ -193,7 +193,7 @@ pub trait GateOps<F> {
 
 fn check_gate_ops_args<F>(
     gate_data: &GateData<F>,
-    calc_data: &CalculationData,
+    calc_data: &CalculationData<F>,
     horner_data: &HornerData,
     cfg: &GateOpsConfig,
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -209,7 +209,7 @@ fn check_gate_ops_args<F>(
 
 fn setup_config<F>(
     _gate_data: &GateData<F>,
-    _calc_data: &CalculationData,
+    _calc_data: &CalculationData<F>,
     _horner_data: &HornerData,
     _result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &GateOpsConfig,
@@ -241,7 +241,7 @@ fn setup_config<F>(
 
 pub fn gate_evaluation<F>(
     gate_data: &GateData<F>,
-    calc_data: &CalculationData,
+    calc_data: &CalculationData<F>,
     horner_data: &HornerData,
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &GateOpsConfig,
@@ -285,7 +285,7 @@ macro_rules! impl_gate_ops_field {
                 #[link_name = concat!($field_prefix, "_gate_evaluation")]
                 pub(crate) fn gate_evaluation_ffi(
                     gate_data: *const GateData<$field>,
-                    calc_data: *const CalculationData,
+                    calc_data: *const CalculationData<$field>,
                     horner_data: *const HornerData,
                     cfg: *const GateOpsConfig,
                     result: *mut $field,
@@ -296,7 +296,7 @@ macro_rules! impl_gate_ops_field {
         impl GateOps<$field> for $field_config {
             fn gate_evaluation(
                 gate_data: &GateData<$field>,
-                calc_data: &CalculationData,
+                calc_data: &CalculationData<$field>,
                 horner_data: &HornerData,
                 result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &GateOpsConfig,
@@ -304,7 +304,7 @@ macro_rules! impl_gate_ops_field {
                 unsafe {
                     $field_prefix_ident::gate_evaluation_ffi(
                         gate_data as *const GateData<$field>,
-                        calc_data as *const CalculationData,
+                        calc_data as *const CalculationData<$field>,
                         horner_data as *const HornerData,
                         cfg as *const GateOpsConfig,
                         result.as_mut_ptr(),

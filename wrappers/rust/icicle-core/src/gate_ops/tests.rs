@@ -33,102 +33,8 @@ pub fn check_gate_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
 {
-    let test_size = 1 << 4;
-
-    check_gate_ops_evaluation::<F>(test_size);
     check_horner_evaluation::<F>(1);
     check_complex_gate_ops::<F>(1);
-}
-
-
-pub fn check_gate_ops_evaluation<F: FieldImpl>(test_size: usize)
-where
-    <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
-{
-    let mut rng = rand::thread_rng();
-
-    let table_size = 1 << 5;
-    let graph_size = 1 << 4;
-
-    let constants = F::Config::generate_random(table_size);
-    let fixed = F::Config::generate_random(table_size);
-    let advice = F::Config::generate_random(table_size);
-    let instance = F::Config::generate_random(table_size);
-    let challenges = F::Config::generate_random(table_size);
-    let beta = F::Config::generate_random(1);
-    let gamma = F::Config::generate_random(1);
-    let theta = F::Config::generate_random(1);
-    let y = F::Config::generate_random(1);
-    let previous_value = F::Config::generate_random(1);
-
-    let rotations: Vec<u32> = vec![0];
-    let calculations: Vec<u32> = (0..graph_size).map(|_| rng.gen_range(0..8)).collect();
-    let targets: Vec<u32> = Vec::from_iter(0..graph_size as u32);
-    let value_types: Vec<u32> = (0..graph_size * 2).map(|_| rng.gen_range(0..8)).collect();
-    let value_indices: Vec<u32> = (0..graph_size * 4).map(|_| rng.gen_range(0..8)).collect();
-
-    let horner_value_types: Vec<u32> = vec![0, 1];
-    let horner_value_indices: Vec<u32> = vec![0, 1];
-    let horner_offsets: Vec<u32> = vec![0, 2];
-    let horner_sizes: Vec<u32> = vec![2, 2];
-
-    let gate_data = GateData::new(
-        constants.as_ptr(),
-        constants.len() as u32,
-        fixed.as_ptr(),
-        1,
-        table_size as u32,
-        advice.as_ptr(),
-        1,
-        table_size as u32,
-        instance.as_ptr(),
-        1,
-        table_size as u32,
-        rotations.as_ptr(),
-        rotations.len() as u32,
-        challenges.as_ptr(),
-        challenges.len() as u32,
-        beta.as_ptr(),
-        gamma.as_ptr(),
-        theta.as_ptr(),
-        y.as_ptr(),
-        previous_value.as_ptr(),
-        test_size as u32,
-        1,
-        1,
-    );
-
-    let calc_data = CalculationData::new(
-        calculations.as_ptr(),
-        targets.as_ptr(),
-        value_types.as_ptr(),
-        value_indices.as_ptr(),
-        calculations.len() as u32,
-        calculations.len() as u32,
-    );
-
-    let horner_data = HornerData::new(
-        horner_value_types.as_ptr(),
-        horner_value_indices.as_ptr(),
-        horner_offsets.as_ptr(),
-        horner_sizes.as_ptr(),
-        horner_value_types.len() as u32
-    );
-
-    let mut result = vec![F::zero(); test_size];
-    let mut result = HostSlice::from_mut_slice(&mut result);
-
-    test_utilities::test_set_main_device();
-    let cfg = GateOpsConfig::default();
-
-    gate_evaluation(
-        &gate_data,
-        &calc_data,
-        &horner_data,
-        result,
-        &cfg,
-    )
-    .unwrap();
 }
 
 pub fn check_horner_evaluation<F: FieldImpl>(test_size: usize)
@@ -185,8 +91,6 @@ where
     let horner_value_indices: Vec<u32> = vec![0, 0, 0, 0];
 
     let gate_data = GateData::new(
-        constants.as_ptr(),
-        constants.len() as u32,
         fixed.as_ptr(),
         1,
         table_size as u32,
@@ -196,18 +100,12 @@ where
         instance.as_ptr(),
         1,
         table_size as u32,
-        rotations.as_ptr(),
-        rotations.len() as u32,
         challenges.as_ptr(),
         challenges.len() as u32,
         beta.as_ptr(),
         gamma.as_ptr(),
         theta.as_ptr(),
         y.as_ptr(),
-        previous_value.as_ptr(),
-        test_size as u32,
-        1,
-        2,
     );
 
     let calc_data = CalculationData::new(
@@ -215,7 +113,15 @@ where
         targets.as_ptr(),
         value_types.as_ptr(),
         value_indices.as_ptr(),
+        constants.as_ptr(),
+        constants.len() as u32,
+        rotations.as_ptr(),
+        rotations.len() as u32,
+        previous_value.as_ptr(),
         calculations.len() as u32,
+        2,
+        test_size as u32,
+        1,
         2,
     );
 
@@ -228,7 +134,7 @@ where
     );
 
     let mut result = vec![F::zero(); test_size];
-    let mut result_slice = HostSlice::from_mut_slice(&mut result);
+    let result_slice = HostSlice::from_mut_slice(&mut result);
 
     test_utilities::test_set_main_device();
 
@@ -317,8 +223,6 @@ where
 
     // Build the GateData:
     let gate_data = GateData::new(
-        constants.as_ptr(),
-        constants.len() as u32,
         fixed.as_ptr(),
         1,
         table_size as u32,
@@ -328,18 +232,12 @@ where
         instance.as_ptr(),
         1,
         table_size as u32,
-        rotations.as_ptr(),
-        rotations.len() as u32,
         challenges.as_ptr(),
         challenges.len() as u32,
         beta.as_ptr(),
         gamma.as_ptr(),
         theta.as_ptr(),
         y.as_ptr(),
-        previous_value.as_ptr(),
-        test_size as u32,
-        1,
-        6,
     );
 
     let calc_data = CalculationData::new(
@@ -347,7 +245,15 @@ where
         targets.as_ptr(),
         value_types.as_ptr(),
         value_indices.as_ptr(),
+        constants.as_ptr(),
+        constants.len() as u32,
+        rotations.as_ptr(),
+        rotations.len() as u32,
+        previous_value.as_ptr(),
         calculations.len() as u32,
+        6,
+        test_size as u32,
+        1,
         6,
     );
 
@@ -360,7 +266,7 @@ where
     );
 
     let mut result = vec![F::zero(); test_size];
-    let mut result_slice = HostSlice::from_mut_slice(&mut result);
+    let result_slice = HostSlice::from_mut_slice(&mut result);
 
     test_utilities::test_set_main_device();
     let cfg = GateOpsConfig::default();

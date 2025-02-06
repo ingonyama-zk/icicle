@@ -10,7 +10,7 @@ namespace icicle {
   using gateEvaluationImpl = std::function<eIcicleError(
     const Device& device,
     const GateData<scalar_t>& gate_data, 
-    const CalculationData& calc_data,
+    const CalculationData<scalar_t>& calc_data,
     const HornerData& horner_data,
     const GateOpsConfig& config,
     scalar_t* results)>;
