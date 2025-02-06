@@ -1277,8 +1277,8 @@ TEST_F(FieldApiTestBase, Sumcheck)
   }
 
   auto run = [&](
-              const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-              const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
@@ -1294,7 +1294,7 @@ TEST_F(FieldApiTestBase, Sumcheck)
     CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
     SumcheckConfig sumcheck_config;
     SumcheckProof<scalar_t> sumcheck_proof;
-    
+
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
       mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
@@ -1305,7 +1305,8 @@ TEST_F(FieldApiTestBase, Sumcheck)
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
-    ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
