@@ -6,6 +6,10 @@
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
 
+#include <iostream>
+#include <cstddef>
+#include <iomanip>
+
 namespace m31 {
   template <class CONFIG>
   class MersenneField : public Field<CONFIG>
@@ -21,6 +25,58 @@ namespace m31 {
     static constexpr HOST_DEVICE_INLINE MersenneField one() { return MersenneField{CONFIG::one}; }
 
     static constexpr HOST_DEVICE_INLINE MersenneField from(uint32_t value) { return MersenneField(value); }
+
+    /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
+      between 0 and p. This is done using 2 steps:
+      1. Splitting the number into TLC sized digits - xs = x_i * p_i = x_i * 2^(TLC*32*i).
+      In the case of Mersenne, p_i modulo p turn out to be 2^i, therefore, we can replace the multiplication with
+      shifts. At the end of this step the number is reduced from to 48 bits max (for a 576 input).
+      2. The second step uses Mersenne reduction (splitting into digitd of 31 bits and adding) twice.*/
+    template <unsigned NLIMBS>
+    static constexpr HOST_DEVICE_INLINE MersenneField from(const storage<NLIMBS>& xs)
+    {
+      static_assert(NLIMBS * 32 <= 576); // for now we support up to 576 bits
+      storage<2> rs = {};
+      // first reduction step:
+      for (int i = 0; i < NLIMBS; i++) {
+        const MersenneField& xi =
+          *reinterpret_cast<const MersenneField*>(xs.limbs + i); // use casting instead of copying
+        storage<2> temp = {};
+        temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
+        temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
+        base_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
+      }
+      // second reduction step:
+      const uint32_t modulus = MersenneField::get_modulus().limbs[0];
+      uint32_t tmp = ((rs.limbs[0] >> 31) | (rs.limbs[1] << 1)) +
+                     (rs.limbs[0] & modulus); // mersenne reduction - max: 2^17 + 2^31-1 <= 2^32
+      tmp = (tmp >> 31) + (tmp & modulus);    // max: 1 + 0 = 1
+      return MersenneField{{tmp == modulus ? 0 : tmp}};
+    }
+
+    /* This is the non-template version of the from(storage) function above. It receives an array of bytes and its size
+    and returns a field element after modular reduction. For now we support up to 576 bits. */
+    static constexpr HOST_DEVICE_INLINE MersenneField from(const std::byte* in, unsigned nof_bytes)
+    {
+      storage<2> rs = {};
+      unsigned constexpr bytes_per_field = 4;
+      int size = nof_bytes / bytes_per_field;
+      // first reduction step:
+      for (int i = 0; i < size; i++) {
+        const MersenneField& xi =
+          *reinterpret_cast<const MersenneField*>(in + i * bytes_per_field); // use casting instead of copying
+        storage<2> temp = {};
+        temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
+        temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
+        base_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
+      }
+      // second reduction step:
+      const uint32_t modulus = MersenneField::get_modulus().limbs[0];
+      uint32_t tmp = ((rs.limbs[0] >> 31) | (rs.limbs[1] << 1)) +
+                     (rs.limbs[0] & modulus); // mersenne reduction - max: 2^17 + 2^31-1 <= 2^32
+      tmp = (tmp >> 31) + (tmp & modulus);    // max: 1 + 0 = 1
+      return MersenneField{{tmp == modulus ? 0 : tmp}};
+    }
 
     static HOST_INLINE MersenneField rand_host() { return MersenneField(Field<CONFIG>::rand_host()); }
 
@@ -207,7 +263,6 @@ namespace m31 {
     static constexpr storage_array<omegas_count, limbs_count> omega_inv = {{{0x7ffffffe}}};
 
     static constexpr storage_array<omegas_count, limbs_count> inv = {{{0x40000000}}};
-
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative.
