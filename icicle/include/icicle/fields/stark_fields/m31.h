@@ -160,12 +160,12 @@ namespace m31 {
     {
       uint32_t xs = x.limbs_storage.limbs[0];
       if (xs <= 1) return xs;
-      uint32_t a = 1, b = 0, y = xs, z = MersenneField::get_modulus().limbs[0], e, m = z;
+      uint32_t a = 1, b = 0, y = xs, z = MersenneField::get_modulus().limbs[0], m = z;
       while (1) {
 #ifdef __CUDA_ARCH__
-        e = __ffs(y) - 1;
+        uint32_t e = __ffs(y) - 1;
 #else
-        e = __builtin_ctz(y);
+        uint32_t e = __builtin_ctz(y);
 #endif
         y >>= e;
         if (a >= m) {
