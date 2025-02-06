@@ -252,7 +252,7 @@ namespace icicle {
       std::shared_ptr<DeviceAPI> apiInstance = std::make_shared<API_CLASS>();                                          \
       register_deviceAPI(DEVICE_TYPE, apiInstance);                                                                    \
       ICICLE_CHECK(icicle_set_default_device(icicle::Device(DEVICE_TYPE)));                                            \
-      ICICLE_LOG_INFO << "Succesfully loaded " << DEVICE_TYPE << " as default device";                                 \
+      ICICLE_LOG_INFO << "Successfully loaded " << DEVICE_TYPE << " as default device";                                \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
