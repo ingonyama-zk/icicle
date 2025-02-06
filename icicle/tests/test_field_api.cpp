@@ -1255,13 +1255,9 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
 
 TEST_F(FieldApiTestBase, Sumcheck)
 {
-  icicle_set_device("CPU"); // Use CPU only for now.
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
-
-  // create transcript_config
-  SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
 
   // generate inputs
   std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
@@ -1280,28 +1276,48 @@ TEST_F(FieldApiTestBase, Sumcheck)
     claimed_sum = claimed_sum + (a * b - c) * eq;
   }
 
-  // ===== Prover side ======
-  // create sumcheck
-  auto prover_sumcheck = create_sumcheck<scalar_t>();
+  auto run = [&](
+              const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+              const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
 
-  CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
-  SumcheckConfig sumcheck_config;
-  SumcheckProof<scalar_t> sumcheck_proof;
-  ICICLE_CHECK(prover_sumcheck.get_proof(
-    mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-    sumcheck_proof));
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+    
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+
+  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }
-
-  // ===== Verifier side ======
-  // create sumcheck
-  auto verifier_sumcheck = create_sumcheck<scalar_t>();
-  bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
-
-  ASSERT_EQ(true, verification_pass);
 }
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
