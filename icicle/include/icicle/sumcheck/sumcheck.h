@@ -6,7 +6,7 @@
 #include "icicle/sumcheck/sumcheck_config.h"
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
 #include "icicle/backend/sumcheck_backend.h"
-#include "cpu_sumcheck_transcript.h"
+#include "icicle/sumcheck/sumcheck_transcript.h"
 
 namespace icicle {
   template <typename F>
@@ -96,7 +96,7 @@ namespace icicle {
       }
 
       // create sumcheck_transcript for the Fiat-Shamir
-      CpuSumcheckTranscript sumcheck_transcript(
+      SumcheckTranscript sumcheck_transcript(
         claimed_sum, nof_rounds, combine_function_poly_degree, std::move(transcript_config));
 
       for (int round_idx = 0; round_idx < nof_rounds - 1; round_idx++) {

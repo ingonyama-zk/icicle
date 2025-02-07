@@ -3,10 +3,10 @@
 #include <string.h>
 
 template <typename S>
-class CpuSumcheckTranscript
+class SumcheckTranscript
 {
 public:
-  CpuSumcheckTranscript(
+  SumcheckTranscript(
     const S& claimed_sum,
     const uint32_t mle_polynomial_size,
     const uint32_t combine_function_poly_degree,
