@@ -100,23 +100,18 @@ namespace icicle {
 
       const int round_poly_size = round_polynomial.size();
       for (int element_idx = 0; element_idx < mle_polynomial_size / 2; ++element_idx) {
-        for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-          combine_func_inputs[poly_idx] = in_mle_polynomials[poly_idx][element_idx];
-        }
         for (int k = 0; k < round_poly_size; ++k) {
+          // update the combine program inputs for k
+          for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
+            combine_func_inputs[poly_idx] = (k == 0) ? in_mle_polynomials[poly_idx][element_idx] :
+                                            (k == 1) ? in_mle_polynomials[poly_idx][element_idx + mle_polynomial_size / 2] :
+                                            combine_func_inputs[poly_idx] -
+                                            in_mle_polynomials[poly_idx][element_idx] +
+                                            in_mle_polynomials[poly_idx][element_idx + mle_polynomial_size / 2];
+          }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
           round_polynomial[k] = round_polynomial[k] + combine_func_result;
-
-          // if this is not the last k
-          if (k + 1 < round_poly_size) {
-            // update the combine program inputs for the next k
-            for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-              combine_func_inputs[poly_idx] = combine_func_inputs[poly_idx] -
-                                              in_mle_polynomials[poly_idx][element_idx] +
-                                              in_mle_polynomials[poly_idx][element_idx + mle_polynomial_size / 2];
-            }
-          }
         }
       }
     }
