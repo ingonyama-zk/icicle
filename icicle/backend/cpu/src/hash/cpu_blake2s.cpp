@@ -54,16 +54,7 @@ namespace icicle {
         });
       }
       executor.run(taskflow).wait();
-      // for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
-      //   int result = blake2s(
-      //     output + batch_idx * digest_size_in_bytes, digest_size_in_bytes, input + batch_idx * single_input_size,
-      //     single_input_size,
-      //     nullptr, // No key used
-      //     0        // Key length is 0
-      //   );
 
-      //   if (result != 0) { return eIcicleError::UNKNOWN_ERROR; } // TODO Yuval error codes
-      // }
       return eIcicleError::SUCCESS;
     }
 
