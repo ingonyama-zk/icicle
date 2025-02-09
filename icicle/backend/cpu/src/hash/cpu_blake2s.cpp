@@ -12,6 +12,7 @@
 
 #include "icicle/backend/hash/blake2s_backend.h"
 #include "icicle/utils/modifiers.h"
+#include <taskflow/taskflow.hpp>
 
 namespace icicle {
 
@@ -19,6 +20,7 @@ namespace icicle {
   {
   public:
     Blake2sBackendCPU(uint64_t input_chunk_size) : HashBackend("Blake2s-CPU", BLAKE2S_OUTBYTES, input_chunk_size) {}
+
 
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
@@ -30,16 +32,38 @@ namespace icicle {
       // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
       // outside a merkle-tree context is not as fast as it could be.
       // Note that for batch=1 this has not effect.
-      for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
-        int result = blake2s(
-          output + batch_idx * digest_size_in_bytes, digest_size_in_bytes, input + batch_idx * single_input_size,
-          single_input_size,
-          nullptr, // No key used
-          0        // Key length is 0
-        );
 
-        if (result != 0) { return eIcicleError::UNKNOWN_ERROR; } // TODO Yuval error codes
+      size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      size_t chunk_size = (config.batch + num_chunks - 1) / num_chunks;
+      tf::Taskflow taskflow;
+      tf::Executor executor;
+      for (size_t i = 0; i < num_chunks; ++i) {
+        size_t start_index = i * chunk_size;
+        size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
+        taskflow.emplace([&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input](){
+          for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
+            int result = blake2s(
+              output + batch_idx * digest_size_in_bytes, digest_size_in_bytes, input + batch_idx * single_input_size,
+              single_input_size,
+              nullptr, // No key used
+              0        // Key length is 0
+            );
+
+            if (result != 0) { return eIcicleError::UNKNOWN_ERROR; } // TODO Yuval error codes
+          }
+        });
       }
+      executor.run(taskflow).wait();
+      // for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
+      //   int result = blake2s(
+      //     output + batch_idx * digest_size_in_bytes, digest_size_in_bytes, input + batch_idx * single_input_size,
+      //     single_input_size,
+      //     nullptr, // No key used
+      //     0        // Key length is 0
+      //   );
+
+      //   if (result != 0) { return eIcicleError::UNKNOWN_ERROR; } // TODO Yuval error codes
+      // }
       return eIcicleError::SUCCESS;
     }
 
