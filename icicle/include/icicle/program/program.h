@@ -116,6 +116,9 @@ namespace icicle {
     // default constructor
     Program() {}
 
+    // Friend function for C-api to have access to the default constructor
+    friend Program<S>* create_empty_program(); // COMMENT why not just make the default constructor public?
+
     // run recursively on the DFG and push instruction per operation
     void generate_program(std::shared_ptr<Operation<S>> operation)
     {

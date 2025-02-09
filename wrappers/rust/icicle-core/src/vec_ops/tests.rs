@@ -2,12 +2,15 @@
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mixed_mul_scalars, mul_scalars,
-    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl,
-    MixedVecOps, VecOps, VecOpsConfig,
+    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, 
+    execute_program,
+    FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
 };
+use crate::program::{Handle, Instruction, FieldHasSymbol, Symbol, SymbolTrait, Program, ProgramTrait};
 use icicle_runtime::device::Device;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
+use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 
 #[test]
 fn test_vec_ops_config() {
@@ -455,6 +458,62 @@ where
         .copy_to_host(HostSlice::from_mut_slice(&mut result_host[..]))
         .unwrap();
     assert_eq!(input.as_slice(), result_host.as_slice());
+}
+
+pub fn check_program<F, Data>()
+where
+    F: FieldImpl,
+    // F::Config::Symbol exists? <---
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldHasSymbol<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+{
+    let lambda_eq_x_ab_minus_c = |vars: &mut Vec<Symbol<F>>| {
+        let A = vars[0].clone();
+        let B = vars[1].clone();
+        let C = vars[2].clone();
+        let EQ = vars[3].clone();
+        vars[4] = EQ * &(&A * &B - &C);
+        // TODO readd the ops below
+        vars[5] = A * &B - &C.inverse();
+        // vars[6] = vars[5];
+    };
+
+    let size = 3;
+    let a = F::Config::generate_random(size);
+    let b = F::Config::generate_random(size);
+    let c = F::Config::generate_random(size);
+    let eq = F::Config::generate_random(size);
+    let var4 = vec![F::zero(); size];
+    let var5 = vec![F::zero(); size];
+    let var6 = vec![F::zero(); size];
+    let a_slice = HostSlice::from_slice(&a);
+    let b_slice = HostSlice::from_slice(&b);
+    let c_slice = HostSlice::from_slice(&c);
+    let eq_slice = HostSlice::from_slice(&eq);
+    let mut var4_slice = HostSlice::from_slice(&var4);
+    let mut var5_slice = HostSlice::from_slice(&var5);
+    let mut var6_slice = HostSlice::from_slice(&var6);
+    let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
+
+    let program = Program::<F>::new(lambda_eq_x_ab_minus_c, 7).unwrap();
+    
+    let cfg = VecOpsConfig::default();
+    execute_program(&mut parameters, &program, &cfg);
+}
+
+pub fn check_program_with_return_value<F, Data>()
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldHasSymbol<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+{
+    let lambda_eq_x_ab_minus_c = |inputs: &mut Vec<Symbol<F>>| {
+        let A = inputs[0].clone();
+        let B = inputs[1].clone();
+        let C = inputs[2].clone();
+        let EQ = inputs[3].clone();
+        return EQ * (A * B - C);
+    };
 }
 
 pub fn check_vec_ops_mixed_scalars_mul<F: FieldImpl, T: FieldImpl>(test_size: usize)

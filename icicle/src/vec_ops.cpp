@@ -531,17 +531,32 @@ namespace icicle {
 
   ICICLE_DISPATCHER_INST(ExecuteProgramDispatcher, execute_program, programExecutionImpl)
 
+  // TODO update documentation
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, execute_program)(
-    std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
+    scalar_t** data_ptr,
+    uint64_t nof_params,
+    const Program<scalar_t>* program,
+    uint64_t size,
+    const VecOpsConfig& config)
   {
-    return ExecuteProgramDispatcher::execute(data, program, size, config);
+    std::vector<scalar_t*> data_vec;
+    data_vec.reserve(nof_params);
+    for (uint64_t i = 0; i < nof_params; i++)
+    {
+      if (data_ptr[i] == nullptr)
+      {
+        throw std::invalid_argument("Null pointer found in parameters");
+      }
+      data_vec.push_back(data_ptr[i]);
+    }
+    return ExecuteProgramDispatcher::execute(data_vec, *program, size, config);
   }
 
   template <>
   eIcicleError execute_program(
     std::vector<scalar_t*>& data, const Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
   {
-    return CONCAT_EXPAND(FIELD, execute_program)(data, program, size, config);
+    return CONCAT_EXPAND(FIELD, execute_program)(data.data(), data.size(), &program, size, config);
   }
 
   /*********************************** POLY EVAL ***********************************/
