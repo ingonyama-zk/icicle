@@ -14,6 +14,9 @@ public:
       : m_claimed_sum(claimed_sum), m_mle_polynomial_size(mle_polynomial_size),
         m_combine_function_poly_degree(combine_function_poly_degree), m_transcript_config(std::move(transcript_config))
   {
+    // Check inputs
+    ICICLE_ASSERT(m_mle_polynomial_size > 0) << "mle_polynomial_size must be > 0";
+    ICICLE_ASSERT(m_combine_function_poly_degree > 0) << "combine_function_poly_degree must be > 0";
     m_entry_0.clear();
     m_round_idx = 0;
   }
@@ -21,10 +24,6 @@ public:
   // add round polynomial to the transcript
   S get_alpha(const std::vector<S>& round_poly)
   {
-    // Make sure reset was called (Internal assertion)
-    ICICLE_ASSERT(m_mle_polynomial_size > 0) << "mle_polynomial_size must reset with value > 0";
-    ICICLE_ASSERT(m_combine_function_poly_degree > 0) << "combine_function_poly_degree must reset with value > 0";
-
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
     hash_input.reserve(2048);
