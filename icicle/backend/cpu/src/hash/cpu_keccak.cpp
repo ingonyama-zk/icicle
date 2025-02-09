@@ -52,16 +52,16 @@ namespace icicle {
       for (size_t i = 0; i < num_chunks; ++i) {
         size_t start_index = i * chunk_size;
         size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
-        taskflow.emplace([&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak](){
-          for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
+        taskflow.emplace(
+          [&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak]() {
+            for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
+              eIcicleError err = sha3_hash_buffer(
+                8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size,
+                single_input_size, output + batch_idx * digest_size_in_bytes);
 
-            eIcicleError err = sha3_hash_buffer(
-            8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size, single_input_size,
-            output + batch_idx * digest_size_in_bytes);
-
-            if (err != eIcicleError::SUCCESS) { return err; }
-          }
-        });
+              if (err != eIcicleError::SUCCESS) { return err; }
+            }
+          });
       }
       executor.run(taskflow).wait();
 

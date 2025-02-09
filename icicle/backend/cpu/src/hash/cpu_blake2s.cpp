@@ -21,7 +21,6 @@ namespace icicle {
   public:
     Blake2sBackendCPU(uint64_t input_chunk_size) : HashBackend("Blake2s-CPU", BLAKE2S_OUTBYTES, input_chunk_size) {}
 
-
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
       const auto digest_size_in_bytes = output_size();
@@ -40,7 +39,7 @@ namespace icicle {
       for (size_t i = 0; i < num_chunks; ++i) {
         size_t start_index = i * chunk_size;
         size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
-        taskflow.emplace([&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input](){
+        taskflow.emplace([&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input]() {
           for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
             int result = blake2s(
               output + batch_idx * digest_size_in_bytes, digest_size_in_bytes, input + batch_idx * single_input_size,
