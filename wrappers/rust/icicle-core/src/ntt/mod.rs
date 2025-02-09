@@ -61,14 +61,21 @@ pub enum Ordering {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NttAlgorithm {
-    Auto,
-    Radix2,
-    MixedRadix,
+    Auto =0,
+    Radix2 =1,
+    MixedRadix =2,
 }
 
 // CUDA backend specific flags
-pub const CUDA_NTT_FAST_TWIDDLES_MODE: &str = "fast_twiddles";
-pub const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
+const CUDA_NTT_FAST_TWIDDLES_MODE: &str = "fast_twiddles";
+const CUDA_NTT_ALGORITHM: &str = "ntt_algorithm";
+
+pub enum CUDA_option {
+    CudaNttFastTwiddleMode(bool),
+    CudaNttAlgorithm(NttAlgorithm)
+}
+
+
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -104,6 +111,14 @@ impl<S: FieldImpl> NTTConfig<S> {
             ext: ConfigExtension::new(),
         }
     }
+
+    pub fn set_cuda_option(&self, option : CUDA_option) -> () {
+        match option {
+            CUDA_option::CudaNttFastTwiddleMode(flag) => self.ext.set_bool(CUDA_NTT_FAST_TWIDDLES_MODE, flag),
+            CUDA_option::CudaNttAlgorithm(ntt_algorithm) => self.ext.set_int(CUDA_NTT_ALGORITHM, ntt_algorithm as i32) ,
+        }
+    }
+
 }
 
 #[repr(C)]

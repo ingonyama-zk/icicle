@@ -49,8 +49,22 @@ pub struct MSMConfig {
 }
 
 // backend specific options
-pub const CUDA_MSM_LARGE_BUCKET_FACTOR: &str = "large_bucket_factor";
-pub const CUDA_MSM_IS_BIG_TRIANGLE: &str = "is_big_triangle";
+const CUDA_MSM_LARGE_BUCKET_FACTOR: &str = "large_bucket_factor";
+const CUDA_MSM_IS_BIG_TRIANGLE: &str = "is_big_triangle";
+
+pub enum CUDA_option {
+    CudaMsmLargeBucketFactor(i32),
+    CudaMsmIsBigTriangle(bool)
+}
+
+impl MSMConfig {
+    pub fn set_cuda_option(&self, option : CUDA_option) -> () {
+        match option {
+            CUDA_option::CudaMsmLargeBucketFactor(value) => self.ext.set_int(CUDA_MSM_LARGE_BUCKET_FACTOR, value),
+            CUDA_option::CudaMsmIsBigTriangle(flag) => self.ext.set_bool(CUDA_MSM_IS_BIG_TRIANGLE, flag),
+        }
+    }
+}
 
 impl Default for MSMConfig {
     fn default() -> Self {
