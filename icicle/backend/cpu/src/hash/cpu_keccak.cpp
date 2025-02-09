@@ -12,6 +12,7 @@
 
 #include "icicle/backend/hash/keccak_backend.h"
 #include "icicle/utils/modifiers.h"
+#include <taskflow/taskflow.hpp>
 
 namespace icicle {
 
@@ -43,13 +44,27 @@ namespace icicle {
       // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
       // outside a merkle-tree context is not as fast as it could be.
       // Note that for batch=1 this has not effect.
-      for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
-        eIcicleError err = sha3_hash_buffer(
-          8 * digest_size_in_bytes /*=bitsize*/, m_is_keccak, input + batch_idx * single_input_size, single_input_size,
-          output + batch_idx * digest_size_in_bytes);
+      const auto is_keccak = m_is_keccak;
+      size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      size_t chunk_size = (config.batch + num_chunks - 1) / num_chunks;
+      tf::Taskflow taskflow;
+      tf::Executor executor;
+      for (size_t i = 0; i < num_chunks; ++i) {
+        size_t start_index = i * chunk_size;
+        size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
+        taskflow.emplace([&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak](){
+          for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
 
-        if (err != eIcicleError::SUCCESS) { return err; }
+            eIcicleError err = sha3_hash_buffer(
+            8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size, single_input_size,
+            output + batch_idx * digest_size_in_bytes);
+
+            if (err != eIcicleError::SUCCESS) { return err; }
+          }
+        });
       }
+      executor.run(taskflow).wait();
+
       return eIcicleError::SUCCESS;
     }
 
