@@ -11,6 +11,7 @@ import (
 type HashConfig struct {
 	StreamHandle       runtime.Stream
 	batchSize          uint64
+	nThreads           uint64
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
 	IsAsync            bool
@@ -21,6 +22,7 @@ func GetDefaultHashConfig() HashConfig {
 	return HashConfig{
 		StreamHandle:       nil,
 		batchSize:          1,
+		nThreads:           0,
 		areInputsOnDevice:  false,
 		areOutputsOnDevice: false,
 		IsAsync:            false,

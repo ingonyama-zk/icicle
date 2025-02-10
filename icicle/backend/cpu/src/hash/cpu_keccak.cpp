@@ -45,7 +45,19 @@ namespace icicle {
       // outside a merkle-tree context is not as fast as it could be.
       // Note that for batch=1 this has not effect.
       const auto is_keccak = m_is_keccak;
-      size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      // size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      // size_t num_chunks = 1; // Adjust based on the number of threads
+
+
+      size_t num_chunks;
+      // printf("Keccak: %llu, %llu\n", config.n_threads, config.batch);
+      if (config.n_threads == 0){
+        num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      }
+      else {
+        num_chunks = static_cast<size_t>(config.n_threads);
+      }
+
       size_t chunk_size = (config.batch + num_chunks - 1) / num_chunks;
       tf::Taskflow taskflow;
       tf::Executor executor;

@@ -14,6 +14,7 @@ use std::ffi::c_void;
 pub struct HashConfig {
     pub stream_handle: IcicleStreamHandle,
     batch: u64,
+    n_threads: u64,
     are_inputs_on_device: bool,
     are_outputs_on_device: bool,
     pub is_async: bool,
@@ -26,6 +27,7 @@ impl HashConfig {
         Self {
             stream_handle: std::ptr::null_mut(),
             batch: 1,
+            n_threads: 0,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
