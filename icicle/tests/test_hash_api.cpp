@@ -148,7 +148,7 @@ TEST_F(HashApiTest, KeccakLarge)
   auto config = default_hash_config();
   config.batch = 1 << 8;
   ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); //0 means autoselect
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
   config.ext = &ext;
   const unsigned chunk_size = 1 << 13; // 8KB chunks
   const unsigned total_size = chunk_size * config.batch;
@@ -199,7 +199,7 @@ TEST_F(HashApiTest, Blake2sLarge)
   auto config = default_hash_config();
   config.batch = 1 << 8;
   ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); //0 means autoselect
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
   config.ext = &ext;
   const unsigned chunk_size = 1 << 13; // 8KB chunks
   const unsigned total_size = chunk_size * config.batch;
@@ -250,7 +250,7 @@ TEST_F(HashApiTest, Blake3Large)
   auto config = default_hash_config();
   config.batch = 1 << 8;
   ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); //0 means autoselect
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
   config.ext = &ext;
   const unsigned chunk_size = 1 << 11; // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;

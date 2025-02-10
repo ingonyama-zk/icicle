@@ -16,7 +16,6 @@
 #include "icicle/config_extension.h"
 #include "icicle/backend/msm_config.h"
 
-
 namespace icicle {
 
 // Configuration flags for Keccak and SHA-3
@@ -47,9 +46,9 @@ namespace icicle {
       size_t num_chunks = 1;
       if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
         num_chunks = config.ext && (config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) != 0)
-                          ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
-                          :                                    // number of threads provided by config
-                          std::thread::hardware_concurrency(); // check machine properties (if provided with 0)
+                       ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                       :                                    // number of threads provided by config
+                       std::thread::hardware_concurrency(); // check machine properties (if provided with 0)
       }
       if (num_chunks <= 0) {
         ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";

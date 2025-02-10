@@ -29,14 +29,12 @@ namespace icicle {
       const auto single_input_size = get_single_chunk_size(
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
 
-
-
       size_t num_chunks = 1;
       if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
         num_chunks = config.ext && (config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) != 0)
-                          ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
-                          :                                    // number of threads provided by config
-                          std::thread::hardware_concurrency(); // check machine properties (if provided with 0)
+                       ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                       :                                    // number of threads provided by config
+                       std::thread::hardware_concurrency(); // check machine properties (if provided with 0)
       }
       if (num_chunks <= 0) {
         ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
