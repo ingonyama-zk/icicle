@@ -27,7 +27,7 @@ impl HashConfig {
         Self {
             stream_handle: std::ptr::null_mut(),
             batch: 1,
-            n_threads: 0,
+            n_threads: 1,
             are_inputs_on_device: false,
             are_outputs_on_device: false,
             is_async: false,
