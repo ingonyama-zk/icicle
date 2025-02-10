@@ -27,10 +27,6 @@ namespace icicle {
       const auto single_input_size = get_single_chunk_size(
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
 
-      // TODO (future): use tasks manager to parallel across threads. Add option to config-extension to set #threads
-      // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
-      // outside a merkle-tree context is not as fast as it could be.
-      // Note that for batch=1 this has not effect.
       size_t num_chunks;
       if (config.n_threads == 0) {
         num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
