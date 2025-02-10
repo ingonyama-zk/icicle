@@ -1354,7 +1354,7 @@ TEST_F(FieldApiTestBase, SumcheckDataOnDevice)
 
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumcheckConfig sumcheck_config;
-  
+
   sumcheck_config.are_inputs_on_device = true;
 
   for (int idx = 0; idx < nof_mle_poly; ++idx) {
@@ -1374,8 +1374,7 @@ TEST_F(FieldApiTestBase, SumcheckDataOnDevice)
   // create sumcheck
   auto verifier_sumcheck = create_sumcheck<scalar_t>();
   bool verification_pass = false;
-  ICICLE_CHECK(
-    verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 
