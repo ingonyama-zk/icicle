@@ -2,6 +2,7 @@
 
 #include "icicle/runtime.h"
 #include "icicle/config_extension.h"
+#include "icicle/backend/msm_config.h"
 
 namespace icicle {
 
@@ -15,7 +16,6 @@ namespace icicle {
   struct HashConfig {
     icicleStreamHandle stream = nullptr; /**< Stream for asynchronous execution. Default is nullptr. */
     uint64_t batch = 1;                  /**< Number of hashes to perform in parallel (independently). Default is 1. */
-    uint64_t n_threads = 1; /**< Number of threades to run in parallel for CPU. 0 means autoselcet. Default is 1. */
     bool are_inputs_on_device =
       false; /**< True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
     bool are_outputs_on_device =

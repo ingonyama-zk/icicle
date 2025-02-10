@@ -13,6 +13,9 @@
 #include "icicle/backend/hash/keccak_backend.h"
 #include "icicle/utils/modifiers.h"
 #include <taskflow/taskflow.hpp>
+#include "icicle/config_extension.h"
+#include "icicle/backend/msm_config.h"
+
 
 namespace icicle {
 
@@ -41,12 +44,18 @@ namespace icicle {
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
 
       const auto is_keccak = m_is_keccak;
-      size_t num_chunks;
-      if (config.n_threads == 0) {
-        num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
-      } else {
-        num_chunks = static_cast<size_t>(config.n_threads);
+      size_t num_chunks = 1;
+      if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
+        num_chunks = config.ext && (config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) != 0)
+                          ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                          :                                    // number of threads provided by config
+                          std::thread::hardware_concurrency(); // check machine properties (if provided with 0)
       }
+      if (num_chunks <= 0) {
+        ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+        num_chunks = 1;
+      }
+
       size_t chunk_size = (config.batch + num_chunks - 1) / num_chunks;
       if (num_chunks == 1) { // single thread without using taskflow
         for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {

@@ -22,7 +22,6 @@ func GetDefaultHashConfig() HashConfig {
 	return HashConfig{
 		StreamHandle:       nil,
 		batchSize:          1,
-		nThreads:           1,
 		areInputsOnDevice:  false,
 		areOutputsOnDevice: false,
 		IsAsync:            false,
