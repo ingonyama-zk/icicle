@@ -1,5 +1,6 @@
 use crate::traits::FieldImpl;
-use crate::program::{Program, Symbol, Handle, FieldHasSymbol};
+use crate::program::{Program, FieldHasProgram};
+use crate::symbol::FieldHasSymbol;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -139,7 +140,7 @@ pub trait VecOps<F> {
     ) -> Result<(), eIcicleError>
     where
         F: FieldImpl,
-        <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F>,
+        <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
         Data: HostOrDeviceSlice<F> + ?Sized;
 }
 
@@ -279,7 +280,7 @@ fn check_execute_program<F, Data>( // COMMENT do we need this check in Rust (or 
 ) -> VecOpsConfig
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F>,
+    <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
     Data: HostOrDeviceSlice<F> + ?Sized // TODO make sure that copying this type isn't intensive (pointer to slice copied instead of actual data)
 {
     // All parameters' config should match so each one is compared to the first one
@@ -540,7 +541,7 @@ pub fn execute_program<F, Data>(
 ) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F>,
+    <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
     Data: HostOrDeviceSlice<F> + ?Sized
 {
     let cfg = check_execute_program(&data, program, cfg);

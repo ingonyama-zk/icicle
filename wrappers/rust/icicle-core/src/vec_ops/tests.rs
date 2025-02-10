@@ -6,7 +6,8 @@ use crate::vec_ops::{
     execute_program,
     FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
 };
-use crate::program::{Handle, Instruction, FieldHasSymbol, Symbol, SymbolTrait, Program, ProgramTrait};
+use crate::program::{Handle, Instruction, FieldHasProgram, Program, ProgramTrait};
+use crate::symbol::{Symbol, SymbolTrait, FieldHasSymbol};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
@@ -168,7 +169,7 @@ pub fn check_vec_ops_scalars_sum<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(test_size * batch_size);
@@ -192,7 +193,7 @@ pub fn check_vec_ops_scalars_product<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(test_size * batch_size);
@@ -216,13 +217,13 @@ pub fn check_vec_ops_scalars_add_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
-    let a_main = F::Config::generate_random(cfg.batch_size as usize);
-    let b = F::Config::generate_random(test_size * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); test_size * cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); test_size * cfg.batch_size as usize];
+    let a_main = F::Config::generate_random(batch_size as usize);
+    let b = F::Config::generate_random(test_size * batch_size as usize);
+    let mut result_main = vec![F::zero(); test_size * batch_size as usize];
+    let mut result_ref = vec![F::zero(); test_size * batch_size as usize];
 
     let a_main = HostSlice::from_slice(&a_main);
     let b = HostSlice::from_slice(&b);
@@ -242,7 +243,7 @@ pub fn check_vec_ops_scalars_sub_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(batch_size);
@@ -268,7 +269,7 @@ pub fn check_vec_ops_scalars_mul_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(batch_size);
@@ -318,7 +319,7 @@ pub fn check_matrix_transpose<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
@@ -355,7 +356,7 @@ pub fn check_slice<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let size_in: u64 = 1 << 10;
@@ -464,7 +465,7 @@ pub fn check_program<F, Data>()
 where
     F: FieldImpl,
     // F::Config::Symbol exists? <---
-    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldHasSymbol<F>,
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
     Data: HostOrDeviceSlice<F> + ?Sized,
 {
     let lambda_eq_x_ab_minus_c = |vars: &mut Vec<Symbol<F>>| {
@@ -472,6 +473,11 @@ where
         let B = vars[1].clone();
         let C = vars[2].clone();
         let EQ = vars[3].clone();
+
+        let a = &vars[0];
+        let b = &vars[0];
+        let c = a * b;
+
         vars[4] = EQ * &(&A * &B - &C);
         // TODO readd the ops below
         vars[5] = A * &B - &C.inverse();
