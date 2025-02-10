@@ -11,7 +11,6 @@ import (
 type HashConfig struct {
 	StreamHandle       runtime.Stream
 	batchSize          uint64
-	nThreads           uint64
 	areInputsOnDevice  bool
 	areOutputsOnDevice bool
 	IsAsync            bool
