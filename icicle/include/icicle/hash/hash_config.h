@@ -15,7 +15,7 @@ namespace icicle {
   struct HashConfig {
     icicleStreamHandle stream = nullptr; /**< Stream for asynchronous execution. Default is nullptr. */
     uint64_t batch = 1;                  /**< Number of hashes to perform in parallel (independently). Default is 1. */
-    uint64_t n_threads = 0;                  /**< Number of threades to run in parallel for CPU. 0 means autoselcet. Default is 0. */
+    uint64_t n_threads = 0; /**< Number of threades to run in parallel for CPU. 0 means autoselcet. Default is 0. */
     bool are_inputs_on_device =
       false; /**< True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
     bool are_outputs_on_device =
