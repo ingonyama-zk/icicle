@@ -49,7 +49,6 @@ namespace icicle {
       // size_t num_chunks = 1; // Adjust based on the number of threads
 
       size_t num_chunks;
-      // printf("Keccak: %llu, %llu\n", config.n_threads, config.batch);
       if (config.n_threads == 0) {
         num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
       } else {

@@ -32,8 +32,6 @@ namespace icicle {
       // outside a merkle-tree context is not as fast as it could be.
       // Note that for batch=1 this has not effect.
       size_t num_chunks;
-      // printf("blake2s: %llu, %llu\n",config.n_threads, config.batch);
-
       if (config.n_threads == 0) {
         num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
       } else {
