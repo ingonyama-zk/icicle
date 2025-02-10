@@ -4,8 +4,8 @@ mod tests {
     use crate::{
         blake2s::Blake2s,
         blake3::Blake3,
-        pow::{pow_solver, PowConfig},
         keccak::{Keccak256, Keccak512},
+        pow::{pow_solver, PowConfig},
         sha3::Sha3_256,
     };
     use icicle_core::{
@@ -14,7 +14,7 @@ mod tests {
     };
     use icicle_runtime::{eIcicleError, memory::HostSlice, test_utilities};
     use rand::Rng;
-    use std::{sync::Once, time::Instant};
+    use std::sync::Once;
 
     static INIT: Once = Once::new();
 
@@ -283,7 +283,7 @@ mod tests {
         initialize();
         test_utilities::test_set_main_device();
         const BITS: u8 = 25;
-        let input: [u8; 32] = [20;32];
+        let input: [u8; 32] = [20; 32];
         let input_host = HostSlice::from_slice(&input);
         let cfg = PowConfig::default();
         let mut gpu_found = false;
@@ -292,7 +292,7 @@ mod tests {
         let found_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut gpu_found));
         let nonce_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut gpu_nonce));
         let mined_hash_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut gpu_mined_hash));
-        
+
         let hasher = Blake3::new(0).unwrap();
 
         let err = pow_solver(&hasher, input_host, BITS, &cfg, found_host, nonce_host, mined_hash_host);
