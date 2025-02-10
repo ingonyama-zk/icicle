@@ -40,10 +40,6 @@ namespace icicle {
       const auto single_input_size = get_single_chunk_size(
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
 
-      // TODO (future): use tasks manager to parallel across threads. Add option to config-extension to set #threads
-      // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
-      // outside a merkle-tree context is not as fast as it could be.
-      // Note that for batch=1 this has not effect.
       const auto is_keccak = m_is_keccak;
       size_t num_chunks;
       if (config.n_threads == 0) {
@@ -51,26 +47,33 @@ namespace icicle {
       } else {
         num_chunks = static_cast<size_t>(config.n_threads);
       }
-
       size_t chunk_size = (config.batch + num_chunks - 1) / num_chunks;
-      tf::Taskflow taskflow;
-      tf::Executor executor;
-      for (size_t i = 0; i < num_chunks; ++i) {
-        size_t start_index = i * chunk_size;
-        size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
-        taskflow.emplace(
-          [&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak]() {
-            for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
-              eIcicleError err = sha3_hash_buffer(
-                8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size,
-                single_input_size, output + batch_idx * digest_size_in_bytes);
+      if (num_chunks == 1) { // single thread without using taskflow
+        for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
+          eIcicleError err = sha3_hash_buffer(
+            8 * digest_size_in_bytes /*=bitsize*/, m_is_keccak, input + batch_idx * single_input_size,
+            single_input_size, output + batch_idx * digest_size_in_bytes);
+          if (err != eIcicleError::SUCCESS) { return err; }
+        }
+      } else {
+        tf::Taskflow taskflow;
+        tf::Executor executor;
+        for (size_t i = 0; i < num_chunks; ++i) {
+          size_t start_index = i * chunk_size;
+          size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
+          taskflow.emplace(
+            [&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak]() {
+              for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
+                eIcicleError err = sha3_hash_buffer(
+                  8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size,
+                  single_input_size, output + batch_idx * digest_size_in_bytes);
 
-              if (err != eIcicleError::SUCCESS) { return err; }
-            }
-          });
+                if (err != eIcicleError::SUCCESS) { return err; }
+              }
+            });
+        }
+        executor.run(taskflow).wait();
       }
-      executor.run(taskflow).wait();
-
       return eIcicleError::SUCCESS;
     }
 
