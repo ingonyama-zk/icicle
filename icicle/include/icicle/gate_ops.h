@@ -47,7 +47,7 @@ namespace icicle {
     const uint32_t* value_indices;  // Source value indices
     const T* constants;          // Constants array
     uint32_t num_constants;        // Number of constants
-    const uint32_t* rotations;        // Rotations array
+    const int32_t* rotations;        // Rotations array
     uint32_t num_rotations;        // Number of rotations
     const T* previous_value;
     uint32_t num_calculations;      // Number of calculations
