@@ -7,7 +7,7 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(PowSolverDispatcher, pow_solver, PowSolverImpl);
 
   extern "C" eIcicleError pow(
-    Hash hasher, 
+    Hash& hasher, 
     uint8_t* challenge, 
     uint32_t challenge_size, 
     uint32_t padding_size, 
