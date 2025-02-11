@@ -6,18 +6,33 @@ namespace icicle {
 
   ICICLE_DISPATCHER_INST(PowSolverDispatcher, pow_solver, PowSolverImpl);
 
-  extern "C" eIcicleError pow(
+  extern "C" eIcicleError proof_of_work(
     Hash& hasher,
-    uint8_t* challenge,
+    std::byte* challenge,
     uint32_t challenge_size,
-    uint32_t padding_size,
-    uint8_t bits,
+    uint8_t solution_bits,
     const PowConfig& config,
-    bool* found,
-    uint64_t* nonce,
-    uint64_t* mined_hash)
+    bool& found,
+    uint64_t& nonce,
+    uint64_t& mined_hash)
   {
     return PowSolverDispatcher::execute(
-      hasher, challenge, challenge_size, padding_size, bits, config, found, nonce, mined_hash);
+      hasher, challenge, challenge_size, solution_bits, config, found, nonce, mined_hash);
+  }
+
+  ICICLE_DISPATCHER_INST(PowCheckDispatcher, pow_check, PowCheckImpl);
+
+  extern "C" eIcicleError proof_of_work_check(
+    Hash& hasher,
+    std::byte* challenge,
+    uint32_t challenge_size,
+    uint8_t solution_bits,
+    const PowConfig& config,
+    uint64_t nonce,
+    bool& is_correct,
+    uint64_t& mined_hash)
+  {
+    return PowCheckDispatcher::execute(
+      hasher, challenge, challenge_size, solution_bits, config, nonce, is_correct, mined_hash);
   }
 } // namespace icicle

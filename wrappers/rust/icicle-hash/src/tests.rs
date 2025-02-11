@@ -5,7 +5,7 @@ mod tests {
         blake2s::Blake2s,
         blake3::Blake3,
         keccak::{Keccak256, Keccak512},
-        pow::{pow_solver, PowConfig},
+        pow::{pow_check, pow_solver, PowConfig},
         sha3::Sha3_256,
     };
     use icicle_core::{
@@ -284,33 +284,48 @@ mod tests {
         test_utilities::test_set_main_device();
         const BITS: u8 = 25;
         let input: [u8; 32] = [20; 32];
+        let golden_nonce: u64 = 40825909;
+        let golden_hash: u64 = 364385878471;
         let input_host = HostSlice::from_slice(&input);
         let cfg = PowConfig::default();
+
         let mut gpu_found = false;
         let mut gpu_nonce = 0;
         let mut gpu_mined_hash = 0;
-        let found_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut gpu_found));
-        let nonce_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut gpu_nonce));
-        let mined_hash_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut gpu_mined_hash));
 
         let hasher = Blake3::new(0).unwrap();
 
-        let err = pow_solver(&hasher, input_host, BITS, &cfg, found_host, nonce_host, mined_hash_host);
+        let err = pow_solver(&hasher, input_host, BITS, &cfg, &mut gpu_found, &mut gpu_nonce, &mut gpu_mined_hash);
         assert_eq!(err, eIcicleError::Success);
+        assert!(gpu_found);
+        assert_eq!(gpu_nonce, golden_nonce);
+        assert_eq!(gpu_mined_hash, golden_hash);
+
+        let mut gpu_is_correct = false;
+        let mut gpu_mined_hash_check = 0;
+
+        let err = pow_check(&hasher, input_host, BITS, &cfg, gpu_nonce, &mut gpu_is_correct, &mut gpu_mined_hash_check);
+        assert_eq!(err, eIcicleError::Success);
+        assert_eq!(gpu_mined_hash_check, golden_hash);
+        assert!(gpu_is_correct);
 
         test_utilities::test_set_ref_device();
         let mut cpu_found = false;
         let mut cpu_nonce = 0;
         let mut cpu_mined_hash = 0;
-        let found_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut cpu_found));
-        let nonce_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut cpu_nonce));
-        let mined_hash_host = HostSlice::from_mut_slice(std::slice::from_mut(&mut cpu_mined_hash));
         let hasher = Blake3::new(0).unwrap();
-        let err = pow_solver(&hasher, input_host, BITS, &cfg, found_host, nonce_host, mined_hash_host);
+        let err = pow_solver(&hasher, input_host, BITS, &cfg, &mut cpu_found, &mut cpu_nonce, &mut cpu_mined_hash);
         assert_eq!(err, eIcicleError::Success);
+        assert!(cpu_found);
+        assert_eq!(cpu_nonce, golden_nonce);
+        assert_eq!(cpu_mined_hash, golden_hash);
 
-        assert_eq!(gpu_found, cpu_found);
-        assert_eq!(gpu_nonce, cpu_nonce);
-        assert_eq!(gpu_mined_hash, cpu_mined_hash);
+        let mut cpu_is_correct = false;
+        let mut cpu_mined_hash_check = 0;
+
+        let err = pow_check(&hasher, input_host, BITS, &cfg, cpu_nonce, &mut cpu_is_correct, &mut cpu_mined_hash_check);
+        assert_eq!(err, eIcicleError::Success);
+        assert_eq!(cpu_mined_hash, golden_hash);
+        assert!(cpu_is_correct);
     }
 }
