@@ -42,7 +42,7 @@ if (FIELD)
         gtest_discover_tests(test_polynomial_api)    
     endif()
 
-    if(SUMCHECK OR HASH)
+    if(SUMCHECK OR HASH OR FRI)
         target_link_libraries(test_field_api PRIVATE icicle_hash)
     endif()
 endif()
