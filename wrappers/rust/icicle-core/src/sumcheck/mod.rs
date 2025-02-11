@@ -213,15 +213,31 @@ macro_rules! impl_sumcheck_tests {
     ($field:ident) => {
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
+        use icicle_runtime::{device::Device, runtime, test_utilities};
+        use std::sync::Once;
+
+        const MAX_SIZE: u64 = 1 << 18;
+        static INIT: Once = Once::new();
+        const FAST_TWIDDLES_MODE: bool = false;
+
+        pub fn initialize() {
+            INIT.call_once(move || {
+                test_utilities::test_load_and_init_devices();
+            });
+            // TODO loop over devices once we implement for CUDA
+            test_utilities::test_set_ref_device();
+        }
 
         #[test]
         fn test_sumcheck_transcript_config() {
+            initialize();
             let hash = Keccak256::new(0).unwrap();
             check_sumcheck_transcript_config::<$field>(&hash);
         }
 
         #[test]
         fn test_sumcheck_simple() {
+            initialize();
             let hash = Keccak256::new(0).unwrap();
             check_sumcheck_simple::<$field>(&hash);
         }
