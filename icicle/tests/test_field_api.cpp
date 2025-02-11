@@ -1253,6 +1253,7 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
+#ifdef SUMCHECK
 TEST_F(FieldApiTestBase, Sumcheck)
 {
   icicle_set_device("CPU"); // Use CPU only for now.
@@ -1302,6 +1303,8 @@ TEST_F(FieldApiTestBase, Sumcheck)
 
   ASSERT_EQ(true, verification_pass);
 }
+#endif // SUMCHECK
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
