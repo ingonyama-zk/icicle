@@ -31,7 +31,7 @@ namespace icicle {
     void init(int nof_queries, int nof_fri_rounds)
     {
       ICICLE_ASSERT(nof_queries > 0 && nof_fri_rounds > 0)
-          << "Number of queries and FRI rounds must be > 0";
+          << "Number of queries and FRI rounds must be > 0. nof_queries = " << nof_queries << ", nof_fri_rounds = " << nof_fri_rounds;
       
       // Resize the matrix to hold nof_queries rows and nof_fri_rounds columns
       m_query_proofs.resize(nof_queries, std::vector<MerkleProof>(nof_fri_rounds));

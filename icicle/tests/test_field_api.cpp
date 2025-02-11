@@ -16,6 +16,13 @@
 #include "icicle/program/returning_value_program.h"
 #include "../../icicle/backend/cpu/include/cpu_program_executor.h"
 #include "icicle/sumcheck/sumcheck.h"
+#include "icicle/hash/hash.h"
+#include "icicle/merkle/merkle_tree.h"
+
+#include "icicle/fri/fri.h"
+#include "icicle/fri/fri_config.h"
+#include "icicle/fri/fri_proof.h"
+#include "icicle/fri/fri_transcript_config.h"
 
 #include "test_base.h"
 
@@ -1238,6 +1245,52 @@ TEST_F(FieldApiTestBase, Sumcheck)
 
   ASSERT_EQ(true, verification_pass);
 }
+
+TYPED_TEST(FieldApiTest, Fri)
+{
+  // Randomize configuration
+  const int log_input_size = rand_uint_32b(5, 13);
+  const size_t input_size = 1 << log_input_size;
+  const int folding_factor = 2;
+  const int stopping_degree = rand_uint_32b(1, 8);
+  const uint64_t output_store_min_layer = 0;
+
+  ICICLE_LOG_DEBUG << "log_input_size = " << log_input_size;
+  ICICLE_LOG_DEBUG << "input_size = " << input_size;
+  ICICLE_LOG_DEBUG << "folding_factor = " << folding_factor;
+  ICICLE_LOG_DEBUG << "stopping_degree = " << stopping_degree;
+
+  // Initialize domain
+  auto init_domain_config = default_ntt_init_domain_config();
+  init_domain_config.is_async = false;
+  ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+
+  // Generate input polynomial evaluations
+  auto scalars = std::make_unique<scalar_t[]>(input_size);
+  scalar_t::rand_host_many(scalars.get(), input_size);
+
+  // ===== Prover side ======
+  Hash hash_for_merkle_tree = create_keccak_256_hash();
+  Fri prover_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
+
+  FriTranscriptConfig<scalar_t> transcript_config;
+  FriConfig fri_config;
+  fri_config.nof_queries = 2;
+  FriProof<scalar_t> fri_proof;
+
+  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
+
+  // ===== Verifier side ======
+  Fri verifier_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
+  bool verification_pass = false;
+  ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, verification_pass));
+
+  ASSERT_EQ(true, verification_pass);
+
+  // Release domain
+  ICICLE_CHECK(ntt_release_domain<scalar_t>());
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

@@ -81,7 +81,7 @@ public:
     eIcicleError get_fri_proof(
         const FriConfig& fri_config,
         const FriTranscriptConfig<F>& fri_transcript_config,
-        const std::vector<F*>& input_data,
+        const F* input_data,
         FriProof<F>& fri_proof /* OUT */) const
     {
         return m_backend->get_fri_proof(fri_config, fri_transcript_config, input_data, fri_proof);
