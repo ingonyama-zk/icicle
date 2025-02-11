@@ -1387,7 +1387,7 @@ TEST_F(FieldApiTestBase, SumcheckDataOnDevice)
   }
 }
 
-MlePoly complex_combine(const std::vector<MlePoly>& inputs)
+MlePoly user_defined_combine(const std::vector<MlePoly>& inputs)
 {
   const MlePoly& A = inputs[0];
   const MlePoly& B = inputs[1];
@@ -1396,7 +1396,7 @@ MlePoly complex_combine(const std::vector<MlePoly>& inputs)
   return A * B - MlePoly(scalar_t::from(2)) * C + D;
 }
 
-TEST_F(FieldApiTestBase, SumcheckComplexCombine)
+TEST_F(FieldApiTestBase, SumcheckUserDefinedCombine)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
@@ -1416,7 +1416,7 @@ TEST_F(FieldApiTestBase, SumcheckComplexCombine)
     const scalar_t b = mle_polynomials[1][element_i];
     const scalar_t c = mle_polynomials[2][element_i];
     const scalar_t d = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c - d) ;
+    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c + d) ;
   }
 
   auto run = [&](
@@ -1434,7 +1434,7 @@ TEST_F(FieldApiTestBase, SumcheckComplexCombine)
     // create sumcheck
     auto prover_sumcheck = create_sumcheck<scalar_t>();
 
-    CombineFunction<scalar_t> combine_func(complex_combine, nof_mle_poly);
+    CombineFunction<scalar_t> combine_func(user_defined_combine, nof_mle_poly);
     SumcheckConfig sumcheck_config;
     SumcheckProof<scalar_t> sumcheck_proof;
 
@@ -1467,7 +1467,15 @@ MlePoly too_complex_combine(const std::vector<MlePoly>& inputs)
   const MlePoly& A = inputs[0];
   const MlePoly& B = inputs[1];
   const MlePoly& C = inputs[2];
-  return A * B + B * C + C * A + A * B * C - scalar_t::from(2) + scalar_t::from(9) + A * B * C * C * B * A;
+  return A * B + B * C + C * A + A * B * C - scalar_t::from(2) + scalar_t::from(9) + A * B * C + C * B * A;
+}
+
+MlePoly too_high_degree_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  return (A * B * C * A * B * C);
 }
 
 MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
@@ -1478,7 +1486,7 @@ MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
   const MlePoly& D = inputs[3];
   const MlePoly& E = inputs[4];
   const MlePoly& F = inputs[5];
-  return A * B * C * D * E * F;
+  return A * B * C + D * E * F;
 }
 
 TEST_F(FieldApiTestBase, SumcheckCudaShouldFailCases)
@@ -1530,6 +1538,8 @@ TEST_F(FieldApiTestBase, SumcheckCudaShouldFailCases)
   run("CUDA", mle_polynomials, mle_poly_size, claimed_sum, combine_func_too_many_polys);
   CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_short);
   run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
+  CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_short);
+  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
