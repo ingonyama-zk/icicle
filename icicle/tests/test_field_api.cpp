@@ -1416,7 +1416,7 @@ TEST_F(FieldApiTestBase, SumcheckUserDefinedCombine)
     const scalar_t b = mle_polynomials[1][element_i];
     const scalar_t c = mle_polynomials[2][element_i];
     const scalar_t d = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c + d) ;
+    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c + d);
   }
 
   auto run = [&](
