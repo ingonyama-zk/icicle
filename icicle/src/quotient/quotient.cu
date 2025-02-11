@@ -279,7 +279,8 @@ namespace quotient {
             CHK_IF_RETURN(cudaMemcpyAsync(d_samples, samples, sizeof(ColumnSampleBatch<QP, QF>) * sample_size, cudaMemcpyHostToDevice, stream));
 
             // Kernel to set the `columns` and `values` pointers in the device struct array
-            set_columns_and_values_pointers<QP, QF><<<(sample_size + 255) / 256, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
+            int sample_size_to_kernel = sample_size == 0 ? 1 : (sample_size + 255) / 256;
+            set_columns_and_values_pointers<QP, QF><<<sample_size_to_kernel, 256, 0, stream>>>(d_samples, d_columns_ptrs, d_values_ptrs, d_point_ptrs, sample_size);
         }
         
         QF *d_batch_random_coeffs;
@@ -291,7 +292,8 @@ namespace quotient {
         QF *d_flattened_line_coeffs;
         CHK_IF_RETURN(cudaMallocAsync(&d_flattened_line_coeffs, sizeof(QF) * flattened_line_coeffs_size, stream));
 
-        int block_dim = sample_size < 512 ? sample_size : 512; 
+        int block_dim = sample_size < 512 ? sample_size : 512;
+        block_dim = block_dim == 0 ? 1 : block_dim; 
         int num_blocks = block_dim < 512 ? 1 : (sample_size + block_dim - 1) / block_dim;
         column_line_and_batch_random_coeffs<QP, QF, F><<<num_blocks, block_dim, 0, stream>>>(
             d_samples, 
