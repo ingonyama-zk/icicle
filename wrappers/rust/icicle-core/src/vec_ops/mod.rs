@@ -1,6 +1,6 @@
 use crate::traits::FieldImpl;
-use crate::program::{Program, ProgramTrait, ReturningValueProgramTrait, FieldHasProgram};
-use crate::symbol::FieldHasSymbol;
+use crate::program::ProgramBaseTrait;
+use crate::symbol::SymbolTrait;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -133,15 +133,17 @@ pub trait VecOps<F> {
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
-    fn execute_program<Data>(
+    fn execute_program<Program, Symbol, Data>(
         data: &mut Vec<&Data>,
-        program: &Program<F>,
+        program: &Program,
         cfg: &VecOpsConfig
     ) -> Result<(), eIcicleError>
     where
         F: FieldImpl,
-        <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
-        Data: HostOrDeviceSlice<F> + ?Sized;
+        <F as FieldImpl>::Config: VecOps<F>,
+        Data: HostOrDeviceSlice<F> + ?Sized,
+        Symbol: SymbolTrait<F>,
+        Program: ProgramBaseTrait<F, Symbol>;
 }
 
 #[doc(hidden)]
@@ -275,13 +277,12 @@ fn check_vec_ops_args_slice<F>(
 
 fn check_execute_program<F, Data>( // COMMENT do we need this check in Rust (or any of the other checks)? seems to bloat rust for stuff not even implemented in cpp.
     data: &Vec<&Data>,
-    _program: &Program<F>, // COMMENT should I add check for nof program parameters vs data size?
     cfg: &VecOpsConfig
 ) -> VecOpsConfig
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
-    Data: HostOrDeviceSlice<F> + ?Sized // TODO make sure that copying this type isn't intensive (pointer to slice copied instead of actual data)
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
 {
     // All parameters' config should match so each one is compared to the first one
     let nof_iterations = data[0].len();
@@ -534,17 +535,19 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
-pub fn execute_program<F, Data>(
+pub fn execute_program<F, Program, Symbol, Data>(
     data: &mut Vec<&Data>,
-    program: &Program<F>,
+    program: &Program,
     cfg: &VecOpsConfig
 ) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
-    Data: HostOrDeviceSlice<F> + ?Sized
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+    Symbol: SymbolTrait<F>,
+    Program: ProgramBaseTrait<F, Symbol>,
 {
-    let cfg = check_execute_program(&data, program, cfg);
+    let cfg = check_execute_program(&data, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::execute_program(data, program, &cfg)
 }
 
@@ -557,8 +560,10 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         use icicle_core::traits::FieldImpl;
-        use icicle_core::symbol::{FieldHasSymbol, Symbol, SymbolTrait};
-        use icicle_core::program::{FieldHasProgram, Program, ProgramTrait};
+        use icicle_core::symbol::SymbolTrait;
+        use crate::symbol::$field_prefix_ident::Symbol;
+        use icicle_core::program::ProgramBaseTrait;
+        use crate::program::$field_prefix_ident::Program;
 
         mod $field_prefix_ident {
             use crate::vec_ops::{$field, HostOrDeviceSlice};
@@ -942,14 +947,16 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn execute_program<Data>(
+            fn execute_program<Program, Symbol, Data>(
                 data: &mut Vec<&Data>,
-                program: &Program<$field>,
+                program: &Program,
                 cfg: &VecOpsConfig
             ) -> Result<(), eIcicleError>
             where
-                <$field as FieldImpl>::Config: VecOps<$field> + FieldHasSymbol<$field>,
-                Data: HostOrDeviceSlice<$field> + ?Sized
+                <$field as FieldImpl>::Config: VecOps<$field>,
+                Data: HostOrDeviceSlice<$field> + ?Sized,
+                Symbol: SymbolTrait<$field>,
+                Program: ProgramBaseTrait<$field, Symbol>,
             {
                 unsafe {
                     let data_ptr: *const *const $field = data.iter().map(|s| s.as_ptr()).collect::<Vec<_>>().as_ptr();
@@ -1019,6 +1026,7 @@ macro_rules! impl_vec_ops_mixed_field {
 #[macro_export]
 macro_rules! impl_vec_ops_tests {
     (
+      $field_prefix_ident: ident,
       $field:ident
     ) => {
         pub(crate) mod test_vecops {
@@ -1026,6 +1034,8 @@ macro_rules! impl_vec_ops_tests {
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
+            use crate::symbol::$field_prefix_ident::Symbol;
+            use crate::program::$field_prefix_ident::{Program, ReturningValueProgram};
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();
@@ -1060,6 +1070,24 @@ macro_rules! impl_vec_ops_tests {
             pub fn test_slice() {
                 initialize();
                 check_slice::<$field>()
+            }
+
+            #[test]
+            pub fn test_program() {
+                initialize();
+                check_program::<$field, Program, Symbol>()
+            }
+
+            #[test]
+            pub fn test_returning_value_program() {
+                initialize();
+                check_program_with_return_value::<$field, ReturningValueProgram, Symbol>()
+            }
+
+            #[test]
+            pub fn test_predefined_program() {
+                initialize();
+                check_predefined_program::<$field, Program, Symbol>()
             }
         }
     };

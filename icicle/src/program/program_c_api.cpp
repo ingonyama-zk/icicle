@@ -11,24 +11,13 @@ typedef Symbol<scalar_t>* SymbolHandle;
 typedef Program<scalar_t>* ProgramHandle;
 typedef ReturningValueProgram<scalar_t>* ReturningValueProgramHandle;
 
-// Friend function to access the protected default program constructors
-template <typename S> Program<S>* create_empty_program() {
-  return new Program<S>();
-}
-
-template <typename S> ReturningValueProgram<S>* create_empty_returning_value_program() {
-  return new ReturningValueProgram<S>();
-}
-
-// FIXME add to build it seems not to e compiled currently (Same for symbol)
-
 extern "C" {
   // Program functions
   // Constructor
   ProgramHandle CONCAT_EXPAND(FIELD, create_empty_program)() { return create_empty_program<scalar_t>(); }
 
   ProgramHandle CONCAT_EXPAND(FIELD, create_predefined_program)(PreDefinedPrograms pre_def) {
-    return new ProgramHandle(pre_def);
+    return new Program<scalar_t>(pre_def);
   }
 
   // Destructor
@@ -38,8 +27,6 @@ extern "C" {
     delete program;
     return eIcicleError::SUCCESS;
   }
-
-  // TODO set as input here in program and don't pass it to Rust
 
   void CONCAT_EXPAND(FIELD, generate_program)(
     ProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters
@@ -66,7 +53,7 @@ extern "C" {
   ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_value_program)(
     PreDefinedPrograms pre_def
   ) {
-    return new ReturningValueProgramHandle(pre_def);
+    return new ReturningValueProgram<scalar_t>(pre_def);
   }
 
   int CONCAT_EXPAND(FIELD, get_program_polynomial_degree)(ReturningValueProgramHandle program) {

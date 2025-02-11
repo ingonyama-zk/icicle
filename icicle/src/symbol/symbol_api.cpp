@@ -35,7 +35,7 @@ extern "C" { // TODO remove program from names
   }
 
   SymbolHandle CONCAT_EXPAND(FIELD, assign_symbol)(SymbolHandle this_symbol, const SymbolHandle other) {
-    this_symbol->assign(other);
+    this_symbol->assign(*other);
     return this_symbol;
   }
 
@@ -44,7 +44,7 @@ extern "C" { // TODO remove program from names
   }
 
   SymbolHandle CONCAT_EXPAND(FIELD, multiply_symbols)(const SymbolHandle op_a, const SymbolHandle op_b) {
-    return new SymbolHandle(op_a->multiply(*op_b));
+    return new Symbol<scalar_t>(op_a->multiply(*op_b));
   }
 
   SymbolHandle CONCAT_EXPAND(FIELD, sub_symbols)(const SymbolHandle op_a, const SymbolHandle op_b) {

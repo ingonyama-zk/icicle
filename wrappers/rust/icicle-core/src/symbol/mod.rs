@@ -1,10 +1,9 @@
 use icicle_runtime::errors::eIcicleError;
 use std::ffi::c_void;
-use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign, Deref};
+use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 use crate::traits::FieldImpl;
 
-pub type Handle = *const c_void;
-pub type Symbol<F> = <<F as FieldImpl>::Config as FieldHasSymbol<F>>::Symbol;
+pub type SymbolHandle = *const c_void;
 
 #[doc(hidden)]
 pub trait SymbolTrait<F: FieldImpl>:
@@ -26,28 +25,18 @@ pub trait SymbolTrait<F: FieldImpl>:
   fn inverse(&self) -> Self;
 
   // Functions necessary for the Symbol backend implementation (irrelevant to the user)
-  fn handle(&self) -> Handle;
-  fn delete_handle(handle: Handle);
+  fn handle(&self) -> SymbolHandle;
+  fn delete_handle(handle: SymbolHandle);
 
   fn set_as_input(&self, in_index: u32);
 
-  fn add_handles(op_a: Handle, op_b: Handle) -> Result<Handle, eIcicleError>;
-  fn sub_handles(op_a: Handle, op_b: Handle) -> Result<Handle, eIcicleError>;
-  fn mul_handles(op_a: Handle, op_b: Handle) -> Result<Handle, eIcicleError>;
+  fn add_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError>;
+  fn sub_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError>;
+  fn mul_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError>;
 
   fn add_field(self, other: F) -> Result<Self, eIcicleError>;
   fn sub_field(self, other: F) -> Result<Self, eIcicleError>;
   fn mul_field(self, other: F) -> Result<Self, eIcicleError>;
-}
-
-pub trait SymbolRefOps<F: FieldImpl, Symbol: SymbolTrait<F>>:
-  Deref<Target=Symbol> +
-  Add<Output=Symbol> + Sub<Output=Symbol> + Mul<Output=Symbol> +
-  Add<Symbol, Output=Symbol> + Sub<Symbol, Output=Symbol> + Mul<Symbol, Output=Symbol> +
-  Add<F, Output=Symbol> + Sub<F, Output=Symbol> + Mul<F, Output=Symbol> + Sized {}
-
-pub trait FieldHasSymbol<F: FieldImpl> {
-  type Symbol: SymbolTrait<F>;
 }
 
 #[macro_export]
@@ -61,56 +50,56 @@ macro_rules! impl_symbol_field {
     pub mod $field_prefix_ident {
       // use crate::field::{ScalarCfg, ScalarField};
       use crate::symbol::$field;
-      use icicle_core::symbol::{Symbol, SymbolTrait, SymbolRefOps, FieldHasSymbol, Handle};
+      use icicle_core::symbol::{SymbolTrait, SymbolHandle};
       use icicle_runtime::errors::eIcicleError;
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
       use std::ffi::c_void;
       use std::fmt;
 
       #[repr(C)]
-      pub struct FieldSymbol {
-        m_handle: Handle
+      pub struct Symbol {
+        m_handle: SymbolHandle
       }
 
       // Symbol Operations
       extern "C" {
         #[link_name = concat!($field_prefix, "_create_empty_symbol")]
-        pub(crate) fn ffi_create_empty_symbol() -> Handle;
+        pub(crate) fn ffi_create_empty_symbol() -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_create_scalar_symbol")]
-        pub(crate) fn ffi_create_symbol(constant: $field) -> Handle;
+        pub(crate) fn ffi_create_symbol(constant: $field) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_copy_symbol")]
-        pub(crate) fn ffi_copy_symbol(other: Handle) -> Handle;
+        pub(crate) fn ffi_copy_symbol(other: SymbolHandle) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_set_symbol_as_input")]
-        pub(crate) fn ffi_set_symbol_as_input(symbol: Handle, in_index: u32) -> eIcicleError;
+        pub(crate) fn ffi_set_symbol_as_input(symbol: SymbolHandle, in_index: u32) -> eIcicleError;
 
         #[link_name = concat!($field_prefix, "_add_symbols")]
-        pub(crate) fn ffi_add_symbols(op_a: Handle, op_b: Handle) -> Handle;
+        pub(crate) fn ffi_add_symbols(op_a: SymbolHandle, op_b: SymbolHandle) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_sub_symbols")]
-        pub(crate) fn ffi_sub_symbols(op_a: Handle, op_b: Handle) -> Handle;
+        pub(crate) fn ffi_sub_symbols(op_a: SymbolHandle, op_b: SymbolHandle) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_multiply_symbols")]
-        pub(crate) fn ffi_multiply_symbols(op_a: Handle, op_b: Handle) -> Handle;
+        pub(crate) fn ffi_multiply_symbols(op_a: SymbolHandle, op_b: SymbolHandle) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_inverse_symbol")]
-        pub(crate) fn ffi_inverse_symbol(op_a: Handle) -> Handle;
+        pub(crate) fn ffi_inverse_symbol(op_a: SymbolHandle) -> SymbolHandle;
 
         #[link_name = "delete_symbol"]
-        pub(crate) fn ffi_delete_symbol(symbol: Handle) -> eIcicleError;
+        pub(crate) fn ffi_delete_symbol(symbol: SymbolHandle) -> eIcicleError;
       }
 
       // Implement Symbol Operations
-      impl SymbolTrait<$field> for FieldSymbol {
+      impl SymbolTrait<$field> for Symbol {
         fn new_empty() -> Result<Self, eIcicleError> {
           unsafe {
             let handle = ffi_create_empty_symbol();
             if handle.is_null() {
               Err(eIcicleError::AllocationFailed)
             } else {
-              Ok(FieldSymbol { m_handle: handle })
+              Ok(Symbol { m_handle: handle })
             }
           }
         }
@@ -121,7 +110,7 @@ macro_rules! impl_symbol_field {
             if handle.is_null() {
               Err(eIcicleError::AllocationFailed)
             } else {
-              Ok(FieldSymbol { m_handle: handle })
+              Ok(Symbol { m_handle: handle })
             }
           }
         }
@@ -132,7 +121,7 @@ macro_rules! impl_symbol_field {
             if handle.is_null() {
               Err(eIcicleError::AllocationFailed)
             } else {
-              Ok(FieldSymbol { m_handle: handle })
+              Ok(Symbol { m_handle: handle })
             }
           }
         }
@@ -143,14 +132,14 @@ macro_rules! impl_symbol_field {
             if handle.is_null() {
               panic!("Inverse allocation failed!");
             } else {
-              FieldSymbol { m_handle: handle }
+              Symbol { m_handle: handle }
             }
           }
         }
 
-        fn handle(&self) -> Handle { self.m_handle }
+        fn handle(&self) -> SymbolHandle { self.m_handle }
 
-        fn delete_handle(handle: Handle) {
+        fn delete_handle(handle: SymbolHandle) {
           unsafe {
             if !handle.is_null()
             {
@@ -163,7 +152,7 @@ macro_rules! impl_symbol_field {
           unsafe { ffi_set_symbol_as_input(self.m_handle, in_index); }
         }
 
-        fn add_handles(op_a: Handle, op_b: Handle) -> Result<Handle, eIcicleError> {
+        fn add_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
           unsafe {
             let handle = ffi_add_symbols(op_a, op_b);
             if handle.is_null() {
@@ -174,7 +163,7 @@ macro_rules! impl_symbol_field {
           }
         }
 
-        fn sub_handles(op_a: Handle, op_b: Handle) -> Result<Handle, eIcicleError> {
+        fn sub_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
           unsafe {
             let handle = ffi_sub_symbols(op_a, op_b);
             if handle.is_null() {
@@ -185,7 +174,7 @@ macro_rules! impl_symbol_field {
           }
         }
 
-        fn mul_handles(op_a: Handle, op_b: Handle) -> Result<Handle, eIcicleError> {
+        fn mul_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
           unsafe {
             let handle = ffi_multiply_symbols(op_a, op_b);
             if handle.is_null() {
@@ -197,19 +186,19 @@ macro_rules! impl_symbol_field {
         }
 
         fn add_field(self, other: $field) -> Result<Self, eIcicleError> {
-          let other_symbol = FieldSymbol::new_constant(other)?;
+          let other_symbol = Symbol::new_constant(other)?;
           let res_handle = Self::add_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
 
         fn sub_field(self, other: $field) -> Result<Self, eIcicleError> {
-          let other_symbol = FieldSymbol::new_constant(other)?;
+          let other_symbol = Symbol::new_constant(other)?;
           let res_handle = Self::sub_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
 
         fn mul_field(self, other: $field) -> Result<Self, eIcicleError> {
-          let other_symbol = FieldSymbol::new_constant(other)?;
+          let other_symbol = Symbol::new_constant(other)?;
           let res_handle = Self::mul_handles(self.m_handle, other_symbol.m_handle)?;
           Ok(Self { m_handle: res_handle })
         }
@@ -218,83 +207,83 @@ macro_rules! impl_symbol_field {
       macro_rules! impl_op {
         ($op:ident, $assign_op:ident, $method:ident, $assign_method:ident, $handles_method:ident) => {
           // Owned op Owned
-          impl $op<FieldSymbol> for FieldSymbol
+          impl $op<Symbol> for Symbol
           {
-            type Output = FieldSymbol;
+            type Output = Symbol;
       
-            fn $method(self, other: FieldSymbol) -> FieldSymbol {
+            fn $method(self, other: Symbol) -> Symbol {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              Symbol { m_handle: res_handle }
             }
           }
       
           // Owned op &Reference
-          impl $op<&FieldSymbol> for FieldSymbol
+          impl $op<&Symbol> for Symbol
           {
-            type Output = FieldSymbol;
+            type Output = Symbol;
       
-            fn $method(self, other: &FieldSymbol) -> FieldSymbol {
+            fn $method(self, other: &Symbol) -> Symbol {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              Symbol { m_handle: res_handle }
             }
           }
       
           // &Reference op &Reference
-          impl $op<&FieldSymbol> for &FieldSymbol
+          impl $op<&Symbol> for &Symbol
           {
-            type Output = FieldSymbol;
+            type Output = Symbol;
       
-            fn $method(self, other: &FieldSymbol) -> FieldSymbol {
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other.m_handle)
+            fn $method(self, other: &Symbol) -> Symbol {
+              let res_handle = Symbol::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              Symbol { m_handle: res_handle }
             }
           }
 
           // &Reference op Owned
-          impl $op<FieldSymbol> for &FieldSymbol
+          impl $op<Symbol> for &Symbol
           {
-            type Output = FieldSymbol;
+            type Output = Symbol;
       
-            fn $method(self, other: FieldSymbol) -> FieldSymbol {
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other.m_handle)
+            fn $method(self, other: Symbol) -> Symbol {
+              let res_handle = Symbol::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              Symbol { m_handle: res_handle }
             }
           }
       
           // Owned op Field
-          impl $op<$field> for FieldSymbol {
-            type Output = FieldSymbol;
+          impl $op<$field> for Symbol {
+            type Output = Symbol;
       
             fn $method(self, other: $field) -> Self {
-              let other_symbol = FieldSymbol::new_constant(other)
+              let other_symbol = Symbol::new_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other_symbol.m_handle)
+              let res_handle = Symbol::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              Symbol { m_handle: res_handle }
             }
           }
       
           // &Reference op Field
-          impl $op<$field> for &FieldSymbol {
-            type Output = FieldSymbol;
+          impl $op<$field> for &Symbol {
+            type Output = Symbol;
       
-            fn $method(self, other: $field) -> FieldSymbol {
-              let other_symbol = FieldSymbol::new_constant(other)
+            fn $method(self, other: $field) -> Symbol {
+              let other_symbol = Symbol::new_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              let res_handle = FieldSymbol::$handles_method(self.m_handle, other_symbol.m_handle)
+              let res_handle = Symbol::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              FieldSymbol { m_handle: res_handle }
+              Symbol { m_handle: res_handle }
             }
           }
       
           // Owned opAssign Owned
-          impl $assign_op<FieldSymbol> for FieldSymbol
+          impl $assign_op<Symbol> for Symbol
           {
-            fn $assign_method(&mut self, other: FieldSymbol) {
+            fn $assign_method(&mut self, other: Symbol) {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               Self::delete_handle(self.m_handle);
@@ -303,9 +292,9 @@ macro_rules! impl_symbol_field {
           }
       
           // Owned opAssign &Reference
-          impl $assign_op<&FieldSymbol> for FieldSymbol
+          impl $assign_op<&Symbol> for Symbol
           {
-            fn $assign_method(&mut self, other: &FieldSymbol) {
+            fn $assign_method(&mut self, other: &Symbol) {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               Self::delete_handle(self.m_handle);
@@ -314,10 +303,10 @@ macro_rules! impl_symbol_field {
           }
       
           // Owned opAssign Field
-          impl $assign_op<$field> for FieldSymbol
+          impl $assign_op<$field> for Symbol
           {
             fn $assign_method(&mut self, other: $field) {
-              let other_symbol = FieldSymbol::new_constant(other)
+              let other_symbol = Symbol::new_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               let res_handle = Self::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
@@ -332,25 +321,17 @@ macro_rules! impl_symbol_field {
       impl_op!(Sub, SubAssign, sub, sub_assign, sub_handles);
       impl_op!(Mul, MulAssign, mul, mul_assign, mul_handles);
 
-      impl Drop for FieldSymbol where FieldSymbol: SymbolTrait<$field> { // TODO test without drop and with copy
+      impl Drop for Symbol where Symbol: SymbolTrait<$field> { // TODO test without drop and with copy
         fn drop(&mut self) {
-          FieldSymbol::delete_handle(self.m_handle);
+          Symbol::delete_handle(self.m_handle);
         }
       }
 
-      impl Clone for FieldSymbol where FieldSymbol: SymbolTrait<$field> {
+      impl Clone for Symbol where Symbol: SymbolTrait<$field> {
         fn clone(&self) -> Self {
           Self::copy_symbol(self).unwrap()
         }
       }
-
-      impl SymbolRefOps<$field, FieldSymbol> for &FieldSymbol {}
-    }
-
-    use icicle_core::symbol::FieldHasSymbol;
-
-    impl FieldHasSymbol<$field> for $field_config {
-      type Symbol = $field_prefix_ident::FieldSymbol;
     }
   };
 }
