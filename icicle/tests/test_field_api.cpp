@@ -1387,6 +1387,81 @@ TEST_F(FieldApiTestBase, SumcheckDataOnDevice)
   }
 }
 
+MlePoly complex_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& D = inputs[3];
+  return A * B - MlePoly(scalar_t::from(2)) * C + D;
+}
+
+TEST_F(FieldApiTestBase, SumcheckComplexCombine)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 4;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const scalar_t a = mle_polynomials[0][element_i];
+    const scalar_t b = mle_polynomials[1][element_i];
+    const scalar_t c = mle_polynomials[2][element_i];
+    const scalar_t d = mle_polynomials[3][element_i];
+    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c - d) ;
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(complex_combine, nof_mle_poly);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+
+  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
 MlePoly too_complex_combine(const std::vector<MlePoly>& inputs)
 {
   const MlePoly& A = inputs[0];
