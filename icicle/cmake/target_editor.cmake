@@ -17,6 +17,13 @@ function(handle_curve TARGET)
   )
 endfunction()
 
+function(handle_ring TARGET)
+  # TODO: add ring specific sources
+  # target_sources(${TARGET} PRIVATE
+  #     src/vec_ops.cpp  
+  # )
+endfunction()
+
 function(handle_ntt TARGET FEATURE_LIST)
   if(NTT AND "NTT" IN_LIST FEATURE_LIST)
     target_compile_definitions(${TARGET} PUBLIC NTT=${NTT})

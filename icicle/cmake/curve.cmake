@@ -1,4 +1,4 @@
-include(cmake/fields_and_curves.cmake)
+include(cmake/features.cmake)
 include(cmake/target_editor.cmake)
 
 function(extract_curve_names CURVE_NAMES_OUT)

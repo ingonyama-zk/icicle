@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
+include(cmake/ring.cmake)
 include(cmake/hash.cmake)
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
@@ -84,6 +85,12 @@ elseif(FIELD)
   set(FEATURES_STRING "")
   check_field(${FIELD} FIELD_INDEX FEATURES_STRING)
   setup_field_target(${FIELD} ${FIELD_INDEX} ${FEATURES_STRING})
+elseif(RING)
+  # TODO Yuval : try to support this in addition to the above to build Fq+Zq simultaneously ??
+  set(RING_INDEX -1)
+  set(FEATURES_STRING "")
+  check_ring(${RING} RING_INDEX FEATURES_STRING)
+  setup_ring_target(${RING} ${RING_INDEX} ${FEATURES_STRING})
 endif()
 
 if (HASH)
