@@ -1,7 +1,7 @@
 #pragma once
 
-#include "icicle/fields/storage.h"
-#include "icicle/fields/host_math.h"
+#include "icicle/math/storage.h"
+#include "icicle/math/host_math.h"
 
 namespace params_gen {
   template <unsigned NLIMBS, unsigned BIT_SHIFT>

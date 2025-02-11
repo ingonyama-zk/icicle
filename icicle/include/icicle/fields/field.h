@@ -23,12 +23,11 @@
   #include "gpu-utils/sharedmem.h"
   #include "device_math.h"
 #endif // __CUDACC__
-#include "host_math.h"
+#include "icicle/math/host_math.h"
 
 #include "icicle/errors.h"
 #include "icicle/utils/rand_gen.h"
-#include "host_math.h"
-#include "storage.h"
+#include "icicle/math/storage.h"
 
 #include <iomanip>
 #include <iostream>

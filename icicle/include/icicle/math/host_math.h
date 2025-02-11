@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include "icicle/utils/modifiers.h"
-#include "icicle/fields/storage.h"
+#include "icicle/math/storage.h"
 #include "icicle/errors.h"
 namespace host_math {
 
