@@ -1,5 +1,5 @@
 use crate::traits::FieldImpl;
-use crate::program::{Program, FieldHasProgram};
+use crate::program::{Program, ProgramTrait, ReturningValueProgramTrait, FieldHasProgram};
 use crate::symbol::FieldHasSymbol;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
@@ -275,7 +275,7 @@ fn check_vec_ops_args_slice<F>(
 
 fn check_execute_program<F, Data>( // COMMENT do we need this check in Rust (or any of the other checks)? seems to bloat rust for stuff not even implemented in cpp.
     data: &Vec<&Data>,
-    program: &Program<F>,
+    _program: &Program<F>, // COMMENT should I add check for nof program parameters vs data size?
     cfg: &VecOpsConfig
 ) -> VecOpsConfig
 where
@@ -557,8 +557,8 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         use icicle_core::traits::FieldImpl;
-        use icicle_core::program::{FieldHasSymbol, Symbol, SymbolTrait, Program, ProgramTrait};
-        use crate::program::$field_prefix_ident::{FieldSymbol, FieldProgram};
+        use icicle_core::symbol::{FieldHasSymbol, Symbol, SymbolTrait};
+        use icicle_core::program::{FieldHasProgram, Program, ProgramTrait};
 
         mod $field_prefix_ident {
             use crate::vec_ops::{$field, HostOrDeviceSlice};

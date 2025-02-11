@@ -9,22 +9,30 @@ using namespace icicle;
 
 typedef Symbol<scalar_t>* SymbolHandle;
 typedef Program<scalar_t>* ProgramHandle;
+typedef ReturningValueProgram<scalar_t>* ReturningValueProgramHandle;
 
-// Friend function to access the protected default program constructor
+// Friend function to access the protected default program constructors
 template <typename S> Program<S>* create_empty_program() {
   return new Program<S>();
 }
 
+template <typename S> ReturningValueProgram<S>* create_empty_returning_value_program() {
+  return new ReturningValueProgram<S>();
+}
+
+// FIXME add to build it seems not to e compiled currently (Same for symbol)
+
 extern "C" {
   // Program functions
   // Constructor
-  ProgramHandle CONCAT_EXPAND(FIELD, program_create_empty_program)() { return create_empty_program<scalar_t>(); }
-  ProgramHandle CONCAT_EXPAND(FIELD, program_create_predefined_program)(PreDefinedPrograms pre_def) {
+  ProgramHandle CONCAT_EXPAND(FIELD, create_empty_program)() { return create_empty_program<scalar_t>(); }
+
+  ProgramHandle CONCAT_EXPAND(FIELD, create_predefined_program)(PreDefinedPrograms pre_def) {
     return new ProgramHandle(pre_def);
   }
 
   // Destructor
-  eIcicleError program_delete_program(ProgramHandle program)
+  eIcicleError delete_program(ProgramHandle program)
   {
     if (!program) { return eIcicleError::INVALID_POINTER; }
     delete program;
@@ -33,8 +41,9 @@ extern "C" {
 
   // TODO set as input here in program and don't pass it to Rust
 
-  void CONCAT_EXPAND(FIELD, program_generate_program)(
-    ProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters) {
+  void CONCAT_EXPAND(FIELD, generate_program)(
+    ProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters
+  ) {
     std::vector<Symbol<scalar_t>> parameters_vec;
     parameters_vec.reserve(nof_parameters);
 
@@ -46,6 +55,27 @@ extern "C" {
       }
       parameters_vec.push_back(*parameters_ptr[i]); // TODO replace with span toi avoid copying
     }
+    program->m_nof_parameters = nof_parameters;
     program->generate_program(parameters_vec);
+  }
+
+  ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_empty_returning_value_program)() {
+    return create_empty_returning_value_program<scalar_t>();
+  }
+
+  ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_value_program)(
+    PreDefinedPrograms pre_def
+  ) {
+    return new ReturningValueProgramHandle(pre_def);
+  }
+
+  int CONCAT_EXPAND(FIELD, get_program_polynomial_degree)(ReturningValueProgramHandle program) {
+    return program->get_polynomial_degee();
+  }
+
+  void CONCAT_EXPAND(FIELD, generate_returning_value_program)(
+    ReturningValueProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters
+  ) {
+    CONCAT_EXPAND(FIELD, generate_program)(program, parameters_ptr, nof_parameters);
   }
 }

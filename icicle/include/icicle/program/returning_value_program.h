@@ -44,6 +44,12 @@ namespace icicle {
 
     int get_polynomial_degee() const { return m_poly_degree; }
 
+  protected:
+    ReturningValueProgram() {}
+
+    // Friend function for C-api to have access to the default constructor
+    friend ReturningValueProgram<S>* create_empty_returning_value_program();
+
   private:
     int m_poly_degree = 0;
   };

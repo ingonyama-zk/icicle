@@ -7,7 +7,7 @@ use crate::vec_ops::{
     FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
 };
 use crate::program::{Handle, Instruction, FieldHasProgram, Program, ProgramTrait};
-use crate::symbol::{Symbol, SymbolTrait, FieldHasSymbol};
+use crate::symbol::{Symbol, SymbolTrait, SymbolRefOps, FieldHasSymbol};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
@@ -464,24 +464,22 @@ where
 pub fn check_program<F, Data>()
 where
     F: FieldImpl,
-    // F::Config::Symbol exists? <---
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldHasSymbol<F> + FieldHasProgram<F>,
     Data: HostOrDeviceSlice<F> + ?Sized,
+    for <'a> &'a Symbol<F>: SymbolRefOps<F, Symbol<F>>,
 {
     let lambda_eq_x_ab_minus_c = |vars: &mut Vec<Symbol<F>>| {
-        let A = vars[0].clone();
-        let B = vars[1].clone();
-        let C = vars[2].clone();
-        let EQ = vars[3].clone();
-
         let a = &vars[0];
-        let b = &vars[0];
-        let c = a * b;
+        let b = &vars[1];
+        let c = &vars[2];
+        let eq = &vars[3];
 
-        vars[4] = EQ * &(&A * &B - &C);
-        // TODO readd the ops below
-        vars[5] = A * &B - &C.inverse();
-        // vars[6] = vars[5];
+        let var4_res = eq * (a * b - c);
+        let var5_res = a * b - c.inverse();
+        
+        vars[4] = var4_res;
+        vars[6] += &var5_res;
+        vars[5] = var5_res;
     };
 
     let size = 3;
@@ -496,15 +494,15 @@ where
     let b_slice = HostSlice::from_slice(&b);
     let c_slice = HostSlice::from_slice(&c);
     let eq_slice = HostSlice::from_slice(&eq);
-    let mut var4_slice = HostSlice::from_slice(&var4);
-    let mut var5_slice = HostSlice::from_slice(&var5);
-    let mut var6_slice = HostSlice::from_slice(&var6);
+    let var4_slice = HostSlice::from_slice(&var4);
+    let var5_slice = HostSlice::from_slice(&var5);
+    let var6_slice = HostSlice::from_slice(&var6);
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
 
     let program = Program::<F>::new(lambda_eq_x_ab_minus_c, 7).unwrap();
     
     let cfg = VecOpsConfig::default();
-    execute_program(&mut parameters, &program, &cfg);
+    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
 }
 
 pub fn check_program_with_return_value<F, Data>()
@@ -513,12 +511,12 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldHasSymbol<F>,
     Data: HostOrDeviceSlice<F> + ?Sized,
 {
-    let lambda_eq_x_ab_minus_c = |inputs: &mut Vec<Symbol<F>>| {
-        let A = inputs[0].clone();
-        let B = inputs[1].clone();
-        let C = inputs[2].clone();
-        let EQ = inputs[3].clone();
-        return EQ * (A * B - C);
+    let lambda_eq_x_ab_minus_c = |inputs: &mut Vec<Symbol<F>>| -> Symbol<F> {
+        let a = inputs[0].clone();
+        let b = inputs[1].clone();
+        let c = inputs[2].clone();
+        let eq = inputs[3].clone();
+        eq * (a * b - c)
     };
 }
 
