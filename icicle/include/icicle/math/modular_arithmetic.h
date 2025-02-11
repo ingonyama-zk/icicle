@@ -5,7 +5,7 @@
 // CUDA compiles both host and device math. CPU needs only host math.
 #ifdef __CUDACC__
   #include "gpu-utils/sharedmem.h"
-  #include "device_math.h"
+  #include "cuda_math.h"
 #endif // __CUDACC__
 #include "icicle/math/host_math.h"
 
@@ -21,9 +21,9 @@
 #include <cassert>
 
 #ifdef __CUDA_ARCH__
-namespace base_math = device_math;
+namespace icicle_math = cuda_math;
 #else
-namespace base_math = host_math;
+namespace icicle_math = host_math;
 #endif
 
 // NOTE: This class implements modular-arithmetics (via operator overloading) for the derived class type!
@@ -101,7 +101,7 @@ public:
   static HOST_DEVICE_INLINE Derived inv_log_size(uint32_t logn)
   {
     if (logn == 0) { return Derived{CONFIG::one}; }
-    base_math::index_err(logn, CONFIG::omegas_count); // check if the requested size is within the valid range
+    icicle_math::index_err(logn, CONFIG::omegas_count); // check if the requested size is within the valid range
     storage_array<CONFIG::omegas_count, TLC> const inv = CONFIG::inv;
     return Derived{inv.storages[logn - 1]};
   }
@@ -242,19 +242,19 @@ public:
   static constexpr HOST_DEVICE_INLINE uint32_t
   add_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-    return base_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
+    return icicle_math::template add_sub_limbs<NLIMBS, false, CARRY_OUT>(xs, ys, rs);
   }
 
   template <unsigned NLIMBS, bool CARRY_OUT>
   static constexpr HOST_DEVICE_INLINE uint32_t
   sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-    return base_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
+    return icicle_math::template add_sub_limbs<NLIMBS, true, CARRY_OUT>(xs, ys, rs);
   }
 
   static HOST_DEVICE_INLINE void multiply_raw(const ff_storage& as, const ff_storage& bs, ff_wide_storage& rs)
   {
-    return base_math::template multiply_raw<TLC>(as, bs, rs);
+    return icicle_math::template multiply_raw<TLC>(as, bs, rs);
   }
 
 public:
@@ -374,7 +374,7 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Derived reduce(const Wide& xs)
   {
-    return Derived{base_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
+    return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
       xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
   }
 
@@ -402,8 +402,8 @@ public:
       Derived pi = get_reduced_digit_for_storage_reduction(i); // use precomputed values - pi = 2^(TLC*32*i) % p
       storage<2 * TLC + 2> temp = {};
       storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
-      base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
-      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);              // accumulation
+      icicle_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
+      icicle_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);              // accumulation
     }
     int constexpr extra_limbs = NLIMBS - TLC * size;
     if constexpr (extra_limbs > 0) { // handle the extra limbs (when TLC does not divide NLIMBS)
@@ -411,14 +411,14 @@ public:
       Derived pi = get_reduced_digit_for_storage_reduction(size);
       storage<2 * TLC + 2> temp = {};
       storage<extra_limbs + TLC>& temp_storage = *reinterpret_cast<storage<extra_limbs + TLC>*>(temp.limbs);
-      base_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage); // multiplication
-      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);             // accumulation
+      icicle_math::template multiply_raw<extra_limbs, TLC>(xi, pi.limbs_storage, temp_storage); // multiplication
+      icicle_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);             // accumulation
     }
     // second reduction step: - an alternative for this step would be to use the barret reduction straight away but with
     // a larger value of m.
     unsigned constexpr msbits_count = 2 * TLC * 32 - (2 * NBITS - 1);
     unsigned top_bits = (rs.limbs[2 * TLC] << msbits_count) + (rs.limbs[2 * TLC - 1] >> (32 - msbits_count));
-    base_math::template add_sub_limbs<2 * TLC + 2, true, false>(
+    icicle_math::template add_sub_limbs<2 * TLC + 2, true, false>(
       rs, get_mod_sub_for_storage_reduction(top_bits),
       rs); // subtracting the precomputed multiple of p from the look-up table
     // third and final step:
@@ -440,8 +440,8 @@ public:
       Derived pi = get_reduced_digit_for_storage_reduction(i); // use precomputed values - pi = 2^(TLC*32*i) % p
       storage<2 * TLC + 2> temp = {};
       storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
-      base_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
-      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);              // accumulation
+      icicle_math::template multiply_raw<TLC>(xi.limbs_storage, pi.limbs_storage, temp_storage); // multiplication
+      icicle_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs);              // accumulation
     }
     int extra_bytes = nof_bytes - bytes_per_field * size;
     if (extra_bytes > 0) { // handle the extra limbs (when TLC does not divide NLIMBS)
@@ -454,14 +454,14 @@ public:
       Derived pi = get_reduced_digit_for_storage_reduction(size);
       storage<2 * TLC + 2> temp = {};
       storage<2 * TLC>& temp_storage = *reinterpret_cast<storage<2 * TLC>*>(temp.limbs);
-      base_math::template multiply_raw<TLC>(xi, pi.limbs_storage, temp_storage);  // multiplication
-      base_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs); // accumulation
+      icicle_math::template multiply_raw<TLC>(xi, pi.limbs_storage, temp_storage);  // multiplication
+      icicle_math::template add_sub_limbs<2 * TLC + 2, false, false>(rs, temp, rs); // accumulation
     }
     // second reduction step: - an alternative for this step would be to use the barret reduction straight away but with
     // a larger value of m.
     unsigned constexpr msbits_count = 2 * TLC * 32 - (2 * NBITS - 1);
     unsigned top_bits = (rs.limbs[2 * TLC] << msbits_count) + (rs.limbs[2 * TLC - 1] >> (32 - msbits_count));
-    base_math::template add_sub_limbs<2 * TLC + 2, true, false>(
+    icicle_math::template add_sub_limbs<2 * TLC + 2, true, false>(
       rs, get_mod_sub_for_storage_reduction(top_bits),
       rs); // subtracting the precomputed multiple of p from the look-up table
     // third and final step:
@@ -486,7 +486,7 @@ public:
 
   friend HOST_DEVICE bool operator==(const Derived& xs, const Derived& ys)
   {
-    return base_math::template is_equal<TLC>(xs.limbs_storage, ys.limbs_storage);
+    return icicle_math::template is_equal<TLC>(xs.limbs_storage, ys.limbs_storage);
   }
 
   friend HOST_DEVICE bool operator!=(const Derived& xs, const Derived& ys) { return !(xs == ys); }
@@ -604,7 +604,7 @@ public:
   static constexpr HOST_DEVICE_INLINE Derived div2(const Derived& xs)
   {
     Derived rs = {};
-    base_math::template div2<TLC>(xs.limbs_storage, rs.limbs_storage);
+    icicle_math::template div2<TLC>(xs.limbs_storage, rs.limbs_storage);
     return sub_modulus<MODULUS_MULTIPLE>(rs);
   }
 
