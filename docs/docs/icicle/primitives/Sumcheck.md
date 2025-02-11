@@ -1,7 +1,7 @@
 # Sumcheck API Documentation
 
 ## Overview
-Sumchek protocol is a protocol where a Prover prove to a Verifier that the sum of a multilinear polynomial, over the boolean hypercube, is a specific sum.
+Sumchek protocol is a protocol where a Prover proves to a Verifier that the sum of a multilinear polynomial, over the boolean hypercube, is a specific sum.
 
 For a polynomial $P$, with $n$ dimention $n$ the Prover is trying to prove that:
 $$
@@ -19,7 +19,7 @@ $$
 for some scalar $C$.
 
 ## ICICLE's Sumecheck
-ICICLE is implementing a non-onteractive Sumcheck protocol with support of a combine function. Sumcheck is supported by both CPU and CUDA backends of ICICLE. The polynomials are passed to the protocol as MLEs (evaluation representation).
+ICICLE implements a non-interactive Sumcheck protocol that supports a combine function. Sumcheck is supported by both CPU and CUDA backends of ICICLE. The polynomials are passed to the protocol as MLEs (evaluation representation).
 
 ### Implementation Limitations
 
@@ -28,14 +28,6 @@ There are some limitations / assumptions to the Sumcheck implementation.
 - The maximum size of the polynomials (number of evaluations = $2^n$) depends on the number of polynomials and memory size of the device (e.g. CPU/GPU) used. For 4 polynomials one should expects that a GPU equiped with 24GB of memory can run Sumcheck with polynomials of size up to $2^{29}$.
 - The polynomial size must be of size which is a power of 2.
 
-
-#### CUDA Specific Limitations
-
-There are some limitations spesific to the CUDA implementation of the Sumcheck protocol. Here is a list of them:
-
-- The maximum number of polynomials is 4.
-- The highest valid degree of the combined polynomial should be 4.
-- The combine function can't be too complex. As a rule of thumb - the number of input polynomials + the number of constants used + the number of operations (e.g. addition, substruction and multlipication) should be less then 20.
 
 ## C++ API
 A sumcheck is created by the following function:
@@ -131,7 +123,7 @@ eIcicleError get_proof(
 
 The arguments for this method are:
 - **`mle_polynomials: std::vector<F*>&`**: A vector of pointer. Each pointer points to the evaluations of one of the input polynomials.
-- **`mle_polynomial_size: uint64_t`**: The length of the polynomials (number of evaluations).
+- **`mle_polynomial_size: uint64_t`**: The length of the polynomials (number of evaluations). Should be a power of 2
 - **`claimed_sum: F&`**: The sum the claimed by the Prover to be the sum of the combine function over the evaluations of the polynomials.
 - **`combine_function: ReturningValueProgram<F>&`**: The combine function. Uses ICICLE's [program](program.md) API.
 - **`transcript_config: SumcheckTranscriptConfig<F>&&`**: The `SumcheckTranscriptConfig` object for the Fiat-Shamir scheme.
