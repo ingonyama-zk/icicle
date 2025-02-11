@@ -18,23 +18,6 @@ namespace icicle {
   {
   public:
     /**
-     * @brief Constructor for the case where you only have a Merkle hash function & store layer data in a fixed tree.
-     *
-     * @param input_size          The size of the input polynomial - number of evaluations.
-     * @param folding_factor      The factor by which the codeword is folded each round.
-     * @param stopping_degree     Stopping degree threshold for the final polynomial.
-     * @param hash_for_merkle_tree The hash function used for Merkle tree commitments.
-     * @param output_store_min_layer Optional parameter (default=0). Controls partial storage of layers.
-     */
-    CpuFriBackend(const size_t input_size, const size_t folding_factor, const size_t stopping_degree, const Hash& hash_for_merkle_tree, const uint64_t output_store_min_layer = 0)
-        : FriBackend<F>(folding_factor, stopping_degree),
-          m_log_input_size(static_cast<size_t>(std::log2(static_cast<double>(input_size)))),
-          m_input_size(input_size),
-          m_fri_rounds(m_log_input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer)
-    {
-    }
-
-    /**
      * @brief Constructor that accepts an existing array of Merkle trees.
      *
      * @param folding_factor   The factor by which the codeword is folded each round.
@@ -67,6 +50,9 @@ namespace icicle {
       size_t df = this->m_stopping_degree;
       size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
       size_t nof_fri_rounds = (m_log_input_size > log_df_plus_1) ? (m_log_input_size - log_df_plus_1) : 0;
+
+      // Initialize the proof
+      fri_proof.init(fri_config.nof_queries, nof_fri_rounds);
 
       //commit fold phase
       ICICLE_CHECK(commit_fold_phase(input_data, transcript, fri_config, nof_fri_rounds, fri_proof));
@@ -103,10 +89,7 @@ namespace icicle {
 
       // Get persistent storage for round from FriRounds. m_fri_rounds already allocated a vector for each round with capacity 2^(m_log_input_size - round_idx).
       F* round_evals = m_fri_rounds.get_round_evals(0);
-      // Resize the persistent vector so it holds m_input_size elements.
-      round_evals->resize(m_input_size);
-      // Copy input_data into the persistent storage.
-      std::copy(input_data, input_data + m_input_size, round_evals->begin());
+      std::copy(input_data, input_data + m_input_size, round_evals);
 
       size_t current_size = m_input_size;
       size_t current_log_size = m_log_input_size;
@@ -119,14 +102,17 @@ namespace icicle {
 
         // Merkle tree for the current round_idx
         MerkleTree* current_round_tree = m_fri_rounds.get_merkle_tree(round_idx);
-        current_round_tree->build(reinterpret_cast<const std::byte*>(round_evals->data()), sizeof(F), MerkleTreeConfig());
+        current_round_tree->build(reinterpret_cast<const std::byte*>(round_evals), sizeof(F), MerkleTreeConfig());
         auto [root_ptr, root_size] = current_round_tree->get_merkle_root();
         ICICLE_ASSERT(root_ptr != nullptr && root_size > 0) << "Failed to retrieve Merkle root for round " << round_idx;
 
         // FIXME SHANIE - do I need to add the root to the proof here?
 
         // Add root to transcript and get alpha
-        std::vector<std::byte> merkle_commit(root_ptr, root_ptr + root_size); //FIXME SHANIE - is this the right way to convert?
+        // std::vector<std::byte> merkle_commit(root_ptr, root_ptr + root_size); //FIXME SHANIE - what is the right way to convert?
+        std::vector<std::byte> merkle_commit(root_size);
+        std::memcpy(merkle_commit.data(), root_ptr, root_size);
+
         F alpha = transcript.get_alpha(merkle_commit);
 
         // Fold the evaluations
@@ -147,7 +133,7 @@ namespace icicle {
         }
 
         for (size_t i = 0; i < half; ++i){
-          (*round_evals)[i] = peven[i] + (alpha * podd[i]);
+          round_evals[i] = peven[i] + (alpha * podd[i]);
         }
         
         current_size>>=1;
@@ -160,7 +146,7 @@ namespace icicle {
     eIcicleError proof_of_work(CpuFriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof){
       for (uint64_t nonce = 0; nonce < UINT64_MAX; nonce++)
       {
-        if(transcript.hash_and_get_nof_leading_zero_bits(nonce, pow_bits) == pow_bits){
+        if(transcript.hash_and_get_nof_leading_zero_bits(nonce) == pow_bits){
           transcript.set_pow_nonce(nonce);
           fri_proof.set_pow_nonce(nonce);
           return eIcicleError::SUCCESS;
@@ -184,7 +170,7 @@ namespace icicle {
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
       size_t seed = transcript.get_seed_for_query_phase();
       seed_rand_generator(seed);
-      std::vector<size_t> query_indices = rand_size_t_vector(fri_config.nof_queries, fri_proof.get_final_poly()->size(), m_input_size);
+      std::vector<size_t> query_indices = rand_size_t_vector(fri_config.nof_queries, (this->m_stopping_degree + 1), m_input_size);
 
       for (size_t q = 0; q < query_indices.size(); q++){
         size_t query = query_indices[q];
@@ -192,8 +178,8 @@ namespace icicle {
           size_t round_size = (1ULL << (m_log_input_size - round_idx));
           size_t query_idx = query % round_size;
           size_t query_idx_sym = (query + (round_size >> 1)) % round_size;
-          std::vector<F>* round_evals = m_fri_rounds.get_round_evals(round_idx);
-          const std::byte* leaves = reinterpret_cast<const std::byte*>(round_evals->data());
+          F* round_evals = m_fri_rounds.get_round_evals(round_idx);
+          const std::byte* leaves = reinterpret_cast<const std::byte*>(round_evals);
           uint64_t leaves_size = sizeof(F);
 
           MerkleProof& proof_ref = fri_proof.get_query_proof(query_idx, round_idx);              

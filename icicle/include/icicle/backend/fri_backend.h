@@ -25,33 +25,13 @@ class FriBackend
 {
 public:
     /**
-     * @brief Constructor for the case where you only have a Merkle hash function & store layer data in a fixed tree.
-     *
-     * @param input_size          The size of the input polynomial - number of evaluations.
-     * @param folding_factor      The factor by which the codeword is folded each round.
-     * @param stopping_degree     Stopping degree threshold for the final polynomial.
-     * @param hash_for_merkle_tree The hash function used for Merkle tree commitments.
-     * @param output_store_min_layer Optional parameter (default=0). Controls partial storage of layers.
-     */
-    FriBackend(const size_t input_size,
-               const size_t folding_factor,
-               const size_t stopping_degree,
-               const Hash& hash_for_merkle_tree,
-               uint64_t output_store_min_layer = 0)
-      : m_folding_factor(folding_factor)
-      , m_stopping_degree(stopping_degree)
-    {}
-
-    /**
      * @brief Constructor that accepts an existing array of Merkle trees.
      *
      * @param folding_factor   The factor by which the codeword is folded each round.
      * @param stopping_degree  Stopping degree threshold for the final polynomial.
-     * @param merkle_trees     A moved vector of MerkleTree pointers.
      */
     FriBackend(const size_t folding_factor,
-               const size_t stopping_degree,
-               std::vector<MerkleTree>&& merkle_trees)
+               const size_t stopping_degree)
       : m_folding_factor(folding_factor)
       , m_stopping_degree(stopping_degree)
     {}
@@ -81,14 +61,12 @@ protected:
 
 /*************************** Backend Factory Registration ***************************/
 
-//FIXME SHANIE - need two FriFactoryImpl
-
 /**
  * @brief A function signature for creating a FriBackend instance for a specific device.
  */
 template <typename F>
 using FriFactoryImpl =
-    std::function<eIcicleError(const Device& device, std::shared_ptr<FriBackend<F>>& backend /*OUT*/)>;
+    std::function<eIcicleError(const Device& device,const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree>&& merkle_trees, std::shared_ptr<FriBackend<F>>& backend /*OUT*/)>;
 
 /**
  * @brief Register a FRI backend factory for a specific device type.

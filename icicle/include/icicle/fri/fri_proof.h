@@ -26,19 +26,15 @@ namespace icicle {
      * @brief Initialize the Merkle proofs and final polynomial storage.
      *
      * @param nof_queries Number of queries in the proof.
-     * @param final_poly_degree Degree of the final polynomial.
      * @param nof_fri_rounds Number of FRI rounds (rounds).
      */
-    void init(int nof_queries, int final_poly_degree, int nof_fri_rounds)
+    void init(int nof_queries, int nof_fri_rounds)
     {
       ICICLE_ASSERT(nof_queries > 0 && nof_fri_rounds > 0)
           << "Number of queries and FRI rounds must be > 0";
       
       // Resize the matrix to hold nof_queries rows and nof_fri_rounds columns
       m_query_proofs.resize(nof_queries, std::vector<MerkleProof>(nof_fri_rounds));
-
-      // Initialize the final polynomial
-      m_final_poly.resize(final_poly_degree + 1, F::zero());
     }
 
     /**
@@ -70,14 +66,14 @@ namespace icicle {
     }
 
     //get pointer to the final polynomial
-    std::vector<F>* get_final_poly() const
+    F* get_final_poly() const
     {
       return m_final_poly.get();
     }
 
   private:
     std::vector<std::vector<MerkleProof>> m_query_proofs; // Matrix of Merkle proofs [query][round] - contains path, root, leaf
-    std::unique_ptr<std::vector<F>> m_final_poly;         // Final polynomial (constant in canonical FRI)
+    std::unique_ptr<F[]> m_final_poly;                    // Final polynomial (constant in canonical FRI)
     uint64_t m_pow_nonce;                                 // Proof-of-work nonce
 
   public:

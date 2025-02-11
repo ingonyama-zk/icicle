@@ -58,14 +58,14 @@ public:
     return m_prev_alpha;
   }
 
-  size_t hash_and_get_nof_leading_zero_bits(uint64_t nonce, const size_t pow_bits)
+  size_t hash_and_get_nof_leading_zero_bits(uint64_t nonce)
   {
     // Prepare a buffer for hashing
     std::vector<std::byte> hash_input;
     hash_input.reserve(1024); // pre-allocate some space
 
     // Build the hash input
-    build_hash_input_pow(hash_input);
+    build_hash_input_pow(hash_input, nonce);
 
     const Hash& hasher = m_transcript_config.get_hasher();
     std::vector<std::byte> hash_result(hasher.output_size());
@@ -129,6 +129,12 @@ private:
     dest.insert(dest.end(), data_bytes, data_bytes + sizeof(uint32_t));
   }
 
+  void append_u64(std::vector<std::byte>& dest, uint64_t value)
+  {
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&value);
+    dest.insert(dest.end(), data_bytes, data_bytes + sizeof(uint64_t));
+  }
+
   /**
     * @brief Append a field element to the byte vector.
     * @param dest (OUT) Destination byte vector.
@@ -168,7 +174,6 @@ private:
     append_data(m_entry_0, m_transcript_config.get_public_state());
   }
 
-
   /**
     * @brief Build the hash input for round 0 (commit phase 0).
     *
@@ -207,12 +212,12 @@ private:
     *
     * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
     */
-    void build_hash_input_pow(std::vector<std::byte>& hash_input, uint32_t temp_pow_nonce)
+    void build_hash_input_pow(std::vector<std::byte>& hash_input, uint64_t temp_pow_nonce)
   {
     append_data(hash_input, m_entry_0);
     append_field(hash_input, m_prev_alpha);
     append_data(hash_input, m_transcript_config.get_nonce_label());
-    append_u32(hash_input, temp_pow_nonce);
+    append_u64(hash_input, temp_pow_nonce);
   }
 
   /**

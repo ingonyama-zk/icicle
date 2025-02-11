@@ -110,6 +110,7 @@ CONCAT_EXPAND(FIELD, fri_create)(
 
   // Create and return the Fri instance
   return new icicle::Fri<scalar_t>(icicle::create_fri<scalar_t>(
+    create_config->input_size,
     create_config->folding_factor,
     create_config->stopping_degree,
     *(create_config->hash_for_merkle_tree),
