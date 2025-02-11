@@ -86,7 +86,8 @@ namespace icicle {
 
     // setup input
     uint8_t* inputs = new uint8_t[full_size * grid_size];
-    build_chunks(reinterpret_cast<uint8_t*>(challenge), inputs, grid_size, challenge_size, config.padding_size, full_size);
+    build_chunks(
+      reinterpret_cast<uint8_t*>(challenge), inputs, grid_size, challenge_size, config.padding_size, full_size);
 
     uint64_t i = 0;
     uint64_t offset = 0;
@@ -159,7 +160,7 @@ namespace icicle {
     delete[] input;
     delete[] output;
 
-    return eIcicleError::SUCCESS; 
+    return eIcicleError::SUCCESS;
   }
 
   eIcicleError pow_solver_cpu_backend(
@@ -173,8 +174,8 @@ namespace icicle {
     uint64_t& nonce,
     uint64_t& mined_hash)
   {
-    auto err = cpu_pow(
-      hasher, challenge, challenge_size, hasher.output_size(), solution_bits, config, found, nonce, mined_hash);
+    auto err =
+      cpu_pow(hasher, challenge, challenge_size, hasher.output_size(), solution_bits, config, found, nonce, mined_hash);
     return err;
   }
 

@@ -295,7 +295,15 @@ mod tests {
 
         let hasher = Blake3::new(0).unwrap();
 
-        let err = pow_solver(&hasher, input_host, BITS, &cfg, &mut gpu_found, &mut gpu_nonce, &mut gpu_mined_hash);
+        let err = pow_solver(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            &mut gpu_found,
+            &mut gpu_nonce,
+            &mut gpu_mined_hash,
+        );
         assert_eq!(err, eIcicleError::Success);
         assert!(gpu_found);
         assert_eq!(gpu_nonce, golden_nonce);
@@ -304,7 +312,15 @@ mod tests {
         let mut gpu_is_correct = false;
         let mut gpu_mined_hash_check = 0;
 
-        let err = pow_check(&hasher, input_host, BITS, &cfg, gpu_nonce, &mut gpu_is_correct, &mut gpu_mined_hash_check);
+        let err = pow_check(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            gpu_nonce,
+            &mut gpu_is_correct,
+            &mut gpu_mined_hash_check,
+        );
         assert_eq!(err, eIcicleError::Success);
         assert_eq!(gpu_mined_hash_check, golden_hash);
         assert!(gpu_is_correct);
@@ -314,7 +330,15 @@ mod tests {
         let mut cpu_nonce = 0;
         let mut cpu_mined_hash = 0;
         let hasher = Blake3::new(0).unwrap();
-        let err = pow_solver(&hasher, input_host, BITS, &cfg, &mut cpu_found, &mut cpu_nonce, &mut cpu_mined_hash);
+        let err = pow_solver(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            &mut cpu_found,
+            &mut cpu_nonce,
+            &mut cpu_mined_hash,
+        );
         assert_eq!(err, eIcicleError::Success);
         assert!(cpu_found);
         assert_eq!(cpu_nonce, golden_nonce);
@@ -323,7 +347,15 @@ mod tests {
         let mut cpu_is_correct = false;
         let mut cpu_mined_hash_check = 0;
 
-        let err = pow_check(&hasher, input_host, BITS, &cfg, cpu_nonce, &mut cpu_is_correct, &mut cpu_mined_hash_check);
+        let err = pow_check(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            cpu_nonce,
+            &mut cpu_is_correct,
+            &mut cpu_mined_hash_check,
+        );
         assert_eq!(err, eIcicleError::Success);
         assert_eq!(cpu_mined_hash, golden_hash);
         assert!(cpu_is_correct);

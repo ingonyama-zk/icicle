@@ -59,7 +59,6 @@ pub fn pow_solver(
     nonce: &mut u64,
     mined_hash: &mut u64,
 ) -> eIcicleError {
-
     if solution_bits < 1 || solution_bits > 60 {
         panic!("invalid solution_bits value");
     }
