@@ -20,8 +20,6 @@
 #include <string>
 #include <cassert>
 
-// using namespace icicle;
-
 #ifdef __CUDA_ARCH__
 namespace base_math = device_math;
 #else

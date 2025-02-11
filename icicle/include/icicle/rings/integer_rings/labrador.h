@@ -1,9 +1,8 @@
 #pragma once
 
 #include "icicle/math/storage.h"
+#include "icicle/rings/integer_ring.h"
 #include "icicle/fields/params_gen.h"
-#include "icicle/fields/field.h"
-// #include "icicle/rings/integer_ring.h"
 
 namespace labrador {
   // Zq such that q = Pbb*Pkb for Pbb,Pkb the primes of baby-bear and koala-bear fields
@@ -22,7 +21,7 @@ namespace labrador {
   /**
    *  Define the integer ring Zq
    */
-  using Zq = Field<zq_config>; // TODO replace Field with ModularArithmetic
+  using Zq = IntegerRing<zq_config>;
 
   // TODO Yuval: define ZqRNS too
 
