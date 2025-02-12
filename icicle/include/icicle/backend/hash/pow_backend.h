@@ -42,10 +42,10 @@ namespace icicle {
 
   void register_pow_verify(const std::string& deviceType, PowVerifyImpl impl);
 
-#define REGISTER_POW_VERIFY_BACKEND(DEVICE_TYPE, FUNC)                                                                  \
+#define REGISTER_POW_VERIFY_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_pow) = []() -> bool {                                                                      \
-      register_pow_verify(DEVICE_TYPE, FUNC);                                                                           \
+      register_pow_verify(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
