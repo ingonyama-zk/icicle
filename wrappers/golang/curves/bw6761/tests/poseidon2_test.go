@@ -69,12 +69,11 @@ func testPoseidon2HashSponge(s *suite.Suite) {
 			continue // TODO Danny remove this
 		}
 		inputs := bw6_761.GenerateScalars(t*8 - 2)
-		var noDomainTag *bw6_761.ScalarField
 
 		// Set device to CPU
 		test_helpers.ActivateReferenceDevice()
 		outputsRef := make([]bw6_761.ScalarField, 1)
-		poseidon2HasherRef, _ := poseidon2.NewHasher(uint64(t), noDomainTag)
+		poseidon2HasherRef, _ := poseidon2.NewHasher(uint64(t), nil /*domain tag*/)
 		poseidon2HasherRef.Hash(
 			core.HostSliceFromElements(inputs),
 			core.HostSliceFromElements(outputsRef),
@@ -86,7 +85,7 @@ func testPoseidon2HashSponge(s *suite.Suite) {
 		// Set device to main
 		test_helpers.ActivateMainDevice()
 		outputsMain := make([]bw6_761.ScalarField, 1)
-		poseidon2HasherMain, _ := poseidon2.NewHasher(uint64(t), noDomainTag)
+		poseidon2HasherMain, _ := poseidon2.NewHasher(uint64(t), nil /*domain tag*/)
 		poseidon2HasherMain.Hash(
 			core.HostSliceFromElements(inputs),
 			core.HostSliceFromElements(outputsMain),
