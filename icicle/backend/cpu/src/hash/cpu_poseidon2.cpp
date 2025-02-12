@@ -142,12 +142,11 @@ namespace icicle {
         break;
       default:
         ICICLE_LOG_ERROR
-          << "cuda_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]";
+          << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]";
         return eIcicleError::INVALID_ARGUMENT;
       } // switch (T) {
       if (full_rounds == 0 && partial_rounds == 0) { // All arrays are empty in this case (true for wide fields (width >
                                                      // 32) & t > 8).
-        poseidon2_constants->nof_upper_full_rounds = 0; // To be used
         return eIcicleError::SUCCESS;
       }
 
@@ -179,33 +178,18 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     } // eIcicleError init_poseidon2_constants(
 
+    // size - numbr of bytes in a single inputs.
+    // The total size of the input should be size * config.batch.
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
       bool is_unsupported_T_for_this_field = m_poseidon2_constants.nof_upper_full_rounds == 0;
       if (is_unsupported_T_for_this_field) {
-        ICICLE_LOG_ERROR << "CPU: Unsupported poseidon2 width (t=" << t << ") for this field!";
+        ICICLE_LOG_ERROR << "Unsupported poseidon2 width (t=" << t << ") for this field!";
         return eIcicleError::API_NOT_IMPLEMENTED;
       }
 
-      const int output_size = static_cast<int>(m_output_size) / sizeof(S);
-
-      bool is_sponge = false;
       int input_size_in_scalars = size / sizeof(S);
-      if ((config.batch == 1) && (input_size_in_scalars != (m_use_domain_tag ? t - 1 : t))) { // Check if sponge
-                                                                                              // function.
-        is_sponge = true;
-        if (config.batch != 1) {
-          ICICLE_LOG_ERROR << "The only supported value of config.batch for sponge functions is 1.\n";
-          return eIcicleError::INVALID_ARGUMENT;
-        }
-      } // sponge function
-      else { // Non-sponge function.
-        if ((m_use_domain_tag ? input_size_in_scalars : input_size_in_scalars - 1) % (t - 1) != 0) {
-          ICICLE_LOG_ERROR << "Padding isn't supported for non-sponge function hash. The following should be true: "
-                              "((m_use_domain_tag ? size : size-1) % (m_t-1) != 0).\n";
-          return eIcicleError::INVALID_ARGUMENT;
-        }
-      } // Non-sponge function.
+      bool is_sponge = input_size_in_scalars != (m_use_domain_tag ? t - 1 : t);
 
       // Generate padding indications.
       int sponge_nof_hashers = 0;
@@ -216,7 +200,7 @@ namespace icicle {
           sponge_nof_hashers = 1;
           is_padding_needed = true;
           padding_size_in_scalars = t - (input_size_in_scalars + (m_use_domain_tag == true));
-        } else if (input_size_in_scalars >= t) { // More than a single hasher in the chain.
+        } else { // More than a single hasher in the chain.
           sponge_nof_hashers = (input_size_in_scalars - !(m_use_domain_tag == true) + (t - 2)) / (t - 1);
           is_padding_needed = (input_size_in_scalars - !(m_use_domain_tag == true)) % (t - 1);
           if (is_padding_needed) {
@@ -229,8 +213,8 @@ namespace icicle {
   case T:                                                                                                              \
     if constexpr (!is_large_field || T <= 8) {                                                                         \
       permutation_error = poseidon2_sponge_permutation<T>(                                                             \
-        in_fields, is_padding_needed, padding_size_in_scalars, m_use_domain_tag, m_domain_tag_value, out,              \
-        sponge_nof_hashers, output_size, m_poseidon2_constants);                                                       \
+        in_fields, input_size_in_scalars, is_padding_needed, padding_size_in_scalars, m_use_domain_tag,                \
+        m_domain_tag_value, out, sponge_nof_hashers, config.batch, m_poseidon2_constants);                             \
     }                                                                                                                  \
     break;
 
@@ -238,7 +222,7 @@ namespace icicle {
   case T:                                                                                                              \
     if constexpr (!is_large_field || T <= 8) {                                                                         \
       permutation_error = poseidon2_permutation<T>(                                                                    \
-        in_fields, m_use_domain_tag, m_domain_tag_value, out, config.batch, output_size, m_poseidon2_constants);       \
+        in_fields, m_use_domain_tag, m_domain_tag_value, out, config.batch, m_poseidon2_constants);                    \
     }                                                                                                                  \
     break;
 
@@ -297,7 +281,7 @@ namespace icicle {
 
     template <int T>
     void prepare_poseidon2_sponge_states(
-      const S* input,
+      const S*& input,
       const bool is_padding_needed,
       const S* padding,
       const int padding_size_in_scalars,
@@ -332,11 +316,9 @@ namespace icicle {
     } // prepare_poseidon2_sponge_states(const S* input, S* states, unsigned int batch_size, bool use_domain_tag, S
       // domain_tag)
 
-    S sbox_el(S element, const int alpha) const
+    S sbox_element(S element, const int alpha) const
     {
       switch (alpha) {
-      case 0:
-        return element;
       case 3:
         return element * element * element;
       case 5:
@@ -347,7 +329,8 @@ namespace icicle {
         return element * element * element * element * element * element * element * element * element * element *
                element;
       default: {
-        // Danny TODO: How to stop here if there is an illegal alpha?
+        ICICLE_LOG_ERROR << "Unsupported poseidon2 alpha. Should be one of {3, 5, 7, 11}";
+        return S::from(0);
       }
       }
       return element;
@@ -390,7 +373,7 @@ namespace icicle {
       }
 #pragma unroll
       for (int element_idx_in_hash = 0; element_idx_in_hash < T; element_idx_in_hash++) {
-        states[element_idx_in_hash] = sbox_el(states[element_idx_in_hash], alpha);
+        states[element_idx_in_hash] = sbox_element(states[element_idx_in_hash], alpha);
       }
 
       full_matrix_mul_vec<T>(states, mds_matrix, states);
@@ -418,7 +401,7 @@ namespace icicle {
     {
       state[0] = state[0] + rounds_constants[rc_offset];
 
-      state[0] = sbox_el(state[0], alpha);
+      state[0] = sbox_element(state[0], alpha);
 
       // Multiply partial matrix by vector.
       // Partial matrix is represented by T members - diagonal members of the matrix.
@@ -464,10 +447,9 @@ namespace icicle {
       const S domain_tag_value,
       S* out,
       unsigned int batch_size,
-      unsigned int output_len,
       const Poseidon2ConstantsOptions<S>& constants) const
     {
-      S* states = new S[T * batch_size];
+      S* states = new S[T];
 
       for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
         prepare_poseidon2_states<T>(input, states, use_domain_tag, domain_tag_value);
@@ -490,11 +472,10 @@ namespace icicle {
           states, rc_offset, constants.nof_upper_full_rounds, constants.rounds_constants, constants.mds_matrix,
           constants.alpha);
 
-        squeeze_states<T>(states, 1, out);
+        out[0] = states[1];
 
-        input += T;  // Move to the next hasher input.
-        states += T; // Move to the next hasher.
-        out += 1;    // Move to the output of the next hasher.
+        input += use_domain_tag ? T - 1 : T; // Move to the next hasher input.
+        out += 1;                            // Move to the output of the next hasher.
       } // for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
 
       return eIcicleError::SUCCESS;
@@ -503,57 +484,66 @@ namespace icicle {
     template <int T>
     eIcicleError poseidon2_sponge_permutation(
       const S* input,
+      const int input_size_in_scalars,
       const bool is_padding_needed,
       const int padding_size_in_scalars,
       const bool use_domain_tag,
       const S domain_tag_value,
       S* out,
       int nof_hashers,
-      const int output_len,
+      unsigned int batch_size,
       const Poseidon2ConstantsOptions<S>& constants) const
     {
-      S states[T];
-      for (int i = 0; i < T; i++)
-        states[i] = S::from(0);
-
       S padding[T];
       padding[0] = S::from(1);
       for (int i = 1; i < T; i++)
         padding[i] = S::from(0);
 
-      for (int hasher_idx = 0; hasher_idx < nof_hashers; hasher_idx++) {
-        // prepare_poseidon2_sponge_states function performs:
-        // - domain tag for the first hasher
-        // - padding for the last hasher
-        // - addition on T-1 inputs with the prev d_states T-1 inputs.
-        // - increment of the input pointer to point to the next hasher's input.
-        bool is_first_hasher = hasher_idx == 0;
-        bool is_last_hasher = hasher_idx == nof_hashers - 1;
-        prepare_poseidon2_sponge_states<T>(
-          input, is_padding_needed, padding, padding_size_in_scalars, states, use_domain_tag, domain_tag_value,
-          is_first_hasher, is_last_hasher);
-        if (is_first_hasher && !use_domain_tag) input += 1;
-        input += (T - 1);
+      for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
+        const S* input_shadow = input;
 
-        pre_full_round<T>(states, constants);
+        // states vector should be set to zero in order to use addition in prepare_poseidon2_sponge_states.
+        S states[T];
+        for (int i = 0; i < T; i++)
+          states[i] = S::from(0);
 
-        size_t rc_offset = 0;
+        for (int hasher_idx = 0; hasher_idx < nof_hashers; hasher_idx++) {
+          // prepare_poseidon2_sponge_states function performs:
+          // - domain tag for the first hasher
+          // - padding for the last hasher
+          // - addition on T-1 inputs with the prev d_states T-1 inputs.
+          // - increment of the input pointer to point to the next hasher's input.
+          bool is_first_hasher = hasher_idx == 0;
+          bool is_last_hasher = hasher_idx == nof_hashers - 1;
 
-        full_rounds<T>(
-          states, rc_offset, constants.nof_upper_full_rounds, constants.rounds_constants, constants.mds_matrix,
-          constants.alpha);
-        rc_offset += T * constants.nof_upper_full_rounds;
+          prepare_poseidon2_sponge_states<T>(
+            input, is_padding_needed, padding, padding_size_in_scalars, states, use_domain_tag, domain_tag_value,
+            is_first_hasher, is_last_hasher);
+          input += (T - 1); // Move to the next hasher.
 
-        partial_rounds<T>(
-          states, rc_offset, constants.rounds_constants, constants.partial_matrix_diagonal_m1,
-          constants.nof_partial_rounds, constants.alpha);
-        rc_offset += constants.nof_partial_rounds;
+          pre_full_round<T>(states, constants);
 
-        full_rounds<T>(
-          states, rc_offset, constants.nof_upper_full_rounds, constants.rounds_constants, constants.mds_matrix,
-          constants.alpha);
-      } // for (int hasher_idx = 0; hasher_idx < nof_hashers; hasher_idx ++) {
-      squeeze_states<T>(states, 1, out);
+          size_t rc_offset = 0;
+
+          full_rounds<T>(
+            states, rc_offset, constants.nof_upper_full_rounds, constants.rounds_constants, constants.mds_matrix,
+            constants.alpha);
+          rc_offset += T * constants.nof_upper_full_rounds;
+
+          partial_rounds<T>(
+            states, rc_offset, constants.rounds_constants, constants.partial_matrix_diagonal_m1,
+            constants.nof_partial_rounds, constants.alpha);
+          rc_offset += constants.nof_partial_rounds;
+
+          full_rounds<T>(
+            states, rc_offset, constants.nof_upper_full_rounds, constants.rounds_constants, constants.mds_matrix,
+            constants.alpha);
+
+        } // for (int hasher_idx = 0; hasher_idx < nof_hashers; hasher_idx ++) {
+
+        out[batch_idx] = states[1];
+        input = input_shadow + input_size_in_scalars; // Move to the input of the next hasher.
+      } // for (int batch_idx = 0; batch_idx < batch_size; batch_idx++) {
 
       return eIcicleError::SUCCESS;
     } // eIcicleError poseidon2_sponge_permutation(
@@ -564,15 +554,6 @@ namespace icicle {
     const S m_domain_tag_value;
 
   }; // class Poseidon2BackendCUDA : public HashBackend
-
-  // static eIcicleError create_cuda_poseidon2_hash_backend(
-  //   const Device& device, unsigned t, const scalar_t* domain_tag, std::shared_ptr<HashBackend>& backend /*OUT*/)
-  // {
-  //   backend = std::make_shared<Poseidon2BackendCUDA<scalar_t>>(device.id, t, domain_tag);
-  //   return eIcicleError::SUCCESS;
-  // }
-
-  // REGISTER_CREATE_POSEIDON2_BACKEND("CUDA", create_cuda_poseidon2_hash_backend);
 
   static eIcicleError create_cpu_poseidon2_hash_backend(
     const Device& device, unsigned t, const scalar_t* domain_tag, std::shared_ptr<HashBackend>& backend /*OUT*/)
