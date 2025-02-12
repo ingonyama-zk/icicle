@@ -9,10 +9,9 @@ macro(message)
 endmacro()
 FetchContent_Declare(
   Taskflow
-#  GIT_REPOSITORY https://github.com/taskflow/taskflow.git
-#  GIT_TAG v3.8.0
-#  GIT_SHALLOW TRUE
-URL https://github.com/taskflow/taskflow/archive/refs/tags/v3.8.0.zip
+ GIT_REPOSITORY https://github.com/taskflow/taskflow.git
+ GIT_TAG v3.8.0
+ GIT_SHALLOW TRUE
 )
 # Disable unnecessary components
 set(TF_BUILD_BENCHMARKS OFF CACHE BOOL "Disable Taskflow benchmarks" FORCE)
