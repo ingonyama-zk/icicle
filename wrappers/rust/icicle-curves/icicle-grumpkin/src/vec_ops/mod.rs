@@ -6,7 +6,7 @@ use icicle_core::{
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 use icicle_core::traits::FieldImpl;
-use icicle_core::symbol::SymbolTrait;
+
 use icicle_core::program::ProgramBaseTrait;
 
 impl_vec_ops_field!("grumpkin", grumpkin, ScalarField, ScalarCfg);

@@ -8,7 +8,6 @@ use crate::vec_ops::{
     FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
 };
 use crate::program::{Handle, Instruction, ProgramTrait, ReturningValueProgramTrait, PreDefinedProgram};
-use crate::symbol::SymbolTrait;
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
@@ -462,121 +461,11 @@ where
     assert_eq!(input.as_slice(), result_host.as_slice());
 }
 
-pub fn check_program<F, Program, Symbol>()
+pub fn check_predefined_program<F, Program>()
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
-    Symbol: SymbolTrait<F>,
-    Program: ProgramTrait<F, Symbol>,
-{
-    let lambda_eq_x_ab_minus_c = |vars: &mut Vec<Symbol>| {
-        let a = vars[0].clone();
-        let b = vars[1].clone();
-        let c = vars[2].clone();
-        let eq = vars[3].clone();
-
-        let var4_res = eq * (a.clone() * b.clone() - c.clone());
-        let var5_res = a * b - c.inverse();
-        
-        vars[4] = var4_res;
-        vars[6] += &var5_res;
-        vars[5] = var5_res;
-    };
-
-    const TEST_SIZE: usize = 1 << 10;
-    let a = F::Config::generate_random(TEST_SIZE);
-    let b = F::Config::generate_random(TEST_SIZE);
-    let c = F::Config::generate_random(TEST_SIZE);
-    let eq = F::Config::generate_random(TEST_SIZE);
-    let var4 = vec![F::zero(); TEST_SIZE];
-    let var5 = vec![F::zero(); TEST_SIZE];
-    let var6 = vec![F::zero(); TEST_SIZE];
-    let a_slice = HostSlice::from_slice(&a);
-    let b_slice = HostSlice::from_slice(&b);
-    let c_slice = HostSlice::from_slice(&c);
-    let eq_slice = HostSlice::from_slice(&eq);
-    let var4_slice = HostSlice::from_slice(&var4);
-    let var5_slice = HostSlice::from_slice(&var5);
-    let var6_slice = HostSlice::from_slice(&var6);
-    let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
-
-    let program = Program::new(lambda_eq_x_ab_minus_c, 7).unwrap();
-    
-    let cfg = VecOpsConfig::default();
-    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
-
-    for i in 0..TEST_SIZE {
-        let a = parameters[0][i];
-        let b = parameters[1][i];
-        let c = parameters[2][i];
-        let eq = parameters[3][i];
-        let var4 = parameters[4][i];
-        let var5 = parameters[5][i];
-        let var6 = parameters[6][i];
-        assert_eq!(var4, <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
-                            eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
-                                    c)));
-        assert_eq!(var5, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
-                            <<F as FieldImpl>::Config as FieldArithmetic<F>>::inv(c)));
-        assert_eq!(var6, var5);
-    }
-}
-
-pub fn check_program_with_return_value<F, ReturningValueProgram, Symbol>()
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
-    Symbol: SymbolTrait<F>,
-    ReturningValueProgram: ReturningValueProgramTrait<F, Symbol>,
-{
-    let lambda_eq_x_ab_minus_c = |inputs: &mut Vec<Symbol>| -> Symbol {
-        let a = inputs[0].clone();
-        let b = inputs[1].clone();
-        let c = inputs[2].clone();
-        let eq = inputs[3].clone();
-        eq * (a + b + c)
-    };
-
-    const TEST_SIZE: usize = 1 << 10;
-    let a = F::Config::generate_random(TEST_SIZE);
-    let b = F::Config::generate_random(TEST_SIZE);
-    let c = F::Config::generate_random(TEST_SIZE);
-    let eq = F::Config::generate_random(TEST_SIZE);
-    let res = vec![F::zero(); TEST_SIZE];
-    let a_slice = HostSlice::from_slice(&a);
-    let b_slice = HostSlice::from_slice(&b);
-    let c_slice = HostSlice::from_slice(&c);
-    let eq_slice = HostSlice::from_slice(&eq);
-    let res_slice = HostSlice::from_slice(&res);
-    let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, res_slice];
-    let nof_inputs = parameters.len() as u32 - 1;
-
-    let program = ReturningValueProgram::new(lambda_eq_x_ab_minus_c, nof_inputs).unwrap();
-    
-    let cfg = VecOpsConfig::default();
-    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
-
-    for i in 0..TEST_SIZE {
-        let a = parameters[0][i];
-        let b = parameters[1][i];
-        let c = parameters[2][i];
-        let eq = parameters[3][i];
-        let res = parameters[4][i];
-        assert_eq!(res, <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
-                            eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(
-                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(a, b),
-                                    c)));
-    }
-}
-
-pub fn check_predefined_program<F, Program, Symbol>()
-where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
-    Symbol: SymbolTrait<F>,
-    Program: ProgramTrait<F, Symbol>,
+    Program: ProgramTrait<F>,
 {
     const TEST_SIZE: usize = 1 << 10;
     let a = F::Config::generate_random(TEST_SIZE);
@@ -609,12 +498,11 @@ where
     }
 }
 
-pub fn check_predefined_return_value_program_on_device<F, Program, Symbol>()
+pub fn check_predefined_return_value_program_on_device<F, Program>()
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
-    Symbol: SymbolTrait<F>,
-    Program: ProgramTrait<F, Symbol>,
+    Program: ProgramTrait<F>,
 {
     const TEST_SIZE: usize = 1 << 10;
     let a = F::Config::generate_random(TEST_SIZE);

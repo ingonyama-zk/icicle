@@ -1,6 +1,5 @@
 use crate::traits::FieldImpl;
 use crate::program::ProgramBaseTrait;
-use crate::symbol::SymbolTrait;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -133,7 +132,7 @@ pub trait VecOps<F> {
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
-    fn execute_program<Program, Symbol, Data>(
+    fn execute_program<Program, Data>(
         data: &mut Vec<&Data>,
         program: &Program,
         cfg: &VecOpsConfig
@@ -142,8 +141,7 @@ pub trait VecOps<F> {
         F: FieldImpl,
         <F as FieldImpl>::Config: VecOps<F>,
         Data: HostOrDeviceSlice<F> + ?Sized,
-        Symbol: SymbolTrait<F>,
-        Program: ProgramBaseTrait<F, Symbol>;
+        Program: ProgramBaseTrait<F>;
 }
 
 #[doc(hidden)]
@@ -535,7 +533,7 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
-pub fn execute_program<F, Program, Symbol, Data>(
+pub fn execute_program<F, Program, Data>(
     data: &mut Vec<&Data>,
     program: &Program,
     cfg: &VecOpsConfig
@@ -544,8 +542,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
     Data: HostOrDeviceSlice<F> + ?Sized,
-    Symbol: SymbolTrait<F>,
-    Program: ProgramBaseTrait<F, Symbol>,
+    Program: ProgramBaseTrait<F>,
 {
     let cfg = check_execute_program(&data, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::execute_program(data, program, &cfg)
@@ -560,7 +557,6 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::symbol::$field_prefix_ident::Symbol;
             use crate::program::$field_prefix_ident::Program;
             use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
@@ -942,7 +938,7 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn execute_program<Program, Symbol, Data>(
+            fn execute_program<Program, Data>(
                 data: &mut Vec<&Data>,
                 program: &Program,
                 cfg: &VecOpsConfig
@@ -950,8 +946,7 @@ macro_rules! impl_vec_ops_field {
             where
                 <$field as FieldImpl>::Config: VecOps<$field>,
                 Data: HostOrDeviceSlice<$field> + ?Sized,
-                Symbol: SymbolTrait<$field>,
-                Program: ProgramBaseTrait<$field, Symbol>,
+                Program: ProgramBaseTrait<$field>,
             {
                 unsafe {
                     let data_vec: Vec<*const $field> = data.iter().map(|s| s.as_ptr()).collect();
@@ -1029,7 +1024,6 @@ macro_rules! impl_vec_ops_tests {
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
-            use crate::symbol::$field_prefix_ident::Symbol;
             use crate::program::$field_prefix_ident::{Program, ReturningValueProgram};
 
             fn initialize() {
@@ -1068,43 +1062,23 @@ macro_rules! impl_vec_ops_tests {
             }
 
             #[test]
-            pub fn test_program() {
-                initialize();
-                test_utilities::test_set_ref_device();
-                check_program::<$field, Program, Symbol>();
-                initialize();
-                test_utilities::test_set_main_device();
-                check_program::<$field, Program, Symbol>()
-            }
-
-            #[test]
-            pub fn test_returning_value_program() {
-                initialize();
-                test_utilities::test_set_ref_device();
-                check_program_with_return_value::<$field, ReturningValueProgram, Symbol>();
-                initialize();
-                test_utilities::test_set_main_device();
-                check_program_with_return_value::<$field, ReturningValueProgram, Symbol>()
-            }
-
-            #[test]
             pub fn test_predefined_program() {
                 initialize();
                 test_utilities::test_set_ref_device();
-                check_predefined_program::<$field, Program, Symbol>();
+                check_predefined_program::<$field, Program>();
                 initialize();
                 test_utilities::test_set_main_device();
-                check_predefined_program::<$field, Program, Symbol>()
+                check_predefined_program::<$field, Program>()
             }
 
             #[test]
             pub fn test_predefined_return_value_program() {
                 initialize();
                 test_utilities::test_set_ref_device();
-                check_predefined_return_value_program_on_device::<$field, Program, Symbol>();
+                check_predefined_return_value_program_on_device::<$field, Program>();
                 initialize();
                 test_utilities::test_set_main_device();
-                check_predefined_return_value_program_on_device::<$field, Program, Symbol>()
+                check_predefined_return_value_program_on_device::<$field, Program>()
             }
         }
     };
