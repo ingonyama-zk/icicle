@@ -91,7 +91,7 @@ void CONCAT_EXPAND(FIELD, extension_generate_program)(
 
   for (int i = 0; i < nof_parameters; i++) {
     if (parameters_ptr[i] == nullptr) { throw std::invalid_argument("Null pointer found in parameters"); }
-    parameters_vec.push_back(*parameters_ptr[i]); // TODO replace with span toi avoid copying
+    parameters_vec.push_back(*parameters_ptr[i]); // TODO replace with span to avoid copying when we switch to cpp20
   }
   program->m_nof_parameters = nof_parameters;
   program->generate_program(parameters_vec);
