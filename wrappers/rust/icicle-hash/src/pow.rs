@@ -37,8 +37,8 @@ extern "C" {
     ) -> eIcicleError;
 }
 extern "C" {
-    #[link_name = "proof_of_work_check"]
-    pub fn pow_check_ffi(
+    #[link_name = "proof_of_work_verify"]
+    pub fn pow_verify_ffi(
         hasher: HasherHandle,
         challenge: *const u8,
         challenge_size: u32,
@@ -83,7 +83,7 @@ pub fn pow_solver(
     result
 }
 
-pub fn pow_check(
+pub fn pow_verify(
     hasher: &Hasher,
     challenge: &(impl HostOrDeviceSlice<u8> + ?Sized),
     solution_bits: u8,
@@ -102,7 +102,7 @@ pub fn pow_check(
     cfg.is_challenge_on_device = challenge.is_on_device();
 
     let result = unsafe {
-        pow_check_ffi(
+        pow_verify_ffi(
             hasher.handle,
             challenge.as_ptr(),
             challenge.len() as u32,

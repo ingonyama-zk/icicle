@@ -61,8 +61,8 @@ namespace icicle {
   } // namespace
 
   eIcicleError cpu_pow(
-    Hash& hasher,
-    std::byte* challenge,
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint32_t hash_size,
     uint8_t solution_bits,
@@ -87,7 +87,7 @@ namespace icicle {
     // setup input
     uint8_t* inputs = new uint8_t[full_size * grid_size];
     build_chunks(
-      reinterpret_cast<uint8_t*>(challenge), inputs, grid_size, challenge_size, config.padding_size, full_size);
+      reinterpret_cast<const uint8_t*>(challenge), inputs, grid_size, challenge_size, config.padding_size, full_size);
 
     uint64_t i = 0;
     uint64_t offset = 0;
@@ -118,9 +118,9 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 
-  eIcicleError cpu_pow_check(
-    Hash& hasher,
-    std::byte* challenge,
+  eIcicleError cpu_pow_verify(
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint32_t hash_size,
     uint8_t solution_bits,
@@ -165,8 +165,8 @@ namespace icicle {
 
   eIcicleError pow_solver_cpu_backend(
     const Device& device,
-    Hash& hasher,
-    std::byte* challenge,
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint8_t solution_bits,
     const PowConfig& config,
@@ -179,10 +179,10 @@ namespace icicle {
     return err;
   }
 
-  eIcicleError pow_check_cpu_backend(
+  eIcicleError pow_verify_cpu_backend(
     const Device& device,
-    Hash& hasher,
-    std::byte* challenge,
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint8_t solution_bits,
     const PowConfig& config,
@@ -190,11 +190,11 @@ namespace icicle {
     bool& is_correct,
     uint64_t& mined_hash)
   {
-    auto err = cpu_pow_check(
+    auto err = cpu_pow_verify(
       hasher, challenge, challenge_size, hasher.output_size(), solution_bits, config, nonce, is_correct, mined_hash);
     return err;
   }
 
   REGISTER_POW_SOLVER_BACKEND("CPU", pow_solver_cpu_backend);
-  REGISTER_POW_CHECK_BACKEND("CPU", pow_check_cpu_backend);
+  REGISTER_POW_VERIFY_BACKEND("CPU", pow_verify_cpu_backend);
 } // namespace icicle

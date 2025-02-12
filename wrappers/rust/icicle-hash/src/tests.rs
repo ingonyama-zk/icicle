@@ -5,7 +5,7 @@ mod tests {
         blake2s::Blake2s,
         blake3::Blake3,
         keccak::{Keccak256, Keccak512},
-        pow::{pow_check, pow_solver, PowConfig},
+        pow::{pow_solver, pow_verify, PowConfig},
         sha3::Sha3_256,
     };
     use icicle_core::{
@@ -312,7 +312,7 @@ mod tests {
         let mut gpu_is_correct = false;
         let mut gpu_mined_hash_check = 0;
 
-        let err = pow_check(
+        let err = pow_verify(
             &hasher,
             input_host,
             BITS,
@@ -347,7 +347,7 @@ mod tests {
         let mut cpu_is_correct = false;
         let mut cpu_mined_hash_check = 0;
 
-        let err = pow_check(
+        let err = pow_verify(
             &hasher,
             input_host,
             BITS,

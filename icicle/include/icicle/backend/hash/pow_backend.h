@@ -10,8 +10,8 @@ namespace icicle {
 
   using PowSolverImpl = std::function<eIcicleError(
     const Device& device,
-    Hash& hasher,
-    std::byte* challenge,
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint8_t solution_bits,
     const PowConfig& config,
@@ -29,10 +29,10 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  using PowCheckImpl = std::function<eIcicleError(
+  using PowVerifyImpl = std::function<eIcicleError(
     const Device& device,
-    Hash& hasher,
-    std::byte* challenge,
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint8_t solution_bits,
     const PowConfig& config,
@@ -40,12 +40,12 @@ namespace icicle {
     bool& is_correct,
     uint64_t& mined_hash)>;
 
-  void register_pow_check(const std::string& deviceType, PowCheckImpl impl);
+  void register_pow_verify(const std::string& deviceType, PowVerifyImpl impl);
 
-#define REGISTER_POW_CHECK_BACKEND(DEVICE_TYPE, FUNC)                                                                  \
+#define REGISTER_POW_VERIFY_BACKEND(DEVICE_TYPE, FUNC)                                                                  \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_pow) = []() -> bool {                                                                      \
-      register_pow_check(DEVICE_TYPE, FUNC);                                                                           \
+      register_pow_verify(DEVICE_TYPE, FUNC);                                                                           \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

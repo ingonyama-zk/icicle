@@ -49,8 +49,8 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure of the operation.
    */
   eIcicleError pow_solver(
-    Hash& hasher,
-    std::byte* challenge,
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint8_t solution_bits,
     const PowConfig& config,
@@ -75,9 +75,9 @@ namespace icicle {
    *
    * @return eIcicleError Error code indicating success or failure of the verification process.
    */
-  eIcicleError pow_check(
-    Hash& hasher,
-    std::byte* challenge,
+  eIcicleError pow_verify(
+    const Hash& hasher,
+    const std::byte* challenge,
     uint32_t challenge_size,
     uint8_t solution_bits,
     const PowConfig& config,
