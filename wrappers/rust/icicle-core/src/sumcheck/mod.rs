@@ -175,7 +175,7 @@ pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>>
 where
     F: FieldImpl,
 {
-    fn get_proof(&self) -> Vec<Vec<F>>;
+    fn get_proof(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
     fn print(&self) -> eIcicleError;
 }
 
@@ -369,14 +369,14 @@ macro_rules! impl_sumcheck {
         }
 
         impl SumcheckProofOps<$field> for SumcheckProof {
-            fn get_proof(&self) -> Vec<Vec<$field>> {
+            fn get_proof(&self) -> Result<Vec<Vec<$field>>, eIcicleError> {
                 let mut poly_size = 0;
                 let mut num_polys = 0;
                 unsafe {
                     let err = icicle_sumcheck_proof_get_proof_sizes(self.handle, &mut poly_size, &mut num_polys);
 
                     if err != eIcicleError::Success {
-                        println!("Uh oh");
+                        return Err(err)
                     }
 
                     let mut rounds: Vec<Vec<$field>> = Vec::with_capacity(num_polys as usize);
@@ -387,7 +387,7 @@ macro_rules! impl_sumcheck {
                         rounds.push(round_slice.to_vec());
                     }
 
-                    rounds
+                    Ok(rounds)
                 }
             }
 

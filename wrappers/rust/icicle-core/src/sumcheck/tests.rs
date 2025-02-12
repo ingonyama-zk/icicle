@@ -111,7 +111,7 @@ where
     /****** End Proof ******/
 
     /****** Obtain Proof Data ******/
-    let proof_data = <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_proof(&proof);
+    let proof_data = <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_proof(&proof).unwrap();
 
     /********** Verifier deserializes proof data *********/
     let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_data);
