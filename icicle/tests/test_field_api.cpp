@@ -1475,7 +1475,7 @@ MlePoly too_high_degree_combine(const std::vector<MlePoly>& inputs)
   const MlePoly& A = inputs[0];
   const MlePoly& B = inputs[1];
   const MlePoly& C = inputs[2];
-  return (A * B * C * A * B * C);
+  return (A * B * C * A * B * C * A * B * C);
 }
 
 MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
@@ -1486,25 +1486,35 @@ MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
   const MlePoly& D = inputs[3];
   const MlePoly& E = inputs[4];
   const MlePoly& F = inputs[5];
-  return A * B * C + D * E * F;
+  const MlePoly& G = inputs[5];
+  const MlePoly& H = inputs[5];
+  const MlePoly& I = inputs[5];
+  return A * B * C + D * E * F + G * H * I;
 }
 
 TEST_F(FieldApiTestBase, SumcheckCudaShouldFailCases)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly_big = 9;
   int nof_mle_poly = 6;
-  int nof_mle_poly_short = 3;
+  int nof_mle_poly_small = 3;
 
   // generate inputs
+  std::vector<scalar_t*> mle_polynomials_big(nof_mle_poly_big);
+  for (int poly_i = 0; poly_i < nof_mle_poly_big; poly_i++) {
+    mle_polynomials_big[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials_big[poly_i], mle_poly_size);
+  }
+
   std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
     mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
     scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
-  std::vector<scalar_t*> mle_polynomials_small(nof_mle_poly_short);
-  for (int poly_i = 0; poly_i < nof_mle_poly_short; poly_i++) {
+  std::vector<scalar_t*> mle_polynomials_small(nof_mle_poly_small);
+  for (int poly_i = 0; poly_i < nof_mle_poly_small; poly_i++) {
     mle_polynomials_small[poly_i] = new scalar_t[mle_poly_size];
     scalar_t::rand_host_many(mle_polynomials_small[poly_i], mle_poly_size);
   }
@@ -1534,11 +1544,11 @@ TEST_F(FieldApiTestBase, SumcheckCudaShouldFailCases)
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
   };
 
-  CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly);
-  run("CUDA", mle_polynomials, mle_poly_size, claimed_sum, combine_func_too_many_polys);
-  CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_short);
+  CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
+  run("CUDA", mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
+  CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
   run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
-  CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_short);
+  CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
   run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
 
   for (auto& mle_poly_ptr : mle_polynomials) {
