@@ -10,3 +10,4 @@ This section of the documentation is dedicated to the main APIs provided by ICIC
 - [Polynomials](../polynomials/overview.md)
 - [Hash](./hash.md)
 - [Merkle-tree commitment](./merkle.md)
+- [Sumcheck](./sumcheck.md)

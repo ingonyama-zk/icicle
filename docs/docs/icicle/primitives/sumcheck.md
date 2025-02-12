@@ -3,13 +3,13 @@
 ## Overview
 Sumchek protocol is a protocol where a Prover proves to a Verifier that the sum of a multilinear polynomial, over the boolean hypercube, is a specific sum.
 
-For a polynomial $P$, with $n$ dimention $n$ the Prover is trying to prove that:
+For a polynomial $P$, with $n$ dimension $n$ the Prover is trying to prove that:
 $$
 \sum_{X_1 \in \{0, 1\}}\sum_{X_2 \in \{0, 1\}}\cdot\cdot\cdot\sum_{X_n \in \{0, 1\}} P(X_1, X_2,..., X_n) = C,
 $$
 for some scalar $C$.
 
-The proof is build in an interactive way, where the Prover and Verifier do a series of $n$ rounds. Each round is consists of a challange (created by the Verifier), computation (made by the Prover) and verifing (done by the Verifier). Using a Fiat-Shamir (FS) scheme, the proof become non-interactive. This allow the Prover to generate the entire proof and send it to Verifier which then verify the whole proof.
+The proof is build in an interactive way, where the Prover and Verifier do a series of $n$ rounds. Each round is consists of a challenge (created by the Verifier), computation (made by the Prover) and verifying (done by the Verifier). Using a Fiat-Shamir (FS) scheme, the proof become non-interactive. This allow the Prover to generate the entire proof and send it to Verifier which then verify the whole proof.
 
 ### Sumcheck with Combine Function
 The Sumcheck protocol can be generalized to an arbitrary function of several multilinear polynomials. In this case, assuming there are $m$ polynomials of $n$ variables, and let $f$ be some arbitrary function that take $m$ polynomials and return a polynomial of higher (or equal) degree. Now the Prover tries to prove that:
@@ -25,7 +25,7 @@ ICICLE implements a non-interactive Sumcheck protocol that supports a combine fu
 
 There are some limitations / assumptions to the Sumcheck implementation.
 
-- The maximum size of the polynomials (number of evaluations = $2^n$) depends on the number of polynomials and memory size of the device (e.g. CPU/GPU) used. For 4 polynomials one should expects that a GPU equiped with 24GB of memory can run Sumcheck with polynomials of size up to $2^{29}$.
+- The maximum size of the polynomials (number of evaluations = $2^n$) depends on the number of polynomials and memory size of the device (e.g. CPU/GPU) used. For 4 polynomials one should expects that a GPU equipped with 24GB of memory can run Sumcheck with polynomials of size up to $2^{29}$.
 - The polynomial size must be of size which is a power of 2.
 
 
@@ -40,7 +40,7 @@ There are two configuration structs related to the Sumcheck protocol.
 The `SumcheckConfig` struct is a configuration object used to specify parameters for Sumcheck. It contains the following fields:
 - **`stream: icicleStreamHandle`**: Specifies the CUDA stream for asynchronous execution. If `nullptr`, the default stream is used.
 - **`use_extension_field: bool`**: If true extension field is used for the Fiat-Shamir results. ***Currently not supported (should always be false)***
-- **`batch: int`**: Number of input chuncks to hash in batch.
+- **`batch: int`**: Number of input chunks to hash in batch.
 - **`are_inputs_on_device: bool`**: If true expect the input polynomials to reside on the device (e.g. GPU), if false expect them to reside on the host (e.g. CPU).
 - **`is_async: bool`**: If true runs the hash asynchronously.
 - **`ext: ConfigExtension*`**: Backend-specific extensions.
