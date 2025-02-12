@@ -5,6 +5,7 @@
 #include <memory>
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/merkle/merkle_tree.h"
+#include "icicle/utils/log.h"
 
 
 namespace icicle {
@@ -28,13 +29,14 @@ namespace icicle {
      * @param nof_queries Number of queries in the proof.
      * @param nof_fri_rounds Number of FRI rounds (rounds).
      */
-    void init(int nof_queries, int nof_fri_rounds)
+    void init(const size_t nof_queries, const size_t nof_fri_rounds, const size_t m_stopping_degree)
     {
       ICICLE_ASSERT(nof_queries > 0 && nof_fri_rounds > 0)
           << "Number of queries and FRI rounds must be > 0. nof_queries = " << nof_queries << ", nof_fri_rounds = " << nof_fri_rounds;
       
       // Resize the matrix to hold nof_queries rows and nof_fri_rounds columns
-      m_query_proofs.resize(nof_queries, std::vector<MerkleProof>(nof_fri_rounds));
+      m_query_proofs.resize(2*nof_queries, std::vector<MerkleProof>(nof_fri_rounds)); //for each query, we have 2 proofs (for the leaf and its symmetric)
+      m_final_poly = std::make_unique<F[]>(m_stopping_degree + 1);
     }
 
     /**
@@ -44,7 +46,7 @@ namespace icicle {
      * @param round_idx Index of the round (FRI round).
      * @return Reference to the Merkle proof at the specified position.
      */
-    MerkleProof& get_query_proof(int query_idx, int round_idx)
+    MerkleProof& get_query_proof(const size_t query_idx, const size_t round_idx)
     {
       if (query_idx < 0 || query_idx >= m_query_proofs.size()) {
         throw std::out_of_range("Invalid query index");

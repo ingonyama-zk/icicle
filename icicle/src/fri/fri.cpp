@@ -4,6 +4,7 @@
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/dispatcher.h"
 #include "icicle/hash/hash.h"
+#include "icicle/utils/log.h"
 #include <cstddef>
 
 namespace icicle {
@@ -18,13 +19,13 @@ namespace icicle {
   Fri<S> create_fri_with_merkle_trees(
     size_t folding_factor,
     size_t stopping_degree,
-    std::vector<MerkleTree>&& merkle_trees)
+    std::vector<MerkleTree> merkle_trees)
   {
     std::shared_ptr<FriBackend<S>> backend; 
     ICICLE_CHECK(FriDispatcher::execute(
       folding_factor,
       stopping_degree,
-      std::move(merkle_trees),
+      merkle_trees,
       backend));
 
     Fri<S> fri{backend};
@@ -59,7 +60,7 @@ namespace icicle {
     return create_fri_with_merkle_trees<scalar_t>(
       folding_factor,
       stopping_degree,
-      std::move(merkle_trees));
+      merkle_trees);
   }
 
   /**
@@ -70,12 +71,12 @@ namespace icicle {
   Fri<scalar_t> create_fri(
     size_t folding_factor,
     size_t stopping_degree,
-    std::vector<MerkleTree>&& merkle_trees)
+    std::vector<MerkleTree> merkle_trees)
   {
     return create_fri_with_merkle_trees<scalar_t>(
       folding_factor,
       stopping_degree,
-      std::move(merkle_trees));
+      merkle_trees);
   }
 
 } // namespace icicle

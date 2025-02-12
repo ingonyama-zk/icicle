@@ -42,14 +42,14 @@ Fri<F> create_fri(
  *
  * @param folding_factor The factor by which the codeword is folded each round.
  * @param stopping_degree The minimal polynomial degree at which to stop folding.
- * @param merkle_trees A moved vector of `MerkleTree` objects.
+ * @param merkle_trees A reference vector of `MerkleTree` objects.
  * @return A `Fri<F>` object built around the chosen backend.
  */
 template <typename F>
 Fri<F> create_fri(
     size_t folding_factor,
     size_t stopping_degree,
-    std::vector<MerkleTree>&& merkle_trees);
+    std::vector<MerkleTree> merkle_trees);
 
 /**
  * @brief Class for performing FRI operations.

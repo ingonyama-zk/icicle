@@ -186,7 +186,7 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees)(
   return new icicle::Fri<scalar_t>(icicle::create_fri<scalar_t>(
     create_config->folding_factor,
     create_config->stopping_degree,
-    std::move(merkle_trees_vec)
+    merkle_trees_vec
   ));
 }
 

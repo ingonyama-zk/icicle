@@ -8,6 +8,7 @@
 #include "icicle/hash/hash.h"
 #include "icicle/hash/keccak.h"
 #include "icicle/utils/log.h"
+#include "icicle/fri/fri.h"
 
 
 namespace icicle {
@@ -22,13 +23,13 @@ public:
     *
     * @param merkle_trees A moved vector of `unique_ptr<MerkleTree>`.
     */
-  FriRounds(std::vector<MerkleTree>&& merkle_trees)
-    : m_merkle_trees(std::move(merkle_trees))
+  FriRounds(std::vector<MerkleTree> merkle_trees, const size_t log_input_size)
+    : m_merkle_trees(merkle_trees)
   {
     size_t fold_rounds = m_merkle_trees.size(); //FIXME - consider stopping degree?
-    m_round_evals.resize(fold_rounds);
+    m_rounds_evals.resize(fold_rounds);
     for (size_t i = 0; i < fold_rounds; i++) {
-      m_round_evals[i] = std::make_unique<F[]>(1ULL << (fold_rounds - i));
+      m_rounds_evals[i] = std::make_unique<F[]>(1ULL << (log_input_size - i));
     }
   }
 
@@ -46,8 +47,8 @@ public:
 
   F* get_round_evals(size_t round_idx)
   {
-    ICICLE_ASSERT(round_idx < m_round_evals.size()) << "round index out of bounds";
-    return m_round_evals[round_idx].get();
+    ICICLE_ASSERT(round_idx < m_rounds_evals.size()) << "round index out of bounds";
+    return m_rounds_evals[round_idx].get();
   }
 
   /**
@@ -67,7 +68,7 @@ public:
 private:
   // Persistent polynomial evaluations for each round (heap allocated).
   // For round i, the expected length is 2^(m_initial_log_size - i).
-  std::vector<std::unique_ptr<F[]>> m_round_evals;
+  std::vector<std::unique_ptr<F[]>> m_rounds_evals;
 
   // Holds MerkleTree for each round. m_merkle_trees[i] is the tree for round i.
   std::vector<MerkleTree> m_merkle_trees;

@@ -66,7 +66,7 @@ protected:
  */
 template <typename F>
 using FriFactoryImpl =
-    std::function<eIcicleError(const Device& device,const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree>&& merkle_trees, std::shared_ptr<FriBackend<F>>& backend /*OUT*/)>;
+    std::function<eIcicleError(const Device& device,const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees, std::shared_ptr<FriBackend<F>>& backend /*OUT*/)>;
 
 /**
  * @brief Register a FRI backend factory for a specific device type.

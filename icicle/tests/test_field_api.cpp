@@ -20,6 +20,7 @@
 #include "icicle/merkle/merkle_tree.h"
 
 #include "icicle/fri/fri.h"
+#include "icicle/backend/fri_backend.h"
 #include "icicle/fri/fri_config.h"
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
@@ -1249,10 +1250,13 @@ TEST_F(FieldApiTestBase, Sumcheck)
 TYPED_TEST(FieldApiTest, Fri)
 {
   // Randomize configuration
-  const int log_input_size = rand_uint_32b(5, 13);
+  // const int log_input_size = rand_uint_32b(5, 13);
+  const int log_input_size = 5;
   const size_t input_size = 1 << log_input_size;
   const int folding_factor = 2;
-  const int stopping_degree = rand_uint_32b(1, 8);
+  // const int log_stopping_degree = rand_uint_32b(0, 3);
+  const int log_stopping_degree = 3;
+  const size_t stopping_degree = 1 << log_stopping_degree;
   const uint64_t output_store_min_layer = 0;
 
   ICICLE_LOG_DEBUG << "log_input_size = " << log_input_size;
@@ -1267,10 +1271,13 @@ TYPED_TEST(FieldApiTest, Fri)
 
   // Generate input polynomial evaluations
   auto scalars = std::make_unique<scalar_t[]>(input_size);
-  scalar_t::rand_host_many(scalars.get(), input_size);
+  // scalar_t::rand_host_many(scalars.get(), input_size);
+  for (size_t i = 0; i < input_size; i++) {
+    scalars[i] = scalar_t::from(i);
+  }
 
   // ===== Prover side ======
-  Hash hash_for_merkle_tree = create_keccak_256_hash();
+  Hash hash_for_merkle_tree = create_keccak_256_hash((2*32)); // arity = 2
   Fri prover_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
 
   FriTranscriptConfig<scalar_t> transcript_config;

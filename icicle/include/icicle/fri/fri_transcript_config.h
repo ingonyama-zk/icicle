@@ -20,10 +20,10 @@ public:
     // Default Constructor
     FriTranscriptConfig()
       : m_hasher(create_keccak_256_hash()),
-        m_domain_separator_label({}),
-        m_commit_phase_label({}),
+        m_domain_separator_label(cstr_to_bytes("ds")),
+        m_commit_phase_label(cstr_to_bytes("commit")),
         m_nonce_label(cstr_to_bytes("nonce")),
-        m_public({}),
+        m_public(cstr_to_bytes("public")),
         m_seed_rng(F::zero())
     {
     }
