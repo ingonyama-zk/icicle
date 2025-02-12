@@ -297,7 +297,7 @@ where
                 nof_iterations, i, data[i].len());
         }
     }
-    setup_config(data[0], data[0], data[0], cfg, nof_iterations)
+    setup_config(data[0], data[0], data[0], cfg, 1)
 }
 
 /// Modify VecopsConfig according to the given vectors
@@ -559,13 +559,9 @@ macro_rules! impl_vec_ops_field {
         $field:ident,
         $field_config:ident
     ) => {
-        use icicle_core::traits::FieldImpl;
-        use icicle_core::symbol::SymbolTrait;
-        use crate::symbol::$field_prefix_ident::Symbol;
-        use icicle_core::program::ProgramBaseTrait;
-        use crate::program::$field_prefix_ident::Program;
-
         mod $field_prefix_ident {
+            use crate::symbol::$field_prefix_ident::Symbol;
+            use crate::program::$field_prefix_ident::Program;
             use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_core::program::Handle;
@@ -687,7 +683,6 @@ macro_rules! impl_vec_ops_field {
                     output: *mut $field,
                 ) -> eIcicleError;
 
-                // COMMENT Maybe batch size could replace the requirement for length in C-API?
                 #[link_name = concat!($field_prefix, "_execute_program")]
                 pub(crate) fn execute_program_ffi(
                     data_ptr: *const *const $field,
@@ -959,9 +954,9 @@ macro_rules! impl_vec_ops_field {
                 Program: ProgramBaseTrait<$field, Symbol>,
             {
                 unsafe {
-                    let data_ptr: *const *const $field = data.iter().map(|s| s.as_ptr()).collect::<Vec<_>>().as_ptr();
+                    let data_vec: Vec<*const $field> = data.iter().map(|s| s.as_ptr()).collect();
                     $field_prefix_ident::execute_program_ffi(
-                        data_ptr,
+                        data_vec.as_ptr(),
                         data.len() as u64,
                         program.handle(),
                         data[0].len() as u64,
@@ -1075,19 +1070,41 @@ macro_rules! impl_vec_ops_tests {
             #[test]
             pub fn test_program() {
                 initialize();
+                test_utilities::test_set_ref_device();
+                check_program::<$field, Program, Symbol>();
+                initialize();
+                test_utilities::test_set_main_device();
                 check_program::<$field, Program, Symbol>()
             }
 
             #[test]
             pub fn test_returning_value_program() {
                 initialize();
+                test_utilities::test_set_ref_device();
+                check_program_with_return_value::<$field, ReturningValueProgram, Symbol>();
+                initialize();
+                test_utilities::test_set_main_device();
                 check_program_with_return_value::<$field, ReturningValueProgram, Symbol>()
             }
 
             #[test]
             pub fn test_predefined_program() {
                 initialize();
+                test_utilities::test_set_ref_device();
+                check_predefined_program::<$field, Program, Symbol>();
+                initialize();
+                test_utilities::test_set_main_device();
                 check_predefined_program::<$field, Program, Symbol>()
+            }
+
+            #[test]
+            pub fn test_predefined_return_value_program() {
+                initialize();
+                test_utilities::test_set_ref_device();
+                check_predefined_return_value_program_on_device::<$field, Program, Symbol>();
+                initialize();
+                test_utilities::test_set_main_device();
+                check_predefined_return_value_program_on_device::<$field, Program, Symbol>()
             }
         }
     };

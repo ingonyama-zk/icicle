@@ -483,14 +483,14 @@ where
         vars[5] = var5_res;
     };
 
-    let size = 3;
-    let a = F::Config::generate_random(size);
-    let b = F::Config::generate_random(size);
-    let c = F::Config::generate_random(size);
-    let eq = F::Config::generate_random(size);
-    let var4 = vec![F::zero(); size];
-    let var5 = vec![F::zero(); size];
-    let var6 = vec![F::zero(); size];
+    const TEST_SIZE: usize = 1 << 10;
+    let a = F::Config::generate_random(TEST_SIZE);
+    let b = F::Config::generate_random(TEST_SIZE);
+    let c = F::Config::generate_random(TEST_SIZE);
+    let eq = F::Config::generate_random(TEST_SIZE);
+    let var4 = vec![F::zero(); TEST_SIZE];
+    let var5 = vec![F::zero(); TEST_SIZE];
+    let var6 = vec![F::zero(); TEST_SIZE];
     let a_slice = HostSlice::from_slice(&a);
     let b_slice = HostSlice::from_slice(&b);
     let c_slice = HostSlice::from_slice(&c);
@@ -505,7 +505,7 @@ where
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
 
-    for i in 0..size {
+    for i in 0..TEST_SIZE {
         let a = parameters[0][i];
         let b = parameters[1][i];
         let c = parameters[2][i];
@@ -536,41 +536,41 @@ where
         let b = inputs[1].clone();
         let c = inputs[2].clone();
         let eq = inputs[3].clone();
-        eq * (a * b - c)
+        eq * (a + b + c)
     };
 
-    let size = 3;
-    let a = F::Config::generate_random(size);
-    let b = F::Config::generate_random(size);
-    let c = F::Config::generate_random(size);
-    let eq = F::Config::generate_random(size);
-    let res = vec![F::zero(); size];
+    const TEST_SIZE: usize = 1 << 10;
+    let a = F::Config::generate_random(TEST_SIZE);
+    let b = F::Config::generate_random(TEST_SIZE);
+    let c = F::Config::generate_random(TEST_SIZE);
+    let eq = F::Config::generate_random(TEST_SIZE);
+    let res = vec![F::zero(); TEST_SIZE];
     let a_slice = HostSlice::from_slice(&a);
     let b_slice = HostSlice::from_slice(&b);
     let c_slice = HostSlice::from_slice(&c);
     let eq_slice = HostSlice::from_slice(&eq);
     let res_slice = HostSlice::from_slice(&res);
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, res_slice];
+    let nof_inputs = parameters.len() as u32 - 1;
 
-    let program = ReturningValueProgram::new(lambda_eq_x_ab_minus_c, 7).unwrap();
+    let program = ReturningValueProgram::new(lambda_eq_x_ab_minus_c, nof_inputs).unwrap();
     
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
 
-    for i in 0..size {
+    for i in 0..TEST_SIZE {
         let a = parameters[0][i];
         let b = parameters[1][i];
         let c = parameters[2][i];
         let eq = parameters[3][i];
         let res = parameters[4][i];
         assert_eq!(res, <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
-                            eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                            eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(
+                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(a, b),
                                     c)));
     }
 }
 
-// TODO add predefined program test
 pub fn check_predefined_program<F, Program, Symbol>()
 where
     F: FieldImpl,
@@ -578,12 +578,12 @@ where
     Symbol: SymbolTrait<F>,
     Program: ProgramTrait<F, Symbol>,
 {
-    let size = 3;
-    let a = F::Config::generate_random(size);
-    let b = F::Config::generate_random(size);
-    let c = F::Config::generate_random(size);
-    let eq = F::Config::generate_random(size);
-    let var4 = vec![F::zero(); size];
+    const TEST_SIZE: usize = 1 << 10;
+    let a = F::Config::generate_random(TEST_SIZE);
+    let b = F::Config::generate_random(TEST_SIZE);
+    let c = F::Config::generate_random(TEST_SIZE);
+    let eq = F::Config::generate_random(TEST_SIZE);
+    let var4 = vec![F::zero(); TEST_SIZE];
     let a_slice = HostSlice::from_slice(&a);
     let b_slice = HostSlice::from_slice(&b);
     let c_slice = HostSlice::from_slice(&c);
@@ -596,7 +596,7 @@ where
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
 
-    for i in 0..size {
+    for i in 0..TEST_SIZE {
         let a = parameters[0][i];
         let b = parameters[1][i];
         let c = parameters[2][i];
@@ -606,6 +606,48 @@ where
                             eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
                                     <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
                                     c)));
+    }
+}
+
+pub fn check_predefined_return_value_program_on_device<F, Program, Symbol>()
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    Symbol: SymbolTrait<F>,
+    Program: ProgramTrait<F, Symbol>,
+{
+    const TEST_SIZE: usize = 1 << 10;
+    let a = F::Config::generate_random(TEST_SIZE);
+    let b = F::Config::generate_random(TEST_SIZE);
+    let c = F::Config::generate_random(TEST_SIZE);
+    
+    let a_slice = HostSlice::from_slice(&a);
+    let b_slice = HostSlice::from_slice(&b);
+    let c_slice = HostSlice::from_slice(&c);
+
+    // Move to device
+    let mut a_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    a_device.copy_from_host(&a_slice).unwrap();
+    let mut b_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    b_device.copy_from_host(&b_slice).unwrap();
+    let mut c_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    c_device.copy_from_host(&c_slice).unwrap();
+    let res_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+
+    let mut parameters = vec![&a_device, &b_device, &c_device, &res_device];
+
+    let program = Program::new_predefined(PreDefinedProgram::ABminusC).unwrap();
+    
+    let cfg = VecOpsConfig::default();
+    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
+
+    let mut res_device_to_host = vec![F::zero(); TEST_SIZE];
+    res_device.copy_to_host(HostSlice::from_mut_slice(&mut res_device_to_host)).unwrap();
+
+    for i in 0..TEST_SIZE {
+        assert_eq!(res_device_to_host[i], <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
+                        <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a[i], b[i]),
+                        c[i]));
     }
 }
 

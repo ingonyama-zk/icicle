@@ -16,7 +16,7 @@ pub trait SymbolTrait<F: FieldImpl>:
   for<'a> AddAssign<&'a Self> +
   for<'a> SubAssign<&'a Self> +
   for<'a> MulAssign<&'a Self> +
-  Clone + Drop + Sized
+  Clone + Sized
 {
   fn new_empty() -> Result<Self, eIcicleError>;
   fn new_constant(constant: F) -> Result<Self, eIcicleError>;
@@ -321,7 +321,7 @@ macro_rules! impl_symbol_field {
       impl_op!(Sub, SubAssign, sub, sub_assign, sub_handles);
       impl_op!(Mul, MulAssign, mul, mul_assign, mul_handles);
 
-      impl Drop for Symbol where Symbol: SymbolTrait<$field> { // TODO test without drop and with copy
+      impl Drop for Symbol where Symbol: SymbolTrait<$field> {
         fn drop(&mut self) {
           Symbol::delete_handle(self.m_handle);
         }

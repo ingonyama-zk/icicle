@@ -541,12 +541,8 @@ namespace icicle {
   {
     std::vector<scalar_t*> data_vec;
     data_vec.reserve(nof_params);
-    for (uint64_t i = 0; i < nof_params; i++)
-    {
-      if (data_ptr[i] == nullptr)
-      {
-        throw std::invalid_argument("Null pointer found in parameters");
-      }
+    for (uint64_t i = 0; i < nof_params; i++) {
+      if (data_ptr[i] == nullptr) { throw std::invalid_argument("Null pointer found in parameters"); }
       data_vec.push_back(data_ptr[i]);
     }
     return ExecuteProgramDispatcher::execute(data_vec, *program, size, config);
@@ -558,6 +554,33 @@ namespace icicle {
   {
     return CONCAT_EXPAND(FIELD, execute_program)(data.data(), data.size(), &program, size, config);
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(ExtExecuteProgramDispatcher, extension_execute_program, extProgramExecutionImpl)
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, extension_execute_program)(
+    extension_t** data_ptr,
+    uint64_t nof_params,
+    const Program<extension_t>* program,
+    uint64_t size,
+    const VecOpsConfig& config)
+  {
+    std::vector<extension_t*> data_vec;
+    data_vec.reserve(nof_params);
+    for (uint64_t i = 0; i < nof_params; i++) {
+      if (data_ptr[i] == nullptr) { throw std::invalid_argument("Null pointer found in parameters"); }
+      data_vec.push_back(data_ptr[i]);
+    }
+    return ExtExecuteProgramDispatcher::execute(data_vec, *program, size, config);
+  }
+
+  template <>
+  eIcicleError execute_program(
+    std::vector<extension_t*>& data, const Program<extension_t>& program, uint64_t size, const VecOpsConfig& config)
+  {
+    return CONCAT_EXPAND(FIELD, extension_execute_program)(data.data(), data.size(), &program, size, config);
+  }
+#endif // EXT_FIELD
 
   /*********************************** POLY EVAL ***********************************/
 

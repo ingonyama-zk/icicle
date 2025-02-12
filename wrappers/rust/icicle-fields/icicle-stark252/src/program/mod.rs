@@ -1,4 +1,4 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 
 use icicle_core::impl_program_field;
 

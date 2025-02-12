@@ -5,6 +5,10 @@ use icicle_core::vec_ops::{VecOps, VecOpsConfig};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
+use icicle_core::traits::FieldImpl;
+use icicle_core::symbol::SymbolTrait;
+use icicle_core::program::ProgramBaseTrait;
+
 impl_vec_ops_field!("stark252", stark252, ScalarField, ScalarCfg);
 
 #[cfg(test)]
