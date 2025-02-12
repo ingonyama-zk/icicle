@@ -1,15 +1,15 @@
 #pragma once
 
 #include "icicle/math/storage.h"
-#include "icicle/math/host_math.h"
+#include "icicle/math/icicle_math.h"
 
 namespace params_gen {
   template <unsigned NLIMBS, unsigned BIT_SHIFT>
   static constexpr HOST_INLINE storage<2 * NLIMBS> get_square(const storage<NLIMBS>& xs)
   {
     storage<2 * NLIMBS> rs = {};
-    host_math::template multiply_raw<NLIMBS, NLIMBS, true>(xs, xs, rs);
-    return host_math::template left_shift<2 * NLIMBS, BIT_SHIFT>(rs);
+    icicle_math::template multiply_raw<NLIMBS, NLIMBS, true>(xs, xs, rs);
+    return icicle_math::template left_shift<2 * NLIMBS, BIT_SHIFT>(rs);
   }
 
   template <unsigned NLIMBS>
@@ -17,7 +17,7 @@ namespace params_gen {
   get_difference_no_carry(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys)
   {
     storage<NLIMBS> rs = {};
-    host_math::template add_sub_limbs<NLIMBS, true, false, true>(xs, ys, rs);
+    icicle_math::template add_sub_limbs<NLIMBS, true, false, true>(xs, ys, rs);
     return rs;
   }
 
@@ -27,8 +27,8 @@ namespace params_gen {
     storage<NLIMBS> rs = {};
     storage<NLIMBS> qs = {};
     storage<2 * NLIMBS> wide_one = {1};
-    storage<2 * NLIMBS> pow_of_2 = host_math::template left_shift<2 * NLIMBS, EXP>(wide_one);
-    host_math::template integer_division<2 * NLIMBS, NLIMBS, NLIMBS, true>(pow_of_2, modulus, qs, rs);
+    storage<2 * NLIMBS> pow_of_2 = icicle_math::template left_shift<2 * NLIMBS, EXP>(wide_one);
+    icicle_math::template integer_division<2 * NLIMBS, NLIMBS, NLIMBS, true>(pow_of_2, modulus, qs, rs);
     return qs;
   }
 
@@ -38,12 +38,12 @@ namespace params_gen {
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < 32 * NLIMBS; i++) {
       if (INV) {
-        if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
-        rs = host_math::template right_shift<NLIMBS, 1>(rs);
+        if (rs.limbs[0] & 1) icicle_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
+        rs = icicle_math::template right_shift<NLIMBS, 1>(rs);
       } else {
-        rs = host_math::template left_shift<NLIMBS, 1>(rs);
+        rs = icicle_math::template left_shift<NLIMBS, 1>(rs);
         storage<NLIMBS> temp = {};
-        rs = host_math::template add_sub_limbs<NLIMBS, true, true, true>(rs, modulus, temp) ? rs : temp;
+        rs = icicle_math::template add_sub_limbs<NLIMBS, true, true, true>(rs, modulus, temp) ? rs : temp;
       }
     }
     return rs;
@@ -57,12 +57,12 @@ namespace params_gen {
     storage<2 * NLIMBS> x1 = {};
     storage<3 * NLIMBS> x2 = {};
     storage<3 * NLIMBS> x3 = {};
-    host_math::template multiply_raw<NLIMBS, NLIMBS, true>(modulus, m, x1);
-    host_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, x1, x2);
+    icicle_math::template multiply_raw<NLIMBS, NLIMBS, true>(modulus, m, x1);
+    icicle_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, x1, x2);
     storage<2 * NLIMBS> one = {1};
-    storage<2 * NLIMBS> pow_of_2 = host_math::template left_shift<2 * NLIMBS, NBITS>(one);
-    host_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, pow_of_2, x3);
-    host_math::template add_sub_limbs<3 * NLIMBS, true, false, true>(x3, x2, x2);
+    storage<2 * NLIMBS> pow_of_2 = icicle_math::template left_shift<2 * NLIMBS, NBITS>(one);
+    icicle_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, pow_of_2, x3);
+    icicle_math::template add_sub_limbs<3 * NLIMBS, true, false, true>(x3, x2, x2);
     double err = (double)x2.limbs[2 * NLIMBS - 1] / pow_of_2.limbs[2 * NLIMBS - 1];
     err += (double)m.limbs[NLIMBS - 1] / 0xffffffff;
     err += (double)NLIMBS / 0x80000000;
@@ -73,9 +73,9 @@ namespace params_gen {
   constexpr unsigned two_adicity(const storage<NLIMBS>& modulus)
   {
     unsigned two_adicity = 1;
-    storage<NLIMBS> temp = host_math::template right_shift<NLIMBS, 1>(modulus);
+    storage<NLIMBS> temp = icicle_math::template right_shift<NLIMBS, 1>(modulus);
     while (!(temp.limbs[0] & 1)) {
-      temp = host_math::template right_shift<NLIMBS, 1>(temp);
+      temp = icicle_math::template right_shift<NLIMBS, 1>(temp);
       two_adicity++;
     }
     return two_adicity;
@@ -87,8 +87,8 @@ namespace params_gen {
     storage_array<TWO_ADICITY, NLIMBS> invs = {};
     storage<NLIMBS> rs = {1};
     for (int i = 0; i < TWO_ADICITY; i++) {
-      if (rs.limbs[0] & 1) host_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
-      rs = host_math::template right_shift<NLIMBS, 1>(rs);
+      if (rs.limbs[0] & 1) icicle_math::template add_sub_limbs<NLIMBS, false, false, true>(rs, modulus, rs);
+      rs = icicle_math::template right_shift<NLIMBS, 1>(rs);
       invs.storages[i] = rs;
     }
     return invs;
@@ -108,12 +108,12 @@ namespace params_gen {
       storage<NLIMBS> rs = {};
       storage<NLIMBS + 2> mod_sub_factor = {};
       temp.limbs[0] = i;
-      storage<2 * NLIMBS + 2> candidate = host_math::template left_shift<2 * NLIMBS + 2, bit_shift>(temp);
-      host_math::template integer_division<2 * NLIMBS + 2, NLIMBS, NLIMBS + 2, true>( // find the closest multiple of p
-                                                                                      // to subtract.
+      storage<2 * NLIMBS + 2> candidate = icicle_math::template left_shift<2 * NLIMBS + 2, bit_shift>(temp);
+      icicle_math::template integer_division<2 * NLIMBS + 2, NLIMBS, NLIMBS + 2, true>( // find the closest multiple of
+                                                                                        // p to subtract.
         candidate, modulus, mod_sub_factor, rs);
       storage<2 * NLIMBS + 2> temp2 = {};
-      host_math::template multiply_raw<NLIMBS + 2, NLIMBS, true>(mod_sub_factor, modulus, temp2);
+      icicle_math::template multiply_raw<NLIMBS + 2, NLIMBS, true>(mod_sub_factor, modulus, temp2);
       mod_subs.storages[i] = temp2;
     }
     return mod_subs;
@@ -126,16 +126,16 @@ namespace params_gen {
     32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;                                \
   static constexpr storage<limbs_count> zero = {};                                                                     \
   static constexpr storage<limbs_count> one = {1};                                                                     \
-  static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);           \
-  static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);         \
+  static constexpr storage<limbs_count> modulus_2 = icicle_math::template left_shift<limbs_count, 1>(modulus);         \
+  static constexpr storage<limbs_count> modulus_4 = icicle_math::template left_shift<limbs_count, 1>(modulus_2);       \
   static constexpr storage<limbs_count> neg_modulus =                                                                  \
     params_gen::template get_difference_no_carry<limbs_count>(zero, modulus);                                          \
   static constexpr storage<2 * limbs_count> modulus_squared =                                                          \
     params_gen::template get_square<limbs_count, 0>(modulus);                                                          \
   static constexpr storage<2 * limbs_count> modulus_squared_2 =                                                        \
-    host_math::template left_shift<2 * limbs_count, 1>(modulus_squared);                                               \
+    icicle_math::template left_shift<2 * limbs_count, 1>(modulus_squared);                                             \
   static constexpr storage<2 * limbs_count> modulus_squared_4 =                                                        \
-    host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2);                                             \
+    icicle_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2);                                           \
   static constexpr storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus);   \
   static constexpr storage<limbs_count> montgomery_r =                                                                 \
     params_gen::template get_montgomery_constant<limbs_count, false>(modulus);                                         \
