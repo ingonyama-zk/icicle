@@ -1,7 +1,5 @@
 #include <cstdint>
 #include <gtest/gtest.h>
-#include <iostream>
-#include <random>
 
 #include "icicle/runtime.h"
 #include "icicle/vec_ops.h"
@@ -14,7 +12,7 @@
 #include "icicle/program/symbol.h"
 #include "icicle/program/program.h"
 #include "icicle/program/returning_value_program.h"
-#include "../../icicle/backend/cpu/include/cpu_program_executor.h"
+#include "../backend/cpu/include/cpu_program_executor.h"
 #include "icicle/sumcheck/sumcheck.h"
 
 #include "test_base.h"
@@ -85,10 +83,10 @@ TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
       const storage<3> c =
         TypeParam::template rand_storage<3>(); // 3 because we don't support higher odd number of limbs yet
       storage<4> product = {};
-      base_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+      icicle_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
       auto c_red = TypeParam::from(c);
       auto c_inv = TypeParam::inverse(c_red);
-      base_math::multiply_raw<3, 1, true>(
+      icicle_math::multiply_raw<3, 1, true>(
         c, c_inv.limbs_storage, product); // using 32-bit multiplication for small fields
       ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
       ASSERT_EQ(TypeParam::from(product), TypeParam::one());
@@ -108,10 +106,10 @@ TYPED_TEST(FieldApiTest, FieldStorageReduceSanityTest)
       const storage<18 - TypeParam::TLC> c =
         TypeParam::template rand_storage<18 - TypeParam::TLC>(); // -TLC so we don't overflow in multiplication
       storage<18> product = {};
-      base_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+      icicle_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
       auto c_red = TypeParam::from(c);
       auto c_inv = TypeParam::inverse(c_red);
-      base_math::multiply_raw(c, c_inv.limbs_storage, product);
+      icicle_math::multiply_raw(c, c_inv.limbs_storage, product);
       ASSERT_EQ(TypeParam::from(a) + TypeParam::from(b), TypeParam::from(sum));
       ASSERT_EQ(TypeParam::from(product), TypeParam::one());
       std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
