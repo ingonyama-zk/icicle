@@ -1,5 +1,7 @@
 use crate::hash::Hasher;
-use crate::sumcheck::{Sumcheck, SumcheckConstructor, SumcheckOps, SumcheckTranscriptConfig};
+use crate::sumcheck::{
+    PreDefinedProgram, ReturningValueProgramTrait, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
+};
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::HostSlice;
 
@@ -47,12 +49,16 @@ where
 }
 
 /// Tests the `Sumcheck` struct's basic functionality, including proving and verifying.
-pub fn check_sumcheck_simple<F: FieldImpl>(hash: &Hasher)
+pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
-    <F as FieldImpl>::Config: GenerateRandom<F> + SumcheckConstructor<F>,
+    SW: Sumcheck,
+    P: ReturningValueProgramTrait,
 {
+    let log_mle_poly_size = 13u64;
+    let mle_poly_size = 1 << log_mle_poly_size;
+    let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -64,16 +70,54 @@ where
         seed_rng,
     );
 
+    let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+    for _ in 0..nof_mle_poly {
+        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        mle_polys.push(mle_poly_random);
+    }
+
     // Create a Sumcheck instance using the transcript configuration.
-    let claimed_sum = F::from_u32(7); //dummy
-    let sumcheck = Sumcheck::new::<F>(&claimed_sum, &config).unwrap();
+    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    for i in 0..mle_poly_size {
+        let a = mle_polys[0][i];
+        let b = mle_polys[1][i];
+        let c = mle_polys[2][i];
+        let eq = mle_polys[3][i];
+        claimed_sum = claimed_sum + (a * b - c) * eq;
+    }
 
-    // Generate dummy input data.
-    let dummy_input: Vec<F> = F::Config::generate_random(5);
+    /****** Being Proof ******/
+    let sumcheck = SW::new().unwrap();
 
+    let mle_poly_ptrs: Vec<*const <SW as Sumcheck>::Field> = mle_polys
+        .iter()
+        .map(|poly| {
+            let poly_ptr = poly.as_ptr();
+            return poly_ptr;
+        })
+        .collect::<Vec<*const <SW as Sumcheck>::Field>>();
+
+    let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
-    let proof = sumcheck.prove(HostSlice::from_slice(&dummy_input));
+    let proof = sumcheck.prove(
+        HostSlice::from_slice(&mle_poly_ptrs[..]),
+        mle_poly_size as u64,
+        claimed_sum,
+        combine_func,
+        &config,
+        &sumcheck_config,
+    );
+    /****** End Proof ******/
 
-    // Verify the proof using the `verify` method.
-    let _valid = sumcheck.verify(&proof);
+    /****** Obtain Proof Data ******/
+    let proof_data = <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_proof(&proof);
+
+    /********** Verifier deserializes proof data *********/
+    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_data);
+
+    // Verify the proof.
+    let valid = sumcheck.verify(&proof_as_sumcheck_proof, claimed_sum, &config);
+
+    assert!(valid);
 }
