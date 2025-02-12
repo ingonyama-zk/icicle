@@ -376,7 +376,7 @@ macro_rules! impl_sumcheck {
                     let err = icicle_sumcheck_proof_get_proof_sizes(self.handle, &mut poly_size, &mut num_polys);
 
                     if err != eIcicleError::Success {
-                        return Err(err)
+                        return Err(err);
                     }
 
                     let mut rounds: Vec<Vec<$field>> = Vec::with_capacity(num_polys as usize);
