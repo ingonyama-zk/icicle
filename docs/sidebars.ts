@@ -85,7 +85,12 @@ const cppApi = [
     type: "doc",
     label: "Merkle-Tree",
     id: "icicle/primitives/merkle",
-  }
+  },
+  {
+    type: "doc",
+    label: "Sumcheck",
+    id: "icicle/primitives/sumcheck",
+  },
 ];
 
 const golangBindingsApi = [
