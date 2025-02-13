@@ -12,18 +12,8 @@ on:
           - patch
           - minor
           - major
-      bumpDocs:
-        description: 'Bump Docs?'
-        required: true
-        type: boolean
-        default: true
-      bumpRust:
-        description: 'Bump Rust crates?'
-        required: true
-        type: boolean
-        default: true
-      createRelease:
-        description: 'Create draft release?'
+      bump:
+        description: 'Bump Docs, Rust crates, and create draft release?'
         required: true
         type: boolean
         default: true
@@ -59,7 +49,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: cargo install cargo-workspaces
       - name: Bump rust crate versions, commit, and tag
-        if: ${{ inputs.bumpRust }}
+        if: ${{ inputs.bump }}
         working-directory: wrappers/rust
         # https://github.com/pksunkara/cargo-workspaces?tab=readme-ov-file#version
         run: |
@@ -71,7 +61,7 @@ jobs:
           node-version: 18
       - name: Bump docs version
         id: bump-docs-version
-        if: ${{ inputs.releaseType != 'patch' && inputs.bumpDocs }}
+        if: ${{ inputs.releaseType != 'patch' && inputs.bump }}
         working-directory: ./docs
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
@@ -84,7 +74,7 @@ jobs:
         run: |
           git push origin main --tags
       - name: Create draft release
-        if: ${{ inputs.createRelease }}
+        if: ${{ inputs.bump }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |          
@@ -101,7 +91,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p release_output && rm -rf ./release_output/*
-          LATEST_TAG=$(git describe --tags --abbrev=0)
+          LATEST_TAG=$(git ls-remote --tags --sort='-v:refname' | head -n1 | sed 's/.*refs\/tags\/\(v[0-9.]*\).*/\1/')
           ./scripts/release/build_all.sh $LATEST_TAG ./release_output
           for file in ./release_output/*.tar.gz; do
             gh release upload $LATEST_TAG "$file"
