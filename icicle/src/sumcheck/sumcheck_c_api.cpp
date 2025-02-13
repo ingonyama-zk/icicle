@@ -106,8 +106,6 @@ SumcheckProof<scalar_t>* CONCAT_EXPAND(FIELD, sumcheck_get_proof)(
   // Finished constructing the SumcheckTranscriptConfig from TranscriptConfigFFI
 
   SumcheckProof<scalar_t>* sumcheck_proof = new SumcheckProof<scalar_t>();
-  // SumcheckConfig sumcheck_config = SumcheckConfig();
-
   sumcheck_handle->get_proof(
     mle_polynomials, mle_polynomial_size, *claimed_sum, *combine_function, std::move(transcript_config),
     *sumcheck_config, *sumcheck_proof);
@@ -261,17 +259,5 @@ eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_print)(SumcheckProof<scalar_t>*
 
   return eIcicleError::SUCCESS;
 }
-
 /***************** END SumcheckProof **********************/
-
-/******************* BEGIN ReturningValueProgram ******************/
-// TODO - Move this to a Program c_api.cpp file when completed
-typedef ReturningValueProgram<scalar_t>* ReturningValueProgramHandle;
-
-ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_value_program)(PreDefinedPrograms pre_def)
-{
-  return new ReturningValueProgram<scalar_t>(pre_def);
-}
-/******************* END ReturningValueProgram ******************/
-
 } // extern "C"

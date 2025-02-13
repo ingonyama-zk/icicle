@@ -3,7 +3,8 @@ pub mod tests;
 
 use crate::field::FieldArithmetic;
 use crate::hash::Hasher;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
+use crate::program::ReturningValueProgram;
+use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, Handle};
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -66,8 +67,8 @@ impl<'a, F> SumcheckTranscriptConfig<'a, F> {
 }
 
 /// Converts [SumcheckTranscriptConfig](SumcheckTranscriptConfig) to its FFI-compatible equivalent.
-#[derive(Debug)]
 #[repr(C)]
+#[derive(Debug)]
 pub struct FFISumcheckTranscriptConfig<F> {
     hash: *const c_void,
     domain_separator_label: *const u8,
@@ -114,21 +115,20 @@ where
 }
 
 #[repr(C)]
+#[derive(Debug, Clone)]
 pub struct SumcheckConfig {
     /**< Stream for asynchronous execution. Default is nullptr. */
-    stream: IcicleStreamHandle,
+    pub stream: IcicleStreamHandle,
     /**< If true, then use extension field for the fiat shamir result. Recommended for small fields for security*/
-    use_extension_field: bool,
+    pub use_extension_field: bool,
     /**< Number of input chunks to hash in batch. Default is 1. */
-    batch: u64,
+    pub batch: u64,
     /**< True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
-    are_inputs_on_device: bool,
-    /**< True if outputs reside on the device, false if on the host. Default is false. */
-    are_outputs_on_device: bool,
+    pub are_inputs_on_device: bool,
     /**< True to run the hash asynchronously, false to run synchronously. Default is false. */
-    is_async: bool,
+    pub is_async: bool,
     /**< Pointer to backend-specific configuration extensions. Default is nullptr. */
-    ext: ConfigExtension,
+    pub ext: ConfigExtension,
 }
 
 impl Default for SumcheckConfig {
@@ -138,7 +138,6 @@ impl Default for SumcheckConfig {
             use_extension_field: false,
             batch: 1,
             are_inputs_on_device: false,
-            are_outputs_on_device: false,
             is_async: false,
             ext: ConfigExtension::new(),
         }
@@ -157,7 +156,7 @@ pub trait Sumcheck {
 
     fn prove(
         &self,
-        mle_polys: &(impl HostOrDeviceSlice<*const Self::Field> + ?Sized),
+        mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
         combine_function: impl ReturningValueProgram + Handle,
@@ -181,72 +180,22 @@ where
     fn print(&self) -> eIcicleError;
 }
 
-/************************* START TO BE MOVED **********************************/
-// TODO - Use the Program and Symbol FFI when ready
-#[repr(C)]
-pub enum PreDefinedProgram {
-    ABminusC = 0,
-    EQtimesABminusC,
-}
-
-pub type FieldReturningValueProgramHandle = *const c_void;
-
-pub trait ReturningValueProgram: Sized {
-    fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
-}
-
-pub trait Handle {
-    fn handle(&self) -> *const c_void;
-}
-
-/************************* END TO BE MOVED **********************************/
-
 /// Macro to implement Sumcheck functionality for a specific field.
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
         use icicle_core::sumcheck::{
-            FFISumcheckTranscriptConfig, FieldReturningValueProgramHandle, Handle, PreDefinedProgram,
-            ReturningValueProgram, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
+            FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
-        use icicle_core::traits::FieldImpl;
+        use icicle_core::program::{
+            ReturningValueProgramHandle, PreDefinedProgram, ReturningValueProgram,
+        };
+        use icicle_core::traits::{FieldImpl, Handle};
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
 
-        /************************* START TO BE MOVED **********************************/
-        // TODO - Use the Program and Symbol FFI when ready
-        pub struct FieldReturningValueProgram {
-            m_handle: FieldReturningValueProgramHandle,
-        }
-
-        // Returning Value Program trait implementation
-        impl ReturningValueProgram for FieldReturningValueProgram {
-            fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
-                unsafe {
-                    let prog_handle = icicle_create_predefined_returning_value_program(pre_def);
-                    if prog_handle.is_null() {
-                        return Err(eIcicleError::AllocationFailed);
-                    } else {
-                        Ok(Self {
-                            m_handle: prog_handle,
-                        })
-                    }
-                }
-            }
-        }
-
-        impl Handle for FieldReturningValueProgram {
-            fn handle(&self) -> FieldReturningValueProgramHandle {
-                self.m_handle
-            }
-        }
-        /************************* END TO BE MOVED **********************************/
-
         extern "C" {
-            #[link_name = concat!($field_prefix, "_create_predefined_returning_value_program")]
-            fn icicle_create_predefined_returning_value_program(pre_def: PreDefinedProgram) -> SumcheckHandle;
-
             #[link_name = concat!($field_prefix, "_sumcheck_create")]
             fn icicle_sumcheck_create() -> SumcheckHandle;
 
@@ -260,7 +209,7 @@ macro_rules! impl_sumcheck {
                 mle_poly_size: u64,
                 num_mle_polys: u64,
                 claimed_sum: &$field,
-                combine_function_handle: FieldReturningValueProgramHandle,
+                combine_function_handle: ReturningValueProgramHandle,
                 transcript_config: &FFISumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> SumcheckProofHandle;
@@ -321,7 +270,7 @@ macro_rules! impl_sumcheck {
 
             fn prove(
                 &self,
-                mle_polys: &(impl HostOrDeviceSlice<*const $field> + ?Sized),
+                mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                 mle_poly_size: u64,
                 claimed_sum: $field,
                 combine_function: impl ReturningValueProgram + Handle,
@@ -329,16 +278,27 @@ macro_rules! impl_sumcheck {
                 sumcheck_config: &SumcheckConfig,
             ) -> Self::Proof {
                 let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
+
+                let mut cfg = sumcheck_config.clone();
+                if mle_polys[0].is_on_device() {
+                    for mle_poly in mle_polys {
+                        assert!(mle_poly.is_on_active_device());
+                    }
+                    cfg.are_inputs_on_device = true;
+                }
+
                 unsafe {
+                    let mle_polys_internal: Vec<*const $field> = mle_polys.iter().map(|mle_poly| mle_poly.as_ptr()).collect();
+
                     let proof_handle = icicle_sumcheck_prove(
                         self.handle,
-                        mle_polys.as_ptr() as *const *const $field,
+                        mle_polys_internal.as_ptr() as *const *const $field,
                         mle_poly_size,
                         mle_polys.len() as u64,
                         &claimed_sum,
                         combine_function.handle(),
                         &ffi_transcript_config,
-                        sumcheck_config,
+                        &cfg,
                     );
 
                     Self::Proof { handle: proof_handle }
@@ -462,8 +422,8 @@ macro_rules! impl_sumcheck {
 macro_rules! impl_sumcheck_tests {
     ($field:ident) => {
         use icicle_core::sumcheck::tests::*;
-        // TODO - Use the Program and Symbol FFI when ready
-        use super::{FieldReturningValueProgram as Program, SumcheckWrapper};
+        use super::SumcheckWrapper;
+        use crate::program::FieldReturningValueProgram as Program;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};
         use std::sync::Once;
@@ -476,7 +436,6 @@ macro_rules! impl_sumcheck_tests {
             INIT.call_once(move || {
                 test_utilities::test_load_and_init_devices();
             });
-            // TODO loop over devices once we implement for CUDA
             test_utilities::test_set_ref_device();
         }
 

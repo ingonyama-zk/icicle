@@ -3,6 +3,7 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
+use std::ffi::c_void;
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {
@@ -36,4 +37,8 @@ pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Outp
     fn sqr(self) -> Self;
     fn inv(self) -> Self;
     fn pow(self, exp: usize) -> Self;
+}
+
+pub trait Handle {
+    fn handle(&self) -> *const c_void;
 }
