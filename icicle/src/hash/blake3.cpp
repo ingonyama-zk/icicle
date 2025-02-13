@@ -14,4 +14,5 @@ namespace icicle {
     Hash blake3{backend};
     return blake3;
   }
+
 } // namespace icicle
