@@ -211,6 +211,7 @@ impl MerkleTree {
             );
 
             if handle.is_null() {
+                println!("Null handle!");
                 Err(eIcicleError::UnknownError)
             } else {
                 Ok(MerkleTree { handle })

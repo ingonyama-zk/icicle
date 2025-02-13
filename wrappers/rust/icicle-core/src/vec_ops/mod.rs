@@ -1,4 +1,5 @@
 use crate::traits::FieldImpl;
+use crate::program::ProgramBaseTrait;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -130,6 +131,17 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
+
+    fn execute_program<Program, Data>(
+        data: &mut Vec<&Data>,
+        program: &Program,
+        cfg: &VecOpsConfig
+    ) -> Result<(), eIcicleError>
+    where
+        F: FieldImpl,
+        <F as FieldImpl>::Config: VecOps<F>,
+        Data: HostOrDeviceSlice<F> + ?Sized,
+        Program: ProgramBaseTrait<F>;
 }
 
 #[doc(hidden)]
@@ -249,6 +261,31 @@ fn check_vec_ops_args_slice<F>(
     }
     let batch_size = output.len() / size_out as usize;
     setup_config(input, input, output, cfg, batch_size)
+}
+
+fn check_execute_program<F, Data>( // COMMENT do we need this check in Rust (or any of the other checks)? seems to bloat rust for stuff not even implemented in cpp.
+    data: &Vec<&Data>,
+    cfg: &VecOpsConfig
+) -> VecOpsConfig
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+{
+    // All parameters' config should match so each one is compared to the first one
+    let nof_iterations = data[0].len();
+    let is_on_device = data[0].is_on_device();
+
+    for i in 1..data.len() {
+        if data[i].len() != nof_iterations {
+            panic!("First parameter length ({}) and parameter[{}] length do not match", nof_iterations, data[i].len());
+        }
+        if data[i].is_on_device() != is_on_device {
+            panic!("First parameter length ({}) and parameter[{}] length ({}) do not match",
+                nof_iterations, i, data[i].len());
+        }
+    }
+    setup_config(data[0], data[0], data[0], cfg, 1)
 }
 
 /// Modify VecopsConfig according to the given vectors
@@ -486,6 +523,21 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
+pub fn execute_program<F, Program, Data>(
+    data: &mut Vec<&Data>,
+    program: &Program,
+    cfg: &VecOpsConfig
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+    Program: ProgramBaseTrait<F>,
+{
+    let cfg = check_execute_program(&data, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::execute_program(data, program, &cfg)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -495,9 +547,10 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         mod $field_prefix_ident {
-
+            use crate::program::$field_prefix_ident::Program;
             use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
+            use icicle_core::program::Handle;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
@@ -614,6 +667,15 @@ macro_rules! impl_vec_ops_field {
                     size_out: u64,
                     cfg: *const VecOpsConfig,
                     output: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_execute_program")]
+                pub(crate) fn execute_program_ffi(
+                    data_ptr: *const *const $field,
+                    nof_params: u64,
+                    program: Handle,
+                    nof_iterations: u64,
+                    cfg: *const VecOpsConfig
                 ) -> eIcicleError;
             }
         }
@@ -865,6 +927,29 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+
+            fn execute_program<Program, Data>(
+                data: &mut Vec<&Data>,
+                program: &Program,
+                cfg: &VecOpsConfig
+            ) -> Result<(), eIcicleError>
+            where
+                <$field as FieldImpl>::Config: VecOps<$field>,
+                Data: HostOrDeviceSlice<$field> + ?Sized,
+                Program: ProgramBaseTrait<$field>,
+            {
+                unsafe {
+                    let data_vec: Vec<*const $field> = data.iter().map(|s| s.as_ptr()).collect();
+                    $field_prefix_ident::execute_program_ffi(
+                        data_vec.as_ptr(),
+                        data.len() as u64,
+                        program.handle(),
+                        data[0].len() as u64,
+                        cfg as *const VecOpsConfig
+                    )
+                    .wrap()
+                }
+            }
         }
     };
 }
@@ -921,6 +1006,7 @@ macro_rules! impl_vec_ops_mixed_field {
 #[macro_export]
 macro_rules! impl_vec_ops_tests {
     (
+      $field_prefix_ident: ident,
       $field:ident
     ) => {
         pub(crate) mod test_vecops {
@@ -928,6 +1014,7 @@ macro_rules! impl_vec_ops_tests {
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
+            use crate::program::$field_prefix_ident::{Program, ReturningValueProgram};
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();
@@ -962,6 +1049,26 @@ macro_rules! impl_vec_ops_tests {
             pub fn test_slice() {
                 initialize();
                 check_slice::<$field>()
+            }
+
+            #[test]
+            pub fn test_predefined_program() {
+                initialize();
+                test_utilities::test_set_ref_device();
+                check_predefined_program::<$field, Program>();
+                initialize();
+                test_utilities::test_set_main_device();
+                check_predefined_program::<$field, Program>()
+            }
+
+            #[test]
+            pub fn test_predefined_return_value_program() {
+                initialize();
+                test_utilities::test_set_ref_device();
+                check_predefined_return_value_program_on_device::<$field, Program>();
+                initialize();
+                test_utilities::test_set_main_device();
+                check_predefined_return_value_program_on_device::<$field, Program>()
             }
         }
     };

@@ -1,13 +1,17 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
+use crate::field::FieldArithmetic;
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mixed_mul_scalars, mul_scalars,
-    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl,
-    MixedVecOps, VecOps, VecOpsConfig,
+    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, 
+    execute_program,
+    FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
 };
+use crate::program::{Handle, Instruction, ProgramTrait, ReturningValueProgramTrait, PreDefinedProgram};
 use icicle_runtime::device::Device;
-use icicle_runtime::memory::{DeviceVec, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
+use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 
 #[test]
 fn test_vec_ops_config() {
@@ -165,7 +169,7 @@ pub fn check_vec_ops_scalars_sum<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(test_size * batch_size);
@@ -189,7 +193,7 @@ pub fn check_vec_ops_scalars_product<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(test_size * batch_size);
@@ -213,13 +217,13 @@ pub fn check_vec_ops_scalars_add_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
-    let a_main = F::Config::generate_random(cfg.batch_size as usize);
-    let b = F::Config::generate_random(test_size * cfg.batch_size as usize);
-    let mut result_main = vec![F::zero(); test_size * cfg.batch_size as usize];
-    let mut result_ref = vec![F::zero(); test_size * cfg.batch_size as usize];
+    let a_main = F::Config::generate_random(batch_size as usize);
+    let b = F::Config::generate_random(test_size * batch_size as usize);
+    let mut result_main = vec![F::zero(); test_size * batch_size as usize];
+    let mut result_ref = vec![F::zero(); test_size * batch_size as usize];
 
     let a_main = HostSlice::from_slice(&a_main);
     let b = HostSlice::from_slice(&b);
@@ -239,7 +243,7 @@ pub fn check_vec_ops_scalars_sub_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(batch_size);
@@ -265,7 +269,7 @@ pub fn check_vec_ops_scalars_mul_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(batch_size);
@@ -315,7 +319,7 @@ pub fn check_matrix_transpose<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
@@ -352,7 +356,7 @@ pub fn check_slice<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let size_in: u64 = 1 << 10;
@@ -455,6 +459,84 @@ where
         .copy_to_host(HostSlice::from_mut_slice(&mut result_host[..]))
         .unwrap();
     assert_eq!(input.as_slice(), result_host.as_slice());
+}
+
+pub fn check_predefined_program<F, Program>()
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    Program: ProgramTrait<F>,
+{
+    const TEST_SIZE: usize = 1 << 10;
+    let a = F::Config::generate_random(TEST_SIZE);
+    let b = F::Config::generate_random(TEST_SIZE);
+    let c = F::Config::generate_random(TEST_SIZE);
+    let eq = F::Config::generate_random(TEST_SIZE);
+    let var4 = vec![F::zero(); TEST_SIZE];
+    let a_slice = HostSlice::from_slice(&a);
+    let b_slice = HostSlice::from_slice(&b);
+    let c_slice = HostSlice::from_slice(&c);
+    let eq_slice = HostSlice::from_slice(&eq);
+    let var4_slice = HostSlice::from_slice(&var4);
+    let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice];
+
+    let program = Program::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    
+    let cfg = VecOpsConfig::default();
+    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
+
+    for i in 0..TEST_SIZE {
+        let a = parameters[0][i];
+        let b = parameters[1][i];
+        let c = parameters[2][i];
+        let eq = parameters[3][i];
+        let var4 = parameters[4][i];
+        assert_eq!(var4, <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+                            eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
+                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                                    c)));
+    }
+}
+
+pub fn check_predefined_return_value_program_on_device<F, Program>()
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    Program: ProgramTrait<F>,
+{
+    const TEST_SIZE: usize = 1 << 10;
+    let a = F::Config::generate_random(TEST_SIZE);
+    let b = F::Config::generate_random(TEST_SIZE);
+    let c = F::Config::generate_random(TEST_SIZE);
+    
+    let a_slice = HostSlice::from_slice(&a);
+    let b_slice = HostSlice::from_slice(&b);
+    let c_slice = HostSlice::from_slice(&c);
+
+    // Move to device
+    let mut a_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    a_device.copy_from_host(&a_slice).unwrap();
+    let mut b_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    b_device.copy_from_host(&b_slice).unwrap();
+    let mut c_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+    c_device.copy_from_host(&c_slice).unwrap();
+    let res_device = DeviceVec::<F>::device_malloc(TEST_SIZE).unwrap();
+
+    let mut parameters = vec![&a_device, &b_device, &c_device, &res_device];
+
+    let program = Program::new_predefined(PreDefinedProgram::ABminusC).unwrap();
+    
+    let cfg = VecOpsConfig::default();
+    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
+
+    let mut res_device_to_host = vec![F::zero(); TEST_SIZE];
+    res_device.copy_to_host(HostSlice::from_mut_slice(&mut res_device_to_host)).unwrap();
+
+    for i in 0..TEST_SIZE {
+        assert_eq!(res_device_to_host[i], <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
+                        <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a[i], b[i]),
+                        c[i]));
+    }
 }
 
 pub fn check_vec_ops_mixed_scalars_mul<F: FieldImpl, T: FieldImpl>(test_size: usize)

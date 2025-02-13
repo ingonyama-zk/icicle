@@ -11,6 +11,8 @@ pub mod poseidon2;
 pub mod sumcheck;
 pub mod vec_ops;
 
+pub mod program;
+
 #[doc(hidden)]
 pub mod tests;
 pub mod traits;
