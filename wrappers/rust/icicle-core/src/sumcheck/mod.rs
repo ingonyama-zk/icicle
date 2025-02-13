@@ -184,11 +184,9 @@ where
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
+        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram, ReturningValueProgramHandle};
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
-        };
-        use icicle_core::program::{
-            ReturningValueProgramHandle, PreDefinedProgram, ReturningValueProgram,
         };
         use icicle_core::traits::{FieldImpl, Handle};
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -288,7 +286,10 @@ macro_rules! impl_sumcheck {
                 }
 
                 unsafe {
-                    let mle_polys_internal: Vec<*const $field> = mle_polys.iter().map(|mle_poly| mle_poly.as_ptr()).collect();
+                    let mle_polys_internal: Vec<*const $field> = mle_polys
+                        .iter()
+                        .map(|mle_poly| mle_poly.as_ptr())
+                        .collect();
 
                     let proof_handle = icicle_sumcheck_prove(
                         self.handle,
@@ -421,9 +422,9 @@ macro_rules! impl_sumcheck {
 #[macro_export]
 macro_rules! impl_sumcheck_tests {
     ($field:ident) => {
-        use icicle_core::sumcheck::tests::*;
         use super::SumcheckWrapper;
         use crate::program::FieldReturningValueProgram as Program;
+        use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};
         use std::sync::Once;

@@ -1,8 +1,6 @@
 use crate::hash::Hasher;
-use crate::sumcheck::{
-    Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
-};
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
+use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use crate::traits::{FieldImpl, GenerateRandom, Handle};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 
@@ -89,9 +87,7 @@ where
     /****** Begin CPU Proof ******/
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| {
-            HostSlice::from_slice(poly)
-        })
+        .map(|poly| HostSlice::from_slice(poly))
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let sumcheck = SW::new().unwrap();
@@ -161,19 +157,22 @@ where
 
     let mle_poly_hosts = mle_polys
         .iter()
-        .map(|poly| {
-            HostSlice::from_slice(poly)
-        })
+        .map(|poly| HostSlice::from_slice(poly))
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
     let mut device_mle_polys = Vec::with_capacity(nof_mle_poly);
     for i in 0..nof_mle_poly {
         let mut device_slice = DeviceVec::device_malloc(mle_poly_size).unwrap();
-        device_slice.copy_from_host(mle_poly_hosts[i]).unwrap();
+        device_slice
+            .copy_from_host(mle_poly_hosts[i])
+            .unwrap();
         device_mle_polys.push(device_slice);
     }
 
-    let mle_polys_device: Vec<&DeviceSlice<<SW as Sumcheck>::Field>> = device_mle_polys.iter().map(|s| &s[..]).collect();
+    let mle_polys_device: Vec<&DeviceSlice<<SW as Sumcheck>::Field>> = device_mle_polys
+        .iter()
+        .map(|s| &s[..])
+        .collect();
     let device_mle_polys_slice = mle_polys_device.as_slice();
 
     let sumcheck = SW::new().unwrap();

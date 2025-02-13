@@ -12,5 +12,4 @@ ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_val
 {
   return new ReturningValueProgram<scalar_t>(pre_def);
 }
-
 }
