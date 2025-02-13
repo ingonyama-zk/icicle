@@ -81,7 +81,7 @@ fi
 echo "$FILES" | while read -r file; do
     if [ "$CHECK_ONLY" = true ]; then
         # Check if the file is properly formatted
-        if ! clang-format -output-replacements-xml "$file" | grep -q "<replacement "; then
+        if ! clang-format --output-replacements-xml "$file" | grep -q "<replacement "; then
             echo "✅ $file is properly formatted."
         else
             echo "❌ $file needs formatting."
