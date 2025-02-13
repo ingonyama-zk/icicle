@@ -21,5 +21,4 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
-
 } // namespace icicle

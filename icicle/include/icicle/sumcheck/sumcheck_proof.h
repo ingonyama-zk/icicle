@@ -32,10 +32,10 @@ namespace icicle {
       m_round_polynomials.resize(nof_round_polynomials, std::vector<S>(round_polynomial_degree + 1, S::zero()));
     }
 
-    // set the value of polynomial round_polynomial_idx at x = evaluation_idx
-    void set_round_polynomial_value(int round_polynomial_idx, int evaluation_idx, const S& value)
+    // return a reference to the round polynomial generated at round # round_polynomial_idx
+    const std::vector<S>& get_const_round_polynomial(int round_polynomial_idx) const
     {
-      m_round_polynomials[round_polynomial_idx][evaluation_idx] = value;
+      return m_round_polynomials[round_polynomial_idx];
     }
 
     // return a reference to the round polynomial generated at round # round_polynomial_idx
@@ -54,7 +54,6 @@ namespace icicle {
       std::cout << "Sumcheck Proof :" << std::endl;
       for (int round_poly_i = 0; round_poly_i < m_round_polynomials.size(); round_poly_i++) {
         std::cout << "  Round polynomial " << round_poly_i << ":" << std::endl;
-        ;
         for (auto& element : m_round_polynomials[round_poly_i]) {
           std::cout << "    " << element << std::endl;
         }

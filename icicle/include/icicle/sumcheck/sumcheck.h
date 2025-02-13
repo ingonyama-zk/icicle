@@ -6,7 +6,7 @@
 #include "icicle/sumcheck/sumcheck_config.h"
 #include "icicle/sumcheck/sumcheck_transcript_config.h"
 #include "icicle/backend/sumcheck_backend.h"
-#include "cpu_sumcheck_transcript.h"
+#include "icicle/sumcheck/sumcheck_transcript.h"
 
 namespace icicle {
   template <typename F>
@@ -75,14 +75,14 @@ namespace icicle {
      * @return Error code of type eIcicleError indicating success or failure.
      */
     eIcicleError verify(
-      SumcheckProof<F>& sumcheck_proof,
+      const SumcheckProof<F>& sumcheck_proof,
       const F& claimed_sum,
       const SumcheckTranscriptConfig<F>&& transcript_config,
       bool& valid /*out*/)
     {
       valid = false;
       const int nof_rounds = sumcheck_proof.get_nof_round_polynomials();
-      const std::vector<F>& round_poly_0 = sumcheck_proof.get_round_polynomial(0);
+      const std::vector<F>& round_poly_0 = sumcheck_proof.get_const_round_polynomial(0);
       const uint32_t combine_function_poly_degree = round_poly_0.size() - 1;
 
       // verify that the sum of round_polynomial-0 is the clamed_sum
@@ -96,14 +96,14 @@ namespace icicle {
       }
 
       // create sumcheck_transcript for the Fiat-Shamir
-      CpuSumcheckTranscript sumcheck_transcript(
+      SumcheckTranscript sumcheck_transcript(
         claimed_sum, nof_rounds, combine_function_poly_degree, std::move(transcript_config));
 
       for (int round_idx = 0; round_idx < nof_rounds - 1; round_idx++) {
-        std::vector<F>& round_poly = sumcheck_proof.get_round_polynomial(round_idx);
+        const std::vector<F>& round_poly = sumcheck_proof.get_const_round_polynomial(round_idx);
         const F alpha = sumcheck_transcript.get_alpha(round_poly);
         const F alpha_value = lagrange_interpolation(round_poly, alpha);
-        const std::vector<F>& next_round_poly = sumcheck_proof.get_round_polynomial(round_idx + 1);
+        const std::vector<F>& next_round_poly = sumcheck_proof.get_const_round_polynomial(round_idx + 1);
         F expected_alpha_value = next_round_poly[0] + next_round_poly[1];
         if (alpha_value != expected_alpha_value) {
           ICICLE_LOG_ERROR << "verification failed on round: " << round_idx;

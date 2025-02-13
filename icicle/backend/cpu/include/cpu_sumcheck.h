@@ -4,10 +4,10 @@
 #include <functional>
 #include "icicle/program/symbol.h"
 #include "icicle/program/program.h"
-#include "cpu_sumcheck_transcript.h"
+#include "icicle/sumcheck/sumcheck_transcript.h"
 #include "cpu_program_executor.h"
 #include "icicle/backend/sumcheck_backend.h"
-#include "cpu_sumcheck_transcript.h"
+
 namespace icicle {
   template <typename F>
   class CpuSumcheckBackend : public SumcheckBackend<F>
@@ -53,7 +53,7 @@ namespace icicle {
 
       // create sumcheck_transcript for the Fiat-Shamir
       const uint32_t combine_function_poly_degree_u = combine_function_poly_degree;
-      CpuSumcheckTranscript<F> sumcheck_transcript(
+      SumcheckTranscript<F> sumcheck_transcript(
         claimed_sum, nof_rounds, combine_function_poly_degree_u, std::move(transcript_config));
       sumcheck_proof.init(
         nof_rounds,

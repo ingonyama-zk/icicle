@@ -95,7 +95,7 @@ pub trait MSM<C: Curve> {
 /// * `scalars` - scalar values `s1, s2, ..., sn`.
 ///
 /// * `bases` - bases `P1, P2, ..., Pn`. The number of bases can be smaller than the number of scalars
-/// in the case of batch MSM. In this case bases are re-used periodically. Alternatively, there can be more bases
+/// in the case of batch MSM. In this case bases are reused periodically. Alternatively, there can be more bases
 /// than scalars if precomputation has been performed, you need to set `cfg.precompute_factor` in that case.
 ///
 /// * `cfg` - config used to specify extra arguments of the MSM.
