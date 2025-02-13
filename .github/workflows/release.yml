@@ -71,7 +71,7 @@ jobs:
           node-version: 18
       - name: Bump docs version
         id: bump-docs-version
-        if: ${{ inputs.releaseType != ‘patch’ && inputs.bumpDocs }}
+        if: ${{ inputs.releaseType != 'patch' && inputs.bumpDocs }}
         working-directory: ./docs
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
