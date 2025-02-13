@@ -1,5 +1,4 @@
 use icicle_runtime::eIcicleError;
-use crate::traits::Handle;
 use std::ffi::c_void;
 
 #[repr(C)]

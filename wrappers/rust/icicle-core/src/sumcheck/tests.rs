@@ -5,7 +5,6 @@ use crate::sumcheck::{
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::traits::{FieldImpl, GenerateRandom, Handle};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
-use icicle_runtime::test_utilities::{test_set_ref_device, test_set_main_device};
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
 pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
@@ -78,7 +77,6 @@ where
         mle_polys.push(mle_poly_random);
     }
 
-    // Create a Sumcheck instance using the transcript configuration.
     let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
@@ -89,9 +87,6 @@ where
     }
 
     /****** Begin CPU Proof ******/
-    test_set_ref_device();
-    let sumcheck = SW::new().unwrap();
-
     let mle_poly_hosts = mle_polys
         .iter()
         .map(|poly| {
@@ -99,6 +94,7 @@ where
         })
         .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
+    let sumcheck = SW::new().unwrap();
     let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let sumcheck_config = SumcheckConfig::default();
     // Generate a proof using the `prove` method.
@@ -113,11 +109,11 @@ where
     /****** End CPU Proof ******/
 
     /****** Obtain Proof Round Polys ******/
-    let cpu_proof_round_polys =
+    let proof_round_polys =
         <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_round_polys(&proof).unwrap();
 
     /********** Verifier deserializes proof data *********/
-    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(cpu_proof_round_polys);
+    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
 
     // Verify the proof.
     let valid = sumcheck
@@ -125,47 +121,86 @@ where
         .unwrap();
 
     assert!(valid);
+}
 
-    /****** Begin GPU Proof ******/
-    // test_set_main_device();
+pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
+where
+    SW: Sumcheck,
+    P: ReturningValueProgram + Handle,
+{
+    let log_mle_poly_size = 13u64;
+    let mle_poly_size = 1 << log_mle_poly_size;
+    let nof_mle_poly = 4;
 
-    // let mut gpu_mle_polys = Vec::with_capacity(nof_mle_poly);
-    // for _ in 0..nof_mle_poly {
-    //     let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
-    //     let mle_poly_random_host = HostSlice::from_slice(&mle_poly_random);
-    //     let mut device_slice = DeviceVec::device_malloc(mle_poly_size).unwrap();
-    //     device_slice.copy_from_host(mle_poly_random_host).unwrap();
-    //     gpu_mle_polys.push(device_slice);
-    // }
+    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
 
-    // let mle_polys_device: Vec<&DeviceVec<<SW as Sumcheck>::Field>> = gpu_mle_polys.iter().map(|s| ).collect();
+    let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+    for _ in 0..nof_mle_poly {
+        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        mle_polys.push(mle_poly_random);
+    }
 
-    // let sumcheck = SW::new().unwrap();
+    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    for i in 0..mle_poly_size {
+        let a = mle_polys[0][i];
+        let b = mle_polys[1][i];
+        let c = mle_polys[2][i];
+        let eq = mle_polys[3][i];
+        claimed_sum = claimed_sum + (a * b - c) * eq;
+    }
 
-    // let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
-    // let sumcheck_config = SumcheckConfig::default();
-    // // Generate a proof using the `prove` method.
-    // let proof = sumcheck.prove(
-    //     mle_polys_device.as_slice(),
-    //     mle_poly_size as u64,
-    //     claimed_sum,
-    //     combine_func,
-    //     &config,
-    //     &sumcheck_config,
-    // );
-    // /****** End GPU Proof ******/
+    /****** Begin Device Proof ******/
+    let config = SumcheckTranscriptConfig::new(
+        hash,
+        b"DomainLabel".to_vec(),
+        b"PolyLabel".to_vec(),
+        b"ChallengeLabel".to_vec(),
+        true, // little endian
+        seed_rng,
+    );
 
-    // /****** Obtain Proof Round Polys ******/
-    // let gpu_proof_round_polys =
-    //     <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_round_polys(&proof).unwrap();
+    let mle_poly_hosts = mle_polys
+        .iter()
+        .map(|poly| {
+            HostSlice::from_slice(poly)
+        })
+        .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
 
-    // /********** Verifier deserializes proof data *********/
-    // let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(gpu_proof_round_polys);
+    let mut device_mle_polys = Vec::with_capacity(nof_mle_poly);
+    for i in 0..nof_mle_poly {
+        let mut device_slice = DeviceVec::device_malloc(mle_poly_size).unwrap();
+        device_slice.copy_from_host(mle_poly_hosts[i]).unwrap();
+        device_mle_polys.push(device_slice);
+    }
 
-    // // Verify the proof.
-    // let valid = sumcheck
-    //     .verify(&proof_as_sumcheck_proof, claimed_sum, &config)
-    //     .unwrap();
+    let mle_polys_device: Vec<&DeviceSlice<<SW as Sumcheck>::Field>> = device_mle_polys.iter().map(|s| &s[..]).collect();
+    let device_mle_polys_slice = mle_polys_device.as_slice();
 
-    // assert!(valid);
+    let sumcheck = SW::new().unwrap();
+    let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    let sumcheck_config = SumcheckConfig::default();
+    // Generate a proof using the `prove` method.
+    let proof = sumcheck.prove(
+        device_mle_polys_slice,
+        mle_poly_size as u64,
+        claimed_sum,
+        combine_func,
+        &config,
+        &sumcheck_config,
+    );
+    /****** End Device Proof ******/
+
+    /****** Obtain Proof Round Polys ******/
+    let proof_round_polys =
+        <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_round_polys(&proof).unwrap();
+
+    /********** Verifier deserializes proof data *********/
+    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
+
+    // Verify the proof.
+    let valid = sumcheck
+        .verify(&proof_as_sumcheck_proof, claimed_sum, &config)
+        .unwrap();
+
+    assert!(valid);
 }

@@ -449,8 +449,13 @@ macro_rules! impl_sumcheck_tests {
         #[test]
         fn test_sumcheck_simple() {
             initialize();
+            test_utilities::test_set_ref_device();
             let hash = Keccak256::new(0).unwrap();
             check_sumcheck_simple::<SumcheckWrapper, Program>(&hash);
+
+            test_utilities::test_set_main_device();
+            let device_hash = Keccak256::new(0).unwrap();
+            check_sumcheck_simple_device::<SumcheckWrapper, Program>(&device_hash);
         }
     };
 }
