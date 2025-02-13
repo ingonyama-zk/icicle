@@ -5,9 +5,8 @@
 #include <vector>
 #include <random>
 #include "icicle/errors.h"
-#include "cpu_fri_transcript.h"
+#include "icicle/fri/fri_transcript.h"
 #include "icicle/backend/fri_backend.h"
-#include "cpu_fri_transcript.h"
 #include "cpu_fri_rounds.h"
 #include "cpu_ntt_domain.h"
 #include "icicle/utils/log.h"
@@ -45,7 +44,7 @@ namespace icicle {
       }
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
 
-      CpuFriTranscript<F> transcript(std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), m_log_input_size);
+      FriTranscript<F> transcript(std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), m_log_input_size);
 
       // Initialize the proof
       fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree);
@@ -78,7 +77,7 @@ namespace icicle {
      * @param transcript  The transcript to generate challenges.
      * @return eIcicleError Error code indicating success or failure.
      */
-    eIcicleError commit_fold_phase(const F* input_data, CpuFriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof){
+    eIcicleError commit_fold_phase(const F* input_data, FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof){
       ICICLE_ASSERT(this->m_folding_factor==2) << "Folding factor must be 2";
 
       const F* twiddles = ntt_cpu::CpuNttDomain<F>::s_ntt_domain.get_twiddles();
@@ -140,7 +139,7 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError proof_of_work(CpuFriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof){
+    eIcicleError proof_of_work(FriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof){
       for (uint64_t nonce = 0; nonce < UINT64_MAX; nonce++)
       {
         if(transcript.hash_and_get_nof_leading_zero_bits(nonce) == pow_bits){
@@ -162,7 +161,7 @@ namespace icicle {
     * @param fri_proof       (OUT) The proof object where we store the resulting Merkle proofs.
     * @return eIcicleError
     */
-    eIcicleError query_phase(CpuFriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
+    eIcicleError query_phase(FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
     {
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
       size_t seed = transcript.get_seed_for_query_phase();

@@ -12,10 +12,10 @@
 namespace icicle {
 
 template <typename F>
-class CpuFriTranscript
+class FriTranscript
 {
 public:
-  CpuFriTranscript(FriTranscriptConfig<F>&& transcript_config, const size_t log_input_size)
+  FriTranscript(FriTranscriptConfig<F>&& transcript_config, const size_t log_input_size)
     : m_transcript_config(std::move(transcript_config))
     , m_log_input_size(log_input_size)
     , m_prev_alpha(F::zero())
