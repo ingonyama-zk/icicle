@@ -75,6 +75,7 @@ if (HASH)
         src/hash/blake3_dispatch.c
         src/hash/blake3_portable.c
         src/hash/cpu_merkle_tree.cpp
+        src/hash/cpu_pow.cpp
     )
     target_include_directories(icicle_hash PUBLIC include)
 endif()
