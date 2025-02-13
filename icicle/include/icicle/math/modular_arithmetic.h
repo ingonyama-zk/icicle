@@ -49,6 +49,17 @@ public:
     return Derived{scalar};
   }
 
+  static constexpr HOST_DEVICE_INLINE Derived from_u64(uint64_t value)
+  {
+    storage<TLC> scalar{};
+    scalar.limbs[0] = value;
+    scalar.limbs[1] = value >> 32;
+    for (int i = 2; i < TLC; i++) {
+      scalar.limbs[i] = 0;
+    }
+    return Derived{scalar};
+  }
+
   static HOST_INLINE Derived omega(uint32_t logn)
   {
     if (logn == 0) { return Derived{CONFIG::one}; }

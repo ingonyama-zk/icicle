@@ -13,4 +13,8 @@
   #define M31        1003
   #define KOALA_BEAR 1004
 
+  // TODO Yuval: consider splitting it from here
+  // Ring libraries
+  #define LABRADOR 2001
+
 #endif

@@ -40,29 +40,27 @@ function(check_ring RING RING_INDEX_OUT FEATURES_STRING_OUT)
 endfunction()
 
 function(setup_ring_target RING RING_INDEX FEATURES_STRING)
-    # TODO Yuval
-    
-    #   add_library(icicle_ring SHARED)
+  add_library(icicle_ring SHARED)
 
   # Split FEATURES_STRING into a list using "," as the separator
   string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})
 
   # customize the RING lib to choose what to include
-#   handle_ring(icicle_ring) # basic RING methods, including vec ops
+  handle_ring(icicle_ring) # basic RING methods, including vec ops
   # Handle features
   # TODO   handle_ntt(icicle_ring "${FEATURES_LIST}")
   # Add additional feature handling calls here
 
-#   set_target_properties(icicle_ring PROPERTIES OUTPUT_NAME "icicle_ring_${RING}")
-#   target_link_libraries(icicle_ring PUBLIC icicle_device)
+  set_target_properties(icicle_ring PROPERTIES OUTPUT_NAME "icicle_ring_${RING}")
+  target_link_libraries(icicle_ring PUBLIC icicle_device)
 
   # Ensure RING is defined in the cache for backends to see
   set(RING "${RING}" CACHE STRING "")
   add_compile_definitions(RING=${RING} RING_ID=${RING_INDEX})
 
-#   install(TARGETS icicle_ring
-    # RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
-    # LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
-    # ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
+  install(TARGETS icicle_ring
+    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
 endfunction()
 

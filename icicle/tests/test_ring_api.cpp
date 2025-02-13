@@ -1,33 +1,31 @@
-#include "test_base.h"
 
-// TODO Yuval: control the exact type of Zq by the build system
-#include "icicle/rings/integer_rings/labrador.h"
 
-class RingApiTestBase : public IcicleTestBase
+#include "test_ring_field.h"
+
+// Extending the common tests to ring specific tests
+
+using Zq = scalar_t;
+
+#include "icicle/fields/params_gen.h"
+
+TYPED_TEST(RingAndFieldTest, RootsOfUnity)
 {
-};
+  constexpr int logn = 24;
+  // auto w = TypeParam::omega(logn);
+  // ASSERT_EQ(TypeParam::pow(w, 1 << logn), TypeParam::one());
 
-TEST_F(RingApiTestBase, RingSanityTest)
-{
-  using namespace labrador;
-  ICICLE_LOG_INFO << "Hello from RingSanityTest";
-  ICICLE_LOG_INFO << "omegas_count = " << labrador::zq_config::omegas_count;
+  constexpr int limbs_count = 2;
+  // constexpr storage<2> modulus = {0x00000001, 0xffffffff}; // goldilocks
+  constexpr storage<2> modulus = {0xf7000001, 0x3b880000}; // labrador
+  constexpr unsigned modulus_bit_count =
+    32 * (limbs_count - 1) + params_gen::floorlog2(modulus.limbs[limbs_count - 1]) + 1;
+  ICICLE_LOG_INFO << "modulus_bit_count=" << modulus_bit_count;
+  storage<limbs_count> m = params_gen::template get_m<limbs_count, 2 * modulus_bit_count>(modulus);
 
-  auto a = Zq::rand_host();
-  auto b = Zq::rand_host();
-  auto b_inv = Zq::inverse(b);
-  auto a_neg = Zq::neg(a);
-  ASSERT_EQ(a + Zq::zero(), a);
-  ASSERT_EQ(a + b - a, b);
-  ASSERT_EQ(b * a * b_inv, a);
-  ASSERT_EQ(a + a_neg, Zq::zero());
-  ASSERT_EQ(a * Zq::zero(), Zq::zero());
-  ASSERT_EQ(b * b_inv, Zq::one());
-  ASSERT_EQ(a * Zq::from(2), a + a);
-
-  constexpr int logn = 27;
-  auto w = Zq::omega(logn);
-  ICICLE_LOG_INFO << "omega(" << logn << ") = " << w;
-  ICICLE_LOG_INFO << Zq::pow(w, 1 << (logn));
-  ASSERT_EQ(Zq::pow(w, 1 << logn), Zq::one());
+  unsigned num_of_reductions = params_gen::template num_of_reductions<limbs_count, 2 * modulus_bit_count>(modulus, m);
+  ICICLE_LOG_INFO << "num_of_reductions=" << num_of_reductions;
+  ICICLE_LOG_INFO << "m=" << scalar_t{field_config::zq_config::m};
+  ICICLE_LOG_INFO << "slack_bits=" << scalar_t::slack_bits;
+  ICICLE_LOG_INFO << "neg_mod=" << scalar_t{field_config::zq_config::neg_modulus};
+  ICICLE_LOG_INFO << "mod=" << scalar_t{field_config::zq_config::modulus};
 }

@@ -80,4 +80,7 @@ if (HASH)
     target_include_directories(icicle_hash PUBLIC include)
 endif()
 
-
+if (RING)
+    target_sources(icicle_ring PRIVATE src/field/cpu_vec_ops.cpp)
+    target_include_directories(icicle_ring PRIVATE include)
+endif()

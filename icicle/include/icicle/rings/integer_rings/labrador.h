@@ -22,6 +22,7 @@ namespace labrador {
    *  Define the integer ring Zq
    */
   using Zq = IntegerRing<zq_config>;
+  using scalar_t = Zq;
 
   // TODO Yuval: define ZqRNS too
 

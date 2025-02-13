@@ -38,3 +38,11 @@ namespace field_config = m31;
   #include "icicle/fields/stark_fields/koalabear.h"
 namespace field_config = koalabear;
 #endif
+
+// TODO Yuval: Either move rings to ring_config.h or rename file.
+//             Easier to use a single header to easily instantiate APIs common to both fields and rings
+
+#if RING_ID == LABRADOR
+  #include "icicle/rings/integer_rings/labrador.h"
+namespace field_config = labrador;
+#endif
