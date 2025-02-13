@@ -1,6 +1,7 @@
 use crate::hash::Hasher;
 use crate::sumcheck::{
-    PreDefinedProgram, ReturningValueProgramTrait, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
+    Handle, PreDefinedProgram, ReturningValueProgram, Sumcheck, SumcheckConfig, SumcheckProofOps,
+    SumcheckTranscriptConfig,
 };
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::HostSlice;
@@ -52,7 +53,7 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgramTrait,
+    P: ReturningValueProgram + Handle,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -86,7 +87,7 @@ where
         claimed_sum = claimed_sum + (a * b - c) * eq;
     }
 
-    /****** Being Proof ******/
+    /****** Begin Proof ******/
     let sumcheck = SW::new().unwrap();
 
     let mle_poly_ptrs: Vec<*const <SW as Sumcheck>::Field> = mle_polys
@@ -110,14 +111,17 @@ where
     );
     /****** End Proof ******/
 
-    /****** Obtain Proof Data ******/
-    let proof_data = <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_proof(&proof).unwrap();
+    /****** Obtain Proof Round Polys ******/
+    let proof_round_polys =
+        <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_round_polys(&proof).unwrap();
 
     /********** Verifier deserializes proof data *********/
-    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_data);
+    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
 
     // Verify the proof.
-    let valid = sumcheck.verify(&proof_as_sumcheck_proof, claimed_sum, &config);
+    let valid = sumcheck
+        .verify(&proof_as_sumcheck_proof, claimed_sum, &config)
+        .unwrap();
 
     assert!(valid);
 }

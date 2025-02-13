@@ -123,15 +123,16 @@ SumcheckProof<scalar_t>* CONCAT_EXPAND(FIELD, sumcheck_get_proof)(
  * @param ffi_transcript_config - The transcript config to use in the Sumcheck protocol
  * @return eIcicleError indicating the success or failure of the operation.
  */
-bool CONCAT_EXPAND(FIELD, sumcheck_verify)(
+eIcicleError CONCAT_EXPAND(FIELD, sumcheck_verify)(
   SumcheckHandle* sumcheck_handle,
   const SumcheckProof<scalar_t>* sumcheck_proof_handle,
   const scalar_t* claimed_sum,
-  const TranscriptConfigFFI* ffi_transcript_config)
+  const TranscriptConfigFFI* ffi_transcript_config,
+  bool* is_verified)
 {
   if (!ffi_transcript_config || !ffi_transcript_config->hasher || !ffi_transcript_config->seed_rng) {
     ICICLE_LOG_ERROR << "Invalid FFI transcript configuration.";
-    return false;
+    return eIcicleError::INVALID_POINTER;
   }
 
   ICICLE_LOG_DEBUG << "Verifying SumcheckProof from FFI";
@@ -152,13 +153,9 @@ bool CONCAT_EXPAND(FIELD, sumcheck_verify)(
                                              std::move(round_poly_label),      std::move(round_challenge_label),
                                              *ffi_transcript_config->seed_rng, ffi_transcript_config->little_endian};
 
-  bool is_verified = false;
-
-  sumcheck_handle->verify(
-    *sumcheck_proof_handle, *claimed_sum, std::move(transcript_config), is_verified /*out*/
+  return sumcheck_handle->verify(
+    *sumcheck_proof_handle, *claimed_sum, std::move(transcript_config), *is_verified /*out*/
   );
-
-  return is_verified;
 }
 /**************** END Sumcheck ***************************/
 

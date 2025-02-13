@@ -154,28 +154,30 @@ pub trait Sumcheck {
     fn new() -> Result<Self, eIcicleError>
     where
         Self: Sized;
+
     fn prove(
         &self,
         mle_polys: &(impl HostOrDeviceSlice<*const Self::Field> + ?Sized),
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgramTrait,
+        combine_function: impl ReturningValueProgram + Handle,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
-    ) -> Self::Proof; // TODO: Replace `String` with proof type.
+    ) -> Self::Proof;
+
     fn verify(
         &self,
         proof: &Self::Proof,
         claimed_sum: Self::Field,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
-    ) -> bool;
+    ) -> Result<bool, eIcicleError>;
 }
 
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>>
 where
     F: FieldImpl,
 {
-    fn get_proof(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
+    fn get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
     fn print(&self) -> eIcicleError;
 }
 
@@ -189,10 +191,14 @@ pub enum PreDefinedProgram {
 
 pub type FieldReturningValueProgramHandle = *const c_void;
 
-pub trait ReturningValueProgramTrait: Sized {
+pub trait ReturningValueProgram: Sized {
     fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
-    fn handle(&self) -> FieldReturningValueProgramHandle;
 }
+
+pub trait Handle {
+    fn handle(&self) -> *const c_void;
+}
+
 /************************* END TO BE MOVED **********************************/
 
 /// Macro to implement Sumcheck functionality for a specific field.
@@ -200,8 +206,8 @@ pub trait ReturningValueProgramTrait: Sized {
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
         use icicle_core::sumcheck::{
-            FFISumcheckTranscriptConfig, FieldReturningValueProgramHandle, PreDefinedProgram,
-            ReturningValueProgramTrait, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
+            FFISumcheckTranscriptConfig, FieldReturningValueProgramHandle, Handle, PreDefinedProgram,
+            ReturningValueProgram, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
         use icicle_core::traits::FieldImpl;
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -215,7 +221,7 @@ macro_rules! impl_sumcheck {
         }
 
         // Returning Value Program trait implementation
-        impl ReturningValueProgramTrait for FieldReturningValueProgram {
+        impl ReturningValueProgram for FieldReturningValueProgram {
             fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
                 unsafe {
                     let prog_handle = icicle_create_predefined_returning_value_program(pre_def);
@@ -228,7 +234,9 @@ macro_rules! impl_sumcheck {
                     }
                 }
             }
+        }
 
+        impl Handle for FieldReturningValueProgram {
             fn handle(&self) -> FieldReturningValueProgramHandle {
                 self.m_handle
             }
@@ -263,7 +271,8 @@ macro_rules! impl_sumcheck {
                 proof: SumcheckProofHandle,
                 claimed_sum: *const $field,
                 transcript_config: &FFISumcheckTranscriptConfig<$field>,
-            ) -> bool;
+                is_verified: &mut bool,
+            ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_create")]
             fn icicle_sumcheck_proof_create(
@@ -315,7 +324,7 @@ macro_rules! impl_sumcheck {
                 mle_polys: &(impl HostOrDeviceSlice<*const $field> + ?Sized),
                 mle_poly_size: u64,
                 claimed_sum: $field,
-                combine_function: impl ReturningValueProgramTrait,
+                combine_function: impl ReturningValueProgram + Handle,
                 transcript_config: &SumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> Self::Proof {
@@ -341,9 +350,24 @@ macro_rules! impl_sumcheck {
                 proof: &Self::Proof,
                 claimed_sum: $field,
                 transcript_config: &SumcheckTranscriptConfig<$field>,
-            ) -> bool {
+            ) -> Result<bool, eIcicleError> {
                 let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
-                unsafe { icicle_sumcheck_verify(self.handle, proof.handle, &claimed_sum, &ffi_transcript_config) }
+                let mut is_verified = false;
+                let err = unsafe {
+                    icicle_sumcheck_verify(
+                        self.handle,
+                        proof.handle,
+                        &claimed_sum,
+                        &ffi_transcript_config,
+                        &mut is_verified,
+                    )
+                };
+
+                if err != eIcicleError::Success {
+                    return Err(err);
+                }
+
+                Ok(is_verified)
             }
         }
 
@@ -369,7 +393,7 @@ macro_rules! impl_sumcheck {
         }
 
         impl SumcheckProofOps<$field> for SumcheckProof {
-            fn get_proof(&self) -> Result<Vec<Vec<$field>>, eIcicleError> {
+            fn get_round_polys(&self) -> Result<Vec<Vec<$field>>, eIcicleError> {
                 let mut poly_size = 0;
                 let mut num_polys = 0;
                 unsafe {
