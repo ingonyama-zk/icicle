@@ -89,7 +89,7 @@ You should see something like this
 
 ```sh
 nvcc: NVIDIA (R) Cuda compiler driver
-Copyright (c) 2005-2023 NVIDIA Corporation
+Copyright (c) 2005-2025 NVIDIA Corporation
 Built on Tue_Aug_15_22:02:13_PDT_2023
 Cuda compilation tools, release 12.2, V12.2.140
 Build cuda_12.2.r12.2/compiler.33191640_0
