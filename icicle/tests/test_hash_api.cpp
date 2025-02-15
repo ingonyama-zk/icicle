@@ -1149,6 +1149,10 @@ TEST_F(HashApiTest, poseidon_tree)
 
 #endif // POSEIDON
 
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+
 #ifdef POSEIDON2
   // bn254: p = 0x303b6f7c86d043bfcbcc80214f26a30277a15d3f74ca654992defe7ff8d03570
   #include "icicle/fields/field_config.h"
@@ -1189,7 +1193,7 @@ TEST_F(HashApiTest, poseidon2_3_single_hasher)
 } // poseidon2_3_single_hasher
 
 // Sponge, chain of 2 hashers, no padding, no domain tag.
-TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_without_dt)
+TEST_F(HashApiTest, poseidon2_4_sponge_2_hashers_without_dt)
 {
   const unsigned t = 4;
   auto config = default_hash_config();
@@ -1226,28 +1230,29 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_without_dt)
     // std::cout << "Output CUDA = " << output_mainDev[0] << std::endl;
     ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
   }
-} // poseidon2_3_sponge_2_hashers_without_dt
+} // poseidon2_4_sponge_2_hashers_without_dt
 
 // Test used to generate expected result of any hasher ccording to the parameters inside.
 TEST_F(HashApiTest, poseidon2_3_gen_hasher_expected_result_cpu_only)
 {
-  const unsigned t = 4;
   auto config = default_hash_config();
   config.batch = 1;
 
+  const unsigned t = 4;
   auto input = std::make_unique<scalar_t[]>(t);
-  for (int i = 0; i < config.batch; i++) {
-    for (int j = 0; j < t; j++) {
-      input[i * t + j] = scalar_t::from(j + 4);
-    }
-  }
-  // input[0] = scalar_t::hex_str2scalar("0x0a57c297b1c82b6e031cdd8d00f8a04cfd29144fbaabd9ee3d7bdef2b61ec18d");
-  // input[1] = scalar_t::hex_str2scalar("0x17e49ca947671143af1f5038d0ed615d4db68cb2b475b00fb253a1f0886a80c0");
-  // input[2] = scalar_t::hex_str2scalar("0x0001e7319635c0fdeabf4dbc8c539c296682a0c9260a8f457b3565e49299d310");
-  // input[3] = scalar_t::hex_str2scalar("0x1aa6c65a496292747d2667b5e72a3521637b4d4d8dbc99d0b555696c1cdb9a3e");
-  // for (int i=0; i<config.batch*t; i++) {
-  //   std::cout << "Input = " << input[i] << std::endl;
+  // for (int i = 0; i < config.batch; i++) {
+  //   for (int j = 0; j < t; j++) {
+  //     input[i * t + j] = scalar_t::from(j + 4);
+  //   }
   // }
+  // input[0] = scalar_t::hex_str2scalar("0x0a57c297b1c82b6e031cdd8d00f8a04cfd29144fbaabd9ee3d7bdef2b61ec18d");
+  input[0] = scalar_t::from(0);
+  input[1] = scalar_t::from(1);
+  input[2] = scalar_t::from(1);
+  input[3] = scalar_t::from(0);
+  for (int i = 0; i < config.batch * t; i++) {
+    std::cout << "Input = " << input[i] << std::endl;
+  }
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
@@ -1263,13 +1268,13 @@ TEST_F(HashApiTest, poseidon2_3_gen_hasher_expected_result_cpu_only)
       ICICLE_CHECK(poseidon2.hash(input.get(), t, config, out));
     }
     END_TIMER(POSEIDON2_sync, oss.str().c_str(), measure);
-  };
+  }; //
 
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-  // for (int i=0; i<config.batch; i++) {
-  //   std::cout << "Output = " << output_cpu[i] << std::endl;
-  // }
+  for (int i = 0; i < config.batch; i++) {
+    std::cout << "Output = " << output_cpu[i] << std::endl;
+  }
 } // poseidon2_3_gen_hasher_expected_result_cpu_only
 
 TEST_F(HashApiTest, poseidon2_non_sponge_all_included_test)
@@ -1346,6 +1351,8 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
       for (auto nof_hashers : {1, 2, 16, 256}) {
         for (auto padding_size : {0, t > 2 ? t - 2 : 0}) { // If padding_size == 0 then there is no padding.
           for (auto use_domain_tag : {false, true}) {
+            std::cout << "t = " << t << ", batch_size = " << batch_size << ", nof_hashers = " << nof_hashers
+                      << ", padding_size = " << padding_size << ", use_domain_tag = " << use_domain_tag << std::endl;
             std::unique_ptr<scalar_t[]> input;
             if (use_domain_tag) {
               input = std::make_unique<scalar_t[]>(config.batch * (nof_hashers * (t - 1) - padding_size));
@@ -1363,6 +1370,7 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
               if (use_domain_tag) {
                 auto poseidon2 = Poseidon2::create<scalar_t>(t, &domain_tag);
                 START_TIMER(POSEIDON2_sync)
+                std::cout << "use_domain_tag, Device = " << device << std::endl;
                 for (int i = 0; i < ITERS; ++i) {
                   ICICLE_CHECK(poseidon2.hash(input.get(), nof_hashers * (t - 1) - padding_size, config, out.get()));
                 }
@@ -1371,6 +1379,7 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
               else {
                 auto poseidon2 = Poseidon2::create<scalar_t>(t);
                 START_TIMER(POSEIDON2_sync)
+                std::cout << "Not use_domain_tag, Device = " << device << std::endl;
                 for (int i = 0; i < ITERS; ++i) {
                   ICICLE_CHECK(
                     poseidon2.hash(input.get(), 1 + nof_hashers * (t - 1) - padding_size, config, out.get()));
@@ -1428,12 +1437,14 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_with_dt)
   if (IcicleTestBase::main_device() == "CUDA") {
     auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
     run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+    // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
+    // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
     ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
   }
 } // poseidon2_3_sponge_2_hashers_with_dt
 
 // Sponge, chain of 1 hasher, with padding (2 scalars 1,0), no domain tag.
-TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding)
+TEST_F(HashApiTest, poseidon2_4_sponge_1_hasher_without_dt_with_padding)
 {
   const unsigned t = 4;
   auto config = default_hash_config();
@@ -1451,7 +1462,7 @@ TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding)
     oss << dev_type << " " << msg;
 
     auto poseidon2 = Poseidon2::create<scalar_t>(t);
-
+    std::cout << "Device = " << dev << std::endl;
     START_TIMER(POSEIDON2_sync)
     for (int i = 0; i < iters; ++i) {
       ICICLE_CHECK(poseidon2.hash(input.get(), nof_valid_inputs, config, out));
@@ -1465,9 +1476,12 @@ TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding)
   if (IcicleTestBase::main_device() == "CUDA") {
     auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
     run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+    // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
+    // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
     ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
   }
-} // poseidon2_3_sponge_1_hasher_without_dt_with_padding
+} // poseidon2_4_sponge_1_hasher_without_dt_with_padding
+
 // Sponge, chain of 1 hasher, with padding (2 scalars 1,0), no domain tag.
 TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding_debug)
 {
@@ -1477,9 +1491,7 @@ TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding_debug)
   int nof_valid_inputs = 2;
 
   auto input = std::make_unique<scalar_t[]>(nof_valid_inputs);
-  // scalar_t::rand_host_many(input.get(), nof_valid_inputs);
-  input[0] = scalar_t::from(0);
-  input[1] = scalar_t::from(1);
+  scalar_t::rand_host_many(input.get(), nof_valid_inputs);
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
@@ -1779,6 +1791,10 @@ TEST_F(HashApiTest, poseidon2_3_1K_batch_without_dt)
 } // poseidon2_3_1K_batch_without_dt
 
 #endif // POSEIDON2
+
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef SUMCHECK
 /*======================= (TODO??) Move to Sumcheck test-suite =======================*/

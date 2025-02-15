@@ -178,7 +178,7 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     } // eIcicleError init_poseidon2_constants(
 
-    // size - numbr of bytes in a single inputs.
+    // size - number of bytes in a single inputs.
     // The total size of the input should be size * config.batch.
     eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
     {
@@ -286,21 +286,8 @@ namespace icicle {
       const S* padding,
       const int padding_size_in_scalars,
       S* states,
-      const bool use_domain_tag,
-      const S domain_tag,
-      const bool is_first_hasher,
       const bool is_last_hasher) const
     {
-      if (is_first_hasher) {
-        if (use_domain_tag) {
-          states[0] = domain_tag;
-        } else {
-          states[0] = input[0];
-          input += 1; // Increment the pointer. Now rest of the input is of T-1 granularity.
-        }
-      }
-      // For middle and last hashers states[0] stays the same as the output of the prev hasher. So, no need to take care
-      // of that.
 #pragma unroll
       for (int states_idx = 1; states_idx < T; states_idx++) {
         if (is_last_hasher && is_padding_needed) {
@@ -313,8 +300,7 @@ namespace icicle {
           states[states_idx] = states[states_idx] + input[states_idx - 1];
         }
       }
-    } // prepare_poseidon2_sponge_states(const S* input, S* states, unsigned int batch_size, bool use_domain_tag, S
-      // domain_tag)
+    } // prepare_poseidon2_sponge_states(
 
     S sbox_element(S element, const int alpha) const
     {
@@ -506,20 +492,20 @@ namespace icicle {
         S states[T];
         for (int i = 0; i < T; i++)
           states[i] = S::from(0);
+        // Take care of first input of the first hasher. Rest of the input has T-1 granularity.
+        if (use_domain_tag) {
+          states[0] = domain_tag_value;
+        } else {
+          states[0] = input[0];
+          input += 1;
+        }
 
         for (int hasher_idx = 0; hasher_idx < nof_hashers; hasher_idx++) {
-          // prepare_poseidon2_sponge_states function performs:
-          // - domain tag for the first hasher
-          // - padding for the last hasher
-          // - addition on T-1 inputs with the prev d_states T-1 inputs.
-          // - increment of the input pointer to point to the next hasher's input.
-          bool is_first_hasher = hasher_idx == 0;
           bool is_last_hasher = hasher_idx == nof_hashers - 1;
 
           prepare_poseidon2_sponge_states<T>(
-            input, is_padding_needed, padding, padding_size_in_scalars, states, use_domain_tag, domain_tag_value,
-            is_first_hasher, is_last_hasher);
-          input += (T - 1); // Move to the next hasher.
+            input, is_padding_needed, padding, padding_size_in_scalars, states, is_last_hasher);
+          input += T - 1; // Move to the next hasher.
 
           pre_full_round<T>(states, constants);
 
