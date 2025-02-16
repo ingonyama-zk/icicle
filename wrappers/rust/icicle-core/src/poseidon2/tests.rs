@@ -61,6 +61,11 @@ where
     <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
 {
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
+        let large_field = mem::size_of::<F>() > 4;
+        let skip_case = large_field && t > 4; // In Poseidon2 there is no support for large fields when t > 4.
+        if skip_case {
+            continue;
+        };
         let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
         let mut outputs_main = vec![F::zero(); 1];
         let mut outputs_ref = vec![F::zero(); 1];
