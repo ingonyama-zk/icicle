@@ -30,10 +30,19 @@ if [[ ! -d "./icicle" || ! -d "./scripts" ]]; then
 fi
 
 # Download latest build images
-docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu22-cuda122:latest
-docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu20-cuda122:latest
-docker pull ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122:latest
-docker pull ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122:latest
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu22-cuda122:latest &
+pid_ubuntu22_pull_image=$!
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu20-cuda122:latest &
+pid_ubuntu20_pull_image=$!
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122:latest &
+pid_ubi8_pull_image=$!
+docker pull ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122:latest &
+pid_ubi9_pull_image=$!
+
+wait $pid_ubuntu22_pull_image
+wait $pid_ubuntu20_pull_image
+wait $pid_ubi8_pull_image
+wait $pid_ubi9_pull_image
 
 # Alternatively, build the images locally
 # echo "Building Docker images..."
@@ -57,7 +66,7 @@ docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubuntu22 cuda122 &
+            ghcr.io/ingonyama-zk/icicle-release-ubuntu22-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubuntu22 cuda122 &
 
 # obtain the last backgrounded process' pid
 pid_ubuntu22=$!
@@ -67,7 +76,7 @@ docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubuntu20-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubuntu20 cuda122 &
+            ghcr.io/ingonyama-zk/icicle-release-ubuntu20-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubuntu20 cuda122 &
 
 pid_ubuntu20=$!
 
@@ -76,7 +85,7 @@ docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi8 cuda122 &
+            ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi8 cuda122 &
 
 pid_ubi8=$!
 
@@ -85,7 +94,7 @@ docker run --rm --gpus all                  \
             -v ./icicle:/icicle             \
             -v "$output_dir:/output"        \
             -v ./scripts:/scripts           \
-            icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122 &
+            ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122 &
 
 pid_ubi9=$!
 

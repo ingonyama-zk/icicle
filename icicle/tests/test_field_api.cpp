@@ -1255,13 +1255,9 @@ TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
 
 TEST_F(FieldApiTestBase, Sumcheck)
 {
-  icicle_set_device("CPU"); // Use CPU only for now.
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
-
-  // create transcript_config
-  SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
 
   // generate inputs
   std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
@@ -1280,19 +1276,103 @@ TEST_F(FieldApiTestBase, Sumcheck)
     claimed_sum = claimed_sum + (a * b - c) * eq;
   }
 
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+
+  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
+TEST_F(FieldApiTestBase, SumcheckDataOnDevice)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 4;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const scalar_t a = mle_polynomials[0][element_i];
+    const scalar_t b = mle_polynomials[1][element_i];
+    const scalar_t c = mle_polynomials[2][element_i];
+    const scalar_t eq = mle_polynomials[3][element_i];
+    claimed_sum = claimed_sum + (a * b - c) * eq;
+  }
+
+  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(nof_mle_poly);
+  icicle_set_device(IcicleTestBase::main_device());
+
+  // create transcript_config
+  SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
   // ===== Prover side ======
   // create sumcheck
   auto prover_sumcheck = create_sumcheck<scalar_t>();
 
   CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   SumcheckConfig sumcheck_config;
-  SumcheckProof<scalar_t> sumcheck_proof;
-  ICICLE_CHECK(prover_sumcheck.get_proof(
-    mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-    sumcheck_proof));
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
+
+  sumcheck_config.are_inputs_on_device = true;
+
+  for (int idx = 0; idx < nof_mle_poly; ++idx) {
+    scalar_t* tmp = nullptr;
+    icicle_malloc((void**)&tmp, mle_poly_size * sizeof(scalar_t));
+    icicle_copy_to_device(tmp, mle_polynomials[idx], mle_poly_size * sizeof(scalar_t));
+    data_main[idx] = tmp;
   }
+  std::ostringstream oss;
+  oss << "CUDA" << " " << "Sumcheck";
+
+  SumcheckProof<scalar_t> sumcheck_proof;
+
+  START_TIMER(sumcheck);
+  ICICLE_CHECK(prover_sumcheck.get_proof(
+    data_main, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+    sumcheck_proof));
+  END_TIMER(sumcheck, oss.str().c_str(), true);
 
   // ===== Verifier side ======
   // create sumcheck
@@ -1301,7 +1381,314 @@ TEST_F(FieldApiTestBase, Sumcheck)
   ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
 
   ASSERT_EQ(true, verification_pass);
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
 }
+
+MlePoly user_defined_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& D = inputs[3];
+  return A * B - MlePoly(scalar_t::from(2)) * C + D;
+}
+
+TEST_F(FieldApiTestBase, SumcheckUserDefinedCombine)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 4;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const scalar_t a = mle_polynomials[0][element_i];
+    const scalar_t b = mle_polynomials[1][element_i];
+    const scalar_t c = mle_polynomials[2][element_i];
+    const scalar_t d = mle_polynomials[3][element_i];
+    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c + d);
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(user_defined_combine, nof_mle_poly);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+
+  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
+MlePoly too_complex_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  return A * B + B * C + C * A + A * B * C - scalar_t::from(2) + scalar_t::from(9) + A * B * C + C * B * A;
+}
+
+MlePoly too_high_degree_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  return (A * B * C * A * B * C * A * B * C);
+}
+
+MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& D = inputs[3];
+  const MlePoly& E = inputs[4];
+  const MlePoly& F = inputs[5];
+  const MlePoly& G = inputs[5];
+  const MlePoly& H = inputs[5];
+  const MlePoly& I = inputs[5];
+  return A * B * C + D * E * F + G * H * I;
+}
+
+TEST_F(FieldApiTestBase, SumcheckCudaShouldFailCases)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly_big = 9;
+  int nof_mle_poly = 6;
+  int nof_mle_poly_small = 3;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials_big(nof_mle_poly_big);
+  for (int poly_i = 0; poly_i < nof_mle_poly_big; poly_i++) {
+    mle_polynomials_big[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials_big[poly_i], mle_poly_size);
+  }
+
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  std::vector<scalar_t*> mle_polynomials_small(nof_mle_poly_small);
+  for (int poly_i = 0; poly_i < nof_mle_poly_small; poly_i++) {
+    mle_polynomials_small[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials_small[poly_i], mle_poly_size);
+  }
+
+  // claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, CombineFunction<scalar_t> combine_func) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    eIcicleError error = prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof);
+
+    ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
+  };
+
+  CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
+  run("CUDA", mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
+  CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
+  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
+  CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
+  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+  for (auto& mle_poly_ptr : mle_polynomials_small) {
+    delete[] mle_poly_ptr;
+  }
+}
+
+MlePoly identity(const std::vector<MlePoly>& inputs) { return inputs[0]; }
+
+TEST_F(FieldApiTestBase, SumcheckIdentity)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 1;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const scalar_t a = mle_polynomials[0][element_i];
+    claimed_sum = claimed_sum + a;
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(identity, nof_mle_poly);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+
+  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
+MlePoly single_input(const std::vector<MlePoly>& inputs) { return MlePoly(scalar_t::from(2)) * inputs[0]; }
+
+TEST_F(FieldApiTestBase, SumcheckSingleInputProgram)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 1;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const scalar_t a = mle_polynomials[0][element_i];
+    claimed_sum = claimed_sum + scalar_t::from(2) * a;
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(single_input, nof_mle_poly);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+
+  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
