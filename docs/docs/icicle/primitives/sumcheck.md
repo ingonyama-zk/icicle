@@ -57,7 +57,7 @@ The default values are:
   };
 ```
 
-### SumcheckTranscriptConfig<F>
+### SumcheckTranscriptConfig
 The `SumcheckTranscriptConfig<F>` class is used to specify parameters for the Fiat-Shamir scheme used by the Sumcheck protocol. It contains the following fields:
 - **`hasher: Hash`**: The hash function used to generate randomness for Fiat-Shamir.
 - **`domain_label: char*`**: The label for the domain separator in the transcript.
