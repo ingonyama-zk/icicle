@@ -103,3 +103,11 @@ print(f"logn (power-of-two order): {int(math.log2(n))}")
 print(f"Primitive n-th root of unity (w): {hex(omega)}, limbs: {omega_limbs}")
 print(f"w^n mod q = {pow(omega, n, q)}")
 
+# compute root of unity of order logn=24 in the ring q based on Rou of the prime fields
+p1_rou_27 = 0x00000089 # Baby bear
+p1_rou_24 = pow(p1_rou_27, 8, p1) #w^8 mod p1 for w or order logn=27
+p2_rou_24 = 0x6ac49f88 # Koala bear
+q_rou_24 = from_rns(p1, p2, p1_rou_24, p2_rou_24) #crt
+print(f"(logn=24) w^n mod q = {pow(q_rou_24, 1<<24, q)}")
+print(f"Rou in the ring q = {to_32b_limbs_str(q_rou_24)}")
+

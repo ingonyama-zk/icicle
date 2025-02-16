@@ -12,8 +12,8 @@ namespace labrador {
 
     // This rou is generating a subgroup smaller than Zq*
     // It has roots of unity up to logn=27
-    static constexpr storage<2> rou = {0xa8ba8afd, 0x13bea756};
-    static constexpr unsigned omegas_count = 27;
+    static constexpr storage<2> rou = {0x8be440ed, 0x0309b111};
+    static constexpr unsigned omegas_count = 24;
     static constexpr storage_array<omegas_count, limbs_count> inv =
       params_gen::template get_invs<limbs_count, omegas_count>(modulus);
   };
