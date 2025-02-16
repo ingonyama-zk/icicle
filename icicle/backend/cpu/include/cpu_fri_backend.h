@@ -24,7 +24,7 @@ namespace icicle {
      * @param merkle_trees     A moved vector of MerkleTree pointers.
      */
     CpuFriBackend(const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-        : FriBackend<F>(folding_factor, stopping_degree),
+        : FriBackend<F>(folding_factor, stopping_degree, merkle_trees),
           m_nof_fri_rounds(merkle_trees.size()),
           m_log_input_size(m_nof_fri_rounds + std::log2(static_cast<double>(stopping_degree))),
           m_input_size(pow(2, m_log_input_size)),
@@ -47,7 +47,7 @@ namespace icicle {
       FriTranscript<F> transcript(std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), m_log_input_size);
 
       // Initialize the proof
-      fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree);
+      fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree+1);
 
       //commit fold phase
       ICICLE_CHECK(commit_fold_phase(input_data, transcript, fri_config, fri_proof));
@@ -168,7 +168,7 @@ namespace icicle {
       seed_rand_generator(seed);
       std::vector<size_t> query_indices = rand_size_t_vector(fri_config.nof_queries, (this->m_stopping_degree + 1), m_input_size);
 
-      for (size_t query_idx = 0; query_idx < query_indices.size(); query_idx++){
+      for (size_t query_idx = 0; query_idx < fri_config.nof_queries; query_idx++){
         size_t query = query_indices[query_idx];
         for (size_t round_idx = 0; round_idx < m_nof_fri_rounds; round_idx++){
           size_t round_size = (1ULL << (m_log_input_size - round_idx));

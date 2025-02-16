@@ -15,14 +15,15 @@ template <typename F>
 class FriTranscript
 {
 public:
-  FriTranscript(FriTranscriptConfig<F>&& transcript_config, const size_t log_input_size)
+  FriTranscript(FriTranscriptConfig<F>&& transcript_config, const uint32_t log_input_size)
     : m_transcript_config(std::move(transcript_config))
-    , m_log_input_size(log_input_size)
     , m_prev_alpha(F::zero())
     , m_first_round(true)
     , m_pow_nonce(0)
   {
     m_entry_0.clear();
+    m_entry_0.reserve(1024); // pre-allocate some space
+    build_entry_0(log_input_size);
     m_first_round = true;
   }
 
@@ -35,14 +36,11 @@ public:
   F get_alpha(const std::vector<std::byte>& merkle_commit)
   {
     ICICLE_ASSERT(m_transcript_config.get_domain_separator_label().size() > 0) << "Domain separator label must be set";
-    // Prepare a buffer for hashing
-    m_entry_0.reserve(1024); // pre-allocate some space
     std::vector<std::byte> hash_input;
     hash_input.reserve(1024); // pre-allocate some space
 
     // Build the round's hash input
     if (m_first_round) {
-      build_entry_0();
       build_hash_input_round_0(hash_input);
       m_first_round = false;
     } else {
@@ -54,7 +52,8 @@ public:
     const Hash& hasher = m_transcript_config.get_hasher();
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
-    reduce_hash_result_to_field(m_prev_alpha, hash_result);
+    m_prev_alpha = F::from(hash_result.data(), hasher.output_size());
+    // reduce_hash_result_to_field(m_prev_alpha, hash_result); //FIXME SHANIE - remove this
     return m_prev_alpha;
   }
 
@@ -101,7 +100,6 @@ public:
 
 private:
   const FriTranscriptConfig<F> m_transcript_config; // Transcript configuration (labels, seeds, etc.)
-  const size_t m_log_input_size;                    // Logarithm of the initial input size
   const HashConfig m_hash_config;                   // hash config - default
   bool m_first_round;                               // Indicates if this is the first round
   std::vector<std::byte> m_entry_0;                 // Hash input set in the first round and used in all subsequent rounds
@@ -146,18 +144,19 @@ private:
     dest.insert(dest.end(), data_bytes, data_bytes + sizeof(F));
   }
 
-  /**
-    * @brief Convert a hash output into a field element by copying a minimal number of bytes.
-    * @param alpha (OUT) The resulting field element.
-    * @param hash_result A buffer of bytes (from the hash function).
-    */
-  void reduce_hash_result_to_field(F& alpha, const std::vector<std::byte>& hash_result)
-  {
-    alpha = F::zero();
-    const int nof_bytes_to_copy = std::min<int>(sizeof(alpha), static_cast<int>(hash_result.size()));
-    std::memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
-    alpha = alpha * F::one(); 
-  }
+  //FIXME SHANIE - remove this
+  // /**
+  //   * @brief Convert a hash output into a field element by copying a minimal number of bytes.
+  //   * @param alpha (OUT) The resulting field element.
+  //   * @param hash_result A buffer of bytes (from the hash function).
+  //   */
+  // void reduce_hash_result_to_field(F& alpha, const std::vector<std::byte>& hash_result)
+  // {
+  //   alpha = F::zero();
+  //   const int nof_bytes_to_copy = std::min<int>(sizeof(alpha), static_cast<int>(hash_result.size()));
+  //   std::memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
+  //   alpha = alpha * F::one(); 
+  // }
 
 
   /**
@@ -167,10 +166,10 @@ private:
     * entry_0 =[DS||public.LE32()]
     *
     */
-  void build_entry_0()
+  void build_entry_0(uint32_t log_input_size)
   {
     append_data(m_entry_0, m_transcript_config.get_domain_separator_label());
-    append_u32(m_entry_0, m_log_input_size);
+    append_u32(m_entry_0, log_input_size);
     append_data(m_entry_0, m_transcript_config.get_public_state());
   }
 

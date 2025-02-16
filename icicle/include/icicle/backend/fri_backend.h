@@ -31,9 +31,11 @@ public:
      * @param stopping_degree  Stopping degree threshold for the final polynomial.
      */
     FriBackend(const size_t folding_factor,
-               const size_t stopping_degree)
+               const size_t stopping_degree,
+               std::vector<MerkleTree> merkle_trees)
       : m_folding_factor(folding_factor)
       , m_stopping_degree(stopping_degree)
+      , m_merkle_trees(merkle_trees)
     {}
 
     virtual ~FriBackend() = default;
@@ -53,6 +55,8 @@ public:
       const F* input_data,
       FriProof<F>& fri_proof
     ) = 0;
+
+    std::vector<MerkleTree> m_merkle_trees;
 
 protected:
     const size_t m_folding_factor;

@@ -25,6 +25,7 @@
 #include "icicle/fri/fri_transcript_config.h"
 
 #include "test_base.h"
+#include "icicle/fri/fri_domain.h" // FIXME SHANIE
 
 using namespace field_config;
 using namespace icicle;
@@ -1714,9 +1715,11 @@ TYPED_TEST(FieldApiTest, Fri)
   ICICLE_LOG_DEBUG << "stopping_degree = " << stopping_degree;
 
   // Initialize domain
-  auto init_domain_config = default_ntt_init_domain_config();
-  init_domain_config.is_async = false;
+  NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
   ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+
+  // FriInitDomainConfig init_fri_domain_config = default_fri_init_domain_config();
+  // ICICLE_CHECK(fri_init_domain(scalar_t::omega(log_input_size), init_fri_domain_config));
 
   // Generate input polynomial evaluations
   auto scalars = std::make_unique<scalar_t[]>(input_size);
@@ -1729,17 +1732,18 @@ TYPED_TEST(FieldApiTest, Fri)
   Hash hash_for_merkle_tree = create_keccak_256_hash((2*32)); // arity = 2
   Fri prover_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
 
-  FriTranscriptConfig<scalar_t> transcript_config;
+  FriTranscriptConfig<scalar_t> prover_transcript_config;
+  FriTranscriptConfig<scalar_t> verifier_transcript_config; //FIXME - do verfier and prover need different configs? (moved...)
   FriConfig fri_config;
   fri_config.nof_queries = 2;
   FriProof<scalar_t> fri_proof;
 
-  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
+  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(prover_transcript_config), scalars.get(), fri_proof));
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
   bool verification_pass = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, verification_pass));
+  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(verifier_transcript_config), fri_proof, verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 
