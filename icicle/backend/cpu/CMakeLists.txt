@@ -82,5 +82,8 @@ endif()
 
 if (RING)
     target_sources(icicle_ring PRIVATE src/field/cpu_vec_ops.cpp)
+    if (NTT)
+        target_sources(icicle_ring PRIVATE src/field/cpu_ntt.cpp)
+    endif()
     target_include_directories(icicle_ring PRIVATE include)
 endif()
