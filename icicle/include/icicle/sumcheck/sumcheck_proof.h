@@ -20,8 +20,11 @@ namespace icicle {
   class SumcheckProof
   {
   public:
-    // Constructor
+    // Constructor for creating a new proof
     SumcheckProof() {}
+
+    // Constructor for a verifier to use given a prover's proof
+    SumcheckProof(std::vector<std::vector<S>> polys) : m_round_polynomials(polys) {}
 
     // Init the round polynomial values for the problem
     void init(int nof_round_polynomials, int round_polynomial_degree)
