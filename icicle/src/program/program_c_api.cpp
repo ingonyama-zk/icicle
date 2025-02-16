@@ -3,6 +3,7 @@
 #include "icicle/program/returning_value_program.h"
 
 using namespace field_config;
+using namespace icicle;
 
 extern "C" {
 
