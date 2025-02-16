@@ -1,0 +1,34 @@
+cmake_minimum_required(VERSION 3.18)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+project(example)
+add_executable(example example.cpp)
+target_sources(example PRIVATE 
+  ../../../icicle/src/hash/keccak.cpp
+  ../../../icicle/src/hash/hash_c_api.cpp
+  ../../../icicle/src/hash/blake2s.cpp
+  ../../../icicle/src/hash/blake3.cpp
+  ../../../icicle/src/hash/merkle_tree.cpp
+  ../../../icicle/src/hash/merkle_c_api.cpp
+  ../../../icicle/backend/cpu/src/hash/cpu_keccak.cpp
+  ../../../icicle/src/hash/pow.cpp
+)
+install(TARGETS example
+  RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
+target_include_directories(example PRIVATE "../../../icicle/include" "..")
+target_link_directories(example PRIVATE "${CMAKE_SOURCE_DIR}/build/icicle")
+message("${CMAKE_BINARY_DIR}/icicle")
+target_link_libraries(example PRIVATE icicle_curve_bn254 icicle_field_bn254 icicle_device)
+if(BACKEND_DIR)
+  add_compile_definitions(BACKEND_DIR="${BACKEND_DIR}")
+endif()
+
+# add_library(icicle_hash SHARED)
+# target_include_directories(icicle_hash PRIVATE "../../../icicle/include" "..")
+
+
+
