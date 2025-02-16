@@ -2,7 +2,6 @@
 
 #include "icicle/runtime.h"
 #include "icicle/config_extension.h"
-#include "icicle/backend/msm_config.h"
 
 namespace icicle {
 
@@ -34,3 +33,15 @@ namespace icicle {
   static HashConfig default_hash_config() { return HashConfig(); }
 
 } // namespace icicle
+
+/********* CPU Backend Configurations *********/
+namespace CpuBackendConfig {
+  // Backend-specific configuration flags as constexpr strings
+  constexpr const char* CPU_NOF_THREADS = "n_threads";
+} // namespace CpuBackendConfig
+/********* CUDA Backend Configurations *********/
+
+namespace CudaBackendConfig {
+  // Backend-specific configuration flags as constexpr strings
+
+} // namespace CudaBackendConfig

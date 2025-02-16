@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <taskflow/taskflow.hpp>
 #include "icicle/config_extension.h"
-#include "icicle/backend/msm_config.h"
 
 namespace icicle {
 
