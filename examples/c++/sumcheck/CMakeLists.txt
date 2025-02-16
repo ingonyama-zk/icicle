@@ -23,12 +23,8 @@ target_include_directories(example PRIVATE "../../../icicle/include" "..")
 target_link_directories(example PRIVATE "${CMAKE_SOURCE_DIR}/build/icicle")
 message("${CMAKE_BINARY_DIR}/icicle")
 target_link_libraries(example PRIVATE icicle_curve_bn254 icicle_field_bn254 icicle_device)
+find_package(Threads REQUIRED)
+target_link_libraries(example PRIVATE Threads::Threads)
 if(BACKEND_DIR)
   add_compile_definitions(BACKEND_DIR="${BACKEND_DIR}")
 endif()
-
-# add_library(icicle_hash SHARED)
-# target_include_directories(icicle_hash PRIVATE "../../../icicle/include" "..")
-
-
-
