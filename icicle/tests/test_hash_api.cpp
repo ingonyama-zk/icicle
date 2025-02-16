@@ -123,7 +123,6 @@ TEST_F(HashApiTest, Keccak256Batch)
 {
   auto config = default_hash_config();
   config.batch = 2;
-
   const std::string input = "0123456789abcdef"; // this is a batch of "01234567" and "89abcdef"
   const std::string expected_output_0 = "d529b8ccadec912a5c302a7a9ef53e70c144eea6043dcea534fdbbb2d042fc31";
   const std::string expected_output_1 = "58ed472a16d883f4dec9fc40438a59b017de9a7dbaa0bbc2cc9170e94eed2337";
@@ -148,6 +147,9 @@ TEST_F(HashApiTest, KeccakLarge)
 {
   auto config = default_hash_config();
   config.batch = 1 << 8;
+  ConfigExtension ext;
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
+  config.ext = &ext;
   const unsigned chunk_size = 1 << 13; // 8KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
@@ -196,6 +198,9 @@ TEST_F(HashApiTest, Blake2sLarge)
 {
   auto config = default_hash_config();
   config.batch = 1 << 8;
+  ConfigExtension ext;
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
+  config.ext = &ext;
   const unsigned chunk_size = 1 << 13; // 8KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
@@ -244,6 +249,9 @@ TEST_F(HashApiTest, Blake3Large)
 {
   auto config = default_hash_config();
   config.batch = 1 << 8;
+  ConfigExtension ext;
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
+  config.ext = &ext;
   const unsigned chunk_size = 1 << 11; // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
