@@ -167,16 +167,16 @@ public:
       if constexpr (!IS_3B) return b_mult;
       typename FF::ff_storage temp = {};
       typename FF::ff_storage modulus = FF::get_modulus();
-      icicle_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
         b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
       b_mult.limbs_storage =
-        icicle_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
           ? b_mult.limbs_storage
           : temp;
-      icicle_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
         b_mult.limbs_storage, FF{Gen::weierstrass_b_g2_re}.limbs_storage, b_mult.limbs_storage);
       b_mult.limbs_storage =
-        icicle_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
           ? b_mult.limbs_storage
           : temp;
       return b_mult;
@@ -202,16 +202,16 @@ public:
       if constexpr (!IS_3B) return b_mult;
       typename FF::ff_storage temp = {};
       typename FF::ff_storage modulus = FF::get_modulus();
-      icicle_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
         b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
       b_mult.limbs_storage =
-        icicle_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
           ? b_mult.limbs_storage
           : temp;
-      icicle_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
+      host_math::template add_sub_limbs<CONFIG::limbs_count, false, false, true>(
         b_mult.limbs_storage, FF{Gen::weierstrass_b_g2_im}.limbs_storage, b_mult.limbs_storage);
       b_mult.limbs_storage =
-        icicle_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
+        host_math::template add_sub_limbs<CONFIG::limbs_count, true, true, true>(b_mult.limbs_storage, modulus, temp)
           ? b_mult.limbs_storage
           : temp;
       return b_mult;
