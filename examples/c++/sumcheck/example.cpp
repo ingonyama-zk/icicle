@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
   ReturningValueProgram<scalar_t> combine_func(EQ_X_AB_MINUS_C);
   // create default sumcheck config
   SumcheckConfig sumcheck_config;
-  // create empty sumcheck proof object which the prover will asign round polynomials into
+  // create empty sumcheck proof object which the prover will assign round polynomials into
   SumcheckProof<scalar_t> sumcheck_proof;
 
   std::cout << "\nCreating proof" << std::endl;
