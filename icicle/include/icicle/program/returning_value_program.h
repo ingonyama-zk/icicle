@@ -42,7 +42,7 @@ namespace icicle {
       }
     }
 
-    int get_polynomial_degee() const { return m_poly_degree; }
+    int get_polynomial_degree() const { return m_poly_degree; }
 
   private:
     int m_poly_degree = 0;

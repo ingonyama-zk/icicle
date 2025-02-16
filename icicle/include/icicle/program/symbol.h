@@ -88,6 +88,9 @@ namespace icicle {
         return;
       }
       switch (m_opcode) {
+      case OP_INPUT:
+        m_poly_degree = 1;
+        return;
       case OP_ADD:
       case OP_SUB:
         m_poly_degree = std::max(m_operand1->m_poly_degree, m_operand2->m_poly_degree);
