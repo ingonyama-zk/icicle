@@ -95,6 +95,12 @@ fn main() {
     ];
     let poly = Polynomial::new(coefficients);
 
+    // Geerate mle polynomial
+    let mut mle_poly = Vec::with_capacity(2);
+    for _ in 0..2 {
+        mle_poly.push(poly);
+    }
+
     // Calculate the expected sum over the Boolean hypercube {0,1}^2
     let expected_sum = FieldElement::from(4);
 
@@ -104,20 +110,23 @@ fn main() {
         "domain_separator",
         "round_poly",
         "round_challenge",
-        false,
+        false, // big endian
         FieldElement::from(0),
     );
     let sumcheck_config = SumcheckConfig::default();
-
+   
+    // define sumcheck lambda
+    let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    
     // Initialize prover
     let prover = Sumcheck::new().expect("Failed to create Sumcheck instance");
 
     // Generate proof
     let proof = prover.prove(
-        &[&poly],
+        mle_poly.as_slice(),
         2, // Number of variables in the polynomial
         expected_sum,
-        Default::default(), // No custom combine function
+        combine_func, // Use pre-defined combine function eq * (a * b - c)
         &transcript_config,
         &sumcheck_config,
     );
