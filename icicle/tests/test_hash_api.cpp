@@ -1240,16 +1240,12 @@ TEST_F(HashApiTest, poseidon2_3_gen_hasher_expected_result_cpu_only)
 
   const unsigned t = 4;
   auto input = std::make_unique<scalar_t[]>(t);
-  // for (int i = 0; i < config.batch; i++) {
-  //   for (int j = 0; j < t; j++) {
-  //     input[i * t + j] = scalar_t::from(j + 4);
-  //   }
-  // }
-  // input[0] = scalar_t::hex_str2scalar("0x0a57c297b1c82b6e031cdd8d00f8a04cfd29144fbaabd9ee3d7bdef2b61ec18d");
-  input[0] = scalar_t::from(0);
-  input[1] = scalar_t::from(1);
-  input[2] = scalar_t::from(1);
-  input[3] = scalar_t::from(0);
+  // Set the inputs as needed.
+  for (int i = 0; i < config.batch; i++) {
+    for (int j = 0; j < t; j++) {
+      input[i * t + j] = scalar_t::from(j + 4);
+    }
+  }
   for (int i = 0; i < config.batch * t; i++) {
     std::cout << "Input = " << input[i] << std::endl;
   }
@@ -1351,8 +1347,6 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
       for (auto nof_hashers : {1, 2, 16, 256}) {
         for (auto padding_size : {0, t > 2 ? t - 2 : 0}) { // If padding_size == 0 then there is no padding.
           for (auto use_domain_tag : {false, true}) {
-            std::cout << "t = " << t << ", batch_size = " << batch_size << ", nof_hashers = " << nof_hashers
-                      << ", padding_size = " << padding_size << ", use_domain_tag = " << use_domain_tag << std::endl;
             std::unique_ptr<scalar_t[]> input;
             if (use_domain_tag) {
               input = std::make_unique<scalar_t[]>(config.batch * (nof_hashers * (t - 1) - padding_size));

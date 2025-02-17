@@ -1,6 +1,5 @@
 #include "icicle/backend/hash/poseidon2_backend.h"
 #include "icicle/utils/utils.h"
-// #include "constants.h"
 
 /// These are pre-calculated constants for different curves
 #include "icicle/fields/id.h"
@@ -59,7 +58,7 @@ namespace icicle {
       const std::string* mds_matrix;
       const std::string* partial_matrix_diagonal;
       unsigned int T = t;
-      switch (T) {
+      switch (t) {
       case 2:
         alpha = alpha_2;
         rounds_constants = rounds_constants_2;
@@ -142,25 +141,25 @@ namespace icicle {
         break;
       default:
         ICICLE_LOG_ERROR
-          << "cpu_poseidon2_init_default_constants: T (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]";
+          << "cpu_poseidon2_init_default_constants: t (width) must be one of [2, 3, 4, 8, 12, 16, 20, 24]";
         return eIcicleError::INVALID_ARGUMENT;
-      } // switch (T) {
+      } // switch (t) {
       if (full_rounds == 0 && partial_rounds == 0) { // All arrays are empty in this case (true for wide fields (width >
                                                      // 32) & t > 8).
         return eIcicleError::SUCCESS;
       }
 
-      scalar_t* scalar_rounds_constants = new scalar_t[full_rounds * T + partial_rounds];
-      for (int i = 0; i < (full_rounds * T + partial_rounds); i++) {
+      scalar_t* scalar_rounds_constants = new scalar_t[full_rounds * t + partial_rounds];
+      for (int i = 0; i < (full_rounds * t + partial_rounds); i++) {
         scalar_rounds_constants[i] = scalar_t::hex_str2scalar(rounds_constants[i]);
       }
-      scalar_t* scalar_mds_matrix = new scalar_t[T * T];
-      for (int i = 0; i < (T * T); i++) {
+      scalar_t* scalar_mds_matrix = new scalar_t[t * t];
+      for (int i = 0; i < (t * t); i++) {
         scalar_mds_matrix[i] = scalar_t::hex_str2scalar(mds_matrix[i]);
       }
-      scalar_t* scalar_partial_matrix_diagonal = new scalar_t[T];
-      scalar_t* scalar_partial_matrix_diagonal_m1 = new scalar_t[T];
-      for (int i = 0; i < T; i++) {
+      scalar_t* scalar_partial_matrix_diagonal = new scalar_t[t];
+      scalar_t* scalar_partial_matrix_diagonal_m1 = new scalar_t[t];
+      for (int i = 0; i < t; i++) {
         scalar_partial_matrix_diagonal[i] = scalar_t::hex_str2scalar(partial_matrix_diagonal[i]);
         scalar_partial_matrix_diagonal_m1[i] = scalar_partial_matrix_diagonal[i] - scalar_t::from(1);
       }
@@ -302,26 +301,6 @@ namespace icicle {
       }
     } // prepare_poseidon2_sponge_states(
 
-    S sbox_element(S element, const int alpha) const
-    {
-      switch (alpha) {
-      case 3:
-        return element * element * element;
-      case 5:
-        return element * element * element * element * element;
-      case 7:
-        return element * element * element * element * element * element * element;
-      case 11:
-        return element * element * element * element * element * element * element * element * element * element *
-               element;
-      default: {
-        ICICLE_LOG_ERROR << "Unsupported poseidon2 alpha. Should be one of {3, 5, 7, 11}";
-        return S::from(0);
-      }
-      }
-      return element;
-    }
-
     // This function performs a full matrix by vector multiplication.
     template <int T>
     void full_matrix_mul_vec(const S* vec_in, const S* matrix_in, S* result) const
@@ -359,7 +338,7 @@ namespace icicle {
       }
 #pragma unroll
       for (int element_idx_in_hash = 0; element_idx_in_hash < T; element_idx_in_hash++) {
-        states[element_idx_in_hash] = sbox_element(states[element_idx_in_hash], alpha);
+        states[element_idx_in_hash] = S::pow(states[element_idx_in_hash], alpha);
       }
 
       full_matrix_mul_vec<T>(states, mds_matrix, states);
@@ -387,7 +366,7 @@ namespace icicle {
     {
       state[0] = state[0] + rounds_constants[rc_offset];
 
-      state[0] = sbox_element(state[0], alpha);
+      state[0] = S::pow(state[0], alpha);
 
       // Multiply partial matrix by vector.
       // Partial matrix is represented by T members - diagonal members of the matrix.
