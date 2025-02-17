@@ -53,11 +53,6 @@ ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_val
   return new ReturningValueProgram<scalar_t>(pre_def);
 }
 
-int CONCAT_EXPAND(FIELD, get_program_polynomial_degree)(ReturningValueProgramHandle program)
-{
-  return program->get_polynomial_degee();
-}
-
 void CONCAT_EXPAND(FIELD, generate_returning_value_program)(
   ReturningValueProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters)
 {

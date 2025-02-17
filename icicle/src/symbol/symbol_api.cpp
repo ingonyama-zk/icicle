@@ -7,10 +7,15 @@ using namespace icicle;
 
 typedef Symbol<scalar_t>* SymbolHandle;
 
-extern "C" { // TODO remove program from names
+extern "C" {
 // Symbol functions
 // Constructors
-SymbolHandle CONCAT_EXPAND(FIELD, create_empty_symbol)() { return new Symbol<scalar_t>(); }
+SymbolHandle CONCAT_EXPAND(FIELD, create_input_symbol)(int in_idx)
+{
+  auto symbol = new Symbol<scalar_t>();
+  symbol->set_as_input(in_idx);
+  return symbol;
+}
 SymbolHandle CONCAT_EXPAND(FIELD, create_scalar_symbol)(const scalar_t* constant)
 {
   return new Symbol<scalar_t>(*constant);
@@ -63,7 +68,12 @@ typedef Symbol<extension_t>* ExtensionSymbolHandle;
 extern "C" { // TODO remove program from names
 // Symbol functions
 // Constructors
-ExtensionSymbolHandle CONCAT_EXPAND(FIELD, extension_create_empty_symbol)() { return new Symbol<extension_t>(); }
+ExtensionSymbolHandle CONCAT_EXPAND(FIELD, extension_create_input_symbol)(int in_idx)
+{
+  auto symbol = new Symbol<extension_t>();
+  symbol->set_as_input(in_idx);
+  return symbol;
+}
 ExtensionSymbolHandle CONCAT_EXPAND(FIELD, extension_create_scalar_symbol)(const extension_t* constant)
 {
   return new Symbol<extension_t>(*constant);

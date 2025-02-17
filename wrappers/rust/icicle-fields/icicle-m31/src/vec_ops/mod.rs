@@ -6,8 +6,8 @@ use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
 use icicle_core::traits::FieldImpl;
-use icicle_core::symbol::SymbolTrait;
-use icicle_core::program::ProgramBaseTrait;
+use icicle_core::symbol::Symbol;
+use icicle_core::program::Program;
 
 impl_vec_ops_field!("m31", m31, ScalarField, ScalarCfg);
 impl_vec_ops_field!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);
