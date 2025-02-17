@@ -112,6 +112,7 @@ let proof= sumcheck.prove(
         &transcript_config, 
         &sumcheck_config); 
 info!("Prover time {:?}", prover_time.elapsed());
+set_backend_cpu();
 let verify_time = Instant::now();
 verify_proof(sumcheck,proof, claimed_sum);
 info!("verify time {:?}", verify_time.elapsed());
