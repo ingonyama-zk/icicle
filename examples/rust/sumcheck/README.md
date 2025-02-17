@@ -1,4 +1,4 @@
-# Sumcheck benches
+# Sumcheck example
 
 This example, instantiates a R1CS sumcheck instance with the parameters 
 * `Sample size = 1<<22` field: BN254 scalar.
