@@ -109,7 +109,7 @@ const ingoPreset = {
   docs: {
     .
     .
-    includeCurrentVersion: false, // Update this to true to render the next verion's docs
+    includeCurrentVersion: false, // Update this to true to render the next version's docs
     .
     .
     .
