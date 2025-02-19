@@ -1,9 +1,5 @@
 # Sumcheck
 
-## Overview
-
-The SumCheck protocol iteratively reduces the problem of summing a polynomial over all points in an n-dimensional Boolean hypercube to verifying sums over lower-dimensional spaces. This module provides an efficient implementation, leveraging parallel computations where applicable.
-
 ## Sumcheck API Overview
 
 ### **Structs**
@@ -13,7 +9,7 @@ Configuration structure for the SumCheck protocol’s transcript.
 
 ##### **Fields:**
 - `hash: &Hasher` - Reference to the hashing function used.
-- `domain_separator_label: Vec<u8>` - Domain separator for transcript uniqueness.
+- `domain_separator_label: Vec<u8>` - Domain separator label for transcript uniqueness.
 - `round_poly_label: Vec<u8>` - Label for the polynomial at each round.
 - `round_challenge_label: Vec<u8>` - Label for the challenge at each round.
 - `little_endian: bool` - Whether to use little-endian encoding.
@@ -31,7 +27,7 @@ General configuration for the SumCheck execution.
 
 ##### **Fields:**
 - `stream: IcicleStreamHandle` - Stream for asynchronous execution (default: `nullptr`).
-- `use_extension_field: bool` - Whether to use an extension field for Fiat-Shamir transformation.
+- `use_extension_field: bool` - Whether to use an extension field for Fiat-Shamir transformation. Sumcheck currently does not support extension fields, always set to `false` otherwise return an error.
 - `batch: u64` - Number of input chunks to hash in batch (default: 1).
 - `are_inputs_on_device: bool` - Whether inputs reside on the device (e.g., GPU).
 - `is_async: bool` - Whether hashing is run asynchronously.
@@ -97,7 +93,7 @@ fn main() {
 
     // Geerate mle polynomial
     let mut mle_poly = Vec::with_capacity(2);
-    for _ in 0..2 {
+    for _ in 0..4 {
         mle_poly.push(poly);
     }
 
