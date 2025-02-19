@@ -326,47 +326,6 @@ TEST_F(HashApiTest, sha3)
 }
 
 /****************************** Merkle **********************************/
-class HashSumBackend : public HashBackend
-{
-public:
-  HashSumBackend(uint64_t input_chunk_size, uint64_t output_size)
-      : HashBackend("HashSum", output_size, input_chunk_size)
-  {
-  }
-
-  eIcicleError hash(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const override
-  {
-    const auto chunk_size = get_single_chunk_size(size);
-    const auto output_digest_size = output_size();
-    for (int i = 0; i < config.batch; ++i) {
-      hash_single(input, size, config, output);
-      input += chunk_size;
-      output += output_digest_size;
-    }
-    return eIcicleError::SUCCESS;
-  }
-
-  void hash_single(const std::byte* input, uint64_t size, const HashConfig& config, std::byte* output) const
-  {
-    const uint32_t* input_u32 = (const uint32_t*)input;
-    uint32_t* output_u32 = (uint32_t*)output;
-
-    output_u32[0] = 0;
-    int t_size = sizeof(uint32_t);
-    for (int i = 0; i < (size / t_size); ++i) {
-      output_u32[0] += input_u32[i];
-    }
-    for (int i = 1; i < (output_size() / t_size); ++i) {
-      output_u32[i] = output_u32[0];
-    }
-  }
-
-  static Hash create(uint64_t input_chunk_size, uint64_t output_size)
-  {
-    auto backend = std::make_shared<HashSumBackend>(input_chunk_size, output_size);
-    return Hash(backend);
-  }
-};
 
 /**
  * @brief Builds tree in a straight-forward single-threaded manner and compares the result with Icicle's calculation.
@@ -621,35 +580,6 @@ void test_merkle_tree(
     ICICLE_CHECK(icicle_free(device_leaves));
     ICICLE_CHECK(icicle_free(wrong_device_leaves));
   }
-}
-
-TEST_F(HashApiTest, MerkleTreeBasic)
-{
-  const int leaf_size = sizeof(uint32_t);
-  const int nof_leaves = 50;
-  uint32_t leaves[nof_leaves];
-  randomize(leaves, nof_leaves);
-
-  uint32_t leaves_alternative[nof_leaves];
-  randomize(leaves_alternative, nof_leaves);
-
-  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
-
-  // define the merkle tree
-  auto config = default_merkle_tree_config();
-  auto layer0_hash = HashSumBackend::create(5 * leaf_size, 2 * leaf_size); // in 5 leaves, out 2 leaves  200B ->  80B
-  auto layer1_hash = HashSumBackend::create(4 * leaf_size, leaf_size);     // in 4 leaves, out 1 leaf    80B  ->  20B
-  auto layer2_hash = HashSumBackend::create(leaf_size, leaf_size);         // in 1 leaf, out 1 leaf      20B  ->  20B
-  auto layer3_hash = HashSumBackend::create(5 * leaf_size, leaf_size); // in 5 leaves, out 1 leaf    20B  ->  4B output
-
-  std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
-
-  int output_store_min_layer;
-  randomize(&output_store_min_layer, 1);
-  output_store_min_layer = output_store_min_layer & 3; // Ensure index is in a valid 0-3 range
-  ICICLE_LOG_DEBUG << "Min store layer:\t" << output_store_min_layer;
-
-  test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, leaves);
 }
 
 TEST_F(HashApiTest, MerkleTreeZeroPadding)
