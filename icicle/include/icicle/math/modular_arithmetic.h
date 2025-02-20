@@ -1,7 +1,5 @@
 #pragma once
 
-#include "icicle/math/modular_arithmetic.h"
-
 // CUDA compiles both host and device math. CPU needs only host math.
 #ifdef __CUDACC__
   #include "gpu-utils/sharedmem.h"
@@ -501,42 +499,6 @@ public:
   }
 
   friend HOST_DEVICE bool operator!=(const Derived& xs, const Derived& ys) { return !(xs == ys); }
-
-  template <typename Gen, bool IS_3B = false>
-  static HOST_DEVICE_INLINE Derived mul_weierstrass_b(const Derived& xs)
-  {
-    Derived r = {};
-    constexpr Derived b_mult = []() {
-      Derived b_mult = Derived{Gen::weierstrass_b};
-      if constexpr (!IS_3B) return b_mult;
-      ff_storage temp = {};
-      ff_storage modulus = get_modulus<>();
-      host_math::template add_sub_limbs<TLC, false, false, true>(
-        b_mult.limbs_storage, b_mult.limbs_storage, b_mult.limbs_storage);
-      b_mult.limbs_storage =
-        host_math::template add_sub_limbs<TLC, true, true, true>(b_mult.limbs_storage, modulus, temp)
-          ? b_mult.limbs_storage
-          : temp;
-      host_math::template add_sub_limbs<TLC, false, false, true>(
-        b_mult.limbs_storage, Derived{Gen::weierstrass_b}.limbs_storage, b_mult.limbs_storage);
-      b_mult.limbs_storage =
-        host_math::template add_sub_limbs<TLC, true, true, true>(b_mult.limbs_storage, modulus, temp)
-          ? b_mult.limbs_storage
-          : temp;
-      return b_mult;
-    }();
-
-    if constexpr (Gen::is_b_u32) { // assumes that 3b is also u32
-      r = mul_unsigned<b_mult.limbs_storage.limbs[0], Derived>(xs);
-      if constexpr (Gen::is_b_neg)
-        return neg(r);
-      else {
-        return r;
-      }
-    } else {
-      return b_mult * xs;
-    }
-  }
 
   template <const Derived& multiplier>
   static HOST_DEVICE_INLINE Derived mul_const(const Derived& xs)
