@@ -1,3 +1,6 @@
-use icicle_core::impl_program;
+use crate::field::{ScalarField, ExtensionField};
 
-impl_program!("m31");
+use icicle_core::impl_program_field;
+
+impl_program_field!("m31", m31, ScalarField, ScalarCfg);
+impl_program_field!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);

@@ -1,9 +1,9 @@
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
-use std::ffi::c_void;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
+use std::ffi::c_void;
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {
@@ -39,6 +39,12 @@ pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Outp
     fn pow(self, exp: usize) -> Self;
 }
 
+pub type HandleCPP = *const c_void;
+
 pub trait Handle {
-    fn handle(&self) -> *const c_void;
+    fn handle(&self) -> HandleCPP;
+}
+
+pub trait DeletableHandle: Handle {
+    fn delete_handle(handle: HandleCPP);
 }

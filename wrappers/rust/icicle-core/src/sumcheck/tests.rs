@@ -1,4 +1,5 @@
 use crate::hash::Hasher;
+use crate::symbol::Symbol;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use crate::traits::{FieldImpl, GenerateRandom, Handle};
@@ -51,7 +52,7 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram + Handle,
+    P: ReturningValueProgram<<SW as Sumcheck>::Field, <SW as Sumcheck>::ProgSymbol>,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -122,7 +123,7 @@ where
 pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram + Handle,
+    P: ReturningValueProgram<<SW as Sumcheck>::Field, <SW as Sumcheck>::ProgSymbol>,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
