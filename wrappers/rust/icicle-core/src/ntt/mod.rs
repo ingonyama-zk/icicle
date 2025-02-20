@@ -341,7 +341,7 @@ macro_rules! impl_ntt {
                 fn get_root_of_unity(max_size: u64) -> $field {
                     let mut rou = std::mem::MaybeUninit::<$field>::uninit(); // Prepare uninitialized memory for rou
                     unsafe {
-                        get_root_of_unity(max_size, rou.as_mut_ptr());
+                        get_root_of_unity(max_size, rou.as_mut_ptr()).wrap().unwrap();
                         return rou.assume_init();
                     }
                 }
