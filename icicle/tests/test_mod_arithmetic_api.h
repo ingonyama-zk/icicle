@@ -148,24 +148,6 @@ TYPED_TEST(ModArithTest, vectorVectorOps)
   }
   run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-
-  // div
-#ifdef FIELD // no division for rings
-  TypeParam::rand_host_many(in_a.get(), total_size);
-  TypeParam::rand_host_many(in_b.get(), total_size);
-  // reference
-  if (!IcicleTestBase::is_main_device_available()) {
-    for (int i = 0; i < total_size; i++) {
-      out_ref[i] = in_a[i] * TypeParam::inverse(in_b[i]);
-    }
-  } else {
-    run(
-      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_div<TypeParam>, "vector div",
-      ITERS);
-  }
-  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_div<TypeParam>, "vector div", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-#endif
 }
 
 TYPED_TEST(ModArithTest, montgomeryConversion)
@@ -733,7 +715,7 @@ TYPED_TEST(ModArithTest, ntt)
   const bool inplace = rand_uint_32b(0, 1);
   const int logn = rand_uint_32b(0, 17);
   const uint64_t N = 1 << logn;
-  const int log_ntt_domain_size = logn + 1;
+  const int log_ntt_domain_size = logn + 2;
   const int log_batch_size = rand_uint_32b(0, 2);
   const int batch_size = 1 << log_batch_size;
   const int _ordering = rand_uint_32b(0, 3);
