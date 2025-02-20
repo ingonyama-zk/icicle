@@ -1,5 +1,4 @@
 
-// Note: currently icicle frontend is sharing headers with cuda backend so need this hack. TODO Yuval: decouple.
 #pragma once
 
 #ifdef __CUDACC__

@@ -86,7 +86,6 @@ elseif(FIELD)
   check_field(${FIELD} FIELD_INDEX FEATURES_STRING)
   setup_field_target(${FIELD} ${FIELD_INDEX} ${FEATURES_STRING})
 elseif(RING)
-  # TODO Yuval : try to support this in addition to the above to build Fq+Zq simultaneously ??
   set(RING_INDEX -1)
   set(FEATURES_STRING "")
   check_ring(${RING} RING_INDEX FEATURES_STRING)

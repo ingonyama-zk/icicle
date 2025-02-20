@@ -19,7 +19,7 @@
 
 #include "test_base.h"
 
-using namespace field_config; // TODO Yuval: split for rings?
+using namespace field_config;
 using namespace icicle;
 
 // TODO Hadar - add tests that test different configurations of data on device or on host.
