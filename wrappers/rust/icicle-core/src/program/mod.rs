@@ -84,6 +84,9 @@ macro_rules! impl_program_field {
         #[link_name = "delete_program"]
         pub(crate) fn ffi_delete_program(program: HandleCPP) -> eIcicleError;
 
+        #[link_name = concat!($field_prefix, "_clear_symbols")]
+        pub(crate) fn ffi_clear_symbols();
+
         // ReturningValueProgram
         #[link_name = concat!($field_prefix, "_get_program_polynomial_degree")]
         pub(crate) fn ffi_get_program_polynomial_degree(program: HandleCPP) -> i32;
@@ -94,21 +97,22 @@ macro_rules! impl_program_field {
         fn new(program_func: impl FnOnce(&mut Vec<Symbol>), nof_parameters: u32) -> Result<Self, eIcicleError>
         {
           unsafe {
-            let prog_handle = ffi_create_empty_program();
-            if prog_handle.is_null() {
-              return Err(eIcicleError::AllocationFailed);
-            }
             let mut program_parameters: Vec<Symbol> = (0..nof_parameters)
                                                       .enumerate()
                                                       .map(|(i, _)| Symbol::new_input(i as u32).unwrap())
                                                       .collect();
 
-            // RELEASE POOL FOR SYMBOLS WITH COPY AND NO DROP! (Stat with memory leak and then set the release pool)
-
             program_func(&mut program_parameters);
 
             let handles: Vec<*const c_void> = program_parameters.iter().map(|s| s.handle()).collect();
+            
+            let prog_handle = ffi_create_empty_program();
+            if prog_handle.is_null() {
+              return Err(eIcicleError::AllocationFailed);
+            }
             ffi_generate_program(prog_handle, handles.as_ptr(), program_parameters.len() as u32);
+
+            ffi_clear_symbols();
 
             Ok(Self { m_handle: prog_handle })
           }
@@ -117,6 +121,7 @@ macro_rules! impl_program_field {
         fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError> {
           unsafe {
             let prog_handle = ffi_create_predefined_program(pre_def);
+            ffi_clear_symbols();
             if prog_handle.is_null() {
               return Err(eIcicleError::AllocationFailed);
             } else {

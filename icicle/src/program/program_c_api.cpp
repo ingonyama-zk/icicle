@@ -3,6 +3,7 @@
 #include "icicle/program/symbol.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/utils.h"
+#include "icicle/utils/ffi_manager.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -58,6 +59,12 @@ void CONCAT_EXPAND(FIELD, generate_returning_value_program)(
 {
   CONCAT_EXPAND(FIELD, generate_program)(program, parameters_ptr, nof_parameters);
 }
+
+void CONCAT_EXPAND(FIELD, clear_symbols)()
+{
+  FfiObjectPool<Symbol<scalar_t>>& pool = FfiObjectPool<Symbol<scalar_t>>::instance();
+  pool.clear();
+}
 }
 
 #ifdef EXT_FIELD
@@ -112,6 +119,12 @@ void CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
   ExtensionReturningValueProgramHandle program, ExtensionSymbolHandle* parameters_ptr, int nof_parameters)
 {
   CONCAT_EXPAND(FIELD, extension_generate_program)(program, parameters_ptr, nof_parameters);
+}
+
+void CONCAT_EXPAND(FIELD, extension_clear_symbols)()
+{
+  FfiObjectPool<Symbol<extension_t>>& pool = FfiObjectPool<Symbol<extension_t>>::instance();
+  pool.clear();
 }
 }
 #endif // EXT_FIELD
