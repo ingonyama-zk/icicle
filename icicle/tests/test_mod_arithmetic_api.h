@@ -27,11 +27,11 @@ using namespace icicle;
 static bool VERBOSE = true;
 static int ITERS = 1;
 
-class RingAndFieldTestBase : public IcicleTestBase
+class ModArithTestBase : public IcicleTestBase
 {
 };
 template <typename T>
-class RingAndFieldTest : public RingAndFieldTestBase
+class ModArithTest : public ModArithTestBase
 {
 public:
   void random_samples(T* arr, uint64_t count)
@@ -44,32 +44,16 @@ public:
 #ifdef EXT_FIELD
 typedef testing::Types<scalar_t, extension_t> FTImplementations;
 #elif defined(RING)
-typedef testing::Types<scalar_t /*, TODO Yuval ZqRns */> FTImplementations;
+typedef testing::Types<scalar_t /*, TODO add ZqRns here */> FTImplementations;
 #elif defined(FIELD)
 typedef testing::Types<scalar_t> FTImplementations;
 #else
   #error invalid type for ring and field test
 #endif
 
-TYPED_TEST_SUITE(RingAndFieldTest, FTImplementations);
+TYPED_TEST_SUITE(ModArithTest, FTImplementations);
 
-// Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
-TYPED_TEST(RingAndFieldTest, FieldSanityTest)
-{
-  auto a = TypeParam::rand_host();
-  auto b = TypeParam::rand_host();
-  auto b_inv = TypeParam::inverse(b);
-  auto a_neg = TypeParam::neg(a);
-  ASSERT_EQ(a + TypeParam::zero(), a);
-  ASSERT_EQ(a + b - a, b);
-  ASSERT_EQ(b * a * b_inv, a);
-  ASSERT_EQ(a + a_neg, TypeParam::zero());
-  ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
-  ASSERT_EQ(b * b_inv, TypeParam::one());
-  ASSERT_EQ(a * scalar_t::from(2), a + a);
-}
-
-TYPED_TEST(RingAndFieldTest, vectorVectorOps)
+TYPED_TEST(ModArithTest, vectorVectorOps)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
   const int batch_size = 1 << rand_uint_32b(0, 4);
@@ -109,8 +93,8 @@ TYPED_TEST(RingAndFieldTest, vectorVectorOps)
     };
 
   // add
-  RingAndFieldTest<TypeParam>::random_samples(in_a.get(), total_size);
-  RingAndFieldTest<TypeParam>::random_samples(in_b.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
   if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] + in_b[i];
@@ -124,8 +108,8 @@ TYPED_TEST(RingAndFieldTest, vectorVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // accumulate
-  RingAndFieldTest<TypeParam>::random_samples(in_a.get(), total_size);
-  RingAndFieldTest<TypeParam>::random_samples(in_b.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
   for (int i = 0; i < total_size; i++) { // TODO - compare gpu against cpu with inplace operations?
     out_ref[i] = in_a[i] + in_b[i];
   }
@@ -136,8 +120,8 @@ TYPED_TEST(RingAndFieldTest, vectorVectorOps)
   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // sub
-  RingAndFieldTest<TypeParam>::random_samples(in_a.get(), total_size);
-  RingAndFieldTest<TypeParam>::random_samples(in_b.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
   if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] - in_b[i];
@@ -151,8 +135,8 @@ TYPED_TEST(RingAndFieldTest, vectorVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // mul
-  RingAndFieldTest<TypeParam>::random_samples(in_a.get(), total_size);
-  RingAndFieldTest<TypeParam>::random_samples(in_b.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
   if (!IcicleTestBase::is_main_device_available()) {
     for (int i = 0; i < total_size; i++) {
       out_ref[i] = in_a[i] * in_b[i];
@@ -184,7 +168,7 @@ TYPED_TEST(RingAndFieldTest, vectorVectorOps)
 #endif
 }
 
-TYPED_TEST(RingAndFieldTest, montgomeryConversion)
+TYPED_TEST(ModArithTest, montgomeryConversion)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
   const int batch_size = 1 << rand_uint_32b(0, 4);
@@ -217,7 +201,7 @@ TYPED_TEST(RingAndFieldTest, montgomeryConversion)
   };
 
   // convert_montgomery
-  RingAndFieldTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
   // reference
   if (!IcicleTestBase::is_main_device_available()) {
     if (is_to_montgomery) {
@@ -236,7 +220,7 @@ TYPED_TEST(RingAndFieldTest, montgomeryConversion)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 
-TEST_F(RingAndFieldTestBase, VectorReduceOps)
+TEST_F(ModArithTestBase, VectorReduceOps)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
   const int batch_size = 1 << rand_uint_32b(0, 4);
@@ -318,7 +302,7 @@ TEST_F(RingAndFieldTestBase, VectorReduceOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(scalar_t)));
 }
 
-TEST_F(RingAndFieldTestBase, scalarVectorOps)
+TEST_F(ModArithTestBase, scalarVectorOps)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
   const int batch_size = 1 << rand_uint_32b(0, 4);
@@ -427,7 +411,7 @@ TEST_F(RingAndFieldTestBase, scalarVectorOps)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
-TYPED_TEST(RingAndFieldTest, matrixAPIsAsync)
+TYPED_TEST(ModArithTest, matrixAPIsAsync)
 {
   const int R = 1 << rand_uint_32b(2, 9);
   const int C = 1 << rand_uint_32b(2, 9);
@@ -524,7 +508,7 @@ TYPED_TEST(RingAndFieldTest, matrixAPIsAsync)
   }
 }
 
-TYPED_TEST(RingAndFieldTest, bitReverse)
+TYPED_TEST(ModArithTest, bitReverse)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
   const int batch_size = 1 << rand_uint_32b(0, 4);
@@ -558,7 +542,7 @@ TYPED_TEST(RingAndFieldTest, bitReverse)
     END_TIMER(BIT_REVERSE, oss.str().c_str(), measure);
   };
 
-  RingAndFieldTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
 
   // Reference implementation
   if (!IcicleTestBase::is_main_device_available() || is_in_place) {
@@ -597,7 +581,7 @@ TYPED_TEST(RingAndFieldTest, bitReverse)
   }
 }
 
-TYPED_TEST(RingAndFieldTest, Slice)
+TYPED_TEST(ModArithTest, Slice)
 {
   const uint64_t size_in = 1 << rand_uint_32b(4, 17);
   const uint64_t offset = rand_uint_32b(0, 14);
@@ -658,7 +642,7 @@ TYPED_TEST(RingAndFieldTest, Slice)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size_out * sizeof(TypeParam)));
 }
 
-TEST_F(RingAndFieldTestBase, highestNonZeroIdx)
+TEST_F(ModArithTestBase, highestNonZeroIdx)
 {
   const uint64_t N = 1 << rand_uint_32b(3, 17);
   const int batch_size = 1 << rand_uint_32b(0, 4);
@@ -696,7 +680,7 @@ TEST_F(RingAndFieldTestBase, highestNonZeroIdx)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), batch_size * sizeof(int64_t)));
 }
 
-TEST_F(RingAndFieldTestBase, polynomialEval)
+TEST_F(ModArithTestBase, polynomialEval)
 {
   const uint64_t coeffs_size = 1 << rand_uint_32b(4, 13);
   const uint64_t domain_size = 1 << rand_uint_32b(2, 9);
@@ -741,83 +725,9 @@ TEST_F(RingAndFieldTestBase, polynomialEval)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_result_size * sizeof(scalar_t)));
 }
 
-// TODO: consider moving this to Field tests since ring elements generally have no inverse
-TEST_F(RingAndFieldTestBase, polynomialDivision)
-{
-  const uint64_t numerator_size = 1 << rand_uint_32b(5, 7);
-  const uint64_t denominator_size = 1 << rand_uint_32b(3, 4);
-  const uint64_t q_size = numerator_size - denominator_size + 1;
-  const uint64_t r_size = numerator_size;
-  const int batch_size = rand_uint_32b(10, 19);
-
-  // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
-
-  auto numerator = std::make_unique<scalar_t[]>(numerator_size * batch_size);
-  auto denominator = std::make_unique<scalar_t[]>(denominator_size * batch_size);
-
-  for (auto device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-    for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
-      ICICLE_LOG_INFO << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
-                      << "]";
-
-      // randomize matrix with rows/cols as polynomials
-      scalar_t::rand_host_many(numerator.get(), numerator_size * batch_size);
-      scalar_t::rand_host_many(denominator.get(), denominator_size * batch_size);
-
-      // Add padding to each vector so that the degree is lower than the size
-      const int zero_pad_length = 1;
-      if (columns_batch) {
-        for (int i = 0; i < batch_size * zero_pad_length; i++) {
-          numerator[batch_size * numerator_size - batch_size * zero_pad_length + i] = scalar_t::zero();
-          denominator[batch_size * denominator_size - batch_size * zero_pad_length + i] = scalar_t::zero();
-        }
-      } else {
-        for (int i = 0; i < batch_size; ++i) {
-          for (int j = 0; j < zero_pad_length; ++j) {
-            numerator[i * numerator_size + numerator_size - zero_pad_length + j] = scalar_t::zero();
-            denominator[i * denominator_size + denominator_size - zero_pad_length + j] = scalar_t::zero();
-          }
-        }
-      }
-
-      auto q = std::make_unique<scalar_t[]>(q_size * batch_size);
-      auto r = std::make_unique<scalar_t[]>(r_size * batch_size);
-
-      auto config = default_vec_ops_config();
-      config.batch_size = batch_size;
-      config.columns_batch = columns_batch;
-      // TODO v3.2 support column batch for this API
-      if (columns_batch && device == "CUDA") {
-        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
-        continue;
-      }
-
-      ICICLE_CHECK(polynomial_division(
-        numerator.get(), numerator_size, denominator.get(), denominator_size, config, q.get(), q_size, r.get(),
-        r_size));
-
-      // test a(x)=q(x)b(x)+r(x) in random point
-      const auto rand_x = scalar_t::rand_host();
-      auto ax = std::make_unique<scalar_t[]>(config.batch_size);
-      auto bx = std::make_unique<scalar_t[]>(config.batch_size);
-      auto qx = std::make_unique<scalar_t[]>(config.batch_size);
-      auto rx = std::make_unique<scalar_t[]>(config.batch_size);
-      polynomial_eval(numerator.get(), numerator_size, &rand_x, 1, config, ax.get());
-      polynomial_eval(denominator.get(), denominator_size, &rand_x, 1, config, bx.get());
-      polynomial_eval(q.get(), q_size, &rand_x, 1, config, qx.get());
-      polynomial_eval(r.get(), r_size, &rand_x, 1, config, rx.get());
-
-      for (int i = 0; i < config.batch_size; ++i) {
-        ASSERT_EQ(ax[i], qx[i] * bx[i] + rx[i]);
-      }
-    }
-  }
-}
-
 #ifdef NTT
 
-TYPED_TEST(RingAndFieldTest, ntt)
+TYPED_TEST(ModArithTest, ntt)
 {
   // Randomize configuration
   const bool inplace = rand_uint_32b(0, 1);
@@ -927,7 +837,7 @@ void lambda_multi_result(std::vector<MlePoly>& vars)
   vars[6] = vars[5];
 }
 
-TEST_F(RingAndFieldTestBase, CpuProgramExecutorMultiRes)
+TEST_F(ModArithTestBase, CpuProgramExecutorMultiRes)
 {
   scalar_t a = scalar_t::rand_host();
   scalar_t b = scalar_t::rand_host();
@@ -970,7 +880,7 @@ MlePoly returning_value_func(const std::vector<MlePoly>& inputs)
   return (EQ * (A * B - C));
 }
 
-TEST_F(RingAndFieldTestBase, CpuProgramExecutorReturningVal)
+TEST_F(ModArithTestBase, CpuProgramExecutorReturningVal)
 {
   // randomize input vectors
   const int total_size = 100000;
@@ -1070,7 +980,7 @@ MlePoly ex_x_ab_minus_c_func(const std::vector<MlePoly>& inputs)
   return EQ * (A * B - C);
 }
 
-TEST_F(RingAndFieldTestBase, ProgramExecutorVecOp)
+TEST_F(ModArithTestBase, ProgramExecutorVecOp)
 {
   // randomize input vectors
   const int total_size = 100000;
@@ -1123,7 +1033,7 @@ TEST_F(RingAndFieldTestBase, ProgramExecutorVecOp)
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
 
-TEST_F(RingAndFieldTestBase, ProgramExecutorVecOpDataOnDevice)
+TEST_F(ModArithTestBase, ProgramExecutorVecOpDataOnDevice)
 {
   // randomize input vectors
   const int total_size = 100000;
@@ -1194,443 +1104,3 @@ TEST_F(RingAndFieldTestBase, ProgramExecutorVecOpDataOnDevice)
 
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
 }
-
-// TODO: move to field-only tests?
-#ifdef SUMCHECK
-TEST_F(RingAndFieldTestBase, Sumcheck)
-{
-  int log_mle_poly_size = 13;
-  int mle_poly_size = 1 << log_mle_poly_size;
-  int nof_mle_poly = 4;
-
-  // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
-  }
-
-  // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
-  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t eq = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a * b - c) * eq;
-  }
-
-  auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-
-    // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
-
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
-    // ===== Prover side ======
-    // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
-
-    CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
-    SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
-
-    START_TIMER(sumcheck);
-    ICICLE_CHECK(prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-      sumcheck_proof));
-    END_TIMER(sumcheck, oss.str().c_str(), true);
-
-    // ===== Verifier side ======
-    // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
-
-    ASSERT_EQ(true, verification_pass);
-  };
-
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
-  }
-}
-
-TEST_F(RingAndFieldTestBase, SumcheckDataOnDevice)
-{
-  int log_mle_poly_size = 13;
-  int mle_poly_size = 1 << log_mle_poly_size;
-  int nof_mle_poly = 4;
-
-  // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
-  }
-
-  // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
-  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t eq = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a * b - c) * eq;
-  }
-
-  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(nof_mle_poly);
-  icicle_set_device(IcicleTestBase::main_device());
-
-  // create transcript_config
-  SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
-
-  // ===== Prover side ======
-  // create sumcheck
-  auto prover_sumcheck = create_sumcheck<scalar_t>();
-
-  CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
-  SumcheckConfig sumcheck_config;
-
-  sumcheck_config.are_inputs_on_device = true;
-
-  for (int idx = 0; idx < nof_mle_poly; ++idx) {
-    scalar_t* tmp = nullptr;
-    icicle_malloc((void**)&tmp, mle_poly_size * sizeof(scalar_t));
-    icicle_copy_to_device(tmp, mle_polynomials[idx], mle_poly_size * sizeof(scalar_t));
-    data_main[idx] = tmp;
-  }
-  std::ostringstream oss;
-  oss << "CUDA" << " " << "Sumcheck";
-
-  SumcheckProof<scalar_t> sumcheck_proof;
-
-  START_TIMER(sumcheck);
-  ICICLE_CHECK(prover_sumcheck.get_proof(
-    data_main, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-    sumcheck_proof));
-  END_TIMER(sumcheck, oss.str().c_str(), true);
-
-  // ===== Verifier side ======
-  // create sumcheck
-  auto verifier_sumcheck = create_sumcheck<scalar_t>();
-  bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
-
-  ASSERT_EQ(true, verification_pass);
-
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
-  }
-}
-
-MlePoly user_defined_combine(const std::vector<MlePoly>& inputs)
-{
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  const MlePoly& D = inputs[3];
-  return A * B - MlePoly(scalar_t::from(2)) * C + D;
-}
-
-TEST_F(RingAndFieldTestBase, SumcheckUserDefinedCombine)
-{
-  int log_mle_poly_size = 13;
-  int mle_poly_size = 1 << log_mle_poly_size;
-  int nof_mle_poly = 4;
-
-  // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
-  }
-
-  // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
-  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t d = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c + d);
-  }
-
-  auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-
-    // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
-
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
-    // ===== Prover side ======
-    // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
-
-    CombineFunction<scalar_t> combine_func(user_defined_combine, nof_mle_poly);
-    SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
-
-    START_TIMER(sumcheck);
-    ICICLE_CHECK(prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-      sumcheck_proof));
-    END_TIMER(sumcheck, oss.str().c_str(), true);
-
-    // ===== Verifier side ======
-    // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
-
-    ASSERT_EQ(true, verification_pass);
-  };
-
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
-  }
-}
-
-MlePoly too_complex_combine(const std::vector<MlePoly>& inputs)
-{
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  return A * B + B * C + C * A + A * B * C - scalar_t::from(2) + scalar_t::from(9) + A * B * C + C * B * A;
-}
-
-MlePoly too_high_degree_combine(const std::vector<MlePoly>& inputs)
-{
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  return (A * B * C * A * B * C * A * B * C);
-}
-
-MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
-{
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  const MlePoly& D = inputs[3];
-  const MlePoly& E = inputs[4];
-  const MlePoly& F = inputs[5];
-  const MlePoly& G = inputs[5];
-  const MlePoly& H = inputs[5];
-  const MlePoly& I = inputs[5];
-  return A * B * C + D * E * F + G * H * I;
-}
-
-TEST_F(RingAndFieldTestBase, SumcheckCudaShouldFailCases)
-{
-  int log_mle_poly_size = 13;
-  int mle_poly_size = 1 << log_mle_poly_size;
-  int nof_mle_poly_big = 9;
-  int nof_mle_poly = 6;
-  int nof_mle_poly_small = 3;
-
-  // generate inputs
-  std::vector<scalar_t*> mle_polynomials_big(nof_mle_poly_big);
-  for (int poly_i = 0; poly_i < nof_mle_poly_big; poly_i++) {
-    mle_polynomials_big[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials_big[poly_i], mle_poly_size);
-  }
-
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
-  }
-
-  std::vector<scalar_t*> mle_polynomials_small(nof_mle_poly_small);
-  for (int poly_i = 0; poly_i < nof_mle_poly_small; poly_i++) {
-    mle_polynomials_small[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials_small[poly_i], mle_poly_size);
-  }
-
-  // claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
-
-  auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, CombineFunction<scalar_t> combine_func) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-
-    // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
-
-    // ===== Prover side ======
-    // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
-    SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
-
-    eIcicleError error = prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-      sumcheck_proof);
-
-    ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
-  };
-
-  CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
-  run("CUDA", mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
-  CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
-  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
-  CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
-  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
-
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
-  }
-  for (auto& mle_poly_ptr : mle_polynomials_small) {
-    delete[] mle_poly_ptr;
-  }
-}
-
-MlePoly identity(const std::vector<MlePoly>& inputs) { return inputs[0]; }
-
-TEST_F(RingAndFieldTestBase, SumcheckIdentity)
-{
-  int log_mle_poly_size = 13;
-  int mle_poly_size = 1 << log_mle_poly_size;
-  int nof_mle_poly = 1;
-
-  // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
-  }
-
-  // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
-  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    claimed_sum = claimed_sum + a;
-  }
-
-  auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-
-    // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
-
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
-    // ===== Prover side ======
-    // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
-
-    CombineFunction<scalar_t> combine_func(identity, nof_mle_poly);
-    SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
-
-    START_TIMER(sumcheck);
-    ICICLE_CHECK(prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-      sumcheck_proof));
-    END_TIMER(sumcheck, oss.str().c_str(), true);
-
-    // ===== Verifier side ======
-    // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
-
-    ASSERT_EQ(true, verification_pass);
-  };
-
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
-  }
-}
-
-MlePoly single_input(const std::vector<MlePoly>& inputs) { return MlePoly(scalar_t::from(2)) * inputs[0]; }
-
-TEST_F(RingAndFieldTestBase, SumcheckSingleInputProgram)
-{
-  int log_mle_poly_size = 13;
-  int mle_poly_size = 1 << log_mle_poly_size;
-  int nof_mle_poly = 1;
-
-  // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
-  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
-  }
-
-  // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
-  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    claimed_sum = claimed_sum + scalar_t::from(2) * a;
-  }
-
-  auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-
-    // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
-
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
-    // ===== Prover side ======
-    // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
-
-    CombineFunction<scalar_t> combine_func(single_input, nof_mle_poly);
-    SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
-
-    START_TIMER(sumcheck);
-    ICICLE_CHECK(prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
-      sumcheck_proof));
-    END_TIMER(sumcheck, oss.str().c_str(), true);
-
-    // ===== Verifier side ======
-    // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
-
-    ASSERT_EQ(true, verification_pass);
-  };
-
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-
-  for (auto& mle_poly_ptr : mle_polynomials) {
-    delete[] mle_poly_ptr;
-  }
-}
-
-#endif // SUMCHECK
