@@ -72,7 +72,8 @@ TEST_F(FieldTestBase, polynomialDivision)
   const uint64_t denominator_size = 1 << rand_uint_32b(3, 4);
   const uint64_t q_size = numerator_size - denominator_size + 1;
   const uint64_t r_size = numerator_size;
-  const int batch_size = rand_uint_32b(10, 19);
+  // const int batch_size = rand_uint_32b(10, 19);
+  const int batch_size = 1; // Metal backend doesn't support batch vecops, TODO remove when supported
 
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
@@ -139,9 +140,387 @@ TEST_F(FieldTestBase, polynomialDivision)
   }
 }
 
-#ifdef SUMCHECK
-  #include "icicle/hash/keccak.h"
-TEST_F(FieldTestBase, Sumcheck)
+#ifdef NTT
+
+TYPED_TEST(FieldApiTest, ntt)
+{
+  // Randomize configuration
+  const bool inplace = rand_uint_32b(0, 1);
+  const int logn = rand_uint_32b(0, 17);
+  const uint64_t N = 1 << logn;
+  const int log_ntt_domain_size = logn + 2; // Fix for Metal backend support
+  const int log_batch_size = rand_uint_32b(0, 2);
+  const int batch_size = 1 << log_batch_size;
+  const int _ordering = rand_uint_32b(0, 3);
+  const Ordering ordering = static_cast<Ordering>(_ordering);
+  bool columns_batch;
+  if (logn == 7 || logn < 4) {
+    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
+  } else {
+    columns_batch = rand_uint_32b(0, 1);
+  }
+  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
+  const int log_coset_stride = rand_uint_32b(0, 2);
+  scalar_t coset_gen;
+  if (log_coset_stride) {
+    coset_gen = scalar_t::omega(logn + log_coset_stride);
+  } else {
+    coset_gen = scalar_t::one();
+  }
+
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  ICICLE_LOG_DEBUG << "inplace = " << inplace;
+  ICICLE_LOG_DEBUG << "ordering = " << _ordering;
+  ICICLE_LOG_DEBUG << "log_coset_stride = " << log_coset_stride;
+
+  const int total_size = N * batch_size;
+  auto scalars = std::make_unique<TypeParam[]>(total_size);
+  TypeParam::rand_host_many(scalars.get(), total_size);
+
+  auto out_main = std::make_unique<TypeParam[]>(total_size);
+  auto out_ref = std::make_unique<TypeParam[]>(total_size);
+  auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    icicleStreamHandle stream = nullptr;
+    ICICLE_CHECK(icicle_create_stream(&stream));
+    auto init_domain_config = default_ntt_init_domain_config();
+    init_domain_config.stream = stream;
+    init_domain_config.is_async = false;
+    ConfigExtension ext;
+    ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
+    init_domain_config.ext = &ext;
+    auto config = default_ntt_config<scalar_t>();
+    config.stream = stream;
+    config.coset_gen = coset_gen;
+    config.batch_size = batch_size;       // default: 1
+    config.columns_batch = columns_batch; // default: false
+    config.ordering = ordering;           // default: kNN
+    config.are_inputs_on_device = true;
+    config.are_outputs_on_device = true;
+    config.is_async = false;
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+    TypeParam *d_in, *d_out;
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
+    ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
+    ICICLE_CHECK(icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream));
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i) {
+      if (inplace) {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_in));
+      } else {
+        ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
+      }
+    }
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+
+    if (inplace) {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
+    } else {
+      ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
+    }
+    ICICLE_CHECK(icicle_free_async(d_in, config.stream));
+    ICICLE_CHECK(icicle_free_async(d_out, config.stream));
+    ICICLE_CHECK(icicle_stream_synchronize(config.stream));
+    ICICLE_CHECK(icicle_destroy_stream(stream));
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  };
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+}
+#endif // NTT
+
+// define program
+using MlePoly = Symbol<scalar_t>;
+
+// define program
+using MlePoly = Symbol<scalar_t>;
+void lambda_multi_result(std::vector<MlePoly>& vars)
+{
+  const MlePoly& A = vars[0];
+  const MlePoly& B = vars[1];
+  const MlePoly& C = vars[2];
+  const MlePoly& EQ = vars[3];
+  vars[4] = EQ * (A * B - C) + scalar_t::from(9);
+  vars[5] = A * B - C.inverse();
+  vars[6] = vars[5];
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutorMultiRes)
+{
+  scalar_t a = scalar_t::rand_host();
+  scalar_t b = scalar_t::rand_host();
+  scalar_t c = scalar_t::rand_host();
+  scalar_t eq = scalar_t::rand_host();
+  scalar_t res_0;
+  scalar_t res_1;
+  scalar_t res_2;
+
+  Program<scalar_t> program(lambda_multi_result, 7);
+  CpuProgramExecutor<scalar_t> prog_exe(program);
+
+  // init program
+  prog_exe.m_variable_ptrs[0] = &a;
+  prog_exe.m_variable_ptrs[1] = &b;
+  prog_exe.m_variable_ptrs[2] = &c;
+  prog_exe.m_variable_ptrs[3] = &eq;
+  prog_exe.m_variable_ptrs[4] = &res_0;
+  prog_exe.m_variable_ptrs[5] = &res_1;
+  prog_exe.m_variable_ptrs[6] = &res_2;
+
+  // execute
+  prog_exe.execute();
+
+  // check correctness
+  scalar_t expected_res_0 = eq * (a * b - c) + scalar_t::from(9);
+  ASSERT_EQ(res_0, expected_res_0);
+
+  scalar_t expected_res_1 = a * b - scalar_t::inverse(c);
+  ASSERT_EQ(res_1, expected_res_1);
+  ASSERT_EQ(res_2, res_1);
+}
+
+MlePoly returning_value_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return (EQ * (A * B - C));
+}
+
+TEST_F(FieldApiTestBase, CpuProgramExecutorReturningVal)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  //----- element wise operation ----------------------
+  auto out_element_wise = std::make_unique<scalar_t[]>(total_size);
+  START_TIMER(element_wise_op)
+  for (int i = 0; i < 100000; ++i) {
+    out_element_wise[i] = in_eq[i] * (in_a[i] * in_b[i] - in_c[i]);
+  }
+  END_TIMER(element_wise_op, "Straight forward function (Element wise) time: ", true);
+
+  //----- explicit program ----------------------
+  ReturningValueProgram<scalar_t> program_explicit(returning_value_func, 4);
+
+  CpuProgramExecutor<scalar_t> prog_exe_explicit(program_explicit);
+  auto out_explicit_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_explicit.m_variable_ptrs[0] = in_a.get();
+  prog_exe_explicit.m_variable_ptrs[1] = in_b.get();
+  prog_exe_explicit.m_variable_ptrs[2] = in_c.get();
+  prog_exe_explicit.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_explicit.m_variable_ptrs[4] = out_explicit_program.get();
+
+  // run on all vectors
+  START_TIMER(explicit_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_explicit.execute();
+    (prog_exe_explicit.m_variable_ptrs[0])++;
+    (prog_exe_explicit.m_variable_ptrs[1])++;
+    (prog_exe_explicit.m_variable_ptrs[2])++;
+    (prog_exe_explicit.m_variable_ptrs[3])++;
+    (prog_exe_explicit.m_variable_ptrs[4])++;
+  }
+  END_TIMER(explicit_program, "Explicit program executor time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_explicit_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- predefined program ----------------------
+  Program<scalar_t> predef_program(EQ_X_AB_MINUS_C);
+
+  CpuProgramExecutor<scalar_t> prog_exe_predef(predef_program);
+  auto out_predef_program = std::make_unique<scalar_t[]>(total_size);
+
+  // init program
+  prog_exe_predef.m_variable_ptrs[0] = in_a.get();
+  prog_exe_predef.m_variable_ptrs[1] = in_b.get();
+  prog_exe_predef.m_variable_ptrs[2] = in_c.get();
+  prog_exe_predef.m_variable_ptrs[3] = in_eq.get();
+  prog_exe_predef.m_variable_ptrs[4] = out_predef_program.get();
+
+  // run on all vectors
+  START_TIMER(predef_program)
+  for (int i = 0; i < total_size; ++i) {
+    prog_exe_predef.execute();
+    (prog_exe_predef.m_variable_ptrs[0])++;
+    (prog_exe_predef.m_variable_ptrs[1])++;
+    (prog_exe_predef.m_variable_ptrs[2])++;
+    (prog_exe_predef.m_variable_ptrs[3])++;
+    (prog_exe_predef.m_variable_ptrs[4])++;
+  }
+  END_TIMER(predef_program, "Program predefined time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_predef_program.get(), total_size * sizeof(scalar_t)));
+
+  //----- Vecops operation ----------------------
+  auto config = default_vec_ops_config();
+  auto out_vec_ops = std::make_unique<scalar_t[]>(total_size);
+
+  START_TIMER(vecop)
+  vector_mul(in_a.get(), in_b.get(), total_size, config, out_vec_ops.get());         // A * B
+  vector_sub(out_vec_ops.get(), in_c.get(), total_size, config, out_vec_ops.get());  // A * B - C
+  vector_mul(out_vec_ops.get(), in_eq.get(), total_size, config, out_vec_ops.get()); // EQ * (A * B - C)
+  END_TIMER(vecop, "Vec ops time: ", true);
+
+  // check correctness
+  ASSERT_EQ(0, memcmp(out_element_wise.get(), out_vec_ops.get(), total_size * sizeof(scalar_t)));
+}
+
+MlePoly ex_x_ab_minus_c_func(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& EQ = inputs[3];
+  return EQ * (A * B - C);
+}
+
+TEST_F(FieldApiTestBase, ProgramExecutorVecOp)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, 4);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program,
+               uint64_t size, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    auto config = default_vec_ops_config();
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(executeProgram)
+    ICICLE_CHECK(execute_program(data, program, size, config));
+    END_TIMER(executeProgram, oss.str().c_str(), true);
+  };
+
+  // initialize data vector for main device
+  auto out_main = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(5);
+  data_main[0] = in_a.get();
+  data_main[1] = in_b.get();
+  data_main[2] = in_c.get();
+  data_main[3] = in_eq.get();
+  data_main[4] = out_main.get();
+
+  // initialize data vector for reference device
+  auto out_ref = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(5);
+  data_ref[0] = in_a.get();
+  data_ref[1] = in_b.get();
+  data_ref[2] = in_c.get();
+  data_ref[3] = in_eq.get();
+  data_ref[4] = out_ref.get();
+
+  // run on both devices and compare
+  run(IcicleTestBase::main_device(), data_main, prog, total_size, "execute_program");
+  run(IcicleTestBase::reference_device(), data_ref, prog, total_size, "execute_program");
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTestBase, ProgramExecutorVecOpDataOnDevice)
+{
+  // randomize input vectors
+  const int total_size = 100000;
+  const int num_of_params = 5;
+  const ReturningValueProgram<scalar_t> prog(ex_x_ab_minus_c_func, num_of_params - 1);
+  auto in_a = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_a.get(), total_size);
+  auto in_b = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_b.get(), total_size);
+  auto in_c = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_c.get(), total_size);
+  auto in_eq = std::make_unique<scalar_t[]>(total_size);
+  scalar_t::rand_host_many(in_eq.get(), total_size);
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& data, const Program<scalar_t>& program,
+               uint64_t size, VecOpsConfig config, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(executeProgram)
+    ICICLE_CHECK(execute_program(data, program, size, config));
+    END_TIMER(executeProgram, oss.str().c_str(), true);
+  };
+
+  // initialize data vector for main device
+  auto out_main = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(num_of_params);
+  data_main[0] = in_a.get();
+  data_main[1] = in_b.get();
+  data_main[2] = in_c.get();
+  data_main[3] = in_eq.get();
+  data_main[4] = out_main.get();
+
+  // initialize data vector for reference device
+  auto out_ref = std::make_unique<scalar_t[]>(total_size);
+  std::vector<scalar_t*> data_ref = std::vector<scalar_t*>(num_of_params);
+  data_ref[0] = in_a.get();
+  data_ref[1] = in_b.get();
+  data_ref[2] = in_c.get();
+  data_ref[3] = in_eq.get();
+  data_ref[4] = out_ref.get();
+
+  auto config = default_vec_ops_config();
+  config.is_a_on_device = 1;
+
+  // run on both devices and compare
+  run(IcicleTestBase::reference_device(), data_ref, prog, total_size, config, "execute_program");
+
+  icicle_set_device(IcicleTestBase::main_device());
+
+  if (config.is_a_on_device) {
+    for (int idx = 0; idx < num_of_params; ++idx) {
+      scalar_t* tmp = nullptr;
+      icicle_malloc((void**)&tmp, total_size * sizeof(scalar_t));
+      icicle_copy_to_device(tmp, data_main[idx], total_size * sizeof(scalar_t));
+      data_main[idx] = tmp;
+    }
+  }
+
+  run(IcicleTestBase::main_device(), data_main, prog, total_size, config, "execute_program");
+
+  if (config.is_a_on_device)
+    icicle_copy_to_host(out_main.get(), data_main[num_of_params - 1], total_size * sizeof(scalar_t));
+
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+}
+
+TEST_F(FieldApiTestBase, Sumcheck)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
