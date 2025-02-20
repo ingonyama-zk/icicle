@@ -110,11 +110,6 @@ CONCAT_EXPAND(FIELD, extension_create_predefined_returning_value_program)(PreDef
   return new ReturningValueProgram<extension_t>(pre_def);
 }
 
-int CONCAT_EXPAND(FIELD, extension_get_program_polynomial_degree)(ExtensionReturningValueProgramHandle program)
-{
-  return program->get_polynomial_degee();
-}
-
 void CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
   ExtensionReturningValueProgramHandle program, ExtensionSymbolHandle* parameters_ptr, int nof_parameters)
 {

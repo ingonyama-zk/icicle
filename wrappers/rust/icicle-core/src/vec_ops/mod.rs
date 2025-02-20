@@ -170,7 +170,9 @@ fn check_vec_ops_args<F, T>(
             result.len()
         );
     }
-    setup_config(a, b, result, cfg, 1 /* Placeholder no need for batch_size in this operation */)
+    setup_config(
+        a, b, result, cfg, 1, /* Placeholder no need for batch_size in this operation */
+    )
 }
 
 fn check_vec_ops_args_scalar_ops<F, T>(
@@ -180,18 +182,10 @@ fn check_vec_ops_args_scalar_ops<F, T>(
     cfg: &VecOpsConfig,
 ) -> VecOpsConfig {
     if b.len() != result.len() {
-        panic!(
-            "b.len() and result.len() do not match {} != {}",
-            b.len(),
-            result.len()
-        );
+        panic!("b.len() and result.len() do not match {} != {}", b.len(), result.len());
     }
     if b.len() % a.len() != 0 {
-        panic!(
-            "b.len(), a.len() do not match {} % {} != 0",
-            b.len(),
-            a.len(),
-        );
+        panic!("b.len(), a.len() do not match {} % {} != 0", b.len(), a.len(),);
     }
     let batch_size = a.len();
     setup_config(a, b, result, cfg, batch_size)
@@ -249,11 +243,7 @@ fn check_vec_ops_args_slice<F>(
     cfg: &VecOpsConfig,
 ) -> VecOpsConfig {
     if input.len() as u64 % size_in != 0 {
-        panic!(
-            "size_in does not divide input size {} % {} != 0",
-            input.len(),
-            size_in,
-        );
+        panic!("size_in does not divide input size {} % {} != 0", input.len(), size_in,);
     }
     if output.len() as u64 % size_out != 0 {
         panic!(
@@ -306,7 +296,7 @@ fn setup_config<F, T>(
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
     result: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
-    batch_size: usize
+    batch_size: usize,
 ) -> VecOpsConfig {
     // check device slices are on active device
     if a.is_on_device() && !a.is_on_active_device() {
