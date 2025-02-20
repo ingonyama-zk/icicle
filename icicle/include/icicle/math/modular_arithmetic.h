@@ -621,7 +621,7 @@ public:
         c = c - b;
       }
 
-#ifdef RING // only for rings, unecessary for fields
+#ifdef RING // only for rings, unnecessary for fields
       // Detect Non-Invertible Cases - rings only
       if (u == zero || v == zero) return zero; // If one side becomes 0, xs has no inverse
 #endif
