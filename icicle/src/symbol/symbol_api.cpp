@@ -147,10 +147,10 @@ CONCAT_EXPAND(FIELD, extension_add_symbols)(const ExtensionSymbolHandle op_a, co
 ExtensionSymbolHandle
 CONCAT_EXPAND(FIELD, extension_multiply_symbols)(const ExtensionSymbolHandle op_a, const ExtensionSymbolHandle op_b)
 {
-  auto symbol_ptr = new Symbol<extension_t>(op_a->multiply(*op_b));FfiObjectPool<Symbol<extension_t>>& pool = FfiObjectPool<Symbol<extension_t>>::instance();
+  auto symbol_ptr = new Symbol<extension_t>(op_a->multiply(*op_b));
+  FfiObjectPool<Symbol<extension_t>>& pool = FfiObjectPool<Symbol<extension_t>>::instance();
   pool.add(symbol_ptr);
   return symbol_ptr;
-
 }
 
 ExtensionSymbolHandle

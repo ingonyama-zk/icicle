@@ -8,7 +8,7 @@ This documantaion is designed to bring developers up to speed about Rust API for
 
 ## Introduction
 
-The Rust FFI bindings for both Program ans Symbol serve as a "shallow wrapper" around the underlying C++ implementation. These bindings provide a straightforward Rust interface that directly calls functions from a C++ library, effectively bridging Rust and C++ operations. The Rust layer handles simple interface translations without delving into complex logic or data structures, which are managed on the C++ side. This design ensures efficient data handling, memory management, and execution while utilizing the existing backend directly via C++.
+The Rust FFI bindings for both Program d Symbol serve as a "shallow wrapper" around the underlying C++ implementation. These bindings provide a straightforward Rust interface that directly calls functions from a C++ library, effectively bridging Rust and C++ operations. The Rust layer handles simple interface translations without delving into complex logic or data structures, which are managed on the C++ side. This design ensures efficient data handling, memory management, and execution while utilizing the existing backend directly via C++.
 
 The following would list the implemented Rust functionality with some examples paralleling those given in the [original program overview](../primitives/program.md).
 # Symbol
@@ -40,7 +40,7 @@ pub trait Symbol<F: FieldImpl>:
 }
 ```
 ## `Symbol` Struct
-The `Symbol` sturct is implemented for each of the supported icicle fields, implementing the above trait for the specific field (field distinction is relevant for the input symbols and stored constants in the program). In its core it's just a handle to the cpp implementation.
+The `Symbol` struct is implemented for each of the supported icicle fields, implementing the above trait for the specific field (field distinction is relevant for the input symbols and stored constants in the program). In its core it's just a handle to the cpp implementation.
 ```rust
 pub struct Program {
   handle: ProgramHandle,
@@ -65,7 +65,7 @@ pub trait Program<F: FieldImpl>: {
 }
 ```
 ## `Program` Struct
-The `Program` sturct is implemented for each of the supported icicle fields, implementing the above trait for the specific field (field distinction is relevant for the input symbols and stored constants in the program). In its core it's just a handle to the cpp implementation.
+The `Program` struct is implemented for each of the supported icicle fields, implementing the above trait for the specific field (field distinction is relevant for the input symbols and stored constants in the program). In its core it's just a handle to the cpp implementation.
 ```rust
 pub struct Program {
   handle: ProgramHandle,

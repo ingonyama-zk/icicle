@@ -4,7 +4,8 @@
 using namespace icicle;
 
 template <typename T>
-class FfiObjectPool {
+class FfiObjectPool
+{
 public:
   static FfiObjectPool& instance()
   {
@@ -23,7 +24,7 @@ public:
   void clear()
   {
     // Needs amount of unlocks equal to pool size (For each lock done when adding an element)
-    for (auto ptr: m_pool) {
+    for (auto ptr : m_pool) {
       delete ptr;
       m_mutex.unlock();
     }
@@ -40,4 +41,5 @@ private:
   static std::recursive_mutex m_mutex;
 };
 
-template <typename T> std::recursive_mutex FfiObjectPool<T>::m_mutex;
+template <typename T>
+std::recursive_mutex FfiObjectPool<T>::m_mutex;
