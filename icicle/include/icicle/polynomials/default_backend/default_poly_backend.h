@@ -374,7 +374,7 @@ namespace icicle {
 
       // (3) element wise division
       auto config = default_vec_ops_config();
-      config.is_a_on_device = false;
+      config.is_a_on_device = true;
       config.is_b_on_device = true;
       config.is_result_on_device = true;
       config.is_async = true;
