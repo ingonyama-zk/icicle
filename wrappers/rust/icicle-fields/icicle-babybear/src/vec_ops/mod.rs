@@ -1,4 +1,5 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionCfg, ExtensionField};
+use crate::field::{ScalarCfg, ScalarField};
 
 use icicle_core::vec_ops::{MixedVecOps, VecOps, VecOpsConfig};
 use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
@@ -9,7 +10,9 @@ use icicle_core::program::Program;
 use icicle_core::traits::FieldImpl;
 
 impl_vec_ops_field!("babybear", babybear, ScalarField, ScalarCfg);
+#[cfg(not(feature = "no_ext_field"))]
 impl_vec_ops_field!("babybear_extension", babybear_extension, ExtensionField, ExtensionCfg);
+#[cfg(not(feature = "no_ext_field"))]
 impl_vec_ops_mixed_field!(
     "babybear_extension",
     babybear_mixed,
@@ -24,8 +27,8 @@ pub(crate) mod tests {
     use icicle_core::vec_ops::tests::*;
     use icicle_core::{impl_mixed_vec_ops_tests, impl_vec_ops_tests};
 
-    impl_vec_ops_tests!(babybear, ScalarField);
-
+    impl_vec_ops_tests!(ScalarField);
+    #[cfg(not(feature = "no_ext_field"))]
     mod extension {
         use super::*;
 

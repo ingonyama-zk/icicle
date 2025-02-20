@@ -5,6 +5,7 @@ use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
 impl_ntt!("babybear", babybear, ScalarField, ScalarCfg);
+#[cfg(not(feature = "no_ext_field"))]
 impl_ntt_without_domain!(
     "babybear_extension",
     ScalarField,
@@ -23,6 +24,7 @@ pub(crate) mod tests {
     impl_ntt_tests!(ScalarField);
 
     // Tests against risc0 and plonky3
+    #[cfg(not(feature = "no_ext_field"))]
     use super::ExtensionField;
     use icicle_core::{
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
@@ -37,6 +39,7 @@ pub(crate) mod tests {
     // Note that risc0 and plonky3 tests shouldn't be ran simultaneously in parallel to other ntt tests as they use different roots of unity.
     #[test]
     #[serial]
+    #[cfg(not(feature = "no_ext_field"))]
     fn phase2_test_ntt_against_risc0() {
         test_utilities::test_load_and_init_devices();
         test_utilities::test_set_main_device();
