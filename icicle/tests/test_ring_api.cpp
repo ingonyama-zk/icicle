@@ -22,8 +22,11 @@ TYPED_TEST(RingTest, RingSanityTest)
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
   ASSERT_EQ(a * scalar_t::from(2), a + a);
 
-  // TODO Yuval: ring inverse
-  //   auto b_inv = TypeParam::inverse(b);
-  //   ASSERT_EQ(b * a * b_inv, a);
-  //   ASSERT_EQ(b * b_inv, TypeParam::one());
+  TypeParam invertible_element = TypeParam::rand_host();
+  while (!TypeParam::has_inverse(invertible_element)) {
+    invertible_element = TypeParam::rand_host();
+  }
+  auto invertible_element_inv = TypeParam::inverse(invertible_element);
+  ASSERT_EQ(invertible_element * a * invertible_element_inv, a);
+  ASSERT_EQ(invertible_element * invertible_element_inv, TypeParam::one());
 }

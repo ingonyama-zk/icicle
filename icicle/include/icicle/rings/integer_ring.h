@@ -6,7 +6,14 @@ template <class CONFIG>
 class IntegerRing : public ModArith<IntegerRing<CONFIG>, CONFIG>
 {
   // By deriving from ModArith<IntegerRing> (CRTP) we get operands defined for the type IntegerRing
-  // Can add here Field specific logic (such as inverse)
+
+public:
+  static constexpr HOST_DEVICE bool has_inverse(const IntegerRing& xs)
+  {
+    // Note: inverse returns zero when no inverse
+    auto xs_inv = IntegerRing::inverse(xs);
+    return xs_inv != IntegerRing::zero();
+  }
 };
 
 template <class CONFIG>
