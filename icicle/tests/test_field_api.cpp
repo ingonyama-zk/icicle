@@ -1453,8 +1453,9 @@ TEST_F(FieldApiTestBase, SumcheckUserDefinedCombine)
 
     ASSERT_EQ(true, verification_pass);
   };
-  for (const auto& device : s_registered_devices)
+  for (const auto& device : s_registered_devices) {
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  }
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
