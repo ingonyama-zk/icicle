@@ -1,6 +1,6 @@
 #pragma once
 
-#include "icicle/fields/storage.h"
+#include "icicle/math/storage.h"
 #include "icicle/fields/params_gen.h"
 
 namespace bw6_761 {

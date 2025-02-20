@@ -1,7 +1,7 @@
 #pragma once
 
-#include "icicle/fields/storage.h"
-#include "icicle/fields/host_math.h"
+#include "icicle/math/storage.h"
+#include "icicle/math/host_math.h"
 
 namespace params_gen {
   template <unsigned NLIMBS, unsigned BIT_SHIFT>
@@ -109,8 +109,8 @@ namespace params_gen {
       storage<NLIMBS + 2> mod_sub_factor = {};
       temp.limbs[0] = i;
       storage<2 * NLIMBS + 2> candidate = host_math::template left_shift<2 * NLIMBS + 2, bit_shift>(temp);
-      host_math::template integer_division<2 * NLIMBS + 2, NLIMBS, NLIMBS + 2, true>( // find the closest multiple of p
-                                                                                      // to subtract.
+      host_math::template integer_division<2 * NLIMBS + 2, NLIMBS, NLIMBS + 2, true>( // find the closest multiple of
+                                                                                      // p to subtract.
         candidate, modulus, mod_sub_factor, rs);
       storage<2 * NLIMBS + 2> temp2 = {};
       host_math::template multiply_raw<NLIMBS + 2, NLIMBS, true>(mod_sub_factor, modulus, temp2);

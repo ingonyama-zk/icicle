@@ -2,7 +2,7 @@
 #ifndef GRUMPKIN_SCALAR_PARAMS_H
   #define GRUMPKIN_SCALAR_PARAMS_H
 
-  #include "icicle/fields/storage.h"
+  #include "icicle/math/storage.h"
   #include "icicle/fields/field.h"
   #include "icicle/fields/snark_fields/bn254_base.h"
 
