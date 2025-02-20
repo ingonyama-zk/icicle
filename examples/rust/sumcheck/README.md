@@ -7,7 +7,16 @@ This example, instantiates a R1CS sumcheck instance with the parameters
 * In this example, we configured the Fiat Shamir protocol to run with the blake3 hash. Experiment with different hashes such as Keccak, blake2s , Poseidon etc. 
 * Experiment with different sizes, fields, etc.
 * The code runs in both CPU/GPU in a device agnostic manner. It assumes that the cuda backend is installed in the `icicle/backend/cuda/` folder, defaults to CPU in the absence of a device backend.
-* Run the example with `RUST_LOG=info cargo run --release cargo--package sumcheck --bin sumcheck`
+
+Running the example with script
+```sh
+# for CPU
+./run.sh -d CPU
+# for CUDA
+./run.sh -d CUDA -b /path/to/cuda/backend/install/dir
+# for METAL (not supported yet)
+./run.sh -d METAL -b /path/to/cuda/backend/install/dir
+```
 
 Sample outputs: M1 mac
 ```rust
@@ -29,3 +38,4 @@ Valid proof!
 [2025-02-17T21:10:34Z INFO  sumcheck] verify time 183.244µs
 [2025-02-17T21:10:34Z INFO  sumcheck] total time 1.489436224s
 ```
+
