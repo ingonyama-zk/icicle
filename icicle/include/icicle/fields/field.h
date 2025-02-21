@@ -39,7 +39,7 @@ public:
     if constexpr (Gen::is_b_u32) { // assumes that 3b is also u32
       r = ModArith<Field<CONFIG>, CONFIG>::template mul_unsigned<b_mult.limbs_storage.limbs[0], Field>(xs);
       if constexpr (Gen::is_b_neg)
-        return ModArith<Field<CONFIG>, CONFIG>::template neg(r);
+        return ModArith<Field<CONFIG>, CONFIG>::template neg<b_mult.limbs_storage.limbs[0], Field>(r);
       else {
         return r;
       }
