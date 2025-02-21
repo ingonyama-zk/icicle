@@ -37,7 +37,7 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 
 #### Supported fields and operations
 
-| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/documentation/architecture_and_concepts/Cryptography/p-value/) |  m31  |  Koalabear  |
+| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/architecture-and-concepts/cryptography/#stark-field) |  m31  |  Koalabear  |
 | ----------------------------------------- | :----------------------------------------------: | :------------------------------------------------------------------------------------------------: | :---: | :---: |
 | [Vector operations](./primitives/vec_ops) |                        ✅                         |                                                 ✅                                                  |   ✅     |   ✅   |
 | [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |   ❌     |   ✅   |
