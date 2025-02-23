@@ -6,7 +6,6 @@ use crate::{
 };
 use icicle_runtime::{memory::HostSlice, test_utilities};
 use std::mem;
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub fn check_poseidon2_hash<F: FieldImpl>()
 where
