@@ -1715,40 +1715,55 @@ TYPED_TEST(FieldApiTest, Fri)
   ICICLE_LOG_DEBUG << "stopping_degree = " << stopping_degree;
 
   // Initialize domain
-  NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
-  ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+  auto run = [&](
+    const std::string& dev_type,
+    const int log_input_size,
+    const size_t input_size,
+    const int folding_factor,
+    const size_t stopping_degree,
+    const uint64_t output_store_min_layer
+  ) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
 
-  // FriInitDomainConfig init_fri_domain_config = default_fri_init_domain_config();
-  // ICICLE_CHECK(fri_init_domain(scalar_t::omega(log_input_size), init_fri_domain_config));
+    NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
 
-  // Generate input polynomial evaluations
-  auto scalars = std::make_unique<scalar_t[]>(input_size);
-  // scalar_t::rand_host_many(scalars.get(), input_size);
-  for (size_t i = 0; i < input_size; i++) {
-    scalars[i] = scalar_t::from(i);
-  }
+    // FriInitDomainConfig init_fri_domain_config = default_fri_init_domain_config();
+    // ICICLE_CHECK(fri_init_domain(scalar_t::omega(log_input_size), init_fri_domain_config));
 
-  // ===== Prover side ======
-  Hash hash_for_merkle_tree = create_keccak_256_hash((2*32)); // arity = 2
-  Fri prover_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
+    // Generate input polynomial evaluations
+    auto scalars = std::make_unique<scalar_t[]>(input_size);
+    // scalar_t::rand_host_many(scalars.get(), input_size);
+    for (size_t i = 0; i < input_size; i++) {
+      scalars[i] = scalar_t::from(i);
+    }
 
-  FriTranscriptConfig<scalar_t> prover_transcript_config;
-  FriTranscriptConfig<scalar_t> verifier_transcript_config; //FIXME - do verfier and prover need different configs? (moved...)
-  FriConfig fri_config;
-  fri_config.nof_queries = 2;
-  FriProof<scalar_t> fri_proof;
+    // ===== Prover side ======
+    Hash hash_for_merkle_tree = create_keccak_256_hash((2*32)); // arity = 2
+    Fri prover_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
 
-  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(prover_transcript_config), scalars.get(), fri_proof));
+    FriTranscriptConfig<scalar_t> prover_transcript_config;
+    FriTranscriptConfig<scalar_t> verifier_transcript_config; //FIXME - do verfier and prover need different configs? (moved...)
+    FriConfig fri_config;
+    fri_config.nof_queries = 2;
+    FriProof<scalar_t> fri_proof;
 
-  // ===== Verifier side ======
-  Fri verifier_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
-  bool verification_pass = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(verifier_transcript_config), fri_proof, verification_pass));
+    ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(prover_transcript_config), scalars.get(), fri_proof));
 
-  ASSERT_EQ(true, verification_pass);
+    // ===== Verifier side ======
+    Fri verifier_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash_for_merkle_tree, output_store_min_layer);
+    bool verification_pass = false;
+    ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(verifier_transcript_config), fri_proof, verification_pass));
 
-  // Release domain
-  ICICLE_CHECK(ntt_release_domain<scalar_t>());
+    ASSERT_EQ(true, verification_pass);
+
+    // Release domain
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  };
+
+  run(IcicleTestBase::reference_device(), log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer);
+  // run(IcicleTestBase::main_device(), log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer);
 }
 int main(int argc, char** argv)
 {

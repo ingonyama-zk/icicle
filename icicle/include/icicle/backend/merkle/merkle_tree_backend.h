@@ -56,6 +56,10 @@ namespace icicle {
      * @return A pair of (root data pointer, root size).
      */
     virtual std::pair<const std::byte*, size_t> get_merkle_root() const = 0;
+    
+    virtual std::pair<const std::byte*, size_t> get_merkle_root(bool on_device) const {
+      return get_merkle_root();
+    };
 
     /**
      * @brief Retrieve the Merkle path for a specific element.

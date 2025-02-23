@@ -44,7 +44,7 @@ namespace icicle {
       const uint32_t nof_rounds = std::log2(mle_polynomial_size);
 
       // check that the combine function has a legal polynomial degree
-      int combine_function_poly_degree = combine_function.get_polynomial_degee();
+      int combine_function_poly_degree = combine_function.get_polynomial_degree();
       if (combine_function_poly_degree < 0) {
         ICICLE_LOG_ERROR << "Illegal polynomial degree (" << combine_function_poly_degree
                          << ") for provided combine function";
