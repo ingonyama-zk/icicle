@@ -6,6 +6,7 @@ use crate::{
 };
 use icicle_runtime::{memory::HostSlice, test_utilities};
 use std::mem;
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub fn check_poseidon2_hash<F: FieldImpl>()
 where
@@ -73,24 +74,22 @@ where
         test_utilities::test_set_main_device();
         let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        poseidon_hasher_main
-            .hash(
-                HostSlice::from_slice(&inputs),
-                &HashConfig::default(),
-                HostSlice::from_mut_slice(&mut outputs_main),
-            )
-            .unwrap();
+        let main_device_err = poseidon_hasher_main.hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main),
+        ).unwrap();
 
-        // Sponge poseidon is planned for v3.2. Not supported in v3.1
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let err = poseidon_hasher_ref.hash(
+        let ref_device_err = poseidon_hasher_ref.hash(
             HostSlice::from_slice(&inputs),
             &HashConfig::default(),
             HostSlice::from_mut_slice(&mut outputs_ref),
-        );
-        // assert_eq!(err, Err(eIcicleError::InvalidArgument));
+        ).unwrap();
+
+        assert_eq!(main_device_err, ref_device_err);
     }
 }
 
