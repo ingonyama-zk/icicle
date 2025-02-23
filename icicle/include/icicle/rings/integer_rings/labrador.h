@@ -4,6 +4,11 @@
 #include "icicle/rings/integer_ring.h"
 #include "icicle/fields/params_gen.h"
 
+// RNS
+#include "icicle/rings/integer_ring_rns.h"
+#include "icicle/fields/stark_fields/babybear.h"
+#include "icicle/fields/stark_fields/koalabear.h"
+
 namespace labrador {
   // Zq such that q = Pbb*Pkb for Pbb,Pkb the primes of baby-bear and koala-bear fields
   struct zq_config {
@@ -24,6 +29,16 @@ namespace labrador {
   using Zq = IntegerRing<zq_config>;
   using scalar_t = Zq;
 
-  // TODO Yuval: define ZqRNS too
+  struct zq_rns_config {
+    using Fields = std::tuple<babybear::scalar_t, koalabear::scalar_t>;
+    static constexpr unsigned limbs_count = 2;
+    // Offset in limbs_storage for each field
+    static constexpr std::array<unsigned, 2> FieldOffset = {0, 1};
+  };
+
+  /**
+   *  Define the integer ring ZqRns
+   */
+  using ZqRns = IntegerRingRns<zq_rns_config>;
 
 } // namespace labrador

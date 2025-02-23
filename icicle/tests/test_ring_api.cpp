@@ -1,5 +1,4 @@
 
-
 #include "test_mod_arithmetic_api.h"
 
 // Derive all ModArith tests and add ring specific tests here
@@ -8,6 +7,7 @@ class RingTest : public ModArithTest<T>
 {
 };
 
+using RingTestBase = ModArithTestBase;
 TYPED_TEST_SUITE(RingTest, FTImplementations);
 
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
@@ -29,4 +29,20 @@ TYPED_TEST(RingTest, RingSanityTest)
   auto invertible_element_inv = TypeParam::inverse(invertible_element);
   ASSERT_EQ(invertible_element * a * invertible_element_inv, a);
   ASSERT_EQ(invertible_element * invertible_element_inv, TypeParam::one());
+}
+
+TEST_F(RingTestBase, RingSanityRNS)
+{
+  auto a = labrador::ZqRns::one();
+  auto b = labrador::ZqRns::one();
+  auto sum = a + b;
+  auto mul = sum * sum;
+  auto sub = mul - sum;
+  auto minus_one = labrador::ZqRns::zero() - labrador::ZqRns::one();
+  std::cout << "a=" << a << std::endl;
+  std::cout << "b=" << b << std::endl;
+  std::cout << "sum=a+b=" << sum << std::endl;
+  std::cout << "mul=sum*sum=" << mul << std::endl;
+  std::cout << "sub=mul-sum=" << sub << std::endl;
+  std::cout << "minus_one=" << minus_one << std::endl;
 }
