@@ -1,47 +1,47 @@
 # Sumcheck API Documentation
 
 ## Overview
-Sumchek protocol is a protocol where a Prover proves to a Verifier that the sum of a multilinear polynomial, over the boolean hypercube, is a specific sum.
+The Sumcheck protocol allows a Prover to prove to a Verifier that the sum of a multilinear polynomial, over the Boolean hypercube, equals a specific scalar value.
 
-For a polynomial $P$, with $n$ dimension $n$ the Prover is trying to prove that:
+For a polynomial $P$ with $n$ variables, the Prover aims to prove that:
 $$
 \sum_{X_1 \in \{0, 1\}}\sum_{X_2 \in \{0, 1\}}\cdot\cdot\cdot\sum_{X_n \in \{0, 1\}} P(X_1, X_2,..., X_n) = C,
 $$
-for some scalar $C$.
+where $C$ is some scalar.
 
-The proof is build in an interactive way, where the Prover and Verifier do a series of $n$ rounds. Each round is consists of a challenge (created by the Verifier), computation (made by the Prover) and verifying (done by the Verifier). Using a Fiat-Shamir (FS) scheme, the proof become non-interactive. This allow the Prover to generate the entire proof and send it to Verifier which then verify the whole proof.
+The proof is constructed interactively, involving a series of $n$ rounds. Each round consists of a challenge (from the Verifier), a computation (from the Prover), and a verification step (by the Verifier). Using a Fiat-Shamir (FS) scheme, the proof becomes non-interactive, enabling the Prover to generate the entire proof and send it to the Verifier for validation.
 
 ### Sumcheck with Combine Function
-The Sumcheck protocol can be generalized to an arbitrary function of several multilinear polynomials. In this case, assuming there are $m$ polynomials of $n$ variables, and let $f$ be some arbitrary function that take $m$ polynomials and return a polynomial of higher (or equal) degree. Now the Prover tries to prove that:
+The Sumcheck protocol can be generalized to handle multiple multilinear polynomials. In this case, assuming there are $m$ polynomials of $n$ variables, and $f$ is an arbitrary function that takes these $m$ polynomials and returns a polynomial of equal or higher degree, the Prover tries to prove that:
 $$
 \sum_{X_1 \in \{0, 1\}}\sum_{X_2 \in \{0, 1\}}\cdot\cdot\cdot\sum_{X_n \in \{0, 1\}} f\left(P_1(X_1, ..., X_n), P_2(X_1, ..., X_n), ..., P_m(X_1, ..., X_n)\right) = C,
 $$
-for some scalar $C$.
+where $C$ is some scalar.
 
-## ICICLE's Sumecheck
-ICICLE implements a non-interactive Sumcheck protocol that supports a combine function. Sumcheck is supported by both CPU and CUDA backends of ICICLE. The polynomials are passed to the protocol as MLEs (evaluation representation).
+## ICICLE's Sumecheck Implementation
+ICICLE implements a non-interactive Sumcheck protocol that supports a combine function. It is available on both the CPU and CUDA backends of ICICLE. The polynomials are passed to the protocol in MLE (evaluation representation) form.
 
 ### Implementation Limitations
 
-There are some limitations / assumptions to the Sumcheck implementation.
+There are some limitations and assumptions in the Sumcheck implementation:
 
-- The maximum size of the polynomials (number of evaluations = $2^n$) depends on the number of polynomials and memory size of the device (e.g. CPU/GPU) used. For 4 polynomials one should expects that a GPU equipped with 24GB of memory can run Sumcheck with polynomials of size up to $2^{29}$.
-- The polynomial size must be of size which is a power of 2.
-
+- The maximum size of the polynomials (i.e., the number of evaluations $2^n$) depends on the number of polynomials and the memory size of the device (e.g., CPU/GPU) being used. For example, with 4 polynomials, a GPU with 24GB of memory should be able to handle Sumcheck for polynomials of size up to $2^29$.
+- The polynomial size must a power of 2.
+- The current implementation does not support generating the challenge ($\alpha$) in an extension field. This functionality is necessary for ensuring security when working with small fields.
 
 ## C++ API
-A sumcheck is created by the following function:
+A Sumcheck object can be created using the following function:
 ```cpp
 Sumcheck<scalar_t> create_sumcheck()
 ```
 
-There are two configuration structs related to the Sumcheck protocol.
+There are two key configuration structs related to the Sumcheck protocol.
 
-The `SumcheckConfig` struct is a configuration object used to specify parameters for Sumcheck. It contains the following fields:
-- **`stream: icicleStreamHandle`**: Specifies the CUDA stream for asynchronous execution. If `nullptr`, the default stream is used.
-- **`use_extension_field: bool`**: If true extension field is used for the Fiat-Shamir results. ***Currently not supported (should always be false)***
-- **`batch: int`**: Number of input chunks to hash in batch.
-- **`are_inputs_on_device: bool`**: If true expect the input polynomials to reside on the device (e.g. GPU), if false expect them to reside on the host (e.g. CPU).
+### SumcheckConfig
+The `SumcheckConfig` struct is used to specify parameters for the Sumcheck protocol. It contains the following fields:
+- **`stream: icicleStreamHandle`**: The CUDA stream for asynchronous execution. If `nullptr`, the default stream is used.
+- **`use_extension_field: bool`**: If true, an extension field is used for Fiat-Shamir results. Currently unsupported (should always be false).
+- **`are_inputs_on_device: bool`**: If true, the input polynomials are expected to reside on the device (e.g., GPU); otherwise, they are expected to reside on the host (e.g., CPU).
 - **`is_async: bool`**: If true runs the hash asynchronously.
 - **`ext: ConfigExtension*`**: Backend-specific extensions.
 
@@ -57,23 +57,24 @@ The default values are:
   };
 ```
 
-The `SumcheckTranscriptConfig<F>` class is a configuration object used to specify parameters to the Fiat-Shamir scheme used by the Sumcheck. It contained the following fields:
-- **`hasher: Hash`**: Hash function used for randomness generation by Fiat-Shamir.
-- **`domain_label: char*`**: Label for the domain separator in the transcript.
-- **`poly_label: char*`**: Label for round polynomials in the transcript.
-- **`challenge_label: char*`**: Label for round challenges in the transcript.
-- **`seed: F`**: Seed for initializing the RNG.
-- **`little_endian: bool`**: Encoding endianness
+### SumcheckTranscriptConfig
+The `SumcheckTranscriptConfig<F>` class is used to specify parameters for the Fiat-Shamir scheme used by the Sumcheck protocol. It contains the following fields:
+- **`hasher: Hash`**: The hash function used to generate randomness for Fiat-Shamir.
+- **`domain_label: char*`**: The label for the domain separator in the transcript.
+- **`poly_label: char*`**: The label for round polynomials in the transcript.
+- **`challenge_label: char*`**: The label for round challenges in the transcript.
+- **`seed: F`**: The seed for initializing the RNG.
+- **`little_endian: bool`**: The encoding endianness.
 
-There are three constructors for `SumcheckTranscriptConfig<F>`, each one with its own arguments and default value.
+There are three constructors for `SumcheckTranscriptConfig<F>`, each with its own default values:
 
-The default constructor:
+* **Default constructor**:
 ```cpp
     SumcheckTranscriptConfig()
         : m_little_endian(true), m_seed_rng(F::from(0)), m_hasher(std::move(create_keccak_256_hash()))
 ```
 
-A constructor with byte vector for labels:
+* **Constructor with byte vector for labels**:
 ```cpp
     SumcheckTranscriptConfig(
       Hash hasher,
@@ -85,7 +86,8 @@ A constructor with byte vector for labels:
         : m_hasher(std::move(hasher)), m_domain_separator_label(domain_label), m_round_poly_label(poly_label),
           m_round_challenge_label(challenge_label), m_little_endian(little_endian), m_seed_rng(seed)
 ```
-A constructor with `const char*` arguments for labels
+
+* **Constructor with `const char*` arguments for labels**:
 ```cpp
     SumcheckTranscriptConfig(
       Hash hasher,
@@ -100,16 +102,16 @@ A constructor with `const char*` arguments for labels
 ```
 
 ### Generating Sumcheck Proofs
-To generate a Proof, first and empty proof needed to be created. Sumceck proof is represented by the class `SumcheckProof<S>`:
+To generate a proof, first, an empty proof needs to be created. The Sumcheck proof is represented by the `SumcheckProof<S>` class:
 
 ```cpp
 template <typename S>
 class SumcheckProof
 ```
 
-It has only the default constructor ` SumcheckProof()` which takes no arguments.
+The class has a default constructor `SumcheckProof()` that takes no arguments.
 
-Then, the proof can be generate by the `get_proof` method of the `Sumcheck<F>` object:
+The proof can be generated using the get_proof method from the `Sumcheck<F>` object:
 ```cpp
 eIcicleError get_proof(
   const std::vector<F*>& mle_polynomials,
@@ -122,17 +124,15 @@ eIcicleError get_proof(
 ```
 
 The arguments for this method are:
-- **`mle_polynomials: std::vector<F*>&`**: A vector of pointer. Each pointer points to the evaluations of one of the input polynomials.
-- **`mle_polynomial_size: uint64_t`**: The length of the polynomials (number of evaluations). Should be a power of 2
-- **`claimed_sum: F&`**: The sum the claimed by the Prover to be the sum of the combine function over the evaluations of the polynomials.
-- **`combine_function: ReturningValueProgram<F>&`**: The combine function. Uses ICICLE's [program](program.md) API.
-- **`transcript_config: SumcheckTranscriptConfig<F>&&`**: The `SumcheckTranscriptConfig` object for the Fiat-Shamir scheme.
-- **`sumcheck_config: SumcheckConfig&`**: The `SumcheckConfig` object for the Sumcheck configuration.
-- **`sumcheck_proof: SumcheckProof<F>&`**: A `SumcheckProof` object which is the output of the `get_proof` method.
+- **`mle_polynomials: std::vector<F*>&`**: A vector of pointers, each pointing to the evaluations of one of the input polynomials.
+- **`mle_polynomial_size: uint64_t`**: The length of the polynomials (number of evaluations). This should be a power of 2.
+- **`claimed_sum: F&`**: The sum the Prover claims to be the sum of the combine function over the evaluations of the polynomials.
+- **`combine_function: ReturningValueProgram<F>&`**: The combine function, using ICICLE's [program](program.md) API.
+- **`transcript_config: SumcheckTranscriptConfig<F>&&`**: The configuration for the Fiat-Shamir scheme.
+- **`sumcheck_config: SumcheckConfig&`**: The configuration for the Sumcheck protocol.
+- **`sumcheck_proof: SumcheckProof<F>&`**: The output `SumcheckProof` object containing the generated proof.
 
 #### Example: Generating a Proof
-
-Generating a Sumcheck proof:
 
 ```cpp
 auto prover_sumcheck = create_sumcheck<scalar_t>();
@@ -148,7 +148,7 @@ ICICLE_CHECK(prover_sumcheck.get_proof(
 
 ### Verifying Sumcheck Proofs
 
-To verify the proof, the Verifier should use the method `verify` of the `Sumcheck<F>` object:
+To verify the proof, the Verifier should use the verify method of the `Sumcheck<F>` object:
 
 ```cpp
 eIcicleError verify(
@@ -159,17 +159,14 @@ eIcicleError verify(
 ```
 
 The arguments for this method are:
-- **`sumcheck_proof: SumcheckProof<F>&`**: The proof the verifier wants to verify.
-- **`claimed_sum: F&`**: The sum, claimed by the Prover, the Verifier wants to check.
-- **`transcript_config: SumcheckTranscriptConfig<F>&&`**: The `SumcheckTranscriptConfig` object for the Fiat-Shamir scheme.
-- **`valid: bool`**: The output of the method. True if the proof was verified correctly, false otherwise.
+- **`sumcheck_proof: SumcheckProof<F>&`**: The proof that the Verifier wants to verify.
+- **`claimed_sum: F&`**: The sum that the Verifier wants to check, claimed by the Prover.
+- **`transcript_config: SumcheckTranscriptConfig<F>&&`**: The configuration for the Fiat-Shamir scheme.
+- **`valid: bool`**: The output of the method. `true` if the proof is valid, `false` otherwise.
 
-> **_NOTE:_**  The `SumcheckTranscriptConfig` used for generating the proof should be **identical** to the one used to verify it.
+> **_NOTE:_**  The `SumcheckTranscriptConfig` used for generating the proof must be identical to the one used for verification.
 
 #### Example: Verifying a Proof
-
-Verifying a Shumcheck proof:
-
 ```cpp
 auto verifier_sumcheck = create_sumcheck<scalar_t>();
 bool verification_pass = false;
@@ -177,4 +174,4 @@ ICICLE_CHECK(
   verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
 ```
 
-After `verifier_sumcheck.verify` the variable `verification_pass` is `true` if the proof is valid and `false` otherwise.
+After calling `verifier_sumcheck.verify`, the variable `verification_pass` will be `true` if the proof is valid, and `false` if not.
