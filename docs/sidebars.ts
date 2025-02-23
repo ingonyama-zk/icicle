@@ -178,6 +178,11 @@ const rustBindingsApi = [
     label: "Merkle-Tree",
     id: "icicle/rust-bindings/merkle",
   },
+  {
+    "type": "doc",
+    "label": "Sumcheck",
+    "id": "icicle/rust-bindings/sumcheck"
+  }
   // {
   //   type: "doc",
   //   label: "Multi GPU Support (TODO)",
