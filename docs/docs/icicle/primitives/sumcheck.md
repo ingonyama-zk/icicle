@@ -27,7 +27,7 @@ There are some limitations and assumptions in the Sumcheck implementation:
 
 - The maximum size of the polynomials (i.e., the number of evaluations $2^n$) depends on the number of polynomials and the memory size of the device (e.g., CPU/GPU) being used. For example, with 4 polynomials, a GPU with 24GB of memory should be able to handle Sumcheck for polynomials of size up to $2^29$.
 - The polynomial size must a power of 2.
-
+- The current implementation does not support generating the challenge ($\alpha$) in an extension field. This functionality is necessary for ensuring security when working with small fields.
 
 ## C++ API
 A Sumcheck object can be created using the following function:
