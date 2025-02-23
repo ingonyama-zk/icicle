@@ -29,6 +29,7 @@ metal_backend = ["icicle-runtime/metal_backend"]
 pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
 vulkan_backend = ["icicle-runtime/vulkan_backend"]
 pull_vulkan_backend = ["icicle-runtime/pull_vulkan_backend"]
+no_ext_field = []
 
 [[bench]]
 name = "ntt"

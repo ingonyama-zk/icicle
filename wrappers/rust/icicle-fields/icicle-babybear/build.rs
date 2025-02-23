@@ -27,6 +27,8 @@ fn main() {
         .define("FIELD", "babybear")
         .define("HASH", "OFF")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+    #[cfg(feature = "no_ext_field")]
+    config.define("EXT_FIELD", "OFF");
 
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
