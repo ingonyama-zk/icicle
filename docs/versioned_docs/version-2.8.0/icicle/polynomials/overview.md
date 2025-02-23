@@ -171,7 +171,7 @@ Polynomial& add_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
 Polynomial& sub_monomial_inplace(Coeff monomial_coeff, uint64_t monomial = 0);
 ```
 
-The ability to add or subtract monomials directly and in-place is an efficient way to manipualte polynomials.
+The ability to add or subtract monomials directly and in-place is an efficient way to manipulate polynomials.
 
 Example:
 
