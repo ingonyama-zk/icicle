@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mixed_mul_scalars, mul_scalars,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars, mul_scalars,
     product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl,
     MixedVecOps, VecOps, VecOpsConfig,
 };
@@ -42,6 +42,7 @@ where
     check_vec_ops_scalars_sub::<F>(test_size);
     check_vec_ops_scalars_mul::<F>(test_size);
     check_vec_ops_scalars_div::<F>(test_size);
+    check_vec_ops_scalars_inv::<F>(test_size);
     check_vec_ops_scalars_sum::<F>(test_size);
     check_vec_ops_scalars_product::<F>(test_size);
     check_vec_ops_scalars_add_scalar::<F>(test_size);
@@ -161,11 +162,41 @@ where
     assert_eq!(result_main.as_slice(), result_ref.as_slice());
 }
 
+pub fn check_vec_ops_scalars_inv<F: FieldImpl>(test_size: usize)
+where
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
+{
+    let cfg = VecOpsConfig::default();
+
+    let a = F::Config::generate_random(test_size);
+    let mut inv = vec![F::zero(); test_size];
+    let mut result_main = vec![F::zero(); test_size];
+    let mut result_ref = vec![F::one(); test_size];
+    let mut result = vec![F::one(); test_size];
+
+    let a = HostSlice::from_slice(&a);
+    let inv = HostSlice::from_mut_slice(&mut inv);
+    let result_main = HostSlice::from_mut_slice(&mut result_main);
+    let result_ref = HostSlice::from_mut_slice(&mut result_ref);
+    let result = HostSlice::from_mut_slice(&mut result);
+
+    test_utilities::test_set_main_device();
+    inv_scalars(a, inv, &cfg).unwrap();
+    mul_scalars(a, inv, result_main, &cfg).unwrap();
+
+    test_utilities::test_set_ref_device();
+    inv_scalars(a, inv, &cfg).unwrap();
+    mul_scalars(a, inv, result_ref, &cfg).unwrap();
+
+    assert_eq!(result_main.as_slice(), result.as_slice());
+    assert_eq!(result_ref.as_slice(), result.as_slice());
+}
+
 pub fn check_vec_ops_scalars_sum<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(test_size * batch_size);
@@ -189,7 +220,7 @@ pub fn check_vec_ops_scalars_product<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(test_size * batch_size);
@@ -214,7 +245,7 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
     let mut cfg = VecOpsConfig::default();
-    let batch_size = 3;
+    cfg.batch_size = 3;
 
     let a_main = F::Config::generate_random(cfg.batch_size as usize);
     let b = F::Config::generate_random(test_size * cfg.batch_size as usize);
@@ -239,7 +270,7 @@ pub fn check_vec_ops_scalars_sub_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(batch_size);
@@ -265,7 +296,7 @@ pub fn check_vec_ops_scalars_mul_scalar<F: FieldImpl>(test_size: usize)
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let a_main = F::Config::generate_random(batch_size);
@@ -315,7 +346,7 @@ pub fn check_matrix_transpose<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let (r, c): (u32, u32) = (1u32 << 10, 1u32 << 4);
@@ -352,7 +383,7 @@ pub fn check_slice<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F>,
 {
-    let mut cfg = VecOpsConfig::default();
+    let cfg = VecOpsConfig::default();
     let batch_size = 3;
 
     let size_in: u64 = 1 << 10;
