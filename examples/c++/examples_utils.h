@@ -24,6 +24,7 @@ void try_load_and_set_backend_device(int argc = 0, char** argv = nullptr)
   // trying to choose device if available, or fallback to CPU otherwise (default device)
   const bool is_device_available = (eIcicleError::SUCCESS == icicle_is_device_available(selected_device));
   if (is_device_available) {
+    std::cout << "SP: Device " << selected_device << " is available" << std::endl;
     ICICLE_LOG_INFO << "selecting " << selected_device << " device";
     ICICLE_CHECK(icicle_set_device(selected_device));
     return;

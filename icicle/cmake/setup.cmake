@@ -28,7 +28,13 @@ if (BUILD_FOR_ANDROID)
     set(CMAKE_ANDROID_ARCH_ABI "${ANDROID_ABI}" CACHE STRING "Target ABI for Android")
     set(CMAKE_ANDROID_STL_TYPE c++_shared CACHE STRING "Android STL type")
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake" CACHE FILEPATH "Path to the Android toolchain file")
-    list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/${ANDROID_MIN_API}")
+    # Ubuntu
+    # list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/${ANDROID_MIN_API}")
+    # MacOS
+    list(APPEND CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/${ANDROID_MIN_API}")
+    
+
+
 
     message(STATUS "Using ANDROID_MIN_API: ${ANDROID_MIN_API}")
     message(STATUS "Using ANDROID_ABI: ${ANDROID_ABI}")
