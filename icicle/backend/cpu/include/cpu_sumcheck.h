@@ -16,8 +16,7 @@ namespace icicle {
   public:
     CpuSumcheckBackend() : SumcheckBackend<F>() {}
 
-
-    // Calculate a proof for the mle polynomials
+    // Calculates a proof for the mle polynomials
     eIcicleError get_proof(
       const std::vector<F*>& mle_polynomials,
       const uint64_t mle_polynomial_size,
@@ -37,16 +36,12 @@ namespace icicle {
       std::vector<F> folded_mle_polynomials_values(
         nof_mle_poly * mle_polynomial_size); // folded_mle_polynomials data itself
       // init the folded_mle_polynomials pointers
-      for (int mle_polynomial_idx = 0; mle_polynomial_idx < nof_mle_poly; mle_polynomial_idx++) {
-        folded_mle_polynomials[mle_polynomial_idx] =
-          &(folded_mle_polynomials_values[mle_polynomial_idx * mle_polynomial_size]);
+      for (int poly_idx = 0; poly_idx < nof_mle_poly; poly_idx++) {
+        folded_mle_polynomials[poly_idx] = &(folded_mle_polynomials_values[poly_idx * mle_polynomial_size]);
       }
 
-      // Check that the size of the the proof feet the size of the mle polynomials.
-      const uint32_t nof_rounds = std::log2(mle_polynomial_size);
-
-      // check that the combine function has a legal polynomial degree
-      int combine_function_poly_degree = combine_function.get_polynomial_degree();
+      // Check that the combine function has a legal polynomial degree
+      const int combine_function_poly_degree = combine_function.get_polynomial_degree();
       if (combine_function_poly_degree < 0) {
         ICICLE_LOG_ERROR << "Illegal polynomial degree (" << combine_function_poly_degree
                          << ") for provided combine function";
@@ -55,14 +50,12 @@ namespace icicle {
 
       // create sumcheck_transcript for the Fiat-Shamir
       const uint32_t combine_function_poly_degree_u = combine_function_poly_degree;
+      const uint32_t nof_rounds = std::log2(mle_polynomial_size);
       SumcheckTranscript<F> sumcheck_transcript(
         claimed_sum, nof_rounds, combine_function_poly_degree_u, std::move(transcript_config));
-      sumcheck_proof.init(
-        nof_rounds,
-        combine_function_poly_degree_u); // reset the sumcheck proof to accumulate the round polynomials
 
-      // generate a program executor for the combine function
-      CpuProgramExecutor program_executor(combine_function);
+      // reset the sumcheck proof to accumulate the round polynomials
+      sumcheck_proof.init(nof_rounds, combine_function_poly_degree_u);
 
       // set threads values
       int max_nof_workers = get_nof_workers(sumcheck_config);
@@ -72,7 +65,7 @@ namespace icicle {
       // run log2(poly_size) rounds
       int cur_mle_polynomial_size = mle_polynomial_size;
       for (int round_idx = 0; round_idx < nof_rounds; ++round_idx) {
-        const int nof_total_iterations = round_idx == 0 ? cur_mle_polynomial_size/2 : cur_mle_polynomial_size/4;
+        const int nof_total_iterations = (round_idx == 0) ? cur_mle_polynomial_size/2 : cur_mle_polynomial_size/4;
         const int nof_workers = std::min(max_nof_workers, nof_total_iterations);
         const int nof_iterations_per_worker = (nof_total_iterations+nof_workers-1)/nof_workers; // round up
         F alpha = round_idx ? sumcheck_transcript.get_alpha(sumcheck_proof.get_round_polynomial(round_idx-1)) : F::zero() ;
