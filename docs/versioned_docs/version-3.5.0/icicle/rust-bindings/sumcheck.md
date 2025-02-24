@@ -91,7 +91,7 @@ fn main() {
     ];
     let poly = Polynomial::new(coefficients);
 
-    // Geerate mle polynomial
+    // Generate mle polynomial
     let mut mle_poly = Vec::with_capacity(2);
     for _ in 0..4 {
         mle_poly.push(poly);
