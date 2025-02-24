@@ -44,7 +44,7 @@ public:
 #ifdef EXT_FIELD
 typedef testing::Types<scalar_t, extension_t> FTImplementations;
 #elif defined(RING)
-typedef testing::Types<scalar_t /*, TODO add ZqRns here */> FTImplementations;
+typedef testing::Types<scalar_t /*,scalar_rns_t*/> FTImplementations;
 #elif defined(FIELD)
 typedef testing::Types<scalar_t> FTImplementations;
 #else

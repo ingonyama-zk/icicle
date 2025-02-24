@@ -9,6 +9,10 @@
 #include <utility>
 
 // This class is a template class that implement integer-rings in RNS representation
+// In RNS we represent an integer as a tuple of integers, each in a different field.
+// given q=p1*p2*...*pn, we represent an integer x as a tuple (x mod p1, x mod p2, ..., x mod pn)
+// The class is parameterized by a configuration class that defines the fields and the number of limbs
+// The class provides basic arithmetic operations on the integer ring
 template <typename RNS_CONFIG>
 class IntegerRingRns
 {
@@ -21,41 +25,6 @@ public:
   using FieldType = std::tuple_element_t<I, Fields>;
 
   storage<RNS_CONFIG::limbs_count> limbs_storage;
-
-  // `get_field` with correct access to `limbs_storage.limbs`
-  template <size_t I>
-  HOST_DEVICE FieldType<I>* get_field()
-  {
-    return reinterpret_cast<FieldType<I>*>(limbs_storage.limbs + FieldOffset[I]);
-  }
-
-  template <size_t I>
-  HOST_DEVICE const FieldType<I>* get_field() const
-  {
-    return reinterpret_cast<const FieldType<I>*>(limbs_storage.limbs + FieldOffset[I]);
-  }
-
-  // Zero Initialization
-  template <size_t... I>
-  static constexpr HOST_DEVICE IntegerRingRns zero_impl(std::index_sequence<I...>)
-  {
-    IntegerRingRns result;
-    ((*(result.template get_field<I>()) = FieldType<I>::zero()), ...);
-    return result;
-  }
-
-  static constexpr HOST_DEVICE IntegerRingRns zero() { return zero_impl(std::make_index_sequence<NofFields>{}); }
-
-  // One Initialization
-  template <size_t... I>
-  static constexpr HOST_DEVICE IntegerRingRns one_impl(std::index_sequence<I...>)
-  {
-    IntegerRingRns result;
-    ((*(result.template get_field<I>()) = FieldType<I>::one()), ...);
-    return result;
-  }
-
-  static constexpr HOST_DEVICE IntegerRingRns one() { return one_impl(std::make_index_sequence<NofFields>{}); }
 
   // Stream Output
   friend std::ostream& operator<<(std::ostream& os, const IntegerRingRns& xs)
@@ -71,7 +40,19 @@ public:
     return os;
   }
 
-  // Generalized Arithmetic Implementation for `+`, `-`, `*`
+  // `get_field` with correct access to `limbs_storage.limbs`
+  template <size_t I>
+  HOST_DEVICE FieldType<I>* get_field()
+  {
+    return reinterpret_cast<FieldType<I>*>(limbs_storage.limbs + FieldOffset[I]);
+  }
+
+  template <size_t I>
+  HOST_DEVICE const FieldType<I>* get_field() const
+  {
+    return reinterpret_cast<const FieldType<I>*>(limbs_storage.limbs + FieldOffset[I]);
+  }
+
   template <typename Op, size_t... I>
   static HOST_DEVICE IntegerRingRns
   apply_binary_op(const IntegerRingRns& a, const IntegerRingRns& b, Op op, std::index_sequence<I...>)
@@ -96,6 +77,24 @@ public:
     return x;
   }
 
+  static HOST_DEVICE IntegerRingRns zero()
+  {
+    IntegerRingRns zero;
+    return apply_op_inplace(zero, [](auto x) { return x.zero(); }, std::make_index_sequence<NofFields>{});
+  }
+
+  static HOST_DEVICE IntegerRingRns one()
+  {
+    IntegerRingRns one;
+    return apply_op_inplace(one, [](auto x) { return x.one(); }, std::make_index_sequence<NofFields>{});
+  }
+
+  static HOST_DEVICE IntegerRingRns from(uint32_t value)
+  {
+    IntegerRingRns u32;
+    return apply_op_inplace(u32, [value](auto x) { return x.from(value); }, std::make_index_sequence<NofFields>{});
+  }
+
   // Operator Overloads
   friend HOST_DEVICE IntegerRingRns operator+(const IntegerRingRns& a, const IntegerRingRns& b)
   {
@@ -112,6 +111,13 @@ public:
     return apply_binary_op(a, b, [](auto x, auto y) { return x * y; }, std::make_index_sequence<NofFields>{});
   }
 
+  friend HOST_DEVICE bool operator==(const IntegerRingRns& a, const IntegerRingRns& b)
+  {
+    return icicle_math::template is_equal<limbs_count>(a.limbs_storage, b.limbs_storage);
+  }
+
+  friend HOST_DEVICE bool operator!=(const IntegerRingRns& a, const IntegerRingRns& b) { return !(a == b); }
+
   static HOST_INLINE IntegerRingRns rand_host()
   {
     IntegerRingRns rand_element;
@@ -124,4 +130,37 @@ public:
     for (int i = 0; i < size; i++)
       out[i] = rand_host();
   }
+
+  static HOST_DEVICE IntegerRingRns neg(const IntegerRingRns& x)
+  {
+    return apply_op_unary(x, [](auto x) { return x.neg(x); }, std::make_index_sequence<NofFields>{});
+  }
+
+  static HOST_DEVICE IntegerRingRns inverse(const IntegerRingRns& x)
+  {
+    return apply_op_unary(x, [](auto x) { return x.inverse(x); }, std::make_index_sequence<NofFields>{});
+  }
+
+  static HOST_DEVICE bool has_inverse(const IntegerRingRns& x)
+  {
+    // TODO Yuval implement
+    return true;
+  }
+
+  static HOST_DEVICE IntegerRingRns pow(const IntegerRingRns& x, const IntegerRingRns& y)
+  {
+    return apply_binary_op(x, y, [](auto x, auto y) { return x.pow(x, y); }, std::make_index_sequence<NofFields>{});
+  }
+
+  static HOST_DEVICE IntegerRingRns to_montgomery(const IntegerRingRns& x)
+  {
+    return apply_op_unary(x, [](auto x) { return x.to_montgomery(x); }, std::make_index_sequence<NofFields>{});
+  }
+
+  static HOST_DEVICE IntegerRingRns from_montgomery(const IntegerRingRns& x)
+  {
+    return apply_op_unary(x, [](auto x) { return x.from_montgomery(x); }, std::make_index_sequence<NofFields>{});
+  }
+
+  // TODO Yuval: conversion to/from direct representation (from/to limbs to avoid coupling the types Zq and ZqRns)
 };

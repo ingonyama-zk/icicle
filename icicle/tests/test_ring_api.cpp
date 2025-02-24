@@ -20,7 +20,7 @@ TYPED_TEST(RingTest, RingSanityTest)
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
-  ASSERT_EQ(a * scalar_t::from(2), a + a);
+  ASSERT_EQ(a * TypeParam::from(2), a + a);
 
   TypeParam invertible_element = TypeParam::rand_host();
   while (!TypeParam::has_inverse(invertible_element)) {
@@ -31,6 +31,28 @@ TYPED_TEST(RingTest, RingSanityTest)
   ASSERT_EQ(invertible_element * invertible_element_inv, TypeParam::one());
 }
 
+// TODO remove once all tests compile for RNS type
+TEST_F(RingTestBase, RingSanityRNSTest)
+{
+  auto a = scalar_rns_t::rand_host();
+  auto b = scalar_rns_t::rand_host();
+  auto a_neg = scalar_rns_t::neg(a);
+  ASSERT_EQ(a + scalar_rns_t::zero(), a);
+  ASSERT_EQ(a + b - a, b);
+  ASSERT_EQ(a + a_neg, scalar_rns_t::zero());
+  ASSERT_EQ(a * scalar_rns_t::zero(), scalar_rns_t::zero());
+  ASSERT_EQ(a * scalar_rns_t::from(2), a + a);
+
+  scalar_rns_t invertible_element = scalar_rns_t::rand_host();
+  while (!scalar_rns_t::has_inverse(invertible_element)) {
+    invertible_element = scalar_rns_t::rand_host();
+  }
+  auto invertible_element_inv = scalar_rns_t::inverse(invertible_element);
+  ASSERT_EQ(invertible_element * a * invertible_element_inv, a);
+  ASSERT_EQ(invertible_element * invertible_element_inv, scalar_rns_t::one());
+}
+
+// TODO remove once all tests compile for RNS type
 TEST_F(RingTestBase, RingSanityRNS)
 {
   auto a = scalar_rns_t::one();
@@ -59,7 +81,7 @@ TEST_F(RingTestBase, RingSanityRNS)
     rns_output[i] = rns_input_a[i] * rns_input_b[i];
   }
   END_TIMER_AVERAGE(rns, "rns mult", true /*=enable*/, size);
-  END_TIMER(rns, "rns mult", true /*=enable*/);
+  // END_TIMER(rns, "rns mult", true /*=enable*/);
 
   // DIRECT
   auto direct_input_a = std::vector<scalar_t>(size);
@@ -73,7 +95,7 @@ TEST_F(RingTestBase, RingSanityRNS)
     direct_output[i] = direct_input_a[i] * direct_input_b[i];
   }
   END_TIMER_AVERAGE(direct, "direct mult", true /*=enable*/, size);
-  END_TIMER(direct, "direct mult", true /*=enable*/);
+  // END_TIMER(direct, "direct mult", true /*=enable*/);
 
   // TODO Yuval: convert rns to direct to compare
   static_assert(sizeof(scalar_rns_t) == sizeof(scalar_t), "RNS and direct scalar_t should have the same size");
