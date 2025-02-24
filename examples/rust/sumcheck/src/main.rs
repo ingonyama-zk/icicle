@@ -48,10 +48,12 @@ pub fn verify_proof(sumcheck: SumcheckWrapper, proof: icicle_bn254::sumcheck::Su
     match proof_validty {
         Ok(true) => println!("Valid proof!"), // Verification succeeded
         Ok(false) => {
-            eprintln!("Sumcheck proof not valid",);
+            eprintln!("Sumcheck proof not valid");
+            assert!(false, "Sumcheck proof verification failed!");
         }
         Err(err) => {
-            eprintln!("Error in verification");
+            eprintln!("Error in verification {:?}",err);
+            assert!(false, "Sumcheck proof verification encountered an error!");
         }
     }
 }
@@ -121,6 +123,7 @@ pub fn main() {
         true,
         seed_rng,
     );
+    //try different combine functions!
     let combine_function =
         <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(
             PreDefinedProgram::EQtimesABminusC,
@@ -139,6 +142,7 @@ pub fn main() {
     );
     info!("Prover time {:?}", prover_time.elapsed());
     set_backend_cpu();
+    //experiment with fake sum or fake proof
     let verify_time = Instant::now();
     verify_proof(sumcheck, proof, claimed_sum);
     info!("verify time {:?}", verify_time.elapsed());
