@@ -39,6 +39,6 @@ namespace labrador {
   /**
    *  Define the integer ring ZqRns
    */
-  using ZqRns = IntegerRingRns<zq_rns_config>;
+  using scalar_rns_t = IntegerRingRns<zq_rns_config>;
 
 } // namespace labrador

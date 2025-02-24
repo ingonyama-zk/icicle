@@ -33,16 +33,49 @@ TYPED_TEST(RingTest, RingSanityTest)
 
 TEST_F(RingTestBase, RingSanityRNS)
 {
-  auto a = labrador::ZqRns::one();
-  auto b = labrador::ZqRns::one();
+  auto a = scalar_rns_t::one();
+  auto b = scalar_rns_t::one();
   auto sum = a + b;
   auto mul = sum * sum;
   auto sub = mul - sum;
-  auto minus_one = labrador::ZqRns::zero() - labrador::ZqRns::one();
+  auto minus_one = scalar_rns_t::zero() - scalar_rns_t::one();
   std::cout << "a=" << a << std::endl;
   std::cout << "b=" << b << std::endl;
   std::cout << "sum=a+b=" << sum << std::endl;
   std::cout << "mul=sum*sum=" << mul << std::endl;
   std::cout << "sub=mul-sum=" << sub << std::endl;
   std::cout << "minus_one=" << minus_one << std::endl;
+
+  const int size = 1 << 22;
+  // RNS
+  auto rns_input_a = std::vector<scalar_rns_t>(size);
+  auto rns_input_b = std::vector<scalar_rns_t>(size);
+  auto rns_output = std::vector<scalar_rns_t>(size);
+
+  scalar_rns_t::rand_host_many(rns_input_a.data(), size);
+  scalar_rns_t::rand_host_many(rns_input_b.data(), size);
+  START_TIMER(rns);
+  for (int i = 0; i < size; ++i) {
+    rns_output[i] = rns_input_a[i] * rns_input_b[i];
+  }
+  END_TIMER_AVERAGE(rns, "rns mult", true /*=enable*/, size);
+  END_TIMER(rns, "rns mult", true /*=enable*/);
+
+  // DIRECT
+  auto direct_input_a = std::vector<scalar_t>(size);
+  auto direct_input_b = std::vector<scalar_t>(size);
+  auto direct_output = std::vector<scalar_t>(size);
+
+  scalar_t::rand_host_many(direct_input_a.data(), size);
+  scalar_t::rand_host_many(direct_input_b.data(), size);
+  START_TIMER(direct);
+  for (int i = 0; i < size; ++i) {
+    direct_output[i] = direct_input_a[i] * direct_input_b[i];
+  }
+  END_TIMER_AVERAGE(direct, "direct mult", true /*=enable*/, size);
+  END_TIMER(direct, "direct mult", true /*=enable*/);
+
+  // TODO Yuval: convert rns to direct to compare
+  static_assert(sizeof(scalar_rns_t) == sizeof(scalar_t), "RNS and direct scalar_t should have the same size");
+  ASSERT_EQ(0, memcmp(rns_output.data(), direct_output.data(), size * sizeof(scalar_t)));
 }
