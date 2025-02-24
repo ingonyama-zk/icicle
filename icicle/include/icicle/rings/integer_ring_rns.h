@@ -17,6 +17,7 @@ template <typename RNS_CONFIG>
 class IntegerRingRns
 {
 public:
+  // TODO Yuval: clean this class up a little, add comments, and make sure it is consistent with the rest of the code
   static constexpr unsigned limbs_count = RNS_CONFIG::limbs_count;
   using Fields = typename RNS_CONFIG::Fields;
   static constexpr unsigned NofFields = std::tuple_size_v<Fields>;
@@ -42,19 +43,19 @@ public:
 
   // `get_field` with correct access to `limbs_storage.limbs`
   template <size_t I>
-  HOST_DEVICE FieldType<I>* get_field()
+  HOST_DEVICE_INLINE FieldType<I>* get_field()
   {
     return reinterpret_cast<FieldType<I>*>(limbs_storage.limbs + FieldOffset[I]);
   }
 
   template <size_t I>
-  HOST_DEVICE const FieldType<I>* get_field() const
+  HOST_DEVICE_INLINE const FieldType<I>* get_field() const
   {
     return reinterpret_cast<const FieldType<I>*>(limbs_storage.limbs + FieldOffset[I]);
   }
 
   template <typename Op, size_t... I>
-  static HOST_DEVICE IntegerRingRns
+  static HOST_DEVICE_INLINE IntegerRingRns
   apply_binary_op(const IntegerRingRns& a, const IntegerRingRns& b, Op op, std::index_sequence<I...>)
   {
     IntegerRingRns result;
@@ -63,7 +64,7 @@ public:
   }
 
   template <typename Op, size_t... I>
-  static HOST_DEVICE IntegerRingRns apply_op_unary(const IntegerRingRns& x, Op op, std::index_sequence<I...>)
+  static HOST_DEVICE_INLINE IntegerRingRns apply_op_unary(const IntegerRingRns& x, Op op, std::index_sequence<I...>)
   {
     IntegerRingRns result;
     ((*(result.template get_field<I>()) = op(*(x.template get_field<I>()))), ...);
@@ -71,25 +72,25 @@ public:
   }
 
   template <typename Op, size_t... I>
-  static HOST_DEVICE IntegerRingRns apply_op_inplace(IntegerRingRns& x, Op op, std::index_sequence<I...>)
+  static HOST_DEVICE_INLINE IntegerRingRns apply_op_inplace(IntegerRingRns& x, Op op, std::index_sequence<I...>)
   {
     ((*(x.template get_field<I>()) = op(*(x.template get_field<I>()))), ...);
     return x;
   }
 
-  static HOST_DEVICE IntegerRingRns zero()
+  static HOST_DEVICE_INLINE IntegerRingRns zero()
   {
     IntegerRingRns zero;
     return apply_op_inplace(zero, [](auto x) { return x.zero(); }, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns one()
+  static HOST_DEVICE_INLINE IntegerRingRns one()
   {
     IntegerRingRns one;
     return apply_op_inplace(one, [](auto x) { return x.one(); }, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns from(uint32_t value)
+  static HOST_DEVICE_INLINE IntegerRingRns from(uint32_t value)
   {
     IntegerRingRns u32;
     return apply_op_inplace(u32, [value](auto x) { return x.from(value); }, std::make_index_sequence<NofFields>{});
@@ -110,7 +111,7 @@ public:
     }
   }
 
-  static HOST_DEVICE IntegerRingRns omega(uint32_t logn)
+  static HOST_DEVICE_INLINE IntegerRingRns omega(uint32_t logn)
   {
     IntegerRingRns res;
     return apply_op_inplace(
@@ -118,17 +119,17 @@ public:
   }
 
   // Operator Overloads
-  friend HOST_DEVICE IntegerRingRns operator+(const IntegerRingRns& a, const IntegerRingRns& b)
+  friend HOST_DEVICE_INLINE IntegerRingRns operator+(const IntegerRingRns& a, const IntegerRingRns& b)
   {
     return apply_binary_op(a, b, [](auto x, auto y) { return x + y; }, std::make_index_sequence<NofFields>{});
   }
 
-  friend HOST_DEVICE IntegerRingRns operator-(const IntegerRingRns& a, const IntegerRingRns& b)
+  friend HOST_DEVICE_INLINE IntegerRingRns operator-(const IntegerRingRns& a, const IntegerRingRns& b)
   {
     return apply_binary_op(a, b, [](auto x, auto y) { return x - y; }, std::make_index_sequence<NofFields>{});
   }
 
-  friend HOST_DEVICE IntegerRingRns operator*(const IntegerRingRns& a, const IntegerRingRns& b)
+  friend HOST_DEVICE_INLINE IntegerRingRns operator*(const IntegerRingRns& a, const IntegerRingRns& b)
   {
     return apply_binary_op(a, b, [](auto x, auto y) { return x * y; }, std::make_index_sequence<NofFields>{});
   }
@@ -153,12 +154,12 @@ public:
       out[i] = rand_host();
   }
 
-  static HOST_DEVICE IntegerRingRns neg(const IntegerRingRns& x)
+  static HOST_DEVICE_INLINE IntegerRingRns neg(const IntegerRingRns& x)
   {
     return apply_op_unary(x, [](auto x) { return x.neg(x); }, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns inverse(const IntegerRingRns& x)
+  static HOST_DEVICE_INLINE IntegerRingRns inverse(const IntegerRingRns& x)
   {
     return apply_op_unary(x, [](auto x) { return x.inverse(x); }, std::make_index_sequence<NofFields>{});
   }
@@ -178,22 +179,22 @@ public:
     return has_inverse_impl(x, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns pow(const IntegerRingRns& x, const IntegerRingRns& y)
+  static HOST_DEVICE_INLINE IntegerRingRns pow(const IntegerRingRns& x, const IntegerRingRns& y)
   {
     return apply_binary_op(x, y, [](auto x, auto y) { return x.pow(x, y); }, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns to_montgomery(const IntegerRingRns& x)
+  static HOST_DEVICE_INLINE IntegerRingRns to_montgomery(const IntegerRingRns& x)
   {
     return apply_op_unary(x, [](auto x) { return x.to_montgomery(x); }, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns from_montgomery(const IntegerRingRns& x)
+  static HOST_DEVICE_INLINE IntegerRingRns from_montgomery(const IntegerRingRns& x)
   {
     return apply_op_unary(x, [](auto x) { return x.from_montgomery(x); }, std::make_index_sequence<NofFields>{});
   }
 
-  static HOST_DEVICE IntegerRingRns sqr(const IntegerRingRns& x) { return x * x; }
+  static HOST_DEVICE_INLINE IntegerRingRns sqr(const IntegerRingRns& x) { return x * x; }
 
   static HOST_DEVICE_INLINE IntegerRingRns inv_log_size(uint32_t logn)
   {

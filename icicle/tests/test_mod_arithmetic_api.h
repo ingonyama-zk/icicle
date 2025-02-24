@@ -711,12 +711,14 @@ TEST_F(ModArithTestBase, polynomialEval)
 
 TYPED_TEST(ModArithTest, ntt)
 {
+  // TODO Yuval: cleanup this test
+
   // Randomize configuration
   const bool inplace = rand_uint_32b(0, 1);
-  const int logn = rand_uint_32b(0, 17);
+  const int logn = 20; // rand_uint_32b(0, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 2;
-  const int log_batch_size = rand_uint_32b(0, 2);
+  const int log_batch_size = 4; // and_uint_32b(0, 2);
   const int batch_size = 1 << log_batch_size;
   const int _ordering = rand_uint_32b(0, 3);
   const Ordering ordering = static_cast<Ordering>(_ordering);
@@ -812,7 +814,11 @@ TYPED_TEST(ModArithTest, ntt)
     ICICLE_CHECK(icicle_free_async(d_out, config.stream));
     ICICLE_CHECK(icicle_stream_synchronize(config.stream));
     ICICLE_CHECK(icicle_destroy_stream(stream));
+  #ifdef RING
     ICICLE_CHECK(ntt_release_domain<TypeParam>());
+  #else
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  #endif
   };
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
