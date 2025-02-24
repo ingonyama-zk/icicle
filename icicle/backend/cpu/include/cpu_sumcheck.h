@@ -58,7 +58,7 @@ namespace icicle {
       sumcheck_proof.init(nof_rounds, combine_function_poly_degree_u);
 
       // set threads values
-      int max_nof_workers = get_nof_workers(sumcheck_config);
+      const int max_nof_workers = get_nof_workers(sumcheck_config);
       const int round_polynomial_size = sumcheck_proof.get_round_polynomial(0).size();
       std::vector<std::vector<F>> worker_round_polynomial(
         max_nof_workers, std::vector<F>(round_polynomial_size, F::zero()));
@@ -158,11 +158,12 @@ namespace icicle {
         for (int k = 0; k < round_polynomial.size(); ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            combine_func_inputs[poly_idx] = (k == 0)   ? in_mle_polynomials[poly_idx][2 * element_idx]
-                                            : (k == 1) ? in_mle_polynomials[poly_idx][2 * element_idx + 1]
-                                                       : combine_func_inputs[poly_idx] -
-                                                           in_mle_polynomials[poly_idx][2 * element_idx] +
-                                                           in_mle_polynomials[poly_idx][2 * element_idx + 1];
+            combine_func_inputs[poly_idx] =                                   // (1-k)*element_i + k*element_i+1
+              (k == 0) ? in_mle_polynomials[poly_idx][2 * element_idx] :      // for k=0: = element_i
+              (k == 1) ? in_mle_polynomials[poly_idx][2 * element_idx + 1] :  // for k=1: = element_i+1
+                         combine_func_inputs[poly_idx] -                      // else = prev result 
+                         in_mle_polynomials[poly_idx][2 * element_idx] +      //        - element_i
+                         in_mle_polynomials[poly_idx][2 * element_idx + 1];   //        + element_i+1
           }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
@@ -211,11 +212,12 @@ namespace icicle {
         for (int k = 0; k < round_polynomial.size(); ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            combine_func_inputs[poly_idx] = (k == 0)   ? folded_mle_polynomials[poly_idx][2 * element_idx]
-                                            : (k == 1) ? folded_mle_polynomials[poly_idx][2 * element_idx + 1]
-                                                       : combine_func_inputs[poly_idx] -
-                                                           folded_mle_polynomials[poly_idx][2 * element_idx] +
-                                                           folded_mle_polynomials[poly_idx][2 * element_idx + 1];
+            combine_func_inputs[poly_idx] =                                       // (1-k)*element_i + k*element_i+1
+              (k == 0) ? folded_mle_polynomials[poly_idx][2 * element_idx] :      // for k=0: = element_i
+              (k == 1) ? folded_mle_polynomials[poly_idx][2 * element_idx + 1] :  // for k=1: = element_i+1
+                         combine_func_inputs[poly_idx] -                          // else = prev result 
+                         folded_mle_polynomials[poly_idx][2 * element_idx] +      //        - element_i
+                         folded_mle_polynomials[poly_idx][2 * element_idx + 1];   //        + element_i+1
           }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
@@ -266,12 +268,12 @@ namespace icicle {
         for (int k = 0; k < round_polynomial.size(); ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            combine_func_inputs[poly_idx] =
-              (k == 0)   ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx]
-              : (k == 1) ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1]
-                         : combine_func_inputs[poly_idx] -
-                             folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx] +
-                             folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1];
+            combine_func_inputs[poly_idx] =                                                             // (1-k)*element_i + k*element_i+1
+              (k == 0) ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx] :      // for k=0: = element_i
+              (k == 1) ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1] :  // for k=1: = element_i+1
+                         combine_func_inputs[poly_idx] -                                                // else = prev result 
+                         folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx] +      //        - element_i
+                         folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1];   //        + element_i+1
           }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
