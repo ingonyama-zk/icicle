@@ -43,6 +43,10 @@ TEST_F(RingTestBase, RingSanityRNSTest)
   ASSERT_EQ(a * scalar_rns_t::zero(), scalar_rns_t::zero());
   ASSERT_EQ(a * scalar_rns_t::from(2), a + a);
 
+  auto p1 = scalar_rns_t::from(0x78000001) + scalar_rns_t::zero(); // +0 so it is reduced
+  std::cout << "p1=" << p1 << std::endl;
+  ASSERT_EQ(scalar_rns_t::has_inverse(p1), false);
+
   scalar_rns_t invertible_element = scalar_rns_t::rand_host();
   while (!scalar_rns_t::has_inverse(invertible_element)) {
     invertible_element = scalar_rns_t::rand_host();

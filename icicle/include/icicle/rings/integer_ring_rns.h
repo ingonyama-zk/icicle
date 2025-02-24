@@ -141,10 +141,19 @@ public:
     return apply_op_unary(x, [](auto x) { return x.inverse(x); }, std::make_index_sequence<NofFields>{});
   }
 
+  template <size_t... I>
+  static HOST_DEVICE auto has_inverse_impl(const IntegerRingRns& x, std::index_sequence<I...>)
+  {
+    // compute element-wise is_zero for each field
+    const auto element_wise_is_zero = std::make_tuple((*(x.template get_field<I>()) != FieldType<I>::zero())...);
+    // Reduce tuple to a single bool (true if all elements are nonzero)
+    bool all_nonzero = (... && std::get<I>(element_wise_is_zero));
+    return all_nonzero;
+  }
+
   static HOST_DEVICE bool has_inverse(const IntegerRingRns& x)
   {
-    // TODO Yuval implement
-    return true;
+    return has_inverse_impl(x, std::make_index_sequence<NofFields>{});
   }
 
   static HOST_DEVICE IntegerRingRns pow(const IntegerRingRns& x, const IntegerRingRns& y)
