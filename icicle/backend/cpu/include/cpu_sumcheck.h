@@ -60,49 +60,37 @@ namespace icicle {
       // set threads values
       int max_nof_workers = get_nof_workers(sumcheck_config);
       const int round_polynomial_size = sumcheck_proof.get_round_polynomial(0).size();
-      std::vector< std::vector<F> > worker_round_polynomial(max_nof_workers ,std::vector<F>(round_polynomial_size, F::zero()));
+      std::vector<std::vector<F>> worker_round_polynomial(
+        max_nof_workers, std::vector<F>(round_polynomial_size, F::zero()));
 
       // run log2(poly_size) rounds
       int cur_mle_polynomial_size = mle_polynomial_size;
       for (int round_idx = 0; round_idx < nof_rounds; ++round_idx) {
-        const int nof_total_iterations = (round_idx == 0) ? cur_mle_polynomial_size/2 : cur_mle_polynomial_size/4;
+        const int nof_total_iterations = (round_idx == 0) ? cur_mle_polynomial_size / 2 : cur_mle_polynomial_size / 4;
         const int nof_workers = std::min(max_nof_workers, nof_total_iterations);
-        const int nof_iterations_per_worker = (nof_total_iterations+nof_workers-1)/nof_workers; // round up
-        F alpha = round_idx ? sumcheck_transcript.get_alpha(sumcheck_proof.get_round_polynomial(round_idx-1)) : F::zero() ;
+        const int nof_iterations_per_worker = (nof_total_iterations + nof_workers - 1) / nof_workers; // round up
+        F alpha =
+          round_idx ? sumcheck_transcript.get_alpha(sumcheck_proof.get_round_polynomial(round_idx - 1)) : F::zero();
         for (int worker_idx = 0; worker_idx < nof_workers; ++worker_idx) {
           m_taskflow.emplace([&, worker_idx]() {
             const int start_element_idx = worker_idx * nof_iterations_per_worker;
-            const int cur_worker_nof_iterations = std::min(nof_iterations_per_worker, nof_total_iterations-start_element_idx);
+            const int cur_worker_nof_iterations =
+              std::min(nof_iterations_per_worker, nof_total_iterations - start_element_idx);
             switch (round_idx) {
-              case 0:
-                build_round_polynomial_0(
-                  mle_polynomials,
-                  cur_mle_polynomial_size, 
-                  start_element_idx, 
-                  cur_worker_nof_iterations, 
-                  combine_function, 
-                  worker_round_polynomial[worker_idx]);
-                break;
-              case 1:
-                fold_and_build_round_polynomial_1(
-                  alpha, 
-                  mle_polynomials, 
-                  folded_mle_polynomials, 
-                  cur_mle_polynomial_size, 
-                  start_element_idx, 
-                  cur_worker_nof_iterations, 
-                  combine_function, 
-                  worker_round_polynomial[worker_idx]);
-                break;
-              default:
-                fold_and_build_round_polynomial_i(
-                  alpha, 
-                  folded_mle_polynomials, 
-                  cur_mle_polynomial_size, 
-                  start_element_idx, 
-                  cur_worker_nof_iterations, 
-                  combine_function, 
-                  worker_round_polynomial[worker_idx]);
+            case 0:
+              build_round_polynomial_0(
+                mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_iterations,
+                combine_function, worker_round_polynomial[worker_idx]);
+              break;
+            case 1:
+              fold_and_build_round_polynomial_1(
+                alpha, mle_polynomials, folded_mle_polynomials, cur_mle_polynomial_size, start_element_idx,
+                cur_worker_nof_iterations, combine_function, worker_round_polynomial[worker_idx]);
+              break;
+            default:
+              fold_and_build_round_polynomial_i(
+                alpha, folded_mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_iterations,
+                combine_function, worker_round_polynomial[worker_idx]);
             }
           });
         }
@@ -110,13 +98,13 @@ namespace icicle {
         m_taskflow.clear();
 
         // increment folded_mle_polynomials to point to the generated data
-        if (round_idx>1) {
+        if (round_idx > 1) {
           for (int mle_polynomial_idx = 0; mle_polynomial_idx < nof_mle_poly; mle_polynomial_idx++) {
             folded_mle_polynomials[mle_polynomial_idx] += cur_mle_polynomial_size;
           }
         }
-       cur_mle_polynomial_size = round_idx ? cur_mle_polynomial_size/2 : cur_mle_polynomial_size;
-        
+        cur_mle_polynomial_size = round_idx ? cur_mle_polynomial_size / 2 : cur_mle_polynomial_size;
+
         std::vector<F>& round_polynomial = sumcheck_proof.get_round_polynomial(round_idx);
         for (int worker_idx = 0; worker_idx < nof_workers; ++worker_idx) {
           for (int k = 0; k < round_polynomial.size(); ++k) {
@@ -130,13 +118,15 @@ namespace icicle {
 
   private:
     // members
-    tf::Taskflow m_taskflow;       // Accumulate tasks
-    tf::Executor m_executor;       // execute all tasks accumulated on multiple threads
-  
+    tf::Taskflow m_taskflow; // Accumulate tasks
+    tf::Executor m_executor; // execute all tasks accumulated on multiple threads
+
     // functions
-    int get_nof_workers(const SumcheckConfig& config) const {
-      int nof_workers = config.ext && config.ext->has("n_threads") ? config.ext->get<int>("n_threads") : // number of threads provided by config
-      std::thread::hardware_concurrency(); // check machine properties
+    int get_nof_workers(const SumcheckConfig& config) const
+    {
+      int nof_workers = config.ext && config.ext->has("n_threads") ? config.ext->get<int>("n_threads")
+                                                                   : // number of threads provided by config
+                          std::thread::hardware_concurrency();       // check machine properties
       if (nof_workers <= 0) {
         ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
         nof_workers = 1;
@@ -164,15 +154,15 @@ namespace icicle {
       F combine_func_result;
       program_executor.m_variable_ptrs[nof_polynomials] = &combine_func_result;
 
-      for (int element_idx = start_element_idx; element_idx < start_element_idx+nof_iterations; ++element_idx) {
+      for (int element_idx = start_element_idx; element_idx < start_element_idx + nof_iterations; ++element_idx) {
         for (int k = 0; k < round_polynomial.size(); ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            combine_func_inputs[poly_idx] = (k == 0) ? in_mle_polynomials[poly_idx][2*element_idx] :
-                                            (k == 1) ? in_mle_polynomials[poly_idx][2*element_idx + 1] :
-                                            combine_func_inputs[poly_idx] -
-                                            in_mle_polynomials[poly_idx][2*element_idx] +
-                                            in_mle_polynomials[poly_idx][2*element_idx + 1];
+            combine_func_inputs[poly_idx] = (k == 0)   ? in_mle_polynomials[poly_idx][2 * element_idx]
+                                            : (k == 1) ? in_mle_polynomials[poly_idx][2 * element_idx + 1]
+                                                       : combine_func_inputs[poly_idx] -
+                                                           in_mle_polynomials[poly_idx][2 * element_idx] +
+                                                           in_mle_polynomials[poly_idx][2 * element_idx + 1];
           }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
@@ -203,28 +193,29 @@ namespace icicle {
       F combine_func_result;
       program_executor.m_variable_ptrs[nof_polynomials] = &combine_func_result;
 
-      for (int element_idx = start_element_idx; element_idx < start_element_idx+nof_iterations; ++element_idx) {
-          // fold in_mle_polynomials vector to folded_mle_polynomials vector
-          for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            // fold element(2i) and element(2i+1) -> folded(i)
-            folded_mle_polynomials[poly_idx][2*element_idx] = 
-              in_mle_polynomials[poly_idx][4*element_idx] +
-              alpha * (in_mle_polynomials[poly_idx][4*element_idx + 1] - in_mle_polynomials[poly_idx][4*element_idx]);
+      for (int element_idx = start_element_idx; element_idx < start_element_idx + nof_iterations; ++element_idx) {
+        // fold in_mle_polynomials vector to folded_mle_polynomials vector
+        for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
+          // fold element(2i) and element(2i+1) -> folded(i)
+          folded_mle_polynomials[poly_idx][2 * element_idx] =
+            in_mle_polynomials[poly_idx][4 * element_idx] +
+            alpha * (in_mle_polynomials[poly_idx][4 * element_idx + 1] - in_mle_polynomials[poly_idx][4 * element_idx]);
 
-            // fold element(i+n/4) and element(i+3n/4) -> folded(2*i+1)
-            folded_mle_polynomials[poly_idx][2*element_idx+1] =
-              in_mle_polynomials[poly_idx][4*element_idx + 2] +
-              alpha * (in_mle_polynomials[poly_idx][4*element_idx + 3] - in_mle_polynomials[poly_idx][4*element_idx + 2]);
-            }
-        
+          // fold element(i+n/4) and element(i+3n/4) -> folded(2*i+1)
+          folded_mle_polynomials[poly_idx][2 * element_idx + 1] =
+            in_mle_polynomials[poly_idx][4 * element_idx + 2] +
+            alpha *
+              (in_mle_polynomials[poly_idx][4 * element_idx + 3] - in_mle_polynomials[poly_idx][4 * element_idx + 2]);
+        }
+
         for (int k = 0; k < round_polynomial.size(); ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            combine_func_inputs[poly_idx] = (k == 0) ? folded_mle_polynomials[poly_idx][2*element_idx] :
-                                            (k == 1) ? folded_mle_polynomials[poly_idx][2*element_idx + 1] :
-                                            combine_func_inputs[poly_idx] -
-                                            folded_mle_polynomials[poly_idx][2*element_idx] +
-                                            folded_mle_polynomials[poly_idx][2*element_idx + 1];
+            combine_func_inputs[poly_idx] = (k == 0)   ? folded_mle_polynomials[poly_idx][2 * element_idx]
+                                            : (k == 1) ? folded_mle_polynomials[poly_idx][2 * element_idx + 1]
+                                                       : combine_func_inputs[poly_idx] -
+                                                           folded_mle_polynomials[poly_idx][2 * element_idx] +
+                                                           folded_mle_polynomials[poly_idx][2 * element_idx + 1];
           }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
@@ -254,29 +245,33 @@ namespace icicle {
       F combine_func_result;
       program_executor.m_variable_ptrs[nof_polynomials] = &combine_func_result;
 
-      for (int element_idx = start_element_idx; element_idx < start_element_idx+nof_iterations; ++element_idx) {
+      for (int element_idx = start_element_idx; element_idx < start_element_idx + nof_iterations; ++element_idx) {
         // fold folded_mle_polynomials vector to itself
         for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
           // fold folded(2*i) and folded(2*i+1) -> folded(2*i)
-          folded_mle_polynomials[poly_idx][mle_polynomial_size + 2*element_idx] = 
-            folded_mle_polynomials[poly_idx][4*element_idx] +
-            alpha * (folded_mle_polynomials[poly_idx][4*element_idx + 1] - folded_mle_polynomials[poly_idx][4*element_idx]);
+          folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx] =
+            folded_mle_polynomials[poly_idx][4 * element_idx] +
+            alpha * (folded_mle_polynomials[poly_idx][4 * element_idx + 1] -
+                     folded_mle_polynomials[poly_idx][4 * element_idx]);
 
           // fold folded(2*i+2) and folded(2*i+3) -> folded(2*i+1)
-          folded_mle_polynomials[poly_idx][mle_polynomial_size + 2*element_idx+1] =
-            folded_mle_polynomials[poly_idx][4*element_idx + 2] +
-            alpha * (folded_mle_polynomials[poly_idx][4*element_idx + 3] - folded_mle_polynomials[poly_idx][4*element_idx + 2]);
+          folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1] =
+            folded_mle_polynomials[poly_idx][4 * element_idx + 2] +
+            alpha * (folded_mle_polynomials[poly_idx][4 * element_idx + 3] -
+                     folded_mle_polynomials[poly_idx][4 * element_idx + 2]);
         }
-      
-        // update_round_polynomial(element_idx, folded_mle_polynomials, mle_polynomial_size, program_executor, round_polynomial);
+
+        // update_round_polynomial(element_idx, folded_mle_polynomials, mle_polynomial_size, program_executor,
+        // round_polynomial);
         for (int k = 0; k < round_polynomial.size(); ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
-            combine_func_inputs[poly_idx] = (k == 0) ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2*element_idx] :
-                                            (k == 1) ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2*element_idx + 1] :
-                                            combine_func_inputs[poly_idx] -
-                                            folded_mle_polynomials[poly_idx][mle_polynomial_size + 2*element_idx] +
-                                            folded_mle_polynomials[poly_idx][mle_polynomial_size + 2*element_idx + 1];
+            combine_func_inputs[poly_idx] =
+              (k == 0)   ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx]
+              : (k == 1) ? folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1]
+                         : combine_func_inputs[poly_idx] -
+                             folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx] +
+                             folded_mle_polynomials[poly_idx][mle_polynomial_size + 2 * element_idx + 1];
           }
           // execute the combine functions and append to the round polynomial
           program_executor.execute();
@@ -284,7 +279,6 @@ namespace icicle {
         }
       }
     }
-
   };
 
 } // namespace icicle
