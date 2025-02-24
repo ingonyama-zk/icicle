@@ -21,6 +21,5 @@ set(ICICLE_CURVES
 # Define available ring libraries with an index and their supported features
 # Format: index:curve:features
 set(ICICLE_RINGS
-  # 2001:labrador:NTT
-  2001:labrador:NONE # TODO Yuval - add NTT
+  2001:labrador:NTT
 )

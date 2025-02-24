@@ -728,12 +728,22 @@ TYPED_TEST(ModArithTest, ntt)
   }
   const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
   const int log_coset_stride = rand_uint_32b(0, 2);
+
+  #ifdef RING
+  TypeParam coset_gen;
+  if (log_coset_stride) {
+    coset_gen = TypeParam::omega(logn + log_coset_stride);
+  } else {
+    coset_gen = TypeParam::one();
+  }
+  #else
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
   } else {
     coset_gen = scalar_t::one();
   }
+  #endif
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -759,7 +769,11 @@ TYPED_TEST(ModArithTest, ntt)
     ConfigExtension ext;
     ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
+  #ifdef RING
+    auto config = default_ntt_config<TypeParam>();
+  #else
     auto config = default_ntt_config<scalar_t>();
+  #endif
     config.stream = stream;
     config.coset_gen = coset_gen;
     config.batch_size = batch_size;       // default: 1
@@ -768,7 +782,11 @@ TYPED_TEST(ModArithTest, ntt)
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
     config.is_async = false;
+  #ifdef RING
+    ICICLE_CHECK(ntt_init_domain(TypeParam::omega(log_ntt_domain_size), init_domain_config));
+  #else
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+  #endif
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));

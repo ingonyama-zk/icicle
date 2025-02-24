@@ -95,6 +95,28 @@ public:
     return apply_op_inplace(u32, [value](auto x) { return x.from(value); }, std::make_index_sequence<NofFields>{});
   }
 
+  template <typename T>
+  static constexpr bool has_member_omegas_count()
+  {
+    return sizeof(T::omegas_count) > 0;
+  }
+
+  static constexpr HOST_INLINE unsigned get_omegas_count()
+  {
+    if constexpr (has_member_omegas_count<RNS_CONFIG>()) {
+      return RNS_CONFIG::omegas_count;
+    } else {
+      return 0;
+    }
+  }
+
+  static HOST_DEVICE IntegerRingRns omega(uint32_t logn)
+  {
+    IntegerRingRns res;
+    return apply_op_inplace(
+      res, [logn](auto x) { return decltype(x)::omega(logn); }, std::make_index_sequence<NofFields>{});
+  }
+
   // Operator Overloads
   friend HOST_DEVICE IntegerRingRns operator+(const IntegerRingRns& a, const IntegerRingRns& b)
   {
@@ -171,5 +193,27 @@ public:
     return apply_op_unary(x, [](auto x) { return x.from_montgomery(x); }, std::make_index_sequence<NofFields>{});
   }
 
+  static HOST_DEVICE IntegerRingRns sqr(const IntegerRingRns& x) { return x * x; }
+
+  static HOST_DEVICE_INLINE IntegerRingRns inv_log_size(uint32_t logn)
+  {
+    IntegerRingRns res;
+    return apply_op_inplace(
+      res, [logn](auto x) { return decltype(x)::inv_log_size(logn); }, std::make_index_sequence<NofFields>{});
+  }
+
   // TODO Yuval: conversion to/from direct representation (from/to limbs to avoid coupling the types Zq and ZqRns)
+};
+
+template <class CONFIG>
+struct std::hash<IntegerRingRns<CONFIG>> {
+  std::size_t operator()(const IntegerRingRns<CONFIG>& key) const
+  {
+    std::size_t hash = 0;
+    // boost hashing, see
+    // https://stackoverflow.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
+    for (int i = 0; i < CONFIG::limbs_count; i++)
+      hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    return hash;
+  }
 };

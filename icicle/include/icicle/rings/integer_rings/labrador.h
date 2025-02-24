@@ -34,6 +34,7 @@ namespace labrador {
     static constexpr unsigned limbs_count = 2;
     // Offset in limbs_storage for each field
     static constexpr std::array<unsigned, 2> FieldOffset = {0, 1};
+    static constexpr size_t omegas_count = 24;
   };
 
   /**
