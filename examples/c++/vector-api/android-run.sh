@@ -58,7 +58,7 @@ if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ 
   # cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B build/icicle
   
   # cmake -DVULKAN_BACKEND=local -DBUILD_FOR_ANDROID=ON -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B build/icicle
-  cmake -DVULKAN_BACKEND=local -DBUILD_TESTS=OFF -DBUILD_FOR_ANDROID=ON -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF -S "${ICICLE_DIR}" -B build/icicle
+  cmake -DVULKAN_BACKEND=local -DBUILD_TESTS=OFF -DBUILD_FOR_ANDROID=ON -DANDROID_PLATFORM=android-35 -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF -S "${ICICLE_DIR}" -B build/icicle
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")
   echo -e "\033[33mCompleted configuring icicle and ${DEVICE_TYPE} backend\033[0m"
 else
@@ -67,7 +67,7 @@ else
   cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -S "${ICICLE_DIR}" -B build/icicle
 fi
 echo -e "\033[33mConfigure example\033[0m"
-cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_BUILD_TYPE=Release -S . -B build/example
+cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 -DCMAKE_BUILD_TYPE=Release -S . -B build/example
 echo -e "\033[33mCompleted configuring example\033[0m"
 
 echo -e "\033[33mBuilding icicle and ${DEVICE_TYPE} backend\033[0m"

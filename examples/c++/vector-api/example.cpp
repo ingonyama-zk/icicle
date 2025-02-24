@@ -198,6 +198,7 @@ int main(int argc, char** argv)
 
 
   scalar_t *dev_a, *dev_b, *dev_c;
+  std::cout << "SP: Allocating memory on device" << std::endl;
   ICICLE_CHECK(icicle_malloc((void**)&dev_a, N * sizeof(scalar_t)));
   ICICLE_CHECK(icicle_malloc((void**)&dev_b, N * sizeof(scalar_t)));
   ICICLE_CHECK(icicle_malloc((void**)&dev_c, N * sizeof(scalar_t)));
@@ -207,37 +208,37 @@ int main(int argc, char** argv)
   config_ondevice.is_b_on_device = true;
   config_ondevice.is_result_on_device = true;
 
-  // babybear_vector_add(dev_a, dev_b, N, &config_ondevice, dev_c);
+  babybear_vector_add(dev_a, dev_b, N, &config_ondevice, dev_c);
 
   // free memory on device
   ICICLE_CHECK(icicle_free(dev_a));
   ICICLE_CHECK(icicle_free(dev_b));
   ICICLE_CHECK(icicle_free(dev_c));
-  // return 0;
+  return 0;
   
   
-  // on-host data
-  auto h_a = std::make_unique<scalar_t[]>(N);
-  auto h_b = std::make_unique<scalar_t[]>(N);
-  auto h_out = std::make_unique<scalar_t[]>(N);
-  auto h_out_baseline = std::make_unique<scalar_t[]>(N);
+  // // on-host data
+  // auto h_a = std::make_unique<scalar_t[]>(N);
+  // auto h_b = std::make_unique<scalar_t[]>(N);
+  // auto h_out = std::make_unique<scalar_t[]>(N);
+  // auto h_out_baseline = std::make_unique<scalar_t[]>(N);
 
-  random_samples(h_a.get(), N ); 
-  random_samples(h_b.get(), N ); 
+  // random_samples(h_a.get(), N ); 
+  // random_samples(h_b.get(), N ); 
 
-  auto config = default_vec_ops_config();
-  std::cout << "*** Warm-up ***" << std::endl;
-  example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
-  std::cout << "***********************" << std::endl;
-  std::cout << "*** Benchmark run 1 ***" << std::endl;
-  std::cout << "***********************" << std::endl;
-  example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
-  std::cout << "***********************" << std::endl;
-  std::cout << "*** Benchmark run 2 ***" << std::endl;
-  std::cout << "***********************" << std::endl;
-  example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
-  // example_reduce(h_a.get(), h_out.get(), h_out_baseline.get(), N, config, offset, stride);
-  // example_scalar_vector(h_a.get(), h_out.get(), h_out_baseline.get(), N, config);
+  // auto config = default_vec_ops_config();
+  // std::cout << "*** Warm-up ***" << std::endl;
+  // example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
+  // std::cout << "***********************" << std::endl;
+  // std::cout << "*** Benchmark run 1 ***" << std::endl;
+  // std::cout << "***********************" << std::endl;
+  // example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
+  // std::cout << "***********************" << std::endl;
+  // std::cout << "*** Benchmark run 2 ***" << std::endl;
+  // std::cout << "***********************" << std::endl;
+  // example_element_wise(h_a.get(), h_b.get(), h_out.get(), h_out_baseline.get(), N, config);
+  // // example_reduce(h_a.get(), h_out.get(), h_out_baseline.get(), N, config, offset, stride);
+  // // example_scalar_vector(h_a.get(), h_out.get(), h_out_baseline.get(), N, config);
   
   
 
