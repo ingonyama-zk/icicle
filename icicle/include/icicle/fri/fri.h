@@ -12,8 +12,7 @@
 #include "icicle/hash/hash.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/fri/fri_transcript.h"
-// #include "fri_domain.h" // FIXME SHANIE
-
+#include "icicle/utils/log.h"
 
 namespace icicle {
 
@@ -30,17 +29,19 @@ class Fri;
  * @param input_size The size of the input polynomial - number of evaluations.
  * @param folding_factor The factor by which the codeword is folded each round.
  * @param stopping_degree The minimal polynomial degree at which to stop folding.
- * @param hash_for_merkle_tree The hash function used for the Merkle commitments.
+ * @param merkle_tree_leaves_hash The hash function used for leaves of the Merkle tree.
+ * @param merkle_tree_compress_hash The hash function used for compressing Merkle tree nodes.
  * @param output_store_min_layer (Optional) The layer at which to store partial results. Default = 0.
  * @return A `Fri<F>` object built around the chosen backend.
  */
 template <typename F>
 Fri<F> create_fri(
-    size_t input_size,
-    size_t folding_factor,
-    size_t stopping_degree,
-    Hash& hash_for_merkle_tree,
-    uint64_t output_store_min_layer = 0);
+    const size_t input_size,
+    const size_t folding_factor,
+    const size_t stopping_degree,
+    const Hash& merkle_tree_leaves_hash,
+    const Hash& merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer = 0);
 
 /**
  * @brief Constructor for the case where Merkle trees are already given.
@@ -52,8 +53,8 @@ Fri<F> create_fri(
  */
 template <typename F>
 Fri<F> create_fri(
-    size_t folding_factor,
-    size_t stopping_degree,
+    const size_t folding_factor,
+    const size_t stopping_degree,
     std::vector<MerkleTree> merkle_trees);
 
 /**
@@ -138,55 +139,28 @@ public:
         ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
         std::vector<size_t> query_indices = rand_size_t_vector(fri_config.nof_queries, final_poly_size, input_size);
 
-        // const F* twiddles_inv = FriDomain<F>::s_fri_domain.get_twiddles_inv();
-        // uint64_t domain_max_size = FriDomain<F>::s_fri_domain.get_max_size();
-
         uint64_t domain_max_size = 0;
         uint64_t max_log_size = 0;
-        F primitive_root = F::omega(log_input_size);
-        bool found_logn = false;
-        F omega = primitive_root;
-        const unsigned omegas_count = F::get_omegas_count();
-        for (int i = 0; i < omegas_count; i++) {
-            omega = F::sqr(omega);
-            if (!found_logn) {
-                ++max_log_size;
-                found_logn = omega == F::one();
-                if (found_logn) break;
-            }
-        }
-        domain_max_size = (int)pow(2, max_log_size);
-        if (domain_max_size == input_size) {
-            ICICLE_LOG_DEBUG << "FIXME SHANIE domain_max_size matches input_size, calculation can be removed";
-        }
-        if (omega != F::one()) { // FIXME - redundant?
-            ICICLE_LOG_ERROR << "Primitive root provided to the InitDomain function is not a root-of-unity";
-            return eIcicleError::INVALID_ARGUMENT;
-        }
-
-
-        auto twiddles = std::make_unique<F[]>(domain_max_size+1); //FIXME - input_size or log_input_size?
-        twiddles[0] = F::one();
-        for (int i = 1; i <= input_size; i++) {
-            twiddles[i] = twiddles[i - 1] * primitive_root;
-        }
+        F primitive_root_inv = F::omega_inv(log_input_size);
 
         for (size_t query_idx = 0; query_idx < fri_config.nof_queries; query_idx++){
             size_t query = query_indices[query_idx];
             size_t current_log_size = log_input_size;
             for (size_t round_idx = 0; round_idx < nof_fri_rounds; ++round_idx) {
-                ICICLE_LOG_DEBUG << "Query " << query << ", Round " << round_idx;
-
+                size_t round_size = (1ULL << (log_input_size - round_idx));
+                size_t elem_idx = query % round_size;
+                size_t elem_idx_sym = (query + (round_size >> 1)) % round_size;
+      
                 MerkleTree current_round_tree = m_backend->m_merkle_trees[round_idx];
                 MerkleProof& proof_ref = fri_proof.get_query_proof(2*query_idx, round_idx);
                 bool valid = false;
                 eIcicleError err = current_round_tree.verify(proof_ref, valid);
                 if (err != eIcicleError::SUCCESS) {
-                    ICICLE_LOG_ERROR << "Merkle path verification returned err for query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
+                    ICICLE_LOG_ERROR << "[VERIFIER] Merkle path verification returned err for query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
                     return err;
                 }
                 if (!valid){
-                    ICICLE_LOG_ERROR << "Merkle path verification failed for leaf query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
+                    ICICLE_LOG_ERROR << "[VERIFIER] Merkle path verification failed for leaf query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
                     return eIcicleError::SUCCESS; // return with verification_pass = false
                 } 
 
@@ -205,18 +179,19 @@ public:
                 // collinearity check
                 const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf(); //TODO shanie - need also to verify is leaf_index==query?
                 const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
+                ICICLE_ASSERT(elem_idx == leaf_index) << "Leaf index from proof doesn't match query expected index";
+                ICICLE_ASSERT(elem_idx_sym == leaf_index_sym) << "Leaf index symmetry from proof doesn't match query expected index";
                 F leaf_data_f = F::from(leaf_data, leaf_size);
                 F leaf_data_sym_f = F::from(leaf_data_sym, leaf_size_sym);
-                F alpha = alpha_values[round_idx];
-                uint64_t tw_idx = domain_max_size - ((domain_max_size>>current_log_size)*leaf_index);
                 F l_even = (leaf_data_f + leaf_data_sym_f) * F::inv_log_size(1);
-                F l_odd = ((leaf_data_f - leaf_data_sym_f) * F::inv_log_size(1)) * twiddles[tw_idx];
+                F l_odd = ((leaf_data_f - leaf_data_sym_f) * F::inv_log_size(1)) * F::pow(primitive_root_inv, leaf_index*(input_size>>current_log_size));
+                F alpha = alpha_values[round_idx];
                 F folded = l_even + (alpha * l_odd);
 
                 if (round_idx == nof_fri_rounds - 1) {
                     const F* final_poly = fri_proof.get_final_poly();
                     if (final_poly[query%final_poly_size] != folded) {
-                        ICICLE_LOG_ERROR << "Collinearity check failed for query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
+                        ICICLE_LOG_ERROR << "[VERIFIER] (last round) Collinearity check failed for query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
                         return eIcicleError::SUCCESS; // return with verification_pass = false;
                     }
                 } else {
@@ -224,7 +199,7 @@ public:
                     const auto [leaf_data_folded, leaf_size_folded, leaf_index_folded] = proof_ref_folded.get_leaf();
                     F leaf_data_folded_f = F::from(leaf_data_folded, leaf_size_folded);
                     if (leaf_data_folded_f != folded) {
-                        ICICLE_LOG_ERROR << "Collinearity check failed for query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx;
+                        ICICLE_LOG_ERROR << "[VERIFIER] Collinearity check failed. query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx << ".\nfolded_res = \t\t" << folded << "\nfolded_from_proof = \t" << leaf_data_folded_f;
                         return eIcicleError::SUCCESS; // return with verification_pass = false
                     }
                 }

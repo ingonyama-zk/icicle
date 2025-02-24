@@ -21,12 +21,12 @@ namespace icicle {
      *
      * @param folding_factor   The factor by which the codeword is folded each round.
      * @param stopping_degree  Stopping degree threshold for the final polynomial.
-     * @param merkle_trees     A moved vector of MerkleTree pointers.
+     * @param merkle_trees     A vector of MerkleTrees.
      */
     CpuFriBackend(const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
         : FriBackend<F>(folding_factor, stopping_degree, merkle_trees),
           m_nof_fri_rounds(merkle_trees.size()),
-          m_log_input_size(m_nof_fri_rounds + std::log2(static_cast<double>(stopping_degree))),
+          m_log_input_size(merkle_trees.size() + std::log2(static_cast<double>(stopping_degree+1))),
           m_input_size(pow(2, m_log_input_size)),
           m_fri_rounds(merkle_trees, m_log_input_size)
     {
@@ -78,7 +78,7 @@ namespace icicle {
      * @return eIcicleError Error code indicating success or failure.
      */
     eIcicleError commit_fold_phase(const F* input_data, FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof){
-      ICICLE_ASSERT(this->m_folding_factor==2) << "Folding factor must be 2";
+      ICICLE_ASSERT(this->m_folding_factor==2) << "Currently only folding factor of 2 is supported"; //TODO SHANIE - remove when supporting other folding factors
 
       const F* twiddles = ntt_cpu::CpuNttDomain<F>::s_ntt_domain.get_twiddles();
       uint64_t domain_max_size = ntt_cpu::CpuNttDomain<F>::s_ntt_domain.get_max_size();
@@ -91,21 +91,13 @@ namespace icicle {
       size_t current_log_size = m_log_input_size;
 
       for (size_t round_idx = 0; round_idx < m_nof_fri_rounds; ++round_idx){
-        // if (current_size == (df + 1)) { FIXME SHANIE - do I need this?
-        //   fri_proof.finalpoly->assign(round_evals->begin(), round_evals->end());
-        //   break;
-        // }
-
         // Merkle tree for the current round_idx
         MerkleTree* current_round_tree = m_fri_rounds.get_merkle_tree(round_idx);
-        current_round_tree->build(reinterpret_cast<const std::byte*>(round_evals), sizeof(F)*current_size, MerkleTreeConfig());
+        current_round_tree->build(round_evals, current_size, MerkleTreeConfig());
         auto [root_ptr, root_size] = current_round_tree->get_merkle_root();
         ICICLE_ASSERT(root_ptr != nullptr && root_size > 0) << "Failed to retrieve Merkle root for round " << round_idx;
 
-        // FIXME SHANIE - do I need to add the root to the proof here?
-
         // Add root to transcript and get alpha
-        // std::vector<std::byte> merkle_commit(root_ptr, root_ptr + root_size); //FIXME SHANIE - what is the right way to convert?
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
 
@@ -161,8 +153,7 @@ namespace icicle {
     * @param fri_proof       (OUT) The proof object where we store the resulting Merkle proofs.
     * @return eIcicleError
     */
-    eIcicleError query_phase(FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
-    {
+    eIcicleError query_phase(FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof){
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
       size_t seed = transcript.get_seed_for_query_phase();
       seed_rand_generator(seed);
@@ -175,14 +166,12 @@ namespace icicle {
           size_t leaf_idx = query % round_size;
           size_t leaf_idx_sym = (query + (round_size >> 1)) % round_size;
           F* round_evals = m_fri_rounds.get_round_evals(round_idx);
-          const std::byte* leaves = reinterpret_cast<const std::byte*>(round_evals);
-          uint64_t leaves_size = sizeof(F);
 
           MerkleProof& proof_ref = fri_proof.get_query_proof(2*query_idx, round_idx);              
-          eIcicleError err = m_fri_rounds.get_merkle_tree(round_idx)->get_merkle_proof(leaves, sizeof(F), leaf_idx, false /* is_pruned */, MerkleTreeConfig(), proof_ref);
+          eIcicleError err = m_fri_rounds.get_merkle_tree(round_idx)->get_merkle_proof(round_evals, round_size, leaf_idx, false /* is_pruned */, MerkleTreeConfig(), proof_ref);
           if (err != eIcicleError::SUCCESS) return err;
           MerkleProof& proof_ref_sym = fri_proof.get_query_proof(2*query_idx+1, round_idx);              
-          eIcicleError err_sym = m_fri_rounds.get_merkle_tree(round_idx)->get_merkle_proof(leaves, sizeof(F), leaf_idx_sym, false /* is_pruned */, MerkleTreeConfig(), proof_ref_sym);
+          eIcicleError err_sym = m_fri_rounds.get_merkle_tree(round_idx)->get_merkle_proof(round_evals, round_size, leaf_idx_sym, false /* is_pruned */, MerkleTreeConfig(), proof_ref_sym);
           if (err_sym != eIcicleError::SUCCESS) return err_sym;
         }
       }

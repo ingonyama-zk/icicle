@@ -38,7 +38,8 @@ struct FriCreateHashFFI {
   size_t input_size;
   size_t folding_factor;
   size_t stopping_degree;
-  Hash* hash_for_merkle_tree;
+  Hash* merkle_tree_leaves_hash;
+  Hash* merkle_tree_compress_hash;
   uint64_t output_store_min_layer;
 };
 
@@ -66,7 +67,7 @@ CONCAT_EXPAND(FIELD, fri_create)(
   const FriTranscriptConfigFFI* ffi_transcript_config
 )
 {
-  if (!create_config || !create_config->hash_for_merkle_tree) {
+  if (!create_config || !create_config->merkle_tree_leaves_hash || !create_config->merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config.";
     return nullptr;
   }
@@ -113,7 +114,8 @@ CONCAT_EXPAND(FIELD, fri_create)(
     create_config->input_size,
     create_config->folding_factor,
     create_config->stopping_degree,
-    *(create_config->hash_for_merkle_tree),
+    *(create_config->merkle_tree_leaves_hash),
+    *(create_config->merkle_tree_compress_hash),
     create_config->output_store_min_layer
   ));
 }

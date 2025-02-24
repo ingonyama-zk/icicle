@@ -21,12 +21,13 @@ public:
     * @brief Constructor that accepts an already-existing array of Merkle trees.
     *        Ownership is transferred from the caller.
     *
-    * @param merkle_trees A moved vector of `unique_ptr<MerkleTree>`.
+    * @param merkle_trees A vector of MerkleTrees.
+    * @param log_input_size The log of the input size.
     */
   FriRounds(std::vector<MerkleTree> merkle_trees, const size_t log_input_size)
     : m_merkle_trees(merkle_trees)
   {
-    size_t fold_rounds = m_merkle_trees.size(); //FIXME - consider stopping degree?
+    size_t fold_rounds = m_merkle_trees.size();
     m_rounds_evals.resize(fold_rounds);
     for (size_t i = 0; i < fold_rounds; i++) {
       m_rounds_evals[i] = std::make_unique<F[]>(1ULL << (log_input_size - i));
