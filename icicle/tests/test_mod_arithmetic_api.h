@@ -812,12 +812,12 @@ TYPED_TEST(ModArithTest, ntt)
     ICICLE_CHECK(icicle_free_async(d_out, config.stream));
     ICICLE_CHECK(icicle_stream_synchronize(config.stream));
     ICICLE_CHECK(icicle_destroy_stream(stream));
-    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+    ICICLE_CHECK(ntt_release_domain<TypeParam>());
   };
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 #endif // NTT
 

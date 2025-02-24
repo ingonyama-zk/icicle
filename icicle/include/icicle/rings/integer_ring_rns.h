@@ -217,3 +217,14 @@ struct std::hash<IntegerRingRns<CONFIG>> {
     return hash;
   }
 };
+
+#ifdef __CUDACC__
+template <class CONFIG>
+struct SharedMemory<IntegerRingRns<CONFIG>> {
+  __device__ IntegerRingRns<CONFIG>* getPointer()
+  {
+    extern __shared__ IntegerRingRns<CONFIG> s_scalar_rns_[];
+    return s_scalar_rns_;
+  }
+};
+#endif // __CUDACC__
