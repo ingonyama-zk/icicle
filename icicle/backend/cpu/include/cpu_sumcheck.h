@@ -74,13 +74,12 @@ namespace icicle {
         for (int worker_idx = 0; worker_idx < nof_workers; ++worker_idx) {
           m_taskflow.emplace([&, worker_idx]() {
             const int start_element_idx = worker_idx * nof_tasks_per_worker;
-            const int cur_worker_nof_tasks =
-              std::min(nof_tasks_per_worker, nof_total_iterations - start_element_idx);
+            const int cur_worker_nof_tasks = std::min(nof_tasks_per_worker, nof_total_iterations - start_element_idx);
             switch (round_idx) {
             case 0:
               build_round_polynomial_0(
-                mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_tasks,
-                combine_function, worker_round_polynomial[worker_idx]);
+                mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_tasks, combine_function,
+                worker_round_polynomial[worker_idx]);
               break;
             case 1:
               fold_and_build_round_polynomial_1(
