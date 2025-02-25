@@ -246,7 +246,7 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
     data_main[idx] = tmp;
   }
   std::ostringstream oss;
-  oss << "CUDA" << " " << "Sumcheck";
+  oss << IcicleTestBase::main_device() << " " << "Sumcheck";
 
   SumcheckProof<scalar_t> sumcheck_proof;
 
