@@ -53,7 +53,6 @@ public:
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
     m_prev_alpha = F::from(hash_result.data(), hasher.output_size());
-    // reduce_hash_result_to_field(m_prev_alpha, hash_result); //FIXME SHANIE - remove this
     return m_prev_alpha;
   }
 
@@ -143,21 +142,6 @@ private:
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
     dest.insert(dest.end(), data_bytes, data_bytes + sizeof(F));
   }
-
-  //FIXME SHANIE - remove this
-  // /**
-  //   * @brief Convert a hash output into a field element by copying a minimal number of bytes.
-  //   * @param alpha (OUT) The resulting field element.
-  //   * @param hash_result A buffer of bytes (from the hash function).
-  //   */
-  // void reduce_hash_result_to_field(F& alpha, const std::vector<std::byte>& hash_result)
-  // {
-  //   alpha = F::zero();
-  //   const int nof_bytes_to_copy = std::min<int>(sizeof(alpha), static_cast<int>(hash_result.size()));
-  //   std::memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
-  //   alpha = alpha * F::one(); 
-  // }
-
 
   /**
     * @brief Build the hash input for round 0 (commit phase 0).

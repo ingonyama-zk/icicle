@@ -104,7 +104,7 @@ public:
     eIcicleError verify(
         const FriConfig& fri_config,
         const FriTranscriptConfig<F>& fri_transcript_config,
-        FriProof<F>& fri_proof, // FIXME - const?
+        FriProof<F>& fri_proof,
         bool& verification_pass /* OUT */) const
     {
         verification_pass = false;
@@ -177,7 +177,7 @@ public:
                 }
 
                 // collinearity check
-                const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf(); //TODO shanie - need also to verify is leaf_index==query?
+                const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf();
                 const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
                 ICICLE_ASSERT(elem_idx == leaf_index) << "Leaf index from proof doesn't match query expected index";
                 ICICLE_ASSERT(elem_idx_sym == leaf_index_sym) << "Leaf index symmetry from proof doesn't match query expected index";

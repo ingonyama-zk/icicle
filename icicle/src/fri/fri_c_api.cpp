@@ -7,7 +7,6 @@
 
 using namespace field_config;
 
-// TODO: Add methods for `prove`, `verify`, and the `proof` struct.
 
 extern "C" {
 

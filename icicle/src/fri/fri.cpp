@@ -46,15 +46,17 @@ namespace icicle {
     const Hash& merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    ICICLE_ASSERT(folding_factor == 2) << "Only folding factor of 2 is supported";
-    size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
-    size_t df = stopping_degree;
-    size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
-    size_t fold_rounds = (log_input_size > log_df_plus_1) ? (log_input_size - log_df_plus_1) : 0;
+    ICICLE_ASSERT(folding_factor == 2) << " Currently only folding factor of 2 is supported";
+    const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
+    const size_t df = stopping_degree;
+    const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
+    const size_t fold_rounds = (log_input_size > log_df_plus_1) ? (log_input_size - log_df_plus_1) : 0;
 
     std::vector<MerkleTree> merkle_trees;
     merkle_trees.reserve(fold_rounds);
-    size_t first_merkle_tree_height = log_input_size+1; //FIXME SHANIE - assuming merkle_tree_arity = 2
+    size_t compress_hash_arity = merkle_tree_compress_hash.default_input_chunk_size()/merkle_tree_compress_hash.output_size();
+    ICICLE_ASSERT(compress_hash_arity == 2) << " Currently only compress hash arity of 2 is supported";
+    size_t first_merkle_tree_height = std::ceil(std::log2(input_size) / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
     uint64_t leaf_element_size = merkle_tree_leaves_hash.default_input_chunk_size();
