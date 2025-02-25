@@ -193,8 +193,8 @@ TEST_F(FieldTestBase, Sumcheck)
     ASSERT_EQ(true, verification_pass);
   };
 
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  for (const auto& device : s_registered_devices)
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
@@ -335,9 +335,9 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
 
     ASSERT_EQ(true, verification_pass);
   };
-
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  for (const auto& device : s_registered_devices) {
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  }
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
@@ -498,8 +498,8 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     ASSERT_EQ(true, verification_pass);
   };
 
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  for (const auto& device : s_registered_devices)
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
@@ -563,8 +563,8 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     ASSERT_EQ(true, verification_pass);
   };
 
-  run(IcicleTestBase::reference_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
-  run(IcicleTestBase::main_device(), mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  for (const auto& device : s_registered_devices)
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;

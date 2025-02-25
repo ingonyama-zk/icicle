@@ -231,6 +231,11 @@
                   "type": "doc",
                   "label": "Merkle-Tree",
                   "id": "icicle/rust-bindings/merkle"
+                },
+                {
+                  "type": "doc",
+                  "label": "Sumcheck",
+                  "id": "icicle/rust-bindings/sumcheck"
                 }
               ]
             }
