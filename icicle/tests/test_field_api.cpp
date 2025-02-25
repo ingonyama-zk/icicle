@@ -344,6 +344,8 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
   }
 }
 
+#ifdef CUDA_ARCH
+
 MlePoly too_complex_combine(const std::vector<MlePoly>& inputs)
 {
   const MlePoly& A = inputs[0];
@@ -440,6 +442,7 @@ TEST_F(FieldTestBase, SumcheckCudaShouldFailCases)
     delete[] mle_poly_ptr;
   }
 }
+#endif // CUDA_ARCH
 
 MlePoly identity(const std::vector<MlePoly>& inputs) { return inputs[0]; }
 
