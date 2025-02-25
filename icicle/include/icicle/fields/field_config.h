@@ -38,3 +38,11 @@ namespace field_config = m31;
   #include "icicle/fields/stark_fields/koalabear.h"
 namespace field_config = koalabear;
 #endif
+
+// Note: rings are currently here since most code is shared with fields and include field_config.h
+// Maybe we will refactor in the future
+
+#if RING_ID == LABRADOR
+  #include "icicle/rings/integer_rings/labrador.h"
+namespace field_config = labrador;
+#endif

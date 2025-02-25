@@ -6,7 +6,8 @@ members = [
     "polynomials",
     "arkworks-icicle-conversions",
     "hash-and-merkle", 
-    "poseidon2",
+    "poseidon2", 
+    "sumcheck",
 ]
 
 [workspace.dependencies]

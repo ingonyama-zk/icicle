@@ -17,6 +17,14 @@ function(handle_curve TARGET)
   )
 endfunction()
 
+function(handle_ring TARGET)
+  target_sources(${TARGET} PRIVATE
+    src/fields/ffi_extern.cpp
+    src/vec_ops.cpp
+    src/matrix_ops.cpp
+  )
+endfunction()
+
 function(handle_ntt TARGET FEATURE_LIST)
   if(NTT AND "NTT" IN_LIST FEATURE_LIST)
     target_compile_definitions(${TARGET} PUBLIC NTT=${NTT})
@@ -93,7 +101,7 @@ endfunction()
 function(handle_sumcheck TARGET FEATURE_LIST)
   if(SUMCHECK AND "SUMCHECK" IN_LIST FEATURE_LIST)
     target_compile_definitions(${TARGET} PUBLIC SUMCHECK=${SUMCHECK})
-    target_sources(${TARGET} PRIVATE src/sumcheck/sumcheck.cpp src/sumcheck/sumcheck_c_api.cpp)
+    target_sources(${TARGET} PRIVATE src/sumcheck/sumcheck.cpp src/sumcheck/sumcheck_c_api.cpp src/program/program_c_api.cpp)
     set(SUMCHECK ON CACHE BOOL "Enable SUMCHECK feature" FORCE)
   else()
     set(SUMCHECK OFF CACHE BOOL "SUMCHECK not available for this field" FORCE)

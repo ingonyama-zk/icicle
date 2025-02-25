@@ -17,6 +17,10 @@
 **/Cargo.lock
 **/icicle/build/
 **/wrappers/rust/icicle-cuda-runtime/src/bindings.rs
-**/build/*
+**/build*/*
+.cache*
 **tar.gz
-icicle/backend/cuda
+
+#ignore all backends except cpu
+icicle/backend/*
+!icicle/backend/cpu

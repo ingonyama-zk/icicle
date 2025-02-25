@@ -1,4 +1,4 @@
-include(cmake/fields_and_curves.cmake)
+include(cmake/features.cmake)
 include(cmake/target_editor.cmake)
 
 function(extract_field_names FIELD_NAMES_OUT)
