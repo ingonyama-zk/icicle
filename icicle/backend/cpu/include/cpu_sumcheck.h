@@ -68,28 +68,28 @@ namespace icicle {
       for (int round_idx = 0; round_idx < nof_rounds; ++round_idx) {
         const int nof_total_iterations = (round_idx == 0) ? cur_mle_polynomial_size / 2 : cur_mle_polynomial_size / 4;
         const int nof_workers = std::min(max_nof_workers, nof_total_iterations);
-        const int nof_iterations_per_worker = (nof_total_iterations + nof_workers - 1) / nof_workers; // round up
+        const int nof_tasks_per_worker = (nof_total_iterations + nof_workers - 1) / nof_workers; // round up
         F alpha =
           round_idx ? sumcheck_transcript.get_alpha(sumcheck_proof.get_round_polynomial(round_idx - 1)) : F::zero();
         for (int worker_idx = 0; worker_idx < nof_workers; ++worker_idx) {
           m_taskflow.emplace([&, worker_idx]() {
-            const int start_element_idx = worker_idx * nof_iterations_per_worker;
-            const int cur_worker_nof_iterations =
-              std::min(nof_iterations_per_worker, nof_total_iterations - start_element_idx);
+            const int start_element_idx = worker_idx * nof_tasks_per_worker;
+            const int cur_worker_nof_tasks =
+              std::min(nof_tasks_per_worker, nof_total_iterations - start_element_idx);
             switch (round_idx) {
             case 0:
               build_round_polynomial_0(
-                mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_iterations,
+                mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_tasks,
                 combine_function, worker_round_polynomial[worker_idx]);
               break;
             case 1:
               fold_and_build_round_polynomial_1(
                 alpha, mle_polynomials, folded_mle_polynomials, cur_mle_polynomial_size, start_element_idx,
-                cur_worker_nof_iterations, combine_function, worker_round_polynomial[worker_idx]);
+                cur_worker_nof_tasks, combine_function, worker_round_polynomial[worker_idx]);
               break;
             default:
               fold_and_build_round_polynomial_i(
-                alpha, folded_mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_iterations,
+                alpha, folded_mle_polynomials, cur_mle_polynomial_size, start_element_idx, cur_worker_nof_tasks,
                 combine_function, worker_round_polynomial[worker_idx]);
             }
           });
