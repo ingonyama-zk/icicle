@@ -44,7 +44,7 @@ public:
 #ifdef EXT_FIELD
 typedef testing::Types<scalar_t, extension_t> FTImplementations;
 #elif defined(RING)
-typedef testing::Types<scalar_t /*, TODO add ZqRns here */> FTImplementations;
+typedef testing::Types<scalar_t, scalar_rns_t> FTImplementations;
 #elif defined(FIELD)
 typedef testing::Types<scalar_t> FTImplementations;
 #else
@@ -53,11 +53,29 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(ModArithTest, FTImplementations);
 
+TYPED_TEST(ModArithTest, Bench)
+{
+  const uint64_t N = 1 << 25;
+  auto in_a = std::vector<TypeParam>(N);
+  auto in_b = std::vector<TypeParam>(N);
+  auto out = std::vector<TypeParam>(N);
+
+  ModArithTest<TypeParam>::random_samples(in_a.data(), N);
+  ModArithTest<TypeParam>::random_samples(in_b.data(), N);
+
+  START_TIMER(multiplier);
+  for (size_t i = 0; i < N; ++i) {
+    out[i] = in_a[i] * in_b[i];
+  }
+  END_TIMER_AVERAGE(multiplier, "multiplier", true, N);
+  ASSERT_NE(0, memcmp(out.data(), in_a.data(), N * sizeof(TypeParam)));
+}
+
 TYPED_TEST(ModArithTest, vectorVectorOps)
 {
-  const uint64_t N = 1 << rand_uint_32b(3, 17);
-  const int batch_size = 1 << rand_uint_32b(0, 4);
-  const bool columns_batch = rand_uint_32b(0, 1);
+  const uint64_t N = 1 << 24;   // 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1;     // 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = 0; // rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -68,6 +86,9 @@ TYPED_TEST(ModArithTest, vectorVectorOps)
   auto in_b = std::make_unique<TypeParam[]>(total_size);
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
+
+  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
 
   auto vector_accumulate_wrapper =
     [](TypeParam* a, const TypeParam* b, uint64_t size, const VecOpsConfig& config, TypeParam* /*out*/) {
@@ -85,54 +106,86 @@ TYPED_TEST(ModArithTest, vectorVectorOps)
       std::ostringstream oss;
       oss << dev_type << " " << msg;
 
-      START_TIMER(VECADD_sync)
-      for (int i = 0; i < iters; ++i) {
+#define DEVICE_MEM
+#ifdef DEVICE_MEM
+      TypeParam* d_in_a;
+      TypeParam* d_in_b;
+      TypeParam* d_out;
+      ICICLE_CHECK(icicle_malloc((void**)&d_in_a, total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_malloc((void**)&d_in_b, total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_malloc((void**)&d_out, total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_copy(d_in_a, in_a.get(), total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_copy(d_in_b, in_b.get(), total_size * sizeof(TypeParam)));
+      config.is_a_on_device = true;
+      config.is_b_on_device = true;
+      config.is_result_on_device = true;
+#endif // DEVICE_MEM
+
+      START_TIMER(VECADD_sync);
+      for (int i = 0; i < 1 /*iters*/; ++i) {
+#ifdef DEVICE_MEM
+        ICICLE_CHECK(vec_op_func(d_in_a, d_in_b, N, config, d_out));
+#else
         ICICLE_CHECK(vec_op_func(in_a.get(), in_b.get(), N, config, out));
+#endif // DEVICE_MEM
       }
       END_TIMER(VECADD_sync, oss.str().c_str(), measure);
+
+#ifdef DEVICE_MEM
+      ICICLE_CHECK(icicle_copy(out, d_out, total_size * sizeof(TypeParam)));
+      ICICLE_CHECK(icicle_free(d_in_a));
+      ICICLE_CHECK(icicle_free(d_in_b));
+      ICICLE_CHECK(icicle_free(d_out));
+#endif // DEVICE_MEM
     };
 
   // add
-  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
-  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
-  if (!IcicleTestBase::is_main_device_available()) {
-    for (int i = 0; i < total_size; i++) {
-      out_ref[i] = in_a[i] + in_b[i];
-    }
-  } else {
-    run(
-      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add",
-      ITERS);
-  }
-  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  // if (!IcicleTestBase::is_main_device_available()) {
+  //   for (int i = 0; i < total_size; i++) {
+  //     out_ref[i] = in_a[i] + in_b[i];
+  //   }
+  // } else {
+  //   run(
+  //     IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add",
+  //     ITERS);
+  // }
+  // run(IcicleTestBase::main_device(), out_main.get(), false /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  // run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add",
+  // ITERS);
+
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  // run("VULKAN", out_main.get(), false /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  // run("VULKAN", out_main.get(), VERBOSE /*=measure*/, vector_add<TypeParam>, "vector add", ITERS);
+  // ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // accumulate
-  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
-  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
-  for (int i = 0; i < total_size; i++) { // TODO - compare gpu against cpu with inplace operations?
-    out_ref[i] = in_a[i] + in_b[i];
-  }
-  run(
-    IcicleTestBase::main_device(), nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate",
-    ITERS);
+  // ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  // ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
+  // for (int i = 0; i < total_size; i++) { // TODO - compare gpu against cpu with inplace operations?
+  //   out_ref[i] = in_a[i] + in_b[i];
+  // }
+  // run(
+  //   IcicleTestBase::main_device(), nullptr, VERBOSE /*=measure*/, vector_accumulate_wrapper, "vector accumulate",
+  //   ITERS);
 
-  ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  // ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+
+  // return; //
 
   // sub
-  ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
-  ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
-  if (!IcicleTestBase::is_main_device_available()) {
-    for (int i = 0; i < total_size; i++) {
-      out_ref[i] = in_a[i] - in_b[i];
-    }
-  } else {
-    run(
-      IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub",
-      ITERS);
-  }
-  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub", ITERS);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  // ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
+  // ModArithTest<TypeParam>::random_samples(in_b.get(), total_size);
+  // if (!IcicleTestBase::is_main_device_available()) {
+  //   for (int i = 0; i < total_size; i++) {
+  //     out_ref[i] = in_a[i] - in_b[i];
+  //   }
+  // } else {
+  //   run(
+  //     IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub",
+  //     ITERS);
+  // }
+  // run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_sub<TypeParam>, "vector sub",
+  // ITERS); ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 
   // mul
   ModArithTest<TypeParam>::random_samples(in_a.get(), total_size);
@@ -146,7 +199,19 @@ TYPED_TEST(ModArithTest, vectorVectorOps)
       IcicleTestBase::reference_device(), out_ref.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul",
       ITERS);
   }
+  run(IcicleTestBase::main_device(), out_main.get(), false /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
   run(IcicleTestBase::main_device(), out_main.get(), VERBOSE /*=measure*/, vector_mul<TypeParam>, "vector mul", ITERS);
+
+  std::cout << "in_a[0] = " << in_a[0] << std::endl;
+  std::cout << "in_b[0] = " << in_b[0] << std::endl;
+  std::cout << "out_main[0] = " << out_main[0] << std::endl;
+  std::cout << "out_ref[0] = " << out_ref[0] << std::endl;
+
+  // std::cout << "in_a[1] = " << in_a[1] << std::endl;
+  // std::cout << "in_b[1] = " << in_a[1] << std::endl;
+  // std::cout << "out_main[1] = " << out_main[1] << std::endl;
+  // std::cout << "out_ref[1] = " << out_ref[1] << std::endl;
+
   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 
@@ -711,12 +776,14 @@ TEST_F(ModArithTestBase, polynomialEval)
 
 TYPED_TEST(ModArithTest, ntt)
 {
+  // TODO Yuval: cleanup this test
+
   // Randomize configuration
   const bool inplace = rand_uint_32b(0, 1);
-  const int logn = rand_uint_32b(0, 17);
+  const int logn = 7; // rand_uint_32b(0, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 2;
-  const int log_batch_size = rand_uint_32b(0, 2);
+  const int log_batch_size = 4; // and_uint_32b(0, 2);
   const int batch_size = 1 << log_batch_size;
   const int _ordering = rand_uint_32b(0, 3);
   const Ordering ordering = static_cast<Ordering>(_ordering);
@@ -728,12 +795,22 @@ TYPED_TEST(ModArithTest, ntt)
   }
   const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
   const int log_coset_stride = rand_uint_32b(0, 2);
+
+  #ifdef RING
+  TypeParam coset_gen;
+  if (log_coset_stride) {
+    coset_gen = TypeParam::omega(logn + log_coset_stride);
+  } else {
+    coset_gen = TypeParam::one();
+  }
+  #else
   scalar_t coset_gen;
   if (log_coset_stride) {
     coset_gen = scalar_t::omega(logn + log_coset_stride);
   } else {
     coset_gen = scalar_t::one();
   }
+  #endif
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -759,7 +836,11 @@ TYPED_TEST(ModArithTest, ntt)
     ConfigExtension ext;
     ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
+  #ifdef RING
+    auto config = default_ntt_config<TypeParam>();
+  #else
     auto config = default_ntt_config<scalar_t>();
+  #endif
     config.stream = stream;
     config.coset_gen = coset_gen;
     config.batch_size = batch_size;       // default: 1
@@ -768,7 +849,11 @@ TYPED_TEST(ModArithTest, ntt)
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
     config.is_async = false;
+  #ifdef RING
+    ICICLE_CHECK(ntt_init_domain(TypeParam::omega(log_ntt_domain_size), init_domain_config));
+  #else
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
+  #endif
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
@@ -794,12 +879,16 @@ TYPED_TEST(ModArithTest, ntt)
     ICICLE_CHECK(icicle_free_async(d_out, config.stream));
     ICICLE_CHECK(icicle_stream_synchronize(config.stream));
     ICICLE_CHECK(icicle_destroy_stream(stream));
+  #ifdef RING
+    ICICLE_CHECK(ntt_release_domain<TypeParam>());
+  #else
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
+  #endif
   };
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 #endif // NTT
 

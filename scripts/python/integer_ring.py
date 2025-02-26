@@ -26,13 +26,29 @@ def find_generator(p):
 
 # CRT - from RNS to Direct representation
 
-def from_rns(p1, p2, g1, g2):
-    """Computes a generator of Z_q^* given generators for Z_p1^* and Z_p2^* using SymPy's CRT."""
-    q = p1 * p2
-    
-    # Compute CRT
-    g, _ = crt([p1, p2], [g1, g2])
-    
+from sympy.ntheory.modular import crt
+
+def from_rns(p_list, g_list):
+    """
+    Computes a generator of Z_q^* given generators for Z_p^* using SymPy's CRT.
+
+    Arguments:
+    - p_list: List of primes [p1, p2, ..., pn].
+    - g_list: Corresponding generators [g1, g2, ..., gn].
+
+    Returns:
+    - A single generator for Z_q^* using the Chinese Remainder Theorem (CRT).
+    """
+    assert len(p_list) == len(g_list), "Lists must be of the same length"
+
+    # Compute the modulus q = p1 * p2 * ... * pn
+    q = 1
+    for p in p_list:
+        q *= p
+
+    # Compute CRT for all primes and generators
+    g, _ = crt(p_list, g_list)
+
     return g % q  # Ensure g is within the correct range
 
 def is_primitive_root(g, q, phi, factors):
@@ -92,7 +108,7 @@ g2 = find_generator(p2)  # Example generator of Z_p2^*
 print(f"Generator of p1: {hex(g1)}")
 print(f"Generator of p2: {hex(g2)}")
 
-g = from_rns(p1, p2, g1, g2)
+g = from_rns([p1, p2], [g1, g2])
 print(f"Generator of a multiplicative subgroup (<Zq*) of Z_q: {g}")
 
 n, omega, q = find_roots_of_unity(p1, p2, g)
@@ -107,7 +123,21 @@ print(f"w^n mod q = {pow(omega, n, q)}")
 p1_rou_27 = 0x00000089 # Baby bear
 p1_rou_24 = pow(p1_rou_27, 8, p1) #w^8 mod p1 for w or order logn=27
 p2_rou_24 = 0x6ac49f88 # Koala bear
-q_rou_24 = from_rns(p1, p2, p1_rou_24, p2_rou_24) #crt
+q_rou_24 = from_rns([p1, p2], [p1_rou_24, p2_rou_24]) #crt
 print(f"(logn=24) w^n mod q = {pow(q_rou_24, 1<<24, q)}")
 print(f"Rou in the ring q = {to_32b_limbs_str(q_rou_24)}")
 
+# Greyhound
+Pbb = 0x78000001
+Pkb = 0x7f000001
+Ptb = (2**32)-(2**30)+1
+Pcb = (2**30)+(2**25)+1
+Pgb = (2**29)-(2**26)+1
+q_greyhound = Pbb*Pkb*Ptb*Pcb*Pgb
+# q_greyhound = q_greyhound*q_greyhound # TODO remove
+print(f"Greyhound: {hex(q_greyhound)}")
+print(f"Greyhound: {to_32b_limbs_str(q_greyhound)}")
+print(f"Greyhound bitcount={q_greyhound.bit_length()}")
+
+# compute root of unity of order logn=24 for greyhound
+q_greyhound_rou = from_rns

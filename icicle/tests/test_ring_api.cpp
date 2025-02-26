@@ -1,5 +1,4 @@
 
-
 #include "test_mod_arithmetic_api.h"
 
 // Derive all ModArith tests and add ring specific tests here
@@ -8,6 +7,7 @@ class RingTest : public ModArithTest<T>
 {
 };
 
+using RingTestBase = ModArithTestBase;
 TYPED_TEST_SUITE(RingTest, FTImplementations);
 
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
@@ -20,7 +20,7 @@ TYPED_TEST(RingTest, RingSanityTest)
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
-  ASSERT_EQ(a * scalar_t::from(2), a + a);
+  ASSERT_EQ(a * TypeParam::from(2), a + a);
 
   TypeParam invertible_element = TypeParam::rand_host();
   while (!TypeParam::has_inverse(invertible_element)) {
