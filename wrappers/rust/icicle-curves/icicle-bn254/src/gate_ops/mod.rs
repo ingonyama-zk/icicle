@@ -1,7 +1,7 @@
 use crate::curve::{ScalarCfg, ScalarField};
 use icicle_core::{
     impl_gate_ops_field,
-    gate_ops::{GateData, CalculationData, HornerData, GateOps, GateOpsConfig},
+    gate_ops::{GateData, CalculationData, HornerData, GateOps, GateOpsConfig, LookupData, LookupConfig},
 };
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 

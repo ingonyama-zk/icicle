@@ -41,6 +41,114 @@ impl GateOpsConfig {
 
 #[repr(C)]
 #[derive(Debug, Clone)]
+pub struct LookupConfig {
+    pub stream_handle: IcicleStreamHandle,
+    pub is_table_values_on_device: bool,
+    pub is_inputs_prods_on_device: bool,
+    pub is_inputs_inv_sums_on_device: bool,
+    pub is_coset_on_device: bool,
+    pub is_l_on_device: bool,
+    pub is_y_on_device: bool,
+    pub is_previous_value_on_device: bool,
+    pub is_result_on_device: bool,
+    pub is_async: bool,
+}
+
+impl LookupConfig {
+    pub fn default() -> Self {
+        Self {
+            stream_handle: std::ptr::null_mut(),
+            is_table_values_on_device: false,
+            is_inputs_prods_on_device: false,
+            is_inputs_inv_sums_on_device: false,
+            is_coset_on_device: false,
+            is_l_on_device: false,
+            is_y_on_device: false,
+            is_previous_value_on_device: false,
+            is_result_on_device: false,
+            is_async: false,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct LookupData<T> {
+    pub table_values: *const T,
+    pub num_table_values: u32,
+    pub inputs_prods: *const T,
+    pub num_inputs_prods: u32,
+    pub inputs_inv_sums: *const T,
+    pub num_inputs_inv_sums: u32,
+    pub phi_coset: *const T,
+    pub num_phi_coset: u32,
+    pub m_coset: *const T,
+    pub num_m_coset: u32,
+    pub l0: *const T,
+    pub num_l0: u32,
+    pub l_last: *const T,
+    pub num_l_last: u32,
+    pub l_active_row: *const T,
+    pub num_l_active_row: u32,
+    pub y: *const T,
+    pub previous_value: *const T,
+    pub num_elements: u32,
+    pub rot_scale: u32,
+    pub i_size: u32,
+}
+
+impl<T> LookupData<T> {
+    pub fn new(
+        table_values: *const T,
+        num_table_values: u32,
+        inputs_prods: *const T,
+        num_inputs_prods: u32,
+        inputs_inv_sums: *const T,
+        num_inputs_inv_sums: u32,
+        phi_coset: *const T,
+        num_phi_coset: u32,
+        m_coset: *const T,
+        num_m_coset: u32,
+        l0: *const T,
+        num_l0: u32,
+        l_last: *const T,
+        num_l_last: u32,
+        l_active_row: *const T,
+        num_l_active_row: u32,
+        y: *const T,
+        previous_value: *const T,
+        num_elements: u32,
+        rot_scale: u32,
+        i_size: u32,
+    ) -> Self {
+        Self {
+            table_values,
+            num_table_values,
+            inputs_prods,
+            num_inputs_prods,
+            inputs_inv_sums,
+            num_inputs_inv_sums,
+            phi_coset,
+            num_phi_coset,
+            m_coset,
+            num_m_coset,
+            l0,
+            num_l0,
+            l_last,
+            num_l_last,
+            l_active_row,
+            num_l_active_row,
+            y,
+            previous_value,
+            num_elements,
+            rot_scale,
+            i_size,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
 pub struct HornerData {
     pub value_types: *const u32,
     pub value_indices: *const u32,
@@ -189,54 +297,12 @@ pub trait GateOps<F> {
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &GateOpsConfig,
     ) -> Result<(), eIcicleError>;
-}
 
-fn check_gate_ops_args<F>(
-    gate_data: &GateData<F>,
-    calc_data: &CalculationData<F>,
-    horner_data: &HornerData,
-    cfg: &GateOpsConfig,
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-) -> GateOpsConfig {
-    setup_config(
-        gate_data,
-        calc_data,
-        horner_data,
-        result,
-        cfg)
-}
-
-
-fn setup_config<F>(
-    _gate_data: &GateData<F>,
-    _calc_data: &CalculationData<F>,
-    _horner_data: &HornerData,
-    _result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
-    cfg: &GateOpsConfig,
-) -> GateOpsConfig {
-    // if gate_data.constants.is_on_device() && !gate_data.constants.is_on_active_device() {
-    //     panic!("input constants is allocated on an inactive device");
-    // }
-    // if gate_data.fixed.is_on_device() && !gate_data.fixed.is_on_active_device() {
-    //     panic!("input fixed is allocated on an inactive device");
-    // }
-    // if gate_data.advice.is_on_device() && !gate_data.advice.is_on_active_device() {
-    //     panic!("input advice is allocated on an inactive device");
-    // }
-    // if gate_data.instance.is_on_device() && !gate_data.instance.is_on_active_device() {
-    //     panic!("input instance is allocated on an inactive device");
-    // }
-    // if result.is_on_device() && !result.is_on_active_device() {
-    //     panic!("output is allocated on an inactive device");
-    // }
-
-    let res_cfg = cfg.clone();
-    // res_cfg.is_constants_on_device = gate_data.constants.is_on_device();
-    // res_cfg.is_fixed_on_device = gate_data.fixed.is_on_device();
-    // res_cfg.is_advice_on_device = gate_data.advice.is_on_device();
-    // res_cfg.is_instance_on_device = gate_data.instance.is_on_device();
-    // res_cfg.is_result_on_device = result.is_on_device();
-    res_cfg
+    fn lookups_constraint(
+        lookup_data: &LookupData<F>,
+        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &LookupConfig,
+    ) -> Result<(), eIcicleError>;
 }
 
 pub fn gate_evaluation<F>(
@@ -250,18 +316,26 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: GateOps<F>,
 {
-    println!("check_gate_ops_args");
-    let cfg = check_gate_ops_args(
-        gate_data,
-        calc_data,
-        horner_data,
-        cfg,
-        result
-    );
     <<F as FieldImpl>::Config as GateOps<F>>::gate_evaluation(
         gate_data,
         calc_data,
         horner_data,
+        result, 
+        &cfg,
+    )
+}
+
+pub fn lookups_constraint<F>(
+    lookup_data: &LookupData<F>,
+    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &LookupConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: GateOps<F>,
+{
+    <<F as FieldImpl>::Config as GateOps<F>>::lookups_constraint(
+        lookup_data,
         result, 
         &cfg,
     )
@@ -278,7 +352,7 @@ macro_rules! impl_gate_ops_field {
         mod $field_prefix_ident {
 
             use crate::gate_ops::{$field, HostOrDeviceSlice};
-            use icicle_core::gate_ops::{GateData, CalculationData, HornerData, GateOpsConfig};
+            use icicle_core::gate_ops::{GateData, CalculationData, HornerData, LookupData, GateOpsConfig, LookupConfig};
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
@@ -288,6 +362,13 @@ macro_rules! impl_gate_ops_field {
                     calc_data: *const CalculationData<$field>,
                     horner_data: *const HornerData,
                     cfg: *const GateOpsConfig,
+                    result: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_lookups_constraint")]
+                pub(crate) fn lookups_constraint_ffi(
+                    lookup_data: *const LookupData<$field>,
+                    cfg: *const LookupConfig,
                     result: *mut $field,
                 ) -> eIcicleError;
             }
@@ -307,6 +388,21 @@ macro_rules! impl_gate_ops_field {
                         calc_data as *const CalculationData<$field>,
                         horner_data as *const HornerData,
                         cfg as *const GateOpsConfig,
+                        result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn lookups_constraint(
+                lookup_data: &LookupData<$field>,
+                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &LookupConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::lookups_constraint_ffi(
+                        lookup_data as *const LookupData<$field>,
+                        cfg as *const LookupConfig,
                         result.as_mut_ptr(),
                     )
                     .wrap()
@@ -336,6 +432,12 @@ macro_rules! impl_gate_ops_tests {
             pub fn test_gate_ops_scalars() {
                 initialize();
                 check_gate_ops_scalars::<$field>()
+            }
+
+            #[test]
+            pub fn test_lookup_constraints_scalars() {
+                initialize();
+                check_lookup_constraints_scalars::<$field>()
             }
         }
     };

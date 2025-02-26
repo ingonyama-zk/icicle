@@ -62,6 +62,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    fn mul_accumulate(
+        a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
     fn div(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         b: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -72,6 +78,11 @@ pub trait VecOps<F> {
     fn inv(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
+    fn inplace_inv(
+        a: &(impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
@@ -349,6 +360,19 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::mul(a, b, result, &cfg)
 }
 
+pub fn mul_accumulate<F>(
+    a: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(a, b, a, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::mul_accumulate(a, b, &cfg)
+}
+
 pub fn mixed_mul_scalars<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     b: &(impl HostOrDeviceSlice<T> + ?Sized),
@@ -388,6 +412,18 @@ where
 {
     let cfg = check_vec_ops_args(a, a, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::inv(a, result, &cfg)
+}
+
+pub fn inplace_inv_scalars<F>(
+    a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(a, a, a, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::inplace_inv(a, &cfg)
 }
 
 pub fn sum_scalars<F>(
@@ -565,6 +601,14 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> eIcicleError;
 
+                #[link_name = concat!($field_prefix, "_vector_mul_accumulate")]
+                pub(crate) fn vector_mul_accumulate_ffi(
+                    a: *const $field,
+                    b: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                ) -> eIcicleError;
+
                 #[link_name = concat!($field_prefix, "_vector_div")]
                 pub(crate) fn vector_div_ffi(
                     a: *const $field,
@@ -580,6 +624,13 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_vector_inplace_inv")]
+                pub(crate) fn vector_inplace_inv_ffi(
+                    a: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_sum")]
@@ -726,6 +777,22 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
+            fn mul_accumulate(
+                a: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_mul_accumulate_ffi(
+                        a.as_ptr(),
+                        b.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
+                    )
+                    .wrap()
+                }
+            }
+
             fn div(
                 a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),
@@ -755,6 +822,20 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn inplace_inv(
+                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_inplace_inv_ffi(
+                        a.as_ptr(),
+                        a.len() as u32,
+                        cfg as *const VecOpsConfig,
                     )
                     .wrap()
                 }

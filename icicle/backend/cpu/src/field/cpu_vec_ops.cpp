@@ -25,6 +25,7 @@ enum VecOperation {
   VECTOR_MUL,
   VECTOR_DIV,
   VECTOR_INV,
+  VECTOR_INPLACE_INV,
   CONVERT_TO_MONTGOMERY,
   CONVERT_FROM_MONTGOMERY,
   VECTOR_SUM,
@@ -453,7 +454,7 @@ cpu_vector_accumulate(const Device& device, T* vec_a, const T* vec_b, uint64_t s
   return cpu_2vectors_op(VecOperation::VECTOR_ADD, vec_a, vec_b, size, config, vec_a);
 }
 
-REGISTER_VECTOR_ACCUMULATE_BACKEND("CPU", cpu_vector_accumulate<scalar_t>);
+REGISTER_VECTOR_MUL_ACCUMULATE_BACKEND("CPU", cpu_vector_accumulate<scalar_t>);
 
 /*********************************** SUB ***********************************/
 template <typename T>
@@ -475,6 +476,16 @@ eIcicleError cpu_vector_mul(
 
 REGISTER_VECTOR_MUL_BACKEND("CPU", (cpu_vector_mul<scalar_t, scalar_t>));
 
+/*********************************** MUL ACCUMULATE ***********************************/
+template <typename T>
+eIcicleError
+cpu_vector_mul_accumulate(const Device& device, T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config)
+{
+  return cpu_2vectors_op(VecOperation::VECTOR_MUL, vec_a, vec_b, size, config, vec_a);
+}
+
+REGISTER_VECTOR_ACCUMULATE_BACKEND("CPU", cpu_vector_mul_accumulate<scalar_t>);
+
 /*********************************** DIV ***********************************/
 template <typename T>
 eIcicleError cpu_vector_div(
@@ -493,6 +504,15 @@ eIcicleError cpu_vector_inv(const Device& device, const T* vec_a, uint64_t size,
 }
 
 REGISTER_VECTOR_INV_BACKEND("CPU", cpu_vector_inv<scalar_t>);
+
+/*********************************** INPLACE INV ***********************************/
+template <typename T>
+eIcicleError cpu_vector_inplace_inv(const Device& device, T* vec_a, uint64_t size, const VecOpsConfig& config)
+{
+  return cpu_2vectors_op(VecOperation::VECTOR_INPLACE_INV, vec_a, vec_a, size, config, vec_a);
+}
+
+REGISTER_VECTOR_INPLACE_INV_BACKEND("CPU", cpu_vector_inplace_inv<scalar_t>);
 
 /*********************************** CONVERT MONTGOMERY ***********************************/
 template <typename T>
@@ -1015,6 +1035,7 @@ REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CPU", cpu_vector_add<extension_t>);
 REGISTER_VECTOR_ACCUMULATE_EXT_FIELD_BACKEND("CPU", cpu_vector_accumulate<extension_t>);
 REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CPU", cpu_vector_sub<extension_t>);
 REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CPU", (cpu_vector_mul<extension_t, extension_t>));
+REGISTER_VECTOR_MUL_ACCUMULATE_EXT_FIELD_BACKEND("CPU", (cpu_vector_mul_accumulate<extension_t, extension_t>));
 REGISTER_VECTOR_MIXED_MUL_BACKEND("CPU", (cpu_vector_mul<extension_t, scalar_t>));
 REGISTER_VECTOR_DIV_EXT_FIELD_BACKEND("CPU", cpu_vector_div<extension_t>);
 REGISTER_VECTOR_INV_EXT_FIELD_BACKEND("CPU", cpu_vector_inv<extension_t>);

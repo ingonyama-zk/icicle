@@ -15,7 +15,6 @@ namespace icicle {
     const GateOpsConfig& config,
     scalar_t* results)>;
 
-
   void register_gate_evaluation(const std::string& deviceType, gateEvaluationImpl impl);
 
 #define REGISTER_GATE_EVALUATION_BACKEND(DEVICE_TYPE, FUNC)                                                            \
@@ -26,5 +25,20 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  using lookupsConstraintImpl = std::function<eIcicleError(
+    const Device& device,
+    const LookupData<scalar_t>& lookup_data,
+    const LookupConfig& config,
+    scalar_t* results)>;
+
+  void register_lookups_constraint(const std::string& deviceType, lookupsConstraintImpl impl);
+
+#define REGISTER_LOOKUP_CONSTRAINT_BACKEND(DEVICE_TYPE, FUNC)                                                           \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_lookups_constraint) = []() -> bool {                                                   \
+      register_lookups_constraint(DEVICE_TYPE, FUNC);                                                                  \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
 
 } // namespace icicle

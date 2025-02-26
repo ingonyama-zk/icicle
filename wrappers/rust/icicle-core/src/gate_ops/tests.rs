@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
-use crate::gate_ops::{gate_evaluation, GateOps, GateOpsConfig, GateData, CalculationData, HornerData, FieldImpl};
+use crate::gate_ops::{gate_evaluation, lookups_constraint, GateOps, GateOpsConfig, GateData, CalculationData, HornerData, LookupConfig, LookupData, FieldImpl};
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
@@ -33,8 +33,96 @@ pub fn check_gate_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
 {
-    // check_horner_evaluation::<F>(1);
-    check_ezkl_gate_ops::<F>(1);
+    check_horner_evaluation::<F>(4096);
+    // check_ezkl_gate_ops::<F>(2^25);
+}
+
+pub fn check_lookup_constraints_scalars<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
+{
+    check_sample_lookup_constraints::<F>(1);
+}
+
+pub fn check_sample_lookup_constraints<F: FieldImpl>(_test_size: usize)
+where
+    <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
+{
+    let table_values = vec![
+        F::from_u32(2u32),
+    ];
+
+    let inputs_prods = vec![
+        F::from_u32(2u32),
+    ];
+
+    let inputs_inv_sums = vec![
+        F::from_u32(2u32),
+    ];
+
+    let phi_coset = vec![
+        F::from_u32(2u32),
+    ];
+
+    let m_coset = vec![
+        F::from_u32(2u32),
+    ];
+
+    let l0 = vec![
+        F::from_u32(2u32),
+    ];
+
+    let l_last = vec![
+        F::from_u32(2u32),
+    ];
+
+    let l_active_row = vec![
+        F::from_u32(2u32),
+    ];
+
+    let previous_value = vec![
+        F::from_u32(2u32),
+    ];
+
+    let y = vec![
+        F::from_u32(2u32),
+    ];
+
+    let rot_scale = 1;
+    let i_size = 1; 
+
+    let lookup_data = LookupData::new(
+        table_values.as_ptr(),
+        table_values.len() as u32,
+        table_values.as_ptr(),
+        inputs_prods.len() as u32,
+        inputs_inv_sums.as_ptr(),
+        inputs_inv_sums.len() as u32,
+        phi_coset.as_ptr(),
+        phi_coset.len() as u32,
+        m_coset.as_ptr(),
+        m_coset.len() as u32,
+        l0.as_ptr(),
+        l0.len() as u32,
+        l_last.as_ptr(),
+        l_last.len() as u32,
+        l_active_row.as_ptr(), 
+        l_active_row.len() as u32,
+        y.as_ptr(),
+        previous_value.as_ptr(),
+        previous_value.len() as u32,
+        rot_scale as u32,
+        i_size as u32,
+    );
+
+    let mut values = vec![ F::from_u32(0u32) ];
+    let h_values = HostSlice::from_mut_slice(&mut values[..]);
+    let mut cfg = LookupConfig::default();
+    cfg.is_result_on_device = false;
+
+    lookups_constraint(&lookup_data, h_values, &cfg).unwrap(); 
+
+    println!("h_values: {:?}", h_values);
 }
 
 pub fn check_horner_evaluation<F: FieldImpl>(test_size: usize)
@@ -151,6 +239,8 @@ where
 
     let expected = F::from_u32(335u32);
     assert_eq!(result[0], expected, "Horner test did not match expected value");
+
+    println!("result: {:?}", result);
 }
 
 pub fn check_complex_gate_ops<F: FieldImpl>(test_size: usize)

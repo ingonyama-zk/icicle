@@ -80,7 +80,7 @@ namespace icicle {
 
     bool is_device_registered(const char* device_type) { return apiMap.find(device_type) != apiMap.end(); }
 
-    Device m_default_device{"", -1};
+    Device m_default_device{"CUDA", 0};
   };
 
   DeviceTracker DeviceAPI::sMemTracker;

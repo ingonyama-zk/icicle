@@ -31,6 +31,20 @@ namespace icicle {
     bool is_async;                  /** Async execution flag. Default: false. */
   };
 
+
+  struct LookupConfig {
+      icicleStreamHandle stream;          /** Stream for asynchronous execution. */
+      bool is_table_values_on_device;     /** True if `table_values` columns are on the device. Default: false. */
+      bool is_inputs_prods_on_device;     /** True if `inputs_prods` is on the device. Default: false. */
+      bool is_inputs_inv_sums_on_device;  /** True if `inputs_inv_sums` is on the device. Default: false. */
+      bool is_coset_on_device;     /** True if `phi_coset` and `m_coset` columns are on the device. Default: false. */
+      bool is_l_on_device;                /** True if `l0`, `l_last` and `l_active_row` columns are on the device. Default: false. */
+      bool is_y_on_device;                /** True if `y` array is on the device. Default: false. */
+      bool is_previous_value_on_device;   /** True if `previous_value` array is on the device. Default: false. */
+      bool is_result_on_device;           /** True to keep results on device. Default: false. */
+      bool is_async;
+  };
+
   struct HornerData {
     const uint32_t* value_types;      // Value types for Horner's method
     const uint32_t* value_indices;  // Source indices for Horner's method
@@ -76,10 +90,35 @@ namespace icicle {
     const T* y;
   };
 
+  template <typename T>
+  struct LookupData {
+    const T* table_values;
+    uint32_t num_table_values;
+    const T* inputs_prods;
+    uint32_t num_inputs_prods;
+    const T* inputs_inv_sums;
+    uint32_t num_inputs_inv_sums;
+    const T* phi_coset;
+    uint32_t num_phi_coset;
+    const T* m_coset;
+    uint32_t num_m_coset;
+    const T* l0;
+    uint32_t num_l0;
+    const T* l_last;
+    uint32_t num_l_last;
+    const T* l_active_row;
+    uint32_t num_l_active_row;
+    const T* y;
+    const T* previous_value;
+    uint32_t num_elements;
+    uint32_t rot_scale;
+    uint32_t i_size;
+  };
+
   /**
    * @brief Returns the default value of GateOpsConfig.
    */
-  static GateOpsConfig default_vec_ops_config()
+  static GateOpsConfig default_gate_ops_config()
   {
     return GateOpsConfig{
       nullptr,  // stream
@@ -105,6 +144,16 @@ namespace icicle {
     const CalculationData<T>& calc_data,
     const HornerData& horner_data,
     const GateOpsConfig& config, 
+    T* results
+  );
+
+  /**
+   * @brief Evaluate the lookups constraints with full parameter set
+   */
+  template <typename T>
+  eIcicleError lookups_constraint(
+    const LookupData<T>& gate_data, 
+    const LookupConfig& config, 
     T* results
   );
 

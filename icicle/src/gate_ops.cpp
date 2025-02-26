@@ -5,6 +5,7 @@ namespace icicle {
 
   /*********************************** EVALUATE ************************/
   ICICLE_DISPATCHER_INST(GateEvaluationDispatcher, gate_evaluation, gateEvaluationImpl);
+  ICICLE_DISPATCHER_INST(LookupsConstraintDispatcher, lookups_constraint, lookupsConstraintImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(FIELD, gate_evaluation)(
     const GateData<scalar_t>* gate_data, 
@@ -17,6 +18,18 @@ namespace icicle {
         *gate_data, 
         *calc_data,
         *horner_data,
+        *config,
+        results
+      );
+  }
+
+  extern "C" eIcicleError CONCAT_EXPAND(FIELD, lookups_constraint)(
+    const LookupData<scalar_t>* lookup_data, 
+    const LookupConfig* config,
+    scalar_t* results)
+  {
+      return LookupsConstraintDispatcher::execute(
+        *lookup_data, 
         *config,
         results
       );
@@ -37,4 +50,17 @@ namespace icicle {
       results
     );
   }
+
+  eIcicleError lookups_constraint(
+    const LookupData<scalar_t>& lookup_data, 
+    const LookupConfig& config,
+    scalar_t* results)
+  {
+    return CONCAT_EXPAND(FIELD, lookups_constraint)(
+      &lookup_data, 
+      &config,
+      results
+    );
+  }
+
 }
