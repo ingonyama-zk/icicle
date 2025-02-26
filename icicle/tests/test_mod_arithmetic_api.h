@@ -53,6 +53,24 @@ typedef testing::Types<scalar_t> FTImplementations;
 
 TYPED_TEST_SUITE(ModArithTest, FTImplementations);
 
+TYPED_TEST(ModArithTest, Bench)
+{
+  const uint64_t N = 1 << 25;
+  auto in_a = std::vector<TypeParam>(N);
+  auto in_b = std::vector<TypeParam>(N);
+  auto out = std::vector<TypeParam>(N);
+
+  ModArithTest<TypeParam>::random_samples(in_a.data(), N);
+  ModArithTest<TypeParam>::random_samples(in_b.data(), N);
+
+  START_TIMER(multiplier);
+  for (size_t i = 0; i < N; ++i) {
+    out[i] = in_a[i] * in_b[i];
+  }
+  END_TIMER_AVERAGE(multiplier, "multiplier", true, N);
+  ASSERT_NE(0, memcmp(out.data(), in_a.data(), N * sizeof(TypeParam)));
+}
+
 TYPED_TEST(ModArithTest, vectorVectorOps)
 {
   const uint64_t N = 1 << 24;   // 1 << rand_uint_32b(3, 17);

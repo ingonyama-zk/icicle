@@ -26,10 +26,10 @@ namespace greyhound {
   using Zq = IntegerRing<zq_config>;
   using scalar_t = Zq;
 
-  // TODO Yuval define real ZqRns
+  // TODO Yuval use the actual fields
   struct zq_rns_config {
     using Fields =
-      std::tuple<babybear::scalar_t, koalabear::scalar_t, babybear::scalar_t, koalabear::scalar_t, babybear::scalar_t>;
+      std::tuple<babybear::scalar_t, babybear::scalar_t, babybear::scalar_t, babybear::scalar_t, babybear::scalar_t>;
     static constexpr unsigned limbs_count = 5;
     // Offset in limbs_storage for each field
     static constexpr std::array<unsigned, 5> FieldOffset = {0, 1, 2, 3, 4};
