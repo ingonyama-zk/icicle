@@ -59,7 +59,7 @@ pub fn compute_binary_tree<F: FieldImpl>(
     let tree_height: usize = test_vec
         .len()
         .ilog2() as usize;
-    // Note: we assume here binary tree so 'Hash' layer is aleady included in the tree height
+    // Note: we assume here binary tree so 'Hash' layer is already included in the tree height
     let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
         .chain(std::iter::repeat(&compress).take(tree_height - 1))
         .collect();
@@ -201,7 +201,7 @@ pub fn main() {
 
     // for binary tree Poseidon(t1,t2) -> n1
     let poseidon_state_size = 2;
-    let leaf_size: u64 = 8; // each leaf is a 32 bit element 32/8 = 4 bytes
+    let leaf_size: u64 = 8; // each leaf is 2 elements, each 4 bytes
 
     let size = 1 << args.input_log_size as usize;
     let mut test_vec = vec![Frm31::from_u32(random::<u32>()); size * (poseidon_state_size as usize)];
