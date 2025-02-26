@@ -33,8 +33,8 @@ namespace icicle {
     update_chunks(uint8_t* challenge, uint64_t num_chunks, uint64_t offset, uint32_t challenge_size, uint32_t full_size)
     {
       for (uint64_t idx = 0; idx < num_chunks; ++idx) {
-        uint64_t* nonce_ptr = (uint64_t*)(challenge + idx * full_size + challenge_size);
-        *nonce_ptr = offset + idx;
+        uint64_t res = idx + offset;
+        memcpy(challenge + idx * full_size + challenge_size, &res, sizeof(uint64_t));
       }
     }
 
