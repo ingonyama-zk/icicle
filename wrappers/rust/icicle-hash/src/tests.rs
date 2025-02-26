@@ -4,7 +4,7 @@ mod tests {
     use crate::{
         blake2s::Blake2s,
         blake3::Blake3,
-        keccak::Keccak256,
+        keccak::{Keccak256, Keccak512},
         pow::{pow_solver, pow_verify, PowConfig},
         sha3::Sha3_256,
     };
