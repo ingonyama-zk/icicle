@@ -16,7 +16,7 @@ use std::time::Instant;
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(short, long, default_value_t = 20)]
-    input_log_size: u8,
+    log_nof_leaves: u64, // log2(nof_leaves)
 
     /// Device type (e.g., "CPU", "CUDA", "METAL")
     #[arg(short, long, default_value = "CPU")]
@@ -203,12 +203,10 @@ pub fn main() {
     let poseidon_state_size = 2;
     let leaf_size: u64 = 8; // each leaf is 2 elements, each 4 bytes
 
-    let size = 1 << args.input_log_size as usize;
-    let mut test_vec = vec![Frm31::from_u32(random::<u32>()); size * (poseidon_state_size as usize)];
-    println!(
-        "Generated random vector of size {:?}",
-        size * (poseidon_state_size as usize)
-    );
+    let nof_leaves = 1 << args.log_nof_leaves as usize;
+    let nof_elements = nof_leaves * poseidon_state_size;
+    let mut test_vec = vec![Frm31::from_u32(random::<u32>()); nof_elements];
+    println!("Generated random vector of size {:?}", nof_elements);
     //to use later for merkle proof
     let mut binding = test_vec.clone();
     let test_vec_slice = HostSlice::from_mut_slice(&mut binding);
@@ -238,7 +236,7 @@ pub fn main() {
             .unwrap()
     );
 
-    let random_test_index = rand::thread_rng().gen_range(0..size * (poseidon_state_size as usize));
+    let random_test_index = rand::thread_rng().gen_range(0..nof_leaves);
     print!(
         "Generating proof for element {:?} at random test index {:?} ",
         test_vec[random_test_index], random_test_index
