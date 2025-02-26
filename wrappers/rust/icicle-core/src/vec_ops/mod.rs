@@ -1,6 +1,5 @@
 use crate::traits::FieldImpl;
 use crate::program::Program;
-use crate::symbol::Symbol;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -133,7 +132,7 @@ pub trait VecOps<F> {
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
-    fn execute_program<Prog, S, Data>(
+    fn execute_program<Prog, Data>(
         data: &mut Vec<&Data>,
         program: &Prog,
         cfg: &VecOpsConfig
@@ -142,8 +141,7 @@ pub trait VecOps<F> {
         F: FieldImpl,
         <F as FieldImpl>::Config: VecOps<F>,
         Data: HostOrDeviceSlice<F> + ?Sized,
-        S: Symbol<F>,
-        Prog: Program<F, S>;
+        Prog: Program<F>;
 }
 
 #[doc(hidden)]
@@ -265,7 +263,7 @@ fn check_vec_ops_args_slice<F>(
     setup_config(input, input, output, cfg, batch_size)
 }
 
-fn check_execute_program<F, Data>( // COMMENT do we need this check in Rust (or any of the other checks)? seems to bloat rust for stuff not even implemented in cpp.
+fn check_execute_program<F, Data>(
     data: &Vec<&Data>,
     cfg: &VecOpsConfig
 ) -> VecOpsConfig
@@ -525,7 +523,7 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
-pub fn execute_program<F, Prog, S, Data>(
+pub fn execute_program<F, Prog, Data>(
     data: &mut Vec<&Data>,
     program: &Prog,
     cfg: &VecOpsConfig
@@ -534,8 +532,7 @@ where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
     Data: HostOrDeviceSlice<F> + ?Sized,
-    S: Symbol<F>,
-    Prog: Program<F, S>,
+    Prog: Program<F>,
 {
     let cfg = check_execute_program(&data, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::execute_program(data, program, &cfg)
@@ -932,7 +929,7 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn execute_program<Prog, S, Data>(
+            fn execute_program<Prog, Data>(
                 data: &mut Vec<&Data>,
                 program: &Prog,
                 cfg: &VecOpsConfig
@@ -940,8 +937,7 @@ macro_rules! impl_vec_ops_field {
             where
                 <$field as FieldImpl>::Config: VecOps<$field>,
                 Data: HostOrDeviceSlice<$field> + ?Sized,
-                S: Symbol<$field>,
-                Prog: Program<$field, S>,
+                Prog: Program<$field>,
             {
                 unsafe {
                     let data_vec: Vec<*const $field> = data.iter().map(|s| s.as_ptr()).collect();
@@ -1019,8 +1015,8 @@ macro_rules! impl_vec_ops_tests {
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
-            use crate::symbol::$field_prefix_ident::Symbol;
-            use crate::program::$field_prefix_ident::{Program, ReturningValueProgram};
+            // use crate::symbol::$field_prefix_ident::Symbol;
+            use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();
@@ -1060,17 +1056,17 @@ macro_rules! impl_vec_ops_tests {
             #[test]
             pub fn test_program() {
                 initialize(); // Sets main device
-                check_program::<$field, Program, Symbol>();
+                check_program::<$field, FieldProgram>();
                 test_utilities::test_set_ref_device();
-                check_program::<$field, Program, Symbol>()
+                check_program::<$field, FieldProgram>()
             }
 
             #[test]
             pub fn test_predefined_program() {
                 initialize(); // Sets main device
-                check_predefined_program::<$field, Program, Symbol>();
+                check_predefined_program::<$field, FieldProgram>();
                 test_utilities::test_set_ref_device();
-                check_predefined_program::<$field, Program, Symbol>()
+                check_predefined_program::<$field, FieldProgram>()
             }
         }
     };

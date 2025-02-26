@@ -10,24 +10,26 @@ pub enum PreDefinedProgram {
   EQtimesABminusC
 }
 
-pub trait Program<F, S>: 
+pub trait Program<F>: 
   Sized + Handle
 where
   F:FieldImpl,
-  S: Symbol<F>,
 {
-  fn new(program_func: impl FnOnce(&mut Vec<S>), nof_parameters: u32) -> Result<Self, eIcicleError>;
+  type ProgSymbol: Symbol<F>;
+
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, eIcicleError>;
   
   fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
 }
 
-pub trait ReturningValueProgram<F, S>:
+pub trait ReturningValueProgram<F>:
   Sized + Handle
 where
   F:FieldImpl,
-  S: Symbol<F>,
 {
-  fn new(program_func: impl FnOnce(&mut Vec<S>) -> S, nof_parameters: u32) -> Result<Self, eIcicleError>;
+  type ProgSymbol: Symbol<F>;
+
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, eIcicleError>;
 
   fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
 }
@@ -43,24 +45,22 @@ macro_rules! impl_program_field {
     pub mod $field_prefix_ident {
       use crate::program::$field;
       use icicle_core::traits::{FieldImpl, Handle, HandleCPP};
-      use icicle_core::symbol::Symbol as SymbolTrait;
-      use crate::symbol::$field_prefix_ident::Symbol;
-      use icicle_core::program::{ Program as ProgramTrait,
-                                  ReturningValueProgram as ReturningValueProgramTrait,
-                                  PreDefinedProgram, Instruction};
+      use icicle_core::symbol::Symbol;
+      use crate::symbol::$field_prefix_ident::FieldSymbol;
+      use icicle_core::program::{ Program, ReturningValueProgram, PreDefinedProgram, Instruction};
       use icicle_runtime::errors::eIcicleError;
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
       use std::ffi::c_void;
 
       // Programs structs
       #[repr(C)]
-      pub struct Program
+      pub struct FieldProgram
       {
         m_handle: HandleCPP
       }
 
       #[repr(C)]
-      pub struct ReturningValueProgram {
+      pub struct FieldReturningValueProgram {
         m_handle: HandleCPP
       }
 
@@ -93,13 +93,15 @@ macro_rules! impl_program_field {
       }
 
       // Program trait implementation
-      impl ProgramTrait<$field, Symbol> for Program {
-        fn new(program_func: impl FnOnce(&mut Vec<Symbol>), nof_parameters: u32) -> Result<Self, eIcicleError>
+      impl Program<$field> for FieldProgram {
+        type ProgSymbol = FieldSymbol;
+
+        fn new(program_func: impl FnOnce(&mut Vec<FieldSymbol>), nof_parameters: u32) -> Result<Self, eIcicleError>
         {
           unsafe {
-            let mut program_parameters: Vec<Symbol> = (0..nof_parameters)
+            let mut program_parameters: Vec<FieldSymbol> = (0..nof_parameters)
                                                       .enumerate()
-                                                      .map(|(i, _)| Symbol::new_input(i as u32).unwrap())
+                                                      .map(|(i, _)| FieldSymbol::new_input(i as u32).unwrap())
                                                       .collect();
 
             program_func(&mut program_parameters);
@@ -131,11 +133,11 @@ macro_rules! impl_program_field {
         }
       }
 
-      impl Handle for Program {
+      impl Handle for FieldProgram {
         fn handle(&self) -> HandleCPP { self.m_handle }
       }
 
-      impl Drop for Program {
+      impl Drop for FieldProgram {
         fn drop(&mut self) {
           unsafe {
             if !self.m_handle.is_null()
@@ -147,9 +149,11 @@ macro_rules! impl_program_field {
       }
 
       // Returning Value Program trait implementation
-      impl ReturningValueProgramTrait<$field, Symbol> for ReturningValueProgram {
+      impl ReturningValueProgram<$field> for FieldReturningValueProgram {
+        type ProgSymbol = FieldSymbol;
+
         fn new(
-          program_func: impl FnOnce(&mut Vec<Symbol>) -> Symbol, 
+          program_func: impl FnOnce(&mut Vec<FieldSymbol>) -> FieldSymbol, 
           nof_parameters: u32
         ) -> Result<Self, eIcicleError>
         {
@@ -159,9 +163,9 @@ macro_rules! impl_program_field {
               return Err(eIcicleError::AllocationFailed);
             }
 
-            let mut program_parameters: Vec<Symbol> = (0..nof_parameters)
+            let mut program_parameters: Vec<FieldSymbol> = (0..nof_parameters)
                                                       .enumerate()
-                                                      .map(|(i, _)| Symbol::new_input(i as u32).unwrap())
+                                                      .map(|(i, _)| FieldSymbol::new_input(i as u32).unwrap())
                                                       .collect();
 
             let res_symbol = program_func(&mut program_parameters);
@@ -186,11 +190,11 @@ macro_rules! impl_program_field {
         }
       }
 
-      impl Handle for ReturningValueProgram {
+      impl Handle for FieldReturningValueProgram {
         fn handle(&self) -> HandleCPP { self.m_handle }
       }
 
-      impl Drop for ReturningValueProgram {
+      impl Drop for FieldReturningValueProgram {
         fn drop(&mut self) {
           unsafe {
             if !self.m_handle.is_null()

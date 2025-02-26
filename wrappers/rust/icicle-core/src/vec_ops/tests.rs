@@ -462,14 +462,13 @@ where
     assert_eq!(input.as_slice(), result_host.as_slice());
 }
 
-pub fn check_program<F, Prog, S>()
+pub fn check_program<F, Prog>()
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
-    S: Symbol<F>,
-    Prog: Program<F, S>,
+    Prog: Program<F>,
 {
-    let lambda_eq_x_ab_minus_c = |vars: &mut Vec<S>| {
+    let lambda_eq_x_ab_minus_c = |vars: &mut Vec<Prog::ProgSymbol>| {
         let a = vars[0];
         let b = vars[1];
         let c = vars[2];
@@ -526,12 +525,11 @@ where
     }
 }
 
-pub fn check_predefined_program<F, Prog, S>()
+pub fn check_predefined_program<F, Prog>()
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
-    S: Symbol<F>,
-    Prog: Program<F, S>,
+    Prog: Program<F>,
 {
     const TEST_SIZE: usize = 1 << 10;
     let a = F::Config::generate_random(TEST_SIZE);

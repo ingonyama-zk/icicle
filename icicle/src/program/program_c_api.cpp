@@ -3,7 +3,7 @@
 #include "icicle/program/symbol.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/utils.h"
-#include "icicle/utils/ffi_manager.h"
+#include "release_pool.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -30,18 +30,21 @@ eIcicleError delete_program(ProgramHandle program)
   return eIcicleError::SUCCESS;
 }
 
-void CONCAT_EXPAND(FIELD, generate_program)(ProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters)
+eIcicleError
+CONCAT_EXPAND(FIELD, generate_program)(ProgramHandle program, SymbolHandle* parameters_ptr, int nof_parameters)
 {
   std::vector<Symbol<scalar_t>> parameters_vec;
   parameters_vec.reserve(nof_parameters);
 
   for (int i = 0; i < nof_parameters; i++) {
-    if (parameters_ptr[i] == nullptr) { throw std::invalid_argument("Null pointer found in parameters"); }
+    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
     parameters_vec.push_back(*parameters_ptr[i]); // TODO replace with span to avoid copying when we switch to cpp20
   }
 
   program->m_nof_parameters = nof_parameters;
   program->generate_program(parameters_vec);
+
+  return eIcicleError::SUCCESS;
 }
 
 ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_empty_returning_value_program)()
@@ -62,7 +65,7 @@ void CONCAT_EXPAND(FIELD, generate_returning_value_program)(
 
 void CONCAT_EXPAND(FIELD, clear_symbols)()
 {
-  FfiObjectPool<Symbol<scalar_t>>& pool = FfiObjectPool<Symbol<scalar_t>>::instance();
+  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
   pool.clear();
 }
 }
@@ -85,18 +88,20 @@ ExtensionProgramHandle CONCAT_EXPAND(FIELD, extension_create_predefined_program)
   return new Program<extension_t>(pre_def);
 }
 
-void CONCAT_EXPAND(FIELD, extension_generate_program)(
+eIcicleError CONCAT_EXPAND(FIELD, extension_generate_program)(
   ExtensionProgramHandle program, ExtensionSymbolHandle* parameters_ptr, int nof_parameters)
 {
   std::vector<Symbol<extension_t>> parameters_vec;
   parameters_vec.reserve(nof_parameters);
 
   for (int i = 0; i < nof_parameters; i++) {
-    if (parameters_ptr[i] == nullptr) { throw std::invalid_argument("Null pointer found in parameters"); }
+    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
     parameters_vec.push_back(*parameters_ptr[i]); // TODO replace with span to avoid copying when we switch to cpp20
   }
   program->m_nof_parameters = nof_parameters;
   program->generate_program(parameters_vec);
+
+  return eIcicleError::SUCCESS;
 }
 
 ExtensionReturningValueProgramHandle CONCAT_EXPAND(FIELD, extension_create_empty_returning_value_program)()
@@ -118,7 +123,7 @@ void CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
 
 void CONCAT_EXPAND(FIELD, extension_clear_symbols)()
 {
-  FfiObjectPool<Symbol<extension_t>>& pool = FfiObjectPool<Symbol<extension_t>>::instance();
+  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
   pool.clear();
 }
 }

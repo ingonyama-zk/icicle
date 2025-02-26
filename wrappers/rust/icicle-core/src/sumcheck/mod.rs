@@ -3,9 +3,8 @@ pub mod tests;
 
 use crate::field::FieldArithmetic;
 use crate::hash::Hasher;
-use crate::symbol::Symbol;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, Handle};
+use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -151,8 +150,6 @@ pub trait Sumcheck {
     type FieldConfig: FieldConfig + GenerateRandom<Self::Field> + FieldArithmetic<Self::Field>;
     type Proof: SumcheckProofOps<Self::Field>;
 
-    type ProgSymbol: Symbol<Self::Field>;
-
     fn new() -> Result<Self, eIcicleError>
     where
         Self: Sized;
@@ -162,7 +159,7 @@ pub trait Sumcheck {
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgram<Self::Field, Self::ProgSymbol>,
+        combine_function: impl ReturningValueProgram<Self::Field>,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
     ) -> Self::Proof;
@@ -195,7 +192,7 @@ macro_rules! impl_sumcheck {
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
-        use crate::symbol::$field_prefix_ident::Symbol;
+        use crate::symbol::$field_prefix_ident::FieldSymbol;
 
         extern "C" {
             #[link_name = concat!($field_prefix, "_sumcheck_create")]
@@ -261,8 +258,6 @@ macro_rules! impl_sumcheck {
             type FieldConfig = $field_cfg;
             type Proof = SumcheckProof;
 
-            type ProgSymbol = Symbol;
-
             fn new() -> Result<Self, eIcicleError> {
                 let handle = unsafe { icicle_sumcheck_create() };
                 if handle.is_null() {
@@ -277,7 +272,7 @@ macro_rules! impl_sumcheck {
                 mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                 mle_poly_size: u64,
                 claimed_sum: $field,
-                combine_function: impl ReturningValueProgram<Self::Field, Self::ProgSymbol> + Handle,
+                combine_function: impl ReturningValueProgram<Self::Field> + Handle,
                 transcript_config: &SumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> Self::Proof {
@@ -432,7 +427,7 @@ macro_rules! impl_sumcheck_tests {
         $field:ident
     ) => {
         use super::SumcheckWrapper;
-        use crate::program::$field_prefix_ident::ReturningValueProgram as Program;
+        use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};

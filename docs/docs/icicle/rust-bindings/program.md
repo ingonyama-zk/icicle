@@ -17,26 +17,21 @@ Symbol is the basic (template) class that allow users to define their own progra
 The trait defines the functionality required by the user. The expected use-case of symbol is solely to be operated on to create the final arithmetic operation, which is reflected implemented functions and traits.
 ```rust
 pub trait Symbol<F: FieldImpl>:
-  // Operator overloading for Symbol op Symbol, Symbol op Field scalar, Symbol op &Symbol
-  Add + Sub + Mul + AddAssign + SubAssign + MulAssign + 
+  Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> +
   Add<F, Output = Self> + Sub<F, Output = Self> + Mul<F, Output = Self> +
-  AddAssign<F> + SubAssign<F> + MulAssign<F> +
+  AddAssign + SubAssign + MulAssign + AddAssign<F> + SubAssign<F> + MulAssign<F> +
   for<'a> Add<&'a Self, Output = Self> +
   for<'a> Sub<&'a Self, Output = Self> +
   for<'a> Mul<&'a Self, Output = Self> +
   for<'a> AddAssign<&'a Self> +
   for<'a> SubAssign<&'a Self> +
   for<'a> MulAssign<&'a Self> +
-  Clone + Sized
+  Clone + Copy + Sized + DeletableHandle
 {
-  // Create a Symbol representing a constant from a field scalar
-  fn from_constant(constant: F) -> Result<Self, eIcicleError>;
+  fn new_input(in_idx: u32) -> Result<Self, eIcicleError>;      // New input symbol for the execution function
+  fn from_constant(constant: F) -> Result<Self, eIcicleError>;  // New symbol from a field element
 
-  // Get field inverse of the given Symbol
-  fn inverse(&self) -> Self;
-
-  // Set symbol as input (Which is required for correct Program generation)
-  fn set_as_input(&self, in_index: u32);
+  fn inverse(&self) -> Self; // Field inverse of the symbol
 }
 ```
 ## `Symbol` Struct
@@ -47,19 +42,39 @@ pub struct Program {
 }
 ```
 ### Traits implemented and key methods
-Additional trait the struct implements besides the `Symbol<F>` trait.
-#### `Handle` 
-Trait to guarantee linking the symbol to the appropriate cpp backend - providing a function to access the pointer to the backend implementation.
-### `Drop`
-Ensures proper resource management by releasing the backend allocated memory when a `Symbol` instance goes out of scope. This prevents memory leaks and ensures that resources are cleaned up correctly, adhering to Rust's RAII (Resource Acquisition Is Initialization) principles.
+Additional traits the struct implements to fulfil `Symbol<F>` trait that should be noted.
+#### Arithmetic operations
+Symbol implements addition, subtraction and multiplication (as well as the assign variants of them) with other symbols / references as well as field elements. Applying the operations will generate a new symbol (Or overwrite the existing in the case of the assign operation) representing the arithmetic operations of the two operand symbols. The `inverse` function joins these operations to allow an additional arithmetic operation (division).
+#### `DeletableHandle` 
+Trait to guarantee linking the symbol to the appropriate cpp backend - providing a function to access the pointer to the backend implementation, as well as a method (in rust) to delete the relevant memory on the backend side.
 
 # Program
 A configurebale program to be ran on the various Icicle backends. It can be one of the members of `PredefinedProgram` enum. The program adheres to the following trait:
 ## `Program` Trait Definition
-The trait defines the base functionality required for the user, which in this case is only creation (The other execution functionality is exposed through Vector Operations).
+The trait defines the base functionality required for the user, which in this case is only creation (The execution functionality is exposed through Vector Operations). It is split to 2 traits:
+- `Program` - a program for running a function that takes a vector of field elements (both inputs and outputs) and has no return value (output is written to the given vector). It is executed through Vector Operations.
+- `ReturningValueProgram` - a program for running a function that takes an vector of inputs and returns a single field element. It is used for Sumcheck.
 ```rust
-pub trait Program<F: FieldImpl>: {
-  fn new<S: Symbol<F>>(program_func: impl FnOnce(&mut Vec<S>), nof_parameters: u32) -> Result<Self, eIcicleError>;
+pub trait Program<F>: 
+  Sized + Handle
+where
+  F:FieldImpl,
+{
+  type ProgSymbol: Symbol<F>;
+
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>), nof_parameters: u32) -> Result<Self, eIcicleError>;
+  
+  fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+}
+
+pub trait ReturningValueProgram<F>:
+  Sized + Handle
+where
+  F:FieldImpl,
+{
+  type ProgSymbol: Symbol<F>;
+
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, eIcicleError>;
 
   fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
 }
@@ -72,7 +87,7 @@ pub struct Program {
 }
 ```
 ### Traits implemented and key methods
-Additional trait the struct implements besides the `Program<F>` trait.
+Additional trait the struct implements to fulfil `Program<F>` trait.
 #### `Handle` 
 Trait to guarantee linking the program to the appropriate cpp backend - providing a function to access the pointer to the backend implementation.
 ### `Drop`
@@ -89,7 +104,6 @@ example_function<F, S>(vars: &mut Vec<S>)
 where
   F: FieldImpl, // TODO do we need both in types
   S: Symbol<F>,
-  &'a S: SymbolRef<F, S>,
 {
   let a = vars[0];
   let b = vars[1];
@@ -125,24 +139,23 @@ where
 
 And in total with data setup we would get code like this:
 ```rust
-const SIZE: usize = 1 << 10;
-let a = F::Config::generate_random(SIZE);
-let b = F::Config::generate_random(SIZE);
-let c = F::Config::generate_random(SIZE);
-let eq = F::Config::generate_random(SIZE);
-let var4 = vec![F::zero(); SIZE];
-let var5 = vec![F::zero(); SIZE];
-let var6 = vec![F::zero(); SIZE];
-let a_slice = HostSlice::from_slice(&a);
-let b_slice = HostSlice::from_slice(&b);
-let c_slice = HostSlice::from_slice(&c);
-let eq_slice = HostSlice::from_slice(&eq);
-let var4_slice = HostSlice::from_slice(&var4);
-let var5_slice = HostSlice::from_slice(&var5);
-let var6_slice = HostSlice::from_slice(&var6);
+let lambda_d_times_ab_minus_c = |vars: &mut Vec<S>| {
+    let a = vars[0]; // Shallow copies pointing to the same memory in the backend
+    let b = vars[1];
+    let c = vars[2];
+    let d = vars[3];
+
+    vars[4] = d * (a * b - c) + F::from_u32(9);
+    vars[5] = a * b - c.inverse();
+    vars[6] = vars[5];
+    vars[3] = (vars[0] + vars[1]) * F::from_u32(2); // all variables can be both inputs and outputs
+};
+
+// Additional code initiating the below slices to be equal-sized slices of field elements
+
 let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
 
-let program = Program::new(example_lambda, 7).unwrap();
+let program = Prog::new(lambda_eq_x_ab_minus_c, 7).unwrap();
 
 let cfg = VecOpsConfig::default();
 execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
