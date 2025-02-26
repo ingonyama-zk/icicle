@@ -36,7 +36,7 @@ public:
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
     m_round_idx++;
-    reduce_hash_result_to_field(m_prev_alpha, hash_result);
+    m_prev_alpha = S::from(hash_result.data(), hasher.output_size());
     return m_prev_alpha;
   }
 
@@ -54,15 +54,6 @@ private:
   void append_data(std::vector<std::byte>& byte_vec, const std::vector<std::byte>& label)
   {
     byte_vec.insert(byte_vec.end(), label.begin(), label.end());
-  }
-
-  // convert a vector of bytes to a field
-  void reduce_hash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result)
-  {
-    alpha = S::zero();
-    const int nof_bytes_to_copy = std::min(sizeof(alpha), hash_result.size());
-    memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
-    alpha = alpha * S::one();
   }
 
   // append an integer uint32_t to hash input
