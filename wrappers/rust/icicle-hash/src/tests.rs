@@ -4,7 +4,7 @@ mod tests {
     use crate::{
         blake2s::Blake2s,
         blake3::Blake3,
-        keccak::{Keccak256, Keccak512},
+        keccak::Keccak256,
         pow::{pow_solver, pow_verify, PowConfig},
         sha3::Sha3_256,
     };
@@ -358,6 +358,86 @@ mod tests {
         );
         assert_eq!(err, eIcicleError::Success);
         assert_eq!(cpu_mined_hash, golden_hash);
+        assert!(cpu_is_correct);
+    }
+    #[test]
+    fn keccak_pow() {
+        initialize();
+        test_utilities::test_set_main_device();
+        const BITS: u8 = 25;
+        let input: [u8; 21] = [20; 21];
+
+        let input_host = HostSlice::from_slice(&input);
+        let mut cfg = PowConfig::default();
+        cfg.padding_size = 3;
+
+        let mut gpu_found = false;
+        let mut gpu_nonce = 0;
+        let mut gpu_mined_hash = 0;
+
+        let hasher = Keccak256::new(0).unwrap();
+
+        let err = pow_solver(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            &mut gpu_found,
+            &mut gpu_nonce,
+            &mut gpu_mined_hash,
+        );
+        assert_eq!(err, eIcicleError::Success);
+        assert!(gpu_found);
+
+        let mut gpu_is_correct = false;
+        let mut gpu_mined_hash_check = 0;
+
+        let err = pow_verify(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            gpu_nonce,
+            &mut gpu_is_correct,
+            &mut gpu_mined_hash_check,
+        );
+        assert_eq!(err, eIcicleError::Success);
+        assert_eq!(gpu_mined_hash_check, gpu_mined_hash);
+        assert!(gpu_is_correct);
+
+        test_utilities::test_set_ref_device();
+        let mut cpu_found = false;
+        let mut cpu_nonce = 0;
+        let mut cpu_mined_hash = 0;
+        let hasher = Keccak256::new(0).unwrap();
+        let err = pow_solver(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            &mut cpu_found,
+            &mut cpu_nonce,
+            &mut cpu_mined_hash,
+        );
+        assert_eq!(err, eIcicleError::Success);
+        assert!(cpu_found);
+        assert_eq!(cpu_nonce, gpu_nonce);
+        assert_eq!(cpu_mined_hash, gpu_mined_hash);
+
+        let mut cpu_is_correct = false;
+        let mut cpu_mined_hash_check = 0;
+
+        let err = pow_verify(
+            &hasher,
+            input_host,
+            BITS,
+            &cfg,
+            cpu_nonce,
+            &mut cpu_is_correct,
+            &mut cpu_mined_hash_check,
+        );
+        assert_eq!(err, eIcicleError::Success);
+        assert_eq!(cpu_mined_hash, cpu_mined_hash_check);
         assert!(cpu_is_correct);
     }
 }
