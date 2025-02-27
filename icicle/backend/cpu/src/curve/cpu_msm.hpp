@@ -65,7 +65,6 @@ public:
     // TBD: optimize - condsider nof workers, do experiments
     int optimal_c = config.c > 0 ? config.c :                                                   // c given by config.
                       std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
-                      std::cout << "optimal_c: " << optimal_c << std::endl;
     return optimal_c;
   }
 
