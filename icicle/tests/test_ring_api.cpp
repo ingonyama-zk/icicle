@@ -44,7 +44,7 @@ TEST_F(RingTestBase, RingRnsConversion)
   ASSERT_EQ(r * r_inv, scalar_t::one());
 
   // convert direct to rns and check 'r * r^-1 = 1' in rns
-  scalar_rns_t r_rns = scalar_rns_t::from_direct(r);
+  scalar_rns_t r_rns = scalar_rns_t::from_direct(r); // static method to convert direct to rns
   scalar_rns_t r_inv_rns_converted = scalar_rns_t::from_direct(r_inv);
   scalar_rns_t r_inv_rns_computed = scalar_rns_t::inverse(r_rns);
   ASSERT_EQ(r_inv_rns_converted, r_inv_rns_computed);
@@ -52,7 +52,7 @@ TEST_F(RingTestBase, RingRnsConversion)
   ICICLE_LOG_INFO << "r=" << r << ", r_rns=" << r_rns << ", r_inv=" << r_inv << ", r_inv_rns=" << r_inv_rns_converted;
 
   // Constructor from direct
-  scalar_rns_t r_rns_from_zq = r; // here we convert r to rns implicitly
+  scalar_rns_t r_rns_from_zq = r; // here we convert r to rns implicitly by constructing from Zq type
   scalar_rns_t r_rns_from_zq_direct = scalar_rns_t::from_direct(r);
   ASSERT_EQ(r_rns_from_zq, r_rns_from_zq_direct);
 
@@ -60,11 +60,14 @@ TEST_F(RingTestBase, RingRnsConversion)
   scalar_t r_backup = r;
   // convert r inplace
   scalar_rns_t& r_rns_casted = (scalar_rns_t&)r;
-  scalar_rns_t::convert_direct_to_rns(&r.limbs_storage, &r_rns_casted.limbs_storage);
+  scalar_rns_t::convert_direct_to_rns(
+    &r.limbs_storage, &r_rns_casted.limbs_storage); // convert using given memory, possibly inplace
   ASSERT_EQ(r_rns_casted, r_rns);
   ICICLE_LOG_INFO << "r=" << r << ", r_rns=" << r_rns_casted;
   // convert rns back to direct
   ASSERT_NE(r, r_backup);
-  scalar_rns_t::convert_rns_to_direct(&r_rns_casted.limbs_storage, &r.limbs_storage);
+  ASSERT_EQ(r_backup, r_rns_casted.to_direct()); // create a new Zq element from rns
+  scalar_rns_t::convert_rns_to_direct(
+    &r_rns_casted.limbs_storage, &r.limbs_storage); // convert using the given memory, possibly inplace
   ASSERT_EQ(r, r_backup);
 }

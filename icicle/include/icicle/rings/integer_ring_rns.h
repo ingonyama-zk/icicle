@@ -20,6 +20,7 @@ public:
   // TODO Yuval: clean this class up a little, add comments, and make sure it is consistent with the rest of the code
   static constexpr unsigned limbs_count = RNS_CONFIG::limbs_count;
   using Fields = typename RNS_CONFIG::Fields;
+  using Zq = typename RNS_CONFIG::Zq;
   static constexpr unsigned NofFields = std::tuple_size_v<Fields>;
   static constexpr std::array<unsigned, limbs_count> FieldOffset = RNS_CONFIG::FieldOffset;
   template <size_t I>
@@ -248,28 +249,33 @@ public:
   static constexpr HOST_DEVICE_INLINE void
   convert_rns_to_direct(const storage<RNS_CONFIG::limbs_count>* zqrns, storage<RNS_CONFIG::limbs_count>* zq /*OUT*/)
   {
-    const bool inplace = zq == zqrns;
+    // Note: here we compute the CRT algorithm to convert from RNS to direct representation
 
-    // TODO Yuval: generalize for any number of fields (this is labrador case)
+    constexpr unsigned sizeof_limb = sizeof(zq->limbs[0]);
 
-    // Precomputed Wi
-    using Zq = typename RNS_CONFIG::Zq;
-    Zq W0{RNS_CONFIG::W.storages[0]};
-    Zq W1{RNS_CONFIG::W.storages[1]};
-    // I now need SIGMA(Wi*xi) for each field
-    // Note: I compute it using the type Zq so I need to copy the element xi to a Zq type
-    // TODO Future: optimize this code my minimizing number of reductions etc.
-    Zq x0{};
-    Zq x1{};
-    std::memcpy(&x0, (std::byte*)zqrns, 4 /*sizeof the field*/);
-    std::memcpy(&x1, (std::byte*)zqrns + 4, 4 /*sizeof the field*/);
+    // TODO: optimize implementation if needed
 
-    std::cout << "x0=" << x0 << ", x1=" << x1 << ", W0=" << W0 << ", W1=" << W1 << std::endl;
-    // Compute the sum mod q
-    Zq zq0 = x0 * W0;
-    Zq zq1 = x1 * W1;
-    Zq zq_sum = zq0 + zq1;
+    // Compute Σ(Wi * xi)
+    Zq zq_sum = Zq::zero();
+    // TODO UNROLL?
+    for (size_t i = 0; i < NofFields; i++) {
+      Zq xi{};
+      // TODO: can we avoid this memcpy? Probably yes if we use a low level multiplier, rather than the Zq multiplier
+      std::memcpy(
+        &xi, reinterpret_cast<const std::byte*>(zqrns) + RNS_CONFIG::FieldOffset[i] * sizeof_limb,
+        RNS_CONFIG::FieldLimbs[i] * sizeof_limb);
+      zq_sum = zq_sum + (xi * Zq{RNS_CONFIG::W.storages[i]});
+    }
+
+    // Store result
     *zq = zq_sum.limbs_storage;
+  }
+
+  Zq to_direct() const
+  {
+    Zq zq;
+    convert_rns_to_direct(&limbs_storage, &zq.limbs_storage);
+    return zq;
   }
 };
 
