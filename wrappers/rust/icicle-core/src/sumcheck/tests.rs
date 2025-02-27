@@ -51,7 +51,7 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram<<SW as Sumcheck>::Field>,
+    P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -122,7 +122,7 @@ where
 pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram<<SW as Sumcheck>::Field>,
+    P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;

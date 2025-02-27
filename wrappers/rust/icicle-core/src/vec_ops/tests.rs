@@ -468,15 +468,15 @@ where
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
     Prog: Program<F>,
 {
-    let lambda_eq_x_ab_minus_c = |vars: &mut Vec<Prog::ProgSymbol>| {
-        let a = vars[0];
+    let example_lambda = |vars: &mut Vec<Prog::ProgSymbol>| {
+        let a = vars[0]; // Shallow copies pointing to the same memory in the backend
         let b = vars[1];
         let c = vars[2];
-        let eq = vars[3];
-
-        vars[4] = eq * (a * b - c) + F::from_u32(9);
+        let d = vars[3];
+    
+        vars[4] = d * (a * b - c) + F::from_u32(9);
         vars[5] = a * b - c.inverse();
-        vars[6] = vars[5];
+        vars[6] += a * b - c.inverse();
         vars[3] = (vars[0] + vars[1]) * F::from_u32(2); // all variables can be both inputs and outputs
     };
 
@@ -497,7 +497,7 @@ where
     let var6_slice = HostSlice::from_slice(&var6);
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
 
-    let program = Prog::new(lambda_eq_x_ab_minus_c, 7).unwrap();
+    let program = Prog::new(example_lambda, 7).unwrap();
     
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");

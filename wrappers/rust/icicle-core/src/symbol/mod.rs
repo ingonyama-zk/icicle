@@ -1,8 +1,10 @@
 use icicle_runtime::errors::eIcicleError;
 use std::marker::Copy;
 use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
-use crate::traits::{FieldImpl, DeletableHandle};
+use crate::traits::{FieldImpl, Handle};
+use std::ffi::c_void;
 
+pub type SymbolHandle = *const c_void;
 #[doc(hidden)]
 pub trait Symbol<F: FieldImpl>:
   Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> +
@@ -14,7 +16,7 @@ pub trait Symbol<F: FieldImpl>:
   for<'a> AddAssign<&'a Self> +
   for<'a> SubAssign<&'a Self> +
   for<'a> MulAssign<&'a Self> +
-  Clone + Copy + Sized + DeletableHandle
+  Clone + Copy + Sized + Handle
 {
   fn new_input(in_idx: u32) -> Result<Self, eIcicleError>;      // New input symbol for the execution function
   fn from_constant(constant: F) -> Result<Self, eIcicleError>;  // New symbol from a field element
@@ -32,8 +34,8 @@ macro_rules! impl_symbol_field {
   ) => {
     pub mod $field_prefix_ident {
       use crate::symbol::$field;
-      use icicle_core::traits::{DeletableHandle, Handle, HandleCPP};
-      use icicle_core::symbol::Symbol;
+      use icicle_core::traits::{Handle};
+      use icicle_core::symbol::{Symbol, SymbolHandle};
       use icicle_runtime::errors::eIcicleError;
       use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
       use std::ffi::c_void;
@@ -42,41 +44,38 @@ macro_rules! impl_symbol_field {
       #[repr(C)]
       #[derive(Copy)]
       pub struct FieldSymbol {
-        m_handle: HandleCPP,
+        m_handle: SymbolHandle,
       }
 
       // Symbol Operations
       extern "C" {
         #[link_name = concat!($field_prefix, "_create_input_symbol")]
-        pub(crate) fn ffi__input_symbol(in_idx: u32) -> HandleCPP;
+        pub(crate) fn ffi_input_symbol(in_idx: u32) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_create_scalar_symbol")]
-        pub(crate) fn ffi__symbol_from_const(constant: *const $field) -> HandleCPP;
+        pub(crate) fn ffi_symbol_from_const(constant: *const $field) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_copy_symbol")]
-        pub(crate) fn ffi_copy_symbol(other: HandleCPP) -> HandleCPP;
+        pub(crate) fn ffi_copy_symbol(other: SymbolHandle) -> SymbolHandle;
 
         #[link_name = concat!($field_prefix, "_add_symbols")]
-        pub(crate) fn ffi_add_symbols(op_a: HandleCPP, op_b: HandleCPP, res: *mut HandleCPP) -> eIcicleError;
+        pub(crate) fn ffi_add_symbols(op_a: SymbolHandle, op_b: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
 
         #[link_name = concat!($field_prefix, "_sub_symbols")]
-        pub(crate) fn ffi_sub_symbols(op_a: HandleCPP, op_b: HandleCPP, res: *mut HandleCPP) -> eIcicleError;
+        pub(crate) fn ffi_sub_symbols(op_a: SymbolHandle, op_b: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
 
         #[link_name = concat!($field_prefix, "_multiply_symbols")]
-        pub(crate) fn ffi_multiply_symbols(op_a: HandleCPP, op_b: HandleCPP, res: *mut HandleCPP) -> eIcicleError;
+        pub(crate) fn ffi_multiply_symbols(op_a: SymbolHandle, op_b: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
 
         #[link_name = concat!($field_prefix, "_inverse_symbol")]
-        pub(crate) fn ffi_inverse_symbol(op_a: HandleCPP, res: *mut HandleCPP) -> eIcicleError;
-
-        #[link_name = "delete_symbol"]
-        pub(crate) fn ffi_delete_symbol(symbol: HandleCPP) -> eIcicleError;
+        pub(crate) fn ffi_inverse_symbol(op_a: SymbolHandle, res: *mut SymbolHandle) -> eIcicleError;
       }
 
       // Implement Symbol UI
       impl Symbol<$field> for FieldSymbol {
         fn new_input(in_idx: u32) -> Result<Self, eIcicleError> {
           unsafe {
-            let handle = ffi__input_symbol(in_idx);
+            let handle = ffi_input_symbol(in_idx);
             if handle.is_null() {
               Err(eIcicleError::AllocationFailed)
             } else {
@@ -87,7 +86,7 @@ macro_rules! impl_symbol_field {
 
         fn from_constant(constant: $field) -> Result<Self, eIcicleError> {
           unsafe {
-            let handle = ffi__symbol_from_const(&constant as *const $field);
+            let handle = ffi_symbol_from_const(&constant as *const $field);
             if handle.is_null() {
               Err(eIcicleError::AllocationFailed)
             } else {
@@ -113,7 +112,7 @@ macro_rules! impl_symbol_field {
 
       // Implement useful functions for the implementation of the above UI
       impl FieldSymbol {
-        fn add_handles(op_a: HandleCPP, op_b: HandleCPP) -> Result<HandleCPP, eIcicleError> {
+        fn add_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
             let ffi_status = ffi_add_symbols(op_a, op_b, &mut handle);
@@ -127,7 +126,7 @@ macro_rules! impl_symbol_field {
           }
         }
 
-        fn sub_handles(op_a: HandleCPP, op_b: HandleCPP) -> Result<HandleCPP, eIcicleError> {
+        fn sub_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
             let ffi_status = ffi_sub_symbols(op_a, op_b, &mut handle);
@@ -141,7 +140,7 @@ macro_rules! impl_symbol_field {
           }
         }
 
-        fn mul_handles(op_a: HandleCPP, op_b: HandleCPP) -> Result<HandleCPP, eIcicleError> {
+        fn mul_handles(op_a: SymbolHandle, op_b: SymbolHandle) -> Result<SymbolHandle, eIcicleError> {
           unsafe {
             let mut handle = std::ptr::null();
             let ffi_status = ffi_multiply_symbols(op_a, op_b, &mut handle);
@@ -175,23 +174,7 @@ macro_rules! impl_symbol_field {
       }
 
       impl Handle for FieldSymbol {
-        fn handle(&self) -> HandleCPP { self.m_handle }
-      }
-
-      impl DeletableHandle for FieldSymbol {
-        fn delete_handle(handle: HandleCPP) {
-          unsafe {
-            if !handle.is_null()
-            {
-              unsafe {
-                let ffi_status = ffi_delete_symbol(handle);
-                if ffi_status != eIcicleError::Success {
-                  panic!("Couldn't delete symbol, due to {:?}", ffi_status);
-                }
-              }
-            }
-          }
-        }
+        fn handle(&self) -> SymbolHandle { self.m_handle }
       }
 
       // Implement other traits required by Symbol<F>
@@ -295,7 +278,6 @@ macro_rules! impl_symbol_field {
             fn $assign_method(&mut self, other: FieldSymbol) {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              Self::delete_handle(self.m_handle);
               self.m_handle = res_handle;
             }
           }
@@ -306,7 +288,6 @@ macro_rules! impl_symbol_field {
             fn $assign_method(&mut self, other: &FieldSymbol) {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              Self::delete_handle(self.m_handle);
               self.m_handle = res_handle;
             }
           }
@@ -319,7 +300,6 @@ macro_rules! impl_symbol_field {
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               let res_handle = Self::$handles_method(self.m_handle, other_symbol.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
-              Self::delete_handle(self.m_handle);
               self.m_handle = res_handle;
             }
           }

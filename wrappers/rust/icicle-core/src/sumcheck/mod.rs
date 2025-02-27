@@ -159,7 +159,7 @@ pub trait Sumcheck {
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgram<Self::Field>,
+        combine_function: impl ReturningValueProgram,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
     ) -> Self::Proof;
@@ -184,11 +184,11 @@ where
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
-        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram, ProgramHandle};
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
-        use icicle_core::traits::{FieldImpl, Handle, HandleCPP};
+        use icicle_core::traits::{FieldImpl, Handle};
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
@@ -208,7 +208,7 @@ macro_rules! impl_sumcheck {
                 mle_poly_size: u64,
                 num_mle_polys: u64,
                 claimed_sum: &$field,
-                combine_function_handle: HandleCPP,
+                combine_function_handle: ProgramHandle,
                 transcript_config: &FFISumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> SumcheckProofHandle;
@@ -272,7 +272,7 @@ macro_rules! impl_sumcheck {
                 mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                 mle_poly_size: u64,
                 claimed_sum: $field,
-                combine_function: impl ReturningValueProgram<Self::Field> + Handle,
+                combine_function: impl ReturningValueProgram,
                 transcript_config: &SumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> Self::Proof {

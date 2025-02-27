@@ -1,6 +1,6 @@
+#pragma once
 #include <set>
 
-using namespace icicle;
 
 template <typename T>
 class ReleasePool
@@ -12,7 +12,7 @@ public:
     return instance;
   }
 
-  void insert(T* ptr) // TODO change to insert
+  void insert(T* ptr)
   {
     m_pool.insert(ptr);
   }
@@ -32,5 +32,5 @@ private:
   ReleasePool(const ReleasePool&) = delete;
   ReleasePool& operator=(const ReleasePool&) = delete;
 
-  std::set<T*> m_pool; // TODO thread local variable
+  std::set<T*> m_pool;
 };

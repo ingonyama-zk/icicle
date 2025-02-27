@@ -39,12 +39,6 @@ pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Outp
     fn pow(self, exp: usize) -> Self;
 }
 
-pub type HandleCPP = *const c_void;
-
 pub trait Handle {
-    fn handle(&self) -> HandleCPP;
-}
-
-pub trait DeletableHandle: Handle {
-    fn delete_handle(handle: HandleCPP);
+    fn handle(&self) -> *const c_void;
 }

@@ -34,14 +34,6 @@ SymbolHandle CONCAT_EXPAND(FIELD, copy_symbol)(const SymbolHandle other)
   return symbol_ptr;
 }
 
-// Destructor
-eIcicleError delete_symbol(SymbolHandle symbol)
-{
-  if (!symbol) { return eIcicleError::INVALID_POINTER; }
-  delete symbol;
-  return eIcicleError::SUCCESS;
-}
-
 eIcicleError CONCAT_EXPAND(FIELD, inverse_symbol)(const SymbolHandle input, SymbolHandle* output)
 {
   if (!input) { return eIcicleError::INVALID_POINTER; }

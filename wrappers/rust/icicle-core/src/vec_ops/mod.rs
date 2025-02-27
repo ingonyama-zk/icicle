@@ -547,11 +547,10 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         mod $field_prefix_ident {
-            use icicle_core::program::Program;
+            use icicle_core::program::{Program, ProgramHandle};
             use icicle_core::symbol::Symbol;
             use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
-            use icicle_core::traits::HandleCPP;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
@@ -674,7 +673,7 @@ macro_rules! impl_vec_ops_field {
                 pub(crate) fn execute_program_ffi(
                     data_ptr: *const *const $field,
                     nof_params: u64,
-                    program: HandleCPP,
+                    program: ProgramHandle,
                     nof_iterations: u64,
                     cfg: *const VecOpsConfig
                 ) -> eIcicleError;
@@ -1015,7 +1014,6 @@ macro_rules! impl_vec_ops_tests {
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
-            // use crate::symbol::$field_prefix_ident::Symbol;
             use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
 
             fn initialize() {

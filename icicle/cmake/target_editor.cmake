@@ -8,7 +8,6 @@ function(handle_field TARGET)
       src/vec_ops.cpp
       src/matrix_ops.cpp
       src/program/program_c_api.cpp
-      src/program/release_pool.h
       src/symbol/symbol_api.cpp
   )
 endfunction()
