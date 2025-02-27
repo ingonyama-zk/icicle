@@ -8,6 +8,7 @@
 #include "icicle/fri/fri_transcript_config.h"
 #include "icicle/errors.h"
 #include "icicle/hash/hash.h"
+#include "icicle/hash/pow.h"
 
 namespace icicle {
 
@@ -56,20 +57,35 @@ public:
     return m_prev_alpha;
   }
 
-  size_t hash_and_get_nof_leading_zero_bits(uint64_t nonce)
-  {
+  bool verify_pow(uint64_t nonce, uint8_t pow_bits) {
     // Prepare a buffer for hashing
     std::vector<std::byte> hash_input;
     hash_input.reserve(1024); // pre-allocate some space
-
-    // Build the hash input
-    build_hash_input_pow(hash_input, nonce);
-
+    build_hash_input_pow(hash_input);
     const Hash& hasher = m_transcript_config.get_hasher();
-    std::vector<std::byte> hash_result(hasher.output_size());
-    hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
+    const PowConfig cfg;
+    uint64_t mined_hash;
+    bool is_correct;
+    proof_of_work_verify(hasher, hash_input.data(), hash_input.size(), pow_bits, cfg, nonce, is_correct, mined_hash);
+    ICICLE_LOG_DEBUG << "Verified mined pow hash: " << mined_hash;
+    ICICLE_LOG_DEBUG << "Verified mined pow hash: 0x" << std::hex << mined_hash;
 
-    return count_leading_zero_bits(hash_result);
+    return is_correct;
+  }
+
+  eIcicleError solve_pow(uint64_t& nonce, size_t pow_bits, bool& found) {
+    // Prepare a buffer for hashing
+    std::vector<std::byte> hash_input;
+    hash_input.reserve(1024); // pre-allocate some space
+    build_hash_input_pow(hash_input);
+    const Hash& hasher = m_transcript_config.get_hasher();
+    const PowConfig cfg;
+    uint64_t mined_hash;
+    eIcicleError pow_error = proof_of_work(hasher, hash_input.data(), hash_input.size(), pow_bits, cfg, found, nonce, mined_hash);
+
+    ICICLE_LOG_DEBUG << "Mined pow hash: " << mined_hash;
+    ICICLE_LOG_DEBUG << "Mined pow hash: 0x" << std::hex << mined_hash;
+    return pow_error;
   }
 
   /**
@@ -190,17 +206,17 @@ private:
   }
 
   /**
-    * @brief Build the hash input for the proof-of-work nonce.
-    * hash_input = entry_0||alpha_{n-1}||"nonce"||nonce
+    * @brief Build the hash input prefix. The nonce is added later
+    * hash_input_prefix = entry_0||alpha_{n-1}||"nonce"
+    * hash_input = hash_input_prefix||nonce
     *
     * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
     */
-    void build_hash_input_pow(std::vector<std::byte>& hash_input, uint64_t temp_pow_nonce)
+    void build_hash_input_pow(std::vector<std::byte>& hash_input)
   {
     append_data(hash_input, m_entry_0);
     append_field(hash_input, m_prev_alpha);
     append_data(hash_input, m_transcript_config.get_nonce_label());
-    append_u64(hash_input, temp_pow_nonce);
   }
 
   /**

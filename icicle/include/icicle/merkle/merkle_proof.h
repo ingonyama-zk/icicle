@@ -164,6 +164,22 @@ namespace icicle {
     std::vector<std::byte> m_root;
     std::vector<std::byte> m_path;
 
+  public:
+    // For debugging and testing purposes
+    // FIXME SHANIE: how to get correct element_size and nof_elements? (for print_bytes)
+    eIcicleError print_proof() const
+    {
+      std::cout << "Merkle Proof:" << std::endl;
+      std::cout << "  Leaf index: " << m_leaf_index << std::endl;
+      std::cout << "  Pruned path: " << (m_pruned ? "Yes" : "No") << std::endl;
+      std::cout << "  Leaf data:" << std::endl;
+      print_bytes(m_leaf.data(), m_leaf.size(), 1);
+      std::cout << "  Root data:" << std::endl;
+      print_bytes(m_root.data(), m_root.size(), 1);
+      std::cout << "  Path data:" << std::endl;
+      print_bytes(m_path.data(), m_path.size(), 1);
+      return eIcicleError::SUCCESS;
+    }
   };
 
 } // namespace icicle

@@ -124,12 +124,24 @@ public:
             std::vector<std::byte> merkle_commit(root_size);
             std::memcpy(merkle_commit.data(), root_ptr, root_size);
             alpha_values[round_idx] = transcript.get_alpha(merkle_commit);
+
+            // ICICLE_LOG_INFO << "Alpha for round" << round_idx << ": " << alpha_values[round_idx];
+            // ICICLE_LOG_INFO << "merkle_commit for round" << round_idx << ": ";
+            // print_bytes(merkle_commit.data(), 1, merkle_commit.size());
         }
 
         // proof-of-work
         if (fri_config.pow_bits != 0) {
-            bool valid = (transcript.hash_and_get_nof_leading_zero_bits(fri_proof.get_pow_nonce()) == fri_config.pow_bits);
-            if (!valid) return eIcicleError::SUCCESS; // return with verification_pass = false
+            uint64_t proof_pow_nonce = fri_proof.get_pow_nonce();
+            ICICLE_LOG_INFO << "proof_pow_nonce: " << proof_pow_nonce;
+            // size_t pow_bits_from_proof = transcript.hash_and_get_nof_leading_zero_bits(proof_pow_nonce);
+            // ICICLE_LOG_INFO << "pow_bits_from_proof: " << pow_bits_from_proof;
+
+            ICICLE_ASSERT(transcript.verify_pow(proof_pow_nonce, fri_config.pow_bits));
+
+            // bool valid = (pow_bits_from_proof== fri_config.pow_bits);
+            // ICICLE_ASSERT(valid);
+            // if (!valid) return eIcicleError::SUCCESS; // return with verification_pass = false
             transcript.set_pow_nonce(fri_proof.get_pow_nonce());
         }
 
@@ -179,8 +191,8 @@ public:
                 // collinearity check
                 const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf();
                 const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
-                ICICLE_ASSERT(elem_idx == leaf_index) << "Leaf index from proof doesn't match query expected index";
-                ICICLE_ASSERT(elem_idx_sym == leaf_index_sym) << "Leaf index symmetry from proof doesn't match query expected index";
+                ICICLE_ASSERT(elem_idx == leaf_index) << "Leaf index from proof (" << leaf_index << ") doesn't match query expected index (" << elem_idx << ")";
+                ICICLE_ASSERT(elem_idx_sym == leaf_index_sym) << "Leaf index symmetry from proof (" << leaf_index_sym << ") doesn't match query expected index(" << elem_idx_sym << ")";
                 F leaf_data_f = F::from(leaf_data, leaf_size);
                 F leaf_data_sym_f = F::from(leaf_data_sym, leaf_size_sym);
                 F l_even = (leaf_data_f + leaf_data_sym_f) * F::inv_log_size(1);
