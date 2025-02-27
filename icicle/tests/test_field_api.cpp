@@ -1,4 +1,3 @@
-
 #include "test_mod_arithmetic_api.h"
 #include "icicle/sumcheck/sumcheck.h"
 #include "icicle/fri/fri.h"
@@ -740,11 +739,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     Fri prover_fri = create_fri<scalar_t, TypeParam>(
       input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
-    // set transcript config
     const char* domain_separator_label = "domain_separator_label";
-    const char* round_challenge_label = "round_challenge_label";
-    const char* commit_phase_label = "commit_phase_label";
-    const char* nonce_label = "nonce_label";
     std::vector<std::byte>&& public_state = {};
     TypeParam seed_rng = TypeParam::one();
 
