@@ -63,4 +63,8 @@ TEST_F(RingTestBase, RingRnsConversion)
   scalar_rns_t::convert_direct_to_rns(&r.limbs_storage, &r_rns_casted.limbs_storage);
   ASSERT_EQ(r_rns_casted, r_rns);
   ICICLE_LOG_INFO << "r=" << r << ", r_rns=" << r_rns_casted;
+  // convert rns back to direct
+  ASSERT_NE(r, r_backup);
+  scalar_rns_t::convert_rns_to_direct(&r_rns_casted.limbs_storage, &r.limbs_storage);
+  ASSERT_EQ(r, r_backup);
 }

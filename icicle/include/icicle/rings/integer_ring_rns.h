@@ -244,6 +244,33 @@ public:
   {
     convert_direct_to_rns(&zq.limbs_storage, &limbs_storage);
   }
+
+  static constexpr HOST_DEVICE_INLINE void
+  convert_rns_to_direct(const storage<RNS_CONFIG::limbs_count>* zqrns, storage<RNS_CONFIG::limbs_count>* zq /*OUT*/)
+  {
+    const bool inplace = zq == zqrns;
+
+    // TODO Yuval: generalize for any number of fields (this is labrador case)
+
+    // Precomputed Wi
+    using Zq = typename RNS_CONFIG::Zq;
+    Zq W0{RNS_CONFIG::W.storages[0]};
+    Zq W1{RNS_CONFIG::W.storages[1]};
+    // I now need SIGMA(Wi*xi) for each field
+    // Note: I compute it using the type Zq so I need to copy the element xi to a Zq type
+    // TODO Future: optimize this code my minimizing number of reductions etc.
+    Zq x0{};
+    Zq x1{};
+    std::memcpy(&x0, (std::byte*)zqrns, 4 /*sizeof the field*/);
+    std::memcpy(&x1, (std::byte*)zqrns + 4, 4 /*sizeof the field*/);
+
+    std::cout << "x0=" << x0 << ", x1=" << x1 << ", W0=" << W0 << ", W1=" << W1 << std::endl;
+    // Compute the sum mod q
+    Zq zq0 = x0 * W0;
+    Zq zq1 = x1 * W1;
+    Zq zq_sum = zq0 + zq1;
+    *zq = zq_sum.limbs_storage;
+  }
 };
 
 template <class CONFIG>
