@@ -203,7 +203,47 @@ public:
       res, [logn](auto x) { return decltype(x)::inv_log_size(logn); }, std::make_index_sequence<NofFields>{});
   }
 
-  // TODO Yuval: conversion to/from direct representation (from/to limbs to avoid coupling the types Zq and ZqRns)
+  static constexpr HOST_DEVICE_INLINE void
+  convert_direct_to_rns(const storage<RNS_CONFIG::limbs_count>* zq, storage<RNS_CONFIG::limbs_count>* zqrns /*OUT*/)
+  {
+    // Reduce zq mod pi, elementwise
+    const bool inplace = zq == zqrns;
+    IntegerRingRns* rns_out_casted = (IntegerRingRns*)(zqrns);
+    if (inplace) {
+      // Inplace: copy input/output to local memory (GPU regs or CPU stack) and reduce from there
+      IntegerRingRns tmp_local_mem;
+      tmp_local_mem.limbs_storage = *zq;
+      apply_op_inplace(
+        *rns_out_casted,
+        [&](auto x) {
+          return decltype(x)::from((std::byte*)&tmp_local_mem, RNS_CONFIG::limbs_count * sizeof(uint32_t));
+        },
+        std::make_index_sequence<NofFields>{});
+    } else {
+      // reduce directly from input to output
+      apply_op_inplace(
+        *rns_out_casted,
+        [&](auto x) { return decltype(x)::from((std::byte*)zq, RNS_CONFIG::limbs_count * sizeof(uint32_t)); },
+        std::make_index_sequence<NofFields>{});
+    }
+  }
+
+  // Conversion to/from direct representation
+  template <typename Zq>
+  static constexpr HOST_DEVICE IntegerRingRns from_direct(const Zq& zq)
+  {
+    IntegerRingRns res;
+    convert_direct_to_rns(&zq.limbs_storage, &res.limbs_storage);
+    return res;
+  }
+
+  IntegerRingRns() = default;
+
+  template <typename Zq>
+  IntegerRingRns(const Zq& zq)
+  {
+    convert_direct_to_rns(&zq.limbs_storage, &limbs_storage);
+  }
 };
 
 template <class CONFIG>
