@@ -1,6 +1,11 @@
 
 #include "test_mod_arithmetic_api.h"
 
+#include "icicle/fri/fri.h"
+#include "icicle/fri/fri_config.h"
+#include "icicle/fri/fri_proof.h"
+#include "icicle/fri/fri_transcript_config.h"
+
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
 class FieldTest : public ModArithTest<T>
@@ -577,8 +582,7 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 #endif // SUMCHECK
 
 #ifdef FRI
-
-TYPED_TEST(FieldTestBase, Fri)
+TYPED_TEST(FieldTest, Fri)
 {
   // Non-random configuration
   // const int log_input_size = 10;
@@ -655,7 +659,7 @@ TYPED_TEST(FieldTestBase, Fri)
   run(IcicleTestBase::reference_device());
   run(IcicleTestBase::main_device());
 }
-endif // FRI
+#endif // FRI
 
 
 // TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
