@@ -1,6 +1,6 @@
 #pragma once
 
-#include "icicle/fields/storage.h"
+#include "icicle/math/storage.h"
 #include "icicle/fields/field.h"
 #include "icicle/fields/complex_extension.h"
 #include "icicle/fields/quartic_extension.h"
@@ -44,7 +44,7 @@ namespace m31 {
         storage<2> temp = {};
         temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
         temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
-        base_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
+        icicle_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
       }
       // second reduction step:
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];
@@ -68,7 +68,7 @@ namespace m31 {
         storage<2> temp = {};
         temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
         temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
-        base_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
+        icicle_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
       }
       // second reduction step:
       const uint32_t modulus = MersenneField::get_modulus().limbs[0];

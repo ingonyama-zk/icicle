@@ -15,9 +15,9 @@ where
     let domain_tag = F::Config::generate_random(1)[0];
     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
         let large_field = mem::size_of::<F>() > 4;
-        let skip_case = large_field && t > 4; // TODO Danny add  8, 12, 16, 20, 24 for large fields once all is supported
+        let skip_case = large_field && t > 4; // In Poseidon2 there is no support for large fields when t > 4.
         if skip_case {
-            continue; // TODO Danny remove this
+            continue;
         };
         for domain_tag in [None, Some(&domain_tag)] {
             let inputs: Vec<F> = if domain_tag != None {
@@ -50,44 +50,47 @@ where
                 )
                 .unwrap();
 
-            assert_eq!(outputs_main, outputs_ref);
+            assert_eq!(outputs_main, outputs_ref, "Domain tag {:?}, t {:?}", domain_tag, t);
         }
     }
 }
 
 // TODO uncomment once Poseidon2 sponge function is ready
-// pub fn check_poseidon2_hash_sponge<F: FieldImpl>()
-// where
-//     <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
-// {
-//     for t in [2, 3, 4, 8, 12, 16, 20, 24] {
-//         let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
-//         let mut outputs_main = vec![F::zero(); 1];
-//         let mut outputs_ref = vec![F::zero(); 1];
+pub fn check_poseidon2_hash_sponge<F: FieldImpl>()
+where
+    <F as FieldImpl>::Config: Poseidon2Hasher<F> + GenerateRandom<F>,
+{
+    for t in [2, 3, 4, 8, 12, 16, 20, 24] {
+        let large_field = mem::size_of::<F>() > 4;
+        let skip_case = large_field && t > 4; // In Poseidon2 there is no support for large fields when t > 4.
+        if skip_case {
+            continue;
+        };
+        let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
+        let mut outputs_main = vec![F::zero(); 1];
+        let mut outputs_ref = vec![F::zero(); 1];
 
-//         test_utilities::test_set_main_device();
-//         let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+        test_utilities::test_set_main_device();
+        let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-//         poseidon_hasher_main
-//             .hash(
-//                 HostSlice::from_slice(&inputs),
-//                 &HashConfig::default(),
-//                 HostSlice::from_mut_slice(&mut outputs_main),
-//             )
-//             .unwrap();
+        let main_device_err = poseidon_hasher_main.hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_main),
+        ).unwrap();
 
-//         // Sponge poseidon is planned for v3.2. Not supported in v3.1
-//         test_utilities::test_set_ref_device();
-//         let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
+        test_utilities::test_set_ref_device();
+        let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-//         let err = poseidon_hasher_ref.hash(
-//             HostSlice::from_slice(&inputs),
-//             &HashConfig::default(),
-//             HostSlice::from_mut_slice(&mut outputs_ref),
-//         );
-//         assert_eq!(err, Err(eIcicleError::InvalidArgument));
-//     }
-// }
+        let ref_device_err = poseidon_hasher_ref.hash(
+            HostSlice::from_slice(&inputs),
+            &HashConfig::default(),
+            HostSlice::from_mut_slice(&mut outputs_ref),
+        ).unwrap();
+
+        assert_eq!(main_device_err, ref_device_err);
+    }
+}
 
 pub fn check_poseidon2_hash_multi_device<F: FieldImpl>()
 where

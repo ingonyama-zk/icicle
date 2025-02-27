@@ -2,7 +2,7 @@
 #ifndef BLS12_381_BASE_PARAMS_H
   #define BLS12_381_BASE_PARAMS_H
 
-  #include "icicle/fields/storage.h"
+  #include "icicle/math/storage.h"
   #include "icicle/fields/params_gen.h"
 
 namespace bls12_381 {

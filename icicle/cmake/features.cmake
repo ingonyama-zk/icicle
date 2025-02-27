@@ -1,5 +1,5 @@
 
-# Define available fields with an index and their supported features
+# Define available field libraries with an index and their supported features
 # Format: index:field:features
 set(ICICLE_FIELDS
   1001:babybear:NTT,EXT_FIELD,POSEIDON,POSEIDON2,SUMCHECK
@@ -8,7 +8,7 @@ set(ICICLE_FIELDS
   1004:koalabear:NTT,EXT_FIELD,POSEIDON,POSEIDON2,SUMCHECK
 )
 
-# Define available curves with an index and their supported features
+# Define available curve libraries with an index and their supported features
 # Format: index:curve:features
 set(ICICLE_CURVES
   1:bn254:NTT,MSM,G2,ECNTT,POSEIDON,POSEIDON2,SUMCHECK
@@ -16,4 +16,10 @@ set(ICICLE_CURVES
   3:bls12_377:NTT,MSM,G2,ECNTT,POSEIDON,POSEIDON2,SUMCHECK
   4:bw6_761:NTT,MSM,G2,ECNTT,POSEIDON,POSEIDON2,SUMCHECK
   5:grumpkin:MSM,POSEIDON,POSEIDON2,SUMCHECK
+)
+
+# Define available ring libraries with an index and their supported features
+# Format: index:curve:features
+set(ICICLE_RINGS
+  2001:labrador:NTT
 )
