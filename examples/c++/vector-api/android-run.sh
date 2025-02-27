@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Exit immediately if a command exits with a non-zero status
+rm -r build
 set -e
 
 # Function to display usage information
@@ -39,7 +40,7 @@ done
 
 # Set default values if not provided
 : "${DEVICE_TYPE:=CPU}"
-: "${ICICLE_BACKEND_INSTALL_DIR:=}"
+: "${ICICLE_BACKEND_INSTALL_DIR:=../../../icicle/backend/vulkan}"
 
 DEVICE_TYPE_LOWERCASE=$(echo "$DEVICE_TYPE" | tr '[:upper:]' '[:lower:]')
 
@@ -52,22 +53,20 @@ ICICLE_DIR=$(realpath "../../../icicle/")
 echo -e "\033[33m$ICICLE_DIR\033[0m"
 ICICLE_BACKEND_SOURCE_DIR="${ICICLE_DIR}/backend/${DEVICE_TYPE_LOWERCASE}"
 echo -e "\033[33m$ICICLE_BACKEND_SOURCE_DIR\033[0m"
+echo -e  "\033[33m$NDK_DIR\033[0m"
 # Build Icicle and the example app that links to it
 if [ "$DEVICE_TYPE" != "CPU" ] && [ ! -d "${ICICLE_BACKEND_INSTALL_DIR}" ] && [ -d "${ICICLE_BACKEND_SOURCE_DIR}" ]; then
   echo -e "\033[33mConfigure icicle and ${DEVICE_TYPE} backend\033[0m"
-  # cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B build/icicle
-  
-  # cmake -DVULKAN_BACKEND=local -DBUILD_FOR_ANDROID=ON -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF "-D${DEVICE_TYPE}_BACKEND"=local -S "${ICICLE_DIR}" -B build/icicle
   cmake -DVULKAN_BACKEND=local -DBUILD_TESTS=OFF -DBUILD_FOR_ANDROID=ON -DANDROID_PLATFORM=android-35 -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -DG2=OFF -DECNTT=OFF -S "${ICICLE_DIR}" -B build/icicle
   export ICICLE_BACKEND_INSTALL_DIR=$(realpath "build/icicle/backend")
   echo -e "\033[33mCompleted configuring icicle and ${DEVICE_TYPE} backend\033[0m"
 else
   echo "Building icicle without backend, ICICLE_BACKEND_INSTALL_DIR=${ICICLE_BACKEND_INSTALL_DIR}"
   export ICICLE_BACKEND_INSTALL_DIR="${ICICLE_BACKEND_INSTALL_DIR}"
-  cmake -DCMAKE_BUILD_TYPE=Release -DFIELD=babybear -DEXT_FIELD=OFF -S "${ICICLE_DIR}" -B build/icicle
+  cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_FOR_ANDROID=ON  -DFIELD=babybear -DEXT_FIELD=OFF -S "${ICICLE_DIR}" -B build/icicle
 fi
 echo -e "\033[33mConfigure example\033[0m"
-cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 -DCMAKE_BUILD_TYPE=Release -S . -B build/example
+cmake -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk-r28/build/cmake/android.toolchain.cmake -DANDROID_NDK=/opt/android-ndk-r28 -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-35 -DCMAKE_BUILD_TYPE=Release -S . -B build/example # todo use variable for install dir
 echo -e "\033[33mCompleted configuring example\033[0m"
 
 echo -e "\033[33mBuilding icicle and ${DEVICE_TYPE} backend\033[0m"
