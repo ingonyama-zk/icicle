@@ -1,7 +1,6 @@
 #pragma once
 #include <set>
 
-
 template <typename T>
 class ReleasePool
 {
@@ -12,10 +11,7 @@ public:
     return instance;
   }
 
-  void insert(T* ptr)
-  {
-    m_pool.insert(ptr);
-  }
+  void insert(T* ptr) { m_pool.insert(ptr); }
 
   void clear()
   {
