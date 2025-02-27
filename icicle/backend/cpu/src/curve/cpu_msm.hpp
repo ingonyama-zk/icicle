@@ -42,14 +42,21 @@ public:
   }
 
   // run MSM based on pippenger algorithm
-  void run_msm(const scalar_t* scalars, const A* bases, P* results)
+  void run_msm(const scalar_t* scalars, const A* bases, P* results, bool last_task_on_batch)
   {
     phase1_populate_buckets(scalars, bases);
 
+    wait_last_task_completed();
+
     phase2_collapse_segments();
 
-    // TBD: start the next task in batch in parallel to phase 3
-    phase3_final_accumulator(results);
+    if (last_task_on_batch) {
+      phase3_final_accumulator(results);
+      m_phase3_thread = nullptr;
+    }
+    else {
+      m_phase3_thread = new std::thread(&Msm::phase3_final_accumulator, this, results);
+    }
   }
 
   // Calculate the optimal C based on the problem size, config and machine parameters.
@@ -57,7 +64,8 @@ public:
   {
     // TBD: optimize - condsider nof workers, do experiments
     int optimal_c = config.c > 0 ? config.c :                                                   // c given by config.
-                      std::max((int)(0.7 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
+                      std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
+                      std::cout << "optimal_c: " << optimal_c << std::endl;
     return optimal_c;
   }
 
@@ -87,6 +95,7 @@ private:
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
   uint32_t m_segment_size;       // segments size for phase 2.
   uint32_t m_nof_workers;        // number of threads in current machine
+  std::thread* m_phase3_thread = nullptr;
 
   // per worker:
   std::vector<std::vector<Bucket>> m_workers_buckets;    // all buckets used by the worker
@@ -134,6 +143,13 @@ private:
     m_taskflow.clear();
   }
 
+  // if there is a phase3 task runninf, wait for it to complete
+  void wait_last_task_completed() {
+    if (m_phase3_thread) {
+      m_phase3_thread->join();
+    }
+  }    
+
   // phase 1: Each worker process a portion of the inputs and populate its buckets
   void phase1_populate_buckets(const scalar_t* scalars, const A* bases)
   {
@@ -142,7 +158,7 @@ private:
 
     // Run workers to build their buckets on a subset of the scalars and bases
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
-      m_taskflow.emplace([=]() {
+      m_taskflow.emplace([&, worker_i]() {
         const int scalars_start_idx = worker_msm_size * worker_i;
         const int bases_start_idx = scalars_start_idx * m_precompute_factor;
         const int cur_worker_msm_size = std::min(worker_msm_size, m_msm_size - worker_i * worker_msm_size);
@@ -217,18 +233,36 @@ private:
     }
   }
 
+//   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
+//   void phase2_collapse_segments()
+//   {
+// //    for (int segment_idx = 0; segment_idx < m_segments.size();
+//     for (int worker_i = 0; worker_i < 10;
+//       worker_i++) { // TBD: divide the work among m_nof_workers only.
+//       // Each thread is responsible for a sinעle thread
+//       m_taskflow.emplace([&, worker_i]() {
+//         for (int segment_idx = worker_i*16; segment_idx < worker_i*16+16; segment_idx++) {
+//         const uint64_t bucket_start = segment_idx * m_segment_size;
+//         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
+//         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
+//         }
+//       });
+//     }
+//     run_workers_and_wait();
+//   }
+
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
   {
-    uint64_t bucket_start = 0;
+//    for (int segment_idx = 0; segment_idx < m_segments.size();
     for (int segment_idx = 0; segment_idx < m_segments.size();
-         segment_idx++) { // TBD: divide the work among m_nof_workers only.
+    segment_idx++) { 
       // Each thread is responsible for a sinעle thread
-      m_taskflow.emplace([=]() {
+      m_taskflow.emplace([&, segment_idx]() {
+        const uint64_t bucket_start = segment_idx * m_segment_size;
         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
       });
-      bucket_start += m_segment_size;
     }
     run_workers_and_wait();
   }
@@ -341,7 +375,7 @@ eIcicleError cpu_msm(
   for (int batch_i = 0; batch_i < config.batch_size; batch_i++) {
     const int batch_start_idx = msm_size * batch_i;
     const int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
-    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i]);
+    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i], batch_i+1 == config.batch_size);
   }
   return eIcicleError::SUCCESS;
 }
