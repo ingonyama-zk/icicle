@@ -1,4 +1,3 @@
-
 #include "test_mod_arithmetic_api.h"
 
 #include "icicle/fri/fri.h"
@@ -602,15 +601,17 @@ TYPED_TEST(FieldTest, Fri)
   const size_t stopping_degree = stopping_size - 1;
   const uint64_t output_store_min_layer = 0;
 
-  ICICLE_LOG_DEBUG << "log_input_size = " << log_input_size;
-  ICICLE_LOG_DEBUG << "input_size = " << input_size;
-  ICICLE_LOG_DEBUG << "folding_factor = " << folding_factor;
-  ICICLE_LOG_DEBUG << "stopping_size = " << stopping_size;
-  ICICLE_LOG_DEBUG << "log_stopping_size = " << log_stopping_size;
-  ICICLE_LOG_DEBUG << "pow_bits = " << pow_bits;
-  ICICLE_LOG_DEBUG << "nof_queries = " << nof_queries;
+  ICICLE_LOG_INFO << "log_input_size    = " << log_input_size;
+  ICICLE_LOG_INFO << "log_stopping_size = " << log_stopping_size;
+  ICICLE_LOG_INFO << "folding_factor    = " << folding_factor;
+  ICICLE_LOG_INFO << "pow_bits          = " << pow_bits;
+  ICICLE_LOG_INFO << "nof_queries       = " << nof_queries;
 
-  auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries, pow_bits](
+  // Generate input polynomial evaluations
+  auto scalars = std::make_unique<scalar_t[]>(input_size);
+  scalar_t::rand_host_many(scalars.get(), input_size);
+
+  auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries, pow_bits, &scalars](
     const std::string& dev_type
   ) {
     Device dev = {dev_type, 0};
@@ -619,10 +620,6 @@ TYPED_TEST(FieldTest, Fri)
     // Initialize ntt domain
     NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
-
-    // Generate input polynomial evaluations
-    auto scalars = std::make_unique<scalar_t[]>(input_size);
-    scalar_t::rand_host_many(scalars.get(), input_size);
 
     // ===== Prover side ======
     uint64_t merkle_tree_arity = 2; // TODO SHANIE - add support for other arities
