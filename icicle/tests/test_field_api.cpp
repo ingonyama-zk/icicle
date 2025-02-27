@@ -635,6 +635,7 @@ TYPED_TEST(FieldTest, Fri)
 
         // Initialize ntt domain
         NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+        ICICLE_LOG_INFO << "Initializing domain of size: 1 << " << log_input_size << " (" << (1 << log_input_size) << ")";
         ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
 
         // ===== Prover side ======
@@ -694,6 +695,12 @@ TYPED_TEST(FieldTest, Fri)
 
 TYPED_TEST(FieldTest, FriShouldFailCases)
 {
+  // Non-random configuration
+  // const int log_input_size = 10;
+  // const int log_stopping_size = 4;
+  // const size_t pow_bits = 0;
+  // const size_t nof_queries = 4;
+  
   // Randomize configuration
   const size_t log_input_size = rand_uint_32b(3, 13);
   const size_t input_size = 1 << log_input_size;

@@ -147,17 +147,20 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError proof_of_work(FriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof)
-    {
-      for (uint64_t nonce = 0; nonce < UINT64_MAX; nonce++) {
-        if (transcript.hash_and_get_nof_leading_zero_bits(nonce) == pow_bits) {
-          transcript.set_pow_nonce(nonce);
-          fri_proof.set_pow_nonce(nonce);
-          return eIcicleError::SUCCESS;
-        }
+    eIcicleError proof_of_work(FriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof){
+      uint64_t nonce = 0;
+      bool found = false;
+      eIcicleError pow_err = transcript.solve_pow(nonce, pow_bits, found);
+      if (pow_err != eIcicleError::SUCCESS) {
+        ICICLE_LOG_ERROR << "Failed to find a proof-of-work nonce";
+        return pow_err;
       }
-      ICICLE_LOG_ERROR << "Failed to find a proof-of-work nonce";
-      return eIcicleError::UNKNOWN_ERROR;
+
+      ICICLE_ASSERT(found);
+
+      transcript.set_pow_nonce(nonce);
+      fri_proof.set_pow_nonce(nonce);
+      return eIcicleError::SUCCESS;
     }
 
     /**
