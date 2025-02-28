@@ -36,8 +36,6 @@ where
     fn sub(&self, rhs: &Self) -> Self;
     fn mul(&self, rhs: &Self) -> Self;
     fn mul_by_scalar(&self, rhs: &Self::Field) -> Self;
-    fn div(&self, rhs: &Self) -> Self;
-    fn rem(&self, rhs: &Self) -> Self;
 }
 
 #[macro_export]
@@ -333,22 +331,6 @@ macro_rules! impl_univariate_polynomial_api {
                 unsafe {
                     Self {
                         handle: multiply_by_scalar(self.handle, rhs),
-                    }
-                }
-            }
-
-            fn div(&self, rhs: &Self) -> Self {
-                unsafe {
-                    Self {
-                        handle: quotient(self.handle, rhs.handle),
-                    }
-                }
-            }
-
-            fn rem(&self, rhs: &Self) -> Self {
-                unsafe {
-                    Self {
-                        handle: remainder(self.handle, rhs.handle),
                     }
                 }
             }
