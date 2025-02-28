@@ -65,6 +65,15 @@ where
     };
     p
 }
+//use UnivariatePolynomial trait to perform polynomial operations on arbitrary fields
+//fold_poly takes a polynomial and a scalar as input and returns a polynomial
+fn fold_poly<P: UnivariatePolynomial>(poly: P, beta: P::Field) -> P {
+    let o = poly.odd(); // Get the odd terms (in coeff form)
+    let e = poly.even(); // Get the even terms (in coeff form)
+                         // Perform the fold operation: e + (o * beta)
+    let o_beta = o.mul_by_scalar(&beta); // o * beta (polynomial * scalar)
+    e.add(&o_beta) // e + (o * beta) (addition of polynomials)
+}
 
 fn main() {
     let args = Args::parse();
@@ -118,7 +127,10 @@ fn main() {
     let fold = &e + &(&o * &q_at_five); // e(x) + o(x) * scalar
 
     let _coeff = fold.get_coeff(2); // Coeff of x^2
-
+                                    //using univariate poly trait, it inherits all methods from densepolynomial for specific fields
+    println!("Performing folding operation on h using Univariatepoly trait");
+    let fold_univariate = fold_poly(h, q_at_five);
+    assert_eq!(fold.eval(&five), fold_univariate.eval(&five));
     println!(
         "Polynomial computation on selected device took: {} ms",
         start
