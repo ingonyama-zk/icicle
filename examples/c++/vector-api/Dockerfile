@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
-# Use an official Ubuntu base image. Using an newer version breaks the dxc build
-FROM --platform=linux/amd64 ubuntu:20.04
+# Use an official Ubuntu base image. 
+FROM --platform=linux/amd64 ubuntu:24.04
 
 # Set environment variables for non-interactive installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,14 +16,10 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     git \
     ninja-build \
-    python3.8
+    python3.8 \
+    xxd
 
 
-# Register the version in alternatives
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.8 10
-
-# Set python 3 as the default python
-RUN update-alternatives --set python /usr/bin/python3.8
 
 
 # Install cmake, the version in apt is too old 
@@ -44,8 +40,9 @@ ENV PATH="$PATH:linux_dxc_2025_02_20.x86_64/bin/dxc"
 # Set the Android NDK version and download URL
 ARG NDK_VERSION=28
 ARG NDK_URL=https://dl.google.com/android/repository/android-ndk-r${NDK_VERSION}-linux.zip
-ENV NDK_DIR=/opt/android-ndk
-ENV CMAKE_ANDROID_NDK=/opt/android-ndk
+ENV ANDROID_NDK=/opt/android-ndk-r28/
+ENV NDK_DIR=/opt/android-ndk-r28/
+ENV CMAKE_ANDROID_NDK=/opt/android-ndk-r28/
 
 # Download and extract the Android NDK
 RUN curl -L ${NDK_URL} -o android-ndk.zip
