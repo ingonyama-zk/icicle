@@ -584,7 +584,7 @@ TYPED_TEST(FieldTest, Fri)
   const int log_input_size = rand_uint_32b(3, 13);
   const size_t input_size = 1 << log_input_size;
   const int folding_factor = 2; // TODO SHANIE - add support for other folding factors
-  const int log_stopping_size = rand_uint_32b(0, log_input_size-2);
+  const int log_stopping_size = rand_uint_32b(0, log_input_size - 2);
   const size_t stopping_size = 1 << log_stopping_size;
   const size_t stopping_degree = stopping_size - 1;
   const uint64_t output_store_min_layer = 0;
@@ -601,15 +601,17 @@ TYPED_TEST(FieldTest, Fri)
 
   // ===== Prover side ======
   uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-  
-  // Define hashers for merkle tree 
-  Hash hash = Keccak256::create(sizeof(TypeParam)); // hash element -> 32B
+
+  // Define hashers for merkle tree
+  Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
   Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
 
-  Fri prover_fri = create_fri<scalar_t, TypeParam>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
+  Fri prover_fri = create_fri<scalar_t, TypeParam>(
+    input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
   FriTranscriptConfig<TypeParam> prover_transcript_config;
-  FriTranscriptConfig<TypeParam> verifier_transcript_config; //FIXME SHANIE - verfier and prover should have the same config
+  FriTranscriptConfig<TypeParam>
+    verifier_transcript_config; // FIXME SHANIE - verfier and prover should have the same config
   FriConfig fri_config;
   fri_config.nof_queries = nof_queries;
   fri_config.pow_bits = pow_bits;
@@ -618,7 +620,8 @@ TYPED_TEST(FieldTest, Fri)
   ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(prover_transcript_config), scalars.get(), fri_proof));
 
   // ===== Verifier side ======
-  Fri verifier_fri = create_fri<scalar_t, TypeParam>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
+  Fri verifier_fri = create_fri<scalar_t, TypeParam>(
+    input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
   bool verification_pass = false;
   ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(verifier_transcript_config), fri_proof, verification_pass));
 
@@ -628,7 +631,6 @@ TYPED_TEST(FieldTest, Fri)
   ICICLE_CHECK(ntt_release_domain<scalar_t>());
 }
 // #endif // FRI
-
 
 // TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
 //             It means we skip fields such as babybear!

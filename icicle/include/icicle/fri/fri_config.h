@@ -14,13 +14,14 @@ namespace icicle {
    * It also supports backend-specific extensions for customization.
    */
   struct FriConfig {
-    icicleStreamHandle stream = nullptr;      // Stream for asynchronous execution. Default is nullptr.
-    size_t pow_bits = 0;                      // Number of leading zeros required for proof-of-work. Default is 0.
-    size_t nof_queries = 1;                   // Number of queries, computed for each folded layer of FRI. Default is 1.
-    bool are_inputs_on_device = false;        // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
-    bool are_outputs_on_device = false;       // True if outputs reside on the device, false if on the host. Default is false.
-    bool is_async = false;                    // True to run operations asynchronously, false to run synchronously. Default is false.
-    ConfigExtension* ext = nullptr;           // Pointer to backend-specific configuration extensions. Default is nullptr.
+    icicleStreamHandle stream = nullptr; // Stream for asynchronous execution. Default is nullptr.
+    size_t pow_bits = 0;                 // Number of leading zeros required for proof-of-work. Default is 0.
+    size_t nof_queries = 1;              // Number of queries, computed for each folded layer of FRI. Default is 1.
+    bool are_inputs_on_device =
+      false; // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
+    bool are_outputs_on_device = false; // True if outputs reside on the device, false if on the host. Default is false.
+    bool is_async = false; // True to run operations asynchronously, false to run synchronously. Default is false.
+    ConfigExtension* ext = nullptr; // Pointer to backend-specific configuration extensions. Default is nullptr.
   };
 
   /**

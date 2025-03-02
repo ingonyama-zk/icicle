@@ -29,7 +29,6 @@ static size_t rand_size_t(size_t min = 0, size_t max = SIZE_MAX)
   return dist(rand_generator);
 }
 
-
 /**
  * @brief Generate random unsigned integer in range (inclusive)
  * @param min Lower limit.

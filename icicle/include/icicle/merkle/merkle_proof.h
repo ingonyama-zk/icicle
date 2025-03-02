@@ -163,7 +163,6 @@ namespace icicle {
     std::vector<std::byte> m_leaf;
     std::vector<std::byte> m_root;
     std::vector<std::byte> m_path;
-
   };
 
 } // namespace icicle

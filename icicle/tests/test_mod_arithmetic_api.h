@@ -22,7 +22,6 @@
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
 
-
 #include "test_base.h"
 
 using namespace field_config;

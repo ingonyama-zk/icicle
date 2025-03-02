@@ -242,7 +242,7 @@ public:
       FF::reduce(
         (CONFIG::nonresidue_is_negative
            ? (FF::mul_wide(xs.real, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))
-           : (FF::mul_wide(xs.real, x0))-FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
+           : (FF::mul_wide(xs.real, x0)) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
       FF::reduce(
         (CONFIG::nonresidue_is_negative
            ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2)))
@@ -268,11 +268,9 @@ public:
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
     ICICLE_ASSERT(nof_bytes >= 4 * sizeof(FF)) << "Input size is too small";
-    return QuarticExtensionField{FF::from(in, sizeof(FF)),
-                         FF::from(in + sizeof(FF), sizeof(FF)),
-                          FF::from(in + 2 * sizeof(FF), sizeof(FF)),
-                          FF::from(in + 3 * sizeof(FF), sizeof(FF))};
-                        
+    return QuarticExtensionField{
+      FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF)), FF::from(in + 2 * sizeof(FF), sizeof(FF)),
+      FF::from(in + 3 * sizeof(FF), sizeof(FF))};
   }
 };
 #if __CUDACC__
