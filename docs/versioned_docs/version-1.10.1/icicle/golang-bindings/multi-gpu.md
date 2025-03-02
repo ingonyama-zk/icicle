@@ -70,7 +70,7 @@ Runs a given function on a specific GPU device, ensuring that all CUDA calls wit
 
 In Go, most concurrency can be done via Goroutines. However, there is no guarantee that a goroutine stays on a specific host thread. 
 
-`RunOnDevice` was designed to solve this caveat and insure that the goroutine will stay on a specific host thread.
+`RunOnDevice` was designed to solve this caveat and ensure that the goroutine will stay on a specific host thread.
 
 `RunOnDevice` will lock a goroutine into a specific host thread, sets a current GPU device, runs a provided function, and unlocks the goroutine from the host thread after the provided function finishes.
 
