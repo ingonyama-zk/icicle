@@ -1,5 +1,4 @@
 #pragma once
-#include <chrono>
 #include <time.h>
 #include <random>
 
@@ -8,16 +7,15 @@
 #include "icicle/utils/log.h"
 #include "icicle/utils/rand_gen.h"
 
-using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
+using FpMiliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
 #define START_TIMER(timer) auto timer##_start = std::chrono::high_resolution_clock::now();
 #define END_TIMER(timer, msg, enable)                                                                                  \
   if (enable)                                                                                                          \
-    printf("%s: %.3f ms\n", msg, FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
+    printf("%s: %.3f ms\n", msg, FpMiliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count());
 #define END_TIMER_AVERAGE(timer, msg, enable, iters)                                                                   \
   if (enable)                                                                                                          \
     printf(                                                                                                            \
-      "%s: %.3f ms\n", msg,                                                                                            \
-      FpMilliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / iters);
+      "%s: %.3f ms\n", msg, FpMiliseconds(std::chrono::high_resolution_clock::now() - timer##_start).count() / iters);
 
 #define UNKOWN_DEVICE "UNKNOWN"
 

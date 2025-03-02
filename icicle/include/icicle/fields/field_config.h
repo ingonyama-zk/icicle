@@ -46,7 +46,3 @@ namespace field_config = koalabear;
   #include "icicle/rings/integer_rings/labrador.h"
 namespace field_config = labrador;
 #endif
-#if RING_ID == GREYHOUND
-  #include "icicle/rings/integer_rings/greyhound.h"
-namespace field_config = greyhound;
-#endif

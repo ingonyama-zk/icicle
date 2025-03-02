@@ -32,41 +32,6 @@ struct
   uint32_t limbs[3];
 };
 
-// Specialization for LIMBS_COUNT == 5
-template <>
-struct
-#ifdef __CUDA_ARCH__
-  __align__(LIMBS_ALIGNMENT(5))
-#endif
-    storage<5> {
-  static constexpr unsigned LC = 5;
-  uint32_t limbs[5];
-};
-
-// Specialization for LIMBS_COUNT == 10
-
-template <>
-struct
-#ifdef __CUDA_ARCH__
-  __align__(LIMBS_ALIGNMENT(10))
-#endif
-    storage<10> {
-  static constexpr unsigned LC = 10;
-  uint32_t limbs[10];
-};
-
-// Specialization for LIMBS_COUNT == 15
-
-template <>
-struct
-#ifdef __CUDA_ARCH__
-  __align__(LIMBS_ALIGNMENT(15))
-#endif
-    storage<15> {
-  static constexpr unsigned LC = 15;
-  uint32_t limbs[15];
-};
-
 // General template for LIMBS_COUNT > 1
 template <unsigned LIMBS_COUNT>
 struct

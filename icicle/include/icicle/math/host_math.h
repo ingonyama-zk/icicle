@@ -190,8 +190,7 @@ namespace host_math {
   static constexpr HOST_INLINE uint32_t // 32 is enough for the carry
   add_sub_limbs(const storage<NLIMBS>& xs, const storage<NLIMBS>& ys, storage<NLIMBS>& rs)
   {
-    // TODO: can do 64b addition for odd number of limbs too with some extra logic
-    if constexpr (USE_32 || NLIMBS % 2 != 0) {
+    if constexpr (USE_32 || NLIMBS < 2) {
       const uint32_t* x = xs.limbs;
       const uint32_t* y = ys.limbs;
       uint32_t* r = rs.limbs;
@@ -256,8 +255,10 @@ namespace host_math {
   static constexpr HOST_INLINE void
   multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
-    // TODO: can do 64b multiplication for odd number of limbs too with some extra logic
-    if constexpr (USE_32 || NLIMBS_A % 2 != 0 || NLIMBS_B % 2 != 0) {
+    static_assert(
+      ((NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1)) || USE_32,
+      "odd number of limbs is not supported for 64 bit multiplication\n");
+    if constexpr (USE_32) {
       multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
       return;
     } else if constexpr ((NLIMBS_A == 1 && NLIMBS_B == 2) || (NLIMBS_A == 2 && NLIMBS_B == 1)) {
@@ -379,7 +380,7 @@ namespace host_math {
     // seems that after optimization (inlining probably), the compiler eliminates the msb limbs since they are unused.
     // The following code is not assuming so and uses an LSB-multiplier explicitly (although they perform the same for
     // optimized code, but not for debug).
-    if constexpr (NLIMBS % 2 == 0) {
+    if constexpr (NLIMBS > 1) {
       // LSB multiplier, computed only NLIMBS output limbs
       storage<NLIMBS> r_low = {};
       lsb_multiply_raw_64<NLIMBS>(as.limbs64, neg_mod.limbs64, r_low.limbs64);

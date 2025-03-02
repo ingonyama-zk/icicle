@@ -22,5 +22,4 @@ set(ICICLE_CURVES
 # Format: index:curve:features
 set(ICICLE_RINGS
   2001:labrador:NTT
-  2002:greyhound:NONE
 )
