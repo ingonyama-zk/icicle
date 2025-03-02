@@ -273,6 +273,7 @@ public:
       FF::from(in + 3 * sizeof(FF), sizeof(FF))};
   }
 };
+
 #if __CUDACC__
 template <class CONFIG, class T>
 struct SharedMemory<QuarticExtensionField<CONFIG, T>> {
