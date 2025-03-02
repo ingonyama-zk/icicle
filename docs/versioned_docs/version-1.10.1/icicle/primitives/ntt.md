@@ -63,7 +63,7 @@ NTT also supports two different modes `Batch NTT` and `Single NTT`
 
 Batch NTT allows you to run many NTTs with a single API call, Single MSM will launch a single MSM computation.
 
-Deciding weather to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
+Deciding whether to use `batch NTT` vs `single NTT` is highly dependent on your application and use case.
 
 **Single NTT Mode**
 
