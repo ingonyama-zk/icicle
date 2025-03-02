@@ -38,8 +38,7 @@ namespace icicle {
     {
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
 
-      FriTranscript<F> transcript(
-        std::move(fri_transcript_config), m_log_input_size);
+      FriTranscript<F> transcript(std::move(fri_transcript_config), m_log_input_size);
 
       // Initialize the proof
       fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree + 1);
