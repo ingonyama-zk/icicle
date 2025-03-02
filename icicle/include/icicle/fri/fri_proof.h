@@ -106,20 +106,6 @@ namespace icicle {
     std::unique_ptr<F[]> m_final_poly; // Final polynomial (constant in canonical FRI)
     size_t m_final_poly_size;          // Size of the final polynomial
     uint64_t m_pow_nonce;              // Proof-of-work nonce
-
-  public:
-    // for debug
-    void print_proof()
-    {
-      std::cout << "FRI Proof:" << std::endl;
-      for (int query_idx = 0; query_idx < m_query_proofs.size(); query_idx++) {
-        std::cout << " Query " << query_idx << ":" << std::endl;
-        for (int round_idx = 0; round_idx < m_query_proofs[query_idx].size(); round_idx++) {
-          std::cout << "  round " << round_idx << ":" << std::endl;
-          m_query_proofs[query_idx][round_idx].print_proof();
-        }
-      }
-    }
   };
 
 } // namespace icicle
