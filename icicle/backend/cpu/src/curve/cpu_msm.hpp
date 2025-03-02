@@ -189,11 +189,10 @@ private:
       if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
 
       for (int j = 0; j < m_precompute_factor; j++) {
-        // Handle required preprocess of base P
-        A base = m_config.are_points_montgomery_form ? A::from_montgomery(bases[m_precompute_factor * i + j])
-                                                     : bases[m_precompute_factor * i + j]; // TDB: avoid copy
+        // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
+        const A& base = bases[m_precompute_factor * i + j];
         if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
-        A base_neg = A::neg(base);
+        const A base_neg = A::neg(base);
 
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
