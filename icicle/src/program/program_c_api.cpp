@@ -42,6 +42,9 @@ CONCAT_EXPAND(FIELD, generate_program)(SymbolHandle* parameters_ptr, int nof_par
   (*program)->m_nof_parameters = nof_parameters;
   (*program)->generate_program(parameters_vec);
 
+  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
+  pool.clear();
+
   return eIcicleError::SUCCESS;
 }
 
@@ -55,12 +58,6 @@ eIcicleError CONCAT_EXPAND(FIELD, generate_returning_value_program)(
 {
   ProgramHandle program = *returning_program;
   return CONCAT_EXPAND(FIELD, generate_program)(parameters_ptr, nof_parameters, &program);
-}
-
-void CONCAT_EXPAND(FIELD, clear_symbols)()
-{
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.clear();
 }
 }
 
@@ -90,6 +87,9 @@ eIcicleError CONCAT_EXPAND(FIELD, extension_generate_program)(
   (*program)->m_nof_parameters = nof_parameters;
   (*program)->generate_program(parameters_vec);
 
+  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
+  pool.clear();
+
   return eIcicleError::SUCCESS;
 }
 
@@ -104,12 +104,6 @@ eIcicleError CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
 {
   ExtensionProgramHandle program = *returning_program;
   return CONCAT_EXPAND(FIELD, extension_generate_program)(parameters_ptr, nof_parameters, &program);
-}
-
-void CONCAT_EXPAND(FIELD, extension_clear_symbols)()
-{
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.clear();
 }
 }
 #endif // EXT_FIELD

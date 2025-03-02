@@ -46,8 +46,6 @@ pub struct Symbol {
 Additional traits the struct implements to fulfil `Symbol<F>` trait that should be noted.
 #### Arithmetic operations
 Symbol implements addition, subtraction and multiplication (as well as the assign variants of them) with other symbols / references as well as field elements. Applying the operations will generate a new symbol (Or overwrite the existing in the case of the assign operation) representing the arithmetic operations of the two operand symbols. The `inverse` function joins these operations to allow an additional arithmetic operation (division).
-#### `Handle` 
-Trait to guarantee linking the symbol to the appropriate cpp backend - providing a function to access the pointer to the backend implementation.
 
 # Program
 A program to be ran on the various Icicle backends. It can be either a user-defined program, or one of the members of `PredefinedProgram` enum. The program adheres to one of the following traits:
@@ -73,12 +71,6 @@ pub struct Program {
   handle: ProgramHandle,
 }
 ```
-### Traits implemented and key methods
-Additional trait the struct implements to fulfil `Program<F>` trait.
-#### `Handle` 
-Trait to guarantee linking the program to the appropriate cpp backend - providing a function to access the pointer to the backend implementation.
-### `Drop`
-Ensures proper resource management by releasing the backend allocated memory when a `Program` instance goes out of scope. This prevents memory leaks and ensures that resources are cleaned up correctly, adhering to Rust's RAII (Resource Acquisition Is Initialization) principles.
 
 # Usage
 This section will outline how to use Program and Symbol, mirroring the examples from the [cpp overview](../primitives/program.md). The program use-case splits to three steps:

@@ -78,9 +78,6 @@ macro_rules! impl_program_field {
 
         #[link_name = "delete_program"]
         pub(crate) fn ffi_delete_program(program: ProgramHandle) -> eIcicleError;
-
-        #[link_name = concat!($field_prefix, "_clear_symbols")]
-        pub(crate) fn ffi_clear_symbols();
       }
 
       // Program trait implementation
@@ -100,7 +97,6 @@ macro_rules! impl_program_field {
           let ffi_status;
           unsafe {
             ffi_status = ffi_generate_program(handles.as_ptr(), program_parameters.len() as u32, &mut prog_handle);
-            ffi_clear_symbols();
           }
           if ffi_status != eIcicleError::Success {
             Err(ffi_status)
@@ -160,7 +156,6 @@ macro_rules! impl_program_field {
           let ffi_status;
           unsafe {
             ffi_status = ffi_generate_program(handles.as_ptr(), program_parameters.len() as u32, &mut prog_handle);
-            ffi_clear_symbols();
           }
           if ffi_status != eIcicleError::Success {
             Err(ffi_status)

@@ -1053,7 +1053,8 @@ macro_rules! impl_vec_ops_tests {
 
             #[test]
             pub fn test_program() {
-                initialize(); // Sets main device
+                initialize();
+                test_utilities::test_set_main_device();
                 check_program::<$field, FieldProgram>();
                 test_utilities::test_set_ref_device();
                 check_program::<$field, FieldProgram>()
@@ -1061,7 +1062,8 @@ macro_rules! impl_vec_ops_tests {
 
             #[test]
             pub fn test_predefined_program() {
-                initialize(); // Sets main device
+                initialize();
+                test_utilities::test_set_main_device();
                 check_predefined_program::<$field, FieldProgram>();
                 test_utilities::test_set_ref_device();
                 check_predefined_program::<$field, FieldProgram>()
