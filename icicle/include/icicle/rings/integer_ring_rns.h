@@ -159,6 +159,9 @@ public:
   // Additional ops
   static HOST_DEVICE_INLINE IntegerRingRns inverse(const IntegerRingRns& x)
   {
+    // Note that if we don't return zero then it's not consistent with the direct Zq type.
+    // Also note that has_inverse() in RNS is very cheap (simply checks all elements are non-zero)
+    if (!has_inverse(x)) { return zero(); }
     return apply_op_unary(x, [](auto x) { return x.inverse(x); }, std::make_index_sequence<nof_fields>{});
   }
 
