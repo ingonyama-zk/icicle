@@ -653,12 +653,12 @@ TYPED_TEST(FieldTest, FriMerkleTreeAPi)
   const size_t df = stopping_degree;
   const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
   const size_t fold_rounds = (log_input_size > log_df_plus_1) ? (log_input_size - log_df_plus_1) : 0;
-  
+
   // Define hashers and merkle trees
-  uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-  Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
+  uint64_t merkle_tree_arity = 2;                   // TODO SHANIE (future) - add support for other arities
+  Hash hash = Keccak256::create(sizeof(TypeParam)); // hash element -> 32B
   Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
-  
+
   std::vector<MerkleTree> merkle_trees;
   merkle_trees.reserve(fold_rounds);
   size_t compress_hash_arity = compress.default_input_chunk_size() / compress.output_size();
@@ -670,11 +670,11 @@ TYPED_TEST(FieldTest, FriMerkleTreeAPi)
     merkle_trees.emplace_back(MerkleTree::create(layer_hashes, leaf_element_size, output_store_min_layer));
     layer_hashes.pop_back();
   }
-  
+
   // ===== Prover side ======
   Fri prover_fri = create_fri<scalar_t, TypeParam>(folding_factor, stopping_degree, merkle_trees);
 
-  FriTranscriptConfig<TypeParam> transcript_config;  
+  FriTranscriptConfig<TypeParam> transcript_config;
   FriConfig fri_config;
   fri_config.nof_queries = nof_queries;
   fri_config.pow_bits = pow_bits;
@@ -684,14 +684,14 @@ TYPED_TEST(FieldTest, FriMerkleTreeAPi)
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(folding_factor, stopping_degree, merkle_trees);
-  bool verification_pass = false;  
+  bool verification_pass = false;
   ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 
   // Release domain
   ICICLE_CHECK(ntt_release_domain<scalar_t>());
-}  
+}
 #endif // FRI
 
 // TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
