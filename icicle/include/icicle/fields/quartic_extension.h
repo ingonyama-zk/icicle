@@ -264,7 +264,7 @@ public:
     return res;
   }
 
-  /* Receives an array of bytes and its size and returns extension field element. */
+  // Receives an array of bytes and its size and returns extension field element.
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
     ICICLE_ASSERT(nof_bytes >= 4 * sizeof(FF)) << "Input size is too small";
