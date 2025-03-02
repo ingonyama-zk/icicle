@@ -309,7 +309,7 @@ export default {
         {
           type: "link",
           label: "Ingopedia",
-          href: "https://www.ingonyama.com/ingopedia/communityguide"
+          href: "https://www.ingonyama.com/ingopedia/glossary"
         },
         {
           href: 'https://github.com/ingonyama-zk',
