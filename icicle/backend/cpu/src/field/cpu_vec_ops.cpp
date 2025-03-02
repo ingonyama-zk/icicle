@@ -1002,6 +1002,7 @@ REGISTER_SCALAR_SUB_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_sub<extension_t>);
 #endif // EXT_FIELD
 
 #ifdef RING
+// Register APIs for rns type
 REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<scalar_rns_t>);
 REGISTER_BIT_REVERSE_RING_RNS_BACKEND("CPU", cpu_bit_reverse<scalar_rns_t>);
 REGISTER_SLICE_RING_RNS_BACKEND("CPU", cpu_slice<scalar_rns_t>);
@@ -1016,4 +1017,59 @@ REGISTER_VECTOR_PRODUCT_RING_RNS_BACKEND("CPU", cpu_vector_product<scalar_rns_t>
 REGISTER_SCALAR_MUL_VEC_RING_RNS_BACKEND("CPU", cpu_scalar_mul<scalar_rns_t>);
 REGISTER_SCALAR_ADD_VEC_RING_RNS_BACKEND("CPU", cpu_scalar_add<scalar_rns_t>);
 REGISTER_SCALAR_SUB_VEC_RING_RNS_BACKEND("CPU", cpu_scalar_sub<scalar_rns_t>);
+
+// TODO: can probably merge those two to one. not that important as it's short but generally this can be useful
+// Will do it when removing TaskManager (which currently doesn't support mixed types)
+template <typename Zq, typename ZqRns>
+eIcicleError
+cpu_convert_to_rns(const Device& device, const Zq* input, uint64_t size, const VecOpsConfig& config, ZqRns* output)
+{
+  tf::Taskflow taskflow;
+  tf::Executor executor;
+  const uint64_t total_nof_operations = size * config.batch_size;
+
+  const int nof_workers = get_nof_workers(config);
+  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
+
+  for (uint64_t start_idx = 0; start_idx < total_nof_operations; start_idx += worker_task_size) {
+    taskflow.emplace([=]() {
+      const uint64_t end_idx = std::min(start_idx + worker_task_size, total_nof_operations);
+      for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
+        ZqRns::convert_direct_to_rns(&input[idx].limbs_storage, &output[idx].limbs_storage);
+      }
+    });
+  }
+
+  executor.run(taskflow).wait();
+  taskflow.clear();
+  return eIcicleError::SUCCESS;
+}
+
+template <typename Zq, typename ZqRns>
+eIcicleError
+cpu_convert_from_rns(const Device& device, const ZqRns* input, uint64_t size, const VecOpsConfig& config, Zq* output)
+{
+  tf::Taskflow taskflow;
+  tf::Executor executor;
+  const uint64_t total_nof_operations = size * config.batch_size;
+
+  const int nof_workers = get_nof_workers(config);
+  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
+
+  for (uint64_t start_idx = 0; start_idx < total_nof_operations; start_idx += worker_task_size) {
+    taskflow.emplace([=]() {
+      const uint64_t end_idx = std::min(start_idx + worker_task_size, total_nof_operations);
+      for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
+        ZqRns::convert_rns_to_direct(&input[idx].limbs_storage, &output[idx].limbs_storage);
+      }
+    });
+  }
+
+  executor.run(taskflow).wait();
+  taskflow.clear();
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_CONVERT_TO_RNS_BACKEND("CPU", (cpu_convert_to_rns<scalar_t, scalar_rns_t>));
+REGISTER_CONVERT_FROM_RNS_BACKEND("CPU", (cpu_convert_from_rns<scalar_t, scalar_rns_t>));
 #endif // RING

@@ -252,6 +252,10 @@ public:
     // Note: here we compute the CRT algorithm to convert from RNS to direct representation
 
     constexpr unsigned sizeof_limb = sizeof(zq->limbs[0]);
+    // Note: without those, CUDA cannot compile this code to GPU since those values are not in device memory
+    constexpr auto field_offsets = RNS_CONFIG::FieldOffset;
+    constexpr auto W = RNS_CONFIG::W;
+    constexpr auto field_nof_limbs = RNS_CONFIG::FieldLimbs;
 
     // TODO: optimize implementation if needed
 
@@ -262,9 +266,9 @@ public:
       Zq xi{};
       // TODO: can we avoid this memcpy? Probably yes if we use a low level multiplier, rather than the Zq multiplier
       std::memcpy(
-        &xi, reinterpret_cast<const std::byte*>(zqrns) + RNS_CONFIG::FieldOffset[i] * sizeof_limb,
-        RNS_CONFIG::FieldLimbs[i] * sizeof_limb);
-      zq_sum = zq_sum + (xi * Zq{RNS_CONFIG::W.storages[i]});
+        &xi, reinterpret_cast<const std::byte*>(zqrns) + field_offsets[i] * sizeof_limb,
+        field_nof_limbs[i] * sizeof_limb);
+      zq_sum = zq_sum + (xi * Zq{W.storages[i]});
     }
 
     // Store result

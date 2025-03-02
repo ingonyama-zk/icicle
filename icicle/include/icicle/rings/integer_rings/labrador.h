@@ -39,7 +39,6 @@ namespace labrador {
     // W are the precomputed values for the CRT
     static constexpr storage_array<2, 2> W = {storage<2>{0x30924914, 0x22049241}, storage<2>{0xc66db6ee, 0x19836dbf}};
     using Zq = IntegerRing<zq_config>;
-    ;
   };
 
   /**
