@@ -12,8 +12,8 @@
 #include "icicle/utils/log.h"
 
 namespace icicle {
-  template <typename F>
-  class CpuFriBackend : public FriBackend<F>
+  template <typename S, typename F>
+  class CpuFriBackend : public FriBackend<S, F>
   {
   public:
     /**
@@ -24,7 +24,7 @@ namespace icicle {
      * @param merkle_trees     A vector of MerkleTrees.
      */
     CpuFriBackend(const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-        : FriBackend<F>(folding_factor, stopping_degree, merkle_trees),
+        : FriBackend<S, F>(folding_factor, stopping_degree, merkle_trees),
           m_nof_fri_rounds(merkle_trees.size()),
           m_log_input_size(merkle_trees.size() + std::log2(static_cast<double>(stopping_degree+1))),
           m_input_size(pow(2, m_log_input_size)),
@@ -38,10 +38,6 @@ namespace icicle {
       const F* input_data,
       FriProof<F>& fri_proof /*out*/) override
     {
-      if (fri_config.use_extension_field) {
-        ICICLE_LOG_ERROR << "FriConfig::use_extension_field = true is currently unsupported";
-        return eIcicleError::API_NOT_IMPLEMENTED;
-      }
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
 
       FriTranscript<F> transcript(std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), m_log_input_size);
@@ -80,8 +76,8 @@ namespace icicle {
     eIcicleError commit_fold_phase(const F* input_data, FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof){
       ICICLE_ASSERT(this->m_folding_factor==2) << "Currently only folding factor of 2 is supported"; //TODO SHANIE - remove when supporting other folding factors
 
-      const F* twiddles = ntt_cpu::CpuNttDomain<F>::s_ntt_domain.get_twiddles();
-      uint64_t domain_max_size = ntt_cpu::CpuNttDomain<F>::s_ntt_domain.get_max_size();
+      const S* twiddles = ntt_cpu::CpuNttDomain<S>::s_ntt_domain.get_twiddles();
+      uint64_t domain_max_size = ntt_cpu::CpuNttDomain<S>::s_ntt_domain.get_max_size();
 
       // Get persistent storage for round from FriRounds. m_fri_rounds already allocated a vector for each round with capacity 2^(m_log_input_size - round_idx).
       F* round_evals = m_fri_rounds.get_round_evals(0);
@@ -109,9 +105,9 @@ namespace icicle {
         std::vector<F> podd(half);
 
         for (size_t i = 0; i < half; ++i){
-          peven[i] = (round_evals[i] + round_evals[i + half]) * F::inv_log_size(1);
+          peven[i] = (round_evals[i] + round_evals[i + half]) * S::inv_log_size(1);
           uint64_t tw_idx = domain_max_size - ((domain_max_size>>current_log_size) * i);
-          podd[i] = ((round_evals[i] - round_evals[i + half]) * F::inv_log_size(1)) * twiddles[tw_idx];
+          podd[i] = ((round_evals[i] - round_evals[i + half]) * S::inv_log_size(1)) * twiddles[tw_idx];
         }
 
         if (round_idx == m_nof_fri_rounds - 1){
@@ -127,7 +123,6 @@ namespace icicle {
         current_size>>=1;
         current_log_size--;
       }
-
       return eIcicleError::SUCCESS;
     }
 

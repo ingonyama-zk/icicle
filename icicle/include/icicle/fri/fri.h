@@ -19,7 +19,7 @@ namespace icicle {
 /**
  * @brief Forward declaration for the FRI class template.
  */
-template <typename F>
+template <typename S, typename F>
 class Fri;
 
 /**
@@ -34,8 +34,8 @@ class Fri;
  * @param output_store_min_layer (Optional) The layer at which to store partial results. Default = 0.
  * @return A `Fri<F>` object built around the chosen backend.
  */
-template <typename F>
-Fri<F> create_fri(
+template <typename S, typename F>
+Fri<S, F> create_fri(
     const size_t input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
@@ -51,8 +51,8 @@ Fri<F> create_fri(
  * @param merkle_trees A reference vector of `MerkleTree` objects.
  * @return A `Fri<F>` object built around the chosen backend.
  */
-template <typename F>
-Fri<F> create_fri(
+template <typename S, typename F>
+Fri<S, F> create_fri(
     const size_t folding_factor,
     const size_t stopping_degree,
     std::vector<MerkleTree> merkle_trees);
@@ -64,15 +64,15 @@ Fri<F> create_fri(
  *
  * @tparam F The field type used in the FRI protocol.
  */
-template <typename F>
+template <typename S, typename F>
 class Fri
 {
 public:
     /**
      * @brief Constructor for the Fri class.
-     * @param backend A shared pointer to the backend (FriBackend<F>) responsible for FRI operations.
+     * @param backend A shared pointer to the backend (FriBackend<S, F>) responsible for FRI operations.
      */
-    explicit Fri(std::shared_ptr<FriBackend<F>> backend)
+    explicit Fri(std::shared_ptr<FriBackend<S, F>> backend)
         : m_backend(std::move(backend))
     {}
 
@@ -141,7 +141,7 @@ public:
 
         uint64_t domain_max_size = 0;
         uint64_t max_log_size = 0;
-        F primitive_root_inv = F::omega_inv(log_input_size);
+        S primitive_root_inv = S::omega_inv(log_input_size);
 
         for (size_t query_idx = 0; query_idx < fri_config.nof_queries; query_idx++){
             size_t query = query_indices[query_idx];
@@ -181,10 +181,10 @@ public:
                 const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
                 ICICLE_ASSERT(elem_idx == leaf_index) << "Leaf index from proof doesn't match query expected index";
                 ICICLE_ASSERT(elem_idx_sym == leaf_index_sym) << "Leaf index symmetry from proof doesn't match query expected index";
-                F leaf_data_f = F::from(leaf_data, leaf_size);
-                F leaf_data_sym_f = F::from(leaf_data_sym, leaf_size_sym);
-                F l_even = (leaf_data_f + leaf_data_sym_f) * F::inv_log_size(1);
-                F l_odd = ((leaf_data_f - leaf_data_sym_f) * F::inv_log_size(1)) * F::pow(primitive_root_inv, leaf_index*(input_size>>current_log_size));
+                const F& leaf_data_f = *reinterpret_cast<const F*>(leaf_data);
+                const F& leaf_data_sym_f = *reinterpret_cast<const F*>(leaf_data_sym);
+                F l_even = (leaf_data_f + leaf_data_sym_f) * S::inv_log_size(1);
+                F l_odd = ((leaf_data_f - leaf_data_sym_f) * S::inv_log_size(1)) * S::pow(primitive_root_inv, leaf_index*(input_size>>current_log_size));
                 F alpha = alpha_values[round_idx];
                 F folded = l_even + (alpha * l_odd);
 
@@ -197,7 +197,7 @@ public:
                 } else {
                     MerkleProof& proof_ref_folded = fri_proof.get_query_proof(2*query_idx, round_idx+1);
                     const auto [leaf_data_folded, leaf_size_folded, leaf_index_folded] = proof_ref_folded.get_leaf();
-                    F leaf_data_folded_f = F::from(leaf_data_folded, leaf_size_folded);
+                    const F& leaf_data_folded_f = *reinterpret_cast<const F*>(leaf_data_folded);
                     if (leaf_data_folded_f != folded) {
                         ICICLE_LOG_ERROR << "[VERIFIER] Collinearity check failed. query=" << query << ", query_idx=" << query_idx << ", round=" << round_idx << ".\nfolded_res = \t\t" << folded << "\nfolded_from_proof = \t" << leaf_data_folded_f;
                         return eIcicleError::SUCCESS; // return with verification_pass = false
@@ -211,7 +211,7 @@ public:
     }
 
 private:
-    std::shared_ptr<FriBackend<F>> m_backend; // Shared pointer to the backend for FRI operations.
+    std::shared_ptr<FriBackend<S, F>> m_backend; // Shared pointer to the backend for FRI operations.
 };
 
 } // namespace icicle

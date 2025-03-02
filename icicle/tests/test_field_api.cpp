@@ -576,9 +576,9 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 
 #endif // SUMCHECK
 
-#ifdef FRI
+// #ifdef FRI
 
-TYPED_TEST(FieldApiTest, Fri)
+TYPED_TEST(FieldTest, Fri)
 {
   // Randomize configuration
   const int log_input_size = rand_uint_32b(3, 13);
@@ -591,39 +591,34 @@ TYPED_TEST(FieldApiTest, Fri)
   const size_t pow_bits = rand_uint_32b(0, 3);
   const size_t nof_queries = rand_uint_32b(2, 4);
 
-  ICICLE_LOG_DEBUG << "log_input_size = " << log_input_size;
-  ICICLE_LOG_DEBUG << "input_size = " << input_size;
-  ICICLE_LOG_DEBUG << "folding_factor = " << folding_factor;
-  ICICLE_LOG_DEBUG << "stopping_degree = " << stopping_degree;
-
   // Initialize ntt domain
   NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
   ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
 
   // Generate input polynomial evaluations
-  auto scalars = std::make_unique<scalar_t[]>(input_size);
-  scalar_t::rand_host_many(scalars.get(), input_size);
+  auto scalars = std::make_unique<TypeParam[]>(input_size);
+  TypeParam::rand_host_many(scalars.get(), input_size);
 
   // ===== Prover side ======
-  uint64_t merkle_tree_arity = 2; // TODO SHANIE - add support for other arities
+  uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
   
   // Define hashers for merkle tree 
-  Hash hash = Keccak256::create(sizeof(scalar_t)); // hash element -> 32B
+  Hash hash = Keccak256::create(sizeof(TypeParam)); // hash element -> 32B
   Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
 
-  Fri prover_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
+  Fri prover_fri = create_fri<scalar_t, TypeParam>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
-  FriTranscriptConfig<scalar_t> prover_transcript_config;
-  FriTranscriptConfig<scalar_t> verifier_transcript_config; //FIXME SHANIE - verfier and prover should have the same config
+  FriTranscriptConfig<TypeParam> prover_transcript_config;
+  FriTranscriptConfig<TypeParam> verifier_transcript_config; //FIXME SHANIE - verfier and prover should have the same config
   FriConfig fri_config;
   fri_config.nof_queries = nof_queries;
   fri_config.pow_bits = pow_bits;
-  FriProof<scalar_t> fri_proof;
+  FriProof<TypeParam> fri_proof;
 
   ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(prover_transcript_config), scalars.get(), fri_proof));
 
   // ===== Verifier side ======
-  Fri verifier_fri = create_fri<scalar_t>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
+  Fri verifier_fri = create_fri<scalar_t, TypeParam>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
   bool verification_pass = false;
   ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(verifier_transcript_config), fri_proof, verification_pass));
 
@@ -632,7 +627,7 @@ TYPED_TEST(FieldApiTest, Fri)
   // Release domain
   ICICLE_CHECK(ntt_release_domain<scalar_t>());
 }
-endif // FRI
+// #endif // FRI
 
 
 // TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.

@@ -15,7 +15,6 @@ namespace icicle {
    */
   struct FriConfig {
     icicleStreamHandle stream = nullptr;      // Stream for asynchronous execution. Default is nullptr.
-    bool use_extension_field = false;         // If true, then use extension field for the fiat shamir result. Recommended for small fields for security. TODO SHANIE - this was not part of the design plan, do we need to add this like in sumcheck?
     size_t pow_bits = 0;                      // Number of leading zeros required for proof-of-work. Default is 0.
     size_t nof_queries = 1;                   // Number of queries, computed for each folded layer of FRI. Default is 1.
     bool are_inputs_on_device = false;        // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.

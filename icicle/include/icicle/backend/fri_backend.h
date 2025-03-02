@@ -20,7 +20,7 @@ namespace icicle {
  * @brief Abstract base class for FRI backend implementations.
  * @tparam F Field type used in the FRI protocol.
  */
-template <typename F>
+template <typename S, typename F>
 class FriBackend
 {
 public:
@@ -68,9 +68,9 @@ protected:
 /**
  * @brief A function signature for creating a FriBackend instance for a specific device.
  */
-template <typename F>
+template <typename S, typename F>
 using FriFactoryImpl =
-    std::function<eIcicleError(const Device& device,const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees, std::shared_ptr<FriBackend<F>>& backend /*OUT*/)>;
+    std::function<eIcicleError(const Device& device,const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees, std::shared_ptr<FriBackend<S, F>>& backend /*OUT*/)>;
 
 /**
  * @brief Register a FRI backend factory for a specific device type.
@@ -78,7 +78,7 @@ using FriFactoryImpl =
  * @param deviceType String identifier for the device type.
  * @param impl        A factory function that creates a FriBackend<F>.
  */
-void register_fri_factory(const std::string& deviceType, FriFactoryImpl<scalar_t> impl);
+void register_fri_factory(const std::string& deviceType, FriFactoryImpl<scalar_t, scalar_t> impl);
 
 /**
  * @brief Macro to register a FRI backend factory.
@@ -94,5 +94,38 @@ void register_fri_factory(const std::string& deviceType, FriFactoryImpl<scalar_t
       return true;                                                                                                     \
     }();                                                                                                               \
   }
+
+#ifdef EXT_FIELD
+/**
+ * @brief A function signature for creating a FriBackend instance for a specific device, with extension field.
+ */
+ template <typename S, typename F>
+ using FriExtFactoryImpl =
+     std::function<eIcicleError(const Device& device,const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees, std::shared_ptr<FriBackend<S, F>>& backend /*OUT*/)>;
+ 
+ /**
+  * @brief Register a FRI backend factory for a specific device type.
+  *
+  * @param deviceType String identifier for the device type.
+  * @param impl        A factory function that creates a FriBackend<S, F>.
+  */
+ void register_extension_fri_factory(const std::string& deviceType, FriExtFactoryImpl<scalar_t, extension_t> impl);
+ 
+ /**
+  * @brief Macro to register a FRI backend factory.
+  *
+  * This macro registers a factory function for a specific backend by calling
+  * `register_fri_factory` at runtime.
+  *
+  */
+ #define REGISTER_FRI_EXT_FACTORY_BACKEND(DEVICE_TYPE, FUNC)                                                                \
+   namespace {                                                                                                          \
+     static bool UNIQUE(_reg_fri_ext_field) = []() -> bool {                                                                      \
+       register_extension_fri_factory(DEVICE_TYPE, static_cast<FriExtFactoryImpl<scalar_t, extension_t>>(FUNC));                                                                         \
+       return true;                                                                                                     \
+     }();                                                                                                               \
+   }
+ 
+#endif // EXT_FIELD
 
 } // namespace icicle

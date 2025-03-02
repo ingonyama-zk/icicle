@@ -1,5 +1,6 @@
 #pragma once
 
+#include "icicle/errors.h"
 #include "icicle/fields/field.h"
 #include "icicle/utils/modifiers.h"
 
@@ -261,6 +262,17 @@ public:
       exp >>= 1;
     }
     return res;
+  }
+
+  /* Receives an array of bytes and its size and returns extension field element. */
+  static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(const std::byte* in, unsigned nof_bytes)
+  {
+    ICICLE_ASSERT(nof_bytes >= 4 * sizeof(FF)) << "Input size is too small";
+    return QuarticExtensionField{FF::from(in, sizeof(FF)),
+                         FF::from(in + sizeof(FF), sizeof(FF)),
+                          FF::from(in + 2 * sizeof(FF), sizeof(FF)),
+                          FF::from(in + 3 * sizeof(FF), sizeof(FF))};
+                        
   }
 };
 #if __CUDACC__

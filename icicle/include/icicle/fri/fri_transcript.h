@@ -139,7 +139,7 @@ private:
     */
   void append_field(std::vector<std::byte>& dest, const F& field)
   {
-    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&field);
     dest.insert(dest.end(), data_bytes, data_bytes + sizeof(F));
   }
 
