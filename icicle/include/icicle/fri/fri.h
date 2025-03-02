@@ -81,11 +81,11 @@ namespace icicle {
      */
     eIcicleError get_fri_proof(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F>& fri_transcript_config,
+      const FriTranscriptConfig<F>&& fri_transcript_config,
       const F* input_data,
       FriProof<F>& fri_proof /* OUT */) const
     {
-      return m_backend->get_fri_proof(fri_config, fri_transcript_config, input_data, fri_proof);
+      return m_backend->get_fri_proof(fri_config, std::move(fri_transcript_config), input_data, fri_proof);
     }
 
     /**
@@ -98,7 +98,7 @@ namespace icicle {
      */
     eIcicleError verify(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F>& fri_transcript_config,
+      const FriTranscriptConfig<F>&& fri_transcript_config,
       FriProof<F>& fri_proof,
       bool& verification_pass /* OUT */) const
     {

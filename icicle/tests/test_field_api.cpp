@@ -609,21 +609,19 @@ TYPED_TEST(FieldTest, Fri)
   Fri prover_fri = create_fri<scalar_t, TypeParam>(
     input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
-  FriTranscriptConfig<TypeParam> prover_transcript_config;
-  FriTranscriptConfig<TypeParam>
-    verifier_transcript_config; // FIXME SHANIE - verfier and prover should have the same config
+  FriTranscriptConfig<TypeParam> transcript_config;
   FriConfig fri_config;
   fri_config.nof_queries = nof_queries;
   fri_config.pow_bits = pow_bits;
   FriProof<TypeParam> fri_proof;
 
-  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(prover_transcript_config), scalars.get(), fri_proof));
+  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(
     input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
   bool verification_pass = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(verifier_transcript_config), fri_proof, verification_pass));
+  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 

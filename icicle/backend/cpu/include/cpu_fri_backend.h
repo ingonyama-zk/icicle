@@ -32,14 +32,14 @@ namespace icicle {
 
     eIcicleError get_fri_proof(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F>& fri_transcript_config,
+      const FriTranscriptConfig<F>&& fri_transcript_config,
       const F* input_data,
       FriProof<F>& fri_proof /*out*/) override
     {
       ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
 
       FriTranscript<F> transcript(
-        std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), m_log_input_size);
+        std::move(fri_transcript_config), m_log_input_size);
 
       // Initialize the proof
       fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree + 1);

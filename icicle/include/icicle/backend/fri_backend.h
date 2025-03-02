@@ -48,7 +48,7 @@ namespace icicle {
      */
     virtual eIcicleError get_fri_proof(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F>& fri_transcript_config,
+      const FriTranscriptConfig<F>&& fri_transcript_config,
       const F* input_data,
       FriProof<F>& fri_proof) = 0;
 
