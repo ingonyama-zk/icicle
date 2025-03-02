@@ -21,6 +21,7 @@ function(handle_ring TARGET)
   target_sources(${TARGET} PRIVATE
     src/fields/ffi_extern.cpp
     src/vec_ops.cpp
+    src/rings/rns_vec_ops.cpp
     src/matrix_ops.cpp
   )
 endfunction()

@@ -466,4 +466,46 @@ namespace icicle {
     T* r_out /*OUT*/,
     uint64_t r_size);
 
+  /*************************** Integer Rings ***************************/
+
+  /**
+   * @brief Converts integer-ring elements from direct form to RNS form.
+   *
+   * @tparam Zq Type of the elements in the direct form.
+   * @tparam ZqRns Type of the elements in the RNS form.
+   * @param input Pointer to the input vector(s) in direct form.
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output vector(s) where the results will be stored in RNS form.
+   *               The output array should have the same storage layout as the input vectors.
+   * @return eIcicleError Error code indicating success or failure.
+   * @note The function assumes that the input and output arrays are properly allocated. Can compute in-place.
+   */
+  template <typename Zq, typename ZqRns>
+  eIcicleError convert_to_rns(const Zq* input, uint64_t size, const VecOpsConfig& config, ZqRns* output);
+
+  /**
+   * @brief Converts integer-ring elements from RNS form to direct form.
+   *
+   * @tparam Zq Type of the elements in the direct form.
+   * @tparam ZqRns Type of the elements in the RNS form.
+   * @param input Pointer to the input vector(s) in RNS form.
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output vector(s) where the results will be stored in direct form.
+   *               The output array should have the same storage layout as the input vectors.
+   * @return eIcicleError Error code indicating success or failure.
+   * @note The function assumes that the input and output arrays are properly allocated. Can compute in-place.
+   */
+  template <typename Zq, typename ZqRns>
+  eIcicleError convert_from_rns(const ZqRns* input, uint64_t size, const VecOpsConfig& config, Zq* output);
+
 } // namespace icicle

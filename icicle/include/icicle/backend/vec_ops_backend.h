@@ -664,6 +664,32 @@ namespace icicle {
         return true;                                                                                                   \
       }();                                                                                                             \
     }
+
+  // RNS <--> direct conversion
+  using ringConvertToRnsImpl = std::function<eIcicleError(
+    const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
+
+  void register_convert_to_rns(const std::string& deviceType, ringConvertToRnsImpl);
+  #define REGISTER_CONVERT_TO_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                           \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_convert_to_rns) = []() -> bool {                                                         \
+        register_convert_to_rns(DEVICE_TYPE, FUNC);                                                                    \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringConvertFromRnsImpl = std::function<eIcicleError(
+    const Device& device, const scalar_rns_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
+
+  void register_convert_from_rns(const std::string& deviceType, ringConvertFromRnsImpl);
+  #define REGISTER_CONVERT_FROM_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                         \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_convert_from_rns) = []() -> bool {                                                       \
+        register_convert_from_rns(DEVICE_TYPE, FUNC);                                                                  \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
 #endif // RING
 
 } // namespace icicle
