@@ -68,16 +68,6 @@ namespace icicle {
       return m_query_proofs[0][round_idx].get_root();
     }
 
-    // /**
-    //  * @brief Returns a tuple containing the pointer to the leaf data, its size and index.
-    //  * @return A tuple of (leaf data pointer, leaf size, leaf_index).
-    //  */
-    // std::tuple<const std::byte*, std::size_t, uint64_t> get_leaf(const size_t query_idx, const size_t round_idx)
-    // const
-    // {
-    //   return m_query_proofs[query_idx][round_idx].get_leaf();
-    // }
-
     /**
      * @brief Get the number of FRI rounds in the proof.
      *
