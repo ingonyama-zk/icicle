@@ -5,9 +5,7 @@
 #include "icicle/fri/fri_transcript_config.h"
 #include <cstddef>
 
-
 using namespace field_config;
-
 
 extern "C" {
 
@@ -54,7 +52,7 @@ struct FriCreateHashFFI {
 struct FriCreateWithTreesFFI {
   size_t folding_factor;
   size_t stopping_degree;
-  MerkleTree* merkle_trees; // An array of MerkleTree* (pointers).
+  MerkleTree* merkle_trees;  // An array of MerkleTree* (pointers).
   size_t merkle_trees_count; // Number of items in merkle_trees.
 };
 
@@ -65,11 +63,8 @@ struct FriCreateWithTreesFFI {
  * @param transcript_config Pointer to the FFI transcript configuration structure.
  * @return Pointer to the created FRI instance (FriHandle*), or nullptr on error.
  */
-FriHandle*
-CONCAT_EXPAND(FIELD, fri_create)(
-  const FriCreateHashFFI* create_config,
-  const FriTranscriptConfigFFI* ffi_transcript_config
-)
+FriHandle* CONCAT_EXPAND(FIELD, fri_create)(
+  const FriCreateHashFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
 {
   if (!create_config || !create_config->merkle_tree_leaves_hash || !create_config->merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config.";
@@ -80,11 +75,10 @@ CONCAT_EXPAND(FIELD, fri_create)(
     return nullptr;
   }
 
-
   ICICLE_LOG_DEBUG << "Constructing FRI instance from FFI (hash-based)";
 
   // Convert byte arrays to vectors
-  //TODO SHANIE - check if this is the correct way
+  // TODO SHANIE - check if this is the correct way
   std::vector<std::byte> domain_separator_label(
     ffi_transcript_config->domain_separator_label,
     ffi_transcript_config->domain_separator_label + ffi_transcript_config->domain_separator_label_len);
@@ -92,15 +86,11 @@ CONCAT_EXPAND(FIELD, fri_create)(
     ffi_transcript_config->round_challenge_label,
     ffi_transcript_config->round_challenge_label + ffi_transcript_config->round_challenge_label_len);
   std::vector<std::byte> commit_label(
-    ffi_transcript_config->commit_label,
-    ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
+    ffi_transcript_config->commit_label, ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
   std::vector<std::byte> nonce_label(
-    ffi_transcript_config->nonce_label,
-    ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
+    ffi_transcript_config->nonce_label, ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
   std::vector<std::byte> public_state(
-    ffi_transcript_config->public_state,
-    ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
-
+    ffi_transcript_config->public_state, ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
 
   // Construct a FriTranscriptConfig
   FriTranscriptConfig config{
@@ -110,18 +100,13 @@ CONCAT_EXPAND(FIELD, fri_create)(
     std::move(commit_label),
     std::move(nonce_label),
     std::move(public_state),
-    *(ffi_transcript_config->seed_rng)
-  };
+    *(ffi_transcript_config->seed_rng)};
 
   // Create and return the Fri instance
   return new icicle::Fri<scalar_t, scalar_t>(icicle::create_fri<scalar_t, scalar_t>(
-    create_config->input_size,
-    create_config->folding_factor,
-    create_config->stopping_degree,
-    *(create_config->merkle_tree_leaves_hash),
-    *(create_config->merkle_tree_compress_hash),
-    create_config->output_store_min_layer
-  ));
+    create_config->input_size, create_config->folding_factor, create_config->stopping_degree,
+    *(create_config->merkle_tree_leaves_hash), *(create_config->merkle_tree_compress_hash),
+    create_config->output_store_min_layer));
 }
 
 // fri_create_with_trees - Using vector<MerkleTree*>&& constructor
@@ -132,11 +117,8 @@ CONCAT_EXPAND(FIELD, fri_create)(
  * @param transcript_config Pointer to the FFI transcript configuration structure.
  * @return Pointer to the created FRI instance (FriHandle*), or nullptr on error.
  */
-FriHandle*
-CONCAT_EXPAND(FIELD, fri_create_with_trees)(
-  const FriCreateWithTreesFFI* create_config,
-  const FriTranscriptConfigFFI* ffi_transcript_config
-)
+FriHandle* CONCAT_EXPAND(FIELD, fri_create_with_trees)(
+  const FriCreateWithTreesFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
 {
   if (!create_config || !create_config->merkle_trees) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config with trees.";
@@ -147,7 +129,6 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees)(
     return nullptr;
   }
 
-
   ICICLE_LOG_DEBUG << "Constructing FRI instance from FFI (with existing trees)";
 
   // Convert the raw array of MerkleTree* into a std::vector<MerkleTree*>
@@ -157,9 +138,8 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees)(
     merkle_trees_vec.push_back(create_config->merkle_trees[i]);
   }
 
-
   // Convert byte arrays to vectors
-  //TODO SHANIE - check if this is the correct way
+  // TODO SHANIE - check if this is the correct way
   std::vector<std::byte> domain_separator_label(
     ffi_transcript_config->domain_separator_label,
     ffi_transcript_config->domain_separator_label + ffi_transcript_config->domain_separator_label_len);
@@ -167,15 +147,11 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees)(
     ffi_transcript_config->round_challenge_label,
     ffi_transcript_config->round_challenge_label + ffi_transcript_config->round_challenge_label_len);
   std::vector<std::byte> commit_label(
-    ffi_transcript_config->commit_label,
-    ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
+    ffi_transcript_config->commit_label, ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
   std::vector<std::byte> nonce_label(
-    ffi_transcript_config->nonce_label,
-    ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
+    ffi_transcript_config->nonce_label, ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
   std::vector<std::byte> public_state(
-    ffi_transcript_config->public_state,
-    ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
-
+    ffi_transcript_config->public_state, ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
 
   // Construct a FriTranscriptConfig
   FriTranscriptConfig config{
@@ -185,17 +161,12 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees)(
     std::move(commit_label),
     std::move(nonce_label),
     std::move(public_state),
-    *(ffi_transcript_config->seed_rng)
-  };
+    *(ffi_transcript_config->seed_rng)};
 
   // Create and return the Fri instance
   return new icicle::Fri<scalar_t, scalar_t>(icicle::create_fri<scalar_t, scalar_t>(
-    create_config->folding_factor,
-    create_config->stopping_degree,
-    merkle_trees_vec
-  ));
+    create_config->folding_factor, create_config->stopping_degree, merkle_trees_vec));
 }
-
 
 /**
  * @brief Deletes the given Fri instance.
@@ -214,15 +185,10 @@ eIcicleError CONCAT_EXPAND(FIELD, fri_delete)(const FriHandle* fri_handle)
 
   return eIcicleError::SUCCESS;
 }
- 
-
 
 #ifdef EXT_FIELD // EXT_FIELD
-FriHandleExt*
-CONCAT_EXPAND(FIELD, fri_create_ext)(
-  const FriCreateHashFFI* create_config,
-  const FriTranscriptConfigFFI* ffi_transcript_config
-)
+FriHandleExt* CONCAT_EXPAND(FIELD, fri_create_ext)(
+  const FriCreateHashFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
 {
   if (!create_config || !create_config->merkle_tree_leaves_hash || !create_config->merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config.";
@@ -243,14 +209,11 @@ CONCAT_EXPAND(FIELD, fri_create_ext)(
     ffi_transcript_config->round_challenge_label,
     ffi_transcript_config->round_challenge_label + ffi_transcript_config->round_challenge_label_len);
   std::vector<std::byte> commit_label(
-    ffi_transcript_config->commit_label,
-    ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
+    ffi_transcript_config->commit_label, ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
   std::vector<std::byte> nonce_label(
-    ffi_transcript_config->nonce_label,
-    ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
+    ffi_transcript_config->nonce_label, ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
   std::vector<std::byte> public_state(
-    ffi_transcript_config->public_state,
-    ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
+    ffi_transcript_config->public_state, ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
 
   // Construct a FriTranscriptConfig
   FriTranscriptConfig config{
@@ -260,33 +223,25 @@ CONCAT_EXPAND(FIELD, fri_create_ext)(
     std::move(commit_label),
     std::move(nonce_label),
     std::move(public_state),
-    *(ffi_transcript_config->seed_rng)
-  };
+    *(ffi_transcript_config->seed_rng)};
 
   // Create and return the Fri instance for the extension field
   return new icicle::Fri<scalar_t, extension_t>(icicle::create_fri<scalar_t, extension_t>(
-    create_config->input_size,
-    create_config->folding_factor,
-    create_config->stopping_degree,
-    *(create_config->merkle_tree_leaves_hash),
-    *(create_config->merkle_tree_compress_hash),
-    create_config->output_store_min_layer
-  ));
+    create_config->input_size, create_config->folding_factor, create_config->stopping_degree,
+    *(create_config->merkle_tree_leaves_hash), *(create_config->merkle_tree_compress_hash),
+    create_config->output_store_min_layer));
 }
 
-
-FriHandleExt*
-CONCAT_EXPAND(FIELD, fri_create_with_trees_ext)(
-  const FriCreateWithTreesFFI* create_config,
-  const FriTranscriptConfigFFI* ffi_transcript_config
-)
+FriHandleExt* CONCAT_EXPAND(FIELD, fri_create_with_trees_ext)(
+  const FriCreateWithTreesFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
 {
   if (!create_config || !create_config->merkle_trees) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config with trees.";
     return nullptr;
   }
-  if (!ffi_transcript_config || !ffi_transcript_config
-      || !ffi_transcript_config->hasher || !ffi_transcript_config->seed_rng) {
+  if (
+    !ffi_transcript_config || !ffi_transcript_config || !ffi_transcript_config->hasher ||
+    !ffi_transcript_config->seed_rng) {
     ICICLE_LOG_ERROR << "Invalid FFI transcript configuration for FRI.";
     return nullptr;
   }
@@ -300,9 +255,8 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees_ext)(
     merkle_trees_vec.push_back(create_config->merkle_trees[i]);
   }
 
-
   // Convert byte arrays to vectors
-  //TODO SHANIE - check if this is the correct way
+  // TODO SHANIE - check if this is the correct way
   std::vector<std::byte> domain_separator_label(
     ffi_transcript_config->domain_separator_label,
     ffi_transcript_config->domain_separator_label + ffi_transcript_config->domain_separator_label_len);
@@ -310,15 +264,11 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees_ext)(
     ffi_transcript_config->round_challenge_label,
     ffi_transcript_config->round_challenge_label + ffi_transcript_config->round_challenge_label_len);
   std::vector<std::byte> commit_label(
-    ffi_transcript_config->commit_label,
-    ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
+    ffi_transcript_config->commit_label, ffi_transcript_config->commit_label + ffi_transcript_config->commit_label_len);
   std::vector<std::byte> nonce_label(
-    ffi_transcript_config->nonce_label,
-    ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
+    ffi_transcript_config->nonce_label, ffi_transcript_config->nonce_label + ffi_transcript_config->nonce_label_len);
   std::vector<std::byte> public_state(
-    ffi_transcript_config->public_state,
-    ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
-
+    ffi_transcript_config->public_state, ffi_transcript_config->public_state + ffi_transcript_config->public_state_len);
 
   // Construct a FriTranscriptConfig
   FriTranscriptConfig config{
@@ -328,15 +278,11 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees_ext)(
     std::move(commit_label),
     std::move(nonce_label),
     std::move(public_state),
-    *(ffi_transcript_config->seed_rng)
-  };
+    *(ffi_transcript_config->seed_rng)};
 
   // Create and return the Fri instance
   return new icicle::Fri<scalar_t, extension_t>(icicle::create_fri<scalar_t, extension_t>(
-    create_config->folding_factor,
-    create_config->stopping_degree,
-    merkle_trees_vec
-  ));
+    create_config->folding_factor, create_config->stopping_degree, merkle_trees_vec));
 }
 
 /**
@@ -344,19 +290,18 @@ CONCAT_EXPAND(FIELD, fri_create_with_trees_ext)(
  * @param fri_handle_ext Pointer to the Fri instance to be deleted.
  * @return eIcicleError indicating the success or failure of the operation.
  */
- eIcicleError CONCAT_EXPAND(FIELD, fri_delete_ext)(const FriHandleExt* fri_handle_ext)
- {
-   if (!fri_handle_ext) {
-     ICICLE_LOG_ERROR << "Cannot delete a null Fri instance.";
-     return eIcicleError::INVALID_ARGUMENT;
-   }
- 
-   ICICLE_LOG_DEBUG << "Destructing Fri instance from FFI";
-   delete fri_handle_ext;
- 
-   return eIcicleError::SUCCESS;
- }
- 
+eIcicleError CONCAT_EXPAND(FIELD, fri_delete_ext)(const FriHandleExt* fri_handle_ext)
+{
+  if (!fri_handle_ext) {
+    ICICLE_LOG_ERROR << "Cannot delete a null Fri instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  ICICLE_LOG_DEBUG << "Destructing Fri instance from FFI";
+  delete fri_handle_ext;
+
+  return eIcicleError::SUCCESS;
+}
 
 #endif // EXT_FIELD
 
