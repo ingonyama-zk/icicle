@@ -14,7 +14,7 @@ namespace icicle {
     std::vector<MerkleTree> merkle_trees,
     std::shared_ptr<FriBackend<S, F>>& backend /*OUT*/)
   {
-    backend = std::make_shared<CpuFriBackend<S, F>>(folding_factor, stopping_degree, merkle_trees);
+    backend = std::make_shared<CpuFriBackend<S, F>>(folding_factor, stopping_degree, std::move(merkle_trees));
     return eIcicleError::SUCCESS;
   }
 

@@ -22,7 +22,7 @@ namespace icicle {
     const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
   {
     std::shared_ptr<FriBackend<S, F>> backend;
-    ICICLE_CHECK(FriDispatcher::execute(folding_factor, stopping_degree, merkle_trees, backend));
+    ICICLE_CHECK(FriDispatcher::execute(folding_factor, stopping_degree, std::move(merkle_trees), backend));
 
     Fri<S, F> fri{backend};
     return fri;
@@ -60,7 +60,7 @@ namespace icicle {
       merkle_trees.emplace_back(MerkleTree::create(layer_hashes, leaf_element_size, output_store_min_layer));
       layer_hashes.pop_back();
     }
-    return create_fri_with_merkle_trees<S, F>(folding_factor, stopping_degree, merkle_trees);
+    return create_fri_with_merkle_trees<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
   /**
@@ -70,7 +70,7 @@ namespace icicle {
   template <typename S, typename F>
   Fri<S, F> create_fri_template(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
   {
-    return create_fri_with_merkle_trees<S, F>(folding_factor, stopping_degree, merkle_trees);
+    return create_fri_with_merkle_trees<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
 #ifdef EXT_FIELD
@@ -85,7 +85,7 @@ namespace icicle {
     const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
   {
     std::shared_ptr<FriBackend<S, F>> backend;
-    ICICLE_CHECK(FriExtFieldDispatcher::execute(folding_factor, stopping_degree, merkle_trees, backend));
+    ICICLE_CHECK(FriExtFieldDispatcher::execute(folding_factor, stopping_degree, std::move(merkle_trees), backend));
 
     Fri<S, F> fri{backend};
     return fri;
@@ -122,7 +122,7 @@ namespace icicle {
       merkle_trees.emplace_back(MerkleTree::create(layer_hashes, leaf_element_size, output_store_min_layer));
       layer_hashes.pop_back();
     }
-    return create_fri_with_merkle_trees_ext<S, F>(folding_factor, stopping_degree, merkle_trees);
+    return create_fri_with_merkle_trees_ext<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
   /**
@@ -132,7 +132,7 @@ namespace icicle {
   template <typename S, typename F>
   Fri<S, F> create_fri_template_ext(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
   {
-    return create_fri_with_merkle_trees_ext<S, F>(folding_factor, stopping_degree, merkle_trees);
+    return create_fri_with_merkle_trees_ext<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 #endif // EXT_FIELD
 
@@ -154,7 +154,7 @@ namespace icicle {
   Fri<scalar_t, scalar_t>
   create_fri(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
   {
-    return create_fri_template<scalar_t, scalar_t>(folding_factor, stopping_degree, merkle_trees);
+    return create_fri_template<scalar_t, scalar_t>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
 #ifdef EXT_FIELD
@@ -162,7 +162,7 @@ namespace icicle {
   Fri<scalar_t, extension_t>
   create_fri(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
   {
-    return create_fri_template_ext<scalar_t, extension_t>(folding_factor, stopping_degree, merkle_trees);
+    return create_fri_template_ext<scalar_t, extension_t>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
   template <>

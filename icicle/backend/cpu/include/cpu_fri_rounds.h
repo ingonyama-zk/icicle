@@ -23,7 +23,7 @@ namespace icicle {
      * @param merkle_trees A vector of MerkleTrees.
      * @param log_input_size The log of the input size.
      */
-    FriRounds(std::vector<MerkleTree> merkle_trees, const size_t log_input_size) : m_merkle_trees(merkle_trees)
+    FriRounds(std::vector<MerkleTree>& merkle_trees, const size_t log_input_size) : m_merkle_trees(merkle_trees)
     {
       size_t fold_rounds = m_merkle_trees.size();
       m_rounds_evals.resize(fold_rounds);
@@ -68,7 +68,7 @@ namespace icicle {
     std::vector<std::unique_ptr<F[]>> m_rounds_evals;
 
     // Holds MerkleTree for each round. m_merkle_trees[i] is the tree for round i.
-    std::vector<MerkleTree> m_merkle_trees;
+    std::vector<MerkleTree>& m_merkle_trees;
   };
 
 } // namespace icicle
