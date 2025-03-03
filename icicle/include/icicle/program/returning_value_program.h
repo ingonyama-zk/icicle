@@ -44,7 +44,21 @@ namespace icicle {
 
     int get_polynomial_degree() const { return m_poly_degree; }
 
+  protected:
+    ReturningValueProgram() {}
+
+    // Friend function for C-api to have access to the default constructor
+    template <typename T>
+    friend ReturningValueProgram<T>* create_empty_returning_value_program();
+
   private:
     int m_poly_degree = 0;
   };
+
+  // Friend function for C-api to have access to the default constructor
+  template <typename S>
+  ReturningValueProgram<S>* create_empty_returning_value_program()
+  {
+    return new ReturningValueProgram<S>();
+  }
 } // namespace icicle

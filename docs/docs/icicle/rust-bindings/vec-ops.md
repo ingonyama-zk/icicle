@@ -57,6 +57,7 @@ All operations are element-wise operations, and the results placed into the `res
 - **`mul`**: Performs element-wise multiplication of two vectors.
 - **`transpose`**: Performs matrix transpose.
 - **`bit_reverse/bit_reverse_inplace`**: Reverse order of elements based on bit-reverse.
+- **`execute_program`**: Execute a user-defined function with arbitrary number of input and output variables (Passed as part of data - a vector of slices of field elements). For more details see [program](./program.md).
 
 
 
@@ -106,4 +107,15 @@ pub fn bit_reverse_inplace<F>(
     input: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>;
+
+pub fn execute_program<F, Prog, Data>(
+    data: &mut Vec<&Data>,
+    program: &Prog,
+    cfg: &VecOpsConfig
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+    Prog: Program<F>;
 ```

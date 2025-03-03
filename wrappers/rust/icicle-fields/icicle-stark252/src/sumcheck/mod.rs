@@ -8,5 +8,5 @@ pub(crate) mod tests {
     use crate::field::ScalarField;
     use icicle_core::impl_sumcheck_tests;
 
-    impl_sumcheck_tests!(ScalarField);
+    impl_sumcheck_tests!(stark252, ScalarField);
 }
