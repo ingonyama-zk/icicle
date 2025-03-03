@@ -1,0 +1,523 @@
+name: METAL-C++/Go/RUST
+
+on:
+  pull_request:
+    branches:
+      - main
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  spelling-checker:
+    name: Check Spelling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: codespell-project/actions-codespell@v2
+        with:
+          # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
+          skip: ./**/target,./**/build,./docs/*.js,./docs/*.json,./*.svg
+          # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-ignore_words_file
+          ignore_words_file: .codespellignore
+
+  check-changed-files:
+    uses: ./.github/workflows/check-changed-files.yml
+
+### Assume formatting is done in linux CI TODO separate to files and run once
+  # check-format:
+  #   name: Check Code Format
+  #   runs-on: ubuntu-22.04
+  #   needs: check-changed-files
+  #   container:
+  #     image: silkeh/clang:19-bookworm # Replace with a container having the desired clang-format version
+  #   steps:
+  #   - name: Checkout
+  #     uses: actions/checkout@v4
+  #   - name: Setup go
+  #     if: needs.check-changed-files.outputs.golang == 'true'
+  #     uses: actions/setup-go@v5
+  #     with:
+  #       go-version: '1.22.0'
+  #   - name: Check clang-format
+  #     if: needs.check-changed-files.outputs.cpp == 'true'
+  #     run: |
+  #       clang-format --version  
+  #       ./scripts/format_all.sh . --check --exclude "build|wrappers"
+  #   - name: Check gofmt
+  #     if: needs.check-changed-files.outputs.golang == 'true'
+  #     run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
+  #   - name: Check rustfmt
+  #     if: needs.check-changed-files.outputs.rust == 'true'
+  #     working-directory: ./wrappers/rust
+  #     # "-name target -prune" removes searching in any directory named "target"
+  #     # Formatting by single file is necessary due to generated files not being present
+  #     # before building the project.
+  #     # e.g. icicle-metal-runtime/src/bindings.rs is generated and icicle-metal-runtime/src/lib.rs includes that module
+  #     # causing rustfmt to fail.
+  #     run: if [[ $(find . -path ./icicle-curves/icicle-curve-template -prune -o -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
+
+  extract-metal-backend-branch:
+    uses: ./.github/workflows/extract-metal-backend.yml
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+
+  test-metal-curve:
+    name: Test curve on macOS
+    runs-on: [self-hosted, macOS, arm64, icicle, metal]
+    needs: [check-changed-files, extract-metal-backend-branch]
+    strategy:
+      matrix:
+        curve: # No extension field support currently TODO
+          - name: bn254
+            build_args: -DG2=OFF -DECNTT=OFF
+          # - name: bls12_381
+          #   build_args: -DG2=OFF -DECNTT=OFF
+          # - name: bls12_377
+          #   build_args: -DG2=OFF -DECNTT=OFF
+          # - name: bw6_761
+          #   build_args: -DG2=OFF -DECNTT=OFF
+          # - name: grumpkin
+          #   build_args: -DG2=OFF -DECNTT=OFF
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout METAL Backend
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-metal-backend
+        path: ./icicle/backend/metal
+        ssh-key: ${{ secrets.METAL_PULL_KEY }}
+        ref: ${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}
+    - name: Get METAL Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      working-directory: ./icicle/backend/metal
+      id: extract-metal-sha
+      run: |
+        METAL_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "METAL Backend Commit SHA: $METAL_BACKEND_SHA"
+        echo "metal-backend-sha=$METAL_BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set METAL backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      id: metal-flag
+      run: |
+        METAL_BACKEND_SHA=${{ steps.extract-metal-sha.outputs.metal-backend-sha }}
+        CURVE=${{ matrix.curve.name }}
+        COMMIT_FILE="gh_commit_sha_${CURVE}_${METAL_BACKEND_SHA}"
+        if [ "${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+            echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+            echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+            echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+            echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build curve
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.metal-flag.outputs.METAL_FLAG }} ${{ steps.metal-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake --build build --target install -j
+        rm -rf ${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
+        touch ${{ steps.metal-flag.outputs.COMMIT_FILE_PATH }}
+
+    - name: Run C++ Curve Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: | # Exclude un-implemented features from field tests
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        ctest --output-on-failure -E ".*Sumcheck.*|.*Program.*|.*HashApiTest.*"
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d METAL
+                cd -
+            fi
+        done
+    - name: Run RUST Curve Tests
+      working-directory: ./wrappers/rust/icicle-curves
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=icicle-${CURVE//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.INSTALL_PATH }}
+        cd ./$CURVE_DIR
+        cargo test --release --verbose --features no_ecntt,no_g2 -- --skip phase --skip hash --skip tree --skip test_ntt_arbitrary_coset --skip test_ntt_coset_interpolation_nm --skip test_ntt_batch --skip test_ntt_device_async --skip sumcheck
+        cargo test phase2 --release --features no_ecntt,no_g2
+        cargo test phase3 --release --features no_ecntt,no_g2
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+    - name: Run Golang curve Tests
+      working-directory: ./wrappers/golang/curves
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        go test ./$CURVE_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
+
+
+  test-linux-field:
+    name: Test field on macOS
+    runs-on: [self-hosted, macOS, arm64, icicle, metal]
+    needs: [check-changed-files, extract-metal-backend-branch]
+    strategy:
+      matrix:
+        field:
+          - name: babybear
+            build_args: -DEXT_FIELD=OFF
+          # - name: stark252
+          #   build_args: -DEXT_FIELD=OFF
+          # - name: m31
+          #   build_args: -DEXT_FIELD=OFF
+          # - name: koalabear
+          #   build_args: -DEXT_FIELD=OFF
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout METAL Backend
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-metal-backend
+        path: ./icicle/backend/metal
+        ssh-key: ${{ secrets.METAL_PULL_KEY }}
+        ref: ${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}
+    - name: Get METAL Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      working-directory: ./icicle/backend/metal
+      id: extract-metal-sha
+      run: |
+        METAL_BACKEND_SHA=$(git rev-parse HEAD)
+        echo "METAL Backend Commit SHA: $METAL_BACKEND_SHA"
+        echo "metal-backend-sha=$METAL_BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set METAL backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      id: metal-flag 
+      run: |
+        METAL_BACKEND_SHA=${{ steps.extract-metal-sha.outputs.metal-backend-sha }}
+        FIELD=${{ matrix.field.name }}
+        COMMIT_FILE="gh_commit_sha_${FIELD}_${METAL_BACKEND_SHA}"
+        if [ "${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}" == "main" ]; then
+          INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD
+          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+            echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+            echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        else
+          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD
+          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/field/$FIELD" >> $GITHUB_OUTPUT
+          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+          if [ -f "$COMMIT_FILE_PATH" ]; then
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+            echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+          else
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+            echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+            rm -rf ${INSTALL_PATH}
+          fi
+          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build field
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.metal-flag.outputs.METAL_FLAG }} ${{ steps.metal-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake --build build --target install -j
+        rm -rf ${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.field.name }}*
+        touch ${{ steps.metal-flag.outputs.COMMIT_FILE_PATH }}
+
+    - name: Run C++ field Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: |  # Exclude un-implemented features from field tests
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        ctest --output-on-failure -E ".*Sumcheck.*|.*Program.*|.*HashApiTest.*" 
+
+    - name: Run C++ examples
+      working-directory: ./examples/c++
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
+            if [ -d "$dir" ]; then
+                echo "Running command in $dir"
+                cd $dir
+                ./run.sh -d METAL
+                cd -
+            fi
+        done
+
+    - name: Run RUST Field Tests
+      working-directory: ./wrappers/rust/icicle-fields
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=icicle-${FIELD//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.INSTALL_PATH }}
+        cd ./$FIELD_DIR
+        cargo test --release --verbose --features no_ext_field -- --skip phase --skip hash --skip tree --skip test_ntt_arbitrary_coset --skip test_ntt_coset_interpolation_nm --skip test_ntt_batch --skip test_ntt_device_async --skip sumcheck
+        cargo test phase2 --release
+        cargo test phase3 --release
+
+    - name: Setup go
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      timeout-minutes: 15
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+    - name: Run Golang field Tests
+      working-directory: ./wrappers/golang/fields
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$FIELD -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        if [ -d "./$FIELD/tests" ]; then
+          echo "Running tests for $FIELD..."
+          go test ./$FIELD_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
+        else
+          echo "Folder ./$FIELD_DIR/tests does not exist. Skipping tests for $FIELD."
+        fi
+
+### TODO uncomment when hash will be supported in metal
+  # test-linux-hash:
+  #   name: Build and test Go & RUST hash on macOS
+  #   runs-on: [self-hosted, macOS, arm64, icicle, metal]
+  #   needs: [check-changed-files, extract-metal-backend-branch]
+  #   steps:
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v4
+  #   - name: Checkout METAL Backend
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: ingonyama-zk/icicle-metal-backend
+  #       path: ./icicle/backend/metal
+  #       ssh-key: ${{ secrets.METAL_PULL_KEY }}
+  #       ref: ${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}
+  #   - name: Get METAL Backend Commit SHA
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+  #     working-directory: ./icicle/backend/metal
+  #     id: extract-metal-sha
+  #     run: |
+  #       METAL_BACKEND_SHA=$(git rev-parse HEAD)
+  #       echo "METAL Backend Commit SHA: $METAL_BACKEND_SHA"
+  #       echo "metal-backend-sha=$METAL_BACKEND_SHA" >> $GITHUB_OUTPUT
+  #   - name: Set METAL backend flag
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+  #     id: metal-flag
+  #     run: |
+  #       METAL_BACKEND_SHA=${{ steps.extract-metal-sha.outputs.metal-backend-sha }}
+  #       COMMIT_FILE="gh_commit_sha_hash_${METAL_BACKEND_SHA}"
+  #       if [ "${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}" == "main" ]; then
+  #         INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
+  #         echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash" >> $GITHUB_OUTPUT
+  #         COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+  #         echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+  #         if [ -f "$COMMIT_FILE_PATH" ]; then
+  #           echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+  #           echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+  #           echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+  #           rm -rf ${INSTALL_PATH}
+  #         fi
+  #         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+  #         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+  #       else
+  #         INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash
+  #         echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/hash" >> $GITHUB_OUTPUT
+  #         COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+  #         echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+  #         if [ -f "$COMMIT_FILE_PATH" ]; then
+  #           echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+  #           echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+  #           echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+  #           rm -rf ${INSTALL_PATH}
+  #         fi
+  #         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+  #         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+  #       fi
+  #   - name: Build
+  #     working-directory: ./icicle
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
+  #     # builds the hash and merkle tree lib using a local copy of the METAL backend
+  #     run:  |
+  #       mkdir -p build && rm -rf build/*
+  #       cmake -DCMAKE_BUILD_TYPE=Release  -DHASH=ON ${{ steps.metal-flag.outputs.METAL_FLAG }} ${{ steps.metal-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+  #       cmake --build build --target install -j
+  #       rm -rf ${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
+  #       touch ${{ steps.metal-flag.outputs.COMMIT_FILE_PATH }}
+  #   - name: Run RUST Hash Tests
+  #     working-directory: ./wrappers/rust/icicle-hash
+  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+  #     run: |
+  #       export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.INSTALL_PATH }}
+  #       cargo test --release --verbose -- --skip phase
+  #       cargo test phase2 --release
+  #       cargo test phase3 --release
+  #   - name: Setup go
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+  #     timeout-minutes: 15
+  #     uses: actions/setup-go@v5
+  #     with:
+  #       go-version: '1.22.0'
+  #   - name: Test GoLang Hashes
+  #     working-directory: ./wrappers/golang/hash
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+  #     run: |
+  #       export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+  #       export LD_LIBRARY_PATH=${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib
+  #       export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+  #       go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
+  #   - name: Test GoLang Merkle Tree
+  #     working-directory: ./wrappers/golang/merkle-tree
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+  #     run: |
+  #       export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+  #       export LD_LIBRARY_PATH=${{ steps.metal-flag.outputs.INSTALL_PATH }}/lib
+  #       export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+  #       go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
+
+
+### TODO uncomment when all curves will be suppoerted
+  # run-rust-examples:
+  #   name: Run Rust Examples
+  #   runs-on: [self-hosted, macOS, arm64, icicle, metal]
+  #   needs: [check-changed-files, extract-metal-backend-branch]
+  #   steps:
+  #   - name: Checkout Repo
+  #     uses: actions/checkout@v4
+  #   - name: Checkout METAL Backend
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: ingonyama-zk/icicle-metal-backend
+  #       path: ./icicle/backend/metal
+  #       ssh-key: ${{ secrets.METAL_PULL_KEY }}
+  #       ref: ${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}
+  #   - name: Get METAL Backend Commit SHA
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+  #     working-directory: ./icicle/backend/metal
+  #     id: extract-metal-sha
+  #     run: |
+  #       METAL_BACKEND_SHA=$(git rev-parse HEAD)
+  #       echo "METAL Backend Commit SHA: $METAL_BACKEND_SHA"
+  #       echo "metal-backend-sha=$METAL_BACKEND_SHA" >> $GITHUB_OUTPUT
+  #   - name: Set METAL backend flag
+  #     if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+  #     id: metal-flag
+  #     run: |
+  #       METAL_BACKEND_SHA=${{ steps.extract-metal-sha.outputs.metal-backend-sha }}
+  #       COMMIT_FILE="gh_commit_sha_hash_${METAL_BACKEND_SHA}"
+  #       if [ "${{ needs.extract-metal-backend-branch.outputs.metal-backend-branch }}" == "main" ]; then
+  #         INSTALL_PATH=${{ github.workspace }}/../../main_lib/rust-examples
+  #         echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/rust-examples" >> $GITHUB_OUTPUT
+  #         COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+  #         echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+
+  #         if [ -f "$COMMIT_FILE_PATH" ]; then
+  #           echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+  #           echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+  #           echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+  #           rm -rf ${INSTALL_PATH}
+  #         fi
+  #         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+  #         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+  #       else
+  #         INSTALL_PATH=${{ github.workspace }}/../../temp_lib/rust-examples
+  #         echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/rust-examples" >> $GITHUB_OUTPUT
+  #         COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
+  #         echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
+  #         if [ -f "$COMMIT_FILE_PATH" ]; then
+  #           echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting METAL_FLAG="
+  #           echo "METAL_FLAG=" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting METAL_FLAG=-DMETAL_BACKEND=local"
+  #           echo "METAL_FLAG=-DMETAL_BACKEND=local" >> $GITHUB_OUTPUT
+  #           rm -rf ${INSTALL_PATH}
+  #         fi
+  #         echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
+  #         echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
+  #       fi
+  #   - name: Rust examples
+  #     working-directory: ./examples/rust
+  #     if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
+  #     run: |        
+  #       export ICICLE_BACKEND_INSTALL_DIR=${{ steps.metal-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+  #       export RUST_ICICLE_BACKEND_INSTALL_DIR=$ICICLE_BACKEND_INSTALL_DIR/backend
+  #       # loop over all directories in the current directory
+  #       for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
+  #         if [ -d "$dir" ]; then
+  #           echo "Running command in $dir"
+  #           cd $dir
+  #           ./run.sh -d METAL
+  #           cd -
+  #         fi
+  #       done
