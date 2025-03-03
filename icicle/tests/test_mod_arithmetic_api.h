@@ -711,14 +711,20 @@ TEST_F(ModArithTestBase, polynomialEval)
 
 TYPED_TEST(ModArithTest, ntt)
 {
-  // TODO Yuval: cleanup this test
+  #ifdef RING
+  // For rings, twiddles are the ring type, direct or RNS (== TypeParam)
+  using TwiddleType = TypeParam;
+  #else
+  // For fields and extensions fields, twiddles are the base fields (== scalar_t)
+  using TwiddleType = scalar_t;
+  #endif
 
   // Randomize configuration
   const bool inplace = rand_uint_32b(0, 1);
-  const int logn = 7; // rand_uint_32b(0, 17);
+  const int logn = rand_uint_32b(0, 17);
   const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 2;
-  const int log_batch_size = 4; // and_uint_32b(0, 2);
+  const int log_batch_size = and_uint_32b(0, 2);
   const int batch_size = 1 << log_batch_size;
   const int _ordering = rand_uint_32b(0, 3);
   const Ordering ordering = static_cast<Ordering>(_ordering);
@@ -731,21 +737,7 @@ TYPED_TEST(ModArithTest, ntt)
   const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
   const int log_coset_stride = rand_uint_32b(0, 2);
 
-  #ifdef RING
-  TypeParam coset_gen;
-  if (log_coset_stride) {
-    coset_gen = TypeParam::omega(logn + log_coset_stride);
-  } else {
-    coset_gen = TypeParam::one();
-  }
-  #else
-  scalar_t coset_gen;
-  if (log_coset_stride) {
-    coset_gen = scalar_t::omega(logn + log_coset_stride);
-  } else {
-    coset_gen = scalar_t::one();
-  }
-  #endif
+  TwiddleType coset_gen = log_coset_stride ? TwiddleType::omega(logn + log_coset_stride) : TwiddleType::one();
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -771,11 +763,7 @@ TYPED_TEST(ModArithTest, ntt)
     ConfigExtension ext;
     ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
-  #ifdef RING
-    auto config = default_ntt_config<TypeParam>();
-  #else
-    auto config = default_ntt_config<scalar_t>();
-  #endif
+    auto config = default_ntt_config<TwiddleType>();
     config.stream = stream;
     config.coset_gen = coset_gen;
     config.batch_size = batch_size;       // default: 1
@@ -784,11 +772,7 @@ TYPED_TEST(ModArithTest, ntt)
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
     config.is_async = false;
-  #ifdef RING
-    ICICLE_CHECK(ntt_init_domain(TypeParam::omega(log_ntt_domain_size), init_domain_config));
-  #else
-    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
-  #endif
+    ICICLE_CHECK(ntt_init_domain(TwiddleType::omega(log_ntt_domain_size), init_domain_config));
     TypeParam *d_in, *d_out;
     ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
     ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
@@ -814,11 +798,7 @@ TYPED_TEST(ModArithTest, ntt)
     ICICLE_CHECK(icicle_free_async(d_out, config.stream));
     ICICLE_CHECK(icicle_stream_synchronize(config.stream));
     ICICLE_CHECK(icicle_destroy_stream(stream));
-  #ifdef RING
-    ICICLE_CHECK(ntt_release_domain<TypeParam>());
-  #else
-    ICICLE_CHECK(ntt_release_domain<scalar_t>());
-  #endif
+    ICICLE_CHECK(ntt_release_domain<TwiddleType>());
   };
   run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
   run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
