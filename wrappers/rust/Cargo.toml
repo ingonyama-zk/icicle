@@ -12,6 +12,7 @@ members = [
   "icicle-fields/icicle-koalabear",
   "icicle-fields/icicle-m31",
   "icicle-fields/icicle-stark252",
+  "icicle-rings/icicle-labrador",
   "icicle-hash",
 ]
 exclude = []
@@ -19,7 +20,7 @@ exclude = []
 [workspace.package]
 version = "3.5.0"
 edition = "2021"
-authors = [ "Ingonyama" ]
+authors = ["Ingonyama"]
 homepage = "https://www.ingonyama.com"
 repository = "https://github.com/ingonyama-zk/icicle"
 

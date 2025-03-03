@@ -14,7 +14,7 @@ typedef ReturningValueProgram<scalar_t>* ReturningValueProgramHandle;
 
 extern "C" {
 // Program functions
-ProgramHandle CONCAT_EXPAND(FIELD, create_predefined_program)(PreDefinedPrograms pre_def)
+ProgramHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, create_predefined_program)(PreDefinedPrograms pre_def)
 {
   return new Program<scalar_t>(pre_def);
 }
@@ -27,8 +27,8 @@ eIcicleError delete_program(ProgramHandle program)
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError
-CONCAT_EXPAND(FIELD, generate_program)(SymbolHandle* parameters_ptr, int nof_parameters, ProgramHandle* program)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, generate_program)(
+  SymbolHandle* parameters_ptr, int nof_parameters, ProgramHandle* program)
 {
   *program = create_empty_program<scalar_t>();
   std::vector<Symbol<scalar_t>> parameters_vec;
@@ -48,16 +48,17 @@ CONCAT_EXPAND(FIELD, generate_program)(SymbolHandle* parameters_ptr, int nof_par
   return eIcicleError::SUCCESS;
 }
 
-ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_value_program)(PreDefinedPrograms pre_def)
+ReturningValueProgramHandle
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, create_predefined_returning_value_program)(PreDefinedPrograms pre_def)
 {
   return new ReturningValueProgram<scalar_t>(pre_def);
 }
 
-eIcicleError CONCAT_EXPAND(FIELD, generate_returning_value_program)(
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, generate_returning_value_program)(
   SymbolHandle* parameters_ptr, int nof_parameters, ReturningValueProgramHandle* returning_program)
 {
   ProgramHandle program = *returning_program;
-  return CONCAT_EXPAND(FIELD, generate_program)(parameters_ptr, nof_parameters, &program);
+  return CONCAT_EXPAND(ICICLE_FFI_PREFIX, generate_program)(parameters_ptr, nof_parameters, &program);
 }
 }
 
@@ -68,12 +69,12 @@ typedef ReturningValueProgram<extension_t>* ExtensionReturningValueProgramHandle
 
 extern "C" {
 // Program functions
-ExtensionProgramHandle CONCAT_EXPAND(FIELD, extension_create_predefined_program)(PreDefinedPrograms pre_def)
+ExtensionProgramHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_create_predefined_program)(PreDefinedPrograms pre_def)
 {
   return new Program<extension_t>(pre_def);
 }
 
-eIcicleError CONCAT_EXPAND(FIELD, extension_generate_program)(
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_generate_program)(
   ExtensionSymbolHandle* parameters_ptr, int nof_parameters, ExtensionProgramHandle* program)
 {
   *program = create_empty_program<extension_t>();
@@ -94,16 +95,16 @@ eIcicleError CONCAT_EXPAND(FIELD, extension_generate_program)(
 }
 
 ExtensionReturningValueProgramHandle
-CONCAT_EXPAND(FIELD, extension_create_predefined_returning_value_program)(PreDefinedPrograms pre_def)
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_create_predefined_returning_value_program)(PreDefinedPrograms pre_def)
 {
   return new ReturningValueProgram<extension_t>(pre_def);
 }
 
-eIcicleError CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_generate_returning_value_program)(
   ExtensionSymbolHandle* parameters_ptr, int nof_parameters, ExtensionReturningValueProgramHandle* returning_program)
 {
   ExtensionProgramHandle program = *returning_program;
-  return CONCAT_EXPAND(FIELD, extension_generate_program)(parameters_ptr, nof_parameters, &program);
+  return CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_generate_program)(parameters_ptr, nof_parameters, &program);
 }
 }
 #endif // EXT_FIELD
