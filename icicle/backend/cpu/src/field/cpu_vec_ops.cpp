@@ -1005,4 +1005,5 @@ REGISTER_VECTOR_PRODUCT_EXT_FIELD_BACKEND("CPU", cpu_vector_product<extension_t>
 REGISTER_SCALAR_MUL_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_mul<extension_t>);
 REGISTER_SCALAR_ADD_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_add<extension_t>);
 REGISTER_SCALAR_SUB_VEC_EXT_FIELD_BACKEND("CPU", cpu_scalar_sub<extension_t>);
+REGISTER_EXECUTE_PROGRAM_EXT_FIELD_BACKEND("CPU", cpu_execute_program<extension_t>);
 #endif // EXT_FIELD

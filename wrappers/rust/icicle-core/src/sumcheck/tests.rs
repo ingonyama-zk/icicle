@@ -1,7 +1,7 @@
 use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use crate::traits::{FieldImpl, GenerateRandom, Handle};
+use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
@@ -51,7 +51,7 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram + Handle,
+    P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -122,7 +122,7 @@ where
 pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
-    P: ReturningValueProgram + Handle,
+    P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;

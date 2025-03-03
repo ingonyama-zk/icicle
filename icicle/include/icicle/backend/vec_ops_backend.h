@@ -460,6 +460,23 @@ namespace icicle {
         return true;                                                                                                   \
       }();                                                                                                             \
     }
+
+  using extProgramExecutionImpl = std::function<eIcicleError(
+    const Device& device,
+    std::vector<extension_t*>& data,
+    const Program<extension_t>& program,
+    uint64_t size,
+    const VecOpsConfig& config)>;
+
+  void register_extension_execute_program(const std::string& deviceType, extProgramExecutionImpl);
+
+  #define REGISTER_EXECUTE_PROGRAM_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_program_execution) = []() -> bool {                                                      \
+        register_extension_execute_program(DEVICE_TYPE, FUNC);                                                         \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 #endif // EXT_FIELD
 
 } // namespace icicle
