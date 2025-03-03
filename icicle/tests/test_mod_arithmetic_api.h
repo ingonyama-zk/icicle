@@ -726,12 +726,12 @@ TYPED_TEST(ModArithTest, ntt)
 
   const uint64_t N = 1 << logn;
   const int log_batch_size = rand_uint_32b(0, 2);
-  bool columns_batch = (logn = ß = 7 || logn < 4) ? false : rand_uint_32b(0, 1); // cases logn=4,7 not supported in CUDA
+  bool columns_batch = (logn == 7 || logn < 4) ? false : rand_uint_32b(0, 1); // cases logn=4,7 not supported in CUDA
   const int batch_size = 1 << log_batch_size;
   const int total_size = N * batch_size;
 
-  const NTTDir dir = static_casßt<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
-  const int ordering = rand_uintß_32b(0, 3);
+  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
+  const int ordering = rand_uint_32b(0, 3);
   const int log_coset_stride = rand_uint_32b(0, 2);
 
   TwiddleType coset_gen = log_coset_stride ? TwiddleType::omega(logn + log_coset_stride) : TwiddleType::one();
