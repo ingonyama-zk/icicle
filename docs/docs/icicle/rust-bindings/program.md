@@ -1,15 +1,13 @@
 # Rust FFI Bindings for Program
 
->**_NOTE:_**
->Please refer to the [Program overview](../primitives/program.md) page for additional detail. This section is a brief description of the Rust FFI bindings.
+:::note
+Please refer to the [Program overview](../primitives/program.md) page for additional detail. This section is a brief description of the Rust FFI bindings.
+:::
 
-This documentation is designed to bring developers up to speed about Rust API for program implemented in the cpp backend.
+This documentation is designed to bring developers up to speed about the Rust API wrapping the cpp implementation of program.
 
 ## Introduction
 Program is a class that let users define expressions on vector elements, and have ICICLE compile it for the backends for a fused implementation. This solves memory bottlenecks and also let users customize algorithms such as sumcheck. Program can create only element-wise lambda functions. Program itself works for definition while actual execution is handled through other functionalities like [Vector Operations](./vec-ops.md).
-
-
-The Rust FFI bindings for both Program and Symbol serve as a "shallow wrapper" around the underlying C++ implementation. These bindings provide a straightforward Rust interface that directly calls functions from a C++ library, effectively bridging Rust and C++ operations. The Rust layer handles simple interface translations without delving into complex logic or data structures, which are managed on the C++ side. This design ensures efficient data handling, memory management, and execution while utilizing the existing backend directly via C++.
 
 The following would list the implemented Rust functionality with some examples paralleling those given in the [original program overview](../primitives/program.md).
 # Symbol
@@ -45,7 +43,7 @@ pub struct Symbol {
 ### Traits implemented and key methods
 Additional traits the struct implements to fulfil `Symbol<F>` trait that should be noted.
 #### Arithmetic operations
-Symbol implements addition, subtraction and multiplication (as well as the assign variants of them) with other symbols / references as well as field elements. Applying the operations will generate a new symbol (Or overwrite the existing in the case of the assign operation) representing the arithmetic operations of the two operand symbols. The `inverse` function joins these operations to allow an additional arithmetic operation (division).
+Symbol implements addition, subtraction and multiplication (as well as the assign variants of them) with other symbols / references as well as field elements. Applying the operations will generate a new symbol (or overwrite the existing in the case of the assign operation) representing the arithmetic operations of the two operand symbols. The `inverse` function joins these operations to allow an additional arithmetic operation (division).
 
 # Program
 A program to be ran on the various Icicle backends. It can be either a user-defined program, or one of the members of `PredefinedProgram` enum. The program adheres to one of the following traits:
@@ -74,13 +72,14 @@ pub struct Program {
 
 # Usage
 This section will outline how to use Program and Symbol, mirroring the examples from the [cpp overview](../primitives/program.md). The program use-case splits to three steps:
-1. Defining a function/lambda that describes the program to be ran (or choosing one of the predefined list?).
+1. Defining a function/lambda that describes the program to be ran (or choosing one of the predefined list).
 2. Creating a new program given the above function.
 3. Executing the program using the Vector Operations API.
 ## Defining a Function for Program
 A function operating on a vector of symbols, with outputs being written to said input vector. The input symbols in the vector represent inputs and outputs of field elements, and will be replaced by vectors of field elements when executed.
->**_NOTE:_**
-> The defined function defines arithmetic operations to be done in series, without control-flow i.e. loops, conditions etc.
+:::note
+The defined function defines arithmetic operations to be done in series, and could be represented as set of equations (for each output). Practically, control flow (e.g., loops, conditions) is not parsed, instead the computation follows the exact execution path taken during tracing, which determines the final computation that will be performed. 
+:::
 ```rust
 example_function<F, S>(vars: &mut Vec<S>)
 where
@@ -117,10 +116,11 @@ where
     Parameter: HostOrDeviceSlice<F> + ?Sized,
     Prog: Program<F> + Handle,
 ```
-
-And in total with data setup we would get code like this (Example taken from check_program in vec_ops tests):
+### Examples
+ Example taken from check_program in vec_ops tests.
+#### Program functionality with a custom functions
 ```rust
-pub fn use_program<F, Prog>()
+pub fn check_program<F, Prog>()
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
@@ -143,6 +143,23 @@ where
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
     
     let program = Prog::new(example_lambda, 7).unwrap();
+    
+    let cfg = VecOpsConfig::default();
+    execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
+}
+```
+#### Program functionality with predefined programs
+```rust
+pub fn check_predefined_program<F, Prog>()
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    Prog: Program<F>,
+{
+    // Additional lines for initiating the slices of field elements for the parameters
+    let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice];
+
+    let program = Prog::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
