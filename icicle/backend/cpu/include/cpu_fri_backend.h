@@ -21,7 +21,7 @@ namespace icicle {
      *
      * @param folding_factor   The factor by which the codeword is folded each round.
      * @param stopping_degree  Stopping degree threshold for the final polynomial.
-     * @param merkle_trees     A vector of MerkleTrees.
+     * @param merkle_trees     A vector of MerkleTrees, tree per FRI round.
      */
     CpuFriBackend(const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
         : FriBackend<S, F>(folding_factor, stopping_degree, merkle_trees), m_nof_fri_rounds(merkle_trees.size()),
@@ -36,7 +36,9 @@ namespace icicle {
       const F* input_data,
       FriProof<F>& fri_proof /*out*/) override
     {
-      ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
+      if(__builtin_expect(fri_config.nof_queries <= 0, 0)){
+        ICICLE_LOG_ERROR << "Number of queries must be > 0";
+      }
 
       FriTranscript<F> transcript(std::move(fri_transcript_config), m_log_input_size);
 
@@ -72,10 +74,10 @@ namespace icicle {
     eIcicleError commit_fold_phase(
       const F* input_data, FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
     {
-      ICICLE_ASSERT(this->m_folding_factor == 2)
-        << "Currently only folding factor of 2 is supported"; // TODO SHANIE - remove when supporting other folding
-                                                              // factors
-
+      if (this->m_folding_factor != 2){
+        ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE - remove when supporting other folding
+        // factors
+      }        
       const S* twiddles = ntt_cpu::CpuNttDomain<S>::s_ntt_domain.get_twiddles();
       uint64_t domain_max_size = ntt_cpu::CpuNttDomain<S>::s_ntt_domain.get_max_size();
 
@@ -92,8 +94,9 @@ namespace icicle {
         MerkleTree* current_round_tree = m_fri_rounds.get_merkle_tree(round_idx);
         current_round_tree->build(round_evals, current_size, MerkleTreeConfig());
         auto [root_ptr, root_size] = current_round_tree->get_merkle_root();
-        ICICLE_ASSERT(root_ptr != nullptr && root_size > 0) << "Failed to retrieve Merkle root for round " << round_idx;
-
+        if (root_ptr == nullptr || root_size <= 0){
+          ICICLE_LOG_ERROR << "Failed to retrieve Merkle root for round " << round_idx;
+        }
         // Add root to transcript and get alpha
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
@@ -150,7 +153,6 @@ namespace icicle {
      */
     eIcicleError query_phase(FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
     {
-      ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
       size_t seed = transcript.get_seed_for_query_phase();
       seed_rand_generator(seed);
       std::vector<size_t> query_indices =

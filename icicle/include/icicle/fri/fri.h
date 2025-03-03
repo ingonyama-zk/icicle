@@ -93,17 +93,20 @@ namespace icicle {
      * @param fri_config Configuration for FRI operations.
      * @param fri_transcript_config Configuration for encoding/hashing (Fiat-Shamir).
      * @param fri_proof The proof object to verify.
-     * @param verification_pass (OUT) Set to true if verification succeeds, false otherwise.
+     * @param valid (OUT) Set to true if verification succeeds, false otherwise.
      * @return An eIcicleError indicating success or failure.
      */
     eIcicleError verify(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>&& fri_transcript_config,
       FriProof<F>& fri_proof,
-      bool& verification_pass /* OUT */) const
+      bool& valid /* OUT */) const
     {
-      verification_pass = false;
-      ICICLE_ASSERT(fri_config.nof_queries > 0) << "No queries specified in FriConfig.";
+      valid = false;
+      if(__builtin_expect(fri_config.nof_queries <= 0, 0)){
+        ICICLE_LOG_ERROR << "Number of queries must be > 0";
+      }
+
       const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
       const size_t final_poly_size = fri_proof.get_final_poly_size();
       const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
@@ -115,7 +118,9 @@ namespace icicle {
         std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), log_input_size);
       for (size_t round_idx = 0; round_idx < nof_fri_rounds; ++round_idx) {
         auto [root_ptr, root_size] = fri_proof.get_root(round_idx);
-        ICICLE_ASSERT(root_ptr != nullptr && root_size > 0) << "Failed to retrieve Merkle root for round " << round_idx;
+        if (root_ptr == nullptr || root_size <= 0){
+          ICICLE_LOG_ERROR << "Failed to retrieve Merkle root for round " << round_idx;
+        }
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
         alpha_values[round_idx] = transcript.get_alpha(merkle_commit);
@@ -124,14 +129,13 @@ namespace icicle {
       // proof-of-work
       if (fri_config.pow_bits != 0) {
         bool valid = (transcript.hash_and_get_nof_leading_zero_bits(fri_proof.get_pow_nonce()) == fri_config.pow_bits);
-        if (!valid) return eIcicleError::SUCCESS; // return with verification_pass = false
+        if (!valid) return eIcicleError::SUCCESS; // return with valid = false
         transcript.set_pow_nonce(fri_proof.get_pow_nonce());
       }
 
       // get query indices
       size_t seed = transcript.get_seed_for_query_phase();
       seed_rand_generator(seed);
-      ICICLE_ASSERT(fri_config.nof_queries > 0) << "Number of queries must be > 0";
       std::vector<size_t> query_indices = rand_size_t_vector(fri_config.nof_queries, final_poly_size, input_size);
 
       uint64_t domain_max_size = 0;
@@ -158,7 +162,7 @@ namespace icicle {
           if (!valid) {
             ICICLE_LOG_ERROR << "[VERIFIER] Merkle path verification failed for leaf query=" << query
                              << ", query_idx=" << query_idx << ", round=" << round_idx;
-            return eIcicleError::SUCCESS; // return with verification_pass = false
+            return eIcicleError::SUCCESS; // return with valid = false
           }
 
           MerkleProof& proof_ref_sym = fri_proof.get_query_proof(2 * query_idx + 1, round_idx);
@@ -172,15 +176,18 @@ namespace icicle {
           if (!valid) {
             ICICLE_LOG_ERROR << "Merkle path verification failed for leaf query=" << query
                              << ", query_idx=" << query_idx << ", round=" << round_idx;
-            return eIcicleError::SUCCESS; // return with verification_pass = false
+            return eIcicleError::SUCCESS; // return with valid = false
           }
 
           // collinearity check
           const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf();
           const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
-          ICICLE_ASSERT(elem_idx == leaf_index) << "Leaf index from proof doesn't match query expected index";
-          ICICLE_ASSERT(elem_idx_sym == leaf_index_sym)
-            << "Leaf index symmetry from proof doesn't match query expected index";
+          if(__builtin_expect(elem_idx != leaf_index, 0)){
+            ICICLE_LOG_ERROR << "Leaf index from proof doesn't match query expected index";
+          }
+          if(__builtin_expect(elem_idx_sym != leaf_index_sym, 0)){
+            ICICLE_LOG_ERROR << "Leaf index symmetry from proof doesn't match query expected index";
+          }
           const F& leaf_data_f = *reinterpret_cast<const F*>(leaf_data);
           const F& leaf_data_sym_f = *reinterpret_cast<const F*>(leaf_data_sym);
           F l_even = (leaf_data_f + leaf_data_sym_f) * S::inv_log_size(1);
@@ -194,7 +201,7 @@ namespace icicle {
             if (final_poly[query % final_poly_size] != folded) {
               ICICLE_LOG_ERROR << "[VERIFIER] (last round) Collinearity check failed for query=" << query
                                << ", query_idx=" << query_idx << ", round=" << round_idx;
-              return eIcicleError::SUCCESS; // return with verification_pass = false;
+              return eIcicleError::SUCCESS; // return with valid = false;
             }
           } else {
             MerkleProof& proof_ref_folded = fri_proof.get_query_proof(2 * query_idx, round_idx + 1);
@@ -204,13 +211,13 @@ namespace icicle {
               ICICLE_LOG_ERROR << "[VERIFIER] Collinearity check failed. query=" << query << ", query_idx=" << query_idx
                                << ", round=" << round_idx << ".\nfolded_res = \t\t" << folded
                                << "\nfolded_from_proof = \t" << leaf_data_folded_f;
-              return eIcicleError::SUCCESS; // return with verification_pass = false
+              return eIcicleError::SUCCESS; // return with valid = false
             }
           }
           current_log_size--;
         }
       }
-      verification_pass = true;
+      valid = true;
       return eIcicleError::SUCCESS;
     }
 

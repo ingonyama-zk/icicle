@@ -186,11 +186,11 @@ TEST_F(FieldTestBase, Sumcheck)
     // ===== Verifier side ======
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
+    bool valid = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
-    ASSERT_EQ(true, verification_pass);
+    ASSERT_EQ(true, valid);
   };
 
   for (const auto& device : s_registered_devices)
@@ -259,10 +259,10 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   // ===== Verifier side ======
   // create sumcheck
   auto verifier_sumcheck = create_sumcheck<scalar_t>();
-  bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+  bool valid = false;
+  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
-  ASSERT_EQ(true, verification_pass);
+  ASSERT_EQ(true, valid);
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
@@ -329,11 +329,11 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
     // ===== Verifier side ======
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
+    bool valid = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
-    ASSERT_EQ(true, verification_pass);
+    ASSERT_EQ(true, valid);
   };
   for (const auto& device : s_registered_devices) {
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
@@ -494,11 +494,11 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     // ===== Verifier side ======
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
+    bool valid = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
-    ASSERT_EQ(true, verification_pass);
+    ASSERT_EQ(true, valid);
   };
 
   for (const auto& device : s_registered_devices)
@@ -559,11 +559,11 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     // ===== Verifier side ======
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
-    bool verification_pass = false;
+    bool valid = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
-    ASSERT_EQ(true, verification_pass);
+    ASSERT_EQ(true, valid);
   };
 
   for (const auto& device : s_registered_devices)
@@ -620,10 +620,10 @@ TYPED_TEST(FieldTest, FriHashAPi)
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(
     input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
-  bool verification_pass = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, verification_pass));
+  bool valid = false;
+  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, valid));
 
-  ASSERT_EQ(true, verification_pass);
+  ASSERT_EQ(true, valid);
 
   // Release domain
   ICICLE_CHECK(ntt_release_domain<scalar_t>());
@@ -684,10 +684,10 @@ TYPED_TEST(FieldTest, FriMerkleTreeAPi)
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(folding_factor, stopping_degree, merkle_trees);
-  bool verification_pass = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, verification_pass));
+  bool valid = false;
+  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, valid));
 
-  ASSERT_EQ(true, verification_pass);
+  ASSERT_EQ(true, valid);
 
   // Release domain
   ICICLE_CHECK(ntt_release_domain<scalar_t>());
