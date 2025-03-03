@@ -75,7 +75,7 @@ namespace icicle {
     inline eIcicleError
     build(const T* leaves, uint64_t nof_leaves /* number of leaf elements */, const MerkleTreeConfig& config)
     {
-      return build(reinterpret_cast<const std::byte*>(leaves), nof_leaves * sizeof(T), config);
+      return build(reinterpret_cast<const std::byte*>(leaves), nof_leaves * m_backend->get_leaf_element_size(), config);
     }
 
     /**
