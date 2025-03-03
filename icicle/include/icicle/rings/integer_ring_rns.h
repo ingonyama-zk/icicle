@@ -257,8 +257,8 @@ public:
     constexpr unsigned sizeof_limb = sizeof(zq->limbs[0]);
     // Note: without those, CUDA cannot compile this code to GPU since those values are not in device memory
     constexpr auto field_offsets = RNS_CONFIG::field_offset;
-    constexpr auto field_nof_limbs = RNS_CONFIG::field_nof_limbs;
-    constexpr auto W_crt = RNS_CONFIG::W_crt;
+    constexpr auto field_limb_counts = RNS_CONFIG::field_limb_counts;
+    constexpr auto crt_weights = RNS_CONFIG::crt_weights;
 
     // Compute Σ(Wi * xi)
     Zq zq_sum = Zq::zero();
@@ -268,8 +268,8 @@ public:
       // TODO: can we avoid this memcpy? Probably yes if we use a low level multiplier, rather than the Zq multiplier
       std::memcpy(
         &xi, reinterpret_cast<const std::byte*>(zqrns) + field_offsets[i] * sizeof_limb,
-        field_nof_limbs[i] * sizeof_limb);
-      zq_sum = zq_sum + (xi * Zq{W_crt.storages[i]});
+        field_limb_counts[i] * sizeof_limb);
+      zq_sum = zq_sum + (xi * Zq{crt_weights.storages[i]});
     }
 
     // Store result
@@ -297,8 +297,6 @@ struct std::hash<IntegerRingRns<CONFIG>> {
   std::size_t operator()(const IntegerRingRns<CONFIG>& key) const
   {
     std::size_t hash = 0;
-    // boost hashing, see
-    // https://stackoverfloW_crt.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
     for (int i = 0; i < CONFIG::limbs_count; i++)
       hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
     return hash;
