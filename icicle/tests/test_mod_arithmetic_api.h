@@ -44,7 +44,7 @@ public:
 #ifdef EXT_FIELD
 typedef testing::Types<scalar_t, extension_t> FTImplementations;
 #elif defined(RING)
-typedef testing::Types<scalar_t /*, TODO add ZqRns here */> FTImplementations;
+typedef testing::Types<scalar_t, scalar_rns_t> FTImplementations;
 #elif defined(FIELD)
 typedef testing::Types<scalar_t> FTImplementations;
 #else
@@ -711,95 +711,85 @@ TEST_F(ModArithTestBase, polynomialEval)
 
 TYPED_TEST(ModArithTest, ntt)
 {
+  #ifdef RING
+  // For rings, twiddles are the ring type, direct or RNS (== TypeParam)
+  using TwiddleType = TypeParam;
+  #else
+  // For fields and extensions fields, twiddles are the base fields (== scalar_t)
+  using TwiddleType = scalar_t;
+  #endif
+
   // Randomize configuration
-  const bool inplace = rand_uint_32b(0, 1);
   const int logn = rand_uint_32b(0, 17);
-  const uint64_t N = 1 << logn;
   const int log_ntt_domain_size = logn + 2;
+  const bool inplace = rand_uint_32b(0, 1);
+
+  const uint64_t N = 1 << logn;
   const int log_batch_size = rand_uint_32b(0, 2);
+  bool columns_batch = (logn == 7 || logn < 4) ? false : rand_uint_32b(0, 1); // cases logn=4,7 not supported in CUDA
   const int batch_size = 1 << log_batch_size;
-  const int _ordering = rand_uint_32b(0, 3);
-  const Ordering ordering = static_cast<Ordering>(_ordering);
-  bool columns_batch;
-  if (logn == 7 || logn < 4) {
-    columns_batch = false; // currently not supported (icicle_v3/backend/cuda/src/ntt/ntt.cuh line 578)
-  } else {
-    columns_batch = rand_uint_32b(0, 1);
-  }
-  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
-  const int log_coset_stride = rand_uint_32b(0, 2);
-  scalar_t coset_gen;
-  if (log_coset_stride) {
-    coset_gen = scalar_t::omega(logn + log_coset_stride);
-  } else {
-    coset_gen = scalar_t::one();
-  }
-
-  ICICLE_LOG_DEBUG << "N = " << N;
-  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
-  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
-  ICICLE_LOG_DEBUG << "inplace = " << inplace;
-  ICICLE_LOG_DEBUG << "ordering = " << _ordering;
-  ICICLE_LOG_DEBUG << "log_coset_stride = " << log_coset_stride;
-
   const int total_size = N * batch_size;
+
+  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1)); // 0: forward, 1: inverse
+  const int ordering = rand_uint_32b(0, 3);
+  const int log_coset_stride = rand_uint_32b(0, 2);
+
+  TwiddleType coset_gen = log_coset_stride ? TwiddleType::omega(logn + log_coset_stride) : TwiddleType::one();
+
+  ICICLE_LOG_DEBUG << "N = " << N << ", batch_size = " << batch_size << ", columns_batch = " << columns_batch
+                   << ", inplace = " << inplace << ", ordering = " << ordering
+                   << ", log_coset_stride = " << log_coset_stride;
+
   auto scalars = std::make_unique<TypeParam[]>(total_size);
   TypeParam::rand_host_many(scalars.get(), total_size);
 
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
-  auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure, int iters) {
-    Device dev = {dev_type, 0};
-    icicle_set_device(dev);
-    icicleStreamHandle stream = nullptr;
-    ICICLE_CHECK(icicle_create_stream(&stream));
+  auto run = [&](const std::string& dev_type, TypeParam* out, const char* msg, bool measure) {
+    // set device
+    ICICLE_CHECK(icicle_set_device(dev_type));
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    // init domain
     auto init_domain_config = default_ntt_init_domain_config();
-    init_domain_config.stream = stream;
-    init_domain_config.is_async = false;
     ConfigExtension ext;
     ext.set(CudaBackendConfig::CUDA_NTT_FAST_TWIDDLES_MODE, true);
     init_domain_config.ext = &ext;
-    auto config = default_ntt_config<scalar_t>();
-    config.stream = stream;
+    ICICLE_CHECK(ntt_init_domain(TwiddleType::omega(log_ntt_domain_size), init_domain_config));
+
+    // allocate and copy to device
+    TypeParam *d_in, *d_out;
+    ICICLE_CHECK(icicle_malloc((void**)&d_in, total_size * sizeof(TypeParam)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_out, total_size * sizeof(TypeParam)));
+    ICICLE_CHECK(icicle_copy_to_device(d_in, scalars.get(), total_size * sizeof(TypeParam)));
+
+    // ntt
+    auto config = default_ntt_config<TwiddleType>();
     config.coset_gen = coset_gen;
-    config.batch_size = batch_size;       // default: 1
-    config.columns_batch = columns_batch; // default: false
-    config.ordering = ordering;           // default: kNN
+    config.batch_size = batch_size;
+    config.columns_batch = columns_batch;
+    config.ordering = static_cast<Ordering>(ordering);
     config.are_inputs_on_device = true;
     config.are_outputs_on_device = true;
-    config.is_async = false;
-    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_ntt_domain_size), init_domain_config));
-    TypeParam *d_in, *d_out;
-    ICICLE_CHECK(icicle_malloc_async((void**)&d_in, total_size * sizeof(TypeParam), config.stream));
-    ICICLE_CHECK(icicle_malloc_async((void**)&d_out, total_size * sizeof(TypeParam), config.stream));
-    ICICLE_CHECK(icicle_copy_to_device_async(d_in, scalars.get(), total_size * sizeof(TypeParam), config.stream));
-    std::ostringstream oss;
-    oss << dev_type << " " << msg;
+
     START_TIMER(NTT_sync)
-    for (int i = 0; i < iters; ++i) {
-      if (inplace) {
-        ICICLE_CHECK(ntt(d_in, N, dir, config, d_in));
-      } else {
-        ICICLE_CHECK(ntt(d_in, N, dir, config, d_out));
-      }
-    }
+    ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
-    if (inplace) {
-      ICICLE_CHECK(icicle_copy_to_host_async(out, d_in, total_size * sizeof(TypeParam), config.stream));
-    } else {
-      ICICLE_CHECK(icicle_copy_to_host_async(out, d_out, total_size * sizeof(TypeParam), config.stream));
-    }
-    ICICLE_CHECK(icicle_free_async(d_in, config.stream));
-    ICICLE_CHECK(icicle_free_async(d_out, config.stream));
-    ICICLE_CHECK(icicle_stream_synchronize(config.stream));
-    ICICLE_CHECK(icicle_destroy_stream(stream));
-    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+    // Copy back result and release device memory
+    ICICLE_CHECK(icicle_copy_to_host(out, inplace ? d_in : d_out, total_size * sizeof(TypeParam)));
+    ICICLE_CHECK(icicle_free(d_in));
+    ICICLE_CHECK(icicle_free(d_out));
+
+    // release domain
+    ICICLE_CHECK(ntt_release_domain<TwiddleType>());
   };
-  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/, 10 /*=iters*/); // warmup
-  run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/, 10 /*=iters*/);
-  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(scalar_t)));
+
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", false /*=measure*/); // warmup
+  run(IcicleTestBase::reference_device(), out_ref.get(), "ntt", VERBOSE /*=measure*/);
+  run(IcicleTestBase::main_device(), out_main.get(), "ntt", VERBOSE /*=measure*/);
+  ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
 }
 #endif // NTT
 
