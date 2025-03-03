@@ -27,18 +27,17 @@ public:
 
   storage<RNS_CONFIG::limbs_count> limbs_storage;
 
-  // Stream Output
-  friend std::ostream& operator<<(std::ostream& os, const IntegerRingRns& xs)
+  friend std::ostream& operator<<(std::ostream& os, const IntegerRingRns& x)
   {
-    std::stringstream hex_string;
-    hex_string << std::hex << std::setfill('0');
-
-    for (int i = 0; i < limbs_count; i++) {
-      hex_string << std::setw(8) << xs.limbs_storage.limbs[limbs_count - i - 1];
-    }
-
-    os << "0x" << hex_string.str();
+    x.print(os, std::make_index_sequence<nof_fields>{});
     return os;
+  }
+
+  template <size_t... I>
+  void print(std::ostream& os, std::index_sequence<I...>) const
+  {
+    // Print the fields element wise
+    ((os << " [" << I << "]=" << *get_field<I>()), ...);
   }
 
   // Access Field Elements
