@@ -428,8 +428,20 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         ctest --output-on-failure
 
+    - name: Run RUST ring Tests
+      working-directory: ./wrappers/rust/icicle-rings
+      if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        RING=${{ matrix.ring.name }}
+        RING_DIR=icicle-${RING//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        cd ./$RING_DIR
+        cargo test --release --verbose -- --skip phase
+        cargo test phase2 --release
+        cargo test phase3 --release
+    
     # TODO: C++ examples
-    # TODO: Rust and Go tests
+    # TODO: Go tests
 
   test-linux-hash:
     name: Build and test Go & RUST hash on Linux

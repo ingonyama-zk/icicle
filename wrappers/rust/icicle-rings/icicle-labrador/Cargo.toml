@@ -1,0 +1,28 @@
+[package]
+name = "icicle-labrador"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.3"
+serial_test = "3.0.0"
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[features]
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
+metal_backend = ["icicle-runtime/metal_backend"]
+pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
+vulkan_backend = ["icicle-runtime/vulkan_backend"]
+pull_vulkan_backend = ["icicle-runtime/pull_vulkan_backend"]

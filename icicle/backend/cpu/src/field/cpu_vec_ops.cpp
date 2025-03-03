@@ -1018,6 +1018,7 @@ REGISTER_VECTOR_PRODUCT_RING_RNS_BACKEND("CPU", cpu_vector_product<scalar_rns_t>
 REGISTER_SCALAR_MUL_VEC_RING_RNS_BACKEND("CPU", cpu_scalar_mul<scalar_rns_t>);
 REGISTER_SCALAR_ADD_VEC_RING_RNS_BACKEND("CPU", cpu_scalar_add<scalar_rns_t>);
 REGISTER_SCALAR_SUB_VEC_RING_RNS_BACKEND("CPU", cpu_scalar_sub<scalar_rns_t>);
+REGISTER_EXECUTE_PROGRAM_RING_RNS_BACKEND("CPU", cpu_execute_program<scalar_rns_t>);
 
 // RNS conversion
 template <typename SrcType, typename DstType, bool into_rns>

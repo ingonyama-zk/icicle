@@ -47,7 +47,7 @@ The last step of preparations is to create the dispatcher. It should be placed a
 ```cpp
   ICICLE_DISPATCHER_INST(ExecuteProgramDispatcher, execute_program, programExecutionImpl)
 
-  extern "C" eIcicleError CONCAT_EXPAND(FIELD, execute_program)(
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, execute_program)(
     std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
   {
     return ExecuteProgramDispatcher::execute(data, program, size, config);
@@ -57,7 +57,7 @@ The last step of preparations is to create the dispatcher. It should be placed a
   eIcicleError
   execute_program(std::vector<scalar_t*>& data, Program<scalar_t>& program, uint64_t size, const VecOpsConfig& config)
   {
-    return CONCAT_EXPAND(FIELD, execute_program)(data, program, size, config);
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, execute_program)(data, program, size, config);
   }
 ```
 
