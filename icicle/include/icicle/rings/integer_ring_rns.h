@@ -179,9 +179,10 @@ public:
     return has_inverse_impl(x, std::make_index_sequence<nof_fields>{});
   }
 
-  static HOST_DEVICE_INLINE IntegerRingRns pow(const IntegerRingRns& x, const IntegerRingRns& y)
+  static HOST_DEVICE_INLINE IntegerRingRns pow(const IntegerRingRns& x, int exp)
   {
-    return apply_binary_op(x, y, [](auto x, auto y) { return x.pow(x, y); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(
+      x, [exp](auto x) { return decltype(x)::pow(x, exp); }, std::make_index_sequence<nof_fields>{});
   }
 
   static HOST_DEVICE_INLINE IntegerRingRns to_montgomery(const IntegerRingRns& x)

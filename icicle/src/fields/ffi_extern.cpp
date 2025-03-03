@@ -67,3 +67,38 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_pow)(extension_t* bas
   *result = extension_t::pow(*base, exp);
 }
 #endif // EXT_FIELD
+
+#ifdef RING
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_generate_scalars)(scalar_rns_t* scalars, int size)
+{
+  scalar_rns_t::rand_host_many(scalars, size);
+}
+
+extern "C" void
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_sub)(scalar_rns_t* scalar1, scalar_rns_t* scalar2, scalar_rns_t* result)
+{
+  *result = *scalar1 - *scalar2;
+}
+
+extern "C" void
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_add)(scalar_rns_t* scalar1, scalar_rns_t* scalar2, scalar_rns_t* result)
+{
+  *result = *scalar1 + *scalar2;
+}
+
+extern "C" void
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_mul)(scalar_rns_t* scalar1, scalar_rns_t* scalar2, scalar_rns_t* result)
+{
+  *result = *scalar1 * *scalar2;
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_inv)(scalar_rns_t* scalar1, scalar_rns_t* result)
+{
+  *result = scalar_rns_t::inverse(*scalar1);
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_pow)(scalar_rns_t* base, int exp, scalar_rns_t* result)
+{
+  *result = scalar_rns_t::pow(*base, exp);
+}
+#endif // RING
