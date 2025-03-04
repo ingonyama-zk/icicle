@@ -28,18 +28,3 @@ static size_t rand_size_t(size_t min = 0, size_t max = SIZE_MAX)
   std::uniform_int_distribution<size_t> dist(min, max);
   return dist(rand_generator);
 }
-
-/**
- * @brief Generate random unsigned integer in range (inclusive)
- * @param min Lower limit.
- * @param max Upper limit.
- * @return Random (uniform distribution) unsigned integer s.t. min <= integer <= max.
- */
-static std::vector<size_t> rand_size_t_vector(size_t nof_queries, size_t min = 0, size_t max = SIZE_MAX)
-{
-  std::vector<size_t> vec(nof_queries);
-  for (size_t i = 0; i < nof_queries; i++) {
-    vec[i] = rand_size_t(min, max);
-  }
-  return vec;
-}

@@ -40,8 +40,8 @@ namespace icicle {
       m_query_proofs.resize(
         2 * nof_queries,
         std::vector<MerkleProof>(nof_fri_rounds)); // for each query, we have 2 proofs (for the leaf and its symmetric)
-      m_final_poly_size = final_poly_size;
-      m_final_poly = std::make_unique<F[]>(final_poly_size);
+      m_final_poly.resize(final_poly_size);
+
     }
 
     /**
@@ -75,27 +75,26 @@ namespace icicle {
      * @return Number of FRI rounds.
      */
     size_t get_nof_fri_rounds() const { return m_query_proofs[0].size(); }
-
     /**
      * @brief Get the final poly size.
      *
      * @return final_poly_size.
      */
-    size_t get_final_poly_size() const { return m_final_poly_size; }
+    size_t get_final_poly_size() const { return m_final_poly.size(); }
 
     void set_pow_nonce(uint64_t pow_nonce) { m_pow_nonce = pow_nonce; }
 
     uint64_t get_pow_nonce() const { return m_pow_nonce; }
 
     // get pointer to the final polynomial
-    F* get_final_poly() const { return m_final_poly.get(); }
+    F* get_final_poly() { return m_final_poly.data(); }
+    const F* get_final_poly() const { return m_final_poly.data(); }
 
   private:
     std::vector<std::vector<MerkleProof>>
       m_query_proofs; // Matrix of Merkle proofs [query][round] - contains path, root, leaf. for each query, we have 2
                       // proofs (for the leaf in [2*query] and its symmetric in [2*query+1])
-    std::unique_ptr<F[]> m_final_poly; // Final polynomial (constant in canonical FRI)
-    size_t m_final_poly_size;          // Size of the final polynomial
+    std::vector<F> m_final_poly; // Final polynomial (constant in canonical FRI)
     uint64_t m_pow_nonce;              // Proof-of-work nonce
   };
 

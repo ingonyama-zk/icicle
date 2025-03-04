@@ -166,11 +166,7 @@ namespace icicle {
      */
     eIcicleError query_phase(FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
     {
-      size_t seed = transcript.get_seed_for_query_phase();
-      seed_rand_generator(seed);
-      std::vector<size_t> query_indices =
-        rand_size_t_vector(fri_config.nof_queries, (this->m_stopping_degree + 1), m_input_size);
-
+      std::vector<size_t> query_indices = transcript.rand_query_indicies(fri_config.nof_queries, (this->m_stopping_degree + 1), m_input_size);
       for (size_t query_idx = 0; query_idx < fri_config.nof_queries; query_idx++) {
         size_t query = query_indices[query_idx];
         for (size_t round_idx = 0; round_idx < m_nof_fri_rounds; round_idx++) {

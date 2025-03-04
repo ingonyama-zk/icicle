@@ -75,8 +75,16 @@ namespace icicle {
      */
     void set_pow_nonce(uint32_t pow_nonce) { m_pow_nonce = pow_nonce; }
 
-    size_t get_seed_for_query_phase()
-    {
+    
+    /**
+     * @brief Generates random query indices for the query phase.
+     *        The seed is derived from the current transcript state.
+     * @param nof_queries Number of query indices to generate.
+     * @param min Lower limit.
+     * @param max Upper limit.
+     * @return Random (uniform distribution) unsigned integer s.t. min <= integer <= max.
+     */
+    std::vector<size_t> rand_query_indicies(size_t nof_queries, size_t min = 0, size_t max = SIZE_MAX){
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
@@ -88,7 +96,12 @@ namespace icicle {
       std::vector<std::byte> hash_result(hasher.output_size());
       hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
       uint64_t seed = bytes_to_uint_64(hash_result);
-      return seed;
+      seed_rand_generator(seed);
+      std::vector<size_t> vec(nof_queries);
+      for (size_t i = 0; i < nof_queries; i++) {
+        vec[i] = rand_size_t(min, max);
+      }
+      return vec;
     }
 
   private:

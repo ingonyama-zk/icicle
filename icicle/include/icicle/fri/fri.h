@@ -133,13 +133,7 @@ namespace icicle {
         transcript.set_pow_nonce(fri_proof.get_pow_nonce());
       }
 
-      // get query indices
-      size_t seed = transcript.get_seed_for_query_phase();
-      seed_rand_generator(seed);
-      std::vector<size_t> query_indices = rand_size_t_vector(fri_config.nof_queries, final_poly_size, input_size);
-
-      uint64_t domain_max_size = 0;
-      uint64_t max_log_size = 0;
+      std::vector<size_t> query_indices = transcript.rand_query_indicies(fri_config.nof_queries, final_poly_size, input_size);
       S primitive_root_inv = S::omega_inv(log_input_size);
 
       for (size_t query_idx = 0; query_idx < fri_config.nof_queries; query_idx++) {

@@ -36,7 +36,7 @@ struct FriTranscriptConfigFFI {
  * @brief Structure representing creation parameters for the "hash-based" constructor
  *        `create_fri<scalar_t>(folding_factor, stopping_degree, Hash&, output_store_min_layer)`.
  */
-struct FriCreateHashFFI {
+struct FriCreateWithHashFFI {
   size_t input_size;
   size_t folding_factor;
   size_t stopping_degree;
@@ -64,7 +64,7 @@ struct FriCreateWithTreesFFI {
  * @return Pointer to the created FRI instance (FriHandle*), or nullptr on error.
  */
 FriHandle* CONCAT_EXPAND(FIELD, fri_create)(
-  const FriCreateHashFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
+  const FriCreateWithHashFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
 {
   if (!create_config || !create_config->merkle_tree_leaves_hash || !create_config->merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config.";
@@ -188,7 +188,7 @@ eIcicleError CONCAT_EXPAND(FIELD, fri_delete)(const FriHandle* fri_handle)
 
 #ifdef EXT_FIELD // EXT_FIELD
 FriHandleExt* CONCAT_EXPAND(FIELD, fri_create_ext)(
-  const FriCreateHashFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
+  const FriCreateWithHashFFI* create_config, const FriTranscriptConfigFFI* ffi_transcript_config)
 {
   if (!create_config || !create_config->merkle_tree_leaves_hash || !create_config->merkle_tree_compress_hash) {
     ICICLE_LOG_ERROR << "Invalid FRI creation config.";
