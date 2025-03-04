@@ -615,7 +615,7 @@ TYPED_TEST(FieldTest, FriHashAPi)
   fri_config.pow_bits = pow_bits;
   FriProof<TypeParam> fri_proof;
 
-  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
+  ICICLE_CHECK(prover_fri.get_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(
@@ -680,7 +680,7 @@ TYPED_TEST(FieldTest, FriMerkleTreeAPi)
   fri_config.pow_bits = pow_bits;
   FriProof<TypeParam> fri_proof;
 
-  ICICLE_CHECK(prover_fri.get_fri_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
+  ICICLE_CHECK(prover_fri.get_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(folding_factor, stopping_degree, merkle_trees);

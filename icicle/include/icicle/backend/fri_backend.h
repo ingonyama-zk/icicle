@@ -46,7 +46,7 @@ namespace icicle {
      * @param fri_proof           (OUT) A FriProof object to store the proof's Merkle layers, final poly, etc.
      * @return eIcicleError       Error code indicating success or failure.
      */
-    virtual eIcicleError get_fri_proof(
+    virtual eIcicleError get_proof(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>&& fri_transcript_config,
       const F* input_data,

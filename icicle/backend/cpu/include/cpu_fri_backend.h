@@ -30,7 +30,7 @@ namespace icicle {
     {
     }
 
-    eIcicleError get_fri_proof(
+    eIcicleError get_proof(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>&& fri_transcript_config,
       const F* input_data,
@@ -46,22 +46,31 @@ namespace icicle {
       fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree + 1);
 
       // commit fold phase
-      ICICLE_CHECK(commit_fold_phase(input_data, transcript, fri_config, fri_proof));
-
+      // ICICLE_CHECK(commit_fold_phase(input_data, transcript, fri_config, fri_proof));
+      eIcicleError err = commit_fold_phase(input_data, transcript, fri_config, fri_proof);
+      if(err != eIcicleError::SUCCESS){
+        return err;
+      }
+      
       // proof of work
-      if (fri_config.pow_bits != 0) { ICICLE_CHECK(proof_of_work(transcript, fri_config.pow_bits, fri_proof)); }
-
+      if (fri_config.pow_bits != 0) {
+        err = proof_of_work(transcript, fri_config.pow_bits, fri_proof);
+        if(err != eIcicleError::SUCCESS){
+          return err;
+        }
+      }
+      
       // query phase
-      ICICLE_CHECK(query_phase(transcript, fri_config, fri_proof));
-
-      return eIcicleError::SUCCESS;
+      err = query_phase(transcript, fri_config, fri_proof);
+      
+      return err;
     }
 
   private:
-    const size_t m_nof_fri_rounds; // Number of FRI rounds
-    const size_t m_log_input_size; // Log size of the input polynomial
-    const size_t m_input_size;     // Size of the input polynomial
-    FriRounds<F> m_fri_rounds;     // Holds intermediate rounds
+    const size_t m_nof_fri_rounds;
+    const size_t m_log_input_size;
+    const size_t m_input_size;
+    FriRounds<F> m_fri_rounds; // Holds intermediate rounds
 
     /**
      * @brief Perform the commit-fold phase of the FRI protocol.
@@ -77,12 +86,16 @@ namespace icicle {
       if (this->m_folding_factor != 2){
         ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE - remove when supporting other folding
         // factors
-      }        
+      }
       const S* twiddles = ntt_cpu::CpuNttDomain<S>::s_ntt_domain.get_twiddles();
       uint64_t domain_max_size = ntt_cpu::CpuNttDomain<S>::s_ntt_domain.get_max_size();
+      if (m_input_size > domain_max_size){
+        ICICLE_LOG_ERROR << "Size is too large for domain. size = " << m_input_size << ", domain_max_size = " << domain_max_size;
+      }
 
-      // Get persistent storage for round from FriRounds. m_fri_rounds already allocated a vector for each round with
-      // capacity 2^(m_log_input_size - round_idx).
+      // Retrieve pre-allocated memory for the round from m_fri_rounds. 
+      // The instance of FriRounds has already allocated a vector for each round with 
+      // a capacity of 2^(m_log_input_size - round_idx).
       F* round_evals = m_fri_rounds.get_round_evals(0);
       std::copy(input_data, input_data + m_input_size, round_evals);
 

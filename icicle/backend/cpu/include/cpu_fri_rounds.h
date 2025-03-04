@@ -1,15 +1,3 @@
-#pragma once
-
-#include <cstddef>
-#include <vector>
-#include <memory>
-#include "icicle/merkle/merkle_tree.h"
-#include "icicle/errors.h"
-#include "icicle/hash/hash.h"
-#include "icicle/hash/keccak.h"
-#include "icicle/utils/log.h"
-#include "icicle/fri/fri.h"
-
 namespace icicle {
 
   template <typename F>
@@ -40,13 +28,19 @@ namespace icicle {
      */
     MerkleTree* get_merkle_tree(size_t round_idx)
     {
-      ICICLE_ASSERT(round_idx < m_merkle_trees.size()) << "round index out of bounds";
+      if(round_idx >= m_merkle_trees.size()){
+        ICICLE_LOG_ERROR << "round index out of bounds";
+        return nullptr;
+      }
       return &m_merkle_trees[round_idx];
     }
 
     F* get_round_evals(size_t round_idx)
     {
-      ICICLE_ASSERT(round_idx < m_rounds_evals.size()) << "round index out of bounds";
+      if(round_idx >= m_merkle_trees.size()){
+        ICICLE_LOG_ERROR << "round index out of bounds";
+        return nullptr;
+      }
       return m_rounds_evals[round_idx].get();
     }
 

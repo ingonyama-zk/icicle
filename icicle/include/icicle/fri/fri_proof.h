@@ -31,9 +31,10 @@ namespace icicle {
      */
     void init(const size_t nof_queries, const size_t nof_fri_rounds, const size_t final_poly_size)
     {
-      ICICLE_ASSERT(nof_queries > 0 && nof_fri_rounds > 0)
-        << "Number of queries and FRI rounds must be > 0. nof_queries = " << nof_queries
+      if(nof_queries <= 0 || nof_fri_rounds <= 0){
+        ICICLE_LOG_ERROR << "Number of queries and FRI rounds must be > 0. nof_queries = " << nof_queries
         << ", nof_fri_rounds = " << nof_fri_rounds;
+      }
 
       // Resize the matrix to hold nof_queries rows and nof_fri_rounds columns
       m_query_proofs.resize(
@@ -60,10 +61,10 @@ namespace icicle {
     }
 
     /**
-     * @brief Returns a pair containing the pointer to the root data and its size.
+     * @brief Returns a pair containing the pointer to the merkle tree root data and its size.
      * @return A pair of (root data pointer, root size).
      */
-    std::pair<const std::byte*, std::size_t> get_root(const size_t round_idx) const
+    std::pair<const std::byte*, std::size_t> get_merkle_tree_root(const size_t round_idx) const
     {
       return m_query_proofs[0][round_idx].get_root();
     }

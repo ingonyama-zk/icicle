@@ -1,13 +1,5 @@
-#include "icicle/errors.h"
 #include "icicle/fri/fri.h"
-#include "icicle/backend/fri_backend.h"
-#include "icicle/fields/stark_fields/babybear.h"
-#include "icicle/merkle/merkle_tree.h"
 #include "icicle/dispatcher.h"
-#include "icicle/hash/hash.h"
-#include "icicle/utils/log.h"
-#include <cstddef>
-#include <cstdint>
 
 namespace icicle {
 
@@ -37,11 +29,13 @@ namespace icicle {
     const size_t input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
-    const Hash& merkle_tree_leaves_hash,
-    const Hash& merkle_tree_compress_hash,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    ICICLE_ASSERT(folding_factor == 2) << " Currently only folding factor of 2 is supported";
+    if(folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported";
+    }
     const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
     const size_t df = stopping_degree;
     const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
@@ -51,7 +45,9 @@ namespace icicle {
     merkle_trees.reserve(fold_rounds);
     size_t compress_hash_arity =
       merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
-    ICICLE_ASSERT(compress_hash_arity == 2) << " Currently only compress hash arity of 2 is supported";
+    if(compress_hash_arity != 2){
+      ICICLE_LOG_ERROR << "Currently only compress hash arity of 2 is supported";
+    }
     size_t first_merkle_tree_height = std::ceil(std::log2(input_size) / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
@@ -99,11 +95,13 @@ namespace icicle {
     const size_t input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
-    const Hash& merkle_tree_leaves_hash,
-    const Hash& merkle_tree_compress_hash,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    ICICLE_ASSERT(folding_factor == 2) << " Currently only folding factor of 2 is supported";
+    if(folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported";
+    }
     const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
     const size_t df = stopping_degree;
     const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
@@ -113,7 +111,9 @@ namespace icicle {
     merkle_trees.reserve(fold_rounds);
     size_t compress_hash_arity =
       merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
-    ICICLE_ASSERT(compress_hash_arity == 2) << " Currently only compress hash arity of 2 is supported";
+    if(compress_hash_arity != 2){
+      ICICLE_LOG_ERROR << "Currently only compress hash arity of 2 is supported";
+    }
     size_t first_merkle_tree_height = std::ceil(std::log2(input_size) / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
@@ -141,8 +141,8 @@ namespace icicle {
     const size_t input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
-    const Hash& merkle_tree_leaves_hash,
-    const Hash& merkle_tree_compress_hash,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
     return create_fri_template<scalar_t, scalar_t>(
@@ -170,8 +170,8 @@ namespace icicle {
     const size_t input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
-    const Hash& merkle_tree_leaves_hash,
-    const Hash& merkle_tree_compress_hash,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
     return create_fri_template_ext<scalar_t, extension_t>(

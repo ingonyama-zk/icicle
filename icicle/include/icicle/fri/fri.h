@@ -39,8 +39,8 @@ namespace icicle {
     const size_t input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
-    const Hash& merkle_tree_leaves_hash,
-    const Hash& merkle_tree_compress_hash,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer = 0);
 
   /**
@@ -79,13 +79,13 @@ namespace icicle {
      * @param fri_proof Reference to a FriProof object (output).
      * @return An eIcicleError indicating success or failure.
      */
-    eIcicleError get_fri_proof(
+    eIcicleError get_proof(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>&& fri_transcript_config,
       const F* input_data,
       FriProof<F>& fri_proof /* OUT */) const
     {
-      return m_backend->get_fri_proof(fri_config, std::move(fri_transcript_config), input_data, fri_proof);
+      return m_backend->get_proof(fri_config, std::move(fri_transcript_config), input_data, fri_proof);
     }
 
     /**
@@ -117,7 +117,7 @@ namespace icicle {
       FriTranscript<F> transcript(
         std::move(const_cast<FriTranscriptConfig<F>&>(fri_transcript_config)), log_input_size);
       for (size_t round_idx = 0; round_idx < nof_fri_rounds; ++round_idx) {
-        auto [root_ptr, root_size] = fri_proof.get_root(round_idx);
+        auto [root_ptr, root_size] = fri_proof.get_merkle_tree_root(round_idx);
         if (root_ptr == nullptr || root_size <= 0){
           ICICLE_LOG_ERROR << "Failed to retrieve Merkle root for round " << round_idx;
         }
@@ -222,7 +222,7 @@ namespace icicle {
     }
 
   private:
-    std::shared_ptr<FriBackend<S, F>> m_backend; // Shared pointer to the backend for FRI operations.
+    std::shared_ptr<FriBackend<S, F>> m_backend;
   };
 
 } // namespace icicle

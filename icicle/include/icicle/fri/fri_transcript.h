@@ -33,8 +33,6 @@ namespace icicle {
      */
     F get_alpha(const std::vector<std::byte>& merkle_commit)
     {
-      ICICLE_ASSERT(m_transcript_config.get_domain_separator_label().size() > 0)
-        << "Domain separator label must be set";
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
 

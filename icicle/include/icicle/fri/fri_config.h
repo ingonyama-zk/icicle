@@ -19,7 +19,6 @@ namespace icicle {
     size_t nof_queries = 1;              // Number of queries, computed for each folded layer of FRI. Default is 1.
     bool are_inputs_on_device =
       false; // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
-    bool are_outputs_on_device = false; // True if outputs reside on the device, false if on the host. Default is false.
     bool is_async = false; // True to run operations asynchronously, false to run synchronously. Default is false.
     ConfigExtension* ext = nullptr; // Pointer to backend-specific configuration extensions. Default is nullptr.
   };

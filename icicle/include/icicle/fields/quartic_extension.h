@@ -267,7 +267,9 @@ public:
   // Receives an array of bytes and its size and returns extension field element.
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
-    ICICLE_ASSERT(nof_bytes >= 4 * sizeof(FF)) << "Input size is too small";
+    if(nof_bytes < 4 * sizeof(FF)){
+      ICICLE_LOG_ERROR << "Input size is too small";
+    }
     return QuarticExtensionField{
       FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF)), FF::from(in + 2 * sizeof(FF), sizeof(FF)),
       FF::from(in + 3 * sizeof(FF), sizeof(FF))};
