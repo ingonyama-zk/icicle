@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, PrimeField, Field};
 
 use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField as IcicleScalar};
 use icicle_core::{
@@ -69,10 +69,11 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
 //============================================================================================//
 fn from_ark<T, I>(ark: &T) -> I
 where
-    T: PrimeField,
+    T: Field,
     I: FieldImpl,
 {
-    let mut ark_bytes = Vec::with_capacity(T::BigInt::NUM_LIMBS * 8 * T::extension_degree() as usize);
+
+    let mut ark_bytes = vec![];
     for base_elem in ark.to_base_prime_field_elements() {
         ark_bytes.extend_from_slice(
             &base_elem
@@ -85,7 +86,7 @@ where
 
 fn to_ark<T, I>(icicle: &I) -> T
 where
-    T: PrimeField,
+    T: Field,
     I: FieldImpl,
 {
     T::from_random_bytes(&icicle.to_bytes_le()).unwrap()

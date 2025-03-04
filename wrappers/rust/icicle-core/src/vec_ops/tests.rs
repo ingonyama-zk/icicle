@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, mixed_mul_scalars, mul_scalars,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, inplace_inv_scalars, mixed_mul_scalars, mul_scalars,
     product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, FieldImpl,
     MixedVecOps, VecOps, VecOpsConfig,
 };
