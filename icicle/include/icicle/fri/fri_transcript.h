@@ -15,8 +15,8 @@ namespace icicle {
   class FriTranscript
   {
   public:
-    FriTranscript(const FriTranscriptConfig<F>&& transcript_config, const uint32_t log_input_size)
-        : m_transcript_config(std::move(transcript_config)), m_prev_alpha(F::zero()),
+    FriTranscript(const FriTranscriptConfig<F>& transcript_config, const uint32_t log_input_size)
+        : m_transcript_config(transcript_config), m_prev_alpha(F::zero()),
           m_pow_nonce(0)
     {
       m_entry_0.clear();
@@ -105,7 +105,7 @@ namespace icicle {
     }
 
   private:
-    const FriTranscriptConfig<F>&& m_transcript_config;
+    const FriTranscriptConfig<F>& m_transcript_config;
     std::vector<std::byte> m_entry_0; // Hash input set in the first round and used in all subsequent rounds
     F m_prev_alpha;
     uint64_t m_pow_nonce;             // Proof-of-work nonce - optional

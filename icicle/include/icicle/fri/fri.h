@@ -81,11 +81,11 @@ namespace icicle {
      */
     eIcicleError get_proof(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F>&& fri_transcript_config,
+      const FriTranscriptConfig<F>& fri_transcript_config,
       const F* input_data,
       FriProof<F>& fri_proof /* OUT */) const
     {
-      return m_backend->get_proof(fri_config, std::move(fri_transcript_config), input_data, fri_proof);
+      return m_backend->get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
     }
 
     /**
@@ -98,7 +98,7 @@ namespace icicle {
      */
     eIcicleError verify(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F> fri_transcript_config,
+      const FriTranscriptConfig<F>& fri_transcript_config,
       FriProof<F>& fri_proof,
       bool& valid /* OUT */) const
     {
@@ -110,7 +110,7 @@ namespace icicle {
       const size_t final_poly_size = fri_proof.get_final_poly_size();
       const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
 
-      FriTranscript<F> transcript(std::move(fri_transcript_config), log_input_size);
+      FriTranscript<F> transcript(fri_transcript_config, log_input_size);
       std::vector<F> alpha_values(nof_fri_rounds);
       update_transcript_and_generate_alphas_from_proof(fri_proof, transcript, nof_fri_rounds, alpha_values);
 

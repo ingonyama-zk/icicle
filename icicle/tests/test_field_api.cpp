@@ -615,19 +615,28 @@ TYPED_TEST(FieldTest, FriHashAPi)
   Fri prover_fri = create_fri<scalar_t, TypeParam>(
     input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
-  FriTranscriptConfig<TypeParam> transcript_config;
+  // set transcript config
+  const char* domain_separator_label = "domain_separator_label"; 
+  const char* round_challenge_label = "round_challenge_label"; 
+  const char* commit_phase_label = "commit_phase_label"; 
+  const char* nonce_label = "nonce_label"; 
+  std::vector<std::byte>&& public_state = {}; 
+  TypeParam seed_rng = TypeParam::one();
+
+  FriTranscriptConfig<TypeParam> transcript_config(hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state), seed_rng);
+
   FriConfig fri_config;
   fri_config.nof_queries = nof_queries;
   fri_config.pow_bits = pow_bits;
   FriProof<TypeParam> fri_proof;
 
-  ICICLE_CHECK(prover_fri.get_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
+  ICICLE_CHECK(prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof));
 
   // ===== Verifier side ======
   Fri verifier_fri = create_fri<scalar_t, TypeParam>(
     input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
   bool valid = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, valid));
+  ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, valid));
 
   ASSERT_EQ(true, valid);
 
