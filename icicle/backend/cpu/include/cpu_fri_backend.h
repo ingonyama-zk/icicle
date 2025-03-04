@@ -46,7 +46,6 @@ namespace icicle {
       fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree + 1);
 
       // commit fold phase
-      // ICICLE_CHECK(commit_fold_phase(input_data, transcript, fri_config, fri_proof));
       eIcicleError err = commit_fold_phase(input_data, transcript, fri_config, fri_proof);
       if(err != eIcicleError::SUCCESS){
         return err;
@@ -114,7 +113,7 @@ namespace icicle {
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
 
-        F alpha = transcript.get_alpha(merkle_commit);
+        F alpha = transcript.get_alpha(merkle_commit, round_idx == 0);
 
         // Fold the evaluations
         size_t half = current_size >> 1;

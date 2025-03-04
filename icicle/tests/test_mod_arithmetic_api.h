@@ -15,12 +15,6 @@
 #include "icicle/program/program.h"
 #include "icicle/program/returning_value_program.h"
 #include "../backend/cpu/include/cpu_program_executor.h"
-#include "icicle/sumcheck/sumcheck.h"
-
-#include "icicle/fri/fri.h"
-#include "icicle/fri/fri_config.h"
-#include "icicle/fri/fri_proof.h"
-#include "icicle/fri/fri_transcript_config.h"
 
 #include "test_base.h"
 

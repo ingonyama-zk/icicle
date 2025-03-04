@@ -45,7 +45,7 @@ namespace icicle {
     }
 
     /**
-     * @brief Get a reference to a specific Merkle proof.
+     * @brief Get a reference to a specific Merkle proof for a given query index in a specific FRI round.
      *
      * @param query_idx Index of the query.
      * @param round_idx Index of the round (FRI round).

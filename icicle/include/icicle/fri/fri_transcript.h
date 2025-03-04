@@ -16,13 +16,12 @@ namespace icicle {
   {
   public:
     FriTranscript(const FriTranscriptConfig<F>&& transcript_config, const uint32_t log_input_size)
-        : m_transcript_config(std::move(transcript_config)), m_prev_alpha(F::zero()), m_first_round(true),
+        : m_transcript_config(std::move(transcript_config)), m_prev_alpha(F::zero()),
           m_pow_nonce(0)
     {
       m_entry_0.clear();
       m_entry_0.reserve(1024); // pre-allocate some space
       build_entry_0(log_input_size);
-      m_first_round = true;
     }
 
     /**
@@ -31,24 +30,23 @@ namespace icicle {
      * @param merkle_commit The raw bytes of the Merkle commit.
      * @return A field element alpha derived via Fiat-Shamir.
      */
-    F get_alpha(const std::vector<std::byte>& merkle_commit)
+    F get_alpha(const std::vector<std::byte>& merkle_commit, bool is_first_round)
     {
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
 
       // Build the round's hash input
-      if (m_first_round) {
-        build_hash_input_round_0(hash_input);
-        m_first_round = false;
+      if (is_first_round) {
+        build_hash_input_round_0(hash_input, merkle_commit);
       } else {
-        build_hash_input_round_i(hash_input);
+        build_hash_input_round_i(hash_input, merkle_commit);
       }
-      append_data(hash_input, merkle_commit);
 
       // Hash the input and return alpha
       const Hash& hasher = m_transcript_config.get_hasher();
       std::vector<std::byte> hash_result(hasher.output_size());
-      hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
+      const HashConfig hash_config;
+      hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
       m_prev_alpha = F::from(hash_result.data(), hasher.output_size());
       return m_prev_alpha;
     }
@@ -64,7 +62,8 @@ namespace icicle {
 
       const Hash& hasher = m_transcript_config.get_hasher();
       std::vector<std::byte> hash_result(hasher.output_size());
-      hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
+      const HashConfig hash_config;
+      hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
 
       return count_leading_zero_bits(hash_result);
     }
@@ -94,7 +93,8 @@ namespace icicle {
 
       const Hash& hasher = m_transcript_config.get_hasher();
       std::vector<std::byte> hash_result(hasher.output_size());
-      hasher.hash(hash_input.data(), hash_input.size(), m_hash_config, hash_result.data());
+      const HashConfig hash_config;
+      hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
       uint64_t seed = bytes_to_uint_64(hash_result);
       seed_rand_generator(seed);
       std::vector<size_t> vec(nof_queries);
@@ -105,11 +105,9 @@ namespace icicle {
     }
 
   private:
-    const FriTranscriptConfig<F>&& m_transcript_config; // Transcript configuration (labels, seeds, etc.)
-    const HashConfig m_hash_config;                     // hash config - default
-    bool m_first_round;                                 // Indicates if this is the first round
+    const FriTranscriptConfig<F>&& m_transcript_config;
     std::vector<std::byte> m_entry_0; // Hash input set in the first round and used in all subsequent rounds
-    F m_prev_alpha;                   // The previous alpha generated
+    F m_prev_alpha;
     uint64_t m_pow_nonce;             // Proof-of-work nonce - optional
 
     /**
@@ -123,20 +121,16 @@ namespace icicle {
     }
 
     /**
-     * @brief Append an unsigned 64-bit integer to the byte vector (little-endian).
+     * @brief Append an integral value to the byte vector (little-endian).
+     * @tparam T Type of the value.
      * @param dest (OUT) Destination byte vector.
      * @param value The 64-bit value to append.
      */
-    void append_u32(std::vector<std::byte>& dest, uint32_t value)
+    template <typename T>
+    void append_value(std::vector<std::byte>& dest, T value)
     {
       const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&value);
-      dest.insert(dest.end(), data_bytes, data_bytes + sizeof(uint32_t));
-    }
-
-    void append_u64(std::vector<std::byte>& dest, uint64_t value)
-    {
-      const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&value);
-      dest.insert(dest.end(), data_bytes, data_bytes + sizeof(uint64_t));
+      dest.insert(dest.end(), data_bytes, data_bytes + sizeof(T));
     }
 
     /**
@@ -160,7 +154,7 @@ namespace icicle {
     void build_entry_0(uint32_t log_input_size)
     {
       append_data(m_entry_0, m_transcript_config.get_domain_separator_label());
-      append_u32(m_entry_0, log_input_size);
+      append_value<uint32_t>(m_entry_0, log_input_size);
       append_data(m_entry_0, m_transcript_config.get_public_state());
     }
 
@@ -172,12 +166,13 @@ namespace icicle {
      *
      * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
      */
-    void build_hash_input_round_0(std::vector<std::byte>& hash_input)
+    void build_hash_input_round_0(std::vector<std::byte>& hash_input, const std::vector<std::byte>& merkle_commit)
     {
       append_data(hash_input, m_entry_0);
       append_field(hash_input, m_transcript_config.get_seed_rng());
       append_data(hash_input, m_transcript_config.get_round_challenge_label());
       append_data(hash_input, m_transcript_config.get_commit_phase_label());
+      append_data(hash_input, merkle_commit);
     }
 
     /**
@@ -188,12 +183,13 @@ namespace icicle {
      *
      * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
      */
-    void build_hash_input_round_i(std::vector<std::byte>& hash_input)
+    void build_hash_input_round_i(std::vector<std::byte>& hash_input, const std::vector<std::byte>& merkle_commit)
     {
       append_data(hash_input, m_entry_0);
       append_field(hash_input, m_prev_alpha);
       append_data(hash_input, m_transcript_config.get_round_challenge_label());
       append_data(hash_input, m_transcript_config.get_commit_phase_label());
+      append_data(hash_input, merkle_commit);
     }
 
     /**
@@ -207,7 +203,7 @@ namespace icicle {
       append_data(hash_input, m_entry_0);
       append_field(hash_input, m_prev_alpha);
       append_data(hash_input, m_transcript_config.get_nonce_label());
-      append_u64(hash_input, temp_pow_nonce);
+      append_value<uint64_t>(hash_input, temp_pow_nonce);
     }
 
     /**
@@ -224,7 +220,7 @@ namespace icicle {
       } else {
         append_data(hash_input, m_entry_0);
         append_data(hash_input, m_transcript_config.get_nonce_label());
-        append_u32(hash_input, m_pow_nonce);
+        append_value<uint32_t>(hash_input, m_pow_nonce);
       }
     }
 

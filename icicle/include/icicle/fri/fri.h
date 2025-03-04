@@ -98,7 +98,7 @@ namespace icicle {
      */
     eIcicleError verify(
       const FriConfig& fri_config,
-      const FriTranscriptConfig<F>&& fri_transcript_config,
+      const FriTranscriptConfig<F> fri_transcript_config,
       FriProof<F>& fri_proof,
       bool& valid /* OUT */) const
     {
@@ -123,7 +123,7 @@ namespace icicle {
         }
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
-        alpha_values[round_idx] = transcript.get_alpha(merkle_commit);
+        alpha_values[round_idx] = transcript.get_alpha(merkle_commit, round_idx==0);
       }
 
       // proof-of-work
