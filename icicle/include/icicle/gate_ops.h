@@ -26,6 +26,7 @@ namespace icicle {
     bool is_rotations_on_device;    /** True if `rotations` array is on the device. Default: false. */
     bool is_challenges_on_device;   /** True if `challenges` array is on the device. Default: false. */
     bool is_calculations_on_device; /** True if `calculations` array is on the device. Default: false. */
+    bool is_previous_value_on_device;   /** True if `previous_value` array is on the device. Default: false. */
     bool is_horners_on_device;      /** True if `horners` array is on the device. Default: false. */
     bool is_result_on_device;       /** True to keep results on device. Default: false. */
     bool is_async;                  /** Async execution flag. Default: false. */
