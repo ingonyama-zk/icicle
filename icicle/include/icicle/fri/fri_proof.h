@@ -26,8 +26,8 @@ namespace icicle {
     /**
      * @brief Initialize the Merkle proofs and final polynomial storage for the FRI proof.
      *
-     * A FriProof instance should first be created and then initialized using this method 
-     * before use. The initialization is done with the required parameters when setting up 
+     * A FriProof instance should first be created and then initialized using this method
+     * before use. The initialization is done with the required parameters when setting up
      * the prover and generating the proof.
      *
      * @param nof_queries Number of queries in the proof.
@@ -37,9 +37,9 @@ namespace icicle {
      */
     eIcicleError init(const size_t nof_queries, const size_t nof_fri_rounds, const size_t final_poly_size)
     {
-      if(nof_queries <= 0 || nof_fri_rounds <= 0){
+      if (nof_queries <= 0 || nof_fri_rounds <= 0) {
         ICICLE_LOG_ERROR << "Number of queries and FRI rounds must be > 0. nof_queries = " << nof_queries
-        << ", nof_fri_rounds = " << nof_fri_rounds;
+                         << ", nof_fri_rounds = " << nof_fri_rounds;
         return eIcicleError::INVALID_ARGUMENT;
       }
 
@@ -103,7 +103,7 @@ namespace icicle {
       m_query_proofs; // Matrix of Merkle proofs [query][round] - contains path, root, leaf. for each query, we have 2
                       // proofs (for the leaf in [2*query] and its symmetric in [2*query+1])
     std::vector<F> m_final_poly; // Final polynomial (constant in canonical FRI)
-    uint64_t m_pow_nonce;              // Proof-of-work nonce
+    uint64_t m_pow_nonce;        // Proof-of-work nonce
   };
 
 } // namespace icicle

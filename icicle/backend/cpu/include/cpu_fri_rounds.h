@@ -28,7 +28,7 @@ namespace icicle {
      */
     MerkleTree* get_merkle_tree(size_t round_idx)
     {
-      if(round_idx >= m_merkle_trees.size()){
+      if (round_idx >= m_merkle_trees.size()) {
         ICICLE_LOG_ERROR << "round index out of bounds";
         return nullptr;
       }
@@ -37,7 +37,7 @@ namespace icicle {
 
     F* get_round_evals(size_t round_idx)
     {
-      if(round_idx >= m_merkle_trees.size()){
+      if (round_idx >= m_merkle_trees.size()) {
         ICICLE_LOG_ERROR << "round index out of bounds";
         return nullptr;
       }

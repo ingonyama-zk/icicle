@@ -102,9 +102,7 @@ namespace icicle {
       FriProof<F>& fri_proof,
       bool& valid /* OUT */) const
     {
-      if(__builtin_expect(fri_config.nof_queries <= 0, 0)){
-        ICICLE_LOG_ERROR << "Number of queries must be > 0";
-      }
+      if (__builtin_expect(fri_config.nof_queries <= 0, 0)) { ICICLE_LOG_ERROR << "Number of queries must be > 0"; }
 
       const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
       const size_t final_poly_size = fri_proof.get_final_poly_size();
@@ -120,11 +118,13 @@ namespace icicle {
         check_pow_nonce_and_set_to_transcript(fri_proof, transcript, fri_config, pow_valid);
         if (!pow_valid) return eIcicleError::SUCCESS; // return with valid = false
       }
-            
-      //verify queries
+
+      // verify queries
       bool queries_valid = false;
-      std::vector<size_t> queries_indicies = transcript.rand_queries_indicies(fri_config.nof_queries, final_poly_size, 1 << log_input_size);
-      eIcicleError err = verify_queries(fri_proof, fri_config.nof_queries, queries_indicies, alpha_values, queries_valid);
+      std::vector<size_t> queries_indicies =
+        transcript.rand_queries_indicies(fri_config.nof_queries, final_poly_size, 1 << log_input_size);
+      eIcicleError err =
+        verify_queries(fri_proof, fri_config.nof_queries, queries_indicies, alpha_values, queries_valid);
       if (!queries_valid) return eIcicleError::SUCCESS; // return with valid = false
 
       valid = true;
@@ -141,15 +141,20 @@ namespace icicle {
      * @param nof_fri_rounds Number of FRI rounds.
      * @param alpha_values (OUT) Vector to store computed alpha values.
      */
-    void update_transcript_and_generate_alphas_from_proof(FriProof<F>& fri_proof, FriTranscript<F>& transcript, const size_t nof_fri_rounds, std::vector<F>& alpha_values) const{
+    void update_transcript_and_generate_alphas_from_proof(
+      FriProof<F>& fri_proof,
+      FriTranscript<F>& transcript,
+      const size_t nof_fri_rounds,
+      std::vector<F>& alpha_values) const
+    {
       for (size_t round_idx = 0; round_idx < nof_fri_rounds; ++round_idx) {
         auto [root_ptr, root_size] = fri_proof.get_merkle_tree_root(round_idx);
-        if (root_ptr == nullptr || root_size <= 0){
+        if (root_ptr == nullptr || root_size <= 0) {
           ICICLE_LOG_ERROR << "Failed to retrieve Merkle root for round " << round_idx;
         }
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
-        alpha_values[round_idx] = transcript.get_alpha(merkle_commit, round_idx==0);
+        alpha_values[round_idx] = transcript.get_alpha(merkle_commit, round_idx == 0);
       }
     }
 
@@ -160,15 +165,16 @@ namespace icicle {
      * @param fri_config Configuration specifying required PoW bits.
      * @param pow_valid (OUT) Set to true if PoW verification succeeds.
      */
-    void check_pow_nonce_and_set_to_transcript(FriProof<F>& fri_proof, FriTranscript<F>& transcript, const FriConfig& fri_config, bool& pow_valid) const{
+    void check_pow_nonce_and_set_to_transcript(
+      FriProof<F>& fri_proof, FriTranscript<F>& transcript, const FriConfig& fri_config, bool& pow_valid) const
+    {
       pow_valid = (transcript.hash_and_get_nof_leading_zero_bits(fri_proof.get_pow_nonce()) == fri_config.pow_bits);
-      if (pow_valid) {
-        transcript.set_pow_nonce(fri_proof.get_pow_nonce());
-      }
+      if (pow_valid) { transcript.set_pow_nonce(fri_proof.get_pow_nonce()); }
     }
 
     /**
-     * @brief Checks if the leaf index from the proof matches the expected index computed based on the transcript random generation.
+     * @brief Checks if the leaf index from the proof matches the expected index computed based on the transcript random
+     * generation.
      * @param leaf_index Index extracted from the proof.
      * @param leaf_index_sym Symmetric index extracted from the proof.
      * @param query The query based on the transcript random generation.
@@ -176,15 +182,21 @@ namespace icicle {
      * @param log_input_size Log of the initial input size.
      * @return True if indices are consistent, false otherwise.
      */
-    bool leaf_index_consistency_check(const uint64_t leaf_index, const uint64_t leaf_index_sym, const size_t query, const size_t round_idx, const uint32_t log_input_size) const {
+    bool leaf_index_consistency_check(
+      const uint64_t leaf_index,
+      const uint64_t leaf_index_sym,
+      const size_t query,
+      const size_t round_idx,
+      const uint32_t log_input_size) const
+    {
       size_t round_size = (1ULL << (log_input_size - round_idx));
       size_t elem_idx = query % round_size;
       size_t elem_idx_sym = (query + (round_size >> 1)) % round_size;
-      if(__builtin_expect(elem_idx != leaf_index, 0)){
+      if (__builtin_expect(elem_idx != leaf_index, 0)) {
         ICICLE_LOG_ERROR << "Leaf index from proof doesn't match query expected index";
         return false;
       }
-      if(__builtin_expect(elem_idx_sym != leaf_index_sym, 0)){
+      if (__builtin_expect(elem_idx_sym != leaf_index_sym, 0)) {
         ICICLE_LOG_ERROR << "Leaf index symmetry from proof doesn't match query expected index";
         return false;
       }
@@ -193,7 +205,7 @@ namespace icicle {
 
     /**
      * @brief Validates collinearity in the folding process for a specific round.
-     *        This ensures that the folded value computed from the queried elements 
+     *        This ensures that the folded value computed from the queried elements
      *        matches the expected value in the proof.
      * @param fri_proof The proof object containing leaf data.
      * @param leaf_data Pointer to the leaf data.
@@ -206,14 +218,24 @@ namespace icicle {
      * @param primitive_root_inv Inverse primitive root used in calculations.
      * @return True if the collinearity check passes, false otherwise.
      */
-    bool collinearity_check(FriProof<F>& fri_proof, const std::byte* leaf_data, const std::byte* leaf_data_sym, const size_t query_idx, const size_t query, const size_t round_idx, std::vector<F>& alpha_values, const uint32_t log_input_size, const S primitive_root_inv) const {
+    bool collinearity_check(
+      FriProof<F>& fri_proof,
+      const std::byte* leaf_data,
+      const std::byte* leaf_data_sym,
+      const size_t query_idx,
+      const size_t query,
+      const size_t round_idx,
+      std::vector<F>& alpha_values,
+      const uint32_t log_input_size,
+      const S primitive_root_inv) const
+    {
       const F& leaf_data_f = *reinterpret_cast<const F*>(leaf_data);
       const F& leaf_data_sym_f = *reinterpret_cast<const F*>(leaf_data_sym);
       size_t round_size = (1ULL << (log_input_size - round_idx));
       size_t elem_idx = query % round_size;
       F l_even = (leaf_data_f + leaf_data_sym_f) * S::inv_log_size(1);
       F l_odd = ((leaf_data_f - leaf_data_sym_f) * S::inv_log_size(1)) *
-                S::pow(primitive_root_inv, elem_idx * (1<<round_idx));
+                S::pow(primitive_root_inv, elem_idx * (1 << round_idx));
       F alpha = alpha_values[round_idx];
       F folded = l_even + (alpha * l_odd);
 
@@ -223,7 +245,7 @@ namespace icicle {
         const F* final_poly = fri_proof.get_final_poly();
         if (final_poly[query % final_poly_size] != folded) {
           ICICLE_LOG_ERROR << " (last round) Collinearity check failed for query=" << query
-                          << ", query_idx=" << query_idx << ", round=" << round_idx;
+                           << ", query_idx=" << query_idx << ", round=" << round_idx;
           return false;
         }
       } else {
@@ -232,8 +254,8 @@ namespace icicle {
         const F& leaf_data_folded_f = *reinterpret_cast<const F*>(leaf_data_folded);
         if (leaf_data_folded_f != folded) {
           ICICLE_LOG_ERROR << "Collinearity check failed. query=" << query << ", query_idx=" << query_idx
-                          << ", round=" << round_idx << ".\nfolded_res = \t\t" << folded
-                          << "\nfolded_from_proof = \t" << leaf_data_folded_f;
+                           << ", round=" << round_idx << ".\nfolded_res = \t\t" << folded << "\nfolded_from_proof = \t"
+                           << leaf_data_folded_f;
           return false;
         }
       }
@@ -247,7 +269,9 @@ namespace icicle {
      * @param proof_ref_sym Merkle proof for the symmetric query.
      * @return True if both proofs are valid, false otherwise.
      */
-    bool verify_merkle_proofs_for_query(const MerkleTree& current_round_tree,  MerkleProof& proof_ref, MerkleProof& proof_ref_sym) const {
+    bool verify_merkle_proofs_for_query(
+      const MerkleTree& current_round_tree, MerkleProof& proof_ref, MerkleProof& proof_ref_sym) const
+    {
       bool merkle_proof_valid = false;
       eIcicleError err = current_round_tree.verify(proof_ref, merkle_proof_valid);
       if (err != eIcicleError::SUCCESS) {
@@ -285,37 +309,43 @@ namespace icicle {
      * @return An eIcicleError indicating success or failure.
      */
 
-    eIcicleError verify_queries(FriProof<F>& fri_proof, const size_t nof_queries, std::vector<size_t>& queries_indicies, std::vector<F>& alpha_values, bool& queries_valid) const{
-      const uint32_t log_input_size = fri_proof.get_nof_fri_rounds() + static_cast<uint32_t>(std::log2(fri_proof.get_final_poly_size()));
+    eIcicleError verify_queries(
+      FriProof<F>& fri_proof,
+      const size_t nof_queries,
+      std::vector<size_t>& queries_indicies,
+      std::vector<F>& alpha_values,
+      bool& queries_valid) const
+    {
+      const uint32_t log_input_size =
+        fri_proof.get_nof_fri_rounds() + static_cast<uint32_t>(std::log2(fri_proof.get_final_poly_size()));
       S primitive_root_inv = S::omega_inv(log_input_size);
       for (size_t query_idx = 0; query_idx < nof_queries; query_idx++) {
         size_t query = queries_indicies[query_idx];
         for (size_t round_idx = 0; round_idx < fri_proof.get_nof_fri_rounds(); ++round_idx) {
-
           MerkleTree current_round_tree = m_backend->m_merkle_trees[round_idx];
           MerkleProof& proof_ref = fri_proof.get_query_proof(2 * query_idx, round_idx);
           MerkleProof& proof_ref_sym = fri_proof.get_query_proof(2 * query_idx + 1, round_idx);
           const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf();
           const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
 
-          if(!verify_merkle_proofs_for_query(current_round_tree, proof_ref, proof_ref_sym)){
-            return eIcicleError::SUCCESS; // return with queries_valid = false
-          }    
-
-          if(!leaf_index_consistency_check(leaf_index, leaf_index_sym, query, round_idx, log_input_size)){
-            return eIcicleError::SUCCESS; // return with queries_valid = false
-          }
-          
-          if (!collinearity_check(fri_proof, leaf_data, leaf_data_sym, query_idx, query, round_idx, alpha_values, log_input_size, primitive_root_inv)){
+          if (!verify_merkle_proofs_for_query(current_round_tree, proof_ref, proof_ref_sym)) {
             return eIcicleError::SUCCESS; // return with queries_valid = false
           }
 
+          if (!leaf_index_consistency_check(leaf_index, leaf_index_sym, query, round_idx, log_input_size)) {
+            return eIcicleError::SUCCESS; // return with queries_valid = false
+          }
+
+          if (!collinearity_check(
+                fri_proof, leaf_data, leaf_data_sym, query_idx, query, round_idx, alpha_values, log_input_size,
+                primitive_root_inv)) {
+            return eIcicleError::SUCCESS; // return with queries_valid = false
+          }
         }
       }
       queries_valid = true;
       return eIcicleError::SUCCESS;
     }
-
   };
 
 } // namespace icicle

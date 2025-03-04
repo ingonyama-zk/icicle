@@ -16,8 +16,7 @@ namespace icicle {
   {
   public:
     FriTranscript(const FriTranscriptConfig<F>& transcript_config, const uint32_t log_input_size)
-        : m_transcript_config(transcript_config), m_prev_alpha(F::zero()),
-          m_pow_nonce(0)
+        : m_transcript_config(transcript_config), m_prev_alpha(F::zero()), m_pow_nonce(0)
     {
       m_entry_0.clear();
       m_entry_0.reserve(1024); // pre-allocate some space
@@ -74,7 +73,6 @@ namespace icicle {
      */
     void set_pow_nonce(uint32_t pow_nonce) { m_pow_nonce = pow_nonce; }
 
-    
     /**
      * @brief Generates random query indices for the query phase.
      *        The seed is derived from the current transcript state.
@@ -83,7 +81,8 @@ namespace icicle {
      * @param max Upper limit.
      * @return Random (uniform distribution) unsigned integer s.t. min <= integer <= max.
      */
-    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min = 0, size_t max = SIZE_MAX){
+    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min = 0, size_t max = SIZE_MAX)
+    {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
@@ -108,7 +107,7 @@ namespace icicle {
     const FriTranscriptConfig<F>& m_transcript_config;
     std::vector<std::byte> m_entry_0; // Hash input set in the first round and used in all subsequent rounds
     F m_prev_alpha;
-    uint64_t m_pow_nonce;             // Proof-of-work nonce - optional
+    uint64_t m_pow_nonce; // Proof-of-work nonce - optional
 
     /**
      * @brief Append a vector of bytes to another vector of bytes.

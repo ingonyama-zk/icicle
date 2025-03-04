@@ -309,9 +309,7 @@ public:
   /* Receives an array of bytes and its size and returns extension field element. */
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
-    if(nof_bytes < 2 * sizeof(FF)){
-      ICICLE_LOG_ERROR << "Input size is too small";
-    }
+    if (nof_bytes < 2 * sizeof(FF)) { ICICLE_LOG_ERROR << "Input size is too small"; }
     return ComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
   }
 };

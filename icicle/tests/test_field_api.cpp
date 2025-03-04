@@ -6,7 +6,6 @@
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
 
-
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
 class FieldTest : public ModArithTest<T>
@@ -193,8 +192,7 @@ TEST_F(FieldTestBase, Sumcheck)
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool valid = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
+    ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
     ASSERT_EQ(true, valid);
   };
@@ -336,8 +334,7 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool valid = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
+    ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
     ASSERT_EQ(true, valid);
   };
@@ -501,8 +498,7 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool valid = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
+    ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
     ASSERT_EQ(true, valid);
   };
@@ -566,8 +562,7 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool valid = false;
-    ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
+    ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), valid));
 
     ASSERT_EQ(true, valid);
   };
@@ -616,14 +611,16 @@ TYPED_TEST(FieldTest, FriHashAPi)
     input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
   // set transcript config
-  const char* domain_separator_label = "domain_separator_label"; 
-  const char* round_challenge_label = "round_challenge_label"; 
-  const char* commit_phase_label = "commit_phase_label"; 
-  const char* nonce_label = "nonce_label"; 
-  std::vector<std::byte>&& public_state = {}; 
+  const char* domain_separator_label = "domain_separator_label";
+  const char* round_challenge_label = "round_challenge_label";
+  const char* commit_phase_label = "commit_phase_label";
+  const char* nonce_label = "nonce_label";
+  std::vector<std::byte>&& public_state = {};
   TypeParam seed_rng = TypeParam::one();
 
-  FriTranscriptConfig<TypeParam> transcript_config(hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state), seed_rng);
+  FriTranscriptConfig<TypeParam> transcript_config(
+    hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+    seed_rng);
 
   FriConfig fri_config;
   fri_config.nof_queries = nof_queries;
