@@ -53,6 +53,10 @@ namespace icicle {
 
   private:
     int m_poly_degree = 0;
+
+    // Friend function for C-api to have access to update the poly degree after generation
+    template <typename T>
+    friend void set_poly_degree(ReturningValueProgram<T>* program, int poly_degree);
   };
 
   // Friend function for C-api to have access to the default constructor
@@ -60,5 +64,12 @@ namespace icicle {
   ReturningValueProgram<S>* create_empty_returning_value_program()
   {
     return new ReturningValueProgram<S>();
+  }
+
+  // Friend function for C-api to have access to update the poly degree after generation
+  template <typename S>
+  void set_poly_degree(ReturningValueProgram<S>* program, int poly_degree)
+  {
+    program->m_poly_degree = poly_degree;
   }
 } // namespace icicle

@@ -54,10 +54,25 @@ ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_val
 }
 
 eIcicleError CONCAT_EXPAND(FIELD, generate_returning_value_program)(
-  SymbolHandle* parameters_ptr, int nof_parameters, ReturningValueProgramHandle* returning_program)
+  SymbolHandle* parameters_ptr, int nof_parameters, ReturningValueProgramHandle* program)
 {
-  ProgramHandle program = *returning_program;
-  return CONCAT_EXPAND(FIELD, generate_program)(parameters_ptr, nof_parameters, &program);
+  *program = create_empty_returning_value_program<scalar_t>();
+  std::vector<Symbol<scalar_t>> parameters_vec;
+  parameters_vec.reserve(nof_parameters);
+
+  for (int i = 0; i < nof_parameters; i++) {
+    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
+    parameters_vec.push_back(*parameters_ptr[i]);
+  }
+
+  (*program)->m_nof_parameters = nof_parameters;
+  (*program)->generate_program(parameters_vec);
+  set_poly_degree(*program, parameters_ptr[nof_parameters - 1]->m_operation->m_poly_degree);
+
+  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
+  pool.clear();
+
+  return eIcicleError::SUCCESS;
 }
 }
 
@@ -100,10 +115,25 @@ CONCAT_EXPAND(FIELD, extension_create_predefined_returning_value_program)(PreDef
 }
 
 eIcicleError CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
-  ExtensionSymbolHandle* parameters_ptr, int nof_parameters, ExtensionReturningValueProgramHandle* returning_program)
+  ExtensionSymbolHandle* parameters_ptr, int nof_parameters, ExtensionReturningValueProgramHandle* program)
 {
-  ExtensionProgramHandle program = *returning_program;
-  return CONCAT_EXPAND(FIELD, extension_generate_program)(parameters_ptr, nof_parameters, &program);
+  *program = create_empty_returning_value_program<extension_t>();
+  std::vector<Symbol<extension_t>> parameters_vec;
+  parameters_vec.reserve(nof_parameters);
+
+  for (int i = 0; i < nof_parameters; i++) {
+    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
+    parameters_vec.push_back(*parameters_ptr[i]);
+  }
+
+  (*program)->m_nof_parameters = nof_parameters;
+  (*program)->generate_program(parameters_vec);
+  set_poly_degree(*program, parameters_ptr[nof_parameters - 1]->m_operation->m_poly_degree);
+
+  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
+  pool.clear();
+
+  return eIcicleError::SUCCESS;
 }
 }
 #endif // EXT_FIELD
