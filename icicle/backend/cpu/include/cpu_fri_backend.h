@@ -43,10 +43,13 @@ namespace icicle {
       FriTranscript<F> transcript(fri_transcript_config, m_log_input_size);
 
       // Initialize the proof
-      fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree + 1);
+      eIcicleError err = fri_proof.init(fri_config.nof_queries, m_nof_fri_rounds, this->m_stopping_degree + 1);
+      if(err != eIcicleError::SUCCESS){
+        return err;
+      }
 
       // commit fold phase
-      eIcicleError err = commit_fold_phase(input_data, transcript, fri_config, fri_proof);
+      err = commit_fold_phase(input_data, transcript, fri_config, fri_proof);
       if(err != eIcicleError::SUCCESS){
         return err;
       }
