@@ -540,7 +540,7 @@ TEST_F(FieldTestBase, SumcheckDifferentTranscriptShouldFail)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    Hash hasher = create_sha3_256_hash();
+    Hash hasher = create_keccak_256_hash();
     const char* domain_label = "ingonyama";
     const char* poly_label = "poly_label";
     const char* challenge_label = "icicle";
@@ -715,7 +715,7 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    Hash hasher = create_sha3_256_hash();
+    Hash hasher = create_keccak_256_hash();
     const char* domain_label = "ingonyama";
     const char* poly_label = "poly_label";
     const char* challenge_label = "icicle";
