@@ -262,7 +262,8 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   // create sumcheck
   auto verifier_sumcheck = create_sumcheck<scalar_t>();
   bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
+  ICICLE_CHECK(
+    verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 

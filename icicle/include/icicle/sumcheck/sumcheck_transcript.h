@@ -41,9 +41,9 @@ public:
 
 private:
   const SumcheckTranscriptConfig<S> m_transcript_config; // configuration how to build the transcript
-  HashConfig m_config;                                     // hash config - default
-  uint32_t m_round_idx;                                    //
-  std::vector<std::byte> m_entry_0;                        //
+  HashConfig m_config;                                   // hash config - default
+  uint32_t m_round_idx;                                  //
+  std::vector<std::byte> m_entry_0;                      //
   uint32_t m_mle_polynomial_size = 0;
   uint32_t m_combine_function_poly_degree = 0;
   const S m_claimed_sum;
