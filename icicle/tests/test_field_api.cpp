@@ -606,7 +606,7 @@ TYPED_TEST(FieldTest, Fri)
       TypeParam::rand_host_many(scalars.get(), input_size);
 
       auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries,
-                  pow_bits, &scalars](const std::string& dev_type) {
+                  pow_bits, &scalars](const std::string& dev_type, bool measure) {
         Device dev = {dev_type, 0};
         icicle_set_device(dev);
 
@@ -641,13 +641,15 @@ TYPED_TEST(FieldTest, Fri)
         fri_config.pow_bits = pow_bits;
         FriProof<TypeParam> fri_proof;
 
-        // ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree << ".
-        // pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
-        // std::ostringstream oss;
-        // oss << dev_type << " FRI proof";
-        // START_TIMER(FRIPROOF_sync)
+        std::ostringstream oss;
+        if (measure) {
+          ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree
+                          << ".pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
+          oss << dev_type << " FRI proof";
+        }
+        START_TIMER(FRIPROOF_sync)
         ICICLE_CHECK(prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof));
-        // END_TIMER(FRIPROOF_sync, oss.str().c_str(), true);
+        END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
 
         // ===== Verifier side ======
         Fri verifier_fri = create_fri<scalar_t, TypeParam>(
@@ -661,8 +663,8 @@ TYPED_TEST(FieldTest, Fri)
         ICICLE_CHECK(ntt_release_domain<scalar_t>());
       };
 
-      run(IcicleTestBase::reference_device());
-      // run(IcicleTestBase::main_device());
+      run(IcicleTestBase::reference_device(), false);
+      // run(IcicleTestBase::main_device(), , VERBOSE);
     }
   }
 }
@@ -720,11 +722,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     fri_config.pow_bits = pow_bits;
     FriProof<TypeParam> fri_proof;
 
-    // std::ostringstream oss;
-    // oss << dev_type << " FRI proof";
-    // START_TIMER(FRIPROOF_sync)
     eIcicleError error = prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof);
-    // END_TIMER(FRIPROOF_sync, oss.str().c_str(), true);
 
     if (error == eIcicleError::SUCCESS) {
       // ===== Verifier side ======
