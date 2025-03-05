@@ -165,7 +165,7 @@ TEST_F(FieldTestBase, Sumcheck)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
     SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
@@ -229,7 +229,7 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   icicle_set_device(IcicleTestBase::main_device());
 
   // create transcript_config
-  SumcheckTranscriptConfig<scalar_t> transcript_config_prover; // default configuration
+  SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
   SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
 
   // ===== Prover side ======
@@ -262,7 +262,8 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   // create sumcheck
   auto verifier_sumcheck = create_sumcheck<scalar_t>();
   bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config_verifier), verification_pass));
+  ICICLE_CHECK(
+    verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config_verifier), verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 
@@ -310,7 +311,7 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
     SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
@@ -390,7 +391,7 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedDegreeCombine)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
     SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
@@ -426,7 +427,6 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedDegreeCombine)
     delete[] mle_poly_ptr;
   }
 }
-
 
 MlePoly max_allowed_nof_polys_comine(const std::vector<MlePoly>& inputs)
 {
@@ -475,7 +475,7 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedNofPolys)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
     SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
@@ -667,16 +667,16 @@ TEST_F(FieldTestBase, SumcheckDeviceShouldFailCases)
 
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
   };
-    for (const auto& device : s_registered_devices) {
-      if (device == "CPU") continue;
-      ICICLE_LOG_INFO << "Run test on device: " << device;
-      CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
-      run(device, mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
-      CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
-      run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
-      CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
-      run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
-    }
+  for (const auto& device : s_registered_devices) {
+    if (device == "CPU") continue;
+    ICICLE_LOG_INFO << "Run test on device: " << device;
+    CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
+    run(device, mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
+    CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
+    run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
+    CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
+    run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
+  }
 
   for (auto& mle_poly_ptr : mle_polynomials_big) {
     delete[] mle_poly_ptr;
@@ -791,7 +791,7 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
     SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
