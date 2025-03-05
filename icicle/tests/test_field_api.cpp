@@ -344,7 +344,84 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
   }
 }
 
-  #ifdef CUDA_ARCH
+MlePoly max_allowed_degree_combine(const std::vector<MlePoly>& inputs)
+{
+  const MlePoly& A = inputs[0];
+  const MlePoly& B = inputs[1];
+  const MlePoly& C = inputs[2];
+  const MlePoly& D = inputs[3];
+  const MlePoly& E = inputs[4];
+  const MlePoly& F = inputs[5];
+  return A * B * C * D * E * F;
+}
+
+TEST_F(FieldTestBase, SumcheckMaxAllowedDegreeCombine)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 6;
+
+  // generate inputs
+  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
+    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  scalar_t claimed_sum = scalar_t::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const scalar_t a = mle_polynomials[0][element_i];
+    const scalar_t b = mle_polynomials[1][element_i];
+    const scalar_t c = mle_polynomials[2][element_i];
+    const scalar_t d = mle_polynomials[3][element_i];
+    const scalar_t e = mle_polynomials[4][element_i];
+    const scalar_t f = mle_polynomials[5][element_i];
+    claimed_sum = claimed_sum + (a * b * c * d * e * f);
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
+               const scalar_t claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // create transcript_config
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    // ===== Prover side ======
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<scalar_t>();
+
+    CombineFunction<scalar_t> combine_func(max_allowed_degree_combine, nof_mle_poly);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<scalar_t> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    // ===== Verifier side ======
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+  };
+  for (const auto& device : s_registered_devices) {
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+  }
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
 
 MlePoly too_complex_combine(const std::vector<MlePoly>& inputs)
 {
@@ -427,13 +504,16 @@ TEST_F(FieldTestBase, SumcheckCudaShouldFailCases)
 
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
   };
+    for (const auto& device : s_registered_devices) {
+      if (device == "CPU") continue;
+      CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
+      run(device, mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
+      CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
+      run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
+      CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
+      run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
+    }
 
-  CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
-  run("CUDA", mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
-  CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
-  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_complex);
-  CombineFunction<scalar_t> combine_func_too_high_degree(too_high_degree_combine, nof_mle_poly_small);
-  run("CUDA", mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
 
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
@@ -442,7 +522,6 @@ TEST_F(FieldTestBase, SumcheckCudaShouldFailCases)
     delete[] mle_poly_ptr;
   }
 }
-  #endif // CUDA_ARCH
 
 MlePoly identity(const std::vector<MlePoly>& inputs) { return inputs[0]; }
 
