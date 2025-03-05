@@ -33,7 +33,6 @@ namespace icicle {
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    if (folding_factor != 2) { ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; }
     const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
     const size_t df = stopping_degree;
     const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
@@ -85,7 +84,6 @@ namespace icicle {
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    if (folding_factor != 2) { ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; }
     const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
     const size_t df = stopping_degree;
     const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;

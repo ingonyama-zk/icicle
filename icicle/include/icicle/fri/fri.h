@@ -99,7 +99,8 @@ namespace icicle {
 
       FriTranscript<F> transcript(fri_transcript_config, log_input_size);
       std::vector<F> alpha_values(nof_fri_rounds);
-      update_transcript_and_generate_alphas_from_proof(fri_proof, transcript, nof_fri_rounds, alpha_values);
+      eIcicleError err = update_transcript_and_generate_alphas_from_proof(fri_proof, transcript, nof_fri_rounds, alpha_values);
+      if (err != eIcicleError::SUCCESS){ return err; }
 
       // Validate proof-of-work
       if (fri_config.pow_bits != 0) {
@@ -111,9 +112,9 @@ namespace icicle {
       // verify queries
       bool queries_valid = false;
       std::vector<size_t> queries_indicies =
-        transcript.rand_queries_indicies(fri_config.nof_queries, final_poly_size, 1 << log_input_size);
-      eIcicleError err =
-        verify_queries(fri_proof, fri_config.nof_queries, queries_indicies, alpha_values, queries_valid);
+      transcript.rand_queries_indicies(fri_config.nof_queries, final_poly_size, 1 << log_input_size, err);
+      if (err != eIcicleError::SUCCESS) { return err; }
+      err = verify_queries(fri_proof, fri_config.nof_queries, queries_indicies, alpha_values, queries_valid);
       if (!queries_valid) return eIcicleError::SUCCESS; // return with valid = false
 
       valid = true;
@@ -130,7 +131,7 @@ namespace icicle {
      * @param nof_fri_rounds Number of FRI rounds.
      * @param alpha_values (OUT) Vector to store computed alpha values.
      */
-    void update_transcript_and_generate_alphas_from_proof(
+    eIcicleError update_transcript_and_generate_alphas_from_proof(
       FriProof<F>& fri_proof,
       FriTranscript<F>& transcript,
       const size_t nof_fri_rounds,
@@ -143,8 +144,11 @@ namespace icicle {
         }
         std::vector<std::byte> merkle_commit(root_size);
         std::memcpy(merkle_commit.data(), root_ptr, root_size);
-        alpha_values[round_idx] = transcript.get_alpha(merkle_commit, round_idx == 0);
+        eIcicleError err;
+        alpha_values[round_idx] = transcript.get_alpha(merkle_commit, round_idx == 0, err);
+        if (err != eIcicleError::SUCCESS){ return err; }
       }
+      return eIcicleError::SUCCESS;
     }
 
     /**

@@ -29,7 +29,7 @@ namespace icicle {
      * @param merkle_commit The raw bytes of the Merkle commit.
      * @return A field element alpha derived via Fiat-Shamir.
      */
-    F get_alpha(const std::vector<std::byte>& merkle_commit, bool is_first_round)
+    F get_alpha(const std::vector<std::byte>& merkle_commit, bool is_first_round, eIcicleError& err)
     {
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
@@ -45,7 +45,7 @@ namespace icicle {
       const Hash& hasher = m_transcript_config.get_hasher();
       std::vector<std::byte> hash_result(hasher.output_size());
       const HashConfig hash_config;
-      hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
+      err = hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
       m_prev_alpha = F::from(hash_result.data(), hasher.output_size());
       return m_prev_alpha;
     }
@@ -81,7 +81,7 @@ namespace icicle {
      * @param max Upper limit.
      * @return Random (uniform distribution) unsigned integer s.t. min <= integer <= max.
      */
-    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min = 0, size_t max = SIZE_MAX)
+    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min, size_t max, eIcicleError& err)
     {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
@@ -93,7 +93,7 @@ namespace icicle {
       const Hash& hasher = m_transcript_config.get_hasher();
       std::vector<std::byte> hash_result(hasher.output_size());
       const HashConfig hash_config;
-      hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
+      err = hasher.hash(hash_input.data(), hash_input.size(), hash_config, hash_result.data());
       uint64_t seed = bytes_to_uint_64(hash_result);
       seed_rand_generator(seed);
       std::vector<size_t> vec(nof_queries);
