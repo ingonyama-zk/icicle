@@ -581,6 +581,9 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 
 TYPED_TEST(FieldTest, FriHashAPi)
 {
+  auto dev_type = IcicleTestBase::main_device();
+  Device dev = {dev_type, 0};
+  icicle_set_device(dev);
   // Randomize configuration
   const int log_input_size = rand_uint_32b(3, 13);
   const size_t input_size = 1 << log_input_size;

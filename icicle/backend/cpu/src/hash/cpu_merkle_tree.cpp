@@ -52,6 +52,7 @@ namespace icicle {
 
     eIcicleError build(const std::byte* leaves, uint64_t leaves_size, const MerkleTreeConfig& config) override
     {
+      ICICLE_LOG_DEBUG << "starting cpu build";
       TasksManager<HashTask> task_manager(get_nof_workers(config)); // Run workers.
       if (m_tree_already_built) {
         ICICLE_LOG_ERROR << "Tree cannot be built more than one time";
