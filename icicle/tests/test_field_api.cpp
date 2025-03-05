@@ -584,8 +584,8 @@ TYPED_TEST(FieldTest, Fri)
   size_t log_stopping_size;
   size_t pow_bits;
   size_t nof_queries;
-  for (size_t params_options = 0; params_options<=1; params_options++){
-    if (params_options){
+  for (size_t params_options = 0; params_options <= 1; params_options++) {
+    if (params_options) {
       log_stopping_size = 0;
       pow_bits = 16;
       nof_queries = 100;
@@ -594,7 +594,7 @@ TYPED_TEST(FieldTest, Fri)
       pow_bits = 0;
       nof_queries = 50;
     }
-    for (size_t log_input_size = 16; log_input_size <=24; log_input_size+=4){
+    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
       const size_t input_size = 1 << log_input_size;
       const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
       const size_t stopping_size = 1 << log_stopping_size;
@@ -604,20 +604,19 @@ TYPED_TEST(FieldTest, Fri)
       // Generate input polynomial evaluations
       auto scalars = std::make_unique<TypeParam[]>(input_size);
       TypeParam::rand_host_many(scalars.get(), input_size);
-      
-      auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries, pow_bits, &scalars](
-        const std::string& dev_type
-      ) {
+
+      auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries,
+                  pow_bits, &scalars](const std::string& dev_type) {
         Device dev = {dev_type, 0};
         icicle_set_device(dev);
-        
+
         // Initialize ntt domain
         NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
         ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
-        
+
         // ===== Prover side ======
         uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-      
+
         // Define hashers for merkle tree
         Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
         Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
@@ -642,7 +641,8 @@ TYPED_TEST(FieldTest, Fri)
         fri_config.pow_bits = pow_bits;
         FriProof<TypeParam> fri_proof;
 
-        // ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
+        // ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree << ".
+        // pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
         // std::ostringstream oss;
         // oss << dev_type << " FRI proof";
         // START_TIMER(FRIPROOF_sync)
@@ -667,7 +667,6 @@ TYPED_TEST(FieldTest, Fri)
   }
 }
 
-
 TYPED_TEST(FieldTest, FriShouldFailCases)
 {
   // Randomize configuration
@@ -683,20 +682,20 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
   // Generate input polynomial evaluations
   auto scalars = std::make_unique<TypeParam[]>(input_size);
   TypeParam::rand_host_many(scalars.get(), input_size);
-  
+
   auto run = [log_input_size, input_size, stopping_degree, output_store_min_layer, pow_bits, &scalars](
-    const std::string& dev_type, const size_t nof_queries, const size_t folding_factor, const size_t log_domain_size
-  ) {
+               const std::string& dev_type, const size_t nof_queries, const size_t folding_factor,
+               const size_t log_domain_size) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
-    
+
     // Initialize ntt domain
     NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_domain_size), init_domain_config));
-    
+
     // ===== Prover side ======
     uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-  
+
     // Define hashers for merkle tree
     Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
     Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
@@ -721,21 +720,20 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     fri_config.pow_bits = pow_bits;
     FriProof<TypeParam> fri_proof;
 
-    std::ostringstream oss;
-    oss << dev_type << " FRI proof";
-    START_TIMER(FRIPROOF_sync)
+    // std::ostringstream oss;
+    // oss << dev_type << " FRI proof";
+    // START_TIMER(FRIPROOF_sync)
     eIcicleError error = prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof);
-    END_TIMER(FRIPROOF_sync, oss.str().c_str(), true);
+    // END_TIMER(FRIPROOF_sync, oss.str().c_str(), true);
 
-    if (error == eIcicleError::SUCCESS){
+    if (error == eIcicleError::SUCCESS) {
       // ===== Verifier side ======
       Fri verifier_fri = create_fri<scalar_t, TypeParam>(
         input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
       bool valid = false;
       error = verifier_fri.verify(fri_config, transcript_config, fri_proof, valid);
-  
+
       ASSERT_EQ(true, valid);
-  
     }
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
 
@@ -743,9 +741,12 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  run(IcicleTestBase::reference_device(), 0/*nof_queries*/, 2/*folding_factor*/, log_input_size/*log_domain_size*/);
-  run(IcicleTestBase::reference_device(), 10/*nof_queries*/, 16/*folding_factor*/, log_input_size/*log_domain_size*/);
-  run(IcicleTestBase::reference_device(), 10/*nof_queries*/, 2/*folding_factor*/, log_input_size-1/*log_domain_size*/);
+  run(IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1 /*log_domain_size*/);
   // run(IcicleTestBase::main_device());
 }
 

@@ -40,12 +40,12 @@ namespace icicle {
       if (__builtin_expect(fri_config.nof_queries <= 0, 0)) {
         ICICLE_LOG_ERROR << "Number of queries must be > 0";
         return eIcicleError::INVALID_ARGUMENT;
-       }
+      }
       if (__builtin_expect(this->m_folding_factor != 2, 0)) {
-        ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when supporting other folding factors
+        ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
+                                                                               // supporting other folding factors
         return eIcicleError::INVALID_ARGUMENT;
       }
-
 
       FriTranscript<F> transcript(fri_transcript_config, m_log_input_size);
 
@@ -118,7 +118,7 @@ namespace icicle {
 
         eIcicleError err;
         F alpha = transcript.get_alpha(merkle_commit, round_idx == 0, err);
-        if (err != eIcicleError::SUCCESS){ return err; }
+        if (err != eIcicleError::SUCCESS) { return err; }
 
         // Fold the evaluations
         size_t half = current_size >> 1;
