@@ -184,11 +184,12 @@ TEST_F(FieldTestBase, Sumcheck)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
+    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
@@ -257,10 +258,11 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   END_TIMER(sumcheck, oss.str().c_str(), true);
 
   // ===== Verifier side ======
+  SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
   // create sumcheck
   auto verifier_sumcheck = create_sumcheck<scalar_t>();
   bool verification_pass = false;
-  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+  ICICLE_CHECK(verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
   ASSERT_EQ(true, verification_pass);
 
@@ -327,11 +329,12 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
+    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
@@ -492,11 +495,12 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
+    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
@@ -557,11 +561,12 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
+    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
