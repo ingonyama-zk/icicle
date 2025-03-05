@@ -638,8 +638,18 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
+    Hash hasher = create_sha3_256_hash();
+    const char* domain_label = "ingonyama";
+    const char* poly_label = "poly_label";
+    const char* challenge_label = "icicle";
+    scalar_t seed = scalar_t::from(18);
+    bool little_endian = true;
+
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_prover(
+      hasher, domain_label, poly_label, challenge_label, seed, little_endian);; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config_verifier(
+      hasher, domain_label, poly_label, challenge_label, seed, little_endian);; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
@@ -653,7 +663,7 @@ TEST_F(FieldTestBase, SumcheckIdentity)
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config_prover), sumcheck_config,
       sumcheck_proof));
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
@@ -662,7 +672,7 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
     ICICLE_CHECK(
-      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass));
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config_verifier), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
