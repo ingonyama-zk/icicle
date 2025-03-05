@@ -453,7 +453,7 @@ MlePoly too_many_polynomials_combine(const std::vector<MlePoly>& inputs)
   return A * B * C + D * E * F + G * H * I;
 }
 
-TEST_F(FieldTestBase, SumcheckCudaShouldFailCases)
+TEST_F(FieldTestBase, SumcheckDeviceShouldFailCases)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
@@ -506,6 +506,7 @@ TEST_F(FieldTestBase, SumcheckCudaShouldFailCases)
   };
     for (const auto& device : s_registered_devices) {
       if (device == "CPU") continue;
+      ICICLE_LOG_INFO << "Run test on device: " << device;
       CombineFunction<scalar_t> combine_func_too_many_polys(too_many_polynomials_combine, nof_mle_poly_big);
       run(device, mle_polynomials_big, mle_poly_size, claimed_sum, combine_func_too_many_polys);
       CombineFunction<scalar_t> combine_func_too_complex(too_complex_combine, nof_mle_poly_small);
@@ -514,7 +515,9 @@ TEST_F(FieldTestBase, SumcheckCudaShouldFailCases)
       run(device, mle_polynomials_small, mle_poly_size, claimed_sum, combine_func_too_high_degree);
     }
 
-
+  for (auto& mle_poly_ptr : mle_polynomials_big) {
+    delete[] mle_poly_ptr;
+  }
   for (auto& mle_poly_ptr : mle_polynomials) {
     delete[] mle_poly_ptr;
   }
