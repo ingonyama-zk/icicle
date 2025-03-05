@@ -76,6 +76,9 @@ macro_rules! impl_program_field {
         #[link_name = concat!($field_prefix, "_generate_program")]
         pub(crate) fn ffi_generate_program(parameters_ptr: *const SymbolHandle, nof_parameter: u32, program: *mut ProgramHandle) -> eIcicleError;
 
+        #[link_name = concat!($field_prefix, "_generate_returning_value_program")]
+        pub(crate) fn ffi_generate_returning_value_program(parameters_ptr: *const SymbolHandle, nof_parameter: u32, program: *mut ProgramHandle) -> eIcicleError;
+
         #[link_name = "delete_program"]
         pub(crate) fn ffi_delete_program(program: ProgramHandle) -> eIcicleError;
       }
@@ -155,7 +158,7 @@ macro_rules! impl_program_field {
           let mut prog_handle = std::ptr::null();
           let ffi_status;
           unsafe {
-            ffi_status = ffi_generate_program(handles.as_ptr(), program_parameters.len() as u32, &mut prog_handle);
+            ffi_status = ffi_generate_returning_value_program(handles.as_ptr(), program_parameters.len() as u32, &mut prog_handle);
           }
           if ffi_status != eIcicleError::Success {
             Err(ffi_status)

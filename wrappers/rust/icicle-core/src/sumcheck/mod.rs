@@ -462,5 +462,17 @@ macro_rules! impl_sumcheck_tests {
             let device_hash = Keccak256::new(0).unwrap();
             check_sumcheck_simple_device::<SumcheckWrapper, Program>(&device_hash);
         }
+
+        #[test]
+        fn test_sumcheck_user_defined_combine() {
+            initialize();
+            test_utilities::test_set_ref_device();
+            let hash = Keccak256::new(0).unwrap();
+            check_sumcheck_user_defined_combine::<SumcheckWrapper, Program>(&hash);
+
+            test_utilities::test_set_main_device();
+            let device_hash = Keccak256::new(0).unwrap();
+            check_sumcheck_user_defined_combine::<SumcheckWrapper, Program>(&device_hash);
+        }
     };
 }
