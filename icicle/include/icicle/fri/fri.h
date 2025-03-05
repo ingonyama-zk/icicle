@@ -44,17 +44,6 @@ namespace icicle {
     const uint64_t output_store_min_layer = 0);
 
   /**
-   * @brief Constructor for the case where Merkle trees are already given.
-   *
-   * @param folding_factor The factor by which the codeword is folded each round.
-   * @param stopping_degree The minimal polynomial degree at which to stop folding.
-   * @param merkle_trees A reference vector of `MerkleTree` objects.
-   * @return A `Fri<F>` object built around the chosen backend.
-   */
-  template <typename S, typename F>
-  Fri<S, F> create_fri(const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees);
-
-  /**
    * @brief Class for performing FRI operations.
    *
    * This class provides a high-level interface for constructing and managing a FRI proof.

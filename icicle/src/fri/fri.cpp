@@ -55,16 +55,6 @@ namespace icicle {
     return create_fri_with_merkle_trees<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
-  /**
-   * @brief Specialization of create_fri for the case of
-   *        (folding_factor, stopping_degree, vector<MerkleTree>&&).
-   */
-  template <typename S, typename F>
-  Fri<S, F> create_fri_template(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-  {
-    return create_fri_with_merkle_trees<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
-  }
-
 #ifdef EXT_FIELD
   using FriExtFactoryScalar = FriFactoryImpl<scalar_t, extension_t>;
   ICICLE_DISPATCHER_INST(FriExtFieldDispatcher, extension_fri_factory, FriExtFactoryScalar);
@@ -117,15 +107,6 @@ namespace icicle {
     return create_fri_with_merkle_trees_ext<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
   }
 
-  /**
-   * @brief Specialization of create_fri for the case of
-   *        (folding_factor, stopping_degree, vector<MerkleTree>&&).
-   */
-  template <typename S, typename F>
-  Fri<S, F> create_fri_template_ext(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-  {
-    return create_fri_with_merkle_trees_ext<S, F>(folding_factor, stopping_degree, std::move(merkle_trees));
-  }
 #endif // EXT_FIELD
 
   template <>
@@ -142,21 +123,7 @@ namespace icicle {
       output_store_min_layer);
   }
 
-  template <>
-  Fri<scalar_t, scalar_t>
-  create_fri(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-  {
-    return create_fri_template<scalar_t, scalar_t>(folding_factor, stopping_degree, std::move(merkle_trees));
-  }
-
 #ifdef EXT_FIELD
-  template <>
-  Fri<scalar_t, extension_t>
-  create_fri(size_t folding_factor, size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-  {
-    return create_fri_template_ext<scalar_t, extension_t>(folding_factor, stopping_degree, std::move(merkle_trees));
-  }
-
   template <>
   Fri<scalar_t, extension_t> create_fri(
     const size_t input_size,

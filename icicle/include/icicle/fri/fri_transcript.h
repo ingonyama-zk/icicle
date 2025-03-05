@@ -207,7 +207,6 @@ namespace icicle {
 
     /**
      * @brief Build the hash input for the query phase.
-     * hash_input = entry_0||alpha_{n-1}||"query"||seed
      *
      * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
      */

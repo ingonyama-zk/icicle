@@ -641,69 +641,6 @@ TYPED_TEST(FieldTest, FriHashAPi)
   ICICLE_CHECK(ntt_release_domain<scalar_t>());
 }
 
-TYPED_TEST(FieldTest, FriMerkleTreeAPi)
-{
-  // Randomize configuration
-  const int log_input_size = rand_uint_32b(3, 13);
-  const size_t input_size = 1 << log_input_size;
-  const int folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
-  const int log_stopping_size = rand_uint_32b(0, log_input_size - 2);
-  const size_t stopping_size = 1 << log_stopping_size;
-  const size_t stopping_degree = stopping_size - 1;
-  const uint64_t output_store_min_layer = 0;
-  const size_t pow_bits = rand_uint_32b(0, 3);
-  const size_t nof_queries = rand_uint_32b(2, 4);
-
-  // Initialize ntt domain
-  NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
-  ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
-
-  // Generate input polynomial evaluations
-  auto scalars = std::make_unique<TypeParam[]>(input_size);
-  TypeParam::rand_host_many(scalars.get(), input_size);
-
-  const size_t df = stopping_degree;
-  const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
-  const size_t fold_rounds = (log_input_size > log_df_plus_1) ? (log_input_size - log_df_plus_1) : 0;
-
-  // Define hashers and merkle trees
-  uint64_t merkle_tree_arity = 2;                   // TODO SHANIE (future) - add support for other arities
-  Hash hash = Keccak256::create(sizeof(TypeParam)); // hash element -> 32B
-  Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
-
-  std::vector<MerkleTree> merkle_trees;
-  merkle_trees.reserve(fold_rounds);
-  size_t compress_hash_arity = compress.default_input_chunk_size() / compress.output_size();
-  size_t first_merkle_tree_height = std::ceil(std::log2(input_size) / std::log2(compress_hash_arity)) + 1;
-  std::vector<Hash> layer_hashes(first_merkle_tree_height, compress);
-  layer_hashes[0] = hash;
-  uint64_t leaf_element_size = hash.default_input_chunk_size();
-  for (size_t i = 0; i < fold_rounds; i++) {
-    merkle_trees.emplace_back(MerkleTree::create(layer_hashes, leaf_element_size, output_store_min_layer));
-    layer_hashes.pop_back();
-  }
-
-  // ===== Prover side ======
-  Fri prover_fri = create_fri<scalar_t, TypeParam>(folding_factor, stopping_degree, merkle_trees);
-
-  FriTranscriptConfig<TypeParam> transcript_config;
-  FriConfig fri_config;
-  fri_config.nof_queries = nof_queries;
-  fri_config.pow_bits = pow_bits;
-  FriProof<TypeParam> fri_proof;
-
-  ICICLE_CHECK(prover_fri.get_proof(fri_config, std::move(transcript_config), scalars.get(), fri_proof));
-
-  // ===== Verifier side ======
-  Fri verifier_fri = create_fri<scalar_t, TypeParam>(folding_factor, stopping_degree, merkle_trees);
-  bool valid = false;
-  ICICLE_CHECK(verifier_fri.verify(fri_config, std::move(transcript_config), fri_proof, valid));
-
-  ASSERT_EQ(true, valid);
-
-  // Release domain
-  ICICLE_CHECK(ntt_release_domain<scalar_t>());
-}
 #endif // FRI
 
 // TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
