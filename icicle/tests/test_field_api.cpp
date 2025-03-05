@@ -165,13 +165,18 @@ TEST_F(FieldTestBase, Sumcheck)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
+    // ===== Prover side ======
+
     // create transcript_config
     SumcheckTranscriptConfig<scalar_t> transcript_config(
       create_keccak_256_hash(), "labelA", "labelB", "LabelC", scalar_t::from(12));
 
+    ASSERT_NE(transcript_config.get_domain_separator_label().size(),
+              0); // assert label exists
+
     std::ostringstream oss;
     oss << dev_type << " " << msg;
-    // ===== Prover side ======
+
     // create sumcheck
     auto prover_sumcheck = create_sumcheck<scalar_t>();
 
@@ -188,6 +193,9 @@ TEST_F(FieldTestBase, Sumcheck)
     ASSERT_EQ(transcript_config.get_domain_separator_label().size(), 0); // assert data was moved and not copied
 
     // ===== Verifier side ======
+    // Note that the verifier is another machine and needs to regenerate the same transcript config.
+    // Also note that even if the same process, the transcript-config is moved since it may be large, so cannot reuse
+    // twice.
     SumcheckTranscriptConfig<scalar_t> verifier_transcript_config(
       create_keccak_256_hash(), "labelA", "labelB", "LabelC", scalar_t::from(12));
     // create sumcheck
