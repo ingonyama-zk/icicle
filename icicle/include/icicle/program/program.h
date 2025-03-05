@@ -71,7 +71,7 @@ namespace icicle {
     }
 
     // run over the DFG held by program_parameters and generate the program
-    void generate_program(std::vector<Symbol<S>>& program_parameters)
+    virtual void generate_program(std::vector<Symbol<S>>& program_parameters)
     {
       // run over the graph and allocate location for all constants
       Operation<S>::reset_visit();

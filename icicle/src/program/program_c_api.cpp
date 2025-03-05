@@ -12,6 +12,24 @@ typedef Symbol<scalar_t>* SymbolHandle;
 typedef Program<scalar_t>* ProgramHandle;
 typedef ReturningValueProgram<scalar_t>* ReturningValueProgramHandle;
 
+template <typename S>
+eIcicleError ffi_generate_program(Program<S>* program, Symbol<S>** parameters_ptr, int nof_parameters)
+{
+  if (program == nullptr) { return eIcicleError::ALLOCATION_FAILED; }
+
+  std::vector<Symbol<S>> parameters_vec;
+  parameters_vec.reserve(nof_parameters);
+  for (int i = 0; i < nof_parameters; i++) {
+    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
+    parameters_vec.push_back(*parameters_ptr[i]);
+  }
+  program->m_nof_parameters = nof_parameters;
+  program->generate_program(parameters_vec);
+
+  ReleasePool<Symbol<S>>::instance().clear();
+  return eIcicleError::SUCCESS;
+}
+
 extern "C" {
 // Program functions
 ProgramHandle CONCAT_EXPAND(FIELD, create_predefined_program)(PreDefinedPrograms pre_def)
@@ -31,21 +49,7 @@ eIcicleError
 CONCAT_EXPAND(FIELD, generate_program)(SymbolHandle* parameters_ptr, int nof_parameters, ProgramHandle* program)
 {
   *program = create_empty_program<scalar_t>();
-  std::vector<Symbol<scalar_t>> parameters_vec;
-  parameters_vec.reserve(nof_parameters);
-
-  for (int i = 0; i < nof_parameters; i++) {
-    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
-    parameters_vec.push_back(*parameters_ptr[i]);
-  }
-
-  (*program)->m_nof_parameters = nof_parameters;
-  (*program)->generate_program(parameters_vec);
-
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.clear();
-
-  return eIcicleError::SUCCESS;
+  return ffi_generate_program(*program, parameters_ptr, nof_parameters);
 }
 
 ReturningValueProgramHandle CONCAT_EXPAND(FIELD, create_predefined_returning_value_program)(PreDefinedPrograms pre_def)
@@ -57,22 +61,7 @@ eIcicleError CONCAT_EXPAND(FIELD, generate_returning_value_program)(
   SymbolHandle* parameters_ptr, int nof_parameters, ReturningValueProgramHandle* program)
 {
   *program = create_empty_returning_value_program<scalar_t>();
-  std::vector<Symbol<scalar_t>> parameters_vec;
-  parameters_vec.reserve(nof_parameters);
-
-  for (int i = 0; i < nof_parameters; i++) {
-    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
-    parameters_vec.push_back(*parameters_ptr[i]);
-  }
-
-  (*program)->m_nof_parameters = nof_parameters;
-  (*program)->generate_program(parameters_vec);
-  set_poly_degree(*program, parameters_ptr[nof_parameters - 1]->m_operation->m_poly_degree);
-
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.clear();
-
-  return eIcicleError::SUCCESS;
+  return ffi_generate_program(*program, parameters_ptr, nof_parameters);
 }
 }
 
@@ -92,20 +81,7 @@ eIcicleError CONCAT_EXPAND(FIELD, extension_generate_program)(
   ExtensionSymbolHandle* parameters_ptr, int nof_parameters, ExtensionProgramHandle* program)
 {
   *program = create_empty_program<extension_t>();
-  std::vector<Symbol<extension_t>> parameters_vec;
-  parameters_vec.reserve(nof_parameters);
-
-  for (int i = 0; i < nof_parameters; i++) {
-    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
-    parameters_vec.push_back(*parameters_ptr[i]);
-  }
-  (*program)->m_nof_parameters = nof_parameters;
-  (*program)->generate_program(parameters_vec);
-
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.clear();
-
-  return eIcicleError::SUCCESS;
+  return ffi_generate_program(*program, parameters_ptr, nof_parameters);
 }
 
 ExtensionReturningValueProgramHandle
@@ -118,22 +94,7 @@ eIcicleError CONCAT_EXPAND(FIELD, extension_generate_returning_value_program)(
   ExtensionSymbolHandle* parameters_ptr, int nof_parameters, ExtensionReturningValueProgramHandle* program)
 {
   *program = create_empty_returning_value_program<extension_t>();
-  std::vector<Symbol<extension_t>> parameters_vec;
-  parameters_vec.reserve(nof_parameters);
-
-  for (int i = 0; i < nof_parameters; i++) {
-    if (parameters_ptr[i] == nullptr) { return eIcicleError::INVALID_ARGUMENT; }
-    parameters_vec.push_back(*parameters_ptr[i]);
-  }
-
-  (*program)->m_nof_parameters = nof_parameters;
-  (*program)->generate_program(parameters_vec);
-  set_poly_degree(*program, parameters_ptr[nof_parameters - 1]->m_operation->m_poly_degree);
-
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.clear();
-
-  return eIcicleError::SUCCESS;
+  return ffi_generate_program(*program, parameters_ptr, nof_parameters);
 }
 }
 #endif // EXT_FIELD

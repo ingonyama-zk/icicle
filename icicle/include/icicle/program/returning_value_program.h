@@ -24,7 +24,6 @@ namespace icicle {
       this->set_as_inputs(program_parameters);
       program_parameters[nof_inputs] = program_func(program_parameters); // place the output after the all inputs
       this->generate_program(program_parameters);
-      m_poly_degree = program_parameters[nof_inputs].m_operation->m_poly_degree;
     }
 
     // Generate a program based on a PreDefinedPrograms
@@ -42,6 +41,13 @@ namespace icicle {
       }
     }
 
+    // Call base generate_program as well as updating the required polynomial degree
+    void generate_program(std::vector<Symbol<S>>& program_parameters) override
+    {
+      Program<S>::generate_program(program_parameters);
+      m_poly_degree = program_parameters.back().m_operation->m_poly_degree;
+    }
+
     int get_polynomial_degree() const { return m_poly_degree; }
 
   protected:
@@ -53,10 +59,6 @@ namespace icicle {
 
   private:
     int m_poly_degree = 0;
-
-    // Friend function for C-api to have access to update the poly degree after generation
-    template <typename T>
-    friend void set_poly_degree(ReturningValueProgram<T>* program, int poly_degree);
   };
 
   // Friend function for C-api to have access to the default constructor
@@ -64,12 +66,5 @@ namespace icicle {
   ReturningValueProgram<S>* create_empty_returning_value_program()
   {
     return new ReturningValueProgram<S>();
-  }
-
-  // Friend function for C-api to have access to update the poly degree after generation
-  template <typename S>
-  void set_poly_degree(ReturningValueProgram<S>* program, int poly_degree)
-  {
-    program->m_poly_degree = poly_degree;
   }
 } // namespace icicle
