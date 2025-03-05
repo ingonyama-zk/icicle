@@ -135,6 +135,7 @@ TEST_F(FieldTestBase, polynomialDivision)
 }
 
 #ifdef SUMCHECK
+  #include "icicle/hash/keccak.h"
 TEST_F(FieldTestBase, Sumcheck)
 {
   int log_mle_poly_size = 13;
@@ -165,7 +166,8 @@ TEST_F(FieldTestBase, Sumcheck)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", scalar_t::from(12));
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
@@ -183,8 +185,11 @@ TEST_F(FieldTestBase, Sumcheck)
       sumcheck_proof));
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
+    ASSERT_EQ(transcript_config.get_domain_separator_label().size(), 0); // assert data was moved and not copied
+
     // ===== Verifier side ======
-    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
+    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", scalar_t::from(12));
     // create sumcheck
     auto verifier_sumcheck = create_sumcheck<scalar_t>();
     bool verification_pass = false;
