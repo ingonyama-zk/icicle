@@ -49,10 +49,6 @@ int main(int argc, char* argv[])
   scalar_t seed = scalar_t::from(18);
   bool little_endian = true;
 
-  // create transcript_config for Fiat-Shamir
-  SumcheckTranscriptConfig<scalar_t> transcript_config(
-    hasher, domain_label, poly_label, challenge_label, seed, little_endian);
-
   // create sumcheck
   auto prover_sumcheck = create_sumcheck<scalar_t>();
   // create the combine function to be the pre-defined function eq*(a*b-c)
@@ -63,6 +59,10 @@ int main(int argc, char* argv[])
   CombineFunction<scalar_t> combine_funcs[2] = {combine_func_pre_def, combine_func_user_def};
 
   for (CombineFunction<scalar_t> combine_func : combine_funcs) {
+    // create transcript_config for Fiat-Shamir
+    SumcheckTranscriptConfig<scalar_t> prover_transcript_config(
+      hasher, domain_label, poly_label, challenge_label, seed, little_endian);
+
     // create default sumcheck config
     SumcheckConfig sumcheck_config;
     // create empty sumcheck proof object which the prover will assign round polynomials into
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
     std::cout << "\nCreating proof" << std::endl;
     // create the proof - Prover side
     prover_sumcheck.get_proof(
-      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(prover_transcript_config), sumcheck_config,
       sumcheck_proof);
 
     // create sumcheck object for the Verifier
@@ -82,7 +82,9 @@ int main(int argc, char* argv[])
     std::cout << "Verifying proof" << std::endl;
     // verify the proof - Verifier side
     // NOTE: the transcript config should be identical for both Prover and Verifier
-    verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config), verification_pass);
+    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config(
+      hasher, domain_label, poly_label, challenge_label, seed, little_endian);
+    verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass);
     std::cout << "Verification result: " << (verification_pass ? "true" : "false") << std::endl;
   }
 }
