@@ -644,7 +644,7 @@ TYPED_TEST(FieldTest, Fri)
         std::ostringstream oss;
         if (measure) {
           ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree
-                          << ".pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
+                          << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
           oss << dev_type << " FRI proof";
         }
         START_TIMER(FRIPROOF_sync)
