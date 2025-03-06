@@ -17,21 +17,22 @@ namespace icicle {
    * @note APIs with a single input, ignore input b.
    */
   struct VecOpsConfig {
-    icicleStreamHandle stream; /** Stream for asynchronous execution. */
-    bool is_a_on_device;       /** True if `a` is on the device, false if it is not. Default value: false. */
-    bool is_b_on_device;       /** True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
-    bool is_result_on_device;  /** If true, the output is preserved on the device, otherwise on the host. Default value:
-                                   false. */
-    bool is_async;             /** Whether to run the vector operations asynchronously.
-                                   If set to `true`, the function will be non-blocking and synchronization
-                                   must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
-                                   If set to `false`, the function will block the current CPU thread. */
-    int batch_size;            /** Number of vectors (or operations) to process in a batch.
-                                   Each vector operation will be performed independently on each batch element.
-                                   Default value: 1. */
-    bool columns_batch; /** True if the batched vectors are stored as columns in a 2D array (i.e., the vectors are
-                           strided in memory as columns of a matrix). If false, the batched vectors are stored
-                           contiguously in memory (e.g., as rows or in a flat array). Default value: false. */
+    icicleStreamHandle stream = nullptr; /** Stream for asynchronous execution. */
+    bool is_a_on_device = false;         /** True if `a` is on the device, false if it is not. Default value: false. */
+    bool is_b_on_device =
+      false; /** True if `b` is on the device, false if it is not. Default value: false. OPTIONAL. */
+    bool is_result_on_device = false; /** If true, the output is preserved on the device, otherwise on the host. Default
+                                    value: false. */
+    bool is_async = false;            /** Whether to run the vector operations asynchronously.
+                                    If set to `true`, the function will be non-blocking and synchronization
+                                    must be explicitly managed using `cudaStreamSynchronize` or `cudaDeviceSynchronize`.
+                                    If set to `false`, the function will block the current CPU thread. */
+    int batch_size = 1;               /** Number of vectors (or operations) to process in a batch.
+                                        Each vector operation will be performed independently on each batch element.
+                                        Default value: 1. */
+    bool columns_batch = false; /** True if the batched vectors are stored as columns in a 2D array (i.e., the vectors
+                             are strided in memory as columns of a matrix). If false, the batched vectors are stored
+                             contiguously in memory (e.g., as rows or in a flat array). Default value: false. */
     ConfigExtension* ext = nullptr; /** Backend-specific extension. */
   };
 
@@ -40,19 +41,7 @@ namespace icicle {
    *
    * @return Default value of VecOpsConfig.
    */
-  static VecOpsConfig default_vec_ops_config()
-  {
-    VecOpsConfig config = {
-      nullptr, // stream
-      false,   // is_a_on_device
-      false,   // is_b_on_device
-      false,   // is_result_on_device
-      false,   // is_async
-      1,       // batch_size
-      false,   // columns_batch
-    };
-    return config;
-  }
+  static VecOpsConfig default_vec_ops_config() { return VecOpsConfig{}; }
 
   // Element-wise vector operations
 
@@ -465,5 +454,47 @@ namespace icicle {
     uint64_t q_size,
     T* r_out /*OUT*/,
     uint64_t r_size);
+
+  /*************************** Integer Rings ***************************/
+
+  /**
+   * @brief Converts integer-ring elements from direct form to RNS form.
+   *
+   * @tparam Zq Type of the elements in the direct form.
+   * @tparam ZqRns Type of the elements in the RNS form.
+   * @param input Pointer to the input vector(s) in direct form.
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output vector(s) where the results will be stored in RNS form.
+   *               The output array should have the same storage layout as the input vectors.
+   * @return eIcicleError Error code indicating success or failure.
+   * @note The function assumes that the input and output arrays are properly allocated. Can compute in-place.
+   */
+  template <typename Zq, typename ZqRns>
+  eIcicleError convert_to_rns(const Zq* input, uint64_t size, const VecOpsConfig& config, ZqRns* output);
+
+  /**
+   * @brief Converts integer-ring elements from RNS form to direct form.
+   *
+   * @tparam Zq Type of the elements in the direct form.
+   * @tparam ZqRns Type of the elements in the RNS form.
+   * @param input Pointer to the input vector(s) in RNS form.
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output vector(s) where the results will be stored in direct form.
+   *               The output array should have the same storage layout as the input vectors.
+   * @return eIcicleError Error code indicating success or failure.
+   * @note The function assumes that the input and output arrays are properly allocated. Can compute in-place.
+   */
+  template <typename Zq, typename ZqRns>
+  eIcicleError convert_from_rns(const ZqRns* input, uint64_t size, const VecOpsConfig& config, Zq* output);
 
 } // namespace icicle

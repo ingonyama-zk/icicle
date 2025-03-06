@@ -125,7 +125,7 @@ pub fn main() {
     );
     //try different combine functions!
     let combine_function =
-        <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(
+        <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(
             PreDefinedProgram::EQtimesABminusC,
         )
         .unwrap();

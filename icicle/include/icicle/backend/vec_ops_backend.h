@@ -460,6 +460,253 @@ namespace icicle {
         return true;                                                                                                   \
       }();                                                                                                             \
     }
+
+  using extProgramExecutionImpl = std::function<eIcicleError(
+    const Device& device,
+    std::vector<extension_t*>& data,
+    const Program<extension_t>& program,
+    uint64_t size,
+    const VecOpsConfig& config)>;
+
+  void register_extension_execute_program(const std::string& deviceType, extProgramExecutionImpl);
+
+  #define REGISTER_EXECUTE_PROGRAM_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_program_execution) = []() -> bool {                                                      \
+        register_extension_execute_program(DEVICE_TYPE, FUNC);                                                         \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
 #endif // EXT_FIELD
+
+#ifdef RING // for RNS type
+  using ringRnsVectorReduceOpImpl = std::function<eIcicleError(
+    const Device& device, const scalar_rns_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
+  using ringRnsVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_rns_t* vec_a,
+    const scalar_rns_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    scalar_rns_t* output)>;
+
+  using mixedVectorOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_rns_t* scalar_a,
+    const scalar_t* vec_b,
+    uint64_t size,
+    const VecOpsConfig& config,
+    scalar_rns_t* output)>;
+
+  using ringRnsVectorOpImplInplaceA = std::function<eIcicleError(
+    const Device& device, scalar_rns_t* vec_a, const scalar_rns_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
+
+  using ringRnsVectorReduceOpImpl = std::function<eIcicleError(
+    const Device& device, const scalar_rns_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
+
+  void register_ring_rns_vector_add(const std::string& deviceType, ringRnsVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_ADD_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_add_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_add(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_accumulate(const std::string& deviceType, ringRnsVectorOpImplInplaceA impl);
+
+  #define REGISTER_VECTOR_ACCUMULATE_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                               \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_accumulate_ring_rns) = []() -> bool {                                                \
+        register_ring_rns_vector_accumulate(DEVICE_TYPE, FUNC);                                                        \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_sub(const std::string& deviceType, ringRnsVectorOpImpl impl);
+  #define REGISTER_VECTOR_SUB_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_sub_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_sub(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_mul(const std::string& deviceType, ringRnsVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_MUL_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_mul_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_mul(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_mixed_mul(const std::string& deviceType, mixedVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_MIXED_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                         \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_mixed_mul) = []() -> bool {                                                          \
+        register_ring_rns_vector_mixed_mul(DEVICE_TYPE, FUNC);                                                         \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_div(const std::string& deviceType, ringRnsVectorOpImpl impl);
+
+  #define REGISTER_VECTOR_DIV_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_div_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_div(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_scalar_mul_vec(const std::string& deviceType, ringRnsVectorOpImpl impl);
+
+  #define REGISTER_SCALAR_MUL_VEC_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_mul_vec_ring_rns) = []() -> bool {                                                \
+        register_ring_rns_scalar_mul_vec(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_scalar_add_vec(const std::string& deviceType, ringRnsVectorOpImpl impl);
+
+  #define REGISTER_SCALAR_ADD_VEC_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_add_vec_ring_rns) = []() -> bool {                                                \
+        register_ring_rns_scalar_add_vec(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_scalar_sub_vec(const std::string& deviceType, ringRnsVectorOpImpl impl);
+
+  #define REGISTER_SCALAR_SUB_VEC_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_sub_vec_ring_rns) = []() -> bool {                                                \
+        register_ring_rns_scalar_sub_vec(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_sum(const std::string& deviceType, ringRnsVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_SUM_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_sum_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_sum(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_ring_rns_vector_product(const std::string& deviceType, ringRnsVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_PRODUCT_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_product_ring_rns) = []() -> bool {                                                   \
+        register_ring_rns_vector_product(DEVICE_TYPE, FUNC);                                                           \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringRnsConvertMontgomeryImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_rns_t* input,
+    uint64_t size,
+    bool is_to_montgomery,
+    const VecOpsConfig& config,
+    scalar_rns_t* output)>;
+
+  void register_ring_rns_scalar_convert_montgomery(const std::string& deviceType, ringRnsConvertMontgomeryImpl);
+
+  #define REGISTER_CONVERT_MONTGOMERY_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                              \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_convert_mont_ring_rns) = []() -> bool {                                           \
+        register_ring_rns_scalar_convert_montgomery(DEVICE_TYPE, FUNC);                                                \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringRnsMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_rns_t* in,
+    uint32_t nof_rows,
+    uint32_t nof_cols,
+    const VecOpsConfig& config,
+    scalar_rns_t* out)>;
+
+  void register_ring_rns_matrix_transpose(const std::string& deviceType, ringRnsMatrixOpImpl impl);
+
+  #define REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_matrix_transpose_ring_rns) = []() -> bool {                                              \
+        register_ring_rns_matrix_transpose(DEVICE_TYPE, FUNC);                                                         \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringRnsBitReverseOpImpl = std::function<eIcicleError(
+    const Device& device, const scalar_rns_t* input, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
+
+  void register_ring_rns_bit_reverse(const std::string& deviceType, ringRnsBitReverseOpImpl);
+
+  #define REGISTER_BIT_REVERSE_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_convert_mont) = []() -> bool {                                                    \
+        register_ring_rns_bit_reverse(DEVICE_TYPE, FUNC);                                                              \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringRnsSliceOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_rns_t* input,
+    uint64_t offset,
+    uint64_t stride,
+    uint64_t size_in,
+    uint64_t size_out,
+    const VecOpsConfig& config,
+    scalar_rns_t* output)>;
+
+  void register_ring_rns_slice(const std::string& deviceType, ringRnsSliceOpImpl);
+
+  #define REGISTER_SLICE_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                           \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_scalar_slice) = []() -> bool {                                                           \
+        register_ring_rns_slice(DEVICE_TYPE, FUNC);                                                                    \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  // RNS <--> direct conversion
+  using ringConvertToRnsImpl = std::function<eIcicleError(
+    const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
+
+  void register_convert_to_rns(const std::string& deviceType, ringConvertToRnsImpl);
+  #define REGISTER_CONVERT_TO_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                           \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_convert_to_rns) = []() -> bool {                                                         \
+        register_convert_to_rns(DEVICE_TYPE, FUNC);                                                                    \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using ringConvertFromRnsImpl = std::function<eIcicleError(
+    const Device& device, const scalar_rns_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
+
+  void register_convert_from_rns(const std::string& deviceType, ringConvertFromRnsImpl);
+  #define REGISTER_CONVERT_FROM_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                         \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_convert_from_rns) = []() -> bool {                                                       \
+        register_convert_from_rns(DEVICE_TYPE, FUNC);                                                                  \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+#endif // RING
 
 } // namespace icicle

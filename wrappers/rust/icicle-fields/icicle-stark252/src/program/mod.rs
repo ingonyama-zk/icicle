@@ -1,3 +1,5 @@
-use icicle_core::impl_program;
+use crate::field::ScalarField;
 
-impl_program!("stark252");
+use icicle_core::impl_program_field;
+
+impl_program_field!("stark252", stark252, ScalarField, ScalarCfg);
