@@ -325,7 +325,7 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config;   // default configuration
+    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
