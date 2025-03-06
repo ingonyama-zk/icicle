@@ -314,8 +314,8 @@ namespace icicle {
   }
 
   /************************ Keccak 256 registration ************************/
-  eIcicleError
-  create_keccak_256_hash_backend_cpu(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_keccak_256_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 32, true /*is_keccak*/, "Keccak-256-CPU");
     return eIcicleError::SUCCESS;
@@ -324,8 +324,8 @@ namespace icicle {
   REGISTER_KECCAK_256_FACTORY_BACKEND("CPU", create_keccak_256_hash_backend_cpu);
 
   /************************ Keccak 512 registration ************************/
-  eIcicleError
-  create_keccak_512_hash_backend_cpu(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_keccak_512_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 64, true /*is_keccak*/, "Keccak-512-CPU");
     return eIcicleError::SUCCESS;
@@ -334,8 +334,8 @@ namespace icicle {
   REGISTER_KECCAK_512_FACTORY_BACKEND("CPU", create_keccak_512_hash_backend_cpu);
 
   /************************ SHA3 256 registration ************************/
-  eIcicleError
-  create_sha3_256_hash_backend_cpu(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_sha3_256_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 32, false /*is_keccak*/, "SHA3-256-CPU");
     return eIcicleError::SUCCESS;
@@ -344,8 +344,8 @@ namespace icicle {
   REGISTER_SHA3_256_FACTORY_BACKEND("CPU", create_sha3_256_hash_backend_cpu);
 
   /************************ SHA3 512 registration ************************/
-  eIcicleError
-  create_sha3_512_hash_backend_cpu(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_sha3_512_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 64, false /*is_keccak*/, "SHA3-512-CPU");
     return eIcicleError::SUCCESS;
