@@ -728,6 +728,10 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     SumcheckTranscriptConfig<scalar_t> transcript_config_verifier(
       hasher, domain_label, poly_label, challenge_label, seed, little_endian);
 
+    // check separator exists
+    ASSERT_NE(transcript_config_prover.get_domain_separator_label().size(), 0);
+    ASSERT_NE(transcript_config_verifier.get_domain_separator_label().size(), 0);
+
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
