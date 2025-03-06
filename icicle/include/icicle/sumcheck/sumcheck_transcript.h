@@ -10,7 +10,7 @@ public:
     const S& claimed_sum,
     const uint32_t mle_polynomial_size,
     const uint32_t combine_function_poly_degree,
-    const SumcheckTranscriptConfig<S>&& transcript_config)
+    SumcheckTranscriptConfig<S>&& transcript_config)
       : m_claimed_sum(claimed_sum), m_mle_polynomial_size(mle_polynomial_size),
         m_combine_function_poly_degree(combine_function_poly_degree), m_transcript_config(std::move(transcript_config))
   {
@@ -40,10 +40,10 @@ public:
   }
 
 private:
-  const SumcheckTranscriptConfig<S>&& m_transcript_config; // configuration how to build the transcript
-  HashConfig m_config;                                     // hash config - default
-  uint32_t m_round_idx;                                    //
-  std::vector<std::byte> m_entry_0;                        //
+  const SumcheckTranscriptConfig<S> m_transcript_config; // configuration how to build the transcript
+  HashConfig m_config;                                   // hash config - default
+  uint32_t m_round_idx;                                  //
+  std::vector<std::byte> m_entry_0;                      //
   uint32_t m_mle_polynomial_size = 0;
   uint32_t m_combine_function_poly_degree = 0;
   const S m_claimed_sum;
