@@ -1,3 +1,5 @@
-use icicle_core::impl_program;
+use crate::curve::ScalarField;
 
-impl_program!("grumpkin");
+use icicle_core::impl_program_field;
+
+impl_program_field!("grumpkin", grumpkin, ScalarField, ScalarCfg);

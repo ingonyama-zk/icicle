@@ -131,3 +131,19 @@ fn main() {
     let result = prover.verify(&proof, expected_sum, &transcript_config);
     assert!(result.is_ok() && result.unwrap(), "SumCheck proof verification failed!");
 }
+```
+# Misc
+## ReturningValueProgram
+A variant of [Program](./program.md) tailored for Sumcheck's combine function. It differs from `Program` by the function it receives in its constructor - instead of returning no value and using the given parameter vector as both inputs and outputs, it returns a single value which is the one and only return value of the function. This way it fulfils the utility of the combine function, allowing custom combine functions for the icicle backend.
+```rust
+pub trait ReturningValueProgram:
+  Sized + Handle
+{
+  type Field: FieldImpl;
+  type ProgSymbol: Symbol<Self::Field>;
+
+  fn new(program_func: impl FnOnce(&mut Vec<Self::ProgSymbol>) -> Self::ProgSymbol, nof_parameters: u32) -> Result<Self, eIcicleError>;
+
+  fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
+}
+```

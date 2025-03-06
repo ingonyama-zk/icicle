@@ -512,13 +512,13 @@ namespace icicle {
   }
 
   /************************ Blake2s registration ************************/
-  eIcicleError
-  create_blake2s_hash_backend(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_blake2s_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<Blake2sBackendCPU>(input_chunk_size);
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_BLAKE2S_FACTORY_BACKEND("CPU", create_blake2s_hash_backend);
+  REGISTER_BLAKE2S_FACTORY_BACKEND("CPU", create_blake2s_hash_backend_cpu);
 
 } // namespace icicle

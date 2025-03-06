@@ -1,7 +1,7 @@
 use crate::traits::{FieldConfig, FieldImpl};
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-pub trait UnivariatePolynomial
+pub trait UnivariatePolynomial: Clone + Sized
 where
     Self::Field: FieldImpl,
     Self::FieldConfig: FieldConfig,
@@ -31,6 +31,11 @@ where
     fn get_nof_coeffs(&self) -> u64;
     fn get_coeff(&self, idx: u64) -> Self::Field;
     fn copy_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(&self, start_idx: u64, coeffs: &mut S);
+    fn add(&self, rhs: &Self) -> Self;
+    fn add_assign(&mut self, rhs: &Self);
+    fn sub(&self, rhs: &Self) -> Self;
+    fn mul(&self, rhs: &Self) -> Self;
+    fn mul_by_scalar(&self, rhs: &Self::Field) -> Self;
 }
 
 #[macro_export]
@@ -291,6 +296,43 @@ macro_rules! impl_univariate_polynomial_api {
 
             fn degree(&self) -> i64 {
                 unsafe { degree(self.handle) }
+            }
+
+            fn add(&self, rhs: &Self) -> Self {
+                unsafe {
+                    Self {
+                        handle: add(self.handle, rhs.handle),
+                    }
+                }
+            }
+
+            fn add_assign(&mut self, rhs: &Self) {
+                unsafe { add_inplace(self.handle, rhs.handle) };
+            }
+
+            fn sub(&self, rhs: &Self) -> Self {
+                unsafe {
+                    Self {
+                        handle: subtract(self.handle, rhs.handle),
+                    }
+                }
+            }
+
+            fn mul(&self, rhs: &Self) -> Self {
+                unsafe {
+                    Self {
+                        handle: multiply(self.handle, rhs.handle),
+                    }
+                }
+            }
+
+            //poly * scalar
+            fn mul_by_scalar(&self, rhs: &Self::Field) -> Self {
+                unsafe {
+                    Self {
+                        handle: multiply_by_scalar(self.handle, rhs),
+                    }
+                }
             }
         }
 

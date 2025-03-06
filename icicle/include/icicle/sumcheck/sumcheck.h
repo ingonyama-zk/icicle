@@ -57,7 +57,7 @@ namespace icicle {
       const uint64_t mle_polynomial_size,
       const F& claimed_sum,
       const CombineFunction<F>& combine_function,
-      const SumcheckTranscriptConfig<F>&& transcript_config,
+      SumcheckTranscriptConfig<F>&& transcript_config,
       const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) const
     {
@@ -77,7 +77,7 @@ namespace icicle {
     eIcicleError verify(
       const SumcheckProof<F>& sumcheck_proof,
       const F& claimed_sum,
-      const SumcheckTranscriptConfig<F>&& transcript_config,
+      SumcheckTranscriptConfig<F>&& transcript_config,
       bool& valid /*out*/)
     {
       valid = false;

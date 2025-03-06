@@ -4,7 +4,7 @@ pub mod tests;
 use crate::field::FieldArithmetic;
 use crate::hash::Hasher;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, Handle};
+use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -159,7 +159,7 @@ pub trait Sumcheck {
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
         mle_poly_size: u64,
         claimed_sum: Self::Field,
-        combine_function: impl ReturningValueProgram + Handle,
+        combine_function: impl ReturningValueProgram,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
         sumcheck_config: &SumcheckConfig,
     ) -> Self::Proof;
@@ -184,7 +184,7 @@ where
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
-        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram, ReturningValueProgramHandle};
+        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram, ProgramHandle};
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
@@ -192,6 +192,7 @@ macro_rules! impl_sumcheck {
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
+        use crate::symbol::$field_prefix_ident::FieldSymbol;
 
         extern "C" {
             #[link_name = concat!($field_prefix, "_sumcheck_create")]
@@ -207,7 +208,7 @@ macro_rules! impl_sumcheck {
                 mle_poly_size: u64,
                 num_mle_polys: u64,
                 claimed_sum: &$field,
-                combine_function_handle: ReturningValueProgramHandle,
+                combine_function_handle: ProgramHandle,
                 transcript_config: &FFISumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> SumcheckProofHandle;
@@ -271,7 +272,7 @@ macro_rules! impl_sumcheck {
                 mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
                 mle_poly_size: u64,
                 claimed_sum: $field,
-                combine_function: impl ReturningValueProgram + Handle,
+                combine_function: impl ReturningValueProgram,
                 transcript_config: &SumcheckTranscriptConfig<$field>,
                 sumcheck_config: &SumcheckConfig,
             ) -> Self::Proof {
@@ -421,9 +422,12 @@ macro_rules! impl_sumcheck {
 /// Macro to define tests for a specific field.
 #[macro_export]
 macro_rules! impl_sumcheck_tests {
-    ($field:ident) => {
+    (
+        $field_prefix_ident: ident,
+        $field:ident
+    ) => {
         use super::SumcheckWrapper;
-        use crate::program::FieldReturningValueProgram as Program;
+        use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};
@@ -457,6 +461,18 @@ macro_rules! impl_sumcheck_tests {
             test_utilities::test_set_main_device();
             let device_hash = Keccak256::new(0).unwrap();
             check_sumcheck_simple_device::<SumcheckWrapper, Program>(&device_hash);
+        }
+
+        #[test]
+        fn test_sumcheck_user_defined_combine() {
+            initialize();
+            test_utilities::test_set_ref_device();
+            let hash = Keccak256::new(0).unwrap();
+            check_sumcheck_user_defined_combine::<SumcheckWrapper, Program>(&hash);
+
+            test_utilities::test_set_main_device();
+            let device_hash = Keccak256::new(0).unwrap();
+            check_sumcheck_user_defined_combine::<SumcheckWrapper, Program>(&device_hash);
         }
     };
 }

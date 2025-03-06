@@ -1,3 +1,5 @@
-use icicle_core::impl_program;
+use crate::curve::ScalarField;
 
-impl_program!("bn254");
+use icicle_core::impl_program_field;
+
+impl_program_field!("bn254", bn254, ScalarField, ScalarCfg);

@@ -7,6 +7,8 @@ function(handle_field TARGET)
       src/fields/ffi_extern.cpp
       src/vec_ops.cpp
       src/matrix_ops.cpp
+      src/program/program_c_api.cpp
+      src/symbol/symbol_api.cpp
   )
 endfunction()
 
@@ -21,6 +23,7 @@ function(handle_ring TARGET)
   target_sources(${TARGET} PRIVATE
     src/fields/ffi_extern.cpp
     src/vec_ops.cpp
+    src/rings/rns_vec_ops.cpp
     src/matrix_ops.cpp
   )
 endfunction()

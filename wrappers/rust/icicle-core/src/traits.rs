@@ -1,9 +1,9 @@
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
-use std::ffi::c_void;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
+use std::ffi::c_void;
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {
