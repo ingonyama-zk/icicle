@@ -554,7 +554,7 @@ TEST_F(FieldTestBase, SumcheckDifferentTranscriptShouldFail)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    Hash hasher = create_sha3_256_hash();
+    Hash hasher = create_keccak_256_hash();
     const char* domain_label = "ingonyama";
     const char* poly_label = "poly_label";
     const char* challenge_label = "icicle";
@@ -729,7 +729,7 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
-    Hash hasher = create_sha3_256_hash();
+    Hash hasher = create_keccak_256_hash();
     const char* domain_label = "ingonyama";
     const char* poly_label = "poly_label";
     const char* challenge_label = "icicle";
@@ -738,6 +738,10 @@ TEST_F(FieldTestBase, SumcheckIdentity)
 
     // create transcript_config
     SumcheckTranscriptConfig<scalar_t> config_prover; // default configuration
+
+    // check separator exists
+    ASSERT_NE(transcript_config_prover.get_domain_separator_label().size(), 0);
+    ASSERT_NE(transcript_config_verifier.get_domain_separator_label().size(), 0);
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
