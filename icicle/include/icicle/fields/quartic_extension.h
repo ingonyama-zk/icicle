@@ -32,7 +32,7 @@ private:
 
 public:
   typedef T FF;
-  static constexpr unsigned TLC = 4 * CONFIG::limbs_count;
+  static constexpr unsigned TLC = 4 * FF::TLC;
 
   FF real;
   FF im1;
@@ -248,7 +248,7 @@ public:
       FF::reduce(
         (CONFIG::nonresidue_is_negative
            ? (FF::mul_wide(xs.real, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))
-           : (FF::mul_wide(xs.real, x0))-FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
+           : (FF::mul_wide(xs.real, x0)) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
       FF::reduce(
         (CONFIG::nonresidue_is_negative
            ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2)))

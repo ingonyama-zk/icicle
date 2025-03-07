@@ -31,7 +31,7 @@ private:
 
 public:
   typedef T FF;
-  static constexpr unsigned TLC = 2 * CONFIG::limbs_count;
+  static constexpr unsigned TLC = 2 * FF::TLC;
 
   FF real;
   FF imaginary;

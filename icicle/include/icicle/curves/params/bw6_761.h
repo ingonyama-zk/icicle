@@ -3,6 +3,8 @@
 #include "icicle/curves/projective.h"
 #include "icicle/fields/snark_fields/bw6_761_base.h"
 #include "icicle/fields/snark_fields/bw6_761_scalar.h"
+#include "icicle/fields/complex_extension.h"
+#include "icicle/fields/cubic_extension.h"
 
 namespace bw6_761 {
   struct G1;
@@ -14,6 +16,25 @@ namespace bw6_761 {
   typedef Field<fq_config_g2> g2_point_field_t;
   typedef Projective<g2_point_field_t, scalar_t, G2> g2_projective_t;
   typedef Affine<g2_point_field_t> g2_affine_t;
+
+  struct fq3_config {
+    // nonresidue to generate the extension field
+    static constexpr uint32_t nonresidue_re = 4;
+    static constexpr uint32_t nonresidue_im = 0;
+    // true if nonresidue is negative
+    static constexpr bool nonresidue_is_negative = true;
+  };
+
+  typedef CubicExtensionField<fq_config, point_field_t> fq3_field_t;
+
+  struct fq6_config {
+    // nonresidue to generate the extension field
+    static constexpr uint32_t nonresidue = 1;
+    // true if nonresidue is negative
+    static constexpr bool nonresidue_is_negative = false;
+  };
+
+  typedef ComplexExtensionField<fq6_config, fq3_field_t> fq6_field_t;
 
   // G1 and G2 generators
   struct G1 {

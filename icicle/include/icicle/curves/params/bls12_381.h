@@ -4,6 +4,7 @@
 #include "icicle/fields/snark_fields/bls12_381_base.h"
 #include "icicle/fields/snark_fields/bls12_381_scalar.h"
 #include "icicle/fields/complex_extension.h"
+#include "icicle/fields/cubic_extension.h"
 
 namespace bls12_381 {
   struct G1;
@@ -15,6 +16,24 @@ namespace bls12_381 {
   typedef ComplexExtensionField<fq_config, point_field_t> g2_point_field_t;
   typedef Projective<g2_point_field_t, scalar_t, G2> g2_projective_t;
   typedef Affine<g2_point_field_t> g2_affine_t;
+
+  struct fq6_config {
+    // nonresidue to generate the extension field
+    static constexpr uint32_t nonresidue_re = 1;
+    static constexpr uint32_t nonresidue_im = 1;
+    // true if nonresidue is negative
+    static constexpr bool nonresidue_is_negative = false;
+  };
+
+  struct fq12_config {
+    // nonresidue to generate the extension field
+    static constexpr uint32_t nonresidue = 1;
+    // true if nonresidue is negative
+    static constexpr bool nonresidue_is_negative = false;
+  };
+
+  typedef CubicExtensionField<fq6_config, g2_point_field_t> fq6_field_t;
+  typedef ComplexExtensionField<fq12_config, fq6_field_t> fq12_field_t;
 
   // G1 and G2 generators
   struct G1 {
