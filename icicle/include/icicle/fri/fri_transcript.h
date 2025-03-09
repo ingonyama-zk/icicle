@@ -62,8 +62,6 @@ namespace icicle {
       uint64_t mined_hash;
       bool is_correct;
       proof_of_work_verify(hasher, hash_input.data(), hash_input.size(), pow_bits, cfg, nonce, is_correct, mined_hash);
-      ICICLE_LOG_DEBUG << "Verified mined pow hash: " << mined_hash;
-      ICICLE_LOG_DEBUG << "Verified mined pow hash: 0x" << std::hex << mined_hash;
 
       return is_correct;
     }
@@ -80,8 +78,6 @@ namespace icicle {
       eIcicleError pow_error =
         proof_of_work(hasher, hash_input.data(), hash_input.size(), pow_bits, cfg, found, nonce, mined_hash);
 
-      ICICLE_LOG_DEBUG << "Mined pow hash: " << mined_hash;
-      ICICLE_LOG_DEBUG << "Mined pow hash: 0x" << std::hex << mined_hash;
       return pow_error;
     }
 

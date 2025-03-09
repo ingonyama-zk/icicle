@@ -674,6 +674,9 @@ TYPED_TEST(FieldTest, Fri)
         ICICLE_CHECK(prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof));
         END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
 
+        // Release domain
+        ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
         // ===== Verifier side ======
         Fri verifier_fri = create_fri<scalar_t, TypeParam>(
           input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
@@ -681,9 +684,6 @@ TYPED_TEST(FieldTest, Fri)
         ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, valid));
 
         ASSERT_EQ(true, valid);
-
-        // Release domain
-        ICICLE_CHECK(ntt_release_domain<scalar_t>());
       };
 
       run(IcicleTestBase::reference_device(), false);
@@ -752,6 +752,9 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
 
     eIcicleError error = prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof);
 
+    // Release domain
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
     if (error == eIcicleError::SUCCESS) {
       // ===== Verifier side ======
       Fri verifier_fri = create_fri<scalar_t, TypeParam>(
@@ -762,9 +765,6 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
       ASSERT_EQ(true, valid);
     }
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
-
-    // Release domain
-    ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
   // Reference Device

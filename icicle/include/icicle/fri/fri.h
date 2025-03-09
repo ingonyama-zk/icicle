@@ -64,7 +64,7 @@ namespace icicle {
      * @brief Generate a FRI proof from the given polynomial evaluations (or input data).
      * @param fri_config Configuration for FRI operations (e.g., proof-of-work, queries).
      * @param fri_transcript_config Configuration for encoding/hashing (Fiat-Shamir).
-     * @param input_data Evaluations or other relevant data for constructing the proof.
+     * @param input_data Evaluations of the input polynomial.
      * @param fri_proof Reference to a FriProof object (output).
      * @return An eIcicleError indicating success or failure.
      */

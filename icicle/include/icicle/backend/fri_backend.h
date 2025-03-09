@@ -42,7 +42,7 @@ namespace icicle {
      *
      * @param fri_config            Configuration for FRI operations (e.g., proof-of-work bits, queries).
      * @param fri_transcript_config Configuration for encoding/hashing FRI messages (Fiat-Shamir).
-     * @param input_data          Evaluations of the polynomial (or other relevant data).
+     * @param input_data          Evaluations of the input polynomial.
      * @param fri_proof           (OUT) A FriProof object to store the proof's Merkle layers, final poly, etc.
      * @return eIcicleError       Error code indicating success or failure.
      */
