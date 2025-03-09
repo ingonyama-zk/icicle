@@ -1,4 +1,3 @@
-
 #include "test_mod_arithmetic_api.h"
 #include "icicle/sumcheck/sumcheck.h"
 #include "icicle/fri/fri.h"
@@ -687,13 +686,19 @@ TYPED_TEST(FieldTest, Fri)
       };
 
       run(IcicleTestBase::reference_device(), false);
-      // run(IcicleTestBase::main_device(), , VERBOSE);
+      run(IcicleTestBase::main_device(), false);
     }
   }
 }
 
 TYPED_TEST(FieldTest, FriShouldFailCases)
 {
+  // Non-random configuration
+  // const int log_input_size = 10;
+  // const int log_stopping_size = 4;
+  // const size_t pow_bits = 0;
+  // const size_t nof_queries = 4;
+  
   // Randomize configuration
   const size_t log_input_size = rand_uint_32b(3, 13);
   const size_t input_size = 1 << log_input_size;
@@ -728,7 +733,6 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     Fri prover_fri = create_fri<scalar_t, TypeParam>(
       input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
-    // set transcript config
     const char* domain_separator_label = "domain_separator_label";
     const char* round_challenge_label = "round_challenge_label";
     const char* commit_phase_label = "commit_phase_label";
@@ -762,13 +766,24 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
+  // Reference Device
   run(IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
   run(
     IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
   run(
     IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
     log_input_size - 1 /*log_domain_size*/);
-  // run(IcicleTestBase::main_device());
+  
+  // Main Device
+  // Test invalid nof_queries
+  run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  // Test invalid folding_factor
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  // Test invalid input size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1 /*log_domain_size*/);
 }
 
 #endif // FRI
