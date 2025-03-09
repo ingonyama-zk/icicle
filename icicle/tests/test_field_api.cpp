@@ -264,7 +264,8 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
     data_main[idx] = tmp;
   }
   std::ostringstream oss;
-  oss << IcicleTestBase::main_device() << " " << "Sumcheck";
+  oss << IcicleTestBase::main_device() << " "
+      << "Sumcheck";
 
   SumcheckProof<scalar_t> sumcheck_proof;
 
@@ -698,7 +699,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
   // const int log_stopping_size = 4;
   // const size_t pow_bits = 0;
   // const size_t nof_queries = 4;
-  
+
   // Randomize configuration
   const size_t log_input_size = rand_uint_32b(3, 13);
   const size_t input_size = 1 << log_input_size;
@@ -773,17 +774,14 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
   run(
     IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
     log_input_size - 1 /*log_domain_size*/);
-  
+
   // Main Device
   // Test invalid nof_queries
   run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
   // Test invalid folding_factor
-  run(
-    IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
   // Test invalid input size
-  run(
-    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
-    log_input_size - 1 /*log_domain_size*/);
+  run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size - 1 /*log_domain_size*/);
 }
 
 #endif // FRI

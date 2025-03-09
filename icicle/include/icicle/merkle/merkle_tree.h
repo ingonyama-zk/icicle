@@ -84,7 +84,10 @@ namespace icicle {
      */
     inline std::pair<const std::byte*, size_t> get_merkle_root() const { return m_backend->get_merkle_root(); }
 
-    inline std::pair<const std::byte*, size_t> get_merkle_root(bool on_device) const { return m_backend->get_merkle_root(on_device); }
+    inline std::pair<const std::byte*, size_t> get_merkle_root(bool on_device) const
+    {
+      return m_backend->get_merkle_root(on_device);
+    }
 
     template <typename T>
     inline std::pair<T*, size_t> get_merkle_root() const

@@ -147,7 +147,8 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError proof_of_work(FriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof){
+    eIcicleError proof_of_work(FriTranscript<F>& transcript, const size_t pow_bits, FriProof<F>& fri_proof)
+    {
       uint64_t nonce = 0;
       bool found = false;
       eIcicleError pow_err = transcript.solve_pow(nonce, pow_bits, found);

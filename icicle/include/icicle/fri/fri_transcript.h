@@ -51,7 +51,8 @@ namespace icicle {
       return m_prev_alpha;
     }
 
-    bool verify_pow(uint64_t nonce, uint8_t pow_bits) {
+    bool verify_pow(uint64_t nonce, uint8_t pow_bits)
+    {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
@@ -67,7 +68,8 @@ namespace icicle {
       return is_correct;
     }
 
-    eIcicleError solve_pow(uint64_t& nonce, size_t pow_bits, bool& found) {
+    eIcicleError solve_pow(uint64_t& nonce, size_t pow_bits, bool& found)
+    {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
       hash_input.reserve(1024); // pre-allocate some space
@@ -75,7 +77,8 @@ namespace icicle {
       const Hash& hasher = m_transcript_config.get_hasher();
       const PowConfig cfg;
       uint64_t mined_hash;
-      eIcicleError pow_error = proof_of_work(hasher, hash_input.data(), hash_input.size(), pow_bits, cfg, found, nonce, mined_hash);
+      eIcicleError pow_error =
+        proof_of_work(hasher, hash_input.data(), hash_input.size(), pow_bits, cfg, found, nonce, mined_hash);
 
       ICICLE_LOG_DEBUG << "Mined pow hash: " << mined_hash;
       ICICLE_LOG_DEBUG << "Mined pow hash: 0x" << std::hex << mined_hash;
