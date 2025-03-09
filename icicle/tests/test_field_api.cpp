@@ -639,7 +639,6 @@ TYPED_TEST(FieldTest, Fri)
 
         // Initialize ntt domain
         NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
-        ICICLE_LOG_INFO << "Initializing domain of size: 1 << " << log_input_size << " (" << (1 << log_input_size) << ")";
         ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
 
         // ===== Prover side ======
@@ -740,6 +739,9 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
       input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
     const char* domain_separator_label = "domain_separator_label";
+    const char* round_challenge_label = "round_challenge_label";
+    const char* commit_phase_label = "commit_phase_label";
+    const char* nonce_label = "nonce_label";
     std::vector<std::byte>&& public_state = {};
     TypeParam seed_rng = TypeParam::one();
 

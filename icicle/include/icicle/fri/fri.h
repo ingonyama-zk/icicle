@@ -162,12 +162,8 @@ namespace icicle {
     void check_pow_nonce_and_set_to_transcript(
       FriProof<F>& fri_proof, FriTranscript<F>& transcript, const FriConfig& fri_config, bool& pow_valid) const
     {
-      // pow_valid = (transcript.hash_and_get_nof_leading_zero_bits(fri_proof.get_pow_nonce()) == fri_config.pow_bits);
-      // if (pow_valid) { transcript.set_pow_nonce(fri_proof.get_pow_nonce()); }
-
       uint64_t proof_pow_nonce = fri_proof.get_pow_nonce();
-      ICICLE_LOG_INFO << "proof_pow_nonce: " << proof_pow_nonce;
-      ICICLE_ASSERT(transcript.verify_pow(proof_pow_nonce, fri_config.pow_bits));
+      pow_valid = transcript.verify_pow(proof_pow_nonce, fri_config.pow_bits);
       transcript.set_pow_nonce(proof_pow_nonce);
     }
 
