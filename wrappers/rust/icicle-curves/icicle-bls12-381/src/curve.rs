@@ -13,7 +13,7 @@ pub(crate) const BASE_LIMBS: usize = 12;
 pub(crate) const G2_BASE_LIMBS: usize = 24;
 
 impl_scalar_field!("bls12_381", bls12_381_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
-impl_field!("bl12_381_base_field", BASE_LIMBS, BaseField, BaseCfg);
+impl_field!("bls12_381_base_field", BASE_LIMBS, BaseField, BaseCfg);
 
 impl_curve!(
     "bls12_381",
