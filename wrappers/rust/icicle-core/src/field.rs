@@ -183,7 +183,7 @@ where
 #[macro_export]
 macro_rules! impl_field {
     (
-        $field_prefix_ident:ident,
+        $field_prefix:literal,
         $num_limbs:ident,
         $field_name:ident,
         $field_cfg:ident
@@ -194,12 +194,17 @@ macro_rules! impl_field {
 
         impl FieldConfig for $field_cfg {
             fn from_u32<const NUM_LIMBS: usize>(val: u32) -> [u32; NUM_LIMBS] {
+                extern "C" {
+                    #[link_name = concat!($field_prefix, "_from_u32")]
+                    pub(crate) fn from_u32(val: u32, result: *mut $field_name);
+                }
+
                 let mut limbs = [0u32; NUM_LIMBS];
 
                 unsafe {
                     // Convert `val` into field representation using an external FFI call.
                     // Casting `limbs` ensures compatibility without tightly coupling `FieldConfig` and `Field`.
-                    $field_prefix_ident::from_u32(val, limbs.as_mut_ptr() as *mut $field_name);
+                    from_u32(val, limbs.as_mut_ptr() as *mut $field_name);
                 }
 
                 limbs
@@ -219,7 +224,7 @@ macro_rules! impl_scalar_field {
         $field_name:ident,
         $field_cfg:ident
     ) => {
-        impl_field!($field_prefix_ident, $num_limbs, $field_name, $field_cfg);
+        impl_field!($field_prefix, $num_limbs, $field_name, $field_cfg);
 
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
@@ -254,9 +259,6 @@ macro_rules! impl_scalar_field {
 
                 #[link_name = concat!($field_prefix, "_pow")]
                 pub(crate) fn pow(a: *const $field_name, exp: usize, result: *mut $field_name);
-
-                #[link_name = concat!($field_prefix, "_from_u32")]
-                pub(crate) fn from_u32(val: u32, result: *mut $field_name);
             }
 
             pub(crate) fn convert_scalars_montgomery(

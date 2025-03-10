@@ -13,11 +13,11 @@ pub(crate) const BASE_LIMBS: usize = 8;
 pub(crate) const G2_BASE_LIMBS: usize = 16;
 
 impl_scalar_field!("bn254", bn254_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
-impl_field!(BASE_LIMBS, BaseField, BaseCfg);
+impl_field!("bn254_base_field", BASE_LIMBS, BaseField, BaseCfg);
 impl_curve!("bn254", bn254, CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(not(feature = "no_g2"))]
-impl_field!(G2_BASE_LIMBS, G2BaseField, G2BaseCfg);
+impl_field!("bn254_g2_base_field", G2_BASE_LIMBS, G2BaseField, G2BaseCfg);
 #[cfg(not(feature = "no_g2"))]
 impl_curve!(
     "bn254_g2",

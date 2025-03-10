@@ -53,6 +53,11 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, generate_affine_points)(affine_
   projective_t::rand_host_many(points, size);
 }
 
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, base_field_from_u32)(uint32_t val, point_field_t* result)
+{
+  *result = point_field_t::from(val);
+}
+
 /********************************** G2 **********************************/
 #ifdef G2_ENABLED
 extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_eq)(g2_projective_t* point1, g2_projective_t* point2)
@@ -100,5 +105,10 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generate_projective_points)(
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generate_affine_points)(g2_affine_t* points, int size)
 {
   g2_projective_t::rand_host_many(points, size);
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_base_field_from_u32)(uint32_t val, point_field_t* result)
+{
+  *result = point_field_t::from(val);
 }
 #endif // G2
