@@ -24,7 +24,6 @@ namespace icicle {
       this->set_as_inputs(program_parameters);
       program_parameters[nof_inputs] = program_func(program_parameters); // place the output after the all inputs
       this->generate_program(program_parameters);
-      m_poly_degree = program_parameters[nof_inputs].m_operation->m_poly_degree;
     }
 
     // Generate a program based on a PreDefinedPrograms
@@ -40,6 +39,13 @@ namespace icicle {
       default:
         ICICLE_LOG_ERROR << "Illegal opcode: " << int(pre_def);
       }
+    }
+
+    // Call base generate_program as well as updating the required polynomial degree
+    void generate_program(std::vector<Symbol<S>>& program_parameters) override
+    {
+      Program<S>::generate_program(program_parameters);
+      m_poly_degree = program_parameters.back().m_operation->m_poly_degree;
     }
 
     int get_polynomial_degree() const { return m_poly_degree; }

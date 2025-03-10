@@ -15,22 +15,19 @@ SymbolHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, create_input_symbol)(int in_idx)
 {
   auto symbol_ptr = new Symbol<scalar_t>();
   symbol_ptr->set_as_input(in_idx);
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(symbol_ptr);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(symbol_ptr);
   return symbol_ptr;
 }
 SymbolHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, create_scalar_symbol)(const scalar_t* constant)
 {
   auto symbol_ptr = new Symbol<scalar_t>(*constant);
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(symbol_ptr);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(symbol_ptr);
   return symbol_ptr;
 }
 SymbolHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, copy_symbol)(const SymbolHandle other)
 {
   auto symbol_ptr = new Symbol<scalar_t>(*other);
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(symbol_ptr);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(symbol_ptr);
   return symbol_ptr;
 }
 
@@ -38,8 +35,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, inverse_symbol)(const SymbolHandle
 {
   if (!input) { return eIcicleError::INVALID_POINTER; }
   *output = new Symbol<scalar_t>(input->inverse());
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(*output);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(*output);
   return eIcicleError::SUCCESS;
 }
 
@@ -48,8 +44,7 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, add_symbols)(const SymbolHandle op_a, const Sym
 {
   if (!op_a || !op_b) { return eIcicleError::INVALID_ARGUMENT; }
   *res = new Symbol<scalar_t>(op_a->add(*op_b));
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(*res);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(*res);
   return eIcicleError::SUCCESS;
 }
 
@@ -58,8 +53,7 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, multiply_symbols)(const SymbolHandle op_a, cons
 {
   if (!op_a || !op_b) { return eIcicleError::INVALID_ARGUMENT; }
   *res = new Symbol<scalar_t>(op_a->multiply(*op_b));
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(*res);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(*res);
   return eIcicleError::SUCCESS;
 }
 
@@ -68,8 +62,7 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, sub_symbols)(const SymbolHandle op_a, const Sym
 {
   if (!op_a || !op_b) { return eIcicleError::INVALID_ARGUMENT; }
   *res = new Symbol<scalar_t>(op_a->sub(*op_b));
-  ReleasePool<Symbol<scalar_t>>& pool = ReleasePool<Symbol<scalar_t>>::instance();
-  pool.insert(*res);
+  ReleasePool<Symbol<scalar_t>>::instance().insert(*res);
   return eIcicleError::SUCCESS;
 }
 }
@@ -84,22 +77,19 @@ ExtensionSymbolHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_create_input_sy
 {
   auto symbol_ptr = new Symbol<extension_t>();
   symbol_ptr->set_as_input(in_idx);
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(symbol_ptr);
+  ReleasePool<Symbol<extension_t>>::instance().insert(symbol_ptr);
   return symbol_ptr;
 }
 ExtensionSymbolHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_create_scalar_symbol)(const extension_t* constant)
 {
   auto symbol_ptr = new Symbol<extension_t>(*constant);
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(symbol_ptr);
+  ReleasePool<Symbol<extension_t>>::instance().insert(symbol_ptr);
   return symbol_ptr;
 }
 ExtensionSymbolHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_copy_symbol)(const ExtensionSymbolHandle other)
 {
   auto symbol_ptr = new Symbol<extension_t>(*other);
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(symbol_ptr);
+  ReleasePool<Symbol<extension_t>>::instance().insert(symbol_ptr);
   return symbol_ptr;
 }
 
@@ -108,8 +98,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_inverse_symbol)(
 {
   if (!input) { return eIcicleError::INVALID_POINTER; }
   *output = new Symbol<extension_t>(input->inverse());
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(*output);
+  ReleasePool<Symbol<extension_t>>::instance().insert(*output);
   return eIcicleError::SUCCESS;
 }
 
@@ -118,8 +107,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_add_symbols)(
 {
   if (!op_a || !op_b) { return eIcicleError::INVALID_ARGUMENT; }
   *res = new Symbol<extension_t>(op_a->add(*op_b));
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(*res);
+  ReleasePool<Symbol<extension_t>>::instance().insert(*res);
   return eIcicleError::SUCCESS;
 }
 
@@ -128,8 +116,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_multiply_symbols)(
 {
   if (!op_a || !op_b) { return eIcicleError::INVALID_ARGUMENT; }
   *res = new Symbol<extension_t>(op_a->multiply(*op_b));
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(*res);
+  ReleasePool<Symbol<extension_t>>::instance().insert(*res);
   return eIcicleError::SUCCESS;
 }
 
@@ -138,8 +125,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_sub_symbols)(
 {
   if (!op_a || !op_b) { return eIcicleError::INVALID_ARGUMENT; }
   *res = new Symbol<extension_t>(op_a->sub(*op_b));
-  ReleasePool<Symbol<extension_t>>& pool = ReleasePool<Symbol<extension_t>>::instance();
-  pool.insert(*res);
+  ReleasePool<Symbol<extension_t>>::instance().insert(*res);
   return eIcicleError::SUCCESS;
 }
 }
