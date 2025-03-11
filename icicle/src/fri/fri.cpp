@@ -2,7 +2,6 @@
 #include "icicle/dispatcher.h"
 #include "icicle/errors.h"
 
-
 namespace icicle {
 
   using FriFactoryScalar = FriFactoryImpl<scalar_t, scalar_t>;
@@ -116,7 +115,7 @@ namespace icicle {
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer,
-    FriProof<scalar_t>& fri_proof /* OUT */) 
+    FriProof<scalar_t>& fri_proof /* OUT */)
   {
     if (fri_config.nof_queries <= 0) {
       ICICLE_LOG_ERROR << "Number of queries must be > 0";
@@ -129,11 +128,11 @@ namespace icicle {
     }
     const size_t log_input_size = std::log2(input_size);
     Fri prover_fri = create_fri_template<scalar_t, scalar_t>(
-      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
-      output_store_min_layer);
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
+      merkle_tree_compress_hash, output_store_min_layer);
     return prover_fri.get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
   }
-  
+
   template <>
   eIcicleError verify_fri_mt<scalar_t, scalar_t>(
     const FriConfig& fri_config,
@@ -150,15 +149,15 @@ namespace icicle {
     }
     if (fri_config.folding_factor != 2) {
       ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
-                                                                            // supporting other folding factors
+                                                                             // supporting other folding factors
       return eIcicleError::INVALID_ARGUMENT;
     }
     const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
     const size_t final_poly_size = fri_proof.get_final_poly_size();
     const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
     Fri verifier_fri = create_fri_template<scalar_t, scalar_t>(
-      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
-      output_store_min_layer);
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
+      merkle_tree_compress_hash, output_store_min_layer);
     return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 
@@ -171,7 +170,7 @@ namespace icicle {
     const size_t input_size,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer, 
+    const uint64_t output_store_min_layer,
     FriProof<extension_t>& fri_proof /* OUT */)
   {
     if (fri_config.nof_queries <= 0) {
@@ -185,11 +184,11 @@ namespace icicle {
     }
     const size_t log_input_size = std::log2(input_size);
     Fri prover_fri = create_fri_template_ext<scalar_t, extension_t>(
-      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
-      output_store_min_layer);
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
+      merkle_tree_compress_hash, output_store_min_layer);
     return prover_fri.get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
   }
-  
+
   template <>
   eIcicleError verify_fri_mt<scalar_t, extension_t>(
     const FriConfig& fri_config,
@@ -197,7 +196,7 @@ namespace icicle {
     FriProof<extension_t>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer, 
+    const uint64_t output_store_min_layer,
     bool& valid /* OUT */)
   {
     if (fri_config.nof_queries <= 0) {
@@ -213,8 +212,8 @@ namespace icicle {
     const size_t final_poly_size = fri_proof.get_final_poly_size();
     const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
     Fri verifier_fri = create_fri_template_ext<scalar_t, extension_t>(
-      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
-      output_store_min_layer);
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
+      merkle_tree_compress_hash, output_store_min_layer);
     return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 #endif

@@ -15,10 +15,10 @@ namespace icicle {
    */
   struct FriConfig {
     icicleStreamHandle stream = nullptr; // Stream for asynchronous execution. Default is nullptr.
-    size_t folding_factor = 2;     // The factor by which the codeword is folded in each round.
-    size_t stopping_degree = 0;    // The minimal polynomial degree at which folding stops.
-    size_t pow_bits = 16;                 // Number of leading zeros required for proof-of-work. Default is 0.
-    size_t nof_queries = 100;              // Number of queries, computed for each folded layer of FRI. Default is 50.
+    size_t folding_factor = 2;           // The factor by which the codeword is folded in each round.
+    size_t stopping_degree = 0;          // The minimal polynomial degree at which folding stops.
+    size_t pow_bits = 16;                // Number of leading zeros required for proof-of-work. Default is 0.
+    size_t nof_queries = 100;            // Number of queries, computed for each folded layer of FRI. Default is 50.
     bool are_inputs_on_device =
       false; // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
     bool is_async = false; // True to run operations asynchronously, false to run synchronously. Default is false.

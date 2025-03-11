@@ -750,7 +750,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     FriProof<TypeParam> fri_proof;
 
     eIcicleError error = get_fri_proof_mt<scalar_t, TypeParam>(
-      fri_config, transcript_config, scalars.get(),input_size, hash, compress, output_store_min_layer, fri_proof);
+      fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
 
     // Release domain
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
