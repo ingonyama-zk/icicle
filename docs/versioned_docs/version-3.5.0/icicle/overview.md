@@ -13,7 +13,7 @@ title: ICICLE Overview
 
 [![GitHub Release](https://img.shields.io/github/v/release/ingonyama-zk/icicle)](https://github.com/ingonyama-zk/icicle/releases)
 
-[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library designed to accelerate zero-knowledge proofs (ZKPs) using multiple compute backends, including GPUs, CPUs, and potentially other platforms. ICICLE's key strength lies in its ability to implement blazing-fast cryptographic primitives, enabling developers to significantly reduce proving times with minimal effort.
+[ICICLE](https://github.com/ingonyama-zk/icicle) is a cryptography library designed to accelerate high-speed cryptography, starting with Zero-Knowledge Proofs (ZKPs), using multiple compute backends, including GPUs, CPUs, and potentially other platforms. ICICLE's key strength lies in its ability to implement blazing-fast cryptographic primitives, enabling developers to significantly reduce proving times with minimal effort.
 
 ## Key Features
 
@@ -29,7 +29,7 @@ Originally, ICICLE was focused solely on GPU acceleration. With the release of v
 
 ## Who Uses ICICLE?
 
-ICICLE has been successfully integrated and used by leading ZK companies such as [Celer Network](https://github.com/celer-network), [Gnark](https://github.com/Consensys/gnark), and others to enhance their ZK proving pipelines.
+ICICLE has been successfully integrated and used by leading cryptography companies such as [Brevis](https://www.ingonyama.com/blog/icicle-case-study-accelerating-zk-proofs-with-brevis), [Gnark](https://github.com/Consensys/gnark), [Zircuit](https://www.ingonyama.com/blog/case-study-accelerating-zircuits-zero-knowledge-proofs-with-icicle), [zkWASM](https://www.ingonyama.com/blog/how-icicle-helps-grow-the-zkwasm-ecosystem), [Kroma Network](https://www.ingonyama.com/blog/icicle-case-study-accelerating-zk-proofs-with-kroma-network) and others to enhance their ZK proving pipelines.
 
 ## Don't Have Access to a GPU?
 
@@ -37,7 +37,7 @@ We understand that not all developers have access to GPUs, but this shouldn't li
 
 ### Grants
 
-At Ingonyama, we are committed to accelerating progress in ZK and cryptography. If you're an engineer, developer, or academic researcher, we invite you to check out [our grant program](https://www.ingonyama.com/blog/icicle-for-researchers-grants-challenges). We can provide access to GPUs and even fund your research.
+At Ingonyama, we are committed to accelerating progress in ZK and cryptography. If you're an engineer, developer, or academic researcher, we invite you to check out [our grant program](https://www.ingonyama.com/blog/ingonyama-research-grants-2025)). We can provide access to GPUs and even fund your research.
 
 ### Google Colab
 
