@@ -644,9 +644,6 @@ TYPED_TEST(FieldTest, Fri)
         Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
         Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
 
-        Fri prover_fri = create_fri<scalar_t, TypeParam>(
-          input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
-
         // set transcript config
         const char* domain_separator_label = "domain_separator_label";
         const char* round_challenge_label = "round_challenge_label";
@@ -662,6 +659,8 @@ TYPED_TEST(FieldTest, Fri)
         FriConfig fri_config;
         fri_config.nof_queries = nof_queries;
         fri_config.pow_bits = pow_bits;
+        fri_config.folding_factor = folding_factor;
+        fri_config.stopping_degree = stopping_degree;
         FriProof<TypeParam> fri_proof;
 
         std::ostringstream oss;
@@ -671,18 +670,19 @@ TYPED_TEST(FieldTest, Fri)
           oss << dev_type << " FRI proof";
         }
         START_TIMER(FRIPROOF_sync)
-        ICICLE_CHECK(prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof));
+        eIcicleError err = FRI::get_proof_mt<scalar_t, TypeParam>(
+          fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+        ICICLE_CHECK(err);
         END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
 
         // Release domain
         ICICLE_CHECK(ntt_release_domain<scalar_t>());
 
         // ===== Verifier side ======
-        Fri verifier_fri = create_fri<scalar_t, TypeParam>(
-          input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
         bool valid = false;
-        ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, valid));
-
+        err = FRI::verify_mt<scalar_t, TypeParam>(
+          fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
+        ICICLE_CHECK(err);
         ASSERT_EQ(true, valid);
       };
 
@@ -731,9 +731,6 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
     Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
 
-    Fri prover_fri = create_fri<scalar_t, TypeParam>(
-      input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
-
     const char* domain_separator_label = "domain_separator_label";
     const char* round_challenge_label = "round_challenge_label";
     const char* commit_phase_label = "commit_phase_label";
@@ -748,20 +745,21 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     FriConfig fri_config;
     fri_config.nof_queries = nof_queries;
     fri_config.pow_bits = pow_bits;
+    fri_config.folding_factor = folding_factor;
+    fri_config.stopping_degree = stopping_degree;
     FriProof<TypeParam> fri_proof;
 
-    eIcicleError error = prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof);
+    eIcicleError error = get_fri_proof_mt<scalar_t, TypeParam>(
+      fri_config, transcript_config, scalars.get(),input_size, hash, compress, output_store_min_layer, fri_proof);
 
     // Release domain
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
 
     if (error == eIcicleError::SUCCESS) {
       // ===== Verifier side ======
-      Fri verifier_fri = create_fri<scalar_t, TypeParam>(
-        input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
       bool valid = false;
-      error = verifier_fri.verify(fri_config, transcript_config, fri_proof, valid);
-
+      error = verify_fri_mt<scalar_t, TypeParam>(
+        fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
       ASSERT_EQ(true, valid);
     }
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);

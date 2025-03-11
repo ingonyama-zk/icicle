@@ -1,5 +1,7 @@
 #include "icicle/fri/fri.h"
 #include "icicle/dispatcher.h"
+#include "icicle/errors.h"
+
 
 namespace icicle {
 
@@ -26,14 +28,13 @@ namespace icicle {
    */
   template <typename S, typename F>
   Fri<S, F> create_fri_template(
-    const size_t input_size,
+    const size_t log_input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
     const size_t df = stopping_degree;
     const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
     const size_t fold_rounds = (log_input_size > log_df_plus_1) ? (log_input_size - log_df_plus_1) : 0;
@@ -43,7 +44,7 @@ namespace icicle {
     size_t compress_hash_arity =
       merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
     if (compress_hash_arity != 2) { ICICLE_LOG_ERROR << "Currently only compress hash arity of 2 is supported"; }
-    size_t first_merkle_tree_height = std::ceil(std::log2(input_size) / std::log2(compress_hash_arity)) + 1;
+    size_t first_merkle_tree_height = std::ceil(log_input_size / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
     uint64_t leaf_element_size = merkle_tree_leaves_hash.default_input_chunk_size();
@@ -77,14 +78,13 @@ namespace icicle {
    */
   template <typename S, typename F>
   Fri<S, F> create_fri_template_ext(
-    const size_t input_size,
+    const size_t log_input_size,
     const size_t folding_factor,
     const size_t stopping_degree,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer)
   {
-    const size_t log_input_size = static_cast<size_t>(std::log2(static_cast<double>(input_size)));
     const size_t df = stopping_degree;
     const size_t log_df_plus_1 = (df > 0) ? static_cast<size_t>(std::log2(static_cast<double>(df + 1))) : 0;
     const size_t fold_rounds = (log_input_size > log_df_plus_1) ? (log_input_size - log_df_plus_1) : 0;
@@ -94,7 +94,7 @@ namespace icicle {
     size_t compress_hash_arity =
       merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
     if (compress_hash_arity != 2) { ICICLE_LOG_ERROR << "Currently only compress hash arity of 2 is supported"; }
-    size_t first_merkle_tree_height = std::ceil(std::log2(input_size) / std::log2(compress_hash_arity)) + 1;
+    size_t first_merkle_tree_height = std::ceil(log_input_size / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
     uint64_t leaf_element_size = merkle_tree_leaves_hash.default_input_chunk_size();
@@ -108,32 +108,114 @@ namespace icicle {
 #endif // EXT_FIELD
 
   template <>
-  Fri<scalar_t, scalar_t> create_fri(
+  eIcicleError get_fri_proof_mt<scalar_t, scalar_t>(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<scalar_t>& fri_transcript_config,
+    const scalar_t* input_data,
     const size_t input_size,
-    const size_t folding_factor,
-    const size_t stopping_degree,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer)
+    const uint64_t output_store_min_layer,
+    FriProof<scalar_t>& fri_proof /* OUT */) 
   {
-    return create_fri_template<scalar_t, scalar_t>(
-      input_size, folding_factor, stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
+    if (fri_config.nof_queries <= 0) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (fri_config.folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
+                                                                             // supporting other folding factors
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    const size_t log_input_size = std::log2(input_size);
+    Fri prover_fri = create_fri_template<scalar_t, scalar_t>(
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
       output_store_min_layer);
+    return prover_fri.get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
+  }
+  
+  template <>
+  eIcicleError verify_fri_mt<scalar_t, scalar_t>(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<scalar_t>& fri_transcript_config,
+    FriProof<scalar_t>& fri_proof,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer,
+    bool& valid /* OUT */)
+  {
+    if (fri_config.nof_queries <= 0) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (fri_config.folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
+                                                                            // supporting other folding factors
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
+    const size_t final_poly_size = fri_proof.get_final_poly_size();
+    const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
+    Fri verifier_fri = create_fri_template<scalar_t, scalar_t>(
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
+      output_store_min_layer);
+    return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 
 #ifdef EXT_FIELD
   template <>
-  Fri<scalar_t, extension_t> create_fri(
+  eIcicleError get_fri_proof_mt<scalar_t, extension_t>(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<extension_t>& fri_transcript_config,
+    const extension_t* input_data,
     const size_t input_size,
-    const size_t folding_factor,
-    const size_t stopping_degree,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer)
+    const uint64_t output_store_min_layer, 
+    FriProof<extension_t>& fri_proof /* OUT */)
   {
-    return create_fri_template_ext<scalar_t, extension_t>(
-      input_size, folding_factor, stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
+    if (fri_config.nof_queries <= 0) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (fri_config.folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
+                                                                             // supporting other folding factors
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    const size_t log_input_size = std::log2(input_size);
+    Fri prover_fri = create_fri_template_ext<scalar_t, extension_t>(
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
       output_store_min_layer);
+    return prover_fri.get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
+  }
+  
+  template <>
+  eIcicleError verify_fri_mt<scalar_t, extension_t>(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<extension_t>& fri_transcript_config,
+    FriProof<extension_t>& fri_proof,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer, 
+    bool& valid /* OUT */)
+  {
+    if (fri_config.nof_queries <= 0) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (fri_config.folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
+                                                                             // supporting other folding factors
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
+    const size_t final_poly_size = fri_proof.get_final_poly_size();
+    const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
+    Fri verifier_fri = create_fri_template_ext<scalar_t, extension_t>(
+      log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash,
+      output_store_min_layer);
+    return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 #endif
 

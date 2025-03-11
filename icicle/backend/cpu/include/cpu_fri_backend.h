@@ -37,16 +37,6 @@ namespace icicle {
       const F* input_data,
       FriProof<F>& fri_proof /*out*/) override
     {
-      if (__builtin_expect(fri_config.nof_queries <= 0, 0)) {
-        ICICLE_LOG_ERROR << "Number of queries must be > 0";
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-      if (__builtin_expect(this->m_folding_factor != 2, 0)) {
-        ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
-                                                                               // supporting other folding factors
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-
       FriTranscript<F> transcript(fri_transcript_config, m_log_input_size);
 
       // Initialize the proof
