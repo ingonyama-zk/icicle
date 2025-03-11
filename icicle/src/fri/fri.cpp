@@ -43,7 +43,6 @@ namespace icicle {
 
     Fri<S, F> fri{backend};
     return fri;
-
   }
 
 #ifdef EXT_FIELD
