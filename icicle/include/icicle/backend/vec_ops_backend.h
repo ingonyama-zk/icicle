@@ -707,6 +707,23 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  using rnsProgramExecutionImpl = std::function<eIcicleError(
+    const Device& device,
+    std::vector<scalar_rns_t*>& data,
+    const Program<scalar_rns_t>& program,
+    uint64_t size,
+    const VecOpsConfig& config)>;
+
+  void register_rns_execute_program(const std::string& deviceType, rnsProgramExecutionImpl);
+
+  #define REGISTER_EXECUTE_PROGRAM_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                 \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_program_execution_rns) = []() -> bool {                                                  \
+        register_rns_execute_program(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
 #endif // RING
 
 } // namespace icicle

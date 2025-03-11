@@ -10,7 +10,7 @@ use icicle_runtime::{eIcicleError, stream::IcicleStream};
 
 pub(crate) const BASE_LIMBS: usize = 24;
 
-impl_field!(BASE_LIMBS, BaseField, BaseCfg);
+impl_field!("bw6_761_g2_base_field", BASE_LIMBS, BaseField, BaseCfg);
 pub type ScalarField = bls12_377BaseField;
 impl_curve!(
     "bw6_761",
