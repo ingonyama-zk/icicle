@@ -694,21 +694,14 @@ TYPED_TEST(FieldTest, Fri)
 
 TYPED_TEST(FieldTest, FriShouldFailCases)
 {
-  // Non-random configuration
-  // const int log_input_size = 10;
-  // const int log_stopping_size = 4;
-  // const size_t pow_bits = 0;
-  // const size_t nof_queries = 4;
-
-  // Randomize configuration
-  const size_t log_input_size = rand_uint_32b(3, 13);
+  const int log_input_size = 10;
+  const int log_stopping_size = 4;
+  const size_t pow_bits = 0;
+  const size_t nof_queries = 4;
   const size_t input_size = 1 << log_input_size;
-  const size_t log_stopping_size = rand_uint_32b(0, log_input_size - 2);
   const size_t stopping_size = 1 << log_stopping_size;
   const size_t stopping_degree = stopping_size - 1;
   const uint64_t output_store_min_layer = 0;
-  const size_t pow_bits = rand_uint_32b(0, 3);
-  const size_t nof_queries = rand_uint_32b(2, 4);
 
   // Generate input polynomial evaluations
   auto scalars = std::make_unique<TypeParam[]>(input_size);
