@@ -795,9 +795,6 @@ TYPED_TEST(ModArithTest, ntt)
 
 // define program
 using MlePoly = Symbol<scalar_t>;
-
-// define program
-using MlePoly = Symbol<scalar_t>;
 void lambda_multi_result(std::vector<MlePoly>& vars)
 {
   const MlePoly& A = vars[0];

@@ -74,12 +74,12 @@ namespace icicle {
 
   /************************ Blake3 registration ************************/
   eIcicleError
-  create_blake3_hash_backend(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  create_blake3_hash_backend_cpu(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<Blake3BackendCPU>(input_chunk_size);
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_BLAKE3_FACTORY_BACKEND("CPU", create_blake3_hash_backend);
+  REGISTER_BLAKE3_FACTORY_BACKEND("CPU", create_blake3_hash_backend_cpu);
 
 } // namespace icicle
