@@ -8,6 +8,7 @@
 #include "icicle/backend/sumcheck_backend.h"
 #include "icicle/sumcheck/sumcheck_transcript.h"
 
+// Limitations due to device limitations (for CPU they are not needed)
 constexpr int MAX_COMBINE_POLY_DEG = 6; // Max degree of combine polynomial supported
 constexpr int MAX_NOF_POLYNIMOALS = 8;  // Max nof polynomials supported
 constexpr int MAX_TOTAL_NOF_VARS = 20;  // Max nof vars allowed in the  of the combine function
@@ -65,6 +66,8 @@ namespace icicle {
       const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) const
     {
+      // Limitations due to device limitations (for CPU they are not needed)
+      // Check here to make sure all backends have same behavior
       if (sumcheck_config.use_extension_field) {
         ICICLE_LOG_ERROR << "SumcheckConfig::use_extension_field = true is currently unsupported";
         return eIcicleError::INVALID_ARGUMENT;
