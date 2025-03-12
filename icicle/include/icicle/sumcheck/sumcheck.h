@@ -95,7 +95,8 @@ namespace icicle {
 
       const int total_nof_vars = combine_function.get_nof_vars();
       if (total_nof_vars > MAX_TOTAL_NOF_VARS) {
-        ICICLE_LOG_ERROR << "Too complex combine function, such functions are unsupported.";
+        ICICLE_LOG_ERROR << "Too complex combine function. Max num of variables allowed is " << MAX_TOTAL_NOF_VARS
+                         << ", but " << total_nof_vars << " were given";
         return eIcicleError::INVALID_ARGUMENT;
       }
       return m_backend->get_proof(
