@@ -47,10 +47,11 @@ namespace icicle {
     }
 
     /**
-     * @brief Get a reference to a specific Merkle proof for a given query index in a specific FRI round. Each query includes a proof for two values per round..
+     * @brief Get a reference to a specific Merkle proof for a given query index in a specific FRI round. Each query
+     * includes a proof for two values per round..
      *
      * This function returns a reference to a pre-allocated Merkle proof in the `m_query_proofs` array.
-     * The proof is initially empty and will be populated by another function responsible for generating 
+     * The proof is initially empty and will be populated by another function responsible for generating
      * the actual proof data.
      * @param query_idx Index of the query.
      * @param round_idx Index of the round (FRI round).
@@ -71,7 +72,9 @@ namespace icicle {
      */
     std::pair<const std::byte*, std::size_t> get_merkle_tree_root(const size_t round_idx) const
     {
-      return m_query_proofs[0/*query_idx*/][round_idx].get_root(); // Since all queries in the same round share the same root, we can just return root for query index 0 of the current round 
+      return m_query_proofs[0 /*query_idx*/][round_idx]
+        .get_root(); // Since all queries in the same round share the same root, we can just return root for query index
+                     // 0 of the current round
     }
 
     /**

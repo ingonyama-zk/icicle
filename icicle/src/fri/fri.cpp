@@ -27,7 +27,7 @@ namespace icicle {
     std::vector<MerkleTree> merkle_trees;
     merkle_trees.reserve(fold_rounds);
     size_t compress_hash_arity =
-    merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
+      merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
     size_t first_merkle_tree_height = std::ceil(log_input_size / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
@@ -67,7 +67,7 @@ namespace icicle {
     std::vector<MerkleTree> merkle_trees;
     merkle_trees.reserve(fold_rounds);
     size_t compress_hash_arity =
-    merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
+      merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
     size_t first_merkle_tree_height = std::ceil(log_input_size / std::log2(compress_hash_arity)) + 1;
     std::vector<Hash> layer_hashes(first_merkle_tree_height, merkle_tree_compress_hash);
     layer_hashes[0] = merkle_tree_leaves_hash;
@@ -85,32 +85,33 @@ namespace icicle {
 
 #endif // EXT_FIELD
 
-eIcicleError check_if_valid(const size_t nof_queries, const size_t input_size, const size_t folding_factor, const size_t compress_hash_arity){
-  if (nof_queries <= 0 || nof_queries > (input_size / folding_factor)) {
-    ICICLE_LOG_ERROR << "Number of queries must be > 0 and < input_size/folding_factor";
-    return eIcicleError::INVALID_ARGUMENT;
+  eIcicleError check_if_valid(
+    const size_t nof_queries, const size_t input_size, const size_t folding_factor, const size_t compress_hash_arity)
+  {
+    if (nof_queries <= 0 || nof_queries > (input_size / folding_factor)) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0 and < input_size/folding_factor";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (folding_factor != 2) {
+      ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
+                                                                             // supporting other folding factors
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (input_size == 0 || (input_size & (input_size - 1)) != 0) {
+      ICICLE_LOG_ERROR << "input_size must be a power of 2. input_size = " << input_size;
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (folding_factor % compress_hash_arity != 0) {
+      ICICLE_LOG_ERROR << "folding_factor must be divisible by compress_hash_arity. "
+                       << "folding_factor = " << folding_factor << ", compress_hash_arity = " << compress_hash_arity;
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    if (compress_hash_arity != 2) {
+      ICICLE_LOG_ERROR << "Currently only compress hash arity of 2 is supported";
+      return eIcicleError::INVALID_ARGUMENT;
+    }
+    return eIcicleError::SUCCESS;
   }
-  if (folding_factor != 2) {
-    ICICLE_LOG_ERROR << "Currently only folding factor of 2 is supported"; // TODO SHANIE (future) - remove when
-                                                                           // supporting other folding factors
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-  if (input_size == 0 || (input_size & (input_size - 1)) != 0) {
-    ICICLE_LOG_ERROR << "input_size must be a power of 2. input_size = "<< input_size;
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-  if (folding_factor % compress_hash_arity != 0) {
-    ICICLE_LOG_ERROR << "folding_factor must be divisible by compress_hash_arity. "
-    << "folding_factor = " << folding_factor << ", compress_hash_arity = " << compress_hash_arity;
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-  if (compress_hash_arity != 2) { 
-    ICICLE_LOG_ERROR << "Currently only compress hash arity of 2 is supported";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-  return eIcicleError::SUCCESS;
-}
-
 
   template <>
   eIcicleError get_fri_proof_mt<scalar_t, scalar_t>(
@@ -123,8 +124,10 @@ eIcicleError check_if_valid(const size_t nof_queries, const size_t input_size, c
     const uint64_t output_store_min_layer,
     FriProof<scalar_t>& fri_proof /* OUT */)
   {
-    eIcicleError err = check_if_valid(fri_config.nof_queries, input_size, fri_config.folding_factor, merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size());
-    if (err != eIcicleError::SUCCESS){ return err; }
+    eIcicleError err = check_if_valid(
+      fri_config.nof_queries, input_size, fri_config.folding_factor,
+      merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size());
+    if (err != eIcicleError::SUCCESS) { return err; }
     const size_t log_input_size = std::log2(input_size);
     Fri prover_fri = create_fri<scalar_t, scalar_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
@@ -145,11 +148,12 @@ eIcicleError check_if_valid(const size_t nof_queries, const size_t input_size, c
     const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
     const size_t final_poly_size = fri_proof.get_final_poly_size();
     const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
-    
+
     size_t compress_hash_arity =
-    merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
-    eIcicleError err = check_if_valid(fri_config.nof_queries, (1 << log_input_size), fri_config.folding_factor, compress_hash_arity);
-    if (err != eIcicleError::SUCCESS){ return err; }
+      merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
+    eIcicleError err =
+      check_if_valid(fri_config.nof_queries, (1 << log_input_size), fri_config.folding_factor, compress_hash_arity);
+    if (err != eIcicleError::SUCCESS) { return err; }
     Fri verifier_fri = create_fri<scalar_t, scalar_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
       merkle_tree_compress_hash, output_store_min_layer);
@@ -169,9 +173,10 @@ eIcicleError check_if_valid(const size_t nof_queries, const size_t input_size, c
     FriProof<extension_t>& fri_proof /* OUT */)
   {
     size_t compress_hash_arity =
-    merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
-    eIcicleError err = check_if_valid(fri_config.nof_queries, input_size, fri_config.folding_factor, compress_hash_arity);
-    if (err != eIcicleError::SUCCESS){ return err; }
+      merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
+    eIcicleError err =
+      check_if_valid(fri_config.nof_queries, input_size, fri_config.folding_factor, compress_hash_arity);
+    if (err != eIcicleError::SUCCESS) { return err; }
     const size_t log_input_size = std::log2(input_size);
     Fri prover_fri = create_fri_ext<scalar_t, extension_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
@@ -194,9 +199,10 @@ eIcicleError check_if_valid(const size_t nof_queries, const size_t input_size, c
     const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
 
     size_t compress_hash_arity =
-    merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
-    eIcicleError err = check_if_valid(fri_config.nof_queries, (1 << log_input_size), fri_config.folding_factor, compress_hash_arity);
-    if (err != eIcicleError::SUCCESS){ return err; }
+      merkle_tree_compress_hash.default_input_chunk_size() / merkle_tree_compress_hash.output_size();
+    eIcicleError err =
+      check_if_valid(fri_config.nof_queries, (1 << log_input_size), fri_config.folding_factor, compress_hash_arity);
+    if (err != eIcicleError::SUCCESS) { return err; }
     Fri verifier_fri = create_fri_ext<scalar_t, extension_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
       merkle_tree_compress_hash, output_store_min_layer);

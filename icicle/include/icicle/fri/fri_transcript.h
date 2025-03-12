@@ -244,9 +244,7 @@ namespace icicle {
     uint64_t bytes_to_uint_64(const std::vector<std::byte>& data)
     {
       uint64_t result = 0;
-      if (data.size() < sizeof(uint64_t)) {
-        ICICLE_LOG_ERROR << "Insufficient data size for conversion to uint64_t";
-      }
+      if (data.size() < sizeof(uint64_t)) { ICICLE_LOG_ERROR << "Insufficient data size for conversion to uint64_t"; }
       std::memcpy(&result, data.data(), sizeof(uint64_t));
       return result;
     }

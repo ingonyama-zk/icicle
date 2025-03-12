@@ -701,11 +701,9 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
   const size_t stopping_degree = stopping_size - 1;
   const uint64_t output_store_min_layer = 0;
 
-
   auto run = [stopping_degree, output_store_min_layer, pow_bits](
                const std::string& dev_type, const size_t nof_queries, const size_t folding_factor,
                const size_t log_domain_size, const size_t merkle_tree_arity, const size_t input_size) {
-
     // Generate input polynomial evaluations
     auto scalars = std::make_unique<TypeParam[]>(input_size);
     TypeParam::rand_host_many(scalars.get(), input_size);
@@ -758,43 +756,59 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
 
   // Reference Device
   // Test invalid nof_queries
-  run(IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
-  run(IcicleTestBase::main_device(), (1<<log_input_size)/2 + 1 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::main_device(), (1 << log_input_size) / 2 + 1 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
   // Test invalid folding_factor  (currently not supported)
   run(
-    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
   // Test too small domain size
   run(
     IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
     log_input_size - 1 /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
   // Test invalid merkle tree arity
   run(
-    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
-    log_input_size /*log_domain_size*/, 4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
   // Test invallid input size
-    run(
-    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
-    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
-
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
 
   // Main Device
   // Test invalid nof_queries
-  run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
-  run(IcicleTestBase::main_device(), (1<<log_input_size)/2 + 1 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
-  // Test invalid folding_factor  (currently not supported)
-  run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
-  // Test too small domain size 
   run(
-    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size - 1
-    /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+    IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::main_device(), (1 << log_input_size) / 2 + 1 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1
+    /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
   // Test invalid merkle tree arity
   run(
-    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size 
-    /*log_domain_size*/, 4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size
+    /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
   // Test invallid input size
   run(
-    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size 
-    /*log_domain_size*/, 4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size
+    /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
 }
 
 #endif // FRI
