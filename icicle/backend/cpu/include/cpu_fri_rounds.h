@@ -62,7 +62,7 @@ namespace icicle {
     std::vector<std::unique_ptr<F[]>> m_rounds_evals;
 
     // Holds MerkleTree for each round. m_merkle_trees[i] is the tree for round i.
-    std::vector<MerkleTree>& m_merkle_trees;
+    std::vector<MerkleTree> m_merkle_trees;
   };
 
 } // namespace icicle

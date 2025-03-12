@@ -37,7 +37,7 @@ namespace icicle {
       layer_hashes.pop_back();
     }
     std::shared_ptr<FriBackend<S, F>> backend;
-    ICICLE_CHECK(FriDispatcher::execute(folding_factor, stopping_degree, std::move(merkle_trees), backend));
+    ICICLE_CHECK(FriDispatcher::execute(folding_factor, stopping_degree, merkle_trees, backend)); // The MerkleTree class only holds a shared_ptr to MerkleTreeBackend, so copying is lightweight.
 
     Fri<S, F> fri{backend};
     return fri;
@@ -77,7 +77,7 @@ namespace icicle {
       layer_hashes.pop_back();
     }
     std::shared_ptr<FriBackend<S, F>> backend;
-    ICICLE_CHECK(FriExtFieldDispatcher::execute(folding_factor, stopping_degree, std::move(merkle_trees), backend));
+    ICICLE_CHECK(FriExtFieldDispatcher::execute(folding_factor, stopping_degree, merkle_trees, backend));
 
     Fri<S, F> fri{backend};
     return fri;

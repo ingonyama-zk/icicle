@@ -24,7 +24,7 @@ namespace icicle {
      * @param merkle_trees     A vector of MerkleTrees, tree per FRI round.
      */
     CpuFriBackend(const size_t folding_factor, const size_t stopping_degree, std::vector<MerkleTree> merkle_trees)
-        : FriBackend<S, F>(folding_factor, stopping_degree, std::move(merkle_trees)),
+        : FriBackend<S, F>(folding_factor, stopping_degree, merkle_trees),
           m_nof_fri_rounds(this->m_merkle_trees.size()),
           m_log_input_size(this->m_merkle_trees.size() + std::log2(static_cast<double>(stopping_degree + 1))),
           m_input_size(pow(2, m_log_input_size)), m_fri_rounds(this->m_merkle_trees, m_log_input_size)
