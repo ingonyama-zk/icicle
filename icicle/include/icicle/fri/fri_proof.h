@@ -67,8 +67,8 @@ namespace icicle {
     }
 
     /**
-     * @brief Get a const reference to a specific Merkle proof for a given query index in a specific FRI round. Each query
-     * includes a proof for two values per round.
+     * @brief Get a const reference to a specific Merkle proof for a given query index in a specific FRI round. Each
+     * query includes a proof for two values per round.
      */
 
     const MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx) const

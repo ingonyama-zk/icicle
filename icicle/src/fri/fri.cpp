@@ -4,7 +4,7 @@
 
 namespace icicle {
 
-    /**
+  /**
    * @brief Class for performing FRI operations.
    *
    * This class provides a high-level interface for constructing and managing a FRI proof.
@@ -303,7 +303,6 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
   };
-
 
   using FriFactoryScalar = FriFactoryImpl<scalar_t, scalar_t>;
   ICICLE_DISPATCHER_INST(FriDispatcher, fri_factory, FriFactoryScalar);

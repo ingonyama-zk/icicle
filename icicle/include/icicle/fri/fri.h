@@ -100,6 +100,6 @@ namespace icicle {
         fri_config, fri_transcript_config, fri_proof, merkle_tree_leaves_hash, merkle_tree_compress_hash,
         valid /* OUT */);
     }
-  };
+  }; // namespace fri_merkle_tree
 
 } // namespace icicle

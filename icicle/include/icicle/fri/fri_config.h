@@ -19,10 +19,9 @@ namespace icicle {
     size_t stopping_degree = 0;          // The minimal polynomial degree at which folding stops.
     size_t pow_bits = 16;                // Number of leading zeros required for proof-of-work.
     size_t nof_queries = 100;            // Number of queries, computed for each folded layer of FRI.
-    bool are_inputs_on_device =
-      false; // True if inputs reside on the device (e.g., GPU), false if on the host (CPU).
-    bool is_async = false; // True to run operations asynchronously, false to run synchronously.
-    ConfigExtension* ext = nullptr; // Pointer to backend-specific configuration extensions.
+    bool are_inputs_on_device = false;   // True if inputs reside on the device (e.g., GPU), false if on the host (CPU).
+    bool is_async = false;               // True to run operations asynchronously, false to run synchronously.
+    ConfigExtension* ext = nullptr;      // Pointer to backend-specific configuration extensions.
   };
 
   /**
