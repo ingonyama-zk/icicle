@@ -34,8 +34,8 @@ namespace icicle {
    * @return `eIcicleError` indicating success or failure of the proof generation.
    */
 
-  template <typename S, typename F>
-  eIcicleError get_fri_proof_merkle_tree(
+  template <typename F>
+  eIcicleError prove_fri_merkle_tree(
     const FriConfig& fri_config,
     const FriTranscriptConfig<F>& fri_transcript_config,
     const F* input_data,
@@ -61,7 +61,7 @@ namespace icicle {
    * @return `eIcicleError` indicating success or failure of the verification process.
    */
 
-  template <typename S, typename F>
+  template <typename F>
   eIcicleError verify_fri_merkle_tree(
     const FriConfig& fri_config,
     const FriTranscriptConfig<F>& fri_transcript_config,
@@ -71,7 +71,7 @@ namespace icicle {
     bool& valid /* OUT */);
 
   namespace fri_merkle_tree {
-    template <typename S, typename F>
+    template <typename F>
     inline static eIcicleError prove(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>& fri_transcript_config,
@@ -82,12 +82,12 @@ namespace icicle {
       const uint64_t output_store_min_layer,
       FriProof<F>& fri_proof /* OUT */)
     {
-      return get_fri_proof_merkle_tree<S, F>(
+      return prove_fri_merkle_tree<F>(
         fri_config, fri_transcript_config, input_data, input_size, merkle_tree_leaves_hash, merkle_tree_compress_hash,
         output_store_min_layer, fri_proof /* OUT */);
     }
 
-    template <typename S, typename F>
+    template <typename F>
     inline static eIcicleError verify(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>& fri_transcript_config,
@@ -96,7 +96,7 @@ namespace icicle {
       Hash merkle_tree_compress_hash,
       bool& valid /* OUT */)
     {
-      return verify_fri_merkle_tree<S, F>(
+      return verify_fri_merkle_tree<F>(
         fri_config, fri_transcript_config, fri_proof, merkle_tree_leaves_hash, merkle_tree_compress_hash,
         valid /* OUT */);
     }

@@ -670,7 +670,7 @@ TYPED_TEST(FieldTest, Fri)
           oss << dev_type << " FRI proof";
         }
         START_TIMER(FRIPROOF_sync)
-        eIcicleError err = fri_merkle_tree::prove<scalar_t, TypeParam>(
+        eIcicleError err = fri_merkle_tree::prove<TypeParam>(
           fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
         ICICLE_CHECK(err);
         END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
@@ -681,7 +681,7 @@ TYPED_TEST(FieldTest, Fri)
         // ===== Verifier side ======
         bool valid = false;
         err =
-          fri_merkle_tree::verify<scalar_t, TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
+          fri_merkle_tree::verify<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
         ICICLE_CHECK(err);
         ASSERT_EQ(true, valid);
       };
@@ -738,7 +738,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     fri_config.stopping_degree = stopping_degree;
     FriProof<TypeParam> fri_proof;
 
-    eIcicleError error = get_fri_proof_merkle_tree<scalar_t, TypeParam>(
+    eIcicleError error = prove_fri_merkle_tree<TypeParam>(
       fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
 
     // Release domain
@@ -748,7 +748,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
       // ===== Verifier side ======
       bool valid = false;
       error =
-        verify_fri_merkle_tree<scalar_t, TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
+        verify_fri_merkle_tree<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
       ASSERT_EQ(true, valid);
     }
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);

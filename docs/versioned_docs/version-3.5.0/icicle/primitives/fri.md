@@ -138,10 +138,10 @@ class FriProof
 The class has a default constructor `FriProof()` that takes no arguments.
 
 To generate a FRI proof using the Merkle Tree commit scheme, use one of the following functions:
-1. **Directly call `get_fri_proof_merkle_tree`:**
+1. **Directly call `prove_fri_merkle_tree`:**
    ```cpp
-   template <typename S, typename F>
-   eIcicleError get_fri_proof_merkle_tree(
+   template <typename F>
+   eIcicleError prove_fri_merkle_tree(
        const FriConfig& fri_config,
        const FriTranscriptConfig<F>& fri_transcript_config,
        const F* input_data,
@@ -151,11 +151,11 @@ To generate a FRI proof using the Merkle Tree commit scheme, use one of the foll
        const uint64_t output_store_min_layer,
        FriProof<F>& fri_proof /* OUT */);
    ```
-2. **Use the `fri_merkle_tree` namespace, which internally calls `get_fri_proof_merkle_tree`:**
+2. **Use the `fri_merkle_tree` namespace, which internally calls `prove_fri_merkle_tree`:**
    ```cpp
-   fri_merkle_tree::prove<scalar_t, TypeParam>( ... );
+   fri_merkle_tree::prove<TypeParam>( ... );
    ```
-   This approach calls `get_fri_proof_merkle_tree` internally but provides a more structured way to access it.
+   This approach calls `prove_fri_merkle_tree` internally but provides a more structured way to access it.
 
 - **`input_data: const F*`**: Evaluations of The input polynomial.
 - **`fri_proof: FriProof<F>&`**: The output `FriProof` object containing the generated proof.
@@ -206,7 +206,7 @@ fri_config.stopping_degree = 0;
 FriProof<TypeParam> fri_proof;
 
 // get fri proof
-eIcicleError err = fri_merkle_tree::prove<scalar_t, TypeParam>(
+eIcicleError err = fri_merkle_tree::prove<TypeParam>(
   fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
 ICICLE_CHECK(err);
 
@@ -221,7 +221,7 @@ To verify the FRI proof using the Merkle Tree commit scheme, use one of the foll
 1. **Directly call `verify_fri_merkle_tree`**:
 ```cpp
 // icicle/fri/fri.h
-template <typename S, typename F>
+template <typename F>
 eIcicleError verify_fri_merkle_tree(
     const FriConfig& fri_config,
     const FriTranscriptConfig<F>& fri_transcript_config,
@@ -233,7 +233,7 @@ eIcicleError verify_fri_merkle_tree(
 
 2. **Use the `fri_merkle_tree` namespac, which internally calls `verify_fri_merkle_tree`:**
   ```cpp
-  fri_merkle_tree::verify<scalar_t, TypeParam>( ... );
+  fri_merkle_tree::verify<TypeParam>( ... );
   ```
 
 > **_NOTE:_**  `FriConfig` and `FriTranscriptConfig` used for generating the proof must be identical to the one used for verification.
@@ -241,7 +241,7 @@ eIcicleError verify_fri_merkle_tree(
 #### Example: Verifying a Proof
 ```cpp
 bool valid = false;
-eIcicleError err = fri_merkle_tree::verify<scalar_t, TypeParam>(
+eIcicleError err = fri_merkle_tree::verify<TypeParam>(
   fri_config, transcript_config, fri_proof, hash, compress, valid);
 ICICLE_CHECK(err);
 ASSERT_EQ(true, valid); // Ensure proof verification succeeds
