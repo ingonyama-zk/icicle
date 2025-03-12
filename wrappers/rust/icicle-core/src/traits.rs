@@ -1,9 +1,9 @@
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 use icicle_runtime::stream::IcicleStream;
+use std::ffi::c_void;
 use std::fmt::{Debug, Display};
 use std::ops::{Add, Mul, Sub};
-use std::ffi::c_void;
 
 #[doc(hidden)]
 pub trait GenerateRandom<F> {
@@ -11,8 +11,9 @@ pub trait GenerateRandom<F> {
 }
 
 #[doc(hidden)]
-pub trait FieldConfig: Debug + PartialEq + Copy + Clone {}
-
+pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
+    fn from_u32<const NUM_LIMBS: usize>(val: u32) -> [u32; NUM_LIMBS];
+}
 pub trait FieldImpl:
     Display + Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> + Send + Sync
 {

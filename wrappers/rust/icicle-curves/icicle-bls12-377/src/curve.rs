@@ -18,7 +18,7 @@ impl_scalar_field!("bls12_377", bls12_377_sf, SCALAR_LIMBS, ScalarField, ScalarC
 impl_scalar_field!("bw6_761", bw6_761_sf, BASE_LIMBS, BaseField, BaseCfg);
 
 #[cfg(not(feature = "bw6-761"))]
-impl_field!(BASE_LIMBS, BaseField, BaseCfg);
+impl_field!("bls12_377_base_field", BASE_LIMBS, BaseField, BaseCfg);
 
 impl_curve!(
     "bls12_377",
@@ -31,7 +31,7 @@ impl_curve!(
 );
 
 #[cfg(not(feature = "no_g2"))]
-impl_field!(G2_BASE_LIMBS, G2BaseField, G2BaseCfg);
+impl_field!("bls12_377_g2_base_field", G2_BASE_LIMBS, G2BaseField, G2BaseCfg);
 #[cfg(not(feature = "no_g2"))]
 impl_curve!(
     "bls12_377_g2",

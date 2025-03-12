@@ -8,14 +8,6 @@ use icicle_runtime::{
     stream::IcicleStream,
 };
 
-pub fn check_field_equality<F: FieldImpl>() {
-    let left = F::zero();
-    let right = F::one();
-    assert_ne!(left, right);
-    let left = F::from_bytes_le(&[1]);
-    assert_eq!(left, right);
-}
-
 pub fn check_field_arithmetic<F>()
 where
     F: FieldImpl + Arithmetic,
