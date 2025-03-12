@@ -37,12 +37,6 @@ namespace icicle {
      */
     eIcicleError init(const size_t nof_queries, const size_t nof_fri_rounds, const size_t final_poly_size)
     {
-      if (nof_queries <= 0 || nof_fri_rounds <= 0) {
-        ICICLE_LOG_ERROR << "Number of queries and FRI rounds must be > 0. nof_queries = " << nof_queries
-                         << ", nof_fri_rounds = " << nof_fri_rounds;
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-
       // Resize the matrix to hold nof_queries rows and nof_fri_rounds columns
       m_query_proofs.resize(
         2 * nof_queries,

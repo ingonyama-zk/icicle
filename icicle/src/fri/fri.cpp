@@ -99,8 +99,8 @@ namespace icicle {
     const uint64_t output_store_min_layer,
     FriProof<scalar_t>& fri_proof /* OUT */)
   {
-    if (fri_config.nof_queries <= 0) {
-      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+    if (fri_config.nof_queries <= 0 || fri_config.nof_queries > (input_size / fri_config.folding_factor)) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0 and < input_size/fri_config.folding_factor";
       return eIcicleError::INVALID_ARGUMENT;
     }
     if (fri_config.folding_factor != 2) {
@@ -125,8 +125,11 @@ namespace icicle {
     const uint64_t output_store_min_layer,
     bool& valid /* OUT */)
   {
-    if (fri_config.nof_queries <= 0) {
-      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+    const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
+    const size_t final_poly_size = fri_proof.get_final_poly_size();
+    const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
+    if (fri_config.nof_queries <= 0 || fri_config.nof_queries > ((1 << log_input_size) / fri_config.folding_factor)) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0 and < input_size/fri_config.folding_factor";
       return eIcicleError::INVALID_ARGUMENT;
     }
     if (fri_config.folding_factor != 2) {
@@ -134,9 +137,6 @@ namespace icicle {
                                                                              // supporting other folding factors
       return eIcicleError::INVALID_ARGUMENT;
     }
-    const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
-    const size_t final_poly_size = fri_proof.get_final_poly_size();
-    const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
     Fri verifier_fri = create_fri<scalar_t, scalar_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
       merkle_tree_compress_hash, output_store_min_layer);
@@ -155,8 +155,8 @@ namespace icicle {
     const uint64_t output_store_min_layer,
     FriProof<extension_t>& fri_proof /* OUT */)
   {
-    if (fri_config.nof_queries <= 0) {
-      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+    if (fri_config.nof_queries <= 0 || fri_config.nof_queries > (input_size / fri_config.folding_factor)) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0 and < input_size/fri_config.folding_factor";
       return eIcicleError::INVALID_ARGUMENT;
     }
     if (fri_config.folding_factor != 2) {
@@ -181,8 +181,11 @@ namespace icicle {
     const uint64_t output_store_min_layer,
     bool& valid /* OUT */)
   {
-    if (fri_config.nof_queries <= 0) {
-      ICICLE_LOG_ERROR << "Number of queries must be > 0";
+    const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
+    const size_t final_poly_size = fri_proof.get_final_poly_size();
+    const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
+    if (fri_config.nof_queries <= 0 || fri_config.nof_queries > ((1 << log_input_size) / fri_config.folding_factor)) {
+      ICICLE_LOG_ERROR << "Number of queries must be > 0 and < input_size/fri_config.folding_factor";
       return eIcicleError::INVALID_ARGUMENT;
     }
     if (fri_config.folding_factor != 2) {
@@ -190,9 +193,6 @@ namespace icicle {
                                                                              // supporting other folding factors
       return eIcicleError::INVALID_ARGUMENT;
     }
-    const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
-    const size_t final_poly_size = fri_proof.get_final_poly_size();
-    const uint32_t log_input_size = nof_fri_rounds + static_cast<uint32_t>(std::log2(final_poly_size));
     Fri verifier_fri = create_fri_ext<scalar_t, extension_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
       merkle_tree_compress_hash, output_store_min_layer);

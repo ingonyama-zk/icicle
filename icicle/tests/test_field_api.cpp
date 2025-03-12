@@ -687,7 +687,7 @@ TYPED_TEST(FieldTest, Fri)
       };
 
       run(IcicleTestBase::reference_device(), false);
-      // run(IcicleTestBase::main_device(), false);
+      run(IcicleTestBase::main_device(), false);
     }
   }
 }
@@ -766,14 +766,15 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
     log_input_size - 1 /*log_domain_size*/);
 
-  // // Main Device
-  // // Test invalid nof_queries
-  // run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
-  // // Test invalid folding_factor
-  // run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
-  // // Test invalid input size
-  // run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size - 1
-  // /*log_domain_size*/);
+  // Main Device
+  // Test invalid nof_queries
+  run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  // Test invalid folding_factor
+  run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  // Test invalid input size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size - 1
+    /*log_domain_size*/);
 }
 
 #endif // FRI

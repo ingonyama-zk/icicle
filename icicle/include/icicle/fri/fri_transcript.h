@@ -10,6 +10,8 @@
 #include "icicle/hash/hash.h"
 #include "icicle/hash/pow.h"
 
+#define PRE_ALLOCATED_SPACE 1024
+
 namespace icicle {
 
   template <typename F>
@@ -20,7 +22,7 @@ namespace icicle {
         : m_transcript_config(transcript_config), m_prev_alpha(F::zero()), m_pow_nonce(0)
     {
       m_entry_0.clear();
-      m_entry_0.reserve(1024); // pre-allocate some space
+      m_entry_0.reserve(PRE_ALLOCATED_SPACE); // pre-allocate some space
       build_entry_0(log_input_size);
     }
 
@@ -33,7 +35,7 @@ namespace icicle {
     F get_alpha(const std::vector<std::byte>& merkle_commit, bool is_first_round, eIcicleError& err)
     {
       std::vector<std::byte> hash_input;
-      hash_input.reserve(1024); // pre-allocate some space
+      hash_input.reserve(PRE_ALLOCATED_SPACE); // pre-allocate some space
 
       // Build the round's hash input
       if (is_first_round) {
@@ -55,7 +57,7 @@ namespace icicle {
     {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
-      hash_input.reserve(1024); // pre-allocate some space
+      hash_input.reserve(PRE_ALLOCATED_SPACE); // pre-allocate some space
       build_hash_input_pow(hash_input);
       const Hash& hasher = m_transcript_config.get_hasher();
       const PowConfig cfg;
@@ -70,7 +72,7 @@ namespace icicle {
     {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
-      hash_input.reserve(1024); // pre-allocate some space
+      hash_input.reserve(PRE_ALLOCATED_SPACE); // pre-allocate some space
       build_hash_input_pow(hash_input);
       const Hash& hasher = m_transcript_config.get_hasher();
       const PowConfig cfg;
@@ -99,7 +101,7 @@ namespace icicle {
     {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
-      hash_input.reserve(1024); // pre-allocate some space
+      hash_input.reserve(PRE_ALLOCATED_SPACE); // pre-allocate some space
 
       // Build the hash input
       build_hash_input_query_phase(hash_input);
