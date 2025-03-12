@@ -35,7 +35,7 @@ namespace icicle {
    * @param input_size The number of evaluations in the input polynomial.
    * @param merkle_tree_leaves_hash The hash function used for Merkle tree leaves.
    * @param merkle_tree_compress_hash The hash function used for compressing Merkle tree nodes.
-   * @param output_store_min_layer (Optional) The layer at which to store partial results. Default = 0.
+   * @param output_store_min_layer The layer at which to store partial results. Default = 0.
    * @param fri_proof (OUT) The generated FRI proof.
    * @return `eIcicleError` indicating success or failure of the proof generation.
    */
@@ -63,7 +63,6 @@ namespace icicle {
    * @param fri_proof The FRI proof to be verified.
    * @param merkle_tree_leaves_hash The hash function used for Merkle tree leaves.
    * @param merkle_tree_compress_hash The hash function used for compressing Merkle tree nodes.
-   * @param output_store_min_layer The layer at which to store partial results.
    * @param valid (OUT) Boolean flag indicating whether the proof is valid.
    * @return `eIcicleError` indicating success or failure of the verification process.
    */
@@ -75,7 +74,6 @@ namespace icicle {
     const FriProof<F>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer,
     bool& valid /* OUT */);
 
   namespace fri_merkle_tree {
@@ -102,12 +100,11 @@ namespace icicle {
       const FriProof<F>& fri_proof,
       Hash merkle_tree_leaves_hash,
       Hash merkle_tree_compress_hash,
-      const uint64_t output_store_min_layer,
       bool& valid /* OUT */)
     {
       return verify_fri_mt<S, F>(
         fri_config, fri_transcript_config, fri_proof, merkle_tree_leaves_hash, merkle_tree_compress_hash,
-        output_store_min_layer, valid /* OUT */);
+        valid /* OUT */);
     }
   };
 

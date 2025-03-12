@@ -228,7 +228,6 @@ eIcicleError verify_fri_mt(
     FriProof<F>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer,
     bool& valid /* OUT */);
 ```
 
@@ -243,7 +242,7 @@ eIcicleError verify_fri_mt(
 ```cpp
 bool valid = false;
 eIcicleError err = FRI::verify_mt<scalar_t, TypeParam>(
-  fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
+  fri_config, transcript_config, fri_proof, hash, compress, valid);
 ICICLE_CHECK(err);
 ASSERT_EQ(true, valid); // Ensure proof verification succeeds
 ```

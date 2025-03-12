@@ -681,7 +681,7 @@ TYPED_TEST(FieldTest, Fri)
         // ===== Verifier side ======
         bool valid = false;
         err = fri_merkle_tree::verify_mt<scalar_t, TypeParam>(
-          fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
+          fri_config, transcript_config, fri_proof, hash, compress, valid);
         ICICLE_CHECK(err);
         ASSERT_EQ(true, valid);
       };
@@ -748,7 +748,7 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
       // ===== Verifier side ======
       bool valid = false;
       error = verify_fri_mt<scalar_t, TypeParam>(
-        fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
+        fri_config, transcript_config, fri_proof, hash, compress, valid);
       ASSERT_EQ(true, valid);
     }
     ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);

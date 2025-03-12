@@ -144,7 +144,6 @@ namespace icicle {
     const FriProof<scalar_t>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer,
     bool& valid /* OUT */)
   {
     const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
@@ -158,7 +157,7 @@ namespace icicle {
     if (err != eIcicleError::SUCCESS) { return err; }
     Fri verifier_fri = create_fri<scalar_t, scalar_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
-      merkle_tree_compress_hash, output_store_min_layer);
+      merkle_tree_compress_hash, 0);
     return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 
@@ -193,7 +192,6 @@ namespace icicle {
     const FriProof<extension_t>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer,
     bool& valid /* OUT */)
   {
     const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
@@ -207,7 +205,7 @@ namespace icicle {
     if (err != eIcicleError::SUCCESS) { return err; }
     Fri verifier_fri = create_fri_ext<scalar_t, extension_t>(
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
-      merkle_tree_compress_hash, output_store_min_layer);
+      merkle_tree_compress_hash, 0);
     return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 #endif
