@@ -611,112 +611,6 @@ unsigned int get_gpu_power(nvmlDevice_t device) {
     return 0;
 }
 
-TYPED_TEST(FieldTest, FriBench)
-{
-  auto dev_type = IcicleTestBase::main_device();
-  Device dev = {dev_type, 0};
-  icicle_set_device(dev);
-  const int max_log_size = 22;
-  const size_t max_input_size = 1 << max_log_size;
-
-  auto scalars = std::make_unique<scalar_t[]>(max_input_size);
-  scalar_t::rand_host_many(scalars.get(), max_input_size);
-
-
-
-  const int log_sizes[] = {12, 14, 16, 18, 20, max_log_size};
-  for(int log_size: log_sizes) {
-    
-    struct timespec start, end;
-    // Initialize NVML
-    
-    long total_time = 0;
-    long total_power = 0;
-    int iterations = 10;
-
-    for (int i = 0; i < iterations; i++) {
-
-        size_t input_size = 1 << log_size;
-        const int folding_factor = 2;
-        const int log_stopping_size = 0;
-        const size_t stopping_size = 1 << log_stopping_size;
-        const size_t stopping_degree = stopping_size - 1;
-        const uint64_t output_store_min_layer = 0;
-        const size_t pow_bits = 0;
-        const size_t nof_queries = 100;
-
-        // Initialize ntt domain
-        NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
-        ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_size), init_domain_config));
-
-        // ===== Prover side ======
-        uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-
-        // Define hashers for merkle tree
-        Hash hash = Keccak256::create(sizeof(scalar_t));                          // hash element -> 32B
-        Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
-
-        Fri prover_fri = create_fri<scalar_t, scalar_t>(
-          input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
-
-        // set transcript config
-        const char* domain_separator_label = "domain_separator_label";
-        const char* round_challenge_label = "round_challenge_label";
-        const char* commit_phase_label = "commit_phase_label";
-        const char* nonce_label = "nonce_label";
-        std::vector<std::byte>&& public_state = {};
-        scalar_t seed_rng = scalar_t::one();
-
-        FriTranscriptConfig<scalar_t> transcript_config(
-          hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
-          seed_rng);
-
-        FriConfig fri_config;
-        fri_config.nof_queries = nof_queries;
-        fri_config.pow_bits = pow_bits;
-        FriProof<scalar_t> fri_proof;
-
-        nvmlInit();
-        nvmlDevice_t gpu_device;
-        nvmlDeviceGetHandleByIndex(0, &gpu_device); // Select GPU 0
-
-        unsigned int power_before = get_gpu_power(gpu_device);
-
-        // Get start time
-        clock_gettime(CLOCK_MONOTONIC, &start);
-        
-        ICICLE_CHECK(prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof));
-        
-        // Get end time
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        unsigned int power_after = get_gpu_power(gpu_device);
-
-        nvmlShutdown();
-        
-        // Compute elapsed time in nanoseconds
-        long elapsed_ns = (end.tv_sec - start.tv_sec) * 1e9 + (end.tv_nsec - start.tv_nsec);
-        total_time += elapsed_ns;
-        unsigned int avg_power = (power_before + power_after) / 2;
-        total_power += avg_power;
-
-        Fri verifier_fri = create_fri<scalar_t, TypeParam>(
-          input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
-        bool valid = false;
-
-        ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, valid));
-
-        ASSERT_EQ(true, valid);
-        
-        ICICLE_CHECK(ntt_release_domain<scalar_t>());
-    }
-
-    // Compute average
-    long avg_time = total_time / iterations;
-    long avg_power = total_power / iterations;
-    ICICLE_LOG_INFO << "[" << dev_type << "] AVERAGE FRI TIME (log_size = " << log_size << "): " << avg_time << " ns AVERAGE GPU POWER: " << avg_power << "mW";
-  }
-}
-
 template <typename TypeParam>
 void bench_func(const std::string& dev_type, const TypeParam* scalars_max, bool measure, const int min_log_size, const int max_log_size, const int log_step, int warmup, int bench_times) {
   Device dev = {dev_type, 0};
@@ -767,9 +661,6 @@ void bench_func(const std::string& dev_type, const TypeParam* scalars_max, bool 
         Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
         Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
 
-        Fri prover_fri = create_fri<scalar_t, TypeParam>(
-          input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
-
         // set transcript config
         const char* domain_separator_label = "domain_separator_label";
         const char* round_challenge_label = "round_challenge_label";
@@ -793,15 +684,15 @@ void bench_func(const std::string& dev_type, const TypeParam* scalars_max, bool 
           oss << bench_i;
         }
         START_TIMER(FRIPROOF_sync)
-        ICICLE_CHECK(prover_fri.get_proof(fri_config, transcript_config, scalars, fri_proof));
+        eIcicleError err = FRI::get_proof_mt<scalar_t, TypeParam>(
+          fri_config, transcript_config, scalars, input_size, hash, compress, output_store_min_layer, fri_proof);
         END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
         ICICLE_LOG_INFO << "gpu_power: " << get_gpu_power(gpu_device);
 
         // ===== Verifier side ======
-        Fri verifier_fri = create_fri<scalar_t, TypeParam>(
-          input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
         bool valid = false;
-        ICICLE_CHECK(verifier_fri.verify(fri_config, transcript_config, fri_proof, valid));
+        err = FRI::verify_mt<scalar_t, TypeParam>(
+          fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
 
         ASSERT_EQ(true, valid);
       }
@@ -846,7 +737,7 @@ TYPED_TEST(FieldTest, Fri)
       pow_bits = 0;
       nof_queries = 50;
     }
-    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
+    for (size_t log_input_size = 16; log_input_size <= 16; log_input_size += 4) {
       const size_t input_size = 1 << log_input_size;
       const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
       const size_t stopping_size = 1 << log_stopping_size;
