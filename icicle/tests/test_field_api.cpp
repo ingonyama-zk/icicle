@@ -631,7 +631,7 @@ TYPED_TEST(FieldTest, Fri)
       auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries,
                   pow_bits, &scalars](const std::string& dev_type, bool measure) {
         Device dev = {dev_type, 0};
-        icicle_set_device(dev);
+        ICICLE_CHECK(icicle_set_device(dev));
 
         // Initialize ntt domain
         NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
@@ -697,19 +697,19 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
   const int log_input_size = 10;
   const int log_stopping_size = 4;
   const size_t pow_bits = 0;
-  const size_t nof_queries = 4;
-  const size_t input_size = 1 << log_input_size;
   const size_t stopping_size = 1 << log_stopping_size;
   const size_t stopping_degree = stopping_size - 1;
   const uint64_t output_store_min_layer = 0;
 
-  // Generate input polynomial evaluations
-  auto scalars = std::make_unique<TypeParam[]>(input_size);
-  TypeParam::rand_host_many(scalars.get(), input_size);
 
-  auto run = [log_input_size, input_size, stopping_degree, output_store_min_layer, pow_bits, &scalars](
+  auto run = [stopping_degree, output_store_min_layer, pow_bits](
                const std::string& dev_type, const size_t nof_queries, const size_t folding_factor,
-               const size_t log_domain_size) {
+               const size_t log_domain_size, const size_t merkle_tree_arity, const size_t input_size) {
+
+    // Generate input polynomial evaluations
+    auto scalars = std::make_unique<TypeParam[]>(input_size);
+    TypeParam::rand_host_many(scalars.get(), input_size);
+
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
@@ -718,8 +718,6 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_domain_size), init_domain_config));
 
     // ===== Prover side ======
-    uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-
     // Define hashers for merkle tree
     Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
     Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
@@ -759,22 +757,44 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
   };
 
   // Reference Device
-  run(IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
+  // Test invalid nof_queries
+  run(IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(IcicleTestBase::main_device(), (1<<log_input_size)/2 + 1 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
   run(
-    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size
   run(
     IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
-    log_input_size - 1 /*log_domain_size*/);
+    log_input_size - 1 /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid merkle tree arity
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invallid input size
+    run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+
 
   // Main Device
   // Test invalid nof_queries
-  run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/);
-  // Test invalid folding_factor
-  run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/);
-  // Test invalid input size
+  run(IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(IcicleTestBase::main_device(), (1<<log_input_size)/2 + 1 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
+  run(IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size 
   run(
     IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size - 1
-    /*log_domain_size*/);
+    /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid merkle tree arity
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size 
+    /*log_domain_size*/, 4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invallid input size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size 
+    /*log_domain_size*/, 4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
 }
 
 #endif // FRI

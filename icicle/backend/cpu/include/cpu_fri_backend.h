@@ -176,11 +176,11 @@ namespace icicle {
           size_t leaf_idx_sym = (query + (round_size >> 1)) % round_size;
           F* round_evals = m_fri_rounds.get_round_evals(round_idx);
 
-          MerkleProof& proof_ref = fri_proof.get_query_proof(2 * query_idx, round_idx);
+          MerkleProof& proof_ref = fri_proof.get_query_proof_slot(2 * query_idx, round_idx);
           eIcicleError err = m_fri_rounds.get_merkle_tree(round_idx)->get_merkle_proof(
             round_evals, round_size, leaf_idx, false /* is_pruned */, MerkleTreeConfig(), proof_ref);
           if (err != eIcicleError::SUCCESS) return err;
-          MerkleProof& proof_ref_sym = fri_proof.get_query_proof(2 * query_idx + 1, round_idx);
+          MerkleProof& proof_ref_sym = fri_proof.get_query_proof_slot(2 * query_idx + 1, round_idx);
           eIcicleError err_sym = m_fri_rounds.get_merkle_tree(round_idx)->get_merkle_proof(
             round_evals, round_size, leaf_idx_sym, false /* is_pruned */, MerkleTreeConfig(), proof_ref_sym);
           if (err_sym != eIcicleError::SUCCESS) return err_sym;

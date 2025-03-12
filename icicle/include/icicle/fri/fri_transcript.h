@@ -224,9 +224,12 @@ namespace icicle {
     /**
      * @brief Build the hash input for the query phase.
      *
+     * - If PoW is **enabled**: `hash_input = entry_0 || "nonce" || nonce`
+     * - If PoW is **disabled**: `hash_input = entry_0 || alpha_{n-1}`
+     *
      * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
      */
-    void build_hash_input_query_phase(std::vector<std::byte>& hash_input)
+    inline void build_hash_input_query_phase(std::vector<std::byte>& hash_input)
     {
       if (m_pow_nonce == 0) {
         append_data(hash_input, m_entry_0);
@@ -241,9 +244,10 @@ namespace icicle {
     uint64_t bytes_to_uint_64(const std::vector<std::byte>& data)
     {
       uint64_t result = 0;
-      for (size_t i = 0; i < sizeof(uint64_t); i++) {
-        result |= static_cast<uint64_t>(data[i]) << (i * 8);
+      if (data.size() < sizeof(uint64_t)) {
+        ICICLE_LOG_ERROR << "Insufficient data size for conversion to uint64_t";
       }
+      std::memcpy(&result, data.data(), sizeof(uint64_t));
       return result;
     }
   };

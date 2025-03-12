@@ -312,7 +312,7 @@ namespace icicle {
           return false;
         }
       } else {
-        MerkleProof& proof_ref_folded = fri_proof.get_query_proof(2 * query_idx, round_idx + 1);
+        MerkleProof& proof_ref_folded = fri_proof.get_query_proof_slot(2 * query_idx, round_idx + 1);
         const auto [leaf_data_folded, leaf_size_folded, leaf_index_folded] = proof_ref_folded.get_leaf();
         const F& leaf_data_folded_f = *reinterpret_cast<const F*>(leaf_data_folded);
         if (leaf_data_folded_f != folded) {
@@ -386,8 +386,8 @@ namespace icicle {
         size_t query = queries_indicies[query_idx];
         for (size_t round_idx = 0; round_idx < fri_proof.get_nof_fri_rounds(); ++round_idx) {
           MerkleTree current_round_tree = m_backend->m_merkle_trees[round_idx];
-          MerkleProof& proof_ref = fri_proof.get_query_proof(2 * query_idx, round_idx);
-          MerkleProof& proof_ref_sym = fri_proof.get_query_proof(2 * query_idx + 1, round_idx);
+          MerkleProof& proof_ref = fri_proof.get_query_proof_slot(2 * query_idx, round_idx);
+          MerkleProof& proof_ref_sym = fri_proof.get_query_proof_slot(2 * query_idx + 1, round_idx);
           const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf();
           const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
 
