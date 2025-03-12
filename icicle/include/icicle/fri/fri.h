@@ -72,13 +72,13 @@ namespace icicle {
   eIcicleError verify_fri_mt(
     const FriConfig& fri_config,
     const FriTranscriptConfig<F>& fri_transcript_config,
-    FriProof<F>& fri_proof,
+    const FriProof<F>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer,
     bool& valid /* OUT */);
 
-  struct FRI {
+  namespace fri_merkle_tree {
     template <typename S, typename F>
     inline static eIcicleError get_proof_mt(
       const FriConfig& fri_config,
@@ -99,7 +99,7 @@ namespace icicle {
     inline static eIcicleError verify_mt(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>& fri_transcript_config,
-      FriProof<F>& fri_proof,
+      const FriProof<F>& fri_proof,
       Hash merkle_tree_leaves_hash,
       Hash merkle_tree_compress_hash,
       const uint64_t output_store_min_layer,
@@ -156,7 +156,7 @@ namespace icicle {
     eIcicleError verify(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>& fri_transcript_config,
-      FriProof<F>& fri_proof,
+      const FriProof<F>& fri_proof,
       bool& valid /* OUT */) const
     {
       if (__builtin_expect(fri_config.nof_queries <= 0, 0)) { ICICLE_LOG_ERROR << "Number of queries must be > 0"; }
@@ -201,7 +201,7 @@ namespace icicle {
      * @param alpha_values (OUT) Vector to store computed alpha values.
      */
     eIcicleError update_transcript_and_generate_alphas_from_proof(
-      FriProof<F>& fri_proof,
+      const FriProof<F>& fri_proof,
       FriTranscript<F>& transcript,
       const size_t nof_fri_rounds,
       std::vector<F>& alpha_values) const
@@ -228,7 +228,7 @@ namespace icicle {
      * @param pow_valid (OUT) Set to true if PoW verification succeeds.
      */
     void check_pow_nonce_and_set_to_transcript(
-      FriProof<F>& fri_proof, FriTranscript<F>& transcript, const FriConfig& fri_config, bool& pow_valid) const
+      const FriProof<F>& fri_proof, FriTranscript<F>& transcript, const FriConfig& fri_config, bool& pow_valid) const
     {
       uint64_t proof_pow_nonce = fri_proof.get_pow_nonce();
       pow_valid = transcript.verify_pow(proof_pow_nonce, fri_config.pow_bits);
@@ -282,7 +282,7 @@ namespace icicle {
      * @return True if the collinearity check passes, false otherwise.
      */
     bool collinearity_check(
-      FriProof<F>& fri_proof,
+      const FriProof<F>& fri_proof,
       const std::byte* leaf_data,
       const std::byte* leaf_data_sym,
       const size_t query_idx,
@@ -312,7 +312,7 @@ namespace icicle {
           return false;
         }
       } else {
-        MerkleProof& proof_ref_folded = fri_proof.get_query_proof_slot(2 * query_idx, round_idx + 1);
+        const MerkleProof& proof_ref_folded = fri_proof.get_query_proof_slot(2 * query_idx, round_idx + 1);
         const auto [leaf_data_folded, leaf_size_folded, leaf_index_folded] = proof_ref_folded.get_leaf();
         const F& leaf_data_folded_f = *reinterpret_cast<const F*>(leaf_data_folded);
         if (leaf_data_folded_f != folded) {
@@ -333,7 +333,7 @@ namespace icicle {
      * @return True if both proofs are valid, false otherwise.
      */
     bool verify_merkle_proofs_for_query(
-      const MerkleTree& current_round_tree, MerkleProof& proof_ref, MerkleProof& proof_ref_sym) const
+      const MerkleTree& current_round_tree, const MerkleProof& proof_ref, const MerkleProof& proof_ref_sym) const
     {
       bool merkle_proof_valid = false;
       eIcicleError err = current_round_tree.verify(proof_ref, merkle_proof_valid);
@@ -373,7 +373,7 @@ namespace icicle {
      */
 
     eIcicleError verify_queries(
-      FriProof<F>& fri_proof,
+      const FriProof<F>& fri_proof,
       const size_t nof_queries,
       std::vector<size_t>& queries_indicies,
       std::vector<F>& alpha_values,
@@ -386,8 +386,8 @@ namespace icicle {
         size_t query = queries_indicies[query_idx];
         for (size_t round_idx = 0; round_idx < fri_proof.get_nof_fri_rounds(); ++round_idx) {
           MerkleTree current_round_tree = m_backend->m_merkle_trees[round_idx];
-          MerkleProof& proof_ref = fri_proof.get_query_proof_slot(2 * query_idx, round_idx);
-          MerkleProof& proof_ref_sym = fri_proof.get_query_proof_slot(2 * query_idx + 1, round_idx);
+          const MerkleProof& proof_ref = fri_proof.get_query_proof_slot(2 * query_idx, round_idx);
+          const MerkleProof& proof_ref_sym = fri_proof.get_query_proof_slot(2 * query_idx + 1, round_idx);
           const auto [leaf_data, leaf_size, leaf_index] = proof_ref.get_leaf();
           const auto [leaf_data_sym, leaf_size_sym, leaf_index_sym] = proof_ref_sym.get_leaf();
 

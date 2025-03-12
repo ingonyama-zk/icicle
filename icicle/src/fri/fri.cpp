@@ -141,7 +141,7 @@ namespace icicle {
   eIcicleError verify_fri_mt<scalar_t, scalar_t>(
     const FriConfig& fri_config,
     const FriTranscriptConfig<scalar_t>& fri_transcript_config,
-    FriProof<scalar_t>& fri_proof,
+    const FriProof<scalar_t>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer,
@@ -190,7 +190,7 @@ namespace icicle {
   eIcicleError verify_fri_mt<scalar_t, extension_t>(
     const FriConfig& fri_config,
     const FriTranscriptConfig<extension_t>& fri_transcript_config,
-    FriProof<extension_t>& fri_proof,
+    const FriProof<extension_t>& fri_proof,
     Hash merkle_tree_leaves_hash,
     Hash merkle_tree_compress_hash,
     const uint64_t output_store_min_layer,

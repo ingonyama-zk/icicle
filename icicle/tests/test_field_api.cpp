@@ -670,7 +670,7 @@ TYPED_TEST(FieldTest, Fri)
           oss << dev_type << " FRI proof";
         }
         START_TIMER(FRIPROOF_sync)
-        eIcicleError err = FRI::get_proof_mt<scalar_t, TypeParam>(
+        eIcicleError err = fri_merkle_tree::get_proof_mt<scalar_t, TypeParam>(
           fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
         ICICLE_CHECK(err);
         END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
@@ -680,7 +680,7 @@ TYPED_TEST(FieldTest, Fri)
 
         // ===== Verifier side ======
         bool valid = false;
-        err = FRI::verify_mt<scalar_t, TypeParam>(
+        err = fri_merkle_tree::verify_mt<scalar_t, TypeParam>(
           fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
         ICICLE_CHECK(err);
         ASSERT_EQ(true, valid);

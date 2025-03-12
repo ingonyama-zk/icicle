@@ -48,7 +48,7 @@ namespace icicle {
 
     /**
      * @brief Get a reference to a specific Merkle proof for a given query index in a specific FRI round. Each query
-     * includes a proof for two values per round..
+     * includes a proof for two values per round.
      *
      * This function returns a reference to a pre-allocated Merkle proof in the `m_query_proofs` array.
      * The proof is initially empty and will be populated by another function responsible for generating
@@ -58,6 +58,20 @@ namespace icicle {
      * @return Reference to the Merkle proof at the specified position.
      */
     MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx)
+    {
+      if (query_idx < 0 || query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
+      if (round_idx < 0 || round_idx >= m_query_proofs[query_idx].size()) {
+        throw std::out_of_range("Invalid round index");
+      }
+      return m_query_proofs[query_idx][round_idx];
+    }
+
+    /**
+     * @brief Get a const reference to a specific Merkle proof for a given query index in a specific FRI round. Each query
+     * includes a proof for two values per round.
+     */
+
+    const MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx) const
     {
       if (query_idx < 0 || query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
       if (round_idx < 0 || round_idx >= m_query_proofs[query_idx].size()) {
