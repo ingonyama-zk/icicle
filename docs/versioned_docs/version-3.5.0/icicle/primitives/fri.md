@@ -1,4 +1,4 @@
-# Sumcheck API Documentation
+# FRI API Documentation
 
 ## Overview
 The Fast Reed-Solomon Interactive Oracle Proof of Proximity (FRI) protocol is used to efficiently verify that a given polynomial has a bounded degree. 
@@ -41,22 +41,15 @@ The polynomial size must be a power of 2 and is passed to the protocol in evalua
 
 
 ## C++ API
-A Fri object can be created using the following function:
-```cpp
-// icicle/fri/fri.h
-Fri fri_instance = create_fri<scalar_t, TypeParam>(
-          input_size, folding_factor, stopping_degree, merkle_tree_leaves_hash, merkle_tree_compress_hash, output_store_min_layer)
-```
 
-* `merkle_tree_leaves_hash`, `merkle_tree_compress_hash` and `output_store_min_layer` refer to the hashes used in the Merkle Trees built in each round of the folding. For further information about ICICLE's Merkle Trees, see [Merkle-Tree documentation](./merkle.md) and [Hash documentation](./merkle.md).
-* Currently, only a folding factor of 2 is supported.
-* Currently, only arity 2 is supported for `merkle_tree_compress_hash`.
-
+### Configuration structs
 There are two key configuration structs related to the Fri protocol.
 
-### FriConfig
+#### FriConfig
 The `FriConfig` struct is used to specify parameters for the FRI protocol. It contains the following fields:
 - **`stream: icicleStreamHandle`**: The CUDA stream for asynchronous execution. If `nullptr`, the default stream is used.
+- **`folding_factor: size_t`**: The factor by which the codeword is folded in each round.
+- **`stopping_degree: size_t`**: The minimal polynomial degree at which folding stops.
 - **`pow_bits: size_t`**: Number of leading zeros required for proof-of-work. If set, the optional proof-of-work phase is executed.
 - **`nof_queries: size_t`**: Number of queries computed for each folded layer of FRI.
 - **`are_inputs_on_device: bool`**: If true, the input polynomials are stored on the device (e.g., GPU); otherwise, they remain on the host (e.g., CPU).
@@ -68,15 +61,18 @@ The default values are:
 // icicle/fri/fri_config.h
 struct FriConfig {
   icicleStreamHandle stream = nullptr;
-  size_t pow_bits = 0;
-  size_t nof_queries = 1;
-  bool are_inputs_on_device =false;
+  size_t folding_factor = 2;
+  size_t stopping_degree = 0;
+  size_t pow_bits = 16;
+  size_t nof_queries = 100;
+  bool are_inputs_on_device = false;
   bool is_async = false;
   ConfigExtension* ext = nullptr;
 };
 ```
+> **_NOTE:_** Currently, only a folding factor of 2 is supported.
 
-### FriTranscriptConfig
+#### FriTranscriptConfig
 The `FriTranscriptConfig<TypeParam>` class is used to specify parameters for the Fiat-Shamir scheme used by the FRI protocol. It contains the following fields:
 - **`hasher: Hash`**: The hash function used to generate randomness for Fiat-Shamir.
 - **`domain_separator_label: std::vector<std::byte>`**
@@ -86,7 +82,7 @@ The `FriTranscriptConfig<TypeParam>` class is used to specify parameters for the
 - **`public_state: std::vector<std::byte>`**
 - **`seed_rng: TypeParam`**: The seed for initializing the RNG.
 
-Note that the encoding is little endian.
+> **_NOTE:_** the encoding is little endian.
 
 There are three constructors for `FriTranscriptConfig<TypeParam>`:
 
@@ -141,25 +137,40 @@ class FriProof
 
 The class has a default constructor `FriProof()` that takes no arguments.
 
-The proof can be generated using the get_proof method from the `Fri<scalar_t, TypeParam>` object:
-```cpp
-// icicle/fri/fri.h
-eIcicleError get_proof(
-  const FriConfig& fri_config,
-  const FriTranscriptConfig<F>& fri_transcript_config,
-  const F* input_data,
-  FriProof<F>& fri_proof /* OUT */) const
-```
+To generate a FRI proof using the Merkle Tree commit scheme, use one of the following functions:
+1. **Directly call `get_fri_proof_mt`:**
+   ```cpp
+   template <typename S, typename F>
+   eIcicleError get_fri_proof_mt(
+       const FriConfig& fri_config,
+       const FriTranscriptConfig<F>& fri_transcript_config,
+       const F* input_data,
+       const size_t input_size,
+       Hash merkle_tree_leaves_hash,
+       Hash merkle_tree_compress_hash,
+       const uint64_t output_store_min_layer,
+       FriProof<F>& fri_proof /* OUT */);
+   ```
+2. **Use the `FRI` wrapper, which internally calls `get_fri_proof_mt`:**
+   ```cpp
+   FRI::get_proof_mt<scalar_t, TypeParam>( ... );
+   ```
+   This approach calls `get_fri_proof_mt` internally but provides a more structured way to access it.
 
 - **`input_data: const F*`**: Evaluations of The input polynomial.
 - **`fri_proof: FriProof<F>&`**: The output `FriProof` object containing the generated proof.
+* `merkle_tree_leaves_hash`, `merkle_tree_compress_hash` and `output_store_min_layer` refer to the hashes used in the Merkle Trees built in each round of the folding. For further information about ICICLE's Merkle Trees, see [Merkle-Tree documentation](./merkle.md) and [Hash documentation](./merkle.md).
 
-Note: An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](./ntt.md).
+> **_NOTE:_** `folding_factor` must be divisible by `merkle_tree_compress_hash`.
+
+
+> **_NOTE:_** An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](./ntt.md).
 
 ```cpp
 NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
 ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config)
 ```
+:::
 
 #### Example: Generating a Proof
 
@@ -172,9 +183,6 @@ ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config);
 uint64_t merkle_tree_arity = 2;
 Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
 Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
-
-// Create fri
-Fri prover_fri = create_fri<scalar_t, TypeParam>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 
 // set transcript config
 const char* domain_separator_label = "domain_separator_label";
@@ -192,11 +200,15 @@ FriTranscriptConfig<TypeParam> transcript_config(
 FriConfig fri_config;
 fri_config.nof_queries = 100;
 fri_config.pow_bits = 16;
+fri_config.folding_factor = 2;
+fri_config.stopping_degree = 0;
 
 FriProof<TypeParam> fri_proof;
 
 // get fri proof
-prover_fri.get_proof(fri_config, transcript_config, scalars.get(), fri_proof);
+eIcicleError err = FRI::get_proof_mt<scalar_t, TypeParam>(
+  fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+ICICLE_CHECK(err);
 
 // Release ntt domain
 ntt_release_domain<scalar_t>();
@@ -204,26 +216,36 @@ ntt_release_domain<scalar_t>();
 
 ### Verifying Fri Proofs
 
-To verify the proof, the verifier should use the verify method of the `Fri<scalar_t, TypeParam>` object:
+To verify the FRI proof using the Merkle Tree commit scheme, use one of the following functions:
 
+1. **Directly call `verify_fri_mt`**:
 ```cpp
 // icicle/fri/fri.h
-eIcicleError verify(
-  const FriConfig& fri_config,
-  const FriTranscriptConfig<F>& fri_transcript_config,
-  FriProof<F>& fri_proof,
-  bool& valid /* OUT */) const
+template <typename S, typename F>
+eIcicleError verify_fri_mt(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<F>& fri_transcript_config,
+    FriProof<F>& fri_proof,
+    Hash merkle_tree_leaves_hash,
+    Hash merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer,
+    bool& valid /* OUT */);
 ```
+
+2. **Use the `FRI` wrapper, which internally calls `verify_fri_mt`:**
+  ```cpp
+  FRI::verify_mt<scalar_t, TypeParam>( ... );
+  ```
 
 > **_NOTE:_**  `FriConfig` and `FriTranscriptConfig` used for generating the proof must be identical to the one used for verification.
 
 #### Example: Verifying a Proof
 ```cpp
-Fri verifier_fri = create_fri<scalar_t, TypeParam>(input_size, folding_factor, stopping_degree, hash, compress, output_store_min_layer);
 bool valid = false;
-verifier_fri.verify(fri_config, transcript_config, fri_proof, valid);
-
+eIcicleError err = FRI::verify_mt<scalar_t, TypeParam>(
+  fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
+ICICLE_CHECK(err);
 ASSERT_EQ(true, valid); // Ensure proof verification succeeds
 ```
 
-After calling `verifier_fri.verify`, the variable `valid` will be set to `true` if the proof is valid, and `false` otherwise.
+After calling `FRI::verify_mt`, the variable `valid` will be set to `true` if the proof is valid, and `false` otherwise.
