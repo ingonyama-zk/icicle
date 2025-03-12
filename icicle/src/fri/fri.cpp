@@ -437,6 +437,30 @@ namespace icicle {
     return prover_fri.get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
   }
 
+  extern "C" {
+    eIcicleError CONCAT_EXPAND(FIELD, get_fri_proof_mt)(
+      const FriConfig& fri_config,
+      const FriTranscriptConfig<scalar_t>& fri_transcript_config,
+      const scalar_t* input_data,
+      const size_t input_size,
+      Hash& merkle_tree_leaves_hash,
+      Hash& merkle_tree_compress_hash,
+      const uint64_t output_store_min_layer,
+      FriProof<scalar_t>& fri_proof /* OUT */)
+    {
+      return get_fri_proof_mt<scalar_t, scalar_t>(
+        fri_config,
+        fri_transcript_config,
+        input_data,
+        input_size,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
+        output_store_min_layer,
+        fri_proof
+      );
+    }
+  }
+
   template <>
   eIcicleError verify_fri_merkle_tree<scalar_t>(
     const FriConfig& fri_config,

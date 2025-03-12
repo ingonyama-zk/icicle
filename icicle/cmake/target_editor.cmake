@@ -9,6 +9,7 @@ function(handle_field TARGET)
       src/matrix_ops.cpp
       src/program/program_c_api.cpp
       src/symbol/symbol_api.cpp
+      src/fri/fri_c_api.cpp
   )
 endfunction()
 
