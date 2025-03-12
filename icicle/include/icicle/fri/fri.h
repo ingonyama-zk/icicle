@@ -17,12 +17,6 @@
 namespace icicle {
 
   /**
-   * @brief Forward declaration for the FRI class template.
-   */
-  template <typename S, typename F>
-  class Fri;
-
-  /**
    * @brief Generates a FRI proof using a binary Merkle tree structure.
    *
    * This function constructs a FRI proof by applying the Fast Reed-Solomon
@@ -41,7 +35,7 @@ namespace icicle {
    */
 
   template <typename S, typename F>
-  eIcicleError get_fri_proof_mt(
+  eIcicleError get_fri_proof_merkle_tree(
     const FriConfig& fri_config,
     const FriTranscriptConfig<F>& fri_transcript_config,
     const F* input_data,
@@ -68,7 +62,7 @@ namespace icicle {
    */
 
   template <typename S, typename F>
-  eIcicleError verify_fri_mt(
+  eIcicleError verify_fri_merkle_tree(
     const FriConfig& fri_config,
     const FriTranscriptConfig<F>& fri_transcript_config,
     const FriProof<F>& fri_proof,
@@ -78,7 +72,7 @@ namespace icicle {
 
   namespace fri_merkle_tree {
     template <typename S, typename F>
-    inline static eIcicleError get_proof_mt(
+    inline static eIcicleError prove(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>& fri_transcript_config,
       const F* input_data,
@@ -88,13 +82,13 @@ namespace icicle {
       const uint64_t output_store_min_layer,
       FriProof<F>& fri_proof /* OUT */)
     {
-      return get_fri_proof_mt<S, F>(
+      return get_fri_proof_merkle_tree<S, F>(
         fri_config, fri_transcript_config, input_data, input_size, merkle_tree_leaves_hash, merkle_tree_compress_hash,
         output_store_min_layer, fri_proof /* OUT */);
     }
 
     template <typename S, typename F>
-    inline static eIcicleError verify_mt(
+    inline static eIcicleError verify(
       const FriConfig& fri_config,
       const FriTranscriptConfig<F>& fri_transcript_config,
       const FriProof<F>& fri_proof,
@@ -102,7 +96,7 @@ namespace icicle {
       Hash merkle_tree_compress_hash,
       bool& valid /* OUT */)
     {
-      return verify_fri_mt<S, F>(
+      return verify_fri_merkle_tree<S, F>(
         fri_config, fri_transcript_config, fri_proof, merkle_tree_leaves_hash, merkle_tree_compress_hash,
         valid /* OUT */);
     }

@@ -116,7 +116,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError get_fri_proof_mt<scalar_t, scalar_t>(
+  eIcicleError get_fri_proof_merkle_tree<scalar_t, scalar_t>(
     const FriConfig& fri_config,
     const FriTranscriptConfig<scalar_t>& fri_transcript_config,
     const scalar_t* input_data,
@@ -138,7 +138,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError verify_fri_mt<scalar_t, scalar_t>(
+  eIcicleError verify_fri_merkle_tree<scalar_t, scalar_t>(
     const FriConfig& fri_config,
     const FriTranscriptConfig<scalar_t>& fri_transcript_config,
     const FriProof<scalar_t>& fri_proof,
@@ -163,7 +163,7 @@ namespace icicle {
 
 #ifdef EXT_FIELD
   template <>
-  eIcicleError get_fri_proof_mt<scalar_t, extension_t>(
+  eIcicleError get_fri_proof_merkle_tree<scalar_t, extension_t>(
     const FriConfig& fri_config,
     const FriTranscriptConfig<extension_t>& fri_transcript_config,
     const extension_t* input_data,
@@ -186,7 +186,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError verify_fri_mt<scalar_t, extension_t>(
+  eIcicleError verify_fri_merkle_tree<scalar_t, extension_t>(
     const FriConfig& fri_config,
     const FriTranscriptConfig<extension_t>& fri_transcript_config,
     const FriProof<extension_t>& fri_proof,
