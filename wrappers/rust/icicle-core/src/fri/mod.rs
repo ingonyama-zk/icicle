@@ -6,6 +6,18 @@ use fri_proof::FriProofTrait;
 use fri_transcript_config::FriTranscriptConfigTrait;
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
+// pub fn fri<F: FieldImpl>(
+//     config: &FriConfig,
+//     fri_transcript_config: &F::<Config as FriImpl<F>>::FriTranscriptConfig,
+//     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
+//     merkle_tree_leaves_hash: &Hasher,
+//     merkle_tree_compress_hash: &Hasher,
+//     output_store_min_layer: u64,
+//     fri_proof: &mut FriProof,
+// ) {
+
+// }
+
 #[repr(C)]
 #[derive(Clone)]
 pub struct FriConfig {
@@ -35,8 +47,8 @@ impl Default for FriConfig {
     }
 }
 
-pub trait FriImpl<F: FieldImpl> {
-    type FriTranscriptConfig: FriTranscriptConfigTrait<F>;
+pub trait FriImpl<'a, F: FieldImpl + 'a> {
+    type FriTranscriptConfig: FriTranscriptConfigTrait<'a, F>;
     type FriProof: FriProofTrait<F>;
     fn get_fri_proof_mt(
         config: &FriConfig,
@@ -102,12 +114,12 @@ macro_rules! impl_fri {
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl FriImpl<$field> for $field_config {
-                type FriTranscriptConfig = FriTranscriptConfig;
+            impl<'a> FriImpl<'a, $field> for $field_config {
+                type FriTranscriptConfig = FriTranscriptConfigFFI;
                 type FriProof = FriProof;
                 fn get_fri_proof_mt(
                     config: &FriConfig,
-                    fri_transcript_config: &FriTranscriptConfig,
+                    fri_transcript_config: &FriTranscriptConfigFFI,
                     input_data: &(impl HostOrDeviceSlice<$field> + ?Sized),
                     merkle_tree_leaves_hash: &Hasher,
                     merkle_tree_compress_hash: &Hasher,
@@ -130,7 +142,7 @@ macro_rules! impl_fri {
                 }
                 fn verify_fri_mt(
                     config: &FriConfig,
-                    fri_transcript_config: &FriTranscriptConfig,
+                    fri_transcript_config: &FriTranscriptConfigFFI,
                     fri_proof: &FriProof,
                     merkle_tree_leaves_hash: &Hasher,
                     merkle_tree_compress_hash: &Hasher,

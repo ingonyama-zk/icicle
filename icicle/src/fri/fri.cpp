@@ -485,6 +485,28 @@ namespace icicle {
     return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
   }
 
+  extern "C" {
+    eIcicleError CONCAT_EXPAND(FIELD, verify_fri_mt)(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<scalar_t>& fri_transcript_config,
+    FriProof<scalar_t>& fri_proof,
+    Hash& merkle_tree_leaves_hash,
+    Hash& merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer,
+    bool& valid /* OUT */)
+    {
+      return verify_fri_mt<scalar_t, scalar_t>(
+        fri_config,
+        fri_transcript_config,
+        fri_proof,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
+        output_store_min_layer,
+        valid
+      );
+    }
+  }
+
 #ifdef EXT_FIELD
   template <>
   eIcicleError prove_fri_merkle_tree<extension_t>(
