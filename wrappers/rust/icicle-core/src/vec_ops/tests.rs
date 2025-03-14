@@ -1,18 +1,17 @@
 #![allow(unused_imports)]
-use crate::traits::GenerateRandom;
 use crate::field::FieldArithmetic;
-use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, mixed_mul_scalars, mul_scalars,
-    product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars, transpose_matrix, 
-    execute_program,
-    FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
-};
-use crate::program::{Instruction, Program, ReturningValueProgram, PreDefinedProgram};
+use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
 use crate::symbol::Symbol;
+use crate::traits::GenerateRandom;
+use crate::vec_ops::{
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, mixed_mul_scalars,
+    mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars,
+    transpose_matrix, FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
+};
 use icicle_runtime::device::Device;
-use icicle_runtime::memory::{DeviceVec, HostSlice, HostOrDeviceSlice};
+use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
 use icicle_runtime::{runtime, stream::IcicleStream, test_utilities};
-use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 #[test]
 fn test_vec_ops_config() {
@@ -29,7 +28,7 @@ fn test_vec_ops_config() {
     );
 
     // just to test the stream can be set and used correctly
-    let mut stream = IcicleStream::create().unwrap();
+    let stream = IcicleStream::create().unwrap();
     vec_ops_config.stream_handle = *stream;
 
     stream
@@ -473,7 +472,7 @@ where
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
-    
+
         vars[4] = d * (a * b - c) + F::from_u32(9);
         vars[5] = a * b - c.inverse();
         vars[6] += a * b - c.inverse();
@@ -498,7 +497,7 @@ where
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice, var5_slice, var6_slice];
 
     let program = Prog::new(example_lambda, 7).unwrap();
-    
+
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
 
@@ -511,16 +510,33 @@ where
         let var4 = parameters[4][i];
         let var5 = parameters[5][i];
         let var6 = parameters[6][i];
-        assert_eq!(var3, <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(F::from_u32(2),
-                            <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(a, b)));
-        assert_eq!(var4, <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(F::from_u32(9),
-                            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(eq,
-                                <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
-                                    c))));
-        assert_eq!(var5, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
-                            <<F as FieldImpl>::Config as FieldArithmetic<F>>::inv(c)));
+        assert_eq!(
+            var3,
+            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+                F::from_u32(2),
+                <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(a, b)
+            )
+        );
+        assert_eq!(
+            var4,
+            <<F as FieldImpl>::Config as FieldArithmetic<F>>::add(
+                F::from_u32(9),
+                <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+                    eq,
+                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
+                        <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                        c
+                    )
+                )
+            )
+        );
+        assert_eq!(
+            var5,
+            <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
+                <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                <<F as FieldImpl>::Config as FieldArithmetic<F>>::inv(c)
+            )
+        );
         assert_eq!(var6, var5);
     }
 }
@@ -545,7 +561,7 @@ where
     let mut parameters = vec![a_slice, b_slice, c_slice, eq_slice, var4_slice];
 
     let program = Prog::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
-    
+
     let cfg = VecOpsConfig::default();
     execute_program(&mut parameters, &program, &cfg).expect("Program Failed");
 
@@ -555,10 +571,16 @@ where
         let c = parameters[2][i];
         let eq = parameters[3][i];
         let var4 = parameters[4][i];
-        assert_eq!(var4, <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
-                            eq, <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
-                                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
-                                    c)));
+        assert_eq!(
+            var4,
+            <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(
+                eq,
+                <<F as FieldImpl>::Config as FieldArithmetic<F>>::sub(
+                    <<F as FieldImpl>::Config as FieldArithmetic<F>>::mul(a, b),
+                    c
+                )
+            )
+        );
     }
 }
 

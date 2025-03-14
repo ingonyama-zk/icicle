@@ -1,5 +1,5 @@
-use crate::traits::FieldImpl;
 use crate::program::Program;
+use crate::traits::FieldImpl;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -135,7 +135,7 @@ pub trait VecOps<F> {
     fn execute_program<Prog, Data>(
         data: &mut Vec<&Data>,
         program: &Prog,
-        cfg: &VecOpsConfig
+        cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>
     where
         F: FieldImpl,
@@ -263,10 +263,7 @@ fn check_vec_ops_args_slice<F>(
     setup_config(input, input, output, cfg, batch_size)
 }
 
-fn check_execute_program<F, Data>(
-    data: &Vec<&Data>,
-    cfg: &VecOpsConfig
-) -> VecOpsConfig
+fn check_execute_program<F, Data>(data: &Vec<&Data>, cfg: &VecOpsConfig) -> VecOpsConfig
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
@@ -278,11 +275,19 @@ where
 
     for i in 1..data.len() {
         if data[i].len() != nof_iterations {
-            panic!("First parameter length ({}) and parameter[{}] length do not match", nof_iterations, data[i].len());
+            panic!(
+                "First parameter length ({}) and parameter[{}] length do not match",
+                nof_iterations,
+                data[i].len()
+            );
         }
         if data[i].is_on_device() != is_on_device {
-            panic!("First parameter length ({}) and parameter[{}] length ({}) do not match",
-                nof_iterations, i, data[i].len());
+            panic!(
+                "First parameter length ({}) and parameter[{}] length ({}) do not match",
+                nof_iterations,
+                i,
+                data[i].len()
+            );
         }
     }
     setup_config(data[0], data[0], data[0], cfg, 1)
@@ -526,7 +531,7 @@ where
 pub fn execute_program<F, Prog, Data>(
     data: &mut Vec<&Data>,
     program: &Prog,
-    cfg: &VecOpsConfig
+    cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
@@ -547,9 +552,9 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         mod $field_prefix_ident {
+            use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::program::{Program, ProgramHandle};
             use icicle_core::symbol::Symbol;
-            use crate::vec_ops::{$field, HostOrDeviceSlice};
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 
@@ -675,7 +680,7 @@ macro_rules! impl_vec_ops_field {
                     nof_params: u64,
                     program: ProgramHandle,
                     nof_iterations: u64,
-                    cfg: *const VecOpsConfig
+                    cfg: *const VecOpsConfig,
                 ) -> eIcicleError;
             }
         }
@@ -931,7 +936,7 @@ macro_rules! impl_vec_ops_field {
             fn execute_program<Prog, Data>(
                 data: &mut Vec<&Data>,
                 program: &Prog,
-                cfg: &VecOpsConfig
+                cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError>
             where
                 <$field as FieldImpl>::Config: VecOps<$field>,
@@ -939,13 +944,16 @@ macro_rules! impl_vec_ops_field {
                 Prog: Program<$field>,
             {
                 unsafe {
-                    let data_vec: Vec<*const $field> = data.iter().map(|s| s.as_ptr()).collect();
+                    let data_vec: Vec<*const $field> = data
+                        .iter()
+                        .map(|s| s.as_ptr())
+                        .collect();
                     $field_prefix_ident::execute_program_ffi(
                         data_vec.as_ptr(),
                         data.len() as u64,
                         program.handle(),
                         data[0].len() as u64,
-                        cfg as *const VecOpsConfig
+                        cfg as *const VecOpsConfig,
                     )
                     .wrap()
                 }
@@ -1011,10 +1019,10 @@ macro_rules! impl_vec_ops_tests {
     ) => {
         pub(crate) mod test_vecops {
             use super::*;
+            use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
-            use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
 
             fn initialize() {
                 test_utilities::test_load_and_init_devices();

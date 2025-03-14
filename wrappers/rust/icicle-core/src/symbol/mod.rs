@@ -1,27 +1,39 @@
-use icicle_runtime::errors::eIcicleError;
-use std::marker::Copy;
-use std::ops::{Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 use crate::traits::{FieldImpl, Handle};
+use icicle_runtime::errors::eIcicleError;
 use std::ffi::c_void;
+use std::marker::Copy;
+use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 pub type SymbolHandle = *const c_void;
 #[doc(hidden)]
 pub trait Symbol<F: FieldImpl>:
-  Add<Output = Self> + Sub<Output = Self> + Mul<Output = Self> +
-  Add<F, Output = Self> + Sub<F, Output = Self> + Mul<F, Output = Self> +
-  AddAssign + SubAssign + MulAssign + AddAssign<F> + SubAssign<F> + MulAssign<F> +
-  for<'a> Add<&'a Self, Output = Self> +
-  for<'a> Sub<&'a Self, Output = Self> +
-  for<'a> Mul<&'a Self, Output = Self> +
-  for<'a> AddAssign<&'a Self> +
-  for<'a> SubAssign<&'a Self> +
-  for<'a> MulAssign<&'a Self> +
-  Clone + Copy + Sized + Handle
+    Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Add<F, Output = Self>
+    + Sub<F, Output = Self>
+    + Mul<F, Output = Self>
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + AddAssign<F>
+    + SubAssign<F>
+    + MulAssign<F>
+    + for<'a> Add<&'a Self, Output = Self>
+    + for<'a> Sub<&'a Self, Output = Self>
+    + for<'a> Mul<&'a Self, Output = Self>
+    + for<'a> AddAssign<&'a Self>
+    + for<'a> SubAssign<&'a Self>
+    + for<'a> MulAssign<&'a Self>
+    + Clone
+    + Copy
+    + Sized
+    + Handle
 {
-  fn new_input(in_idx: u32) -> Result<Self, eIcicleError>;      // New input symbol for the execution function
-  fn from_constant(constant: F) -> Result<Self, eIcicleError>;  // New symbol from a field element
+    fn new_input(in_idx: u32) -> Result<Self, eIcicleError>; // New input symbol for the execution function
+    fn from_constant(constant: F) -> Result<Self, eIcicleError>; // New symbol from a field element
 
-  fn inverse(&self) -> Self; // Field inverse of the symbol
+    fn inverse(&self) -> Self; // Field inverse of the symbol
 }
 
 #[macro_export]
@@ -184,31 +196,31 @@ macro_rules! impl_symbol_field {
           impl $op<FieldSymbol> for FieldSymbol
           {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: FieldSymbol) -> FieldSymbol {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               FieldSymbol { m_handle: res_handle }
             }
           }
-      
+
           // Owned op &Reference
           impl $op<&FieldSymbol> for FieldSymbol
           {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: &FieldSymbol) -> FieldSymbol {
               let res_handle = Self::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               FieldSymbol { m_handle: res_handle }
             }
           }
-      
+
           // &Reference op &Reference
           impl $op<&FieldSymbol> for &FieldSymbol
           {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: &FieldSymbol) -> FieldSymbol {
               let res_handle = FieldSymbol::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
@@ -220,18 +232,18 @@ macro_rules! impl_symbol_field {
           impl $op<FieldSymbol> for &FieldSymbol
           {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: FieldSymbol) -> FieldSymbol {
               let res_handle = FieldSymbol::$handles_method(self.m_handle, other.m_handle)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
               FieldSymbol { m_handle: res_handle }
             }
           }
-      
+
           // Owned op Field
           impl $op<$field> for FieldSymbol {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: $field) -> Self {
               let other_symbol = FieldSymbol::from_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
@@ -240,11 +252,11 @@ macro_rules! impl_symbol_field {
               FieldSymbol { m_handle: res_handle }
             }
           }
-      
+
           // &Reference op Field
           impl $op<$field> for &FieldSymbol {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: $field) -> FieldSymbol {
               let other_symbol = FieldSymbol::from_constant(other)
                 .expect(concat!("Allocation failed during ", stringify!($op), " operation"));
@@ -257,7 +269,7 @@ macro_rules! impl_symbol_field {
           // Field op Owned
           impl $op<FieldSymbol> for $field {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: FieldSymbol) -> FieldSymbol {
               other $op_token self
             }
@@ -266,12 +278,12 @@ macro_rules! impl_symbol_field {
           // Field op &Reference
           impl $op<&FieldSymbol> for $field {
             type Output = FieldSymbol;
-      
+
             fn $method(self, other: &FieldSymbol) -> FieldSymbol {
               other $op_token self
             }
           }
-      
+
           // Owned opAssign Owned
           impl $assign_op<FieldSymbol> for FieldSymbol
           {
@@ -281,7 +293,7 @@ macro_rules! impl_symbol_field {
               self.m_handle = res_handle;
             }
           }
-      
+
           // Owned opAssign &Reference
           impl $assign_op<&FieldSymbol> for FieldSymbol
           {
@@ -291,7 +303,7 @@ macro_rules! impl_symbol_field {
               self.m_handle = res_handle;
             }
           }
-      
+
           // Owned opAssign Field
           impl $assign_op<$field> for FieldSymbol
           {
@@ -305,7 +317,7 @@ macro_rules! impl_symbol_field {
           }
         };
       }
-      
+
       impl_op!(+, Add, AddAssign, add, add_assign, add_handles);
       impl_op!(-, Sub, SubAssign, sub, sub_assign, sub_handles);
       impl_op!(*, Mul, MulAssign, mul, mul_assign, mul_handles);
