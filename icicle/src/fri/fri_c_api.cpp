@@ -8,7 +8,6 @@ using namespace field_config;
 using namespace icicle;
 
 extern "C" {
-  typedef Fri<scalar_t, scalar_t>* FriHandle;
   typedef Hash* HasherHandle;
 
   // FriProof API
@@ -33,21 +32,45 @@ extern "C" {
     return new FriTranscriptConfig<scalar_t>();
   }
 
+  // struct TranscriptConfigFFI {
+  //   HasherHandle merkle_tree_leaves_hash;
+  //   std::byte* domain_separator_label;
+  //   size_t domain_separator_label_len;
+  //   std::byte* round_challenge_label;
+  //   size_t round_challenge_label_len;
+  //   std::byte* commit_phase_label;
+  //   size_t commit_phase_label_len;
+  //   std::byte* public_state;
+  //   size_t public_state_len;
+  //   const scalar_t* seed_rng;
+  // };
+
   FriTranscriptConfigHandle CONCAT_EXPAND(FIELD, create_fri_transcript_config)(
-    HasherHandle merkle_tree_leaves_hash, scalar_t& seed_rng
+    HasherHandle merkle_tree_leaves_hash,
+    std::byte* domain_separator_label,
+    size_t domain_separator_label_len,
+    std::byte* round_challenge_label,
+    size_t round_challenge_label_len,
+    std::byte* commit_phase_label,
+    size_t commit_phase_label_len,
+    std::byte* nonce_label,
+    size_t nonce_label_label,
+    std::byte* public_state,
+    size_t public_state_len,
+    scalar_t& seed_rng
   ) {
-    const char* domain_separator_label = "domain_separator_label";
-    const char* round_challenge_label = "round_challenge_label";
-    const char* commit_phase_label = "commit_phase_label";
-    const char* nonce_label = "nonce_label";
-    std::vector<std::byte>&& public_state = {};
+    std::vector<std::byte> domain_separator_label_vector(domain_separator_label, domain_separator_label + domain_separator_label_len);
+    std::vector<std::byte> round_challenge_label_vector(round_challenge_label, round_challenge_label + round_challenge_label_len);
+    std::vector<std::byte> commit_phase_label_vector(commit_phase_label, commit_phase_label + commit_phase_label_len);
+    std::vector<std::byte> nonce_label_vector(nonce_label, nonce_label + nonce_label_label);
+    std::vector<std::byte> public_state_vector(public_state, public_state + public_state_len);
     return new icicle::FriTranscriptConfig<scalar_t>(
       *merkle_tree_leaves_hash, 
-      domain_separator_label, 
-      round_challenge_label, 
-      commit_phase_label, 
-      nonce_label,
-      std::move(public_state),
+      std::move(domain_separator_label_vector), 
+      std::move(round_challenge_label_vector), 
+      std::move(commit_phase_label_vector), 
+      std::move(nonce_label_vector),
+      std::move(public_state_vector),
       seed_rng
     );
   }
@@ -58,6 +81,49 @@ extern "C" {
     delete config_ptr;
     return eIcicleError::SUCCESS;
   }
+
+#ifdef EXT_FIELD
+
+  typedef FriTranscriptConfig<extension_t>* FriTranscriptConfigExtensionHandle;
+  typedef FriProof<extension_t>* FriProofExtensionHandle;
+
+  FriProofExtensionHandle CONCAT_EXPAND(FIELD, extension_icicle_initialize_fri_proof)() {
+    return new FriProof<extension_t>();
+  }
+
+  FriTranscriptConfigExtensionHandle CONCAT_EXPAND(FIELD, extension_create_default_fri_transcript_config)() {
+    return new FriTranscriptConfig<extension_t>();
+  }
+  FriTranscriptConfigExtensionHandle CONCAT_EXPAND(FIELD, extension_create_fri_transcript_config)(
+    HasherHandle merkle_tree_leaves_hash,
+    std::byte* domain_separator_label,
+    size_t domain_separator_label_len,
+    std::byte* round_challenge_label,
+    size_t round_challenge_label_len,
+    std::byte* commit_phase_label,
+    size_t commit_phase_label_len,
+    std::byte* nonce_label,
+    size_t nonce_label_label,
+    std::byte* public_state,
+    size_t public_state_len,
+    extension_t& seed_rng
+  ) {
+    std::vector<std::byte> domain_separator_label_vector(domain_separator_label, domain_separator_label + domain_separator_label_len);
+    std::vector<std::byte> round_challenge_label_vector(round_challenge_label, round_challenge_label + round_challenge_label_len);
+    std::vector<std::byte> commit_phase_label_vector(commit_phase_label, commit_phase_label + commit_phase_label_len);
+    std::vector<std::byte> nonce_label_vector(nonce_label, nonce_label + nonce_label_label);
+    std::vector<std::byte> public_state_vector(public_state, public_state + public_state_len);
+    return new icicle::FriTranscriptConfig<extension_t>(
+      *merkle_tree_leaves_hash, 
+      std::move(domain_separator_label_vector), 
+      std::move(round_challenge_label_vector), 
+      std::move(commit_phase_label_vector), 
+      std::move(nonce_label_vector),
+      std::move(public_state_vector),
+      seed_rng
+    );
+  }
+#endif
 
   // FRI
 

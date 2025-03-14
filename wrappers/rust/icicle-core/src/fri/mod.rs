@@ -1,22 +1,64 @@
 pub mod fri_proof;
 pub mod fri_transcript_config;
-
+pub mod tests;
 use crate::{hash::Hasher, traits::FieldImpl};
 use fri_proof::FriProofTrait;
-use fri_transcript_config::FriTranscriptConfigTrait;
+use fri_transcript_config::{FriTranscriptConfig, FriTranscriptConfigTrait};
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
-// pub fn fri<F: FieldImpl>(
-//     config: &FriConfig,
-//     fri_transcript_config: &F::<Config as FriImpl<F>>::FriTranscriptConfig,
-//     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
-//     merkle_tree_leaves_hash: &Hasher,
-//     merkle_tree_compress_hash: &Hasher,
-//     output_store_min_layer: u64,
-//     fri_proof: &mut FriProof,
-// ) {
+pub type FriProof<'a, F> = <<F as FieldImpl>::Config as FriImpl<'a, F>>::FriProof;
 
-// }
+type FriTryFromError<'a, F> = <<<F as FieldImpl>::Config as FriImpl<'a, F>>::FriTranscriptConfigFFI as TryFrom<
+    &'a FriTranscriptConfig<'a, F>,
+>>::Error;
+
+pub fn fri<'a, F: FieldImpl + 'a>(
+    config: &FriConfig,
+    fri_transcript_config: &'a FriTranscriptConfig<F>,
+    input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
+    merkle_tree_leaves_hash: &Hasher,
+    merkle_tree_compress_hash: &Hasher,
+    output_store_min_layer: u64,
+    fri_proof: &mut FriProof<'a, F>,
+) -> Result<(), eIcicleError>
+where
+    <F as FieldImpl>::Config: FriImpl<'a, F>,
+    eIcicleError: From<FriTryFromError<'a, F>>,
+{
+    let ffi_transcript_config = <F::Config as FriImpl<'a, F>>::FriTranscriptConfigFFI::try_from(fri_transcript_config)?;
+    <F::Config as FriImpl<F>>::get_fri_proof_mt(
+        config,
+        &ffi_transcript_config,
+        input_data,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
+        output_store_min_layer,
+        fri_proof,
+    )
+}
+
+pub fn verify_fri<'a, F: FieldImpl + 'a>(
+    config: &FriConfig,
+    fri_transcript_config: &'a FriTranscriptConfig<F>,
+    fri_proof: &FriProof<'a, F>,
+    merkle_tree_leaves_hash: &Hasher,
+    merkle_tree_compress_hash: &Hasher,
+    output_store_min_layer: u64,
+) -> Result<bool, eIcicleError>
+where
+    <F as FieldImpl>::Config: FriImpl<'a, F>,
+    eIcicleError: From<FriTryFromError<'a, F>>,
+{
+    let ffi_transcript_config = <F::Config as FriImpl<'a, F>>::FriTranscriptConfigFFI::try_from(fri_transcript_config)?;
+    <F::Config as FriImpl<F>>::verify_fri_mt(
+        config,
+        &ffi_transcript_config,
+        fri_proof,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
+        output_store_min_layer,
+    )
+}
 
 #[repr(C)]
 #[derive(Clone)]
@@ -48,11 +90,11 @@ impl Default for FriConfig {
 }
 
 pub trait FriImpl<'a, F: FieldImpl + 'a> {
-    type FriTranscriptConfig: FriTranscriptConfigTrait<'a, F>;
+    type FriTranscriptConfigFFI: FriTranscriptConfigTrait<'a, F>;
     type FriProof: FriProofTrait<F>;
     fn get_fri_proof_mt(
         config: &FriConfig,
-        fri_transcript_config: &Self::FriTranscriptConfig,
+        fri_transcript_config: &Self::FriTranscriptConfigFFI,
         input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
@@ -62,7 +104,7 @@ pub trait FriImpl<'a, F: FieldImpl + 'a> {
 
     fn verify_fri_mt(
         config: &FriConfig,
-        fri_transcript_config: &Self::FriTranscriptConfig,
+        fri_transcript_config: &Self::FriTranscriptConfigFFI,
         fri_proof: &Self::FriProof,
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
@@ -110,12 +152,11 @@ macro_rules! impl_fri {
                     fri_proof: FriProofHandle,
                     merkle_tree_leaves_hash: HasherHandle,
                     merkle_tree_compress_hash: HasherHandle,
-                    output_store_min_layer: u64,
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl<'a> FriImpl<'a, $field> for $field_config {
-                type FriTranscriptConfig = FriTranscriptConfigFFI;
+            impl FriImpl<'_, $field> for $field_config {
+                type FriTranscriptConfigFFI = FriTranscriptConfigFFI;
                 type FriProof = FriProof;
                 fn get_fri_proof_mt(
                     config: &FriConfig,
@@ -156,12 +197,66 @@ macro_rules! impl_fri {
                             fri_proof.handle,
                             merkle_tree_leaves_hash.handle,
                             merkle_tree_compress_hash.handle,
-                            output_store_min_layer,
                             &mut valid as *mut bool,
                         );
                         err.wrap_value(valid)
                     }
                 }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_fri_tests {
+    (
+      $field_prefix_ident:ident,
+      $ntt_field:ident,
+      $field:ident,
+      $hasher_new:expr
+    ) => {
+        mod $field_prefix_ident {
+            use super::*;
+            use icicle_core::fri::tests::check_fri;
+            use icicle_runtime::test_utilities;
+            use icicle_runtime::{device::Device, runtime};
+            use icicle_core::ntt::tests::init_domain;
+            use serial_test::parallel;
+            use std::sync::Once;
+            use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
+            use icicle_core::hash::Hasher;
+            
+
+            const MAX_SIZE: u64 = 1 << 10;
+            static INIT: Once = Once::new();
+            const FAST_TWIDDLES_MODE: bool = false;
+
+            pub fn initialize() {
+                INIT.call_once(move || {
+                    // test_utilities::test_load_and_init_devices();
+                    // init domain for both devices
+                    // test_utilities::test_set_ref_device();
+                    init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+
+                    // test_utilities::test_set_main_device();
+                    // init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+                });
+                // test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            pub fn test_fri() {
+                initialize();
+                let merkle_tree_leaves_hash = $hasher_new(std::mem::size_of::<$field>() as u64).unwrap();
+                let merkle_tree_compress_hash = $hasher_new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+                let transcript_hash = $hasher_new(0).unwrap();
+                let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, $field::one());
+
+                check_fri::<$field>(
+                    &merkle_tree_leaves_hash,
+                    &merkle_tree_compress_hash,
+                    &transcript_config,
+                );
             }
         }
     };

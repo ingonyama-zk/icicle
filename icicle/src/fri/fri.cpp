@@ -438,7 +438,7 @@ namespace icicle {
   }
 
   extern "C" {
-    eIcicleError CONCAT_EXPAND(FIELD, get_fri_proof_mt)(
+    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, get_fri_proof_mt)(
       const FriConfig& fri_config,
       const FriTranscriptConfig<scalar_t>& fri_transcript_config,
       const scalar_t* input_data,
@@ -448,7 +448,7 @@ namespace icicle {
       const uint64_t output_store_min_layer,
       FriProof<scalar_t>& fri_proof /* OUT */)
     {
-      return get_fri_proof_mt<scalar_t, scalar_t>(
+      return prove_fri_merkle_tree<scalar_t>(
         fri_config,
         fri_transcript_config,
         input_data,
@@ -486,22 +486,20 @@ namespace icicle {
   }
 
   extern "C" {
-    eIcicleError CONCAT_EXPAND(FIELD, verify_fri_mt)(
+    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, verify_fri_mt)(
     const FriConfig& fri_config,
     const FriTranscriptConfig<scalar_t>& fri_transcript_config,
     FriProof<scalar_t>& fri_proof,
     Hash& merkle_tree_leaves_hash,
     Hash& merkle_tree_compress_hash,
-    const uint64_t output_store_min_layer,
     bool& valid /* OUT */)
     {
-      return verify_fri_mt<scalar_t, scalar_t>(
+      return verify_fri_merkle_tree<scalar_t>(
         fri_config,
         fri_transcript_config,
         fri_proof,
         merkle_tree_leaves_hash,
         merkle_tree_compress_hash,
-        output_store_min_layer,
         valid
       );
     }
@@ -531,6 +529,30 @@ namespace icicle {
     return prover_fri.get_proof(fri_config, fri_transcript_config, input_data, fri_proof);
   }
 
+  extern "C" {
+    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_get_fri_proof_mt)(
+      const FriConfig& fri_config,
+      const FriTranscriptConfig<extension_t>& fri_transcript_config,
+      const extension_t* input_data,
+      const size_t input_size,
+      Hash& merkle_tree_leaves_hash,
+      Hash& merkle_tree_compress_hash,
+      const uint64_t output_store_min_layer,
+      FriProof<extension_t>& fri_proof /* OUT */)
+    {
+      return prove_fri_merkle_tree<extension_t>(
+        fri_config,
+        fri_transcript_config,
+        input_data,
+        input_size,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
+        output_store_min_layer,
+        fri_proof
+      );
+    }
+  }
+
   template <>
   eIcicleError verify_fri_merkle_tree<extension_t>(
     const FriConfig& fri_config,
@@ -553,6 +575,26 @@ namespace icicle {
       log_input_size, fri_config.folding_factor, fri_config.stopping_degree, merkle_tree_leaves_hash,
       merkle_tree_compress_hash, 0);
     return verifier_fri.verify(fri_config, fri_transcript_config, fri_proof, valid);
+  }
+
+  extern "C" {
+    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_verify_fri_mt)(
+    const FriConfig& fri_config,
+    const FriTranscriptConfig<extension_t>& fri_transcript_config,
+    FriProof<extension_t>& fri_proof,
+    Hash& merkle_tree_leaves_hash,
+    Hash& merkle_tree_compress_hash,
+    bool& valid /* OUT */)
+    {
+      return verify_fri_merkle_tree<extension_t>(
+        fri_config,
+        fri_transcript_config,
+        fri_proof,
+        merkle_tree_leaves_hash,
+        merkle_tree_compress_hash,
+        valid
+      );
+    }
   }
 #endif
 
