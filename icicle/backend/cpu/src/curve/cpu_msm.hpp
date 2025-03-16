@@ -42,7 +42,7 @@ public:
   }
 
   // run MSM based on pippenger algorithm
-  void run_msm(const scalar_t* scalars, const A* bases, P* results, bool last_task_on_batch)
+  void run_msm(const scalar_t* scalars, const A* bases, P* results, bool last_task_in_batch)
   {
     phase1_populate_buckets(scalars, bases);
 
@@ -50,11 +50,11 @@ public:
 
     phase2_collapse_segments();
 
-    if (last_task_on_batch) {
+    if (last_task_in_batch) {
       phase3_final_accumulator(results);
       m_phase3_thread = nullptr;
     } else {
-      m_phase3_thread = new std::thread(&Msm::phase3_final_accumulator, this, results);
+      m_phase3_thread = std::make_unique<std::thread>(std::thread(&Msm::phase3_final_accumulator, this, results));
     }
   }
 
@@ -93,7 +93,7 @@ private:
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
   uint32_t m_segment_size;       // segments size for phase 2.
   uint32_t m_nof_workers;        // number of threads in current machine
-  std::thread* m_phase3_thread = nullptr;
+  std::unique_ptr<std::thread> m_phase3_thread = nullptr;
 
   // per worker:
   std::vector<std::vector<Bucket>> m_workers_buckets;    // all buckets used by the worker
