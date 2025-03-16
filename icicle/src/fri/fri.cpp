@@ -73,8 +73,8 @@ namespace icicle {
 
       // verify queries
       bool queries_valid = false;
-      std::vector<size_t> queries_indicies =
-        transcript.rand_queries_indicies(fri_config.nof_queries, final_poly_size, 1 << log_input_size, fri_config.pow_bits != 0, err);
+      std::vector<size_t> queries_indicies = transcript.rand_queries_indicies(
+        fri_config.nof_queries, final_poly_size, 1 << log_input_size, fri_config.pow_bits != 0, err);
       if (err != eIcicleError::SUCCESS) { return err; }
       err = verify_queries(fri_proof, fri_config.nof_queries, queries_indicies, alpha_values, queries_valid);
       if (!queries_valid) return eIcicleError::SUCCESS; // return with valid = false

@@ -97,7 +97,8 @@ namespace icicle {
      * @param max Upper limit.
      * @return Random (uniform distribution) unsigned integer s.t. min <= integer <= max.
      */
-    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min, size_t max, bool use_pow_nonce, eIcicleError& err)
+    std::vector<size_t>
+    rand_queries_indicies(size_t nof_queries, size_t min, size_t max, bool use_pow_nonce, eIcicleError& err)
     {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;

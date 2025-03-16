@@ -165,8 +165,8 @@ namespace icicle {
     eIcicleError query_phase(FriTranscript<F>& transcript, const FriConfig& fri_config, FriProof<F>& fri_proof)
     {
       eIcicleError err;
-      std::vector<size_t> queries_indicies =
-        transcript.rand_queries_indicies(fri_config.nof_queries, (this->m_stopping_degree + 1), m_input_size, fri_config.pow_bits != 0, err);
+      std::vector<size_t> queries_indicies = transcript.rand_queries_indicies(
+        fri_config.nof_queries, (this->m_stopping_degree + 1), m_input_size, fri_config.pow_bits != 0, err);
       if (err != eIcicleError::SUCCESS) { return err; }
       for (size_t query_idx = 0; query_idx < fri_config.nof_queries; query_idx++) {
         size_t query = queries_indicies[query_idx];
