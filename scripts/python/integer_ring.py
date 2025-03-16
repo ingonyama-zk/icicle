@@ -4,8 +4,6 @@ import math
 
 # Prime fields - find generator
 
-from sympy import factorint
-
 def is_primitive_root(g, q, phi, factors):
     """Checks if g is a primitive root mod q by verifying its order."""
     for p in factors:
