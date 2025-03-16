@@ -97,14 +97,14 @@ namespace icicle {
      * @param max Upper limit.
      * @return Random (uniform distribution) unsigned integer s.t. min <= integer <= max.
      */
-    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min, size_t max, eIcicleError& err)
+    std::vector<size_t> rand_queries_indicies(size_t nof_queries, size_t min, size_t max, bool use_pow_nonce, eIcicleError& err)
     {
       // Prepare a buffer for hashing
       std::vector<std::byte> hash_input;
       hash_input.reserve(PRE_ALLOCATED_SPACE); // pre-allocate some space
 
       // Build the hash input
-      build_hash_input_query_phase(hash_input);
+      build_hash_input_query_phase(hash_input, use_pow_nonce);
 
       const Hash& hasher = m_transcript_config.get_hasher();
       std::vector<std::byte> hash_result(hasher.output_size());
@@ -229,9 +229,9 @@ namespace icicle {
      *
      * @param hash_input (OUT) The byte vector that accumulates data to be hashed.
      */
-    inline void build_hash_input_query_phase(std::vector<std::byte>& hash_input)
+    inline void build_hash_input_query_phase(std::vector<std::byte>& hash_input, bool use_pow_nonce)
     {
-      if (m_pow_nonce == 0) {
+      if (!use_pow_nonce) {
         append_data(hash_input, m_entry_0);
         append_field(hash_input, m_prev_alpha);
       } else {
