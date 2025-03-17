@@ -415,7 +415,7 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 
-  template<typename T>
+  template <typename T>
   struct FFIFriTranscriptConfig {
     Hash* hasher_handle;
     uint8_t* domain_separator_label;
@@ -436,44 +436,43 @@ namespace icicle {
     const T* seed_rng;
   };
 
-  template<typename T>
-  FriTranscriptConfig<T> convert_ffi_transcript_config(const FFIFriTranscriptConfig<T>* ffi_transcript_config) {
+  template <typename T>
+  FriTranscriptConfig<T> convert_ffi_transcript_config(const FFIFriTranscriptConfig<T>* ffi_transcript_config)
+  {
     // Convert byte arrays to vectors
     std::vector<std::byte> domain_separator_label(
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->domain_separator_label),
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->domain_separator_label) +
-            ffi_transcript_config->domain_separator_label_len);
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->domain_separator_label),
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->domain_separator_label) +
+        ffi_transcript_config->domain_separator_label_len);
 
     std::vector<std::byte> round_challenge_label(
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->round_challenge_label),
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->round_challenge_label) +
-            ffi_transcript_config->round_challenge_label_len);
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->round_challenge_label),
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->round_challenge_label) +
+        ffi_transcript_config->round_challenge_label_len);
 
     std::vector<std::byte> commit_phase_label(
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->commit_phase_label),
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->commit_phase_label) +
-            ffi_transcript_config->commit_phase_label_len);
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->commit_phase_label),
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->commit_phase_label) +
+        ffi_transcript_config->commit_phase_label_len);
 
     std::vector<std::byte> nonce_label(
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->nonce_label),
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->nonce_label) +
-            ffi_transcript_config->nonce_label_len);
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->nonce_label),
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->nonce_label) + ffi_transcript_config->nonce_label_len);
 
     std::vector<std::byte> public_state(
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->public_state),
-        reinterpret_cast<const std::byte*>(ffi_transcript_config->public_state) +
-            ffi_transcript_config->public_state_len);
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->public_state),
+      reinterpret_cast<const std::byte*>(ffi_transcript_config->public_state) +
+        ffi_transcript_config->public_state_len);
 
     // Construct and return internal config
     FriTranscriptConfig transcript_config{
-        *ffi_transcript_config->hasher_handle,
-        std::move(domain_separator_label),
-        std::move(round_challenge_label),
-        std::move(commit_phase_label),
-        std::move(nonce_label),
-        std::move(public_state),
-        *ffi_transcript_config->seed_rng
-    };
+      *ffi_transcript_config->hasher_handle,
+      std::move(domain_separator_label),
+      std::move(round_challenge_label),
+      std::move(commit_phase_label),
+      std::move(nonce_label),
+      std::move(public_state),
+      *ffi_transcript_config->seed_rng};
 
     return transcript_config;
   }
@@ -501,32 +500,25 @@ namespace icicle {
   }
 
   extern "C" {
-    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, get_fri_proof_mt)(
-      const FriConfig& fri_config,
-      const FFIFriTranscriptConfig<scalar_t>* ffi_transcript_config,
-      const scalar_t* input_data,
-      const size_t input_size,
-      Hash& merkle_tree_leaves_hash,
-      Hash& merkle_tree_compress_hash,
-      const uint64_t output_store_min_layer,
-      FriProof<scalar_t>& fri_proof /* OUT */)
-    {
-      if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
-        ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
-        return eIcicleError::INVALID_POINTER;
-      }
-      auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
-      return prove_fri_merkle_tree<scalar_t>(
-        fri_config,
-        fri_transcript_config,
-        input_data,
-        input_size,
-        merkle_tree_leaves_hash,
-        merkle_tree_compress_hash,
-        output_store_min_layer,
-        fri_proof
-      );
+  eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, get_fri_proof_mt)(
+    const FriConfig& fri_config,
+    const FFIFriTranscriptConfig<scalar_t>* ffi_transcript_config,
+    const scalar_t* input_data,
+    const size_t input_size,
+    Hash& merkle_tree_leaves_hash,
+    Hash& merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer,
+    FriProof<scalar_t>& fri_proof /* OUT */)
+  {
+    if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
+      ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
+      return eIcicleError::INVALID_POINTER;
     }
+    auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
+    return prove_fri_merkle_tree<scalar_t>(
+      fri_config, fri_transcript_config, input_data, input_size, merkle_tree_leaves_hash, merkle_tree_compress_hash,
+      output_store_min_layer, fri_proof);
+  }
   }
 
   template <>
@@ -554,28 +546,22 @@ namespace icicle {
   }
 
   extern "C" {
-    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, verify_fri_mt)(
+  eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, verify_fri_mt)(
     const FriConfig& fri_config,
     const FFIFriTranscriptConfig<scalar_t>* ffi_transcript_config,
     FriProof<scalar_t>& fri_proof,
     Hash& merkle_tree_leaves_hash,
     Hash& merkle_tree_compress_hash,
     bool& valid /* OUT */)
-    {
-      if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
-        ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
-        return eIcicleError::INVALID_POINTER;
-      }
-      auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
-      return verify_fri_merkle_tree<scalar_t>(
-        fri_config,
-        fri_transcript_config,
-        fri_proof,
-        merkle_tree_leaves_hash,
-        merkle_tree_compress_hash,
-        valid
-      );
+  {
+    if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
+      ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
+      return eIcicleError::INVALID_POINTER;
     }
+    auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
+    return verify_fri_merkle_tree<scalar_t>(
+      fri_config, fri_transcript_config, fri_proof, merkle_tree_leaves_hash, merkle_tree_compress_hash, valid);
+  }
   }
 
 #ifdef EXT_FIELD
@@ -603,32 +589,25 @@ namespace icicle {
   }
 
   extern "C" {
-    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_get_fri_proof_mt)(
-      const FriConfig& fri_config,
-      const FFIFriTranscriptConfig<extension_t>* ffi_transcript_config,
-      const extension_t* input_data,
-      const size_t input_size,
-      Hash& merkle_tree_leaves_hash,
-      Hash& merkle_tree_compress_hash,
-      const uint64_t output_store_min_layer,
-      FriProof<extension_t>& fri_proof /* OUT */)
-    {
-      if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
-        ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
-        return eIcicleError::INVALID_POINTER;
-      }
-      auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
-      return prove_fri_merkle_tree<extension_t>(
-        fri_config,
-        fri_transcript_config,
-        input_data,
-        input_size,
-        merkle_tree_leaves_hash,
-        merkle_tree_compress_hash,
-        output_store_min_layer,
-        fri_proof
-      );
+  eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_get_fri_proof_mt)(
+    const FriConfig& fri_config,
+    const FFIFriTranscriptConfig<extension_t>* ffi_transcript_config,
+    const extension_t* input_data,
+    const size_t input_size,
+    Hash& merkle_tree_leaves_hash,
+    Hash& merkle_tree_compress_hash,
+    const uint64_t output_store_min_layer,
+    FriProof<extension_t>& fri_proof /* OUT */)
+  {
+    if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
+      ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
+      return eIcicleError::INVALID_POINTER;
     }
+    auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
+    return prove_fri_merkle_tree<extension_t>(
+      fri_config, fri_transcript_config, input_data, input_size, merkle_tree_leaves_hash, merkle_tree_compress_hash,
+      output_store_min_layer, fri_proof);
+  }
   }
 
   template <>
@@ -656,28 +635,22 @@ namespace icicle {
   }
 
   extern "C" {
-    eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_verify_fri_mt)(
+  eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_verify_fri_mt)(
     const FriConfig& fri_config,
     const FFIFriTranscriptConfig<extension_t>* ffi_transcript_config,
     FriProof<extension_t>& fri_proof,
     Hash& merkle_tree_leaves_hash,
     Hash& merkle_tree_compress_hash,
     bool& valid /* OUT */)
-    {
-      if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
-        ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
-        return eIcicleError::INVALID_POINTER;
-      }
-      auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
-      return verify_fri_merkle_tree<extension_t>(
-        fri_config,
-        fri_transcript_config,
-        fri_proof,
-        merkle_tree_leaves_hash,
-        merkle_tree_compress_hash,
-        valid
-      );
+  {
+    if (!ffi_transcript_config || !ffi_transcript_config->hasher_handle || !ffi_transcript_config->seed_rng) {
+      ICICLE_LOG_ERROR << "Invalid FFI Fri transcript configuration.";
+      return eIcicleError::INVALID_POINTER;
     }
+    auto fri_transcript_config = convert_ffi_transcript_config(ffi_transcript_config);
+    return verify_fri_merkle_tree<extension_t>(
+      fri_config, fri_transcript_config, fri_proof, merkle_tree_leaves_hash, merkle_tree_compress_hash, valid);
+  }
   }
 #endif
 

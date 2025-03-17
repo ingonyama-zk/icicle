@@ -851,24 +851,34 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 
 #ifdef FRI
 
-unsigned int get_gpu_power(nvmlDevice_t device) {
-    unsigned int power;
-    if (nvmlDeviceGetPowerUsage(device, &power) == NVML_SUCCESS) {
-        return power; // Power in milliwatts
-    }
-    return 0;
+unsigned int get_gpu_power(nvmlDevice_t device)
+{
+  unsigned int power;
+  if (nvmlDeviceGetPowerUsage(device, &power) == NVML_SUCCESS) {
+    return power; // Power in milliwatts
+  }
+  return 0;
 }
 
 template <typename TypeParam>
-void bench_func(const std::string& dev_type, const TypeParam* scalars_max, bool measure, const int min_log_size, const int max_log_size, const int log_step, int warmup, int bench_times) {
+void bench_func(
+  const std::string& dev_type,
+  const TypeParam* scalars_max,
+  bool measure,
+  const int min_log_size,
+  const int max_log_size,
+  const int log_step,
+  int warmup,
+  int bench_times)
+{
   Device dev = {dev_type, 0};
   icicle_set_device(dev);
   size_t log_stopping_size;
   size_t pow_bits;
   size_t nof_queries;
-  TypeParam* scalars; 
+  TypeParam* scalars;
   ICICLE_CHECK(icicle_malloc((void**)&scalars, (1 << max_log_size) * sizeof(TypeParam)));
-  ICICLE_CHECK(icicle_copy(scalars, scalars_max,(1 << max_log_size) * sizeof(TypeParam)));
+  ICICLE_CHECK(icicle_copy(scalars, scalars_max, (1 << max_log_size) * sizeof(TypeParam)));
   nvmlInit();
   nvmlDevice_t gpu_device;
   nvmlDeviceGetHandleByIndex(0, &gpu_device); // Select GPU 0
@@ -899,7 +909,8 @@ void bench_func(const std::string& dev_type, const TypeParam* scalars_max, bool 
 
       if (measure) {
         ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree
-                        << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries << ". device_type: " << dev_type;
+                        << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries
+                        << ". device_type: " << dev_type;
       }
       for (int bench_i = measure ? 0 : bench_times - 1; bench_i < bench_times; ++bench_i) {
         // ===== Prover side ======
@@ -928,9 +939,7 @@ void bench_func(const std::string& dev_type, const TypeParam* scalars_max, bool 
         FriProof<TypeParam> fri_proof;
 
         std::ostringstream oss;
-        if (measure) {
-          oss << bench_i;
-        }
+        if (measure) { oss << bench_i; }
         START_TIMER(FRIPROOF_sync)
         eIcicleError err = FRI::get_proof_mt<scalar_t, TypeParam>(
           fri_config, transcript_config, scalars, input_size, hash, compress, output_store_min_layer, fri_proof);
@@ -966,8 +975,8 @@ TYPED_TEST(FieldTest, FriBench2)
   const int log_step = 2;
   auto scalars = std::make_unique<TypeParam[]>(1 << max_log_size);
   TypeParam::rand_host_many(scalars.get(), 1 << max_log_size);
-  bench_func<TypeParam>(IcicleTestBase::main_device(), scalars.get(), true, min_log_size, max_log_size, log_step, 1, 10);
-
+  bench_func<TypeParam>(
+    IcicleTestBase::main_device(), scalars.get(), true, min_log_size, max_log_size, log_step, 1, 10);
 }
 
 TYPED_TEST(FieldTest, Fri)

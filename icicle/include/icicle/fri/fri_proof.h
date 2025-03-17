@@ -91,9 +91,7 @@ namespace icicle {
                      // 0 of the current round
     }
 
-    MerkleProof* get_proofs_at_query(const size_t query_idx) {
-      return m_query_proofs[query_idx].data();
-    }
+    MerkleProof* get_proofs_at_query(const size_t query_idx) { return m_query_proofs[query_idx].data(); }
     /**
      * @brief Get the number of FRI queries in the proof.
      *
