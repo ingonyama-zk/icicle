@@ -48,8 +48,9 @@ impl MerkleTreeConfig {
     }
 }
 
-type MerkleProofHandle = *const c_void;
+pub type MerkleProofHandle = *const c_void;
 
+#[derive(Debug)]
 pub struct MerkleProof {
     handle: MerkleProofHandle,
 }
@@ -130,6 +131,10 @@ impl MerkleProof {
                 slice::from_raw_parts(ptr as *const T, element_count)
             }
         }
+    }
+
+    pub fn from_handle(handle: MerkleProofHandle) -> Self {
+        Self { handle }
     }
 }
 

@@ -1,4 +1,5 @@
 pub mod curve;
+pub mod fri;
 pub mod msm;
 pub mod ntt;
 pub mod polynomials;
@@ -8,7 +9,6 @@ pub mod program;
 pub mod sumcheck;
 pub mod symbol;
 pub mod vec_ops;
-pub mod fri;
 
 #[cfg(not(feature = "no_ecntt"))]
 pub mod ecntt;
