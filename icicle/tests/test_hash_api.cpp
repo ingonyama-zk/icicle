@@ -1238,7 +1238,8 @@ TEST_F(HashApiTest, poseidon2_non_sponge_all_included_test)
           icicle_set_device(device);
           auto out = std::make_unique<scalar_t[]>(config.batch);
           std::ostringstream oss;
-          oss << std::string(device) << " " << "poseidon2";
+          oss << std::string(device) << " "
+              << "poseidon2";
           if (use_domain_tag) {
             auto poseidon2 = Poseidon2::create<scalar_t>(t, &domain_tag);
             START_TIMER(POSEIDON2_sync)
@@ -1298,7 +1299,8 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
               icicle_set_device(device);
               auto out = std::make_unique<scalar_t[]>(config.batch);
               std::ostringstream oss;
-              oss << std::string(device) << " " << "poseidon2";
+              oss << std::string(device) << " "
+                  << "poseidon2";
               if (use_domain_tag) {
                 auto poseidon2 = Poseidon2::create<scalar_t>(t, &domain_tag);
                 START_TIMER(POSEIDON2_sync)

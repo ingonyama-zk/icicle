@@ -8,13 +8,22 @@ use crate::{
 };
 
 pub trait FriProofTrait<F: FieldImpl>: Sized + Handle
-// TODO TIMUR: MerkleProof deref
 where
     F: FieldImpl,
 {
+    /// Constructs a new instance of the FRI proof.
     fn new() -> Self;
+
+    /// Returns the query proofs.
+    ///
+    /// Note: `ManuallyDrop` is used because the values are borrowed from the `FriProof`
+    /// and will be dropped along with it.
     fn get_query_proofs(&self) -> Result<Vec<Vec<ManuallyDrop<MerkleProof>>>, eIcicleError>;
+
+    /// Returns the final polynomial values.
     fn get_final_poly(&self) -> Result<Vec<F>, eIcicleError>;
+
+    /// Returns the proof-of-work nonce.
     fn get_pow_nonce(&self) -> Result<u64, eIcicleError>;
 }
 

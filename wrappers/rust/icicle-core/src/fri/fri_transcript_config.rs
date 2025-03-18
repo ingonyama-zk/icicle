@@ -8,6 +8,7 @@ const DEFAULT_COMMIT_PHASE_LABEL: &str = "commit_phase_label";
 const DEFAULT_NONCE_LABEL: &str = "nonce_label";
 const DEFAULT_PUBLIC_STATE: &[u8] = b"";
 
+/// Configuration for encoding and hashing messages in the FRI protocol.
 pub struct FriTranscriptConfig<'a, F: FieldImpl + 'a> {
     pub hash: &'a Hasher,
     pub domain_separator_label: String,
@@ -19,6 +20,7 @@ pub struct FriTranscriptConfig<'a, F: FieldImpl + 'a> {
 }
 
 impl<'a, F: FieldImpl + 'a> FriTranscriptConfig<'a, F> {
+    /// Creates a new `FriTranscriptConfig` with custom labels.
     pub fn new(
         hash: &'a Hasher,
         domain_separator_label: &str,
@@ -39,6 +41,7 @@ impl<'a, F: FieldImpl + 'a> FriTranscriptConfig<'a, F> {
         }
     }
 
+    /// Creates a `FriTranscriptConfig` with default labels.
     pub fn new_default_labels(hash: &'a Hasher, seed_rng: F) -> Self {
         Self::new(
             hash,

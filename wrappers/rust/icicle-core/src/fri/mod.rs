@@ -9,6 +9,10 @@ use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDevice
 
 pub type FriProof<F> = <<F as FieldImpl>::Config as FriImpl<F>>::FriProof;
 
+/// Computes the FRI proof using the given configuration and input data.
+/// # Returns
+/// - `Ok(())` if the FRI proof was successfully computed.
+/// - `Err(eIcicleError)` if an error occurred during proof generation.
 pub fn fri<F: FieldImpl>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
@@ -32,6 +36,11 @@ where
     )
 }
 
+/// Verifies a FRI proof using the given configuration and Merkle tree hashes.
+/// # Returns
+/// - `Ok(true)` if the proof is valid.
+/// - `Ok(false)` if the proof is invalid.
+/// - `Err(eIcicleError)` if verification failed due to an error.
 pub fn verify_fri<F: FieldImpl>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,

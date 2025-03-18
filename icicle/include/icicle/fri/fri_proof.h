@@ -70,7 +70,6 @@ namespace icicle {
      * @brief Get a const reference to a specific Merkle proof for a given query index in a specific FRI round. Each
      * query includes a proof for two values per round.
      */
-
     const MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx) const
     {
       if (query_idx < 0 || query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
@@ -91,6 +90,12 @@ namespace icicle {
                      // 0 of the current round
     }
 
+    /**
+     * @brief Get a pointer to the Merkle proofs at a specific query index.
+     *
+     * @param query_idx The index of the query to retrieve proofs for.
+     * @return Pointer to the first MerkleProof at the given query index.
+     */
     MerkleProof* get_proofs_at_query(const size_t query_idx) { return m_query_proofs[query_idx].data(); }
     /**
      * @brief Get the number of FRI queries in the proof.
@@ -111,12 +116,32 @@ namespace icicle {
      */
     size_t get_final_poly_size() const { return m_final_poly.size(); }
 
+    /**
+     * @brief Set the proof-of-work nonce.
+     *
+     * @param pow_nonce The proof-of-work nonce to set.
+     */
     void set_pow_nonce(uint64_t pow_nonce) { m_pow_nonce = pow_nonce; }
 
+    /**
+     * @brief Get the proof-of-work nonce.
+     *
+     * @return The current proof-of-work nonce.
+     */
     uint64_t get_pow_nonce() const { return m_pow_nonce; }
 
-    // get pointer to the final polynomial
+    /**
+     * @brief Get a mutable pointer to the final polynomial data.
+     *
+     * @return Pointer to the first element of the final polynomial.
+     */
     F* get_final_poly() { return m_final_poly.data(); }
+
+    /**
+     * @brief Get a const pointer to the final polynomial data.
+     *
+     * @return Const pointer to the first element of the final polynomial.
+     */
     const F* get_final_poly() const { return m_final_poly.data(); }
 
   private:
