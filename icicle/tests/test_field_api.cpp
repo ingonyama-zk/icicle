@@ -4,7 +4,6 @@
 #include "icicle/fri/fri_config.h"
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
-#include <nvml.h>
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -851,134 +850,6 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 
 #ifdef FRI
 
-unsigned int get_gpu_power(nvmlDevice_t device)
-{
-  unsigned int power;
-  if (nvmlDeviceGetPowerUsage(device, &power) == NVML_SUCCESS) {
-    return power; // Power in milliwatts
-  }
-  return 0;
-}
-
-template <typename TypeParam>
-void bench_func(
-  const std::string& dev_type,
-  const TypeParam* scalars_max,
-  bool measure,
-  const int min_log_size,
-  const int max_log_size,
-  const int log_step,
-  int warmup,
-  int bench_times)
-{
-  Device dev = {dev_type, 0};
-  icicle_set_device(dev);
-  size_t log_stopping_size;
-  size_t pow_bits;
-  size_t nof_queries;
-  TypeParam* scalars;
-  ICICLE_CHECK(icicle_malloc((void**)&scalars, (1 << max_log_size) * sizeof(TypeParam)));
-  ICICLE_CHECK(icicle_copy(scalars, scalars_max, (1 << max_log_size) * sizeof(TypeParam)));
-  nvmlInit();
-  nvmlDevice_t gpu_device;
-  nvmlDeviceGetHandleByIndex(0, &gpu_device); // Select GPU 0
-  if (warmup) {
-    ICICLE_LOG_INFO << "Warming up ... " << warmup << " times";
-    measure = false;
-  }
-  for (size_t params_options = 1; params_options <= 1; params_options++) {
-    if (params_options) {
-      log_stopping_size = 0;
-      pow_bits = 16;
-      nof_queries = 100;
-    } else {
-      log_stopping_size = 8;
-      pow_bits = 0;
-      nof_queries = 50;
-    }
-    for (size_t log_input_size = min_log_size; log_input_size <= max_log_size; log_input_size += log_step) {
-      const size_t input_size = 1 << log_input_size;
-      const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
-      const size_t stopping_size = 1 << log_stopping_size;
-      const size_t stopping_degree = stopping_size - 1;
-      const uint64_t output_store_min_layer = 0;
-
-      // Initialize ntt domain
-      NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
-      ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
-
-      if (measure) {
-        ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree
-                        << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries
-                        << ". device_type: " << dev_type;
-      }
-      for (int bench_i = measure ? 0 : bench_times - 1; bench_i < bench_times; ++bench_i) {
-        // ===== Prover side ======
-        uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
-
-        // Define hashers for merkle tree
-        Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
-        Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
-
-        // set transcript config
-        const char* domain_separator_label = "domain_separator_label";
-        const char* round_challenge_label = "round_challenge_label";
-        const char* commit_phase_label = "commit_phase_label";
-        const char* nonce_label = "nonce_label";
-        std::vector<std::byte>&& public_state = {};
-        TypeParam seed_rng = TypeParam::one();
-
-        FriTranscriptConfig<TypeParam> transcript_config(
-          hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
-          seed_rng);
-
-        FriConfig fri_config;
-        fri_config.nof_queries = nof_queries;
-        fri_config.pow_bits = pow_bits;
-        fri_config.are_inputs_on_device = true;
-        FriProof<TypeParam> fri_proof;
-
-        std::ostringstream oss;
-        if (measure) { oss << bench_i; }
-        START_TIMER(FRIPROOF_sync)
-        eIcicleError err = FRI::get_proof_mt<scalar_t, TypeParam>(
-          fri_config, transcript_config, scalars, input_size, hash, compress, output_store_min_layer, fri_proof);
-        END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
-        ICICLE_LOG_INFO << "gpu_power: " << get_gpu_power(gpu_device);
-
-        // ===== Verifier side ======
-        bool valid = false;
-        err = FRI::verify_mt<scalar_t, TypeParam>(
-          fri_config, transcript_config, fri_proof, hash, compress, output_store_min_layer, valid);
-
-        ASSERT_EQ(true, valid);
-      }
-
-      // Release domain
-      ICICLE_CHECK(ntt_release_domain<scalar_t>());
-      if (warmup) {
-        --warmup;
-        log_input_size -= log_step;
-        if (!warmup) {
-          ICICLE_LOG_INFO << "Starting benching";
-          measure = true;
-        }
-      }
-    }
-  }
-}
-
-TYPED_TEST(FieldTest, FriBench2)
-{
-  const int min_log_size = 16;
-  const int max_log_size = 24;
-  const int log_step = 2;
-  auto scalars = std::make_unique<TypeParam[]>(1 << max_log_size);
-  TypeParam::rand_host_many(scalars.get(), 1 << max_log_size);
-  bench_func<TypeParam>(
-    IcicleTestBase::main_device(), scalars.get(), true, min_log_size, max_log_size, log_step, 1, 10);
-}
-
 TYPED_TEST(FieldTest, Fri)
 {
   size_t log_stopping_size;
@@ -994,7 +865,7 @@ TYPED_TEST(FieldTest, Fri)
       pow_bits = 0;
       nof_queries = 50;
     }
-    for (size_t log_input_size = 16; log_input_size <= 16; log_input_size += 4) {
+    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
       const size_t input_size = 1 << log_input_size;
       const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
       const size_t stopping_size = 1 << log_stopping_size;

@@ -6,33 +6,6 @@ FetchContent_Declare(
     URL https://github.com/google/googletest/archive/refs/tags/v1.13.0.zip
 )
 
-# Find NVML include directory
-find_path(NVML_INCLUDE nvml.h
-    PATHS 
-    /usr/include
-    /usr/local/cuda-12.6/targets/x86_64-linux/include
-)
-
-# Find NVML library
-find_library(NVML_LIB nvidia-ml
-    PATHS 
-    /usr/lib
-    /usr/lib/x86_64-linux-gnu
-    /usr/local/cuda-12.6/lib64
-)
-
-# Error handling: Ensure NVML is found
-if (NOT NVML_LIB)
-    message(FATAL_ERROR "NVML library not found! Make sure NVIDIA drivers and NVML are installed.")
-endif()
-
-if (NOT NVML_INCLUDE)
-    message(FATAL_ERROR "NVML header file not found! Check CUDA installation.")
-endif()
-
-# Include NVML headers
-include_directories(${NVML_INCLUDE})
-
 # Disable installation of gtest and gmock
 set(INSTALL_GTEST OFF)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -59,7 +32,7 @@ gtest_discover_tests(test_device_api)
 if (FIELD)
     add_executable(test_field_api test_field_api.cpp)
     target_include_directories(test_field_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
-    target_link_libraries(test_field_api PRIVATE GTest::gtest_main icicle_device icicle_field ${NVML_LIB})
+    target_link_libraries(test_field_api PRIVATE GTest::gtest_main icicle_device icicle_field)
     gtest_discover_tests(test_field_api)
 
     if (NTT)
