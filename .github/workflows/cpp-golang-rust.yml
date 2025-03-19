@@ -52,12 +52,7 @@ jobs:
     - name: Check rustfmt
       if: needs.check-changed-files.outputs.rust == 'true'
       working-directory: ./wrappers/rust
-      # "-name target -prune" removes searching in any directory named "target"
-      # Formatting by single file is necessary due to generated files not being present
-      # before building the project.
-      # e.g. icicle-cuda-runtime/src/bindings.rs is generated and icicle-cuda-runtime/src/lib.rs includes that module
-      # causing rustfmt to fail.
-      run: if [[ $(find . -path ./icicle-curves/icicle-curve-template -prune -o -name target -prune -o -iname *.rs -print | xargs cargo fmt --check --) ]]; then echo "Please run cargo fmt"; exit 1; fi
+      run: cargo fmt --all -- --check
 
   extract-cuda-backend-branch:
     uses: ./.github/workflows/extract-backends.yml
