@@ -70,7 +70,9 @@ struct FriConfig {
   ConfigExtension* ext = nullptr;
 };
 ```
-> **_NOTE:_** Currently, only a folding factor of 2 is supported.
+:::note
+Currently, only a folding factor of 2 is supported.
+:::
 
 #### FriTranscriptConfig
 The `FriTranscriptConfig<TypeParam>` class is used to specify parameters for the Fiat-Shamir scheme used by the FRI protocol. It contains the following fields:
@@ -82,7 +84,9 @@ The `FriTranscriptConfig<TypeParam>` class is used to specify parameters for the
 - **`public_state: std::vector<std::byte>`**
 - **`seed_rng: TypeParam`**: The seed for initializing the RNG.
 
-> **_NOTE:_** the encoding is little endian.
+:::note
+The encoding is little endian.
+:::
 
 There are three constructors for `FriTranscriptConfig<TypeParam>`:
 
@@ -161,10 +165,14 @@ To generate a FRI proof using the Merkle Tree commit scheme, use one of the foll
 - **`fri_proof: FriProof<F>&`**: The output `FriProof` object containing the generated proof.
 * `merkle_tree_leaves_hash`, `merkle_tree_compress_hash` and `output_store_min_layer` refer to the hashes used in the Merkle Trees built in each round of the folding. For further information about ICICLE's Merkle Trees, see [Merkle-Tree documentation](./merkle.md) and [Hash documentation](./merkle.md).
 
-> **_NOTE:_** `folding_factor` must be divisible by `merkle_tree_compress_hash`.
+:::note
+`folding_factor` must be divisible by `merkle_tree_compress_hash`.
+:::
 
 
-> **_NOTE:_** An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](./ntt.md).
+:::note
+An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](./ntt.md).
+:::
 
 ```cpp
 NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
@@ -236,7 +244,9 @@ eIcicleError verify_fri_merkle_tree(
   fri_merkle_tree::verify<TypeParam>( ... );
   ```
 
-> **_NOTE:_**  `FriConfig` and `FriTranscriptConfig` used for generating the proof must be identical to the one used for verification.
+:::note
+`FriConfig` and `FriTranscriptConfig` used for generating the proof must be identical to the one used for verification.
+:::
 
 #### Example: Verifying a Proof
 ```cpp
