@@ -29,7 +29,7 @@ jobs:
 
   check-format:
     name: Check Code Format
-    runs-on: [self-hosted, Linux, X64, icicle] # For cargo
+    runs-on: [self-hosted, Linux, X64, icicle]
     needs: check-changed-files
     steps:
     - name: Checkout
