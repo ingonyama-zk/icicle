@@ -244,15 +244,15 @@ macro_rules! impl_fri_tests {
 
             pub fn initialize() {
                 INIT.call_once(move || {
-                    // test_utilities::test_load_and_init_devices();
-                    // // init domain for both devices
-                    // test_utilities::test_set_ref_device();
+                    test_utilities::test_load_and_init_devices();
+                    // init domain for both devices
+                    test_utilities::test_set_ref_device();
                     init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
 
-                    // test_utilities::test_set_main_device();
-                    // init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+                    test_utilities::test_set_main_device();
+                    init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
                 });
-                // test_utilities::test_set_main_device();
+                test_utilities::test_set_main_device();
             }
 
             #[test]
