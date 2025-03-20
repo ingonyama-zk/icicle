@@ -26,7 +26,6 @@ mod tests {
     impl_field_tests!(ScalarField);
     mod extension {
         use super::*;
-
         impl_field_tests!(ExtensionField);
     }
 }
