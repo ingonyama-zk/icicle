@@ -167,6 +167,12 @@ macro_rules! impl_rns_conversions_tests {
                 initialize();
                 check_rns_conversion::<$ZqType, $ZqRnsType>();
             }
+
+            #[test]
+            fn test_rns_arithmetic_consistency() {
+                initialize();
+                check_rns_arithmetic_consistency::<$ZqType, $ZqRnsType>();
+            }
         }
     };
 }
