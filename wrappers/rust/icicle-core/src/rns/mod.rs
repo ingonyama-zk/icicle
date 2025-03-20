@@ -3,7 +3,7 @@ use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
-// Trait for RNS-conversions (Zq <--> ZqRns)
+/// Trait for RNS conversions (`Zq <--> ZqRns`)
 pub trait RnsConversion<Zq: FieldImpl, ZqRns: FieldImpl> {
     fn to_rns(
         input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
@@ -18,7 +18,12 @@ pub trait RnsConversion<Zq: FieldImpl, ZqRns: FieldImpl> {
     ) -> Result<(), eIcicleError>;
 }
 
-// Floating functions for RNS-conversions (Zq <--> ZqRns)
+// Note: An in-place RNS conversion could be implemented, but it's unnecessary for now.
+// On GPUs, out-of-place conversion is generally faster due to better memory access patterns.
+// Additionally, in-place conversion would require move semantics to transfer ownership of the underlying memory,
+// meaning it would need separate implementations for both `Vec` and `DeviceVec`, rather than relying on the `HostOrDeviceSlice` trait.
+
+/// Performs `Zq -> ZqRns` conversion.
 pub fn to_rns<Zq: FieldImpl, ZqRns: FieldImpl>(
     input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
     cfg: &VecOpsConfig,
@@ -29,20 +34,20 @@ where
 {
     if input.len() != output.len() {
         eprintln!(
-            "input (size={}) and output (size={}) slices must have the same length",
+            "Mismatched slice sizes: input = {}, output = {}",
             input.len(),
             output.len()
         );
         return Err(eIcicleError::InvalidArgument);
     }
 
-    // check device slices are on active device
+    // Ensure input/output are on the active device
     if input.is_on_device() && !input.is_on_active_device() {
-        eprintln!("input not allocated on an inactive device");
+        eprintln!("Input is allocated on an inactive device.");
         return Err(eIcicleError::InvalidArgument);
     }
     if output.is_on_device() && !output.is_on_active_device() {
-        eprintln!("output not allocated on an inactive device");
+        eprintln!("Output is allocated on an inactive device.");
         return Err(eIcicleError::InvalidArgument);
     }
 
@@ -53,6 +58,7 @@ where
     <<Zq as FieldImpl>::Config as RnsConversion<Zq, ZqRns>>::to_rns(input, cfg, output)
 }
 
+/// Performs `ZqRns -> Zq` conversion.
 pub fn from_rns<Zq: FieldImpl, ZqRns: FieldImpl>(
     input: &(impl HostOrDeviceSlice<ZqRns> + ?Sized),
     cfg: &VecOpsConfig,
@@ -63,20 +69,20 @@ where
 {
     if input.len() != output.len() {
         eprintln!(
-            "input (size={}) and output (size={}) slices must have the same length",
+            "Mismatched slice sizes: input = {}, output = {}",
             input.len(),
             output.len()
         );
         return Err(eIcicleError::InvalidArgument);
     }
 
-    // check device slices are on active device
+    // Ensure input/output are on the active device
     if input.is_on_device() && !input.is_on_active_device() {
-        eprintln!("input not allocated on an inactive device");
+        eprintln!("Input is allocated on an inactive device.");
         return Err(eIcicleError::InvalidArgument);
     }
     if output.is_on_device() && !output.is_on_active_device() {
-        eprintln!("output not allocated on an inactive device");
+        eprintln!("Output is allocated on an inactive device.");
         return Err(eIcicleError::InvalidArgument);
     }
 
@@ -87,22 +93,32 @@ where
     <<Zq as FieldImpl>::Config as RnsConversion<Zq, ZqRns>>::from_rns(input, cfg, output)
 }
 
-// Macro that implements RNS-conversions for a given ring, via C-bindings
-// Note: this macro implements the RnsConversion trait for the ZqConfigType only, not need to implement it for ZqRnsConfigType as well
+/// Implements RNS conversion for a given ring via C bindings.
+/// Note: This implements `RnsConversion` for `ZqConfigType`, not `ZqRnsConfigType`.
 #[macro_export]
 macro_rules! impl_rns_conversions {
     (
-        $ring_prefix: literal, 
-        $ZqType: ident, 
+        $ring_prefix: literal,
+        $ZqType: ident,
         $ZqRnsType: ident,
         $ZqConfigType: ident
     ) => {
         extern "C" {
             #[link_name = concat!($ring_prefix, "_convert_to_rns")]
-            fn convert_to_rns(input: *const $ZqType, size: u64, cfg: *const VecOpsConfig, output: *mut $ZqRnsType) -> eIcicleError;
+            fn convert_to_rns(
+                input: *const $ZqType,
+                size: u64,
+                cfg: *const VecOpsConfig,
+                output: *mut $ZqRnsType,
+            ) -> eIcicleError;
 
             #[link_name = concat!($ring_prefix, "_convert_from_rns")]
-            fn convert_from_rns(input: *const $ZqRnsType, size: u64, cfg: *const VecOpsConfig, output: *mut $ZqType) -> eIcicleError;
+            fn convert_from_rns(
+                input: *const $ZqRnsType,
+                size: u64,
+                cfg: *const VecOpsConfig,
+                output: *mut $ZqType,
+            ) -> eIcicleError;
         }
 
         use icicle_core::rns::RnsConversion;
@@ -113,14 +129,7 @@ macro_rules! impl_rns_conversions {
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),
             ) -> Result<(), eIcicleError> {
-                unsafe {
-                    convert_to_rns(
-                        input.as_ptr(),
-                        input.len() as u64,
-                        cfg,
-                        output.as_mut_ptr(),
-                    ).wrap()
-                }
+                unsafe { convert_to_rns(input.as_ptr(), input.len() as u64, cfg, output.as_mut_ptr()).wrap() }
             }
 
             fn from_rns(
@@ -128,30 +137,22 @@ macro_rules! impl_rns_conversions {
                 cfg: &VecOpsConfig,
                 output: &mut (impl HostOrDeviceSlice<$ZqType> + ?Sized),
             ) -> Result<(), eIcicleError> {
-                unsafe {
-                    convert_from_rns(
-                        input.as_ptr(),
-                        input.len() as u64,
-                        cfg,
-                        output.as_mut_ptr(),
-                    ).wrap()
-                }
+                unsafe { convert_from_rns(input.as_ptr(), input.len() as u64, cfg, output.as_mut_ptr()).wrap() }
             }
         }
     };
 }
 
-// Macro that instantiates tests for RNS-conversions for a given ring
+/// Implements tests for RNS conversions for a given ring.
 #[macro_export]
 macro_rules! impl_rns_conversions_tests {
     (
         $ZqType: ident,
         $ZqRnsType: ident
     ) => {
-        use icicle_runtime::test_utilities;
-        use icicle_runtime::{device::Device, runtime};
-        
+        use icicle_runtime::{device::Device, runtime, test_utilities};
 
+        /// Initializes devices before running tests.
         pub fn initialize() {
             test_utilities::test_load_and_init_devices();
             test_utilities::test_set_main_device();
@@ -165,7 +166,6 @@ macro_rules! impl_rns_conversions_tests {
             fn test_rns_conversions() {
                 initialize();
                 check_rns_conversion::<$ZqType, $ZqRnsType>();
-                
             }
         }
     };
