@@ -29,7 +29,7 @@ jobs:
 
   check-format:
     name: Check Code Format
-    runs-on: [self-hosted, Linux, X64, icicle, formatter]
+    runs-on: [self-hosted, Linux, X64, formatter]
     needs: check-changed-files
     steps:
     - name: Checkout
