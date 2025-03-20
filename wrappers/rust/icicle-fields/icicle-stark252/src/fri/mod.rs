@@ -6,7 +6,7 @@ impl_fri!("stark252", stark252_fri, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 mod tests {
-    use icicle_core::{impl_fri_tests, traits::FieldImpl};
+    use icicle_core::impl_fri_tests;
     use icicle_hash::keccak::Keccak256;
 
     use crate::field::ScalarField;
