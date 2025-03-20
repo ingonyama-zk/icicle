@@ -230,7 +230,7 @@ macro_rules! impl_fri_tests {
         mod $field_prefix_ident {
             use super::*;
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
-            use icicle_core::fri::tests::check_fri;
+            use icicle_core::fri::tests::{check_fri, check_fri_on_device};
             use icicle_core::hash::Hasher;
             use icicle_core::ntt::tests::init_domain;
             use icicle_runtime::test_utilities;
@@ -260,6 +260,13 @@ macro_rules! impl_fri_tests {
                 initialize();
 
                 check_fri::<$field>(&$hasher_new);
+            }
+
+            #[test]
+            pub fn test_fri_on_device() {
+                initialize();
+
+                check_fri_on_device::<$field>(&$hasher_new);
             }
         }
     };

@@ -12,7 +12,7 @@ impl_fri!(
 
 #[cfg(test)]
 mod tests {
-    use icicle_core::{impl_fri_tests, traits::FieldImpl};
+    use icicle_core::impl_fri_tests;
     use icicle_hash::keccak::Keccak256;
 
     use crate::field::{ExtensionField, ScalarField};
