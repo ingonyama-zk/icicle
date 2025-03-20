@@ -1,8 +1,9 @@
-// (1) define a trait for the RNS-conversions
-
 use crate::{traits::FieldImpl, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
+pub mod tests;
+
+// Trait for RNS-conversions (Zq <--> ZqRns)
 pub trait RnsConversion<Zq: FieldImpl, ZqRns: FieldImpl> {
     fn to_rns(
         input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
@@ -17,7 +18,7 @@ pub trait RnsConversion<Zq: FieldImpl, ZqRns: FieldImpl> {
     ) -> Result<(), eIcicleError>;
 }
 
-// (2) implement generic RNS-conversions floating-functions that use the trait (<<F as FieldConfig> as RnsConversion>::to_rns(...), <<F as FieldConfig> as RnsConversion>::from_rns(...))
+// Floating functions for RNS-conversions (Zq <--> ZqRns)
 pub fn to_rns<Zq: FieldImpl, ZqRns: FieldImpl>(
     input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
     cfg: &VecOpsConfig,
@@ -86,6 +87,86 @@ where
     <<Zq as FieldImpl>::Config as RnsConversion<Zq, ZqRns>>::from_rns(input, cfg, output)
 }
 
-// (3) implement a macro that implements RNS-conversions for a given FieldConfig type, via C bindings
+// Macro that implements RNS-conversions for a given ring, via C-bindings
+// Note: this macro implements the RnsConversion trait for the ZqConfigType only, not need to implement it for ZqRnsConfigType as well
+#[macro_export]
+macro_rules! impl_rns_conversions {
+    (
+        $ring_prefix: literal, 
+        $ZqType: ident, 
+        $ZqRnsType: ident,
+        $ZqConfigType: ident
+    ) => {
+        extern "C" {
+            #[link_name = concat!($ring_prefix, "_convert_to_rns")]
+            fn convert_to_rns(input: *const $ZqType, size: u64, cfg: *const VecOpsConfig, output: *mut $ZqRnsType) -> eIcicleError;
 
-// (4) implement generic tests for the RNS-conversions (to_rns, from_rns)
+            #[link_name = concat!($ring_prefix, "_convert_from_rns")]
+            fn convert_from_rns(input: *const $ZqRnsType, size: u64, cfg: *const VecOpsConfig, output: *mut $ZqType) -> eIcicleError;
+        }
+
+        use icicle_core::rns::RnsConversion;
+
+        impl RnsConversion<$ZqType, $ZqRnsType> for $ZqConfigType {
+            fn to_rns(
+                input: &(impl HostOrDeviceSlice<$ZqType> + ?Sized),
+                cfg: &VecOpsConfig,
+                output: &mut (impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    convert_to_rns(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg,
+                        output.as_mut_ptr(),
+                    ).wrap()
+                }
+            }
+
+            fn from_rns(
+                input: &(impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),
+                cfg: &VecOpsConfig,
+                output: &mut (impl HostOrDeviceSlice<$ZqType> + ?Sized),
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    convert_from_rns(
+                        input.as_ptr(),
+                        input.len() as u64,
+                        cfg,
+                        output.as_mut_ptr(),
+                    ).wrap()
+                }
+            }
+        }
+    };
+}
+
+// Macro that instantiates tests for RNS-conversions for a given ring
+#[macro_export]
+macro_rules! impl_rns_conversions_tests {
+    (
+        $ZqType: ident,
+        $ZqRnsType: ident
+    ) => {
+        use icicle_runtime::test_utilities;
+        use icicle_runtime::{device::Device, runtime};
+        
+
+        pub fn initialize() {
+            test_utilities::test_load_and_init_devices();
+            test_utilities::test_set_main_device();
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn test_rns_conversions() {
+                initialize();
+                check_rns_conversion::<$ZqType, $ZqRnsType>();
+                
+            }
+        }
+    };
+}
