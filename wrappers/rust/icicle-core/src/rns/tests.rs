@@ -80,7 +80,7 @@ where
     ZqRns::Config: VecOps<ZqRns>,
 {
     use crate::vec_ops::mul_scalars;
-    
+
     // Set reference device for computations
     test_utilities::test_set_ref_device();
 
