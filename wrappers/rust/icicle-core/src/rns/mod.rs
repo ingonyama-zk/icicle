@@ -83,11 +83,20 @@ macro_rules! impl_rns_conversions {
                 output: &mut (impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
+                // Ensure sizes match and batch-size divides the size
                 if input.len() != output.len() {
                     eprintln!(
                         "Mismatched slice sizes: input = {}, output = {}",
                         input.len(),
                         output.len()
+                    );
+                    return Err(eIcicleError::InvalidArgument);
+                }
+                if input.len() % (cfg.batch_size as usize) != 0 {
+                    eprintln!(
+                        "Batch-size={} does not divide total-size={}",
+                        cfg.batch_size,
+                        input.len()
                     );
                     return Err(eIcicleError::InvalidArgument);
                 }
@@ -106,7 +115,15 @@ macro_rules! impl_rns_conversions {
                 cfg_clone.is_a_on_device = input.is_on_device();
                 cfg_clone.is_result_on_device = output.is_on_device();
 
-                unsafe { convert_to_rns(input.as_ptr(), input.len() as u64, cfg, output.as_mut_ptr()).wrap() }
+                unsafe {
+                    convert_to_rns(
+                        input.as_ptr(),
+                        (input.len() / (cfg.batch_size as usize)) as u64,
+                        cfg,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
 
             fn from_rns(
@@ -114,11 +131,20 @@ macro_rules! impl_rns_conversions {
                 output: &mut (impl HostOrDeviceSlice<$ZqType> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
+                // Ensure sizes match and batch-size divides the size
                 if input.len() != output.len() {
                     eprintln!(
                         "Mismatched slice sizes: input = {}, output = {}",
                         input.len(),
                         output.len()
+                    );
+                    return Err(eIcicleError::InvalidArgument);
+                }
+                if input.len() % (cfg.batch_size as usize) != 0 {
+                    eprintln!(
+                        "Batch-size={} does not divide total-size={}",
+                        cfg.batch_size,
+                        input.len()
                     );
                     return Err(eIcicleError::InvalidArgument);
                 }
@@ -137,7 +163,15 @@ macro_rules! impl_rns_conversions {
                 cfg_clone.is_a_on_device = input.is_on_device();
                 cfg_clone.is_result_on_device = output.is_on_device();
 
-                unsafe { convert_from_rns(input.as_ptr(), input.len() as u64, cfg, output.as_mut_ptr()).wrap() }
+                unsafe {
+                    convert_from_rns(
+                        input.as_ptr(),
+                        (input.len() / (cfg.batch_size as usize)) as u64,
+                        cfg,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
         }
     };
