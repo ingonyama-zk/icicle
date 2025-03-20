@@ -79,6 +79,8 @@ where
     ZqRns: FieldImpl,
     ZqRns::Config: VecOps<ZqRns>,
 {
+    use crate::vec_ops::mul_scalars;
+    
     // Set reference device for computations
     test_utilities::test_set_ref_device();
 
@@ -98,7 +100,7 @@ where
     let mut c_rns = vec![ZqRns::zero(); size];
 
     // Compute in Zq: c = a * b
-    Zq::Config::mul(
+    mul_scalars(
         HostSlice::from_slice(&a),
         HostSlice::from_slice(&b),
         HostSlice::from_mut_slice(&mut c),
@@ -111,7 +113,7 @@ where
     Zq::Config::to_rns(HostSlice::from_slice(&b), HostSlice::from_mut_slice(&mut b_rns), &cfg).unwrap();
 
     // Compute in RNS domain: c_rns = a_rns * b_rns
-    ZqRns::Config::mul(
+    mul_scalars(
         HostSlice::from_slice(&a_rns),
         HostSlice::from_slice(&b_rns),
         HostSlice::from_mut_slice(&mut c_rns),
