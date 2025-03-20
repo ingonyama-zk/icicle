@@ -138,6 +138,12 @@ impl MerkleProof {
     }
 }
 
+impl Handle for MerkleProof {
+    fn handle(&self) -> *const c_void {
+        self.handle
+    }
+}
+
 impl Drop for MerkleProof {
     fn drop(&mut self) {
         unsafe {

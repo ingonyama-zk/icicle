@@ -78,6 +78,15 @@ typedef FriProof<scalar_t>* FriProofHandle;
 
 FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_initialize_fri_proof)() { return new FriProof<scalar_t>(); }
 
+FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_initialize_with_arguments_fri_proof)(MerkleProof** query_proofs_ffi, size_t nof_queries, size_t nof_rounds, scalar_t* final_poly_ffi, size_t final_poly_size, uint64_t pow_nonce) {
+  std::vector<std::vector<MerkleProof>> query_proofs_ffi(nof_queries);
+  for (auto i = 0; i < nof_queries; i++) {
+    query_proofs[i] = {*(query_proofs_ffi + i), *(query_proofs_ffi + i) + nof_rounds};
+  }
+  std::vector<scalar_t> final_poly = {final_poly_ffi, final_poly_ffi + final_poly_size};
+  return new FriProof<scalar_t>(); 
+}
+
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_delete_fri_proof)(FriProofHandle proof_ptr)
 {
   if (!proof_ptr) {

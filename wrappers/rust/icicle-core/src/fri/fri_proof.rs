@@ -7,7 +7,13 @@ use crate::{
     traits::{FieldImpl, Handle},
 };
 
-pub trait FriProofTrait<F: FieldImpl>: Sized + Handle
+pub struct FriProofExposed<F: FieldImpl> {
+    pub query_proofs: Vec<Vec<ManuallyDrop<MerkleProof>>>,
+    pub final_poly: Vec<F>,
+    pub pow_nonce: u64
+}
+
+pub trait FriProofTrait<F: FieldImpl>: Sized + Handle + From<FriProofExposed<F>>
 where
     F: FieldImpl,
 {
@@ -25,6 +31,8 @@ where
 
     /// Returns the proof-of-work nonce.
     fn get_pow_nonce(&self) -> Result<u64, eIcicleError>;
+
+    fn expose(&self) -> Result<FriProofExposed<F>, eIcicleError>;
 }
 
 #[macro_export]
@@ -40,6 +48,7 @@ macro_rules! impl_fri_proof {
         use std::ffi::c_void;
         use std::mem::ManuallyDrop;
         use std::slice;
+        use icicle_core::fri::fri_proof::FriProofExposed;
 
         pub type FriProofHandle = *mut c_void;
 
@@ -77,7 +86,7 @@ macro_rules! impl_fri_proof {
             fn fri_proof_get_round_proofs_for_query(
                 handle: FriProofHandle,
                 query_idx: usize,
-                proofs: *mut MerkleProofHandle,
+                proofs: *mut *const MerkleProofHandle,
             ) -> eIcicleError;
         }
 
@@ -102,13 +111,13 @@ macro_rules! impl_fri_proof {
                     fri_proof_get_nof_rounds(self.handle, &mut nof_rounds).wrap()?;
                     let mut proofs: Vec<Vec<ManuallyDrop<MerkleProof>>> = Vec::with_capacity(nof_queries as usize);
                     for i in 0..nof_queries {
-                        let mut proof: MerkleProofHandle = std::ptr::null();
+                        let mut proof: *const MerkleProofHandle = std::ptr::null();
                         fri_proof_get_round_proofs_for_query(self.handle, i, &mut proof).wrap()?;
                         let proofs_per_query = slice::from_raw_parts(proof, nof_rounds as usize);
                         proofs.push(
                             proofs_per_query
                                 .iter()
-                                .map(|x| ManuallyDrop::new(MerkleProof::from_handle(x)))
+                                .map(|x| ManuallyDrop::new(MerkleProof::from_handle(*x)))
                                 .collect(),
                         );
                     }
@@ -129,6 +138,31 @@ macro_rules! impl_fri_proof {
             fn get_pow_nonce(&self) -> Result<u64, eIcicleError> {
                 let mut nonce: u64 = 0;
                 unsafe { fri_proof_get_pow_nonce(self.handle, &mut nonce).wrap_value(nonce) }
+            }
+
+            fn expose(&self) -> Result<FriProofExposed<$field>, eIcicleError> {
+                let query_proofs = self.get_query_proofs()?;
+                let final_poly = self.get_final_poly()?;
+                let pow_nonce = self.get_pow_nonce()?;
+                Ok(FriProofExposed{query_proofs, final_poly, pow_nonce})
+            }
+        }
+
+        impl From<FriProofExposed<$field>> for FriProof {
+            fn from(proof_exposed: FriProofExposed<$field>) -> FriProof {
+                let handle_vectors: Vec<Vec<MerkleProofHandle>> = proof_exposed.query_proofs
+                    .iter()
+                    .map(|inner| inner.iter().map(|proof| proof.handle()).collect())
+                    .collect();
+                let vec_of_pointers: Vec<*const MerkleProofHandle> = handle_vectors
+                    .iter()
+                    .map(|vec| vec.as_ptr())
+                    .collect();
+                let handle: FriProofHandle = unsafe {initialize_with_arguments_fri_proof(vec_of_pointers.as_ptr(), proof_exposed.final_poly.as_ptr(), proof_exposed.pow_nonce)};
+                if handle.is_null() {
+                    panic!("Couldn't convert into FriProof");
+                }
+                FriProof{handle}
             }
         }
 
