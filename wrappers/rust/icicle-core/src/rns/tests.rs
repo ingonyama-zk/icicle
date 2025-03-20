@@ -17,7 +17,7 @@ where
     <Zq as FieldImpl>::Config: RnsConversion<Zq, ZqRns> + GenerateRandom<Zq>,
 {
     let size = 1 << 12;
-    let batch_size = 1;
+    let batch_size = 3;
     let total_size = size * batch_size;
 
     let cfg = VecOpsConfig::default();
