@@ -1,4 +1,7 @@
-use crate::{hash::{Hasher, HasherHandle}, traits::Handle};
+use crate::{
+    hash::{Hasher, HasherHandle},
+    traits::Handle,
+};
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };

@@ -1,6 +1,9 @@
 use super::FriMerkleTreeImpl;
 use crate::{
-    fri::{fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofTrait, fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof},
+    fri::{
+        fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofTrait,
+        fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof,
+    },
     hash::Hasher,
     traits::{FieldImpl, GenerateRandom},
 };
@@ -83,12 +86,17 @@ where
         )
         .unwrap();
 
-        let query_proofs = fri_proof.get_query_proofs().unwrap();
-        let final_poly = fri_proof.get_final_poly().unwrap();
-        let pow_nonce = fri_proof.get_pow_nonce().unwrap();
+        let query_proofs = fri_proof
+            .get_query_proofs()
+            .unwrap();
+        let final_poly = fri_proof
+            .get_final_poly()
+            .unwrap();
+        let pow_nonce = fri_proof
+            .get_pow_nonce()
+            .unwrap();
 
         let fri_proof_copy = FriProof::<F>::create_with_arguments(query_proofs, final_poly, pow_nonce);
-
 
         let valid = fri_merkle_tree_verify(
             &fri_config,

@@ -7,7 +7,7 @@ use crate::traits::{FieldImpl, Handle};
 pub struct PointerArray {
     pub ptr: *const c_void,
     pub element_size: usize,
-    pub len: usize
+    pub len: usize,
 }
 
 impl PointerArray {
@@ -58,12 +58,12 @@ macro_rules! impl_fri_proof {
         $field_config:ident
     ) => {
         use icicle_core::fri::fri_proof::FriProofTrait;
+        use icicle_core::fri::fri_proof::PointerArray;
         use icicle_core::merkle::{MerkleProof, MerkleProofHandle};
         use icicle_core::traits::Handle;
         use std::ffi::c_void;
         use std::mem::ManuallyDrop;
         use std::slice;
-        use icicle_core::fri::fri_proof::PointerArray;
 
         pub type FriProofHandle = *mut c_void;
 
@@ -72,7 +72,14 @@ macro_rules! impl_fri_proof {
             fn icicle_initialize_fri_proof() -> FriProofHandle;
 
             #[link_name = concat!($field_prefix, "_icicle_create_with_arguments_fri_proof")]
-            fn create_with_arguments_fri_proof(proofs: *const *const c_void, nof_queries: usize, nof_rounds: usize, final_poly: *const $field, final_poly_size: usize, pow_nonce: u64) -> FriProofHandle;
+            fn create_with_arguments_fri_proof(
+                proofs: *const *const c_void,
+                nof_queries: usize,
+                nof_rounds: usize,
+                final_poly: *const $field,
+                final_poly_size: usize,
+                pow_nonce: u64,
+            ) -> FriProofHandle;
 
             #[link_name = concat!($field_prefix, "_icicle_delete_fri_proof")]
             fn icicle_delete_fri_proof(handle: FriProofHandle) -> eIcicleError;
@@ -87,22 +94,16 @@ macro_rules! impl_fri_proof {
             fn fri_proof_get_final_poly(handle: FriProofHandle, final_poly: *mut *const $field) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_fri_proof_get_nof_queries")]
-            fn fri_proof_get_nof_queries(
-                handle: FriProofHandle,
-                nof_queries: *mut usize,
-            ) -> eIcicleError;
+            fn fri_proof_get_nof_queries(handle: FriProofHandle, nof_queries: *mut usize) -> eIcicleError;
             #[link_name = concat!($field_prefix, "_fri_proof_get_nof_rounds")]
-            fn fri_proof_get_nof_rounds(
-                handle: FriProofHandle,
-                nof_rounds: *mut usize,
-            ) -> eIcicleError;
+            fn fri_proof_get_nof_rounds(handle: FriProofHandle, nof_rounds: *mut usize) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_fri_proof_get_round_proofs_for_query")]
             fn fri_proof_get_round_proofs_for_query(
                 handle: FriProofHandle,
                 query_idx: usize,
                 proofs: *mut MerkleProofHandle,
-                element_size: *mut usize
+                element_size: *mut usize,
             ) -> eIcicleError;
         }
 
@@ -119,13 +120,29 @@ macro_rules! impl_fri_proof {
                 Self { handle }
             }
 
-            fn create_with_arguments(query_proofs: Vec<PointerArray>, final_poly: Vec<$field>, pow_nonce: u64) -> FriProof {
-                let handle_vectors: Vec<*const c_void> = query_proofs.iter().map(|x| x.ptr).collect();
-                let handle: FriProofHandle = unsafe {create_with_arguments_fri_proof(handle_vectors.as_ptr(), query_proofs.len(), query_proofs[0].len, final_poly.as_ptr(), final_poly.len(), pow_nonce)};
+            fn create_with_arguments(
+                query_proofs: Vec<PointerArray>,
+                final_poly: Vec<$field>,
+                pow_nonce: u64,
+            ) -> FriProof {
+                let handle_vectors: Vec<*const c_void> = query_proofs
+                    .iter()
+                    .map(|x| x.ptr)
+                    .collect();
+                let handle: FriProofHandle = unsafe {
+                    create_with_arguments_fri_proof(
+                        handle_vectors.as_ptr(),
+                        query_proofs.len(),
+                        query_proofs[0].len,
+                        final_poly.as_ptr(),
+                        final_poly.len(),
+                        pow_nonce,
+                    )
+                };
                 if handle.is_null() {
                     panic!("Couldn't convert into FriProof");
                 }
-                FriProof{handle}
+                FriProof { handle }
             }
 
             fn get_query_proofs(&self) -> Result<Vec<PointerArray>, eIcicleError> {
@@ -138,9 +155,13 @@ macro_rules! impl_fri_proof {
                     for i in 0..nof_queries {
                         let mut proofs_per_query: *const c_void = std::ptr::null();
                         let mut size: usize = 0;
-                        fri_proof_get_round_proofs_for_query(self.handle, i, &mut proofs_per_query, &mut size).wrap()?;                        proofs.push(
-                            PointerArray{ ptr: proofs_per_query, element_size: size, len: nof_rounds}
-                        );
+                        fri_proof_get_round_proofs_for_query(self.handle, i, &mut proofs_per_query, &mut size)
+                            .wrap()?;
+                        proofs.push(PointerArray {
+                            ptr: proofs_per_query,
+                            element_size: size,
+                            len: nof_rounds,
+                        });
                         // let second = proofs[i].get(2);
                         // let p = MerkleProof::from_handle(second.clone());
                         // let leaf = p.get_leaf::<u8>();
