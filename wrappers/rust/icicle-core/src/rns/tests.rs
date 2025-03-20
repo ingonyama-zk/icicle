@@ -14,13 +14,12 @@ use icicle_runtime::{
 /// 3. Converting `ZqRns` back to `Zq` and verifying the output matches the original input.
 pub fn check_rns_conversion<Zq: FieldImpl, ZqRns: FieldImpl>()
 where
-    <Zq as FieldImpl>::Config: RnsConversion<Zq, ZqRns> + GenerateRandom<Zq>,
+    Zq::Config: RnsConversion<Zq, ZqRns> + GenerateRandom<Zq>,
 {
     let size = 1 << 12;
     let batch_size = 3;
     let total_size = size * batch_size;
 
-    let cfg = VecOpsConfig::default();
     let input_direct: Vec<Zq> = Zq::Config::generate_random(total_size);
 
     // Convert Zq -> ZqRns on reference device
@@ -28,8 +27,8 @@ where
     let mut output_rns_ref = vec![ZqRns::zero(); total_size];
     to_rns(
         HostSlice::from_slice(&input_direct),
-        &cfg,
         HostSlice::from_mut_slice(&mut output_rns_ref),
+        &VecOpsConfig::default(),
     )
     .unwrap();
 
@@ -37,30 +36,36 @@ where
     test_utilities::test_set_main_device();
     let mut output_rns_main_d = DeviceVec::<ZqRns>::device_malloc(total_size).unwrap();
     let mut output_rns_main_h = vec![ZqRns::zero(); total_size];
-    to_rns(HostSlice::from_slice(&input_direct), &cfg, &mut output_rns_main_d[..]).unwrap();
+    to_rns(
+        HostSlice::from_slice(&input_direct),
+        &mut output_rns_main_d[..],
+        &VecOpsConfig::default(),
+    )
+    .unwrap();
 
     // Ensure reference and main device implementations produce identical results
     output_rns_main_d
         .copy_to_host(HostSlice::from_mut_slice(&mut output_rns_main_h))
         .unwrap();
+
     assert_eq!(output_rns_ref, output_rns_main_h);
 
     // Convert ZqRns -> Zq on main device and compare with original input
-    let mut output_direct = vec![Zq::zero(); total_size];
+    let mut converted_back_from_rns = vec![Zq::zero(); total_size];
     assert_ne!(
-        input_direct, output_direct,
+        input_direct, converted_back_from_rns,
         "Initial output buffer should not match input."
     );
 
     from_rns(
         &mut output_rns_main_d[..],
-        &cfg,
-        HostSlice::from_mut_slice(&mut output_direct),
+        HostSlice::from_mut_slice(&mut converted_back_from_rns),
+        &VecOpsConfig::default(),
     )
     .unwrap();
 
     assert_eq!(
-        input_direct, output_direct,
+        input_direct, converted_back_from_rns,
         "Final conversion should match the original input."
     );
 }
@@ -82,7 +87,6 @@ where
 
     let batch = 6;
     let size = batch * ((1 << 11) + 7);
-    let cfg = VecOpsConfig::default();
 
     // Allocate inputs in Zq
     let a = Zq::Config::generate_random(size);
@@ -99,20 +103,30 @@ where
         HostSlice::from_slice(&a),
         HostSlice::from_slice(&b),
         HostSlice::from_mut_slice(&mut c),
-        &cfg,
+        &VecOpsConfig::default(),
     )
     .unwrap();
 
     // Convert a, b to RNS representation (a_rns, b_rns)
-    Zq::Config::to_rns(HostSlice::from_slice(&a), &cfg, HostSlice::from_mut_slice(&mut a_rns)).unwrap();
-    Zq::Config::to_rns(HostSlice::from_slice(&b), &cfg, HostSlice::from_mut_slice(&mut b_rns)).unwrap();
+    Zq::Config::to_rns(
+        HostSlice::from_slice(&a),
+        HostSlice::from_mut_slice(&mut a_rns),
+        &VecOpsConfig::default(),
+    )
+    .unwrap();
+    Zq::Config::to_rns(
+        HostSlice::from_slice(&b),
+        HostSlice::from_mut_slice(&mut b_rns),
+        &VecOpsConfig::default(),
+    )
+    .unwrap();
 
     // Compute in RNS domain: c_rns = a_rns * b_rns
     ZqRns::Config::mul(
         HostSlice::from_slice(&a_rns),
         HostSlice::from_slice(&b_rns),
         HostSlice::from_mut_slice(&mut c_rns),
-        &cfg,
+        &VecOpsConfig::default(),
     )
     .unwrap();
 
@@ -120,8 +134,8 @@ where
     let mut c_from_rns = vec![Zq::zero(); size];
     Zq::Config::from_rns(
         HostSlice::from_slice(&c_rns),
-        &cfg,
         HostSlice::from_mut_slice(&mut c_from_rns),
+        &VecOpsConfig::default(),
     )
     .unwrap();
 
