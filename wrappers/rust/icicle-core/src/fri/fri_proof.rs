@@ -47,6 +47,9 @@ macro_rules! impl_fri_proof {
             #[link_name = concat!($field_prefix, "_icicle_initialize_fri_proof")]
             fn icicle_initialize_fri_proof() -> FriProofHandle;
 
+            #[link_name = concat!($field_prefix, "_icicle_initialize_with_arguments_fri_proof")]
+            fn initialize_with_arguments_fri_proof(proofs: *const *const MerkleProofHandle, final_poly: *const $field, pow_nonce: u64) -> FriProofHandle;
+
             #[link_name = concat!($field_prefix, "_icicle_delete_fri_proof")]
             fn icicle_delete_fri_proof(handle: FriProofHandle) -> eIcicleError;
 
@@ -59,15 +62,19 @@ macro_rules! impl_fri_proof {
             #[link_name = concat!($field_prefix, "_fri_proof_get_final_poly")]
             fn fri_proof_get_final_poly(handle: FriProofHandle, final_poly: *mut *const $field) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_fri_proof_get_proof_sizes")]
-            fn fri_proof_get_proof_sizes(
+            #[link_name = concat!($field_prefix, "_fri_proof_get_nof_queries")]
+            fn fri_proof_get_nof_queries(
                 handle: FriProofHandle,
                 nof_queries: *mut usize,
+            ) -> eIcicleError;
+            #[link_name = concat!($field_prefix, "_fri_proof_get_nof_rounds")]
+            fn fri_proof_get_nof_rounds(
+                handle: FriProofHandle,
                 nof_rounds: *mut usize,
             ) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_fri_proof_get_round_proof_at")]
-            fn fri_proof_get_round_proof_at(
+            #[link_name = concat!($field_prefix, "_fri_proof_get_round_proofs_for_query")]
+            fn fri_proof_get_round_proofs_for_query(
                 handle: FriProofHandle,
                 query_idx: usize,
                 proofs: *mut MerkleProofHandle,
@@ -81,6 +88,9 @@ macro_rules! impl_fri_proof {
         impl FriProofTrait<$field> for FriProof {
             fn new() -> Self {
                 let handle: FriProofHandle = unsafe { icicle_initialize_fri_proof() };
+                if handle.is_null() {
+                    panic!("Couldn't create FriProof");
+                }
                 Self { handle }
             }
 
@@ -88,14 +98,15 @@ macro_rules! impl_fri_proof {
                 let mut nof_queries: usize = 0;
                 let mut nof_rounds: usize = 0;
                 unsafe {
-                    fri_proof_get_proof_sizes(self.handle, &mut nof_queries, &mut nof_rounds).wrap()?;
+                    fri_proof_get_nof_queries(self.handle, &mut nof_queries).wrap()?;
+                    fri_proof_get_nof_rounds(self.handle, &mut nof_rounds).wrap()?;
                     let mut proofs: Vec<Vec<ManuallyDrop<MerkleProof>>> = Vec::with_capacity(nof_queries as usize);
                     for i in 0..nof_queries {
                         let mut proof: MerkleProofHandle = std::ptr::null();
-                        fri_proof_get_round_proof_at(self.handle, i, &mut proof).wrap()?;
-                        let round_slice = slice::from_raw_parts(proof, nof_rounds as usize);
+                        fri_proof_get_round_proofs_for_query(self.handle, i, &mut proof).wrap()?;
+                        let proofs_per_query = slice::from_raw_parts(proof, nof_rounds as usize);
                         proofs.push(
-                            round_slice
+                            proofs_per_query
                                 .iter()
                                 .map(|x| ManuallyDrop::new(MerkleProof::from_handle(x)))
                                 .collect(),
@@ -109,12 +120,12 @@ macro_rules! impl_fri_proof {
                 let mut nof: usize = 0;
                 unsafe {
                     fri_proof_get_final_poly_size(self.handle, &mut nof).wrap()?;
-                    println!("nof {}", nof);
-                    let mut ptr: *const $field = std::ptr::null();
-                    fri_proof_get_final_poly(self.handle, &mut ptr).wrap()?;
-                    Ok(slice::from_raw_parts(ptr, nof as usize).to_vec())
+                    let mut final_poly_ptr: *const $field = std::ptr::null();
+                    fri_proof_get_final_poly(self.handle, &mut final_poly_ptr).wrap()?;
+                    Ok(slice::from_raw_parts(final_poly_ptr, nof as usize).to_vec())
                 }
             }
+
             fn get_pow_nonce(&self) -> Result<u64, eIcicleError> {
                 let mut nonce: u64 = 0;
                 unsafe { fri_proof_get_pow_nonce(self.handle, &mut nonce).wrap_value(nonce) }

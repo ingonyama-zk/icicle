@@ -7,33 +7,39 @@ use fri_proof::FriProofTrait;
 use fri_transcript_config::FriTranscriptConfig;
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
-pub type FriProof<F> = <<F as FieldImpl>::Config as FriImpl<F>>::FriProof;
+pub type FriProof<F> = <<F as FieldImpl>::Config as FriMerkleTreeImpl<F>>::FriProof;
 
 /// Computes the FRI proof using the given configuration and input data.
 /// # Returns
 /// - `Ok(())` if the FRI proof was successfully computed.
 /// - `Err(eIcicleError)` if an error occurred during proof generation.
-pub fn fri<F: FieldImpl>(
+pub fn fri_merkle_tree_prove<F: FieldImpl>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     output_store_min_layer: u64,
-    fri_proof: &mut FriProof<F>,
-) -> Result<(), eIcicleError>
+) -> Result<FriProof<F>, eIcicleError>
 where
-    <F as FieldImpl>::Config: FriImpl<F>,
+    <F as FieldImpl>::Config: FriMerkleTreeImpl<F>,
 {
-    <F::Config as FriImpl<F>>::get_fri_proof_mt(
+    if input_data.is_on_device() && !input_data.is_on_active_device() {
+        panic!("input_data not allocated on the active device");
+    }
+    let mut local_cfg = config.clone();
+    local_cfg.are_inputs_on_device = true;
+    let mut fri_proof = FriProof::<F>::new();
+    <F::Config as FriMerkleTreeImpl<F>>::fri_merkle_tree_prove(
         config,
         fri_transcript_config,
         input_data,
         merkle_tree_leaves_hash,
         merkle_tree_compress_hash,
         output_store_min_layer,
-        fri_proof,
-    )
+        &mut fri_proof,
+    )?;
+    Ok(fri_proof)
 }
 
 /// Verifies a FRI proof using the given configuration and Merkle tree hashes.
@@ -41,7 +47,7 @@ where
 /// - `Ok(true)` if the proof is valid.
 /// - `Ok(false)` if the proof is invalid.
 /// - `Err(eIcicleError)` if verification failed due to an error.
-pub fn verify_fri<F: FieldImpl>(
+pub fn fri_merkle_tree_verify<F: FieldImpl>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     fri_proof: &FriProof<F>,
@@ -50,9 +56,9 @@ pub fn verify_fri<F: FieldImpl>(
     output_store_min_layer: u64,
 ) -> Result<bool, eIcicleError>
 where
-    <F as FieldImpl>::Config: FriImpl<F>,
+    <F as FieldImpl>::Config: FriMerkleTreeImpl<F>,
 {
-    <F::Config as FriImpl<F>>::verify_fri_mt(
+    <F::Config as FriMerkleTreeImpl<F>>::fri_merkle_tree_verify(
         config,
         fri_transcript_config,
         fri_proof,
@@ -91,10 +97,10 @@ impl Default for FriConfig {
     }
 }
 
-pub trait FriImpl<F: FieldImpl> {
+pub trait FriMerkleTreeImpl<F: FieldImpl> {
     type FieldConfig: FieldConfig + GenerateRandom<F> + FieldArithmetic<F>;
     type FriProof: FriProofTrait<F>;
-    fn get_fri_proof_mt(
+    fn fri_merkle_tree_prove(
         config: &FriConfig,
         fri_transcript_config: &FriTranscriptConfig<F>,
         input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -104,7 +110,7 @@ pub trait FriImpl<F: FieldImpl> {
         fri_proof: &mut Self::FriProof,
     ) -> Result<(), eIcicleError>;
 
-    fn verify_fri_mt(
+    fn fri_merkle_tree_verify(
         config: &FriConfig,
         fri_transcript_config: &FriTranscriptConfig<F>,
         fri_proof: &Self::FriProof,
@@ -126,7 +132,7 @@ macro_rules! impl_fri {
             use super::{$field, $field_config};
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
             use icicle_core::{
-                fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriImpl},
+                fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTreeImpl},
                 hash::{Hasher, HasherHandle},
                 impl_fri_proof,
                 traits::FieldImpl,
@@ -136,8 +142,8 @@ macro_rules! impl_fri {
             impl_fri_proof!($field_prefix, $field, $field_config);
 
             extern "C" {
-                #[link_name = concat!($field_prefix, "_get_fri_proof_mt")]
-                fn icicle_get_fri_proof_mt(
+                #[link_name = concat!($field_prefix, "_fri_merkle_tree_prove")]
+                fn icicle_fri_merkle_tree_prove(
                     fri_config: *const FriConfig,
                     fri_transcript_config: *const FFIFriTranscriptConfig<$field>,
                     input_data: *const $field,
@@ -147,8 +153,8 @@ macro_rules! impl_fri {
                     output_store_min_layer: u64,
                     fri_proof: FriProofHandle,
                 ) -> eIcicleError;
-                #[link_name = concat!($field_prefix, "_verify_fri_mt")]
-                fn verify_fri_mt(
+                #[link_name = concat!($field_prefix, "_fri_merkle_tree_verify")]
+                fn fri_merkle_tree_verify(
                     fri_config: *const FriConfig,
                     fri_transcript_config: *const FFIFriTranscriptConfig<$field>,
                     fri_proof: FriProofHandle,
@@ -157,10 +163,11 @@ macro_rules! impl_fri {
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl FriImpl<$field> for $field_config {
+            impl FriMerkleTreeImpl<$field> for $field_config {
                 type FieldConfig = $field_config;
                 type FriProof = FriProof;
-                fn get_fri_proof_mt(
+
+                fn fri_merkle_tree_prove(
                     config: &FriConfig,
                     transcript_config: &FriTranscriptConfig<$field>,
                     input_data: &(impl HostOrDeviceSlice<$field> + ?Sized),
@@ -171,7 +178,7 @@ macro_rules! impl_fri {
                 ) -> Result<(), eIcicleError> {
                     let ffi_transcript_config = FFIFriTranscriptConfig::<$field>::from(transcript_config);
                     unsafe {
-                        icicle_get_fri_proof_mt(
+                        icicle_fri_merkle_tree_prove(
                             config as *const FriConfig,
                             &ffi_transcript_config,
                             input_data.as_ptr() as *const $field,
@@ -184,7 +191,8 @@ macro_rules! impl_fri {
                         .wrap()
                     }
                 }
-                fn verify_fri_mt(
+
+                fn fri_merkle_tree_verify(
                     config: &FriConfig,
                     fri_transcript_config: &FriTranscriptConfig<$field>,
                     fri_proof: &FriProof,
@@ -195,7 +203,7 @@ macro_rules! impl_fri {
                     let ffi_transcript_config = FFIFriTranscriptConfig::<$field>::from(fri_transcript_config);
                     let mut valid: bool = false;
                     unsafe {
-                        let err = verify_fri_mt(
+                        let err = fri_merkle_tree_verify(
                             config as *const FriConfig,
                             &ffi_transcript_config,
                             fri_proof.handle,
@@ -236,15 +244,15 @@ macro_rules! impl_fri_tests {
 
             pub fn initialize() {
                 INIT.call_once(move || {
-                    test_utilities::test_load_and_init_devices();
-                    // init domain for both devices
-                    test_utilities::test_set_ref_device();
+                    // test_utilities::test_load_and_init_devices();
+                    // // init domain for both devices
+                    // test_utilities::test_set_ref_device();
                     init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
 
-                    test_utilities::test_set_main_device();
-                    init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
+                    // test_utilities::test_set_main_device();
+                    // init_domain::<$ntt_field>(MAX_SIZE, FAST_TWIDDLES_MODE);
                 });
-                test_utilities::test_set_main_device();
+                // test_utilities::test_set_main_device();
             }
 
             #[test]

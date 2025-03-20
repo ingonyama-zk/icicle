@@ -1,4 +1,4 @@
-use crate::hash::{Hasher, HasherHandle};
+use crate::{hash::{Hasher, HasherHandle}, traits::Handle};
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -133,7 +133,7 @@ impl MerkleProof {
         }
     }
 
-    pub fn from_handle(handle: MerkleProofHandle) -> Self {
+    pub unsafe fn from_handle(handle: MerkleProofHandle) -> Self {
         Self { handle }
     }
 }
