@@ -48,6 +48,9 @@ if (FIELD)
     if(SUMCHECK)
         target_sources(icicle_field PRIVATE src/field/cpu_sumcheck.cpp)
     endif()
+    if(FRI)
+        target_sources(icicle_field PRIVATE src/field/cpu_fri.cpp)
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 
