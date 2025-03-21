@@ -92,14 +92,6 @@ namespace icicle {
     }
 
     /**
-     * @brief Get a pointer to the Merkle proofs at a specific query index.
-     *
-     * @param query_idx The index of the query to retrieve proofs for.
-     * @return Pointer to the first MerkleProof at the given query index.
-     */
-    const std::vector<MerkleProof>& get_proofs_at_query(const size_t query_idx) { return m_query_proofs[query_idx]; }
-
-    /**
      * @brief Get the number of FRI queries in the proof.
      *
      * @return Number of FRI queries.
