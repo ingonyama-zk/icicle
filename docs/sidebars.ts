@@ -38,6 +38,11 @@ const architectureDropdown = [
     label: "CUDA Backend",
     id: "icicle/install_cuda_backend"
   },
+   {
+    type: "doc",
+    label: "METAL Backend",
+    id: "icicle/install_metal_backend"
+  },
   {
     type: "doc",
     label: "Multi-Device Support",
