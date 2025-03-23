@@ -33,6 +33,7 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
   - per distribution, for ICICLE-frontend v3.0 and CUDA 12.2.
 
 - **METAL backend** comes as separate tar `icicle30-macOS-Metal.tar.gz`
+  - ICICLE metal backend is supported on Apple Silicon GPUs.
 
 ## Installing and using ICICLE
 
