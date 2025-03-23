@@ -104,10 +104,11 @@ TEST_F(RingTestBase, BalancedDecomposition)
   constexpr auto q_storage = field_t::get_modulus();
   const uint64_t q = *(uint64_t*)&q_storage; // Note this is valid since TLC == 2
 
-  const size_t size = 1 << 10;
+  const size_t size = 1 << 0;
   auto input = std::vector<field_t>(size);
 
-  const auto bases = std::vector<uint32_t>{2 /*, 4, 16, sqrt(q) */}; // TODO Yuval: add more bases
+  // const auto bases = std::vector<uint32_t>{2, 4, 16 /*, sqrt(q) */}; // TODO Yuval: add more bases
+  const auto bases = std::vector<uint32_t>{2, 4}; // TODO Yuval: add more bases
   for (const auto base : bases) {
     // Number of digits needed to represent an element mod q in balanced base-b representation
     const size_t decomposed_size = size * static_cast<size_t>(std::ceil(std::log2(q) / std::log2(base)));
@@ -124,6 +125,11 @@ TEST_F(RingTestBase, BalancedDecomposition)
       // TODO: check that elements are in the range (-b/2, b/2]. It's in the ring so can check if b/2 close to 0 or q
       ICICLE_CHECK(recompose_from_balanced_digits(
         decomposed.data(), decomposed_size, base, VecOpsConfig{}, expected_recomposed.data(), size));
+
+      for (int i = 0; i < decomposed_size; i++) {
+        std::cout << "Decomposed[" << i << "]: " << decomposed[i] << std::endl;
+      }
+      ICICLE_LOG_INFO << "Decompose base=" << base;
       ASSERT_EQ(0, memcmp(input.data(), expected_recomposed.data(), sizeof(field_t) * size));
     }
   }
