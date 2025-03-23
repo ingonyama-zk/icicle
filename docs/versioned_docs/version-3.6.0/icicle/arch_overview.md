@@ -8,10 +8,11 @@ ICICLE v3 is designed with flexibility and extensibility in mind, offering a rob
 - **Frontend (FE):** The ICICLE frontend is open-source and designed to provide a unified API across different programming languages, including C++, Rust, and Go. This frontend abstracts the complexity of working with different backends, allowing developers to write backend-agnostic code that can be deployed across various platforms.
 - **CPU Backend:** ICICLE includes an open-source CPU backend that allows for development and testing on standard hardware. This backend is ideal for prototyping and for environments where specialized hardware is not available.
 
-## CUDA Backend
+## GPU Backend
 
 - **CUDA Backend:** ICICLE also includes a high-performance CUDA backend that is closed-source. This backend is optimized for NVIDIA GPUs and provides significant acceleration for cryptographic operations. 
-- **Installation and Licensing:** The CUDA backend needs to be downloaded and installed. Refer to the [installation guide](./install_cuda_backend.md) for detailed instructions.
+- **METAL Backend:** ICICLE also features a high-performance METAL backend that is closed-source. This backend is optimized for Apple devices, leveraging the power of the Metal framework to accelerate cryptographic operations on macOS and iOS platforms.
+- **Installation and Licensing:** The CUDA backend needs to be downloaded and installed. Refer to the [installation guide](./install_gpu_backend) for detailed instructions.
 
 ## Multi-Device Support
 
