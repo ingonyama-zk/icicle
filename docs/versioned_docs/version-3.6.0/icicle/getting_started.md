@@ -32,6 +32,8 @@ Each ICICLE release includes a tar file named `icicle30-<distribution>.tar.gz`, 
 - **CUDA backend** comes as separate tar `icicle30-<distribution>-cuda122.tar.gz`
   - per distribution, for ICICLE-frontend v3.0 and CUDA 12.2.
 
+- **METAL backend** comes as separate tar `icicle30-macOS-Metal.tar.gz`
+
 ## Installing and using ICICLE
 
 - [Full C++ example](https://github.com/ingonyama-zk/icicle/tree/main/examples/c++/install-and-use-icicle)
