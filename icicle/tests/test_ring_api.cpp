@@ -1,6 +1,6 @@
 
 #include "test_mod_arithmetic_api.h"
-#include "icicle/rings/balanced_decomposition.h"
+#include "icicle/balanced_decomposition.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -95,5 +95,35 @@ TEST_F(RingTestBase, VectorRnsConversion)
     // Note that we convert in-place so the rns type remains but the underlying data is not rns anymore!
     ICICLE_CHECK(convert_from_rns(rns_output.data(), N, VecOpsConfig{}, (scalar_t*)rns_output.data()));
     ASSERT_EQ(0, memcmp(rns_output.data(), direct_output.data(), sizeof(scalar_t) * N));
+  }
+}
+
+TEST_F(RingTestBase, BalancedDecomposition)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const uint64_t q = *(uint64_t*)&q_storage; // Note this is valid since TLC == 2
+
+  const size_t size = 1 << 10;
+  auto input = std::vector<field_t>(size);
+
+  const auto bases = std::vector<uint32_t>{2 /*, 4, 16, sqrt(q) */}; // TODO Yuval: add more bases
+  for (const auto base : bases) {
+    // Number of digits needed to represent an element mod q in balanced base-b representation
+    const size_t decomposed_size = size * static_cast<size_t>(std::ceil(std::log2(q) / std::log2(base)));
+    auto decomposed = std::vector<field_t>(decomposed_size);
+
+    for (auto device : s_registered_devices) {
+      ICICLE_CHECK(icicle_set_device(device));
+      // randomize every time to make sure the test doesn't rely on the compiler not reusing the same buffer
+      field_t::rand_host_many(input.data(), size);
+      auto expected_recomposed = std::vector<field_t>(size);
+
+      ICICLE_CHECK(decompose_balanced_digits(input.data(), size, base, VecOpsConfig{}, decomposed.data()));
+      // TODO: check that elements are in the range (-b/2, b/2]. It's in the ring so can check if b/2 close to 0 or q
+      ICICLE_CHECK(
+        recompose_from_balanced_digits(decomposed.data(), size, base, VecOpsConfig{}, expected_recomposed.data()));
+      ASSERT_EQ(0, memcmp(input.data(), expected_recomposed.data(), sizeof(field_t) * size));
+    }
   }
 }
