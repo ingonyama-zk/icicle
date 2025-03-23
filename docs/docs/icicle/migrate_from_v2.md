@@ -10,7 +10,7 @@ ICICLE v3 introduces a unified interface for high-performance computing across v
 - **Unified API**: The APIs are now standardized across all devices, ensuring consistent usage and reducing the complexity of managing different hardware backends.
 
 :::warning
-When migrating from v2 to v3, it is important to note that, by default, your code now executes on the CPU. This contrasts with V2, which was exclusively a CUDA library. For details on installing and using CUDA GPUs, refer to the [CUDA backend guide](./install_cuda_backend.md).
+When migrating from v2 to v3, it is important to note that, by default, your code now executes on the CPU. This contrasts with V2, which was exclusively a CUDA library. For details on installing and using CUDA or METAL GPUs, refer to the [GPU backend guide](./install_gpu_backend).
 :::
 
 ## Migration Guide for C++
