@@ -119,10 +119,11 @@ TEST_F(RingTestBase, BalancedDecomposition)
       field_t::rand_host_many(input.data(), size);
       auto expected_recomposed = std::vector<field_t>(size);
 
-      ICICLE_CHECK(decompose_balanced_digits(input.data(), size, base, VecOpsConfig{}, decomposed.data()));
-      // TODO: check that elements are in the range (-b/2, b/2]. It's in the ring so can check if b/2 close to 0 or q
       ICICLE_CHECK(
-        recompose_from_balanced_digits(decomposed.data(), size, base, VecOpsConfig{}, expected_recomposed.data()));
+        decompose_balanced_digits(input.data(), size, base, VecOpsConfig{}, decomposed.data(), decomposed_size));
+      // TODO: check that elements are in the range (-b/2, b/2]. It's in the ring so can check if b/2 close to 0 or q
+      ICICLE_CHECK(recompose_from_balanced_digits(
+        decomposed.data(), decomposed_size, base, VecOpsConfig{}, expected_recomposed.data(), size));
       ASSERT_EQ(0, memcmp(input.data(), expected_recomposed.data(), sizeof(field_t) * size));
     }
   }

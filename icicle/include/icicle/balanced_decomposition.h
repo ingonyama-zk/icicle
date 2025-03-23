@@ -24,12 +24,13 @@ namespace icicle {
    * @param output        Output buffer to store balanced digits per input element.
    *                      Must have space for input_size * num_digits(base, q) elements.
    *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   * @param output_size    Number of output digits.
    *
    * @return              eIcicleError indicating success or failure.
    */
   template <typename T>
-  eIcicleError
-  decompose_balanced_digits(const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output);
+  eIcicleError decompose_balanced_digits(
+    const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size);
 
   /**
    * @brief Recomposes canonical T elements from balanced base-b digits.
@@ -46,17 +47,18 @@ namespace icicle {
    * @param input         Pointer to input digits (flattened array).
    *                      Must contain output_size * num_digits(base, q) elements.
    *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
-   * @param output_size   Number of elements to recompose.
+   * @param input_size    Number of input digits.
    * @param base          The base b used in decomposition.
    * @param config        Configuration for the operation.
    * @param output        Output buffer to store recomposed elements.
    *                      Must have space for output_size elements.
    *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   * @param output_size   Number of elements to recompose.
    *
    * @return              eIcicleError indicating success or failure.
    */
   template <typename T>
   eIcicleError recompose_from_balanced_digits(
-    const T* input, size_t output_size, uint32_t base, const VecOpsConfig& config, T* output);
+    const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size);
 
 } // namespace icicle

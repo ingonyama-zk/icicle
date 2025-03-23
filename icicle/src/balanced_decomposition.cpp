@@ -5,35 +5,59 @@
 
 namespace icicle {
 
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+
   /*********************************** BALANCED DECOMPOSITION/RECOMPOSITION ************************/
   ICICLE_DISPATCHER_INST(BalancedDecomposeDispatcher, decompose_balanced_digits, balancedDecompositionImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)(
-    const field_t* input, size_t input_size, uint32_t base, const VecOpsConfig* config, field_t* output)
+    const field_t* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig* config,
+    field_t* output,
+    size_t output_size)
   {
-    return BalancedDecomposeDispatcher::execute(input, input_size, base, *config, output);
+    return BalancedDecomposeDispatcher::execute(input, input_size, base, *config, output, output_size);
   }
 
   template <>
   eIcicleError decompose_balanced_digits(
-    const field_t* input, size_t input_size, uint32_t base, const VecOpsConfig& config, field_t* output)
+    const field_t* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig& config,
+    field_t* output,
+    size_t output_size)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)(input, input_size, base, &config, output);
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)(
+      input, input_size, base, &config, output, output_size);
   }
 
   ICICLE_DISPATCHER_INST(BalancedRecomposeDispatcher, recompose_from_balanced_digits, balancedDecompositionImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits)(
-    const field_t* input, size_t output_size, uint32_t base, const VecOpsConfig* config, field_t* output)
+    const field_t* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig* config,
+    field_t* output,
+    size_t output_size)
   {
-    return BalancedRecomposeDispatcher::execute(input, output_size, base, *config, output);
+    return BalancedRecomposeDispatcher::execute(input, input_size, base, *config, output, output_size);
   }
 
   template <>
   eIcicleError recompose_from_balanced_digits(
-    const field_t* input, size_t output_size, uint32_t base, const VecOpsConfig& config, field_t* output)
+    const field_t* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig& config,
+    field_t* output,
+    size_t output_size)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits)(input, output_size, base, &config, output);
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits)(
+      input, input_size, base, &config, output, output_size);
   }
 
 } // namespace icicle

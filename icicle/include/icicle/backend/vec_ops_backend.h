@@ -266,7 +266,8 @@ namespace icicle {
     size_t input_size,
     uint32_t base,
     const VecOpsConfig& config,
-    field_t* output)>;
+    field_t* output,
+    size_t output_size)>;
 
   void register_decompose_balanced_digits(const std::string& deviceType, balancedDecompositionImpl impl);
   void register_recompose_from_balanced_digits(const std::string& deviceType, balancedDecompositionImpl impl);
