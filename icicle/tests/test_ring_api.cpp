@@ -1,5 +1,6 @@
 
 #include "test_mod_arithmetic_api.h"
+#include "icicle/rings/balanced_decomposition.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
