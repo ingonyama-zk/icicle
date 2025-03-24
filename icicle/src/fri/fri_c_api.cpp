@@ -78,7 +78,14 @@ typedef FriProof<scalar_t>* FriProofHandle;
 
 FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_initialize_fri_proof)() { return new FriProof<scalar_t>(); }
 
-FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_create_with_arguments_fri_proof)(MerkleProof*** query_proofs_ffi, size_t nof_queries, size_t nof_rounds, scalar_t* final_poly_ffi, size_t final_poly_size, uint64_t pow_nonce) {
+FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_create_with_arguments_fri_proof)(
+  MerkleProof*** query_proofs_ffi,
+  size_t nof_queries,
+  size_t nof_rounds,
+  scalar_t* final_poly_ffi,
+  size_t final_poly_size,
+  uint64_t pow_nonce)
+{
   std::vector<std::vector<MerkleProof>> query_proofs(nof_queries);
   for (auto i = 0; i < nof_queries; ++i) {
     std::vector<MerkleProof> proofs_per_query(nof_rounds);
@@ -88,7 +95,7 @@ FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_create_with_arguments_fri
     query_proofs[i] = proofs_per_query;
   }
   std::vector<scalar_t> final_poly = {final_poly_ffi, final_poly_ffi + final_poly_size};
-  return new FriProof<scalar_t>(query_proofs, final_poly, pow_nonce); 
+  return new FriProof<scalar_t>(query_proofs, final_poly, pow_nonce);
 }
 
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_delete_fri_proof)(FriProofHandle proof_ptr)
@@ -101,8 +108,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_delete_fri_proof)(FriProofH
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_nof_queries)(
-  FriProofHandle proof_ptr, size_t* nof_queries)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_nof_queries)(FriProofHandle proof_ptr, size_t* nof_queries)
 {
   if (!proof_ptr) {
     ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
@@ -117,8 +123,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_nof_queries)(
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_nof_rounds)(
-  FriProofHandle proof_ptr, size_t* nof_rounds)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_nof_rounds)(FriProofHandle proof_ptr, size_t* nof_rounds)
 {
   if (!proof_ptr) {
     ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
@@ -277,7 +282,14 @@ FriProofExtensionHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_icicle_initia
   return new FriProof<extension_t>();
 }
 
-FriProofExtensionHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_icicle_create_with_arguments_fri_proof)(MerkleProof*** query_proofs_ffi, size_t nof_queries, size_t nof_rounds, extension_t* final_poly_ffi, size_t final_poly_size, uint64_t pow_nonce) {
+FriProofExtensionHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_icicle_create_with_arguments_fri_proof)(
+  MerkleProof*** query_proofs_ffi,
+  size_t nof_queries,
+  size_t nof_rounds,
+  extension_t* final_poly_ffi,
+  size_t final_poly_size,
+  uint64_t pow_nonce)
+{
   std::vector<std::vector<MerkleProof>> query_proofs(nof_queries);
   for (auto i = 0; i < nof_queries; ++i) {
     std::vector<MerkleProof> proofs_per_query(nof_rounds);
@@ -287,7 +299,7 @@ FriProofExtensionHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_icicle_create
     query_proofs[i] = proofs_per_query;
   }
   std::vector<extension_t> final_poly = {final_poly_ffi, final_poly_ffi + final_poly_size};
-  return new FriProof<extension_t>(query_proofs, final_poly, pow_nonce); 
+  return new FriProof<extension_t>(query_proofs, final_poly, pow_nonce);
 }
 
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_icicle_delete_fri_proof)(FriProofExtensionHandle proof_ptr)

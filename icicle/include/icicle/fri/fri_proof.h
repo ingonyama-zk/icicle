@@ -23,7 +23,10 @@ namespace icicle {
     // Constructor
     FriProof() : m_pow_nonce(0) {}
 
-    FriProof(std::vector<std::vector<MerkleProof>> query_proofs, std::vector<F> final_poly, uint64_t pow_nonce) : m_query_proofs(std::move(query_proofs)), m_final_poly(std::move(final_poly)), m_pow_nonce(pow_nonce) {}
+    FriProof(std::vector<std::vector<MerkleProof>> query_proofs, std::vector<F> final_poly, uint64_t pow_nonce)
+        : m_query_proofs(std::move(query_proofs)), m_final_poly(std::move(final_poly)), m_pow_nonce(pow_nonce)
+    {
+    }
     /**
      * @brief Initialize the Merkle proofs and final polynomial storage for the FRI proof.
      *
