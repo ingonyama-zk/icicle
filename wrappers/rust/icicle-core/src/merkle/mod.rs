@@ -1,4 +1,7 @@
-use crate::hash::{Hasher, HasherHandle};
+use crate::{
+    hash::{Hasher, HasherHandle},
+    traits::Handle,
+};
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -48,8 +51,9 @@ impl MerkleTreeConfig {
     }
 }
 
-type MerkleProofHandle = *const c_void;
+pub type MerkleProofHandle = *const c_void;
 
+#[derive(Debug)]
 pub struct MerkleProof {
     handle: MerkleProofHandle,
 }
@@ -130,6 +134,16 @@ impl MerkleProof {
                 slice::from_raw_parts(ptr as *const T, element_count)
             }
         }
+    }
+
+    pub unsafe fn from_handle(handle: MerkleProofHandle) -> Self {
+        Self { handle }
+    }
+}
+
+impl Handle for MerkleProof {
+    fn handle(&self) -> *const c_void {
+        self.handle
     }
 }
 
