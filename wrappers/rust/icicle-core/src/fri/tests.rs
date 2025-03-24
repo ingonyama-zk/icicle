@@ -1,4 +1,4 @@
-use super::FriMerkleTreeImpl;
+use super::FriMerkleTree;
 use crate::{
     fri::{
         fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofTrait,
@@ -7,24 +7,24 @@ use crate::{
     hash::Hasher,
     traits::{FieldImpl, GenerateRandom},
 };
-use icicle_runtime::{eIcicleError, memory::DeviceVec, stream::IcicleStream};
+use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
 use icicle_runtime::{memory::HostSlice, test_utilities};
 
-pub fn check_fri<F: FieldImpl>(hash_new: &dyn Fn(u64) -> Result<Hasher, eIcicleError>)
-where
-    <F as FieldImpl>::Config: FriMerkleTreeImpl<F> + GenerateRandom<F>,
+pub fn check_fri<F: FieldImpl>(
+    merkle_tree_leaves_hash: &Hasher,
+    merkle_tree_compress_hash: &Hasher,
+    transcript_hash: &Hasher,
+) where
+    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
 {
     let check = || {
         const SIZE: u64 = 1 << 10;
         let fri_config = FriConfig::default();
         let scalars = F::Config::generate_random(SIZE as usize);
 
-        let merkle_tree_leaves_hash = hash_new(std::mem::size_of::<F>() as u64).unwrap();
-        let merkle_tree_compress_hash = hash_new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
-        let transcript_hash = hash_new(0).unwrap();
         let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 
-        let output_store_min_layer = 0;
+        let merkle_tree_min_layer_to_store = 0;
 
         let fri_proof = fri_merkle_tree_prove::<F>(
             &fri_config,
@@ -32,7 +32,7 @@ where
             HostSlice::from_slice(&scalars),
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
-            output_store_min_layer,
+            merkle_tree_min_layer_to_store,
         )
         .unwrap();
         let valid = fri_merkle_tree_verify(
@@ -41,7 +41,6 @@ where
             &fri_proof,
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
-            output_store_min_layer,
         )
         .unwrap();
         assert!(valid);
@@ -52,9 +51,12 @@ where
     check();
 }
 
-pub fn check_fri_on_device<F: FieldImpl>(hash_new: &dyn Fn(u64) -> Result<Hasher, eIcicleError>)
-where
-    <F as FieldImpl>::Config: FriMerkleTreeImpl<F> + GenerateRandom<F>,
+pub fn check_fri_on_device<F: FieldImpl>(
+    merkle_tree_leaves_hash: &Hasher,
+    merkle_tree_compress_hash: &Hasher,
+    transcript_hash: &Hasher,
+) where
+    <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
 {
     let check = || {
         const SIZE: u64 = 1 << 10;
@@ -64,12 +66,9 @@ where
         fri_config.stream_handle = *stream;
         let scalars = F::Config::generate_random(SIZE as usize);
 
-        let merkle_tree_leaves_hash = hash_new(std::mem::size_of::<F>() as u64).unwrap();
-        let merkle_tree_compress_hash = hash_new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
-        let transcript_hash = hash_new(0).unwrap();
         let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 
-        let output_store_min_layer = 0;
+        let merkle_tree_min_layer_to_store = 0;
 
         let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::device_malloc_async(SIZE as usize, &stream).unwrap();
         scalars_d
@@ -82,7 +81,7 @@ where
             HostSlice::from_slice(&scalars),
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
-            output_store_min_layer,
+            merkle_tree_min_layer_to_store,
         )
         .unwrap();
 
@@ -104,7 +103,6 @@ where
             &fri_proof_copy,
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
-            output_store_min_layer,
         )
         .unwrap();
         assert!(valid);

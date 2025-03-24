@@ -1,32 +1,11 @@
-use std::{ffi::c_void, mem::ManuallyDrop};
+use std::mem::ManuallyDrop;
 
 use icicle_runtime::eIcicleError;
 
-use crate::{merkle::MerkleProof, traits::{FieldImpl, Handle}};
-
-pub struct PointerArray {
-    pub ptr: *const c_void,
-    pub element_size: usize,
-    pub len: usize,
-}
-
-impl PointerArray {
-    pub unsafe fn get_untyped<T>(&self, index: usize) -> &T {
-        assert!(index < self.len, "Index out of bounds");
-
-        // Calculate offset: (ptr + index * element_size) and cast to T
-        let byte_ptr = (self.ptr as *const u8).add(index * self.element_size);
-        &*(byte_ptr as *const T)
-    }
-}
-
-impl PointerArray {
-    pub unsafe fn get(&self, index: usize) -> *const c_void {
-        assert!(index < self.len, "Index out of bounds");
-        let byte_ptr = (self.ptr as *const u8).add(index * self.element_size);
-        byte_ptr as *const c_void
-    }
-}
+use crate::{
+    merkle::MerkleProof,
+    traits::{FieldImpl, Handle},
+};
 
 pub trait FriProofTrait<F: FieldImpl>: Sized + Handle
 where
@@ -48,7 +27,11 @@ where
     fn get_pow_nonce(&self) -> Result<u64, eIcicleError>;
 
     /// Creates a new instance of `FriProof` with the given proof data and wraps it in `ManuallyDrop`.
-    fn create_with_arguments(query_proofs: Vec<Vec<ManuallyDrop<MerkleProof>>>, final_poly: Vec<F>, pow_nonce: u64) -> ManuallyDrop<Self>;
+    fn create_with_arguments(
+        query_proofs: Vec<Vec<ManuallyDrop<MerkleProof>>>,
+        final_poly: Vec<F>,
+        pow_nonce: u64,
+    ) -> ManuallyDrop<Self>;
 }
 
 #[macro_export]
@@ -59,7 +42,6 @@ macro_rules! impl_fri_proof {
         $field_config:ident
     ) => {
         use icicle_core::fri::fri_proof::FriProofTrait;
-        use icicle_core::fri::fri_proof::PointerArray;
         use icicle_core::merkle::{MerkleProof, MerkleProofHandle};
         use icicle_core::traits::Handle;
         use std::ffi::c_void;
@@ -127,9 +109,16 @@ macro_rules! impl_fri_proof {
             ) -> ManuallyDrop<FriProof> {
                 let handle_vectors: Vec<Vec<MerkleProofHandle>> = query_proofs
                     .iter()
-                    .map(|x| x.iter().map(|x| x.handle()).collect())
+                    .map(|x| {
+                        x.iter()
+                            .map(|x| x.handle())
+                            .collect()
+                    })
                     .collect();
-                let handle_vectors: Vec<*const MerkleProofHandle> = handle_vectors.iter().map(|x| x.as_ptr()).collect();
+                let handle_vectors: Vec<*const MerkleProofHandle> = handle_vectors
+                    .iter()
+                    .map(|x| x.as_ptr())
+                    .collect();
 
                 let handle: FriProofHandle = unsafe {
                     create_with_arguments_fri_proof(
@@ -156,8 +145,7 @@ macro_rules! impl_fri_proof {
                     let mut proofs: Vec<Vec<ManuallyDrop<MerkleProof>>> = Vec::with_capacity(nof_queries as usize);
                     for i in 0..nof_queries {
                         let mut proofs_per_query: Vec<MerkleProofHandle> = vec![std::ptr::null(); nof_rounds];
-                        fri_proof_get_round_proofs_for_query(self.handle, i, proofs_per_query.as_mut_ptr())
-                            .wrap()?;
+                        fri_proof_get_round_proofs_for_query(self.handle, i, proofs_per_query.as_mut_ptr()).wrap()?;
                         proofs.push(
                             proofs_per_query
                                 .iter()

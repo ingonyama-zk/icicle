@@ -7,7 +7,7 @@ use fri_proof::FriProofTrait;
 use fri_transcript_config::FriTranscriptConfig;
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
-pub type FriProof<F> = <<F as FieldImpl>::Config as FriMerkleTreeImpl<F>>::FriProof;
+pub type FriProof<F> = <<F as FieldImpl>::Config as FriMerkleTree<F>>::FriProof;
 
 /// Computes the FRI proof using the given configuration and input data.
 /// # Returns
@@ -19,27 +19,24 @@ pub fn fri_merkle_tree_prove<F: FieldImpl>(
     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
-    output_store_min_layer: u64,
+    merkle_tree_min_layer_to_store: u64,
 ) -> Result<FriProof<F>, eIcicleError>
 where
-    <F as FieldImpl>::Config: FriMerkleTreeImpl<F>,
+    <F as FieldImpl>::Config: FriMerkleTree<F>,
 {
     if input_data.is_on_device() && !input_data.is_on_active_device() {
         panic!("input_data not allocated on the active device");
     }
     let mut local_cfg = config.clone();
     local_cfg.are_inputs_on_device = true;
-    let mut fri_proof = FriProof::<F>::new();
-    <F::Config as FriMerkleTreeImpl<F>>::fri_merkle_tree_prove(
+    <F::Config as FriMerkleTree<F>>::fri_merkle_tree_prove(
         config,
         fri_transcript_config,
         input_data,
         merkle_tree_leaves_hash,
         merkle_tree_compress_hash,
-        output_store_min_layer,
-        &mut fri_proof,
-    )?;
-    Ok(fri_proof)
+        merkle_tree_min_layer_to_store,
+    )
 }
 
 /// Verifies a FRI proof using the given configuration and Merkle tree hashes.
@@ -53,18 +50,16 @@ pub fn fri_merkle_tree_verify<F: FieldImpl>(
     fri_proof: &FriProof<F>,
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
-    output_store_min_layer: u64,
 ) -> Result<bool, eIcicleError>
 where
-    <F as FieldImpl>::Config: FriMerkleTreeImpl<F>,
+    <F as FieldImpl>::Config: FriMerkleTree<F>,
 {
-    <F::Config as FriMerkleTreeImpl<F>>::fri_merkle_tree_verify(
+    <F::Config as FriMerkleTree<F>>::fri_merkle_tree_verify(
         config,
         fri_transcript_config,
         fri_proof,
         merkle_tree_leaves_hash,
         merkle_tree_compress_hash,
-        output_store_min_layer,
     )
 }
 
@@ -97,7 +92,7 @@ impl Default for FriConfig {
     }
 }
 
-pub trait FriMerkleTreeImpl<F: FieldImpl> {
+pub trait FriMerkleTree<F: FieldImpl> {
     type FieldConfig: FieldConfig + GenerateRandom<F> + FieldArithmetic<F>;
     type FriProof: FriProofTrait<F>;
     fn fri_merkle_tree_prove(
@@ -106,9 +101,8 @@ pub trait FriMerkleTreeImpl<F: FieldImpl> {
         input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
-        output_store_min_layer: u64,
-        fri_proof: &mut Self::FriProof,
-    ) -> Result<(), eIcicleError>;
+        merkle_tree_min_layer_to_store: u64,
+    ) -> Result<Self::FriProof, eIcicleError>;
 
     fn fri_merkle_tree_verify(
         config: &FriConfig,
@@ -116,7 +110,6 @@ pub trait FriMerkleTreeImpl<F: FieldImpl> {
         fri_proof: &Self::FriProof,
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
-        output_store_min_layer: u64,
     ) -> Result<bool, eIcicleError>;
 }
 
@@ -132,7 +125,7 @@ macro_rules! impl_fri {
             use super::{$field, $field_config};
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
             use icicle_core::{
-                fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTreeImpl},
+                fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTree},
                 hash::{Hasher, HasherHandle},
                 impl_fri_proof,
                 traits::FieldImpl,
@@ -150,7 +143,7 @@ macro_rules! impl_fri {
                     input_size: u64,
                     merkle_tree_leaves_hash: HasherHandle,
                     merkle_tree_compress_hash: HasherHandle,
-                    output_store_min_layer: u64,
+                    merkle_tree_min_layer_to_store: u64,
                     fri_proof: FriProofHandle,
                 ) -> eIcicleError;
                 #[link_name = concat!($field_prefix, "_fri_merkle_tree_verify")]
@@ -163,7 +156,7 @@ macro_rules! impl_fri {
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl FriMerkleTreeImpl<$field> for $field_config {
+            impl FriMerkleTree<$field> for $field_config {
                 type FieldConfig = $field_config;
                 type FriProof = FriProof;
 
@@ -173,10 +166,10 @@ macro_rules! impl_fri {
                     input_data: &(impl HostOrDeviceSlice<$field> + ?Sized),
                     merkle_tree_leaves_hash: &Hasher,
                     merkle_tree_compress_hash: &Hasher,
-                    output_store_min_layer: u64,
-                    fri_proof: &mut FriProof,
-                ) -> Result<(), eIcicleError> {
+                    merkle_tree_min_layer_to_store: u64,
+                ) -> Result<FriProof, eIcicleError> {
                     let ffi_transcript_config = FFIFriTranscriptConfig::<$field>::from(transcript_config);
+                    let mut fri_proof = FriProof::new();
                     unsafe {
                         icicle_fri_merkle_tree_prove(
                             config as *const FriConfig,
@@ -185,10 +178,10 @@ macro_rules! impl_fri {
                             input_data.len() as u64,
                             merkle_tree_leaves_hash.handle,
                             merkle_tree_compress_hash.handle,
-                            output_store_min_layer,
+                            merkle_tree_min_layer_to_store,
                             fri_proof.handle,
                         )
-                        .wrap()
+                        .wrap_value(fri_proof)
                     }
                 }
 
@@ -198,7 +191,6 @@ macro_rules! impl_fri {
                     fri_proof: &FriProof,
                     merkle_tree_leaves_hash: &Hasher,
                     merkle_tree_compress_hash: &Hasher,
-                    output_store_min_layer: u64,
                 ) -> Result<bool, eIcicleError> {
                     let ffi_transcript_config = FFIFriTranscriptConfig::<$field>::from(fri_transcript_config);
                     let mut valid: bool = false;
@@ -224,8 +216,7 @@ macro_rules! impl_fri_tests {
     (
       $field_prefix_ident:ident,
       $ntt_field:ident,
-      $field:ident,
-      $hasher_new:expr
+      $field:ident
     ) => {
         mod $field_prefix_ident {
             use super::*;
@@ -233,6 +224,7 @@ macro_rules! impl_fri_tests {
             use icicle_core::fri::tests::{check_fri, check_fri_on_device};
             use icicle_core::hash::Hasher;
             use icicle_core::ntt::tests::init_domain;
+            use icicle_hash::keccak::Keccak256;
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use serial_test::parallel;
@@ -258,15 +250,28 @@ macro_rules! impl_fri_tests {
             #[test]
             pub fn test_fri() {
                 initialize();
-
-                check_fri::<$field>(&$hasher_new);
+                let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
+                let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+                let transcript_hash = Keccak256::new(0).unwrap();
+                check_fri::<$field>(
+                    &merkle_tree_leaves_hash,
+                    &merkle_tree_compress_hash,
+                    &transcript_hash,
+                );
             }
 
             #[test]
             pub fn test_fri_on_device() {
                 initialize();
 
-                check_fri_on_device::<$field>(&$hasher_new);
+                let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
+                let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+                let transcript_hash = Keccak256::new(0).unwrap();
+                check_fri_on_device::<$field>(
+                    &merkle_tree_leaves_hash,
+                    &merkle_tree_compress_hash,
+                    &transcript_hash,
+                );
             }
         }
     };
