@@ -12,7 +12,7 @@ static eIcicleError cpu_decompose_balanced_digits(
 {
   static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
-  const uint64_t q = *(const uint64_t*)&q_storage;
+  const int64_t q = *(const uint64_t*)&q_storage;
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
@@ -37,25 +37,32 @@ static eIcicleError cpu_decompose_balanced_digits(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  // Decompose each element into balanced digits
-  const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
-  int64_t* output_i64 = reinterpret_cast<int64_t*>(output);
+  const int64_t* input_u64 = reinterpret_cast<const int64_t*>(input);
+  int64_t* output_u64 = reinterpret_cast<int64_t*>(output);
 
-  for (size_t input_idx = 0; input_idx < input_size * config.batch_size; ++input_idx) {
-    int64_t element_to_decompose = input_i64[input_idx];
+  // TODO: Replace with parallel task manager for performance.
+  for (size_t idx = 0; idx < input_size * config.batch_size; ++idx) {
+    int64_t val = input_u64[idx];
+    // we need to handle case where val>q/2 by subtracting q
+    if (val > q / 2) { val = val - q; }
 
     for (size_t digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
-      int64_t digit = element_to_decompose % base;
-      element_to_decompose /= base;
+      int64_t digit = static_cast<int64_t>(val % static_cast<int64_t>(base));
+      val /= static_cast<int64_t>(base);
 
       // Shift into balanced digit range [-b/2, b/2)
       if (digit > static_cast<int64_t>(base) / 2) {
-        digit -= base;
-        ++element_to_decompose;
+        digit -= static_cast<int64_t>(base);
+        ++val;
       }
 
-      output_i64[input_idx * digits_per_element + digit_idx] =
-        (digit < 0) ? digit + q : digit; // TODO Yuval: is this correct?
+      // Wrap negative digits to [0, q) for representation in field_t
+      output_u64[idx * digits_per_element + digit_idx] =
+        digit < 0 ? static_cast<uint64_t>(digit + q) : static_cast<uint64_t>(digit);
+    }
+    if (val != 0) {
+      ICICLE_LOG_ERROR << "Balanced decomposition failed: input value too large.";
+      return eIcicleError::INVALID_ARGUMENT;
     }
   }
 
@@ -98,18 +105,18 @@ static eIcicleError cpu_recompose_from_balanced_digits(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  // Recompose each element from balanced digits
-  const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
-  int64_t* output_i64 = reinterpret_cast<int64_t*>(output);
-
+  // TODO: Replace with parallel task manager for performance.
+  field_t base_as_field = field_t::from(base);
   for (size_t out_idx = 0; out_idx < output_size * config.batch_size; ++out_idx) {
-    int64_t acc = 0;
+    // TODO: can maybe implement with i64 type but not sure if faster
+    field_t acc = field_t::zero();
 
     for (size_t digit_idx = digits_per_element; digit_idx-- > 0;) {
-      acc = acc * base + *(input_i64 + out_idx * digits_per_element + digit_idx);
+      auto digit = input[out_idx * digits_per_element + digit_idx];
+      acc = acc * base_as_field + digit;
     }
 
-    output_i64[out_idx] = acc;
+    output[out_idx] = acc;
   }
 
   return eIcicleError::SUCCESS;
