@@ -5,6 +5,40 @@
 namespace icicle {
 
   /**
+   * @brief Compute the number of digits required to represent any element in Z_q
+   *        using balanced base decomposition with the given base.
+   *
+   * Each field element (in [0, q)) may be represented using digits in the range
+   * [-b/2, b/2), where b = base. This method returns the number of such digits
+   * needed to fully represent any field element.
+   *
+   * If base > 2, we add one extra digit to safely account for any additional
+   * carry caused by shifting digits into the balanced range (e.g., digit > b/2).
+   *
+   * @tparam T    Field element type (must match field_t::TLC == 2).
+   * @param base  The base to use for balanced decomposition (must be >= 2).
+   * @return      Number of digits needed for full representation.
+   */
+  template <typename T>
+  static constexpr inline uint32_t compute_nof_digits(uint32_t base)
+  {
+    static_assert(T::TLC == 2, "Balanced decomposition assumes q ~64-bit");
+
+    // Get the modulus q as an int64_t
+    constexpr auto q_storage = T::get_modulus();
+    const int64_t q = *(const int64_t*)&q_storage;
+    ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit"; // TODO Yuval relax this
+
+    // Compute minimum number of digits based on log(q) / log(base)
+    const double log2_q = std::log2(static_cast<double>(q));
+    const double log2_base = std::log2(static_cast<double>(base));
+    const uint32_t base_digits = static_cast<uint32_t>(std::ceil(log2_q / log2_base));
+
+    // For base > 2, we may need an extra digit due to the carry when balancing
+    return base > 2 ? base_digits + 1 : base_digits;
+  }
+
+  /**
    * @brief Decomposes elements in T into balanced base-b digits.
    *
    * For each input element x ∈ T, this function computes a sequence of digits

@@ -102,16 +102,18 @@ TEST_F(RingTestBase, BalancedDecomposition)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
-  const uint64_t q = *(uint64_t*)&q_storage; // Note this is valid since TLC == 2
+  const int64_t q = *(int64_t*)&q_storage;                    // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit"; // TODO Yuval relax this
 
-  const size_t size = 1 << 10;
+  const size_t size = 1 << 12;
   auto input = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
   const auto bases = std::vector<uint32_t>{2, 4, 16, q_sqrt};
   for (const auto base : bases) {
     // Number of digits needed to represent an element mod q in balanced base-b representation
-    const size_t decomposed_size = size * static_cast<size_t>(std::ceil(std::log2(q) / std::log2(base)));
+    const size_t digits_per_element = compute_nof_digits<field_t>(base);
+    const size_t decomposed_size = size * digits_per_element;
     auto decomposed = std::vector<field_t>(decomposed_size);
 
     for (auto device : s_registered_devices) {
@@ -120,15 +122,27 @@ TEST_F(RingTestBase, BalancedDecomposition)
       field_t::rand_host_many(input.data(), size);
       auto recomposed = std::vector<field_t>(size);
 
+      // Decompose into balanced digits
       ICICLE_CHECK(
         decompose_balanced_digits(input.data(), size, base, VecOpsConfig{}, decomposed.data(), decomposed_size));
-      // TODO: check that elements are in the range (-b/2, b/2]. It's in the ring so can check if b/2 close to 0 or q
+
+      // Verify that all digits lie in the correct balanced range (-b/2, b/2]
+      for (size_t i = 0; i < decomposed_size; ++i) {
+        const int64_t digit = *reinterpret_cast<int64_t*>(&decomposed[i]);
+
+        // Since field_t wraps into [0, q), digits near q are actually negative
+        const bool is_positive_digit = digit <= base / 2;
+        const bool is_negative_digit = (q - digit) < base / 2;
+        const bool is_balanced = is_positive_digit || is_negative_digit;
+
+        ASSERT_TRUE(is_balanced) << "Digit " << digit << " is out of expected balanced range for base=" << base;
+      }
+
+      // Recompose and compare to original input
       ICICLE_CHECK(recompose_from_balanced_digits(
         decomposed.data(), decomposed_size, base, VecOpsConfig{}, recomposed.data(), size));
-
-      ICICLE_LOG_INFO << "Decompose base=" << base;
-
-      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
+        << "Recomposition failed for base=" << base;
     }
   }
 }
