@@ -37,7 +37,7 @@ static eIcicleError cpu_decompose_balanced_digits(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t digits_per_element = compute_nof_digits<field_t>(base);
+  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
   if (output_size < input_size * digits_per_element) {
     ICICLE_LOG_ERROR << "Output buffer too small for balanced decomposition.";
     return eIcicleError::INVALID_ARGUMENT;
@@ -145,7 +145,7 @@ static eIcicleError cpu_recompose_from_balanced_digits(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t digits_per_element = compute_nof_digits<field_t>(base);
+  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
   if (input_size < output_size * digits_per_element) {
     ICICLE_LOG_ERROR << "Input buffer too small for balanced recomposition.";
     return eIcicleError::INVALID_ARGUMENT;

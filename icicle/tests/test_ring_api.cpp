@@ -103,7 +103,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit";
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetics";
 
   const size_t size = 1 << 10;
   auto input = std::vector<field_t>(size);
@@ -112,7 +112,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   const auto bases = std::vector<uint32_t>{2, 4, 16, q_sqrt};
   for (const auto base : bases) {
     // Number of digits needed to represent an element mod q in balanced base-b representation
-    const size_t digits_per_element = compute_nof_digits<field_t>(base);
+    const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
     const size_t decomposed_size = size * digits_per_element;
     auto decomposed = std::vector<field_t>(decomposed_size);
 
@@ -136,7 +136,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
 
       // Decompose into balanced digits
       START_TIMER(decomposition);
-      ICICLE_CHECK(decompose_balanced_digits(d_input, size, base, cfg, d_decomposed, decomposed_size));
+      ICICLE_CHECK(balanced_decomposition::decompose(d_input, size, base, cfg, d_decomposed, decomposed_size));
       END_TIMER(decomposition, timer_label_decompose.str().c_str(), true);
 
       // Verify that all digits lie in the correct balanced range (-b/2, b/2]
@@ -154,7 +154,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
 
       // Recompose and compare to original input
       START_TIMER(recomposition);
-      ICICLE_CHECK(recompose_from_balanced_digits(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
+      ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
       END_TIMER(recomposition, timer_label_recompose.str().c_str(), true);
 
       auto recomposed = std::vector<field_t>(size);
