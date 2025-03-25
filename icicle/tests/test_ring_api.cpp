@@ -111,10 +111,10 @@ TEST_F(RingTestBase, BalancedDecomposition)
   auto recomposed = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
-  const auto bases = std::vector<uint32_t>{3, 4, 27, 60, q_sqrt};
+  const auto bases = std::vector<uint32_t>{2, 3, 4, 27, 60, q_sqrt};
 
   for (auto device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device("CPU"));
+    ICICLE_CHECK(icicle_set_device(device));
 
     field_t *d_input, *d_decomposed, *d_recomposed;
     ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
@@ -149,7 +149,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
 
         // Since field_t wraps into [0, q), digits near q are actually negative
         const bool is_positive_digit = digit <= base / 2;
-        const bool is_negative_digit = (base % 0 /*base is even*/) ? (q - digit) < base / 2 : (q - digit) <= base / 2;
+        const bool is_negative_digit = (base % 2 == 0) ? (q - digit) < base / 2 : (q - digit) <= base / 2;
         const bool is_balanced = is_positive_digit || is_negative_digit;
 
         ASSERT_TRUE(is_balanced) << "Digit " << digit << " is out of expected balanced range for base=" << base;
