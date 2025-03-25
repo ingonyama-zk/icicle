@@ -37,8 +37,7 @@ class Labrador(ZqElement):
         
 def calc_nof_digits(q: int, base: int) -> int:
     from math import ceil, log
-    nof_digits = ceil(log(q)/ log(base)) + 1 # +1 ??
-    # nof_digits = ceil(log(q)/ log(base))
+    nof_digits = ceil(log(q)/ log(base)) + 1 if base>2 else ceil(log(q)/ log(base))
     return nof_digits
 
 # Decompose a Labrador element in a given base using integer digits
