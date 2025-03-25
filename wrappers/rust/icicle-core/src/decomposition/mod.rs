@@ -1,8 +1,4 @@
-// (1) trait for BalancedDecomposition
-// (2) floating functions to call the API (for consistency with ICICLE)
-// (3) macro to implement the trait for a given type via C FFI
-//          - Implemented for Field::Config
-// (4) macro to test decomposition
+// TODO Yuval: refine and comment
 
 use crate::{traits::FieldImpl, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -25,6 +21,25 @@ pub trait BalancedDecomposition<T: FieldImpl> {
         base: u32,
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
+}
+
+pub fn balanced_decomposition_count_digits<T: FieldImpl>(base: u32) -> u32
+where
+    T::Config: BalancedDecomposition<T>,
+{
+    T::Config::compute_nof_digits(base)
+}
+
+pub fn balanced_decomposition_recompose<T: FieldImpl>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    base: u32,
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    T::Config: BalancedDecomposition<T>,
+{
+    T::Config::recompose(input, output, base, cfg)
 }
 
 #[macro_export]
