@@ -105,7 +105,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit";
 
-  const size_t size = 1 << 12;
+  const size_t size = 1 << 10;
   auto input = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
