@@ -14,9 +14,7 @@ static eIcicleError cpu_decompose_balanced_digits(
   static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
-  {
-    ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit";
-  }
+  ICICLE_ASSERT(q > 0) << "Implemntation expects at least one slack bit to efficiently rely on int64_t";
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
@@ -42,13 +40,26 @@ static eIcicleError cpu_decompose_balanced_digits(
   const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
   int64_t* output_i64 = reinterpret_cast<int64_t*>(output);
 
+  // Helper function that performs floor division and modulo like Python or standard math.
+  // Ensures that the remainder is always non-negative and the quotient is rounded down
+  // (i.e., toward negative infinity), unlike C++'s default behavior which rounds toward zero.
   auto divmod = [](int64_t a, int64_t base) -> std::pair<int64_t, int64_t> {
+    // Perform regular C++ integer division and modulo
     int64_t q = a / base;
     int64_t r = a % base;
+
+    // If remainder is non-zero AND a and base have opposite signs
+    // then C++ has rounded the quotient toward zero instead of toward -∞,
+    // and the remainder is negative. Fix it.
+    //
+    // (a ^ base) < 0 checks if the signs of a and base are different:
+    // - XOR of two values with the same sign yields a positive or zero result
+    // - XOR of two values with different signs yields a negative result
     if ((r != 0) && ((a ^ base) < 0)) {
-      q -= 1;
-      r += base;
+      q -= 1;    // Round quotient down by one
+      r += base; // Adjust remainder to stay consistent with a = q * base + r
     }
+
     return {q, r};
   };
 
@@ -63,8 +74,8 @@ static eIcicleError cpu_decompose_balanced_digits(
       std::tie(val, digit) = divmod(val, base);
 
       // Shift into balanced digit range [-b/2, b/2)
-      if (digit > static_cast<int64_t>(base) / 2) {
-        digit -= static_cast<int64_t>(base);
+      if (digit > base / 2) {
+        digit -= base;
         ++val;
       }
 
@@ -92,9 +103,7 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   static_assert(field_t::TLC == 2, "Balanced recomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
-  {
-    ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit";
-  }
+  ICICLE_ASSERT(q > 0) << "Implemntation expects at least one slack bit to efficiently rely on int64_t";
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
@@ -120,14 +129,12 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   // TODO: Replace with parallel task manager for performance.
   field_t base_as_field = field_t::from(base);
   for (size_t out_idx = 0; out_idx < output_size * config.batch_size; ++out_idx) {
-    // TODO: can maybe implement with i64 type but not sure if faster
     field_t acc = field_t::zero();
-
+    // computing 'x ≡ ∑ r_i * b^i mod q' in field_t
     for (size_t digit_idx = digits_per_element; digit_idx-- > 0;) {
       auto digit = input[out_idx * digits_per_element + digit_idx];
       acc = acc * base_as_field + digit;
     }
-
     output[out_idx] = acc;
   }
 
