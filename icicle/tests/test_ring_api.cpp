@@ -118,13 +118,19 @@ TEST_F(RingTestBase, BalancedDecomposition)
 
     for (auto device : s_registered_devices) {
       ICICLE_CHECK(icicle_set_device(device));
+      std::stringstream timer_label_decompose, timer_label_recompose;
+      timer_label_decompose << "Decomposition [device=" << device << ", base=" << base << "]";
+      timer_label_recompose << "Recomposition [device=" << device << ", base=" << base << "]";
+
       // randomize every time to make sure the test doesn't rely on the compiler not reusing the same buffer
       field_t::rand_host_many(input.data(), size);
       auto recomposed = std::vector<field_t>(size);
 
       // Decompose into balanced digits
+      START_TIMER(decomposition);
       ICICLE_CHECK(
         decompose_balanced_digits(input.data(), size, base, VecOpsConfig{}, decomposed.data(), decomposed_size));
+      END_TIMER(decomposition, timer_label_decompose.str().c_str(), true);
 
       // Verify that all digits lie in the correct balanced range (-b/2, b/2]
       for (size_t i = 0; i < decomposed_size; ++i) {
@@ -139,8 +145,11 @@ TEST_F(RingTestBase, BalancedDecomposition)
       }
 
       // Recompose and compare to original input
+      START_TIMER(recomposition);
       ICICLE_CHECK(recompose_from_balanced_digits(
         decomposed.data(), decomposed_size, base, VecOpsConfig{}, recomposed.data(), size));
+      END_TIMER(recomposition, timer_label_recompose.str().c_str(), true);
+
       ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
         << "Recomposition failed for base=" << base;
     }

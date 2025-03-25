@@ -1,6 +1,12 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/backend/vec_ops_backend.h"
+#include "taskflow/taskflow.hpp"
 #include <cmath>
+
+static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+
+// extract the number of threads to run from config
+int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
 
 static eIcicleError cpu_decompose_balanced_digits(
   const Device& device,
@@ -14,7 +20,7 @@ static eIcicleError cpu_decompose_balanced_digits(
   static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
-  ICICLE_ASSERT(q > 0) << "Implemntation expects at least one slack bit to efficiently rely on int64_t";
+  ICICLE_ASSERT(q > 0) << "Implementation expects q > 0 to support signed representation using int64_t";
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
@@ -64,31 +70,51 @@ static eIcicleError cpu_decompose_balanced_digits(
   };
 
   // TODO: Replace with parallel task manager for performance.
-  for (size_t idx = 0; idx < input_size * config.batch_size; ++idx) {
-    int64_t val = input_i64[idx];
-    int64_t digit = 0;
-    // we need to handle case where val>q/2 by subtracting q (only for base>2)
-    if (base > 2 && val > q / 2) { val = val - q; }
+  const auto base_div2 = base / 2;
+  const auto q_div2 = q / 2;
 
-    for (size_t digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
-      std::tie(val, digit) = divmod(val, base);
+  tf::Taskflow taskflow;
+  tf::Executor executor;
+  const uint64_t total_nof_operations = input_size * config.batch_size;
+  const int nof_workers = get_nof_workers(config);
+  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
 
-      // Shift into balanced digit range [-b/2, b/2)
-      if (digit > base / 2) {
-        digit -= base;
-        ++val;
+  std::atomic<bool> error = false;
+  for (uint64_t start_idx = 0; start_idx < total_nof_operations; start_idx += worker_task_size) {
+    taskflow.emplace([=, &error]() {
+      const uint64_t end_idx = std::min(start_idx + worker_task_size, total_nof_operations);
+      for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
+        int64_t val = input_i64[idx];
+        int64_t digit = 0;
+        // we need to handle case where val>q/2 by subtracting q (only for base>2)
+        if (base > 2 && val > q_div2) { val = val - q; }
+
+        for (size_t digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
+          std::tie(val, digit) = divmod(val, base);
+
+          // Shift into balanced digit range [-b/2, b/2)
+          if (digit > base_div2) {
+            digit -= base;
+            ++val;
+          }
+
+          // Wrap negative digits to [0, q) for representation in field_t
+          output_i64[idx * digits_per_element + digit_idx] = digit < 0 ? digit + q : digit;
+        }
+        if (val != 0) {
+          if (error) { return; } // stop processing if another thread already failed
+          ICICLE_LOG_ERROR << "Balanced decomposition failed: input value too large.";
+          error.store(true, std::memory_order_relaxed); // mark failure
+          return;
+        }
       }
-
-      // Wrap negative digits to [0, q) for representation in field_t
-      output_i64[idx * digits_per_element + digit_idx] = digit < 0 ? digit + q : digit;
-    }
-    if (val != 0) {
-      ICICLE_LOG_ERROR << "Balanced decomposition failed: input value too large.";
-      return eIcicleError::INVALID_ARGUMENT;
-    }
+    });
   }
 
-  return eIcicleError::SUCCESS;
+  executor.run(taskflow).wait();
+  taskflow.clear();
+
+  return error ? eIcicleError::INVALID_ARGUMENT : eIcicleError::SUCCESS;
 }
 
 static eIcicleError cpu_recompose_from_balanced_digits(
@@ -103,7 +129,7 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   static_assert(field_t::TLC == 2, "Balanced recomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
-  ICICLE_ASSERT(q > 0) << "Implemntation expects at least one slack bit to efficiently rely on int64_t";
+  ICICLE_ASSERT(q > 0) << "Implementation expects q > 0 to support signed representation using int64_t";
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
@@ -126,17 +152,31 @@ static eIcicleError cpu_recompose_from_balanced_digits(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  // TODO: Replace with parallel task manager for performance.
   field_t base_as_field = field_t::from(base);
-  for (size_t out_idx = 0; out_idx < output_size * config.batch_size; ++out_idx) {
-    field_t acc = field_t::zero();
-    // computing 'x ≡ ∑ r_i * b^i mod q' in field_t
-    for (size_t digit_idx = digits_per_element; digit_idx-- > 0;) {
-      auto digit = input[out_idx * digits_per_element + digit_idx];
-      acc = acc * base_as_field + digit;
-    }
-    output[out_idx] = acc;
+
+  tf::Taskflow taskflow;
+  tf::Executor executor;
+  const uint64_t total_nof_operations = output_size * config.batch_size;
+  const int nof_workers = get_nof_workers(config);
+  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
+
+  for (uint64_t start_idx = 0; start_idx < total_nof_operations; start_idx += worker_task_size) {
+    taskflow.emplace([=]() {
+      const uint64_t end_idx = std::min(start_idx + worker_task_size, total_nof_operations);
+      for (uint64_t out_idx = start_idx; out_idx < end_idx; ++out_idx) {
+        field_t acc = field_t::zero();
+        // computing 'x ≡ ∑ r_i * b^i mod q' in field_t
+        for (size_t digit_idx = digits_per_element; digit_idx-- > 0;) {
+          auto digit = input[out_idx * digits_per_element + digit_idx];
+          acc = acc * base_as_field + digit;
+        }
+        output[out_idx] = acc;
+      }
+    });
   }
+
+  executor.run(taskflow).wait();
+  taskflow.clear();
 
   return eIcicleError::SUCCESS;
 }
