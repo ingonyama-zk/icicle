@@ -40,35 +40,33 @@ namespace icicle {
     }
 
     /**
- * @brief Decomposes elements in T into balanced base-b digits.
- *
- * For each input element x ∈ T, this function computes a sequence of digits
- * r_i ∈ (-b/2, b/2] (interpreted in T) such that:
- *
- *     x ≡ ∑ r_i * b^i mod q
- *
- * The number of digits per input element is implicitly computed as ceil(log_b(q)).
- *
- * @tparam T Element type of the ring or field (e.g., uint64_t, int64_t).
- *
- * @param input         Pointer to input elements.
- * @param input_size    Number of elements to decompose.
-                        If `config.batch_size > 1`, this should be a concatenated array of vectors.
- * @param base          The base b for decomposition (must fit in uint32_t).
- * @param config        Configuration for the operation.
- * @param output        Output buffer to store balanced digits per input element.
- *                      Must have space for input_size * num_digits(base, q) elements.
- *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
- * @param output_size    Number of output digits.
- *
- * @return              eIcicleError indicating success or failure.
- */
+     * @brief Decomposes elements into balanced base-b digits.
+     *
+     * For each input element x ∈ T, where T is a finite integer ring or field (e.g., Zq), this function computes a
+     * sequence of balanced digits r_i ∈ (-b/2, b/2] (interpreted in T) such that:
+     *
+     *     x ≡ ∑ r_i * b^i mod q
+     *
+     * @tparam T Element type of the ring or field
+     *
+     * @param input         Pointer to input elements.
+     *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
+     * @param input_size    Number of elements to decompose.
+     * @param base          The base b for decomposition (must fit in uint32_t).
+     * @param config        Configuration for the operation.
+     * @param output        Output buffer to store balanced digits per input element.
+     *                      Must have space for input_size * compute_nof_digits<T>(base) elements.
+     *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
+     * @param output_size   Number of output digits.
+     *
+     * @return              eIcicleError indicating success or failure.
+     */
     template <typename T>
     eIcicleError decompose(
       const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size);
 
     /**
-     * @brief Recomposes canonical T elements from balanced base-b digits.
+     * @brief Recomposes T elements from balanced base-b digits.
      *
      * Given a sequence of digits r_i ∈ (-b/2, b/2] per element,
      * this function reconstructs:
@@ -80,7 +78,7 @@ namespace icicle {
      * @tparam T Element type of the ring or field (e.g., uint64_t, int64_t).
      *
      * @param input         Pointer to input digits (flattened array).
-     *                      Must contain output_size * num_digits(base, q) elements.
+     *                      Must contain output_size * compute_nof_digits<T>(base) elements.
      *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
      * @param input_size    Number of input digits.
      * @param base          The base b used in decomposition.
