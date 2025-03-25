@@ -103,7 +103,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetics";
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
   const size_t size = 1 << 10;
   auto input = std::vector<field_t>(size);

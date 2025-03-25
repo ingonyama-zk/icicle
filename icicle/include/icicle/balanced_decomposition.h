@@ -28,7 +28,7 @@ namespace icicle {
       // Get the modulus q as an int64_t
       constexpr auto q_storage = T::get_modulus();
       const int64_t q = *(const int64_t*)&q_storage;
-      ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetics";
+      ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
       // Compute minimum number of digits based on log(q) / log(base)
       const double log2_q = std::log2(static_cast<double>(q));
