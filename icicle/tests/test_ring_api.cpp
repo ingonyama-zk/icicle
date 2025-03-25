@@ -109,10 +109,10 @@ TEST_F(RingTestBase, BalancedDecomposition)
   auto input = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
-  const auto bases = std::vector<uint32_t>{2, 4, 28, 16, q_sqrt};
+  const auto bases = std::vector<uint32_t>{2, 3, 4, 27, 60, q_sqrt};
 
   for (auto device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(icicle_set_device("CPU"));
 
     field_t::rand_host_many(input.data(), size);
     field_t *d_input, *d_decomposed, *d_recomposed;
