@@ -69,7 +69,6 @@ static eIcicleError cpu_decompose_balanced_digits(
     return {q, r};
   };
 
-  // TODO: Replace with parallel task manager for performance.
   const auto base_div2 = base / 2;
   const auto q_div2 = q / 2;
 

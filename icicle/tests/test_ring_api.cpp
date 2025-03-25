@@ -102,8 +102,8 @@ TEST_F(RingTestBase, BalancedDecomposition)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage;                    // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit"; // TODO Yuval relax this
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit";
 
   const size_t size = 1 << 12;
   auto input = std::vector<field_t>(size);
@@ -124,15 +124,23 @@ TEST_F(RingTestBase, BalancedDecomposition)
 
       // randomize every time to make sure the test doesn't rely on the compiler not reusing the same buffer
       field_t::rand_host_many(input.data(), size);
-      auto recomposed = std::vector<field_t>(size);
+      field_t *d_input, *d_decomposed, *d_recomposed;
+      ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
+      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(field_t)));
+      ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(field_t)));
+      ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(field_t)));
+
+      auto cfg = VecOpsConfig{};
+      cfg.is_a_on_device = true;
+      cfg.is_result_on_device = true;
 
       // Decompose into balanced digits
       START_TIMER(decomposition);
-      ICICLE_CHECK(
-        decompose_balanced_digits(input.data(), size, base, VecOpsConfig{}, decomposed.data(), decomposed_size));
+      ICICLE_CHECK(decompose_balanced_digits(d_input, size, base, cfg, d_decomposed, decomposed_size));
       END_TIMER(decomposition, timer_label_decompose.str().c_str(), true);
 
       // Verify that all digits lie in the correct balanced range (-b/2, b/2]
+      ICICLE_CHECK(icicle_copy(decomposed.data(), d_decomposed, decomposed_size * sizeof(field_t)));
       for (size_t i = 0; i < decomposed_size; ++i) {
         const int64_t digit = *reinterpret_cast<int64_t*>(&decomposed[i]);
 
@@ -146,12 +154,17 @@ TEST_F(RingTestBase, BalancedDecomposition)
 
       // Recompose and compare to original input
       START_TIMER(recomposition);
-      ICICLE_CHECK(recompose_from_balanced_digits(
-        decomposed.data(), decomposed_size, base, VecOpsConfig{}, recomposed.data(), size));
+      ICICLE_CHECK(recompose_from_balanced_digits(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
       END_TIMER(recomposition, timer_label_recompose.str().c_str(), true);
 
+      auto recomposed = std::vector<field_t>(size);
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(field_t)));
       ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
         << "Recomposition failed for base=" << base;
-    }
-  }
+
+      icicle_free(d_input);
+      icicle_free(d_decomposed);
+      icicle_free(d_recomposed);
+    } // device loop
+  } // base loop
 }
