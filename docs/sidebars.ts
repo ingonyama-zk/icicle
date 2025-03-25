@@ -36,7 +36,12 @@ const architectureDropdown = [
   {
     type: "doc",
     label: "CUDA Backend",
-    id: "icicle/install_cuda_backend"
+    id: "icicle/install_gpu_backend"
+  },
+   {
+    type: "doc",
+    label: "METAL Backend",
+    id: "icicle/install_gpu_backend"
   },
   {
     type: "doc",
