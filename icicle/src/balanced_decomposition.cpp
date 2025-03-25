@@ -63,4 +63,10 @@ namespace icicle {
         input, input_size, base, &config, output, output_size);
     }
   } // namespace balanced_decomposition
+
+  extern "C" uint32_t CONCAT_EXPAND(ICICLE_FFI_PREFIX, balanced_decomposition_nof_digits)(uint32_t base)
+  {
+    return balanced_decomposition::compute_nof_digits<field_t>(base);
+  }
+
 } // namespace icicle

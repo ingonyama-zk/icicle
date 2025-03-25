@@ -1,4 +1,5 @@
 pub mod curve;
+pub mod decomposition;
 pub mod ecntt;
 pub mod field;
 pub mod hash;

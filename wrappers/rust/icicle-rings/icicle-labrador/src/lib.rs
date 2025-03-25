@@ -1,3 +1,4 @@
+pub mod decomposition;
 pub mod ntt;
 pub mod program;
 pub mod ring;
