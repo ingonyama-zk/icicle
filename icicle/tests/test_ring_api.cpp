@@ -109,30 +109,32 @@ TEST_F(RingTestBase, BalancedDecomposition)
   auto input = std::vector<field_t>(size);
 
   const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
-  const auto bases = std::vector<uint32_t>{2, 4, 16, q_sqrt};
-  for (const auto base : bases) {
-    // Number of digits needed to represent an element mod q in balanced base-b representation
-    const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
-    const size_t decomposed_size = size * digits_per_element;
-    auto decomposed = std::vector<field_t>(decomposed_size);
+  const auto bases = std::vector<uint32_t>{2, 4, 28, 16, q_sqrt};
 
-    for (auto device : s_registered_devices) {
-      ICICLE_CHECK(icicle_set_device(device));
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    field_t::rand_host_many(input.data(), size);
+    field_t *d_input, *d_decomposed, *d_recomposed;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(field_t)));
+
+    auto cfg = VecOpsConfig{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    for (const auto base : bases) {
+      // Number of digits needed to represent an element mod q in balanced base-b representation
+      const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
+      const size_t decomposed_size = size * digits_per_element;
+      auto decomposed = std::vector<field_t>(decomposed_size);
+
       std::stringstream timer_label_decompose, timer_label_recompose;
       timer_label_decompose << "Decomposition [device=" << device << ", base=" << base << "]";
       timer_label_recompose << "Recomposition [device=" << device << ", base=" << base << "]";
 
-      // randomize every time to make sure the test doesn't rely on the compiler not reusing the same buffer
-      field_t::rand_host_many(input.data(), size);
-      field_t *d_input, *d_decomposed, *d_recomposed;
-      ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
       ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(field_t)));
-      ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(field_t)));
-      ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(field_t)));
-
-      auto cfg = VecOpsConfig{};
-      cfg.is_a_on_device = true;
-      cfg.is_result_on_device = true;
 
       // Decompose into balanced digits
       START_TIMER(decomposition);
@@ -162,9 +164,10 @@ TEST_F(RingTestBase, BalancedDecomposition)
       ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
         << "Recomposition failed for base=" << base;
 
-      icicle_free(d_input);
       icicle_free(d_decomposed);
-      icicle_free(d_recomposed);
-    } // device loop
-  } // base loop
+
+    } // base loop
+    icicle_free(d_input);
+    icicle_free(d_recomposed);
+  } // device loop
 }
