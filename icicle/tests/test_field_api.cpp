@@ -14,11 +14,16 @@ using FieldTestBase = ModArithTestBase;
 TYPED_TEST(FieldTest, FieldSanityTest)
 {
   auto a = TypeParam::rand_host();
+  std::cout << "a " << a <<std::endl;
+  // auto b = TypeParam::one() + TypeParam::one();
   auto b = TypeParam::rand_host();
+  std::cout << "b " << b <<std::endl;
   auto b_inv = TypeParam::inverse(b);
   auto a_neg = TypeParam::neg(a);
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
+  std::cout << "b_inv " << b_inv <<std::endl;
+  std::cout << "a*b " << a*b <<std::endl;
   ASSERT_EQ(b * a * b_inv, a);
   ASSERT_EQ(a + a_neg, TypeParam::zero());
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());

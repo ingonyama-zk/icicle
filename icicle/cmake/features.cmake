@@ -6,6 +6,7 @@ set(ICICLE_FIELDS
   1002:stark252:NTT,POSEIDON,POSEIDON2,SUMCHECK
   1003:m31:EXT_FIELD,POSEIDON,POSEIDON2,SUMCHECK
   1004:koalabear:NTT,EXT_FIELD,POSEIDON,POSEIDON2,SUMCHECK
+  1005:goldilocks:NTT,EXT_FIELD,SUMCHECK
 )
 
 # Define available curve libraries with an index and their supported features

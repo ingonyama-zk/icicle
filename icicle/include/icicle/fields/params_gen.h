@@ -62,7 +62,8 @@ namespace params_gen {
     storage<2 * NLIMBS> one = {1};
     storage<2 * NLIMBS> pow_of_2 = host_math::template left_shift<2 * NLIMBS, NBITS>(one);
     host_math::template multiply_raw<NLIMBS, 2 * NLIMBS, true>(modulus, pow_of_2, x3);
-    host_math::template add_sub_limbs<3 * NLIMBS, true, false, true>(x3, x2, x2);
+    host_math::template add_sub_limbs<3 * NLIMBS, true, false, true>(x3, x2, x2); //todo - verify this
+    if (pow_of_2.limbs[2 * NLIMBS - 1] == 0) return 1;
     double err = (double)x2.limbs[2 * NLIMBS - 1] / pow_of_2.limbs[2 * NLIMBS - 1];
     err += (double)m.limbs[NLIMBS - 1] / 0xffffffff;
     err += (double)NLIMBS / 0x80000000;
