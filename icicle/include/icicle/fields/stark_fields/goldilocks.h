@@ -5,8 +5,6 @@
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
 
-//TODO - implement addition that deals with overflow
-
 namespace goldilocks {
 
   template <class CONFIG>
@@ -29,58 +27,16 @@ namespace goldilocks {
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField from(uint32_t value) { return GoldilocksField(value); }
 
-    /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
-      between 0 and p. This is done using 2 steps:
-      1. Splitting the number into TLC sized digits - xs = x_i * p_i = x_i * 2^(TLC*32*i).
-      In the case of Mersenne, p_i modulo p turn out to be 2^i, therefore, we can replace the multiplication with
-      shifts. At the end of this step the number is reduced from to 48 bits max (for a 576 input).
-      2. The second step uses Mersenne reduction (splitting into digitd of 31 bits and adding) twice.*/
+    //TODO - The fact that for goldilocks the p_i's modulo p are {2^32-1, -2^32, 1, 2^32-1, -2^32, 1,...} can be used for an optimized version of the from functions.
     template <unsigned NLIMBS>
-    static constexpr HOST_DEVICE_INLINE GoldilocksField from(const storage<NLIMBS>& xs)
-    {
-      static_assert(NLIMBS * 32 <= 576); // for now we support up to 576 bits
-      storage<2> rs = {};
-      // first reduction step:
-      for (int i = 0; i < NLIMBS; i++) {
-        const GoldilocksField& xi =
-          *reinterpret_cast<const GoldilocksField*>(xs.limbs + i); // use casting instead of copying
-        storage<2> temp = {};
-        temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
-        temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
-        icicle_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
-      }
-      // second reduction step:
-      const uint32_t modulus = GoldilocksField::get_modulus().limbs[0];
-      uint32_t tmp = ((rs.limbs[0] >> 31) | (rs.limbs[1] << 1)) +
-                     (rs.limbs[0] & modulus); // mersenne reduction - max: 2^17 + 2^31-1 <= 2^32
-      tmp = (tmp >> 31) + (tmp & modulus);    // max: 1 + 0 = 1
-      return GoldilocksField{{tmp == modulus ? 0 : tmp}};
+    static constexpr HOST_DEVICE_INLINE GoldilocksField from(const storage<NLIMBS>& xs) {
+      return Field<CONFIG>::from(xs);
     }
 
-    /* This is the non-template version of the from(storage) function above. It receives an array of bytes and its size
-    and returns a field element after modular reduction. For now we support up to 576 bits. */
-    static constexpr HOST_DEVICE_INLINE GoldilocksField from(const std::byte* in, unsigned nof_bytes)
-    {
-      storage<2> rs = {};
-      unsigned constexpr bytes_per_field = 4;
-      int size = nof_bytes / bytes_per_field;
-      // first reduction step:
-      for (int i = 0; i < size; i++) {
-        const GoldilocksField& xi =
-          *reinterpret_cast<const GoldilocksField*>(in + i * bytes_per_field); // use casting instead of copying
-        storage<2> temp = {};
-        temp.limbs[0] = xi.limbs_storage.limbs[0] << i; // in mersenne pi become shifts
-        temp.limbs[1] = i ? xi.limbs_storage.limbs[0] >> (32 - i) : 0;
-        icicle_math::template add_sub_limbs<2, false, false, true>(rs, temp, rs); // accumulation
-      }
-      // second reduction step:
-      const uint32_t modulus = GoldilocksField::get_modulus().limbs[0];
-      uint32_t tmp = ((rs.limbs[0] >> 31) | (rs.limbs[1] << 1)) +
-                     (rs.limbs[0] & modulus); // mersenne reduction - max: 2^17 + 2^31-1 <= 2^32
-      tmp = (tmp >> 31) + (tmp & modulus);    // max: 1 + 0 = 1
-      return GoldilocksField{{tmp == modulus ? 0 : tmp}};
-    }
-
+    static constexpr HOST_DEVICE_INLINE GoldilocksField from(const std::byte* in, unsigned nof_bytes) {
+      return Field<CONFIG>::from(in, nof_bytes);
+    }    
+    
     static HOST_INLINE GoldilocksField rand_host() { return GoldilocksField(Field<CONFIG>::rand_host()); }
 
     static void rand_host_many(GoldilocksField* out, int size) { 
@@ -92,49 +48,6 @@ namespace goldilocks {
       if (this != &other) { Field<CONFIG>::operator=(other); }
       return *this;
     }
-
-    HOST_DEVICE_INLINE uint32_t get_limb() const { return this->limbs_storage.limbs[0]; } //TODO - remove
-
-    //  The `Wide` struct represents a redundant 32-bit form of the Mersenne Field.
-    struct Wide { //TODO - remove
-      uint32_t storage;
-      static constexpr HOST_DEVICE_INLINE Wide from_field(const GoldilocksField& xs)
-      {
-        Wide out{};
-        out.storage = xs.get_limb();
-        return out;
-      }
-      static constexpr HOST_DEVICE_INLINE Wide from_number(const uint32_t& xs)
-      {
-        Wide out{};
-        out.storage = xs;
-        return out;
-      }
-      friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
-      {
-        uint64_t tmp = (uint64_t)xs.storage + ys.storage;                   // max: 2^33 - 2 = 2^32(1) + (2^32 - 2)
-        tmp = ((tmp >> 32) << 1) + (uint32_t)(tmp);                         // 2(1)+(2^32-2) = 2^32(1)+(0)
-        return from_number((uint32_t)((tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1) + 0 = 2
-      }
-      friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
-      {
-        uint64_t tmp = CONFIG::modulus_3 + xs.storage -
-                       ys.storage; // max: 3(2^31-1) + 2^32-1 - 0 = 2^33 + 2^31-4 = 2^32(2) + (2^31-4)
-        return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(2)+(2^31-4) = 2^31
-      }
-      template <unsigned MODULUS_MULTIPLE = 1>
-      static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
-      {
-        uint64_t tmp = CONFIG::modulus_3 - xs.storage;                      // max: 3(2^31-1) - 0 = 2^32(1) + (2^31 - 3)
-        return from_number(((uint32_t)(tmp >> 32) << 1) + (uint32_t)(tmp)); // max: 2(1)+(2^31-3) = 2^31 - 1
-      }
-      friend HOST_DEVICE_INLINE Wide operator*(Wide xs, const Wide& ys)
-      {
-        uint64_t t1 = (uint64_t)xs.storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
-        t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);         // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
-        return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
-      }
-    };
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField div2(const GoldilocksField& xs)
     {
@@ -149,15 +62,12 @@ namespace goldilocks {
     template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(typename Field<CONFIG>::Wide xs)
     {
-      // printf("am i here\n");
       constexpr uint32_t gold_fact = uint32_t(-1);  //(1<<32) - 1
-      // GoldilocksField x_lo = GoldilocksField{xs.limbs_storage.limbs[0], xs.limbs_storage.limbs[1]};
       GoldilocksField x_lo = {};
       x_lo.limbs_storage.limbs[0] = xs.limbs_storage.limbs[0];
       x_lo.limbs_storage.limbs[1] = xs.limbs_storage.limbs[1];
       // return x_lo;
       uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
-      // GoldilocksField x_hi_lo = GoldilocksField{temp & gold_fact, temp >> 32};
       GoldilocksField x_hi_lo = {};
       x_hi_lo.limbs_storage.limbs[0] = temp & gold_fact;
       x_hi_lo.limbs_storage.limbs[1] = temp >> 32;
@@ -231,47 +141,58 @@ namespace goldilocks {
       // return GoldilocksField{result};
     }
 
-    // static constexpr HOST_DEVICE_INLINE Wide mul_wide(const GoldilocksField& xs, const GoldilocksField& ys)
-    // {
-    //   return Wide::from_field(xs) * Wide::from_field(ys);
-    // }
-
-    // template <unsigned MODULUS_MULTIPLE = 1>
-    // static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const GoldilocksField& xs)
-    // {
-    //   return mul_wide(xs, xs);
-    // }
+    static HOST_DEVICE_INLINE GoldilocksField inv_log_size(uint32_t logn){
+      return Field<CONFIG>::inv_log_size(logn);
+    }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField sqr(const GoldilocksField& xs) { return xs * xs; }
 
-    static constexpr HOST_DEVICE_INLINE GoldilocksField to_montgomery(const GoldilocksField& xs) { return xs; }
+    static constexpr HOST_DEVICE_INLINE GoldilocksField to_montgomery(const GoldilocksField& xs) { return xs * GoldilocksField{CONFIG::montgomery_r}; }
 
-    static constexpr HOST_DEVICE_INLINE GoldilocksField from_montgomery(const GoldilocksField& xs) { return xs; }
+    static constexpr HOST_DEVICE_INLINE GoldilocksField from_montgomery(const GoldilocksField& xs) { return xs * GoldilocksField{CONFIG::montgomery_r_inv}; }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField pow(GoldilocksField base, int exp)
     {
-      GoldilocksField res = one();
-      while (exp > 0) {
-        if (exp & 1) res = res * base;
-        base = base * base;
-        exp >>= 1;
-      }
-      return res;
+      return Field<CONFIG>::pow(base, exp);
     }
   };
 
 
   struct fp_config {
     static constexpr storage<2> modulus = {0x00000001, 0xffffffff};
+    static constexpr unsigned reduced_digits_count = 9;
+    static constexpr storage_array<reduced_digits_count, 2> reduced_digits = {
+      {{0x00000001, 0x00000000},
+      {0xffffffff, 0x00000000},
+      {0x00000001, 0xfffffffe},
+      {0x00000001, 0x00000000},
+      {0xffffffff, 0x00000000},
+      {0x00000001, 0xfffffffe},
+      {0x00000001, 0x00000000},
+      {0xffffffff, 0x00000000},
+      {0x00000001, 0xfffffffe}}};
     PARAMS(modulus)
-
-    static constexpr storage<2> rou = {0x00000010, 0x00000000}; //todo - verify number
+    MOD_SQR_SUBS()
+    static constexpr storage_array<mod_subs_count, 2 * limbs_count + 2> mod_subs = {
+      {{0x7fffffff, 0x00000001, 0xffffffff, 0x7fffffff, 0x00000000, 0x00000000},
+      {0xffffffff, 0x00000001, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000},
+      {0x7fffffff, 0x00000002, 0xffffffff, 0x7fffffff, 0x00000001, 0x00000000},
+      {0xffffffff, 0x00000002, 0xffffffff, 0xffffffff, 0x00000001, 0x00000000},
+      {0x7fffffff, 0x00000003, 0xffffffff, 0x7fffffff, 0x00000002, 0x00000000},
+      {0xffffffff, 0x00000003, 0xffffffff, 0xffffffff, 0x00000002, 0x00000000},
+      {0x7fffffff, 0x00000004, 0xffffffff, 0x7fffffff, 0x00000003, 0x00000000},
+      {0xffffffff, 0x00000004, 0xffffffff, 0xffffffff, 0x00000003, 0x00000000},
+      {0x7fffffff, 0x00000005, 0xffffffff, 0x7fffffff, 0x00000004, 0x00000000},
+      {0xffffffff, 0x00000005, 0xffffffff, 0xffffffff, 0x00000004, 0x00000000},
+      {0x7fffffff, 0x00000006, 0xffffffff, 0x7fffffff, 0x00000005, 0x00000000},
+      {0xffffffff, 0x00000006, 0xffffffff, 0xffffffff, 0x00000005, 0x00000000},
+      {0x7fffffff, 0x00000007, 0xffffffff, 0x7fffffff, 0x00000006, 0x00000000},
+      {0xffffffff, 0x00000007, 0xffffffff, 0xffffffff, 0x00000006, 0x00000000},
+      {0x7fffffff, 0x00000008, 0xffffffff, 0x7fffffff, 0x00000007, 0x00000000},
+      {0xffffffff, 0x00000008, 0xffffffff, 0xffffffff, 0x00000007, 0x00000000},
+      {0x7fffffff, 0x00000009, 0xffffffff, 0x7fffffff, 0x00000008, 0x00000000}}};
+    static constexpr storage<2> rou = {0x00000007, 0x00000000}; //todo - verify number
     TWIDDLES(modulus, rou)
-
-    // nonresidue to generate the extension field
-    static constexpr uint32_t nonresidue = 3; //todo - verify number
-    // true if nonresidue is negative.
-    static constexpr bool nonresidue_is_negative = false; //todo - verify number
   };
 
   /**
@@ -279,13 +200,4 @@ namespace goldilocks {
    */
   typedef GoldilocksField<fp_config> scalar_t;
 
-  /**
-   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
-   */
-  typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
-
-  /**
-   * The default extension type
-   */
-  typedef q_extension_t extension_t;
-} // namespace koalabear
+} // namespace goldilocks
