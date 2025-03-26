@@ -96,6 +96,11 @@ const cppApi = [
     label: "Sumcheck",
     id: "icicle/primitives/sumcheck",
   },
+  {
+    type: "doc",
+    label: "Fri",
+    id: "icicle/primitives/fri",
+  },
 ];
 
 const golangBindingsApi = [
