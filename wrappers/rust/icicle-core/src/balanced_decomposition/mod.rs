@@ -1,13 +1,20 @@
-// TODO Yuval: refine and comment
-
 use crate::{traits::FieldImpl, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
+/// Balanced base decomposition API for field/ring types.
+///
+/// This trait allows elements in a finite field/ring to be decomposed into a sequence of
+/// digits in a balanced base-b representation (digits in the range [-b/2, b/2)),
+/// and later recomposed back into the original field element.
 pub trait BalancedDecomposition<T: FieldImpl> {
-    fn compute_nof_digits(base: u32) -> u32;
+    /// Computes the number of balanced base-b digits required to represent a field element.
+    fn count_digits(base: u32) -> u32;
 
+    /// Decomposes field elements into balanced base-b digits.
+    ///
+    /// The output buffer must have length `input.len() * count_digits(base)`.
     fn decompose(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
@@ -15,6 +22,9 @@ pub trait BalancedDecomposition<T: FieldImpl> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    /// Recomposes field elements from balanced base-b digits.
+    ///
+    /// The input buffer must have length `output.len() * count_digits(base)`.
     fn recompose(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
@@ -23,14 +33,27 @@ pub trait BalancedDecomposition<T: FieldImpl> {
     ) -> Result<(), eIcicleError>;
 }
 
-pub fn balanced_decomposition_count_digits<T: FieldImpl>(base: u32) -> u32
+// Public floating functions around the trait
+pub fn count_digits<T: FieldImpl>(base: u32) -> u32
 where
     T::Config: BalancedDecomposition<T>,
 {
-    T::Config::compute_nof_digits(base)
+    T::Config::count_digits(base)
 }
 
-pub fn balanced_decomposition_recompose<T: FieldImpl>(
+pub fn decompose<T: FieldImpl>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    base: u32,
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    T::Config: BalancedDecomposition<T>,
+{
+    T::Config::decompose(input, output, base, cfg)
+}
+
+pub fn recompose<T: FieldImpl>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
@@ -42,6 +65,7 @@ where
     T::Config::recompose(input, output, base, cfg)
 }
 
+/// Internal macro to implement the `BalancedDecomposition` trait for a specific field backend.
 #[macro_export]
 macro_rules! impl_balanced_decomposition {
     (
@@ -49,7 +73,7 @@ macro_rules! impl_balanced_decomposition {
         $field_type: ident,
         $field_cfg_type: ident
     ) => {
-        use icicle_core::decomposition::BalancedDecomposition;
+        use icicle_core::balanced_decomposition::BalancedDecomposition;
 
         extern "C" {
             #[link_name = concat!($field_prefix, "_balanced_decomposition_nof_digits")]
@@ -81,12 +105,9 @@ macro_rules! impl_balanced_decomposition {
             output: &mut (impl HostOrDeviceSlice<$field_type> + ?Sized),
             cfg: &mut VecOpsConfig,
         ) -> Result<(), eIcicleError> {
-            // make sure batch divides input and output sizes
-            let batch_divides_input_size = input.len() % (cfg.batch_size as usize) == 0;
-            let batch_divides_output_size = input.len() % (cfg.batch_size as usize) == 0;
-            if !batch_divides_input_size || !batch_divides_output_size {
+            if input.len() % (cfg.batch_size as usize) != 0 || output.len() % (cfg.batch_size as usize) != 0 {
                 eprintln!(
-                    "Batch-size={} does not divide input size={} or output size={}",
+                    "Batch size {} must divide input size {} and output size {}",
                     cfg.batch_size,
                     input.len(),
                     output.len()
@@ -94,13 +115,13 @@ macro_rules! impl_balanced_decomposition {
                 return Err(eIcicleError::InvalidArgument);
             }
 
-            // Ensure input/output are on the active device
             if input.is_on_device() && !input.is_on_active_device() {
-                eprintln!("Input is allocated on an inactive device.");
+                eprintln!("Input is on an inactive device");
                 return Err(eIcicleError::InvalidArgument);
             }
+
             if output.is_on_device() && !output.is_on_active_device() {
-                eprintln!("Output is allocated on an inactive device.");
+                eprintln!("Output is on an inactive device");
                 return Err(eIcicleError::InvalidArgument);
             }
 
@@ -111,7 +132,7 @@ macro_rules! impl_balanced_decomposition {
         }
 
         impl BalancedDecomposition<$field_type> for $field_cfg_type {
-            fn compute_nof_digits(base: u32) -> u32 {
+            fn count_digits(base: u32) -> u32 {
                 unsafe { balanced_decomposition_nof_digits(base) }
             }
 
@@ -121,17 +142,17 @@ macro_rules! impl_balanced_decomposition {
                 base: u32,
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
-                let mut cfg_clone = cfg.clone();
-                balanced_decomposition_check_args(input, output, &mut cfg_clone)?;
+                let mut cfg = cfg.clone();
+                balanced_decomposition_check_args(input, output, &mut cfg)?;
 
                 unsafe {
                     decompose_balanced_digits(
                         input.as_ptr(),
-                        (input.len() / (cfg_clone.batch_size as usize)) as usize,
+                        input.len() / (cfg.batch_size as usize),
                         base,
-                        &cfg_clone as *const VecOpsConfig,
+                        &cfg,
                         output.as_mut_ptr(),
-                        (output.len() / (cfg_clone.batch_size as usize)) as usize,
+                        output.len() / (cfg.batch_size as usize),
                     )
                     .wrap()
                 }
@@ -143,17 +164,17 @@ macro_rules! impl_balanced_decomposition {
                 base: u32,
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
-                let mut cfg_clone = cfg.clone();
-                balanced_decomposition_check_args(input, output, &mut cfg_clone)?;
+                let mut cfg = cfg.clone();
+                balanced_decomposition_check_args(input, output, &mut cfg)?;
 
                 unsafe {
                     recompose_from_balanced_digits(
                         input.as_ptr(),
-                        (input.len() / (cfg_clone.batch_size as usize)) as usize,
+                        input.len() / (cfg.batch_size as usize),
                         base,
-                        &cfg_clone as *const VecOpsConfig,
+                        &cfg,
                         output.as_mut_ptr(),
-                        (output.len() / (cfg_clone.batch_size as usize)) as usize,
+                        output.len() / (cfg.batch_size as usize),
                     )
                     .wrap()
                 }
@@ -165,8 +186,8 @@ macro_rules! impl_balanced_decomposition {
 #[macro_export]
 macro_rules! impl_balanced_decomposition_tests {
     ($field_type: ident) => {
-        use icicle_core::decomposition::tests::*;
-        use icicle_runtime::{device::Device, runtime, test_utilities};
+        use icicle_core::balanced_decomposition::tests::*;
+        use icicle_runtime::test_utilities;
 
         /// Initializes devices before running tests.
         pub fn initialize() {

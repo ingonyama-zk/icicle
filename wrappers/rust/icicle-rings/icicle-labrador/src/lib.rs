@@ -1,4 +1,4 @@
-pub mod decomposition;
+pub mod balanced_decomposition;
 pub mod ntt;
 pub mod program;
 pub mod ring;
