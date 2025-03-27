@@ -25,7 +25,7 @@ namespace goldilocks {
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField one() { return GoldilocksField{CONFIG::one}; }
 
-    static constexpr HOST_DEVICE_INLINE GoldilocksField from(uint32_t value) { return GoldilocksField(value); }
+    static constexpr HOST_DEVICE_INLINE GoldilocksField from(uint32_t value) { return Field<CONFIG>::from(value); }
 
     //TODO - The fact that for goldilocks the p_i's modulo p are {2^32-1, -2^32, 1, 2^32-1, -2^32, 1,...} can be used for an optimized version of the from functions.
     template <unsigned NLIMBS>
@@ -72,6 +72,7 @@ namespace goldilocks {
       x_hi_lo.limbs_storage.limbs[0] = temp & gold_fact;
       x_hi_lo.limbs_storage.limbs[1] = temp >> 32;
       GoldilocksField x_hi_hi = Field<CONFIG>::from(xs.limbs_storage.limbs[3]);
+      // return x_hi_hi;
       return x_lo + x_hi_lo - x_hi_hi;
     }
 
@@ -141,6 +142,36 @@ namespace goldilocks {
       // return GoldilocksField{result};
     }
 
+
+    static HOST_INLINE GoldilocksField omega(uint32_t logn)
+    {
+      if (logn == 0) { return GoldilocksField{CONFIG::one}; }
+  
+      if (logn > CONFIG::omegas_count) {
+        THROW_ICICLE_ERR(icicle::eIcicleError::INVALID_ARGUMENT, "ModArith: Invalid omega index");
+      }
+  
+      GoldilocksField omega = GoldilocksField{CONFIG::rou};
+      for (int i = 0; i < CONFIG::omegas_count - logn; i++){
+        omega = sqr(omega);
+      }
+      return omega;
+    }
+
+    static HOST_INLINE GoldilocksField omega_inv(uint32_t logn)
+    {
+      if (logn == 0) { return GoldilocksField{CONFIG::one}; }
+  
+      if (logn > CONFIG::omegas_count) {
+        THROW_ICICLE_ERR(icicle::eIcicleError::INVALID_ARGUMENT, "ModArith: Invalid omega_inv index");
+      }
+  
+      GoldilocksField omega = inverse(GoldilocksField{CONFIG::rou});
+      for (int i = 0; i < CONFIG::omegas_count - logn; i++)
+        omega = sqr(omega);
+      return omega;
+    }
+
     static HOST_DEVICE_INLINE GoldilocksField inv_log_size(uint32_t logn){
       return Field<CONFIG>::inv_log_size(logn);
     }
@@ -191,7 +222,7 @@ namespace goldilocks {
       {0x7fffffff, 0x00000008, 0xffffffff, 0x7fffffff, 0x00000007, 0x00000000},
       {0xffffffff, 0x00000008, 0xffffffff, 0xffffffff, 0x00000007, 0x00000000},
       {0x7fffffff, 0x00000009, 0xffffffff, 0x7fffffff, 0x00000008, 0x00000000}}};
-    static constexpr storage<2> rou = {0x00000007, 0x00000000}; //todo - verify number
+    static constexpr storage<2> rou = {0xda58878c, 0x185629dc};
     TWIDDLES(modulus, rou)
   };
 
@@ -201,3 +232,28 @@ namespace goldilocks {
   typedef GoldilocksField<fp_config> scalar_t;
 
 } // namespace goldilocks
+
+template <class CONFIG>
+struct std::hash<goldilocks::GoldilocksField<CONFIG>> {
+  std::size_t operator()(const goldilocks::GoldilocksField<CONFIG>& key) const
+  {
+    std::size_t hash = 0;
+    // boost hashing, see
+    // https://stackoverflow.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
+    for (int i = 0; i < CONFIG::limbs_count; i++)
+      hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    return hash;
+  }
+};
+
+#ifdef __CUDACC__
+template <class CONFIG>
+struct SharedMemory<goldilocks::GoldilocksField<CONFIG>> {
+  __device__ goldilocks::GoldilocksField<CONFIG>* getPointer()
+  {
+    extern __shared__ goldilocks::GoldilocksField<CONFIG> s_scalar_[];
+    return s_scalar_;
+  }
+};
+
+#endif // __CUDACC__
