@@ -84,7 +84,10 @@ if (HASH)
 endif()
 
 if (RING)
-    target_sources(icicle_ring PRIVATE src/field/cpu_vec_ops.cpp)
+    target_sources(icicle_ring PRIVATE 
+        src/field/cpu_vec_ops.cpp 
+        src/ring/cpu_balanced_decomposition.cpp
+    )
     if (NTT)
         target_sources(icicle_ring PRIVATE src/field/cpu_ntt.cpp)
     endif()

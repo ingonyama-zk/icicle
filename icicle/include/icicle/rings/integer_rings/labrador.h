@@ -27,10 +27,16 @@ namespace labrador {
   };
 
   /**
-   * @brief Defines the integer ring Zq.
+   * @brief Defines the integer ring ℤ_q.
    */
   using ZqRing = IntegerRing<zq_config>;
   using scalar_t = ZqRing;
+
+  /**
+   * @brief Defines the field 𝔽_q.
+   * Although Labrador doesn't use it directly, it simplifies generic compilation of the library.
+   */
+  using field_t = ZqRing;
 
   /**
    * @brief Configuration for the RNS representation of Zq.

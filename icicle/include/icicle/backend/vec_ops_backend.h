@@ -724,6 +724,27 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  using balancedDecompositionImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig& config,
+    field_t* output,
+    size_t output_size)>;
+
+  void register_decompose_balanced_digits(const std::string& deviceType, balancedDecompositionImpl impl);
+  void register_recompose_from_balanced_digits(const std::string& deviceType, balancedDecompositionImpl impl);
+
+  #define REGISTER_BALANCED_DECOMPOSITION_BACKEND(DEVICE_TYPE, DECOMPOSE, RECOMPOSE)                                   \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_balanced_recomposition) = []() -> bool {                                                 \
+        register_decompose_balanced_digits(DEVICE_TYPE, DECOMPOSE);                                                    \
+        register_recompose_from_balanced_digits(DEVICE_TYPE, RECOMPOSE);                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
 #endif // RING
 
 } // namespace icicle

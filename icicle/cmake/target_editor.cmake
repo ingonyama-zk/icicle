@@ -27,6 +27,7 @@ function(handle_ring TARGET)
     src/matrix_ops.cpp
     src/program/program_c_api.cpp
     src/symbol/symbol_api.cpp
+    src/balanced_decomposition.cpp
   )
 endfunction()
 
