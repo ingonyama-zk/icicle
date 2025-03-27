@@ -20,7 +20,11 @@ static eIcicleError cpu_decompose_balanced_digits(
   static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
-  ICICLE_ASSERT(q > 0) << "Implementation expects q > 0 to support signed representation using int64_t";
+
+  if (q < 0) {
+    ICICLE_LOG_ERROR << "Field modulus q must be less than 64 bits; received q = " << q;
+    return eIcicleError::INVALID_ARGUMENT;
+  }
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
@@ -128,7 +132,11 @@ static eIcicleError cpu_recompose_from_balanced_digits(
   static_assert(field_t::TLC == 2, "Balanced recomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
-  ICICLE_ASSERT(q > 0) << "Implementation expects q > 0 to support signed representation using int64_t";
+
+  if (q < 0) {
+    ICICLE_LOG_ERROR << "Field modulus q must be less than 64 bits; received q = " << q;
+    return eIcicleError::INVALID_ARGUMENT;
+  }
 
   if (!input || !output || input_size == 0) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
