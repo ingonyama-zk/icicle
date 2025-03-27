@@ -8,6 +8,8 @@ static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
 // extract the number of threads to run from config
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
 
+// Decomposes elements into balanced base-b digits.
+// CPU implementation for icicle::balanced_decomposition::decompose()
 static eIcicleError cpu_decompose_balanced_digits(
   const Device& device,
   const field_t* input,
@@ -120,6 +122,8 @@ static eIcicleError cpu_decompose_balanced_digits(
   return error ? eIcicleError::INVALID_ARGUMENT : eIcicleError::SUCCESS;
 }
 
+// Recompose elements from balanced base-b digits.
+// CPU implementation for icicle::balanced_decomposition::recompose()
 static eIcicleError cpu_recompose_from_balanced_digits(
   const Device& device,
   const field_t* input,
