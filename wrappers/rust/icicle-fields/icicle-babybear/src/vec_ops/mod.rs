@@ -1,4 +1,5 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ExtensionCfg, ExtensionField};
+use crate::field::{ScalarCfg, ScalarField};
 
 use icicle_core::vec_ops::{MixedVecOps, VecOps, VecOpsConfig};
 use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
