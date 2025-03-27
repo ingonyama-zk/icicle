@@ -5,7 +5,8 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
-	{{if eq .FieldPrefix "Extension"}}{{.SecondField}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.SecondImportPath}}"{{end}}
+	{{- if eq .FieldPrefix "Extension"}}
+	{{.SecondField}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.SecondImportPath}}"{{end}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/vecOps"
 	"github.com/stretchr/testify/suite"
 )
@@ -91,7 +92,8 @@ type {{capitalize .Field}}VecOpsTestSuite struct {
 func (s *{{capitalize .Field}}VecOpsTestSuite) Test{{capitalize .Field}}VecOps() {
 	s.Run("Test{{capitalize .Field}}VecOps", testWrapper(&s.Suite, test{{capitalize .Field}}VecOps))
 	s.Run("Test{{capitalize .Field}}Transpose", testWrapper(&s.Suite, test{{capitalize .Field}}Transpose))
-	{{if eq .FieldPrefix "Extension"}}s.Run("Test{{capitalize .Field}}MixedVecOps", testWrapper(&s.Suite, test{{capitalize .Field}}MixedVecOps)){{end}}
+	{{- if eq .FieldPrefix "Extension"}}
+	s.Run("Test{{capitalize .Field}}MixedVecOps", testWrapper(&s.Suite, test{{capitalize .Field}}MixedVecOps)){{end}}
 }
 
 func TestSuite{{capitalize .Field}}VecOps(t *testing.T) {
