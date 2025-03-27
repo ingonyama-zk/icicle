@@ -126,9 +126,12 @@ type BabybearVecOpsTestSuite struct {
 func (s *BabybearVecOpsTestSuite) TestBabybearVecOps() {
 	s.Run("TestBabybearVecOps", testWrapper(&s.Suite, testBabybearVecOps))
 	s.Run("TestBabybearTranspose", testWrapper(&s.Suite, testBabybearTranspose))
+<<<<<<< HEAD
 	s.Run("TestBabybearSum", testWrapper(&s.Suite, testBabybearSum))
 	s.Run("TestBabybearProduct", testWrapper(&s.Suite, testBabybearProduct))
 
+=======
+>>>>>>> ac815c2fb (Mix of fixes to get go bindings working again and with Metal libs)
 }
 
 func TestSuiteBabybearVecOps(t *testing.T) {
