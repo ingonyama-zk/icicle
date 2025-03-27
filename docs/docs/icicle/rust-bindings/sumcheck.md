@@ -69,68 +69,76 @@ Operations for handling SumCheck proofs.
   Prints the proof.
 
 
-## **Usage Example**
+## **Example with Predefined program (R1CS)**
 
 Below is an example demonstrating how to use the `sumcheck` module, adapted from the `check_sumcheck_simple` test.
 
 ```rust
-use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-use icicle_core::field::FieldElement;
-use icicle_core::polynomial::Polynomial;
+use icicle_bn254::sumcheck::SumcheckWrapper as SW;
+use icicle_bn254::program::bn254::FieldReturningValueProgram as P;
+use icicle_core::program::ReturningValueProgram;
+use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
+use icicle_core::traits::{FieldImpl, GenerateRandom};
 use icicle_hash::keccak::Keccak256;
+use icicle_runtime::memory::HostSlice;
 
-fn main() {
-    // Initialize hashing function
-    let hash = Keccak256::new(0).unwrap();
-
-    // Define a polynomial, e.g., f(x, y) = x + y
-    let coefficients = vec![
-        FieldElement::from(0), // Constant term
-        FieldElement::from(1), // Coefficient for x
-        FieldElement::from(1), // Coefficient for y
-    ];
-    let poly = Polynomial::new(coefficients);
-
-    // Generate mle polynomial
-    let mut mle_poly = Vec::with_capacity(2);
-    for _ in 0..4 {
-        mle_poly.push(poly);
-    }
-
-    // Calculate the expected sum over the Boolean hypercube {0,1}^2
-    let expected_sum = FieldElement::from(4);
-
-    // Configure transcript and execution settings
-    let transcript_config = SumcheckTranscriptConfig::from_string_labels(
-        &hash,
-        "domain_separator",
-        "round_poly",
-        "round_challenge",
-        false, // big endian
-        FieldElement::from(0),
-    );
-    let sumcheck_config = SumcheckConfig::default();
-   
-    // define sumcheck lambda
-    let combine_func = P::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
-    
-    // Initialize prover
-    let prover = Sumcheck::new().expect("Failed to create Sumcheck instance");
-
-    // Generate proof
-    let proof = prover.prove(
-        mle_poly.as_slice(),
-        2, // Number of variables in the polynomial
-        expected_sum,
-        combine_func, // Use pre-defined combine function eq * (a * b - c)
-        &transcript_config,
-        &sumcheck_config,
-    );
-
-    // Verify the proof
-    let result = prover.verify(&proof, expected_sum, &transcript_config);
-    assert!(result.is_ok() && result.unwrap(), "SumCheck proof verification failed!");
+//setup
+let log_mle_poly_size = 10u64;
+let mle_poly_size = 1 << log_mle_poly_size;
+//number of MLE polys
+let nof_mle_poly = 4;
+let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+//create polys
+for _ in 0..nof_mle_poly {
+  let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+  mle_polys.push(mle_poly_random);
 }
+//compute claimed sum
+let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+for i in 0..mle_poly_size {
+  let a = mle_polys[0][i];
+  let b = mle_polys[1][i];
+  let c = mle_polys[2][i];
+  let eq = mle_polys[3][i];
+  claimed_sum = claimed_sum + (a * b - c) * eq;
+}
+//create polynomial host slices
+let mle_poly_hosts = mle_polys
+    .iter()
+    .map(|poly| HostSlice::from_slice(poly))
+    .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
+//define transcript config
+let hasher = Keccak256::new(0).unwrap();
+let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+let transcript_config = SumcheckTranscriptConfig::from_string_labels(
+        &hasher,
+        "DomainLabel",
+        "PolyLabel",
+        "ChallengeLabel",
+        true, // little endian
+        seed_rng,
+    );
+//define sumcheck config
+let sumcheck_config = SumcheckConfig::default();
+let sumcheck = <SW as Sumcheck>::new().unwrap();
+//define combine function
+let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+let proof = sumcheck.prove(
+        &mle_poly_hosts,
+        mle_poly_size.try_into().unwrap(),
+        claimed_sum,
+        combine_function,
+        &transcript_config,
+        &sumcheck_config,);
+//serialize round polynomials from proof
+let proof_round_polys = <<SW as Sumcheck>::Proof as SumcheckProofOps<
+        <SW as Sumcheck>::Field,>>::get_round_polys(&proof).unwrap();
+//verifier reconstruct proof from round polynomials
+let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof =
+        <SW as Sumcheck>::Proof::from(proof_round_polys);
+//verify proof
+let proof_validty = sumcheck.verify(&proof_as_sumcheck_proof, claimed_sum, &transcript_config);
+println!("Sumcheck proof verified, is valid: {}", proof_validty.unwrap());
 ```
 # Misc
 ## ReturningValueProgram
@@ -146,4 +154,49 @@ pub trait ReturningValueProgram:
 
   fn new_predefined(pre_def: PreDefinedProgram) -> Result<Self, eIcicleError>;
 }
+
+```
+
+## **Example with userdefined program (relaxed R1CS)**
+
+In this example, we define a relaxed R1CS sumcheck (zerocheck) (See eq 2 of [Nova](https://eprint.iacr.org/2021/370.pdf)) using the program functionality. We will change the relevant parts in the above code:
+
+```rust
+//The Relaxed r1cs sumcheck (zerocheck) is given bv \sum_{X\in{0,1}^n} F(X) eq(X,Y) = 0 
+//where F(X) = A(X). B(X) - C(X) + E(X). We denote A(X) as the MLE representation of A.Z where Z is the witness vector. E(X) is called the slack vector.
+let nof_mle_poly = 5;
+let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+//initialize slack vector
+let mut slack_poly = vec![<<SW as Sumcheck>::Field as FieldImpl>::zero(); mle_poly_size];
+//create polys except slack poly
+for _ in 0..nof_mle_poly-1 {
+  let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+  mle_polys.push(mle_poly_random);
+}
+//compute claimed sum
+let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+for i in 0..mle_poly_size {
+  let a = mle_polys[0][i];
+  let b = mle_polys[1][i];
+  let c = mle_polys[2][i];
+  let eq = mle_polys[3][i];
+  let slack =  c - a * b;
+  slack_poly[i]=slack; // we want to create a system for zero check
+  claimed_sum = claimed_sum + (a * b - c +slack) * eq;
+};
+mle_polys.push(slack_poly); // add slack poly to mle_polys
+//check that claimed sum is zero
+assert_eq!(claimed_sum, <<SW as Sumcheck>::Field as FieldImpl>::zero());
+//setup end
+//define relaxed r1cs using the program
+let relaxed_r1cs = |vars: &mut Vec<<P as ReturningValueProgram>::ProgSymbol>|-> <P as ReturningValueProgram>::ProgSymbol {
+  let a = vars[0]; 
+  let b = vars[1];
+  let c = vars[2];
+  let eq = vars[3];
+  let slack =vars[4];
+  return eq* (a * b - c + slack);
+};
+//define the combine function with the program for relaxed r1cs instead of the predefined R1CS
+let combine_function = P::new(relaxed_r1cs, 5).unwrap();
 ```
