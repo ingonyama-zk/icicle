@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	LOAD_AND_INIT_DEVICES = sync.OnceFunc(func() {
+	LOAD_AND_INIT_MAIN_DEVICE = sync.OnceFunc(func() {
 		runtime.LoadBackendFromEnvOrDefault()
 		registeredDevices, _ := runtime.GetRegisteredDevices()
 
