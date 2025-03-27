@@ -74,86 +74,71 @@ Operations for handling SumCheck proofs.
 Below is an example demonstrating how to use the `sumcheck` module, adapted from the `check_sumcheck_simple` test.
 
 ```rust
-use icicle_babybear::sumcheck::SumcheckWrapper as SW;
+use icicle_bn254::sumcheck::SumcheckWrapper as SW;
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram as P};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
 use icicle_core::traits::{FieldImpl, GenerateRandom};
 use icicle_hash::keccak::Keccak256;
 use icicle_runtime::memory::HostSlice;
 
-// Define a hasher for Sumcheck
-let hash = Keccak256::new(0).unwrap();
-// Define the number of variables in the polynomial
+//setup
 let log_mle_poly_size = 10u64;
 let mle_poly_size = 1 << log_mle_poly_size;
+//number of MLE polys
 let nof_mle_poly = 4;
-// Generate a random seed.
-let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0]
-// Create a transcript configuration.
-// We show here two ways to create Sumcheck configuratio
-// let config = SumcheckTranscriptConfig::new(
-//     &hash,
-//     b"DomainLabel".to_vec(),
-//     b"PolyLabel".to_vec(),
-//     b"ChallengeLabel".to_vec(),
-//     true, // little endian
-//     seed_rng,
-// );
-let config = SumcheckTranscriptConfig::from_string_labels(
-    &hash,
-    "DomainLabel",
-    "PolyLabel",
-    "ChallengeLabel",
-    false, // big endian
-    seed_rng,
-)
 let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+//create polys
 for _ in 0..nof_mle_poly {
-    let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
-    mle_polys.push(mle_poly_random);
-
-// Compute claimed sum for verification
+  let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+  mle_polys.push(mle_poly_random);
+}
+//compute claimed sum
 let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
 for i in 0..mle_poly_size {
-    let a = mle_polys[0][i];
-    let b = mle_polys[1][i];
-    let c = mle_polys[2][i];
-    let eq = mle_polys[3][i];
-    claimed_sum = claimed_sum + (a * b - c) * eq;
-
+  let a = mle_polys[0][i];
+  let b = mle_polys[1][i];
+  let c = mle_polys[2][i];
+  let eq = mle_polys[3][i];
+  claimed_sum = claimed_sum + (a * b - c) * eq;
+}
+//create polynomial host slices
 let mle_poly_hosts = mle_polys
     .iter()
     .map(|poly| HostSlice::from_slice(poly))
-    .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>()
-let sumcheck = SW::new().unwrap();
-let combine_func =
-    <icicle_babybear::program::babybear::FieldReturningValueProgram as P>::new_predefined(
-        PreDefinedProgram::EQtimesABminusC,
-    )
-    .unwrap();
+    .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
+//define transcript config
+let leaf_size:u64 = (<SW as Sumcheck>::Field::one()).to_bytes_le().len().try_into().unwrap();
+let hasher = Keccak256::new(0).unwrap();
+let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+let transcript_config = SumcheckTranscriptConfig::from_string_labels(
+        &hasher,
+        "DomainLabel",
+        "PolyLabel",
+        "ChallengeLabel",
+        true, // big endian
+        seed_rng,
+    );
+//define sumcheck config
 let sumcheck_config = SumcheckConfig::default();
-// Generate a proof using the `prove` method.
+let sumcheck = <SW as Sumcheck>::new().unwrap();
+//define combine function
+let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
 let proof = sumcheck.prove(
-    mle_poly_hosts.as_slice(),
-    mle_poly_size as u64,
-    claimed_sum,
-    combine_func,
-    &config,
-    &sumcheck_config,
-)
-// Obtain proof round polys
+        &mle_poly_hosts,
+        mle_poly_size.try_into().unwrap(),
+        claimed_sum,
+        combine_function,
+        &transcript_config,
+        &sumcheck_config,);
+//serialize round polynomials from proof
 let proof_round_polys = <<SW as Sumcheck>::Proof as SumcheckProofOps<
-    <SW as Sumcheck>::Field,
->>::get_round_polys(&proof)
-.unwrap()
+        <SW as Sumcheck>::Field,>>::get_round_polys(&proof).unwrap();
+//verifier reconstruct proof from round polynomials
 let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof =
-    <SW as Sumcheck>::Proof::from(proof_round_polys)
-// Verify the proof.
-let valid = sumcheck
-    .verify(&proof_as_sumcheck_proof, claimed_sum, &config)
-    .unwrap()
-println!("Sumcheck proof verified, is valid: {}", valid);
-
+        <SW as Sumcheck>::Proof::from(proof_round_polys);
+//verify proof
+let proof_validty = sumcheck.verify(&proof_as_sumcheck_proof, claimed_sum, &transcript_config);
+println!("Sumcheck proof verified, is valid: {}", proof_validty.unwrap());
 ```
 # Misc
 ## ReturningValueProgram
