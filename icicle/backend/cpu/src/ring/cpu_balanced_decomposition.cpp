@@ -55,7 +55,7 @@ static eIcicleError cpu_decompose_balanced_digits(
   // Helper function that performs floor division and modulo like Python or standard math.
   // Ensures that the remainder is always non-negative and the quotient is rounded down
   // (i.e., toward negative infinity), unlike C++'s default behavior which rounds toward zero.
-  auto divmod = [](int64_t a, int64_t base) -> std::pair<int64_t, int64_t> {
+  auto divmod = [](int64_t a, uint32_t base) -> std::pair<int64_t, int64_t> {
     // Perform regular C++ integer division and modulo
     int64_t q = a / base;
     int64_t r = a % base;

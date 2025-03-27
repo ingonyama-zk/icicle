@@ -1,4 +1,13 @@
 
+"""
+Reference implementation of balanced base decomposition and recomposition
+for finite field elements in Z_q, specifically targeting the Labrador field.
+
+This code serves as a correctness reference for ICICLE:
+- It demonstrates how to perform balanced decomposition using integer digits.
+- It is useful for verifying behavior of new fields (e.g., custom q values).
+- It can be used to test edge cases or failures encountered in the ICICLE implementation.
+"""
 
 class ZqElement:
     def __init__(self, value, q):
