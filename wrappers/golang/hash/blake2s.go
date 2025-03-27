@@ -8,7 +8,7 @@ import (
 )
 
 func NewBlake2sHasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
-	h := C.icicle_create_blake2s((C.ulong)(inputChunkSize))
+	h := C.icicle_create_blake2s((C.uint64_t)(inputChunkSize))
 	if h == nil {
 		return Hasher{handle: nil}, runtime.UnknownError
 	}
