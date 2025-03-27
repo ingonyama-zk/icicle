@@ -162,10 +162,8 @@ pub trait ReturningValueProgram:
 In this example, we define a relaxed R1CS sumcheck (zerocheck) (See eq 2 of [Nova](https://eprint.iacr.org/2021/370.pdf)) using the program functionality. We will change the relevant parts in the above code:
 
 ```rust
-//The Relaxed r1cs sumcheck is \sum_{X\in{0,1}^n} F(X) eq(X,Y)
-//where F(X) = A(X). B(X) - C(X) + E(X) and
-//we denote A(X) as the MLE representation of A.Z where Z is the witness vector. E(X) is called the slack vector.
-//number of MLE polys
+//The Relaxed r1cs sumcheck (zerocheck) is given bv \sum_{X\in{0,1}^n} F(X) eq(X,Y) = 0 
+//where F(X) = A(X). B(X) - C(X) + E(X). We denote A(X) as the MLE representation of A.Z where Z is the witness vector. E(X) is called the slack vector.
 let nof_mle_poly = 5;
 let mut mle_polys = Vec::with_capacity(nof_mle_poly);
 //initialize slack vector
@@ -190,7 +188,6 @@ mle_polys.push(slack_poly); // add slack poly to mle_polys
 //check that claimed sum is zero
 assert_eq!(claimed_sum, <<SW as Sumcheck>::Field as FieldImpl>::zero());
 //setup end
-
 //define relaxed r1cs using the program
 let relaxed_r1cs = |vars: &mut Vec<<P as ReturningValueProgram>::ProgSymbol>|-> <P as ReturningValueProgram>::ProgSymbol {
   let a = vars[0]; 
@@ -201,5 +198,5 @@ let relaxed_r1cs = |vars: &mut Vec<<P as ReturningValueProgram>::ProgSymbol>|-> 
   return eq* (a * b - c + slack);
 };
 //define the combine function with the program for relaxed r1cs instead of the predefined R1CS
-    let combine_function = P::new(relaxed_r1cs, 5).unwrap();
+let combine_function = P::new(relaxed_r1cs, 5).unwrap();
 ```
