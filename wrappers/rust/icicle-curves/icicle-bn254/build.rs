@@ -25,7 +25,8 @@ fn main() {
     };
     config
         .define("CURVE", "bn254")
-        .define("HASH", "OFF")
+        .define("FIELD", "bn254")
+        .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.
