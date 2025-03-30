@@ -62,15 +62,15 @@ namespace bls12_381 {
     static constexpr g2_point_field_t weierstrass_b = {weierstrass_b_g2_re, weierstrass_b_g2_im};
   };
 
-// #ifdef PAIRING_ENABLED
+  // #ifdef PAIRING_ENABLED
 
   // TODO: Split this exponent into 4 exponentiations using basis precomputation
   static const storage<40> PAIRING_EXP_LEFT = {
-    0x38e3ba79, 0xe516c3f4, 0xe208ccf1, 0xfa9912aa, 0x335d5b68, 0x905ce937, 0xb0dea236, 0xc71a2629, 0x996754c8,
-    0x83774940, 0xb6a1e799, 0x21d160ae, 0xed237db4, 0x2ed0b283, 0x6c6f1821, 0x915c97f3, 0xde783765, 0x67f17fcb,
-    0x9096d1b7, 0x2378b903, 0x1bdc51dc, 0x7988f876, 0x03fc77a1, 0x20769950, 0xa621315b, 0x827eca0b, 0x8d63cb9f,
-    0xe5a72bce, 0xc28b6f8a, 0xf68f7764, 0xcf081517, 0x2f230063, 0x528d6a9a, 0x94506632, 0xeb996ca3, 0xd3cde88e,
-    0x195c899e, 0xc0bd38c3, 0x3d807d01, 0x000f686b};
+    0x38e3ba79, 0xe516c3f4, 0xe208ccf1, 0xfa9912aa, 0x335d5b68, 0x905ce937, 0xb0dea236, 0xc71a2629,
+    0x996754c8, 0x83774940, 0xb6a1e799, 0x21d160ae, 0xed237db4, 0x2ed0b283, 0x6c6f1821, 0x915c97f3,
+    0xde783765, 0x67f17fcb, 0x9096d1b7, 0x2378b903, 0x1bdc51dc, 0x7988f876, 0x03fc77a1, 0x20769950,
+    0xa621315b, 0x827eca0b, 0x8d63cb9f, 0xe5a72bce, 0xc28b6f8a, 0xf68f7764, 0xcf081517, 0x2f230063,
+    0x528d6a9a, 0x94506632, 0xeb996ca3, 0xd3cde88e, 0x195c899e, 0xc0bd38c3, 0x3d807d01, 0x000f686b};
 
   struct PairingImpl {
     static constexpr scalar_t::ff_storage R = scalar_t::get_modulus();
@@ -88,7 +88,8 @@ namespace bls12_381 {
 
     struct fq12_config {
       // nonresidue to generate the extension field
-      static constexpr fq6_field_t nonresidue = fq6_field_t{g2_point_field_t::zero(), g2_point_field_t::one(), g2_point_field_t::zero()};
+      static constexpr fq6_field_t nonresidue =
+        fq6_field_t{g2_point_field_t::zero(), g2_point_field_t::one(), g2_point_field_t::zero()};
       // true if nonresidue is negative
       static constexpr bool nonresidue_is_negative = false;
       static constexpr bool nonresidue_is_u32 = false;
@@ -99,11 +100,12 @@ namespace bls12_381 {
     typedef Projective<target_field_t, scalar_t, G1> target_projective_t;
     typedef Affine<target_field_t> target_affine_t;
 
-    static target_affine_t untwist(const g2_affine_t& p1) {
+    static target_affine_t untwist(const g2_affine_t& p1)
+    {
       g2_point_field_t two_inv = g2_point_field_t::inverse(g2_point_field_t::one() + g2_point_field_t::one());
       g2_point_field_t one_minus_i = g2_point_field_t{point_field_t::one(), point_field_t::neg(point_field_t::one())};
       g2_point_field_t coeff = two_inv * one_minus_i; // coeff = (1 - i) / 2
-      target_affine_t p2 = target_affine_t::zero(); // p2 = (X, Y)
+      target_affine_t p2 = target_affine_t::zero();   // p2 = (X, Y)
 
       p2.x.c0.c2 = p1.x * coeff; // p2.X = (p1.x * coeff * v^2) + 0 * u
       p2.y.c1.c1 = p1.y * coeff; // p2.Y = 0 + (p1.y * coeff * v) * u
@@ -111,7 +113,8 @@ namespace bls12_381 {
       return p2;
     }
 
-    static void final_exponentiation(target_field_t &f) {
+    static void final_exponentiation(target_field_t& f)
+    {
       f = target_field_t::pow(f, PAIRING_EXP_LEFT);
       point_field_t::ff_storage q = point_field_t::get_modulus();
 
@@ -134,5 +137,5 @@ namespace bls12_381 {
       f = fq8 * fq6 * target_field_t::inverse(fq2 * f); // f ^ (q^8 + q^6 - (q^2 + 1))
     }
   };
-// #endif
+  // #endif
 } // namespace bls12_381

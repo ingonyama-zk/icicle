@@ -6,14 +6,16 @@
 using namespace curve_config;
 
 namespace icicle {
-  template <typename Pairing, typename TF=typename Pairing::target_field_t, typename TargetAffine=typename Pairing::target_affine_t>
-  TF miller_loop(const TargetAffine& p, const TargetAffine& q) {
+  template <
+    typename Pairing,
+    typename TF = typename Pairing::target_field_t,
+    typename TargetAffine = typename Pairing::target_affine_t>
+  TF miller_loop(const TargetAffine& p, const TargetAffine& q)
+  {
     TF f = TF::one();
 
-    if (TargetAffine::zero() == p || TargetAffine::zero() == q) {
-      return f;
-    }
-    
+    if (TargetAffine::zero() == p || TargetAffine::zero() == q) { return f; }
+
     TF two = TF::from(2);
     TF three = TF::from(3);
 
@@ -58,5 +60,6 @@ namespace icicle {
     return eIcicleError::SUCCESS;
   }
 
-  template eIcicleError pairing<affine_t, g2_affine_t, PairingImpl, PairingImpl::target_field_t>(const affine_t& p, const g2_affine_t& q, PairingImpl::target_field_t* output);
-}
+  template eIcicleError pairing<affine_t, g2_affine_t, PairingImpl, PairingImpl::target_field_t>(
+    const affine_t& p, const g2_affine_t& q, PairingImpl::target_field_t* output);
+} // namespace icicle

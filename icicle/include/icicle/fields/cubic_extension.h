@@ -20,7 +20,8 @@ public:
     FWide c1;
     FWide c2;
 
-    static constexpr Wide HOST_DEVICE_INLINE from_field(const CubicExtensionField xs) {
+    static constexpr Wide HOST_DEVICE_INLINE from_field(const CubicExtensionField xs)
+    {
       return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1), FWide::from_field(xs.c2)};
     }
 
@@ -117,7 +118,8 @@ public:
     return CubicExtensionField{xs.c0 - ys, xs.c1, xs.c2};
   }
 
-  static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs) {
+  static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
+  {
     if constexpr (CONFIG::nonresidue_is_u32) {
       return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
@@ -125,7 +127,8 @@ public:
     }
   }
 
-  static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs) {
+  static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs)
+  {
     if constexpr (CONFIG::nonresidue_is_u32) {
       return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
@@ -134,8 +137,7 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE Wide
-  mul_wide(const CubicExtensionField& xs, const CubicExtensionField& ys)
+  static constexpr HOST_DEVICE Wide mul_wide(const CubicExtensionField& xs, const CubicExtensionField& ys)
   {
     FWide c0_prod = FF::mul_wide(xs.c0, ys.c0);
     FWide c1_prod = FF::mul_wide(xs.c1, ys.c1);
@@ -269,7 +271,7 @@ public:
     const FF a2 = xs.c1 * s2;
     FF a3 = mul_by_nonresidue(a1 + a2);
     const FF t6 = FF::inverse(xs.c0 * s0 + a3);
-      
+
     return CubicExtensionField{
       t6 * s0,
       t6 * s1,

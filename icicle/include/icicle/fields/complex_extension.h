@@ -18,8 +18,9 @@ public:
   struct Wide {
     FWide c0;
     FWide c1;
-    
-    static constexpr Wide HOST_DEVICE_INLINE from_field(const ComplexExtensionField& xs) {
+
+    static constexpr Wide HOST_DEVICE_INLINE from_field(const ComplexExtensionField& xs)
+    {
       return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1)};
     }
 
@@ -33,10 +34,7 @@ public:
       return Wide{xs.c0 - ys.c0, xs.c1 - ys.c1};
     }
 
-    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
-    {
-      return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1)};
-    }
+    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs) { return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1)}; }
   };
 
   typedef T FF;
@@ -86,8 +84,7 @@ public:
   template <unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1)};
+    return ComplexExtensionField{FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1)};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const ComplexExtensionField& xs)
@@ -126,7 +123,8 @@ public:
     return ComplexExtensionField{xs.c0 - ys, xs.c1};
   }
 
-  static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs) {
+  static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
+  {
     if constexpr (CONFIG::nonresidue_is_u32) {
       return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
@@ -134,7 +132,8 @@ public:
     }
   }
 
-  static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs) {
+  static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs)
+  {
     if constexpr (CONFIG::nonresidue_is_u32) {
       return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
@@ -143,8 +142,7 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE Wide
-  mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  static constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
     FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
@@ -342,7 +340,7 @@ public:
   static constexpr HOST_DEVICE ComplexExtensionField pow(ComplexExtensionField base, storage<NLIMBS> exp)
   {
     ComplexExtensionField res = one();
-    while(host_math::is_zero(exp)) {
+    while (host_math::is_zero(exp)) {
       if (host_math::get_bit<NLIMBS>(exp, 0)) res = res * base;
       base = base * base;
       exp = host_math::right_shift<NLIMBS, 1>(exp);

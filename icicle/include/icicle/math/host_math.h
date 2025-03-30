@@ -287,7 +287,8 @@ namespace host_math {
   }
 
   template <unsigned NLIMBS>
-  static constexpr HOST_INLINE bool is_zero(const storage<NLIMBS>& xs) {
+  static constexpr HOST_INLINE bool is_zero(const storage<NLIMBS>& xs)
+  {
     for (int i = 0; i < NLIMBS; i++) {
       if (xs.limbs[i]) return true;
     }

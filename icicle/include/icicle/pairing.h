@@ -23,6 +23,6 @@ namespace icicle {
    *               The output array should have the same storage layout as the input vectors.
    * @return eIcicleError Error code indicating success or failure.
    */
-  template <typename A, typename A2, typename Pairing, typename TargetField=typename Pairing::target_field_t>
+  template <typename A, typename A2, typename Pairing, typename TargetField = typename Pairing::target_field_t>
   eIcicleError pairing(const A& p, const A2& q, TargetField* output);
-}
+} // namespace icicle

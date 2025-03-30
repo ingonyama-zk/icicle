@@ -354,7 +354,6 @@ TEST(CurveSanity, TargetFieldSanityTest)
   // ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
-
 TEST(CurveSanity, PairingBilinearityTest)
 {
   // affine_t p = projective_t::rand_host_affine();

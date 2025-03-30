@@ -70,8 +70,7 @@ public:
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from_montgomery(const QuarticExtensionField& xs)
   {
     return QuarticExtensionField{
-      FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1), FF::from_montgomery(xs.c2),
-      FF::from_montgomery(xs.c3)};
+      FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1), FF::from_montgomery(xs.c2), FF::from_montgomery(xs.c3)};
   }
 
   static HOST_INLINE QuarticExtensionField rand_host()
@@ -95,8 +94,7 @@ public:
 
   friend std::ostream& operator<<(std::ostream& os, const QuarticExtensionField& xs)
   {
-    os << "{ Real: " << xs.c0 << " }; { Im1: " << xs.c1 << " }; { Im2: " << xs.c2 << " }; { Im3: " << xs.c3
-       << " };";
+    os << "{ Real: " << xs.c0 << " }; { Im1: " << xs.c1 << " }; { Im2: " << xs.c2 << " }; { Im3: " << xs.c3 << " };";
     return os;
   }
 
@@ -131,8 +129,7 @@ public:
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide
-  mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
     if (CONFIG::nonresidue_is_negative)
       return Wide{
@@ -161,15 +158,13 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& xs, const FF& ys)
   {
-    return Wide{
-      FF::mul_wide(xs.c0, ys), FF::mul_wide(xs.c1, ys), FF::mul_wide(xs.c2, ys), FF::mul_wide(xs.c3, ys)};
+    return Wide{FF::mul_wide(xs.c0, ys), FF::mul_wide(xs.c1, ys), FF::mul_wide(xs.c2, ys), FF::mul_wide(xs.c3, ys)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& xs, const QuarticExtensionField& ys)
   {
-    return Wide{
-      FF::mul_wide(xs, ys.c0), FF::mul_wide(xs, ys.c1), FF::mul_wide(xs, ys.c2), FF::mul_wide(xs, ys.c3)};
+    return Wide{FF::mul_wide(xs, ys.c0), FF::mul_wide(xs, ys.c1), FF::mul_wide(xs, ys.c2), FF::mul_wide(xs, ys.c3)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
