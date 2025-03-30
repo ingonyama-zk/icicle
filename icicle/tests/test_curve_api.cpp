@@ -8,6 +8,7 @@
 #include "icicle/runtime.h"
 #include "icicle/ntt.h"
 #include "icicle/msm.h"
+#include "icicle/pairing.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
@@ -334,6 +335,50 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
   ASSERT_EQ(a + b, a + TypeParam::to_affine(b)); // mixed addition projective+affine
   ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
 }
+
+// #ifdef PAIRING_ENABLED
+typedef PairingImpl::target_field_t TargetField;
+
+TEST(CurveSanity, TargetFieldSanityTest)
+{
+  auto a = TargetField::rand_host();
+  auto b = TargetField::rand_host();
+  auto b_inv = TargetField::inverse(b);
+  auto a_neg = TargetField::neg(a);
+  ASSERT_EQ(a + TargetField::zero(), a);
+  ASSERT_EQ(a + b - a, b);
+  ASSERT_EQ(b * a * b_inv, a);
+  ASSERT_EQ(a + a_neg, TargetField::zero());
+  ASSERT_EQ(a * TargetField::zero(), TargetField::zero());
+  ASSERT_EQ(b * b_inv, TargetField::one());
+  // ASSERT_EQ(a * scalar_t::from(2), a + a);
+}
+
+
+TEST(CurveSanity, PairingBilinearityTest)
+{
+  // affine_t p = projective_t::rand_host_affine();
+  // g2_affine_t q = g2_projective_t::rand_host_affine();
+  // scalar_t s = scalar_t::rand_host();
+  affine_t p = projective_t::to_affine(projective_t::generator());
+  g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
+  scalar_t s = scalar_t::from(2);
+
+  PairingImpl::target_field_t f1, f2, f3;
+
+  affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
+  g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
+
+  pairing<affine_t, g2_affine_t, PairingImpl>(ps, q, &f1);
+  pairing<affine_t, g2_affine_t, PairingImpl>(p, qs, &f2);
+  pairing<affine_t, g2_affine_t, PairingImpl>(p, q, &f3);
+
+  std::cout << f1.c0.c0.c0 << std::endl << std::endl;
+  std::cout << f2.c0.c0.c0 << std::endl << std::endl;
+  std::cout << f3.c0.c0.c0 << std::endl << std::endl;
+  // f3 = f3 * s;
+}
+// #endif
 
 TYPED_TEST(CurveSanity, ScalarMultTest)
 {

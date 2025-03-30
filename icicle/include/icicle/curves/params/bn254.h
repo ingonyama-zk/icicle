@@ -34,6 +34,7 @@ namespace bn254 {
 
   typedef CubicExtensionField<fq6_config, g2_point_field_t> fq6_field_t;
   typedef ComplexExtensionField<fq12_config, fq6_field_t> fq12_field_t;
+  typedef fq12_field_t pairing_output_t;
 
   // G1 and G2 generators
   struct G1 {

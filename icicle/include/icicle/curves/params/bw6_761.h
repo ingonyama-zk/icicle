@@ -35,6 +35,7 @@ namespace bw6_761 {
   };
 
   typedef ComplexExtensionField<fq6_config, fq3_field_t> fq6_field_t;
+  typedef fq6_field_t pairing_output_t;
 
   // G1 and G2 generators
   struct G1 {
