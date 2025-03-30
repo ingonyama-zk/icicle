@@ -12,7 +12,7 @@ We design custom architectures that enable real-time performance for advanced cr
 Our flagship product is **ICICLE**
 
 #### **ICICLE v3**
-[ICICLE v3](https://github.com/ingonyama-zk/icicle) ICICLE is a versatile cryptography library supporting multiple compute backends—including CUDA, CPU, Metal, and upcoming backends like WebGPU, Vulkan, and ZPU. Originally focused on GPU acceleration, ICICLE has evolved into a backend-agnostic framework for cryptographic acceleration. It enables you to build ZK provers and other cryptographic applications with ease, leveraging the best available hardware for your needs.
+[ICICLE](https://github.com/ingonyama-zk/icicle) is a versatile cryptography library supporting multiple compute backends—including CUDA, CPU, Metal, and upcoming backends like WebGPU, Vulkan, and ZPU. Originally focused on GPU acceleration, ICICLE has evolved into a backend-agnostic framework for cryptographic acceleration. It enables you to build ZK provers and other cryptographic applications with ease, leveraging the best available hardware for your needs.
 
 - **Multiple Backend Support:** Develop on CPU and deploy on various backends including CUDA, Metal, and eventually WebGPU, Vulkan, ZPU, or even remote machines.
 - **Cross-Language Compatibility:** Use ICICLE across multiple programming languages such as C++, Rust, Go, and possibly Python.
