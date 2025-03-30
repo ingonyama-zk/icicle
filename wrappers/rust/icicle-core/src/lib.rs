@@ -1,3 +1,4 @@
+pub mod balanced_decomposition;
 pub mod curve;
 pub mod ecntt;
 pub mod field;
