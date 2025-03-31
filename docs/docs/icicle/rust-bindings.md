@@ -8,6 +8,20 @@ Rust bindings allow you to use ICICLE as a rust library.
 
 `icicle-curves` / `icicle-fields` implement all interfaces and macros from icicle-core for each curve. For example icicle-bn254 implements curve bn254. Each curve has its own build script which will build the ICICLE libraries for that curve as part of the rust-toolchain build.
 
+## Documentation
+
+- [Core Traits and Types](rust-bindings/core.md) - Documentation for core traits and types used throughout the bindings
+- [Field Operations](rust-bindings/vec-ops.md) - Documentation for field arithmetic operations
+- [Curve Operations](rust-bindings/msm.md) - Documentation for curve operations
+- [Hash Functions](rust-bindings/hash.md) - Documentation for hash functions
+- [Merkle Trees](rust-bindings/merkle.md) - Documentation for Merkle tree operations
+- [NTT Operations](rust-bindings/ntt.md) - Documentation for Number Theoretic Transform operations
+- [ECNTT Operations](rust-bindings/ecntt.md) - Documentation for Elliptic Curve Number Theoretic Transform operations
+- [Polynomial Operations](rust-bindings/polynomials.md) - Documentation for polynomial operations
+- [Program Operations](rust-bindings/program.md) - Documentation for program operations
+- [Sumcheck Protocol](rust-bindings/sumcheck.md) - Documentation for the sumcheck protocol
+- [Multi-GPU Support](rust-bindings/multi-gpu.md) - Documentation for multi-GPU operations
+
 ## Using ICICLE Rust bindings in your project
 
 Simply add the following to your `Cargo.toml`.
