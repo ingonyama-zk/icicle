@@ -65,6 +65,54 @@ func testBabybear_extensionTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testBabybear_extensionSum(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := babybear_extension.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[babybear_extension.ExtensionField], batchSize)
+	result2 := make(core.HostSlice[babybear_extension.ExtensionField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.SumScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.SumScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
+func testBabybear_extensionProduct(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := babybear_extension.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[babybear_extension.ExtensionField], batchSize)
+	result2 := make(core.HostSlice[babybear_extension.ExtensionField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.ProductScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ProductScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 func testBabybear_extensionMixedVecOps(suite *suite.Suite) {
 	testSize := 1 << 14
 
@@ -89,6 +137,8 @@ type Babybear_extensionVecOpsTestSuite struct {
 func (s *Babybear_extensionVecOpsTestSuite) TestBabybear_extensionVecOps() {
 	s.Run("TestBabybear_extensionVecOps", testWrapper(&s.Suite, testBabybear_extensionVecOps))
 	s.Run("TestBabybear_extensionTranspose", testWrapper(&s.Suite, testBabybear_extensionTranspose))
+	s.Run("TestBabybear_extensionSum", testWrapper(&s.Suite, testBabybear_extensionSum))
+	s.Run("TestBabybear_extensionProduct", testWrapper(&s.Suite, testBabybear_extensionProduct))
 	s.Run("TestBabybear_extensionMixedVecOps", testWrapper(&s.Suite, testBabybear_extensionMixedVecOps))
 }
 

@@ -43,6 +43,21 @@ int bn254_matrix_transpose(
   scalar_t* mat_out
 );
 
+int bn254_vector_sum(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+int bn254_vector_product(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+
 #ifdef __cplusplus
 }
 #endif

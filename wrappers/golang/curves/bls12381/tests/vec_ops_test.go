@@ -5,6 +5,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bls12_381 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381"
+
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bls12381/vecOps"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,6 +65,54 @@ func testBls12_381Transpose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testBls12_381Sum(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := bls12_381.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[bls12_381.ScalarField], batchSize)
+	result2 := make(core.HostSlice[bls12_381.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.SumScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.SumScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
+func testBls12_381Product(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := bls12_381.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[bls12_381.ScalarField], batchSize)
+	result2 := make(core.HostSlice[bls12_381.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.ProductScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ProductScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 type Bls12_381VecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +120,9 @@ type Bls12_381VecOpsTestSuite struct {
 func (s *Bls12_381VecOpsTestSuite) TestBls12_381VecOps() {
 	s.Run("TestBls12_381VecOps", testWrapper(&s.Suite, testBls12_381VecOps))
 	s.Run("TestBls12_381Transpose", testWrapper(&s.Suite, testBls12_381Transpose))
+	s.Run("TestBls12_381Sum", testWrapper(&s.Suite, testBls12_381Sum))
+	s.Run("TestBls12_381Product", testWrapper(&s.Suite, testBls12_381Product))
+
 }
 
 func TestSuiteBls12_381VecOps(t *testing.T) {

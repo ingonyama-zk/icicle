@@ -43,6 +43,30 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, co
 	return runtime.EIcicleError(err)
 }
 
+func SumScalars(in core.HostOrDeviceSlice, result core.HostOrDeviceSlice, config core.VecOpsConfig) runtime.EIcicleError {
+	inPointer, outPointer, cfgPointer, size := core.VecOpCheckReduction(in, result, &config)
+
+	cIn := (*C.scalar_t)(inPointer)
+	cOut := (*C.scalar_t)(outPointer)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cSize := (C.int)(size)
+
+	err := (C.koalabear_extension_vector_sum(cIn, cSize, cConfig, cOut))
+	return runtime.EIcicleError(err)
+}
+
+func ProductScalars(in core.HostOrDeviceSlice, result core.HostOrDeviceSlice, config core.VecOpsConfig) runtime.EIcicleError {
+	inPointer, outPointer, cfgPointer, size := core.VecOpCheckReduction(in, result, &config)
+
+	cIn := (*C.scalar_t)(inPointer)
+	cOut := (*C.scalar_t)(outPointer)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cSize := (C.int)(size)
+
+	err := (C.koalabear_extension_vector_product(cIn, cSize, cConfig, cOut))
+	return runtime.EIcicleError(err)
+}
+
 func MixedVecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.VecOps) (ret runtime.EIcicleError) {
 	aPointer, bPointer, outPointer, cfgPointer, size := core.VecOpCheck(a, b, out, &config)
 

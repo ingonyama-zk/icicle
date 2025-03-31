@@ -95,6 +95,49 @@ func VecOpCheck(a, b, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer,
 	return a.AsUnsafePointer(), b.AsUnsafePointer(), out.AsUnsafePointer(), unsafe.Pointer(cfg), a.Len()
 }
 
+func VecOpCheckReduction(in, out HostOrDeviceSlice, cfg *VecOpsConfig) (unsafe.Pointer, unsafe.Pointer, unsafe.Pointer, int) {
+	inLen, outLen := in.Len(), out.Len()
+	if inLen < outLen {
+		errorString := fmt.Sprintf(
+			"input vector length %d is smaller than output vector length %d",
+			inLen,
+			outLen,
+		)
+		panic(errorString)
+	}
+
+	if inLen%int(cfg.BatchSize) != 0 {
+		errorString := fmt.Sprintf(
+			"input vector length %d is not divisible by batch size %d",
+			inLen,
+			cfg.BatchSize,
+		)
+		panic(errorString)
+	}
+
+	if outLen != int(cfg.BatchSize) {
+		errorString := fmt.Sprintf(
+			"output vector length %d does not match batch size %d",
+			outLen,
+			cfg.BatchSize,
+		)
+		panic(errorString)
+	}
+
+	if in.IsOnDevice() {
+		in.(DeviceSlice).CheckDevice()
+	}
+	if out.IsOnDevice() {
+		out.(DeviceSlice).CheckDevice()
+	}
+
+	cfg.isAOnDevice = in.IsOnDevice()
+	cfg.isBOnDevice = false
+	cfg.isResultOnDevice = out.IsOnDevice()
+
+	return in.AsUnsafePointer(), out.AsUnsafePointer(), unsafe.Pointer(cfg), inLen / int(cfg.BatchSize)
+}
+
 func TransposeCheck(in, out HostOrDeviceSlice, onDevice bool) {
 	inLen, outLen := in.Len(), out.Len()
 

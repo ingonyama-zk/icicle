@@ -43,6 +43,21 @@ int babybear_extension_matrix_transpose(
   scalar_t* mat_out
 );
 
+int babybear_extension_vector_sum(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+int babybear_extension_vector_product(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+
 int babybear_extension_vector_mixed_mul(
   scalar_t* vec_a,
   scalar_t* vec_b,

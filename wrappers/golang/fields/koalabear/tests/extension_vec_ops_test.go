@@ -65,6 +65,54 @@ func testKoalabear_extensionTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testKoalabear_extensionSum(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := koalabear_extension.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[koalabear_extension.ExtensionField], batchSize)
+	result2 := make(core.HostSlice[koalabear_extension.ExtensionField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.SumScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.SumScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
+func testKoalabear_extensionProduct(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := koalabear_extension.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[koalabear_extension.ExtensionField], batchSize)
+	result2 := make(core.HostSlice[koalabear_extension.ExtensionField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.ProductScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ProductScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 func testKoalabear_extensionMixedVecOps(suite *suite.Suite) {
 	testSize := 1 << 14
 
@@ -89,6 +137,8 @@ type Koalabear_extensionVecOpsTestSuite struct {
 func (s *Koalabear_extensionVecOpsTestSuite) TestKoalabear_extensionVecOps() {
 	s.Run("TestKoalabear_extensionVecOps", testWrapper(&s.Suite, testKoalabear_extensionVecOps))
 	s.Run("TestKoalabear_extensionTranspose", testWrapper(&s.Suite, testKoalabear_extensionTranspose))
+	s.Run("TestKoalabear_extensionSum", testWrapper(&s.Suite, testKoalabear_extensionSum))
+	s.Run("TestKoalabear_extensionProduct", testWrapper(&s.Suite, testKoalabear_extensionProduct))
 	s.Run("TestKoalabear_extensionMixedVecOps", testWrapper(&s.Suite, testKoalabear_extensionMixedVecOps))
 }
 
