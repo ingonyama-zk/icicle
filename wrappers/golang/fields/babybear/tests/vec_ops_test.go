@@ -5,6 +5,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
+
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/vecOps"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,6 +65,54 @@ func testBabybearTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testBabybearSum(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := babybear.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[babybear.ScalarField], batchSize)
+	result2 := make(core.HostSlice[babybear.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.SumScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.SumScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
+func testBabybearProduct(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := babybear.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[babybear.ScalarField], batchSize)
+	result2 := make(core.HostSlice[babybear.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.ProductScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ProductScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 type BabybearVecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +120,8 @@ type BabybearVecOpsTestSuite struct {
 func (s *BabybearVecOpsTestSuite) TestBabybearVecOps() {
 	s.Run("TestBabybearVecOps", testWrapper(&s.Suite, testBabybearVecOps))
 	s.Run("TestBabybearTranspose", testWrapper(&s.Suite, testBabybearTranspose))
+	s.Run("TestBabybearSum", testWrapper(&s.Suite, testBabybearSum))
+	s.Run("TestBabybearProduct", testWrapper(&s.Suite, testBabybearProduct))
 
 }
 

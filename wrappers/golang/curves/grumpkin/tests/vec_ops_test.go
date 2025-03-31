@@ -5,6 +5,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	grumpkin "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/grumpkin"
+
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/grumpkin/vecOps"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,6 +65,54 @@ func testGrumpkinTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testGrumpkinSum(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := grumpkin.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[grumpkin.ScalarField], batchSize)
+	result2 := make(core.HostSlice[grumpkin.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.SumScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.SumScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
+func testGrumpkinProduct(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := grumpkin.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[grumpkin.ScalarField], batchSize)
+	result2 := make(core.HostSlice[grumpkin.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.ProductScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ProductScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 type GrumpkinVecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +120,9 @@ type GrumpkinVecOpsTestSuite struct {
 func (s *GrumpkinVecOpsTestSuite) TestGrumpkinVecOps() {
 	s.Run("TestGrumpkinVecOps", testWrapper(&s.Suite, testGrumpkinVecOps))
 	s.Run("TestGrumpkinTranspose", testWrapper(&s.Suite, testGrumpkinTranspose))
+	s.Run("TestGrumpkinSum", testWrapper(&s.Suite, testGrumpkinSum))
+	s.Run("TestGrumpkinProduct", testWrapper(&s.Suite, testGrumpkinProduct))
+
 }
 
 func TestSuiteGrumpkinVecOps(t *testing.T) {

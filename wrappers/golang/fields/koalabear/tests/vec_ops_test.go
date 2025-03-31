@@ -5,6 +5,7 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	koalabear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear"
+
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear/vecOps"
 	"github.com/stretchr/testify/suite"
 )
@@ -64,6 +65,54 @@ func testKoalabearTranspose(suite *suite.Suite) {
 	suite.Equal(matrix, output)
 }
 
+func testKoalabearSum(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := koalabear.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[koalabear.ScalarField], batchSize)
+	result2 := make(core.HostSlice[koalabear.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.SumScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.SumScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
+func testKoalabearProduct(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := koalabear.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[koalabear.ScalarField], batchSize)
+	result2 := make(core.HostSlice[koalabear.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	vecOps.ProductScalars(a, result, cfg)
+
+	// Test with device memory
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ProductScalars(dA, dResult, cfg)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 type KoalabearVecOpsTestSuite struct {
 	suite.Suite
 }
@@ -71,6 +120,9 @@ type KoalabearVecOpsTestSuite struct {
 func (s *KoalabearVecOpsTestSuite) TestKoalabearVecOps() {
 	s.Run("TestKoalabearVecOps", testWrapper(&s.Suite, testKoalabearVecOps))
 	s.Run("TestKoalabearTranspose", testWrapper(&s.Suite, testKoalabearTranspose))
+	s.Run("TestKoalabearSum", testWrapper(&s.Suite, testKoalabearSum))
+	s.Run("TestKoalabearProduct", testWrapper(&s.Suite, testKoalabearProduct))
+
 }
 
 func TestSuiteKoalabearVecOps(t *testing.T) {
