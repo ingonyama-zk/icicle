@@ -25,6 +25,7 @@ pub(crate) mod tests {
     use icicle_core::{impl_mixed_vec_ops_tests, impl_vec_ops_tests};
 
     impl_vec_ops_tests!(babybear, ScalarField);
+
     mod extension {
         use super::*;
 
