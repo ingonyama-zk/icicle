@@ -176,4 +176,4 @@ Make sure to install icicle libs when installing a library/application that depe
 ### Go: Build, Test, and Install (TODO)
 
 --- 
-**To install CUDA backend and license click [here](./install_gpu_backend#installation)**
+**To install CUDA backend and license click [here](./install_gpu_backend.md#installation)**
