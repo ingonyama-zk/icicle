@@ -8,7 +8,7 @@ import (
 )
 
 func NewSha3256Hasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
-	h := C.icicle_create_sha3_256((C.ulong)(inputChunkSize))
+	h := C.icicle_create_sha3_256((C.uint64_t)(inputChunkSize))
 	if h == nil {
 		return Hasher{handle: nil}, runtime.UnknownError
 	}
@@ -19,7 +19,7 @@ func NewSha3256Hasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
 }
 
 func NewSha3512Hasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
-	h := C.icicle_create_sha3_512((C.ulong)(inputChunkSize))
+	h := C.icicle_create_sha3_512((C.uint64_t)(inputChunkSize))
 	if h == nil {
 		return Hasher{handle: nil}, runtime.UnknownError
 	}

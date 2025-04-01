@@ -27,7 +27,7 @@ func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
 }
 
 func TestMain(m *testing.M) {
-	runtime.LoadBackendFromEnvOrDefault()
+	test_helpers.LOAD_AND_INIT_MAIN_DEVICE()
 
 	exitCode := m.Run()
 

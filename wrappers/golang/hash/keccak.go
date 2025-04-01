@@ -8,7 +8,7 @@ import (
 )
 
 func NewKeccak256Hasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
-	h := C.icicle_create_keccak_256((C.ulong)(inputChunkSize))
+	h := C.icicle_create_keccak_256((C.uint64_t)(inputChunkSize))
 	if h == nil {
 		return Hasher{handle: nil}, runtime.UnknownError
 	}
@@ -19,7 +19,7 @@ func NewKeccak256Hasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
 }
 
 func NewKeccak512Hasher(inputChunkSize uint64) (Hasher, runtime.EIcicleError) {
-	h := C.icicle_create_keccak_512((C.ulong)(inputChunkSize))
+	h := C.icicle_create_keccak_512((C.uint64_t)(inputChunkSize))
 	if h == nil {
 		return Hasher{handle: nil}, runtime.UnknownError
 	}
