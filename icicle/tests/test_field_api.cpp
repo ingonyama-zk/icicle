@@ -72,8 +72,7 @@ TEST_F(FieldTestBase, polynomialDivision)
   const uint64_t denominator_size = 1 << rand_uint_32b(3, 4);
   const uint64_t q_size = numerator_size - denominator_size + 1;
   const uint64_t r_size = numerator_size;
-  // const int batch_size = rand_uint_32b(10, 19);
-  const int batch_size = 1; // Metal backend doesn't support batch vecops, TODO remove when supported
+  const int batch_size = rand_uint_32b(10, 19);
 
   // basically we compute q(x),r(x) for a(x)=q(x)b(x)+r(x) by dividing a(x)/b(x)
 
@@ -140,7 +139,9 @@ TEST_F(FieldTestBase, polynomialDivision)
   }
 }
 
-TEST_F(FieldApiTestBase, Sumcheck)
+#ifdef SUMCHECK
+  #include "icicle/hash/keccak.h"
+TEST_F(FieldTestBase, Sumcheck)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
