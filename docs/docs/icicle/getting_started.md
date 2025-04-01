@@ -8,7 +8,7 @@ This guide will walk you through the entire process of building, testing, and in
 1. **Install ICICLE or build it from source**: This is explained in this guide. For building from source, refer to the [Build from Source page](./build_from_source.md).
 2. **Follow the [Programmer’s Guide](./programmers_guide/general.md)**: Learn how to use ICICLE APIs.  
 3. **Start using ICICLE APIs on your CPU**: Your application will now use ICICLE on the CPU.
-4. **Accelerate your application on a GPU**: [install the GPU backend](./install_gpu_backend),  load it, and select it in your application ([C++](./programmers_guide/cpp.md#loading-a-backend),[Rust](./programmers_guide/rust.md#loading-a-backend), [Go](./programmers_guide/go.md#loading-a-backend)).
+4. **Accelerate your application on a GPU**: [install the GPU backend](./install_gpu_backend.md),  load it, and select it in your application ([C++](./programmers_guide/cpp.md#loading-a-backend),[Rust](./programmers_guide/rust.md#loading-a-backend), [Go](./programmers_guide/go.md#loading-a-backend)).
 5. **Run on the GPU**: Once the GPU backend is selected, all subsequent API calls will execute on the GPU.
 6. **Optimize for multi-GPU environments**: Refer to the [Multi-GPU](./multi-device.md) Guide to fully utilize your system’s capabilities.  
 7. **Review memory management**: Revisit the [Memory Management section](./programmers_guide/general.md#device-abstraction) to allocate memory on the device efficiently and try to keep data on the GPU as long as possible.  
