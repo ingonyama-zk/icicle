@@ -114,4 +114,4 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
 
 ## Parameters for optimal performance
 
-Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
+Please refer to the [primitive description](../primitives/msm.md#choosing-optimal-parameters)
