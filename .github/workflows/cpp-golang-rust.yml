@@ -5,7 +5,6 @@ on:
     branches:
       - main
 
-
 concurrency:
   group:  ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,8 +15,8 @@ jobs:
     name: Check Spelling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: codespell-project/actions-codespell@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: codespell-project/actions-codespell@fad9339798e1ee3fe979ae0a022c931786a408b8
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
           skip: ./**/target,./**/build,./docs/*.js,./docs/*.json,./*.svg
@@ -33,10 +32,10 @@ jobs:
     needs: check-changed-files
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true'
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
     - name: Check clang-format
@@ -119,10 +118,10 @@ jobs:
           echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
         fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout ${{ matrix.backend_upper }} Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
         path: ./icicle/backend/${{ matrix.backend }}
@@ -219,7 +218,7 @@ jobs:
     - name: Setup go
       if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
       timeout-minutes: 15
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
     - name: Run Golang curve Tests
@@ -288,10 +287,10 @@ jobs:
           echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
         fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout ${{ matrix.backend_upper }} Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
         path: ./icicle/backend/${{ matrix.backend }}
@@ -389,7 +388,7 @@ jobs:
     - name: Setup go
       if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
       timeout-minutes: 15
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
     - name: Run Golang field Tests
@@ -421,10 +420,10 @@ jobs:
           
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout CUDA Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-cuda-backend
         path: ./icicle/backend/cuda
@@ -550,10 +549,10 @@ jobs:
           echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
         fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout ${{ matrix.backend_upper }} Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
         path: ./icicle/backend/${{ matrix.backend }}
@@ -628,7 +627,7 @@ jobs:
     - name: Setup go
       if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
       timeout-minutes: 15
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
     - name: Test GoLang Hashes
@@ -756,9 +755,9 @@ jobs:
           echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
         fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout ${{ matrix.backend_upper }} Backend
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
         path: ./icicle/backend/${{ matrix.backend}}
