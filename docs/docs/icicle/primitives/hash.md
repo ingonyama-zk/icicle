@@ -183,5 +183,5 @@ Currently the poseidon sponge mode (sponge function description could be found i
 
 ### Supported Bindings
 
-- [Rust](../rust-bindings/hash)
-- [Go](../golang-bindings/hash)
+- [Rust](../rust-bindings/hash.md)
+- [Go](../golang-bindings/hash.md)
