@@ -26,31 +26,33 @@ type Config struct {
 	MetalBackend     string
 	BuildDir         string
 	InstallPath      string
+	ReleaseType      string
 }
 
 var supportedCurves = []string{"bn254", "bls12_377", "bls12_381", "bw6_761", "grumpkin"}
 var supportedFields = []string{"babybear", "koalabear"}
 
 func showHelp() {
-	fmt.Printf(`Usage: %s [OPTIONS]
+	fmt.Printf(`Usage: %s [OPTIONS...]
 
 Options:
-  -curve <string>           Comma-separated list of curves to be built. If "all" is supplied,
-                                all curves will be built with any additional curve options.
-  -field <string>           Comma-separated list of fields to be built. If "all" is supplied,
-                                all fields will be built with any additional field options
-  -skip-msm                 Builds the curve library with MSM disabled
-  -skip-ntt                 Builds the curve/field library with NTT disabled
-  -skip-g2                  Builds the curve library with G2 disabled
-  -skip-ecntt               Builds the curve library with ECNTT disabled
-  -skip-poseidon            Builds the curve or field library with poseidon hashing disabled
-  -skip-poseidon2           Builds the curve or field library with poseidon2 hashing disabled
-  -skip-hash                Builds the library with Hashes disabled
-  -skip-fieldext            Builds the field library with the extension field disabled
-  -cuda <string>            Specifies the branch/commit for CUDA backend, or "local"
-  -cuda-version <string>    Specifies the version of CUDA to use
-  -metal <string>           Specifies the branch/commit for METAL backend, or "local"
-  -install-path <string>    Installation path for built libraries
+  -curve <string>           			Comma-separated list of curves to be built. If "all" is supplied,
+                            			    all curves will be built with any additional curve options.
+  -field <string>           			Comma-separated list of fields to be built. If "all" is supplied,
+                            			    all fields will be built with any additional field options
+  -skip-msm                 			Builds the curve library with MSM disabled
+  -skip-ntt                 			Builds the curve/field library with NTT disabled
+  -skip-g2                  			Builds the curve library with G2 disabled
+  -skip-ecntt               			Builds the curve library with ECNTT disabled
+  -skip-poseidon            			Builds the curve or field library with poseidon hashing disabled
+  -skip-poseidon2           			Builds the curve or field library with poseidon2 hashing disabled
+  -skip-hash                			Builds the library with Hashes disabled
+  -skip-fieldext            			Builds the field library with the extension field disabled
+  -cuda <string>            			Specifies the branch/commit for CUDA backend, or "local"
+  -cuda-version <string>    			Specifies the version of CUDA to use
+  -cuda-compiler-path <string>    Specifies the path to the CUDA compiler
+  -metal <string>           			Specifies the branch/commit for METAL backend, or "local"
+  -install-path <string>    			Installation path for built libraries
 `, os.Args[0])
 }
 
@@ -83,8 +85,10 @@ func main() {
 	skipFieldext := flag.Bool("skip-fieldext", false, "Skip Field Extension")
 	cudaBackend := flag.String("cuda", "OFF", "CUDA backend")
 	cudaVersion := flag.String("cuda-version", "", "CUDA version")
+	cudaCompilerPath := flag.String("cuda-compiler-path", "", "CUDA compiler path")
 	metalBackend := flag.String("metal", "OFF", "Metal backend")
 	installPath := flag.String("install-path", "", "Installation path")
+	releaseType := flag.String("release-type", "Release", "Release type")
 	help := flag.Bool("help", false, "Show help message")
 
 	flag.Parse()
@@ -121,12 +125,18 @@ func main() {
 	}
 
 	// Set CUDA and Metal backends
+	if *cudaBackend != "OFF" && *metalBackend != "OFF" {
+		fmt.Println("Error: CUDA and Metal backends cannot be built at the same time")
+		os.Exit(1)
+	}
 	config.CudaBackend = *cudaBackend
 	config.MetalBackend = *metalBackend
 
-	// Set CUDA compiler path if version specified
+	// Set CUDA compiler path
 	if *cudaVersion != "" {
 		config.CudaCompilerPath = fmt.Sprintf("/usr/local/cuda-%s/bin/nvcc", *cudaVersion)
+	} else if *cudaCompilerPath != "" {
+		config.CudaCompilerPath = *cudaCompilerPath
 	}
 
 	// Set build and install paths
@@ -159,6 +169,9 @@ func main() {
 	} else if *fields != "" {
 		config.BuildFields = strings.Split(*fields, ",")
 	}
+
+	// Set release type
+	config.ReleaseType = *releaseType
 
 	// Change to icicle directory and create build directory
 	if err := os.Chdir("../../../icicle"); err != nil {
@@ -226,7 +239,7 @@ func buildCurve(config Config, curve string) error {
 		fmt.Sprintf("-DPOSEIDON=%s", config.Poseidon),
 		fmt.Sprintf("-DPOSEIDON2=%s", config.Poseidon2),
 		fmt.Sprintf("-DHASH=%s", config.Hash),
-		"-DCMAKE_BUILD_TYPE=Release",
+		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
 		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
 		"-S", ".", "-B", "build",
 	}
@@ -267,7 +280,7 @@ func buildField(config Config, field string) error {
 		fmt.Sprintf("-DPOSEIDON=%s", config.Poseidon),
 		fmt.Sprintf("-DPOSEIDON2=%s", config.Poseidon2),
 		fmt.Sprintf("-DHASH=%s", config.Hash),
-		"-DCMAKE_BUILD_TYPE=Release",
+		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
 		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
 		"-S", ".", "-B", "build",
 	}
@@ -302,7 +315,7 @@ func buildHash(config Config) error {
 		fmt.Sprintf("-DCUDA_BACKEND=%s", config.CudaBackend),
 		fmt.Sprintf("-DMETAL_BACKEND=%s", config.MetalBackend),
 		fmt.Sprintf("-DHASH=%s", config.Hash),
-		"-DCMAKE_BUILD_TYPE=Release",
+		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
 		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
 		"-S", ".", "-B", "build",
 	}
