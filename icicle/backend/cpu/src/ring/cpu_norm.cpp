@@ -3,10 +3,25 @@
 #include "taskflow/taskflow.hpp"
 #include <cmath>
 
+typedef __uint128_t uint128_t;
+
 static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
 
 // extract the number of threads to run from config
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
+
+// Helper function to convert a value to centered representation [-q/2, q/2)
+static inline int64_t abs_centered(int64_t val, int64_t q) {
+  if (val <= q / 2) {
+    return val;
+  } else {
+    return q - val;
+  }
+}
+
+static inline uint128_t square(int64_t val, int64_t q) {
+  return abs_centered(val, q) * abs_centered(val, q);
+}
 
 // CPU implementation for icicle::norm::check_norm_bound()
 static eIcicleError cpu_check_norm_bound(
@@ -42,20 +57,15 @@ static eIcicleError cpu_check_norm_bound(
 
   if (norm == eNormType::L2) {
     // For L2 norm, we compute sum of squares and compare with bound^2
-    // We use field_t to handle the intermediate calculations
-    field_t bound_squared = field_t::from(norm_bound) * field_t::from(norm_bound);
-    field_t norm_squared = field_t::from(0);
+    uint128_t bound_squared = square(norm_bound, q);
+    uint128_t norm_squared = 0;
 
     for (size_t i = 0; i < size; ++i) {
       int64_t val = input_i64[i];
-      // Convert to centered representation [-q/2, q/2)
-      if (val > q/2) {
-        val -= q;
-      } else if (val < -q/2) {
-        val += q;
-      }
-      norm_squared = norm_squared + field_t::from(val) * field_t::from(val);
-      if (!field_t::lt(norm_squared, bound_squared)) {
+      
+      val = abs_centered(val, q);
+      norm_squared += square(val, q);
+      if (norm_squared >= bound_squared) {
         is_bounded = false;
         break;
       }
@@ -64,13 +74,9 @@ static eIcicleError cpu_check_norm_bound(
     // For LInfinity norm, we check if any element's absolute value exceeds the bound
     for (size_t i = 0; i < size; ++i) {
       int64_t val = input_i64[i];
-      // Convert to centered representation [-q/2, q/2)
-      if (val > q/2) { // TODO: emirsoyturk make this a function
-        val -= q;
-      } else if (val < -q/2) {
-        val += q;
-      }
-      if (std::abs(val) >= static_cast<int64_t>(norm_bound)) {
+      
+      val = abs_centered(val, q);
+      if (val >= norm_bound) {
         is_bounded = false;
         break;
       }
@@ -117,37 +123,33 @@ static eIcicleError cpu_check_norm_relative(
 
   if (norm == eNormType::L2) {
     // For L2 norm, we compute sum of squares and compare with (scale * bound)^2
-    field_t scale_bound_squared = field_t::from(scale) * field_t::from(scale);
-    field_t norm_a_squared = field_t::from(0);
-    field_t norm_b_squared = field_t::from(0);
+    uint128_t scale_bound_squared = square(scale, q);
+    uint128_t norm_a_squared = 0;
+    uint128_t norm_b_squared = 0;
 
     for (size_t i = 0; i < size; ++i) {
       int64_t val_a = input_a_i64[i];
       int64_t val_b = input_b_i64[i];
-      // Convert to centered representation [-q/2, q/2)
-      if (val_a > q/2) val_a -= q;
-      else if (val_a < -q/2) val_a += q;
-      if (val_b > q/2) val_b -= q;
-      else if (val_b < -q/2) val_b += q;
 
-      norm_a_squared = norm_a_squared + field_t::from(val_a) * field_t::from(val_a);
-      norm_b_squared = norm_b_squared + field_t::from(val_b) * field_t::from(val_b);
+      val_a = abs_centered(val_a, q);
+      val_b = abs_centered(val_b, q);
+
+      norm_a_squared += square(val_a, q);
+      norm_b_squared += square(val_b, q);
     }
 
     // Check if norm_a^2 < (scale * norm_b)^2
-    is_bounded = field_t::lt(norm_a_squared, scale_bound_squared * norm_b_squared);
+    is_bounded = norm_a_squared < scale_bound_squared * norm_b_squared;
   } else { // LInfinity norm
     // For LInfinity norm, we check if any element's absolute value exceeds scale * bound
     for (size_t i = 0; i < size; ++i) {
       int64_t val_a = input_a_i64[i];
       int64_t val_b = input_b_i64[i];
-      // Convert to centered representation [-q/2, q/2)
-      if (val_a > q/2) val_a -= q;
-      else if (val_a < -q/2) val_a += q;
-      if (val_b > q/2) val_b -= q;
-      else if (val_b < -q/2) val_b += q;
 
-      if (std::abs(val_a) >= static_cast<int64_t>(scale) * std::abs(val_b)) {
+      val_a = abs_centered(val_a, q);
+      val_b = abs_centered(val_b, q);
+
+      if (val_a >= scale * val_b) {
         is_bounded = false;
         break;
       }
