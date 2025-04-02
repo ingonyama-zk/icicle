@@ -251,7 +251,13 @@ namespace goldilocks {
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField pow(GoldilocksField base, int exp)
     {
-      return Field<CONFIG>::pow(base, exp);
+      GoldilocksField res = one();
+      while (exp > 0) {
+        if (exp & 1) res = res * base;
+        base = base * base;
+        exp >>= 1;
+      }
+      return res;
     }
   };
 
