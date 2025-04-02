@@ -12,7 +12,7 @@ overflow in addition, and that the carry-less optimizations used in other fields
 3. In order to optimize addition and multiplication - the elements are reduced to the range 0<=x<2^64 instead of 0=<x<p.
 This requires changing the operator== implementation such that it will return true for values with a difference of p.
 4. The operations that are implemented differently from the base Field class are: addition, reduction, inverse and
-comparison. The specific details are documented in the relevant fucntions. */
+comparison. The specific details are documented in the relevant functions. */
 namespace goldilocks {
 
   template <class CONFIG>
@@ -71,8 +71,8 @@ namespace goldilocks {
 
     /*This function implements the addition operation. Since the numbers are between 0 and 2^64 we either need to
     subtract p, 2p or do nothing. The case in which we need to subtract 2p is very rare and it happens only if both of
-    the arguments are larger than p. Sometimes we can garantee that one of the arguments is smaller than p and then we
-    use NO_OVERFLOW=true. That is the case in the call that is inside the reduction function. When we can't garantee
+    the arguments are larger than p. Sometimes we can guarantee that one of the arguments is smaller than p and then we
+    use NO_OVERFLOW=true. That is the case in the call that is inside the reduction function. When we can't guarantee
     this then we hint the compiler that this is a rare case.*/
     template <bool NO_OVERFLOW = false>
     static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys)
@@ -94,7 +94,7 @@ namespace goldilocks {
       if (carry) {
         Field<CONFIG>::template add_limbs<TLC, false>(
           rs.limbs_storage, Field<CONFIG>::get_neg_modulus(),
-          rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is garanteed no to
+          rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
                              // overflow since we already took care of the rare case.
       }
       return rs;
@@ -114,7 +114,7 @@ namespace goldilocks {
     /*This function performs the goldilocks reduction:
     xs[63:0] + xs[95:64] * (2^32 - 1) - xs[127:96]
     First it does the subtraction - xs[63:0] - xs[127:96] and hints the compiler that it is rare that xs[63:0] <
-    xs[127:96]. Then it adds xs[95:64] * (2^32 - 1) which is garanteed to be smaller than p - that's why we use the
+    xs[127:96]. Then it adds xs[95:64] * (2^32 - 1) which is guaranteed to be smaller than p - that's why we use the
     addition with NO_OVERFLOW=true*/
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
