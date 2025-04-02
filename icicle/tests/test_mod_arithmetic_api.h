@@ -54,9 +54,9 @@ TYPED_TEST_SUITE(ModArithTest, FTImplementations);
 
 TYPED_TEST(ModArithTest, vectorVectorOps)
 {
-  const uint64_t N = 1 << 4;
-  const int batch_size = 1 << 0;
-  const bool columns_batch = 0;
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
