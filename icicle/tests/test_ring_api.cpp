@@ -1,6 +1,6 @@
-
 #include "test_mod_arithmetic_api.h"
 #include "icicle/balanced_decomposition.h"
+#include "icicle/norm.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -230,4 +230,84 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
       balanced_decomposition::recompose(decomposed.data(), decomposed_size, 1 /*=base*/, cfg, input.data(), size));
 
   } // device loop
+}
+
+TEST_F(RingTestBase, NormBounded)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t size = 1 << 10;
+  auto input = std::vector<field_t>(size);
+  field_t::rand_host_many(input.data(), size);
+  bool is_bounded;
+
+  // Test L2 norm
+  const uint64_t l2_bound = q / 4; // A reasonable bound for L2 norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    field_t *d_input;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(field_t)));
+
+    auto cfg = VecOpsConfig{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    // Check L2 norm
+    ICICLE_CHECK(norm::check_norm_bound(d_input, size, eNormType::L2, l2_bound, cfg, &is_bounded));
+    ASSERT_TRUE(is_bounded) << "L2 norm check failed for bound=" << l2_bound;
+
+    // Check LInfinity norm
+    const uint64_t linf_bound = q / 8; // A reasonable bound for LInfinity norm
+    ICICLE_CHECK(norm::check_norm_bound(d_input, size, eNormType::LInfinity, linf_bound, cfg, &is_bounded));
+    ASSERT_TRUE(is_bounded) << "LInfinity norm check failed for bound=" << linf_bound;
+
+    icicle_free(d_input);
+  }
+}
+
+TEST_F(RingTestBase, NormRelative)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t size = 1 << 10;
+  auto input_a = std::vector<field_t>(size);
+  auto input_b = std::vector<field_t>(size);
+  field_t::rand_host_many(input_a.data(), size);
+  field_t::rand_host_many(input_b.data(), size);
+  bool is_bounded;
+
+  // Test relative norm comparison
+  const uint64_t scale = 2; // Compare if norm(a) < 2 * norm(b)
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    field_t *d_input_a, *d_input_b;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input_a, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_input_b, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_copy(d_input_a, input_a.data(), size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_copy(d_input_b, input_b.data(), size * sizeof(field_t)));
+
+    auto cfg = VecOpsConfig{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    // Check relative L2 norm
+    ICICLE_CHECK(norm::check_norm_relative(d_input_a, d_input_b, size, eNormType::L2, scale, cfg, &is_bounded));
+    ASSERT_TRUE(is_bounded) << "Relative L2 norm check failed for scale=" << scale;
+
+    // Check relative LInfinity norm
+    ICICLE_CHECK(norm::check_norm_relative(d_input_a, d_input_b, size, eNormType::LInfinity, scale, cfg, &is_bounded));
+    ASSERT_TRUE(is_bounded) << "Relative LInfinity norm check failed for scale=" << scale;
+
+    icicle_free(d_input_a);
+    icicle_free(d_input_b);
+  }
 }

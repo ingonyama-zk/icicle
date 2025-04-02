@@ -22,6 +22,7 @@ namespace icicle {
   }
 
   namespace norm {
+    template <>
     eIcicleError check_norm_bound(
       const field_t* input,
       size_t size,
@@ -48,6 +49,7 @@ namespace icicle {
   }
 
   namespace norm {
+    template <>
     eIcicleError check_norm_relative(
       const field_t* input_a,
       const field_t* input_b,
