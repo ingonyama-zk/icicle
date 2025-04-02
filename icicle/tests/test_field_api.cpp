@@ -14,28 +14,66 @@ using FieldTestBase = ModArithTestBase;
 TYPED_TEST(FieldTest, FieldSanityTest)
 {
   auto a = TypeParam::rand_host();
-  std::cout << "a " << a <<std::endl;
-  // auto b = TypeParam::one() + TypeParam::one();
   auto b = TypeParam::rand_host();
-  std::cout << "b " << b <<std::endl;
-  // auto b_inv = TypeParam::inverse(b);
-  // auto a_neg = TypeParam::neg(a);
-  // ASSERT_EQ(a + TypeParam::zero(), a);
-  // ASSERT_EQ(a + b - a, b);
-  // std::cout << "b_inv " << b_inv <<std::endl;
-  // std::cout << "a*b " << a*b <<std::endl;
-  // ASSERT_EQ(b * a * b_inv, a);
-  // ASSERT_EQ(a + a_neg, TypeParam::zero());
-  // ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
-  // ASSERT_EQ(b * b_inv, TypeParam::one());
-  // ASSERT_EQ(a * scalar_t::from(2), a + a);
+  auto c = TypeParam::rand_host();
+  auto d = TypeParam::rand_host();
+  auto e = TypeParam::rand_host();
+  auto f = TypeParam::rand_host();
+  auto g = TypeParam::rand_host();
+  auto h = TypeParam::rand_host();
+  auto i = TypeParam::rand_host();
+  auto j = TypeParam::rand_host();
   START_TIMER(mult)
-  for (int i = 0; i < 1000000; i++)
+  for (int k = 0; k < 1000000; k++)
   {
     a = a * b;
+    b = b * c;
+    c = c * d;
+    d = d * e;
+    e = e * f;
+    f = f * g;
+    g = g * h;
+    h = h * i;
+    i = i * j;
+    j = j * a;
   }
   END_TIMER(mult, "mult timer", true);
+  START_TIMER(add)
+  for (int k = 0; k < 1000000; k++)
+  {
+    a = a + b;
+    b = b + c;
+    c = c + d;
+    d = d + e;
+    e = e + f;
+    f = f + g;
+    g = g + h;
+    h = h + i;
+    i = i + j;
+    j = j + a;
+  }
+  END_TIMER(add, "add timer", true);
   std::cout << "a " << a <<std::endl;
+  std::cout << "b " << b <<std::endl;
+  std::cout << "c " << c <<std::endl;
+  std::cout << "d " << d <<std::endl;
+  std::cout << "e " << e <<std::endl;
+  std::cout << "f " << f <<std::endl;
+  std::cout << "g " << g <<std::endl;
+  std::cout << "h " << h <<std::endl;
+  std::cout << "i " << i <<std::endl;
+  std::cout << "j " << j <<std::endl;
+  a = TypeParam::rand_host();
+  b = TypeParam::rand_host();
+  auto b_inv = TypeParam::inverse(b);
+  auto a_neg = TypeParam::neg(a);
+  ASSERT_EQ(a + TypeParam::zero(), a);
+  ASSERT_EQ(a + b - a, b);
+  ASSERT_EQ(b * a * b_inv, a);
+  ASSERT_EQ(a + a_neg, TypeParam::zero());
+  ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
+  ASSERT_EQ(b * b_inv, TypeParam::one());
+  ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
 TYPED_TEST(FieldTest, vectorDivision)

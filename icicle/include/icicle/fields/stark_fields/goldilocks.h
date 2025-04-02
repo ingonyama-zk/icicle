@@ -5,12 +5,16 @@
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
 
+/*A few things to note about goldilocks field:
+1. It has no slack bits (the modulus uses the entire 64 bits of storage) meaning we need to make sure there is no overflow in addition, and that the carry-less optimizations used in other fields do not apply here.
+2. It has a special reduction algorithm due to the modulus special form.
+3. In order to optimize addition and multiplication - the elements are reduced to the range 0<=x<2^64 instead of 0=<x<p. This requires changing the operator== implementation such that it will return true for values with a difference of p.
+4. The operations that are implemented differently from the base Field class are: addition, reduction, inverse and comparison. The specific details are documented in the relevant fucntions. */
 namespace goldilocks {
 
   template <class CONFIG>
   class GoldilocksField : public Field<CONFIG>
   {
-    // using Wide = Field<CONFIG>::Wide
 
   public:
     static constexpr unsigned TLC = CONFIG::limbs_count;
@@ -51,7 +55,7 @@ namespace goldilocks {
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField div2(const GoldilocksField& xs)
     {
-      return Field<CONFIG>::div2(xs); //calls base sub_modulus or derived sub_modulus?
+      return Field<CONFIG>::div2(xs);
     }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField neg(const GoldilocksField& xs)
@@ -59,53 +63,25 @@ namespace goldilocks {
       return Field<CONFIG>::neg(xs);
     }
 
+    /*This function implements the addition operation. Since the numbers are between 0 and 2^64 we either need to subtract p, 2p or do nothing.
+    The case in which we need to subtract 2p is very rare and it happens only if both of the arguments are larger than p. Sometimes we can garantee that one of the arguments is smaller than p and then we use NO_OVERFLOW=true.
+    That is the case in the call that is inside the reduction function. When we can't garantee this then we hint the compiler that this is a rare case.*/
      template <bool NO_OVERFLOW = false>
     static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys){
       GoldilocksField rs = {};
-      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - 0xffffffff00000001;
-      else rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
-      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(rs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      if (carry){
-        // if constexpr (NO_OVERFLOW) {
-        //   Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
-        //   return rs;
-        // }
-        // else {
-          Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
-          // auto carry2 = Field<CONFIG>::template add_limbs<TLC, true>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
-          // if (__builtin_expect(carry2, 1)){
-            // if (carry2){
-            //   // printf("double carry\n");
-            //   // __builtin_assume(xs.limbs_storage.limbs64[0] > 0xffffffff00000001 && ys.limbs_storage.limbs64[0] > 0xffffffff00000001);
-            //   Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
-            // }
-          // else{
-          //   printf("single carry\n");
-          // }
-        // }
+      const ff_storage modulus = Field<CONFIG>::get_modulus();
+      if constexpr (NO_OVERFLOW == false) { // Handle the rare case where we would need to subtract 2p
+        if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - modulus.limbs64[0]; // It is actually more efficient to check only one of the arguments.
+        else rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
       }
-      // else{
-      //   printf("no carry\n");
-      // }
+      else {
+        rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
+      }
+      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(rs.limbs_storage, ys.limbs_storage, rs.limbs_storage); // Do the addition
+      if (carry){
+          Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is garanteed no to overflow since we already took care of the rare case.
+      }
       return rs;
-      // if (__builtin_expect(rs.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) {
-      //   GoldilocksField rs2 = {};
-      //   const ff_storage modulus = Field<CONFIG>::get_modulus();
-      //   Field<CONFIG>::template sub_limbs<TLC, true>(rs.limbs_storage, modulus, rs2.limbs_storage);
-      //   return rs2;
-      // }
-      // GoldilocksField rs2 = {};
-      // const ff_storage modulus = Field<CONFIG>::get_modulus();
-      // auto carry2 = Field<CONFIG>::template sub_limbs<TLC, true>(rs.limbs_storage, modulus, rs2.limbs_storage);
-      // if (__builtin_expect(carry2 == 0, 0))
-      //   return rs2;
-      // if constexpr (NO_OVERFLOW) {
-        // return rs;
-      // }
-      // else {
-      //   return Field<CONFIG>::template sub_modulus<1>(rs);
-      // }
-      // return sub_limbs<TLC, true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
     }
 
     friend HOST_DEVICE_INLINE GoldilocksField operator+(const GoldilocksField& xs, const GoldilocksField& ys)
@@ -119,65 +95,23 @@ namespace goldilocks {
       return GoldilocksField{result};
     }
 
-
-    // template <unsigned MODULUS_MULTIPLE = 1>
-    // static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
-    // {
-    //   constexpr uint32_t gold_fact = uint32_t(-1);  //(1<<32) - 1
-    //   // GoldilocksField x_lo = {};
-    //   // x_lo.limbs_storage.limbs[0] = xs.limbs_storage.limbs[0];
-    //   // x_lo.limbs_storage.limbs[1] = xs.limbs_storage.limbs[1];
-    //   const GoldilocksField& x_lo = *reinterpret_cast<const GoldilocksField*>(xs.limbs_storage.limbs);
-    //   // return x_lo;
-    //   uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
-    //   GoldilocksField x_hi_lo = {};
-    //   // x_hi_lo.limbs_storage.limbs[0] = temp & gold_fact;
-    //   // x_hi_lo.limbs_storage.limbs[1] = temp >> 32;
-    //   x_hi_lo.limbs_storage.limbs64[0] = temp;
-    //   GoldilocksField x_hi_hi = Field<CONFIG>::from(xs.limbs_storage.limbs[3]);
-    //   // return x_hi_hi;
-    //   return x_lo + x_hi_lo - x_hi_hi;
-    // }
-
+    /*This function performs the goldilocks reduction:
+    xs[63:0] + xs[95:64] * (2^32 - 1) - xs[127:96]
+    First it does the subtraction - xs[63:0] - xs[127:96] and hints the compiler that it is rare that xs[63:0] < xs[127:96].
+    Then it adds xs[95:64] * (2^32 - 1) which is garanteed to be smaller than p - that's why we use the addition with NO_OVERFLOW=true*/
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
-      constexpr uint32_t gold_fact = uint32_t(-1);  //(1<<32) - 1
-      // constexpr uint64_t modulus = 0xffffffff00000001;
-
-      uint64_t t0 = xs.limbs_storage.limbs64[0];
-      bool borrow = t0 < static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
-      t0 -= static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
-      if (__builtin_expect(borrow, 0)) {
-      // if (borrow) {
-        t0 -= gold_fact; // Guaranteed not to underflow
-      }
-
-      uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
-      GoldilocksField x_hi_lo = {};
-      GoldilocksField t0_g = {};
-      x_hi_lo.limbs_storage.limbs64[0] = temp;
-      t0_g.limbs_storage.limbs64[0] = t0;
-
+      constexpr uint32_t gold_fact = uint32_t(-1);  //(2^32 - 1)
       GoldilocksField rs = {};
-      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(x_hi_lo.limbs_storage, t0_g.limbs_storage, rs.limbs_storage);
-      if (carry){
-          Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+      const GoldilocksField& x_lo = *reinterpret_cast<const GoldilocksField*>(xs.limbs_storage.limbs);
+      GoldilocksField x_hi_hi = Field<CONFIG>::from(xs.limbs_storage.limbs[3]);
+      auto carry = Field<CONFIG>::template sub_limbs<TLC, true>(x_lo.limbs_storage, x_hi_hi.limbs_storage, rs.limbs_storage); // xs[63:0] - xs[127:96]
+      if (__builtin_expect(carry, 0)) {
+        Field<CONFIG>::template sub_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage); // cannot underflow
       }
-      return rs;
-      // return goldi_add<true>(x_hi_lo,t0_g);
-      // uint64_t temp = xs.limbs_storage.limbs64[0] + static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact) - static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
-      // uint64_t temp = xs.limbs_storage.limbs64[0] + (static_cast<uint64_t>(xs.limbs_storage.limbs[2])<<32) - static_cast<uint64_t>(xs.limbs_storage.limbs[2]) - static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
-      // uint32_t temp1 = xs.limbs_storage.limbs[0] - xs.limbs_storage.limbs[2] - xs.limbs_storage.limbs[3];
-      // uint32_t temp2 = xs.limbs_storage.limbs[1] + xs.limbs_storage.limbs[2];
-      // uint64_t temp = xs.limbs_storage.limbs64[0] - static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
-      // uint64_t temp = xs.limbs_storage.limbs64[0] - xs.limbs_storage.limbs64[1];
-      // uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
-      // uint64_t temp = xs.limbs_storage.limbs64[0];
-      // GoldilocksField res = {};
-      // // res.limbs_storage.limbs[0] = temp1;
-      // // res.limbs_storage.limbs[1] = temp2;
-      // res.limbs_storage.limbs64[0] = temp;
-      // return res;
+      GoldilocksField x_hi_lo = {};
+      x_hi_lo.limbs_storage.limbs64[0] = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact); // xs[95:64] * (2^32 - 1)
+      return goldi_add<true>(rs,x_hi_lo); // NO_OVERFLOW=true
     }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField inverse(const GoldilocksField& x)
@@ -197,7 +131,7 @@ namespace goldilocks {
           if (Field<CONFIG>::is_odd(b)) carry = Field<CONFIG>::template add_limbs<TLC, true>(b.limbs_storage, modulus, b.limbs_storage);
           b = div2(b);
           if (carry) {
-            b.limbs_storage.limbs[1] = b.limbs_storage.limbs[1] | (1U << 31);
+            b.limbs_storage.limbs[1] = b.limbs_storage.limbs[1] | (1U << 31); // If there is a carry then after the division by 2 we can insert it as the top bit
           }
         }
         while (Field<CONFIG>::is_even(v)) {
@@ -206,7 +140,7 @@ namespace goldilocks {
           if (Field<CONFIG>::is_odd(c)) carry = Field<CONFIG>::template add_limbs<TLC, true>(c.limbs_storage, modulus, c.limbs_storage);
           c = div2(c);
           if (carry) {
-            c.limbs_storage.limbs[1] = c.limbs_storage.limbs[1] | (1U << 31);
+            c.limbs_storage.limbs[1] = c.limbs_storage.limbs[1] | (1U << 31); // If there is a carry then after the division by 2 we can insert it as the top bit
           }
         }
         if (Field<CONFIG>::lt(v, u)) {
@@ -224,22 +158,18 @@ namespace goldilocks {
     friend HOST_DEVICE_INLINE GoldilocksField operator*(const GoldilocksField& xs, const GoldilocksField& ys)
     {
       typename Field<CONFIG>::Wide xy = Field<CONFIG>::mul_wide(xs, ys); 
-      // return Field<CONFIG>::reduce(xy);
-      // GoldilocksField res = {};
-      // res.limbs_storage.limbs64[0] = xy.limbs_storage.limbs64[0];
-      // return res;
       return reduce(xy);
-      // Field<CONFIG> result = static_cast<const Field<CONFIG>&>(xs) * static_cast<const Field<CONFIG>&>(ys);
-      // return GoldilocksField{result};
     }
 
+    /*Since we allow the elements to be between 0 and 2^64, if they are larger than p we need to subtract p before the comparison. This is a rare case so we hint the compiler.*/
     friend HOST_DEVICE bool operator==(const GoldilocksField& xs, const GoldilocksField& ys)
     {
+      const ff_storage modulus = Field<CONFIG>::get_modulus();
       GoldilocksField xr = {};
-      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - 0xffffffff00000001;
+      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - modulus.limbs64[0];
       else xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
       GoldilocksField yr = {};
-      if (__builtin_expect(ys.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0] - 0xffffffff00000001;
+      if (__builtin_expect(ys.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0] - modulus.limbs64[0];
       else yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0];
       return icicle_math::template is_equal<TLC>(xr.limbs_storage, yr.limbs_storage);
     }
@@ -294,7 +224,7 @@ namespace goldilocks {
 
 
   struct fp_config {
-    static constexpr storage<2> modulus = {0x00000001, 0xffffffff};
+    static constexpr storage<2> modulus = {0x00000001, 0xffffffff}; // 2^64 - 2^32 + 1
     static constexpr unsigned reduced_digits_count = 9;
     static constexpr storage_array<reduced_digits_count, 2> reduced_digits = {
       {{0x00000001, 0x00000000},

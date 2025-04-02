@@ -52,7 +52,6 @@ public:
   void SetUp() override
   {
     unsigned seed = time(NULL);
-    // unsigned seed = 1742890624;
     ICICLE_LOG_INFO << "Seed for test is: " << seed;
     seed_rand_generator(seed);
   }
