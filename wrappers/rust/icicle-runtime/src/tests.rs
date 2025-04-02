@@ -124,6 +124,58 @@ mod tests {
     }
 
     #[test]
+    fn test_device_to_device_copy() {
+        initialize();
+        test_utilities::test_set_main_device();
+
+        let input = vec![1, 2, 3, 4];
+        let mut output = vec![0; input.len()];
+        assert_ne!(input, output);
+
+        // Copy from host to first device
+        let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
+        d_mem1.copy_from_host(HostSlice::from_slice(&input)).unwrap();
+
+        // Copy from first device to second device
+        let mut d_mem2 = DeviceVec::device_malloc(input.len()).unwrap();
+        d_mem2.copy_from_device(&d_mem1).unwrap();
+
+        // Copy back to host and verify
+        d_mem2.copy_to_host(HostSlice::from_mut_slice(&mut output)).unwrap();
+        assert_eq!(input, output);
+    }
+
+    #[test]
+    fn test_device_to_device_copy_async() {
+        initialize();
+        test_utilities::test_set_main_device();
+
+        let input = vec![1, 2, 3, 4];
+        let mut output = vec![0; input.len()];
+        assert_ne!(input, output);
+
+        // Create stream for async operations
+        let mut stream = IcicleStream::create().unwrap();
+
+        // Copy from host to first device
+        let mut d_mem1 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
+        d_mem1.copy_from_host_async(HostSlice::from_slice(&input), &stream).unwrap();
+
+        // Copy from first device to second device
+        let mut d_mem2 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
+        d_mem2.copy_from_device_async(&d_mem1, &stream).unwrap();
+
+        // Copy back to host and verify
+        d_mem2.copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream).unwrap();
+        
+        // Synchronize and cleanup
+        stream.synchronize().unwrap();
+        stream.destroy().unwrap();
+        
+        assert_eq!(input, output);
+    }
+
+    #[test]
     fn test_get_device_props() {
         initialize();
         let device = Device::new("CUDA", 0);

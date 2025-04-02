@@ -241,6 +241,50 @@ impl<T> DeviceSlice<T> {
             .wrap()
         }
     }
+
+    pub fn copy_from_device(&mut self, val: &DeviceSlice<T>) -> Result<(), eIcicleError> {
+        assert!(
+            self.len() == val.len(),
+            "In copy from device, destination and source slices have different lengths"
+        );
+
+        if self.is_empty() {
+            return Ok(());
+        }
+        if !self.is_on_active_device() {
+            panic!("not allocated on an inactive device");
+        }
+
+        let size = size_of::<T>() * self.len();
+        unsafe {
+            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, val.as_ptr() as *const c_void, size).wrap()
+        }
+    }
+
+    pub fn copy_from_device_async(&mut self, val: &DeviceSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        assert!(
+            self.len() == val.len(),
+            "In copy from device, destination and source slices have different lengths"
+        );
+
+        if self.is_empty() {
+            return Ok(());
+        }
+        if !self.is_on_active_device() {
+            panic!("not allocated on an inactive device");
+        }
+
+        let size = size_of::<T>() * self.len();
+        unsafe {
+            runtime::icicle_copy_async(
+                self.as_mut_ptr() as *mut c_void,
+                val.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+            .wrap()
+        }
+    }
 }
 
 impl<T> DeviceVec<T> {
