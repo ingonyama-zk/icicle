@@ -16,7 +16,8 @@ struct
 #ifdef __CUDA_ARCH__
   __align__(LIMBS_ALIGNMENT(1))
 #endif
-    storage<1> {
+    storage<1>
+{
   static constexpr unsigned LC = 1;
   uint32_t limbs[1];
 };
@@ -27,7 +28,8 @@ struct
 #ifdef __CUDA_ARCH__
   __align__(LIMBS_ALIGNMENT(1))
 #endif
-    storage<3> {
+    storage<3>
+{
   static constexpr unsigned LC = 3;
   uint32_t limbs[3];
 };
@@ -38,7 +40,8 @@ struct
 #ifdef __CUDA_ARCH__
   __align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
 #endif
-    storage {
+    storage
+{
   static_assert(LIMBS_COUNT % 2 == 0, "odd number of limbs is not supported\n");
   static constexpr unsigned LC = LIMBS_COUNT;
   union { // works only with even LIMBS_COUNT
@@ -52,6 +55,7 @@ struct
 #ifdef __CUDA_ARCH__
   __align__(LIMBS_ALIGNMENT(LIMBS_COUNT))
 #endif
-    storage_array {
+    storage_array
+{
   storage<LIMBS_COUNT> storages[OMEGAS_COUNT];
 };

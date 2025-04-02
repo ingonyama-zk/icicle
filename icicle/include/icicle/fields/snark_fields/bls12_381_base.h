@@ -15,6 +15,7 @@ namespace bls12_381 {
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative
     static constexpr bool nonresidue_is_negative = true;
+    static constexpr bool nonresidue_is_u32 = true;
   };
 } // namespace bls12_381
 

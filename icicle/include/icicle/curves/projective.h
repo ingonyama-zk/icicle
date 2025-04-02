@@ -236,6 +236,8 @@ public:
     return point.z != FF::zero() && eq_holds;
   }
 
+  static HOST_INLINE Affine<FF> rand_host_affine() { return to_affine(rand_host()); }
+
   static HOST_INLINE Projective rand_host()
   {
     SCALAR_FF rand_scalar = SCALAR_FF::rand_host();
