@@ -39,6 +39,7 @@ option(POSEIDON "Build poseidon hash" ON)
 option(POSEIDON2 "Build poseidon2 hash" ON)
 option(SUMCHECK "Build sumcheck" ON)
 option(FRI "Build fri" ON)
+option(PQC "Build icicle-pqc" ON)
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
