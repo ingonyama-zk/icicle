@@ -84,6 +84,9 @@ namespace bls12_381 {
                                                     0x09a1d805, 0x3339d808, 0x299d7d48, 0x73eda753};
     static constexpr unsigned R_BITS = scalar_t::NBITS;
     static constexpr unsigned R_LIMBS = scalar_t::TLC;
+    
+    static constexpr storage<2> Z = { 0x00010000, 0xd2010000 };
+    static constexpr unsigned Z_BITS = 64;
 
     struct fq6_config {
       // nonresidue to generate the extension field
@@ -108,6 +111,55 @@ namespace bls12_381 {
     typedef Projective<target_field_t, scalar_t, G1> target_projective_t;
     typedef Affine<target_field_t> target_affine_t;
 
+  private:
+    static fq6_field_t double_in_place(fq6_field_t& r, const point_field_t& two_inv) {
+      g2_point_field_t& x = r.c0;
+      g2_point_field_t& y = r.c1;
+      g2_point_field_t& z = r.c2;
+      
+      g2_point_field_t a = x * y;
+      a = a * two_inv;
+      
+      g2_point_field_t b = g2_point_field_t::sqr(y);
+      g2_point_field_t c = g2_point_field_t::sqr(z);
+      g2_point_field_t e = G2::weierstrass_b * (c + c + c);
+      g2_point_field_t f = e + e + e;
+      g2_point_field_t g = (b + f) * two_inv;
+      g2_point_field_t h = g2_point_field_t::sqr(y + z) - (b + c);
+      g2_point_field_t i = e - b;
+      g2_point_field_t j = g2_point_field_t::sqr(x);
+      g2_point_field_t e_square = g2_point_field_t::sqr(e);
+      
+      x = a * (b - f);
+      y = g2_point_field_t::sqr(g) - (e_square + e_square + e_square);
+      z = b * h;
+      
+      return fq6_field_t{i, j + j + j, -h};
+    }
+    
+    static fq6_field_t add_in_place(fq6_field_t& r, const g2_affine_t& q) {
+      g2_point_field_t& x = r.c0;
+      g2_point_field_t& y = r.c1;
+      g2_point_field_t& z = r.c2;
+      
+      g2_point_field_t theta = y - (q.y * z);
+      g2_point_field_t lambda = x - (q.x * z);
+      g2_point_field_t c = g2_point_field_t::sqr(theta);
+      g2_point_field_t d = g2_point_field_t::sqr(lambda);
+      g2_point_field_t e = lambda * d;
+      g2_point_field_t f = z * c;
+      g2_point_field_t g = x * d;
+      g2_point_field_t h = e + f - (g + g);
+      
+      x = lambda * h;
+      y = theta * (g - h) - (e * y);
+      z = z * e;
+      
+      g2_point_field_t j = theta * q.x - (lambda * q.y);
+      return fq6_field_t{j, -theta, lambda};
+    }
+
+  public:
     static target_affine_t untwist(const g2_affine_t& p1)
     {
       g2_point_field_t two_inv = g2_point_field_t::inverse(g2_point_field_t::one() + g2_point_field_t::one());
@@ -119,6 +171,21 @@ namespace bls12_381 {
       p2.y.c1.c1 = p1.y * coeff; // p2.Y = 0 + (p1.y * coeff * v) * u
 
       return p2;
+    }
+
+    static std::vector<fq6_field_t> prepare_q(const g2_affine_t& q) {
+      point_field_t two_inv = point_field_t::inverse(point_field_t::one() + point_field_t::one());
+      std::vector<fq6_field_t> coeffs;
+      fq6_field_t r = fq6_field_t { q.x, q.y, g2_point_field_t::one() };
+      
+      for (int j = Z_BITS - 1; j > 0; j--) {
+        coeffs.push_back(double_in_place(r, two_inv));
+        if (host_math::get_bit(Z, j - 1)) {
+          coeffs.push_back(add_in_place(r, q));
+        }
+      }
+      
+      return coeffs;
     }
 
     static void final_exponentiation(target_field_t& f)

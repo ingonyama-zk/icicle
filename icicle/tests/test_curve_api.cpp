@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>
@@ -364,6 +363,17 @@ TEST(CurveSanity, TargetFieldSanityTest)
   std::cout << a_neg << std::endl;
   std::cout << b_inv * a_neg << std::endl;
   // ASSERT_EQ(a * scalar_t::from(2), a + a);
+}
+
+TEST(CurveSanity, PrepareQTest)
+{
+  g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
+  auto coeffs = PairingImpl::prepare_q(q);
+  
+  std::cout << "Coefficients from prepare_q:" << std::endl;
+  for (size_t i = 0; i < coeffs.size(); i++) {
+    std::cout << coeffs[i] << std::endl;
+  }
 }
 
 TEST(CurveSanity, PairingBilinearityTest)

@@ -128,6 +128,11 @@ public:
     return CubicExtensionField{xs.c0 - ys, xs.c1, xs.c2};
   }
 
+  constexpr HOST_DEVICE_INLINE CubicExtensionField operator-() const
+  {
+    return CubicExtensionField{FF::neg(c0), FF::neg(c1), FF::neg(c2)};
+  }
+
   static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {
