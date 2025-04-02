@@ -59,21 +59,125 @@ namespace goldilocks {
       return Field<CONFIG>::neg(xs);
     }
 
-    template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(typename Field<CONFIG>::Wide xs)
+     template <bool NO_OVERFLOW = false>
+    static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys){
+      GoldilocksField rs = {};
+      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - 0xffffffff00000001;
+      else rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
+      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(rs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      if (carry){
+        // if constexpr (NO_OVERFLOW) {
+        //   Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+        //   return rs;
+        // }
+        // else {
+          Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+          // auto carry2 = Field<CONFIG>::template add_limbs<TLC, true>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+          // if (__builtin_expect(carry2, 1)){
+            // if (carry2){
+            //   // printf("double carry\n");
+            //   // __builtin_assume(xs.limbs_storage.limbs64[0] > 0xffffffff00000001 && ys.limbs_storage.limbs64[0] > 0xffffffff00000001);
+            //   Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+            // }
+          // else{
+          //   printf("single carry\n");
+          // }
+        // }
+      }
+      // else{
+      //   printf("no carry\n");
+      // }
+      return rs;
+      // if (__builtin_expect(rs.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) {
+      //   GoldilocksField rs2 = {};
+      //   const ff_storage modulus = Field<CONFIG>::get_modulus();
+      //   Field<CONFIG>::template sub_limbs<TLC, true>(rs.limbs_storage, modulus, rs2.limbs_storage);
+      //   return rs2;
+      // }
+      // GoldilocksField rs2 = {};
+      // const ff_storage modulus = Field<CONFIG>::get_modulus();
+      // auto carry2 = Field<CONFIG>::template sub_limbs<TLC, true>(rs.limbs_storage, modulus, rs2.limbs_storage);
+      // if (__builtin_expect(carry2 == 0, 0))
+      //   return rs2;
+      // if constexpr (NO_OVERFLOW) {
+        // return rs;
+      // }
+      // else {
+      //   return Field<CONFIG>::template sub_modulus<1>(rs);
+      // }
+      // return sub_limbs<TLC, true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
+    }
+
+    friend HOST_DEVICE_INLINE GoldilocksField operator+(const GoldilocksField& xs, const GoldilocksField& ys)
+    {
+      return goldi_add(xs, ys);
+    }
+
+    friend HOST_DEVICE_INLINE GoldilocksField operator-(GoldilocksField xs, const GoldilocksField& ys)
+    {
+      Field<CONFIG> result = static_cast<const Field<CONFIG>&>(xs) - static_cast<const Field<CONFIG>&>(ys);
+      return GoldilocksField{result};
+    }
+
+
+    // template <unsigned MODULUS_MULTIPLE = 1>
+    // static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
+    // {
+    //   constexpr uint32_t gold_fact = uint32_t(-1);  //(1<<32) - 1
+    //   // GoldilocksField x_lo = {};
+    //   // x_lo.limbs_storage.limbs[0] = xs.limbs_storage.limbs[0];
+    //   // x_lo.limbs_storage.limbs[1] = xs.limbs_storage.limbs[1];
+    //   const GoldilocksField& x_lo = *reinterpret_cast<const GoldilocksField*>(xs.limbs_storage.limbs);
+    //   // return x_lo;
+    //   uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
+    //   GoldilocksField x_hi_lo = {};
+    //   // x_hi_lo.limbs_storage.limbs[0] = temp & gold_fact;
+    //   // x_hi_lo.limbs_storage.limbs[1] = temp >> 32;
+    //   x_hi_lo.limbs_storage.limbs64[0] = temp;
+    //   GoldilocksField x_hi_hi = Field<CONFIG>::from(xs.limbs_storage.limbs[3]);
+    //   // return x_hi_hi;
+    //   return x_lo + x_hi_lo - x_hi_hi;
+    // }
+
+    static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
       constexpr uint32_t gold_fact = uint32_t(-1);  //(1<<32) - 1
-      GoldilocksField x_lo = {};
-      x_lo.limbs_storage.limbs[0] = xs.limbs_storage.limbs[0];
-      x_lo.limbs_storage.limbs[1] = xs.limbs_storage.limbs[1];
-      // return x_lo;
+      // constexpr uint64_t modulus = 0xffffffff00000001;
+
+      uint64_t t0 = xs.limbs_storage.limbs64[0];
+      bool borrow = t0 < static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
+      t0 -= static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
+      if (__builtin_expect(borrow, 0)) {
+      // if (borrow) {
+        t0 -= gold_fact; // Guaranteed not to underflow
+      }
+
       uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
       GoldilocksField x_hi_lo = {};
-      x_hi_lo.limbs_storage.limbs[0] = temp & gold_fact;
-      x_hi_lo.limbs_storage.limbs[1] = temp >> 32;
-      GoldilocksField x_hi_hi = Field<CONFIG>::from(xs.limbs_storage.limbs[3]);
-      // return x_hi_hi;
-      return x_lo + x_hi_lo - x_hi_hi;
+      GoldilocksField t0_g = {};
+      x_hi_lo.limbs_storage.limbs64[0] = temp;
+      t0_g.limbs_storage.limbs64[0] = t0;
+
+      GoldilocksField rs = {};
+      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(x_hi_lo.limbs_storage, t0_g.limbs_storage, rs.limbs_storage);
+      if (carry){
+          Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+      }
+      return rs;
+      // return goldi_add<true>(x_hi_lo,t0_g);
+      // uint64_t temp = xs.limbs_storage.limbs64[0] + static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact) - static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
+      // uint64_t temp = xs.limbs_storage.limbs64[0] + (static_cast<uint64_t>(xs.limbs_storage.limbs[2])<<32) - static_cast<uint64_t>(xs.limbs_storage.limbs[2]) - static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
+      // uint32_t temp1 = xs.limbs_storage.limbs[0] - xs.limbs_storage.limbs[2] - xs.limbs_storage.limbs[3];
+      // uint32_t temp2 = xs.limbs_storage.limbs[1] + xs.limbs_storage.limbs[2];
+      // uint64_t temp = xs.limbs_storage.limbs64[0] - static_cast<uint64_t>(xs.limbs_storage.limbs[3]);
+      // uint64_t temp = xs.limbs_storage.limbs64[0] - xs.limbs_storage.limbs64[1];
+      // uint64_t temp = static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact);
+      // uint64_t temp = xs.limbs_storage.limbs64[0];
+      // GoldilocksField res = {};
+      // // res.limbs_storage.limbs[0] = temp1;
+      // // res.limbs_storage.limbs[1] = temp2;
+      // res.limbs_storage.limbs64[0] = temp;
+      // return res;
     }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField inverse(const GoldilocksField& x)
@@ -116,27 +220,14 @@ namespace goldilocks {
       return (u == one) ? b : c;
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksField operator+(GoldilocksField xs, const GoldilocksField& ys)
-    {
-      GoldilocksField rs = {};
-      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      if (carry){
-        Field<CONFIG>::template add_limbs<TLC, false>(rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
-        return rs;
-      }
-      return Field<CONFIG>::template sub_modulus<1>(rs);
-    }
-
-    friend HOST_DEVICE_INLINE GoldilocksField operator-(GoldilocksField xs, const GoldilocksField& ys)
-    {
-      Field<CONFIG> result = static_cast<const Field<CONFIG>&>(xs) - static_cast<const Field<CONFIG>&>(ys);
-      return GoldilocksField{result};
-    }
-
+   
     friend HOST_DEVICE_INLINE GoldilocksField operator*(const GoldilocksField& xs, const GoldilocksField& ys)
     {
       typename Field<CONFIG>::Wide xy = Field<CONFIG>::mul_wide(xs, ys); 
       // return Field<CONFIG>::reduce(xy);
+      // GoldilocksField res = {};
+      // res.limbs_storage.limbs64[0] = xy.limbs_storage.limbs64[0];
+      // return res;
       return reduce(xy);
       // Field<CONFIG> result = static_cast<const Field<CONFIG>&>(xs) * static_cast<const Field<CONFIG>&>(ys);
       // return GoldilocksField{result};
