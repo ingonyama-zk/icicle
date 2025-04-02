@@ -2,6 +2,7 @@
 
 #include "icicle/vec_ops.h"
 #include "icicle/fields/field_config.h"
+#include "icicle/norm.h"
 using namespace field_config;
 
 namespace icicle {
@@ -745,6 +746,36 @@ namespace icicle {
       }();                                                                                                             \
     }
 
-#endif // RING
+  // Norm checking implementations
+  using normCheckImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input,
+    size_t size,
+    eNormType norm,
+    uint64_t norm_bound,
+    const VecOpsConfig& config,
+    bool* output)>;
 
+  using normCheckRelativeImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input_a,
+    const field_t* input_b,
+    size_t size,
+    eNormType norm,
+    uint64_t scale,
+    const VecOpsConfig& config,
+    bool* output)>;
+
+  void register_check_norm_bound(const std::string& deviceType, normCheckImpl impl);
+  void register_check_norm_relative(const std::string& deviceType, normCheckRelativeImpl impl);
+
+  #define REGISTER_NORM_CHECK_BACKEND(DEVICE_TYPE, CHECK_BOUND, CHECK_RELATIVE)                                        \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_norm_check) = []() -> bool {                                                            \
+        register_check_norm_bound(DEVICE_TYPE, CHECK_BOUND);                                                          \
+        register_check_norm_relative(DEVICE_TYPE, CHECK_RELATIVE);                                                    \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+#endif // RING
 } // namespace icicle
