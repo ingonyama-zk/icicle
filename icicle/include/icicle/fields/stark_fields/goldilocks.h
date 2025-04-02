@@ -233,6 +233,19 @@ namespace goldilocks {
       // return GoldilocksField{result};
     }
 
+    friend HOST_DEVICE bool operator==(const GoldilocksField& xs, const GoldilocksField& ys)
+    {
+      GoldilocksField xr = {};
+      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - 0xffffffff00000001;
+      else xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
+      GoldilocksField yr = {};
+      if (__builtin_expect(ys.limbs_storage.limbs64[0] >= 0xffffffff00000001, 0)) yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0] - 0xffffffff00000001;
+      else yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0];
+      return icicle_math::template is_equal<TLC>(xr.limbs_storage, yr.limbs_storage);
+    }
+
+    friend HOST_DEVICE bool operator!=(const GoldilocksField& xs, const GoldilocksField& ys) { return !(xs == ys); }
+
 
     static HOST_INLINE GoldilocksField omega(uint32_t logn)
     {
