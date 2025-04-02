@@ -87,6 +87,7 @@ if (RING)
     target_sources(icicle_ring PRIVATE 
         src/field/cpu_vec_ops.cpp 
         src/ring/cpu_balanced_decomposition.cpp
+        src/ring/cpu_norm.cpp
     )
     if (NTT)
         target_sources(icicle_ring PRIVATE src/field/cpu_ntt.cpp)
