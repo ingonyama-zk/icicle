@@ -566,6 +566,9 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Derived neg(const Derived& xs)
   {
+    if (xs == Derived::zero()) {
+      return xs;
+    }
     const ff_storage modulus = get_modulus<MODULUS_MULTIPLE>();
     Derived rs = {};
     sub_limbs<TLC, false>(modulus, xs.limbs_storage, rs.limbs_storage);

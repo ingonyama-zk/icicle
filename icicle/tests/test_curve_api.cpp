@@ -341,16 +341,28 @@ typedef PairingImpl::target_field_t TargetField;
 
 TEST(CurveSanity, TargetFieldSanityTest)
 {
-  auto a = TargetField::rand_host();
-  auto b = TargetField::rand_host();
+  // auto a = TargetField::rand_host();
+  // auto b = TargetField::rand_host();
+
+  auto a = TargetField::from(2);
+  auto b = TargetField::from(3);
   auto b_inv = TargetField::inverse(b);
   auto a_neg = TargetField::neg(a);
+
   ASSERT_EQ(a + TargetField::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(b * a * b_inv, a);
   ASSERT_EQ(a + a_neg, TargetField::zero());
   ASSERT_EQ(a * TargetField::zero(), TargetField::zero());
   ASSERT_EQ(b * b_inv, TargetField::one());
+
+  // auto p = b_inv * b_inv;
+  // auto q = TargetField::from(3);
+
+  std::cout << b_inv << std::endl;
+  std::cout << a << std::endl;
+  std::cout << a_neg << std::endl;
+  std::cout << b_inv * a_neg << std::endl;
   // ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
@@ -363,7 +375,7 @@ TEST(CurveSanity, PairingBilinearityTest)
   g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
   scalar_t s = scalar_t::from(2);
 
-  PairingImpl::target_field_t f1, f2, f3;
+  PairingImpl::target_field_t f1, f2, f3, f4;
 
   affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
   g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
@@ -371,11 +383,48 @@ TEST(CurveSanity, PairingBilinearityTest)
   pairing<affine_t, g2_affine_t, PairingImpl>(ps, q, &f1);
   pairing<affine_t, g2_affine_t, PairingImpl>(p, qs, &f2);
   pairing<affine_t, g2_affine_t, PairingImpl>(p, q, &f3);
+  pairing<affine_t, g2_affine_t, PairingImpl>(ps, qs, &f4);
 
   std::cout << f1.c0.c0.c0 << std::endl << std::endl;
   std::cout << f2.c0.c0.c0 << std::endl << std::endl;
   std::cout << f3.c0.c0.c0 << std::endl << std::endl;
+  std::cout << f4.c0.c0.c0 << std::endl << std::endl;
+  std::cout << PairingImpl::target_field_t::pow(f4, 4).c0.c0.c0 << std::endl << std::endl;
   // f3 = f3 * s;
+}
+
+TEST(CurveSanity, FinalExponentiationTest)
+{
+  TargetField f = TargetField {
+    {
+      {point_field_t::from(15), point_field_t::from(15)},
+      {point_field_t::from(15), point_field_t::from(15)},
+      {point_field_t::from(15), point_field_t::from(15)},
+    },
+    {
+      {point_field_t::from(15), point_field_t::from(15)},
+      {point_field_t::from(15), point_field_t::from(15)},
+      {point_field_t::from(15), point_field_t::from(15)},
+    }
+  };
+  std::cout << f * f << std::endl;
+  std::cout << TargetField::inverse(f * f) << std::endl;
+  TargetField check = TargetField::pow(f, PairingImpl::R);
+  std::cout << check << std::endl;
+
+  PairingImpl::final_exponentiation(f);
+  std::cout << f << std::endl;
+  f = TargetField::pow(f, PairingImpl::R);
+  std::cout << f << std::endl;
+
+  for (int i = 0; i < 10; i++) {
+    TargetField f = TargetField::rand_host();
+    PairingImpl::final_exponentiation(f);
+    TargetField f_prime = TargetField::pow(f, PairingImpl::RPRIME);
+    f = TargetField::pow(f, PairingImpl::R);
+    ASSERT_EQ(f, TargetField::one());
+    ASSERT_NE(f_prime, TargetField::one());
+  }
 }
 // #endif
 

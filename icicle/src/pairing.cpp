@@ -40,7 +40,6 @@ namespace icicle {
         yt = ytp;
       }
     }
-    std::cout << std::endl;
     f = f * (q.x - xt);
     return f;
   }

@@ -63,6 +63,16 @@ public:
     return CubicExtensionField{FF::from(val), FF::zero(), FF::zero()};
   }
 
+  static constexpr HOST_DEVICE_INLINE CubicExtensionField to_montgomery(const CubicExtensionField& xs)
+  {
+    return CubicExtensionField{FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1)};
+  }
+
+  static constexpr HOST_DEVICE_INLINE CubicExtensionField from_montgomery(const CubicExtensionField& xs)
+  {
+    return CubicExtensionField{FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1)};
+  }
+
   static HOST_INLINE CubicExtensionField rand_host()
   {
     return CubicExtensionField{FF::rand_host(), FF::rand_host(), FF::rand_host()};

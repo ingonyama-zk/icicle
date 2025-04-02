@@ -62,12 +62,12 @@ public:
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{xs.c0 * FF{CONFIG::montgomery_r}, xs.c1 * FF{CONFIG::montgomery_r}};
+    return ComplexExtensionField{FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1)};
   }
 
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField from_montgomery(const ComplexExtensionField& xs)
   {
-    return ComplexExtensionField{xs.c0 * FF{CONFIG::montgomery_r_inv}, xs.c1 * FF{CONFIG::montgomery_r_inv}};
+    return ComplexExtensionField{FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1)};
   }
 
   static HOST_INLINE ComplexExtensionField rand_host()
