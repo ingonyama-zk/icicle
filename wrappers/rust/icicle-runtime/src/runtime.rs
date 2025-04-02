@@ -36,6 +36,13 @@ extern "C" {
         size: usize,
         stream: IcicleStreamHandle,
     ) -> eIcicleError;
+    pub fn icicle_copy(dst: *mut c_void, src: *const c_void, size: usize) -> eIcicleError;
+    pub fn icicle_copy_async(
+        dst: *mut c_void,
+        src: *const c_void,
+        size: usize,
+        stream: IcicleStreamHandle,
+    ) -> eIcicleError;
     pub fn icicle_create_stream(stream: *mut IcicleStreamHandle) -> eIcicleError;
     pub fn icicle_destroy_stream(stream: IcicleStreamHandle) -> eIcicleError;
     pub fn icicle_stream_synchronize(stream: IcicleStreamHandle) -> eIcicleError;
