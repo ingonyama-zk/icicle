@@ -48,7 +48,30 @@ impl MerkleTreeConfig {
     }
 }
 
-type MerkleProofHandle = *const c_void;
+pub struct MerkleProofData<T> {
+    pub pruned_path: bool,
+    pub leaf_idx: u64,
+    pub leaf: Vec<T>,
+    pub root: Vec<T>,
+    pub path: Vec<T>,
+}
+
+impl<T> MerkleProofData<T> {
+    pub fn new(pruned_path: bool, leaf_idx: u64, leaf: Vec<T>, root: Vec<T>, path: Vec<T>) -> Self {
+        Self { pruned_path, leaf_idx, leaf, root, path }
+    }
+}
+
+impl<T> From<MerkleProof> for MerkleProofData<T> {
+    fn from(proof: MerkleProof) -> Self {
+        let (leaf, leaf_idx) = proof.get_leaf::<T>();
+        let root = proof.get_root::<T>();
+        let path = proof.get_path::<T>();
+        Self::new(proof.is_pruned(), leaf_idx, leaf, root, path)
+    }
+}
+
+pub type MerkleProofHandle = *const c_void;
 
 pub struct MerkleProof {
     handle: MerkleProofHandle,
@@ -57,6 +80,16 @@ pub struct MerkleProof {
 // External C functions for merkle proof
 extern "C" {
     fn icicle_merkle_proof_create() -> MerkleProofHandle;
+    fn icicle_merkle_proof_create_with_data(
+        pruned_path: bool,
+        leaf_idx: u64,
+        leaf: *const u8,
+        leaf_size: usize,
+        root: *const u8,
+        root_size: usize,
+        path: *const u8,
+        path_size: usize,
+    ) -> MerkleProofHandle;
     fn icicle_merkle_proof_delete(proof: MerkleProofHandle) -> eIcicleError;
     fn icicle_merkle_proof_is_pruned(proof: MerkleProofHandle) -> bool;
     fn icicle_merkle_proof_get_path(proof: MerkleProofHandle, out_size: *mut usize) -> *const u8;
@@ -75,6 +108,43 @@ impl MerkleProof {
             let handle = icicle_merkle_proof_create();
             if handle.is_null() {
                 Err(eIcicleError::AllocationFailed)
+            } else {
+                Ok(MerkleProof { handle })
+            }
+        }
+    }
+
+    /// Create a new MerkleProof object with specified leaf, root, and path data.
+    pub fn new_with_data<T>(
+        pruned_path: bool,
+        leaf_idx: u64,
+        leaf: &[T],
+        root: &[T],
+        path: &[T],
+    ) -> Result<Self, eIcicleError> {
+        let leaf_bytes = unsafe {
+            slice::from_raw_parts(leaf.as_ptr() as *const u8, leaf.len() * mem::size_of::<T>())
+        };
+        let root_bytes = unsafe {
+            slice::from_raw_parts(root.as_ptr() as *const u8, root.len() * mem::size_of::<T>())
+        };
+        let path_bytes = unsafe {
+            slice::from_raw_parts(path.as_ptr() as *const u8, path.len() * mem::size_of::<T>())
+        };
+
+        unsafe {
+            let handle = icicle_merkle_proof_create_with_data(
+                pruned_path,
+                leaf_idx,
+                leaf_bytes.as_ptr(),
+                leaf_bytes.len(),
+                root_bytes.as_ptr(),
+                root_bytes.len(),
+                path_bytes.as_ptr(),
+                path_bytes.len(),
+            );
+            if handle.is_null() {
+                Err(eIcicleError::UnknownError)
             } else {
                 Ok(MerkleProof { handle })
             }
@@ -130,6 +200,23 @@ impl MerkleProof {
                 slice::from_raw_parts(ptr as *const T, element_count)
             }
         }
+    }
+
+    pub unsafe fn from_handle(handle: MerkleProofHandle) -> Self {
+        Self { handle }
+    }
+}
+
+impl Handle for MerkleProof {
+    fn handle(&self) -> *const c_void {
+        self.handle
+    }
+}
+
+impl<T> TryFrom<MerkleProofData<T>> for MerkleProof {
+    type Error = eIcicleError;
+    fn try_from(data: MerkleProofData<T>) -> Result<Self, Self::Error> {
+        Self::new_with_data(data.pruned_path, data.leaf_idx, &data.leaf, &data.root, &data.path)
     }
 }
 

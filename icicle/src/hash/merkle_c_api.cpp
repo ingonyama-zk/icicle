@@ -11,6 +11,19 @@ typedef icicle::MerkleTree* MerkleTreeHandle;
 // Create a new MerkleProof object and return a handle to it.
 MerkleProofHandle icicle_merkle_proof_create() { return new icicle::MerkleProof(); }
 
+// Create a new MerkleProof object with specified leaf, root, and path data.
+MerkleProofHandle icicle_merkle_proof_create_with_data(
+  bool pruned_path,
+  int64_t leaf_idx,
+  const std::byte* leaf, std::size_t leaf_size,
+  const std::byte* root, std::size_t root_size,
+  const std::byte* path, std::size_t path_size)
+{
+  return new icicle::MerkleProof(
+    pruned_path, leaf_idx, std::vector<std::byte>(leaf, leaf + leaf_size), std::vector<std::byte>(root, root + root_size),
+    std::vector<std::byte>(path, path + path_size));
+}
+
 // Delete the MerkleProof object and free its resources.
 eIcicleError icicle_merkle_proof_delete(MerkleProofHandle proof)
 {
