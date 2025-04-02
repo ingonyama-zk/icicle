@@ -256,9 +256,7 @@ impl<T> DeviceSlice<T> {
         }
 
         let size = size_of::<T>() * self.len();
-        unsafe {
-            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, val.as_ptr() as *const c_void, size).wrap()
-        }
+        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, val.as_ptr() as *const c_void, size).wrap() }
     }
 
     pub fn copy_from_device_async(&mut self, val: &DeviceSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {

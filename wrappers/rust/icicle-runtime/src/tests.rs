@@ -134,14 +134,20 @@ mod tests {
 
         // Copy from host to first device
         let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
-        d_mem1.copy_from_host(HostSlice::from_slice(&input)).unwrap();
+        d_mem1
+            .copy_from_host(HostSlice::from_slice(&input))
+            .unwrap();
 
         // Copy from first device to second device
         let mut d_mem2 = DeviceVec::device_malloc(input.len()).unwrap();
-        d_mem2.copy_from_device(&d_mem1).unwrap();
+        d_mem2
+            .copy_from_device(&d_mem1)
+            .unwrap();
 
         // Copy back to host and verify
-        d_mem2.copy_to_host(HostSlice::from_mut_slice(&mut output)).unwrap();
+        d_mem2
+            .copy_to_host(HostSlice::from_mut_slice(&mut output))
+            .unwrap();
         assert_eq!(input, output);
     }
 
@@ -159,19 +165,29 @@ mod tests {
 
         // Copy from host to first device
         let mut d_mem1 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
-        d_mem1.copy_from_host_async(HostSlice::from_slice(&input), &stream).unwrap();
+        d_mem1
+            .copy_from_host_async(HostSlice::from_slice(&input), &stream)
+            .unwrap();
 
         // Copy from first device to second device
         let mut d_mem2 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
-        d_mem2.copy_from_device_async(&d_mem1, &stream).unwrap();
+        d_mem2
+            .copy_from_device_async(&d_mem1, &stream)
+            .unwrap();
 
         // Copy back to host and verify
-        d_mem2.copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream).unwrap();
-        
+        d_mem2
+            .copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream)
+            .unwrap();
+
         // Synchronize and cleanup
-        stream.synchronize().unwrap();
-        stream.destroy().unwrap();
-        
+        stream
+            .synchronize()
+            .unwrap();
+        stream
+            .destroy()
+            .unwrap();
+
         assert_eq!(input, output);
     }
 
