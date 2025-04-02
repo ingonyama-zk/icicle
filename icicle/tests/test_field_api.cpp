@@ -1,5 +1,9 @@
-
 #include "test_mod_arithmetic_api.h"
+#include "icicle/sumcheck/sumcheck.h"
+#include "icicle/fri/fri.h"
+#include "icicle/fri/fri_config.h"
+#include "icicle/fri/fri_proof.h"
+#include "icicle/fri/fri_transcript_config.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -309,7 +313,8 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
     data_main[idx] = tmp;
   }
   std::ostringstream oss;
-  oss << IcicleTestBase::main_device() << " " << "Sumcheck";
+  oss << IcicleTestBase::main_device() << " "
+      << "Sumcheck";
 
   SumcheckProof<scalar_t> sumcheck_proof;
 
@@ -890,6 +895,217 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 }
 
 #endif // SUMCHECK
+
+#ifdef FRI
+
+TYPED_TEST(FieldTest, Fri)
+{
+  size_t log_stopping_size;
+  size_t pow_bits;
+  size_t nof_queries;
+  for (size_t params_options = 0; params_options <= 1; params_options++) {
+    if (params_options) {
+      log_stopping_size = 0;
+      pow_bits = 16;
+      nof_queries = 100;
+    } else {
+      log_stopping_size = 8;
+      pow_bits = 0;
+      nof_queries = 50;
+    }
+    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
+      const size_t input_size = 1 << log_input_size;
+      const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
+      const size_t stopping_size = 1 << log_stopping_size;
+      const size_t stopping_degree = stopping_size - 1;
+      const uint64_t output_store_min_layer = 0;
+
+      // Generate input polynomial evaluations
+      auto scalars = std::make_unique<TypeParam[]>(input_size);
+      TypeParam::rand_host_many(scalars.get(), input_size);
+
+      auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries,
+                  pow_bits, &scalars](const std::string& dev_type, bool measure) {
+        Device dev = {dev_type, 0};
+        ICICLE_CHECK(icicle_set_device(dev));
+
+        // Initialize ntt domain
+        NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+        ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+
+        // ===== Prover side ======
+        uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
+
+        // Define hashers for merkle tree
+        Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
+        Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
+
+        // set transcript config
+        const char* domain_separator_label = "domain_separator_label";
+        const char* round_challenge_label = "round_challenge_label";
+        const char* commit_phase_label = "commit_phase_label";
+        const char* nonce_label = "nonce_label";
+        std::vector<std::byte>&& public_state = {};
+        TypeParam seed_rng = TypeParam::one();
+
+        FriTranscriptConfig<TypeParam> transcript_config(
+          hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+          seed_rng);
+
+        FriConfig fri_config;
+        fri_config.nof_queries = nof_queries;
+        fri_config.pow_bits = pow_bits;
+        fri_config.folding_factor = folding_factor;
+        fri_config.stopping_degree = stopping_degree;
+        FriProof<TypeParam> fri_proof;
+
+        std::ostringstream oss;
+        if (measure) {
+          ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree
+                          << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
+          oss << dev_type << " FRI proof";
+        }
+        START_TIMER(FRIPROOF_sync)
+        eIcicleError err = fri_merkle_tree::prove<TypeParam>(
+          fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+        ICICLE_CHECK(err);
+        END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
+
+        // Release domain
+        ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
+        // ===== Verifier side ======
+        bool valid = false;
+        err = fri_merkle_tree::verify<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
+        ICICLE_CHECK(err);
+        ASSERT_EQ(true, valid);
+      };
+
+      run(IcicleTestBase::reference_device(), false);
+      run(IcicleTestBase::main_device(), false);
+    }
+  }
+}
+
+TYPED_TEST(FieldTest, FriShouldFailCases)
+{
+  const int log_input_size = 10;
+  const int log_stopping_size = 4;
+  const size_t pow_bits = 0;
+  const size_t stopping_size = 1 << log_stopping_size;
+  const size_t stopping_degree = stopping_size - 1;
+  const uint64_t output_store_min_layer = 0;
+
+  auto run = [stopping_degree, output_store_min_layer, pow_bits](
+               const std::string& dev_type, const size_t nof_queries, const size_t folding_factor,
+               const size_t log_domain_size, const size_t merkle_tree_arity, const size_t input_size) {
+    // Generate input polynomial evaluations
+    auto scalars = std::make_unique<TypeParam[]>(input_size);
+    TypeParam::rand_host_many(scalars.get(), input_size);
+
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // Initialize ntt domain
+    NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_domain_size), init_domain_config));
+
+    // ===== Prover side ======
+    // Define hashers for merkle tree
+    Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
+    Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
+
+    const char* domain_separator_label = "domain_separator_label";
+    const char* round_challenge_label = "round_challenge_label";
+    const char* commit_phase_label = "commit_phase_label";
+    const char* nonce_label = "nonce_label";
+    std::vector<std::byte>&& public_state = {};
+    TypeParam seed_rng = TypeParam::one();
+
+    FriTranscriptConfig<TypeParam> transcript_config(
+      hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+      seed_rng);
+
+    FriConfig fri_config;
+    fri_config.nof_queries = nof_queries;
+    fri_config.pow_bits = pow_bits;
+    fri_config.folding_factor = folding_factor;
+    fri_config.stopping_degree = stopping_degree;
+    FriProof<TypeParam> fri_proof;
+
+    eIcicleError error = prove_fri_merkle_tree<TypeParam>(
+      fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+
+    // Release domain
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
+    if (error == eIcicleError::SUCCESS) {
+      // ===== Verifier side ======
+      bool valid = false;
+      error = verify_fri_merkle_tree<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
+      ASSERT_EQ(true, valid);
+    }
+    ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
+  };
+
+  // Reference Device
+  // Test invalid nof_queries
+  run(
+    IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::main_device(), (1 << log_input_size) / 2 + 1 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1 /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid merkle tree arity
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invallid input size
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+
+  // Main Device
+  // Test invalid nof_queries
+  run(
+    IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::main_device(), (1 << log_input_size) / 2 + 1 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1
+    /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid merkle tree arity
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size
+    /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invallid input size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size
+    /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+}
+
+#endif // FRI
 
 // TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
 //             It means we skip fields such as babybear!

@@ -184,7 +184,8 @@ where
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
-        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram, ProgramHandle};
+        use crate::symbol::$field_prefix_ident::FieldSymbol;
+        use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
@@ -192,7 +193,6 @@ macro_rules! impl_sumcheck {
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
-        use crate::symbol::$field_prefix_ident::FieldSymbol;
 
         extern "C" {
             #[link_name = concat!($field_prefix, "_sumcheck_create")]

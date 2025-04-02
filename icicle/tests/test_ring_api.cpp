@@ -1,5 +1,6 @@
 
 #include "test_mod_arithmetic_api.h"
+#include "icicle/balanced_decomposition.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -95,4 +96,138 @@ TEST_F(RingTestBase, VectorRnsConversion)
     ICICLE_CHECK(convert_from_rns(rns_output.data(), N, VecOpsConfig{}, (scalar_t*)rns_output.data()));
     ASSERT_EQ(0, memcmp(rns_output.data(), direct_output.data(), sizeof(scalar_t) * N));
   }
+}
+
+TEST_F(RingTestBase, BalancedDecomposition)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t size = 1 << 20;
+  auto input = std::vector<field_t>(size);
+  field_t::rand_host_many(input.data(), size);
+  auto recomposed = std::vector<field_t>(size);
+
+  const auto q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+  const auto bases = std::vector<uint32_t>{2, 3, 4, 27, 60, q_sqrt};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    field_t *d_input, *d_decomposed, *d_recomposed;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(field_t)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(field_t)));
+
+    auto cfg = VecOpsConfig{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    for (const auto base : bases) {
+      // Number of digits needed to represent an element mod q in balanced base-b representation
+      const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
+      const size_t decomposed_size = size * digits_per_element;
+      auto decomposed = std::vector<field_t>(decomposed_size);
+
+      std::stringstream timer_label_decompose, timer_label_recompose;
+      timer_label_decompose << "Decomposition [device=" << device << ", base=" << base << "]";
+      timer_label_recompose << "Recomposition [device=" << device << ", base=" << base << "]";
+
+      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(field_t)));
+
+      // Decompose into balanced digits
+      START_TIMER(decomposition);
+      ICICLE_CHECK(balanced_decomposition::decompose(d_input, size, base, cfg, d_decomposed, decomposed_size));
+      END_TIMER(decomposition, timer_label_decompose.str().c_str(), true);
+
+      // Verify that all digits lie in the correct balanced range (-b/2, b/2]
+      ICICLE_CHECK(icicle_copy(decomposed.data(), d_decomposed, decomposed_size * sizeof(field_t)));
+      for (size_t i = 0; i < decomposed_size; ++i) {
+        const int64_t digit = *reinterpret_cast<int64_t*>(&decomposed[i]);
+
+        // Since field_t wraps into [0, q), digits near q are actually negative
+        const bool is_positive_digit = digit <= base / 2;
+        const bool is_negative_digit = (base % 2 == 0) ? (q - digit) < base / 2 : (q - digit) <= base / 2;
+        const bool is_balanced = is_positive_digit || is_negative_digit;
+
+        ASSERT_TRUE(is_balanced) << "Digit " << digit << " is out of expected balanced range for base=" << base;
+      }
+
+      // Recompose and compare to original input
+      START_TIMER(recomposition);
+      ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
+      END_TIMER(recomposition, timer_label_recompose.str().c_str(), true);
+
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(field_t)));
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(field_t) * size))
+        << "Recomposition failed for base=" << base;
+
+      icicle_free(d_decomposed);
+    } // base loop
+
+    icicle_free(d_input);
+    icicle_free(d_recomposed);
+  } // device loop
+}
+
+TEST_F(RingTestBase, BalancedDecompositionErrorCases)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t size = 1 << 10;
+  auto input = std::vector<field_t>(size);
+  field_t::rand_host_many(input.data(), size);
+  auto recomposed = std::vector<field_t>(size);
+  const auto bases = std::vector<uint32_t>{2, 4, 16, 179};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    const auto cfg = VecOpsConfig{};
+
+    // Number of digits needed to represent an element mod q in balanced base-b representation
+    const uint32_t base = rand_uint_32b();
+    const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
+    const size_t decomposed_size = size * digits_per_element;
+    auto decomposed = std::vector<field_t>(decomposed_size);
+
+    // (1) Error: output size too small
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::decompose(input.data(), size, base, cfg, decomposed.data(), decomposed_size - 1));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::recompose(decomposed.data(), decomposed_size - 1, base, cfg, input.data(), size));
+
+    field_t* nullptr_field_t = nullptr;
+    // (2) Error: output is null
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::decompose(input.data(), size, base, cfg, nullptr_field_t, decomposed_size));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::recompose(decomposed.data(), decomposed_size, base, cfg, nullptr_field_t, size));
+
+    // (3) Error: input is null
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::decompose(nullptr_field_t, size, base, cfg, decomposed.data(), decomposed_size));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::recompose(nullptr_field_t, decomposed_size, base, cfg, input.data(), size));
+
+    // (4) Error: base is 1
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::decompose(input.data(), size, 1 /*=base*/, cfg, decomposed.data(), decomposed_size));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      balanced_decomposition::recompose(decomposed.data(), decomposed_size, 1 /*=base*/, cfg, input.data(), size));
+
+  } // device loop
 }
