@@ -251,14 +251,6 @@ namespace host_math {
     }
   }
 
-  // template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
-  // static constexpr HOST_INLINE void
-  // goldimul(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
-  // {
-  //   constexpr const uint32_t gold_fact = (1<<32)-1;
-    
-  // }
-
   template <unsigned NLIMBS_A, unsigned NLIMBS_B = NLIMBS_A, bool USE_32 = false>
   static constexpr HOST_INLINE void
   multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
@@ -356,16 +348,16 @@ namespace host_math {
     if constexpr (NLIMBS % 2 == 0) {
 #pragma unroll
       for (unsigned i = 0; i < NLIMBS / 2; i++) { // Ensure valid indexing
-        out.limbs64[i] = SLACK_BITS ?
-          (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) | (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS)) :
-          xs.limbs64[i + NLIMBS / 2];
+        out.limbs64[i] = SLACK_BITS ? (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) |
+                                        (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS))
+                                    : xs.limbs64[i + NLIMBS / 2];
       }
     } else {
 #pragma unroll
       for (unsigned i = 0; i < NLIMBS; i++) { // Ensure valid indexing
-        out.limbs[i] = SLACK_BITS ? 
-        (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS)) :
-        xs.limbs[i + NLIMBS];
+        out.limbs[i] =
+          SLACK_BITS ? (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS))
+                     : xs.limbs[i + NLIMBS];
       }
     }
   }

@@ -31,6 +31,7 @@ namespace icicle {
    */
   static PowConfig default_pow_config() { return PowConfig(); }
 
+  extern "C" {
   /**
    * @brief Solves the proof-of-work (PoW) challenge using the given hashing algorithm.
    *
@@ -48,7 +49,7 @@ namespace icicle {
    *
    * @return eIcicleError Error code indicating success or failure of the operation.
    */
-  eIcicleError pow_solver(
+  eIcicleError proof_of_work(
     const Hash& hasher,
     const std::byte* challenge,
     uint32_t challenge_size,
@@ -75,7 +76,7 @@ namespace icicle {
    *
    * @return eIcicleError Error code indicating success or failure of the verification process.
    */
-  eIcicleError pow_verify(
+  eIcicleError proof_of_work_verify(
     const Hash& hasher,
     const std::byte* challenge,
     uint32_t challenge_size,
@@ -84,4 +85,5 @@ namespace icicle {
     uint64_t nonce,
     bool& is_correct,
     uint64_t& mined_hash);
+  }
 } // namespace icicle
