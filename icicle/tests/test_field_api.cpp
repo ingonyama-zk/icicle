@@ -53,6 +53,21 @@ TYPED_TEST(FieldTest, FieldSanityTest)
     j = j + a;
   }
   END_TIMER(add, "add timer", true);
+  START_TIMER(sub)
+  for (int k = 0; k < 1000000; k++)
+  {
+    a = a - b;
+    b = b - c;
+    c = c - d;
+    d = d - e;
+    e = e - f;
+    f = f - g;
+    g = g - h;
+    h = h - i;
+    i = i - j;
+    j = j - a;
+  }
+  END_TIMER(sub, "sub timer", true);
   std::cout << "a " << a <<std::endl;
   std::cout << "b " << b <<std::endl;
   std::cout << "c " << c <<std::endl;
