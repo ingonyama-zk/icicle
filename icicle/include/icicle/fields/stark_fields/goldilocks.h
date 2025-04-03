@@ -9,9 +9,7 @@
 1. It has no slack bits (the modulus uses the entire 64 bits of storage) meaning we need to make sure there is no
 overflow in addition, and that the carry-less optimizations used in other fields do not apply here.
 2. It has a special reduction algorithm due to the modulus special form.
-3. In order to optimize addition and multiplication - the elements are reduced to the range 0<=x<2^64 instead of 0=<x<p.
-This requires changing the operator== implementation such that it will return true for values with a difference of p.
-4. The operations that are implemented differently from the base Field class are: addition, reduction, inverse and
+3. The operations that are implemented differently from the base Field class are: addition, reduction, inverse and
 comparison. The specific details are documented in the relevant functions. */
 namespace goldilocks {
 
@@ -79,25 +77,18 @@ namespace goldilocks {
     {
       GoldilocksField rs = {};
       const ff_storage modulus = Field<CONFIG>::get_modulus();
-      if constexpr (NO_OVERFLOW == false) { // Handle the rare case where we would need to subtract 2p
-        if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) {
-          rs.limbs_storage.limbs64[0] =
-            xs.limbs_storage.limbs64[0] -
-            modulus.limbs64[0]; // It is actually more efficient to check only one of the arguments.
-        }
-        else {
-          rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
-        }
-      } else {
-        rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
-      }
       auto carry = Field<CONFIG>::template add_limbs<TLC, true>(
-        rs.limbs_storage, ys.limbs_storage, rs.limbs_storage); // Do the addition
+        xs.limbs_storage, ys.limbs_storage, rs.limbs_storage); // Do the addition
       if (carry) {
         Field<CONFIG>::template add_limbs<TLC, false>(
           rs.limbs_storage, Field<CONFIG>::get_neg_modulus(),
           rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
                              // overflow since we already took care of the rare case.
+      }
+      if (__builtin_expect(rs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for now.
+        rs.limbs_storage.limbs64[0] =
+          rs.limbs_storage.limbs64[0] -
+          modulus.limbs64[0]; 
       }
       return rs;
     }
@@ -187,30 +178,6 @@ namespace goldilocks {
       typename Field<CONFIG>::Wide xy = Field<CONFIG>::mul_wide(xs, ys);
       return reduce(xy);
     }
-
-    /*Since we allow the elements to be between 0 and 2^64, if they are larger than p we need to subtract p before the
-     comparison. This is a rare case so we hint the compiler.*/
-    friend HOST_DEVICE bool operator==(const GoldilocksField& xs, const GoldilocksField& ys)
-    {
-      const ff_storage modulus = Field<CONFIG>::get_modulus();
-      GoldilocksField xr = {};
-      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) {
-        xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - modulus.limbs64[0];
-      }
-      else {
-        xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
-      }
-      GoldilocksField yr = {};
-      if (__builtin_expect(ys.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) {
-        yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0] - modulus.limbs64[0];
-      }
-      else {
-        yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0];
-      }
-      return icicle_math::template is_equal<TLC>(xr.limbs_storage, yr.limbs_storage);
-    }
-
-    friend HOST_DEVICE bool operator!=(const GoldilocksField& xs, const GoldilocksField& ys) { return !(xs == ys); }
 
     static HOST_INLINE GoldilocksField omega(uint32_t logn)
     {
