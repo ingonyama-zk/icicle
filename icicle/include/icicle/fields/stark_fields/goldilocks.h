@@ -80,12 +80,14 @@ namespace goldilocks {
       GoldilocksField rs = {};
       const ff_storage modulus = Field<CONFIG>::get_modulus();
       if constexpr (NO_OVERFLOW == false) { // Handle the rare case where we would need to subtract 2p
-        if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0))
+        if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) {
           rs.limbs_storage.limbs64[0] =
             xs.limbs_storage.limbs64[0] -
             modulus.limbs64[0]; // It is actually more efficient to check only one of the arguments.
-        else
+        }
+        else {
           rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
+        }
       } else {
         rs.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
       }
@@ -192,15 +194,19 @@ namespace goldilocks {
     {
       const ff_storage modulus = Field<CONFIG>::get_modulus();
       GoldilocksField xr = {};
-      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0))
+      if (__builtin_expect(xs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) {
         xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0] - modulus.limbs64[0];
-      else
+      }
+      else {
         xr.limbs_storage.limbs64[0] = xs.limbs_storage.limbs64[0];
+      }
       GoldilocksField yr = {};
-      if (__builtin_expect(ys.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0))
+      if (__builtin_expect(ys.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) {
         yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0] - modulus.limbs64[0];
-      else
+      }
+      else {
         yr.limbs_storage.limbs64[0] = ys.limbs_storage.limbs64[0];
+      }
       return icicle_math::template is_equal<TLC>(xr.limbs_storage, yr.limbs_storage);
     }
 
