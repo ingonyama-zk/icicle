@@ -348,13 +348,16 @@ namespace host_math {
     if constexpr (NLIMBS % 2 == 0) {
 #pragma unroll
       for (unsigned i = 0; i < NLIMBS / 2; i++) { // Ensure valid indexing
-        out.limbs64[i] =
-          (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) | (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS));
+        out.limbs64[i] = SLACK_BITS ? (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) |
+                                        (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS))
+                                    : xs.limbs64[i + NLIMBS / 2];
       }
     } else {
 #pragma unroll
       for (unsigned i = 0; i < NLIMBS; i++) { // Ensure valid indexing
-        out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS));
+        out.limbs[i] =
+          SLACK_BITS ? (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS))
+                     : xs.limbs[i + NLIMBS];
       }
     }
   }
