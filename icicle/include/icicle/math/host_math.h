@@ -477,6 +477,33 @@ namespace host_math {
     }
   }
 
+      /*This function performs the goldilocks reduction:
+    xs[63:0] + xs[95:64] * (2^32 - 1) - xs[127:96]
+    First it does the subtraction - xs[63:0] - xs[127:96] and hints the compiler that it is rare that xs[63:0] <
+    xs[127:96]. Then it adds xs[95:64] * (2^32 - 1) which is guaranteed to be smaller than p. This ensures that the
+    addition operation will not overflow. */
+  template <unsigned NLIMBS>
+  static constexpr void goldi_reduce(
+    const storage<2*NLIMBS>& xs,
+    const storage<NLIMBS>& mod,
+    const storage<NLIMBS>& neg_mod,
+    storage<NLIMBS>& rs)
+    {
+  constexpr uint32_t gold_fact = uint32_t(-1); //(2^32 - 1)
+  const storage<NLIMBS>& x_lo = *reinterpret_cast<const storage<NLIMBS>*>(xs.limbs);
+  storage<NLIMBS> x_hi_hi = {xs.limbs[3]};
+  auto carry = add_sub_limbs<NLIMBS, true, true>(x_lo, x_hi_hi, rs); // xs[63:0] - xs[127:96]
+  if (__builtin_expect(carry, 0)) {
+    add_sub_limbs<NLIMBS, true, false>(rs, neg_mod, rs); // cannot underflow
+  }
+  storage<NLIMBS> x_hi_lo = {};
+  x_hi_lo.limbs64[0] = static_cast<uint64_t>(xs.limbs[2]) * static_cast<uint64_t>(gold_fact); // xs[95:64] * (2^32 - 1)
+  
+  storage<NLIMBS> rs2 = {};
+  goldi_add(rs, x_hi_lo, mod, neg_mod, rs2);
+  rs = rs2;
+}
+
   // Assumes the number is even!
   template <unsigned NLIMBS>
   static constexpr void div2(const storage<NLIMBS>& xs, storage<NLIMBS>& rs)
