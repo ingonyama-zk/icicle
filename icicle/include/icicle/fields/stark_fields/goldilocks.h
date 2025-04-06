@@ -67,12 +67,9 @@ namespace goldilocks {
       return Field<CONFIG>::neg(xs);
     }
 
-    /*This function implements the addition operation. Since the numbers are between 0 and 2^64 we either need to
-    subtract p, 2p or do nothing. The case in which we need to subtract 2p is very rare and it happens only if both of
-    the arguments are larger than p. Sometimes we can guarantee that one of the arguments is smaller than p and then we
-    use NO_OVERFLOW=true. That is the case in the call that is inside the reduction function. When we can't guarantee
-    this then we hint the compiler that this is a rare case.*/
-    template <bool NO_OVERFLOW = false>
+    /*This function implements the addition operation. The inputs are always in the range 0 to p except for when this
+    function is called by the reduce function. In that case we can guarantee that one of the arguments is smaller than p
+    so there is no overflow when adding (-p). The output is always between 0 an p.*/
     static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys)
     {
       GoldilocksField rs = {};
@@ -83,7 +80,7 @@ namespace goldilocks {
         Field<CONFIG>::template add_limbs<TLC, false>(
           rs.limbs_storage, Field<CONFIG>::get_neg_modulus(),
           rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
-                             // overflow since we already took care of the rare case.
+                             // overflow.
       }
       if (__builtin_expect(
             rs.limbs_storage.limbs64[0] >= modulus.limbs64[0],
@@ -108,8 +105,8 @@ namespace goldilocks {
     /*This function performs the goldilocks reduction:
     xs[63:0] + xs[95:64] * (2^32 - 1) - xs[127:96]
     First it does the subtraction - xs[63:0] - xs[127:96] and hints the compiler that it is rare that xs[63:0] <
-    xs[127:96]. Then it adds xs[95:64] * (2^32 - 1) which is guaranteed to be smaller than p - that's why we use the
-    addition with NO_OVERFLOW=true*/
+    xs[127:96]. Then it adds xs[95:64] * (2^32 - 1) which is guaranteed to be smaller than p. This ensures that the
+    addition operation will not overflow. */
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
       constexpr uint32_t gold_fact = uint32_t(-1); //(2^32 - 1)
@@ -125,7 +122,7 @@ namespace goldilocks {
       GoldilocksField x_hi_lo = {};
       x_hi_lo.limbs_storage.limbs64[0] =
         static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact); // xs[95:64] * (2^32 - 1)
-      return goldi_add<true>(rs, x_hi_lo);                                                   // NO_OVERFLOW=true
+      return goldi_add(rs, x_hi_lo);
     }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField inverse(const GoldilocksField& x)
