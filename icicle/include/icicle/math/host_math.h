@@ -290,9 +290,9 @@ namespace host_math {
   static constexpr HOST_INLINE bool is_zero(const storage<NLIMBS>& xs)
   {
     for (int i = 0; i < NLIMBS; i++) {
-      if (xs.limbs[i]) return true;
+      if (xs.limbs[i]) return false;
     }
-    return false;
+    return true;
   }
 
   template <unsigned NLIMBS, unsigned BITS>

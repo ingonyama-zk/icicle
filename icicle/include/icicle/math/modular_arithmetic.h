@@ -566,14 +566,14 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Derived neg(const Derived& xs)
   {
-    if (xs == Derived::zero()) {
-      return xs;
-    }
+    if (xs.is_zero()) { return xs; }
     const ff_storage modulus = get_modulus<MODULUS_MULTIPLE>();
     Derived rs = {};
     sub_limbs<TLC, false>(modulus, xs.limbs_storage, rs.limbs_storage);
     return rs;
   }
+
+  HOST_DEVICE void frobenius_map(unsigned power) {};
 
   // Assumes the number is even!
   template <unsigned MODULUS_MULTIPLE = 1>
@@ -594,6 +594,8 @@ public:
   static constexpr HOST_DEVICE_INLINE bool is_odd(const Derived& xs) { return xs.limbs_storage.limbs[0] & 1; }
 
   static constexpr HOST_DEVICE_INLINE bool is_even(const Derived& xs) { return ~xs.limbs_storage.limbs[0] & 1; }
+
+  constexpr HOST_DEVICE_INLINE bool is_zero() const { return icicle_math::template is_zero<TLC>(limbs_storage); }
 
   static constexpr HOST_DEVICE Derived inverse(const Derived& xs)
   {

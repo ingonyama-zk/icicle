@@ -133,6 +133,42 @@ public:
     return CubicExtensionField{FF::neg(c0), FF::neg(c1), FF::neg(c2)};
   }
 
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator+=(const CubicExtensionField& ys)
+  {
+    *this = *this + ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator-=(const CubicExtensionField& ys)
+  {
+    *this = *this - ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator*=(const CubicExtensionField& ys)
+  {
+    *this = *this * ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator+=(const FF& ys)
+  {
+    *this = *this + ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator-=(const FF& ys)
+  {
+    *this = *this - ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE CubicExtensionField& operator*=(const FF& ys)
+  {
+    *this = *this * ys;
+    return *this;
+  }
+
   static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {
@@ -213,7 +249,7 @@ public:
   }
 
   template <const CubicExtensionField& multiplier>
-  static HOST_DEVICE_INLINE CubicExtensionField mul_const(const CubicExtensionField& xs)
+  static HOST_DEVICE CubicExtensionField mul_const(const CubicExtensionField& xs)
   {
     static constexpr FF mul_c0 = multiplier.c0;
     static constexpr FF mul_c1 = multiplier.c1;
@@ -242,7 +278,7 @@ public:
   }
 
   template <uint32_t multiplier, unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE CubicExtensionField mul_unsigned(const CubicExtensionField& xs)
+  static constexpr HOST_DEVICE CubicExtensionField mul_unsigned(const CubicExtensionField& xs)
   {
     return {
       FF::template mul_unsigned<multiplier>(xs.c0), FF::template mul_unsigned<multiplier>(xs.c1),

@@ -47,13 +47,14 @@ namespace icicle {
   template <typename A, typename A2, typename Pairing, typename TargetField>
   eIcicleError pairing(const A& p, const A2& q, TargetField* output)
   {
-    typename Pairing::target_affine_t p_macron = Pairing::target_affine_t::zero();
-    p_macron.x.c0.c0.c0 = p.x;
-    p_macron.y.c0.c0.c0 = p.y;
-    typename Pairing::target_affine_t q_macron = Pairing::untwist(q);
+    // typename Pairing::target_affine_t p_macron = Pairing::target_affine_t::zero();
+    // p_macron.x.c0.c0.c0 = p.x;
+    // p_macron.y.c0.c0.c0 = p.y;
+    // typename Pairing::target_affine_t q_macron = Pairing::untwist(q);
 
-    TargetField f = miller_loop<Pairing>(p_macron, q_macron);
-    std::cout << "After miller " << f.c0.c0.c0 << std::endl;
+    // TargetField f = miller_loop<Pairing>(p_macron, q_macron);
+    auto coeffs = PairingImpl::prepare_q(q);
+    TargetField f = PairingImpl::opt_miller_loop(p, coeffs);
     Pairing::final_exponentiation(f);
     *output = f;
     return eIcicleError::SUCCESS;

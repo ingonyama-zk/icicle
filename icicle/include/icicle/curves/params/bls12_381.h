@@ -65,28 +65,28 @@ namespace bls12_381 {
   // TODO: Uncomment
   // #ifdef PAIRING_ENABLED
 
-  // TODO: Remove
-  static const storage<136> PAIRING_EXP_FULL = {
-    0x5df57510, 0xc0bcb9b5, 0xe68bfb24, 0x25f98630, 0xfbd5f489, 0x4406fbc8, 0xd12191a0, 0x8e2f8491, 0x0a6f8069, 0x3e9d7165, 0x1d4cab80, 0x226c2f01, 0x17489119, 0x67f67c47, 0xd88592d7, 0xaf3f881b, 0xeed2161d, 0x1a67e49e, 0x69aeb218, 0xe5b78c78, 0x043f7bbc, 0xf6539314, 0xf2701aae, 0x73f62537, 0xe9622d2a, 0xaff1c910, 0x92caa9d4, 0x62833134, 0xbea83d19, 0x2e2f3ec2, 0xb02faa73, 0xa4c7e79f, 0xd7961be1, 0x6c49637f, 0xe8817745, 0x08e88adc, 0x36399917, 0x35de3f7a, 0x31759c36, 0x9c1d9f7c, 0x4ea820b0, 0xfa9e13c2, 0xa403577d, 0x3fc56947, 0xfc5cceb7, 0xa4c1b6dc, 0x7066bca6, 0x1bbd8136, 0x0bc62775, 0x0418a3ef, 0xa9f9e010, 0x49bf9b71, 0x7db60b17, 0x51129109, 0xe5308f1c, 0x498345c6, 0x9dadd7c2, 0x6d8823b1, 0xd556952c, 0x92004ced, 0xc03ef195, 0x4c6bec3e, 0x044ce6ad, 0x0a1fad20, 0xcd15948d, 0xc55d3109, 0x2c3f0bd0, 0x334f46c0, 0x34c05739, 0x3b5a62eb, 0x1d1676a5, 0x72453841, 0xd0463434, 0x127a1b5a, 0xc85b0129, 0x61a474c5, 0x86ef965e, 0x8dfc8e28, 0x459f1243, 0x96532fef, 0xcdc10412, 0x40ee7169, 0xb74bb22a, 0x9c40a68e, 0xf4684d0b, 0x25118790, 0xc8d4c01f, 0x596bc293, 0x27611212, 0x1064837f, 0xbf24dde4, 0x077ffb10, 0xcd2b01f3, 0xc49f570b, 0x4c374693, 0x1a0c5bf2, 0x9bc73ab6, 0x350da535, 0xe4d7acdd, 0xd2670d93, 0x6e1ab656, 0xd39099b8, 0x978e2b0d, 0x19328148, 0x386b0e88, 0xb113f414, 0x630d9aa4, 0x07a0dce2, 0x93753318, 0xa927e7bb, 0xad49466f, 0xe347aa68, 0x106feaf4, 0x1c0ad0d6, 0xff3a0f0f, 0xc872ee83, 0xa660835c, 0x074e43b9, 0xe9cfee9a, 0xc0aadff5, 0xc7deada9, 0x30698e8c, 0xab353f2c, 0xd1073776, 0xbadc3a43, 0x17848517, 0x3f8d14a9, 0x7363baa1, 0x7d4507d0, 0xd4977b3f, 0x89ee0193, 0x496a1c0a, 0xe1bda9c0, 0xdcc825b7, 0x02ee1db5, 0x00000000
-  };
-
-  // TODO: Split this exponent into 4 exponentiations using basis precomputation
-  static const storage<40> PAIRING_EXP_LEFT = {
-    0x38e3ba79, 0xe516c3f4, 0xe208ccf1, 0xfa9912aa, 0x335d5b68, 0x905ce937, 0xb0dea236, 0xc71a2629,
-    0x996754c8, 0x83774940, 0xb6a1e799, 0x21d160ae, 0xed237db4, 0x2ed0b283, 0x6c6f1821, 0x915c97f3,
-    0xde783765, 0x67f17fcb, 0x9096d1b7, 0x2378b903, 0x1bdc51dc, 0x7988f876, 0x03fc77a1, 0x20769950,
-    0xa621315b, 0x827eca0b, 0x8d63cb9f, 0xe5a72bce, 0xc28b6f8a, 0xf68f7764, 0xcf081517, 0x2f230063,
-    0x528d6a9a, 0x94506632, 0xeb996ca3, 0xd3cde88e, 0x195c899e, 0xc0bd38c3, 0x3d807d01, 0x000f686b};
-
   struct PairingImpl {
     static constexpr scalar_t::ff_storage R = scalar_t::get_modulus();
-    static constexpr scalar_t::ff_storage RPRIME = {0x00000000, 0xffffffff, 0xfffe5bfe, 0x53bda402,
-                                                    0x09a1d805, 0x3339d808, 0x299d7d48, 0x73eda753};
     static constexpr unsigned R_BITS = scalar_t::NBITS;
-    static constexpr unsigned R_LIMBS = scalar_t::TLC;
-    
-    static constexpr storage<2> Z = { 0x00010000, 0xd2010000 };
+
+    static constexpr storage<2> Z = {0x00010000, 0xd2010000};
     static constexpr unsigned Z_BITS = 64;
+    static constexpr bool Z_IS_NEGATIVE = true;
+    static constexpr int Z_NAF[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,  0, 0, 0,
+                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0,
+                                    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, -1, 0, 1};
+    static constexpr unsigned Z_NAF_BITS = 65;
+
+    static constexpr point_field_t BASE_FIELD_FROBENIUS_COEFF_C1[2] = {
+      point_field_t::one(),
+      {{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
+        0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}}};
+
+    static HOST_DEVICE void mul_fp2_field_by_frob_coeff(g2_point_field_t& fe, unsigned power)
+    {
+      // std::cout << "COEFF: " << BASE_FIELD_FROBENIUS_COEFF_C1[power % 2] << std::endl;;
+      fe.c1 = fe.c1 * BASE_FIELD_FROBENIUS_COEFF_C1[power % 2];
+    }
 
     struct fq6_config {
       // nonresidue to generate the extension field
@@ -94,6 +94,59 @@ namespace bls12_381 {
       // true if nonresidue is negative
       static constexpr bool nonresidue_is_negative = false;
       static constexpr bool nonresidue_is_u32 = false;
+
+      static constexpr g2_point_field_t FROBENIUS_COEFF_C1[6] = {
+        {point_field_t::one(), point_field_t::zero()},
+        {point_field_t::zero(),
+         {{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
+           0xec024086, 0x397fe699, 0x1a0111ea}}},
+        {{{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
+           0x5f19672f}},
+         point_field_t::zero()},
+        {point_field_t::zero(), point_field_t::one()},
+        {{{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
+           0xec024086, 0x397fe699, 0x1a0111ea}},
+         point_field_t::zero()},
+        {point_field_t::zero(),
+         {{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
+           0x5f19672f}}}};
+
+      static constexpr g2_point_field_t FROBENIUS_COEFF_C2[6] = {
+        {point_field_t::one(), point_field_t::zero()},
+        {{{0x0000aaad, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
+           0xec024086, 0x397fe699, 0x1a0111ea}},
+         point_field_t::zero()},
+        {{{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
+           0xec024086, 0x397fe699, 0x1a0111ea}},
+         point_field_t::zero()
+
+        },
+        {{{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
+           0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}},
+         point_field_t::zero()
+
+        },
+        {{{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
+           0x5f19672f}},
+         point_field_t::zero()
+
+        },
+        {{{0xfffeffff, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
+           0x5f19672f}},
+         point_field_t::zero()
+
+        }};
+
+      static HOST_DEVICE void
+      frobenius_map(g2_point_field_t& c0, g2_point_field_t& c1, g2_point_field_t& c2, unsigned power)
+      {
+        mul_fp2_field_by_frob_coeff(c0, power);
+        mul_fp2_field_by_frob_coeff(c1, power);
+        mul_fp2_field_by_frob_coeff(c2, power);
+        // std::cout << "CUBIC c1: " << c1 << std::endl;
+        c1 *= FROBENIUS_COEFF_C1[power % 6];
+        c2 *= FROBENIUS_COEFF_C2[power % 6];
+      }
     };
     typedef CubicExtensionField<fq6_config, g2_point_field_t> fq6_field_t; // T2
 
@@ -104,6 +157,76 @@ namespace bls12_381 {
       // true if nonresidue is negative
       static constexpr bool nonresidue_is_negative = false;
       static constexpr bool nonresidue_is_u32 = false;
+
+      static constexpr g2_point_field_t FROBENIUS_COEFF_C1[12] = {
+        {
+          point_field_t::one(),
+          point_field_t::zero(),
+        },
+        {
+          {{0x92235fb8, 0x8d0775ed, 0x63e7813d, 0xf67ea53d, 0x84bab9c4, 0x7b2443d7, 0x3cbd5f4f, 0x0fd603fd, 0x202c0d1f,
+            0xc231beb4, 0x02bb0667, 0x1904d3bf}},
+          {{0x6ddc4af3, 0x2cf78a12, 0x4d6c7ec2, 0x282d5ac1, 0x71f63c5f, 0xec0c8ec9, 0xb6c7b36f, 0x54a14787, 0x231f9fb8,
+            0x88e9e902, 0x36c4e032, 0x00fc3e2b}},
+        },
+        {
+          {{0xfffeffff, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
+            0x5f19672f}},
+          point_field_t::zero(),
+        },
+        {
+          {{0x121bdea2, 0xf1ee7b04, 0x3e67fa0a, 0x304466cf, 0xf61eb45e, 0xef396489, 0x30b1cf60, 0x1c3dedd9, 0xd77a2cd9,
+            0xe2e9c448, 0x0180a68e, 0x135203e6}},
+          {{0xede3cc09, 0xc81084fb, 0x72ec05f4, 0xee67992f, 0x009241c5, 0x77f76e17, 0xc2d3435e, 0x48395dab, 0x6bd17ffe,
+            0x6831e36d, 0x37ff400b, 0x06af0e04}},
+        },
+        {
+          {{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
+            0x5f19672f}},
+          point_field_t::zero(),
+        },
+        {
+          {{0x7ff82995, 0x1ee60516, 0x8bd478cd, 0x5871c190, 0x6814f0bd, 0xdb45f353, 0xe77982d0, 0x70df3560, 0xfa99cc91,
+            0x6bd3ad4a, 0x384586c1, 0x144e4211}},
+          {{0x80078116, 0x9b18fae9, 0x257f8732, 0xc63a3e6e, 0x8e9c0566, 0x8beadf4d, 0x0c0b8fee, 0xf3981624, 0x48b1e045,
+            0xdf47fa6b, 0x013a5fd8, 0x05b2cfd9}},
+        },
+        {
+          {{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
+            0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}},
+          point_field_t::zero(),
+        },
+        {
+          {{0x6ddc4af3, 0x2cf78a12, 0x4d6c7ec2, 0x282d5ac1, 0x71f63c5f, 0xec0c8ec9, 0xb6c7b36f, 0x54a14787, 0x231f9fb8,
+            0x88e9e902, 0x36c4e032, 0x00fc3e2b}},
+          {{0x92235fb8, 0x8d0775ed, 0x63e7813d, 0xf67ea53d, 0x84bab9c4, 0x7b2443d7, 0x3cbd5f4f, 0x0fd603fd, 0x202c0d1f,
+            0xc231beb4, 0x02bb0667, 0x1904d3bf}},
+        },
+        {
+          {{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
+            0xec024086, 0x397fe699, 0x1a0111ea}},
+          point_field_t::zero(),
+        },
+        {
+          {{0xede3cc09, 0xc81084fb, 0x72ec05f4, 0xee67992f, 0x009241c5, 0x77f76e17, 0xc2d3435e, 0x48395dab, 0x6bd17ffe,
+            0x6831e36d, 0x37ff400b, 0x06af0e04}},
+          {{0x121bdea2, 0xf1ee7b04, 0x3e67fa0a, 0x304466cf, 0xf61eb45e, 0xef396489, 0x30b1cf60, 0x1c3dedd9, 0xd77a2cd9,
+            0xe2e9c448, 0x0180a68e, 0x135203e6}},
+        },
+        {{{0x0000aaad, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
+           0xec024086, 0x397fe699, 0x1a0111ea}},
+         point_field_t::zero()},
+        {{{0x80078116, 0x9b18fae9, 0x257f8732, 0xc63a3e6e, 0x8e9c0566, 0x8beadf4d, 0x0c0b8fee, 0xf3981624, 0x48b1e045,
+           0xdf47fa6b, 0x013a5fd8, 0x05b2cfd9}},
+         {{0x7ff82995, 0x1ee60516, 0x8bd478cd, 0x5871c190, 0x6814f0bd, 0xdb45f353, 0xe77982d0, 0x70df3560, 0xfa99cc91,
+           0x6bd3ad4a, 0x384586c1, 0x144e4211}}}};
+
+      static HOST_DEVICE void frobenius_map(fq6_field_t& c0, fq6_field_t& c1, unsigned power)
+      {
+        fq6_config::frobenius_map(c0.c0, c0.c1, c0.c2, power);
+        fq6_config::frobenius_map(c1.c0, c1.c1, c1.c2, power);
+        c1 *= FROBENIUS_COEFF_C1[power % 12];
+      }
     };
     typedef ComplexExtensionField<fq12_config, fq6_field_t> fq12_field_t; // T3
     typedef fq12_field_t target_field_t;
@@ -112,14 +235,39 @@ namespace bls12_381 {
     typedef Affine<target_field_t> target_affine_t;
 
   private:
-    static fq6_field_t double_in_place(fq6_field_t& r, const point_field_t& two_inv) {
+    // cyclotomic exponentiation
+    static target_field_t exp_by_z(target_field_t& f)
+    {
+      target_field_t res = target_field_t::one();
+      target_field_t f_inv = f;
+      f_inv.c1 = -f_inv.c1;
+      bool nonzero_bit = false;
+      for (int i = Z_NAF_BITS - 1; i >= 0; i--) {
+        if (nonzero_bit) { res = target_field_t::sqr(res); }
+        int bit = Z_NAF[i];
+        if (bit != 0) {
+          nonzero_bit = true;
+          if (bit > 0) {
+            res *= f;
+          } else {
+            res *= f_inv;
+          }
+        }
+      }
+
+      res.c1 = -res.c1;
+      return res;
+    }
+
+    static fq6_field_t double_in_place(fq6_field_t& r, const point_field_t& two_inv)
+    {
       g2_point_field_t& x = r.c0;
       g2_point_field_t& y = r.c1;
       g2_point_field_t& z = r.c2;
-      
+
       g2_point_field_t a = x * y;
-      a = a * two_inv;
-      
+      a *= two_inv;
+
       g2_point_field_t b = g2_point_field_t::sqr(y);
       g2_point_field_t c = g2_point_field_t::sqr(z);
       g2_point_field_t e = G2::weierstrass_b * (c + c + c);
@@ -129,19 +277,20 @@ namespace bls12_381 {
       g2_point_field_t i = e - b;
       g2_point_field_t j = g2_point_field_t::sqr(x);
       g2_point_field_t e_square = g2_point_field_t::sqr(e);
-      
+
       x = a * (b - f);
       y = g2_point_field_t::sqr(g) - (e_square + e_square + e_square);
       z = b * h;
-      
+
       return fq6_field_t{i, j + j + j, -h};
     }
-    
-    static fq6_field_t add_in_place(fq6_field_t& r, const g2_affine_t& q) {
+
+    static fq6_field_t add_in_place(fq6_field_t& r, const g2_affine_t& q)
+    {
       g2_point_field_t& x = r.c0;
       g2_point_field_t& y = r.c1;
       g2_point_field_t& z = r.c2;
-      
+
       g2_point_field_t theta = y - (q.y * z);
       g2_point_field_t lambda = x - (q.x * z);
       g2_point_field_t c = g2_point_field_t::sqr(theta);
@@ -150,13 +299,108 @@ namespace bls12_381 {
       g2_point_field_t f = z * c;
       g2_point_field_t g = x * d;
       g2_point_field_t h = e + f - (g + g);
-      
+
       x = lambda * h;
       y = theta * (g - h) - (e * y);
-      z = z * e;
-      
+      z *= e;
+
       g2_point_field_t j = theta * q.x - (lambda * q.y);
       return fq6_field_t{j, -theta, lambda};
+    }
+
+    static void mul_by_1(fq6_field_t& r, const g2_point_field_t& c1)
+    {
+      g2_point_field_t b_b = r.c1;
+      b_b *= c1;
+
+      g2_point_field_t t1 = c1;
+      g2_point_field_t tmp = r.c1;
+      tmp += r.c2;
+      t1 *= tmp;
+      t1 -= b_b;
+      t1 *= fq6_config::nonresidue;
+
+      g2_point_field_t t2 = c1;
+      tmp = r.c0;
+      tmp += r.c1;
+      t2 *= tmp;
+      t2 -= b_b;
+
+      r.c0 = t1;
+      r.c1 = t2;
+      r.c2 = b_b;
+    }
+
+    static void mul_by_01(fq6_field_t& r, const g2_point_field_t& c0, const g2_point_field_t& c1)
+    {
+      g2_point_field_t a_a = r.c0;
+      g2_point_field_t b_b = r.c1;
+      a_a *= c0;
+      b_b *= c1;
+
+      g2_point_field_t t1 = c1;
+      g2_point_field_t tmp = r.c1;
+      tmp += r.c2;
+      t1 *= tmp;
+      t1 -= b_b;
+      t1 *= fq6_config::nonresidue;
+      t1 += a_a;
+
+      g2_point_field_t t3 = c0;
+      tmp = r.c0;
+      tmp += r.c2;
+      t3 *= tmp;
+      t3 -= a_a;
+      t3 += b_b;
+
+      g2_point_field_t t2 = c0;
+      t2 += c1;
+      tmp = r.c0;
+      tmp += r.c1;
+      t2 *= tmp;
+      t2 -= a_a;
+      t2 -= b_b;
+
+      r.c0 = t1;
+      r.c1 = t2;
+      r.c2 = t3;
+    }
+
+    static void
+    mul_by_014(target_field_t& f, const g2_point_field_t& c0, const g2_point_field_t& c1, const g2_point_field_t& c4)
+    {
+      fq6_field_t aa = f.c0;
+      mul_by_01(aa, c0, c1);
+
+      fq6_field_t bb = f.c1;
+      mul_by_1(bb, c4);
+
+      g2_point_field_t o = c1;
+      o += c4;
+
+      f.c1 += f.c0;
+      mul_by_01(f.c1, c0, o);
+      f.c1 -= aa;
+      f.c1 -= bb;
+
+      f.c0 = bb;
+      g2_point_field_t old_c1 = f.c0.c1;
+      f.c0.c1 = f.c0.c0;
+      f.c0.c0 = f.c0.c2;
+      f.c0.c0 = f.c0.c0 * fq6_config::nonresidue;
+      f.c0.c2 = old_c1;
+      f.c0 += aa;
+    }
+
+    static void ell(target_field_t& f, fq6_field_t coeffs, affine_t p)
+    {
+      g2_point_field_t c0 = coeffs.c0;
+      g2_point_field_t c1 = coeffs.c1;
+      g2_point_field_t c2 = coeffs.c2;
+
+      c2 *= p.y;
+      c1 *= p.x;
+      mul_by_014(f, c0, c1, c2);
     }
 
   public:
@@ -173,42 +417,65 @@ namespace bls12_381 {
       return p2;
     }
 
-    static std::vector<fq6_field_t> prepare_q(const g2_affine_t& q) {
+    static std::vector<fq6_field_t> prepare_q(const g2_affine_t& q)
+    {
       point_field_t two_inv = point_field_t::inverse(point_field_t::one() + point_field_t::one());
       std::vector<fq6_field_t> coeffs;
-      fq6_field_t r = fq6_field_t { q.x, q.y, g2_point_field_t::one() };
-      
+      fq6_field_t r = fq6_field_t{q.x, q.y, g2_point_field_t::one()};
+
       for (int j = Z_BITS - 1; j > 0; j--) {
         coeffs.push_back(double_in_place(r, two_inv));
-        if (host_math::get_bit(Z, j - 1)) {
-          coeffs.push_back(add_in_place(r, q));
-        }
+        if (host_math::get_bit(Z, j - 1)) { coeffs.push_back(add_in_place(r, q)); }
       }
-      
+
       return coeffs;
+    }
+
+    static target_field_t opt_miller_loop(const affine_t& p, const std::vector<fq6_field_t> q_coeffs)
+    {
+      target_field_t f = target_field_t::one();
+      int i = 0;
+      for (int j = Z_BITS - 1; j > 0; j--) {
+        f = target_field_t::sqr(f);
+        ell(f, q_coeffs[i++], p);
+        if (host_math::get_bit(Z, j - 1)) { ell(f, q_coeffs[i++], p); }
+      }
+
+      if (Z_IS_NEGATIVE) { f.c1 = -f.c1; }
+      return f;
     }
 
     static void final_exponentiation(target_field_t& f)
     {
-      point_field_t::ff_storage q = point_field_t::get_modulus();
+      target_field_t f1 = f;
+      f1.c1 = -f1.c1;
+      target_field_t f2 = target_field_t::inverse(f);
+      target_field_t r = f1 * f2;
+      f2 = r;
+      fq12_config::frobenius_map(r.c0, r.c1, 2);
+      r *= f2;
+      target_field_t y0 = target_field_t::sqr(r);
+      target_field_t y1 = exp_by_z(r);
+      target_field_t y2 = r;
+      y2.c1 = -y2.c1;
+      y1 *= y2;
+      y2 = exp_by_z(y1);
+      y1.c1 = -y1.c1;
+      y1 *= y2;
+      y2 = exp_by_z(y1);
+      fq12_config::frobenius_map(y1.c0, y1.c1, 1);
+      y1 *= y2;
+      r *= y0;
+      y0 = exp_by_z(y1);
+      y2 = exp_by_z(y0);
+      y0 = y1;
+      fq12_config::frobenius_map(y0.c0, y0.c1, 2);
+      y1.c1 = -y1.c1;
+      y1 *= y2;
+      y1 *= y0;
+      r *= y1;
 
-      // f ^ (q^2)
-      target_field_t fq2 = f;
-      fq2 = target_field_t::pow(fq2, q);
-      fq2 = target_field_t::pow(fq2, q);
-
-      // f ^ (q^6)
-      target_field_t fq6 = fq2;
-      for (int i = 0; i < 4; i++) {
-        fq6 = target_field_t::pow(fq6, q);
-      }
-
-      // f ^ (q^8)
-      target_field_t fq8 = fq6;
-      fq8 = target_field_t::pow(fq8, q);
-      fq8 = target_field_t::pow(fq8, q);
-
-      f = fq8 * fq6 * target_field_t::inverse(fq2 * f); // f ^ (q^8 + q^6 - (q^2 + 1))
+      f = r;
     }
   };
   // #endif

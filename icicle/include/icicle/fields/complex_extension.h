@@ -128,6 +128,42 @@ public:
     return ComplexExtensionField{FF::neg(c0), FF::neg(c1)};
   }
 
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator+=(const ComplexExtensionField& ys)
+  {
+    *this = *this + ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator-=(const ComplexExtensionField& ys)
+  {
+    *this = *this - ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator*=(const ComplexExtensionField& ys)
+  {
+    *this = *this * ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator+=(const FF& ys)
+  {
+    *this = *this + ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator-=(const FF& ys)
+  {
+    *this = *this - ys;
+    return *this;
+  }
+
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField& operator*=(const FF& ys)
+  {
+    *this = *this * ys;
+    return *this;
+  }
+
   static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {
