@@ -85,10 +85,11 @@ namespace goldilocks {
           rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
                              // overflow since we already took care of the rare case.
       }
-      if (__builtin_expect(rs.limbs_storage.limbs64[0] >= modulus.limbs64[0], 0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for now.
-        rs.limbs_storage.limbs64[0] =
-          rs.limbs_storage.limbs64[0] -
-          modulus.limbs64[0]; 
+      if (__builtin_expect(
+            rs.limbs_storage.limbs64[0] >= modulus.limbs64[0],
+            0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for
+                  // now.
+        rs.limbs_storage.limbs64[0] = rs.limbs_storage.limbs64[0] - modulus.limbs64[0];
       }
       return rs;
     }
@@ -249,18 +250,18 @@ namespace goldilocks {
        {0x00000001, 0x00000000},
        {0xffffffff, 0x00000000},
        {0x00000001, 0xfffffffe}}};
-  static constexpr unsigned limbs_count = 2;  
-  static constexpr unsigned modulus_bit_count = 64; 
-  static constexpr storage<limbs_count> zero = {};   
-  static constexpr storage<limbs_count> one = {1};  
-  static constexpr storage<limbs_count> neg_modulus = {0xffffffff, 0x00000000};
-  static constexpr storage<limbs_count> montgomery_r = {0xffffffff, 0x00000000};
-  static constexpr storage<limbs_count> montgomery_r_inv = {0x00000001, 0xfffffffe};
-  // The next 4 parameters are unused and are only needed for compilation:
-  static constexpr storage<limbs_count> modulus_2 = {0x00000000, 0x00000000};
-  static constexpr storage<limbs_count> modulus_4 = {0x00000000, 0x00000000};
-  static constexpr storage<limbs_count> m = {0x00000000, 0x00000000};
-  static constexpr unsigned num_of_reductions = 0;
+    static constexpr unsigned limbs_count = 2;
+    static constexpr unsigned modulus_bit_count = 64;
+    static constexpr storage<limbs_count> zero = {};
+    static constexpr storage<limbs_count> one = {1};
+    static constexpr storage<limbs_count> neg_modulus = {0xffffffff, 0x00000000};
+    static constexpr storage<limbs_count> montgomery_r = {0xffffffff, 0x00000000};
+    static constexpr storage<limbs_count> montgomery_r_inv = {0x00000001, 0xfffffffe};
+    // The next 4 parameters are unused and are only needed for compilation:
+    static constexpr storage<limbs_count> modulus_2 = {0x00000000, 0x00000000};
+    static constexpr storage<limbs_count> modulus_4 = {0x00000000, 0x00000000};
+    static constexpr storage<limbs_count> m = {0x00000000, 0x00000000};
+    static constexpr unsigned num_of_reductions = 0;
     MOD_SQR_SUBS()
     static constexpr storage_array<mod_subs_count, 2 * limbs_count + 2> mod_subs = {
       {{0x7fffffff, 0x00000001, 0xffffffff, 0x7fffffff, 0x00000000, 0x00000000},
@@ -283,38 +284,14 @@ namespace goldilocks {
     static constexpr storage<2> rou = {0xda58878c, 0x185629dc};
     static constexpr unsigned omegas_count = 32;
     static constexpr storage_array<omegas_count, limbs_count> inv = {
-      {{0x80000001, 0x7fffffff},
-      {0x40000001, 0xbfffffff},
-      {0x20000001, 0xdfffffff},
-      {0x10000001, 0xefffffff},
-      {0x08000001, 0xf7ffffff},
-      {0x04000001, 0xfbffffff},
-      {0x02000001, 0xfdffffff},
-      {0x01000001, 0xfeffffff},
-      {0x00800001, 0xff7fffff},
-      {0x00400001, 0xffbfffff},
-      {0x00200001, 0xffdfffff},
-      {0x00100001, 0xffefffff},
-      {0x00080001, 0xfff7ffff},
-      {0x00040001, 0xfffbffff},
-      {0x00020001, 0xfffdffff},
-      {0x00010001, 0xfffeffff},
-      {0x00008001, 0xffff7fff},
-      {0x00004001, 0xffffbfff},
-      {0x00002001, 0xffffdfff},
-      {0x00001001, 0xffffefff},
-      {0x00000801, 0xfffff7ff},
-      {0x00000401, 0xfffffbff},
-      {0x00000201, 0xfffffdff},
-      {0x00000101, 0xfffffeff},
-      {0x00000081, 0xffffff7f},
-      {0x00000041, 0xffffffbf},
-      {0x00000021, 0xffffffdf},
-      {0x00000011, 0xffffffef},
-      {0x00000009, 0xfffffff7},
-      {0x00000005, 0xfffffffb},
-      {0x00000003, 0xfffffffd},
-      {0x00000002, 0xfffffffe}}};
+      {{0x80000001, 0x7fffffff}, {0x40000001, 0xbfffffff}, {0x20000001, 0xdfffffff}, {0x10000001, 0xefffffff},
+       {0x08000001, 0xf7ffffff}, {0x04000001, 0xfbffffff}, {0x02000001, 0xfdffffff}, {0x01000001, 0xfeffffff},
+       {0x00800001, 0xff7fffff}, {0x00400001, 0xffbfffff}, {0x00200001, 0xffdfffff}, {0x00100001, 0xffefffff},
+       {0x00080001, 0xfff7ffff}, {0x00040001, 0xfffbffff}, {0x00020001, 0xfffdffff}, {0x00010001, 0xfffeffff},
+       {0x00008001, 0xffff7fff}, {0x00004001, 0xffffbfff}, {0x00002001, 0xffffdfff}, {0x00001001, 0xffffefff},
+       {0x00000801, 0xfffff7ff}, {0x00000401, 0xfffffbff}, {0x00000201, 0xfffffdff}, {0x00000101, 0xfffffeff},
+       {0x00000081, 0xffffff7f}, {0x00000041, 0xffffffbf}, {0x00000021, 0xffffffdf}, {0x00000011, 0xffffffef},
+       {0x00000009, 0xfffffff7}, {0x00000005, 0xfffffffb}, {0x00000003, 0xfffffffd}, {0x00000002, 0xfffffffe}}};
   };
 
   /**
