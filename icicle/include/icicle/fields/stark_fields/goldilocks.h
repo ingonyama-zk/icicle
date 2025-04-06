@@ -70,7 +70,9 @@ namespace goldilocks {
     friend HOST_DEVICE_INLINE GoldilocksField operator+(const GoldilocksField& xs, const GoldilocksField& ys)
     {
       GoldilocksField rs = {};
-      icicle_math::goldi_add(xs.limbs_storage, ys.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+      icicle_math::goldi_add(
+        xs.limbs_storage, ys.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(),
+        rs.limbs_storage);
       return rs;
     }
 
@@ -86,7 +88,8 @@ namespace goldilocks {
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
       GoldilocksField rs = {};
-      icicle_math::goldi_reduce(xs.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+      icicle_math::goldi_reduce(
+        xs.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
       return rs;
     }
 
