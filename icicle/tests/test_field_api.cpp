@@ -17,8 +17,8 @@ using FieldTestBase = ModArithTestBase;
 // Note: this is testing host arithmetic. Other tests against CPU backend should guarantee correct device arithmetic too
 TYPED_TEST(FieldTest, FieldSanityTest)
 {
-  a = TypeParam::rand_host();
-  b = TypeParam::rand_host();
+  auto a = TypeParam::rand_host();
+  auto b = TypeParam::rand_host();
   auto b_inv = TypeParam::inverse(b);
   auto a_neg = TypeParam::neg(a);
   ASSERT_EQ(TypeParam::from_montgomery(TypeParam::to_montgomery(a)), a);
