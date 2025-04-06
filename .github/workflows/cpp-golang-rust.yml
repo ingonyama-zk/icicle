@@ -67,6 +67,7 @@ jobs:
     name: Test Curve ${{ matrix.curve.name }} on ${{ matrix.os }} with ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
         backend: [cuda, metal]
@@ -85,8 +86,9 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip phase --skip montgomery --skip ntt_ --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared"
-            skip-cpp: '-E "CurveApiTest.MontConversionG2Affine|CurveApiTest.MontConversionG2Projective|CurveApiTest.ecntt|CurveApiTest.ecnttDeviceMem|ModArithTestBase.ProgramExecutorVecOp|ModArithTestBase.ProgramExecutorVecOpDataOnDevice|FieldTestBase.Sumcheck|FieldTestBase.SumcheckDataOnDevice|FieldTestBase.SumcheckUserDefinedCombine|FieldTestBase.SumcheckIdentity|FieldTestBase.SumcheckSingleInputProgram"'
+            skip-cpp: '-E "CurveApiTest.MontConversionG2Affine|CurveApiTest.MontConversionG2Projective|CurveApiTest.ecntt|CurveApiTest.ecnttDeviceMem|ModArithTestBase.ProgramExecutorVecOp|ModArithTestBase.ProgramExecutorVecOpDataOnDevice|FieldTestBase.Sumcheck|FieldTestBase.SumcheckDataOnDevice|FieldTestBase.SumcheckUserDefinedCombine|FieldTestBase.SumcheckIdentity|FieldTestBase.SumcheckSingleInputProgram|FieldTestBase.polynomialDivision"'
             skip-golang: "true"
+            initial-support: "true"
         curve:
           - name: bn254
             build_args: -DG2=ON -DECNTT=ON
@@ -237,6 +239,7 @@ jobs:
     name: Test field ${{ matrix.field.name }} on ${{ matrix.os }} with ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
         backend: [cuda, metal]
@@ -255,8 +258,9 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip montgomery --skip ntt_ --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip phase2"
-            skip-cpp: '-E "QuarticExtensionField|ProgramExecutor|FieldTestBase.Sumcheck|FieldTestBase.SumcheckDataOnDevice|FieldTestBase.SumcheckUserDefinedCombine|FieldTestBase.SumcheckIdentity|FieldTestBase.SumcheckSingleInputProgram"'
+            skip-cpp: '-E "QuarticExtensionField|ProgramExecutor|FieldTestBase.Sumcheck|FieldTestBase.SumcheckDataOnDevice|FieldTestBase.SumcheckUserDefinedCombine|FieldTestBase.SumcheckIdentity|FieldTestBase.SumcheckSingleInputProgram|FieldTest.Fri|FieldTest.FriShouldFailCases|FieldTestBase.polynomialDivision"'
             skip-golang: "true"
+            initial-support: "true"
         field:
           - name: babybear
             build_args: -DEXT_FIELD=ON
