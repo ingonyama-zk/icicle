@@ -67,33 +67,36 @@ namespace goldilocks {
       return Field<CONFIG>::neg(xs);
     }
 
-    /*This function implements the addition operation. The inputs are always in the range 0 to p except for when this
-    function is called by the reduce function. In that case we can guarantee that one of the arguments is smaller than p
-    so there is no overflow when adding (-p). The output is always between 0 an p.*/
-    static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys)
-    {
-      GoldilocksField rs = {};
-      const ff_storage modulus = Field<CONFIG>::get_modulus();
-      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(
-        xs.limbs_storage, ys.limbs_storage, rs.limbs_storage); // Do the addition
-      if (carry) {
-        Field<CONFIG>::template add_limbs<TLC, false>(
-          rs.limbs_storage, Field<CONFIG>::get_neg_modulus(),
-          rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
-                             // overflow.
-      }
-      if (__builtin_expect(
-            rs.limbs_storage.limbs64[0] >= modulus.limbs64[0],
-            0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for
-                  // now.
-        rs.limbs_storage.limbs64[0] = rs.limbs_storage.limbs64[0] - modulus.limbs64[0];
-      }
-      return rs;
-    }
+    // /*This function implements the addition operation. The inputs are always in the range 0 to p except for when this
+    // function is called by the reduce function. In that case we can guarantee that one of the arguments is smaller than p
+    // so there is no overflow when adding (-p). The output is always between 0 an p.*/
+    // static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys)
+    // {
+    //   GoldilocksField rs = {};
+    //   const ff_storage modulus = Field<CONFIG>::get_modulus();
+    //   auto carry = Field<CONFIG>::template add_limbs<TLC, true>(
+    //     xs.limbs_storage, ys.limbs_storage, rs.limbs_storage); // Do the addition
+    //   if (carry) {
+    //     Field<CONFIG>::template add_limbs<TLC, false>(
+    //       rs.limbs_storage, Field<CONFIG>::get_neg_modulus(),
+    //       rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
+    //                          // overflow.
+    //   }
+    //   if (__builtin_expect(
+    //         rs.limbs_storage.limbs64[0] >= modulus.limbs64[0],
+    //         0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for
+    //               // now.
+    //     rs.limbs_storage.limbs64[0] = rs.limbs_storage.limbs64[0] - modulus.limbs64[0];
+    //   }
+    //   return rs;
+    // }
 
     friend HOST_DEVICE_INLINE GoldilocksField operator+(const GoldilocksField& xs, const GoldilocksField& ys)
     {
-      return goldi_add(xs, ys);
+      GoldilocksField rs = {};
+      // return goldi_add(xs, ys);
+      icicle_math::goldi_add(xs.limbs_storage, ys.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+      return rs;
     }
 
     friend HOST_DEVICE_INLINE GoldilocksField operator-(GoldilocksField xs, const GoldilocksField& ys)
@@ -122,7 +125,10 @@ namespace goldilocks {
       GoldilocksField x_hi_lo = {};
       x_hi_lo.limbs_storage.limbs64[0] =
         static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact); // xs[95:64] * (2^32 - 1)
-      return goldi_add(rs, x_hi_lo);
+      
+      GoldilocksField rs2 = {};
+      icicle_math::goldi_add(rs.limbs_storage, x_hi_lo.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(), rs2.limbs_storage);
+      return rs2;
     }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField inverse(const GoldilocksField& x)

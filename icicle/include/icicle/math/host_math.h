@@ -419,7 +419,7 @@ namespace host_math {
    * will cause only 1 reduction to be performed.
    */
   template <unsigned NLIMBS, unsigned SLACK_BITS, unsigned NOF_REDUCTIONS>
-  static constexpr HOST_DEVICE_INLINE storage<NLIMBS> barrett_reduce(
+  static constexpr storage<NLIMBS> barrett_reduce(
     const storage<2 * NLIMBS>& xs,
     const storage<NLIMBS>& ms,
     const storage<NLIMBS>& mod1,
@@ -451,6 +451,30 @@ namespace host_math {
     storage<NLIMBS> r_reduced = {};
     const auto borrow = add_sub_limbs<NLIMBS, true, true>(r, mod1, r_reduced);
     return borrow ? r : r_reduced;
+  }
+
+  /*This function implements the addition operation. The inputs are always in the range 0 to p except for when this
+  function is called by the reduce function. In that case we can guarantee that one of the arguments is smaller than p
+  so there is no overflow when adding (-p). The output is always between 0 an p.*/
+  template <unsigned NLIMBS>
+  static constexpr void goldi_add(
+    const storage<NLIMBS>& xs,
+    const storage<NLIMBS>& ys,
+    const storage<NLIMBS>& mod,
+    const storage<NLIMBS>& neg_mod,
+    storage<NLIMBS>& rs)
+  {
+    auto carry = add_sub_limbs<NLIMBS, false, true>(xs, ys, rs); // Do the addition
+    if (carry) {
+      add_sub_limbs<NLIMBS, false, false>(rs, neg_mod, rs); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
+                            // overflow.
+    }
+    if (__builtin_expect(
+          rs.limbs64[0] >= mod.limbs64[0],
+          0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for
+                // now.
+      rs.limbs64[0] = rs.limbs64[0] - mod.limbs64[0];
+    }
   }
 
   // Assumes the number is even!
