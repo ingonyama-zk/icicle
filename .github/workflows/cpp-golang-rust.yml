@@ -71,7 +71,6 @@ jobs:
     strategy:
       matrix:
         backend: [cuda, metal]
-        initial-support: [false]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -81,6 +80,7 @@ jobs:
             skip-rust: ""
             skip-cpp: ""
             skip-golang: "false"
+            initial-support: false
           - backend: metal
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
@@ -244,7 +244,6 @@ jobs:
     strategy:
       matrix:
         backend: [cuda, metal]
-        initial-support: [false]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -254,6 +253,7 @@ jobs:
             skip-rust: ""
             skip-cpp: ""
             skip-golang: "false"
+            initial-support: false
           - backend: metal
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
@@ -520,7 +520,6 @@ jobs:
     strategy:
       matrix:
         backend: [cuda, metal]
-        initial-support: [false]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -530,6 +529,7 @@ jobs:
             skip-rust: ""
             skip-cpp: ""
             skip-golang: "false"
+            initial-support: false
           - backend: metal
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
@@ -735,13 +735,13 @@ jobs:
     strategy:
       matrix:
         backend: [cuda, metal]
-        initial-support: [false]
         include:
           - backend: cuda
             backend_upper: CUDA
             secret_key: CUDA_PULL_KEY
             os: Linux
             runner: [self-hosted, Linux, X64, icicle]
+            initial-support: false
           - backend: metal
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
