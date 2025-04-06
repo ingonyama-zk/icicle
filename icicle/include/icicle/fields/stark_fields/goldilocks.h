@@ -214,6 +214,8 @@ namespace goldilocks {
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField to_montgomery(const GoldilocksField& xs)
     {
+      GoldilocksField t = GoldilocksField{CONFIG::montgomery_r};
+
       return xs * GoldilocksField{CONFIG::montgomery_r};
     }
 
@@ -247,7 +249,18 @@ namespace goldilocks {
        {0x00000001, 0x00000000},
        {0xffffffff, 0x00000000},
        {0x00000001, 0xfffffffe}}};
-    PARAMS(modulus)
+  static constexpr unsigned limbs_count = 2;  
+  static constexpr unsigned modulus_bit_count = 64; 
+  static constexpr storage<limbs_count> zero = {};   
+  static constexpr storage<limbs_count> one = {1};  
+  static constexpr storage<limbs_count> neg_modulus = {0xffffffff, 0x00000000};
+  static constexpr storage<limbs_count> montgomery_r = {0xffffffff, 0x00000000};
+  static constexpr storage<limbs_count> montgomery_r_inv = {0x00000001, 0xfffffffe};
+  // The next 4 parameters are unused and are only needed for compilation:
+  static constexpr storage<limbs_count> modulus_2 = {0x00000000, 0x00000000};
+  static constexpr storage<limbs_count> modulus_4 = {0x00000000, 0x00000000};
+  static constexpr storage<limbs_count> m = {0x00000000, 0x00000000};
+  static constexpr unsigned num_of_reductions = 0;
     MOD_SQR_SUBS()
     static constexpr storage_array<mod_subs_count, 2 * limbs_count + 2> mod_subs = {
       {{0x7fffffff, 0x00000001, 0xffffffff, 0x7fffffff, 0x00000000, 0x00000000},
