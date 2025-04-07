@@ -90,6 +90,7 @@ max_s = n<<(l+1-p.bit_length())
 lu = [0]
 # This calculates and prints the parameters for storage_array<mod_subs_count, 2 * limbs_count + 2> mod_subs
 print("mod_subs:")
+num_to_limbs(0,32, 2*tlc+2) # for now we have the first entry as 0, remove this if we optimize the code in icicle
 for s in range(1,max_s):
     a = (s<<(p_bits-1))//p
     lu.append(a*p)
