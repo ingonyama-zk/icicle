@@ -124,71 +124,82 @@ mod tests {
     }
 
     #[test]
-    fn test_device_to_device_copy() {
+    fn test_copy() {
         initialize();
         test_utilities::test_set_main_device();
 
         let input = vec![1, 2, 3, 4];
+        let input2 = vec![0; input.len()];
         let mut output = vec![0; input.len()];
         assert_ne!(input, output);
+        let h_input = HostSlice::from_slice(&input);
+        let h_input2 = HostSlice::from_slice(&input2);
 
-        // Copy from host to first device
-        let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
-        d_mem1
-            .copy_from_host(HostSlice::from_slice(&input))
-            .unwrap();
-
-        // Copy from first device to second device
-        let mut d_mem2 = DeviceVec::device_malloc(input.len()).unwrap();
-        d_mem2
-            .copy(&d_mem1)
-            .unwrap();
-
-        // Copy back to host and verify
-        d_mem2
-            .copy_to_host(HostSlice::from_mut_slice(&mut output))
-            .unwrap();
-        assert_eq!(input, output);
+        // H -> D -> D -> H
+        {
+            let h_output = HostSlice::from_mut_slice(&mut output);
+    
+            let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
+            d_mem1.copy(h_input).unwrap();
+    
+            let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
+            d_mem2.copy(&d_mem1).unwrap();
+    
+            h_output.copy(&d_mem2).unwrap();
+            assert_eq!(input, output);
+        }
+    
+        // H -> H
+        {
+            let h_output = HostSlice::from_mut_slice(&mut output);
+            h_output.copy(h_input2).unwrap();
+            assert_eq!(input2, output);
+        }
     }
 
     #[test]
-    fn test_device_to_device_copy_async() {
+    fn test_copy_async() {
         initialize();
         test_utilities::test_set_main_device();
 
         let input = vec![1, 2, 3, 4];
+        let input2 = vec![0; input.len()];
         let mut output = vec![0; input.len()];
         assert_ne!(input, output);
+        let h_input = HostSlice::from_slice(&input);
+        let h_input2 = HostSlice::from_slice(&input2);
 
-        // Create stream for async operations
-        let mut stream = IcicleStream::create().unwrap();
+        // H -> D -> D -> H
+        {
+            let mut stream = IcicleStream::create().unwrap();
+            let h_output = HostSlice::from_mut_slice(&mut output);
+    
+            let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
+            d_mem1.copy_async(h_input, &stream).unwrap();
+    
+            let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
+            d_mem2.copy_async(&d_mem1, &stream).unwrap();
+    
+            h_output.copy_async(&d_mem2, &stream).unwrap();
 
-        // Copy from host to first device
-        let mut d_mem1 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
-        d_mem1
-            .copy_from_host_async(HostSlice::from_slice(&input), &stream)
-            .unwrap();
+            stream.synchronize().unwrap();
+            stream.destroy().unwrap();
 
-        // Copy from first device to second device
-        let mut d_mem2 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
-        d_mem2
-            .copy(&d_mem1)
-            .unwrap();
+            assert_eq!(input, output);
+        }
+    
+        // H -> H
+        {
+            let mut stream = IcicleStream::create().unwrap();
+            let h_output = HostSlice::from_mut_slice(&mut output);
 
-        // Copy back to host and verify
-        d_mem2
-            .copy_to_host_async(HostSlice::from_mut_slice(&mut output), &stream)
-            .unwrap();
+            h_output.copy_async(h_input2, &stream).unwrap();
 
-        // Synchronize and cleanup
-        stream
-            .synchronize()
-            .unwrap();
-        stream
-            .destroy()
-            .unwrap();
+            stream.synchronize().unwrap();
+            stream.destroy().unwrap();
 
-        assert_eq!(input, output);
+            assert_eq!(input2, output);
+        }
     }
 
     #[test]

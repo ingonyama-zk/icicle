@@ -53,40 +53,22 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
     }
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        let on_device = src.is_on_device();
-
-        if on_device {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
-            }
-        } else {
-            //TODO: emirsoyturk add checks
-            let size = src.len();
-            unsafe {
-                std::ptr::copy_nonoverlapping(src.as_ptr(), self.as_mut_ptr(), size);
-            }
-            Ok(())
+        //TODO: emirsoyturk add checks
+        let min_len = core::cmp::min(self.len(), src.len());
+        let size = size_of::<T>() * min_len;
+        
+        unsafe {
+            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
         }
     }
 
     fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
-        let on_device = src.is_on_device();
-
-        if on_device {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
-            }
-        } else {
-            //TODO: emirsoyturk add checks
-            let size = src.len();
-            unsafe {
-                std::ptr::copy_nonoverlapping(src.as_ptr(), self.as_mut_ptr(), size);
-            }
-            Ok(())
+        //TODO: emirsoyturk add checks
+        let min_len = core::cmp::min(self.len(), src.len());
+        let size = size_of::<T>() * min_len;
+        
+        unsafe {
+            runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
         }
     }
 }
@@ -123,40 +105,22 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     }
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        let on_device = src.is_on_device();
-
-        if on_device {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
-            }
-        } else {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size)
-                    .wrap()
-            }
+        //TODO: emirsoyturk add checks
+        let min_len = core::cmp::min(self.len(), src.len());
+        let size = size_of::<T>() * min_len;
+        
+        unsafe {
+            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
         }
     }
 
     fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
-        let on_device = src.is_on_device();
-
-        if on_device {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
-            }
-        } else {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_to_device_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle)
-                    .wrap()
-            }
+        //TODO: emirsoyturk add checks
+        let min_len = core::cmp::min(self.len(), src.len());
+        let size = size_of::<T>() * min_len;
+        
+        unsafe {
+            runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
         }
     }
 }
@@ -195,40 +159,22 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
     }
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        let on_device = src.is_on_device();
-
-        if on_device {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
-            }
-        } else {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size)
-                    .wrap()
-            }
+        //TODO: emirsoyturk add checks
+        let min_len = core::cmp::min(self.len(), src.len());
+        let size = size_of::<T>() * min_len;
+        
+        unsafe {
+            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
         }
     }
 
     fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
-        let on_device = src.is_on_device();
-
-        if on_device {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
-            }
-        } else {
-            //TODO: emirsoyturk add checks
-            let size = size_of::<T>() * src.len();
-            unsafe {
-                runtime::icicle_copy_to_device_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle)
-                    .wrap()
-            }
+        //TODO: emirsoyturk add checks
+        let min_len = core::cmp::min(self.len(), src.len());
+        let size = size_of::<T>() * min_len;
+        
+        unsafe {
+            runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
         }
     }
 }
