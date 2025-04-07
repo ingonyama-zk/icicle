@@ -58,12 +58,13 @@ public:
   }
 
   // Calculate the optimal number of workers based on the problem size, config and machine parameters.
-  static unsigned get_optimal_nof_workers(const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor) {
-    
+  static unsigned get_optimal_nof_workers(
+    const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor)
+  {
     uint32_t nof_cores = config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
-                        ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
-                        :                                    // number of threads provided by config
-                        std::thread::hardware_concurrency(); // check machine properties
+                           ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                           :                                    // number of threads provided by config
+                           std::thread::hardware_concurrency(); // check machine properties
     if (nof_cores <= 0) {
       ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
       nof_cores = 1;
@@ -75,11 +76,15 @@ public:
   }
 
   // Calculate the optimal C based on the problem size, config and machine parameters.
-  static unsigned get_optimal_c(const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor, const uint32_t m_nof_workers) {
+  static unsigned get_optimal_c(
+    const MSMConfig& config,
+    const int msm_size,
+    const uint32_t scalar_size,
+    const uint32_t precompute_factor,
+    const uint32_t m_nof_workers)
+  {
     // TBD: optimize - condsider nof workers, do experiments
-    if (config.c > 0) {
-      return config.c;
-    }
+    if (config.c > 0) { return config.c; }
 
     // place here the DT logic
     unsigned optimal_c = std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
@@ -129,7 +134,6 @@ private:
 
     // phase 1 properties
     m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers);
-
 
     m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
