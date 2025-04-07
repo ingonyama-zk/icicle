@@ -419,7 +419,7 @@ namespace host_math {
    * will cause only 1 reduction to be performed.
    */
   template <unsigned NLIMBS, unsigned SLACK_BITS, unsigned NOF_REDUCTIONS>
-  static constexpr storage<NLIMBS> barrett_reduce(
+  static constexpr HOST_INLINE storage<NLIMBS> barrett_reduce(
     const storage<2 * NLIMBS>& xs,
     const storage<NLIMBS>& ms,
     const storage<NLIMBS>& mod1,
