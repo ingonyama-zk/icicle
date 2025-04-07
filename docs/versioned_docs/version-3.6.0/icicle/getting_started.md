@@ -171,3 +171,53 @@ func LoadBackend(path string, isRecursive bool) EIcicleError
 ```
 - **`path`**: The directory where the backend libraries are located.
 - **`isRecursive`**: If `true`, the function will search for backend libraries recursively within the specified path.
+
+## Accessing ICICLE with AI Assistants
+
+ICICLE supports [GitMCP](https://github.com/idosal/git-mcp), a tool that exposes public GitHub repositories as Model Context Protocol.
+This allows AI assistants (like Claude or Cursor) to understand and interact with the ICICLE codebase in natural language — no special setup required.
+
+### How to Use
+
+MCP Server URL (https://gitmcp.io//ingonyama-zk/icicle)
+
+Just paste the following link into your preferred AI assistant:
+
+**Cursor**
+
+   To add this MCP to Cursor, update your ~/.cursor/mcp.json:
+   ```Cursor 
+   {
+     "mcpServers": {
+       "icicle Docs": {
+         "url": "https://gitmcp.io//ingonyama-zk/icicle"
+       }
+     }
+   }
+```
+
+
+**Claude Desktop**
+
+   To add this MCP to Claude Desktop, update your claude_desktop_config.json:
+   ```Claud Desktop 
+   
+   {
+     "mcpServers": {
+       "icicle Docs": {
+         "command": "npx",
+         "args": [
+           "mcp-remote",
+           "https://gitmcp.io//ingonyama-zk/icicle"
+         ]
+       }
+     }
+   }
+```
+
+  :::tip
+You can now ask things like:
+   - How do I build Icicle frontend?
+   - What do I need to include in my cpp code from ICICLE to run async on-device msm?
+Get clear answers that are based on the real code and docs
+  :::
