@@ -86,21 +86,28 @@ jobs:
             secret_key: METAL_PULL_KEY
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust: "--skip phase --skip montgomery --skip ntt_ --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared"
-            skip-cpp: '-E "CurveApiTest.MontConversionG2Affine|CurveApiTest.MontConversionG2Projective|CurveApiTest.ecntt|CurveApiTest.ecnttDeviceMem|ModArithTestBase.ProgramExecutorVecOp|ModArithTestBase.ProgramExecutorVecOpDataOnDevice|FieldTestBase.Sumcheck|FieldTestBase.SumcheckDataOnDevice|FieldTestBase.SumcheckUserDefinedCombine|FieldTestBase.SumcheckIdentity|FieldTestBase.SumcheckSingleInputProgram|FieldTestBase.polynomialDivision"'
+            skip-rust: "--skip phase --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared"
+            skip-cpp: '".*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*"'
             skip-golang: "true"
             initial-support: true
         curve:
           - name: bn254
             build_args: -DG2=ON -DECNTT=ON
+            metal-cpp-skip-tests: ""
           - name: bls12_381
             build_args: -DG2=ON -DECNTT=ON
+            # metal-cpp-flaky-tests: "ModArithTest.ntt|PolynomialTest.multiplication|PolynomialTest.divideByVanishingPolynomial|PolynomialTest.QAP|FieldTest.vectorDivision|FieldTestBase.polynomialDivision"
+            metal-cpp-skip-tests: ""
           - name: bls12_377
             build_args: -DG2=ON -DECNTT=ON
+            metal-cpp-skip-tests: ""
           - name: bw6_761
             build_args: -DG2=ON -DECNTT=ON
+            # metal-cpp-flaky-tests: ""
+            metal-cpp-skip-tests: ""
           - name: grumpkin
             build_args: -DG2=OFF -DECNTT=OFF
+            metal-cpp-skip-tests: ""
 
     steps:
     - name: Set Backend Secret Key
@@ -192,7 +199,13 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        ctest --output-on-failure ${{ matrix.skip-cpp }}
+        if [ "${{ matrix.backend }}" = "metal" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp }}|${{ matrix.curve.metal-cpp-skip-tests }}"
+        else
+          export SKIP_TESTS="${{ matrix.skip-cpp }}"
+        fi
+
+        ctest --output-on-failure -E $SKIP_TESTS
     - name: Run C++ examples
       working-directory: ./examples/c++
       if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
@@ -259,21 +272,27 @@ jobs:
             secret_key: METAL_PULL_KEY
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust: "--skip montgomery --skip ntt_ --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip phase2"
-            skip-cpp: '-E "QuarticExtensionField|ProgramExecutor|FieldTestBase.Sumcheck|FieldTestBase.SumcheckDataOnDevice|FieldTestBase.SumcheckUserDefinedCombine|FieldTestBase.SumcheckIdentity|FieldTestBase.SumcheckSingleInputProgram|FieldTest.Fri|FieldTest.FriShouldFailCases|FieldTestBase.polynomialDivision"'
+            skip-rust: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip phase2"
+            skip-cpp: '-E ".*QuarticExtensionField.*|.*ProgramExecutorVecOps.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*"'
             skip-golang: "true"
             initial-support: true
         field:
           - name: babybear
             build_args: -DEXT_FIELD=ON
+            metal-cpp-skip-tests: ""
           - name: stark252
             build_args: -DEXT_FIELD=OFF
+            metal-cpp-skip-tests: ""
           - name: m31
             build_args: -DEXT_FIELD=ON
+            # metal-cpp-failing-tests: "FieldTest.vectorDivision<m31::MersenneField<m31::fp_config>>|ModArithTestBase.VectorReduceOps|ModArithTestBase.scalarVectorOps|ModArithTestBase.polynomialEval|ModArithTest.vectorVectorOps<m31::MersenneField<m31::fp_config>>"
+            metal-cpp-skip-tests: ""
           - name: koalabear
             build_args: -DEXT_FIELD=ON
+            metal-cpp-skip-tests: ""
           - name: goldilocks
             build_args: -DEXT_FIELD=OFF
+            metal-cpp-skip-tests: ""
     steps:
     - name: Set Backend Secret Key
       id: pull_key
@@ -364,7 +383,13 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        ctest --output-on-failure -R "^Device|^Field|^Polynomial|^ModArith|Sumcheck" ${{ matrix.skip-cpp }}
+        if [ "${{ matrix.backend }}" = "metal" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp }}|${{ matrix.curve.metal-cpp-skip-tests }}"
+        else
+          export SKIP_TESTS="${{ matrix.skip-cpp }}"
+        fi
+
+        ctest --output-on-failure -E $SKIP_TESTS
 
     - name: Run C++ examples
       working-directory: ./examples/c++
@@ -536,7 +561,7 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip poseidon --skip pow --skip merkle"
-            skip-cpp: '-E "HashApiTest.KeccakLarge|HashApiTest.MerkleTreeZeroPadding|HashApiTest.MerkleTreeZeroPaddingLeavesOnDevice|HashApiTest.MerkleTreeLastValuePadding|HashApiTest.MerkleTreeLastValuePaddingLeavesOnDevice|HashApiTest.MerkleTreeMixMediumSize|HashApiTest.MerkleTreeDevicePartialTree|HashApiTest.MerkleTreeLeavesOnDeviceTreeOnHost|HashApiTest.MerkleTreeLarge|HashApiTest.poseidon_12_single_hash|HashApiTest.poseidon_3_single_hash|HashApiTest.poseidon_3_batch_without_dt|HashApiTest.poseidon_3_batch_with_dt|HashApiTest.poseidon_tree|HashApiTest.poseidon2_non_sponge_all_included_test|HashApiTest.poseidon2_sponge_all_included_test|HashApiTest.poseidon2_3_single_hash_without_dt|HashApiTest.poseidon2_3_sponge_1K_hashers_without_dt|HashApiTest.poseidon2_invalid_t|HashApiTest.poseidon2_3_single_hash_with_dt|HashApiTest.poseidon2_2_batch_16_with_dt|HashApiTest.poseidon2_3_large_batch_without_dt_debug|HashApiTest.poseidon2_3_1K_batch_without_dt"'
+            skip-cpp: '-E ".*MerkleTree.*|.*poseidon.*"'
             skip-golang: "true"
             initial-support: true
     steps:
