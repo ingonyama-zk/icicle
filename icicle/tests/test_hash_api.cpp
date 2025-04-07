@@ -1403,7 +1403,7 @@ TEST_F(HashApiTest, poseidon2_4_sponge_1_hasher_without_dt_with_padding)
   auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
   run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
   // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
-    // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
+  // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_4_sponge_1_hasher_without_dt_with_padding
 
