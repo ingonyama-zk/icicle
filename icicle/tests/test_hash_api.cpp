@@ -147,11 +147,8 @@ TEST_F(HashApiTest, Keccak256Batch)
 TEST_F(HashApiTest, KeccakLarge)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 8;
-  ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
-  config.ext = &ext;
-  const unsigned chunk_size = 1 << 13; // 8KB chunks
+  config.batch = 1 << 13;
+  const unsigned chunk_size = 1 << 11; // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
   randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
@@ -195,14 +192,60 @@ TEST_F(HashApiTest, KeccakLarge)
   ICICLE_CHECK(icicle_free(d_output));
 }
 
+TEST_F(HashApiTest, Sha3Large)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 13;
+  const unsigned chunk_size = 1 << 11; // 2KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  auto Sha3CPU = Sha3_256::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(Sha3CPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU Sha3 large time", true);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto Sha3MainDev = Sha3_256::create();
+
+  // test with host memory
+  START_TIMER(mainDev_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(Sha3MainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev Keccak large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(mainDev_timer_device_mem);
+  // ICICLE_CHECK(keccakMainDev.hash(d_input, chunk_size, config, d_output));
+  ICICLE_CHECK(Sha3MainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev Sha3 large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
+}
+
 TEST_F(HashApiTest, Blake2sLarge)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 8;
-  ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
-  config.ext = &ext;
-  const unsigned chunk_size = 1 << 13; // 8KB chunks
+  config.batch = 1 << 13;
+  const unsigned chunk_size = 1 << 11; // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
   randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
@@ -249,7 +292,7 @@ TEST_F(HashApiTest, Blake2sLarge)
 TEST_F(HashApiTest, Blake3Large)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 8;
+  config.batch = 1 << 13;
   ConfigExtension ext;
   ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
   config.ext = &ext;
