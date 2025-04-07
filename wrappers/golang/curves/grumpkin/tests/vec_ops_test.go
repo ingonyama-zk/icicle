@@ -7,6 +7,7 @@ import (
 	grumpkin "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/grumpkin"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/grumpkin/vecOps"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -76,14 +77,17 @@ func testGrumpkinSum(suite *suite.Suite) {
 	cfg := core.DefaultVecOpsConfig()
 	cfg.BatchSize = int32(batchSize)
 
-	vecOps.SumScalars(a, result, cfg)
+	// CPU run
+	test_helpers.ActivateReferenceDevice()
+	vecOps.ReductionVecOp(a, result, cfg, core.Sum)
 
-	// Test with device memory
+	// Cuda run
+	test_helpers.ActivateMainDevice()
 	var dA, dResult core.DeviceSlice
 	a.CopyToDevice(&dA, true)
 	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
 
-	vecOps.SumScalars(dA, dResult, cfg)
+	vecOps.ReductionVecOp(dA, dResult, cfg, core.Sum)
 	result2.CopyFromDevice(&dResult)
 
 	suite.Equal(result, result2)
@@ -100,14 +104,17 @@ func testGrumpkinProduct(suite *suite.Suite) {
 	cfg := core.DefaultVecOpsConfig()
 	cfg.BatchSize = int32(batchSize)
 
-	vecOps.ProductScalars(a, result, cfg)
+	// CPU run
+	test_helpers.ActivateReferenceDevice()
+	vecOps.ReductionVecOp(a, result, cfg, core.Product)
 
-	// Test with device memory
+	// Cuda run
+	test_helpers.ActivateMainDevice()
 	var dA, dResult core.DeviceSlice
 	a.CopyToDevice(&dA, true)
 	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
 
-	vecOps.ProductScalars(dA, dResult, cfg)
+	vecOps.ReductionVecOp(dA, dResult, cfg, core.Product)
 	result2.CopyFromDevice(&dResult)
 
 	suite.Equal(result, result2)

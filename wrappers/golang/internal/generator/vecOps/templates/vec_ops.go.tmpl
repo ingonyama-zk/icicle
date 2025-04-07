@@ -30,6 +30,24 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 	return ret
 }
 
+func ReductionVecOp(in, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.ReductionVecOp) (ret runtime.EIcicleError) {
+	inPointer, outPointer, cfgPointer, size := core.VecOpCheckReduction(in, out, &config)
+
+	cIn := (*C.scalar_t)(inPointer)
+	cOut := (*C.scalar_t)(outPointer)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cSize := (C.int)(size)
+
+	switch op {
+	case core.Sum:
+		ret = (runtime.EIcicleError)(C.{{.Field}}_vector_sum(cIn, cSize, cConfig, cOut))
+	case core.Product:
+		ret = (runtime.EIcicleError)(C.{{.Field}}_vector_product(cIn, cSize, cConfig, cOut))
+	}
+
+	return ret
+}
+
 func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, config core.VecOpsConfig) runtime.EIcicleError {
 	inPointer, _, outPointer, cfgPointer, _ := core.VecOpCheck(in, in, out, &config)
 
@@ -40,30 +58,6 @@ func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, co
 	cOut := (*C.scalar_t)(outPointer)
 
 	err := (C.{{.Field}}_matrix_transpose(cIn, cRowSize, cColumnSize, cConfig, cOut))
-	return runtime.EIcicleError(err)
-}
-
-func SumScalars(in core.HostOrDeviceSlice, result core.HostOrDeviceSlice, config core.VecOpsConfig) runtime.EIcicleError {
-	inPointer, outPointer, cfgPointer, size := core.VecOpCheckReduction(in, result, &config)
-
-	cIn := (*C.scalar_t)(inPointer)
-	cOut := (*C.scalar_t)(outPointer)
-	cConfig := (*C.VecOpsConfig)(cfgPointer)
-	cSize := (C.int)(size)
-
-	err := (C.{{.Field}}_vector_sum(cIn, cSize, cConfig, cOut))
-	return runtime.EIcicleError(err)
-}
-
-func ProductScalars(in core.HostOrDeviceSlice, result core.HostOrDeviceSlice, config core.VecOpsConfig) runtime.EIcicleError {
-	inPointer, outPointer, cfgPointer, size := core.VecOpCheckReduction(in, result, &config)
-
-	cIn := (*C.scalar_t)(inPointer)
-	cOut := (*C.scalar_t)(outPointer)
-	cConfig := (*C.VecOpsConfig)(cfgPointer)
-	cSize := (C.int)(size)
-
-	err := (C.{{.Field}}_vector_product(cIn, cSize, cConfig, cOut))
 	return runtime.EIcicleError(err)
 }
 

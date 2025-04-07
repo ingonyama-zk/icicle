@@ -16,6 +16,13 @@ const (
 	Mul
 )
 
+type ReductionVecOp int
+
+const (
+	Sum ReductionVecOp = iota
+	Product
+)
+
 type VecOpsConfig struct {
 	/// Specifies the stream (queue) to use for async execution.
 	StreamHandle runtime.Stream
