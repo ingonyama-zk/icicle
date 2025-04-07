@@ -1,6 +1,5 @@
 #pragma once
 
-// #define GOLDI_MATH
 #include "icicle/math/storage.h"
 #include "icicle/fields/field.h"
 #include "icicle/fields/quartic_extension.h"
