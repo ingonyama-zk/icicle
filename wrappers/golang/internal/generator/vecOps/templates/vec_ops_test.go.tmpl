@@ -5,7 +5,9 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"
-	{{if eq .FieldPrefix "Extension"}}{{.SecondField}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.SecondImportPath}}"{{end}}
+	{{- if eq .FieldPrefix "Extension" }}
+	{{ .SecondField }} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{ .SecondImportPath }}"
+	{{- end }}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/vecOps"
 	"github.com/stretchr/testify/suite"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"

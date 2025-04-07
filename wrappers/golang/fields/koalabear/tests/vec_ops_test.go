@@ -5,7 +5,6 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	koalabear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear"
-
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear/vecOps"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"

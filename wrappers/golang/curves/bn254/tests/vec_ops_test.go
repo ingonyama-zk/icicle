@@ -5,7 +5,6 @@ import (
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
-
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/vecOps"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
