@@ -21,6 +21,7 @@ pub trait HostOrDeviceSlice<T> {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError>;
+    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError>;
 }
 
 impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
@@ -59,6 +60,25 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             let size = size_of::<T>() * src.len();
             unsafe {
                 runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
+            }
+        } else {
+            //TODO: emirsoyturk add checks
+            let size = src.len();
+            unsafe {
+                std::ptr::copy_nonoverlapping(src.as_ptr(), self.as_mut_ptr(), size);
+            }
+            Ok(())
+        }
+    }
+
+    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
+        let on_device = src.is_on_device();
+
+        if on_device {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
             }
         } else {
             //TODO: emirsoyturk add checks
@@ -120,6 +140,25 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
             }
         }
     }
+
+    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
+        let on_device = src.is_on_device();
+
+        if on_device {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
+            }
+        } else {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_to_device_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle)
+                    .wrap()
+            }
+        }
+    }
 }
 
 // Note: Implementing the trait for DeviceVec such that functions expecting DeviceSlice reference can take a HostOrDeviceSlice reference without being a breaking change.
@@ -169,6 +208,25 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
             let size = size_of::<T>() * src.len();
             unsafe {
                 runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size)
+                    .wrap()
+            }
+        }
+    }
+
+    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
+        let on_device = src.is_on_device();
+
+        if on_device {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
+            }
+        } else {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_to_device_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle)
                     .wrap()
             }
         }
