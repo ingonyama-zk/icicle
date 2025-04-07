@@ -21,7 +21,11 @@ pub trait HostOrDeviceSlice<T> {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError>;
-    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError>;
+    fn copy_async(
+        &mut self,
+        src: &(impl HostOrDeviceSlice<T> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), eIcicleError>;
 }
 
 impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
@@ -56,19 +60,27 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         //TODO: emirsoyturk add checks
         let min_len = core::cmp::min(self.len(), src.len());
         let size = size_of::<T>() * min_len;
-        
-        unsafe {
-            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
-        }
+
+        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
     }
 
-    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
+    fn copy_async(
+        &mut self,
+        src: &(impl HostOrDeviceSlice<T> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
         let min_len = core::cmp::min(self.len(), src.len());
         let size = size_of::<T>() * min_len;
-        
+
         unsafe {
-            runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
+            runtime::icicle_copy_async(
+                self.as_mut_ptr() as *mut c_void,
+                src.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+            .wrap()
         }
     }
 }
@@ -108,19 +120,27 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         //TODO: emirsoyturk add checks
         let min_len = core::cmp::min(self.len(), src.len());
         let size = size_of::<T>() * min_len;
-        
-        unsafe {
-            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
-        }
+
+        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
     }
 
-    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
+    fn copy_async(
+        &mut self,
+        src: &(impl HostOrDeviceSlice<T> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
         let min_len = core::cmp::min(self.len(), src.len());
         let size = size_of::<T>() * min_len;
-        
+
         unsafe {
-            runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
+            runtime::icicle_copy_async(
+                self.as_mut_ptr() as *mut c_void,
+                src.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+            .wrap()
         }
     }
 }
@@ -162,19 +182,27 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
         //TODO: emirsoyturk add checks
         let min_len = core::cmp::min(self.len(), src.len());
         let size = size_of::<T>() * min_len;
-        
-        unsafe {
-            runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
-        }
+
+        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
     }
 
-    fn copy_async(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized), stream: &IcicleStream) -> Result<(), eIcicleError> {
+    fn copy_async(
+        &mut self,
+        src: &(impl HostOrDeviceSlice<T> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
         let min_len = core::cmp::min(self.len(), src.len());
         let size = size_of::<T>() * min_len;
-        
+
         unsafe {
-            runtime::icicle_copy_async(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size, stream.handle).wrap()
+            runtime::icicle_copy_async(
+                self.as_mut_ptr() as *mut c_void,
+                src.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+            .wrap()
         }
     }
 }

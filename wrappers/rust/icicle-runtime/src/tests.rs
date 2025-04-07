@@ -138,21 +138,29 @@ mod tests {
         // H -> D -> D -> H
         {
             let h_output = HostSlice::from_mut_slice(&mut output);
-    
+
             let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
-            d_mem1.copy(h_input).unwrap();
-    
+            d_mem1
+                .copy(h_input)
+                .unwrap();
+
             let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
-            d_mem2.copy(&d_mem1).unwrap();
-    
-            h_output.copy(&d_mem2).unwrap();
+            d_mem2
+                .copy(&d_mem1)
+                .unwrap();
+
+            h_output
+                .copy(&d_mem2)
+                .unwrap();
             assert_eq!(input, output);
         }
-    
+
         // H -> H
         {
             let h_output = HostSlice::from_mut_slice(&mut output);
-            h_output.copy(h_input2).unwrap();
+            h_output
+                .copy(h_input2)
+                .unwrap();
             assert_eq!(input2, output);
         }
     }
@@ -173,30 +181,46 @@ mod tests {
         {
             let mut stream = IcicleStream::create().unwrap();
             let h_output = HostSlice::from_mut_slice(&mut output);
-    
-            let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
-            d_mem1.copy_async(h_input, &stream).unwrap();
-    
-            let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
-            d_mem2.copy_async(&d_mem1, &stream).unwrap();
-    
-            h_output.copy_async(&d_mem2, &stream).unwrap();
 
-            stream.synchronize().unwrap();
-            stream.destroy().unwrap();
+            let mut d_mem1 = DeviceVec::device_malloc(input.len()).unwrap();
+            d_mem1
+                .copy_async(h_input, &stream)
+                .unwrap();
+
+            let mut d_mem2 = DeviceVec::device_malloc(input.len() * 5).unwrap();
+            d_mem2
+                .copy_async(&d_mem1, &stream)
+                .unwrap();
+
+            h_output
+                .copy_async(&d_mem2, &stream)
+                .unwrap();
+
+            stream
+                .synchronize()
+                .unwrap();
+            stream
+                .destroy()
+                .unwrap();
 
             assert_eq!(input, output);
         }
-    
+
         // H -> H
         {
             let mut stream = IcicleStream::create().unwrap();
             let h_output = HostSlice::from_mut_slice(&mut output);
 
-            h_output.copy_async(h_input2, &stream).unwrap();
+            h_output
+                .copy_async(h_input2, &stream)
+                .unwrap();
 
-            stream.synchronize().unwrap();
-            stream.destroy().unwrap();
+            stream
+                .synchronize()
+                .unwrap();
+            stream
+                .destroy()
+                .unwrap();
 
             assert_eq!(input2, output);
         }
