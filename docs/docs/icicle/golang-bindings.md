@@ -104,7 +104,7 @@ go test <path_to_curve_or_field> -count=1
 
 ## How do Golang bindings work?
 
-The golang packages are binded to the libraries produced from compiling ICICLE using cgo.
+The golang packages are bound to the libraries produced from compiling ICICLE using cgo.
 
 1. These libraries (named `libicicle_curve_<curve>.a` and `libicicle_field_<curve>.a`) can be imported in your Go project to leverage the accelerated functionalities provided by ICICLE.
 
