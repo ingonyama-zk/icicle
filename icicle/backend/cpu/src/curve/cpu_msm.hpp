@@ -29,9 +29,8 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
-    // TBD: for sall size MSM - prefer double and add
+    // TBD: for small size MSM - prefer double and add
     calc_optimal_parameters();
-
     // Resize the thread buckets according to optimal parameters
     m_workers_buckets.resize(m_nof_workers);
     m_workers_buckets_busy.resize(m_nof_workers);
@@ -58,12 +57,32 @@ public:
     }
   }
 
+  // Calculate the optimal number of workers based on the problem size, config and machine parameters.
+  static unsigned get_optimal_nof_workers(const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor) {
+    
+    uint32_t nof_cores = config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
+                        ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                        :                                    // number of threads provided by config
+                        std::thread::hardware_concurrency(); // check machine properties
+    if (nof_cores <= 0) {
+      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+      nof_cores = 1;
+    }
+
+    // place here the DT logic
+    unsigned nof_workers = nof_cores;
+    return nof_workers;
+  }
+
   // Calculate the optimal C based on the problem size, config and machine parameters.
-  static unsigned get_optimal_c(unsigned msm_size, const MSMConfig& config)
-  {
+  static unsigned get_optimal_c(const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor, const uint32_t m_nof_workers) {
     // TBD: optimize - condsider nof workers, do experiments
-    int optimal_c = config.c > 0 ? config.c :                                                    // c given by config.
-                      std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
+    if (config.c > 0) {
+      return config.c;
+    }
+
+    // place here the DT logic
+    unsigned optimal_c = std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
     return optimal_c;
   }
 
@@ -104,23 +123,14 @@ private:
   // set the parameters based on the problem size and the machine properties
   void calc_optimal_parameters()
   {
-    // set nof workers
-    m_nof_workers = std::thread::hardware_concurrency();
-    if (m_config.ext && m_config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
-      m_nof_workers = m_config.ext && m_config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
-                        ? m_config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
-                        :                                    // number of threads provided by config
-                        std::thread::hardware_concurrency(); // check machine properties
-    }
-    if (m_nof_workers <= 0) {
-      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
-      m_nof_workers = 1;
-    }
+    m_precompute_factor = m_config.precompute_factor;
+    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+    m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor);
 
     // phase 1 properties
-    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-    m_c = get_optimal_c(m_msm_size, m_config);
-    m_precompute_factor = m_config.precompute_factor;
+    m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers);
+
+
     m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
     const uint64_t last_bm_size =
@@ -391,11 +401,11 @@ eIcicleError cpu_msm_precompute_bases(
   const MSMConfig& config,
   A* output_bases) // Pre assigned?
 {
-  int c = Msm<A, P>::get_optimal_c(nof_bases, config);
-
   const int precompute_factor = config.precompute_factor;
-  const bool is_mont = config.are_points_montgomery_form;
   const uint scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+  const uint32_t nof_workers = Msm<A, P>::get_optimal_nof_workers(config, nof_bases, scalar_size, precompute_factor);
+  const int c = Msm<A, P>::get_optimal_c(config, nof_bases, scalar_size, precompute_factor, nof_workers);
+  const bool is_mont = config.are_points_montgomery_form;
   const unsigned int num_bms_no_precomp = (scalar_size - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {
