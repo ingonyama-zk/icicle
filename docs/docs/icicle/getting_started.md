@@ -201,7 +201,7 @@ Just paste the following link into your preferred AI assistant:
 **Claude Desktop**
 
    To add this MCP to Claude Desktop, update your claude_desktop_config.json:
-   ```Claud Desktop 
+   ```Claude Desktop 
    
    {
      "mcpServers": {
