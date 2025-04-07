@@ -1,9 +1,14 @@
 #pragma once
 
+// #define GOLDI_MATH
 #include "icicle/math/storage.h"
 #include "icicle/fields/field.h"
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
+#ifdef __CUDACC__
+  #include "goldilocks_cuda_math.h"
+#endif // __CUDACC__
+#include "icicle/math/goldilocks_host_math.h"
 
 /*A few things to note about goldilocks field:
 1. It has no slack bits (the modulus uses the entire 64 bits of storage) meaning we need to make sure there is no
