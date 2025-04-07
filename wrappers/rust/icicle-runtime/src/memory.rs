@@ -20,6 +20,7 @@ pub trait HostOrDeviceSlice<T> {
     unsafe fn as_mut_ptr(&mut self) -> *mut T;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
+    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError>;
 }
 
 impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
@@ -45,8 +46,32 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         self.0
             .len()
     }
+
     fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
+        let on_device = src.is_on_device();
+
+        if on_device {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
+            }
+        } else {
+            //TODO: emirsoyturk add checks
+            let size = src.len();
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    src.as_ptr(),
+                    self.as_mut_ptr(),
+                    size,
+                );
+            }
+            Ok(())
+        }
     }
 }
 
@@ -76,8 +101,28 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         self.0
             .len()
     }
+
     fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
+        let on_device = src.is_on_device();
+
+        if on_device {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
+            }
+        } else {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size)
+                    .wrap()
+            }
+        }
     }
 }
 
@@ -112,6 +157,25 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
     fn is_empty(&self) -> bool {
         // Forward to the dereferenced DeviceSlice
         (&**self).is_empty()
+    }
+
+    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
+        let on_device = src.is_on_device();
+
+        if on_device {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap()
+            }
+        } else {
+            //TODO: emirsoyturk add checks
+            let size = size_of::<T>() * src.len();
+            unsafe {
+                runtime::icicle_copy_to_device(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size)
+                    .wrap()
+            }
+        }
     }
 }
 
@@ -235,54 +299,6 @@ impl<T> DeviceSlice<T> {
             runtime::icicle_copy_to_host_async(
                 val.as_mut_ptr() as *mut c_void,
                 self.as_ptr() as *const c_void,
-                size,
-                stream.handle,
-            )
-            .wrap()
-        }
-    }
-
-    pub fn copy_from_device(&mut self, val: &DeviceSlice<T>) -> Result<(), eIcicleError> {
-        assert!(
-            self.len() == val.len(),
-            "In copy from device, destination and source slices have different lengths"
-        );
-
-        if self.is_empty() {
-            return Ok(());
-        }
-        if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
-        }
-        if !val.is_on_active_device() {
-            panic!("source is not allocated on an active device");
-        }
-
-        let size = size_of::<T>() * self.len();
-        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, val.as_ptr() as *const c_void, size).wrap() }
-    }
-
-    pub fn copy_from_device_async(&mut self, val: &DeviceSlice<T>, stream: &IcicleStream) -> Result<(), eIcicleError> {
-        assert!(
-            self.len() == val.len(),
-            "In copy from device, destination and source slices have different lengths"
-        );
-
-        if self.is_empty() {
-            return Ok(());
-        }
-        if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
-        }
-        if !val.is_on_active_device() {
-            panic!("source is not allocated on an active device");
-        }
-
-        let size = size_of::<T>() * self.len();
-        unsafe {
-            runtime::icicle_copy_async(
-                self.as_mut_ptr() as *mut c_void,
-                val.as_ptr() as *const c_void,
                 size,
                 stream.handle,
             )

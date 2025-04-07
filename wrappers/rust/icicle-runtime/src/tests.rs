@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::config::ConfigExtension;
-    use crate::memory::{DeviceVec, HostSlice};
+    use crate::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
     use crate::stream::IcicleStream;
     use crate::test_utilities;
     use crate::*;
@@ -141,7 +141,7 @@ mod tests {
         // Copy from first device to second device
         let mut d_mem2 = DeviceVec::device_malloc(input.len()).unwrap();
         d_mem2
-            .copy_from_device(&d_mem1)
+            .copy(&d_mem1)
             .unwrap();
 
         // Copy back to host and verify
@@ -172,7 +172,7 @@ mod tests {
         // Copy from first device to second device
         let mut d_mem2 = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
         d_mem2
-            .copy_from_device_async(&d_mem1, &stream)
+            .copy(&d_mem1)
             .unwrap();
 
         // Copy back to host and verify
