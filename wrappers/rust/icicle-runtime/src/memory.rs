@@ -64,11 +64,7 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             //TODO: emirsoyturk add checks
             let size = src.len();
             unsafe {
-                std::ptr::copy_nonoverlapping(
-                    src.as_ptr(),
-                    self.as_mut_ptr(),
-                    size,
-                );
+                std::ptr::copy_nonoverlapping(src.as_ptr(), self.as_mut_ptr(), size);
             }
             Ok(())
         }
