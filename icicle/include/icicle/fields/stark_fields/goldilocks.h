@@ -2,7 +2,6 @@
 
 #include "icicle/math/storage.h"
 #include "icicle/fields/field.h"
-#include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
 #ifdef __CUDACC__
   #include "goldilocks_cuda_math.h"
