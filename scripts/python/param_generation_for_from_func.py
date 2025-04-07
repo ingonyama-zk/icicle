@@ -73,7 +73,7 @@ for i in range(n):
 # print(s)
 print(hex(a%p))
 print(hex(s%p))
-assert(a%p == s%p) # verifing that the algorithm works
+assert(a%p == s%p) # verifying that the algorithm works
 
 # unsigned reduced_digits_count
 print("reduced_digits_count:")
