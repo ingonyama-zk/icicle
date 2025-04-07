@@ -4,6 +4,10 @@
 #include "icicle/fields/field.h"
 #include "icicle/fields/quartic_extension.h"
 #include "icicle/fields/params_gen.h"
+#ifdef __CUDACC__
+  #include "goldilocks_cuda_math.h"
+#endif // __CUDACC__
+#include "icicle/math/goldilocks_host_math.h"
 
 /*A few things to note about goldilocks field:
 1. It has no slack bits (the modulus uses the entire 64 bits of storage) meaning we need to make sure there is no
@@ -67,33 +71,13 @@ namespace goldilocks {
       return Field<CONFIG>::neg(xs);
     }
 
-    /*This function implements the addition operation. The inputs are always in the range 0 to p except for when this
-    function is called by the reduce function. In that case we can guarantee that one of the arguments is smaller than p
-    so there is no overflow when adding (-p). The output is always between 0 an p.*/
-    static HOST_DEVICE_INLINE GoldilocksField goldi_add(const GoldilocksField& xs, const GoldilocksField& ys)
-    {
-      GoldilocksField rs = {};
-      const ff_storage modulus = Field<CONFIG>::get_modulus();
-      auto carry = Field<CONFIG>::template add_limbs<TLC, true>(
-        xs.limbs_storage, ys.limbs_storage, rs.limbs_storage); // Do the addition
-      if (carry) {
-        Field<CONFIG>::template add_limbs<TLC, false>(
-          rs.limbs_storage, Field<CONFIG>::get_neg_modulus(),
-          rs.limbs_storage); // Adding (-p) effectively sutracts p in case there is a carry. This is guaranteed no to
-                             // overflow.
-      }
-      if (__builtin_expect(
-            rs.limbs_storage.limbs64[0] >= modulus.limbs64[0],
-            0)) { // reducing into the range of 0 to p because icicle does not support the expanded representation for
-                  // now.
-        rs.limbs_storage.limbs64[0] = rs.limbs_storage.limbs64[0] - modulus.limbs64[0];
-      }
-      return rs;
-    }
-
     friend HOST_DEVICE_INLINE GoldilocksField operator+(const GoldilocksField& xs, const GoldilocksField& ys)
     {
-      return goldi_add(xs, ys);
+      GoldilocksField rs = {};
+      icicle_math::goldi_add(
+        xs.limbs_storage, ys.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(),
+        rs.limbs_storage);
+      return rs;
     }
 
     friend HOST_DEVICE_INLINE GoldilocksField operator-(GoldilocksField xs, const GoldilocksField& ys)
@@ -104,25 +88,13 @@ namespace goldilocks {
 
     /*This function performs the goldilocks reduction:
     xs[63:0] + xs[95:64] * (2^32 - 1) - xs[127:96]
-    First it does the subtraction - xs[63:0] - xs[127:96] and hints the compiler that it is rare that xs[63:0] <
-    xs[127:96]. Then it adds xs[95:64] * (2^32 - 1) which is guaranteed to be smaller than p. This ensures that the
-    addition operation will not overflow. */
+     */
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
-      constexpr uint32_t gold_fact = uint32_t(-1); //(2^32 - 1)
       GoldilocksField rs = {};
-      const GoldilocksField& x_lo = *reinterpret_cast<const GoldilocksField*>(xs.limbs_storage.limbs);
-      GoldilocksField x_hi_hi = Field<CONFIG>::from(xs.limbs_storage.limbs[3]);
-      auto carry = Field<CONFIG>::template sub_limbs<TLC, true>(
-        x_lo.limbs_storage, x_hi_hi.limbs_storage, rs.limbs_storage); // xs[63:0] - xs[127:96]
-      if (__builtin_expect(carry, 0)) {
-        Field<CONFIG>::template sub_limbs<TLC, false>(
-          rs.limbs_storage, Field<CONFIG>::get_neg_modulus(), rs.limbs_storage); // cannot underflow
-      }
-      GoldilocksField x_hi_lo = {};
-      x_hi_lo.limbs_storage.limbs64[0] =
-        static_cast<uint64_t>(xs.limbs_storage.limbs[2]) * static_cast<uint64_t>(gold_fact); // xs[95:64] * (2^32 - 1)
-      return goldi_add(rs, x_hi_lo);
+      icicle_math::goldi_reduce(
+        xs.limbs_storage, Field<CONFIG>::get_modulus(), Field<CONFIG>::get_neg_modulus(), rs.limbs_storage);
+      return rs;
     }
 
     static constexpr HOST_DEVICE_INLINE GoldilocksField inverse(const GoldilocksField& x)
