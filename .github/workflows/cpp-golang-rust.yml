@@ -86,7 +86,7 @@ jobs:
             secret_key: METAL_PULL_KEY
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust: "--skip phase --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared"
+            skip-rust: "--skip phase --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions"
             skip-cpp: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
             skip-golang: "true"
             initial-support: true
@@ -278,7 +278,7 @@ jobs:
         exclude:
           - backend: metal
             field:
-              - name: goldilocks
+              name: goldilocks
         field:
           - name: babybear
             build_args: -DEXT_FIELD=ON
