@@ -20,7 +20,7 @@ pub trait HostOrDeviceSlice<T> {
     unsafe fn as_mut_ptr(&mut self) -> *mut T;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
-    
+
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
         assert!(
             self.len() >= src.len(),
