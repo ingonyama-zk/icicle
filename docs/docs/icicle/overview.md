@@ -33,7 +33,7 @@ ICICLE has been successfully integrated and used by leading cryptography compani
 
 ## Don't Have Access to a GPU?
 
-We understand that not all developers have access to GPUs—but that shouldn’t limit your ability to build with ICICLE. Here are a few ways to get access:
+We understand that not all developers have access to GPUs. With ICICLE’s support for CPU and Metal, you can still start building today. To truly experience ICICLE's acceleration, here are some ways to gain access to GPUs:
 
 ### Grants
 
@@ -41,7 +41,7 @@ At Ingonyama, we are committed to accelerating progress in ZK and cryptography. 
 
 ### Google Colab
 
-Google Colab is a great way to start experimenting with ICICLE right away. It provides free access to NVIDIA T4 GPUs—sufficient enough for prototyping and exploring ICICLE’s capabilities
+Google Colab is a great way to start experimenting with ICICLE right away. It provides free access to NVIDIA T4 GPUs—sufficient enough for prototyping and exploring ICICLE’s capabilities.
 
 For a detailed guide on setting up Google Colab with ICICLE, refer to [this article](./colab-instructions.md).
 
