@@ -241,6 +241,30 @@ impl<T> DeviceSlice<T> {
             .wrap()
         }
     }
+
+    pub fn memset(&mut self, value: u8) -> Result<(), eIcicleError> {
+        if self.is_empty() {
+            return Ok(());
+        }
+        if !self.is_on_active_device() {
+            panic!("not allocated on an inactive device");
+        }
+
+        let size = size_of::<T>() * self.len();
+        unsafe { runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, size).wrap() }
+    }
+
+    pub fn memset_async(&mut self, value: u8, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        if self.is_empty() {
+            return Ok(());
+        }
+        if !self.is_on_active_device() {
+            panic!("not allocated on an inactive device");
+        }
+
+        let size = size_of::<T>() * self.len();
+        unsafe { runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, size, stream.handle).wrap() }
+    }
 }
 
 impl<T> DeviceVec<T> {
@@ -283,6 +307,20 @@ impl<T> DeviceVec<T> {
                 count,
             )))))
         }
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut DeviceSlice<T> {
+        &mut self[..]
+    }
+
+    pub fn memset(&mut self, value: u8) -> Result<(), eIcicleError> {
+        self.as_mut_slice()
+            .memset(value)
+    }
+
+    pub fn memset_async(&mut self, value: u8, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        self.as_mut_slice()
+            .memset_async(value, stream)
     }
 }
 
