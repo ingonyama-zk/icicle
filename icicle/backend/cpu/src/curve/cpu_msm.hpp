@@ -63,9 +63,10 @@ public:
   static unsigned get_optimal_nof_workers(
     const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor)
   {
-    uint32_t nof_cores = config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS) 
-                           ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) // number of threads provided by config
-                           : std::thread::hardware_concurrency(); // check machine properties
+    uint32_t nof_cores =
+      config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
+        ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) // number of threads provided by config
+        : std::thread::hardware_concurrency();                    // check machine properties
     if (nof_cores <= 0) {
       ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
       nof_cores = 1;
