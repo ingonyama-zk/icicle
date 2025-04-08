@@ -150,7 +150,7 @@ mod tests {
                 .unwrap();
 
             h_output
-                .copy(&d_mem2)
+                .copy(&d_mem2[0..input.len()])
                 .unwrap();
             assert_eq!(input, output);
         }
@@ -193,7 +193,7 @@ mod tests {
                 .unwrap();
 
             h_output
-                .copy_async(&d_mem2, &stream)
+                .copy_async(&d_mem2[0..input.len()], &stream)
                 .unwrap();
 
             stream
