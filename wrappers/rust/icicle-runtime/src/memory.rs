@@ -57,7 +57,6 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
     }
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        //TODO: emirsoyturk add checks
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -72,7 +71,6 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         src: &(impl HostOrDeviceSlice<T> + ?Sized),
         stream: &IcicleStream,
     ) -> Result<(), eIcicleError> {
-        //TODO: emirsoyturk add checks
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -123,7 +121,6 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
     }
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        //TODO: emirsoyturk add checks
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -138,7 +135,6 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         src: &(impl HostOrDeviceSlice<T> + ?Sized),
         stream: &IcicleStream,
     ) -> Result<(), eIcicleError> {
-        //TODO: emirsoyturk add checks
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -191,7 +187,6 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
     }
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        //TODO: emirsoyturk add checks
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
@@ -206,7 +201,6 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
         src: &(impl HostOrDeviceSlice<T> + ?Sized),
         stream: &IcicleStream,
     ) -> Result<(), eIcicleError> {
-        //TODO: emirsoyturk add checks
         assert!(
             self.len() >= src.len(),
             "In copy, destination has shorter length than source"
