@@ -29,11 +29,13 @@ public:
     hash_input.reserve(2048);
     (m_round_idx == 0) ? build_hash_input_round_0(hash_input, round_poly)
                        : build_hash_input_round_i(hash_input, round_poly);
-
+    print_byte_vector("CPP: hash_input DS", hash_input);
     // hash hash_input and return alpha
     const Hash& hasher = m_transcript_config.get_hasher();
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
+    std::cout << "round: " << m_round_idx << std::endl;
+    print_byte_vector("CPP: hash_result", hash_result);
     m_round_idx++;
     m_prev_alpha = S::from(hash_result.data(), hasher.output_size());
     return m_prev_alpha;
@@ -68,6 +70,15 @@ private:
     const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
     byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
   }
+  
+  void print_byte_vector(const std::string& label, const std::vector<std::byte>& vec) {
+    std::cout << label << " (len = " << vec.size() << ") = 0x";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<int>(vec[i]); // Convert to int for printing
+    }
+    std::cout << std::dec << std::endl; // Reset to decimal for any subsequent prints
+}
 
   // round 0 hash input
   void build_hash_input_round_0(std::vector<std::byte>& hash_input, const std::vector<S>& round_poly)
@@ -76,15 +87,21 @@ private:
     // append entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
     // claimed_sum]
     append_data(hash_input, m_transcript_config.get_domain_separator_label());
+    //print_byte_vector("hash_input DS", hash_input);
     append_u32(hash_input, m_mle_polynomial_size);
+    //print_byte_vector("hash_input D||size", hash_input);
     append_u32(hash_input, m_combine_function_poly_degree);
+    //print_byte_vector("hash_input D||size||deg", hash_input);
     append_field(hash_input, m_claimed_sum);
+    //print_byte_vector("hash_input D||size||deg|claimedsum ", hash_input);
 
     // append seed_rng
     append_field(hash_input, m_transcript_config.get_seed_rng());
+    //print_byte_vector("hash_input D||size||deg|claimedsum||seedrng ", hash_input);
 
     // append round_challenge_label
     append_data(hash_input, m_transcript_config.get_round_challenge_label());
+    //print_byte_vector("hash_input D||size||deg|claimedsum||seedrng||ch_label", hash_input);
 
     // build entry_0 = [round_poly_label || r_0[x].len() || k=0 || r_0[x]]
     append_data(m_entry_0, round_poly_label);
@@ -93,9 +110,10 @@ private:
     for (const S& r_i : round_poly) {
       append_field(hash_input, r_i);
     }
-
+    print_byte_vector("CPP: entry_0", m_entry_0);
     // append entry_0
     append_data(hash_input, m_entry_0);
+    //print_byte_vector("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len||0||r0[0]||r0[1]", hash_input);
   }
 
   // round !=0 hash input

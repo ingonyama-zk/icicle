@@ -143,6 +143,7 @@ namespace icicle {
       for (int round_idx = 0; round_idx < nof_rounds - 1; round_idx++) {
         const std::vector<F>& round_poly = sumcheck_proof.get_const_round_polynomial(round_idx);
         const F alpha = sumcheck_transcript.get_alpha(round_poly);
+        std::cout << "round: " << round_idx << "  CPP alpha: " << alpha << std::endl;
         const F alpha_value = lagrange_interpolation(round_poly, alpha);
         const std::vector<F>& next_round_poly = sumcheck_proof.get_const_round_polynomial(round_idx + 1);
         F expected_alpha_value = next_round_poly[0] + next_round_poly[1];
