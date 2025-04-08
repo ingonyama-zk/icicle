@@ -72,6 +72,7 @@ public:
       nof_cores = 1;
     }
 
+    // Use decision tree to predict the optimal number of workers
     double field_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
     double field_size_to_fixed_size_ratio = field_size / FIXED_SCALAR_SIZE_CORES_TREE;
 
@@ -91,12 +92,9 @@ public:
     const uint32_t precompute_factor,
     const uint32_t m_nof_workers)
   {
-    // TBD: optimize - condsider nof workers, do experiments
     if (config.c > 0) { return config.c; }
 
-    // place here the DT logic
-    // unsigned optimal_c = std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
-
+    // Use decision tree to predict the optimal c
     double field_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
     double field_size_to_fixed_size_ratio = field_size / FIXED_SCALAR_SIZE_C_TREE;
 
