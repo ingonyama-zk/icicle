@@ -253,7 +253,6 @@ private:
   //   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   //   void phase2_collapse_segments()
   //   {
-  // //    for (int segment_idx = 0; segment_idx < m_segments.size();
   //     for (int worker_i = 0; worker_i < 10;
   //       worker_i++) { // TBD: divide the work among m_nof_workers only.
   //       // Each thread is responsible for a sinעle thread
@@ -271,7 +270,6 @@ private:
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
   {
-    //    for (int segment_idx = 0; segment_idx < m_segments.size();
     for (int segment_idx = 0; segment_idx < m_segments.size(); segment_idx++) {
       // Each thread is responsible for a sinעle thread
       m_taskflow.emplace([&, segment_idx]() {
