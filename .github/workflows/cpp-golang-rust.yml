@@ -596,7 +596,7 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
         export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_runtime -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
 
   run-rust-examples:
