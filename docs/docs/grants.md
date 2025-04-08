@@ -21,7 +21,7 @@ We’re also challenging researchers to reimplement algorithms from existing pap
 
 Applying is simple:
 
-1. [**Fill out the form:**](https://forms.monday.com/forms/d0ed9699146d61e3b5a649b56ba2c663?r=use1) Start by sharing your idea—just a quick description, e.g., “I want to implement Whir in ICICLE” (note: this one’s already taken by Giacomo).
+1. [**Fill out the form:**](https://forms.monday.com/forms/d0ed9699146d61e3b5a649b56ba2c663?r=use1) Start by sharing your idea, just a quick description, e.g., “I want to implement Whir in ICICLE” (note: this one’s already taken by Giacomo).
 2. **Collaborate:** We’ll work with you to define clear performance milestones. Expect a bit of back-and-forth to align on goals.
 3. **Approval:** Once we're aligned, we’ll greenlight the project.
 4. **Get started:** Begin your work with our support and take it to the finish line!
