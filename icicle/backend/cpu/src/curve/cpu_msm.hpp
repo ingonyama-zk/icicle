@@ -13,6 +13,8 @@
 #include "icicle/curves/projective.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
+#include "cpu_msm_tree.hpp"
+#include "icicle/decision_tree.h"
 #include "taskflow/taskflow.hpp"
 #include "icicle/backend/msm_config.h"
 #ifdef MEASURE_MSM_TIMES
@@ -87,7 +89,18 @@ public:
     if (config.c > 0) { return config.c; }
 
     // place here the DT logic
-    unsigned optimal_c = std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
+    // unsigned optimal_c = std::max((int)(0.85 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
+
+    double field_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+    double field_size_to_fixed_size_ratio = field_size / FIXED_SCALAR_SIZE_C_TREE;
+
+    double pcm = (double)config.precompute_factor;
+    double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
+    double nof_cores = (double)m_nof_workers;
+
+    double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, pcm};
+
+    unsigned optimal_c = c_tree.predict(features);
     return optimal_c;
   }
 
