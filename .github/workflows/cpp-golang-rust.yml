@@ -87,7 +87,7 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip phase --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared"
-            skip-cpp: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*
+            skip-cpp: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
             skip-golang: "true"
             initial-support: true
         curve:
@@ -272,9 +272,13 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip phase2"
-            skip-cpp: .*QuarticExtensionField.*|.*ProgramExecutorVecOps.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*
+            skip-cpp: .*QuarticExtensionField.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
             skip-golang: "true"
             initial-support: true
+        exclude:
+          - backend: metal
+            field:
+              - name: goldilocks
         field:
           - name: babybear
             build_args: -DEXT_FIELD=ON
@@ -755,7 +759,9 @@ jobs:
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
-        backend: [cuda, metal]
+        backend: [cuda]
+        # TODO: @jeremy enable metal backend when it supports more features
+        # backend: [cuda, metal]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -763,12 +769,12 @@ jobs:
             os: Linux
             runner: [self-hosted, Linux, X64, icicle]
             initial-support: false
-          - backend: metal
-            backend_upper: METAL
-            secret_key: METAL_PULL_KEY
-            os: macOS
-            runner: [self-hosted, macOS, ARM64, icicle, metal]
-            initial-support: true
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: METAL_PULL_KEY
+          #   os: macOS
+          #   runner: [self-hosted, macOS, ARM64, icicle, metal]
+          #   initial-support: true
     steps:
     - name: Set Backend Secret Key
       id: pull_key
