@@ -7,7 +7,8 @@
 #include "icicle/runtime.h"
 #include "icicle/ntt.h"
 #include "icicle/msm.h"
-#include "icicle/pairing.h"
+#include "icicle/pairings/pairing.h"
+#include "icicle/pairings/pairing_config.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
@@ -17,6 +18,7 @@
 #include "test_base.h"
 #include "icicle/utils/rand_gen.h"
 
+using namespace pairing_config;
 using namespace curve_config;
 using namespace icicle;
 
@@ -335,16 +337,13 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
   ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
 }
 
-// #ifdef PAIRING_ENABLED
-typedef PairingImpl::target_field_t TargetField;
+#ifdef PAIRING_ENABLED
+typedef PairingConfig::TargetField TargetField;
 
 TEST(CurveSanity, TargetFieldSanityTest)
 {
-  // auto a = TargetField::rand_host();
-  // auto b = TargetField::rand_host();
-
-  auto a = TargetField::from(2);
-  auto b = TargetField::from(3);
+  auto a = TargetField::rand_host();
+  auto b = TargetField::rand_host();
   auto b_inv = TargetField::inverse(b);
   auto a_neg = TargetField::neg(a);
 
@@ -354,44 +353,29 @@ TEST(CurveSanity, TargetFieldSanityTest)
   ASSERT_EQ(a + a_neg, TargetField::zero());
   ASSERT_EQ(a * TargetField::zero(), TargetField::zero());
   ASSERT_EQ(b * b_inv, TargetField::one());
-
-  // auto p = b_inv * b_inv;
-  // auto q = TargetField::from(3);
-
-  std::cout << b_inv << std::endl;
-  std::cout << a << std::endl;
-  std::cout << a_neg << std::endl;
-  std::cout << b_inv * a_neg << std::endl;
-  // ASSERT_EQ(a * scalar_t::from(2), a + a);
 }
 
-TEST(CurveSanity, PrepareQTest)
-{
-  g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
-  auto coeffs = PairingImpl::prepare_q(q);
-
-  std::cout << "Coefficients from prepare_q:" << std::endl;
-  for (size_t i = 0; i < coeffs.size(); i++) {
-    std::cout << coeffs[i] << std::endl;
-  }
-}
-
-TEST(CurveSanity, OptMillerLoopTest)
+TEST(CurveSanity, MillerLoopTest)
 {
   // Create generator points
   affine_t p = projective_t::to_affine(projective_t::generator());
   g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
 
   // Prepare Q coefficients
-  auto coeffs = PairingImpl::prepare_q(q);
+  auto coeffs = prepare_q<PairingConfig>(q);
+
+  // std::cout << "Coefficients from prepare_q:" << std::endl;
+  // for (size_t i = 0; i < coeffs.size(); i++) {
+  //   std::cout << coeffs[i] << std::endl;
+  // }
 
   // Run Miller loop
-  auto result = PairingImpl::opt_miller_loop(p, coeffs);
+  auto result = miller_loop<PairingConfig>(p, coeffs);
 
   std::cout << "Result from opt_miller_loop:" << std::endl;
   std::cout << result << std::endl;
 
-  PairingImpl::final_exponentiation(result);
+  final_exponentiation<PairingConfig>(result);
   std::cout << result << std::endl;
 }
 
@@ -404,15 +388,15 @@ TEST(CurveSanity, PairingBilinearityTest)
   g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
   scalar_t s = scalar_t::from(2);
 
-  PairingImpl::target_field_t f1, f2, f3, f4;
+  TargetField f1, f2, f3, f4;
 
   affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
   g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
 
-  pairing<affine_t, g2_affine_t, PairingImpl>(ps, q, &f1);
-  pairing<affine_t, g2_affine_t, PairingImpl>(p, qs, &f2);
-  pairing<affine_t, g2_affine_t, PairingImpl>(p, q, &f3);
-  pairing<affine_t, g2_affine_t, PairingImpl>(ps, qs, &f4);
+  pairing<affine_t, g2_affine_t, PairingConfig>(ps, q, &f1);
+  pairing<affine_t, g2_affine_t, PairingConfig>(p, qs, &f2);
+  pairing<affine_t, g2_affine_t, PairingConfig>(p, q, &f3);
+  pairing<affine_t, g2_affine_t, PairingConfig>(ps, qs, &f4);
 
   std::cout << f1.c0.c0.c0 << std::endl << std::endl;
   std::cout << f2.c0.c0.c0 << std::endl << std::endl;
@@ -433,18 +417,18 @@ TEST(CurveSanity, FinalExponentiationTest)
       {point_field_t::from(15), point_field_t::from(15)},
       {point_field_t::from(15), point_field_t::from(15)},
     }};
-  PairingImpl::final_exponentiation(f);
+  final_exponentiation<PairingConfig>(f);
   std::cout << f << std::endl;
   // for (int i = 0; i < 10; i++) {
   //   TargetField f = TargetField::rand_host();
-  //   PairingImpl::final_exponentiation(f);
-  //   TargetField f_prime = TargetField::pow(f, PairingImpl::RPRIME);
-  //   f = TargetField::pow(f, PairingImpl::R);
+  //   PairingConfig::final_exponentiation(f);
+  //   TargetField f_prime = TargetField::pow(f, PairingConfig::RPRIME);
+  //   f = TargetField::pow(f, PairingConfig::R);
   //   ASSERT_EQ(f, TargetField::one());
   //   ASSERT_NE(f_prime, TargetField::one());
   // }
 }
-// #endif
+#endif
 
 TYPED_TEST(CurveSanity, ScalarMultTest)
 {
