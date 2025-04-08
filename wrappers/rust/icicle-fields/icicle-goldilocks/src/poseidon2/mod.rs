@@ -10,4 +10,4 @@ pub(crate) mod tests {
     use icicle_core::poseidon2::tests::*;
 
     impl_poseidon2_tests!(ScalarField);
-} 
+}
