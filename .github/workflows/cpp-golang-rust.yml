@@ -208,6 +208,8 @@ jobs:
             build_args: -DEXT_FIELD=ON
           - name: koalabear
             build_args: -DEXT_FIELD=ON
+          - name: goldilocks
+            build_args: -DEXT_FIELD=OFF
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
