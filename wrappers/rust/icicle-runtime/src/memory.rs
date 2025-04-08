@@ -58,9 +58,12 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
-        let min_len = core::cmp::min(self.len(), src.len());
-        let size = size_of::<T>() * min_len;
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
 
+        let size = size_of::<T>() * src.len();
         unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
     }
 
@@ -70,9 +73,12 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         stream: &IcicleStream,
     ) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
-        let min_len = core::cmp::min(self.len(), src.len());
-        let size = size_of::<T>() * min_len;
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
 
+        let size = size_of::<T>() * src.len();
         unsafe {
             runtime::icicle_copy_async(
                 self.as_mut_ptr() as *mut c_void,
@@ -118,9 +124,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
-        let min_len = core::cmp::min(self.len(), src.len());
-        let size = size_of::<T>() * min_len;
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
 
+        let size = size_of::<T>() * src.len();
         unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
     }
 
@@ -130,9 +139,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         stream: &IcicleStream,
     ) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
-        let min_len = core::cmp::min(self.len(), src.len());
-        let size = size_of::<T>() * min_len;
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
 
+        let size = size_of::<T>() * src.len();
         unsafe {
             runtime::icicle_copy_async(
                 self.as_mut_ptr() as *mut c_void,
@@ -180,9 +192,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
 
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
-        let min_len = core::cmp::min(self.len(), src.len());
-        let size = size_of::<T>() * min_len;
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
 
+        let size = size_of::<T>() * src.len();
         unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
     }
 
@@ -192,9 +207,12 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
         stream: &IcicleStream,
     ) -> Result<(), eIcicleError> {
         //TODO: emirsoyturk add checks
-        let min_len = core::cmp::min(self.len(), src.len());
-        let size = size_of::<T>() * min_len;
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
 
+        let size = size_of::<T>() * src.len();
         unsafe {
             runtime::icicle_copy_async(
                 self.as_mut_ptr() as *mut c_void,
@@ -258,7 +276,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -277,7 +295,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -295,7 +313,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -319,7 +337,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
