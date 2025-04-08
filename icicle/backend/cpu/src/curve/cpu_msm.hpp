@@ -63,22 +63,18 @@ public:
   static unsigned get_optimal_nof_workers(
     const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor)
   {
-    uint32_t nof_cores = config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
-                           ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
-                           :                                    // number of threads provided by config
-                           std::thread::hardware_concurrency(); // check machine properties
+    uint32_t nof_cores = config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS) 
+                           ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) // number of threads provided by config
+                           : std::thread::hardware_concurrency(); // check machine properties
     if (nof_cores <= 0) {
       ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
       nof_cores = 1;
     }
 
     // Use decision tree to predict the optimal number of workers
-    double field_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-    double field_size_to_fixed_size_ratio = field_size / FIXED_SCALAR_SIZE_CORES_TREE;
-
-    double pcm = (double)config.precompute_factor;
+    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_CORES_TREE;
+    double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
-
     double features[NOF_FEATURES_CORES_TREE] = {msm_log_size, pcm};
     unsigned nof_workers = cores_tree.predict(features);
     return std::min(nof_cores, nof_workers);
@@ -90,20 +86,16 @@ public:
     const int msm_size,
     const uint32_t scalar_size,
     const uint32_t precompute_factor,
-    const uint32_t m_nof_workers)
+    const uint32_t nof_workers)
   {
     if (config.c > 0) { return config.c; }
 
     // Use decision tree to predict the optimal c
-    double field_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-    double field_size_to_fixed_size_ratio = field_size / FIXED_SCALAR_SIZE_C_TREE;
-
-    double pcm = (double)config.precompute_factor;
+    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_C_TREE;
+    double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
-    double nof_cores = (double)m_nof_workers;
-
+    double nof_cores = (double)nof_workers;
     double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, pcm};
-
     unsigned optimal_c = c_tree.predict(features);
     return optimal_c;
   }
