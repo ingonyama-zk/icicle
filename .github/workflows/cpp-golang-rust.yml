@@ -87,7 +87,7 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip phase --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared"
-            skip-cpp: '".*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*"'
+            skip-cpp: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*
             skip-golang: "true"
             initial-support: true
         curve:
@@ -199,13 +199,12 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        if [ "${{ matrix.backend }}" = "metal" ]; then
+        export SKIP_TESTS="${{ matrix.skip-cpp }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-cpp-skip-tests }}" ]; then
           export SKIP_TESTS="${{ matrix.skip-cpp }}|${{ matrix.curve.metal-cpp-skip-tests }}"
-        else
-          export SKIP_TESTS="${{ matrix.skip-cpp }}"
         fi
-
-        ctest --output-on-failure -E $SKIP_TESTS
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        ctest --output-on-failure -E "$SKIP_TESTS"
     - name: Run C++ examples
       working-directory: ./examples/c++
       if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
@@ -273,7 +272,7 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip phase2"
-            skip-cpp: '-E ".*QuarticExtensionField.*|.*ProgramExecutorVecOps.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*"'
+            skip-cpp: .*QuarticExtensionField.*|.*ProgramExecutorVecOps.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*
             skip-golang: "true"
             initial-support: true
         field:
@@ -383,13 +382,12 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        if [ "${{ matrix.backend }}" = "metal" ]; then
-          export SKIP_TESTS="${{ matrix.skip-cpp }}|${{ matrix.curve.metal-cpp-skip-tests }}"
-        else
-          export SKIP_TESTS="${{ matrix.skip-cpp }}"
+        export SKIP_TESTS="${{ matrix.skip-cpp }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-cpp-skip-tests }}" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp }}|${{ matrix.field.metal-cpp-skip-tests }}"
         fi
-
-        ctest --output-on-failure -E $SKIP_TESTS
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        ctest --output-on-failure -E "$SKIP_TESTS"
 
     - name: Run C++ examples
       working-directory: ./examples/c++
@@ -552,7 +550,6 @@ jobs:
             os: Linux
             runner: [self-hosted, Linux, X64, icicle]
             skip-rust: ""
-            skip-cpp: ""
             skip-golang: "false"
             initial-support: false
           - backend: metal
@@ -561,7 +558,6 @@ jobs:
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             skip-rust: "--skip poseidon --skip pow --skip merkle"
-            skip-cpp: '-E ".*MerkleTree.*|.*poseidon.*"'
             skip-golang: "true"
             initial-support: true
     steps:
