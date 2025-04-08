@@ -41,7 +41,7 @@ At Ingonyama, we are committed to accelerating progress in ZK and cryptography. 
 
 ### Google Colab
 
-Google Colab is a great way to start experimenting with ICICLE right away. It provides free access to NVIDIA T4 GPUs—sufficient enough for prototyping and exploring ICICLE’s capabilities.
+Google Colab is a great way to start experimenting with ICICLE right away. It provides free access to NVIDIA T4 GPUs—sufficient enough for prototyping and exploring ICICLE’s capabilities
 
 For a detailed guide on setting up Google Colab with ICICLE, refer to [this article](./colab-instructions.md).
 
