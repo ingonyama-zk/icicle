@@ -72,9 +72,15 @@ public:
       nof_cores = 1;
     }
 
-    // place here the DT logic
-    unsigned nof_workers = nof_cores;
-    return nof_workers;
+    double field_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+    double field_size_to_fixed_size_ratio = field_size / FIXED_SCALAR_SIZE_CORES_TREE;
+
+    double pcm = (double)config.precompute_factor;
+    double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
+
+    double features[NOF_FEATURES_CORES_TREE] = {msm_log_size, pcm};
+    unsigned nof_workers = cores_tree.predict(features);
+    return std::min(nof_cores, nof_workers);
   }
 
   // Calculate the optimal C based on the problem size, config and machine parameters.

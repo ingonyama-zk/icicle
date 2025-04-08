@@ -5,11 +5,11 @@ class DecisionTree {
 public:
     // Constructor
     DecisionTree(int nof_features, const double* thresholds, const int* indices, 
-                    const int* left_childs, const int* right_childs, const int (*classes)[NofClasses])
+                    const int* left_childs, const int* right_childs, const int (*class_predictions)[NofClasses], const int* classes)
         : m_nof_features(nof_features), 
             m_thresholds(thresholds), m_indices(indices), 
             m_left_childs(left_childs), m_right_childs(right_childs), 
-            m_classes(classes) {}
+            m_class_predictions(class_predictions), m_classes(classes) {}
 
     // Destructor
     ~DecisionTree() { }
@@ -25,8 +25,8 @@ private:
     const int* const m_indices;
     const int* const m_left_childs;
     const int* const m_right_childs;
-    const int (*const m_classes)[NofClasses];
-
+    const int (*const m_class_predictions)[NofClasses];
+    const int* const m_classes;
     int find_max(const int* nums) {
         int index = 0;
         for (int i = 0; i < NofClasses; i++) {
@@ -43,6 +43,7 @@ private:
                 return predict(features, m_right_childs[node]);
             }
         }
-        return find_max(m_classes[node]);
+        int class_idx = find_max(m_class_predictions[node]);
+        return m_classes[class_idx];
     }
 };
