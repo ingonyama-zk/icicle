@@ -20,42 +20,7 @@ pub trait HostOrDeviceSlice<T> {
     unsafe fn as_mut_ptr(&mut self) -> *mut T;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
-    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError>;
-    fn copy_async(
-        &mut self,
-        src: &(impl HostOrDeviceSlice<T> + ?Sized),
-        stream: &IcicleStream,
-    ) -> Result<(), eIcicleError>;
-}
-
-impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
-    fn is_on_device(&self) -> bool {
-        false
-    }
-
-    fn is_on_active_device(&self) -> bool {
-        false
-    }
-
-    unsafe fn as_ptr(&self) -> *const T {
-        self.0
-            .as_ptr()
-    }
-
-    unsafe fn as_mut_ptr(&mut self) -> *mut T {
-        self.0
-            .as_mut_ptr()
-    }
-
-    fn len(&self) -> usize {
-        self.0
-            .len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
+    
     fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
         assert!(
             self.len() >= src.len(),
@@ -86,6 +51,35 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
             )
             .wrap()
         }
+    }
+}
+
+impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
+    fn is_on_device(&self) -> bool {
+        false
+    }
+
+    fn is_on_active_device(&self) -> bool {
+        false
+    }
+
+    unsafe fn as_ptr(&self) -> *const T {
+        self.0
+            .as_ptr()
+    }
+
+    unsafe fn as_mut_ptr(&mut self) -> *mut T {
+        self.0
+            .as_mut_ptr()
+    }
+
+    fn len(&self) -> usize {
+        self.0
+            .len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -118,38 +112,6 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
 
     fn is_empty(&self) -> bool {
         self.len() == 0
-    }
-
-    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        assert!(
-            self.len() >= src.len(),
-            "In copy, destination has shorter length than source"
-        );
-
-        let size = size_of::<T>() * src.len();
-        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
-    }
-
-    fn copy_async(
-        &mut self,
-        src: &(impl HostOrDeviceSlice<T> + ?Sized),
-        stream: &IcicleStream,
-    ) -> Result<(), eIcicleError> {
-        assert!(
-            self.len() >= src.len(),
-            "In copy, destination has shorter length than source"
-        );
-
-        let size = size_of::<T>() * src.len();
-        unsafe {
-            runtime::icicle_copy_async(
-                self.as_mut_ptr() as *mut c_void,
-                src.as_ptr() as *const c_void,
-                size,
-                stream.handle,
-            )
-            .wrap()
-        }
     }
 }
 
@@ -184,38 +146,6 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
     fn is_empty(&self) -> bool {
         // Forward to the dereferenced DeviceSlice
         (&**self).is_empty()
-    }
-
-    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
-        assert!(
-            self.len() >= src.len(),
-            "In copy, destination has shorter length than source"
-        );
-
-        let size = size_of::<T>() * src.len();
-        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
-    }
-
-    fn copy_async(
-        &mut self,
-        src: &(impl HostOrDeviceSlice<T> + ?Sized),
-        stream: &IcicleStream,
-    ) -> Result<(), eIcicleError> {
-        assert!(
-            self.len() >= src.len(),
-            "In copy, destination has shorter length than source"
-        );
-
-        let size = size_of::<T>() * src.len();
-        unsafe {
-            runtime::icicle_copy_async(
-                self.as_mut_ptr() as *mut c_void,
-                src.as_ptr() as *const c_void,
-                size,
-                stream.handle,
-            )
-            .wrap()
-        }
     }
 }
 
