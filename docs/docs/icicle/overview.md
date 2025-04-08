@@ -51,7 +51,7 @@ For a detailed guide on setting up Google Colab with ICICLE, refer to [this arti
 
 ## What Can You Do with ICICLE?
 
-[ICICLE](https://github.com/ingonyama-zk/icicle) can be used much like any other cryptography library—but with the added benefit of acceleration. Thanks to multiple integrations, it's already proven effective across a range of use cases:
+[ICICLE](https://github.com/ingonyama-zk/icicle) can be used much like any other cryptography library with the added benefit of acceleration. Thanks to multiple integrations, it's already proven effective across a range of use cases:
 
 ### Boost Your ZK Prover Performance
 
