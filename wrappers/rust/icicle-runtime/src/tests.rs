@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::config::ConfigExtension;
-    use crate::memory::{DeviceVec, HostSlice};
+    use crate::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
     use crate::stream::IcicleStream;
     use crate::test_utilities;
     use crate::*;
@@ -155,7 +155,7 @@ mod tests {
         let expected = vec![val; size];
         let mut device_vec = DeviceVec::<u8>::device_malloc(size).unwrap();
         device_vec
-            .memset(val)
+            .memset(val, size)
             .unwrap();
 
         let mut host_slice = vec![0u8; size];
@@ -173,11 +173,11 @@ mod tests {
         test_utilities::test_set_main_device();
         let size = 1 << 10;
         let val = 42;
-        let expected = vec![val; size];
+        let expected = vec![val; size >> 1];
         let stream = IcicleStream::create().unwrap();
         let mut device_vec = DeviceVec::<u8>::device_malloc(size).unwrap();
-        device_vec
-            .memset_async(val, &stream)
+        device_vec.as_mut_slice()[1..size >> 1] // set only part of the slice
+            .memset_async(val, (size >> 1) - 1, &stream)
             .unwrap();
         stream
             .synchronize()
@@ -189,6 +189,6 @@ mod tests {
             .copy_to_host(host_slice)
             .unwrap();
 
-        assert_eq!(host_slice.as_slice(), expected);
+        assert_eq!(host_slice.as_slice()[1..size >> 1], expected[1..]);
     }
 }
