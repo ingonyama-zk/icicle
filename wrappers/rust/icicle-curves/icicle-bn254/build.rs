@@ -28,7 +28,11 @@ fn main() {
         .define("FIELD", "bn254")
         .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
-
+    // check if cross-compilation is required
+    let target = std::env::var("TARGET").unwrap();
+    if target.contains("android") {
+        config.define("BUILD_FOR_ANDROID", "ON");
+    }
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
     if cfg!(feature = "cuda_backend") {
