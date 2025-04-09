@@ -65,7 +65,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField to_montgomery(const CubicExtensionField& xs)
   {
-    return CubicExtensionField{FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1)};
+    return CubicExtensionField{FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1), FF::to_montgomery(xs.c2)};
   }
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField from_montgomery(const CubicExtensionField& xs)
