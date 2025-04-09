@@ -1,18 +1,18 @@
 #pragma once
 
-#include "icicle/curves/params/bls12_381.h"
+#include "icicle/curves/params/bls12_377.h"
 #include "icicle/pairings/models/bls12.h"
 
-namespace pairing_bls12_381 {
-  using namespace bls12_381;
+namespace pairing_bls12_377 {
+  using namespace bls12_377;
   using namespace icicle_bls12_pairing;
 
   struct PairingConfig {
-    static constexpr storage<2> Z = {0x8508c000, 0x00000001};
+    static constexpr storage<2> Z = {0x00000001, 0x8508c000};
     static constexpr bool Z_IS_NEGATIVE = false;
-    static constexpr int Z_NAF[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,  0, 0, 0,
-                                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0,
-                                    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, -1, 0, 1};
+    static constexpr int Z_NAF[] = {1, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                    0, 0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                    0, 0, -1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1};
 
     static constexpr TwistType TWIST_TYPE = TwistType::D;
 
@@ -21,6 +21,11 @@ namespace pairing_bls12_381 {
       {{0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b,
         0xc63b05c0, 0x17c510ea, 0x01ae3a46}}};
 
+    static void mul_fp2_field_by_frob_coeff(g2_point_field_t& fe, unsigned power)
+    {
+      fe.c1 = fe.c1 * BASE_FIELD_FROBENIUS_COEFF_C1[power % 2];
+    }
+
     struct fq6_config {
       // nonresidue to generate the extension field
       static constexpr g2_point_field_t nonresidue = g2_point_field_t{point_field_t::zero(), point_field_t::one()};
@@ -28,45 +33,23 @@ namespace pairing_bls12_381 {
       static constexpr bool nonresidue_is_negative = false;
       static constexpr bool nonresidue_is_u32 = false;
 
-      static constexpr g2_point_field_t FROBENIUS_COEFF_C1[6] = {
+      static constexpr g2_point_field_t FROBENIUS_COEFF_C1[3] = {
         {point_field_t::one(), point_field_t::zero()},
         {{{0x00000002, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec,
            0x09b3af05}},
          point_field_t::zero()},
         {{{0x00000001, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec,
            0x09b3af05}},
-         point_field_t::zero()},
-        {{{0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b,
-           0xc63b05c0, 0x17c510ea, 0x01ae3a46}},
-         point_field_t::zero()},
-        {{}, point_field_t::zero()},
-        {{}, point_field_t::zero()}};
+         point_field_t::zero()}};
 
-      static constexpr g2_point_field_t FROBENIUS_COEFF_C2[6] = {
+      static constexpr g2_point_field_t FROBENIUS_COEFF_C2[3] = {
         {point_field_t::one(), point_field_t::zero()},
-        {{{0x0000aaad, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
-           0xec024086, 0x397fe699, 0x1a0111ea}},
+        {{{0x00000001, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec,
+           0x09b3af05}},
          point_field_t::zero()},
-        {{{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
-           0xec024086, 0x397fe699, 0x1a0111ea}},
-         point_field_t::zero()
-
-        },
-        {{{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
-           0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}},
-         point_field_t::zero()
-
-        },
-        {{{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
-           0x5f19672f}},
-         point_field_t::zero()
-
-        },
-        {{{0xfffeffff, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
-           0x5f19672f}},
-         point_field_t::zero()
-
-        }};
+        {{{0xffffffff, 0xffffffff, 0x9fffffff, 0xd1e94577, 0x22fb5bff, 0x59064ee8, 0xcc9bc8e3, 0xb8882a75, 0x8f8c524e,
+           0xbc8756ba, 0x17c510ea, 0x01ae3a46}},
+         point_field_t::zero()}};
 
       static void frobenius_map(g2_point_field_t& c0, g2_point_field_t& c1, g2_point_field_t& c2, unsigned power)
       {
@@ -81,6 +64,24 @@ namespace pairing_bls12_381 {
     typedef CubicExtensionField<fq6_config, g2_point_field_t> fq6_field_t; // T2
     static constexpr g2_point_field_t CUBIC_NONRESIDUE = fq6_config::nonresidue;
 
+    static void mul_fp2_by_nonresidue(g2_point_field_t& f)
+    {
+      point_field_t t = f.c0;
+      f.c0 = f.c1;
+      f.c0 = point_field_t::neg(f.c0);
+      f.c0 = f.c0 + f.c0 * point_field_t::from(4);
+      f.c1 = t;
+    }
+
+    static void mul_fp6_by_nonresidue(fq6_field_t& f)
+    {
+      g2_point_field_t t = f.c1;
+      f.c1 = f.c0;
+      f.c0 = f.c2;
+      mul_fp2_by_nonresidue(f.c0);
+      f.c2 = t;
+    }
+
     struct fq12_config {
       // nonresidue to generate the extension field
       static constexpr fq6_field_t nonresidue =
@@ -89,68 +90,19 @@ namespace pairing_bls12_381 {
       static constexpr bool nonresidue_is_negative = false;
       static constexpr bool nonresidue_is_u32 = false;
 
-      static constexpr g2_point_field_t FROBENIUS_COEFF_C1[12] = {
+      static constexpr g2_point_field_t FROBENIUS_COEFF_C1[3] = {
         {
           point_field_t::one(),
           point_field_t::zero(),
         },
-        {
-          {{0x92235fb8, 0x8d0775ed, 0x63e7813d, 0xf67ea53d, 0x84bab9c4, 0x7b2443d7, 0x3cbd5f4f, 0x0fd603fd, 0x202c0d1f,
-            0xc231beb4, 0x02bb0667, 0x1904d3bf}},
-          {{0x6ddc4af3, 0x2cf78a12, 0x4d6c7ec2, 0x282d5ac1, 0x71f63c5f, 0xec0c8ec9, 0xb6c7b36f, 0x54a14787, 0x231f9fb8,
-            0x88e9e902, 0x36c4e032, 0x00fc3e2b}},
-        },
-        {
-          {{0xfffeffff, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
-            0x5f19672f}},
-          point_field_t::zero(),
-        },
-        {
-          {{0x121bdea2, 0xf1ee7b04, 0x3e67fa0a, 0x304466cf, 0xf61eb45e, 0xef396489, 0x30b1cf60, 0x1c3dedd9, 0xd77a2cd9,
-            0xe2e9c448, 0x0180a68e, 0x135203e6}},
-          {{0xede3cc09, 0xc81084fb, 0x72ec05f4, 0xee67992f, 0x009241c5, 0x77f76e17, 0xc2d3435e, 0x48395dab, 0x6bd17ffe,
-            0x6831e36d, 0x37ff400b, 0x06af0e04}},
-        },
-        {
-          {{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
-            0x5f19672f}},
-          point_field_t::zero(),
-        },
-        {
-          {{0x7ff82995, 0x1ee60516, 0x8bd478cd, 0x5871c190, 0x6814f0bd, 0xdb45f353, 0xe77982d0, 0x70df3560, 0xfa99cc91,
-            0x6bd3ad4a, 0x384586c1, 0x144e4211}},
-          {{0x80078116, 0x9b18fae9, 0x257f8732, 0xc63a3e6e, 0x8e9c0566, 0x8beadf4d, 0x0c0b8fee, 0xf3981624, 0x48b1e045,
-            0xdf47fa6b, 0x013a5fd8, 0x05b2cfd9}},
-        },
-        {
-          {{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
-            0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}},
-          point_field_t::zero(),
-        },
-        {
-          {{0x6ddc4af3, 0x2cf78a12, 0x4d6c7ec2, 0x282d5ac1, 0x71f63c5f, 0xec0c8ec9, 0xb6c7b36f, 0x54a14787, 0x231f9fb8,
-            0x88e9e902, 0x36c4e032, 0x00fc3e2b}},
-          {{0x92235fb8, 0x8d0775ed, 0x63e7813d, 0xf67ea53d, 0x84bab9c4, 0x7b2443d7, 0x3cbd5f4f, 0x0fd603fd, 0x202c0d1f,
-            0xc231beb4, 0x02bb0667, 0x1904d3bf}},
-        },
-        {
-          {{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
-            0xec024086, 0x397fe699, 0x1a0111ea}},
-          point_field_t::zero(),
-        },
-        {
-          {{0xede3cc09, 0xc81084fb, 0x72ec05f4, 0xee67992f, 0x009241c5, 0x77f76e17, 0xc2d3435e, 0x48395dab, 0x6bd17ffe,
-            0x6831e36d, 0x37ff400b, 0x06af0e04}},
-          {{0x121bdea2, 0xf1ee7b04, 0x3e67fa0a, 0x304466cf, 0xf61eb45e, 0xef396489, 0x30b1cf60, 0x1c3dedd9, 0xd77a2cd9,
-            0xe2e9c448, 0x0180a68e, 0x135203e6}},
-        },
-        {{{0x0000aaad, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
-           0xec024086, 0x397fe699, 0x1a0111ea}},
+        {{{0x104f2031, 0xe938a9d1, 0x58eb0188, 0xb57668e5, 0xa3aa559d, 0xc681bf34, 0xf94ebc8e, 0x5c8a45e0, 0x82567f91,
+           0x33c1e306, 0x399c0196, 0x009a9975}},
          point_field_t::zero()},
-        {{{0x80078116, 0x9b18fae9, 0x257f8732, 0xc63a3e6e, 0x8e9c0566, 0x8beadf4d, 0x0c0b8fee, 0xf3981624, 0x48b1e045,
-           0xdf47fa6b, 0x013a5fd8, 0x05b2cfd9}},
-         {{0x7ff82995, 0x1ee60516, 0x8bd478cd, 0x5871c190, 0x6814f0bd, 0xdb45f353, 0xe77982d0, 0x70df3560, 0xfa99cc91,
-           0x6bd3ad4a, 0x384586c1, 0x144e4211}}}};
+        {
+          {{0x00000002, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec,
+            0x09b3af05}},
+          point_field_t::zero(),
+        }};
     };
     typedef ComplexExtensionField<fq12_config, fq6_field_t> fq12_field_t; // T3
 
@@ -174,4 +126,4 @@ namespace pairing_bls12_381 {
   // Alias the pairing methods
   using icicle_bls12_pairing::final_exponentiation;
   using icicle_bls12_pairing::miller_loop;
-}; // namespace pairing_bls12_381
+}; // namespace pairing_bls12_377

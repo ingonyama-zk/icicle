@@ -21,6 +21,11 @@ namespace pairing_bls12_381 {
       {{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
         0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}}};
 
+    static void mul_fp2_field_by_frob_coeff(g2_point_field_t& fe, unsigned power)
+    {
+      fe.c1 = fe.c1 * BASE_FIELD_FROBENIUS_COEFF_C1[power % 2];
+    }
+
     struct fq6_config {
       // nonresidue to generate the extension field
       static constexpr g2_point_field_t nonresidue = g2_point_field_t{point_field_t::one(), point_field_t::one()};

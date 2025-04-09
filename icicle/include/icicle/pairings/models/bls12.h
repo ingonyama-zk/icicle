@@ -31,7 +31,11 @@ namespace icicle_bls12_pairing {
       y = Fp2::sqr(g) - (e_square + e_square + e_square);
       z = b * h;
 
-      return Fp6{i, j + j + j, -h};
+      if (Config::TWIST_TYPE == TwistType::M) {
+        return Fp6{i, j + j + j, -h};
+      } else { // TwistType::D
+        return Fp6{-h, j + j + j, i};
+      }
     }
 
     template <typename Config>
@@ -58,7 +62,11 @@ namespace icicle_bls12_pairing {
       z *= e;
 
       Fp2 j = theta * q.x - (lambda * q.y);
-      return Fp6{j, -theta, lambda};
+      if (Config::TWIST_TYPE == TwistType::M) {
+        return Fp6{j, -theta, lambda};
+      } else { // TwistType::D
+        return Fp6{lambda, -theta, j};
+      }
     }
 
     template <typename Config>
@@ -173,34 +181,21 @@ namespace icicle_bls12_pairing {
       Fp2 a2 = f.c0.c2 * c0;
       Fp6 a = {a0, a1, a2};
 
-      // Compute b = self.c1 * (c3, c4)
       Fp6 b = f.c1;
       mul_by_01<Config>(b, c3, c4);
 
-      // Compute e = (self.c0 + self.c1) * (c0 + c3, c4)
-      Fp2 c0_plus_c3 = c0;
-      c0_plus_c3 += c3;
+      Fp2 c0_plus_c3 = c0 + c3;
 
-      Fp6 e = f.c0;
-      e += f.c1;
+      Fp6 e = f.c0 + f.c1;
       mul_by_01<Config>(e, c0_plus_c3, c4);
 
-      // Compute final values
-      f.c1 = e;
-      f.c1 -= a;
-      f.c1 -= b;
+      f.c1 = e - (a + b);
 
       f.c0 = b;
-      f.c0 *= Config::CUBIC_NONRESIDUE;
+      Config::mul_fp6_by_nonresidue(f.c0);
       f.c0 += a;
     }
   } // namespace
-
-  template <typename Config>
-  static void mul_fp2_field_by_frob_coeff(typename Config::Fq2& fe, unsigned power)
-  {
-    fe.c1 = fe.c1 * Config::BASE_FIELD_FROBENIUS_COEFF_C1[power % 2];
-  }
 
   // Evaluate at p
   template <typename Config>
