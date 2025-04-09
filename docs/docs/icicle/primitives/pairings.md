@@ -56,8 +56,8 @@ The specific implementations can be found in the `models/` directory.
 Here's a basic example of how to use pairings in ICICLE:
 
 ```cpp
-#include "icicle/pairings/pairing.h"
-#include "icicle/pairings/models/bn254.h"
+#include "icicle/pairing/pairing.h"
+#include "icicle/pairing/models/bn254.h"
 
 // Initialize points
 Bn254::G1Affine p = ...;

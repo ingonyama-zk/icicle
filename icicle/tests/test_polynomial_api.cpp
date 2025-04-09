@@ -12,6 +12,12 @@
 using namespace field_config;
 using namespace icicle;
 
+#ifdef PAIRING
+#include "icicle/pairing/pairing_config.h"
+#include "icicle/pairing/pairing.h"
+using namespace pairing_config;
+#endif
+
 /*******************************************/
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
@@ -834,7 +840,7 @@ public:
     pk.g2.beta = G2P::to_affine(toxic_waste.beta * g2);
     vk.g2.beta = pk.g2.beta;
     pk.g2.gamma = G2P::to_affine(toxic_waste.gamma * g2);
-    vk.g2.gamma = pk.g2.gamma;
+    pk.g2.gamma = pk.g2.gamma;
     pk.g2.delta = G2P::to_affine(toxic_waste.delta * g2);
     vk.g2.delta = pk.g2.delta;
 
@@ -921,8 +927,25 @@ public:
 
   bool verify(const G16proof& proof, const std::vector<S>& public_witness) const
   {
-    throw std::runtime_error("pairing not implemented");
-    return false;
+    // Compute the left-hand side of the pairing equation
+    typename PairingConfig::TargetField lhs;
+    pairing<PairingConfig>(proof.A, vk.g2.gamma, lhs);
+
+    // Compute the right-hand side of the pairing equation
+    typename PairingConfig::TargetField rhs;
+    projective_t rhs_g1 = projective_t::from_affine(vk.g1.alpha);
+    for (int i = 0; i <= nof_outputs; ++i) {
+        rhs_g1 = rhs_g1 + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
+    }
+    icicle::pairing<PairingConfig>(projective_t::to_affine(rhs_g1), proof.B, rhs);
+
+    // Add the final term to the right-hand side
+    typename PairingConfig::TargetField final_term;
+    icicle::pairing<PairingConfig>(proof.C, vk.g2.delta, final_term);
+    rhs = rhs + final_term;
+
+    // Check if the pairings are equal
+    return lhs == rhs;
   }
 
   // Dummy verification function where pairings are changed to scalar multiplications
@@ -1060,7 +1083,9 @@ TEST_F(PolynomialTest, Groth16)
 
     groth16_example.setup();
     auto proof = groth16_example.prove(witness);
-    // groth16_example.verify(proof); // cannot implement without pairing
+#ifdef PAIRING
+    groth16_example.verify(proof, witness);
+#endif
   }
 }
   #endif // G2

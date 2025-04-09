@@ -80,7 +80,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_from_u32)(uint32_t va
 #endif // EXT_FIELD
 
 #ifdef PAIRING
-#include "icicle/pairings/pairing_config.h"
+#include "icicle/pairing/pairing_config.h"
 using namespace tower_config;
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_generate_scalars)(target_field_t* scalars, int size)

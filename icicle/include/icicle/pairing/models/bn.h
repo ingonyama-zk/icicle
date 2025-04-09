@@ -1,6 +1,6 @@
 #pragma once
 
-#include "icicle/pairings/models/bls12.h"
+#include "icicle/pairing/models/bls12.h"
 
 namespace icicle_bn_pairing {
   using icicle_bls12_pairing::add_in_place;

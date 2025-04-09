@@ -7,7 +7,7 @@
 #include "icicle/runtime.h"
 #include "icicle/ntt.h"
 #include "icicle/msm.h"
-#include "icicle/pairings/pairing.h"
+#include "icicle/pairing/pairing.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
@@ -336,7 +336,7 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 }
 
 #ifdef PAIRING
-  #include "icicle/pairings/pairing_config.h"
+  #include "icicle/pairing/pairing_config.h"
 using namespace pairing_config;
 typedef PairingConfig::TargetField TargetField;
 

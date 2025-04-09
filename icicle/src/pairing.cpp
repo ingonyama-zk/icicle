@@ -1,10 +1,10 @@
-#include "icicle/pairings/pairing.h"
+#include "icicle/pairing/pairing.h"
 #include "icicle/math/host_math.h"
 
 #include "icicle/curves/curve_config.h"
 using namespace curve_config;
 
-#include "icicle/pairings/pairing_config.h"
+#include "icicle/pairing/pairing_config.h"
 using namespace pairing_config;
 
 namespace icicle {

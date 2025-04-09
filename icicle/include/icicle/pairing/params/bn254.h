@@ -2,7 +2,7 @@
 
 #include "icicle/fields/cubic_extension.h"
 #include "icicle/curves/params/bn254.h"
-#include "icicle/pairings/models/bn.h"
+#include "icicle/pairing/models/bn.h"
 
 namespace pairing_bn254 {
   using namespace bn254;
@@ -65,6 +65,7 @@ namespace pairing_bn254 {
     using Fp6 = fq6_field_t;              // Cubic extension over Fp2
     using Fp12 = fq12_field_t;            // Quadratic extension over Fp6
     using G1Affine = affine_t;            // G1 group (affine coordinates)
+    using G1Projective = projective_t;    // G1 group (projective coordinates)
     using G2Affine = g2_affine_t;         // G2 group (affine coordinates)
     using G2Projective = g2_projective_t; // G2 group (projective coordinates)
     using TargetField = Fp12;             // Result of the pairing
