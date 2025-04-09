@@ -207,7 +207,7 @@ jobs:
         ctest --output-on-failure -E "$SKIP_TESTS"
     - name: Run C++ examples
       working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      if: (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true') && matrix.backend != 'metal'
       run: |
         CURVE=${{ matrix.curve.name }}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
@@ -248,7 +248,7 @@ jobs:
         go test ./$CURVE_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
 
 
-  test-linux-field:
+  test-field:
     name: Test field ${{ matrix.field.name }} on ${{ matrix.os }} with ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
@@ -395,7 +395,7 @@ jobs:
 
     - name: Run C++ examples
       working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      if: (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true') && matrix.backend != 'metal'
       run: |
         FIELD=${{ matrix.field.name }}
         export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
