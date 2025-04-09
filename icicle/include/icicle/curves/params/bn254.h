@@ -4,7 +4,6 @@
 #include "icicle/fields/snark_fields/bn254_base.h"
 #include "icicle/fields/snark_fields/bn254_scalar.h"
 #include "icicle/fields/complex_extension.h"
-#include "icicle/fields/cubic_extension.h"
 
 namespace bn254 {
   struct G1;
