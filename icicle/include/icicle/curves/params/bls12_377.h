@@ -4,7 +4,6 @@
 #include "icicle/fields/snark_fields/bls12_377_base.h"
 #include "icicle/fields/snark_fields/bls12_377_scalar.h"
 #include "icicle/fields/complex_extension.h"
-#include "icicle/fields/cubic_extension.h"
 
 namespace bls12_377 {
   struct G1;

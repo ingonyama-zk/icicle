@@ -573,8 +573,6 @@ public:
     return rs;
   }
 
-  HOST_DEVICE void frobenius_map(unsigned power) {};
-
   // Assumes the number is even!
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE Derived div2(const Derived& xs)

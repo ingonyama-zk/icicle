@@ -283,7 +283,8 @@ namespace host_math {
   template <unsigned NLIMBS>
   static constexpr HOST_INLINE unsigned get_bit(const storage<NLIMBS>& xs, unsigned bit)
   {
-    return (xs.limbs[bit / 32] >> (bit % 32)) & 0x1;
+    unsigned limb_size = sizeof(xs.limbs[0]);
+    return (xs.limbs[bit / limb_size] >> (bit % limb_size)) & 0x1;
   }
 
   template <unsigned NLIMBS>

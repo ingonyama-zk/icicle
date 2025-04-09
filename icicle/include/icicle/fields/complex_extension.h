@@ -164,6 +164,9 @@ public:
     return *this;
   }
 
+  /**
+   * @brief Multiplies a field element by the nonresidue of the field
+   */
   static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {
@@ -173,6 +176,9 @@ public:
     }
   }
 
+  /**
+   * @brief Multiplies a wide field element by the nonresidue of the field
+   */
   static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs)
   {
     if constexpr (CONFIG::nonresidue_is_u32) {

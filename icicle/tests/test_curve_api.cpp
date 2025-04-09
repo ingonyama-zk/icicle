@@ -337,7 +337,7 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
   ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
 }
 
-#ifdef PAIRING_ENABLED
+#ifdef PAIRING
 typedef PairingConfig::TargetField TargetField;
 
 TEST(CurveSanity, TargetFieldSanityTest)
@@ -355,78 +355,38 @@ TEST(CurveSanity, TargetFieldSanityTest)
   ASSERT_EQ(b * b_inv, TargetField::one());
 }
 
-TEST(CurveSanity, MillerLoopTest)
-{
-  // Create generator points
-  affine_t p = projective_t::to_affine(projective_t::generator());
-  g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
-
-  // Prepare Q coefficients
-  auto coeffs = prepare_q<PairingConfig>(q);
-
-  // std::cout << "Coefficients from prepare_q:" << std::endl;
-  // for (size_t i = 0; i < coeffs.size(); i++) {
-  //   std::cout << coeffs[i] << std::endl;
-  // }
-
-  // Run Miller loop
-  auto result = miller_loop<PairingConfig>(p, coeffs);
-
-  // std::cout << "Result from opt_miller_loop:" << std::endl;
-  // std::cout << result << std::endl;
-
-  final_exponentiation<PairingConfig>(result);
-  // std::cout << result << std::endl;
-}
-
 TEST(CurveSanity, PairingBilinearityTest)
 {
-  // affine_t p = projective_t::rand_host_affine();
-  // g2_affine_t q = g2_projective_t::rand_host_affine();
-  // scalar_t s = scalar_t::rand_host();
-  affine_t p = projective_t::to_affine(projective_t::generator());
-  g2_affine_t q = g2_projective_t::to_affine(g2_projective_t::generator());
-  scalar_t s = scalar_t::from(2);
+  for (int i = 0; i < 100; i++) {
+    affine_t p = projective_t::rand_host_affine();
+    g2_affine_t q = g2_projective_t::rand_host_affine();
 
-  TargetField f1, f2, f3, f4;
+    // Proper TargetField/ScalarField multiplication is not implemented yet, so we need a uint32_t coefficient
+    uint32_t coeff = 42;
+    scalar_t s = scalar_t::from(coeff);
+    TargetField s_field = TargetField::from(coeff);
+    affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
+    g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
 
-  affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
-  g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
+    TargetField f1, f2, f3, f4;
+    pairing<PairingConfig>(ps, q, &f1);
+    pairing<PairingConfig>(p, qs, &f2);
+    pairing<PairingConfig>(p, q, &f3);
+    pairing<PairingConfig>(ps, qs, &f4);
 
-  pairing<affine_t, g2_affine_t, PairingConfig>(ps, q, &f1);
-  pairing<affine_t, g2_affine_t, PairingConfig>(p, qs, &f2);
-  pairing<affine_t, g2_affine_t, PairingConfig>(p, q, &f3);
-  pairing<affine_t, g2_affine_t, PairingConfig>(ps, qs, &f4);
-
-  // std::cout << f1.c0.c0.c0 << std::endl << std::endl;
-  // std::cout << f2.c0.c0.c0 << std::endl << std::endl;
-  // std::cout << f3.c0.c0.c0 << std::endl << std::endl;
-  // std::cout << f4.c0.c0.c0 << std::endl << std::endl;
+    ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
+    ASSERT_EQ(TargetField::pow(f3, coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
+  }
 }
 
 TEST(CurveSanity, FinalExponentiationTest)
 {
-  TargetField f = TargetField{
-    {
-      {point_field_t::from(15), point_field_t::from(15)},
-      {point_field_t::from(15), point_field_t::from(15)},
-      {point_field_t::from(15), point_field_t::from(15)},
-    },
-    {
-      {point_field_t::from(15), point_field_t::from(15)},
-      {point_field_t::from(15), point_field_t::from(15)},
-      {point_field_t::from(15), point_field_t::from(15)},
-    }};
-  final_exponentiation<PairingConfig>(f);
-  // std::cout << f << std::endl;
-  // for (int i = 0; i < 10; i++) {
-  //   TargetField f = TargetField::rand_host();
-  //   PairingConfig::final_exponentiation(f);
-  //   TargetField f_prime = TargetField::pow(f, PairingConfig::RPRIME);
-  //   f = TargetField::pow(f, PairingConfig::R);
-  //   ASSERT_EQ(f, TargetField::one());
-  //   ASSERT_NE(f_prime, TargetField::one());
-  // }
+  for (int i = 0; i < 10; i++) {
+    TargetField f = TargetField::rand_host();
+    final_exponentiation<PairingConfig>(f);
+    f = TargetField::pow(f, scalar_t::get_modulus());
+    ASSERT_EQ(f, TargetField::one());
+  }
 }
 #endif
 

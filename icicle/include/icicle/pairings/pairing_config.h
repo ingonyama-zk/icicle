@@ -18,8 +18,4 @@ namespace pairing_config = pairing_bls12_381;
 #elif CURVE_ID == BLS12_377
   #include "icicle/pairings/params/bls12_377.h"
 namespace pairing_config = pairing_bls12_377;
-
-#elif CURVE_ID == BW6_761
-  #include "icicle/pairings/params/bw6_761.h"
-namespace pairing_config = pairing_bw6_761;
 #endif

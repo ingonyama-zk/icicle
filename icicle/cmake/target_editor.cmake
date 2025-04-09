@@ -115,8 +115,9 @@ function(handle_sumcheck TARGET FEATURE_LIST)
 endfunction()
 
 function(handle_pairing TARGET FEATURE_LIST)
-  if(G2 AND "PAIRING" IN_LIST FEATURE_LIST)
-    target_compile_definitions(${TARGET} PUBLIC PAIRING_ENABLED=1)
+  if("PAIRING" IN_LIST FEATURE_LIST)
+    set(G2 "G2" CACHE BOOL "Enable G2 feature" FORCE) # Pairing needs G2
+    target_compile_definitions(${TARGET} PUBLIC PAIRING=1)
     target_sources(${TARGET} PRIVATE src/pairing.cpp)
   endif()
 endfunction()

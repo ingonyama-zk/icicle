@@ -9,13 +9,11 @@ namespace icicle {
   /**
    * @brief Computes a cryptographic pairing
    *
-   * @tparam A Type for first group element (typically affine point in G1)
-   * @tparam A2 Type for second group element (typically affine point in G2)
-   * @tparam Pairing Pairing configuration type containing field definitions and implementation details
-   * @tparam TargetField Target field type for pairing result (typically a field extension)
-   * @param p First input group element
-   * @param q Second input group element
-   * @param output Pointer to store the pairing result in the target field
+   * @tparam PairingConfig Pairing configuration type containing field definitions and implementation details
+   *
+   * @param p First input group element. Typically affine point in G1.
+   * @param q Second input group element. Typically affine point in G2.
+   * @param output reference to store the pairing result in the target field
    * @return eIcicleError Error code indicating success or failure
    *
    * The pairing is a bilinear map e: G1 × G2 → GT, where:
@@ -23,6 +21,9 @@ namespace icicle {
    * - GT is a multiplicative subgroup of a field extension
    * - The map preserves the bilinear property: e(aP, bQ) = e(P,Q)^(ab)
    */
-  template <typename A, typename A2, typename PairingConfig, typename TargetField = typename PairingConfig::TargetField>
-  eIcicleError pairing(const A& p, const A2& q, TargetField* output);
+  template <typename PairingConfig>
+  eIcicleError pairing(
+    const typename PairingConfig::G1Affine& p,
+    const typename PairingConfig::G2Affine& q,
+    typename PairingConfig::TargetField* output);
 } // namespace icicle
