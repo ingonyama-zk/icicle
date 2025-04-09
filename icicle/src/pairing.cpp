@@ -10,12 +10,17 @@ using namespace pairing_config;
 namespace icicle {
   template <>
   eIcicleError pairing<PairingConfig>(
-    const PairingConfig::G1Affine& p, const PairingConfig::G2Affine& q, PairingConfig::TargetField* output)
+    const PairingConfig::G1Affine& p, const PairingConfig::G2Affine& q, PairingConfig::TargetField& output)
   {
     auto coeffs = prepare_q<PairingConfig>(q);
-    typename PairingConfig::TargetField f = miller_loop<PairingConfig>(p, coeffs);
-    final_exponentiation<PairingConfig>(f);
-    *output = f;
+    output = miller_loop<PairingConfig>(p, coeffs);
+    final_exponentiation<PairingConfig>(output);
     return eIcicleError::SUCCESS;
+  }
+
+  extern "C" void
+  CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing)(affine_t* p, g2_affine_t* q, PairingConfig::TargetField* output)
+  {
+    pairing<PairingConfig>(*p, *q, *output);
   }
 } // namespace icicle

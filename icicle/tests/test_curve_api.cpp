@@ -368,10 +368,10 @@ TEST(CurveSanity, PairingBilinearityTest)
     g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
 
     TargetField f1, f2, f3, f4;
-    pairing<PairingConfig>(ps, q, &f1);
-    pairing<PairingConfig>(p, qs, &f2);
-    pairing<PairingConfig>(p, q, &f3);
-    pairing<PairingConfig>(ps, qs, &f4);
+    pairing<PairingConfig>(ps, q, f1);
+    pairing<PairingConfig>(p, qs, f2);
+    pairing<PairingConfig>(p, q, f3);
+    pairing<PairingConfig>(ps, qs, f4);
 
     ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
     ASSERT_EQ(TargetField::pow(f3, coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)

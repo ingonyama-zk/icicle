@@ -25,5 +25,5 @@ namespace icicle {
   eIcicleError pairing(
     const typename PairingConfig::G1Affine& p,
     const typename PairingConfig::G2Affine& q,
-    typename PairingConfig::TargetField* output);
+    typename PairingConfig::TargetField& output);
 } // namespace icicle
