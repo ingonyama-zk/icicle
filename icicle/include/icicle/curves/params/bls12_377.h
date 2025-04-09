@@ -17,25 +17,6 @@ namespace bls12_377 {
   typedef Projective<g2_point_field_t, scalar_t, G2> g2_projective_t;
   typedef Affine<g2_point_field_t> g2_affine_t;
 
-  struct fq6_config {
-    // nonresidue to generate the extension field
-    static constexpr uint32_t nonresidue_re = 0;
-    static constexpr uint32_t nonresidue_im = 1;
-    // true if nonresidue is negative
-    static constexpr bool nonresidue_is_negative = false;
-  };
-
-  struct fq12_config {
-    // nonresidue to generate the extension field
-    static constexpr uint32_t nonresidue = 1;
-    // true if nonresidue is negative
-    static constexpr bool nonresidue_is_negative = false;
-  };
-
-  typedef CubicExtensionField<fq6_config, g2_point_field_t> fq6_field_t;
-  typedef ComplexExtensionField<fq12_config, fq6_field_t> fq12_field_t;
-  typedef fq12_field_t pairing_output_t;
-
   // G1 and G2 generators
   struct G1 {
     static constexpr point_field_t gen_x = {0xb21be9ef, 0xeab9b16e, 0xffcd394e, 0xd5481512, 0xbd37cb5c, 0x188282c8,

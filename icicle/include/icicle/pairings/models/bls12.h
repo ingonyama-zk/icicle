@@ -219,7 +219,7 @@ namespace icicle_bls12_pairing {
   }
 
   // cyclotomic exponentiation
-  template <typename Config>
+  template <typename Config, bool Negate = false>
   typename Config::Fp12 exp_by_z(typename Config::Fp12& f)
   {
     using Fp12 = typename Config::Fp12;
@@ -243,7 +243,7 @@ namespace icicle_bls12_pairing {
       }
     }
 
-    if (Config::Z_IS_NEGATIVE) { res.c1 = -res.c1; }
+    if (Config::Z_IS_NEGATIVE || (!Config::Z_IS_NEGATIVE && Negate)) { res.c1 = -res.c1; }
     return res;
   }
 
