@@ -372,11 +372,11 @@ TEST(CurveSanity, MillerLoopTest)
   // Run Miller loop
   auto result = miller_loop<PairingConfig>(p, coeffs);
 
-  std::cout << "Result from opt_miller_loop:" << std::endl;
-  std::cout << result << std::endl;
+  // std::cout << "Result from opt_miller_loop:" << std::endl;
+  // std::cout << result << std::endl;
 
   final_exponentiation<PairingConfig>(result);
-  std::cout << result << std::endl;
+  // std::cout << result << std::endl;
 }
 
 TEST(CurveSanity, PairingBilinearityTest)
@@ -398,10 +398,10 @@ TEST(CurveSanity, PairingBilinearityTest)
   pairing<affine_t, g2_affine_t, PairingConfig>(p, q, &f3);
   pairing<affine_t, g2_affine_t, PairingConfig>(ps, qs, &f4);
 
-  std::cout << f1.c0.c0.c0 << std::endl << std::endl;
-  std::cout << f2.c0.c0.c0 << std::endl << std::endl;
-  std::cout << f3.c0.c0.c0 << std::endl << std::endl;
-  std::cout << f4.c0.c0.c0 << std::endl << std::endl;
+  // std::cout << f1.c0.c0.c0 << std::endl << std::endl;
+  // std::cout << f2.c0.c0.c0 << std::endl << std::endl;
+  // std::cout << f3.c0.c0.c0 << std::endl << std::endl;
+  // std::cout << f4.c0.c0.c0 << std::endl << std::endl;
 }
 
 TEST(CurveSanity, FinalExponentiationTest)
@@ -418,7 +418,7 @@ TEST(CurveSanity, FinalExponentiationTest)
       {point_field_t::from(15), point_field_t::from(15)},
     }};
   final_exponentiation<PairingConfig>(f);
-  std::cout << f << std::endl;
+  // std::cout << f << std::endl;
   // for (int i = 0; i < 10; i++) {
   //   TargetField f = TargetField::rand_host();
   //   PairingConfig::final_exponentiation(f);
