@@ -13,8 +13,8 @@ using namespace field_config;
 using namespace icicle;
 
 #ifdef PAIRING
-#include "icicle/pairing/pairing_config.h"
-#include "icicle/pairing/pairing.h"
+  #include "icicle/pairing/pairing_config.h"
+  #include "icicle/pairing/pairing.h"
 using namespace pairing_config;
 #endif
 
@@ -935,7 +935,7 @@ public:
     typename PairingConfig::TargetField rhs;
     projective_t rhs_g1 = projective_t::from_affine(vk.g1.alpha);
     for (int i = 0; i <= nof_outputs; ++i) {
-        rhs_g1 = rhs_g1 + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
+      rhs_g1 = rhs_g1 + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
     }
     icicle::pairing<PairingConfig>(projective_t::to_affine(rhs_g1), proof.B, rhs);
 
@@ -1083,9 +1083,9 @@ TEST_F(PolynomialTest, Groth16)
 
     groth16_example.setup();
     auto proof = groth16_example.prove(witness);
-#ifdef PAIRING
+    #ifdef PAIRING
     groth16_example.verify(proof, witness);
-#endif
+    #endif
   }
 }
   #endif // G2
