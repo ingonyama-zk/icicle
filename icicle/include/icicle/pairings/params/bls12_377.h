@@ -18,9 +18,8 @@ namespace pairing_bls12_381 {
 
     static constexpr point_field_t BASE_FIELD_FROBENIUS_COEFF_C1[2] = {
       point_field_t::one(),
-      {{ 0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b, 0xc63b05c0, 0x17c510ea, 0x01ae3a46 }}
-    };
-
+      {{0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b,
+        0xc63b05c0, 0x17c510ea, 0x01ae3a46}}};
 
     struct fq6_config {
       // nonresidue to generate the extension field
@@ -31,27 +30,17 @@ namespace pairing_bls12_381 {
 
       static constexpr g2_point_field_t FROBENIUS_COEFF_C1[6] = {
         {point_field_t::one(), point_field_t::zero()},
-        {
-          {{ 0x00000002, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec, 0x09b3af05 }},
-          point_field_t::zero()
-        },
-        {
-          {{ 0x00000001, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec, 0x09b3af05 }},
-          point_field_t::zero()
-        },
-        {
-          {{ 0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b, 0xc63b05c0, 0x17c510ea, 0x01ae3a46 }},
-          point_field_t::zero()
-        },
-        {
-          {},
-          point_field_t::zero()
-        },
-        {
-          {},
-          point_field_t::zero()
-        }
-      };
+        {{{0x00000002, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec,
+           0x09b3af05}},
+         point_field_t::zero()},
+        {{{0x00000001, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec,
+           0x09b3af05}},
+         point_field_t::zero()},
+        {{{0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b,
+           0xc63b05c0, 0x17c510ea, 0x01ae3a46}},
+         point_field_t::zero()},
+        {{}, point_field_t::zero()},
+        {{}, point_field_t::zero()}};
 
       static constexpr g2_point_field_t FROBENIUS_COEFF_C2[6] = {
         {point_field_t::one(), point_field_t::zero()},
