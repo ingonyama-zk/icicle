@@ -336,7 +336,7 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 }
 
 #ifdef PAIRING
-#include "icicle/pairings/pairing_config.h"
+  #include "icicle/pairings/pairing_config.h"
 using namespace pairing_config;
 typedef PairingConfig::TargetField TargetField;
 
