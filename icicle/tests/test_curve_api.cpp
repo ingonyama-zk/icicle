@@ -8,7 +8,6 @@
 #include "icicle/ntt.h"
 #include "icicle/msm.h"
 #include "icicle/pairings/pairing.h"
-#include "icicle/pairings/pairing_config.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
@@ -18,7 +17,6 @@
 #include "test_base.h"
 #include "icicle/utils/rand_gen.h"
 
-using namespace pairing_config;
 using namespace curve_config;
 using namespace icicle;
 
@@ -338,6 +336,8 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 }
 
 #ifdef PAIRING
+#include "icicle/pairings/pairing_config.h"
+using namespace pairing_config;
 typedef PairingConfig::TargetField TargetField;
 
 TEST(CurveSanity, TargetFieldSanityTest)
