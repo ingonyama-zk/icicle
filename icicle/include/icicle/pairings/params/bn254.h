@@ -27,7 +27,8 @@ namespace pairing_bn254 {
       {{0x71a0135a, 0xdc540146, 0xa9c95998, 0xdbaae0ed, 0xb6e2f9b9, 0xdc5ec698, 0x489af5dc, 0x063cf305}},
       {{0x2623b0e3, 0x82d37f63, 0x8fa25bd2, 0x21807dc9, 0xec796f2b, 0x0704b5a7, 0xac41049a, 0x07c03cbc}}};
 
-    static void mul_fp2_field_by_frob_coeff(g2_point_field_t& fe, unsigned power) {
+    static void mul_fp2_field_by_frob_coeff(g2_point_field_t& fe, unsigned power)
+    {
       bn254::mul_fp2_field_by_frob_coeff(fe, power);
     }
 

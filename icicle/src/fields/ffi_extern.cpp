@@ -80,38 +80,41 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_from_u32)(uint32_t va
 #endif // EXT_FIELD
 
 #ifdef PAIRING
-#include "icicle/pairings/pairing_config.h"
+  #include "icicle/pairings/pairing_config.h"
 using namespace tower_config;
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_generate_scalars)(target_field_t* scalars, int size)
+extern "C" void
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_generate_scalars)(target_field_t* scalars, int size)
 {
   target_field_t::rand_host_many(scalars, size);
 }
 
-extern "C" void
-CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_sub)(target_field_t* scalar1, target_field_t* scalar2, target_field_t* result)
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_sub)(
+  target_field_t* scalar1, target_field_t* scalar2, target_field_t* result)
 {
   *result = *scalar1 - *scalar2;
 }
 
-extern "C" void
-CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_add)(target_field_t* scalar1, target_field_t* scalar2, target_field_t* result)
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_add)(
+  target_field_t* scalar1, target_field_t* scalar2, target_field_t* result)
 {
   *result = *scalar1 + *scalar2;
 }
 
-extern "C" void
-CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_mul)(target_field_t* scalar1, target_field_t* scalar2, target_field_t* result)
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_mul)(
+  target_field_t* scalar1, target_field_t* scalar2, target_field_t* result)
 {
   *result = *scalar1 * *scalar2;
 }
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_inv)(target_field_t* scalar1, target_field_t* result)
+extern "C" void
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_inv)(target_field_t* scalar1, target_field_t* result)
 {
   *result = target_field_t::inverse(*scalar1);
 }
 
-extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_pow)(target_field_t* base, int exp, target_field_t* result)
+extern "C" void
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_pow)(target_field_t* base, int exp, target_field_t* result)
 {
   *result = target_field_t::pow(*base, exp);
 }
