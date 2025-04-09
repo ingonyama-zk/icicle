@@ -89,6 +89,22 @@ namespace pairing_bls12_381 {
     typedef CubicExtensionField<fq6_config, g2_point_field_t> fq6_field_t; // T2
     static constexpr g2_point_field_t CUBIC_NONRESIDUE = fq6_config::nonresidue;
 
+    static void mul_fp2_by_nonresidue(g2_point_field_t& f)
+    {
+      point_field_t t = f.c0;
+      f.c0 = f.c0 - f.c1;
+      f.c1 = f.c1 + t;
+    }
+
+    static void mul_fp6_by_nonresidue(fq6_field_t& f)
+    {
+      g2_point_field_t t = f.c1;
+      f.c1 = f.c0;
+      f.c0 = f.c2;
+      mul_fp2_by_nonresidue(f.c0);
+      f.c2 = t;
+    }
+
     struct fq12_config {
       // nonresidue to generate the extension field
       static constexpr fq6_field_t nonresidue =

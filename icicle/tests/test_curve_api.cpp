@@ -364,7 +364,6 @@ TEST(CurveSanity, PairingBilinearityTest)
     // Proper TargetField/ScalarField multiplication is not implemented yet, so we need a uint32_t coefficient
     uint32_t coeff = 42;
     scalar_t s = scalar_t::from(coeff);
-    TargetField s_field = TargetField::from(coeff);
     affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
     g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
 

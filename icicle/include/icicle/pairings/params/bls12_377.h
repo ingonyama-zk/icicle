@@ -1,5 +1,6 @@
 #pragma once
 
+#include "icicle/fields/cubic_extension.h"
 #include "icicle/curves/params/bls12_377.h"
 #include "icicle/pairings/models/bls12.h"
 
