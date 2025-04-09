@@ -8,41 +8,50 @@ namespace pairing_bls12_381 {
   using namespace icicle_bls12_pairing;
 
   struct PairingConfig {
-    static constexpr storage<2> Z = {0x00010000, 0xd2010000};
-    static constexpr bool Z_IS_NEGATIVE = true;
+    static constexpr storage<2> Z = {0x8508c000, 0x00000001};
+    static constexpr bool Z_IS_NEGATIVE = false;
     static constexpr int Z_NAF[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,  0, 0, 0,
                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0,
                                     0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, -1, 0, 1};
 
-    static constexpr TwistType TWIST_TYPE = TwistType::M;
+    static constexpr TwistType TWIST_TYPE = TwistType::D;
 
     static constexpr point_field_t BASE_FIELD_FROBENIUS_COEFF_C1[2] = {
       point_field_t::one(),
-      {{0xffffaaaa, 0xb9feffff, 0xb153ffff, 0x1eabfffe, 0xf6b0f624, 0x6730d2a0, 0xf38512bf, 0x64774b84, 0x434bacd7,
-        0x4b1ba7b6, 0x397fe69a, 0x1a0111ea}}};
+      {{ 0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b, 0xc63b05c0, 0x17c510ea, 0x01ae3a46 }}
+    };
+
 
     struct fq6_config {
       // nonresidue to generate the extension field
-      static constexpr g2_point_field_t nonresidue = g2_point_field_t{point_field_t::one(), point_field_t::one()};
+      static constexpr g2_point_field_t nonresidue = g2_point_field_t{point_field_t::zero(), point_field_t::one()};
       // true if nonresidue is negative
       static constexpr bool nonresidue_is_negative = false;
       static constexpr bool nonresidue_is_u32 = false;
 
       static constexpr g2_point_field_t FROBENIUS_COEFF_C1[6] = {
         {point_field_t::one(), point_field_t::zero()},
-        {point_field_t::zero(),
-         {{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
-           0xec024086, 0x397fe699, 0x1a0111ea}}},
-        {{{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
-           0x5f19672f}},
-         point_field_t::zero()},
-        {point_field_t::zero(), point_field_t::one()},
-        {{{0x0000aaac, 0x8bfd0000, 0x4f49fffd, 0x409427eb, 0x0fb85f9b, 0x897d2965, 0x89759ad4, 0xaa0d857d, 0x63d4de85,
-           0xec024086, 0x397fe699, 0x1a0111ea}},
-         point_field_t::zero()},
-        {point_field_t::zero(),
-         {{0xfffefffe, 0x2e01ffff, 0x620a0002, 0xde17d813, 0xe6f89688, 0xddb3a93b, 0x6a0f77ea, 0xba69c607, 0xdf76ce51,
-           0x5f19672f}}}};
+        {
+          {{ 0x00000002, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec, 0x09b3af05 }},
+          point_field_t::zero()
+        },
+        {
+          {{ 0x00000001, 0x8508c000, 0x90000000, 0x452217cc, 0x970dec00, 0xc5ed1347, 0x34594aab, 0x619aaf7d, 0xdd14f6ec, 0x09b3af05 }},
+          point_field_t::zero()
+        },
+        {
+          {{ 0x00000000, 0x8508c000, 0x30000000, 0x170b5d44, 0xba094800, 0x1ef3622f, 0x00f5138f, 0x1a22d9f3, 0x6ca1493b, 0xc63b05c0, 0x17c510ea, 0x01ae3a46 }},
+          point_field_t::zero()
+        },
+        {
+          {},
+          point_field_t::zero()
+        },
+        {
+          {},
+          point_field_t::zero()
+        }
+      };
 
       static constexpr g2_point_field_t FROBENIUS_COEFF_C2[6] = {
         {point_field_t::one(), point_field_t::zero()},

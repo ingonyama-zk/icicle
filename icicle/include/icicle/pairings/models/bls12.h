@@ -196,6 +196,12 @@ namespace icicle_bls12_pairing {
     }
   } // namespace
 
+  template <typename Config>
+    static void mul_fp2_field_by_frob_coeff(typename Config::Fq2& fe, unsigned power)
+    {
+        fe.c1 = fe.c1 * Config::BASE_FIELD_FROBENIUS_COEFF_C1[power % 2];
+    }
+
   // Evaluate at p
   template <typename Config>
   void ell(typename Config::Fp12& f, typename Config::Fp6 coeffs, typename Config::G1Affine p)
