@@ -20,6 +20,38 @@ pub trait HostOrDeviceSlice<T> {
     unsafe fn as_mut_ptr(&mut self) -> *mut T;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
+
+    fn copy(&mut self, src: &(impl HostOrDeviceSlice<T> + ?Sized)) -> Result<(), eIcicleError> {
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
+
+        let size = size_of::<T>() * src.len();
+        unsafe { runtime::icicle_copy(self.as_mut_ptr() as *mut c_void, src.as_ptr() as *const c_void, size).wrap() }
+    }
+
+    fn copy_async(
+        &mut self,
+        src: &(impl HostOrDeviceSlice<T> + ?Sized),
+        stream: &IcicleStream,
+    ) -> Result<(), eIcicleError> {
+        assert!(
+            self.len() >= src.len(),
+            "In copy, destination has shorter length than source"
+        );
+
+        let size = size_of::<T>() * src.len();
+        unsafe {
+            runtime::icicle_copy_async(
+                self.as_mut_ptr() as *mut c_void,
+                src.as_ptr() as *const c_void,
+                size,
+                stream.handle,
+            )
+            .wrap()
+        }
+    }
 }
 
 impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
@@ -45,6 +77,7 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
         self.0
             .len()
     }
+
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -76,6 +109,7 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
         self.0
             .len()
     }
+
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -166,7 +200,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -185,7 +219,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -203,7 +237,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();
@@ -227,7 +261,7 @@ impl<T> DeviceSlice<T> {
             return Ok(());
         }
         if !self.is_on_active_device() {
-            panic!("not allocated on an inactive device");
+            panic!("not allocated on an active device");
         }
 
         let size = size_of::<T>() * self.len();

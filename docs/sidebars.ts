@@ -175,6 +175,11 @@ const rustBindingsApi = [
   },
   {
     type: "doc",
+    label: "Program",
+    id: "icicle/rust-bindings/program", 
+  },
+  {
+    type: "doc",
     label: "Polynomials",
     id: "icicle/rust-bindings/polynomials",
   },
