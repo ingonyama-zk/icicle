@@ -70,7 +70,7 @@ public:
 
   static constexpr HOST_DEVICE_INLINE CubicExtensionField from_montgomery(const CubicExtensionField& xs)
   {
-    return CubicExtensionField{FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1)};
+    return CubicExtensionField{FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1), FF::from_montgomery(xs.c2)};
   }
 
   static HOST_INLINE CubicExtensionField rand_host()
