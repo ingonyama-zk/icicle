@@ -128,7 +128,6 @@ func (s *BabybearVecOpsTestSuite) TestBabybearVecOps() {
 	s.Run("TestBabybearTranspose", testWrapper(&s.Suite, testBabybearTranspose))
 	s.Run("TestBabybearSum", testWrapper(&s.Suite, testBabybearSum))
 	s.Run("TestBabybearProduct", testWrapper(&s.Suite, testBabybearProduct))
-
 }
 
 func TestSuiteBabybearVecOps(t *testing.T) {

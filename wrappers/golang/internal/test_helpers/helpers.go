@@ -1,14 +1,34 @@
 package test_helpers
 
 import (
+	"fmt"
 	"math/rand"
+	"sync"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
 )
 
 var (
+	LOAD_AND_INIT_MAIN_DEVICE = sync.OnceFunc(func() {
+		runtime.LoadBackendFromEnvOrDefault()
+		registeredDevices, _ := runtime.GetRegisteredDevices()
+
+		fmt.Println(registeredDevices)
+
+		if len(registeredDevices) < 2 {
+			panic("Tests require at least 2 backends to be loaded")
+		}
+
+		mainDeviceName := registeredDevices[1]
+		if registeredDevices[0] != "CPU" {
+			mainDeviceName = registeredDevices[0]
+		}
+
+		MAIN_DEVICE = runtime.CreateDevice(mainDeviceName, 0)
+		fmt.Println("[INFO] Go testing: registeredDevices=", registeredDevices, "; MainDevice=", mainDeviceName, "; ReferenceDevice=CPU")
+	})
 	REFERENCE_DEVICE = runtime.CreateDevice("CPU", 0)
-	MAIN_DEVICE      = runtime.CreateDevice("CUDA", 0)
+	MAIN_DEVICE      runtime.Device
 )
 
 func ActivateReferenceDevice() {
