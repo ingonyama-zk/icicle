@@ -128,7 +128,6 @@ func (s *KoalabearVecOpsTestSuite) TestKoalabearVecOps() {
 	s.Run("TestKoalabearTranspose", testWrapper(&s.Suite, testKoalabearTranspose))
 	s.Run("TestKoalabearSum", testWrapper(&s.Suite, testKoalabearSum))
 	s.Run("TestKoalabearProduct", testWrapper(&s.Suite, testKoalabearProduct))
-
 }
 
 func TestSuiteKoalabearVecOps(t *testing.T) {
