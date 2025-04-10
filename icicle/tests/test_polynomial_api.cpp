@@ -927,7 +927,7 @@ public:
 
   bool verify(const G16proof& proof, const std::vector<S>& public_witness) const
   {
-#ifdef PAIRING
+  #ifdef PAIRING
     // Compute e(A, B)
     typename PairingConfig::TargetField lhs;
     icicle::pairing<PairingConfig>(proof.A, proof.B, lhs);
@@ -939,7 +939,7 @@ public:
     // Compute sum(public_witness[i] * public_witness_points[i])
     projective_t public_inputs = projective_t::zero();
     for (int i = 0; i <= nof_outputs; ++i) {
-        public_inputs = public_inputs + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
+      public_inputs = public_inputs + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
     }
 
     // Add e(sum(public_witness[i] * public_witness_points[i]), gamma) to the right-hand side
@@ -954,9 +954,9 @@ public:
 
     // Check if the pairings are equal
     return lhs == rhs;
-#else
+  #else
     return false;
-#endif
+  #endif
   }
 
   // Dummy verification function where pairings are changed to scalar multiplications
