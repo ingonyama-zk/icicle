@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include "icicle/utils/modifiers.h"
-#include "icicle/fields/storage.h"
+#include "icicle/math/storage.h"
 #include "icicle/errors.h"
 namespace host_math {
 
@@ -227,13 +227,13 @@ namespace host_math {
   static HOST_INLINE void multiply_raw_64(const uint64_t* a, const uint64_t* b, uint64_t* r)
   {
 #pragma unroll
-    for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
+    for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
       uint64_t carry = 0;
 #pragma unroll
-      for (unsigned i = 0; i < NLIMBS_B / 2; i++) {
+      for (unsigned j = 0; j < NLIMBS_A / 2; j++) {
         r[j + i] = host_math::madc_cc_64(a[j], b[i], r[j + i], carry);
       }
-      r[NLIMBS_A / 2 + j] = carry;
+      r[NLIMBS_A / 2 + i] = carry;
     }
   }
 
@@ -256,8 +256,8 @@ namespace host_math {
   multiply_raw(const storage<NLIMBS_A>& as, const storage<NLIMBS_B>& bs, storage<NLIMBS_A + NLIMBS_B>& rs)
   {
     static_assert(
-      (NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1),
-      "odd number of limbs is not supported\n");
+      ((NLIMBS_A % 2 == 0 || NLIMBS_A == 1) && (NLIMBS_B % 2 == 0 || NLIMBS_B == 1)) || USE_32,
+      "odd number of limbs is not supported for 64 bit multiplication\n");
     if constexpr (USE_32) {
       multiply_raw_32<NLIMBS_A, NLIMBS_B>(as, bs, rs);
       return;
@@ -348,13 +348,16 @@ namespace host_math {
     if constexpr (NLIMBS % 2 == 0) {
 #pragma unroll
       for (unsigned i = 0; i < NLIMBS / 2; i++) { // Ensure valid indexing
-        out.limbs64[i] =
-          (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) | (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS));
+        out.limbs64[i] = SLACK_BITS ? (xs.limbs64[i + NLIMBS / 2] << 2 * SLACK_BITS) |
+                                        (xs.limbs64[i + NLIMBS / 2 - 1] >> (64 - 2 * SLACK_BITS))
+                                    : xs.limbs64[i + NLIMBS / 2];
       }
     } else {
 #pragma unroll
       for (unsigned i = 0; i < NLIMBS; i++) { // Ensure valid indexing
-        out.limbs[i] = (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS));
+        out.limbs[i] =
+          SLACK_BITS ? (xs.limbs[i + NLIMBS] << 2 * SLACK_BITS) + (xs.limbs[i + NLIMBS - 1] >> (32 - 2 * SLACK_BITS))
+                     : xs.limbs[i + NLIMBS];
       }
     }
   }
@@ -363,12 +366,13 @@ namespace host_math {
   {
     return std::memcmp(xs.limbs, ys.limbs, NLIMBS * sizeof(xs.limbs[0])) == 0;
   }
-  static constexpr void inv_log_size_err(uint32_t logn, uint32_t omegas_count)
+  // this function checks if the given index is within the array range
+  static constexpr void index_err(uint32_t index, uint32_t max_index)
   {
-    if (logn > omegas_count)
+    if (index > max_index)
       THROW_ICICLE_ERR(
-        icicle::eIcicleError::INVALID_ARGUMENT,
-        "Field: Invalid inv index" + std::to_string(logn) + ">" + std::to_string(omegas_count));
+        icicle::eIcicleError::INVALID_ARGUMENT, "Field: index out of range: given index -" + std::to_string(index) +
+                                                  "> max index - " + std::to_string(max_index));
   }
 
   template <unsigned NLIMBS>
@@ -415,7 +419,7 @@ namespace host_math {
    * will cause only 1 reduction to be performed.
    */
   template <unsigned NLIMBS, unsigned SLACK_BITS, unsigned NOF_REDUCTIONS>
-  static constexpr HOST_DEVICE_INLINE storage<NLIMBS> barrett_reduce(
+  static constexpr HOST_INLINE storage<NLIMBS> barrett_reduce(
     const storage<2 * NLIMBS>& xs,
     const storage<NLIMBS>& ms,
     const storage<NLIMBS>& mod1,
@@ -453,8 +457,9 @@ namespace host_math {
   template <unsigned NLIMBS>
   static constexpr void div2(const storage<NLIMBS>& xs, storage<NLIMBS>& rs)
   {
-    const uint32_t* x = xs.limbs;
-    uint32_t* r = rs.limbs;
+    // Note: volatile is used to prevent compiler optimizations that assume strict aliasing rules.
+    volatile const uint32_t* x = xs.limbs;
+    volatile uint32_t* r = rs.limbs;
     if constexpr (NLIMBS > 1) {
       for (unsigned i = 0; i < NLIMBS - 1; i++) {
         r[i] = (x[i] >> 1) | (x[i + 1] << 31);

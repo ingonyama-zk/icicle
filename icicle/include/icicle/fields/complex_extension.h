@@ -46,6 +46,13 @@ public:
     return ComplexExtensionField{FF::one(), FF::zero()};
   }
 
+  // Converts a uint32_t value to a QuarticExtensionField element.
+  // If `val` ≥ p, it wraps around modulo p, affecting only the first coefficient.
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(uint32_t val)
+  {
+    return ComplexExtensionField{FF::from(val), FF::zero()};
+  }
+
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField to_montgomery(const ComplexExtensionField& xs)
   {
     return ComplexExtensionField{xs.real * FF{CONFIG::montgomery_r}, xs.imaginary * FF{CONFIG::montgomery_r}};
@@ -304,6 +311,13 @@ public:
       exp >>= 1;
     }
     return res;
+  }
+
+  /* Receives an array of bytes and its size and returns extension field element. */
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
+  {
+    if (nof_bytes < 2 * sizeof(FF)) { ICICLE_LOG_ERROR << "Input size is too small"; }
+    return ComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
   }
 };
 

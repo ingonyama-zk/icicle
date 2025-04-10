@@ -3,17 +3,20 @@
 #include <string.h>
 
 template <typename S>
-class CpuSumcheckTranscript
+class SumcheckTranscript
 {
 public:
-  CpuSumcheckTranscript(
+  SumcheckTranscript(
     const S& claimed_sum,
     const uint32_t mle_polynomial_size,
     const uint32_t combine_function_poly_degree,
-    const SumcheckTranscriptConfig<S>&& transcript_config)
+    SumcheckTranscriptConfig<S>&& transcript_config)
       : m_claimed_sum(claimed_sum), m_mle_polynomial_size(mle_polynomial_size),
         m_combine_function_poly_degree(combine_function_poly_degree), m_transcript_config(std::move(transcript_config))
   {
+    // Check inputs
+    ICICLE_ASSERT(m_mle_polynomial_size > 0) << "mle_polynomial_size must be > 0";
+    ICICLE_ASSERT(m_combine_function_poly_degree > 0) << "combine_function_poly_degree must be > 0";
     m_entry_0.clear();
     m_round_idx = 0;
   }
@@ -21,10 +24,6 @@ public:
   // add round polynomial to the transcript
   S get_alpha(const std::vector<S>& round_poly)
   {
-    // Make sure reset was called (Internal assertion)
-    ICICLE_ASSERT(m_mle_polynomial_size > 0) << "mle_polynomial_size must reset with value > 0";
-    ICICLE_ASSERT(m_combine_function_poly_degree > 0) << "combine_function_poly_degree must reset with value > 0";
-
     const std::vector<std::byte>& round_poly_label = m_transcript_config.get_round_poly_label();
     std::vector<std::byte> hash_input;
     hash_input.reserve(2048);
@@ -36,15 +35,15 @@ public:
     std::vector<std::byte> hash_result(hasher.output_size());
     hasher.hash(hash_input.data(), hash_input.size(), m_config, hash_result.data());
     m_round_idx++;
-    reduce_hash_result_to_field(m_prev_alpha, hash_result);
+    m_prev_alpha = S::from(hash_result.data(), hasher.output_size());
     return m_prev_alpha;
   }
 
 private:
-  const SumcheckTranscriptConfig<S>&& m_transcript_config; // configuration how to build the transcript
-  HashConfig m_config;                                     // hash config - default
-  uint32_t m_round_idx;                                    //
-  std::vector<std::byte> m_entry_0;                        //
+  const SumcheckTranscriptConfig<S> m_transcript_config; // configuration how to build the transcript
+  HashConfig m_config;                                   // hash config - default
+  uint32_t m_round_idx;                                  //
+  std::vector<std::byte> m_entry_0;                      //
   uint32_t m_mle_polynomial_size = 0;
   uint32_t m_combine_function_poly_degree = 0;
   const S m_claimed_sum;
@@ -54,15 +53,6 @@ private:
   void append_data(std::vector<std::byte>& byte_vec, const std::vector<std::byte>& label)
   {
     byte_vec.insert(byte_vec.end(), label.begin(), label.end());
-  }
-
-  // convert a vector of bytes to a field
-  void reduce_hash_result_to_field(S& alpha, const std::vector<std::byte>& hash_result)
-  {
-    alpha = S::zero();
-    const int nof_bytes_to_copy = std::min(sizeof(alpha), hash_result.size());
-    memcpy(&alpha, hash_result.data(), nof_bytes_to_copy);
-    alpha = alpha * S::one();
   }
 
   // append an integer uint32_t to hash input

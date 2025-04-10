@@ -11,7 +11,7 @@ pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 8;
 
 impl_scalar_field!("grumpkin", grumpkin_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
-impl_field!(BASE_LIMBS, BaseField, BaseCfg);
+impl_field!("grumpkin_base_field", BASE_LIMBS, BaseField, BaseCfg);
 impl_curve!(
     "grumpkin",
     grumpkin,
