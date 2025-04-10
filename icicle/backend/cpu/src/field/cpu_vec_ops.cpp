@@ -24,6 +24,7 @@ enum VecOperation {
   VECTOR_SUB,
   VECTOR_MUL,
   VECTOR_DIV,
+  VECTOR_INV,
   CONVERT_TO_MONTGOMERY,
   CONVERT_FROM_MONTGOMERY,
   VECTOR_SUM,
@@ -206,6 +207,13 @@ private:
       m_output[i] = m_op_a[i] * U::inverse(m_op_b[i]);
     }
   }
+  // Single worker functionality to execute vector inv (^-1)
+  void vector_inv()
+  {
+    for (uint64_t i = 0; i < m_nof_operations; ++i) {
+      m_output[i] = T::inverse(m_op_a[i]);
+    }
+  }
   // Single worker functionality to execute conversion from barret to montgomery
   void convert_to_montgomery()
   {
@@ -338,6 +346,7 @@ private:
     &VectorOpTask::vector_sub,              // VECTOR_SUB,
     &VectorOpTask::vector_mul,              // VECTOR_MUL,
     &VectorOpTask::vector_div,              // VECTOR_DIV,
+    &VectorOpTask::vector_inv,              // VECTOR_INV,
     &VectorOpTask::convert_to_montgomery,   // CONVERT_TO_MONTGOMERY,
     &VectorOpTask::convert_from_montgomery, // CONVERT_FROM_MONTGOMERY,
     &VectorOpTask::vector_sum,              // VECTOR_SUM
@@ -475,6 +484,15 @@ eIcicleError cpu_vector_div(
 }
 
 REGISTER_VECTOR_DIV_BACKEND("CPU", cpu_vector_div<scalar_t>);
+
+/*********************************** INV ***********************************/
+template <typename T>
+eIcicleError cpu_vector_inv(const Device& device, const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output)
+{
+  return cpu_2vectors_op(VecOperation::VECTOR_INV, vec_a, vec_a, size, config, output);
+}
+
+REGISTER_VECTOR_INV_BACKEND("CPU", cpu_vector_inv<scalar_t>);
 
 /*********************************** CONVERT MONTGOMERY ***********************************/
 template <typename T>
@@ -993,6 +1011,7 @@ REGISTER_VECTOR_SUB_EXT_FIELD_BACKEND("CPU", cpu_vector_sub<extension_t>);
 REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND("CPU", (cpu_vector_mul<extension_t, extension_t>));
 REGISTER_VECTOR_MIXED_MUL_BACKEND("CPU", (cpu_vector_mul<extension_t, scalar_t>));
 REGISTER_VECTOR_DIV_EXT_FIELD_BACKEND("CPU", cpu_vector_div<extension_t>);
+REGISTER_VECTOR_INV_EXT_FIELD_BACKEND("CPU", cpu_vector_inv<extension_t>);
 REGISTER_CONVERT_MONTGOMERY_EXT_FIELD_BACKEND("CPU", cpu_convert_montgomery<extension_t>);
 REGISTER_VECTOR_SUM_EXT_FIELD_BACKEND("CPU", cpu_vector_sum<extension_t>);
 REGISTER_VECTOR_PRODUCT_EXT_FIELD_BACKEND("CPU", cpu_vector_product<extension_t>);
@@ -1012,6 +1031,7 @@ REGISTER_VECTOR_ACCUMULATE_RING_RNS_BACKEND("CPU", cpu_vector_accumulate<scalar_
 REGISTER_VECTOR_SUB_RING_RNS_BACKEND("CPU", cpu_vector_sub<scalar_rns_t>);
 REGISTER_VECTOR_MUL_RING_RNS_BACKEND("CPU", (cpu_vector_mul<scalar_rns_t, scalar_rns_t>));
 REGISTER_VECTOR_DIV_RING_RNS_BACKEND("CPU", cpu_vector_div<scalar_rns_t>);
+REGISTER_VECTOR_INV_RING_RNS_BACKEND("CPU", cpu_vector_inv<scalar_rns_t>);
 REGISTER_CONVERT_MONTGOMERY_RING_RNS_BACKEND("CPU", cpu_convert_montgomery<scalar_rns_t>);
 REGISTER_VECTOR_SUM_RING_RNS_BACKEND("CPU", cpu_vector_sum<scalar_rns_t>);
 REGISTER_VECTOR_PRODUCT_RING_RNS_BACKEND("CPU", cpu_vector_product<scalar_rns_t>);

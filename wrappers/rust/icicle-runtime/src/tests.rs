@@ -249,4 +249,49 @@ mod tests {
         assert_eq!(config_ext.get_int("example_int"), 42);
         assert_eq!(config_ext.get_bool("example_bool"), true);
     }
+    #[test]
+    fn test_memset() {
+        initialize();
+        test_utilities::test_set_main_device();
+        let size = 1 << 10;
+        let val = 42;
+        let expected = vec![val; size];
+        let mut device_vec = DeviceVec::<u8>::device_malloc(size).unwrap();
+        device_vec
+            .memset(val, size)
+            .unwrap();
+
+        let mut host_slice = vec![0u8; size];
+        let host_slice = HostSlice::from_mut_slice(&mut host_slice);
+        device_vec
+            .copy_to_host(host_slice)
+            .unwrap();
+
+        assert_eq!(host_slice.as_slice(), expected);
+    }
+
+    #[test]
+    fn test_memset_async() {
+        initialize();
+        test_utilities::test_set_main_device();
+        let size = 1 << 10;
+        let val = 42;
+        let expected = vec![val; size >> 1];
+        let stream = IcicleStream::create().unwrap();
+        let mut device_vec = DeviceVec::<u8>::device_malloc(size).unwrap();
+        device_vec.as_mut_slice()[1..size >> 1] // set only part of the slice
+            .memset_async(val, (size >> 1) - 1, &stream)
+            .unwrap();
+        stream
+            .synchronize()
+            .unwrap();
+
+        let mut host_slice = vec![0u8; size];
+        let host_slice = HostSlice::from_mut_slice(&mut host_slice);
+        device_vec
+            .copy_to_host(host_slice)
+            .unwrap();
+
+        assert_eq!(host_slice.as_slice()[1..size >> 1], expected[1..]);
+    }
 }
