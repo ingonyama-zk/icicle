@@ -183,7 +183,7 @@ public:
     if constexpr (CONFIG::nonresidue_is_u32) {
       return FF::template mul_unsigned<CONFIG::nonresidue>(xs);
     } else {
-      return FF::template mul_wide(FF::reduce(xs), CONFIG::nonresidue);
+      return FF::template mul_wide<>(FF::reduce(xs), CONFIG::nonresidue);
     }
   }
 
