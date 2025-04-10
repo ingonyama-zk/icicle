@@ -71,8 +71,8 @@ pub trait VecOps<F> {
     ) -> Result<(), eIcicleError>;
 
     fn inv(
-        a: &(impl HostOrDeviceSlice<F> + ?Sized),
-        result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
@@ -410,16 +410,16 @@ where
 }
 
 pub fn inv_scalars<F>(
-    a: &(impl HostOrDeviceSlice<F> + ?Sized),
-    result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
     F: FieldImpl,
     <F as FieldImpl>::Config: VecOps<F>,
 {
-    let cfg = check_vec_ops_args(a, a, result, cfg);
-    <<F as FieldImpl>::Config as VecOps<F>>::inv(a, result, &cfg)
+    let cfg = check_vec_ops_args(input, input, output, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::inv(input, output, &cfg)
 }
 
 pub fn sum_scalars<F>(
@@ -624,10 +624,10 @@ macro_rules! impl_vec_ops_field {
 
                 #[link_name = concat!($field_prefix, "_vector_inv")]
                 pub(crate) fn vector_inv_ffi(
-                    a: *const $field,
+                    input: *const $field,
                     size: u32,
                     cfg: *const VecOpsConfig,
-                    result: *mut $field,
+                    output: *mut $field,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_sum")]
@@ -802,16 +802,16 @@ macro_rules! impl_vec_ops_field {
             }
 
             fn inv(
-                a: &(impl HostOrDeviceSlice<$field> + ?Sized),
-                result: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
                     $field_prefix_ident::vector_inv_ffi(
-                        a.as_ptr(),
-                        a.len() as u32,
+                        input.as_ptr(),
+                        input.len() as u32,
                         cfg as *const VecOpsConfig,
-                        result.as_mut_ptr(),
+                        output.as_mut_ptr(),
                     )
                     .wrap()
                 }
