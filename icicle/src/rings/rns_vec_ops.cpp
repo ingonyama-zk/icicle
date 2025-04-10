@@ -142,20 +142,13 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(VectorInvRingRnsDispatcher, ring_rns_vector_inv, ringRnsVectorReduceOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_vector_inv)(
-    const scalar_rns_t* input,
-    uint64_t size,
-    const VecOpsConfig* config,
-    scalar_rns_t* output)
+    const scalar_rns_t* input, uint64_t size, const VecOpsConfig* config, scalar_rns_t* output)
   {
     return VectorInvRingRnsDispatcher::execute(input, size, *config, output);
   }
 
   template <>
-  eIcicleError vector_inv(
-    const scalar_rns_t* input,
-    uint64_t size,
-    const VecOpsConfig& config,
-    scalar_rns_t* output)
+  eIcicleError vector_inv(const scalar_rns_t* input, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)
   {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_vector_inv)(input, size, &config, output);
   }

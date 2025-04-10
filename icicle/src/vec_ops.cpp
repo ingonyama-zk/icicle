@@ -247,8 +247,8 @@ namespace icicle {
   /*********************************** INV ***********************************/
   ICICLE_DISPATCHER_INST(VectorInvDispatcher, vector_inv, VectorReduceOpImpl);
 
-  extern "C" eIcicleError
-  CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_inv)(const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_inv)(
+    const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
   {
     return VectorInvDispatcher::execute(vec_a, size, *config, output);
   }
