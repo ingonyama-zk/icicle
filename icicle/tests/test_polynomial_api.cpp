@@ -840,7 +840,7 @@ public:
     pk.g2.beta = G2P::to_affine(toxic_waste.beta * g2);
     vk.g2.beta = pk.g2.beta;
     pk.g2.gamma = G2P::to_affine(toxic_waste.gamma * g2);
-    vk.g2.gamma = pk.g2.gamma;
+    pk.g2.gamma = pk.g2.gamma;
     pk.g2.delta = G2P::to_affine(toxic_waste.delta * g2);
     vk.g2.delta = pk.g2.delta;
 
@@ -927,29 +927,36 @@ public:
 
   bool verify(const G16proof& proof, const std::vector<S>& public_witness) const
   {
-  #ifdef PAIRING
-    // Compute the left-hand side of the pairing equation
+#ifdef PAIRING
+    // Compute e(A, B)
     typename PairingConfig::TargetField lhs;
-    pairing<PairingConfig>(proof.A, vk.g2.gamma, lhs);
+    icicle::pairing<PairingConfig>(proof.A, proof.B, lhs);
 
-    // Compute the right-hand side of the pairing equation
+    // Compute e(alpha, beta)
     typename PairingConfig::TargetField rhs;
-    projective_t rhs_g1 = projective_t::from_affine(vk.g1.alpha);
-    for (int i = 0; i <= nof_outputs; ++i) {
-      rhs_g1 = rhs_g1 + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
-    }
-    icicle::pairing<PairingConfig>(projective_t::to_affine(rhs_g1), proof.B, rhs);
+    icicle::pairing<PairingConfig>(vk.g1.alpha, vk.g2.beta, rhs);
 
-    // Add the final term to the right-hand side
+    // Compute sum(public_witness[i] * public_witness_points[i])
+    projective_t public_inputs = projective_t::zero();
+    for (int i = 0; i <= nof_outputs; ++i) {
+        public_inputs = public_inputs + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
+    }
+
+    // Add e(sum(public_witness[i] * public_witness_points[i]), gamma) to the right-hand side
+    typename PairingConfig::TargetField public_term;
+    icicle::pairing<PairingConfig>(projective_t::to_affine(public_inputs), vk.g2.gamma, public_term);
+    rhs = rhs * public_term;
+
+    // Add e(C, delta) to the right-hand side
     typename PairingConfig::TargetField final_term;
     icicle::pairing<PairingConfig>(proof.C, vk.g2.delta, final_term);
-    rhs = rhs + final_term;
+    rhs = rhs * final_term;
 
     // Check if the pairings are equal
     return lhs == rhs;
-  #else
+#else
     return false;
-  #endif
+#endif
   }
 
   // Dummy verification function where pairings are changed to scalar multiplications

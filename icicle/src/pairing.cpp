@@ -19,7 +19,7 @@ namespace icicle {
   }
 
   extern "C" void
-  CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing)(affine_t* p, g2_affine_t* q, PairingConfig::TargetField* output)
+  CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing)(const affine_t* p, const g2_affine_t* q, PairingConfig::TargetField* output)
   {
     pairing<PairingConfig>(*p, *q, *output);
   }

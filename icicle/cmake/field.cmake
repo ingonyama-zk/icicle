@@ -45,12 +45,6 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   # Split FEATURES_STRING into a list using "," as the separator
   string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})
 
-  set(PAIRING_FIELD_INDICES "1" "2" "3")
-  list(FIND PAIRING_FIELD_INDICES "${FIELD_INDEX}" index)
-  if(NOT index EQUAL -1)
-    target_compile_definitions(icicle_field PUBLIC PAIRING=1)
-  endif()
-
   # customize the field lib to choose what to include
   handle_field(icicle_field) # basic field methods, including vec ops
   # Handle features
@@ -60,6 +54,11 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   handle_poseidon2(icicle_field "${FEATURES_LIST}")
   handle_sumcheck(icicle_field "${FEATURES_LIST}")
   handle_fri(icicle_field "${FEATURES_LIST}")
+  set(PAIRING_FIELD_INDICES "1" "2" "3")
+  list(FIND PAIRING_FIELD_INDICES "${FIELD_INDEX}" index)
+  if(NOT index EQUAL -1)
+    target_sources(icicle_field PRIVATE src/fields/ffi_extern_pairing_extension.cpp)
+  endif()
   # Add additional feature handling calls here
 
   set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")

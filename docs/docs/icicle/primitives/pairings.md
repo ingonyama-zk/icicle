@@ -65,7 +65,7 @@ Bn254::G2Affine q = ...;
 Bn254::TargetField result;
 
 // Compute pairing
-eIcicleError err = icicle::pairing<Bn254>(p, q, &result);
+eIcicleError err = icicle::pairing<Bn254>(p, q, result);
 ```
 
 ## Further Reading
