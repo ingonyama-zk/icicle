@@ -52,6 +52,9 @@ pub trait HostOrDeviceSlice<T> {
             .wrap()
         }
     }
+
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError>;
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError>;
 }
 
 impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
@@ -80,6 +83,32 @@ impl<T> HostOrDeviceSlice<T> for HostSlice<T> {
 
     fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+        if size == 0 || self.is_empty() {
+            return Ok(());
+        }
+        if size > self.len() {
+            panic!("size exceeds slice length");
+        }
+        unsafe {
+            runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, size).wrap()?;
+        }
+        Ok(())
+    }
+
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        if size == 0 || self.is_empty() {
+            return Ok(());
+        }
+        if size > self.len() {
+            panic!("size exceeds slice length");
+        }
+        unsafe {
+            runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, size, stream.handle).wrap()?;
+        }
+        Ok(())
     }
 }
 
@@ -112,6 +141,38 @@ impl<T> HostOrDeviceSlice<T> for DeviceSlice<T> {
 
     fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+        if size == 0 || self.is_empty() {
+            return Ok(());
+        }
+        if size > self.len() {
+            panic!("size exceeds slice length");
+        }
+        if !self.is_on_active_device() {
+            panic!("not allocated on an active device");
+        }
+
+        let byte_size = size_of::<T>() * size;
+        unsafe { runtime::memset(self.as_mut_ptr() as *mut c_void, value as i32, byte_size).wrap() }
+    }
+
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        if size == 0 || self.is_empty() {
+            return Ok(());
+        }
+        if size > self.len() {
+            panic!("size exceeds slice length");
+        }
+        if !self.is_on_active_device() {
+            panic!("not allocated on an active device");
+        }
+
+        let byte_size = size_of::<T>() * size;
+        unsafe {
+            runtime::memset_async(self.as_mut_ptr() as *mut c_void, value as i32, byte_size, stream.handle).wrap()
+        }
     }
 }
 
@@ -146,6 +207,16 @@ impl<T> HostOrDeviceSlice<T> for DeviceVec<T> {
     fn is_empty(&self) -> bool {
         // Forward to the dereferenced DeviceSlice
         (&**self).is_empty()
+    }
+
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+        self.as_mut_slice()
+            .memset(value, size)
+    }
+
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        self.as_mut_slice()
+            .memset_async(value, size, stream)
     }
 }
 
@@ -317,6 +388,10 @@ impl<T> DeviceVec<T> {
                 count,
             )))))
         }
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut DeviceSlice<T> {
+        &mut self[..]
     }
 }
 
