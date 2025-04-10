@@ -177,10 +177,6 @@ auto output = std::make_unique<std::byte[]>(32 * config.batch); // Allocate outp
 eIcicleErr err = keccak256.hash(input.data(), input.size() / config.batch, config, output.get());
 ```
 
-### 4. Poseidon sponge function
-
-Currently the poseidon sponge mode (sponge function description could be found in Sec 2.1 of [eprint 2019/458](https://eprint.iacr.org/2019/458.pdf)) isn't implemented.
-
 ### Supported Bindings
 
 - [Rust](../rust-bindings/hash)

@@ -37,6 +37,9 @@ namespace field_config = m31;
 #elif FIELD_ID == KOALA_BEAR
   #include "icicle/fields/stark_fields/koalabear.h"
 namespace field_config = koalabear;
+#elif FIELD_ID == GOLDILOCKS
+  #include "icicle/fields/stark_fields/goldilocks.h"
+namespace field_config = goldilocks;
 #endif
 
 // Note: rings are currently here since most code is shared with fields and include field_config.h
