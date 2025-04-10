@@ -128,7 +128,6 @@ func (s *Bn254VecOpsTestSuite) TestBn254VecOps() {
 	s.Run("TestBn254Transpose", testWrapper(&s.Suite, testBn254Transpose))
 	s.Run("TestBn254Sum", testWrapper(&s.Suite, testBn254Sum))
 	s.Run("TestBn254Product", testWrapper(&s.Suite, testBn254Product))
-
 }
 
 func TestSuiteBn254VecOps(t *testing.T) {

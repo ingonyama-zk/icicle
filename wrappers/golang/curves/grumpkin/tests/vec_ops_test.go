@@ -128,7 +128,6 @@ func (s *GrumpkinVecOpsTestSuite) TestGrumpkinVecOps() {
 	s.Run("TestGrumpkinTranspose", testWrapper(&s.Suite, testGrumpkinTranspose))
 	s.Run("TestGrumpkinSum", testWrapper(&s.Suite, testGrumpkinSum))
 	s.Run("TestGrumpkinProduct", testWrapper(&s.Suite, testGrumpkinProduct))
-
 }
 
 func TestSuiteGrumpkinVecOps(t *testing.T) {
