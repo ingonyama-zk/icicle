@@ -29,7 +29,6 @@ Edit the exact location of Icicle directory and run the container interactively:
 ```sh
 docker run --platform linux/amd64 -it \
   -v $(pwd):/app \
-  -v ~/Projects/ingonyama-zk/icicle:/opt/icicle \
   icicle-cross-android /bin/bash
 ```
 

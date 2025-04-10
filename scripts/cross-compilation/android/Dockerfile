@@ -46,7 +46,7 @@ RUN wget -q ${NDK_URL} -O android-ndk.zip \
     && unzip -q android-ndk.zip -d /opt/ \
     && rm android-ndk.zip
 
-# Add Android targets (ARM64, ARMv7, x86_64)
+# Add Android targets (ARM64, x86_64)
 RUN rustup target add \
     aarch64-linux-android \
     armv7-linux-androideabi \
@@ -58,10 +58,6 @@ COPY <<EOF /root/.cargo/config.toml
 [target.aarch64-linux-android]
 linker = "${ANDROID_NDK_HOME}toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
 ar = "${ANDROID_NDK_HOME}toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-ar"
-
-[target.armv7-linux-androideabi]
-linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang"
-ar = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
 
 [target.x86_64-linux-android]
 linker = "${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang"
