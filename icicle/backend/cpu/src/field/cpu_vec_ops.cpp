@@ -1031,6 +1031,7 @@ REGISTER_VECTOR_ACCUMULATE_RING_RNS_BACKEND("CPU", cpu_vector_accumulate<scalar_
 REGISTER_VECTOR_SUB_RING_RNS_BACKEND("CPU", cpu_vector_sub<scalar_rns_t>);
 REGISTER_VECTOR_MUL_RING_RNS_BACKEND("CPU", (cpu_vector_mul<scalar_rns_t, scalar_rns_t>));
 REGISTER_VECTOR_DIV_RING_RNS_BACKEND("CPU", cpu_vector_div<scalar_rns_t>);
+REGISTER_VECTOR_INV_RING_RNS_BACKEND("CPU", cpu_vector_inv<scalar_rns_t>);
 REGISTER_CONVERT_MONTGOMERY_RING_RNS_BACKEND("CPU", cpu_convert_montgomery<scalar_rns_t>);
 REGISTER_VECTOR_SUM_RING_RNS_BACKEND("CPU", cpu_vector_sum<scalar_rns_t>);
 REGISTER_VECTOR_PRODUCT_RING_RNS_BACKEND("CPU", cpu_vector_product<scalar_rns_t>);

@@ -583,6 +583,16 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  void register_ring_rns_vector_inv(const std::string& deviceType, ringRnsVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_INV_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_inv_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_inv(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   void register_ring_rns_scalar_mul_vec(const std::string& deviceType, ringRnsVectorOpImpl impl);
 
   #define REGISTER_SCALAR_MUL_VEC_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
