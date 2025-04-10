@@ -101,6 +101,11 @@ const cppApi = [
     label: "Fri",
     id: "icicle/primitives/fri",
   },
+  {
+    type: "doc",
+    label: "Pairings",
+    id: "icicle/primitives/pairings",
+  },
 ];
 
 const golangBindingsApi = [

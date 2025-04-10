@@ -280,6 +280,22 @@ namespace host_math {
     }
   }
 
+  template <unsigned NLIMBS>
+  static constexpr HOST_INLINE unsigned get_bit(const storage<NLIMBS>& xs, unsigned bit)
+  {
+    unsigned limb_size = sizeof(xs.limbs[0]) * 8;
+    return (xs.limbs[bit / limb_size] >> (bit % limb_size)) & 0x1;
+  }
+
+  template <unsigned NLIMBS>
+  static constexpr HOST_INLINE bool is_zero(const storage<NLIMBS>& xs)
+  {
+    for (int i = 0; i < NLIMBS; i++) {
+      if (xs.limbs[i]) return false;
+    }
+    return true;
+  }
+
   template <unsigned NLIMBS, unsigned BITS>
   static constexpr HOST_INLINE storage<NLIMBS> left_shift(const storage<NLIMBS>& xs)
   {
