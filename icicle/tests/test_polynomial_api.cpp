@@ -927,7 +927,7 @@ public:
 
   bool verify(const G16proof& proof, const std::vector<S>& public_witness) const
   {
-#ifdef PAIRING
+  #ifdef PAIRING
     // Compute the left-hand side of the pairing equation
     typename PairingConfig::TargetField lhs;
     pairing<PairingConfig>(proof.A, vk.g2.gamma, lhs);
@@ -947,9 +947,9 @@ public:
 
     // Check if the pairings are equal
     return lhs == rhs;
-#else
+  #else
     return false;
-#endif
+  #endif
   }
 
   // Dummy verification function where pairings are changed to scalar multiplications
