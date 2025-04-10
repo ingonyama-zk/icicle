@@ -840,7 +840,7 @@ public:
     pk.g2.beta = G2P::to_affine(toxic_waste.beta * g2);
     vk.g2.beta = pk.g2.beta;
     pk.g2.gamma = G2P::to_affine(toxic_waste.gamma * g2);
-    pk.g2.gamma = pk.g2.gamma;
+    vk.g2.gamma = pk.g2.gamma;
     pk.g2.delta = G2P::to_affine(toxic_waste.delta * g2);
     vk.g2.delta = pk.g2.delta;
 
