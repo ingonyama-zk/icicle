@@ -4,9 +4,9 @@ use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProg
 use crate::symbol::Symbol;
 use crate::traits::GenerateRandom;
 use crate::vec_ops::{
-    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, inv_scalars, execute_program, mixed_mul_scalars,
-    mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars, sum_scalars,
-    transpose_matrix, FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
+    accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, inv_scalars,
+    mixed_mul_scalars, mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars,
+    sum_scalars, transpose_matrix, FieldImpl, MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
