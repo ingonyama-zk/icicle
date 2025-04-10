@@ -1095,7 +1095,7 @@ TEST_F(PolynomialTest, Groth16)
     groth16_example.setup();
     auto proof = groth16_example.prove(witness);
     #ifdef PAIRING
-    groth16_example.verify(proof, witness);
+    ASSERT_EQ(groth16_example.verify(proof, witness), true);
     #endif
   }
 }
