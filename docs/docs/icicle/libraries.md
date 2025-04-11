@@ -37,14 +37,15 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 
 #### Supported fields and operations
 
-| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/architecture-and-concepts/cryptography/#stark-field) |  m31  |  Koalabear  |
-| ----------------------------------------- | :----------------------------------------------: | :------------------------------------------------------------------------------------------------: | :---: | :---: |
-| [Vector operations](./primitives/vec_ops) |                        ✅                         |                                                 ✅                                                  |   ✅     |   ✅   |
-| [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |   ❌     |   ✅   |
-| [NTT](primitives/ntt)                     |                        ✅                         |                                                 ✅                                                  |   ❌     |   ✅   |
-| Extension Field                           |                        ✅                         |                                                 ❌                                                  |   ✅     |   ✅   |
-| [Poseidon](primitives/hash#poseidon)      |                        ✅                         |                                                 ✅                                                  |   ✅     |   ✅   |
-| [Poseidon2](primitives/hash#poseidon2)    |                        ✅                         |                                                 ✅                                                  |   ✅     |   ✅   |
+| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/architecture-and-concepts/cryptography/#stark-field) |  m31  |  Koalabear  | Goldilocks |
+| ----------------------------------------- | :----------------------------------------------: | :------------------------------------------------------------------------------------------------: | :---: | :---------: | :--------: |
+| [Vector operations](./primitives/vec_ops) |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ✅     |
+| [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |  ❌   |     ✅      |     ✅     |
+| [NTT](primitives/ntt)                     |                        ✅                         |                                                 ✅                                                  |  ❌   |     ✅      |     ✅     |
+| Extension Field                           |                        ✅                         |                                                 ❌                                                  |  ✅   |     ✅      |     ❌     |
+| [Poseidon](primitives/hash#poseidon)      |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ❌     |
+| [Poseidon2](primitives/hash#poseidon2)    |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ✅    |
+
 
 ### Misc
 
