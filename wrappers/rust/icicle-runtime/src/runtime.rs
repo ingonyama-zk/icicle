@@ -50,7 +50,7 @@ extern "C" {
     fn icicle_get_device_properties(properties: *mut DeviceProperties) -> eIcicleError;
     fn icicle_get_registered_devices(output: *mut c_char, output_size: usize) -> eIcicleError;
     fn icicle_memset(ptr: *mut c_void, value: i32, size: usize) -> eIcicleError;
-    fn icicle_memset_async(ptr: *mut c_void, value: i32, size: usize, stream: *mut c_void) -> eIcicleError;
+    fn icicle_memset_async(ptr: *mut c_void, value: i32, size: usize, stream: IcicleStreamHandle) -> eIcicleError;
 }
 
 pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError> {
