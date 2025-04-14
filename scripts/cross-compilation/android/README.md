@@ -40,4 +40,4 @@ cargo build --target aarch64-linux-android --release
 exit
 ```
 
-Once you exit the conatainer your cross-compiled application is in `./target/aarch64-linux-android`
+Once you exit the container your cross-compiled application is in `./target/aarch64-linux-android`
