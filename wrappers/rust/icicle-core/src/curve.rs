@@ -35,6 +35,8 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     fn sub(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
     #[doc(hidden)]
     fn mul_scalar(point1: Projective<Self>, point2: Self::ScalarField) -> Projective<Self>;
+    #[doc(hidden)]
+    fn generator() -> Projective<Self>;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -236,6 +238,8 @@ macro_rules! impl_curve {
                     point2: *const $scalar_field,
                     result: *mut $projective_type,
                 );
+                #[link_name = concat!($curve_prefix, "_generator")]
+                pub(crate) fn generator(result: *mut $projective_type);
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
                     input: *const $affine_type,
@@ -354,6 +358,14 @@ macro_rules! impl_curve {
                 config.is_async = false;
                 config.stream_handle = (&*stream).into();
                 unsafe { $curve_prefix_ident::_convert_projective_montgomery(points, len, is_into, &config, points) }
+            }
+
+            fn generator() -> $projective_type {
+                unsafe {
+                    let mut result = $projective_type::zero();
+                    $curve_prefix_ident::generator(&mut result as *mut _ as *mut _);
+                    result
+                }
             }
         }
     };
