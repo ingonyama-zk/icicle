@@ -11,6 +11,19 @@ typedef icicle::MerkleTree* MerkleTreeHandle;
 // Create a new MerkleProof object and return a handle to it.
 MerkleProofHandle icicle_merkle_proof_create() { return new icicle::MerkleProof(); }
 
+// Create a new MerkleProof object with specified leaf, root, and path data.
+MerkleProofHandle icicle_merkle_proof_create_with_data(
+  bool pruned_path,
+  int64_t leaf_idx,
+  const std::byte* leaf, std::size_t leaf_size,
+  const std::byte* root, std::size_t root_size,
+  const std::byte* path, std::size_t path_size)
+{
+  return new icicle::MerkleProof(
+    pruned_path, leaf_idx, std::vector<std::byte>(leaf, leaf + leaf_size), std::vector<std::byte>(root, root + root_size),
+    std::vector<std::byte>(path, path + path_size));
+}
+
 // Delete the MerkleProof object and free its resources.
 eIcicleError icicle_merkle_proof_delete(MerkleProofHandle proof)
 {
@@ -148,4 +161,62 @@ eIcicleError icicle_merkle_tree_verify(icicle::MerkleTree* tree, const icicle::M
   }
 }
 
+// Get the serialized size of the MerkleProof object
+eIcicleError icicle_merkle_proof_get_serialized_size(MerkleProofHandle proof, size_t* size)
+{
+  if (!proof || !size) { 
+    ICICLE_LOG_ERROR << "Cannot get serialized size of a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return proof->serialized_size(*size);
+}
+
+// Serialize the MerkleProof object to a buffer
+eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* buffer, size_t size)
+{
+  if (!proof || !buffer) { 
+    ICICLE_LOG_ERROR << "Cannot serialize a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return proof->serialize(buffer);
+}
+
+// Deserialize the MerkleProof object from a buffer
+eIcicleError icicle_merkle_proof_deserialize(MerkleProofHandle* proof, std::byte* buffer, size_t size)
+{
+  if (!proof) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null MerkleProof pointer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer || !size) {
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer or size is 0.";
+    return eIcicleError::INVALID_POINTER;
+  }
+
+  *proof = new icicle::MerkleProof();
+  return (*proof)->deserialize(buffer, size);
+}
+
+// Serialize the MerkleProof object to a file
+eIcicleError icicle_merkle_proof_serialize_to_file(MerkleProofHandle proof, const char* filename, size_t filename_len)
+{
+  if (!proof || !filename) { 
+    ICICLE_LOG_ERROR << "Cannot serialize to a null filename.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  std::string filename_str(filename, filename_len);
+  return proof->serialize_to_file(std::move(filename_str));
+}
+
+// Deserialize the MerkleProof object from a file
+eIcicleError icicle_merkle_proof_deserialize_from_file(MerkleProofHandle* proof, const char* filename, size_t filename_len)
+{
+  if (!proof || !filename) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null filename.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *proof = new icicle::MerkleProof();
+  std::string filename_str(filename, filename_len);
+  return (*proof)->deserialize_from_file(std::move(filename_str));
+}
 } // extern "C"

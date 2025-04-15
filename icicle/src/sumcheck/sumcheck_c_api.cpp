@@ -260,5 +260,107 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_print)(SumcheckProo
 
   return eIcicleError::SUCCESS;
 }
+
+/**
+ * @brief Gets the serialized size of the given SumcheckProof instance.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance.
+ * @param size Pointer to store the serialized size of the SumcheckProof instance.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size)(SumcheckProof<scalar_t>* sumcheck_proof_handle, size_t* size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!size) {
+    ICICLE_LOG_ERROR << "Cannot write serialized size in a null pointer.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return sumcheck_proof_handle->serialized_size(*size);
+}
+
+/**
+ * @brief Serializes the given SumcheckProof instance to a buffer.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to serialize.
+ * @param buffer The buffer to serialize the SumcheckProof to.
+ * @param size The size of the buffer.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(SumcheckProof<scalar_t>* sumcheck_proof_handle, std::byte* buffer, size_t size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!buffer || !size) { 
+    ICICLE_LOG_ERROR << "Cannot serialize to a null buffer or size is 0.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return sumcheck_proof_handle->serialize(buffer);
+}
+
+/**
+ * @brief Deserializes the given SumcheckProof instance from a buffer.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to deserialize.
+ * @param buffer The buffer to deserialize the SumcheckProof from.
+ * @param size The size of the buffer.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(SumcheckProof<scalar_t>** sumcheck_proof_handle, std::byte* buffer, size_t size)
+{
+  if (!sumcheck_proof_handle) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!buffer || !size) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer or size is 0.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
+  return (*sumcheck_proof_handle)->deserialize(buffer, size);
+}
+
+/**
+ * @brief Serializes the given SumcheckProof instance to a file.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to serialize.
+ * @param filename The name of the file to serialize the SumcheckProof to.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize_to_file)(SumcheckProof<scalar_t>* sumcheck_proof_handle, const char* filename, size_t filename_len)
+{
+  if (!sumcheck_proof_handle) { 
+    ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!filename || !filename_len) { 
+    ICICLE_LOG_ERROR << "Cannot serialize to a null filename.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  std::string filename_str(filename, filename_len);
+  return sumcheck_proof_handle->serialize_to_file(std::move(filename_str));
+}
+
+/**
+ * @brief Deserializes the given SumcheckProof instance from a file.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to deserialize.
+ * @param filename The name of the file to deserialize the SumcheckProof from.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize_from_file)(SumcheckProof<scalar_t>** sumcheck_proof_handle, const char* filename, size_t filename_len)
+{
+  if (!sumcheck_proof_handle) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!filename || !filename_len) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null filename.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  std::string filename_str(filename, filename_len);
+  *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
+  return (*sumcheck_proof_handle)->deserialize_from_file(std::move(filename_str));
+}
+
 /***************** END SumcheckProof **********************/
 } // extern "C"

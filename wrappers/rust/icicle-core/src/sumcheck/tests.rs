@@ -1,7 +1,7 @@
 use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use crate::traits::{FieldImpl, GenerateRandom};
+use crate::traits::{FieldImpl, GenerateRandom, Serialization};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
@@ -281,4 +281,88 @@ where
         .unwrap();
 
     assert!(valid);
+}
+
+pub fn check_sumcheck_proof_serialization<SW, P>(hash: &Hasher)
+where
+    SW: Sumcheck,
+    P: ReturningValueProgram,
+{
+    let log_mle_poly_size = 13u64;
+    let mle_poly_size = 1 << log_mle_poly_size;
+    let nof_mle_poly = 4;
+    // Generate a random seed for the test.
+    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+
+    // Create a transcript configuration.
+    let config = SumcheckTranscriptConfig::new(
+        hash,
+        b"DomainLabel".to_vec(),
+        b"PolyLabel".to_vec(),
+        b"ChallengeLabel".to_vec(),
+        true, // little endian
+        seed_rng,
+    );
+
+    let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+    for _ in 0..nof_mle_poly {
+        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        mle_polys.push(mle_poly_random);
+    }
+
+    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    for i in 0..mle_poly_size {
+        let a = mle_polys[0][i];
+        let b = mle_polys[1][i];
+        let c = mle_polys[2][i];
+        let d = mle_polys[3][i];
+        claimed_sum = claimed_sum + a * b - c * SW::Field::from_u32(2) + d;
+    }
+
+    let user_combine = |vars: &mut Vec<P::ProgSymbol>| -> P::ProgSymbol {
+        let a = vars[0]; // Shallow copies pointing to the same memory in the backend
+        let b = vars[1];
+        let c = vars[2];
+        let d = vars[3];
+        return a * b + d - c * P::Field::from_u32(2);
+    };
+
+    /****** Begin CPU Proof ******/
+    let mle_poly_hosts = mle_polys
+        .iter()
+        .map(|poly| HostSlice::from_slice(poly))
+        .collect::<Vec<&HostSlice<<SW as Sumcheck>::Field>>>();
+
+    let sumcheck = SW::new().unwrap();
+    let combine_func = P::new(user_combine, /* nof_parameters = */ 4).unwrap();
+    let sumcheck_config = SumcheckConfig::default();
+    // Generate a proof using the `prove` method.
+    let proof = sumcheck.prove(
+        mle_poly_hosts.as_slice(),
+        mle_poly_size as u64,
+        claimed_sum,
+        combine_func,
+        &config,
+        &sumcheck_config,
+    );
+    /****** End CPU Proof ******/
+
+    let proof_round_polys =
+        <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_round_polys(&proof).unwrap();
+
+    let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
+    
+    let filename = "proof.bin";
+    proof_as_sumcheck_proof.serialize_to_file(filename).unwrap();
+    let proof_as_sumcheck_proof_deserialized_from_file = <SW as Sumcheck>::Proof::deserialize_from_file(filename).unwrap();
+    let round_polys_original = proof_as_sumcheck_proof.get_round_polys().unwrap();
+    let round_polys_deserialized_from_file = proof_as_sumcheck_proof_deserialized_from_file.get_round_polys().unwrap();
+    let serialized_round_polys = proof_as_sumcheck_proof.serialize().unwrap();
+    let proof_as_sumcheck_proof_deserialized = <SW as Sumcheck>::Proof::deserialize(&serialized_round_polys).unwrap();
+    let round_polys_deserialized = proof_as_sumcheck_proof_deserialized.get_round_polys().unwrap();
+    proof_as_sumcheck_proof.print();
+    proof_as_sumcheck_proof_deserialized.print();
+    proof_as_sumcheck_proof_deserialized_from_file.print();
+    assert_eq!(round_polys_original, round_polys_deserialized);
+    assert_eq!(round_polys_original, round_polys_deserialized_from_file);
 }

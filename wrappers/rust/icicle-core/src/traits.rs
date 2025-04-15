@@ -43,3 +43,11 @@ pub trait Arithmetic: Sized + Add<Output = Self> + Sub<Output = Self> + Mul<Outp
 pub trait Handle {
     fn handle(&self) -> *const c_void;
 }
+
+pub trait Serialization where Self: Sized {
+    fn get_serialized_size(&self) -> Result<usize, eIcicleError>;
+    fn serialize(&self) -> Result<Vec<u8>, eIcicleError>;
+    fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError>;
+    fn serialize_to_file(&self, filename: &str) -> Result<(), eIcicleError>;
+    fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError>;
+}

@@ -4,7 +4,7 @@ pub mod tests;
 use crate::field::FieldArithmetic;
 use crate::hash::Hasher;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
+use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, Serialization};
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -172,7 +172,7 @@ pub trait Sumcheck {
     ) -> Result<bool, eIcicleError>;
 }
 
-pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>>
+pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialization
 where
     F: FieldImpl,
 {
@@ -189,7 +189,7 @@ macro_rules! impl_sumcheck {
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
-        use icicle_core::traits::{FieldImpl, Handle};
+        use icicle_core::traits::{FieldImpl, Handle, Serialization};
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
@@ -244,6 +244,21 @@ macro_rules! impl_sumcheck {
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_print")]
             fn icicle_sumcheck_proof_print(handle: SumcheckProofHandle) -> eIcicleError;
+
+            #[link_name = concat!($field_prefix, "_sumcheck_proof_get_serialized_size")]
+            fn icicle_sumcheck_proof_get_serialized_size(handle: SumcheckProofHandle, size: *mut usize) -> eIcicleError;
+
+            #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize")]
+            fn icicle_sumcheck_proof_serialize(handle: SumcheckProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
+
+            #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize")]
+            fn icicle_sumcheck_proof_deserialize(handle: *mut SumcheckProofHandle, buffer: *const u8, size: usize) -> eIcicleError;
+
+            #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize_to_file")]
+            fn icicle_sumcheck_proof_serialize_to_file(handle: SumcheckProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+
+            #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize_from_file")]
+            fn icicle_sumcheck_proof_deserialize_from_file(handle: *mut SumcheckProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
         }
 
         /***************** SumcheckWrapper *************************/
@@ -382,6 +397,43 @@ macro_rules! impl_sumcheck {
             }
         }
 
+        impl Serialization for SumcheckProof {
+            fn get_serialized_size(&self) -> Result<usize, eIcicleError> {
+                let mut size = 0;
+                unsafe {
+                    icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size).wrap_value(size)
+                }
+            }
+
+            fn serialize(&self) -> Result<Vec<u8>, eIcicleError> {
+                let size = self.get_serialized_size()?;
+                let mut buffer = vec![0; size as usize];
+                unsafe {
+                    icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), size).wrap_value(buffer)
+                }
+            }
+
+            fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError> {
+                let mut handle = std::ptr::null();
+                unsafe {
+                    icicle_sumcheck_proof_deserialize(&mut handle, buffer.as_ptr(), buffer.len()).wrap_value(Self { handle })
+                }
+            }
+
+            fn serialize_to_file(&self, filename: &str) -> Result<(), eIcicleError> {
+                unsafe {
+                    icicle_sumcheck_proof_serialize_to_file(self.handle, filename.as_ptr(), filename.len()).wrap()
+                }
+            }
+
+            fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError> {
+                let mut handle = std::ptr::null();
+                unsafe {
+                    icicle_sumcheck_proof_deserialize_from_file(&mut handle, filename.as_ptr(), filename.len()).wrap_value(Self { handle })
+                }
+            }
+        }
+
         impl From<Vec<Vec<$field>>> for SumcheckProof {
             fn from(value: Vec<Vec<$field>>) -> Self {
                 let vec_of_pointers: Vec<*const $field> = value
@@ -473,6 +525,14 @@ macro_rules! impl_sumcheck_tests {
             test_utilities::test_set_main_device();
             let device_hash = Keccak256::new(0).unwrap();
             check_sumcheck_user_defined_combine::<SumcheckWrapper, Program>(&device_hash);
+        }
+
+        #[test]
+        fn test_sumcheck_proof_serialization() {
+            initialize();
+            test_utilities::test_set_ref_device();
+            let hash = Keccak256::new(0).unwrap();
+            check_sumcheck_proof_serialization::<SumcheckWrapper, Program>(&hash);
         }
     };
 }
