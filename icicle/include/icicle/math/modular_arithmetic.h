@@ -196,34 +196,7 @@ public:
       return rs;
     }
 
-    /**
-     * This method reduces a Wide number `xs` modulo `p` and returns the result as a ModArith element.
-     *
-     * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
-     * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
-     * factor of `modulus_squared` first.
-     *
-     * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
-     * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work
-     * with them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx
-     * \floor{\frac{xs}{p}} \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an
-     * error (it's always less or equal than the real quotient). So the modulus `p` might need to be subtracted several
-     * times before the result is in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[
-     * \frac{xs}{p} - l = \frac{xs}{p}
-     * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
-     *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} +
-     * 2(TLC
-     * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
-     * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
-     * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
-     * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to
-     * 1 will cause only 1 reduction to be performed.
-     */
-    constexpr HOST_DEVICE_INLINE Derived reduce() const
-    {
-      return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
-        limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
-    }
+    constexpr HOST_DEVICE_INLINE Derived reduce() const { return Derived::reduce(*this); }
   };
 
   // return modulus multiplied by 1, 2 or 4
@@ -240,6 +213,35 @@ public:
     default:
       return {};
     }
+  }
+
+  /**
+   * This method reduces a Wide number `xs` modulo `p` and returns the result as a ModArith element.
+   *
+   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
+   * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+   * factor of `modulus_squared` first.
+   *
+   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
+   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work
+   * with them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx
+   * \floor{\frac{xs}{p}} \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an
+   * error (it's always less or equal than the real quotient). So the modulus `p` might need to be subtracted several
+   * times before the result is in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[
+   * \frac{xs}{p} - l = \frac{xs}{p}
+   * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
+   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} +
+   * 2(TLC
+   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
+   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
+   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
+   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to
+   * 1 will cause only 1 reduction to be performed.
+   */
+  static constexpr HOST_DEVICE_INLINE Derived reduce(const Wide& xs)
+  {
+    return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
+      xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
   }
 
   // return m
