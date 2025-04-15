@@ -12,6 +12,12 @@
 using namespace field_config;
 using namespace icicle;
 
+#ifdef PAIRING
+  #include "icicle/pairing/pairing_config.h"
+  #include "icicle/pairing/pairing.h"
+using namespace pairing_config;
+#endif
+
 /*******************************************/
 
 using FpMicroseconds = std::chrono::duration<float, std::chrono::microseconds::period>;
@@ -921,8 +927,36 @@ public:
 
   bool verify(const G16proof& proof, const std::vector<S>& public_witness) const
   {
-    throw std::runtime_error("pairing not implemented");
+  #ifdef PAIRING
+    // Compute e(A, B)
+    typename PairingConfig::TargetField lhs;
+    icicle::pairing<PairingConfig>(proof.A, proof.B, lhs);
+
+    // Compute e(alpha, beta)
+    typename PairingConfig::TargetField rhs;
+    icicle::pairing<PairingConfig>(vk.g1.alpha, vk.g2.beta, rhs);
+
+    // Compute sum(public_witness[i] * public_witness_points[i])
+    projective_t public_inputs = projective_t::zero();
+    for (int i = 0; i <= nof_outputs; ++i) {
+      public_inputs = public_inputs + projective_t::from_affine(vk.g1.public_witness_points[i]) * public_witness[i];
+    }
+
+    // Add e(sum(public_witness[i] * public_witness_points[i]), gamma) to the right-hand side
+    typename PairingConfig::TargetField public_term;
+    icicle::pairing<PairingConfig>(projective_t::to_affine(public_inputs), vk.g2.gamma, public_term);
+    rhs = rhs * public_term;
+
+    // Add e(C, delta) to the right-hand side
+    typename PairingConfig::TargetField final_term;
+    icicle::pairing<PairingConfig>(proof.C, vk.g2.delta, final_term);
+    rhs = rhs * final_term;
+
+    // Check if the pairings are equal
+    return lhs == rhs;
+  #else
     return false;
+  #endif
   }
 
   // Dummy verification function where pairings are changed to scalar multiplications
@@ -1060,7 +1094,9 @@ TEST_F(PolynomialTest, Groth16)
 
     groth16_example.setup();
     auto proof = groth16_example.prove(witness);
-    // groth16_example.verify(proof); // cannot implement without pairing
+    #ifdef PAIRING
+    ASSERT_EQ(groth16_example.verify(proof, witness), true);
+    #endif
   }
 }
   #endif // G2

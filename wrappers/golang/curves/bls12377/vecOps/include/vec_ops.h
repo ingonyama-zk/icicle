@@ -43,6 +43,21 @@ int bls12_377_matrix_transpose(
   scalar_t* mat_out
 );
 
+int bls12_377_vector_sum(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+int bls12_377_vector_product(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
+
 #ifdef __cplusplus
 }
 #endif

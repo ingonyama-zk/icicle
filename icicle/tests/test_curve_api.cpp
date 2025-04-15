@@ -1,4 +1,3 @@
-
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>
@@ -8,6 +7,7 @@
 #include "icicle/runtime.h"
 #include "icicle/ntt.h"
 #include "icicle/msm.h"
+#include "icicle/pairing/pairing.h"
 #include "icicle/vec_ops.h"
 #include "icicle/curves/montgomery_conversion.h"
 #include "icicle/curves/curve_config.h"
@@ -334,6 +334,60 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
   ASSERT_EQ(a + b, a + TypeParam::to_affine(b)); // mixed addition projective+affine
   ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
 }
+
+#ifdef PAIRING
+  #include "icicle/pairing/pairing_config.h"
+using namespace pairing_config;
+typedef PairingConfig::TargetField TargetField;
+
+TEST(CurveSanity, TargetFieldSanityTest)
+{
+  auto a = TargetField::rand_host();
+  auto b = TargetField::rand_host();
+  auto b_inv = TargetField::inverse(b);
+  auto a_neg = TargetField::neg(a);
+
+  ASSERT_EQ(a + TargetField::zero(), a);
+  ASSERT_EQ(a + b - a, b);
+  ASSERT_EQ(b * a * b_inv, a);
+  ASSERT_EQ(a + a_neg, TargetField::zero());
+  ASSERT_EQ(a * TargetField::zero(), TargetField::zero());
+  ASSERT_EQ(b * b_inv, TargetField::one());
+}
+
+TEST(CurveSanity, PairingBilinearityTest)
+{
+  for (int i = 0; i < 100; i++) {
+    affine_t p = projective_t::rand_host_affine();
+    g2_affine_t q = g2_projective_t::rand_host_affine();
+
+    // Proper TargetField/ScalarField multiplication is not implemented yet, so we need a uint32_t coefficient
+    uint32_t coeff = 42;
+    scalar_t s = scalar_t::from(coeff);
+    affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
+    g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
+
+    TargetField f1, f2, f3, f4;
+    pairing<PairingConfig>(ps, q, f1);
+    pairing<PairingConfig>(p, qs, f2);
+    pairing<PairingConfig>(p, q, f3);
+    pairing<PairingConfig>(ps, qs, f4);
+
+    ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
+    ASSERT_EQ(TargetField::pow(f3, coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
+  }
+}
+
+TEST(CurveSanity, FinalExponentiationTest)
+{
+  for (int i = 0; i < 10; i++) {
+    TargetField f = TargetField::rand_host();
+    final_exponentiation<PairingConfig>(f);
+    f = TargetField::pow(f, scalar_t::get_modulus());
+    ASSERT_EQ(f, TargetField::one());
+  }
+}
+#endif
 
 TYPED_TEST(CurveSanity, ScalarMultTest)
 {

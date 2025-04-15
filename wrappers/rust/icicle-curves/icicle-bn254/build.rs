@@ -25,6 +25,7 @@ fn main() {
     };
     config
         .define("CURVE", "bn254")
+        .define("FIELD", "bn254")
         .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 

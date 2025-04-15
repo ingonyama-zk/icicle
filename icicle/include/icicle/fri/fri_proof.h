@@ -27,6 +27,7 @@ namespace icicle {
         : m_query_proofs(std::move(query_proofs)), m_final_poly(std::move(final_poly)), m_pow_nonce(pow_nonce)
     {
     }
+
     /**
      * @brief Initialize the Merkle proofs and final polynomial storage for the FRI proof.
      *
@@ -74,6 +75,7 @@ namespace icicle {
      * @brief Get a const reference to a specific Merkle proof for a given query index in a specific FRI round. Each
      * query includes a proof for two values per round.
      */
+
     const MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx) const
     {
       if (query_idx < 0 || query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
