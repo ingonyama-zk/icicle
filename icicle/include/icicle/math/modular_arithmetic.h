@@ -68,7 +68,7 @@ public:
 
     Derived omega = Derived{CONFIG::rou};
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
-      omega = sqr(omega);
+      omega = omega.sqr();
     return omega;
   }
 
@@ -80,9 +80,9 @@ public:
       THROW_ICICLE_ERR(icicle::eIcicleError::INVALID_ARGUMENT, "ModArith: Invalid omega_inv index");
     }
 
-    Derived omega = inverse(Derived{CONFIG::rou});
+    Derived omega = Derived{CONFIG::rou}.inverse();
     for (int i = 0; i < CONFIG::omegas_count - logn; i++)
-      omega = sqr(omega);
+      omega = omega.sqr();
     return omega;
   }
 
@@ -130,7 +130,6 @@ public:
     return sizeof(T::omegas_count) > 0;
   }
 
-  // private:
   typedef storage<TLC> ff_storage;
   typedef storage<2 * TLC> ff_wide_storage;
 
@@ -163,38 +162,67 @@ public:
     }
 
     template <unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE Wide sub_modulus_squared(const Wide& xs)
+    constexpr HOST_DEVICE_INLINE Wide sub_modulus_squared() const
     {
-      if (REDUCTION_SIZE == 0) return xs;
+      if (REDUCTION_SIZE == 0) return *this;
       const ff_wide_storage modulus = get_modulus_squared<REDUCTION_SIZE>();
       Wide rs = {};
-      return sub_limbs<2 * TLC, true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
+      return sub_limbs<2 * TLC, true>(limbs_storage, modulus, rs.limbs_storage) ? *this : rs;
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
+    constexpr HOST_DEVICE_INLINE Wide neg() const
     {
       const ff_wide_storage modulus = get_modulus_squared<MODULUS_MULTIPLE>();
       Wide rs = {};
-      sub_limbs<2 * TLC, false>(modulus, xs.limbs_storage, rs.limbs_storage);
+      sub_limbs<2 * TLC, false>(modulus, limbs_storage, rs.limbs_storage);
       return rs;
     }
 
-    friend HOST_DEVICE Wide operator+(Wide xs, const Wide& ys)
+    HOST_DEVICE Wide operator+(const Wide& ys) const
     {
       Wide rs = {};
-      add_limbs<2 * TLC, false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
-      return sub_modulus_squared<1>(rs);
+      add_limbs<2 * TLC, false>(limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      return rs.sub_modulus_squared<1>();
     }
 
-    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
+    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const
     {
       Wide rs = {};
-      uint32_t carry = sub_limbs<2 * TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+      uint32_t carry = sub_limbs<2 * TLC, true>(limbs_storage, ys.limbs_storage, rs.limbs_storage);
       if (carry == 0) return rs;
       const ff_wide_storage modulus = get_modulus_squared<1>();
       add_limbs<2 * TLC, false>(rs.limbs_storage, modulus, rs.limbs_storage);
       return rs;
+    }
+
+    /**
+     * This method reduces a Wide number `xs` modulo `p` and returns the result as a ModArith element.
+     *
+     * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
+     * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
+     * factor of `modulus_squared` first.
+     *
+     * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
+     * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work
+     * with them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx
+     * \floor{\frac{xs}{p}} \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an
+     * error (it's always less or equal than the real quotient). So the modulus `p` might need to be subtracted several
+     * times before the result is in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[
+     * \frac{xs}{p} - l = \frac{xs}{p}
+     * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
+     *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} +
+     * 2(TLC
+     * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
+     * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
+     * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
+     * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to
+     * 1 will cause only 1 reduction to be performed.
+     */
+    constexpr HOST_DEVICE_INLINE Derived reduce() const
+    {
+      return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
+        limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
     }
   };
 
@@ -269,20 +297,6 @@ public:
 public:
   ff_storage limbs_storage;
 
-  HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
-
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
-  {
-    const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
-    const uint32_t shift_bits = (digit_num * digit_width) % 32;
-    unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-    if ((shift_bits + digit_width > 32) && (limb_lsb_idx + 1 < TLC)) {
-      rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
-    }
-    rv &= ((1 << digit_width) - 1);
-    return rv;
-  }
-
   template <unsigned NLIMBS>
   static HOST_INLINE storage<NLIMBS> rand_storage(unsigned non_zero_limbs = NLIMBS)
   {
@@ -334,57 +348,42 @@ public:
     return os;
   }
 
-  friend HOST_DEVICE Derived operator+(Derived xs, const Derived& ys)
+  HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
+
+  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
+  {
+    const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
+    const uint32_t shift_bits = (digit_num * digit_width) % 32;
+    unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
+    if ((shift_bits + digit_width > 32) && (limb_lsb_idx + 1 < TLC)) {
+      rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
+    }
+    rv &= ((1 << digit_width) - 1);
+    return rv;
+  }
+
+  HOST_DEVICE Derived operator+(const Derived& ys) const
   {
     Derived rs = {};
-    add_limbs<TLC, false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    add_limbs<TLC, false>(limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return sub_modulus<1>(rs);
   }
 
-  friend HOST_DEVICE Derived operator-(Derived xs, const Derived& ys)
+  HOST_DEVICE Derived operator-(const Derived& ys) const
   {
     Derived rs = {};
-    uint32_t carry = sub_limbs<TLC, true>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    uint32_t carry = sub_limbs<TLC, true>(limbs_storage, ys.limbs_storage, rs.limbs_storage);
     if (carry == 0) return rs;
     const ff_storage modulus = get_modulus<1>();
     add_limbs<TLC, false>(rs.limbs_storage, modulus, rs.limbs_storage);
     return rs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const Derived& xs, const Derived& ys)
+  constexpr HOST_DEVICE_INLINE Wide mul_wide(const Derived& ys) const
   {
     Wide rs = {};
-    multiply_raw(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
+    multiply_raw(limbs_storage, ys.limbs_storage, rs.limbs_storage);
     return rs;
-  }
-
-  /**
-   * This method reduces a Wide number `xs` modulo `p` and returns the result as a ModArith element.
-   *
-   * It is assumed that the high `2 * slack_bits` bits of `xs` are unset which is always the case for the product of 2
-   * numbers with their high `slack_bits` unset. Larger Wide numbers should be reduced by subtracting an appropriate
-   * factor of `modulus_squared` first.
-   *
-   * This function implements ["multi-precision Barrett"](https://github.com/ingonyama-zk/modular_multiplication). As
-   * opposed to Montgomery reduction, it doesn't require numbers to have a special representation but lets us work with
-   * them as-is. The general idea of Barrett reduction is to estimate the quotient \f$ l \approx \floor{\frac{xs}{p}}
-   * \f$ and return \f$ xs - l \cdot p \f$. But since \f$ l \f$ is inevitably computed with an error (it's always less
-   * or equal than the real quotient). So the modulus `p` might need to be subtracted several times before the result is
-   * in the desired range \f$ [0;p-1] \f$. The estimate of the error is as follows: \f[ \frac{xs}{p} - l = \frac{xs}{p}
-   * - \frac{xs \cdot m}{2^{2n}} + \frac{xs \cdot m}{2^{2n}} - \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}}
-   *  + \floor{\frac{xs}{2^k}}\frac{m}{2^{2n-k}} - l \leq p^2(\frac{1}{p}-\frac{m}{2^{2n}}) + \frac{m}{2^{2n-k}} + 2(TLC
-   * - 1) \cdot 2^{-32} \f] Here \f$ l \f$ is the result of [multiply_msb_raw](@ref multiply_msb_raw) function and the
-   * last term in the error is due to its approximation. \f$ n \f$ is the number of bits in \f$ p \f$ and \f$ k = 2n -
-   * 32\cdot TLC \f$. Overall, the error is always less than 2 so at most 2 reductions are needed. However, in most
-   * cases it's less than 1, so setting the [num_of_reductions](@ref num_of_reductions) variable for a field equal to 1
-   * will cause only 1 reduction to be performed.
-   */
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Derived reduce(const Wide& xs)
-  {
-    return Derived{icicle_math::template barrett_reduce<TLC, slack_bits, num_of_reductions()>(
-      xs.limbs_storage, get_m(), get_modulus(), get_modulus<2>(), get_neg_modulus())};
   }
 
   /* This function receives a storage object (currently supports up to 576 bits) and reduces it to a field element
@@ -432,7 +431,7 @@ public:
       rs); // subtracting the precomputed multiple of p from the look-up table
     // third and final step:
     storage<2 * TLC>& res = *reinterpret_cast<storage<2 * TLC>*>(rs.limbs);
-    return reduce(Wide{res}); // finally, use barret reduction
+    return Wide{res}.reduce(); // finally, use barret reduction
   }
 
   /* This is the non-template version of the from(storage) function above. It receives an array of bytes and its size
@@ -475,7 +474,7 @@ public:
       rs); // subtracting the precomputed multiple of p from the look-up table
     // third and final step:
     storage<2 * TLC>& res = *reinterpret_cast<storage<2 * TLC>*>(rs.limbs);
-    return reduce(Wide{res}); // finally, use barret reduction
+    return Wide{res}.reduce(); // finally, use barret reduction
   }
 
   HOST_DEVICE Derived& operator=(Derived const& other)
@@ -487,18 +486,18 @@ public:
     return *this;
   }
 
-  friend HOST_DEVICE Derived operator*(const Derived& xs, const Derived& ys)
+  HOST_DEVICE Derived operator*(const Derived& ys) const
   {
-    Wide xy = mul_wide(xs, ys); // full mult
-    return reduce(xy);          // reduce mod p
+    Wide xy = mul_wide(ys); // full mult
+    return xy.reduce();     // reduce mod p
   }
 
-  friend HOST_DEVICE bool operator==(const Derived& xs, const Derived& ys)
+  HOST_DEVICE bool operator==(const Derived& ys) const
   {
-    return icicle_math::template is_equal<TLC>(xs.limbs_storage, ys.limbs_storage);
+    return icicle_math::template is_equal<TLC>(limbs_storage, ys.limbs_storage);
   }
 
-  friend HOST_DEVICE bool operator!=(const Derived& xs, const Derived& ys) { return !(xs == ys); }
+  HOST_DEVICE bool operator!=(const Derived& ys) const { return !(*this == ys); }
 
   template <const Derived& multiplier>
   static HOST_DEVICE_INLINE Derived mul_const(const Derived& xs)
@@ -539,49 +538,41 @@ public:
     return rs;
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const Derived& xs)
+  constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
   {
     // TODO: change to a more efficient squaring
-    return mul_wide<MODULUS_MULTIPLE>(xs, xs);
+    return mul_wide(*this);
   }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Derived sqr(const Derived& xs)
+  constexpr HOST_DEVICE_INLINE Derived sqr() const
   {
     // TODO: change to a more efficient squaring
-    return xs * xs;
+    const Derived& self = static_cast<const Derived&>(*this);
+    return self * self;
   }
 
-  static constexpr HOST_DEVICE_INLINE Derived to_montgomery(const Derived& xs)
-  {
-    return xs * Derived{CONFIG::montgomery_r};
-  }
+  constexpr HOST_DEVICE_INLINE Derived to_montgomery() const { return *this * Derived{CONFIG::montgomery_r}; }
 
-  static constexpr HOST_DEVICE_INLINE Derived from_montgomery(const Derived& xs)
-  {
-    return xs * Derived{CONFIG::montgomery_r_inv};
-  }
+  constexpr HOST_DEVICE_INLINE Derived from_montgomery() const { return *this * Derived{CONFIG::montgomery_r_inv}; }
 
-  template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE Derived neg(const Derived& xs)
+  constexpr HOST_DEVICE Derived neg() const
   {
     // TODO: add is_zero to cuda backend
 #ifndef __CUDA_ARCH__
-    if (xs.is_zero()) { return xs; }
+    if (is_zero()) { return static_cast<const Derived&>(*this); }
 #endif
-    const ff_storage modulus = get_modulus<MODULUS_MULTIPLE>();
+    const ff_storage modulus = get_modulus<1>();
     Derived rs = {};
-    sub_limbs<TLC, false>(modulus, xs.limbs_storage, rs.limbs_storage);
+    sub_limbs<TLC, false>(modulus, limbs_storage, rs.limbs_storage);
     return rs;
   }
 
   // Assumes the number is even!
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE Derived div2(const Derived& xs)
+  constexpr HOST_DEVICE_INLINE Derived div2() const
   {
     Derived rs = {};
-    icicle_math::template div2<TLC>(xs.limbs_storage, rs.limbs_storage);
+    icicle_math::template div2<TLC>(limbs_storage, rs.limbs_storage);
     return sub_modulus<MODULUS_MULTIPLE>(rs);
   }
 
@@ -592,32 +583,33 @@ public:
     return carry;
   }
 
-  static constexpr HOST_DEVICE_INLINE bool is_odd(const Derived& xs) { return xs.limbs_storage.limbs[0] & 1; }
+  constexpr HOST_DEVICE_INLINE bool is_odd() const { return limbs_storage.limbs[0] & 1; }
 
-  static constexpr HOST_DEVICE_INLINE bool is_even(const Derived& xs) { return ~xs.limbs_storage.limbs[0] & 1; }
+  constexpr HOST_DEVICE_INLINE bool is_even() const { return ~limbs_storage.limbs[0] & 1; }
 
   constexpr HOST_INLINE bool is_zero() const { return icicle_math::template is_zero<TLC>(limbs_storage); }
 
-  static constexpr HOST_DEVICE Derived inverse(const Derived& xs)
+  constexpr HOST_DEVICE Derived inverse() const
   {
-    if (xs == zero()) return zero();
+    if (*this == zero()) return zero();
     constexpr Derived one = Derived{CONFIG::one};
     constexpr Derived zero = Derived{CONFIG::zero};
     constexpr ff_storage modulus = CONFIG::modulus;
-    Derived u = xs;
+
+    Derived u = static_cast<const Derived&>(*this);
     Derived v = Derived{modulus};
     Derived b = one;
     Derived c = {};
     while (!(u == one) && !(v == one)) {
-      while (is_even(u)) {
-        u = div2(u);
-        if (is_odd(b)) add_limbs<TLC, false>(b.limbs_storage, modulus, b.limbs_storage);
-        b = div2(b);
+      while (u.is_even()) {
+        u = u.div2();
+        if (b.is_odd()) add_limbs<TLC, false>(b.limbs_storage, modulus, b.limbs_storage);
+        b = b.div2();
       }
-      while (is_even(v)) {
-        v = div2(v);
-        if (is_odd(c)) add_limbs<TLC, false>(c.limbs_storage, modulus, c.limbs_storage);
-        c = div2(c);
+      while (v.is_even()) {
+        v = v.div2();
+        if (c.is_odd()) add_limbs<TLC, false>(c.limbs_storage, modulus, c.limbs_storage);
+        c = c.div2();
       }
       if (lt(v, u)) {
         u = u - v;
@@ -635,9 +627,10 @@ public:
     return (u == one) ? b : c;
   }
 
-  static constexpr HOST_DEVICE Derived pow(Derived base, int exp)
+  constexpr HOST_DEVICE Derived pow(int exp) const
   {
     Derived res = one();
+    Derived base = static_cast<const Derived&>(*this);
     while (exp > 0) {
       if (exp & 1) res = res * base;
       base = base * base;

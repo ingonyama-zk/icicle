@@ -13,26 +13,19 @@ public:
   FF x;
   FF y;
 
-  static HOST_DEVICE_INLINE Affine neg(const Affine& point) { return {point.x, FF::neg(point.y)}; }
-
   static HOST_DEVICE_INLINE Affine zero() { return {FF::zero(), FF::zero()}; }
 
-  static HOST_DEVICE_INLINE Affine to_montgomery(const Affine& point)
-  {
-    return {FF::to_montgomery(point.x), FF::to_montgomery(point.y)};
-  }
+  HOST_DEVICE_INLINE Affine neg() const { return {x, y.neg()}; }
 
-  static HOST_DEVICE_INLINE Affine from_montgomery(const Affine& point)
-  {
-    return {FF::from_montgomery(point.x), FF::from_montgomery(point.y)};
-  }
+  HOST_DEVICE_INLINE Affine to_montgomery() const { return {x.to_montgomery(), y.to_montgomery()}; }
 
-  friend HOST_DEVICE_INLINE bool operator==(const Affine& xs, const Affine& ys)
-  {
-    return (xs.x == ys.x) && (xs.y == ys.y);
-  }
+  HOST_DEVICE_INLINE Affine from_montgomery() const { return {x.from_montgomery(), y.from_montgomery()}; }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const Affine& xs, const Affine& ys) { return !(xs == ys); }
+  HOST_DEVICE_INLINE bool operator==(const Affine& ys) { return (x == ys.x) && (y == ys.y); }
+
+  HOST_DEVICE_INLINE bool operator!=(const Affine& ys) { return !(*this == ys); }
+
+  HOST_DEVICE_INLINE bool is_zero() const { return x == FF::zero() && y == FF::zero(); }
 
   friend HOST_INLINE std::ostream& operator<<(std::ostream& os, const Affine& point)
   {

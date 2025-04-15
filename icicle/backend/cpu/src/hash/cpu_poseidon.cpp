@@ -185,7 +185,7 @@ namespace icicle {
       // Single full round with pre_matrix.
       for (int state_idx = 0; state_idx < T; state_idx++) {
         // S box
-        tmp_fields[state_idx] = S::pow(tmp_fields[state_idx], alpha);
+        tmp_fields[state_idx] = tmp_fields[state_idx].pow(alpha);
       }
       for (int state_idx = 0; state_idx < T; state_idx++) {
         // Add round constants
@@ -197,7 +197,7 @@ namespace icicle {
       // Partial rounds. Perform calculation only for the first element of *tmp_fields.
       for (int partial_rounds_idx = 0; partial_rounds_idx < nof_partial_rounds; partial_rounds_idx++) {
         // S box
-        tmp_fields[0] = S::pow(tmp_fields[0], alpha);
+        tmp_fields[0] = tmp_fields[0].pow(alpha);
         // Add round constants
         tmp_fields[0] = tmp_fields[0] + *rounds_constants++;
         // Multiplication by sparse matrix.
@@ -212,7 +212,7 @@ namespace icicle {
       // Last full round
       for (int state_idx = 0; state_idx < T; state_idx++) {
         // S box
-        tmp_fields[state_idx] = S::pow(tmp_fields[state_idx], alpha);
+        tmp_fields[state_idx] = tmp_fields[state_idx].pow(alpha);
       }
       // Multiplication by MDS matrix
       field_vec_sqr_full_matrix_mul(tmp_fields, mds_matrix, tmp_fields);
@@ -270,7 +270,7 @@ namespace icicle {
       for (int full_rounds_idx = 0; full_rounds_idx < nof_full_rounds; full_rounds_idx++) {
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // S box
-          in_out_fields[state_idx] = S::pow(in_out_fields[state_idx], alpha);
+          in_out_fields[state_idx] = in_out_fields[state_idx].pow(alpha);
         }
         for (int state_idx = 0; state_idx < T; state_idx++) {
           // Add round constants

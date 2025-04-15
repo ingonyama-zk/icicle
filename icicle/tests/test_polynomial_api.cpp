@@ -90,10 +90,10 @@ public:
   template <typename P, typename A>
   static void compute_powers_of_tau(P g, scalar_t tau, A* res, uint32_t count)
   {
-    res[0] = P::to_affine(g);
+    res[0] = g.to_affine();
     for (int i = 1; i < count; i++) {
       g = tau * g;
-      res[i] = P::to_affine(g);
+      res[i] = g.to_affine();
     }
   }
 
@@ -593,7 +593,7 @@ using curve_config::g2_projective_t;
 class dummy_g2_t : public scalar_t
 {
 public:
-  static constexpr __host__ __device__ dummy_g2_t to_affine(const dummy_g2_t& point) { return point; }
+  constexpr __host__ __device__ dummy_g2_t to_affine() { return *this; }
 
   static constexpr __host__ __device__ dummy_g2_t from_affine(const dummy_g2_t& point) { return point; }
 
@@ -603,7 +603,7 @@ public:
 
   friend __host__ __device__ dummy_g2_t operator*(const scalar_t& xs, const dummy_g2_t& ys)
   {
-    return dummy_g2_t{scalar_t::reduce(scalar_t::mul_wide(xs, ys))};
+    return dummy_g2_t{xs.mul_wide(ys).reduce()};
   }
 
   friend __host__ __device__ dummy_g2_t operator+(const dummy_g2_t& xs, const dummy_g2_t& ys)
@@ -753,8 +753,8 @@ public:
       gamma = S::rand_host();
       delta = S::rand_host();
       tau = S::rand_host();
-      gamma_inv = S::inverse(gamma);
-      delta_inv = S::inverse(delta);
+      gamma_inv = gamma.inverse();
+      delta_inv = delta.inverse();
     }
   };
 
@@ -807,10 +807,10 @@ public:
     const int n = ceil_to_power_of_two(nof_constraints);
 
     // compute the proving and verifying keys
-    pk.g1.alpha = G1P::to_affine(toxic_waste.alpha * g1);
+    pk.g1.alpha = (toxic_waste.alpha * g1).to_affine();
     vk.g1.alpha = pk.g1.alpha;
-    pk.g1.beta = G1P::to_affine(toxic_waste.beta * g1);
-    pk.g1.delta = G1P::to_affine(toxic_waste.delta * g1);
+    pk.g1.beta = (toxic_waste.beta * g1).to_affine();
+    pk.g1.delta = (toxic_waste.delta * g1).to_affine();
 
     pk.g1.powers_of_tau.resize(n, G1A::zero());
     PolynomialTest::compute_powers_of_tau(g1, toxic_waste.tau, pk.g1.powers_of_tau.data(), n);
@@ -822,9 +822,9 @@ public:
       auto p = toxic_waste.beta * L_QAP[i] + toxic_waste.alpha * R_QAP[i] + O_QAP[i];
       p = p * (i < l + 1 ? toxic_waste.gamma_inv : toxic_waste.delta_inv);
       if (i < l + 1)
-        vk.g1.public_witness_points.push_back(G1P::to_affine(p(toxic_waste.tau) * g1));
+        vk.g1.public_witness_points.push_back((p(toxic_waste.tau) * g1).to_affine());
       else
-        pk.g1.private_witness_points.push_back(G1P::to_affine(p(toxic_waste.tau) * g1));
+        pk.g1.private_witness_points.push_back((p(toxic_waste.tau) * g1).to_affine());
     }
 
     // {tau^i(t(tau) / delta}
@@ -833,15 +833,15 @@ public:
     pk.g1.vanishing_poly_points.reserve(n - 1);
     auto x = S::one();
     for (int i = 0; i <= n - 2; ++i) {
-      pk.g1.vanishing_poly_points.push_back(G1P::to_affine(x * t(toxic_waste.tau) * toxic_waste.delta_inv * g1));
+      pk.g1.vanishing_poly_points.push_back((x * t(toxic_waste.tau) * toxic_waste.delta_inv * g1).to_affine());
       x = x * toxic_waste.tau;
     }
 
-    pk.g2.beta = G2P::to_affine(toxic_waste.beta * g2);
+    pk.g2.beta = (toxic_waste.beta * g2).to_affine();
     vk.g2.beta = pk.g2.beta;
-    pk.g2.gamma = G2P::to_affine(toxic_waste.gamma * g2);
+    pk.g2.gamma = (toxic_waste.gamma * g2).to_affine();
     vk.g2.gamma = pk.g2.gamma;
-    pk.g2.delta = G2P::to_affine(toxic_waste.delta * g2);
+    pk.g2.delta = (toxic_waste.delta * g2).to_affine();
     vk.g2.delta = pk.g2.delta;
 
     pk.g2.powers_of_tau.resize(n, G2A::zero());
@@ -889,7 +889,7 @@ public:
       G1P U_commited;
       auto [U_coeff, N] = U.get_coefficients_view();
       ICICLE_CHECK(msm(U_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &U_commited));
-      proof.A = G1P::to_affine(U_commited + G1P::from_affine(pk.g1.alpha) + r * G1P::from_affine(pk.g1.delta));
+      proof.A = (U_commited + G1P::from_affine(pk.g1.alpha) + r * G1P::from_affine(pk.g1.delta)).to_affine();
     }
 
     // compute [B]2 and [B]1 (required to compute C)
@@ -898,7 +898,7 @@ public:
       G2P V_commited_g2;
       auto [V_coeff, N] = V.get_coefficients_view();
       ICICLE_CHECK(msm(V_coeff.get(), pk.g2.powers_of_tau.data(), n, msm_config, &V_commited_g2));
-      proof.B = G2P::to_affine(V_commited_g2 + pk.g2.beta + s * G2P::from_affine(pk.g2.delta));
+      proof.B = (V_commited_g2 + pk.g2.beta + s * G2P::from_affine(pk.g2.delta)).to_affine();
 
       G1P V_commited_g1;
       ICICLE_CHECK(msm(V_coeff.get(), pk.g1.powers_of_tau.data(), n, msm_config, &V_commited_g1));
@@ -917,9 +917,9 @@ public:
       ICICLE_CHECK(
         msm(witness.data() + l + 1, pk.g1.private_witness_points.data(), m - l, msm_config, &private_inputs_commited));
 
-      proof.C = G1P::to_affine(
-        private_inputs_commited + HT_commited + G1P::from_affine(proof.A) * s + B1 * r -
-        r * s * G1P::from_affine(pk.g1.delta));
+      proof.C = (private_inputs_commited + HT_commited + G1P::from_affine(proof.A) * s + B1 * r -
+                 r * s * G1P::from_affine(pk.g1.delta))
+                  .to_affine();
     }
 
     return proof;

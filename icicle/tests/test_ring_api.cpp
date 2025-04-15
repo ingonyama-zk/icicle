@@ -1,4 +1,3 @@
-
 #include "test_mod_arithmetic_api.h"
 #include "icicle/balanced_decomposition.h"
 
