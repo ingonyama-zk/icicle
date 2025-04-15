@@ -128,7 +128,6 @@ func (s *Bls12_381VecOpsTestSuite) TestBls12_381VecOps() {
 	s.Run("TestBls12_381Transpose", testWrapper(&s.Suite, testBls12_381Transpose))
 	s.Run("TestBls12_381Sum", testWrapper(&s.Suite, testBls12_381Sum))
 	s.Run("TestBls12_381Product", testWrapper(&s.Suite, testBls12_381Product))
-
 }
 
 func TestSuiteBls12_381VecOps(t *testing.T) {

@@ -2,10 +2,10 @@ package tests
 
 import (
 	"testing"
-  	{{if .IsScalar}}
+	{{if .IsScalar}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"{{end}}
 	{{if ne .FieldPrefix "G2"}}{{.Field}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}{{if eq .FieldPrefix "G2"}}/g2{{end}}"
-  	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 

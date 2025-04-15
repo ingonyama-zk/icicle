@@ -114,6 +114,13 @@ function(handle_sumcheck TARGET FEATURE_LIST)
   endif()
 endfunction()
 
+function(handle_pairing TARGET FEATURE_LIST)
+  if(G2 AND "PAIRING" IN_LIST FEATURE_LIST)
+    target_compile_definitions(${TARGET} PUBLIC PAIRING=1)
+    target_sources(${TARGET} PRIVATE src/pairing.cpp)
+  endif()
+endfunction()
+
 function(handle_fri TARGET FEATURE_LIST)
   if(FRI AND "FRI" IN_LIST FEATURE_LIST)
     target_compile_definitions(${TARGET} PUBLIC FRI=${FRI})
