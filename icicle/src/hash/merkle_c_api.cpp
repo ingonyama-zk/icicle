@@ -161,4 +161,62 @@ eIcicleError icicle_merkle_tree_verify(icicle::MerkleTree* tree, const icicle::M
   }
 }
 
+// Get the serialized size of the MerkleProof object
+eIcicleError icicle_merkle_proof_get_serialized_size(MerkleProofHandle proof, size_t* size)
+{
+  if (!proof || !size) { 
+    ICICLE_LOG_ERROR << "Cannot get serialized size of a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return proof->serialized_size(*size);
+}
+
+// Serialize the MerkleProof object to a buffer
+eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* buffer, size_t size)
+{
+  if (!proof || !buffer) { 
+    ICICLE_LOG_ERROR << "Cannot serialize a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return proof->serialize(buffer);
+}
+
+// Deserialize the MerkleProof object from a buffer
+eIcicleError icicle_merkle_proof_deserialize(MerkleProofHandle* proof, std::byte* buffer, size_t size)
+{
+  if (!proof) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null MerkleProof pointer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer || !size) {
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer or size is 0.";
+    return eIcicleError::INVALID_POINTER;
+  }
+
+  *proof = new icicle::MerkleProof();
+  return (*proof)->deserialize(buffer, size);
+}
+
+// Serialize the MerkleProof object to a file
+eIcicleError icicle_merkle_proof_serialize_to_file(MerkleProofHandle proof, const char* filename, size_t filename_len)
+{
+  if (!proof || !filename) { 
+    ICICLE_LOG_ERROR << "Cannot serialize to a null filename.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  std::string filename_str(filename, filename_len);
+  return proof->serialize_to_file(std::move(filename_str));
+}
+
+// Deserialize the MerkleProof object from a file
+eIcicleError icicle_merkle_proof_deserialize_from_file(MerkleProofHandle* proof, const char* filename, size_t filename_len)
+{
+  if (!proof || !filename) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null filename.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *proof = new icicle::MerkleProof();
+  std::string filename_str(filename, filename_len);
+  return (*proof)->deserialize_from_file(std::move(filename_str));
+}
 } // extern "C"

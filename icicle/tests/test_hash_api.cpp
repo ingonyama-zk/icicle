@@ -575,6 +575,47 @@ void test_merkle_tree(
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
+
+    // Serialize the proof
+    size_t serialized_proof_size;
+    ICICLE_CHECK(merkle_proof.serialized_size(serialized_proof_size));
+    auto serialized_proof = std::vector<std::byte>(serialized_proof_size);
+    std::byte* ptr = serialized_proof.data();
+    ICICLE_CHECK(merkle_proof.serialize(ptr));
+    // Deserialize the proof
+    MerkleProof deserialized_proof;
+    size_t length = serialized_proof.size();
+    ptr = serialized_proof.data();
+    ICICLE_CHECK(deserialized_proof.deserialize(ptr, length));
+
+    // Compare the original and deserialized proofs
+    // Compare pruned
+    ASSERT_EQ(merkle_proof.is_pruned(), deserialized_proof.is_pruned());
+
+    // Compare paths
+    auto [orig_path_ptr, orig_path_size] = merkle_proof.get_path();
+    auto [deser_path_ptr, deser_path_size] = deserialized_proof.get_path();
+    ASSERT_EQ(orig_path_size, deser_path_size);
+    std::vector<std::byte> orig_path_vec(orig_path_ptr, orig_path_ptr + orig_path_size);
+    std::vector<std::byte> deser_path_vec(deser_path_ptr, deser_path_ptr + deser_path_size);
+    ASSERT_EQ(orig_path_vec, deser_path_vec);
+
+    // Compare leaves
+    auto [orig_leaf_ptr, orig_leaf_size, orig_leaf_idx] = merkle_proof.get_leaf();
+    auto [deser_leaf_ptr, deser_leaf_size, deser_leaf_idx] = deserialized_proof.get_leaf();
+    ASSERT_EQ(orig_leaf_size, deser_leaf_size);
+    ASSERT_EQ(orig_leaf_idx, deser_leaf_idx);
+    std::vector<std::byte> orig_leaf_vec(orig_leaf_ptr, orig_leaf_ptr + orig_leaf_size);
+    std::vector<std::byte> deser_leaf_vec(deser_leaf_ptr, deser_leaf_ptr + deser_leaf_size);
+    ASSERT_EQ(orig_leaf_vec, deser_leaf_vec);
+
+    // Compare roots
+    auto [orig_root_ptr, orig_root_size] = merkle_proof.get_root();
+    auto [deser_root_ptr, deser_root_size] = deserialized_proof.get_root();
+    ASSERT_EQ(orig_root_size, deser_root_size);
+    std::vector<std::byte> orig_root_vec(orig_root_ptr, orig_root_ptr + orig_root_size);
+    std::vector<std::byte> deser_root_vec(deser_root_ptr, deser_root_ptr + deser_root_size);
+    ASSERT_EQ(orig_root_vec, deser_root_vec);
   }
 
   if (config.is_leaves_on_device) {

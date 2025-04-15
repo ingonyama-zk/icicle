@@ -1,4 +1,4 @@
-use crate::hash::{Hasher, HasherHandle};
+use crate::{hash::{Hasher, HasherHandle}, traits::{Handle, Serialization}};
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -62,12 +62,12 @@ impl<T> MerkleProofData<T> {
     }
 }
 
-impl<T> From<MerkleProof> for MerkleProofData<T> {
+impl<T: Clone> From<MerkleProof> for MerkleProofData<T> {
     fn from(proof: MerkleProof) -> Self {
         let (leaf, leaf_idx) = proof.get_leaf::<T>();
         let root = proof.get_root::<T>();
         let path = proof.get_path::<T>();
-        Self::new(proof.is_pruned(), leaf_idx, leaf, root, path)
+        Self::new(proof.is_pruned(), leaf_idx, leaf.to_vec(), root.to_vec(), path.to_vec())
     }
 }
 
@@ -99,6 +99,11 @@ extern "C" {
         out_leaf_idx: *mut u64,
     ) -> *const u8;
     fn icicle_merkle_proof_get_root(proof: MerkleProofHandle, out_size: *mut usize) -> *const u8;
+    fn icicle_merkle_proof_get_serialized_size(proof: MerkleProofHandle, out_size: *mut usize) -> eIcicleError;
+    fn icicle_merkle_proof_serialize(proof: MerkleProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
+    fn icicle_merkle_proof_deserialize(proof: *mut MerkleProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
+    fn icicle_merkle_proof_serialize_to_file(proof: MerkleProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+    fn icicle_merkle_proof_deserialize_from_file(proof: *mut MerkleProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
 }
 
 impl MerkleProof {
@@ -204,6 +209,42 @@ impl MerkleProof {
 
     pub unsafe fn from_handle(handle: MerkleProofHandle) -> Self {
         Self { handle }
+    }
+}
+
+impl Serialization for MerkleProof {
+    fn get_serialized_size(&self) -> Result<usize, eIcicleError> {
+        let mut size = 0;
+        unsafe {
+            icicle_merkle_proof_get_serialized_size(self.handle, &mut size).wrap_value(size)
+        }
+    }
+
+    fn serialize(&self) -> Result<Vec<u8>, eIcicleError> {
+        let mut buffer = vec![0_u8; self.get_serialized_size()?];
+        unsafe {
+            icicle_merkle_proof_serialize(self.handle, buffer.as_mut_ptr() as *mut u8, buffer.len()).wrap_value(buffer)
+        }
+    }
+
+    fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError> {
+        let mut handle = std::ptr::null();
+        unsafe {
+            icicle_merkle_proof_deserialize(&mut handle, buffer.as_ptr() as *mut u8, buffer.len()).wrap_value(Self { handle })
+        }
+    }
+
+    fn serialize_to_file(&self, filename: &str) -> Result<(), eIcicleError> {
+        unsafe {
+            icicle_merkle_proof_serialize_to_file(self.handle, filename.as_ptr() as *const u8, filename.len()).wrap()
+        }
+    }
+
+    fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError> {
+        let mut handle = std::ptr::null();
+        unsafe {
+            icicle_merkle_proof_deserialize_from_file(&mut handle, filename.as_ptr() as *const u8, filename.len()).wrap_value(Self { handle })
+        }
     }
 }
 
