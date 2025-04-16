@@ -291,10 +291,20 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(Sumcheck
 {
   if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
-    return eIcicleError::INVALID_ARGUMENT;
+    return eIcicleError::INVALID_POINTER;
   }
-  if (!buffer || !size) { 
-    ICICLE_LOG_ERROR << "Cannot serialize to a null buffer or size is 0.";
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "Cannot serialize to a null buffer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = sumcheck_proof_handle->serialized_size(expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of SumcheckProof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize SumcheckProof";
     return eIcicleError::INVALID_ARGUMENT;
   }
   return sumcheck_proof_handle->serialize(buffer);
@@ -313,9 +323,9 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(Sumche
     ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  if (!buffer || !size) { 
-    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer or size is 0.";
-    return eIcicleError::INVALID_ARGUMENT;
+  if (!buffer) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer.";
+    return eIcicleError::INVALID_POINTER;
   }
   *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
   return (*sumcheck_proof_handle)->deserialize(buffer, size);

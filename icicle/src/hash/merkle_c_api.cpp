@@ -174,9 +174,23 @@ eIcicleError icicle_merkle_proof_get_serialized_size(MerkleProofHandle proof, si
 // Serialize the MerkleProof object to a buffer
 eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* buffer, size_t size)
 {
-  if (!proof || !buffer) { 
+  if (!proof) { 
     ICICLE_LOG_ERROR << "Cannot serialize a null MerkleProof instance.";
     return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "buffer is null — cannot serialize MerkleProof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = proof->serialized_size(expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of MerkleProof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize MerkleProof";
+    return eIcicleError::INVALID_ARGUMENT;
   }
   return proof->serialize(buffer);
 }
@@ -200,10 +214,15 @@ eIcicleError icicle_merkle_proof_deserialize(MerkleProofHandle* proof, std::byte
 // Serialize the MerkleProof object to a file
 eIcicleError icicle_merkle_proof_serialize_to_file(MerkleProofHandle proof, const char* filename, size_t filename_len)
 {
-  if (!proof || !filename) { 
+  if (!proof) { 
+    ICICLE_LOG_ERROR << "Cannot serialize a null MerkleProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!filename || !filename_len) {
     ICICLE_LOG_ERROR << "Cannot serialize to a null filename.";
     return eIcicleError::INVALID_POINTER;
   }
+
   std::string filename_str(filename, filename_len);
   return proof->serialize_to_file(std::move(filename_str));
 }
@@ -211,7 +230,11 @@ eIcicleError icicle_merkle_proof_serialize_to_file(MerkleProofHandle proof, cons
 // Deserialize the MerkleProof object from a file
 eIcicleError icicle_merkle_proof_deserialize_from_file(MerkleProofHandle* proof, const char* filename, size_t filename_len)
 {
-  if (!proof || !filename) { 
+  if (!proof) { 
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null MerkleProof pointer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!filename || !filename_len) {
     ICICLE_LOG_ERROR << "Cannot deserialize from a null filename.";
     return eIcicleError::INVALID_POINTER;
   }

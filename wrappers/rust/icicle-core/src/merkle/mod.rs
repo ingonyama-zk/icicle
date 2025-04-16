@@ -49,7 +49,7 @@ impl MerkleTreeConfig {
 }
 
 pub struct MerkleProofData<T> {
-    pub pruned_path: bool,
+    pub is_pruned: bool,
     pub leaf_idx: u64,
     pub leaf: Vec<T>,
     pub root: Vec<T>,
@@ -57,13 +57,13 @@ pub struct MerkleProofData<T> {
 }
 
 impl<T> MerkleProofData<T> {
-    pub fn new(pruned_path: bool, leaf_idx: u64, leaf: Vec<T>, root: Vec<T>, path: Vec<T>) -> Self {
-        Self { pruned_path, leaf_idx, leaf, root, path }
+    pub fn new(is_pruned: bool, leaf_idx: u64, leaf: Vec<T>, root: Vec<T>, path: Vec<T>) -> Self {
+        Self { is_pruned, leaf_idx, leaf, root, path }
     }
 }
 
-impl<T: Clone> From<MerkleProof> for MerkleProofData<T> {
-    fn from(proof: MerkleProof) -> Self {
+impl<T: Clone> From<&MerkleProof> for MerkleProofData<T> {
+    fn from(proof: &MerkleProof) -> Self {
         let (leaf, leaf_idx) = proof.get_leaf::<T>();
         let root = proof.get_root::<T>();
         let path = proof.get_path::<T>();
@@ -120,8 +120,8 @@ impl MerkleProof {
     }
 
     /// Create a new MerkleProof object with specified leaf, root, and path data.
-    pub fn new_with_data<T>(
-        pruned_path: bool,
+    pub fn create_with_data<T>(
+        is_pruned: bool,
         leaf_idx: u64,
         leaf: &[T],
         root: &[T],
@@ -139,7 +139,7 @@ impl MerkleProof {
 
         unsafe {
             let handle = icicle_merkle_proof_create_with_data(
-                pruned_path,
+                is_pruned,
                 leaf_idx,
                 leaf_bytes.as_ptr(),
                 leaf_bytes.len(),
@@ -257,7 +257,7 @@ impl Handle for MerkleProof {
 impl<T> TryFrom<MerkleProofData<T>> for MerkleProof {
     type Error = eIcicleError;
     fn try_from(data: MerkleProofData<T>) -> Result<Self, Self::Error> {
-        Self::new_with_data(data.pruned_path, data.leaf_idx, &data.leaf, &data.root, &data.path)
+        Self::create_with_data(data.is_pruned, data.leaf_idx, &data.leaf, &data.root, &data.path)
     }
 }
 
