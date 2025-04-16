@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
-#include <cstring> // For memcpy
+#include <cstring>  // For memcpy
 #include <typeinfo> // For typeid
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/merkle/merkle_tree.h"
