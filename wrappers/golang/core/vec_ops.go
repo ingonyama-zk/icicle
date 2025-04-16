@@ -21,6 +21,7 @@ type ReductionVecOp int
 const (
 	Sum ReductionVecOp = iota
 	Product
+	Inverse
 )
 
 type VecOpsConfig struct {

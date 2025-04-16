@@ -353,14 +353,6 @@ impl<T> DeviceVec<T> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
-        if size == 0 {
-            return unsafe {
-                Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
-                    std::ptr::NonNull::<T>::dangling().as_ptr(),
-                    0,
-                )))))
-            };
-        }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
         let error = unsafe { runtime::icicle_malloc(&mut device_ptr, size) };
@@ -380,14 +372,6 @@ impl<T> DeviceVec<T> {
         let size = count
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
-        if size == 0 {
-            return unsafe {
-                Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
-                    std::ptr::NonNull::<T>::dangling().as_ptr(),
-                    0,
-                )))))
-            };
-        }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
         unsafe { runtime::icicle_malloc_async(&mut device_ptr, size, stream.handle).wrap()? };

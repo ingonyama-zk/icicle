@@ -119,6 +119,33 @@ func testBls12_381Product(suite *suite.Suite) {
 	suite.Equal(result, result2)
 }
 
+func testBls12_381Inverse(suite *suite.Suite) {
+	testSize := 1 << 14
+	batchSize := 3
+
+	a := bls12_381.GenerateScalars(testSize * batchSize)
+	result := make(core.HostSlice[bls12_381.ScalarField], batchSize)
+	result2 := make(core.HostSlice[bls12_381.ScalarField], batchSize)
+
+	cfg := core.DefaultVecOpsConfig()
+	cfg.BatchSize = int32(batchSize)
+
+	// CPU run
+	test_helpers.ActivateReferenceDevice()
+	vecOps.ReductionVecOp(a, result, cfg, core.Inverse)
+
+	// Cuda run
+	test_helpers.ActivateMainDevice()
+	var dA, dResult core.DeviceSlice
+	a.CopyToDevice(&dA, true)
+	dResult.Malloc(a.SizeOfElement()*batchSize, batchSize)
+
+	vecOps.ReductionVecOp(dA, dResult, cfg, core.Inverse)
+	result2.CopyFromDevice(&dResult)
+
+	suite.Equal(result, result2)
+}
+
 type Bls12_381VecOpsTestSuite struct {
 	suite.Suite
 }
