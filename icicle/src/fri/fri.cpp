@@ -190,8 +190,8 @@ namespace icicle {
       size_t round_size = (1ULL << (log_input_size - round_idx));
       size_t elem_idx = query % round_size;
       F l_even = (leaf_data_f + leaf_data_sym_f) * S::inv_log_size(1);
-      F l_odd = ((leaf_data_f - leaf_data_sym_f) * S::inv_log_size(1)) *
-                S::pow(primitive_root_inv, elem_idx * (1 << round_idx));
+      F l_odd =
+        ((leaf_data_f - leaf_data_sym_f) * S::inv_log_size(1)) * primitive_root_inv.pow(elem_idx * (1 << round_idx));
       F alpha = alpha_values[round_idx];
       F folded = l_even + (alpha * l_odd);
 

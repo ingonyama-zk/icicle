@@ -40,7 +40,7 @@ static std::unique_ptr<affine_t[]> generate_SRS(uint32_t size)
   auto pows_of_tau = generate_pows(secret_scalar, size);
   auto SRS = std::make_unique<affine_t[]>(size);
   for (size_t i = 0; i < size; ++i) {
-    SRS[i] = projective_t::to_affine(pows_of_tau[i] * gen);
+    SRS[i] = (pows_of_tau[i] * gen).to_affine();
   }
   return std::move(SRS);
 }
@@ -397,11 +397,11 @@ void example_commit_with_device_memory_view()
   std::cout << "Commitments done. Took: " << duration.count() << " milliseconds" << std::endl;
 
   // sanity checks
-  auto affL1 = projective_t::to_affine(hL1);
-  auto affR1 = projective_t::to_affine(hR1);
+  auto affL1 = hL1.to_affine();
+  auto affR1 = hR1.to_affine();
 
-  auto affL2 = projective_t::to_affine(hL2);
-  auto affR2 = projective_t::to_affine(hR2);
+  auto affL2 = hL2.to_affine();
+  auto affR2 = hR2.to_affine();
 
   // test commitment equality [(f1+f2)^2 + (f1-f2)^2]_1 = [4 (f_1^2+f_2^2]_1
   assert(affL1.x == affR1.x && affL1.y == affR1.y);

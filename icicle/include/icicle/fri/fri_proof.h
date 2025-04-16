@@ -59,10 +59,8 @@ namespace icicle {
      */
     MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx)
     {
-      if (query_idx < 0 || query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
-      if (round_idx < 0 || round_idx >= m_query_proofs[query_idx].size()) {
-        throw std::out_of_range("Invalid round index");
-      }
+      if (query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
+      if (round_idx >= m_query_proofs[query_idx].size()) { throw std::out_of_range("Invalid round index"); }
       return m_query_proofs[query_idx][round_idx];
     }
 
@@ -73,10 +71,8 @@ namespace icicle {
 
     const MerkleProof& get_query_proof_slot(const size_t query_idx, const size_t round_idx) const
     {
-      if (query_idx < 0 || query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
-      if (round_idx < 0 || round_idx >= m_query_proofs[query_idx].size()) {
-        throw std::out_of_range("Invalid round index");
-      }
+      if (query_idx >= m_query_proofs.size()) { throw std::out_of_range("Invalid query index"); }
+      if (round_idx >= m_query_proofs[query_idx].size()) { throw std::out_of_range("Invalid round index"); }
       return m_query_proofs[query_idx][round_idx];
     }
 

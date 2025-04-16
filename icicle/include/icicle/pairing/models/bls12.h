@@ -17,18 +17,18 @@ namespace icicle_bls12_pairing {
       Fp2 a = x * y;
       a *= two_inv;
 
-      Fp2 b = Fp2::sqr(y);
-      Fp2 c = Fp2::sqr(z);
+      Fp2 b = y.sqr();
+      Fp2 c = z.sqr();
       Fp2 e = Config::G2Config::weierstrass_b * (c + c + c);
       Fp2 f = e + e + e;
       Fp2 g = (b + f) * two_inv;
-      Fp2 h = Fp2::sqr(y + z) - (b + c);
+      Fp2 h = (y + z).sqr() - (b + c);
       Fp2 i = e - b;
-      Fp2 j = Fp2::sqr(x);
-      Fp2 e_square = Fp2::sqr(e);
+      Fp2 j = x.sqr();
+      Fp2 e_square = e.sqr();
 
       x = a * (b - f);
-      y = Fp2::sqr(g) - (e_square + e_square + e_square);
+      y = g.sqr() - (e_square + e_square + e_square);
       z = b * h;
 
       if (Config::TWIST_TYPE == TwistType::M) {
@@ -50,8 +50,8 @@ namespace icicle_bls12_pairing {
 
       Fp2 theta = y - (q.y * z);
       Fp2 lambda = x - (q.x * z);
-      Fp2 c = Fp2::sqr(theta);
-      Fp2 d = Fp2::sqr(lambda);
+      Fp2 c = theta.sqr();
+      Fp2 d = lambda.sqr();
       Fp2 e = lambda * d;
       Fp2 f = z * c;
       Fp2 g = x * d;
@@ -231,7 +231,7 @@ namespace icicle_bls12_pairing {
 
     constexpr size_t znaf_bits = sizeof(Config::Z_NAF) / sizeof(int);
     for (int i = znaf_bits - 1; i >= 0; i--) {
-      if (nonzero_bit) { res = Fp12::sqr(res); }
+      if (nonzero_bit) { res = res.sqr(); }
       int bit = Config::Z_NAF[i];
       if (bit != 0) {
         nonzero_bit = true;
@@ -257,7 +257,7 @@ namespace icicle_bls12_pairing {
     int i = 0;
 
     for (int j = sizeof(Config::Z) * 8 - 1; j > 0; j--) {
-      f = Fp12::sqr(f);
+      f = f.sqr();
       ell<Config>(f, q_coeffs[i++], p);
       if (host_math::get_bit(Config::Z, j - 1)) { ell<Config>(f, q_coeffs[i++], p); }
     }
@@ -274,12 +274,12 @@ namespace icicle_bls12_pairing {
 
     Fp12 f1 = f;
     f1.c1 = -f1.c1;
-    Fp12 f2 = Fp12::inverse(f);
+    Fp12 f2 = f.inverse();
     Fp12 r = f1 * f2;
     f2 = r;
     Config::frobenius_map(r, 2);
     r *= f2;
-    Fp12 y0 = Fp12::sqr(r);
+    Fp12 y0 = r.sqr();
     Fp12 y1 = exp_by_z<Config>(r);
     Fp12 y2 = r;
     y2.c1 = -y2.c1;
@@ -306,7 +306,7 @@ namespace icicle_bls12_pairing {
   template <typename Config>
   std::vector<typename Config::Fp6> prepare_q(const typename Config::G2Affine& q)
   {
-    typename Config::Fp two_inv = Config::Fp::inverse(Config::Fp::one() + Config::Fp::one());
+    typename Config::Fp two_inv = (Config::Fp::one() + Config::Fp::one()).inverse();
     std::vector<typename Config::Fp6> coeffs;
     typename Config::Fp6 r = {q.x, q.y, Config::Fp2::one()};
 
