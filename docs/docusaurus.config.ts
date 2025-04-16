@@ -97,7 +97,13 @@ const config: Config = {
   presets: [
     [
       'classic',
-      ingoPreset,
+      {
+      ...ingoPreset,
+        gtag: {
+          trackingID: 'G-3XJCQFYEF9',
+          anonymizeIP: true,
+        },
+      },
     ],
   ],
   stylesheets: [
