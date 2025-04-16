@@ -17,7 +17,7 @@ namespace icicle {
    * It provides functionality to allocate, copy, and access these components, supporting both
    * raw byte manipulation and type-safe access via templates.
    */
-  class MerkleProof: public Serializer
+  class MerkleProof : public Serializer
   {
   public:
     explicit MerkleProof() = default;
@@ -41,11 +41,8 @@ namespace icicle {
       std::vector<std::byte> leaf,
       std::vector<std::byte> root,
       std::vector<std::byte> path)
-      : m_pruned(pruned_path),
-        m_leaf_index(leaf_idx),
-        m_leaf(std::move(leaf)),
-        m_root(std::move(root)),
-        m_path(std::move(path))
+        : m_pruned(pruned_path), m_leaf_index(leaf_idx), m_leaf(std::move(leaf)), m_root(std::move(root)),
+          m_path(std::move(path))
     {
     }
 
@@ -187,22 +184,22 @@ namespace icicle {
     eIcicleError serialized_size(size_t& size) const override
     {
       size = 0;
-      size += sizeof(bool); // pruned
-      size += sizeof(uint64_t); // leaf_index
-      size += sizeof(size_t); // leaf_size
+      size += sizeof(bool);                      // pruned
+      size += sizeof(uint64_t);                  // leaf_index
+      size += sizeof(size_t);                    // leaf_size
       size += m_leaf.size() * sizeof(std::byte); // leaf
-      size += sizeof(size_t); // root_size
+      size += sizeof(size_t);                    // root_size
       size += m_root.size() * sizeof(std::byte); // root
-      size += sizeof(size_t); // path_size
+      size += sizeof(size_t);                    // path_size
       size += m_path.size() * sizeof(std::byte); // path
       return eIcicleError::SUCCESS;
     }
-    
+
     eIcicleError serialize(std::byte*& out) const override
     {
       std::memcpy(out, &m_pruned, sizeof(bool));
       out += sizeof(bool);
-      
+
       std::memcpy(out, &m_leaf_index, sizeof(uint64_t));
       out += sizeof(uint64_t);
 
@@ -227,7 +224,8 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError deserialize(std::byte*& in, size_t& length) override {
+    eIcicleError deserialize(std::byte*& in, size_t& length) override
+    {
       auto advance = [&](size_t bytes) -> bool {
         if (length < bytes) return false;
         in += bytes;

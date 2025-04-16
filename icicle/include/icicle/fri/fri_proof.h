@@ -19,7 +19,7 @@ namespace icicle {
    */
 
   template <typename F>
-  class FriProof: public Serializer
+  class FriProof : public Serializer
   {
   public:
     // Constructor
@@ -123,9 +123,7 @@ namespace icicle {
         for (const auto& proof : query_proofs) {
           size_t proof_size = 0;
           eIcicleError err = proof.serialized_size(proof_size);
-          if (err != eIcicleError::SUCCESS) {
-            return err;
-          }
+          if (err != eIcicleError::SUCCESS) { return err; }
           size += proof_size;
         }
       }
@@ -148,9 +146,7 @@ namespace icicle {
         out += sizeof(size_t);
         for (const MerkleProof& proof : query_proofs) {
           eIcicleError err = proof.serialize(out);
-          if (err != eIcicleError::SUCCESS) {
-            return err;
-          }
+          if (err != eIcicleError::SUCCESS) { return err; }
         }
       }
       size_t F_type = typeid(F).hash_code();
@@ -196,7 +192,8 @@ namespace icicle {
         for (size_t j = 0; j < nof_fri_rounds; ++j) {
           eIcicleError err = m_query_proofs[i][j].deserialize(in, length);
           if (err != eIcicleError::SUCCESS) {
-            ICICLE_LOG_ERROR << "Deserialization failed: m_query_proofs[" << i << "][" << j << "].deserialize(in, length)";
+            ICICLE_LOG_ERROR << "Deserialization failed: m_query_proofs[" << i << "][" << j
+                             << "].deserialize(in, length)";
             return err;
           }
         }
@@ -235,7 +232,7 @@ namespace icicle {
       advance(sizeof(uint64_t));
       return eIcicleError::SUCCESS;
     }
-    
+
   private:
     std::vector<std::vector<MerkleProof>>
       m_query_proofs; // Matrix of Merkle proofs [query][round] - contains path, root, leaf. for each query, we have 2

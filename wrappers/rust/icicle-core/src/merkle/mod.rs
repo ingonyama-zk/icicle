@@ -1,4 +1,7 @@
-use crate::{hash::{Hasher, HasherHandle}, traits::{Handle, Serialization}};
+use crate::{
+    hash::{Hasher, HasherHandle},
+    traits::{Handle, Serialization},
+};
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
@@ -58,7 +61,13 @@ pub struct MerkleProofData<T> {
 
 impl<T> MerkleProofData<T> {
     pub fn new(is_pruned: bool, leaf_idx: u64, leaf: Vec<T>, root: Vec<T>, path: Vec<T>) -> Self {
-        Self { is_pruned, leaf_idx, leaf, root, path }
+        Self {
+            is_pruned,
+            leaf_idx,
+            leaf,
+            root,
+            path,
+        }
     }
 }
 
@@ -102,8 +111,16 @@ extern "C" {
     fn icicle_merkle_proof_get_serialized_size(proof: MerkleProofHandle, out_size: *mut usize) -> eIcicleError;
     fn icicle_merkle_proof_serialize(proof: MerkleProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
     fn icicle_merkle_proof_deserialize(proof: *mut MerkleProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
-    fn icicle_merkle_proof_serialize_to_file(proof: MerkleProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
-    fn icicle_merkle_proof_deserialize_from_file(proof: *mut MerkleProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+    fn icicle_merkle_proof_serialize_to_file(
+        proof: MerkleProofHandle,
+        filename: *const u8,
+        filename_len: usize,
+    ) -> eIcicleError;
+    fn icicle_merkle_proof_deserialize_from_file(
+        proof: *mut MerkleProofHandle,
+        filename: *const u8,
+        filename_len: usize,
+    ) -> eIcicleError;
 }
 
 impl MerkleProof {
@@ -127,15 +144,9 @@ impl MerkleProof {
         root: &[T],
         path: &[T],
     ) -> Result<Self, eIcicleError> {
-        let leaf_bytes = unsafe {
-            slice::from_raw_parts(leaf.as_ptr() as *const u8, leaf.len() * mem::size_of::<T>())
-        };
-        let root_bytes = unsafe {
-            slice::from_raw_parts(root.as_ptr() as *const u8, root.len() * mem::size_of::<T>())
-        };
-        let path_bytes = unsafe {
-            slice::from_raw_parts(path.as_ptr() as *const u8, path.len() * mem::size_of::<T>())
-        };
+        let leaf_bytes = unsafe { slice::from_raw_parts(leaf.as_ptr() as *const u8, leaf.len() * mem::size_of::<T>()) };
+        let root_bytes = unsafe { slice::from_raw_parts(root.as_ptr() as *const u8, root.len() * mem::size_of::<T>()) };
+        let path_bytes = unsafe { slice::from_raw_parts(path.as_ptr() as *const u8, path.len() * mem::size_of::<T>()) };
 
         unsafe {
             let handle = icicle_merkle_proof_create_with_data(
@@ -215,9 +226,7 @@ impl MerkleProof {
 impl Serialization for MerkleProof {
     fn get_serialized_size(&self) -> Result<usize, eIcicleError> {
         let mut size = 0;
-        unsafe {
-            icicle_merkle_proof_get_serialized_size(self.handle, &mut size).wrap_value(size)
-        }
+        unsafe { icicle_merkle_proof_get_serialized_size(self.handle, &mut size).wrap_value(size) }
     }
 
     fn serialize(&self) -> Result<Vec<u8>, eIcicleError> {
@@ -230,7 +239,8 @@ impl Serialization for MerkleProof {
     fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError> {
         let mut handle = std::ptr::null();
         unsafe {
-            icicle_merkle_proof_deserialize(&mut handle, buffer.as_ptr() as *mut u8, buffer.len()).wrap_value(Self { handle })
+            icicle_merkle_proof_deserialize(&mut handle, buffer.as_ptr() as *mut u8, buffer.len())
+                .wrap_value(Self { handle })
         }
     }
 
@@ -243,7 +253,8 @@ impl Serialization for MerkleProof {
     fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError> {
         let mut handle = std::ptr::null();
         unsafe {
-            icicle_merkle_proof_deserialize_from_file(&mut handle, filename.as_ptr() as *const u8, filename.len()).wrap_value(Self { handle })
+            icicle_merkle_proof_deserialize_from_file(&mut handle, filename.as_ptr() as *const u8, filename.len())
+                .wrap_value(Self { handle })
         }
     }
 }

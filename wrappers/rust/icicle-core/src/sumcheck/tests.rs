@@ -351,15 +351,26 @@ where
         <<SW as Sumcheck>::Proof as SumcheckProofOps<<SW as Sumcheck>::Field>>::get_round_polys(&proof).unwrap();
 
     let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
-    
+
     let filename = "proof.bin";
-    proof_as_sumcheck_proof.serialize_to_file(filename).unwrap();
-    let proof_as_sumcheck_proof_deserialized_from_file = <SW as Sumcheck>::Proof::deserialize_from_file(filename).unwrap();
-    let round_polys_original = proof_as_sumcheck_proof.get_round_polys().unwrap();
-    let round_polys_deserialized_from_file = proof_as_sumcheck_proof_deserialized_from_file.get_round_polys().unwrap();
-    let serialized_round_polys = proof_as_sumcheck_proof.serialize().unwrap();
+    proof_as_sumcheck_proof
+        .serialize_to_file(filename)
+        .unwrap();
+    let proof_as_sumcheck_proof_deserialized_from_file =
+        <SW as Sumcheck>::Proof::deserialize_from_file(filename).unwrap();
+    let round_polys_original = proof_as_sumcheck_proof
+        .get_round_polys()
+        .unwrap();
+    let round_polys_deserialized_from_file = proof_as_sumcheck_proof_deserialized_from_file
+        .get_round_polys()
+        .unwrap();
+    let serialized_round_polys = proof_as_sumcheck_proof
+        .serialize()
+        .unwrap();
     let proof_as_sumcheck_proof_deserialized = <SW as Sumcheck>::Proof::deserialize(&serialized_round_polys).unwrap();
-    let round_polys_deserialized = proof_as_sumcheck_proof_deserialized.get_round_polys().unwrap();
+    let round_polys_deserialized = proof_as_sumcheck_proof_deserialized
+        .get_round_polys()
+        .unwrap();
     proof_as_sumcheck_proof.print();
     proof_as_sumcheck_proof_deserialized.print();
     proof_as_sumcheck_proof_deserialized_from_file.print();
