@@ -17,7 +17,7 @@ namespace icicle {
    */
 
   template <typename S>
-  class SumcheckProof: public Serializer
+  class SumcheckProof : public Serializer
   {
   public:
     // Constructor for creating a new proof
@@ -103,16 +103,14 @@ namespace icicle {
       };
 
       size_t required_length = sizeof(size_t) + sizeof(size_t);
-      if (length < required_length) {
-        return eIcicleError::COPY_FAILED;
-      }
+      if (length < required_length) { return eIcicleError::COPY_FAILED; }
 
       size_t S_type;
       std::memcpy(&S_type, in, sizeof(size_t));
       advance(sizeof(size_t));
 
       if (S_type != typeid(S).hash_code()) {
-        ICICLE_LOG_ERROR << "Invalid S type"; 
+        ICICLE_LOG_ERROR << "Invalid S type";
         return eIcicleError::INVALID_ARGUMENT;
       }
 
@@ -122,23 +120,19 @@ namespace icicle {
 
       m_round_polynomials.resize(nof_round_polynomials);
       for (size_t i = 0; i < nof_round_polynomials; ++i) {
-        if (length < sizeof(size_t)) {
-          return eIcicleError::COPY_FAILED;
-        }
+        if (length < sizeof(size_t)) { return eIcicleError::COPY_FAILED; }
         size_t round_poly_size;
         std::memcpy(&round_poly_size, in, sizeof(size_t));
         advance(sizeof(size_t));
 
         size_t byte_size = round_poly_size * sizeof(S);
-        if (length < byte_size) {
-          return eIcicleError::COPY_FAILED;
-        }
+        if (length < byte_size) { return eIcicleError::COPY_FAILED; }
 
         m_round_polynomials[i].resize(round_poly_size);
         std::memcpy(m_round_polynomials[i].data(), in, byte_size);
         advance(byte_size);
       }
-      
+
       return eIcicleError::SUCCESS;
     }
   };

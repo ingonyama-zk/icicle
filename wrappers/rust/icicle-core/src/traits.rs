@@ -44,7 +44,10 @@ pub trait Handle {
     fn handle(&self) -> *const c_void;
 }
 
-pub trait Serialization where Self: Sized {
+pub trait Serialization
+where
+    Self: Sized,
+{
     fn get_serialized_size(&self) -> Result<usize, eIcicleError>;
     fn serialize(&self) -> Result<Vec<u8>, eIcicleError>;
     fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError>;

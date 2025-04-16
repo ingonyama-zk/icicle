@@ -267,7 +267,8 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_print)(SumcheckProo
  * @param size Pointer to store the serialized size of the SumcheckProof instance.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size)(SumcheckProof<scalar_t>* sumcheck_proof_handle, size_t* size)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, size_t* size)
 {
   if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot get serialized size of a null SumcheckProof instance.";
@@ -287,7 +288,8 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size
  * @param size The size of the buffer.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(SumcheckProof<scalar_t>* sumcheck_proof_handle, std::byte* buffer, size_t size)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, std::byte* buffer, size_t size)
 {
   if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
@@ -317,13 +319,14 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(Sumcheck
  * @param size The size of the buffer.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(SumcheckProof<scalar_t>** sumcheck_proof_handle, std::byte* buffer, size_t size)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(
+  SumcheckProof<scalar_t>** sumcheck_proof_handle, std::byte* buffer, size_t size)
 {
-  if (!sumcheck_proof_handle) { 
+  if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  if (!buffer) { 
+  if (!buffer) {
     ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer.";
     return eIcicleError::INVALID_POINTER;
   }
@@ -337,13 +340,14 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(Sumche
  * @param filename The name of the file to serialize the SumcheckProof to.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize_to_file)(SumcheckProof<scalar_t>* sumcheck_proof_handle, const char* filename, size_t filename_len)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize_to_file)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, const char* filename, size_t filename_len)
 {
-  if (!sumcheck_proof_handle) { 
+  if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  if (!filename || !filename_len) { 
+  if (!filename || !filename_len) {
     ICICLE_LOG_ERROR << "Cannot serialize to a null filename.";
     return eIcicleError::INVALID_ARGUMENT;
   }
@@ -357,13 +361,14 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize_to_file)(
  * @param filename The name of the file to deserialize the SumcheckProof from.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize_from_file)(SumcheckProof<scalar_t>** sumcheck_proof_handle, const char* filename, size_t filename_len)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize_from_file)(
+  SumcheckProof<scalar_t>** sumcheck_proof_handle, const char* filename, size_t filename_len)
 {
-  if (!sumcheck_proof_handle) { 
+  if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  if (!filename || !filename_len) { 
+  if (!filename || !filename_len) {
     ICICLE_LOG_ERROR << "Cannot deserialize from a null filename.";
     return eIcicleError::INVALID_ARGUMENT;
   }

@@ -1007,7 +1007,7 @@ TYPED_TEST(FieldTest, Fri)
             ASSERT_EQ(orig_root_size, deser_root_size);
             std::vector<std::byte> orig_root_vec(orig_root_ptr, orig_root_ptr + orig_root_size);
             std::vector<std::byte> deser_root_vec(deser_root_ptr, deser_root_ptr + deser_root_size);
-            ASSERT_EQ(orig_root_vec, deser_root_vec);            
+            ASSERT_EQ(orig_root_vec, deser_root_vec);
           }
         }
       };

@@ -246,19 +246,36 @@ macro_rules! impl_sumcheck {
             fn icicle_sumcheck_proof_print(handle: SumcheckProofHandle) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_get_serialized_size")]
-            fn icicle_sumcheck_proof_get_serialized_size(handle: SumcheckProofHandle, size: *mut usize) -> eIcicleError;
+            fn icicle_sumcheck_proof_get_serialized_size(handle: SumcheckProofHandle, size: *mut usize)
+                -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize")]
-            fn icicle_sumcheck_proof_serialize(handle: SumcheckProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
+            fn icicle_sumcheck_proof_serialize(
+                handle: SumcheckProofHandle,
+                buffer: *mut u8,
+                size: usize,
+            ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize")]
-            fn icicle_sumcheck_proof_deserialize(handle: *mut SumcheckProofHandle, buffer: *const u8, size: usize) -> eIcicleError;
+            fn icicle_sumcheck_proof_deserialize(
+                handle: *mut SumcheckProofHandle,
+                buffer: *const u8,
+                size: usize,
+            ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize_to_file")]
-            fn icicle_sumcheck_proof_serialize_to_file(handle: SumcheckProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+            fn icicle_sumcheck_proof_serialize_to_file(
+                handle: SumcheckProofHandle,
+                filename: *const u8,
+                filename_len: usize,
+            ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize_from_file")]
-            fn icicle_sumcheck_proof_deserialize_from_file(handle: *mut SumcheckProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+            fn icicle_sumcheck_proof_deserialize_from_file(
+                handle: *mut SumcheckProofHandle,
+                filename: *const u8,
+                filename_len: usize,
+            ) -> eIcicleError;
         }
 
         /***************** SumcheckWrapper *************************/
@@ -400,23 +417,20 @@ macro_rules! impl_sumcheck {
         impl Serialization for SumcheckProof {
             fn get_serialized_size(&self) -> Result<usize, eIcicleError> {
                 let mut size = 0;
-                unsafe {
-                    icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size).wrap_value(size)
-                }
+                unsafe { icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size).wrap_value(size) }
             }
 
             fn serialize(&self) -> Result<Vec<u8>, eIcicleError> {
                 let size = self.get_serialized_size()?;
                 let mut buffer = vec![0; size as usize];
-                unsafe {
-                    icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), size).wrap_value(buffer)
-                }
+                unsafe { icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), size).wrap_value(buffer) }
             }
 
             fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError> {
                 let mut handle = std::ptr::null();
                 unsafe {
-                    icicle_sumcheck_proof_deserialize(&mut handle, buffer.as_ptr(), buffer.len()).wrap_value(Self { handle })
+                    icicle_sumcheck_proof_deserialize(&mut handle, buffer.as_ptr(), buffer.len())
+                        .wrap_value(Self { handle })
                 }
             }
 
@@ -429,7 +443,8 @@ macro_rules! impl_sumcheck {
             fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError> {
                 let mut handle = std::ptr::null();
                 unsafe {
-                    icicle_sumcheck_proof_deserialize_from_file(&mut handle, filename.as_ptr(), filename.len()).wrap_value(Self { handle })
+                    icicle_sumcheck_proof_deserialize_from_file(&mut handle, filename.as_ptr(), filename.len())
+                        .wrap_value(Self { handle })
                 }
             }
         }
