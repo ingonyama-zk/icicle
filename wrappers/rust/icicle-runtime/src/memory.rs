@@ -354,7 +354,12 @@ impl<T> DeviceVec<T> {
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
         if size == 0 {
-            return Err(eIcicleError::AllocationFailed);
+            return unsafe {
+                Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
+                    std::ptr::NonNull::<T>::dangling().as_ptr(),
+                    0,
+                )))))
+            };
         }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();
@@ -376,7 +381,12 @@ impl<T> DeviceVec<T> {
             .checked_mul(size_of::<T>())
             .unwrap_or(0);
         if size == 0 {
-            return Err(eIcicleError::AllocationFailed);
+            return unsafe {
+                Ok(Self(ManuallyDrop::new(Box::from_raw(from_raw_parts_mut(
+                    std::ptr::NonNull::<T>::dangling().as_ptr(),
+                    0,
+                )))))
+            };
         }
 
         let mut device_ptr: *mut c_void = std::ptr::null_mut();

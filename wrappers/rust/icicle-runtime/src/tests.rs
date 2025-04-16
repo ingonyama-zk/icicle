@@ -227,6 +227,39 @@ mod tests {
     }
 
     #[test]
+    fn test_empty_device_vec() {
+        initialize();
+        test_utilities::test_set_main_device();
+
+        let mut stream = IcicleStream::create().unwrap();
+        
+        let input: Vec<u64> = vec![];
+        let mut output = vec![0; input.len()];
+        
+        let h_input = HostSlice::from_slice(&input);
+        let h_output = HostSlice::from_mut_slice(&mut output);
+
+
+        let mut d_mem1: DeviceVec<u64> = DeviceVec::device_malloc(input.len()).unwrap();
+        let mut d_mem2: DeviceVec<u64> = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
+
+        d_mem2
+            .copy_async(&d_mem1, &stream)
+            .unwrap();
+
+        h_output
+            .copy_async(&d_mem2, &stream)
+            .unwrap();
+
+        stream
+            .synchronize()
+            .unwrap();
+        stream
+            .destroy()
+            .unwrap();
+    }
+
+    #[test]
     fn test_get_device_props() {
         initialize();
         let device = Device::new("CUDA", 0);
