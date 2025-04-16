@@ -24,11 +24,15 @@ public:
       return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1)};
     }
 
-    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) { return Wide{c0 + ys.c0, c1 + ys.c1}; }
+    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const { 
+      return Wide{c0 + ys.c0, c1 + ys.c1}; 
+    }
 
-    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) { return Wide{c0 - ys.c0, c1 - ys.c1}; }
+    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const { 
+      return Wide{c0 - ys.c0, c1 - ys.c1}; 
+    }
 
-    constexpr HOST_DEVICE_INLINE Wide neg() { return Wide{c0.neg(), c1.neg()}; }
+    constexpr HOST_DEVICE_INLINE Wide neg() const { return Wide{c0.neg(), c1.neg()}; }
 
     constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce() const
     {
@@ -213,14 +217,14 @@ public:
     return xy.reduce();
   }
 
-  friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& ys) const
   {
-    return (xs.c0 == ys.c0) && (xs.c1 == ys.c1);
+    return (c0 == ys.c0) && (c1 == ys.c1);
   }
 
-  friend HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& ys) const
   {
-    return !(xs == ys);
+    return !(*this == ys);
   }
 
   template <typename Gen, bool IS_3B = false>

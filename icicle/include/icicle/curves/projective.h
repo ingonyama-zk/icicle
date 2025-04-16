@@ -189,16 +189,15 @@ public:
 
   HOST_DEVICE_INLINE Projective operator-(const Affine<FF>& p2) const { return *this + p2.neg(); }
 
-  friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point)
-  {
+  HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar) const {
     // Precompute points: P, 2P, ..., (2^window_size - 1)P
     constexpr unsigned window_size =
       4; // 4 seems fastest. Optimum is minimizing EC add and depends on the field size. for 256b it's 4.
     constexpr unsigned table_size = (1 << window_size) - 1; // 2^window_size-1
     std::array<Projective, table_size> table;
-    table[0] = point;
+    table[0] = *this;
     for (int i = 1; i < table_size; ++i) {
-      table[i] = table[i - 1] + point; // Compute (i+1)P
+      table[i] = table[i - 1] + *this; // Compute (i+1)P
     }
 
     Projective res = zero();
@@ -223,7 +222,10 @@ public:
     return res;
   }
 
-  HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar) { return scalar * *this; }
+  friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point)
+  {
+    return point * scalar;
+  }
 
   HOST_DEVICE_INLINE bool operator==(const Projective& p2) const
   {

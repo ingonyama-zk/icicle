@@ -944,7 +944,7 @@ public:
 
     // Add e(sum(public_witness[i] * public_witness_points[i]), gamma) to the right-hand side
     typename PairingConfig::TargetField public_term;
-    icicle::pairing<PairingConfig>(projective_t::to_affine(public_inputs), vk.g2.gamma, public_term);
+    icicle::pairing<PairingConfig>(public_inputs.to_affine(), vk.g2.gamma, public_term);
     rhs = rhs * public_term;
 
     // Add e(C, delta) to the right-hand side

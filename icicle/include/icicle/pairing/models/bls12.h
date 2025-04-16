@@ -17,18 +17,18 @@ namespace icicle_bls12_pairing {
       Fp2 a = x * y;
       a *= two_inv;
 
-      Fp2 b = Fp2::sqr(y);
-      Fp2 c = Fp2::sqr(z);
+      Fp2 b = y.sqr();
+      Fp2 c = z.sqr();
       Fp2 e = Config::G2Config::weierstrass_b * (c + c + c);
       Fp2 f = e + e + e;
       Fp2 g = (b + f) * two_inv;
-      Fp2 h = Fp2::sqr(y + z) - (b + c);
+      Fp2 h = (y + z).sqr() - (b + c);
       Fp2 i = e - b;
-      Fp2 j = Fp2::sqr(x);
-      Fp2 e_square = Fp2::sqr(e);
+      Fp2 j = x.sqr();
+      Fp2 e_square = e.sqr();
 
       x = a * (b - f);
-      y = Fp2::sqr(g) - (e_square + e_square + e_square);
+      y = g.sqr() - (e_square + e_square + e_square);
       z = b * h;
 
       if (Config::TWIST_TYPE == TwistType::M) {
@@ -50,8 +50,8 @@ namespace icicle_bls12_pairing {
 
       Fp2 theta = y - (q.y * z);
       Fp2 lambda = x - (q.x * z);
-      Fp2 c = Fp2::sqr(theta);
-      Fp2 d = Fp2::sqr(lambda);
+      Fp2 c = theta.sqr();
+      Fp2 d = lambda.sqr();
       Fp2 e = lambda * d;
       Fp2 f = z * c;
       Fp2 g = x * d;
@@ -231,7 +231,7 @@ namespace icicle_bls12_pairing {
 
     constexpr size_t znaf_bits = sizeof(Config::Z_NAF) / sizeof(int);
     for (int i = znaf_bits - 1; i >= 0; i--) {
-      if (nonzero_bit) { res = Fp12::sqr(res); }
+      if (nonzero_bit) { res = res.sqr(); }
       int bit = Config::Z_NAF[i];
       if (bit != 0) {
         nonzero_bit = true;

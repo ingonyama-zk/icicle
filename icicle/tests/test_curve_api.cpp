@@ -344,8 +344,8 @@ TEST(CurveSanity, TargetFieldSanityTest)
 {
   auto a = TargetField::rand_host();
   auto b = TargetField::rand_host();
-  auto b_inv = TargetField::inverse(b);
-  auto a_neg = TargetField::neg(a);
+  auto b_inv = b.inverse();
+  auto a_neg = a.neg();
 
   ASSERT_EQ(a + TargetField::zero(), a);
   ASSERT_EQ(a + b - a, b);
@@ -364,8 +364,8 @@ TEST(CurveSanity, PairingBilinearityTest)
     // Proper TargetField/ScalarField multiplication is not implemented yet, so we need a uint32_t coefficient
     uint32_t coeff = 42;
     scalar_t s = scalar_t::from(coeff);
-    affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
-    g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
+    affine_t ps = (projective_t::from_affine(p) * s).to_affine();
+    g2_affine_t qs = (g2_projective_t::from_affine(q) * s).to_affine();
 
     TargetField f1, f2, f3, f4;
     pairing<PairingConfig>(ps, q, f1);
@@ -374,7 +374,7 @@ TEST(CurveSanity, PairingBilinearityTest)
     pairing<PairingConfig>(ps, qs, f4);
 
     ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
-    ASSERT_EQ(TargetField::pow(f3, coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
+    ASSERT_EQ(f3.pow(coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
   }
 }
 

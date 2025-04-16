@@ -25,11 +25,11 @@ public:
       return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1), FWide::from_field(xs.c2)};
     }
 
-    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) { return Wide{c0 + ys.c0, c1 + ys.c1, c2 + ys.c2}; }
+    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const { return Wide{c0 + ys.c0, c1 + ys.c1, c2 + ys.c2}; }
 
-    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) { return Wide{c0 - ys.c0, c1 - ys.c1, c2 - ys.c2}; }
+    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const { return Wide{c0 - ys.c0, c1 - ys.c1, c2 - ys.c2}; }
 
-    constexpr HOST_DEVICE_INLINE Wide neg() { return Wide{c0.neg(), c1.neg(), c2.neg()}; }
+    constexpr HOST_DEVICE_INLINE Wide neg() const { return Wide{c0.neg(), c1.neg(), c2.neg()}; }
 
     constexpr HOST_DEVICE_INLINE CubicExtensionField reduce() const
     {
@@ -220,12 +220,12 @@ public:
     return xy.reduce();
   }
 
-  HOST_DEVICE_INLINE bool operator==(const CubicExtensionField& ys)
+  HOST_DEVICE_INLINE bool operator==(const CubicExtensionField& ys) const
   {
     return (c0 == ys.c0) && (c1 == ys.c1) && (c2 == ys.c2);
   }
 
-  HOST_DEVICE_INLINE bool operator!=(const CubicExtensionField& ys) { return !(*this == ys); }
+  HOST_DEVICE_INLINE bool operator!=(const CubicExtensionField& ys) const { return !(*this == ys); }
 
   template <const CubicExtensionField& multiplier>
   static HOST_DEVICE CubicExtensionField mul_const(const CubicExtensionField& xs)
