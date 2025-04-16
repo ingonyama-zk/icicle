@@ -95,7 +95,7 @@ FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_create_with_arguments_fri
     query_proofs[i] = proofs_per_query;
   }
   std::vector<scalar_t> final_poly = {final_poly_ffi, final_poly_ffi + final_poly_size};
-  return new FriProof<scalar_t>(std::move(query_proofs), std::move(final_poly), pow_nonce);
+  return new FriProof<scalar_t>(query_proofs, final_poly, pow_nonce);
 }
 
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_delete_fri_proof)(FriProofHandle proof_ptr)

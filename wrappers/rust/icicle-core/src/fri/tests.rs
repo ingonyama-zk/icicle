@@ -1,5 +1,3 @@
-use std::mem::ManuallyDrop;
-
 use super::FriMerkleTree;
 use crate::{
     fri::{
@@ -7,7 +5,6 @@ use crate::{
         fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof,
     },
     hash::Hasher,
-    merkle::{MerkleProof, MerkleProofData},
     traits::{FieldImpl, GenerateRandom, Serialization},
 };
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
@@ -87,6 +84,7 @@ pub fn check_fri_on_device<F: FieldImpl>(
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
+        stream.synchronize().unwrap();
 
         let query_proofs = fri_proof
             .get_query_proofs::<u8>()
@@ -107,6 +105,8 @@ pub fn check_fri_on_device<F: FieldImpl>(
             &merkle_tree_compress_hash,
         )
         .unwrap();
+        stream.synchronize().unwrap();
+
         assert!(valid);
     };
     test_utilities::test_set_main_device();
@@ -123,19 +123,16 @@ pub fn check_fri_proof_serialization<F: FieldImpl>(
     <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
 {
     const SIZE: u64 = 1 << 10;
-    let stream = IcicleStream::create().unwrap();
-    let mut fri_config = FriConfig::default();
-    fri_config.is_async = true;
-    fri_config.stream_handle = *stream;
+    let fri_config = FriConfig::default();
     let scalars = F::Config::generate_random(SIZE as usize);
 
     let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 
     let merkle_tree_min_layer_to_store = 0;
 
-    let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::device_malloc_async(SIZE as usize, &stream).unwrap();
+    let mut scalars_d: DeviceVec<_> = DeviceVec::<F>::device_malloc(SIZE as usize).unwrap();
     scalars_d
-        .copy_from_host_async(HostSlice::from_slice(&scalars), &stream)
+        .copy_from_host(HostSlice::from_slice(&scalars))
         .unwrap();
 
     let fri_proof = fri_merkle_tree_prove::<F>(

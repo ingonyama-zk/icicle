@@ -247,8 +247,11 @@ macro_rules! impl_fri_tests {
                 test_utilities::test_set_main_device();
             }
 
+            // Note: tests are prefixed with 'phase4' since they conflict with NTT tests domain.
+            //       The fri tests are executed via 'cargo test phase4' as an additional step
+
             #[test]
-            pub fn test_fri() {
+            pub fn phase4_test_fri() {
                 initialize();
                 let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
                 let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
@@ -261,7 +264,7 @@ macro_rules! impl_fri_tests {
             }
 
             #[test]
-            pub fn test_fri_on_device() {
+            pub fn phase4_test_fri_on_device() {
                 initialize();
 
                 let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
@@ -275,7 +278,7 @@ macro_rules! impl_fri_tests {
             }
 
             #[test]
-            pub fn test_fri_proof_serialization() {
+            pub fn phase4_test_fri_proof_serialization() {
                 initialize();
                 let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
                 let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
