@@ -232,13 +232,12 @@ mod tests {
         test_utilities::test_set_main_device();
 
         let mut stream = IcicleStream::create().unwrap();
-        
+
         let input: Vec<u64> = vec![];
         let mut output = vec![0; input.len()];
-        
+
         let h_input = HostSlice::from_slice(&input);
         let h_output = HostSlice::from_mut_slice(&mut output);
-
 
         let mut d_mem1: DeviceVec<u64> = DeviceVec::device_malloc(input.len()).unwrap();
         let mut d_mem2: DeviceVec<u64> = DeviceVec::device_malloc_async(input.len(), &stream).unwrap();
