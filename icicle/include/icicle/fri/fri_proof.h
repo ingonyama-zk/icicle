@@ -4,11 +4,12 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <cstring> // For memcpy
+#include <typeinfo> // For typeid
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/utils/log.h"
 #include "icicle/serialization.h"
-#include <typeinfo>
 
 namespace icicle {
 

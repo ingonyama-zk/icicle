@@ -851,7 +851,13 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     ICICLE_CHECK(deserialized_proof.deserialize(ptr, proof_size));
 
     // Compare proofs
-    // ASSERT_EQ(sumcheck_proof, deserialized_proof);
+    uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
+    ASSERT_EQ(nof_round_polynomials, deserialized_proof.get_nof_round_polynomials());
+    for (uint round_i = 0; round_i < nof_round_polynomials; round_i++) {
+      const auto& round_poly = sumcheck_proof.get_round_polynomial(round_i);
+      const auto& deserialized_round_poly = deserialized_proof.get_round_polynomial(round_i);
+      ASSERT_EQ(round_poly, deserialized_round_poly);
+    }
   };
 
   for (const auto& device : s_registered_devices)

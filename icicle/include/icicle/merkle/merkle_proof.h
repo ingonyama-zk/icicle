@@ -6,6 +6,7 @@
 #include <iostream> // For streams
 #include <stdexcept>
 #include <utility> // For std::pair
+#include <cstring> // For memcpy
 #include "icicle/runtime.h"
 #include "icicle/serialization.h"
 namespace icicle {
