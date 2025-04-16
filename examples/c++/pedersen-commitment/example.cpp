@@ -18,9 +18,9 @@ T modPow(T base, T exp)
   T e = exp;
   while (e != T::zero()) {
     // If exp is odd, multiply the base with result
-    if (T::is_odd(e)) { r = r * b; }
+    if (e.is_odd()) { r = r * b; }
     // Now exp must be even, divide it by 2
-    e = T::div2(e);
+    e = e.div2();
     b = b * b;
   }
   return r;
@@ -30,7 +30,7 @@ T modPow(T base, T exp)
 template <typename T>
 bool quadratic_residue(T y2)
 {
-  return modPow(y2, T::div2(T::zero() - T::one())) == T::one();
+  return modPow(y2, (T::zero() - T::one()).div2()) == T::one();
 }
 
 // modular square root adapted from:
@@ -42,7 +42,7 @@ bool mySQRT(T a, T* result)
     *result = T::zero();
     return true;
   }
-  if (modPow(a, T::div2(T::zero() - T::one())) != T::one()) {
+  if (modPow(a, (T::zero() - T::one()).div2()) != T::one()) {
     return false; // solution does not exist
   }
   // TODO: consider special cases
@@ -51,15 +51,15 @@ bool mySQRT(T a, T* result)
   T n = T::one() + T::one();  // 2;
   T r = T::zero();
   T m;
-  while (T::is_even(s)) {
+  while (s.is_even()) {
     r = r + T::one();
-    s = T::div2(s); // s /= 2;
+    s = s.div2(); // s /= 2;
   }
   // find a non-square mod p
-  while (modPow(n, T::div2((T::zero() - T::one()))) != T::zero() - T::one()) {
+  while (modPow(n, (T::zero() - T::one()).div2()) != T::zero() - T::one()) {
     n = n + T::one();
   }
-  T x = modPow(a, T::div2(s + T::one()));
+  T x = modPow(a, (s + T::one()).div2());
   T b = modPow(a, s);
   T g = modPow(n, s);
   for (;; r = m) {

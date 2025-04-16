@@ -547,7 +547,8 @@ public:
   constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
   {
     // TODO: change to a more efficient squaring
-    return mul_wide(*this);
+    const Derived& self = static_cast<const Derived&>(*this);
+    return mul_wide(self);
   }
 
   constexpr HOST_DEVICE_INLINE Derived sqr() const

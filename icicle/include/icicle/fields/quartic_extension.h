@@ -203,6 +203,11 @@ public:
     return xy.reduce();
   }
 
+  friend HOST_DEVICE_INLINE QuarticExtensionField operator*(const FF& xs, const QuarticExtensionField& ys)
+  {
+    return ys * xs;
+  }
+
   constexpr HOST_DEVICE_INLINE bool operator==(const QuarticExtensionField& ys) const
   {
     return (c0 == ys.c0) && (c1 == ys.c1) && (c2 == ys.c2) && (c3 == ys.c3);
