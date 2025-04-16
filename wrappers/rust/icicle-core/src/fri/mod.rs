@@ -221,7 +221,7 @@ macro_rules! impl_fri_tests {
         mod $field_prefix_ident {
             use super::*;
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
-            use icicle_core::fri::tests::{check_fri, check_fri_on_device};
+            use icicle_core::fri::tests::{check_fri, check_fri_on_device, check_fri_proof_serialization};
             use icicle_core::hash::Hasher;
             use icicle_core::ntt::tests::init_domain;
             use icicle_hash::keccak::Keccak256;
@@ -268,6 +268,19 @@ macro_rules! impl_fri_tests {
                 let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
                 let transcript_hash = Keccak256::new(0).unwrap();
                 check_fri_on_device::<$field>(
+                    &merkle_tree_leaves_hash,
+                    &merkle_tree_compress_hash,
+                    &transcript_hash,
+                );
+            }
+
+            #[test]
+            pub fn test_fri_proof_serialization() {
+                initialize();
+                let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
+                let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
+                let transcript_hash = Keccak256::new(0).unwrap();
+                check_fri_proof_serialization::<$field>(
                     &merkle_tree_leaves_hash,
                     &merkle_tree_compress_hash,
                     &transcript_hash,

@@ -95,7 +95,7 @@ FriProofHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_create_with_arguments_fri
     query_proofs[i] = proofs_per_query;
   }
   std::vector<scalar_t> final_poly = {final_poly_ffi, final_poly_ffi + final_poly_size};
-  return new FriProof<scalar_t>(query_proofs, final_poly, pow_nonce);
+  return new FriProof<scalar_t>(std::move(query_proofs), std::move(final_poly), pow_nonce);
 }
 
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, icicle_delete_fri_proof)(FriProofHandle proof_ptr)
@@ -196,6 +196,81 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_pow_nonce)(FriProofH
   }
   *result = proof_ptr->get_pow_nonce();
   return eIcicleError::SUCCESS;
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_get_serialized_size)(FriProofHandle proof_ptr, size_t* result)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return proof_ptr->serialized_size(*result);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_serialize)(FriProofHandle proof_ptr, std::byte* buffer, size_t size)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "buffer is null — cannot serialize Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = proof_ptr->serialized_size(expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of Fri proof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize Fri proof";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return proof_ptr->serialize(buffer);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_deserialize)(FriProofHandle* proof_ptr, std::byte* buffer, size_t size)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot deserialize Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "buffer is null — cannot deserialize Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *proof_ptr = new FriProof<scalar_t>();
+  return (*proof_ptr)->deserialize(buffer, size);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_serialize_to_file)(FriProofHandle proof_ptr, const char* filename, size_t filename_len)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!filename || !filename_len) {
+    ICICLE_LOG_ERROR << "filename is null or filename_len is 0 — cannot serialize Fri proof to file";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  std::string filename_str(filename, filename_len);
+  return proof_ptr->serialize_to_file(filename_str);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_proof_deserialize_from_file)(FriProofHandle* proof_ptr, const char* filename, size_t filename_len)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot deserialize Fri proof from file";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!filename || !filename_len) {
+    ICICLE_LOG_ERROR << "filename is null or filename_len is 0 — cannot deserialize Fri proof from file";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  std::string filename_str(filename, filename_len);
+  *proof_ptr = new FriProof<scalar_t>();
+  return (*proof_ptr)->deserialize_from_file(filename_str);
 }
 
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, fri_merkle_tree_prove)(
@@ -410,6 +485,83 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_get_pow_nonce)(FriProofExte
   *result = proof_ptr->get_pow_nonce();
   return eIcicleError::SUCCESS;
 }
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_get_serialized_size)(FriProofExtensionHandle proof_ptr, size_t* result)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  return proof_ptr->serialized_size(*result);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_serialize)(FriProofExtensionHandle proof_ptr, std::byte* buffer, size_t size)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "buffer is null — cannot serialize Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = proof_ptr->serialized_size(expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of Fri proof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize Fri proof";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return proof_ptr->serialize(buffer);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_deserialize)(FriProofExtensionHandle* proof_ptr, std::byte* buffer, size_t size)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot deserialize Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "buffer is null — cannot deserialize Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *proof_ptr = new FriProof<extension_t>();
+  return (*proof_ptr)->deserialize(buffer, size);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_serialize_to_file)(FriProofExtensionHandle proof_ptr, const char* filename, size_t filename_len)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot retrieve Fri proof";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!filename || !filename_len) {
+    ICICLE_LOG_ERROR << "filename is null or filename_len is 0 — cannot serialize Fri proof to file";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  std::string filename_str(filename, filename_len);
+  return proof_ptr->serialize_to_file(filename_str);
+}
+
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_proof_deserialize_from_file)(FriProofExtensionHandle* proof_ptr, const char* filename, size_t filename_len)
+{
+  if (!proof_ptr) {
+    ICICLE_LOG_ERROR << "proof_ptr is null — cannot deserialize Fri proof from file";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!filename || !filename_len) {
+    ICICLE_LOG_ERROR << "filename is null or filename_len is 0 — cannot deserialize Fri proof from file";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  std::string filename_str(filename, filename_len);
+  *proof_ptr = new FriProof<extension_t>();
+  return (*proof_ptr)->deserialize_from_file(filename_str);
+}
+
 
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_fri_merkle_tree_prove)(
   const FriConfig* fri_config,
