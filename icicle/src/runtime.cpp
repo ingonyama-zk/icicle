@@ -51,7 +51,7 @@ extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
     *ptr = reinterpret_cast<void*>(0x1);
     return eIcicleError::SUCCESS;
   }
-  
+
   auto err = DeviceAPI::get_thread_local_deviceAPI()->allocate_memory(ptr, size);
   if (err == eIcicleError::SUCCESS) {
     DeviceAPI::get_global_memory_tracker().add_allocation(*ptr, size, DeviceAPI::get_thread_local_device());
@@ -65,7 +65,7 @@ extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStrea
     *ptr = reinterpret_cast<void*>(0x1);
     return eIcicleError::SUCCESS;
   }
-  
+
   auto err = DeviceAPI::get_thread_local_deviceAPI()->allocate_memory_async(ptr, size, stream);
   if (err == eIcicleError::SUCCESS) {
     DeviceAPI::get_global_memory_tracker().add_allocation(*ptr, size, DeviceAPI::get_thread_local_device());
