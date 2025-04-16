@@ -83,7 +83,7 @@ public:
     Z3 = Z3 + Z3;                                       // 4. Z3 ← Z3 + Z3
     FF t1 = Y * Z;                                      // 5. t1 ← Y · Z
     FF t2 = Z.sqr();                                    // 6. t2 ← Z · Z
-    t2 = FF::template mul_weierstrass_b<Gen, true>(t2); // 7. t2 ← b3 · t2
+    t2 = FF::template mul_weierstrass_b<Gen>(t2);      // 7. t2 ← b3 · t2
     FF X3 = t2 * Z3;                                    // 8. X3 ← t2 · Z3
     FF Y3 = t0 + t2;                                    // 9. Y3 ← t0 + t2
     Z3 = t1 * Z3;                                       // 10. Z3 ← t1 · Z3
