@@ -24,13 +24,9 @@ public:
       return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1)};
     }
 
-    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const { 
-      return Wide{c0 + ys.c0, c1 + ys.c1}; 
-    }
+    HOST_DEVICE_INLINE Wide operator+(const Wide& ys) const { return Wide{c0 + ys.c0, c1 + ys.c1}; }
 
-    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const { 
-      return Wide{c0 - ys.c0, c1 - ys.c1}; 
-    }
+    HOST_DEVICE_INLINE Wide operator-(const Wide& ys) const { return Wide{c0 - ys.c0, c1 - ys.c1}; }
 
     constexpr HOST_DEVICE_INLINE Wide neg() const { return Wide{c0.neg(), c1.neg()}; }
 
@@ -217,15 +213,9 @@ public:
     return xy.reduce();
   }
 
-  HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& ys) const
-  {
-    return (c0 == ys.c0) && (c1 == ys.c1);
-  }
+  HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& ys) const { return (c0 == ys.c0) && (c1 == ys.c1); }
 
-  HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& ys) const
-  {
-    return !(*this == ys);
-  }
+  HOST_DEVICE_INLINE bool operator!=(const ComplexExtensionField& ys) const { return !(*this == ys); }
 
   template <typename Gen, bool IS_3B = false>
   static HOST_DEVICE_INLINE FF mul_weierstrass_b_real(const FF& xs)
