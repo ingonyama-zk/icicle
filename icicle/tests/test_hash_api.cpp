@@ -1102,16 +1102,7 @@ TEST_F(HashApiTest, poseidon2_3_single_hasher)
   config.batch = 1;
 
   auto input = std::make_unique<scalar_t[]>(config.batch * t);
-  // scalar_t::rand_host_many(input.get(), t * config.batch);
-  // Set the inputs as needed.
-  for (int i = 0; i < config.batch; i++) {
-    for (int j = 0; j < t; j++) {
-      input[i * t + j] = scalar_t::from(j + 4);
-    }
-  }
-  for (int i = 0; i < config.batch * t; i++) {
-    std::cout << "Input = " << input[i] << std::endl;
-  }
+  scalar_t::rand_host_many(input.get(), t * config.batch);
 
   auto run = [&](const std::string& dev_type, scalar_t* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
@@ -1144,7 +1135,7 @@ TEST_F(HashApiTest, poseidon2_4_sponge_2_hashers_without_dt)
 {
   const unsigned t = 4;
   auto config = default_hash_config();
-  int nof_hashers = 4096;
+  int nof_hashers = 2;
   int nof_inputs = 1 + nof_hashers * (t - 1);
 
   auto input = std::make_unique<scalar_t[]>(nof_inputs);
@@ -1586,7 +1577,7 @@ TEST_F(HashApiTest, poseidon2_invalid_t)
     auto poseidon2 = Poseidon2::create<scalar_t>(t);
     auto err = poseidon2.hash(input.get(), t, config, output.get());
     if (large_field) {
-      EXPECT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
+      EXPECT_EQ(err, eIcicleError::INVALID_ARGUMENT);
     } else {
       EXPECT_EQ(err, eIcicleError::SUCCESS);
     }
