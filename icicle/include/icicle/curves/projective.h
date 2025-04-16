@@ -189,7 +189,8 @@ public:
 
   HOST_DEVICE_INLINE Projective operator-(const Affine<FF>& p2) const { return *this + p2.neg(); }
 
-  HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar) const {
+  HOST_DEVICE_INLINE Projective operator*(SCALAR_FF scalar) const
+  {
     // Precompute points: P, 2P, ..., (2^window_size - 1)P
     constexpr unsigned window_size =
       4; // 4 seems fastest. Optimum is minimizing EC add and depends on the field size. for 256b it's 4.
@@ -222,10 +223,7 @@ public:
     return res;
   }
 
-  friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point)
-  {
-    return point * scalar;
-  }
+  friend HOST_DEVICE Projective operator*(SCALAR_FF scalar, const Projective& point) { return point * scalar; }
 
   HOST_DEVICE_INLINE bool operator==(const Projective& p2) const
   {

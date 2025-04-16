@@ -373,7 +373,7 @@ TEST(CurveSanity, PairingBilinearityTest)
     pairing<PairingConfig>(p, q, f3);
     pairing<PairingConfig>(ps, qs, f4);
 
-    ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
+    ASSERT_EQ(f1, f2);                    // e(ps, q) == e(p, qs)
     ASSERT_EQ(f3.pow(coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
   }
 }
