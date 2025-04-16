@@ -30,7 +30,6 @@ fn main() {
     if target.contains("android") {
         config.define("BUILD_FOR_ANDROID", "ON");
     }
-    config.define("BUILD_FOR_ANDROID", "ON");
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
     if cfg!(feature = "cuda_backend") {
