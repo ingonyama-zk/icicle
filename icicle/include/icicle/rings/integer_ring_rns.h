@@ -174,15 +174,11 @@ public:
     return all_nonzero;
   }
 
-  HOST_DEVICE bool has_inverse() const
-  {
-    return has_inverse_impl(*this, std::make_index_sequence<nof_fields>{});
-  }
+  HOST_DEVICE bool has_inverse() const { return has_inverse_impl(*this, std::make_index_sequence<nof_fields>{}); }
 
   HOST_DEVICE_INLINE IntegerRingRns pow(int exp) const
   {
-    return apply_op_unary(
-      *this, [exp](auto& x) { return x.pow(exp); }, std::make_index_sequence<nof_fields>{});
+    return apply_op_unary(*this, [exp](auto& x) { return x.pow(exp); }, std::make_index_sequence<nof_fields>{});
   }
 
   HOST_DEVICE_INLINE IntegerRingRns to_montgomery() const
