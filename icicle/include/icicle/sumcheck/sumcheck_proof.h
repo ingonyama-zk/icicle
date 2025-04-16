@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <memory>
+#include <cstring> // For memcpy
+#include <typeinfo> // For typeid
 #include "icicle/serialization.h"
 namespace icicle {
 
