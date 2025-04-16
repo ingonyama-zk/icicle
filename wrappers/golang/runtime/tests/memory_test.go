@@ -19,6 +19,17 @@ func TestMallocAsync(t *testing.T) {
 	assert.Equal(t, runtime.Success, err, "Unable to allocate device memory due to %d", err)
 }
 
+func TestMallocZero(t *testing.T) {
+	_, err := runtime.Malloc(0)
+	assert.Equal(t, runtime.Success, err, "Unable to allocate device memory due to %d", err)
+}
+
+func TestMallocAsyncZero(t *testing.T) {
+	stream, _ := runtime.CreateStream()
+	_, err := runtime.MallocAsync(0, stream)
+	assert.Equal(t, runtime.Success, err, "Unable to allocate device memory due to %d", err)
+}
+
 func TestFree(t *testing.T) {
 	mem, err := runtime.Malloc(20)
 	assert.Equal(t, runtime.Success, err, "Unable to allocate device memory due to %d", err)
