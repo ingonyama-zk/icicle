@@ -196,7 +196,11 @@ public:
       return rs;
     }
 
-    constexpr HOST_DEVICE_INLINE Derived reduce() const { return Derived::reduce(*this); }
+    constexpr HOST_DEVICE_INLINE Derived reduce() const
+    {
+      // We need a static_cast here for Fields that define their own Wide type
+      return Derived::reduce(static_cast<const typename Derived::Wide&>(*this));
+    }
   };
 
   // return modulus multiplied by 1, 2 or 4

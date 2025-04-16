@@ -1,7 +1,7 @@
 #pragma once
 
 #include "icicle/math/storage.h"
-#include "icicle/fields/field.h"
+#include "icicle/math/modular_arithmetic.h"
 #include "icicle/fields/params_gen.h"
 #ifdef __CUDACC__
   #include "goldilocks_cuda_math.h"
@@ -120,12 +120,6 @@ namespace goldilocks {
       // third and final step:
       storage<2 * TLC>& res = *reinterpret_cast<storage<2 * TLC>*>(rs.limbs);
       return reduce(typename Base::Wide{res}); // finally, use goldilocks reduction
-    }
-
-    HOST_DEVICE_INLINE GoldilocksField& operator=(const Field<CONFIG>& other)
-    {
-      if (this != &other) { Base::operator=(other); }
-      return *this;
     }
 
     HOST_DEVICE_INLINE GoldilocksField operator+(const GoldilocksField& ys) const
