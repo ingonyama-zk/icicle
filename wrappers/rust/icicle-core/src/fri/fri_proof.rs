@@ -36,7 +36,11 @@ macro_rules! impl_fri_proof {
         $field:ident,
         $field_config:ident
     ) => {
-        use icicle_core::{fri::fri_proof::FriProofTrait, merkle::{MerkleProof, MerkleProofHandle, MerkleProofData}, traits::{Handle, Serialization}};
+        use icicle_core::{
+            fri::fri_proof::FriProofTrait,
+            merkle::{MerkleProof, MerkleProofData, MerkleProofHandle},
+            traits::{Handle, Serialization},
+        };
         use std::{ffi::c_void, mem::ManuallyDrop, slice};
 
         pub type FriProofHandle = *const c_void;
@@ -89,10 +93,18 @@ macro_rules! impl_fri_proof {
             fn fri_proof_deserialize(handle: *mut FriProofHandle, buffer: *const u8, size: usize) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_fri_proof_serialize_to_file")]
-            fn fri_proof_serialize_to_file(handle: FriProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+            fn fri_proof_serialize_to_file(
+                handle: FriProofHandle,
+                filename: *const u8,
+                filename_len: usize,
+            ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_fri_proof_deserialize_from_file")]
-            fn fri_proof_deserialize_from_file(handle: *mut FriProofHandle, filename: *const u8, filename_len: usize) -> eIcicleError;
+            fn fri_proof_deserialize_from_file(
+                handle: *mut FriProofHandle,
+                filename: *const u8,
+                filename_len: usize,
+            ) -> eIcicleError;
         }
 
         pub struct FriProof {
@@ -222,7 +234,7 @@ macro_rules! impl_fri_proof {
                 let mut buffer: Vec<u8> = vec![0; self.get_serialized_size()?];
                 unsafe { fri_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len()).wrap_value(buffer) }
             }
-            
+
             fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError> {
                 let mut handle: FriProofHandle = std::ptr::null();
                 unsafe { fri_proof_deserialize(&mut handle, buffer.as_ptr(), buffer.len()).wrap_value(Self { handle }) }
@@ -234,7 +246,10 @@ macro_rules! impl_fri_proof {
 
             fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError> {
                 let mut handle: FriProofHandle = std::ptr::null();
-                unsafe { fri_proof_deserialize_from_file(&mut handle, filename.as_ptr(), filename.len()).wrap_value(Self { handle }) }
+                unsafe {
+                    fri_proof_deserialize_from_file(&mut handle, filename.as_ptr(), filename.len())
+                        .wrap_value(Self { handle })
+                }
             }
         }
     };
