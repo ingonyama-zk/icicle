@@ -247,14 +247,14 @@ namespace icicle {
   }
 
 #define REGISTER_DEVICE_API_AND_SET_AS_DEFAULT(DEVICE_TYPE, API_CLASS)                                                 \
-   namespace {                                                                                                          \
-     static bool UNIQUE(_reg_device_##API_CLASS) = []() -> bool {                                                       \
-       std::shared_ptr<DeviceAPI> apiInstance = std::make_shared<API_CLASS>();                                          \
-       register_deviceAPI(DEVICE_TYPE, apiInstance);                                                                    \
-       ICICLE_CHECK(icicle_set_default_device(icicle::Device(DEVICE_TYPE)));                                            \
-       ICICLE_LOG_INFO << "Successfully loaded " << DEVICE_TYPE << " as default device";                                \
-       return true;                                                                                                     \
-     }();                                                                                                               \
-   }
-   
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_device_##API_CLASS) = []() -> bool {                                                       \
+      std::shared_ptr<DeviceAPI> apiInstance = std::make_shared<API_CLASS>();                                          \
+      register_deviceAPI(DEVICE_TYPE, apiInstance);                                                                    \
+      ICICLE_CHECK(icicle_set_default_device(icicle::Device(DEVICE_TYPE)));                                            \
+      ICICLE_LOG_INFO << "Successfully loaded " << DEVICE_TYPE << " as default device";                                \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
 } // namespace icicle

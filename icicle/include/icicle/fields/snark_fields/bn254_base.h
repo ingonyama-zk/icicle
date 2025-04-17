@@ -1,6 +1,6 @@
 #pragma once
 
-#include "icicle/fields/storage.h"
+#include "icicle/math/storage.h"
 #include "icicle/fields/params_gen.h"
 
 namespace bn254 {
@@ -68,5 +68,6 @@ namespace bn254 {
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative
     static constexpr bool nonresidue_is_negative = true;
+    static constexpr bool nonresidue_is_u32 = true;
   };
 } // namespace bn254

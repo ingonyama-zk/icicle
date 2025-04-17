@@ -209,6 +209,14 @@ extern "C" eIcicleError icicle_copy_async(void* dst, const void* src, size_t siz
   eCopyDirection direction;
   auto err = _determine_copy_direction(dst, src, direction);
   if (eIcicleError::SUCCESS != err) { return err; }
+  if (eCopyDirection::HostToHost == direction) {
+    ICICLE_LOG_VERBOSE
+      << "Host to Host copy, falling back to std::memcpy(). NOTE: memory allocated outside of icicle APIs is "
+         "considered host memory. Do not use icicle_copy() with memory allocated by external libs (e.g. a cudaMalloc() "
+         "call)";
+    std::memcpy(dst, src, size);
+    return eIcicleError::SUCCESS;
+  }
   // Call the appropriate copy method
   return DeviceAPI::get_thread_local_deviceAPI()->copy_async(dst, src, size, direction, stream);
 }

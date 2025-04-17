@@ -1,4 +1,4 @@
-include(cmake/fields_and_curves.cmake)
+include(cmake/features.cmake)
 include(cmake/target_editor.cmake)
 
 function(extract_field_names FIELD_NAMES_OUT)
@@ -54,6 +54,12 @@ function(setup_field_target FIELD FIELD_INDEX FEATURES_STRING)
   handle_poseidon2(icicle_field "${FEATURES_LIST}")
   handle_sumcheck(icicle_field "${FEATURES_LIST}")
   handle_gateops(icicle_field "${FEATURES_LIST}")
+  handle_fri(icicle_field "${FEATURES_LIST}")
+  set(PAIRING_FIELD_INDICES "1" "2" "3")
+  list(FIND PAIRING_FIELD_INDICES "${FIELD_INDEX}" index)
+  if(NOT index EQUAL -1)
+    target_sources(icicle_field PRIVATE src/fields/ffi_extern_pairing_extension.cpp)
+  endif()
   # Add additional feature handling calls here
 
   set_target_properties(icicle_field PROPERTIES OUTPUT_NAME "icicle_field_${FIELD}")

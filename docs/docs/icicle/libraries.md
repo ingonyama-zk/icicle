@@ -37,7 +37,7 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 
 #### Supported fields and operations
 
-| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/documentation/architecture_and_concepts/Cryptography/p-value/) |  m31  |  Koalabear  |
+| Operation\Field                           | [babybear](https://eprint.iacr.org/2023/824.pdf) | [Stark252](https://docs.starknet.io/architecture-and-concepts/cryptography/#stark-field) |  m31  |  Koalabear  |
 | ----------------------------------------- | :----------------------------------------------: | :------------------------------------------------------------------------------------------------: | :---: | :---: |
 | [Vector operations](./primitives/vec_ops) |                        ✅                         |                                                 ✅                                                  |   ✅     |   ✅   |
 | [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |   ❌     |   ✅   |
@@ -67,4 +67,4 @@ Each backend may implement
 - One or more ICICLE library. For example implement only bn254 curve.
 - One or more APIs in this library. For example MSM only.
 
-See [CUDA backend](./install_cuda_backend.md) and [Build Your Own Backend](./build_your_own_backend.md) for more info about implementing a backend.
+See [CUDA backend](./install_gpu_backend) and [Build Your Own Backend](./build_your_own_backend.md) for more info about implementing a backend.

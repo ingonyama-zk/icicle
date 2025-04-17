@@ -57,6 +57,11 @@ namespace icicle {
      */
     virtual std::pair<const std::byte*, size_t> get_merkle_root() const = 0;
 
+    virtual std::pair<const std::byte*, size_t> get_merkle_root(bool on_device) const
+    {
+      return this->get_merkle_root();
+    };
+
     /**
      * @brief Retrieve the Merkle path for a specific element.
      * @param leaves Pointer to the leaves of the tree.

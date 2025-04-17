@@ -1,6 +1,6 @@
 package hash
 
-// #cgo LDFLAGS: -L/usr/local/lib  -licicle_hash -lstdc++ -Wl,-rpath=/usr/local/lib
+// #cgo LDFLAGS: -licicle_hash -lstdc++
 // #cgo CFLAGS: -I./include/
 // #include "hash.h"
 import "C"

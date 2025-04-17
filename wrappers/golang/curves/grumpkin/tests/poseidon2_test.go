@@ -61,39 +61,42 @@ func testPoseidon2Hash(s *suite.Suite) {
 	}
 }
 
-// TODO uncomment once Poseidon2 sponge function is ready
-// func testPoseidon2HashSponge(s *suite.Suite) {
-// 	for _, t := range []int{2, 3, 4, 8, 12, 16, 20, 24} {
-// 		inputs := grumpkin.GenerateScalars(t*8 - 2)
-// 		var noDomainTag *grumpkin.ScalarField
-//
-// 		// Set device to CPU
-// 		test_helpers.ActivateReferenceDevice()
-// 		outputsRef := make([]grumpkin.ScalarField, 1)
-// 		poseidon2HasherRef, _ := poseidon2.NewHasher(uint64(t), noDomainTag)
-// 		err := poseidon2HasherRef.Hash(
-// 			core.HostSliceFromElements(inputs),
-// 			core.HostSliceFromElements(outputsRef),
-// 			core.GetDefaultHashConfig(),
-// 		)
-//
-// 		poseidonHasherRef.Delete()
-//
-// 		// Set device to main
-// 		test_helpers.ActivateMainDevice()
-// 		outputsMain := make([]grumpkin.ScalarField, 1)
-// 		poseidonHasherMain, _ := poseidon.NewHasher(uint64(t), noDomainTag)
-// 		poseidonHasherMain.Hash(
-// 			core.HostSliceFromElements(inputs),
-// 			core.HostSliceFromElements(outputsMain),
-// 			core.GetDefaultHashConfig(),
-// 		)
-//
-// 		poseidon2HasherMain.Delete()
-//
-// 		s.Equal(runtime.InvalidArgument, err)
-// 	}
-// }
+func testPoseidon2HashSponge(s *suite.Suite) {
+	for _, t := range []int{2, 3, 4, 8, 12, 16, 20, 24} {
+		// TODO Danny add  8, 12, 16, 20, 24 for large fields once all is supported
+		var largeField grumpkin.ScalarField
+		if largeField.Size() > 4 && t > 4 {
+			continue // TODO Danny remove this
+		}
+		inputs := grumpkin.GenerateScalars(t*8 - 2)
+
+		// Set device to CPU
+		test_helpers.ActivateReferenceDevice()
+		outputsRef := make([]grumpkin.ScalarField, 1)
+		poseidon2HasherRef, _ := poseidon2.NewHasher(uint64(t), nil /*domain tag*/)
+		poseidon2HasherRef.Hash(
+			core.HostSliceFromElements(inputs),
+			core.HostSliceFromElements(outputsRef),
+			core.GetDefaultHashConfig(),
+		)
+
+		poseidon2HasherRef.Delete()
+
+		// Set device to main
+		test_helpers.ActivateMainDevice()
+		outputsMain := make([]grumpkin.ScalarField, 1)
+		poseidon2HasherMain, _ := poseidon2.NewHasher(uint64(t), nil /*domain tag*/)
+		poseidon2HasherMain.Hash(
+			core.HostSliceFromElements(inputs),
+			core.HostSliceFromElements(outputsMain),
+			core.GetDefaultHashConfig(),
+		)
+
+		poseidon2HasherMain.Delete()
+
+		s.Equal(outputsRef, outputsMain, "Poseidon2 hash outputs did not match")
+	}
+}
 
 func testPoseidon2HashTree(s *suite.Suite) {
 	t := 4
@@ -132,7 +135,7 @@ type Poseidon2TestSuite struct {
 
 func (s *Poseidon2TestSuite) TestPoseidon2() {
 	s.Run("TestPoseidon2Hash", testWrapper(&s.Suite, testPoseidon2Hash))
-	// s.Run("TestPoseidonHash2Sponge", testWrapper(&s.Suite, testPoseidonHash2Sponge))
+	s.Run("TestPoseidon2HashSponge", testWrapper(&s.Suite, testPoseidon2HashSponge))
 	s.Run("TestPoseidon2HashTree", testWrapper(&s.Suite, testPoseidon2HashTree))
 }
 

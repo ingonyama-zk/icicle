@@ -36,12 +36,21 @@ extern "C" {
         size: usize,
         stream: IcicleStreamHandle,
     ) -> eIcicleError;
+    pub fn icicle_copy(dst: *mut c_void, src: *const c_void, size: usize) -> eIcicleError;
+    pub fn icicle_copy_async(
+        dst: *mut c_void,
+        src: *const c_void,
+        size: usize,
+        stream: IcicleStreamHandle,
+    ) -> eIcicleError;
     pub fn icicle_create_stream(stream: *mut IcicleStreamHandle) -> eIcicleError;
     pub fn icicle_destroy_stream(stream: IcicleStreamHandle) -> eIcicleError;
     pub fn icicle_stream_synchronize(stream: IcicleStreamHandle) -> eIcicleError;
     fn icicle_device_synchronize() -> eIcicleError;
     fn icicle_get_device_properties(properties: *mut DeviceProperties) -> eIcicleError;
     fn icicle_get_registered_devices(output: *mut c_char, output_size: usize) -> eIcicleError;
+    fn icicle_memset(ptr: *mut c_void, value: i32, size: usize) -> eIcicleError;
+    fn icicle_memset_async(ptr: *mut c_void, value: i32, size: usize, stream: *mut c_void) -> eIcicleError;
 }
 
 pub fn load_backend_from_env_or_default() -> Result<(), eIcicleError> {
@@ -159,4 +168,12 @@ pub fn warmup(stream: &IcicleStream) -> Result<(), eIcicleError> {
         icicle_malloc_async(&mut device_ptr, free_memory >> 1, stream.handle).wrap()?;
         icicle_free_async(device_ptr, stream.handle).wrap()
     }
+}
+
+pub fn memset(ptr: *mut c_void, value: i32, size: usize) -> eIcicleError {
+    unsafe { icicle_memset(ptr, value, size) }
+}
+
+pub fn memset_async(ptr: *mut c_void, value: i32, size: usize, stream: *mut c_void) -> eIcicleError {
+    unsafe { icicle_memset_async(ptr, value, size, stream) }
 }

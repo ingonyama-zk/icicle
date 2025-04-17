@@ -1,6 +1,6 @@
 package merkletree
 
-// #cgo LDFLAGS: -L/usr/local/lib  -licicle_hash -lstdc++ -Wl,-rpath=/usr/local/lib
+// #cgo LDFLAGS: -licicle_hash -lstdc++
 // #cgo CFLAGS: -I./include/
 // #include "merkletree.h"
 import "C"
@@ -51,7 +51,7 @@ func (mp *MerkleProof) IsPruned() bool {
 
 func GetMerkleProofPath[T any](mp *MerkleProof) []T {
 	var size uint64
-	cSize := (*C.uint64_t)(unsafe.Pointer(&size))
+	cSize := (*C.size_t)(unsafe.Pointer(&size))
 
 	pathPtr := C.icicle_merkle_proof_get_path(mp.handle, cSize)
 	if pathPtr == nil {
@@ -65,7 +65,7 @@ func GetMerkleProofPath[T any](mp *MerkleProof) []T {
 
 func GetMerkleProofLeaf[T any](mp *MerkleProof) ([]T, uint64) {
 	var size uint64
-	cSize := (*C.uint64_t)(unsafe.Pointer(&size))
+	cSize := (*C.size_t)(unsafe.Pointer(&size))
 	var leafIndex uint64
 	cLeafIndex := (*C.uint64_t)(unsafe.Pointer(&leafIndex))
 
@@ -81,7 +81,7 @@ func GetMerkleProofLeaf[T any](mp *MerkleProof) ([]T, uint64) {
 
 func GetMerkleProofRoot[T any](mp *MerkleProof) []T {
 	var size uint64
-	cSize := (*C.uint64_t)(unsafe.Pointer(&size))
+	cSize := (*C.size_t)(unsafe.Pointer(&size))
 
 	pathPtr := C.icicle_merkle_proof_get_path(mp.handle, cSize)
 	if pathPtr == nil {
@@ -109,9 +109,9 @@ func CreateMerkleTree(
 
 	merkleTreeHandle := C.icicle_merkle_tree_create(
 		(**C.struct_Hash)(unsafe.Pointer(&layerHasherHandles[0])),
-		C.ulong(len(layerHasherHandles)),
-		C.ulong(leafElementSize),
-		C.ulong(outputStoreMinLayer),
+		C.size_t(len(layerHasherHandles)),
+		C.uint64_t(leafElementSize),
+		C.uint64_t(outputStoreMinLayer),
 	)
 
 	if merkleTreeHandle == nil {
@@ -156,7 +156,7 @@ func BuildMerkleTree[T any](
 	leavesPtr := core.MerkleTreeCheck(leaves, &cfg)
 	cLeaves := (*C.uint8_t)(leavesPtr)
 	sizeOfElement := int(reflect.TypeFor[T]().Size())
-	cLeavesSizeInBytes := (C.ulong)(leaves.Len() * sizeOfElement)
+	cLeavesSizeInBytes := (C.uint64_t)(leaves.Len() * sizeOfElement)
 	cCfg := (*C.MerkleTreeConfig)(unsafe.Pointer(&cfg))
 	__err := C.icicle_merkle_tree_build(mt.handle, cLeaves, cLeavesSizeInBytes, cCfg)
 	return runtime.EIcicleError(__err)
@@ -169,7 +169,7 @@ func GetMerkleTreeRoot[T any](mt *MerkleTree) ([]T, runtime.EIcicleError) {
 	}
 
 	var size uint64
-	cSize := (*C.uint64_t)(unsafe.Pointer(&size))
+	cSize := (*C.size_t)(unsafe.Pointer(&size))
 
 	rootPtr := C.icicle_merkle_tree_get_root(mt.handle, cSize)
 	if rootPtr == nil {
@@ -201,7 +201,7 @@ func GetMerkleTreeProof[T any](
 	leavesPtr := core.MerkleTreeCheck(leaves, &cfg)
 	cLeaves := (*C.uint8_t)(leavesPtr)
 	sizeOfElement := int(reflect.TypeFor[T]().Size())
-	cLeavesSizeInBytes := (C.ulong)(leaves.Len() * sizeOfElement)
+	cLeavesSizeInBytes := (C.uint64_t)(leaves.Len() * sizeOfElement)
 	cLeafIndex := (C.uint64_t)(leafIndex)
 	cPrunedPath := (C._Bool)(prunedPath)
 	cCfg := (*C.MerkleTreeConfig)(unsafe.Pointer(&cfg))

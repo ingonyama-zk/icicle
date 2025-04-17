@@ -2,7 +2,7 @@
 #ifndef BW6_761_SCALAR_PARAMS_H
   #define BW6_761_SCALAR_PARAMS_H
 
-  #include "icicle/fields/storage.h"
+  #include "icicle/math/storage.h"
   #include "icicle/fields/field.h"
   #include "icicle/fields/snark_fields/bls12_377_base.h"
 

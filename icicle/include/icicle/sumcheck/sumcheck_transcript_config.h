@@ -82,7 +82,7 @@ namespace icicle {
 
     // Move Constructor
     SumcheckTranscriptConfig(SumcheckTranscriptConfig&& other) noexcept
-        : m_hasher(other.m_hasher), m_domain_separator_label(std::move(other.m_domain_separator_label)),
+        : m_hasher(std::move(other.m_hasher)), m_domain_separator_label(std::move(other.m_domain_separator_label)),
           m_round_poly_label(std::move(other.m_round_poly_label)),
           m_round_challenge_label(std::move(other.m_round_challenge_label)), m_little_endian(other.m_little_endian),
           m_seed_rng(other.m_seed_rng)
@@ -98,12 +98,12 @@ namespace icicle {
     const F& get_seed_rng() const { return m_seed_rng; }
 
   private:
-    Hash m_hasher;                                         ///< Hash function used for randomness generation.
-    const std::vector<std::byte> m_domain_separator_label; ///< Label for the domain separator in the transcript.
-    const std::vector<std::byte> m_round_poly_label;       ///< Label for round polynomials in the transcript.
-    const std::vector<std::byte> m_round_challenge_label;  ///< Label for round challenges in the transcript.
-    const bool m_little_endian = true;                     ///< Encoding endianness (default: little-endian).
-    F m_seed_rng;                                          ///< Seed for initializing the RNG.
+    Hash m_hasher;                                   ///< Hash function used for randomness generation.
+    std::vector<std::byte> m_domain_separator_label; ///< Label for the domain separator in the transcript.
+    std::vector<std::byte> m_round_poly_label;       ///< Label for round polynomials in the transcript.
+    std::vector<std::byte> m_round_challenge_label;  ///< Label for round challenges in the transcript.
+    const bool m_little_endian = true;               ///< Encoding endianness (default: little-endian).
+    F m_seed_rng;                                    ///< Seed for initializing the RNG.
 
     static inline std::vector<std::byte> cstr_to_bytes(const char* str)
     {

@@ -12,6 +12,8 @@
 
 #include "icicle/backend/hash/keccak_backend.h"
 #include "icicle/utils/modifiers.h"
+#include <taskflow/taskflow.hpp>
+#include "icicle/config_extension.h"
 
 namespace icicle {
 
@@ -39,16 +41,45 @@ namespace icicle {
       const auto single_input_size = get_single_chunk_size(
         size); // if size==0 using default input chunk size. This is useful for Merkle-Tree constructions
 
-      // TODO (future): use tasks manager to parallel across threads. Add option to config-extension to set #threads
-      // with default=0. for now we don't do it and let the merkle-tree define the parallelizm so hashing a large batch
-      // outside a merkle-tree context is not as fast as it could be.
-      // Note that for batch=1 this has not effect.
-      for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
-        eIcicleError err = sha3_hash_buffer(
-          8 * digest_size_in_bytes /*=bitsize*/, m_is_keccak, input + batch_idx * single_input_size, single_input_size,
-          output + batch_idx * digest_size_in_bytes);
+      const auto is_keccak = m_is_keccak;
+      size_t num_chunks = 1;
+      if (config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
+        num_chunks = config.ext && (config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) != 0)
+                       ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
+                       :                                    // number of threads provided by config
+                       std::thread::hardware_concurrency(); // check machine properties (if provided with 0)
+      }
+      if (num_chunks <= 0) {
+        ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+        num_chunks = 1;
+      }
 
-        if (err != eIcicleError::SUCCESS) { return err; }
+      size_t chunk_size = (config.batch + num_chunks - 1) / num_chunks;
+      if (num_chunks == 1) { // single thread without using taskflow
+        for (unsigned batch_idx = 0; batch_idx < config.batch; ++batch_idx) {
+          eIcicleError err = sha3_hash_buffer(
+            8 * digest_size_in_bytes /*=bitsize*/, m_is_keccak, input + batch_idx * single_input_size,
+            single_input_size, output + batch_idx * digest_size_in_bytes);
+          if (err != eIcicleError::SUCCESS) { return err; }
+        }
+      } else {
+        tf::Taskflow taskflow;
+        tf::Executor executor;
+        for (size_t i = 0; i < num_chunks; ++i) {
+          size_t start_index = i * chunk_size;
+          size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
+          taskflow.emplace(
+            [&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak]() {
+              for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
+                eIcicleError err = sha3_hash_buffer(
+                  8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size,
+                  single_input_size, output + batch_idx * digest_size_in_bytes);
+
+                if (err != eIcicleError::SUCCESS) { return err; }
+              }
+            });
+        }
+        executor.run(taskflow).wait();
       }
       return eIcicleError::SUCCESS;
     }
@@ -283,43 +314,43 @@ namespace icicle {
   }
 
   /************************ Keccak 256 registration ************************/
-  static eIcicleError
-  create_keccak_256_hash_backend(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_keccak_256_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 32, true /*is_keccak*/, "Keccak-256-CPU");
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_KECCAK_256_FACTORY_BACKEND("CPU", create_keccak_256_hash_backend);
+  REGISTER_KECCAK_256_FACTORY_BACKEND("CPU", create_keccak_256_hash_backend_cpu);
 
   /************************ Keccak 512 registration ************************/
-  static eIcicleError
-  create_keccak_512_hash_backend(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_keccak_512_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 64, true /*is_keccak*/, "Keccak-512-CPU");
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_KECCAK_512_FACTORY_BACKEND("CPU", create_keccak_512_hash_backend);
+  REGISTER_KECCAK_512_FACTORY_BACKEND("CPU", create_keccak_512_hash_backend_cpu);
 
   /************************ SHA3 256 registration ************************/
-  static eIcicleError
-  create_sha3_256_hash_backend(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_sha3_256_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 32, false /*is_keccak*/, "SHA3-256-CPU");
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_SHA3_256_FACTORY_BACKEND("CPU", create_sha3_256_hash_backend);
+  REGISTER_SHA3_256_FACTORY_BACKEND("CPU", create_sha3_256_hash_backend_cpu);
 
   /************************ SHA3 512 registration ************************/
-  static eIcicleError
-  create_sha3_512_hash_backend(const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
+  eIcicleError create_sha3_512_hash_backend_cpu(
+    const Device& device, uint64_t input_chunk_size, std::shared_ptr<HashBackend>& backend)
   {
     backend = std::make_shared<KeccakBackendCPU>(input_chunk_size, 64, false /*is_keccak*/, "SHA3-512-CPU");
     return eIcicleError::SUCCESS;
   }
 
-  REGISTER_SHA3_512_FACTORY_BACKEND("CPU", create_sha3_512_hash_backend);
+  REGISTER_SHA3_512_FACTORY_BACKEND("CPU", create_sha3_512_hash_backend_cpu);
 
 } // namespace icicle

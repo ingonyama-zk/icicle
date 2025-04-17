@@ -2,7 +2,7 @@
 #ifndef BLS12_381_BASE_PARAMS_H
   #define BLS12_381_BASE_PARAMS_H
 
-  #include "icicle/fields/storage.h"
+  #include "icicle/math/storage.h"
   #include "icicle/fields/params_gen.h"
 
 namespace bls12_381 {
@@ -15,6 +15,7 @@ namespace bls12_381 {
     static constexpr uint32_t nonresidue = 1;
     // true if nonresidue is negative
     static constexpr bool nonresidue_is_negative = true;
+    static constexpr bool nonresidue_is_u32 = true;
   };
 } // namespace bls12_381
 

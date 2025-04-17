@@ -71,7 +71,7 @@ namespace icicle {
     }
 
     // run over the DFG held by program_parameters and generate the program
-    void generate_program(std::vector<Symbol<S>>& program_parameters)
+    virtual void generate_program(std::vector<Symbol<S>>& program_parameters)
     {
       // run over the graph and allocate location for all constants
       Operation<S>::reset_visit();
@@ -115,6 +115,10 @@ namespace icicle {
   protected:
     // default constructor
     Program() {}
+
+    // Friend function for C-api to have access to the default constructor
+    template <typename T>
+    friend Program<T>* create_empty_program();
 
     // run recursively on the DFG and push instruction per operation
     void generate_program(std::shared_ptr<Operation<S>> operation)
@@ -206,4 +210,10 @@ namespace icicle {
     }
   };
 
+  // Friend function to access the protected default program constructors
+  template <typename S>
+  Program<S>* create_empty_program()
+  {
+    return new Program<S>();
+  }
 } // namespace icicle

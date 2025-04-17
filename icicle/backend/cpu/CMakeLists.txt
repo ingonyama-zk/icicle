@@ -4,14 +4,15 @@ message(STATUS "Fetching Taskflow v3.8.0 (CPU backend)")
 
 
 include(FetchContent)
-# Temporarily redefine message() to suppress output
-macro(message)
-endmacro()
+# Temporarily redefine set message log level to WARNING for fetched content
+set(ORIG_CMAKE_MESSAGE_LOG_LEVEL "${CMAKE_MESSAGE_LOG_LEVEL}")
+set(CMAKE_MESSAGE_LOG_LEVEL "WARNING")
+
 FetchContent_Declare(
   Taskflow
-  GIT_REPOSITORY https://github.com/taskflow/taskflow.git
-  GIT_TAG v3.8.0
-  GIT_SHALLOW TRUE
+ GIT_REPOSITORY https://github.com/taskflow/taskflow.git
+ GIT_TAG v3.8.0
+ GIT_SHALLOW TRUE
 )
 # Disable unnecessary components
 set(TF_BUILD_BENCHMARKS OFF CACHE BOOL "Disable Taskflow benchmarks" FORCE)
@@ -25,8 +26,8 @@ FetchContent_MakeAvailable(Taskflow)
 # Use icicle_device as interface for TaskFlow headers
 target_include_directories(icicle_device INTERFACE ${Taskflow_SOURCE_DIR})
 
-# Restore the original message behavior
-unset(message)
+# Restore the original message log level
+set(CMAKE_MESSAGE_LOG_LEVEL "${ORIG_CMAKE_MESSAGE_LOG_LEVEL}")
 
 # CPU backend is built directly into icicle library
 
@@ -47,6 +48,12 @@ if (FIELD)
     endif()
     if(SUMCHECK)
         target_sources(icicle_field PRIVATE src/field/cpu_sumcheck.cpp)
+    endif()
+    if(FRI)
+        target_sources(icicle_field PRIVATE src/field/cpu_fri.cpp)
+    endif()
+    if(GATEOPS)
+        target_sources(icicle_field PRIVATE src/field/cpu_gate_ops.cpp)
     endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
@@ -75,8 +82,18 @@ if (HASH)
         src/hash/blake3_dispatch.c
         src/hash/blake3_portable.c
         src/hash/cpu_merkle_tree.cpp
+        src/hash/cpu_pow.cpp
     )
     target_include_directories(icicle_hash PUBLIC include)
 endif()
 
-
+if (RING)
+    target_sources(icicle_ring PRIVATE 
+        src/field/cpu_vec_ops.cpp 
+        src/ring/cpu_balanced_decomposition.cpp
+    )
+    if (NTT)
+        target_sources(icicle_ring PRIVATE src/field/cpu_ntt.cpp)
+    endif()
+    target_include_directories(icicle_ring PRIVATE include)
+endif()
