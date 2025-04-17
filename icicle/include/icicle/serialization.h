@@ -13,9 +13,15 @@ namespace icicle {
 
     virtual eIcicleError serialized_size(size_t& size) const { return eIcicleError::API_NOT_IMPLEMENTED; }
 
-    virtual eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const { return eIcicleError::API_NOT_IMPLEMENTED; }
+    virtual eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const
+    {
+      return eIcicleError::API_NOT_IMPLEMENTED;
+    }
 
-    virtual eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) { return eIcicleError::API_NOT_IMPLEMENTED; }
+    virtual eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length)
+    {
+      return eIcicleError::API_NOT_IMPLEMENTED;
+    }
 
     eIcicleError serialize_to_file(const std::string& path) const
     {
@@ -50,11 +56,13 @@ namespace icicle {
     }
 
   protected:
-    static eIcicleError memcpy_shift_destination(std::byte*& destination, size_t& remaining_length, const void* source, size_t copy_length)
+    static eIcicleError
+    memcpy_shift_destination(std::byte*& destination, size_t& remaining_length, const void* source, size_t copy_length)
     {
-      if (remaining_length < copy_length) { 
-        ICICLE_LOG_ERROR << "memcpy_shift_destination failed: remaining_length < copy_length: " << remaining_length << " < " << copy_length;
-        return eIcicleError::INVALID_ARGUMENT; 
+      if (remaining_length < copy_length) {
+        ICICLE_LOG_ERROR << "memcpy_shift_destination failed: remaining_length < copy_length: " << remaining_length
+                         << " < " << copy_length;
+        return eIcicleError::INVALID_ARGUMENT;
       }
       std::memcpy(destination, source, copy_length);
       destination += copy_length;
@@ -62,11 +70,13 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    static eIcicleError memcpy_shift_source(void* destination, size_t& remaining_length, std::byte*& source, size_t copy_length)
+    static eIcicleError
+    memcpy_shift_source(void* destination, size_t& remaining_length, std::byte*& source, size_t copy_length)
     {
-      if (remaining_length < copy_length) { 
-        ICICLE_LOG_ERROR << "memcpy_shift_source failed: remaining_length < copy_length: " << remaining_length << " < " << copy_length;
-        return eIcicleError::INVALID_ARGUMENT; 
+      if (remaining_length < copy_length) {
+        ICICLE_LOG_ERROR << "memcpy_shift_source failed: remaining_length < copy_length: " << remaining_length << " < "
+                         << copy_length;
+        return eIcicleError::INVALID_ARGUMENT;
       }
       std::memcpy(destination, source, copy_length);
       source += copy_length;

@@ -144,16 +144,19 @@ namespace icicle {
       }
       size_t final_poly_size = m_final_poly.size();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &final_poly_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_final_poly.data(), final_poly_size * sizeof(F)));
+      ICICLE_CHECK_IF_RETURN(
+        memcpy_shift_destination(buffer, buffer_length, m_final_poly.data(), final_poly_size * sizeof(F)));
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_pow_nonce, sizeof(uint64_t)));
       return eIcicleError::SUCCESS;
     }
 
     eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
     {
-      size_t min_required_length = sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
+      size_t min_required_length =
+        sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
       if (buffer_length < min_required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < min_required_length: " << buffer_length << " < " << min_required_length;
+        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < min_required_length: " << buffer_length << " < "
+                         << min_required_length;
         return eIcicleError::INVALID_ARGUMENT;
       }
       size_t nof_queries;
@@ -171,7 +174,8 @@ namespace icicle {
       size_t final_poly_size;
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&final_poly_size, buffer_length, buffer, sizeof(size_t)));
       m_final_poly.resize(final_poly_size);
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
+      ICICLE_CHECK_IF_RETURN(
+        memcpy_shift_source(m_final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
 
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_pow_nonce, buffer_length, buffer, sizeof(uint64_t)));
       return eIcicleError::SUCCESS;

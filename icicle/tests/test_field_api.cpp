@@ -1022,7 +1022,7 @@ TYPED_TEST(FieldTest, Fri)
       };
 
       run(IcicleTestBase::reference_device(), false);
-      // run(IcicleTestBase::main_device(), false);
+      run(IcicleTestBase::main_device(), false);
     }
   }
 }

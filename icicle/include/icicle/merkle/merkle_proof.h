@@ -183,7 +183,7 @@ namespace icicle {
 
     eIcicleError serialized_size(size_t& size) const override
     {
-      size = sizeof(bool);                      // pruned
+      size = sizeof(bool);                       // pruned
       size += sizeof(uint64_t);                  // leaf_index
       size += sizeof(size_t);                    // leaf_size
       size += m_leaf.size() * sizeof(std::byte); // leaf
@@ -202,26 +202,28 @@ namespace icicle {
 
       auto leaf_size = m_leaf.size();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &leaf_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_leaf.data(), m_leaf.size() * sizeof(std::byte)));
-
+      ICICLE_CHECK_IF_RETURN(
+        memcpy_shift_destination(buffer, buffer_length, m_leaf.data(), m_leaf.size() * sizeof(std::byte)));
 
       auto root_size = m_root.size();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &root_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_root.data(), m_root.size() * sizeof(std::byte)));
+      ICICLE_CHECK_IF_RETURN(
+        memcpy_shift_destination(buffer, buffer_length, m_root.data(), m_root.size() * sizeof(std::byte)));
 
       auto path_size = m_path.size();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &path_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_path.data(), m_path.size() * sizeof(std::byte)));
+      ICICLE_CHECK_IF_RETURN(
+        memcpy_shift_destination(buffer, buffer_length, m_path.data(), m_path.size() * sizeof(std::byte)));
 
       return eIcicleError::SUCCESS;
     }
 
     eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
     {
-
-      size_t required_length = sizeof(bool) + sizeof(uint64_t) + 3 * sizeof(size_t); // minimum length of the proof 
+      size_t required_length = sizeof(bool) + sizeof(uint64_t) + 3 * sizeof(size_t); // minimum length of the proof
       if (buffer_length < required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < required_length: " << buffer_length << " < " << required_length;
+        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < required_length: " << buffer_length << " < "
+                         << required_length;
         return eIcicleError::INVALID_ARGUMENT;
       }
 
@@ -233,7 +235,6 @@ namespace icicle {
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&leaf_size, buffer_length, buffer, sizeof(size_t)));
       m_leaf.resize(leaf_size);
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_leaf.data(), buffer_length, buffer, leaf_size * sizeof(std::byte)));
-
 
       size_t root_size;
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&root_size, buffer_length, buffer, sizeof(size_t)));

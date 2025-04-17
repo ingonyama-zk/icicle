@@ -80,7 +80,8 @@ namespace icicle {
       for (const auto& round_poly : m_round_polynomials) {
         size_t round_poly_size = round_poly.size();
         ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &round_poly_size, sizeof(size_t)));
-        ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, round_poly.data(), round_poly_size * sizeof(S)));
+        ICICLE_CHECK_IF_RETURN(
+          memcpy_shift_destination(buffer, buffer_length, round_poly.data(), round_poly_size * sizeof(S)));
       }
       return eIcicleError::SUCCESS;
     }
