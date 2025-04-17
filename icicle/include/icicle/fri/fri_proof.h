@@ -154,7 +154,7 @@ namespace icicle {
       size_t min_required_length = sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
       if (buffer_length < min_required_length) {
         ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < min_required_length: " << buffer_length << " < " << min_required_length;
-        return eIcicleError::COPY_FAILED;
+        return eIcicleError::INVALID_ARGUMENT;
       }
       size_t nof_queries;
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_queries, buffer_length, buffer, sizeof(size_t)));
