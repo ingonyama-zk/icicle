@@ -453,7 +453,7 @@ cpu_vector_accumulate(const Device& device, T* vec_a, const T* vec_b, uint64_t s
   return cpu_2vectors_op(VecOperation::VECTOR_ADD, vec_a, vec_b, size, config, vec_a);
 }
 
-REGISTER_VECTOR_MUL_ACCUMULATE_BACKEND("CPU", cpu_vector_accumulate<scalar_t>);
+REGISTER_VECTOR_ACCUMULATE_BACKEND("CPU", cpu_vector_accumulate<scalar_t>);
 
 /*********************************** SUB ***********************************/
 template <typename T>
@@ -483,7 +483,7 @@ cpu_vector_mul_accumulate(const Device& device, T* vec_a, const T* vec_b, uint64
   return cpu_2vectors_op(VecOperation::VECTOR_MUL, vec_a, vec_b, size, config, vec_a);
 }
 
-REGISTER_VECTOR_ACCUMULATE_BACKEND("CPU", cpu_vector_mul_accumulate<scalar_t>);
+REGISTER_VECTOR_MUL_ACCUMULATE_BACKEND("CPU", cpu_vector_mul_accumulate<scalar_t>);
 
 /*********************************** DIV ***********************************/
 template <typename T>
