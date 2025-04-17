@@ -179,22 +179,6 @@ namespace icicle {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_mul)(vec_a, vec_b, size, &config, output);
   }
 
-  /*********************************** MUL ACCUMULATE ***********************************/
-  ICICLE_DISPATCHER_INST(VectorMulAccumulateDispatcher, vector_mul_accumulate, vectorVectorOpImplInplaceA);
-
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_mul_accumulate)(
-    scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig* config)
-  {
-    return VectorMulAccumulateDispatcher::execute(vec_a, vec_b, size, *config);
-  }
-
-  template <>
-  eIcicleError vector_mul_accumulate(scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config)
-  {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_mul_accumulate)(vec_a, vec_b, size, &config);
-  }
-
-
 #ifdef EXT_FIELD
   ICICLE_DISPATCHER_INST(VectorMulExtFieldDispatcher, extension_vector_mul, extFieldVectorOpImpl);
 
@@ -290,21 +274,6 @@ namespace icicle {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_vector_inv)(vec_a, size, &config, output);
   }
 #endif // EXT_FIELD
-
-  /*********************************** INPLACE INV ***********************************/
-  ICICLE_DISPATCHER_INST(VectorInplaceInvDispatcher, vector_inplace_inv, VectorOpImplInplaceA);
-
-  extern "C" eIcicleError
-  CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_inplace_inv)(scalar_t* vec_a, uint64_t size, const VecOpsConfig* config)
-  {
-    return VectorInplaceInvDispatcher::execute(vec_a, size, *config);
-  }
-
-  template <>
-  eIcicleError vector_inplace_inv(scalar_t* vec_a, uint64_t size, const VecOpsConfig& config)
-  {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_inplace_inv)(vec_a, size, &config);
-  }
 
   /*********************************** (Scalar + Vector) ELEMENT WISE ***********************************/
   ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);

@@ -114,16 +114,6 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_vector_inplace_inv(const std::string& deviceType, VectorOpImplInplaceA impl);
-
-#define REGISTER_VECTOR_INPLACE_INV_BACKEND(DEVICE_TYPE, FUNC)                                                         \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_inplace_inv) = []() -> bool {                                                          \
-      register_vector_inplace_inv(DEVICE_TYPE, FUNC);                                                                  \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
-
   void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -139,16 +129,6 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_mul) = []() -> bool {                                                                  \
       register_vector_mul(DEVICE_TYPE, FUNC);                                                                          \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
-
-  void register_vector_mul_accumulate(const std::string& deviceType, vectorVectorOpImplInplaceA impl);
-
-#define REGISTER_VECTOR_MUL_ACCUMULATE_BACKEND(DEVICE_TYPE, FUNC)                                                          \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_vec_mul_accumulate) = []() -> bool {                                                           \
-      register_vector_mul_accumulate(DEVICE_TYPE, FUNC);                                                                   \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -313,9 +293,6 @@ namespace icicle {
   using extFieldVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device, extension_t* vec_a, const extension_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
-  using extFieldOneVectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device, extension_t* vec_a, uint64_t size, const VecOpsConfig& config)>;
-
   using extFieldVectorReduceOpImpl = std::function<eIcicleError(
     const Device& device, const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)>;
 
@@ -364,16 +341,6 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
         register_extension_vector_mul(DEVICE_TYPE, FUNC);                                                              \
-        return true;                                                                                                   \
-      }();                                                                                                             \
-    }
-
-  void register_extension_vector_mul_accumulate(const std::string& deviceType, extFieldVectorOpImpl impl);
-
-  #define REGISTER_VECTOR_MUL_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
-    namespace {                                                                                                        \
-      static bool UNIQUE(_reg_vec_mul_ext_field) = []() -> bool {                                                      \
-        register_extension_vector_mul_accumulate(DEVICE_TYPE, FUNC);                                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
