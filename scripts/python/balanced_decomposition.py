@@ -66,7 +66,7 @@ def decompose(num: Labrador, base: int) -> list[int]:
         digit = val % base
         val = val // base
         # balanced decomposition means that the digits are in the range [-base//2, base//2)
-        if digit > base//2:
+        if digit >= base // 2:
             digit = digit - base
             val = val + 1
         print(f"{digit=}, {val=} ")
