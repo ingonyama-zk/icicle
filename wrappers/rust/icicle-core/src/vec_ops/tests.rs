@@ -28,7 +28,7 @@ fn test_vec_ops_config() {
     );
 
     // just to test the stream can be set and used correctly
-    let mut stream = IcicleStream::create().unwrap();
+    let stream = IcicleStream::create().unwrap();
     vec_ops_config.stream_handle = *stream;
 
     stream
