@@ -196,7 +196,7 @@ eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* b
     ICICLE_LOG_ERROR << "buffer is too small — cannot serialize MerkleProof";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  return proof->serialize(buffer);
+  return proof->serialize(buffer, size);
 }
 
 // Deserialize the MerkleProof object from a buffer

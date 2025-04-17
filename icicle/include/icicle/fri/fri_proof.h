@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
-#include <cstring>  // For memcpy
-#include <typeinfo> // For typeid
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/utils/log.h"
@@ -20,7 +18,7 @@ namespace icicle {
    */
 
   template <typename F>
-  class FriProof : public Serializer
+  class FriProof : public Serializable
   {
   public:
     // Constructor
@@ -117,18 +115,15 @@ namespace icicle {
 
     eIcicleError serialized_size(size_t& size) const override
     {
-      size = 0;
-      size += sizeof(size_t); // nof_queries
+      size = sizeof(size_t); // nof_queries
       for (const auto& query_proofs : m_query_proofs) {
         size += sizeof(size_t); // nof_fri_rounds
         for (const auto& proof : query_proofs) {
           size_t proof_size = 0;
-          eIcicleError err = proof.serialized_size(proof_size);
-          if (err != eIcicleError::SUCCESS) { return err; }
+          ICICLE_CHECK_IF_RETURN(proof.serialized_size(proof_size));
           size += proof_size;
         }
       }
-      size += sizeof(size_t); // F type
       size += sizeof(size_t); // final_poly_size
       size += m_final_poly.size() * sizeof(F);
       size += sizeof(uint64_t); // pow_nonce
@@ -136,101 +131,49 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError serialize(std::byte*& out) const override
+    eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const override
     {
       size_t m_query_proofs_size = m_query_proofs.size();
-      std::memcpy(out, &m_query_proofs_size, sizeof(size_t));
-      out += sizeof(size_t);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_query_proofs_size, sizeof(size_t)));
       for (const std::vector<MerkleProof>& query_proofs : m_query_proofs) {
         size_t query_proofs_size = query_proofs.size();
-        std::memcpy(out, &query_proofs_size, sizeof(size_t));
-        out += sizeof(size_t);
+        ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &query_proofs_size, sizeof(size_t)));
         for (const MerkleProof& proof : query_proofs) {
-          eIcicleError err = proof.serialize(out);
-          if (err != eIcicleError::SUCCESS) { return err; }
+          ICICLE_CHECK_IF_RETURN(proof.serialize(buffer, buffer_length));
         }
       }
-      size_t F_type = typeid(F).hash_code();
-      std::memcpy(out, &F_type, sizeof(size_t));
-      out += sizeof(size_t);
       size_t final_poly_size = m_final_poly.size();
-      std::memcpy(out, &final_poly_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_final_poly.data(), final_poly_size * sizeof(F));
-      out += final_poly_size * sizeof(F);
-      std::memcpy(out, &m_pow_nonce, sizeof(uint64_t));
-      out += sizeof(uint64_t);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &final_poly_size, sizeof(size_t)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_final_poly.data(), final_poly_size * sizeof(F)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_pow_nonce, sizeof(uint64_t)));
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError deserialize(std::byte*& in, size_t& length) override
+    eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
     {
-      auto advance = [&](size_t bytes) -> bool {
-        if (length < bytes) return false;
-        in += bytes;
-        length -= bytes;
-        return true;
-      };
-
-      size_t required_length = sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t);
-      if (length < required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < required_length";
+      size_t min_required_length = sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
+      if (buffer_length < min_required_length) {
+        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < min_required_length: " << buffer_length << " < " << min_required_length;
         return eIcicleError::COPY_FAILED;
       }
       size_t nof_queries;
-      std::memcpy(&nof_queries, in, sizeof(size_t));
-      advance(sizeof(size_t));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_queries, buffer_length, buffer, sizeof(size_t)));
       m_query_proofs.resize(nof_queries);
       for (size_t i = 0; i < nof_queries; ++i) {
-        if (length < sizeof(size_t)) {
-          ICICLE_LOG_ERROR << "Deserialization failed: length < sizeof(size_t)";
-          return eIcicleError::COPY_FAILED;
-        }
         size_t nof_fri_rounds;
-        std::memcpy(&nof_fri_rounds, in, sizeof(size_t));
-        advance(sizeof(size_t));
+        ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_fri_rounds, buffer_length, buffer, sizeof(size_t)));
         m_query_proofs[i].resize(nof_fri_rounds);
         for (size_t j = 0; j < nof_fri_rounds; ++j) {
-          eIcicleError err = m_query_proofs[i][j].deserialize(in, length);
-          if (err != eIcicleError::SUCCESS) {
-            ICICLE_LOG_ERROR << "Deserialization failed: m_query_proofs[" << i << "][" << j
-                             << "].deserialize(in, length)";
-            return err;
-          }
+          ICICLE_CHECK_IF_RETURN(m_query_proofs[i][j].deserialize(buffer, buffer_length));
         }
       }
-      size_t F_type;
-      if (length < sizeof(size_t)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < sizeof(size_t)";
-        return eIcicleError::COPY_FAILED;
-      }
-      std::memcpy(&F_type, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (F_type != typeid(F).hash_code()) {
-        ICICLE_LOG_ERROR << "Deserialization failed: F_type != typeid(F).hash_code()";
-        return eIcicleError::INVALID_ARGUMENT;
-      }
 
-      if (length < sizeof(size_t)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < sizeof(size_t)";
-        return eIcicleError::COPY_FAILED;
-      }
       size_t final_poly_size;
-      std::memcpy(&final_poly_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < final_poly_size * sizeof(F)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < final_poly_size * sizeof(F)";
-        return eIcicleError::COPY_FAILED;
-      }
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&final_poly_size, buffer_length, buffer, sizeof(size_t)));
       m_final_poly.resize(final_poly_size);
-      std::memcpy(m_final_poly.data(), in, final_poly_size * sizeof(F));
-      advance(final_poly_size * sizeof(F));
-      if (length < sizeof(uint64_t)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < sizeof(uint64_t)";
-        return eIcicleError::COPY_FAILED;
-      }
-      std::memcpy(&m_pow_nonce, in, sizeof(uint64_t));
-      advance(sizeof(uint64_t));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
+
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_pow_nonce, buffer_length, buffer, sizeof(uint64_t)));
       return eIcicleError::SUCCESS;
     }
 

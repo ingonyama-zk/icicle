@@ -6,7 +6,6 @@
 #include <iostream> // For streams
 #include <stdexcept>
 #include <utility> // For std::pair
-#include <cstring> // For memcpy
 #include "icicle/runtime.h"
 #include "icicle/serialization.h"
 namespace icicle {
@@ -18,7 +17,7 @@ namespace icicle {
    * It provides functionality to allocate, copy, and access these components, supporting both
    * raw byte manipulation and type-safe access via templates.
    */
-  class MerkleProof : public Serializer
+  class MerkleProof : public Serializable
   {
   public:
     explicit MerkleProof() = default;
@@ -184,8 +183,7 @@ namespace icicle {
 
     eIcicleError serialized_size(size_t& size) const override
     {
-      size = 0;
-      size += sizeof(bool);                      // pruned
+      size = sizeof(bool);                      // pruned
       size += sizeof(uint64_t);                  // leaf_index
       size += sizeof(size_t);                    // leaf_size
       size += m_leaf.size() * sizeof(std::byte); // leaf
@@ -196,88 +194,56 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError serialize(std::byte*& out) const override
+    eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const override
     {
-      std::memcpy(out, &m_pruned, sizeof(bool));
-      out += sizeof(bool);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_pruned, sizeof(bool)));
 
-      std::memcpy(out, &m_leaf_index, sizeof(uint64_t));
-      out += sizeof(uint64_t);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_leaf_index, sizeof(uint64_t)));
 
       auto leaf_size = m_leaf.size();
-      std::memcpy(out, &leaf_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_leaf.data(), m_leaf.size() * sizeof(std::byte));
-      out += m_leaf.size() * sizeof(std::byte);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &leaf_size, sizeof(size_t)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_leaf.data(), m_leaf.size() * sizeof(std::byte)));
+
 
       auto root_size = m_root.size();
-      std::memcpy(out, &root_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_root.data(), m_root.size() * sizeof(std::byte));
-      out += m_root.size() * sizeof(std::byte);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &root_size, sizeof(size_t)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_root.data(), m_root.size() * sizeof(std::byte)));
 
       auto path_size = m_path.size();
-      std::memcpy(out, &path_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_path.data(), m_path.size() * sizeof(std::byte));
-      out += m_path.size() * sizeof(std::byte);
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &path_size, sizeof(size_t)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, m_path.data(), m_path.size() * sizeof(std::byte)));
 
       return eIcicleError::SUCCESS;
     }
 
-    eIcicleError deserialize(std::byte*& in, size_t& length) override
+    eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
     {
-      auto advance = [&](size_t bytes) -> bool {
-        if (length < bytes) return false;
-        in += bytes;
-        length -= bytes;
-        return true;
-      };
 
-      size_t required_length = sizeof(bool) + sizeof(uint64_t) + 3 * sizeof(size_t);
-      if (length < required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < required_length";
+      size_t required_length = sizeof(bool) + sizeof(uint64_t) + 3 * sizeof(size_t); // minimum length of the proof 
+      if (buffer_length < required_length) {
+        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < required_length: " << buffer_length << " < " << required_length;
         return eIcicleError::COPY_FAILED;
       }
 
-      std::memcpy(&m_pruned, in, sizeof(bool));
-      advance(sizeof(bool));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_pruned, buffer_length, buffer, sizeof(bool)));
 
-      std::memcpy(&m_leaf_index, in, sizeof(uint64_t));
-      advance(sizeof(uint64_t));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_leaf_index, buffer_length, buffer, sizeof(uint64_t)));
 
       size_t leaf_size;
-      std::memcpy(&leaf_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < leaf_size * sizeof(std::byte)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < leaf_size * sizeof(std::byte)";
-        return eIcicleError::COPY_FAILED;
-      }
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&leaf_size, buffer_length, buffer, sizeof(size_t)));
       m_leaf.resize(leaf_size);
-      std::memcpy(m_leaf.data(), in, leaf_size * sizeof(std::byte));
-      advance(leaf_size * sizeof(std::byte));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_leaf.data(), buffer_length, buffer, leaf_size * sizeof(std::byte)));
+
 
       size_t root_size;
-      std::memcpy(&root_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < root_size * sizeof(std::byte)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < root_size * sizeof(std::byte)";
-        return eIcicleError::COPY_FAILED;
-      }
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&root_size, buffer_length, buffer, sizeof(size_t)));
       m_root.resize(root_size);
-      std::memcpy(m_root.data(), in, root_size * sizeof(std::byte));
-      advance(root_size * sizeof(std::byte));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_root.data(), buffer_length, buffer, root_size * sizeof(std::byte)));
 
       size_t path_size;
-      std::memcpy(&path_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < path_size * sizeof(std::byte)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < path_size * sizeof(std::byte)";
-        return eIcicleError::COPY_FAILED;
-      }
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&path_size, buffer_length, buffer, sizeof(size_t)));
       m_path.resize(path_size);
-      std::memcpy(m_path.data(), in, path_size * sizeof(std::byte));
-      advance(path_size * sizeof(std::byte));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_path.data(), buffer_length, buffer, path_size * sizeof(std::byte)));
 
       return eIcicleError::SUCCESS;
     }

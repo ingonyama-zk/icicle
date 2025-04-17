@@ -581,12 +581,13 @@ void test_merkle_tree(
     ICICLE_CHECK(merkle_proof.serialized_size(serialized_proof_size));
     auto serialized_proof = std::vector<std::byte>(serialized_proof_size);
     std::byte* ptr = serialized_proof.data();
-    ICICLE_CHECK(merkle_proof.serialize(ptr));
+    size_t remaining_length = serialized_proof.size();
+    ICICLE_CHECK(merkle_proof.serialize(ptr, remaining_length));
     // Deserialize the proof
     MerkleProof deserialized_proof;
-    size_t length = serialized_proof.size();
     ptr = serialized_proof.data();
-    ICICLE_CHECK(deserialized_proof.deserialize(ptr, length));
+    remaining_length = serialized_proof.size();
+    ICICLE_CHECK(deserialized_proof.deserialize(ptr, remaining_length));
 
     // Compare the original and deserialized proofs
     // Compare pruned

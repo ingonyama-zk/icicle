@@ -309,7 +309,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
     ICICLE_LOG_ERROR << "buffer is too small — cannot serialize SumcheckProof";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  return sumcheck_proof_handle->serialize(buffer);
+  return sumcheck_proof_handle->serialize(buffer, size);
 }
 
 /**
