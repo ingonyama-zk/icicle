@@ -1,4 +1,3 @@
-
 #include "icicle/backend/vec_ops_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"

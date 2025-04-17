@@ -8,6 +8,7 @@ pub mod program;
 pub mod sumcheck;
 pub mod symbol;
 pub mod vec_ops;
+pub mod gate_ops;
 
 #[cfg(not(feature = "no_ecntt"))]
 pub mod ecntt;

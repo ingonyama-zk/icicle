@@ -57,6 +57,13 @@ int {{.Field}}_vector_product(
   scalar_t* result
 );
 
+int {{.Field}}_vector_inv(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
 {{ if eq .FieldPrefix "Extension" }}
 int {{.Field}}_vector_mixed_mul(
   scalar_t* vec_a,

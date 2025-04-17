@@ -52,6 +52,9 @@ if (FIELD)
     if(FRI)
         target_sources(icicle_field PRIVATE src/field/cpu_fri.cpp)
     endif()
+    if(GATEOPS)
+        target_sources(icicle_field PRIVATE src/field/cpu_gate_ops.cpp)
+    endif()
     target_include_directories(icicle_field PRIVATE include)
 endif() # FIELD
 

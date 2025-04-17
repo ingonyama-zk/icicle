@@ -43,6 +43,8 @@ func ReductionVecOp(in, out core.HostOrDeviceSlice, config core.VecOpsConfig, op
 		ret = (runtime.EIcicleError)(C.bn254_vector_sum(cIn, cSize, cConfig, cOut))
 	case core.Product:
 		ret = (runtime.EIcicleError)(C.bn254_vector_product(cIn, cSize, cConfig, cOut))
+	case core.Inverse:
+		ret = (runtime.EIcicleError)(C.bn254_vector_inv(cIn, cSize, cConfig, cOut))
 	}
 
 	return ret
