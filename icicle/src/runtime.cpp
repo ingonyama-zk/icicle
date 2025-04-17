@@ -50,6 +50,7 @@ extern "C" eIcicleError icicle_malloc(void** ptr, size_t size)
   if (size == 0) {
     static uint64_t dummy = 0;
     *ptr = static_cast<void*>(&dummy);
+    DeviceAPI::get_global_memory_tracker().add_allocation(*ptr, size, DeviceAPI::get_thread_local_device());
     return eIcicleError::SUCCESS;
   }
 
@@ -65,6 +66,7 @@ extern "C" eIcicleError icicle_malloc_async(void** ptr, size_t size, icicleStrea
   if (size == 0) {
     static uint64_t dummy = 0;
     *ptr = static_cast<void*>(&dummy);
+    DeviceAPI::get_global_memory_tracker().add_allocation(*ptr, size, DeviceAPI::get_thread_local_device());
     return eIcicleError::SUCCESS;
   }
 
