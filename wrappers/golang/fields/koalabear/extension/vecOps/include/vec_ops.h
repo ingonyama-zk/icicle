@@ -57,6 +57,13 @@ int koalabear_extension_vector_product(
   scalar_t* result
 );
 
+int koalabear_extension_vector_inv(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
 
 int koalabear_extension_vector_mixed_mul(
   scalar_t* vec_a,

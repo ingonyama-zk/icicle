@@ -6,10 +6,6 @@ import "C"
 import "unsafe"
 
 func Malloc(size uint) (unsafe.Pointer, EIcicleError) {
-	if size == 0 {
-		return nil, AllocationFailed
-	}
-
 	var p C.void
 	devicePtr := unsafe.Pointer(&p)
 	cSize := (C.size_t)(size)
@@ -21,10 +17,6 @@ func Malloc(size uint) (unsafe.Pointer, EIcicleError) {
 }
 
 func MallocAsync(size uint, stream Stream) (unsafe.Pointer, EIcicleError) {
-	if size == 0 {
-		return nil, AllocationFailed
-	}
-
 	var p C.void
 	devicePtr := unsafe.Pointer(&p)
 	cSize := (C.size_t)(size)
