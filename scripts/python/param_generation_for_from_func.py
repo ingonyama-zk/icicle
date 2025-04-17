@@ -64,8 +64,7 @@ for i in range(n):
     # num_to_limbs(pi[i], 32, 18)
     s += ai[i] * pi[i]
     # s = s % p**2
-    if s > p**2:
-        s = s-p**2
+    s = s % (p**2)
     # print("mul")
     # num_to_limbs(ai[i] * pi[i], 32, 18)
     # print("add")
