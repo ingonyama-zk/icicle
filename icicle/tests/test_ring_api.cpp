@@ -91,7 +91,7 @@ TEST_F(RingTestBase, VectorRnsConversion)
     ICICLE_CHECK(vector_mul(rns_input.data(), rns_input.data(), N, VecOpsConfig{}, rns_output.data())); // RNS
     // (3) assert results are different
     ASSERT_NE(0, memcmp(rns_output.data(), direct_output.data(), sizeof(scalar_t) * N));
-    // (4) convert back from rns (inplace) and compare to the the direct output
+    // (4) convert back from rns (inplace) and compare to the direct output
     // Note that we convert in-place so the rns type remains but the underlying data is not rns anymore!
     ICICLE_CHECK(convert_from_rns(rns_output.data(), N, VecOpsConfig{}, (scalar_t*)rns_output.data()));
     ASSERT_EQ(0, memcmp(rns_output.data(), direct_output.data(), sizeof(scalar_t) * N));
