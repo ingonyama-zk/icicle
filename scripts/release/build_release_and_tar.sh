@@ -21,7 +21,7 @@ for field in "${fields[@]}"; do
     mkdir -p build && rm -rf build/*
     # Configure, build, and install
     # Precompile SASS for modern architectures (Turing, Ampere, etc.) and include PTX fallback (?)
-    cmake -S icicle -B build -G Ninja -DFIELD=$field -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86"
+    cmake -S icicle -B build -G Ninja -DFIELD=$field -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86;89;120"
     cmake --build build     # build
     cmake --install build   # install
 done
@@ -33,7 +33,7 @@ for curve in "${curves[@]}"; do
     mkdir -p build && rm -rf build/*
     # Configure, build, and install
     # Precompile SASS for modern architectures (Turing, Ampere, etc.) and include PTX fallback (?)
-    cmake -S icicle -B build -G Ninja -DCURVE=$curve -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86"
+    cmake -S icicle -B build -G Ninja -DCURVE=$curve -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86;89;120"
     cmake --build build     # build
     cmake --install build   # install
 done
