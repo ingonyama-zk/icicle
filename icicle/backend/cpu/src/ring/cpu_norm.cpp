@@ -2,162 +2,212 @@
 #include "icicle/backend/vec_ops_backend.h"
 #include "taskflow/taskflow.hpp"
 #include <cmath>
-
-typedef __uint128_t uint128_t;
+#include <atomic>
 
 static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
 
-// extract the number of threads to run from config
-int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
+// Get number of threads from config (defined in cpu_vec_ops.cpp)
+int get_nof_workers(const VecOpsConfig& config);
 
-// Helper function to convert a value to centered representation [-q/2, q/2)
-static inline int64_t abs_centered(int64_t val, int64_t q) {
-  if (val <= q / 2) {
+static int64_t abs_centered(int64_t val, int64_t q) {
+    if (val > q/2) {
+        val = q - val;
+    }
     return val;
-  } else {
-    return q - val;
-  }
 }
 
-static inline uint128_t square(int64_t val, int64_t q) {
-  return abs_centered(val, q) * abs_centered(val, q);
+// validate input elements don't exceed √q
+static bool validate_inputs(const field_t* input, size_t size, int64_t q) {
+    const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
+    for (size_t i = 0; i < size; ++i) {
+        if (input_i64[i] * input_i64[i] >= q) {
+            ICICLE_LOG_ERROR << "Input element exceeds field modulus q";
+            return false;
+        }
+    }
+    return true;
 }
 
-// CPU implementation for icicle::norm::check_norm_bound()
 static eIcicleError cpu_check_norm_bound(
-  const Device& device,
-  const field_t* input,
-  size_t size,
-  eNormType norm,
-  uint64_t norm_bound,
-  const VecOpsConfig& config,
-  bool* output)
+    const Device& device,
+    const field_t* input,
+    size_t size,
+    eNormType norm,
+    uint64_t norm_bound,
+    const VecOpsConfig& config,
+    bool* output)
 {
-  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(const int64_t*)&q_storage;
-
-  if (q < 0) {
-    ICICLE_LOG_ERROR << "Field modulus q must be less than 64 bits; received q = " << q;
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  if (!input || !output || size == 0) {
-    ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  if (config.columns_batch) {
-    ICICLE_LOG_ERROR << "Unsupported config: norm checking does not support column batch.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
-  bool is_bounded = true;
-
-  if (norm == eNormType::L2) {
-    // For L2 norm, we compute sum of squares and compare with bound^2
-    uint128_t bound_squared = square(norm_bound, q);
-    uint128_t norm_squared = 0;
-
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val = input_i64[i];
-      
-      val = abs_centered(val, q);
-      norm_squared += square(val, q);
-      if (norm_squared >= bound_squared) {
-        is_bounded = false;
-        break;
-      }
+    if (!input || !output || size == 0) {
+        ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size";
+        return eIcicleError::INVALID_ARGUMENT;
     }
-  } else { // LInfinity norm
-    // For LInfinity norm, we check if any element's absolute value exceeds the bound
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val = input_i64[i];
-      
-      val = abs_centered(val, q);
-      if (val >= norm_bound) {
-        is_bounded = false;
-        break;
-      }
-    }
-  }
 
-  *output = is_bounded;
-  return eIcicleError::SUCCESS;
+    static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+    constexpr auto q_storage = field_t::get_modulus();
+    const int64_t q = *(const int64_t*)&q_storage;
+
+    if (!validate_inputs(input, size * config.batch_size, q)) {
+        return eIcicleError::INVALID_ARGUMENT;
+    }
+
+    const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
+    *output = true;
+
+    tf::Taskflow taskflow;
+    tf::Executor executor;
+    const uint64_t total_elements = size * config.batch_size;
+    const int nof_workers = get_nof_workers(config);
+    const uint64_t worker_task_size = (total_elements + nof_workers - 1) / nof_workers;
+
+    std::atomic<bool> early_exit{false};
+
+    if (norm == eNormType::L2) {
+        std::vector<__int128> partial_sums(nof_workers, 0);
+        const __int128 bound_squared = static_cast<__int128>(norm_bound) * norm_bound;
+        __int128 total_sum = 0;
+
+        for (uint64_t worker_id = 0; worker_id < nof_workers; worker_id++) {
+            taskflow.emplace([=, &early_exit, &total_sum]() {
+                if (early_exit.load(std::memory_order_relaxed)) return;
+
+                const uint64_t start_idx = worker_id * worker_task_size;
+                const uint64_t end_idx = std::min(start_idx + worker_task_size, total_elements);
+
+                for (uint64_t i = start_idx; i < end_idx; ++i) {
+                    int64_t abs_val = abs_centered(input_i64[i], q);
+                    __int128 val_squared = static_cast<__int128>(abs_val) * abs_val;
+                    total_sum += val_squared;
+                    if (total_sum > bound_squared) {
+                        *output = false;
+                        early_exit.store(true, std::memory_order_relaxed);
+                        return;
+                    }
+                }
+            });
+        }
+
+        executor.run(taskflow).wait();
+        taskflow.clear();
+    } else { // L∞ norm
+        for (uint64_t start_idx = 0; start_idx < total_elements; start_idx += worker_task_size) {
+            taskflow.emplace([=, &early_exit]() {
+                if (early_exit.load(std::memory_order_relaxed)) return;
+
+                const uint64_t end_idx = std::min(start_idx + worker_task_size, total_elements);
+                
+                for (uint64_t i = start_idx; i < end_idx; ++i) {
+                    int64_t abs_val = abs_centered(input_i64[i], q);
+                    if (abs_val >= norm_bound) {
+                        *output = false;
+                        early_exit.store(true, std::memory_order_relaxed);
+                        return;
+                    }
+                }
+            });
+        }
+
+        executor.run(taskflow).wait();
+        taskflow.clear();
+    }
+
+    return eIcicleError::SUCCESS;
 }
 
-// CPU implementation for icicle::norm::check_norm_relative()
 static eIcicleError cpu_check_norm_relative(
-  const Device& device,
-  const field_t* input_a,
-  const field_t* input_b,
-  size_t size,
-  eNormType norm,
-  uint64_t scale,
-  const VecOpsConfig& config,
-  bool* output)
+    const Device& device,
+    const field_t* input_a,
+    const field_t* input_b,
+    size_t size,
+    eNormType norm,
+    uint64_t scale,
+    const VecOpsConfig& config,
+    bool* output)
 {
-  static_assert(field_t::TLC == 2, "Relative norm checking assumes q ~64b");
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(const int64_t*)&q_storage;
-
-  if (q < 0) {
-    ICICLE_LOG_ERROR << "Field modulus q must be less than 64 bits; received q = " << q;
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  if (!input_a || !input_b || !output || size == 0) {
-    ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  if (config.columns_batch) {
-    ICICLE_LOG_ERROR << "Unsupported config: relative norm checking does not support column batch.";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-
-  const int64_t* input_a_i64 = reinterpret_cast<const int64_t*>(input_a);
-  const int64_t* input_b_i64 = reinterpret_cast<const int64_t*>(input_b);
-  bool is_bounded = true;
-
-  if (norm == eNormType::L2) {
-    // For L2 norm, we compute sum of squares and compare with (scale * bound)^2
-    uint128_t scale_bound_squared = square(scale, q);
-    uint128_t norm_a_squared = 0;
-    uint128_t norm_b_squared = 0;
-
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val_a = input_a_i64[i];
-      int64_t val_b = input_b_i64[i];
-
-      val_a = abs_centered(val_a, q);
-      val_b = abs_centered(val_b, q);
-
-      norm_a_squared += square(val_a, q);
-      norm_b_squared += square(val_b, q);
+    if (!input_a || !input_b || !output || size == 0) {
+        ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size";
+        return eIcicleError::INVALID_ARGUMENT;
     }
 
-    // Check if norm_a^2 < (scale * norm_b)^2
-    is_bounded = norm_a_squared < scale_bound_squared * norm_b_squared;
-  } else { // LInfinity norm
-    // For LInfinity norm, we check if any element's absolute value exceeds scale * bound
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val_a = input_a_i64[i];
-      int64_t val_b = input_b_i64[i];
+    static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+    constexpr auto q_storage = field_t::get_modulus();
+    const int64_t q = *(const int64_t*)&q_storage;
 
-      val_a = abs_centered(val_a, q);
-      val_b = abs_centered(val_b, q);
-
-      if (val_a >= scale * val_b) {
-        is_bounded = false;
-        break;
-      }
+    if (!validate_inputs(input_a, size * config.batch_size, q) ||
+        !validate_inputs(input_b, size * config.batch_size, q)) {
+        return eIcicleError::INVALID_ARGUMENT;
     }
-  }
 
-  *output = is_bounded;
-  return eIcicleError::SUCCESS;
+    const int64_t* input_a_i64 = reinterpret_cast<const int64_t*>(input_a);
+    const int64_t* input_b_i64 = reinterpret_cast<const int64_t*>(input_b);
+    *output = true;
+
+    tf::Taskflow taskflow;
+    tf::Executor executor;
+    const uint64_t total_elements = size * config.batch_size;
+    const int nof_workers = get_nof_workers(config);
+    const uint64_t worker_task_size = (total_elements + nof_workers - 1) / nof_workers;
+
+    std::atomic<bool> early_exit{false};
+
+    if (norm == eNormType::L2) {
+        __int128 total_sum_a = 0;
+        __int128 total_sum_b = 0;
+
+        for (uint64_t worker_id = 0; worker_id < nof_workers; worker_id++) {
+            taskflow.emplace([=, &early_exit, &total_sum_a, &total_sum_b]() {
+                if (early_exit.load(std::memory_order_relaxed)) return;
+
+                const uint64_t start_idx = worker_id * worker_task_size;
+                const uint64_t end_idx = std::min(start_idx + worker_task_size, total_elements);
+
+                for (uint64_t i = start_idx; i < end_idx; ++i) {
+                    int64_t abs_a = abs_centered(input_a_i64[i], q);
+                    int64_t abs_b = abs_centered(input_b_i64[i], q);
+                    
+                    __int128 val_a_squared = static_cast<__int128>(abs_a) * abs_a;
+                    __int128 val_b_squared = static_cast<__int128>(abs_b) * abs_b;
+                    total_sum_a += val_a_squared;
+                    total_sum_b += val_b_squared;
+
+                    // ||a|| >= scale * ||b||
+                    if (total_sum_a >= static_cast<__int128>(scale) * total_sum_b) {
+                        *output = false;
+                        early_exit.store(true, std::memory_order_relaxed);
+                        return;
+                    }
+                }
+            });
+        }
+
+        executor.run(taskflow).wait();
+        taskflow.clear();
+    } else { // L∞ norm
+        for (uint64_t start_idx = 0; start_idx < total_elements; start_idx += worker_task_size) {
+            taskflow.emplace([=, &early_exit]() {
+                if (early_exit.load(std::memory_order_relaxed)) return;
+
+                const uint64_t end_idx = std::min(start_idx + worker_task_size, total_elements);
+                
+                for (uint64_t i = start_idx; i < end_idx; ++i) {
+                    int64_t abs_a = abs_centered(input_a_i64[i], q);
+                    int64_t abs_b = abs_centered(input_b_i64[i], q);
+
+                    // |a| >= scale * |b|
+                    if (abs_a >= scale * abs_b) {
+                        *output = false;
+                        early_exit.store(true, std::memory_order_relaxed);
+                        return;
+                    }
+                }
+            });
+        }
+    }
+
+    executor.run(taskflow).wait();
+    taskflow.clear();
+
+    return eIcicleError::SUCCESS;
 }
 
+// Register the backend implementations
 REGISTER_NORM_CHECK_BACKEND("CPU", cpu_check_norm_bound, cpu_check_norm_relative);

@@ -1,6 +1,11 @@
 #include "test_mod_arithmetic_api.h"
 #include "icicle/balanced_decomposition.h"
 #include "icicle/norm.h"
+#include "icicle/fields/field_config.h"
+#include "icicle/fields/field.h"
+
+using namespace field_config;
+using namespace icicle;
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -232,89 +237,132 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
   } // device loop
 }
 
-TEST_F(RingTestBase, NormBounded)
-{
-  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+TEST_F(RingTestBase, NormBounded) {
+    const size_t size = 4;
+    std::vector<field_t> input(size);
+    bool result;
+    VecOpsConfig config;
+    config.batch_size = 1;
+    config.columns_batch = false;
 
-  // Use a small fixed size
-  const size_t size = 4;
-  auto input = std::vector<field_t>(size);
-  
-  // Set specific values that we know should be within bounds
-  input[0] = field_t::from(1);
-  input[1] = field_t::from(2);
-  input[2] = field_t::from(3);
-  input[3] = field_t::from(4);
-  
-  bool is_bounded;
+    // Test case 1: L2 norm - values within bound
+    input[0] = field_t::from(1);
+    input[1] = field_t::from(2);
+    input[2] = field_t::from(2);
+    input[3] = field_t::from(1);
+    // L2 norm = sqrt(1^2 + 2^2 + 2^2 + 1^2) = sqrt(10)
+    // bound = 4 > sqrt(10)
+    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 4, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_TRUE(result);
 
-  // Test L2 norm with a generous bound
-  const uint64_t l2_bound = q / 2; // A more generous bound for testing
-  for (auto device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
+    // Test case 2: L2 norm - values exceed bound
+    input[0] = field_t::from(3);
+    input[1] = field_t::from(3);
+    input[2] = field_t::from(3);
+    input[3] = field_t::from(3);
+    // L2 norm = sqrt(36) = 6
+    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 5, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_FALSE(result);
 
-    field_t *d_input;
-    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(field_t)));
-    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(field_t)));
+    // Test case 3: LInfinity norm - values within bound
+    input[0] = field_t::from(1);
+    input[1] = field_t::from(2);
+    input[2] = field_t::from(2);
+    input[3] = field_t::from(1);
+    // LInfinity norm = max(|1|, |2|, |2|, |1|) = 2
+    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, 3, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_TRUE(result);
 
-    auto cfg = VecOpsConfig{};
-    cfg.is_a_on_device = true;
-    cfg.is_result_on_device = true;
+    // Test case 4: LInfinity norm - values exceed bound
+    input[0] = field_t::from(1);
+    input[1] = field_t::from(4);
+    input[2] = field_t::from(2);
+    input[3] = field_t::from(1);
+    // LInfinity norm = 4
+    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, 3, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_FALSE(result);
 
-    // Check L2 norm
-    ICICLE_CHECK(norm::check_norm_bound(d_input, size, eNormType::L2, l2_bound, cfg, &is_bounded));
-    ASSERT_TRUE(is_bounded) << "L2 norm check failed for bound=" << l2_bound;
-
-    // Check LInfinity norm with a generous bound
-    const uint64_t linf_bound = q / 2; // A more generous bound for testing
-    ICICLE_CHECK(norm::check_norm_bound(d_input, size, eNormType::LInfinity, linf_bound, cfg, &is_bounded));
-    ASSERT_TRUE(is_bounded) << "LInfinity norm check failed for bound=" << linf_bound;
-
-    icicle_free(d_input);
-  }
+    // Test case 5: Invalid input - element exceeds q
+    constexpr auto q_storage = field_t::get_modulus();
+    const int64_t q = *(const int64_t*)&q_storage;
+    input[0] = field_t::from(q);
+    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 10, config, &result), 
+              eIcicleError::INVALID_ARGUMENT);
 }
 
-TEST_F(RingTestBase, NormRelative)
-{
-  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+TEST_F(RingTestBase, NormRelative) {
+    const size_t size = 4;
+    std::vector<field_t> input_a(size);
+    std::vector<field_t> input_b(size);
+    bool result;
+    VecOpsConfig config;
+    config.batch_size = 1;
+    config.columns_batch = false;
 
-  const size_t size = 1 << 10;
-  auto input_a = std::vector<field_t>(size);
-  auto input_b = std::vector<field_t>(size);
-  field_t::rand_host_many(input_a.data(), size);
-  field_t::rand_host_many(input_b.data(), size);
-  bool is_bounded;
+    // Test case 1: L2 norm - a < 2*b
+    input_a[0] = field_t::from(1);
+    input_a[1] = field_t::from(1);
+    input_a[2] = field_t::from(1);
+    input_a[3] = field_t::from(1);
+    // ||a|| = sqrt(4)
 
-  // Test relative norm comparison
-  const uint64_t scale = 2; // Compare if norm(a) < 2 * norm(b)
-  for (auto device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
+    input_b[0] = field_t::from(1);
+    input_b[1] = field_t::from(1);
+    input_b[2] = field_t::from(0);
+    input_b[3] = field_t::from(0);
+    // ||b|| = sqrt(2)
+    // 4 <= 2 * 2
+    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_FALSE(result);
 
-    field_t *d_input_a, *d_input_b;
-    ICICLE_CHECK(icicle_malloc((void**)&d_input_a, size * sizeof(field_t)));
-    ICICLE_CHECK(icicle_malloc((void**)&d_input_b, size * sizeof(field_t)));
-    ICICLE_CHECK(icicle_copy(d_input_a, input_a.data(), size * sizeof(field_t)));
-    ICICLE_CHECK(icicle_copy(d_input_b, input_b.data(), size * sizeof(field_t)));
+    // Test case 2: L2 norm - early exit when partial sum exceeds bound
+    input_a[0] = field_t::from(2);
+    input_a[1] = field_t::from(2);
+    input_a[2] = field_t::from(2);
+    input_a[3] = field_t::from(2);
 
-    auto cfg = VecOpsConfig{};
-    cfg.is_a_on_device = true;
-    cfg.is_result_on_device = true;
+    input_b[0] = field_t::from(1);
+    input_b[1] = field_t::from(1);
+    // 8 > 2 * 2, should exit after second element
+    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_FALSE(result);
 
-    // Check relative L2 norm
-    ICICLE_CHECK(norm::check_norm_relative(d_input_a, d_input_b, size, eNormType::L2, scale, cfg, &is_bounded));
-    ASSERT_TRUE(is_bounded) << "Relative L2 norm check failed for scale=" << scale;
+    // Test case 3: L∞ norm - a < 2*b
+    input_a[0] = field_t::from(1);
+    input_a[1] = field_t::from(2);
+    input_a[2] = field_t::from(1);
+    input_a[3] = field_t::from(1);
+    // ||a||∞ = 2
 
-    // Check relative LInfinity norm
-    ICICLE_CHECK(norm::check_norm_relative(d_input_a, d_input_b, size, eNormType::LInfinity, scale, cfg, &is_bounded));
-    ASSERT_TRUE(is_bounded) << "Relative LInfinity norm check failed for scale=" << scale;
+    input_b[0] = field_t::from(2);
+    input_b[1] = field_t::from(2);
+    input_b[2] = field_t::from(1);
+    input_b[3] = field_t::from(1);
+    // ||b||∞ = 2
+    // 2 <= 2 * 2
+    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 2, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_TRUE(result);
 
-    icicle_free(d_input_a);
-    icicle_free(d_input_b);
-  }
+    // Test case 4: L∞ norm - early exit on first violation
+    input_a[0] = field_t::from(5);  // |5| >= 2 * |2|, should exit here
+    input_a[1] = field_t::from(6);
+    input_a[2] = field_t::from(7);
+    input_a[3] = field_t::from(8);
+    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 2, config, &result), 
+              eIcicleError::SUCCESS);
+    ASSERT_FALSE(result);
+
+    // Test case 5: Invalid input - element exceeds q
+    constexpr auto q_storage = field_t::get_modulus();
+    const int64_t q = *(const int64_t*)&q_storage;
+    input_a[0] = field_t::from(q); // Equal to q
+    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result), 
+              eIcicleError::INVALID_ARGUMENT);
 }
