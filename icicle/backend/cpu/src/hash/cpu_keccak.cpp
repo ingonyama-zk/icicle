@@ -70,17 +70,18 @@ namespace icicle {
           size_t end_index = std::min(start_index + chunk_size, static_cast<size_t>(config.batch));
           taskflow.emplace(
             [&, start_index, end_index, output, digest_size_in_bytes, single_input_size, input, is_keccak]() {
+              eIcicleError err;
               for (unsigned batch_idx = start_index; batch_idx < end_index; ++batch_idx) {
-                eIcicleError err = sha3_hash_buffer(
+                err = sha3_hash_buffer(
                   8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size,
                   single_input_size, output + batch_idx * digest_size_in_bytes);
-
-                if (err != eIcicleError::SUCCESS) { return err; }
               }
+              return err;
             });
         }
         executor.run(taskflow).wait();
       }
+      // TODO Aviad: check if threads had errors
       return eIcicleError::SUCCESS;
     }
 
