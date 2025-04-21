@@ -801,9 +801,9 @@ namespace icicle {
 
   #define REGISTER_NORM_CHECK_BACKEND(DEVICE_TYPE, CHECK_BOUND, CHECK_RELATIVE)                                        \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_norm_check) = []() -> bool {                                                            \
-        register_check_norm_bound(DEVICE_TYPE, CHECK_BOUND);                                                          \
-        register_check_norm_relative(DEVICE_TYPE, CHECK_RELATIVE);                                                    \
+      static bool UNIQUE(_reg_norm_check) = []() -> bool {                                                             \
+        register_check_norm_bound(DEVICE_TYPE, CHECK_BOUND);                                                           \
+        register_check_norm_relative(DEVICE_TYPE, CHECK_RELATIVE);                                                     \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
