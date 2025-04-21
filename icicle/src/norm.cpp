@@ -11,12 +11,7 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(NormCheckRelativeDispatcher, check_norm_relative, normCheckRelativeImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, check_norm_bound)(
-    const field_t* input,
-    size_t size,
-    eNormType norm,
-    uint64_t norm_bound,
-    const VecOpsConfig* config,
-    bool* output)
+    const field_t* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig* config, bool* output)
   {
     return NormCheckDispatcher::execute(input, size, norm, norm_bound, *config, output);
   }
@@ -24,15 +19,9 @@ namespace icicle {
   namespace norm {
     template <>
     eIcicleError check_norm_bound(
-      const field_t* input,
-      size_t size,
-      eNormType norm,
-      uint64_t norm_bound,
-      const VecOpsConfig& config,
-      bool* output)
+      const field_t* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig& config, bool* output)
     {
-      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, check_norm_bound)(
-        input, size, norm, norm_bound, &config, output);
+      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, check_norm_bound)(input, size, norm, norm_bound, &config, output);
     }
   } // namespace norm
 

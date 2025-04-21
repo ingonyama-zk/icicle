@@ -237,132 +237,137 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
   } // device loop
 }
 
-TEST_F(RingTestBase, NormBounded) {
-    const size_t size = 4;
-    std::vector<field_t> input(size);
-    bool result;
-    VecOpsConfig config;
-    config.batch_size = 1;
-    config.columns_batch = false;
+TEST_F(RingTestBase, NormBounded)
+{
+  const size_t size = 4;
+  std::vector<field_t> input(size);
+  bool result;
+  VecOpsConfig config;
+  config.batch_size = 1;
+  config.columns_batch = false;
 
-    // Test case 1: L2 norm - values within bound
-    input[0] = field_t::from(1);
-    input[1] = field_t::from(2);
-    input[2] = field_t::from(2);
-    input[3] = field_t::from(1);
-    // L2 norm = sqrt(1^2 + 2^2 + 2^2 + 1^2) = sqrt(10)
-    // bound = 4 > sqrt(10)
-    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 4, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_TRUE(result);
+  // Test case 1: L2 norm - values within bound
+  input[0] = field_t::from(1);
+  input[1] = field_t::from(2);
+  input[2] = field_t::from(2);
+  input[3] = field_t::from(1);
+  // L2 norm = sqrt(1^2 + 2^2 + 2^2 + 1^2) = sqrt(10)
+  // bound = 4 > sqrt(10)
+  ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 4, config, &result), eIcicleError::SUCCESS);
+  ASSERT_TRUE(result);
 
-    // Test case 2: L2 norm - values exceed bound
-    input[0] = field_t::from(3);
-    input[1] = field_t::from(3);
-    input[2] = field_t::from(3);
-    input[3] = field_t::from(3);
-    // L2 norm = sqrt(36) = 6
-    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 5, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_FALSE(result);
+  // Test case 2: L2 norm - values exceed bound
+  input[0] = field_t::from(3);
+  input[1] = field_t::from(3);
+  input[2] = field_t::from(3);
+  input[3] = field_t::from(3);
+  // L2 norm = sqrt(36) = 6
+  ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 5, config, &result), eIcicleError::SUCCESS);
+  ASSERT_FALSE(result);
 
-    // Test case 3: LInfinity norm - values within bound
-    input[0] = field_t::from(1);
-    input[1] = field_t::from(2);
-    input[2] = field_t::from(2);
-    input[3] = field_t::from(1);
-    // LInfinity norm = max(|1|, |2|, |2|, |1|) = 2
-    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, 3, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_TRUE(result);
+  // Test case 3: LInfinity norm - values within bound
+  input[0] = field_t::from(1);
+  input[1] = field_t::from(2);
+  input[2] = field_t::from(2);
+  input[3] = field_t::from(1);
+  // LInfinity norm = max(|1|, |2|, |2|, |1|) = 2
+  ASSERT_EQ(
+    norm::check_norm_bound(input.data(), size, eNormType::LInfinity, 3, config, &result), eIcicleError::SUCCESS);
+  ASSERT_TRUE(result);
 
-    // Test case 4: LInfinity norm - values exceed bound
-    input[0] = field_t::from(1);
-    input[1] = field_t::from(4);
-    input[2] = field_t::from(2);
-    input[3] = field_t::from(1);
-    // LInfinity norm = 4
-    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, 3, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_FALSE(result);
+  // Test case 4: LInfinity norm - values exceed bound
+  input[0] = field_t::from(1);
+  input[1] = field_t::from(4);
+  input[2] = field_t::from(2);
+  input[3] = field_t::from(1);
+  // LInfinity norm = 4
+  ASSERT_EQ(
+    norm::check_norm_bound(input.data(), size, eNormType::LInfinity, 3, config, &result), eIcicleError::SUCCESS);
+  ASSERT_FALSE(result);
 
-    // Test case 5: Invalid input - element exceeds q
-    constexpr auto q_storage = field_t::get_modulus();
-    const int64_t q = *(const int64_t*)&q_storage;
-    input[0] = field_t::from(q);
-    ASSERT_EQ(norm::check_norm_bound(input.data(), size, eNormType::L2, 10, config, &result), 
-              eIcicleError::INVALID_ARGUMENT);
+  // Test case 5: Invalid input - element exceeds q
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(const int64_t*)&q_storage;
+  input[0] = field_t::from(q);
+  ASSERT_EQ(
+    norm::check_norm_bound(input.data(), size, eNormType::L2, 10, config, &result), eIcicleError::INVALID_ARGUMENT);
 }
 
-TEST_F(RingTestBase, NormRelative) {
-    const size_t size = 4;
-    std::vector<field_t> input_a(size);
-    std::vector<field_t> input_b(size);
-    bool result;
-    VecOpsConfig config;
-    config.batch_size = 1;
-    config.columns_batch = false;
+TEST_F(RingTestBase, NormRelative)
+{
+  const size_t size = 4;
+  std::vector<field_t> input_a(size);
+  std::vector<field_t> input_b(size);
+  bool result;
+  VecOpsConfig config;
+  config.batch_size = 1;
+  config.columns_batch = false;
 
-    // Test case 1: L2 norm - a < 2*b
-    input_a[0] = field_t::from(1);
-    input_a[1] = field_t::from(1);
-    input_a[2] = field_t::from(1);
-    input_a[3] = field_t::from(1);
-    // ||a|| = sqrt(4)
+  // Test case 1: L2 norm - a < 2*b
+  input_a[0] = field_t::from(1);
+  input_a[1] = field_t::from(1);
+  input_a[2] = field_t::from(1);
+  input_a[3] = field_t::from(1);
+  // ||a|| = sqrt(4)
 
-    input_b[0] = field_t::from(1);
-    input_b[1] = field_t::from(1);
-    input_b[2] = field_t::from(0);
-    input_b[3] = field_t::from(0);
-    // ||b|| = sqrt(2)
-    // 4 <= 2 * 2
-    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_FALSE(result);
+  input_b[0] = field_t::from(1);
+  input_b[1] = field_t::from(1);
+  input_b[2] = field_t::from(0);
+  input_b[3] = field_t::from(0);
+  // ||b|| = sqrt(2)
+  // 4 <= 2 * 2
+  ASSERT_EQ(
+    norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result),
+    eIcicleError::SUCCESS);
+  ASSERT_FALSE(result);
 
-    // Test case 2: L2 norm - early exit when partial sum exceeds bound
-    input_a[0] = field_t::from(2);
-    input_a[1] = field_t::from(2);
-    input_a[2] = field_t::from(2);
-    input_a[3] = field_t::from(2);
+  // Test case 2: L2 norm - early exit when partial sum exceeds bound
+  input_a[0] = field_t::from(2);
+  input_a[1] = field_t::from(2);
+  input_a[2] = field_t::from(2);
+  input_a[3] = field_t::from(2);
 
-    input_b[0] = field_t::from(1);
-    input_b[1] = field_t::from(1);
-    // 8 > 2 * 2, should exit after second element
-    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_FALSE(result);
+  input_b[0] = field_t::from(1);
+  input_b[1] = field_t::from(1);
+  // 8 > 2 * 2, should exit after second element
+  ASSERT_EQ(
+    norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result),
+    eIcicleError::SUCCESS);
+  ASSERT_FALSE(result);
 
-    // Test case 3: L∞ norm - a < 2*b
-    input_a[0] = field_t::from(1);
-    input_a[1] = field_t::from(2);
-    input_a[2] = field_t::from(1);
-    input_a[3] = field_t::from(1);
-    // ||a||∞ = 2
+  // Test case 3: L∞ norm - a < 2*b
+  input_a[0] = field_t::from(1);
+  input_a[1] = field_t::from(2);
+  input_a[2] = field_t::from(1);
+  input_a[3] = field_t::from(1);
+  // ||a||∞ = 2
 
-    input_b[0] = field_t::from(2);
-    input_b[1] = field_t::from(2);
-    input_b[2] = field_t::from(1);
-    input_b[3] = field_t::from(1);
-    // ||b||∞ = 2
-    // 2 <= 2 * 2
-    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 2, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_TRUE(result);
+  input_b[0] = field_t::from(2);
+  input_b[1] = field_t::from(2);
+  input_b[2] = field_t::from(1);
+  input_b[3] = field_t::from(1);
+  // ||b||∞ = 2
+  // 2 <= 2 * 2
+  ASSERT_EQ(
+    norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 2, config, &result),
+    eIcicleError::SUCCESS);
+  ASSERT_TRUE(result);
 
-    // Test case 4: L∞ norm - early exit on first violation
-    input_a[0] = field_t::from(5);  // |5| >= 2 * |2|, should exit here
-    input_a[1] = field_t::from(6);
-    input_a[2] = field_t::from(7);
-    input_a[3] = field_t::from(8);
-    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 2, config, &result), 
-              eIcicleError::SUCCESS);
-    ASSERT_FALSE(result);
+  // Test case 4: L∞ norm - early exit on first violation
+  input_a[0] = field_t::from(5); // |5| >= 2 * |2|, should exit here
+  input_a[1] = field_t::from(6);
+  input_a[2] = field_t::from(7);
+  input_a[3] = field_t::from(8);
+  ASSERT_EQ(
+    norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 2, config, &result),
+    eIcicleError::SUCCESS);
+  ASSERT_FALSE(result);
 
-    // Test case 5: Invalid input - element exceeds q
-    constexpr auto q_storage = field_t::get_modulus();
-    const int64_t q = *(const int64_t*)&q_storage;
-    input_a[0] = field_t::from(q); // Equal to q
-    ASSERT_EQ(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result), 
-              eIcicleError::INVALID_ARGUMENT);
+  // Test case 5: Invalid input - element exceeds q
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(const int64_t*)&q_storage;
+  input_a[0] = field_t::from(q); // Equal to q
+  ASSERT_EQ(
+    norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, config, &result),
+    eIcicleError::INVALID_ARGUMENT);
 }

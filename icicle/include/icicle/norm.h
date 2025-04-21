@@ -8,8 +8,8 @@ namespace icicle {
    * @brief Enum to represent supported norm types for vectors.
    */
   enum class eNormType {
-    L2 = 0,         ///< Euclidean norm: sqrt(sum of squares)
-    LInfinity       ///< Max norm: maximum absolute element value
+    L2 = 0,   ///< Euclidean norm: sqrt(sum of squares)
+    LInfinity ///< Max norm: maximum absolute element value
   };
 
   namespace norm {
@@ -28,12 +28,7 @@ namespace icicle {
      */
     template <typename T>
     eIcicleError check_norm_bound(
-        const T* input,
-        size_t size,
-        eNormType norm,
-        uint64_t norm_bound,
-        const VecOpsConfig& cfg,
-        bool* output);
+      const T* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output);
 
     /**
      * @brief Checks whether norm(a) < scalar:u64 * norm(b)
@@ -41,7 +36,7 @@ namespace icicle {
      * This is useful in lattice-based schemes and other relative-norm comparisons
      * where an exact bound is not known in advance but depends on a second input vector.
      *
-     * @tparam T             Element type of the input vectors 
+     * @tparam T             Element type of the input vectors
      * @param input_a        Pointer to the input vector whose norm is being checked
      * @param input_b        Pointer to the comparison vector whose norm is scaled by `scalar_b`
      * @param size           Number of elements in each vector
@@ -54,14 +49,14 @@ namespace icicle {
      */
     template <typename T>
     eIcicleError check_norm_relative(
-        const T* input_a,
-        const T* input_b,
-        size_t size,
-        eNormType norm,
-        uint64_t scale,
-        const VecOpsConfig& cfg,
-        bool* output);
+      const T* input_a,
+      const T* input_b,
+      size_t size,
+      eNormType norm,
+      uint64_t scale,
+      const VecOpsConfig& cfg,
+      bool* output);
 
   } // namespace norm
 
-} // namespace icicle 
+} // namespace icicle
