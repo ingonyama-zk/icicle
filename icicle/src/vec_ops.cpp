@@ -244,6 +244,37 @@ namespace icicle {
   }
 #endif // EXT_FIELD
 
+  /*********************************** INV ***********************************/
+  ICICLE_DISPATCHER_INST(VectorInvDispatcher, vector_inv, VectorReduceOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_inv)(
+    const scalar_t* vec_a, uint64_t size, const VecOpsConfig* config, scalar_t* output)
+  {
+    return VectorInvDispatcher::execute(vec_a, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_inv(const scalar_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_t* output)
+  {
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, vector_inv)(vec_a, size, &config, output);
+  }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(VectorInvExtFieldDispatcher, extension_vector_inv, extFieldVectorReduceOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_vector_inv)(
+    const extension_t* vec_a, uint64_t size, const VecOpsConfig* config, extension_t* output)
+  {
+    return VectorInvExtFieldDispatcher::execute(vec_a, size, *config, output);
+  }
+
+  template <>
+  eIcicleError vector_inv(const extension_t* vec_a, uint64_t size, const VecOpsConfig& config, extension_t* output)
+  {
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_vector_inv)(vec_a, size, &config, output);
+  }
+#endif // EXT_FIELD
+
   /*********************************** (Scalar + Vector) ELEMENT WISE ***********************************/
   ICICLE_DISPATCHER_INST(ScalarAddDispatcher, scalar_add_vec, scalarVectorOpImpl);
 

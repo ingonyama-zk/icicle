@@ -6,6 +6,7 @@ pub mod hash;
 pub mod merkle;
 pub mod msm;
 pub mod ntt;
+pub mod pairing;
 pub mod polynomials;
 pub mod poseidon;
 pub mod poseidon2;

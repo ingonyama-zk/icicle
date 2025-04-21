@@ -98,8 +98,13 @@ const cppApi = [
   },
   {
     type: "doc",
-    label: "Fri",
+    label: "FRI",
     id: "icicle/primitives/fri",
+  },
+  {
+    type: "doc",
+    label: "Pairings",
+    id: "icicle/primitives/pairings",
   },
 ];
 

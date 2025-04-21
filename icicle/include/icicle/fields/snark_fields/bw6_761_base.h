@@ -10,6 +10,7 @@ namespace bw6_761 {
                                             0x25b42304, 0x03cebaff, 0xe584e919, 0x707ba638, 0x8087be41, 0x528275ef,
                                             0x81d14688, 0xb926186a, 0x04faff3e, 0xd187c940, 0xfb83ce0a, 0x0122e824};
     PARAMS(modulus)
+    static constexpr bool nonresidue_is_u32 = true;
   };
 
   // Note: this fq_config_g2 is a workaround to have different types for G1 and G2.
