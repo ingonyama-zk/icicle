@@ -367,13 +367,13 @@ macro_rules! impl_curve {
             fn get_generator() -> $projective_type {
                 unsafe {
                     let mut result = $projective_type::zero();
-                    $curve_prefix_ident::generator(&mut result as *mut _ as *mut _);
+                    $curve_prefix_ident::generator(&mut result);
                     result
                 }
             }
 
             fn is_on_curve(point: $projective_type) -> bool {
-                unsafe { $curve_prefix_ident::is_on_curve(&point as *const _ as *const _) }
+                unsafe { $curve_prefix_ident::is_on_curve(&point as *const $projective_type) }
             }
         }
     };

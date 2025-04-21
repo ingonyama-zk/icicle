@@ -166,5 +166,5 @@ pub fn check_generator<C: Curve>() {
     let generator = C::get_generator();
     let zero = Projective::<C>::zero();
     assert_ne!(generator, zero);
-    assert_eq!(C::is_on_curve(generator), true);
+    assert!(C::is_on_curve(generator));
 }
