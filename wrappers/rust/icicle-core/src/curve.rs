@@ -36,7 +36,9 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
     #[doc(hidden)]
     fn mul_scalar(point1: Projective<Self>, point2: Self::ScalarField) -> Projective<Self>;
     #[doc(hidden)]
-    fn generator() -> Projective<Self>;
+    fn get_generator() -> Projective<Self>;
+    #[doc(hidden)]
+    fn is_on_curve(point: Projective<Self>) -> bool;
 }
 
 /// A [projective](https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html) elliptic curve point.
@@ -240,6 +242,8 @@ macro_rules! impl_curve {
                 );
                 #[link_name = concat!($curve_prefix, "_generator")]
                 pub(crate) fn generator(result: *mut $projective_type);
+                #[link_name = concat!($curve_prefix, "_is_on_curve")]
+                pub(crate) fn is_on_curve(point: *const $projective_type) -> bool;
                 #[link_name = concat!($curve_prefix, "_affine_convert_montgomery")]
                 pub(crate) fn _convert_affine_montgomery(
                     input: *const $affine_type,
@@ -360,12 +364,16 @@ macro_rules! impl_curve {
                 unsafe { $curve_prefix_ident::_convert_projective_montgomery(points, len, is_into, &config, points) }
             }
 
-            fn generator() -> $projective_type {
+            fn get_generator() -> $projective_type {
                 unsafe {
                     let mut result = $projective_type::zero();
                     $curve_prefix_ident::generator(&mut result as *mut _ as *mut _);
                     result
                 }
+            }
+
+            fn is_on_curve(point: $projective_type) -> bool {
+                unsafe { $curve_prefix_ident::is_on_curve(&point as *const _ as *const _) }
             }
         }
     };
@@ -405,6 +413,11 @@ macro_rules! impl_curve_tests {
             #[test]
             fn test_point_arithmetic() {
                 check_point_arithmetic::<$curve>();
+            }
+
+            #[test]
+            fn test_generator() {
+                check_generator::<$curve>();
             }
         }
     };

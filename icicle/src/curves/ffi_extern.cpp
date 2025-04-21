@@ -68,6 +68,11 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, weierstrass_b)(point_field_t* r
   *result = G1::weierstrass_b;
 }
 
+extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, is_on_curve)(projective_t* point)
+{
+  return projective_t::is_on_curve(*point);
+}
+
 /********************************** G2 **********************************/
 #ifdef G2_ENABLED
 extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_eq)(g2_projective_t* point1, g2_projective_t* point2)
@@ -130,5 +135,10 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_generator)(g2_projective_t* 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_weierstrass_b)(g2_point_field_t* result)
 {
   *result = G2::weierstrass_b;
+}
+
+extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, g2_is_on_curve)(g2_projective_t* point)
+{
+  return g2_projective_t::is_on_curve(*point);
 }
 #endif // G2
