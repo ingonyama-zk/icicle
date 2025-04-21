@@ -7,7 +7,6 @@
 #include <stdexcept>
 #include <utility> // For std::pair
 #include "icicle/runtime.h"
-#include "icicle/serialization.h"
 namespace icicle {
 
   /**
@@ -17,7 +16,7 @@ namespace icicle {
    * It provides functionality to allocate, copy, and access these components, supporting both
    * raw byte manipulation and type-safe access via templates.
    */
-  class MerkleProof : public Serializable
+  class MerkleProof
   {
   public:
     explicit MerkleProof() = default;
@@ -179,74 +178,6 @@ namespace icicle {
     {
       if (offset >= m_path.size()) { throw std::out_of_range("Offset out of bounds"); }
       return reinterpret_cast<const T*>(m_path.data() + offset);
-    }
-
-    eIcicleError serialized_size(size_t& size) const override
-    {
-      size = sizeof(bool);                       // pruned
-      size += sizeof(uint64_t);                  // leaf_index
-      size += sizeof(size_t);                    // leaf_size
-      size += m_leaf.size() * sizeof(std::byte); // leaf
-      size += sizeof(size_t);                    // root_size
-      size += m_root.size() * sizeof(std::byte); // root
-      size += sizeof(size_t);                    // path_size
-      size += m_path.size() * sizeof(std::byte); // path
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const override
-    {
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_pruned, sizeof(bool)));
-
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_leaf_index, sizeof(uint64_t)));
-
-      auto leaf_size = m_leaf.size();
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &leaf_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, m_leaf.data(), m_leaf.size() * sizeof(std::byte)));
-
-      auto root_size = m_root.size();
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &root_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, m_root.data(), m_root.size() * sizeof(std::byte)));
-
-      auto path_size = m_path.size();
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &path_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, m_path.data(), m_path.size() * sizeof(std::byte)));
-
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
-    {
-      size_t required_length = sizeof(bool) + sizeof(uint64_t) + 3 * sizeof(size_t); // minimum length of the proof
-      if (buffer_length < required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < required_length: " << buffer_length << " < "
-                         << required_length;
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_pruned, buffer_length, buffer, sizeof(bool)));
-
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_leaf_index, buffer_length, buffer, sizeof(uint64_t)));
-
-      size_t leaf_size;
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&leaf_size, buffer_length, buffer, sizeof(size_t)));
-      m_leaf.resize(leaf_size);
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_leaf.data(), buffer_length, buffer, leaf_size * sizeof(std::byte)));
-
-      size_t root_size;
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&root_size, buffer_length, buffer, sizeof(size_t)));
-      m_root.resize(root_size);
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_root.data(), buffer_length, buffer, root_size * sizeof(std::byte)));
-
-      size_t path_size;
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&path_size, buffer_length, buffer, sizeof(size_t)));
-      m_path.resize(path_size);
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_path.data(), buffer_length, buffer, path_size * sizeof(std::byte)));
-
-      return eIcicleError::SUCCESS;
     }
 
   private:

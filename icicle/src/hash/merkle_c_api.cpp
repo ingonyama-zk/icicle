@@ -2,7 +2,7 @@
 #include "icicle/errors.h"
 #include "icicle/merkle/merkle_proof.h"
 #include "icicle/merkle/merkle_tree.h"
-
+#include "icicle/serialization.h"
 extern "C" {
 // Define an opaque pointer type for MerkleProof (similar to a handle in C)
 typedef icicle::MerkleProof* MerkleProofHandle;
@@ -172,7 +172,7 @@ eIcicleError icicle_merkle_proof_get_serialized_size(MerkleProofHandle proof, si
     ICICLE_LOG_ERROR << "Cannot get serialized size of a null MerkleProof instance.";
     return eIcicleError::INVALID_POINTER;
   }
-  return proof->serialized_size(*size);
+  return BinarySerializer<icicle::MerkleProof>::serialized_size(*proof, *size);
 }
 
 // Serialize the MerkleProof object to a buffer
@@ -187,7 +187,7 @@ eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* b
     return eIcicleError::INVALID_POINTER;
   }
   size_t expected_size = 0;
-  eIcicleError err = proof->serialized_size(expected_size);
+  eIcicleError err = icicle::BinarySerializer<icicle::MerkleProof>::serialized_size(*proof, expected_size);
   if (err != eIcicleError::SUCCESS) {
     ICICLE_LOG_ERROR << "Cannot get serialized size of MerkleProof";
     return err;
@@ -196,7 +196,7 @@ eIcicleError icicle_merkle_proof_serialize(MerkleProofHandle proof, std::byte* b
     ICICLE_LOG_ERROR << "buffer is too small — cannot serialize MerkleProof";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  return proof->serialize(buffer, size);
+  return icicle::BinarySerializer<icicle::MerkleProof>::serialize(buffer, size, *proof);
 }
 
 // Deserialize the MerkleProof object from a buffer
@@ -211,8 +211,7 @@ eIcicleError icicle_merkle_proof_deserialize(MerkleProofHandle* proof, std::byte
     return eIcicleError::INVALID_POINTER;
   }
 
-  *proof = new icicle::MerkleProof();
-  return (*proof)->deserialize(buffer, size);
+  return icicle::BinarySerializer<icicle::MerkleProof>::deserialize(buffer, size, *proof);
 }
 
 // Serialize the MerkleProof object to a file
@@ -228,7 +227,7 @@ eIcicleError icicle_merkle_proof_serialize_to_file(MerkleProofHandle proof, cons
   }
 
   std::string filename_str(filename, filename_len);
-  return proof->serialize_to_file(std::move(filename_str));
+  return icicle::BinarySerializer<icicle::MerkleProof>::serialize_to_file(std::move(filename_str), *proof);
 }
 
 // Deserialize the MerkleProof object from a file
@@ -245,6 +244,6 @@ icicle_merkle_proof_deserialize_from_file(MerkleProofHandle* proof, const char* 
   }
   *proof = new icicle::MerkleProof();
   std::string filename_str(filename, filename_len);
-  return (*proof)->deserialize_from_file(std::move(filename_str));
+  return icicle::BinarySerializer<icicle::MerkleProof>::deserialize_from_file(std::move(filename_str), *proof);
 }
 } // extern "C"

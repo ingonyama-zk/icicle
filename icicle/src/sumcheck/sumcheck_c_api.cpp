@@ -1,6 +1,7 @@
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/utils.h"
 #include "icicle/sumcheck/sumcheck.h"
+#include "icicle/serialization.h"
 
 using namespace field_config;
 
@@ -278,7 +279,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size
     ICICLE_LOG_ERROR << "Cannot write serialized size in a null pointer.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  return sumcheck_proof_handle->serialized_size(*size);
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(*sumcheck_proof_handle, *size);
 }
 
 /**
@@ -300,7 +301,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
     return eIcicleError::INVALID_POINTER;
   }
   size_t expected_size = 0;
-  eIcicleError err = sumcheck_proof_handle->serialized_size(expected_size);
+  eIcicleError err = BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(*sumcheck_proof_handle, expected_size);
   if (err != eIcicleError::SUCCESS) {
     ICICLE_LOG_ERROR << "Cannot get serialized size of SumcheckProof";
     return err;
@@ -309,7 +310,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
     ICICLE_LOG_ERROR << "buffer is too small — cannot serialize SumcheckProof";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  return sumcheck_proof_handle->serialize(buffer, size);
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialize(buffer, size, *sumcheck_proof_handle);
 }
 
 /**
@@ -330,8 +331,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(
     ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer.";
     return eIcicleError::INVALID_POINTER;
   }
-  *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
-  return (*sumcheck_proof_handle)->deserialize(buffer, size);
+  return BinarySerializer<SumcheckProof<scalar_t>>::deserialize(buffer, size, *sumcheck_proof_handle);
 }
 
 /**
@@ -352,7 +352,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize_to_file)(
     return eIcicleError::INVALID_ARGUMENT;
   }
   std::string filename_str(filename, filename_len);
-  return sumcheck_proof_handle->serialize_to_file(std::move(filename_str));
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialize_to_file(std::move(filename_str), *sumcheck_proof_handle);
 }
 
 /**
@@ -374,7 +374,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize_from_fi
   }
   std::string filename_str(filename, filename_len);
   *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
-  return (*sumcheck_proof_handle)->deserialize_from_file(std::move(filename_str));
+  return BinarySerializer<SumcheckProof<scalar_t>>::deserialize_from_file(std::move(filename_str), *sumcheck_proof_handle);
 }
 
 /***************** END SumcheckProof **********************/

@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <memory>
-#include "icicle/serialization.h"
 namespace icicle {
 
   /**
@@ -17,7 +16,7 @@ namespace icicle {
    */
 
   template <typename S>
-  class SumcheckProof : public Serializable
+  class SumcheckProof
   {
   public:
     // Constructor for creating a new proof
@@ -61,47 +60,6 @@ namespace icicle {
           std::cout << "    " << element << std::endl;
         }
       }
-    }
-
-    eIcicleError serialized_size(size_t& size) const override
-    {
-      size = sizeof(size_t); // nof_round_polynomials
-      for (const auto& round_poly : m_round_polynomials) {
-        size += sizeof(size_t); // nested vector size
-        size += round_poly.size() * sizeof(S);
-      }
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const override
-    {
-      size_t nof_round_polynomials = m_round_polynomials.size();
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &nof_round_polynomials, sizeof(size_t)));
-      for (const auto& round_poly : m_round_polynomials) {
-        size_t round_poly_size = round_poly.size();
-        ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &round_poly_size, sizeof(size_t)));
-        ICICLE_CHECK_IF_RETURN(
-          memcpy_shift_destination(buffer, buffer_length, round_poly.data(), round_poly_size * sizeof(S)));
-      }
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
-    {
-      size_t nof_round_polynomials;
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_round_polynomials, buffer_length, buffer, sizeof(size_t)));
-
-      m_round_polynomials.resize(nof_round_polynomials);
-      for (size_t i = 0; i < nof_round_polynomials; ++i) {
-        size_t round_poly_size;
-        ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&round_poly_size, buffer_length, buffer, sizeof(size_t)));
-
-        size_t byte_size = round_poly_size * sizeof(S);
-        m_round_polynomials[i].resize(round_poly_size);
-        ICICLE_CHECK_IF_RETURN(memcpy_shift_source(m_round_polynomials[i].data(), buffer_length, buffer, byte_size));
-      }
-
-      return eIcicleError::SUCCESS;
     }
   };
 

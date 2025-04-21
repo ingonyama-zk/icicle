@@ -7,7 +7,6 @@
 #include "icicle/backend/merkle/merkle_tree_backend.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/utils/log.h"
-#include "icicle/serialization.h"
 
 namespace icicle {
 
@@ -18,11 +17,16 @@ namespace icicle {
    */
 
   template <typename F>
-  class FriProof : public Serializable
+  class FriProof
   {
   public:
     // Constructor
     FriProof() : m_pow_nonce(0) {}
+
+    FriProof(std::vector<std::vector<MerkleProof>> query_proofs, std::vector<F> final_poly, uint64_t pow_nonce)
+        : m_query_proofs(std::move(query_proofs)), m_final_poly(std::move(final_poly)), m_pow_nonce(pow_nonce)
+    {
+    }
 
     /**
      * @brief Initialize the Merkle proofs and final polynomial storage for the FRI proof.
@@ -93,11 +97,19 @@ namespace icicle {
     }
 
     /**
+     * @brief Get the number of FRI queries in the proof.
+     *
+     * @return Number of FRI queries.
+     */
+    size_t get_nof_fri_queries() const { return m_query_proofs.size(); }
+
+    /**
      * @brief Get the number of FRI rounds in the proof.
      *
      * @return Number of FRI rounds.
      */
     size_t get_nof_fri_rounds() const { return m_query_proofs[0].size(); }
+
     /**
      * @brief Get the final poly size.
      *
@@ -105,81 +117,33 @@ namespace icicle {
      */
     size_t get_final_poly_size() const { return m_final_poly.size(); }
 
+    /**
+     * @brief Set the proof-of-work nonce.
+     *
+     * @param pow_nonce The proof-of-work nonce to set.
+     */
     void set_pow_nonce(uint64_t pow_nonce) { m_pow_nonce = pow_nonce; }
 
+    /**
+     * @brief Get the proof-of-work nonce.
+     *
+     * @return The current proof-of-work nonce.
+     */
     uint64_t get_pow_nonce() const { return m_pow_nonce; }
 
-    // get pointer to the final polynomial
+    /**
+     * @brief Get a mutable pointer to the final polynomial data.
+     *
+     * @return Pointer to the first element of the final polynomial.
+     */
     F* get_final_poly() { return m_final_poly.data(); }
+
+    /**
+     * @brief Get a const pointer to the final polynomial data.
+     *
+     * @return Const pointer to the first element of the final polynomial.
+     */
     const F* get_final_poly() const { return m_final_poly.data(); }
-
-    eIcicleError serialized_size(size_t& size) const override
-    {
-      size = sizeof(size_t); // nof_queries
-      for (const auto& query_proofs : m_query_proofs) {
-        size += sizeof(size_t); // nof_fri_rounds
-        for (const auto& proof : query_proofs) {
-          size_t proof_size = 0;
-          ICICLE_CHECK_IF_RETURN(proof.serialized_size(proof_size));
-          size += proof_size;
-        }
-      }
-      size += sizeof(size_t); // final_poly_size
-      size += m_final_poly.size() * sizeof(F);
-      size += sizeof(uint64_t); // pow_nonce
-
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError serialize(std::byte*& buffer, size_t& buffer_length) const override
-    {
-      size_t m_query_proofs_size = m_query_proofs.size();
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_query_proofs_size, sizeof(size_t)));
-      for (const std::vector<MerkleProof>& query_proofs : m_query_proofs) {
-        size_t query_proofs_size = query_proofs.size();
-        ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &query_proofs_size, sizeof(size_t)));
-        for (const MerkleProof& proof : query_proofs) {
-          ICICLE_CHECK_IF_RETURN(proof.serialize(buffer, buffer_length));
-        }
-      }
-      size_t final_poly_size = m_final_poly.size();
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &final_poly_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, m_final_poly.data(), final_poly_size * sizeof(F)));
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &m_pow_nonce, sizeof(uint64_t)));
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError deserialize(std::byte*& buffer, size_t& buffer_length) override
-    {
-      size_t min_required_length =
-        sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
-      if (buffer_length < min_required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: buffer_length < min_required_length: " << buffer_length << " < "
-                         << min_required_length;
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-      size_t nof_queries;
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_queries, buffer_length, buffer, sizeof(size_t)));
-      m_query_proofs.resize(nof_queries);
-      for (size_t i = 0; i < nof_queries; ++i) {
-        size_t nof_fri_rounds;
-        ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_fri_rounds, buffer_length, buffer, sizeof(size_t)));
-        m_query_proofs[i].resize(nof_fri_rounds);
-        for (size_t j = 0; j < nof_fri_rounds; ++j) {
-          ICICLE_CHECK_IF_RETURN(m_query_proofs[i][j].deserialize(buffer, buffer_length));
-        }
-      }
-
-      size_t final_poly_size;
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&final_poly_size, buffer_length, buffer, sizeof(size_t)));
-      m_final_poly.resize(final_poly_size);
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_source(m_final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
-
-      ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&m_pow_nonce, buffer_length, buffer, sizeof(uint64_t)));
-      return eIcicleError::SUCCESS;
-    }
 
   private:
     std::vector<std::vector<MerkleProof>>
