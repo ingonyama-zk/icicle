@@ -1,5 +1,5 @@
 use icicle_core::field::{Field, MontgomeryConvertibleField};
-use icicle_core::traits::{FieldConfig, FieldImpl, GenerateRandom};
+use icicle_core::traits::{FieldConfig, PrimeField, GenerateRandom};
 use icicle_core::{impl_field, impl_scalar_field};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;

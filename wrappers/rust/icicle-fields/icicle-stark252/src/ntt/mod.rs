@@ -17,7 +17,7 @@ pub(crate) mod tests {
 
     use icicle_core::{
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
-        traits::{FieldImpl, GenerateRandom},
+        traits::{PrimeField, GenerateRandom},
     };
     use icicle_runtime::memory::HostSlice;
     use lambdaworks_math::{
@@ -48,7 +48,7 @@ pub(crate) mod tests {
         for log_size in log_sizes {
             let ntt_size = 1 << log_size;
 
-            let mut scalars: Vec<ScalarField> = <ScalarField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut scalars: Vec<ScalarField> = <ScalarField as PrimeField>::Config::generate_random(ntt_size);
             let scalars_lw: Vec<FE> = scalars
                 .iter()
                 .map(|x| FieldElement::from_bytes_le(&x.to_bytes_le()).unwrap())

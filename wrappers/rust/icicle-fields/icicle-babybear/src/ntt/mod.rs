@@ -26,7 +26,7 @@ pub(crate) mod tests {
     use super::ExtensionField;
     use icicle_core::{
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
-        traits::{FieldImpl, GenerateRandom},
+        traits::{GenerateRandom, PrimeField},
     };
     use icicle_runtime::memory::HostSlice;
     use risc0_core::field::{
@@ -49,7 +49,7 @@ pub(crate) mod tests {
         for log_size in log_sizes {
             let ntt_size = 1 << log_size;
 
-            let mut scalars: Vec<ScalarField> = <ScalarField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut scalars: Vec<ScalarField> = <ScalarField as PrimeField>::Config::generate_random(ntt_size);
             let mut scalars_risc0: Vec<Elem> = scalars
                 .iter()
                 .map(|x| Elem::new(Into::<[u32; 1]>::into(*x)[0]))
@@ -68,7 +68,8 @@ pub(crate) mod tests {
                 assert_eq!(Into::<[u32; 1]>::into(*s1)[0], s2.as_u32());
             }
 
-            let mut ext_scalars: Vec<ExtensionField> = <ExtensionField as FieldImpl>::Config::generate_random(ntt_size);
+            let mut ext_scalars: Vec<ExtensionField> =
+                <ExtensionField as PrimeField>::Config::generate_random(ntt_size);
             let mut ext_scalars_risc0: Vec<ExtElem> = ext_scalars
                 .iter()
                 .map(|x| ExtElem::from_u32_words(&Into::<[u32; 4]>::into(*x)[..]))

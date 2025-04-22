@@ -5,12 +5,11 @@ use crate::curve::*;
 use crate::{
     ecntt::*,
     ntt::{NTTConfig, NTTDir, Ordering},
-    traits::FieldImpl,
 };
 
 pub fn check_ecntt<C: Curve>()
 where
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    C::ScalarField: ECNTT<C>,
 {
     let test_sizes = [1 << 4, 1 << 9, 1 << 11];
     for test_size in test_sizes {
@@ -57,7 +56,7 @@ where
 
 pub fn check_ecntt_batch<C: Curve>()
 where
-    <C::ScalarField as FieldImpl>::Config: ECNTT<C>,
+    C::ScalarField: ECNTT<C>,
 {
     test_utilities::test_set_main_device();
 

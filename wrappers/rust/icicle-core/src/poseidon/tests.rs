@@ -1,15 +1,16 @@
 use crate::{
+    field::PrimeField,
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     poseidon::{Poseidon, PoseidonHasher},
-    traits::{FieldImpl, GenerateRandom},
+    traits::GenerateRandom,
 };
 use icicle_runtime::{errors::eIcicleError, memory::HostSlice, test_utilities};
 use std::mem;
 
-pub fn check_poseidon_hash<F: FieldImpl>()
+pub fn check_poseidon_hash<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+    F: PoseidonHasher + GenerateRandom,
 {
     let batch = 1 << 4;
     let domain_tag = F::Config::generate_random(1)[0];
@@ -50,9 +51,9 @@ where
     }
 }
 
-pub fn check_poseidon_hash_sponge<F: FieldImpl>()
+pub fn check_poseidon_hash_sponge<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+    F: PoseidonHasher + GenerateRandom,
 {
     for t in [3, 5, 9, 12] {
         let inputs: Vec<F> = F::Config::generate_random(t * 8 - 2);
@@ -83,9 +84,9 @@ where
     }
 }
 
-pub fn check_poseidon_hash_multi_device<F: FieldImpl>()
+pub fn check_poseidon_hash_multi_device<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F> + GenerateRandom<F>,
+    F: PoseidonHasher + GenerateRandom,
 {
     let t = 9; // t=9 is for Poseidon9 hash (t is the paper's terminology)
     let inputs: Vec<F> = F::Config::generate_random(t);
@@ -132,9 +133,9 @@ where
     assert_eq!(outputs_ref, outputs_main_0);
 }
 
-pub fn check_poseidon_tree<F: FieldImpl>()
+pub fn check_poseidon_tree<F: PrimeField>()
 where
-    <F as FieldImpl>::Config: PoseidonHasher<F>,
+    F: PoseidonHasher,
 {
     let t = 9;
     let nof_layers = 4;

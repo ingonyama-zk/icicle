@@ -1,11 +1,12 @@
-use crate::traits::{FieldImpl, MontgomeryConvertible};
+use crate::field::PrimeField;
+use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
 
 pub trait Curve: Debug + PartialEq + Copy + Clone {
-    type BaseField: FieldImpl;
-    type ScalarField: FieldImpl;
+    type BaseField: PrimeField;
+    type ScalarField: PrimeField + MontgomeryConvertible + GenerateRandom;
 
     #[doc(hidden)]
     fn eq_proj(point1: *const Projective<Self>, point2: *const Projective<Self>) -> bool;
@@ -64,7 +65,7 @@ impl<C: Curve> Affine<C> {
         }
     }
 
-    pub fn from_limbs(x: <C::BaseField as FieldImpl>::Repr, y: <C::BaseField as FieldImpl>::Repr) -> Self {
+    pub fn from_limbs(x: <C::BaseField as PrimeField>::Repr, y: <C::BaseField as PrimeField>::Repr) -> Self {
         Affine {
             x: C::BaseField::from(x),
             y: C::BaseField::from(y),
@@ -107,9 +108,9 @@ impl<C: Curve> Projective<C> {
     }
 
     pub fn from_limbs(
-        x: <C::BaseField as FieldImpl>::Repr,
-        y: <C::BaseField as FieldImpl>::Repr,
-        z: <C::BaseField as FieldImpl>::Repr,
+        x: <C::BaseField as PrimeField>::Repr,
+        y: <C::BaseField as PrimeField>::Repr,
+        z: <C::BaseField as PrimeField>::Repr,
     ) -> Self {
         Projective {
             x: C::BaseField::from(x),
@@ -381,7 +382,7 @@ macro_rules! impl_curve_tests {
             #[test]
             fn test_point_equality() {
                 initialize();
-                check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as FieldImpl>::Config, $curve>()
+                check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as PrimeField>::Config, $curve>()
             }
 
             #[test]

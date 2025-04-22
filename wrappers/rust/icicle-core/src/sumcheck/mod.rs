@@ -1,10 +1,10 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::field::FieldArithmetic;
+use crate::field::PrimeField;
 use crate::hash::Hasher;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
+use crate::traits::{Arithmetic, GenerateRandom};
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -83,7 +83,7 @@ pub struct FFISumcheckTranscriptConfig<F> {
 
 impl<'a, F> From<&SumcheckTranscriptConfig<'a, F>> for FFISumcheckTranscriptConfig<F>
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     fn from(config: &SumcheckTranscriptConfig<'a, F>) -> Self {
         FFISumcheckTranscriptConfig {
@@ -146,8 +146,7 @@ impl Default for SumcheckConfig {
 
 /// Trait for Sumcheck operations, including proving and verification.
 pub trait Sumcheck {
-    type Field: FieldImpl + Arithmetic;
-    type FieldConfig: FieldConfig + GenerateRandom<Self::Field> + FieldArithmetic<Self::Field>;
+    type Field: PrimeField + Arithmetic;
     type Proof: SumcheckProofOps<Self::Field>;
 
     fn new() -> Result<Self, eIcicleError>
@@ -174,7 +173,7 @@ pub trait Sumcheck {
 
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>>
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     fn get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
     fn print(&self) -> eIcicleError;
@@ -189,7 +188,7 @@ macro_rules! impl_sumcheck {
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
-        use icicle_core::traits::{FieldImpl, Handle};
+        use icicle_core::traits::{Handle, PrimeField};
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;

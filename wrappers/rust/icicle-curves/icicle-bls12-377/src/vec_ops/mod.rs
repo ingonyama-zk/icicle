@@ -8,7 +8,7 @@ use icicle_core::{
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
 use icicle_core::program::Program;
-use icicle_core::traits::FieldImpl;
+use icicle_core::traits::PrimeField;
 
 impl_vec_ops_field!("bls12_377", bls12_377, ScalarField, ScalarCfg);
 #[cfg(feature = "bw6-761")]

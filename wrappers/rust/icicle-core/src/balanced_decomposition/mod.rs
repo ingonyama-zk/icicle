@@ -1,4 +1,4 @@
-use crate::{traits::FieldImpl, vec_ops::VecOpsConfig};
+use crate::{field::PrimeField, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
@@ -8,7 +8,7 @@ pub mod tests;
 /// This trait allows elements in a finite field/ring to be decomposed into a sequence of
 /// digits in a balanced base-b representation (digits in the range [-b/2, b/2)),
 /// and later recomposed back into the original field element.
-pub trait BalancedDecomposition<T: FieldImpl> {
+pub trait BalancedDecomposition: PrimeField {
     /// Computes the number of balanced base-b digits required to represent a field element.
     fn count_digits(base: u32) -> u32;
 
@@ -16,8 +16,8 @@ pub trait BalancedDecomposition<T: FieldImpl> {
     ///
     /// The output buffer must have length `input.len() * count_digits(base)`.
     fn decompose(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         base: u32,
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
@@ -26,43 +26,34 @@ pub trait BalancedDecomposition<T: FieldImpl> {
     ///
     /// The input buffer must have length `output.len() * count_digits(base)`.
     fn recompose(
-        input: &(impl HostOrDeviceSlice<T> + ?Sized),
-        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        input: &(impl HostOrDeviceSlice<Self> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
         base: u32,
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 }
 
 // Public floating functions around the trait
-pub fn count_digits<T: FieldImpl>(base: u32) -> u32
-where
-    T::Config: BalancedDecomposition<T>,
-{
-    T::Config::count_digits(base)
+pub fn count_digits<T: PrimeField + BalancedDecomposition>(base: u32) -> u32 {
+    T::count_digits(base)
 }
 
-pub fn decompose<T: FieldImpl>(
+pub fn decompose<T: PrimeField + BalancedDecomposition>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    T::Config: BalancedDecomposition<T>,
-{
-    T::Config::decompose(input, output, base, cfg)
+) -> Result<(), eIcicleError> {
+    T::decompose(input, output, base, cfg)
 }
 
-pub fn recompose<T: FieldImpl>(
+pub fn recompose<T: PrimeField + BalancedDecomposition>(
     input: &(impl HostOrDeviceSlice<T> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     base: u32,
     cfg: &VecOpsConfig,
-) -> Result<(), eIcicleError>
-where
-    T::Config: BalancedDecomposition<T>,
-{
-    T::Config::recompose(input, output, base, cfg)
+) -> Result<(), eIcicleError> {
+    T::recompose(input, output, base, cfg)
 }
 
 /// Internal macro to implement the `BalancedDecomposition` trait for a specific field backend.
@@ -131,7 +122,7 @@ macro_rules! impl_balanced_decomposition {
             Ok(())
         }
 
-        impl BalancedDecomposition<$field_type> for $field_cfg_type {
+        impl BalancedDecomposition for $field_type {
             fn count_digits(base: u32) -> u32 {
                 unsafe { balanced_decomposition_nof_digits(base) }
             }
