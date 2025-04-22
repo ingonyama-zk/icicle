@@ -2,10 +2,11 @@ use icicle_runtime::eIcicleError;
 
 use crate::{
     merkle::MerkleProofData,
-    traits::{FieldImpl, Handle, Serialization},
+    traits::{FieldImpl, Handle},
 };
+use serde::{de::DeserializeOwned, Serialize};
 
-pub trait FriProofTrait<F: FieldImpl>: Sized + Handle + Serialization
+pub trait FriProofTrait<F: FieldImpl>: Sized + Handle + Serialize + DeserializeOwned
 where
     F: FieldImpl,
 {
@@ -39,8 +40,10 @@ macro_rules! impl_fri_proof {
         use icicle_core::{
             fri::fri_proof::FriProofTrait,
             merkle::{MerkleProof, MerkleProofData, MerkleProofHandle},
-            traits::{Handle, Serialization},
+            traits::Handle,
         };
+        use serde::de::{self, Visitor};
+        use serde::{Deserialize, Deserializer, Serialize, Serializer};
         use std::{ffi::c_void, mem::ManuallyDrop, slice};
 
         pub type FriProofHandle = *const c_void;
@@ -91,20 +94,6 @@ macro_rules! impl_fri_proof {
 
             #[link_name = concat!($field_prefix, "_fri_proof_deserialize")]
             fn fri_proof_deserialize(handle: *mut FriProofHandle, buffer: *const u8, size: usize) -> eIcicleError;
-
-            #[link_name = concat!($field_prefix, "_fri_proof_serialize_to_file")]
-            fn fri_proof_serialize_to_file(
-                handle: FriProofHandle,
-                filename: *const u8,
-                filename_len: usize,
-            ) -> eIcicleError;
-
-            #[link_name = concat!($field_prefix, "_fri_proof_deserialize_from_file")]
-            fn fri_proof_deserialize_from_file(
-                handle: *mut FriProofHandle,
-                filename: *const u8,
-                filename_len: usize,
-            ) -> eIcicleError;
         }
 
         pub struct FriProof {
@@ -224,32 +213,65 @@ macro_rules! impl_fri_proof {
             }
         }
 
-        impl Serialization for FriProof {
-            fn get_serialized_size(&self) -> Result<usize, eIcicleError> {
-                let mut size: usize = 0;
-                unsafe { fri_proof_get_serialized_size(self.handle, &mut size).wrap_value(size) }
-            }
-
-            fn serialize(&self) -> Result<Vec<u8>, eIcicleError> {
-                let mut buffer: Vec<u8> = vec![0; self.get_serialized_size()?];
-                unsafe { fri_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len()).wrap_value(buffer) }
-            }
-
-            fn deserialize(buffer: &[u8]) -> Result<Self, eIcicleError> {
-                let mut handle: FriProofHandle = std::ptr::null();
-                unsafe { fri_proof_deserialize(&mut handle, buffer.as_ptr(), buffer.len()).wrap_value(Self { handle }) }
-            }
-
-            fn serialize_to_file(&self, filename: &str) -> Result<(), eIcicleError> {
-                unsafe { fri_proof_serialize_to_file(self.handle, filename.as_ptr(), filename.len()).wrap() }
-            }
-
-            fn deserialize_from_file(filename: &str) -> Result<Self, eIcicleError> {
-                let mut handle: FriProofHandle = std::ptr::null();
+        impl Serialize for FriProof {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let mut size = 0;
                 unsafe {
-                    fri_proof_deserialize_from_file(&mut handle, filename.as_ptr(), filename.len())
-                        .wrap_value(Self { handle })
+                    fri_proof_get_serialized_size(self.handle, &mut size)
+                        .wrap_value(size)
+                        .map_err(serde::ser::Error::custom)?;
+                    let mut buffer = vec![0u8; size];
+                    fri_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
+                        .wrap()
+                        .map_err(serde::ser::Error::custom)?;
+                    serializer.serialize_bytes(&buffer)
                 }
+            }
+        }
+        impl<'de> Deserialize<'de> for FriProof {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FriProofVisitor;
+
+                impl<'de> Visitor<'de> for FriProofVisitor {
+                    type Value = FriProof;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter.write_str("a byte array representing a FriProof")
+                    }
+
+                    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+                    where
+                        E: de::Error,
+                    {
+                        let mut handle = std::ptr::null();
+                        unsafe {
+                            fri_proof_deserialize(&mut handle, v.as_ptr(), v.len())
+                                .wrap_value(FriProof { handle })
+                                .map_err(de::Error::custom)
+                        }
+                    }
+                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                    where
+                        A: serde::de::SeqAccess<'de>,
+                    {
+                        let mut buffer = Vec::with_capacity(
+                            seq.size_hint()
+                                .unwrap_or(0),
+                        );
+                        while let Some(byte) = seq.next_element::<u8>()? {
+                            buffer.push(byte);
+                        }
+                        self.visit_bytes(&buffer)
+                    }
+                }
+
+                deserializer.deserialize_bytes(FriProofVisitor)
             }
         }
     };

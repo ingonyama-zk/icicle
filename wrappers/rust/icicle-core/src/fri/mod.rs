@@ -283,10 +283,12 @@ macro_rules! impl_fri_tests {
                 let merkle_tree_leaves_hash = Keccak256::new(std::mem::size_of::<$field>() as u64).unwrap();
                 let merkle_tree_compress_hash = Keccak256::new(2 * merkle_tree_leaves_hash.output_size()).unwrap();
                 let transcript_hash = Keccak256::new(0).unwrap();
-                check_fri_proof_serialization::<$field>(
+                check_fri_proof_serialization::<$field, _, _, String>(
                     &merkle_tree_leaves_hash,
                     &merkle_tree_compress_hash,
                     &transcript_hash,
+                    |fri_proof| serde_json::to_string(fri_proof).unwrap(),
+                    |s| serde_json::from_str(&s).unwrap(),
                 );
             }
         }

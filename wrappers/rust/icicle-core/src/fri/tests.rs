@@ -5,7 +5,7 @@ use crate::{
         fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof,
     },
     hash::Hasher,
-    traits::{FieldImpl, GenerateRandom, Serialization},
+    traits::{FieldImpl, GenerateRandom},
 };
 use icicle_runtime::{memory::DeviceVec, stream::IcicleStream};
 use icicle_runtime::{memory::HostSlice, test_utilities};
@@ -84,7 +84,9 @@ pub fn check_fri_on_device<F: FieldImpl>(
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
-        stream.synchronize().unwrap();
+        stream
+            .synchronize()
+            .unwrap();
 
         let query_proofs = fri_proof
             .get_query_proofs::<u8>()
@@ -105,7 +107,9 @@ pub fn check_fri_on_device<F: FieldImpl>(
             &merkle_tree_compress_hash,
         )
         .unwrap();
-        stream.synchronize().unwrap();
+        stream
+            .synchronize()
+            .unwrap();
 
         assert!(valid);
     };
@@ -115,12 +119,16 @@ pub fn check_fri_on_device<F: FieldImpl>(
     check();
 }
 
-pub fn check_fri_proof_serialization<F: FieldImpl>(
+pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     transcript_hash: &Hasher,
+    serialize: S,
+    deserialize: D,
 ) where
     <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
+    S: Fn(&FriProof<F>) -> T,
+    D: Fn(&T) -> FriProof<F>,
 {
     const SIZE: u64 = 1 << 10;
     let fri_config = FriConfig::default();
@@ -145,19 +153,10 @@ pub fn check_fri_proof_serialization<F: FieldImpl>(
     )
     .unwrap();
 
-    let fri_proof_serialized = fri_proof
-        .serialize()
-        .unwrap();
-    let fri_proof_deserialized = FriProof::<F>::deserialize(&fri_proof_serialized).unwrap();
+    let fri_proof_serialized = serialize(&fri_proof);
+    let fri_proof_deserialized = deserialize(&fri_proof_serialized);
 
-    fri_proof
-        .serialize_to_file("fri_proof.bin")
-        .unwrap();
-    let fri_proof_deserialized_from_file: FriProof<F> = FriProof::<F>::deserialize_from_file("fri_proof.bin").unwrap();
     let merkle_proofs = fri_proof
-        .get_query_proofs::<u8>()
-        .unwrap();
-    let merkle_proofs_deserialized_from_file = fri_proof_deserialized_from_file
         .get_query_proofs::<u8>()
         .unwrap();
     let merkle_proofs_deserialized = fri_proof_deserialized
@@ -167,34 +166,18 @@ pub fn check_fri_proof_serialization<F: FieldImpl>(
         for j in 0..merkle_proofs[i].len() {
             let pruned = merkle_proofs[i][j].is_pruned;
             let pruned_deserialized = merkle_proofs_deserialized[i][j].is_pruned;
-            let pruned_deserialized_from_file = merkle_proofs_deserialized_from_file[i][j].is_pruned;
             assert_eq!(pruned, pruned_deserialized);
-            assert_eq!(pruned, pruned_deserialized_from_file);
             let path = &merkle_proofs[i][j].path;
             let path_deserialized = &merkle_proofs_deserialized[i][j].path;
-            let path_deserialized_from_file = &merkle_proofs_deserialized_from_file[i][j].path;
             assert_eq!(path, path_deserialized);
-            assert_eq!(path, path_deserialized_from_file);
             let root = &merkle_proofs[i][j].root;
             let root_deserialized = &merkle_proofs_deserialized[i][j].root;
-            let root_deserialized_from_file = &merkle_proofs_deserialized_from_file[i][j].root;
             assert_eq!(root, root_deserialized);
-            assert_eq!(root, root_deserialized_from_file);
             let leaf = &merkle_proofs[i][j].leaf;
             let leaf_deserialized = &merkle_proofs_deserialized[i][j].leaf;
-            let leaf_deserialized_from_file = &merkle_proofs_deserialized_from_file[i][j].leaf;
             assert_eq!(leaf, leaf_deserialized);
-            assert_eq!(leaf, leaf_deserialized_from_file);
         }
     }
     assert_eq!(fri_proof.get_final_poly(), fri_proof_deserialized.get_final_poly());
-    assert_eq!(
-        fri_proof.get_final_poly(),
-        fri_proof_deserialized_from_file.get_final_poly()
-    );
     assert_eq!(fri_proof.get_pow_nonce(), fri_proof_deserialized.get_pow_nonce());
-    assert_eq!(
-        fri_proof.get_pow_nonce(),
-        fri_proof_deserialized_from_file.get_pow_nonce()
-    );
 }

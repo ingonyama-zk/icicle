@@ -4,7 +4,7 @@ use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTransc
 use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::Serialize;
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
 
