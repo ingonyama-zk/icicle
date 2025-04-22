@@ -75,8 +75,7 @@ namespace icicle {
       size_t final_poly_size;
       ICICLE_RETURN_IF_ERR(memcpy_shift_source(&final_poly_size, buffer_length, buffer, sizeof(size_t)));
       final_poly.resize(final_poly_size);
-      ICICLE_RETURN_IF_ERR(
-        memcpy_shift_source(final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
+      ICICLE_RETURN_IF_ERR(memcpy_shift_source(final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
 
       ICICLE_RETURN_IF_ERR(memcpy_shift_source(&pow_nonce, buffer_length, buffer, sizeof(uint64_t)));
       FriProof<F> proof = FriProof<F>(std::move(query_proofs), std::move(final_poly), pow_nonce);
