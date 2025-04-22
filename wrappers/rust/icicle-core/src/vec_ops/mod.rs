@@ -1073,9 +1073,73 @@ macro_rules! impl_vec_ops_tests {
             }
 
             #[test]
-            pub fn test_vec_ops_scalars() {
+            pub fn test_vec_ops_scalars_add() {
                 initialize();
-                check_vec_ops_scalars::<$field>()
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_add::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sub() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sub::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_mul() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_mul::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_div() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_div::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sum() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sum::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_product() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_product::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_add_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_add_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sub_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sub_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_mul_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_mul_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_accumulate() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_accumulate::<$field>(test_size);
             }
 
             #[test]
