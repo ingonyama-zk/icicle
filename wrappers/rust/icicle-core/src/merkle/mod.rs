@@ -134,9 +134,9 @@ impl MerkleProof {
     pub fn create_with_data<T>(
         is_pruned: bool,
         leaf_idx: u64,
-        leaf: &[T],
-        root: &[T],
-        path: &[T],
+        leaf: Vec<T>,
+        root: Vec<T>,
+        path: Vec<T>,
     ) -> Result<Self, eIcicleError> {
         let leaf_bytes = unsafe { slice::from_raw_parts(leaf.as_ptr() as *const u8, leaf.len() * mem::size_of::<T>()) };
         let root_bytes = unsafe { slice::from_raw_parts(root.as_ptr() as *const u8, root.len() * mem::size_of::<T>()) };
@@ -286,10 +286,19 @@ impl Handle for MerkleProof {
     }
 }
 
-impl<T> TryFrom<MerkleProofData<T>> for MerkleProof {
+impl<T: Clone> TryFrom<MerkleProofData<T>> for MerkleProof {
     type Error = eIcicleError;
     fn try_from(data: MerkleProofData<T>) -> Result<Self, Self::Error> {
-        Self::create_with_data(data.is_pruned, data.leaf_idx, &data.leaf, &data.root, &data.path)
+        Self::create_with_data(
+            data.is_pruned,
+            data.leaf_idx,
+            data.leaf
+                .to_vec(),
+            data.root
+                .to_vec(),
+            data.path
+                .to_vec(),
+        )
     }
 }
 
