@@ -1,10 +1,14 @@
 use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use crate::traits::{FieldImpl, GenerateRandom, Serialization};
+use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::{from_str, to_string};
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
+
 pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
 where
     <F as FieldImpl>::Config: GenerateRandom<F>,
@@ -287,6 +291,7 @@ pub fn check_sumcheck_proof_serialization<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
     P: ReturningValueProgram,
+    SW::Proof: Serialize + DeserializeOwned,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -352,28 +357,16 @@ where
 
     let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
 
-    let filename = "proof.bin";
-    proof_as_sumcheck_proof
-        .serialize_to_file(filename)
-        .unwrap();
-    let proof_as_sumcheck_proof_deserialized_from_file =
-        <SW as Sumcheck>::Proof::deserialize_from_file(filename).unwrap();
+    // === Serialize ===
+    let serialized_proof = to_string(&proof_as_sumcheck_proof).unwrap();
+    let deserialized_proof: SW::Proof = from_str(&serialized_proof).unwrap();
+
     let round_polys_original = proof_as_sumcheck_proof
         .get_round_polys()
         .unwrap();
-    let round_polys_deserialized_from_file = proof_as_sumcheck_proof_deserialized_from_file
+    let round_polys_deserialized = deserialized_proof
         .get_round_polys()
         .unwrap();
-    let serialized_round_polys = proof_as_sumcheck_proof
-        .serialize()
-        .unwrap();
-    let proof_as_sumcheck_proof_deserialized = <SW as Sumcheck>::Proof::deserialize(&serialized_round_polys).unwrap();
-    let round_polys_deserialized = proof_as_sumcheck_proof_deserialized
-        .get_round_polys()
-        .unwrap();
-    proof_as_sumcheck_proof.print();
-    proof_as_sumcheck_proof_deserialized.print();
-    proof_as_sumcheck_proof_deserialized_from_file.print();
+
     assert_eq!(round_polys_original, round_polys_deserialized);
-    assert_eq!(round_polys_original, round_polys_deserialized_from_file);
 }

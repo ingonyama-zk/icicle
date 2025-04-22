@@ -132,7 +132,7 @@ namespace icicle {
         ICICLE_CHECK_IF_RETURN(memcpy_shift_source(round_polynomials[i].data(), buffer_length, buffer, byte_size));
       }
 
-      obj = new SumcheckProof<S>(std::move(round_polynomials));
+      obj = new SumcheckProof<S>(std::move(round_polynomials)); //TODO: move assigment
       return eIcicleError::SUCCESS;
     }
   };
