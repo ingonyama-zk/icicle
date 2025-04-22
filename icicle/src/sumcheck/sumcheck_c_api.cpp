@@ -310,7 +310,6 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
     ICICLE_LOG_ERROR << "buffer is too small — cannot serialize SumcheckProof";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  BinarySerializer<SumcheckProof<scalar_t>>::serialize_to_file("sumcheck_proof.bin", *sumcheck_proof_handle);
   return BinarySerializer<SumcheckProof<scalar_t>>::serialize(buffer, size, *sumcheck_proof_handle);
 }
 
@@ -332,6 +331,7 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(
     ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer.";
     return eIcicleError::INVALID_POINTER;
   }
+  *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
   return BinarySerializer<SumcheckProof<scalar_t>>::deserialize(buffer, size, *sumcheck_proof_handle);
 }
 

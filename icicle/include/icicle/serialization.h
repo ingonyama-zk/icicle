@@ -43,7 +43,7 @@ namespace icicle {
   struct BinarySerializer {
     static eIcicleError serialized_size(const T& obj, size_t& size);
     static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const T& obj);
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, T*& obj);
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, T* obj);
   };
 
   template <typename T>
@@ -58,7 +58,7 @@ namespace icicle {
       return BinarySerializer<T>::pack_and_advance(buffer, buffer_length, obj);
     }
 
-    static eIcicleError deserialize(std::byte* buffer, size_t buffer_length, T*& obj) {
+    static eIcicleError deserialize(std::byte* buffer, size_t buffer_length, T* obj) {
       return BinarySerializer<T>::unpack_and_advance(buffer, buffer_length, obj);
     }
 
@@ -76,7 +76,7 @@ namespace icicle {
       return eIcicleError::SUCCESS;
     }
 
-    static eIcicleError deserialize_from_file(const std::string& path, T*& obj)
+    static eIcicleError deserialize_from_file(const std::string& path, T* obj)
     {
       std::ifstream file(path, std::ios::binary | std::ios::ate);
       if (!file.is_open()) { return eIcicleError::INVALID_ARGUMENT; }
@@ -117,7 +117,7 @@ namespace icicle {
       }
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, SumcheckProof<S>*& obj) {
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, SumcheckProof<S>* obj) {
       size_t nof_round_polynomials;
       std::vector<std::vector<S>> round_polynomials;
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_round_polynomials, buffer_length, buffer, sizeof(size_t)));
@@ -132,7 +132,8 @@ namespace icicle {
         ICICLE_CHECK_IF_RETURN(memcpy_shift_source(round_polynomials[i].data(), buffer_length, buffer, byte_size));
       }
 
-      obj = new SumcheckProof<S>(std::move(round_polynomials)); //TODO: move assigment
+      SumcheckProof<S> proof = SumcheckProof<S>(std::move(round_polynomials));
+      *obj = std::move(proof);
       return eIcicleError::SUCCESS;
     }
   };
@@ -176,7 +177,7 @@ namespace icicle {
 
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, MerkleProof*& obj) {
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, MerkleProof* obj) {
       bool pruned;
       int64_t leaf_idx;
       std::vector<std::byte> leaf;
@@ -201,7 +202,8 @@ namespace icicle {
       path.resize(path_size);
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(path.data(), buffer_length, buffer, path_size * sizeof(std::byte)));
 
-      obj = new MerkleProof(pruned, leaf_idx, std::move(leaf), std::move(root), std::move(path));
+      MerkleProof proof = MerkleProof(pruned, leaf_idx, std::move(leaf), std::move(root), std::move(path));
+      *obj = std::move(proof);
 
       return eIcicleError::SUCCESS;
     }
@@ -247,7 +249,7 @@ namespace icicle {
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &pow_nonce, sizeof(uint64_t)));
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, FriProof<F>*& obj) {
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, FriProof<F>* obj) {
       size_t min_required_length =
         sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
       if (buffer_length < min_required_length) {
@@ -278,7 +280,8 @@ namespace icicle {
         memcpy_shift_source(final_poly.data(), buffer_length, buffer, final_poly_size * sizeof(F)));
 
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&pow_nonce, buffer_length, buffer, sizeof(uint64_t)));
-      obj = new FriProof<F>(std::move(query_proofs), std::move(final_poly), pow_nonce);
+      FriProof<F> proof = FriProof<F>(std::move(query_proofs), std::move(final_poly), pow_nonce);
+      *obj = std::move(proof);
       return eIcicleError::SUCCESS;
     }
   };

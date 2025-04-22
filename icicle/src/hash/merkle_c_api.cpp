@@ -210,7 +210,7 @@ eIcicleError icicle_merkle_proof_deserialize(MerkleProofHandle* proof, std::byte
     ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer or size is 0.";
     return eIcicleError::INVALID_POINTER;
   }
-
+  *proof = new icicle::MerkleProof();
   return icicle::BinarySerializer<icicle::MerkleProof>::deserialize(buffer, size, *proof);
 }
 

@@ -25,6 +25,18 @@ namespace icicle {
     // Constructor for a verifier to use given a prover's proof
     SumcheckProof(std::vector<std::vector<S>> polys) : m_round_polynomials(polys) {}
 
+    // Move constructor
+    SumcheckProof(SumcheckProof&& other) noexcept
+    : m_round_polynomials(std::move(other.m_round_polynomials)) {}
+
+    // Move assignment operator
+    SumcheckProof& operator=(SumcheckProof&& other) noexcept {
+      if (this != &other) {
+        m_round_polynomials = std::move(other.m_round_polynomials);
+      }
+      return *this;
+    }
+
     // Init the round polynomial values for the problem
     void init(int nof_round_polynomials, int round_polynomial_degree)
     {

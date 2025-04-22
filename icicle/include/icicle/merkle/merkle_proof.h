@@ -45,6 +45,27 @@ namespace icicle {
     {
     }
 
+    // Copy constructor
+    MerkleProof(const MerkleProof& other) {
+        m_pruned = other.m_pruned;
+        m_leaf_index = other.m_leaf_index;
+        m_leaf = other.m_leaf;
+        m_root = other.m_root;
+        m_path = other.m_path;
+    }
+
+    // Move assignment operator
+    MerkleProof& operator=(MerkleProof&& other) noexcept {
+      if (this != &other) {
+        m_pruned = other.m_pruned;
+        m_leaf_index = other.m_leaf_index;
+        m_leaf = std::move(other.m_leaf);
+        m_root = std::move(other.m_root);
+        m_path = std::move(other.m_path);
+      }
+      return *this;
+    }
+
     /**
      * @brief Allocates memory for the Merkle proof and copies the leaf and root data.
      *
