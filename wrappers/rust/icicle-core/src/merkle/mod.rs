@@ -115,16 +115,6 @@ extern "C" {
     fn icicle_merkle_proof_get_serialized_size(proof: MerkleProofHandle, out_size: *mut usize) -> eIcicleError;
     fn icicle_merkle_proof_serialize(proof: MerkleProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
     fn icicle_merkle_proof_deserialize(proof: *mut MerkleProofHandle, buffer: *const u8, size: usize) -> eIcicleError;
-    fn icicle_merkle_proof_serialize_to_file(
-        proof: MerkleProofHandle,
-        filename: *const u8,
-        filename_len: usize,
-    ) -> eIcicleError;
-    fn icicle_merkle_proof_deserialize_from_file(
-        proof: *mut MerkleProofHandle,
-        filename: *const u8,
-        filename_len: usize,
-    ) -> eIcicleError;
 }
 
 impl MerkleProof {

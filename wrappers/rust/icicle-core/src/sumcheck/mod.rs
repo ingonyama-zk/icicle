@@ -265,20 +265,6 @@ macro_rules! impl_sumcheck {
                 buffer: *const u8,
                 size: usize,
             ) -> eIcicleError;
-
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize_to_file")]
-            fn icicle_sumcheck_proof_serialize_to_file(
-                handle: SumcheckProofHandle,
-                filename: *const u8,
-                filename_len: usize,
-            ) -> eIcicleError;
-
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize_from_file")]
-            fn icicle_sumcheck_proof_deserialize_from_file(
-                handle: *mut SumcheckProofHandle,
-                filename: *const u8,
-                filename_len: usize,
-            ) -> eIcicleError;
         }
 
         /***************** SumcheckWrapper *************************/
@@ -431,7 +417,6 @@ macro_rules! impl_sumcheck {
                     icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
                         .wrap()
                         .map_err(serde::ser::Error::custom)?;
-                    println!("Buffer length: {}", buffer.len());
                     serializer.serialize_bytes(&buffer)
                 }
             }
@@ -531,6 +516,7 @@ macro_rules! impl_sumcheck_tests {
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};
         use std::sync::Once;
+        use serde_json;
 
         const MAX_SIZE: u64 = 1 << 18;
         static INIT: Once = Once::new();
@@ -579,7 +565,7 @@ macro_rules! impl_sumcheck_tests {
             initialize();
             test_utilities::test_set_ref_device();
             let hash = Keccak256::new(0).unwrap();
-            check_sumcheck_proof_serialization::<SumcheckWrapper, Program>(&hash);
+            check_sumcheck_proof_serialization::<SumcheckWrapper, Program, _, _, String>(&hash, |proof| serde_json::to_string(proof).unwrap(), |s| serde_json::from_str(&s).unwrap(),);
         }
     };
 }

@@ -5,7 +5,6 @@ use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::{from_str, to_string};
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
 
@@ -287,11 +286,13 @@ where
     assert!(valid);
 }
 
-pub fn check_sumcheck_proof_serialization<SW, P>(hash: &Hasher)
+pub fn check_sumcheck_proof_serialization<SW, P, S, D, T>(hash: &Hasher, serialize: S, deserialize: D)
 where
     SW: Sumcheck,
     P: ReturningValueProgram,
     SW::Proof: Serialize + DeserializeOwned,
+    S: Fn(&SW::Proof) -> T,
+    D: Fn(&T) -> SW::Proof,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
@@ -358,8 +359,8 @@ where
     let proof_as_sumcheck_proof: <SW as Sumcheck>::Proof = <SW as Sumcheck>::Proof::from(proof_round_polys);
 
     // === Serialize ===
-    let serialized_proof = to_string(&proof_as_sumcheck_proof).unwrap();
-    let deserialized_proof: SW::Proof = from_str(&serialized_proof).unwrap();
+    let serialized_proof = serialize(&proof_as_sumcheck_proof);
+    let deserialized_proof: SW::Proof = deserialize(&serialized_proof);
 
     let round_polys_original = proof_as_sumcheck_proof
         .get_round_polys()

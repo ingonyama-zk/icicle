@@ -20,7 +20,8 @@
 
 #include "test_base.h"
 #include "icicle/utils/rand_gen.h"
-#include "icicle/serialization.h"
+#include "icicle/merkle/merkle_proof_serializer.h"
+
 using namespace icicle;
 
 static bool VERBOSE = true;
@@ -585,7 +586,7 @@ void test_merkle_tree(
     // Deserialize the proof
     MerkleProof deserialized_proof;
     ICICLE_CHECK(BinarySerializer<MerkleProof>::deserialize(
-      serialized_proof.data(), serialized_proof.size(), &deserialized_proof));
+      serialized_proof.data(), serialized_proof.size(), deserialized_proof));
 
     // Compare the original and deserialized proofs
     // Compare pruned
@@ -1817,4 +1818,3 @@ TEST_F(SumcheckTest, InitializeWithByteVector)
   EXPECT_EQ(config.get_seed_rng(), seed);
 }
 #endif // SUMCHECK
-       //
