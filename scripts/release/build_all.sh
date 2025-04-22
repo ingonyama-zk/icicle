@@ -34,15 +34,16 @@ docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu22-cuda122:latest &
 pid_ubuntu22_pull_image=$!
 docker pull ghcr.io/ingonyama-zk/icicle-release-ubuntu20-cuda122:latest &
 pid_ubuntu20_pull_image=$!
-docker pull ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122:latest &
-pid_ubi8_pull_image=$!
-docker pull ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122:latest &
-pid_ubi9_pull_image=$!
+### RHEL and CentOS libraries are not available due to dependency issues
+# docker pull ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122:latest &
+# pid_ubi8_pull_image=$!
+# docker pull ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122:latest &
+# pid_ubi9_pull_image=$!
 
 wait $pid_ubuntu22_pull_image
 wait $pid_ubuntu20_pull_image
-wait $pid_ubi8_pull_image
-wait $pid_ubi9_pull_image
+# wait $pid_ubi8_pull_image
+# wait $pid_ubi9_pull_image
 
 # Alternatively, build the images locally
 # echo "Building Docker images..."
@@ -81,27 +82,27 @@ docker run --rm --gpus all                  \
 pid_ubuntu20=$!
 
 # ubi 8 (rhel compatible)
-docker run --rm --gpus all                  \
-            -v ./icicle:/icicle             \
-            -v "$output_dir:/output"        \
-            -v ./scripts:/scripts           \
-            ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi8 cuda122 &
+# docker run --rm --gpus all                  \
+#             -v ./icicle:/icicle             \
+#             -v "$output_dir:/output"        \
+#             -v ./scripts:/scripts           \
+#             ghcr.io/ingonyama-zk/icicle-release-ubi8-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi8 cuda122 &
 
-pid_ubi8=$!
+# pid_ubi8=$!
 
 # ubi 9 (rhel compatible)
-docker run --rm --gpus all                  \
-            -v ./icicle:/icicle             \
-            -v "$output_dir:/output"        \
-            -v ./scripts:/scripts           \
-            ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122 &
+# docker run --rm --gpus all                  \
+#             -v ./icicle:/icicle             \
+#             -v "$output_dir:/output"        \
+#             -v ./scripts:/scripts           \
+#             ghcr.io/ingonyama-zk/icicle-release-ubi9-cuda122 bash /scripts/release/build_release_and_tar.sh icicle_$version ubi9 cuda122 &
 
-pid_ubi9=$!
+# pid_ubi9=$!
 
 # NOTE: After launching all builds in background tasks, we wait for all to complete
 # otherwise the script completes and the calling process (potentially github actions)
 # continues and may exit before the builds finish
 wait $pid_ubuntu22
 wait $pid_ubuntu20
-wait $pid_ubi8
-wait $pid_ubi9
+# wait $pid_ubi8
+# wait $pid_ubi9
