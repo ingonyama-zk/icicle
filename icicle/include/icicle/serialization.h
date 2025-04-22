@@ -9,33 +9,33 @@
 #include "merkle/merkle_proof.h"
 
 namespace icicle {
-    inline eIcicleError
-    memcpy_shift_destination(std::byte*& destination, size_t& remaining_length, const void* source, size_t copy_length)
-    {
-      if (remaining_length < copy_length) {
-        ICICLE_LOG_ERROR << "memcpy_shift_destination failed: remaining_length < copy_length: " << remaining_length
-                         << " < " << copy_length;
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-      std::memcpy(destination, source, copy_length);
-      destination += copy_length;
-      remaining_length -= copy_length;
-      return eIcicleError::SUCCESS;
+  inline eIcicleError
+  memcpy_shift_destination(std::byte*& destination, size_t& remaining_length, const void* source, size_t copy_length)
+  {
+    if (remaining_length < copy_length) {
+      ICICLE_LOG_ERROR << "memcpy_shift_destination failed: remaining_length < copy_length: " << remaining_length
+                       << " < " << copy_length;
+      return eIcicleError::INVALID_ARGUMENT;
     }
+    std::memcpy(destination, source, copy_length);
+    destination += copy_length;
+    remaining_length -= copy_length;
+    return eIcicleError::SUCCESS;
+  }
 
-    inline eIcicleError
-    memcpy_shift_source(void* destination, size_t& remaining_length, const std::byte*& source, size_t copy_length)
-    {
-      if (remaining_length < copy_length) {
-        ICICLE_LOG_ERROR << "memcpy_shift_source failed: remaining_length < copy_length: " << remaining_length << " < "
-                         << copy_length;
-        return eIcicleError::INVALID_ARGUMENT;
-      }
-      std::memcpy(destination, source, copy_length);
-      source += copy_length;
-      remaining_length -= copy_length;
-      return eIcicleError::SUCCESS;
+  inline eIcicleError
+  memcpy_shift_source(void* destination, size_t& remaining_length, const std::byte*& source, size_t copy_length)
+  {
+    if (remaining_length < copy_length) {
+      ICICLE_LOG_ERROR << "memcpy_shift_source failed: remaining_length < copy_length: " << remaining_length << " < "
+                       << copy_length;
+      return eIcicleError::INVALID_ARGUMENT;
     }
+    std::memcpy(destination, source, copy_length);
+    source += copy_length;
+    remaining_length -= copy_length;
+    return eIcicleError::SUCCESS;
+  }
 
   template <typename T>
   struct BinarySerializeImpl {
@@ -46,7 +46,8 @@ namespace icicle {
 
   template <typename T>
   struct BinarySerializer {
-    static eIcicleError serialized_size(const T& obj, size_t& size) {
+    static eIcicleError serialized_size(const T& obj, size_t& size)
+    {
       return BinarySerializeImpl<T>::serialized_size(obj, size);
     }
     static eIcicleError serialize(std::byte* buffer, size_t buffer_length, const T& obj)

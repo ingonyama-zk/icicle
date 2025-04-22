@@ -515,8 +515,8 @@ macro_rules! impl_sumcheck_tests {
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};
-        use std::sync::Once;
         use serde_json;
+        use std::sync::Once;
 
         const MAX_SIZE: u64 = 1 << 18;
         static INIT: Once = Once::new();
@@ -565,7 +565,11 @@ macro_rules! impl_sumcheck_tests {
             initialize();
             test_utilities::test_set_ref_device();
             let hash = Keccak256::new(0).unwrap();
-            check_sumcheck_proof_serialization::<SumcheckWrapper, Program, _, _, String>(&hash, |proof| serde_json::to_string(proof).unwrap(), |s| serde_json::from_str(&s).unwrap(),);
+            check_sumcheck_proof_serialization::<SumcheckWrapper, Program, _, _, String>(
+                &hash,
+                |proof| serde_json::to_string(proof).unwrap(),
+                |s| serde_json::from_str(&s).unwrap(),
+            );
         }
     };
 }

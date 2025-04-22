@@ -585,8 +585,8 @@ void test_merkle_tree(
       BinarySerializer<MerkleProof>::serialize(serialized_proof.data(), serialized_proof.size(), merkle_proof));
     // Deserialize the proof
     MerkleProof deserialized_proof;
-    ICICLE_CHECK(BinarySerializer<MerkleProof>::deserialize(
-      serialized_proof.data(), serialized_proof.size(), deserialized_proof));
+    ICICLE_CHECK(
+      BinarySerializer<MerkleProof>::deserialize(serialized_proof.data(), serialized_proof.size(), deserialized_proof));
 
     // Compare the original and deserialized proofs
     // Compare pruned

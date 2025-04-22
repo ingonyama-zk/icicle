@@ -67,7 +67,8 @@ namespace icicle {
         ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_fri_rounds, buffer_length, buffer, sizeof(size_t)));
         query_proofs[i].resize(nof_fri_rounds);
         for (size_t j = 0; j < nof_fri_rounds; ++j) {
-          ICICLE_CHECK_IF_RETURN(BinarySerializeImpl<MerkleProof>::unpack_and_advance(buffer, buffer_length, query_proofs[i][j]));
+          ICICLE_CHECK_IF_RETURN(
+            BinarySerializeImpl<MerkleProof>::unpack_and_advance(buffer, buffer_length, query_proofs[i][j]));
         }
       }
 
