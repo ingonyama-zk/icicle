@@ -4,6 +4,8 @@
 #include "icicle/fri/fri_config.h"
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
+#include "icicle/sumcheck/sumcheck_proof_serializer.h"
+#include "icicle/fri/fri_proof_serializer.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -840,15 +842,15 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 
     // Serialize proof
     size_t proof_size = 0;
-    ICICLE_CHECK(sumcheck_proof.serialized_size(proof_size));
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(sumcheck_proof, proof_size));
     std::vector<std::byte> proof_bytes(proof_size);
-    std::byte* ptr = proof_bytes.data();
-    ICICLE_CHECK(sumcheck_proof.serialize(ptr));
+    ICICLE_CHECK(
+      BinarySerializer<SumcheckProof<scalar_t>>::serialize(proof_bytes.data(), proof_bytes.size(), sumcheck_proof));
 
     // Deserialize proof
     SumcheckProof<scalar_t> deserialized_proof;
-    ptr = proof_bytes.data();
-    ICICLE_CHECK(deserialized_proof.deserialize(ptr, proof_size));
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::deserialize(
+      proof_bytes.data(), proof_bytes.size(), deserialized_proof));
 
     // Compare proofs
     uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
@@ -956,15 +958,15 @@ TYPED_TEST(FieldTest, Fri)
 
         // Serialize proof
         size_t proof_size = 0;
-        ICICLE_CHECK(fri_proof.serialized_size(proof_size));
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::serialized_size(fri_proof, proof_size));
         std::vector<std::byte> proof_bytes(proof_size);
-        std::byte* ptr = proof_bytes.data();
-        ICICLE_CHECK(fri_proof.serialize(ptr));
+        ICICLE_CHECK(
+          BinarySerializer<FriProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), fri_proof));
 
         // Deserialize proof
         FriProof<TypeParam> deserialized_proof;
-        ptr = proof_bytes.data();
-        ICICLE_CHECK(deserialized_proof.deserialize(ptr, proof_size));
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
+          proof_bytes.data(), proof_bytes.size(), deserialized_proof));
 
         // Compare proofs
         // Compare number of FRI rounds

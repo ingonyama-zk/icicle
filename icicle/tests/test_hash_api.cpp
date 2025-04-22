@@ -20,6 +20,7 @@
 
 #include "test_base.h"
 #include "icicle/utils/rand_gen.h"
+#include "icicle/merkle/merkle_proof_serializer.h"
 
 using namespace icicle;
 
@@ -578,15 +579,14 @@ void test_merkle_tree(
 
     // Serialize the proof
     size_t serialized_proof_size;
-    ICICLE_CHECK(merkle_proof.serialized_size(serialized_proof_size));
+    ICICLE_CHECK(BinarySerializer<MerkleProof>::serialized_size(merkle_proof, serialized_proof_size));
     auto serialized_proof = std::vector<std::byte>(serialized_proof_size);
-    std::byte* ptr = serialized_proof.data();
-    ICICLE_CHECK(merkle_proof.serialize(ptr));
+    ICICLE_CHECK(
+      BinarySerializer<MerkleProof>::serialize(serialized_proof.data(), serialized_proof.size(), merkle_proof));
     // Deserialize the proof
     MerkleProof deserialized_proof;
-    size_t length = serialized_proof.size();
-    ptr = serialized_proof.data();
-    ICICLE_CHECK(deserialized_proof.deserialize(ptr, length));
+    ICICLE_CHECK(
+      BinarySerializer<MerkleProof>::deserialize(serialized_proof.data(), serialized_proof.size(), deserialized_proof));
 
     // Compare the original and deserialized proofs
     // Compare pruned
@@ -1820,4 +1820,3 @@ TEST_F(SumcheckTest, InitializeWithByteVector)
   EXPECT_EQ(config.get_seed_rng(), seed);
 }
 #endif // SUMCHECK
-       //

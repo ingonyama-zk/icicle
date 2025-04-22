@@ -6,9 +6,7 @@
 #include <iostream> // For streams
 #include <stdexcept>
 #include <utility> // For std::pair
-#include <cstring> // For memcpy
 #include "icicle/runtime.h"
-#include "icicle/serialization.h"
 namespace icicle {
 
   /**
@@ -18,10 +16,12 @@ namespace icicle {
    * It provides functionality to allocate, copy, and access these components, supporting both
    * raw byte manipulation and type-safe access via templates.
    */
-  class MerkleProof : public Serializer
+  class MerkleProof
   {
   public:
     explicit MerkleProof() = default;
+    MerkleProof(const MerkleProof&) = default;
+    MerkleProof& operator=(const MerkleProof&) = default;
 
     /**
      * @brief Constructs a MerkleProof with specified leaf, root, and path data.
@@ -45,6 +45,26 @@ namespace icicle {
         : m_pruned(pruned_path), m_leaf_index(leaf_idx), m_leaf(std::move(leaf)), m_root(std::move(root)),
           m_path(std::move(path))
     {
+    }
+
+    // Move constructor
+    MerkleProof(MerkleProof&& other) noexcept
+        : m_pruned(other.m_pruned), m_leaf_index(other.m_leaf_index), m_leaf(std::move(other.m_leaf)),
+          m_root(std::move(other.m_root)), m_path(std::move(other.m_path))
+    {
+    }
+
+    // Move assignment operator
+    MerkleProof& operator=(MerkleProof&& other) noexcept
+    {
+      if (this != &other) {
+        m_pruned = other.m_pruned;
+        m_leaf_index = other.m_leaf_index;
+        m_leaf = std::move(other.m_leaf);
+        m_root = std::move(other.m_root);
+        m_path = std::move(other.m_path);
+      }
+      return *this;
     }
 
     /**
@@ -180,106 +200,6 @@ namespace icicle {
     {
       if (offset >= m_path.size()) { throw std::out_of_range("Offset out of bounds"); }
       return reinterpret_cast<const T*>(m_path.data() + offset);
-    }
-
-    eIcicleError serialized_size(size_t& size) const override
-    {
-      size = 0;
-      size += sizeof(bool);                      // pruned
-      size += sizeof(uint64_t);                  // leaf_index
-      size += sizeof(size_t);                    // leaf_size
-      size += m_leaf.size() * sizeof(std::byte); // leaf
-      size += sizeof(size_t);                    // root_size
-      size += m_root.size() * sizeof(std::byte); // root
-      size += sizeof(size_t);                    // path_size
-      size += m_path.size() * sizeof(std::byte); // path
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError serialize(std::byte*& out) const override
-    {
-      std::memcpy(out, &m_pruned, sizeof(bool));
-      out += sizeof(bool);
-
-      std::memcpy(out, &m_leaf_index, sizeof(uint64_t));
-      out += sizeof(uint64_t);
-
-      auto leaf_size = m_leaf.size();
-      std::memcpy(out, &leaf_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_leaf.data(), m_leaf.size() * sizeof(std::byte));
-      out += m_leaf.size() * sizeof(std::byte);
-
-      auto root_size = m_root.size();
-      std::memcpy(out, &root_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_root.data(), m_root.size() * sizeof(std::byte));
-      out += m_root.size() * sizeof(std::byte);
-
-      auto path_size = m_path.size();
-      std::memcpy(out, &path_size, sizeof(size_t));
-      out += sizeof(size_t);
-      std::memcpy(out, m_path.data(), m_path.size() * sizeof(std::byte));
-      out += m_path.size() * sizeof(std::byte);
-
-      return eIcicleError::SUCCESS;
-    }
-
-    eIcicleError deserialize(std::byte*& in, size_t& length) override
-    {
-      auto advance = [&](size_t bytes) -> bool {
-        if (length < bytes) return false;
-        in += bytes;
-        length -= bytes;
-        return true;
-      };
-
-      size_t required_length = sizeof(bool) + sizeof(uint64_t) + 3 * sizeof(size_t);
-      if (length < required_length) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < required_length";
-        return eIcicleError::COPY_FAILED;
-      }
-
-      std::memcpy(&m_pruned, in, sizeof(bool));
-      advance(sizeof(bool));
-
-      std::memcpy(&m_leaf_index, in, sizeof(uint64_t));
-      advance(sizeof(uint64_t));
-
-      size_t leaf_size;
-      std::memcpy(&leaf_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < leaf_size * sizeof(std::byte)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < leaf_size * sizeof(std::byte)";
-        return eIcicleError::COPY_FAILED;
-      }
-      m_leaf.resize(leaf_size);
-      std::memcpy(m_leaf.data(), in, leaf_size * sizeof(std::byte));
-      advance(leaf_size * sizeof(std::byte));
-
-      size_t root_size;
-      std::memcpy(&root_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < root_size * sizeof(std::byte)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < root_size * sizeof(std::byte)";
-        return eIcicleError::COPY_FAILED;
-      }
-      m_root.resize(root_size);
-      std::memcpy(m_root.data(), in, root_size * sizeof(std::byte));
-      advance(root_size * sizeof(std::byte));
-
-      size_t path_size;
-      std::memcpy(&path_size, in, sizeof(size_t));
-      advance(sizeof(size_t));
-      if (length < path_size * sizeof(std::byte)) {
-        ICICLE_LOG_ERROR << "Deserialization failed: length < path_size * sizeof(std::byte)";
-        return eIcicleError::COPY_FAILED;
-      }
-      m_path.resize(path_size);
-      std::memcpy(m_path.data(), in, path_size * sizeof(std::byte));
-      advance(path_size * sizeof(std::byte));
-
-      return eIcicleError::SUCCESS;
     }
 
   private:
