@@ -241,7 +241,7 @@ jobs:
         if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-skip-rust-curve-specific }}" ]; then
           export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-curves }} ${{ matrix.curve.metal-skip-rust-curve-specific }}"
         fi
-        cargo test --release --verbose -- --skip phase "$SKIP_RUST_TESTS"
+        cargo test --release --verbose -- --skip phase $SKIP_RUST_TESTS
         cargo test phase2 --release
         cargo test phase3 --release
     - name: Setup go
@@ -444,7 +444,7 @@ jobs:
         if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-skip-rust-field-specific }}" ]; then
           export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }} ${{ matrix.field.metal-skip-rust-field-specific }}"
         fi
-        cargo test --release --verbose -- --skip phase "$SKIP_RUST_TESTS"
+        cargo test --release --verbose -- --skip phase $SKIP_RUST_TESTS
         cargo test phase2 --release
         cargo test phase3 --release
     - name: Setup go
