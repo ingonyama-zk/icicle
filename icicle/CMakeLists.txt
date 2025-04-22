@@ -48,7 +48,7 @@ if(SANITIZE)
 endif()
 
 # device API library
-add_library(icicle_device SHARED
+add_library(icicle_device STATIC
   src/device_api.cpp
   src/runtime.cpp
   src/config_extension.cpp

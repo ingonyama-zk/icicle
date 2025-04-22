@@ -44,7 +44,7 @@ function(setup_curve_target CURVE CURVE_INDEX FEATURES_STRING)
   # the scalar field of the curve is built to a field library (like babybear is built)
   setup_field_target(${CURVE} ${CURVE_INDEX} ${FEATURES_STRING})
 
-  add_library(icicle_curve SHARED)
+  add_library(icicle_curve STATIC)
 
   # Split FEATURES_STRING into a list using "," as the separator
   string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})
