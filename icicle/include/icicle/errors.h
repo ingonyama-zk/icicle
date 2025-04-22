@@ -71,7 +71,7 @@ namespace icicle {
     }
   }
 
-#define ICICLE_CHECK_IF_RETURN(api_call)                                                                               \
+#define ICICLE_RETURN_IF_ERR(api_call)                                                                                 \
   do {                                                                                                                 \
     using namespace icicle;                                                                                            \
     eIcicleError _err = (api_call);                                                                                    \
