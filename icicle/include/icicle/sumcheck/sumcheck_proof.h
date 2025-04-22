@@ -26,14 +26,12 @@ namespace icicle {
     SumcheckProof(std::vector<std::vector<S>> polys) : m_round_polynomials(polys) {}
 
     // Move constructor
-    SumcheckProof(SumcheckProof&& other) noexcept
-    : m_round_polynomials(std::move(other.m_round_polynomials)) {}
+    SumcheckProof(SumcheckProof&& other) noexcept : m_round_polynomials(std::move(other.m_round_polynomials)) {}
 
     // Move assignment operator
-    SumcheckProof& operator=(SumcheckProof&& other) noexcept {
-      if (this != &other) {
-        m_round_polynomials = std::move(other.m_round_polynomials);
-      }
+    SumcheckProof& operator=(SumcheckProof&& other) noexcept
+    {
+      if (this != &other) { m_round_polynomials = std::move(other.m_round_polynomials); }
       return *this;
     }
 

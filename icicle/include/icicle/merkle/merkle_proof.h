@@ -46,16 +46,18 @@ namespace icicle {
     }
 
     // Copy constructor
-    MerkleProof(const MerkleProof& other) {
-        m_pruned = other.m_pruned;
-        m_leaf_index = other.m_leaf_index;
-        m_leaf = other.m_leaf;
-        m_root = other.m_root;
-        m_path = other.m_path;
+    MerkleProof(const MerkleProof& other)
+    {
+      m_pruned = other.m_pruned;
+      m_leaf_index = other.m_leaf_index;
+      m_leaf = other.m_leaf;
+      m_root = other.m_root;
+      m_path = other.m_path;
     }
 
     // Move assignment operator
-    MerkleProof& operator=(MerkleProof&& other) noexcept {
+    MerkleProof& operator=(MerkleProof&& other) noexcept
+    {
       if (this != &other) {
         m_pruned = other.m_pruned;
         m_leaf_index = other.m_leaf_index;

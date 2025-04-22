@@ -52,7 +52,8 @@ namespace icicle {
     }
 
     // Move assignment operator
-    FriProof& operator=(FriProof&& other) noexcept {
+    FriProof& operator=(FriProof&& other) noexcept
+    {
       if (this != &other) {
         m_query_proofs = std::move(other.m_query_proofs);
         m_final_poly = std::move(other.m_final_poly);

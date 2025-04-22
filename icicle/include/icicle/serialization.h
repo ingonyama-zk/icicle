@@ -37,7 +37,7 @@ namespace icicle {
       remaining_length -= copy_length;
       return eIcicleError::SUCCESS;
     }
-  }
+  } // namespace
 
   template <typename T>
   struct BinarySerializer {
@@ -48,7 +48,8 @@ namespace icicle {
 
   template <typename T>
   struct BinarySerializerBase {
-    static eIcicleError serialize(std::byte* buffer, size_t buffer_length, const T& obj) {
+    static eIcicleError serialize(std::byte* buffer, size_t buffer_length, const T& obj)
+    {
       size_t size;
       ICICLE_CHECK_IF_RETURN(BinarySerializer<T>::serialized_size(obj, size));
       if (buffer_length != size) {
@@ -58,7 +59,8 @@ namespace icicle {
       return BinarySerializer<T>::pack_and_advance(buffer, buffer_length, obj);
     }
 
-    static eIcicleError deserialize(std::byte* buffer, size_t buffer_length, T* obj) {
+    static eIcicleError deserialize(std::byte* buffer, size_t buffer_length, T* obj)
+    {
       return BinarySerializer<T>::unpack_and_advance(buffer, buffer_length, obj);
     }
 
@@ -95,9 +97,10 @@ namespace icicle {
 
   template <typename S>
   struct BinarySerializer<SumcheckProof<S>> : BinarySerializerBase<SumcheckProof<S>> {
-    static eIcicleError serialized_size(const SumcheckProof<S>& obj, size_t& size) {
+    static eIcicleError serialized_size(const SumcheckProof<S>& obj, size_t& size)
+    {
       size = obj.get_nof_round_polynomials(); // nof_round_polynomials
-      
+
       for (size_t i = 0; i < obj.get_nof_round_polynomials(); i++) {
         const auto& round_poly = obj.get_const_round_polynomial(i);
         size += sizeof(size_t); // nested vector length
@@ -105,7 +108,8 @@ namespace icicle {
       }
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const SumcheckProof<S>& obj) {
+    static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const SumcheckProof<S>& obj)
+    {
       size_t nof_round_polynomials = obj.get_nof_round_polynomials();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &nof_round_polynomials, sizeof(size_t)));
       for (size_t i = 0; i < nof_round_polynomials; i++) {
@@ -117,7 +121,8 @@ namespace icicle {
       }
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, SumcheckProof<S>* obj) {
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, SumcheckProof<S>* obj)
+    {
       size_t nof_round_polynomials;
       std::vector<std::vector<S>> round_polynomials;
       ICICLE_CHECK_IF_RETURN(memcpy_shift_source(&nof_round_polynomials, buffer_length, buffer, sizeof(size_t)));
@@ -140,21 +145,23 @@ namespace icicle {
 
   template <>
   struct BinarySerializer<MerkleProof> : BinarySerializerBase<MerkleProof> {
-    static eIcicleError serialized_size(const MerkleProof& obj, size_t& size) {
-      size = sizeof(bool);                       // pruned
-      size += sizeof(uint64_t);                  // leaf_index
-      size += sizeof(size_t);                    // leaf_size
+    static eIcicleError serialized_size(const MerkleProof& obj, size_t& size)
+    {
+      size = sizeof(bool);      // pruned
+      size += sizeof(uint64_t); // leaf_index
+      size += sizeof(size_t);   // leaf_size
       auto [leaf, leaf_size, leaf_index] = obj.get_leaf();
       size += leaf_size * sizeof(std::byte); // leaf
-      size += sizeof(size_t);   // root_size
-      auto [root, root_size] = obj.get_root();                 
+      size += sizeof(size_t);                // root_size
+      auto [root, root_size] = obj.get_root();
       size += root_size * sizeof(std::byte); // root
-      size += sizeof(size_t);                    // path_size
+      size += sizeof(size_t);                // path_size
       auto [path, path_size] = obj.get_path();
       size += path_size * sizeof(std::byte); // path
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const MerkleProof& obj) {
+    static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const MerkleProof& obj)
+    {
       bool pruned = obj.is_pruned();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &pruned, sizeof(bool)));
 
@@ -162,22 +169,20 @@ namespace icicle {
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &leaf_index, sizeof(uint64_t)));
 
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &leaf_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, leaf, leaf_size * sizeof(std::byte)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, leaf, leaf_size * sizeof(std::byte)));
 
       auto [root, root_size] = obj.get_root();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &root_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, root, root_size * sizeof(std::byte)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, root, root_size * sizeof(std::byte)));
 
       auto [path, path_size] = obj.get_path();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &path_size, sizeof(size_t)));
-      ICICLE_CHECK_IF_RETURN(
-        memcpy_shift_destination(buffer, buffer_length, path, path_size * sizeof(std::byte)));
+      ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, path, path_size * sizeof(std::byte)));
 
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, MerkleProof* obj) {
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, MerkleProof* obj)
+    {
       bool pruned;
       int64_t leaf_idx;
       std::vector<std::byte> leaf;
@@ -211,7 +216,8 @@ namespace icicle {
 
   template <typename F>
   struct BinarySerializer<FriProof<F>> : BinarySerializerBase<FriProof<F>> {
-    static eIcicleError serialized_size(const FriProof<F>& obj, size_t& size) {
+    static eIcicleError serialized_size(const FriProof<F>& obj, size_t& size)
+    {
       size = sizeof(size_t); // nof_queries
       size_t nof_queries = obj.get_nof_queries();
       size_t nof_rounds = obj.get_nof_rounds();
@@ -230,7 +236,8 @@ namespace icicle {
 
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const FriProof<F>& obj) {
+    static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const FriProof<F>& obj)
+    {
       size_t query_proofs_size = obj.get_nof_queries();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &query_proofs_size, sizeof(size_t)));
       for (size_t i = 0; i < query_proofs_size; i++) {
@@ -249,7 +256,8 @@ namespace icicle {
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &pow_nonce, sizeof(uint64_t)));
       return eIcicleError::SUCCESS;
     }
-    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, FriProof<F>* obj) {
+    static eIcicleError unpack_and_advance(std::byte*& buffer, size_t& buffer_length, FriProof<F>* obj)
+    {
       size_t min_required_length =
         sizeof(size_t) + sizeof(size_t) + sizeof(size_t) + sizeof(uint64_t); // minimum length of the proof
       if (buffer_length < min_required_length) {

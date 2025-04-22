@@ -375,7 +375,8 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize_from_fi
   }
   std::string filename_str(filename, filename_len);
   *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
-  return BinarySerializer<SumcheckProof<scalar_t>>::deserialize_from_file(std::move(filename_str), *sumcheck_proof_handle);
+  return BinarySerializer<SumcheckProof<scalar_t>>::deserialize_from_file(
+    std::move(filename_str), *sumcheck_proof_handle);
 }
 
 /***************** END SumcheckProof **********************/
