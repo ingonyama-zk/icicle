@@ -52,7 +52,7 @@ namespace ntt_cpu {
     }
   };
 
-  uint64_t bit_reverse(uint64_t i, uint32_t logn)
+  static uint64_t bit_reverse(uint64_t i, uint32_t logn)
   {
     uint32_t rev = 0;
     for (uint32_t j = 0; j < logn; ++j) {
