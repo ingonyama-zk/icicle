@@ -1577,7 +1577,7 @@ TEST_F(HashApiTest, poseidon2_invalid_t)
     auto poseidon2 = Poseidon2::create<scalar_t>(t);
     auto err = poseidon2.hash(input.get(), t, config, output.get());
     if (large_field) {
-      EXPECT_NE(err, eIcicleError::SUCCESS);
+      EXPECT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
     } else {
       EXPECT_EQ(err, eIcicleError::SUCCESS);
     }
