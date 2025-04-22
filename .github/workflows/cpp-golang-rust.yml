@@ -286,7 +286,7 @@ jobs:
             secret_key: METAL_PULL_KEY
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust-all-fields: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip phase2 --skip vec_ops_scalars_inv
+            skip-rust-all-fields: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip vec_ops_scalars_inv
             skip-cpp-all-fields: .*QuarticExtensionField.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
             skip-golang-all-fields: "true"
             initial-support: true
@@ -298,7 +298,7 @@ jobs:
           - name: babybear
             build_args: -DEXT_FIELD=ON
             metal-skip-cpp-field-specific: ""
-            metal-skip-rust-field-specific: ""
+            metal-skip-rust-field-specific: "--skip phase2"
             metal-skip-golang-field-specific: ""
           - name: stark252
             build_args: -DEXT_FIELD=OFF
@@ -309,7 +309,7 @@ jobs:
             build_args: -DEXT_FIELD=ON
             # metal-cpp-failing-tests: "FieldTest.vectorDivision<m31::MersenneField<m31::fp_config>>|ModArithTestBase.VectorReduceOps|ModArithTestBase.scalarVectorOps|ModArithTestBase.polynomialEval|ModArithTest.vectorVectorOps<m31::MersenneField<m31::fp_config>>"
             metal-skip-cpp-field-specific: ""
-            metal-skip-rust-field-specific: "--skip vec_ops_scalars_div --skip vec_ops_scalars_mul"
+            metal-skip-rust-field-specific: ""
             metal-skip-golang-field-specific: ""
           - name: koalabear
             build_args: -DEXT_FIELD=ON
@@ -445,7 +445,7 @@ jobs:
           export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }} ${{ matrix.field.metal-skip-rust-field-specific }}"
         fi
         cargo test --release --verbose -- --skip phase $SKIP_RUST_TESTS
-        cargo test phase2 --release
+        cargo test phase2 --release -- $SKIP_RUST_TESTS
         cargo test phase3 --release
     - name: Setup go
       if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang-all-curves == 'false' }}
