@@ -20,6 +20,8 @@ namespace icicle {
   {
   public:
     explicit MerkleProof() = default;
+    MerkleProof(const MerkleProof&) = default;
+    MerkleProof& operator=(const MerkleProof&) = default;
 
     /**
      * @brief Constructs a MerkleProof with specified leaf, root, and path data.
@@ -45,14 +47,11 @@ namespace icicle {
     {
     }
 
-    // Copy constructor
-    MerkleProof(const MerkleProof& other)
+    // Move constructor
+    MerkleProof(MerkleProof&& other) noexcept
+      : m_pruned(other.m_pruned), m_leaf_index(other.m_leaf_index), m_leaf(std::move(other.m_leaf)),
+        m_root(std::move(other.m_root)), m_path(std::move(other.m_path))
     {
-      m_pruned = other.m_pruned;
-      m_leaf_index = other.m_leaf_index;
-      m_leaf = other.m_leaf;
-      m_root = other.m_root;
-      m_path = other.m_path;
     }
 
     // Move assignment operator

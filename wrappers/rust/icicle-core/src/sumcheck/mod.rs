@@ -576,8 +576,8 @@ macro_rules! impl_sumcheck_tests {
 
         #[test]
         fn test_sumcheck_proof_serialization() {
-            // initialize();
-            // test_utilities::test_set_ref_device();
+            initialize();
+            test_utilities::test_set_ref_device();
             let hash = Keccak256::new(0).unwrap();
             check_sumcheck_proof_serialization::<SumcheckWrapper, Program>(&hash);
         }

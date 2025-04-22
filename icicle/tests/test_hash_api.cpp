@@ -20,7 +20,7 @@
 
 #include "test_base.h"
 #include "icicle/utils/rand_gen.h"
-
+#include "icicle/serialization.h"
 using namespace icicle;
 
 static bool VERBOSE = true;
@@ -578,16 +578,12 @@ void test_merkle_tree(
 
     // Serialize the proof
     size_t serialized_proof_size;
-    ICICLE_CHECK(merkle_proof.serialized_size(serialized_proof_size));
+    ICICLE_CHECK(BinarySerializer<MerkleProof>::serialized_size(merkle_proof, serialized_proof_size));
     auto serialized_proof = std::vector<std::byte>(serialized_proof_size);
-    std::byte* ptr = serialized_proof.data();
-    size_t remaining_length = serialized_proof.size();
-    ICICLE_CHECK(merkle_proof.serialize(ptr, remaining_length));
+    ICICLE_CHECK(BinarySerializer<MerkleProof>::serialize(serialized_proof.data(), serialized_proof.size(), merkle_proof));
     // Deserialize the proof
     MerkleProof deserialized_proof;
-    ptr = serialized_proof.data();
-    remaining_length = serialized_proof.size();
-    ICICLE_CHECK(deserialized_proof.deserialize(ptr, remaining_length));
+    ICICLE_CHECK(BinarySerializer<MerkleProof>::deserialize(serialized_proof.data(), serialized_proof.size(), &deserialized_proof));
 
     // Compare the original and deserialized proofs
     // Compare pruned

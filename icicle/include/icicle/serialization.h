@@ -219,8 +219,8 @@ namespace icicle {
     static eIcicleError serialized_size(const FriProof<F>& obj, size_t& size)
     {
       size = sizeof(size_t); // nof_queries
-      size_t nof_queries = obj.get_nof_queries();
-      size_t nof_rounds = obj.get_nof_rounds();
+      size_t nof_queries = obj.get_nof_fri_queries();
+      size_t nof_rounds = obj.get_nof_fri_rounds();
       for (size_t i = 0; i < nof_queries; i++) {
         size += sizeof(size_t); // nof_fri_rounds
         for (size_t j = 0; j < nof_rounds; j++) {
@@ -238,10 +238,10 @@ namespace icicle {
     }
     static eIcicleError pack_and_advance(std::byte*& buffer, size_t& buffer_length, const FriProof<F>& obj)
     {
-      size_t query_proofs_size = obj.get_nof_queries();
+      size_t query_proofs_size = obj.get_nof_fri_queries();
       ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &query_proofs_size, sizeof(size_t)));
       for (size_t i = 0; i < query_proofs_size; i++) {
-        size_t nof_rounds = obj.get_nof_rounds();
+        size_t nof_rounds = obj.get_nof_fri_rounds();
         ICICLE_CHECK_IF_RETURN(memcpy_shift_destination(buffer, buffer_length, &nof_rounds, sizeof(size_t)));
         for (size_t j = 0; j < nof_rounds; j++) {
           const auto& proof = obj.get_query_proof_slot(i, j);
