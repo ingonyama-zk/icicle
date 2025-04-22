@@ -1,13 +1,12 @@
-use crate::traits::{FieldConfig, FieldImpl};
 use icicle_runtime::memory::HostOrDeviceSlice;
+
+use crate::field::PrimeField;
 
 pub trait UnivariatePolynomial: Clone + Sized
 where
-    Self::Field: FieldImpl,
-    Self::FieldConfig: FieldConfig,
+    Self::Field: PrimeField,
 {
     type Field;
-    type FieldConfig;
 
     fn from_coeffs<S: HostOrDeviceSlice<Self::Field> + ?Sized>(coeffs: &S, size: usize) -> Self;
     fn from_rou_evals<S: HostOrDeviceSlice<Self::Field> + ?Sized>(evals: &S, size: usize) -> Self;
@@ -46,7 +45,7 @@ macro_rules! impl_univariate_polynomial_api {
         $field:ident,
         $field_cfg:ident
     ) => {
-        use icicle_core::{polynomials::UnivariatePolynomial, traits::FieldImpl};
+        use icicle_core::{polynomials::UnivariatePolynomial, traits::PrimeField};
         use icicle_runtime::memory::{DeviceSlice, HostOrDeviceSlice};
         use std::{
             clone, cmp,
@@ -464,13 +463,13 @@ macro_rules! impl_polynomial_tests {
         use icicle_runtime::test_utilities;
         use std::sync::Once;
 
-        use icicle_core::traits::{FieldImpl, GenerateRandom};
+        use icicle_core::traits::{GenerateRandom, PrimeField};
 
         type Poly = DensePolynomial;
 
-        pub fn init_domain<F: FieldImpl>(max_size: u64, fast_twiddles_mode: bool)
+        pub fn init_domain<F: PrimeField>(max_size: u64, fast_twiddles_mode: bool)
         where
-            <F as FieldImpl>::Config: NTTDomain<F>,
+            <F as PrimeField>::Config: NTTDomain<F>,
         {
             let config = NTTInitDomainConfig::default();
             config
@@ -480,9 +479,9 @@ macro_rules! impl_polynomial_tests {
             initialize_domain(rou, &config).unwrap();
         }
 
-        fn randomize_coeffs<F: FieldImpl>(size: usize) -> Vec<F>
+        fn randomize_coeffs<F: PrimeField>(size: usize) -> Vec<F>
         where
-            <F as FieldImpl>::Config: GenerateRandom<F>,
+            <F as PrimeField>::Config: GenerateRandom<F>,
         {
             F::Config::generate_random(size)
         }

@@ -21,4 +21,16 @@ pub(crate) mod tests {
     use icicle_core::ntt::tests::*;
     use serial_test::{parallel, serial};
     impl_ntt_tests!(ScalarField);
+
+    // Tests against risc0 and plonky3
+    use super::ExtensionField;
+    use icicle_core::{
+        ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
+        traits::{PrimeField, GenerateRandom},
+    };
+    use icicle_runtime::memory::HostSlice;
+    use risc0_core::field::{
+        baby_bear::{Elem, ExtElem},
+        Elem as FieldElem, RootsOfUnity,
+    };
 }

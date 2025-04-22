@@ -1,10 +1,10 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::field::FieldArithmetic;
+use crate::field::PrimeField;
 use crate::hash::Hasher;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
+use crate::traits::{Arithmetic, GenerateRandom};
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -93,7 +93,7 @@ pub struct FFISumcheckTranscriptConfig<F> {
 
 impl<'a, F> From<&SumcheckTranscriptConfig<'a, F>> for FFISumcheckTranscriptConfig<F>
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     fn from(config: &SumcheckTranscriptConfig<'a, F>) -> Self {
         FFISumcheckTranscriptConfig {
@@ -168,11 +168,7 @@ impl Default for SumcheckConfig {
 /// including proof generation and verification. It is generic over the
 /// field type and configuration.
 pub trait Sumcheck {
-    /// The field type used in the protocol
-    type Field: FieldImpl + Arithmetic;
-    /// The field configuration type
-    type FieldConfig: FieldConfig + GenerateRandom<Self::Field> + FieldArithmetic<Self::Field>;
-    /// The proof type used in the protocol
+    type Field: PrimeField + Arithmetic;
     type Proof: SumcheckProofOps<Self::Field>;
 
     /// Creates a new instance of the Sumcheck protocol.
@@ -236,7 +232,7 @@ pub trait Sumcheck {
 /// including retrieving round polynomials and printing the proof.
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialize + DeserializeOwned
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     /// Retrieves the round polynomials from the proof.
     ///
@@ -256,19 +252,15 @@ where
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
-        mod $field_prefix_ident {
-            use super::{$field, $field_cfg};
-            use crate::symbol::$field_prefix_ident::FieldSymbol;
-            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
-            use icicle_core::sumcheck::{
-                FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
-            };
-            use icicle_core::traits::{FieldImpl, Handle};
-            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
-            use serde::de::{self, Visitor};
-            use serde::{Deserialize, Deserializer, Serialize, Serializer};
-            use std::ffi::c_void;
-            use std::slice;
+        use crate::symbol::$field_prefix_ident::FieldSymbol;
+        use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
+        use icicle_core::sumcheck::{
+            FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
+        };
+        use icicle_core::traits::{Handle, PrimeField};
+        use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+        use std::ffi::c_void;
+        use std::slice;
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_sumcheck_create")]

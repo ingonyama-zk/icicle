@@ -1,11 +1,10 @@
-use crate::polynomial_ring::PolynomialRing;
-use crate::{balanced_decomposition, traits::GenerateRandom, vec_ops::VecOpsConfig};
+use crate::{balanced_decomposition, field::PrimeField, traits::GenerateRandom, vec_ops::VecOpsConfig};
 
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 pub fn check_balanced_decomposition<F>()
 where
-    F: PolynomialRing + balanced_decomposition::BalancedDecomposition<F> + GenerateRandom<F>,
+    F: PrimeField + balanced_decomposition::BalancedDecomposition + GenerateRandom,
 {
     let batch = 5;
     let size = 1 << 10;

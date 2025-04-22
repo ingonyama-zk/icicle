@@ -21,6 +21,8 @@ pub mod random_sampling;
 pub mod rns;
 pub mod sumcheck;
 pub mod symbol;
+// pub mod vec_ops;
+
 #[doc(hidden)]
 pub mod tests;
 pub mod traits;

@@ -1,10 +1,10 @@
-use crate::{traits::FieldImpl, vec_ops::VecOpsConfig};
+use crate::{field::PrimeField, vec_ops::VecOpsConfig};
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
 pub mod tests;
 
 /// Trait for RNS conversions (`Zq <--> ZqRns`)
-pub trait RnsConversion<Zq: FieldImpl, ZqRns: FieldImpl> {
+pub trait RnsConversion<Zq: PrimeField, ZqRns: PrimeField> {
     fn to_rns(
         input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
         output: &mut (impl HostOrDeviceSlice<ZqRns> + ?Sized),
@@ -24,25 +24,25 @@ pub trait RnsConversion<Zq: FieldImpl, ZqRns: FieldImpl> {
 // meaning it would need separate implementations for both `Vec` and `DeviceVec`, rather than relying on the `HostOrDeviceSlice` trait.
 
 /// Performs `Zq -> ZqRns` conversion.
-pub fn to_rns<Zq: FieldImpl, ZqRns: FieldImpl>(
+pub fn to_rns<Zq: PrimeField, ZqRns: PrimeField>(
     input: &(impl HostOrDeviceSlice<Zq> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<ZqRns> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    Zq::Config: RnsConversion<Zq, ZqRns>,
+    Zq: RnsConversion<Zq, ZqRns>,
 {
-    Zq::Config::to_rns(input, output, cfg)
+    Zq::to_rns(input, output, cfg)
 }
 
 /// Performs `ZqRns -> Zq` conversion.
-pub fn from_rns<Zq: FieldImpl, ZqRns: FieldImpl>(
+pub fn from_rns<Zq: PrimeField, ZqRns: PrimeField>(
     input: &(impl HostOrDeviceSlice<ZqRns> + ?Sized),
     output: &mut (impl HostOrDeviceSlice<Zq> + ?Sized),
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    Zq::Config: RnsConversion<Zq, ZqRns>,
+    Zq: RnsConversion<Zq, ZqRns>,
 {
     Zq::Config::from_rns(input, output, cfg)
 }

@@ -2,7 +2,7 @@ use icicle_core::{
     curve::{Affine, Curve, Projective},
     field::{Field, MontgomeryConvertibleField},
     impl_curve, impl_field, impl_scalar_field,
-    traits::{FieldConfig, FieldImpl, GenerateRandom},
+    traits::{FieldConfig, PrimeField, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
@@ -27,7 +27,7 @@ mod tests {
     use super::{CurveCfg, ScalarField, BASE_LIMBS};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;
-    use icicle_core::traits::FieldImpl;
+    use icicle_core::traits::PrimeField;
     use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_runtime::test_utilities;
 

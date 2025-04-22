@@ -1,6 +1,6 @@
 use crate::curve::{Affine, Curve, Projective};
 use crate::msm::{msm, precompute_bases, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
-use crate::traits::{FieldImpl, GenerateRandom, MontgomeryConvertible};
+use crate::traits::{GenerateRandom, MontgomeryConvertible};
 use icicle_runtime::{memory::HostOrDeviceSlice, test_utilities};
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -21,11 +21,7 @@ pub fn generate_random_affine_points_with_zeroes<C: Curve>(size: usize, num_zero
     points
 }
 
-pub fn check_msm<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
-    C::ScalarField: MontgomeryConvertible,
-{
+pub fn check_msm<C: Curve + MSM<C>>() {
     test_utilities::test_set_main_device();
     let device_count = runtime::get_device_count().unwrap();
     (0..device_count) // TODO: this is proto-loadbalancer
@@ -43,7 +39,7 @@ where
             let mut msm_results = DeviceVec::<Projective<C>>::device_malloc_async(1, &stream).unwrap();
             for test_size in test_sizes {
                 let points = generate_random_affine_points_with_zeroes::<C>(test_size, 2);
-                let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size);
+                let scalars = C::ScalarField::generate_random(test_size);
 
                 // (1) async msm on main device
                 test_utilities::test_set_main_device_with_id(device_id);
@@ -94,10 +90,7 @@ where
         });
 }
 
-pub fn check_msm_batch_shared<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
-{
+pub fn check_msm_batch_shared<C: Curve + MSM<C>>() {
     let test_sizes = [1000, 1 << 14];
     let batch_sizes = [1, 3, 1 << 4];
     let mut stream = IcicleStream::create().unwrap();
@@ -121,7 +114,7 @@ where
             DeviceVec::<Affine<C>>::device_malloc(cfg.precompute_factor as usize * test_size).unwrap();
         precompute_bases(HostSlice::from_slice(&points), &cfg, &mut precomputed_points_d).unwrap();
         for batch_size in batch_sizes {
-            let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
+            let scalars = C::ScalarField::generate_random(test_size * batch_size);
             let scalars_h = HostSlice::from_slice(&scalars);
 
             let mut msm_results_1 = DeviceVec::<Projective<C>>::device_malloc(batch_size).unwrap();
@@ -170,10 +163,7 @@ where
         .unwrap();
 }
 
-pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
-{
+pub fn check_msm_batch_not_shared<C: Curve + MSM<C>>() {
     let test_sizes = [1000, 1 << 14];
     let batch_sizes = [1, 3, 1 << 4];
     let mut stream = IcicleStream::create().unwrap();
@@ -193,7 +183,7 @@ where
         test_utilities::test_set_main_device();
         for batch_size in batch_sizes {
             cfg.precompute_factor = precompute_factor;
-            let scalars = <C::ScalarField as FieldImpl>::Config::generate_random(test_size * batch_size);
+            let scalars = C::ScalarField::generate_random(test_size * batch_size);
             let scalars_h = HostSlice::from_slice(&scalars);
 
             let points = generate_random_affine_points_with_zeroes::<C>(test_size * batch_size, 10);
@@ -251,10 +241,7 @@ where
         .unwrap();
 }
 
-pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>()
-where
-    <C::ScalarField as FieldImpl>::Config: GenerateRandom<C::ScalarField>,
-{
+pub fn check_msm_skewed_distributions<C: Curve + MSM<C>>() {
     let test_sizes = [1 << 10, 10000];
     let test_threshold = 1 << 11;
     let batch_sizes = [1, 3, 1 << 4];
@@ -268,8 +255,7 @@ where
                 scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::one();
             }
             for _ in test_threshold..test_size {
-                scalars[rng.gen_range(0..test_size * batch_size)] =
-                    <<C::ScalarField as FieldImpl>::Config as GenerateRandom<C::ScalarField>>::generate_random(1)[0];
+                scalars[rng.gen_range(0..test_size * batch_size)] = C::ScalarField::generate_random(1)[0];
             }
 
             let mut cfg = MSMConfig::default();

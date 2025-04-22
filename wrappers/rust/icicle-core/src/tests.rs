@@ -1,8 +1,8 @@
 use crate::polynomial_ring::{flatten_polyring_slice, PolynomialRing};
 use crate::{
     curve::{Affine, Curve, Projective},
-    field::Field,
-    traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
+    field::PrimeField,
+    traits::{Arithmetic, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
@@ -11,12 +11,11 @@ use icicle_runtime::{
 
 pub fn check_field_arithmetic<F>()
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: GenerateRandom<F>,
+    F: PrimeField + Arithmetic + GenerateRandom,
 {
     let size = 1 << 10;
-    let scalars_a = F::Config::generate_random(size);
-    let scalars_b = F::Config::generate_random(size);
+    let scalars_a = F::generate_random(size);
+    let scalars_b = F::generate_random(size);
 
     for i in 0..size {
         let result1 = scalars_a[i] + scalars_b[i];
@@ -66,9 +65,9 @@ pub fn check_point_arithmetic<C: Curve>() {
     }
 }
 
-pub fn check_point_equality<const BASE_LIMBS: usize, F: FieldConfig, C>()
+pub fn check_point_equality<const BASE_LIMBS: usize, F: PrimeField, C>()
 where
-    C: Curve<BaseField = Field<BASE_LIMBS, F>>,
+    C: Curve<BaseField = F>,
 {
     let left = Projective::<C>::zero();
     let right = Projective::<C>::zero();
@@ -85,8 +84,7 @@ where
 
 pub fn check_field_convert_montgomery<F>()
 where
-    F: FieldImpl + MontgomeryConvertible,
-    F::Config: GenerateRandom<F>,
+    F: PrimeField + MontgomeryConvertible + GenerateRandom,
 {
     let mut stream = IcicleStream::create().unwrap();
 
