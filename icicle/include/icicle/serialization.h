@@ -53,7 +53,7 @@ namespace icicle {
     static eIcicleError serialize(std::byte* buffer, size_t buffer_length, const T& obj)
     {
       size_t size;
-      ICICLE_CHECK_IF_RETURN(serialized_size(obj, size));
+      ICICLE_RETURN_IF_ERR(serialized_size(obj, size));
       if (buffer_length < size) {
         ICICLE_LOG_ERROR << "Serialization failed: buffer_length < size: " << buffer_length << " < " << size;
         return eIcicleError::INVALID_ARGUMENT;
@@ -75,10 +75,10 @@ namespace icicle {
       }
 
       size_t buffer_length;
-      ICICLE_CHECK_IF_RETURN(BinarySerializeImpl<T>::serialized_size(obj, buffer_length));
+      ICICLE_RETURN_IF_ERR(BinarySerializeImpl<T>::serialized_size(obj, buffer_length));
       std::vector<std::byte> buffer(buffer_length);
       std::byte* ptr = buffer.data();
-      ICICLE_CHECK_IF_RETURN(BinarySerializeImpl<T>::serialize(ptr, buffer_length, obj));
+      ICICLE_RETURN_IF_ERR(BinarySerializeImpl<T>::serialize(ptr, buffer_length, obj));
       file.write(reinterpret_cast<const char*>(buffer.data()), buffer_length);
       return eIcicleError::SUCCESS;
     }
