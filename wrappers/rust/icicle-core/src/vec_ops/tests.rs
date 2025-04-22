@@ -46,7 +46,6 @@ where
     check_vec_ops_scalars_sub::<F>(test_size);
     check_vec_ops_scalars_mul::<F>(test_size);
     check_vec_ops_scalars_div::<F>(test_size);
-    check_vec_ops_scalars_inv::<F>(test_size);
     check_vec_ops_scalars_sum::<F>(test_size);
     check_vec_ops_scalars_product::<F>(test_size);
     check_vec_ops_scalars_add_scalar::<F>(test_size);

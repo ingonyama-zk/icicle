@@ -1079,6 +1079,13 @@ macro_rules! impl_vec_ops_tests {
             }
 
             #[test]
+            pub fn test_vec_ops_scalars_inv() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_inv::<$field>(test_size);
+            }
+
+            #[test]
             pub fn test_matrix_transpose() {
                 initialize();
                 check_matrix_transpose::<$field>()
