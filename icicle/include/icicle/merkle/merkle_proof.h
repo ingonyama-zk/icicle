@@ -49,8 +49,8 @@ namespace icicle {
 
     // Move constructor
     MerkleProof(MerkleProof&& other) noexcept
-      : m_pruned(other.m_pruned), m_leaf_index(other.m_leaf_index), m_leaf(std::move(other.m_leaf)),
-        m_root(std::move(other.m_root)), m_path(std::move(other.m_path))
+        : m_pruned(other.m_pruned), m_leaf_index(other.m_leaf_index), m_leaf(std::move(other.m_leaf)),
+          m_root(std::move(other.m_root)), m_path(std::move(other.m_path))
     {
     }
 

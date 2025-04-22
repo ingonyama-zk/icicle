@@ -842,11 +842,13 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     size_t proof_size = 0;
     ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(sumcheck_proof, proof_size));
     std::vector<std::byte> proof_bytes(proof_size);
-    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::serialize(proof_bytes.data(), proof_bytes.size(), sumcheck_proof));
+    ICICLE_CHECK(
+      BinarySerializer<SumcheckProof<scalar_t>>::serialize(proof_bytes.data(), proof_bytes.size(), sumcheck_proof));
 
     // Deserialize proof
     SumcheckProof<scalar_t> deserialized_proof;
-    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::deserialize(proof_bytes.data(), proof_bytes.size(), &deserialized_proof));
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::deserialize(
+      proof_bytes.data(), proof_bytes.size(), &deserialized_proof));
 
     // Compare proofs
     uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
@@ -956,11 +958,13 @@ TYPED_TEST(FieldTest, Fri)
         size_t proof_size = 0;
         ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::serialized_size(fri_proof, proof_size));
         std::vector<std::byte> proof_bytes(proof_size);
-        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), fri_proof));
+        ICICLE_CHECK(
+          BinarySerializer<FriProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), fri_proof));
 
         // Deserialize proof
         FriProof<TypeParam> deserialized_proof;
-        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(proof_bytes.data(), proof_bytes.size(), &deserialized_proof));
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
+          proof_bytes.data(), proof_bytes.size(), &deserialized_proof));
 
         // Compare proofs
         // Compare number of FRI rounds
