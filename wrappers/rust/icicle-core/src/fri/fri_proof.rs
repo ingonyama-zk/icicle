@@ -6,7 +6,7 @@ use crate::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-pub trait FriProofTrait<F: FieldImpl>: Sized + Handle + Serialize + DeserializeOwned
+pub trait FriProofOps<F: FieldImpl>: Sized + Handle + Serialize + DeserializeOwned
 where
     F: FieldImpl,
 {
@@ -14,7 +14,7 @@ where
     fn new() -> Result<Self, eIcicleError>;
 
     /// Returns the matrix of merkle proofs, where each row corresponds to a query and each column corresponds to a round.
-    fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<F>>>, eIcicleError>;
+    fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<u8>>>, eIcicleError>;
 
     /// Returns the final polynomial values.
     fn get_final_poly(&self) -> Result<Vec<F>, eIcicleError>;
@@ -24,7 +24,7 @@ where
 
     /// Creates a new instance of `FriProof` with the given proof data and wraps it in `ManuallyDrop`.
     fn create_with_arguments(
-        query_proofs_data: Vec<Vec<MerkleProofData<F>>>,
+        query_proofs_data: Vec<Vec<MerkleProofData<u8>>>,
         final_poly: Vec<F>,
         pow_nonce: u64,
     ) -> Result<Self, eIcicleError>;
@@ -38,7 +38,7 @@ macro_rules! impl_fri_proof {
         $field_config:ident
     ) => {
         use icicle_core::{
-            fri::fri_proof::FriProofTrait,
+            fri::fri_proof::FriProofOps,
             merkle::{MerkleProof, MerkleProofData, MerkleProofHandle},
             traits::Handle,
         };
@@ -100,7 +100,7 @@ macro_rules! impl_fri_proof {
             handle: FriProofHandle,
         }
 
-        impl FriProofTrait<$field> for FriProof {
+        impl FriProofOps<$field> for FriProof {
             fn new() -> Result<Self, eIcicleError> {
                 let handle: FriProofHandle = unsafe { icicle_initialize_fri_proof() };
                 if handle.is_null() {
@@ -110,7 +110,7 @@ macro_rules! impl_fri_proof {
             }
 
             fn create_with_arguments(
-                query_proofs_data: Vec<Vec<MerkleProofData<$field>>>,
+                query_proofs_data: Vec<Vec<MerkleProofData<u8>>>,
                 final_poly: Vec<$field>,
                 pow_nonce: u64,
             ) -> Result<Self, eIcicleError> {
@@ -152,13 +152,13 @@ macro_rules! impl_fri_proof {
                 Ok(Self { handle })
             }
 
-            fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<$field>>>, eIcicleError> {
+            fn get_query_proofs(&self) -> Result<Vec<Vec<MerkleProofData<u8>>>, eIcicleError> {
                 let mut nof_queries: usize = 0;
                 let mut nof_rounds: usize = 0;
                 unsafe {
                     fri_proof_get_nof_queries(self.handle, &mut nof_queries).wrap()?;
                     fri_proof_get_nof_rounds(self.handle, &mut nof_rounds).wrap()?;
-                    let mut proofs: Vec<Vec<MerkleProofData<$field>>> = Vec::with_capacity(nof_queries as usize);
+                    let mut proofs: Vec<Vec<MerkleProofData<u8>>> = Vec::with_capacity(nof_queries as usize);
                     for i in 0..nof_queries {
                         let mut proofs_per_query: Vec<MerkleProofHandle> = vec![std::ptr::null(); nof_rounds];
                         fri_proof_get_round_proofs_for_query(self.handle, i, proofs_per_query.as_mut_ptr()).wrap()?;
@@ -168,7 +168,7 @@ macro_rules! impl_fri_proof {
                                 .map(|x| {
                                     let proof_manually_dropped = ManuallyDrop::new(MerkleProof::from_handle(*x));
                                     let proof = &*(&*proof_manually_dropped as *const MerkleProof);
-                                    let proof_data = MerkleProofData::<$field>::from(proof);
+                                    let proof_data = MerkleProofData::<u8>::from(proof);
                                     proof_data
                                 })
                                 .collect(),

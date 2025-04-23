@@ -3,7 +3,7 @@ pub mod fri_transcript_config;
 pub mod tests;
 use crate::traits::{FieldConfig, FieldImpl, GenerateRandom};
 use crate::{field::FieldArithmetic, hash::Hasher};
-use fri_proof::FriProofTrait;
+use fri_proof::FriProofOps;
 use fri_transcript_config::FriTranscriptConfig;
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
@@ -89,7 +89,7 @@ impl Default for FriConfig {
 
 pub trait FriMerkleTree<F: FieldImpl> {
     type FieldConfig: FieldConfig + GenerateRandom<F> + FieldArithmetic<F>;
-    type FriProof: FriProofTrait<F>;
+    type FriProof: FriProofOps<F>;
     fn fri_merkle_tree_prove(
         config: &FriConfig,
         fri_transcript_config: &FriTranscriptConfig<F>,

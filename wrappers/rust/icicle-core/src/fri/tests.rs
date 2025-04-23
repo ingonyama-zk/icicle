@@ -1,7 +1,7 @@
 use super::FriMerkleTree;
 use crate::{
     fri::{
-        fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofTrait,
+        fri_merkle_tree_prove, fri_merkle_tree_verify, fri_proof::FriProofOps,
         fri_transcript_config::FriTranscriptConfig, FriConfig, FriProof,
     },
     hash::Hasher,
