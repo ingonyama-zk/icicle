@@ -17,7 +17,8 @@ static int64_t abs_centered(int64_t val, int64_t q)
   return val;
 }
 
-static bool validate_input_range(int64_t val, int64_t sqrt_q) {
+static bool validate_input_range(int64_t val, int64_t sqrt_q)
+{
   if (val >= sqrt_q) {
     ICICLE_LOG_ERROR << "Input value " << val << " is greater than sqrt(q) = " << sqrt_q;
     return false;
@@ -94,12 +95,10 @@ static eIcicleError cpu_check_norm_bound(
     executor.run(taskflow).wait();
     taskflow.clear();
 
-    if (validation_failed.load(std::memory_order_relaxed)) {
-      return eIcicleError::INVALID_ARGUMENT;
-    }
+    if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
     *output = sum_squares.load(std::memory_order_relaxed) <= bound_squared;
-  } 
+  }
   // For L-infinity norm, we just need to check the max(|input|) < norm_bound
   else if (norm == eNormType::LInfinity) {
     std::atomic<int64_t> max_abs(0);
@@ -127,8 +126,7 @@ static eIcicleError cpu_check_norm_bound(
 
         int64_t current_max = max_abs.load(std::memory_order_relaxed);
         if (local_max > current_max) {
-          max_abs.compare_exchange_weak(current_max, local_max, 
-                std::memory_order_relaxed, std::memory_order_relaxed);
+          max_abs.compare_exchange_weak(current_max, local_max, std::memory_order_relaxed, std::memory_order_relaxed);
         }
       });
     }
@@ -136,9 +134,7 @@ static eIcicleError cpu_check_norm_bound(
     executor.run(taskflow).wait();
     taskflow.clear();
 
-    if (validation_failed.load(std::memory_order_relaxed)) {
-      return eIcicleError::INVALID_ARGUMENT;
-    }
+    if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
     *output = max_abs.load(std::memory_order_relaxed) <= static_cast<int64_t>(norm_bound);
   }
@@ -227,14 +223,12 @@ static eIcicleError cpu_check_norm_relative(
     executor.run(taskflow).wait();
     taskflow.clear();
 
-    if (validation_failed.load(std::memory_order_relaxed)) {
-      return eIcicleError::INVALID_ARGUMENT;
-    }
+    if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
     const uint128_t scale_squared = static_cast<uint128_t>(scale) * static_cast<uint128_t>(scale);
     const uint128_t norm_a_squared = sum_squares_a.load(std::memory_order_relaxed);
     const uint128_t norm_b_squared = sum_squares_b.load(std::memory_order_relaxed);
-    
+
     *output = norm_a_squared < scale_squared * norm_b_squared;
   }
   // For L-infinity norm, we need to check max(|input_a|) < scale * max(|input_b|)
@@ -274,16 +268,16 @@ static eIcicleError cpu_check_norm_relative(
 
         int64_t current_max_a = max_abs_a.load(std::memory_order_relaxed);
         while (local_max_a > current_max_a) {
-          if (max_abs_a.compare_exchange_weak(current_max_a, local_max_a,
-                std::memory_order_relaxed, std::memory_order_relaxed)) {
+          if (max_abs_a.compare_exchange_weak(
+                current_max_a, local_max_a, std::memory_order_relaxed, std::memory_order_relaxed)) {
             break;
           }
         }
 
         int64_t current_max_b = max_abs_b.load(std::memory_order_relaxed);
         while (local_max_b > current_max_b) {
-          if (max_abs_b.compare_exchange_weak(current_max_b, local_max_b,
-                std::memory_order_relaxed, std::memory_order_relaxed)) {
+          if (max_abs_b.compare_exchange_weak(
+                current_max_b, local_max_b, std::memory_order_relaxed, std::memory_order_relaxed)) {
             break;
           }
         }
@@ -293,13 +287,11 @@ static eIcicleError cpu_check_norm_relative(
     executor.run(taskflow).wait();
     taskflow.clear();
 
-    if (validation_failed.load(std::memory_order_relaxed)) {
-      return eIcicleError::INVALID_ARGUMENT;
-    }
+    if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
     const int64_t norm_a = max_abs_a.load(std::memory_order_relaxed);
     const int64_t norm_b = max_abs_b.load(std::memory_order_relaxed);
-    
+
     *output = norm_a < static_cast<int64_t>(scale) * norm_b;
   }
 

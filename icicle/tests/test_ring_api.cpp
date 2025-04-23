@@ -3,7 +3,6 @@
 #include "icicle/norm.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
-#include "icicle/rings/integer_rings/labrador.h"  // For field_t definition
 
 using namespace field_config;
 using namespace icicle;
@@ -258,15 +257,13 @@ TEST_F(RingTestBase, NormBounded)
 
   const size_t size = 1 << 10;
   auto input = std::vector<field_t>(size);
-  
+
   for (size_t i = 0; i < size; ++i) {
     int32_t val = rand_uint_32b();
-    if (val > square_root) {
-      val = val % square_root;
-    }
+    if (val > square_root) { val = val % square_root; }
     input[i] = field_t::from(val);
   }
-  
+
   bool output;
 
   // Test L2 norm
@@ -312,23 +309,26 @@ TEST_F(RingTestBase, NormBounded)
     bool* nullptr_bool = nullptr;
 
     // Test null input
-    ASSERT_NE(eIcicleError::SUCCESS, 
-              norm::check_norm_bound(nullptr_field_t, size, eNormType::L2, 100, VecOpsConfig{}, &output));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_bound(nullptr_field_t, size, eNormType::L2, 100, VecOpsConfig{}, &output));
 
     // Test null output
-    ASSERT_NE(eIcicleError::SUCCESS, 
-              norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
 
     // Test zero size
-    ASSERT_EQ(eIcicleError::SUCCESS, 
-              norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
+    ASSERT_EQ(
+      eIcicleError::SUCCESS, norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
     ASSERT_TRUE(output) << "Norm check should pass for empty vector";
 
     // Test with values exceeding sqrt(q)
     auto invalid_input = std::vector<field_t>(size);
     invalid_input[0] = field_t::from(square_root + 1);
-    ASSERT_NE(eIcicleError::SUCCESS,
-              norm::check_norm_bound(invalid_input.data(), size, eNormType::L2, 100, VecOpsConfig{}, &output));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_bound(invalid_input.data(), size, eNormType::L2, 100, VecOpsConfig{}, &output));
   }
 }
 
@@ -344,14 +344,14 @@ TEST_F(RingTestBase, NormRelative)
   const size_t size = 1 << 10;
   auto input_a = std::vector<field_t>(size);
   auto input_b = std::vector<field_t>(size);
-  
+
   for (size_t i = 0; i < size; ++i) {
     int32_t val_a = rand_uint_32b() % (square_root / 4);
     int32_t val_b = rand_uint_32b() % square_root;
     input_a[i] = field_t::from(val_a);
     input_b[i] = field_t::from(val_b);
   }
-  
+
   bool output;
 
   // Test L2 norm
@@ -367,16 +367,17 @@ TEST_F(RingTestBase, NormRelative)
     }
 
     // Calculate scale that should make the check pass
-    uint64_t passing_scale = static_cast<uint64_t>(std::sqrt(static_cast<double>(norm_a_squared) / static_cast<double>(norm_b_squared))) + 1;
+    uint64_t passing_scale =
+      static_cast<uint64_t>(std::sqrt(static_cast<double>(norm_a_squared) / static_cast<double>(norm_b_squared))) + 1;
     // Test with scale that should pass
-    ICICLE_CHECK(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 
-                                         passing_scale, VecOpsConfig{}, &output));
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::L2, passing_scale, VecOpsConfig{}, &output));
     ASSERT_TRUE(output) << "L2 relative norm check failed with scale " << passing_scale;
 
     // Test with scale that should fail
     uint64_t failing_scale = passing_scale - 1;
-    ICICLE_CHECK(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 
-                                         failing_scale, VecOpsConfig{}, &output));
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::L2, failing_scale, VecOpsConfig{}, &output));
     ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale;
   }
 
@@ -396,14 +397,14 @@ TEST_F(RingTestBase, NormRelative)
     uint64_t passing_scale = static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
 
     // Test with scale that should pass
-    ICICLE_CHECK(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 
-                                         passing_scale, VecOpsConfig{}, &output));
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::LInfinity, passing_scale, VecOpsConfig{}, &output));
     ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale;
 
     // Test with scale that should fail
     uint64_t failing_scale = passing_scale - 2;
-    ICICLE_CHECK(norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::LInfinity, 
-                                         failing_scale, VecOpsConfig{}, &output));
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::LInfinity, failing_scale, VecOpsConfig{}, &output));
     ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale;
   }
 
@@ -413,28 +414,34 @@ TEST_F(RingTestBase, NormRelative)
     bool* nullptr_bool = nullptr;
 
     // Test null input_a
-    ASSERT_NE(eIcicleError::SUCCESS, 
-              norm::check_norm_relative(nullptr_field_t, input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_relative(nullptr_field_t, input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
 
     // Test null input_b
-    ASSERT_NE(eIcicleError::SUCCESS, 
-              norm::check_norm_relative(input_a.data(), nullptr_field_t, size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_relative(input_a.data(), nullptr_field_t, size, eNormType::L2, 2, VecOpsConfig{}, &output));
 
     // Test null output
-    ASSERT_NE(eIcicleError::SUCCESS, 
-              norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
 
     // Test zero size
-    ASSERT_EQ(eIcicleError::SUCCESS, 
-              norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
+    ASSERT_EQ(
+      eIcicleError::SUCCESS,
+      norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
     ASSERT_TRUE(output) << "Relative norm check should pass for empty vectors";
 
     // Test with values exceeding sqrt(q)
     auto invalid_input = std::vector<field_t>(size);
     invalid_input[0] = field_t::from(square_root + 1);
-    ASSERT_NE(eIcicleError::SUCCESS,
-              norm::check_norm_relative(invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
-    ASSERT_NE(eIcicleError::SUCCESS,
-              norm::check_norm_relative(input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_relative(invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    ASSERT_NE(
+      eIcicleError::SUCCESS,
+      norm::check_norm_relative(input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
   }
 }
