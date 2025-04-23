@@ -58,23 +58,23 @@ static eIcicleError cpu_check_norm_bound(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const double sqrt_q = std::sqrt(static_cast<double>(q));
+  auto sqrt_q = static_cast<uint32_t>(std::sqrt(q));
 
   const int64_t* input_i64 = reinterpret_cast<const int64_t*>(input);
 
   // For L2 norm, we need to check the ||input||² < norm_bound²
   if (norm == eNormType::L2) {
-    const uint64_t bound_squared = norm_bound * norm_bound;
-    std::atomic<uint64_t> sum_squares(0);
+    const uint128_t bound_squared = static_cast<uint128_t>(norm_bound) * static_cast<uint128_t>(norm_bound);
+    const int nof_workers = get_nof_workers(config);
+    std::vector<uint128_t> thread_sums(nof_workers, 0);
     std::atomic<bool> validation_failed(false);
 
     tf::Taskflow taskflow;
     tf::Executor executor;
-    const int nof_workers = get_nof_workers(config);
-    const uint64_t worker_task_size = (size + nof_workers - 1) / nof_workers; // round up
+    const uint64_t worker_task_size = (size + nof_workers - 1) / nof_workers;
 
-    for (uint64_t start_idx = 0; start_idx < size; start_idx += worker_task_size) {
-      taskflow.emplace([=, &sum_squares, &validation_failed]() {
+    for (uint64_t start_idx = 0, thread_idx = 0; start_idx < size; start_idx += worker_task_size, ++thread_idx) {
+      taskflow.emplace([=, &thread_sums, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
         uint128_t local_sum = 0;
 
@@ -88,7 +88,7 @@ static eIcicleError cpu_check_norm_bound(
           local_sum += static_cast<uint128_t>(val) * static_cast<uint128_t>(val);
         }
 
-        sum_squares.fetch_add(local_sum, std::memory_order_relaxed);
+        thread_sums[thread_idx] = local_sum;
       });
     }
 
@@ -97,7 +97,13 @@ static eIcicleError cpu_check_norm_bound(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-    *output = sum_squares.load(std::memory_order_relaxed) <= bound_squared;
+
+    uint128_t total_sum = 0;
+    for (const auto& sum : thread_sums) {
+      total_sum += sum;
+    }
+
+    *output = total_sum <= bound_squared;
   }
   // For L-infinity norm, we just need to check the max(|input|) < norm_bound
   else if (norm == eNormType::LInfinity) {
@@ -175,24 +181,24 @@ static eIcicleError cpu_check_norm_relative(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const double sqrt_q = std::sqrt(static_cast<double>(q));
+  auto sqrt_q = static_cast<uint32_t>(std::sqrt(q));
 
   const int64_t* input_a_i64 = reinterpret_cast<const int64_t*>(input_a);
   const int64_t* input_b_i64 = reinterpret_cast<const int64_t*>(input_b);
 
   // For L2 norm, we need to check ||input_a||² < scale² * ||input_b||²
   if (norm == eNormType::L2) {
-    std::atomic<uint128_t> sum_squares_a(0);
-    std::atomic<uint128_t> sum_squares_b(0);
+    const int nof_workers = get_nof_workers(config);
+    std::vector<uint128_t> thread_sums_a(nof_workers, 0);
+    std::vector<uint128_t> thread_sums_b(nof_workers, 0);
     std::atomic<bool> validation_failed(false);
 
     tf::Taskflow taskflow;
     tf::Executor executor;
-    const int nof_workers = get_nof_workers(config);
     const uint64_t worker_task_size = (size + nof_workers - 1) / nof_workers;
 
-    for (uint64_t start_idx = 0; start_idx < size; start_idx += worker_task_size) {
-      taskflow.emplace([=, &sum_squares_a, &sum_squares_b, &validation_failed]() {
+    for (uint64_t start_idx = 0, thread_idx = 0; start_idx < size; start_idx += worker_task_size, ++thread_idx) {
+      taskflow.emplace([=, &thread_sums_a, &thread_sums_b, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
         uint128_t local_sum_a = 0;
         uint128_t local_sum_b = 0;
@@ -215,8 +221,8 @@ static eIcicleError cpu_check_norm_relative(
           local_sum_b += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
         }
 
-        sum_squares_a.fetch_add(local_sum_a, std::memory_order_relaxed);
-        sum_squares_b.fetch_add(local_sum_b, std::memory_order_relaxed);
+        thread_sums_a[thread_idx] = local_sum_a;
+        thread_sums_b[thread_idx] = local_sum_b;
       });
     }
 
@@ -225,10 +231,15 @@ static eIcicleError cpu_check_norm_relative(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-    const uint128_t scale_squared = static_cast<uint128_t>(scale) * static_cast<uint128_t>(scale);
-    const uint128_t norm_a_squared = sum_squares_a.load(std::memory_order_relaxed);
-    const uint128_t norm_b_squared = sum_squares_b.load(std::memory_order_relaxed);
+    // Sum up all thread results in the main thread
+    uint128_t norm_a_squared = 0;
+    uint128_t norm_b_squared = 0;
+    for (size_t i = 0; i < nof_workers; ++i) {
+      norm_a_squared += thread_sums_a[i];
+      norm_b_squared += thread_sums_b[i];
+    }
 
+    const uint128_t scale_squared = static_cast<uint128_t>(scale) * static_cast<uint128_t>(scale);
     *output = norm_a_squared < scale_squared * norm_b_squared;
   }
   // For L-infinity norm, we need to check max(|input_a|) < scale * max(|input_b|)
