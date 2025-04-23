@@ -12,7 +12,7 @@ Serialization and deserialization for Icicle structures are facilitated by the [
   Serializes the structure into a byte array using the provided serializer.
 
 - **`deserialize<'de, D>(deserializer: D) -> Result<Self, D::Error>`**:
-  Deserializes a byte array into an Icicle strucure. This method reconstructs the proof from its serialized form.
+  Deserializes a byte array into an Icicle strucure. This method reconstructs the structure from its serialized form.
 
 ## **Example Usage**
 
