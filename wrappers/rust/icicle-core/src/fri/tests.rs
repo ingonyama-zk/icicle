@@ -113,7 +113,9 @@ pub fn check_fri_on_device<F: FieldImpl>(
             .unwrap();
 
         assert!(valid);
-        stream.destroy().unwrap();
+        stream
+            .destroy()
+            .unwrap();
     };
     test_utilities::test_set_main_device();
     check();

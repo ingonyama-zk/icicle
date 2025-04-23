@@ -67,8 +67,8 @@ pub struct FriConfig {
     pub pow_bits: u64,                     // Number of leading zeros required for proof-of-work. Default is 0.
     pub nof_queries: u64,                  // Number of queries, computed for each folded layer of FRI. Default is 1.
     pub are_inputs_on_device: bool, // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
-    pub is_async: bool,         // True to run operations asynchronously, false to run synchronously. Default is false.
-    pub ext: ConfigExtension,   // Pointer to backend-specific configuration extensions. Default is nullptr.
+    pub is_async: bool, // True to run operations asynchronously, false to run synchronously. Default is false.
+    pub ext: ConfigExtension, // Pointer to backend-specific configuration extensions. Default is nullptr.
 }
 
 impl Default for FriConfig {
