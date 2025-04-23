@@ -37,4 +37,4 @@ ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::deserialize(proof_bytes.
 
 ```
 
-This example demonstrates calculating the serialized size, performing serialization, and then deserialization, followed by a verification step to ensure the integrity of the serialized data.
+This example demonstrates calculating the serialized size, performing serialization, and then deserialization.
