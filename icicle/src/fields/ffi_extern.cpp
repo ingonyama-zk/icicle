@@ -28,6 +28,11 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, inv)(scalar_t* scalar1, scalar_
   *result = (*scalar1).inverse();
 }
 
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, sqr)(scalar_t* scalar1, scalar_t* result)
+{
+  *result = scalar_t::sqr(*scalar1);
+}
+
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pow)(scalar_t* base, int exp, scalar_t* result)
 {
   *result = (*base).pow(exp);
@@ -65,6 +70,11 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_mul)(extension_t* scalar1, extension_
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_inv)(extension_t* scalar1, extension_t* result)
 {
   *result = (*scalar1).inverse();
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_sqr)(extension_t* scalar1, extension_t* result)
+{
+  *result = extension_t::sqr(*scalar1);
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_pow)(extension_t* base, int exp, extension_t* result)
@@ -106,6 +116,11 @@ CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_mul)(scalar_rns_t* scalar1, scalar_rns_t* s
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_inv)(scalar_rns_t* scalar1, scalar_rns_t* result)
 {
   *result = (*scalar1).inverse();
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_sqr)(scalar_rns_t* scalar1, scalar_rns_t* result)
+{
+  *result = scalar_rns_t::sqr(*scalar1);
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_pow)(scalar_rns_t* base, int exp, scalar_rns_t* result)

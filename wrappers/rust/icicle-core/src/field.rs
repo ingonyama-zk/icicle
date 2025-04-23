@@ -78,6 +78,7 @@ pub trait PrimeField:
 macro_rules! impl_field {
     (
         $field:ident,
+        $field_prefix:literal,
         $num_limbs:ident
     ) => {
         #[derive(PartialEq, Copy, Clone)]
@@ -124,7 +125,7 @@ macro_rules! impl_field {
                     from_u32(val, limbs.as_mut_ptr() as *mut $field);
                 }
 
-                limbs
+                Self { limbs }
             }
         }
 
@@ -253,23 +254,24 @@ macro_rules! impl_field_arithmetic {
 macro_rules! impl_montgomery_convertible {
     (
         $field:ident,
-        $convert_montgomery_function_name:literal
+        $convert_montgomery_function_name:ident
     ) => {
-        impl MontgomeryConvertible for $field
-        {
-            use icicle_core::vec_ops::VecOpsConfig;
+        impl $field {
+            fn convert_montgomery(
+                values: &mut (impl HostOrDeviceSlice<Self> + ?Sized),
+                stream: &IcicleStream,
+                is_into: bool,
+            ) -> eIcicleError {
+                extern "C" {
+                    fn $convert_montgomery_function_name(
+                        values: *const $field,
+                        size: u64,
+                        is_into: bool,
+                        config: &VecOpsConfig,
+                        output: *mut $field,
+                    ) -> eIcicleError;
+                }
 
-            extern "C" {
-                fn $convert_montgomery_function_name(
-                    values: *const $field,
-                    size: u64,
-                    is_into: bool,
-                    config: &VecOpsConfig,
-                    output: *mut $field,
-                ) -> eIcicleError;
-            }
-
-            fn convert_montgomery(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream, is_into: bool) -> eIcicleError {
                 // check device slice is on active device
                 if values.is_on_device() && !values.is_on_active_device() {
                     panic!("input not allocated on the active device");
@@ -288,26 +290,28 @@ macro_rules! impl_montgomery_convertible {
                     )
                 }
             }
+        }
 
+        impl MontgomeryConvertible for $field {
             fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-                convert_montgomery(values, stream, true)
+                $field::convert_montgomery(values, stream, true)
             }
 
             fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-                convert_montgomery(values, stream, false)
+                $field::convert_montgomery(values, stream, false)
             }
         }
-    }
+    };
 }
 
 #[macro_export]
 macro_rules! impl_generate_random {
     (
         $field:ident,
-        $generate_random_function_name:literal
+        $generate_random_function_name:ident
     ) => {
         impl GenerateRandom for $field {
-            fn generate_random(size: usize) -> Vec<$field_name> {
+            fn generate_random(size: usize) -> Vec<$field> {
                 extern "C" {
                     pub(crate) fn $generate_random_function_name(scalars: *mut $field, size: usize);
                 }

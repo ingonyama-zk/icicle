@@ -1,13 +1,13 @@
 #![allow(unused_imports)]
-use crate::field::{PrimeField, FieldArithmetic};
+use crate::field::PrimeField;
 use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
 use crate::symbol::Symbol;
-use crate::traits::{Arithmetic, GenerateRandom};
+use crate::traits::{Arithmetic, {Arithmetic, GenerateRandom}};
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, inv_scalars,
     mixed_mul_scalars, mul_scalars, product_scalars, scalar_add, scalar_mul, scalar_sub, slice, sub_scalars,
-    sum_scalars, transpose_matrix, VecOps, MixedVecOps, VecOpsConfig,
+    sum_scalars, transpose_matrix, MixedVecOps, VecOps, VecOpsConfig,
 };
 use icicle_runtime::device::Device;
 use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
@@ -493,12 +493,11 @@ where
 
 pub fn check_program<F, Prog>()
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    F: PrimeField + VecOps + GenerateRandom + Arithmetic,
     Prog: Program<F>,
 {
     let example_lambda = |vars: &mut Vec<Prog::ProgSymbol>| {
-        let a = vars[0]; // Shallow copies pointing to the same memory in the backend
+        let a = vars[0];
         let b = vars[1];
         let c = vars[2];
         let d = vars[3];
@@ -506,14 +505,14 @@ where
         vars[4] = d * (a * b - c) + F::from_u32(9);
         vars[5] = a * b - c.inverse();
         vars[6] += a * b - c.inverse();
-        vars[3] = (vars[0] + vars[1]) * F::from_u32(2); // all variables can be both inputs and outputs
+        vars[3] = (vars[0] + vars[1]) * F::from_u32(2);
     };
 
     const TEST_SIZE: usize = 1 << 10;
-    let a = F::Config::generate_random(TEST_SIZE);
-    let b = F::Config::generate_random(TEST_SIZE);
-    let c = F::Config::generate_random(TEST_SIZE);
-    let eq = F::Config::generate_random(TEST_SIZE);
+    let a = F::generate_random(TEST_SIZE);
+    let b = F::generate_random(TEST_SIZE);
+    let c = F::generate_random(TEST_SIZE);
+    let eq = F::generate_random(TEST_SIZE);
     let var4 = vec![F::zero(); TEST_SIZE];
     let var5 = vec![F::zero(); TEST_SIZE];
     let var6 = vec![F::zero(); TEST_SIZE];
@@ -540,48 +539,23 @@ where
         let var4 = parameters[4][i];
         let var5 = parameters[5][i];
         let var6 = parameters[6][i];
-        assert_eq!(
-            var3,
-            <<F as PrimeField>::Config as FieldArithmetic<F>>::mul(
-                F::from_u32(2),
-                <<F as PrimeField>::Config as FieldArithmetic<F>>::add(a, b)
-            )
-        );
-        assert_eq!(
-            var4,
-            <<F as PrimeField>::Config as FieldArithmetic<F>>::add(
-                F::from_u32(9),
-                <<F as PrimeField>::Config as FieldArithmetic<F>>::mul(
-                    eq,
-                    <<F as PrimeField>::Config as FieldArithmetic<F>>::sub(
-                        <<F as PrimeField>::Config as FieldArithmetic<F>>::mul(a, b),
-                        c
-                    )
-                )
-            )
-        );
-        assert_eq!(
-            var5,
-            <<F as PrimeField>::Config as FieldArithmetic<F>>::sub(
-                <<F as PrimeField>::Config as FieldArithmetic<F>>::mul(a, b),
-                <<F as PrimeField>::Config as FieldArithmetic<F>>::inv(c)
-            )
-        );
+        assert_eq!(var3, F::from_u32(2) * (a + b));
+        assert_eq!(var4, eq * (a * b - c) + F::from_u32(9));
+        assert_eq!(var5, a * b - c.inv());
         assert_eq!(var6, var5);
     }
 }
 
 pub fn check_predefined_program<F, Prog>()
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F> + GenerateRandom<F> + FieldArithmetic<F>,
+    F: PrimeField + VecOps + GenerateRandom + Arithmetic,
     Prog: Program<F>,
 {
     const TEST_SIZE: usize = 1 << 10;
-    let a = F::Config::generate_random(TEST_SIZE);
-    let b = F::Config::generate_random(TEST_SIZE);
-    let c = F::Config::generate_random(TEST_SIZE);
-    let eq = F::Config::generate_random(TEST_SIZE);
+    let a = F::generate_random(TEST_SIZE);
+    let b = F::generate_random(TEST_SIZE);
+    let c = F::generate_random(TEST_SIZE);
+    let eq = F::generate_random(TEST_SIZE);
     let var4 = vec![F::zero(); TEST_SIZE];
     let a_slice = HostSlice::from_slice(&a);
     let b_slice = HostSlice::from_slice(&b);
@@ -601,16 +575,7 @@ where
         let c = parameters[2][i];
         let eq = parameters[3][i];
         let var4 = parameters[4][i];
-        assert_eq!(
-            var4,
-            <<F as PrimeField>::Config as FieldArithmetic<F>>::mul(
-                eq,
-                <<F as PrimeField>::Config as FieldArithmetic<F>>::sub(
-                    <<F as PrimeField>::Config as FieldArithmetic<F>>::mul(a, b),
-                    c
-                )
-            )
-        );
+        assert_eq!(var4, eq * (a * b - c));
     }
 }
 

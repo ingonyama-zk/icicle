@@ -65,20 +65,25 @@ pub fn check_point_arithmetic<C: Curve>() {
     }
 }
 
-pub fn check_point_equality<const BASE_LIMBS: usize, F: PrimeField, C>()
+pub fn check_point_equality<F: PrimeField, C>()
 where
     C: Curve<BaseField = F>,
 {
     let left = Projective::<C>::zero();
     let right = Projective::<C>::zero();
     assert_eq!(left, right);
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], [0; BASE_LIMBS]);
+
+    let x = F::zero();
+    let y = F::from_u32(2);
+    let z = F::zero();
+    let right = Projective::<C>::from_limbs(x.into(), y.into(), z.into());
     assert_eq!(left, right);
-    let mut z = [0; BASE_LIMBS];
-    z[0] = 2;
-    let right = Projective::<C>::from_limbs([0; BASE_LIMBS], [4; BASE_LIMBS], z);
+
+    let z = F::from_u32(2);
+    let right = Projective::<C>::from_limbs(F::zero().into(), F::from_u32(4).into(), z.into());
     assert_ne!(left, right);
-    let left = Projective::<C>::from_limbs([0; BASE_LIMBS], [2; BASE_LIMBS], C::BaseField::one().into());
+
+    let left = Projective::<C>::from_limbs(F::zero().into(), F::from_u32(2).into(), C::BaseField::one().into());
     assert_eq!(left, right);
 }
 
@@ -89,7 +94,7 @@ where
     let mut stream = IcicleStream::create().unwrap();
 
     let size = 1 << 10;
-    let scalars = F::Config::generate_random(size);
+    let scalars = F::generate_random(size);
 
     let mut d_scalars = DeviceVec::device_malloc(size).unwrap();
     d_scalars

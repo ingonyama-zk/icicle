@@ -44,7 +44,7 @@ pub fn from_rns<Zq: PrimeField, ZqRns: PrimeField>(
 where
     Zq: RnsConversion<Zq, ZqRns>,
 {
-    Zq::Config::from_rns(input, output, cfg)
+    Zq::from_rns(input, output, cfg)
 }
 
 /// Implements RNS conversion for a given ring via C bindings.

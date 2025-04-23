@@ -17,7 +17,7 @@ pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hashe
 where
     F: PrimeField + PoseidonHasher,
 {
-    <F as PoseidonHasher<F>>::new(t, domain_tag)
+    <F as PoseidonHasher>::new(t, domain_tag)
 }
 
 pub struct Poseidon;
@@ -44,15 +44,14 @@ macro_rules! impl_poseidon {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon::{$field, $field_cfg};
+            use crate::poseidon::$field;
             use icicle_core::{
+                field::PrimeField,
                 hash::{Hasher, HasherHandle},
                 poseidon::PoseidonHasher,
-                traits::PrimeField,
             };
             use icicle_runtime::errors::eIcicleError;
             use std::marker::PhantomData;
@@ -63,12 +62,8 @@ macro_rules! impl_poseidon {
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
-            impl PoseidonHasher<$field> for $field_cfg {
-                fn new_with_input_size(
-                    t: u32,
-                    domain_tag: Option<&$field>,
-                    input_size: u32,
-                ) -> Result<Hasher, eIcicleError> {
+            impl PoseidonHasher for $field {
+                fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon_hasher(
                             t,

@@ -46,15 +46,15 @@ macro_rules! impl_program_field {
     (
     $field_prefix:literal,
     $field_prefix_ident:ident,
-    $field:ident,
-    $field_config:ident
+    $field:ident
   ) => {
         pub mod $field_prefix_ident {
             use crate::program::$field;
             use crate::symbol::$field_prefix_ident::FieldSymbol;
+            use icicle_core::field::PrimeField;
             use icicle_core::program::{Instruction, PreDefinedProgram, Program, ProgramHandle, ReturningValueProgram};
             use icicle_core::symbol::{Symbol, SymbolHandle};
-            use icicle_core::traits::{Handle, PrimeField};
+            use icicle_core::traits::Handle;
             use icicle_runtime::errors::eIcicleError;
             use icicle_runtime::memory::HostOrDeviceSlice;
             use std::ffi::c_void;
