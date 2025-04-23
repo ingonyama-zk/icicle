@@ -188,7 +188,7 @@ macro_rules! impl_sumcheck {
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
-        use icicle_core::traits::{Handle, PrimeField};
+        use icicle_core::traits::Handle;
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use std::ffi::c_void;
         use std::slice;
@@ -254,7 +254,6 @@ macro_rules! impl_sumcheck {
 
         impl Sumcheck for SumcheckWrapper {
             type Field = $field;
-            type FieldConfig = $field_cfg;
             type Proof = SumcheckProof;
 
             fn new() -> Result<Self, eIcicleError> {

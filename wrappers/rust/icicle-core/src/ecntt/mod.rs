@@ -83,7 +83,7 @@ pub fn ecntt<C: Curve>(
 where
     C::ScalarField: PrimeField + ECNTT<C>,
 {
-    <C::ScalarField as ECNTTUnchecked<Projective<C>, C::ScalarField>>::ntt_unchecked(input, dir, &cfg, output)
+    <C::ScalarField as ECNTTUnchecked<Projective<C>>>::ntt_unchecked(input, dir, &cfg, output)
 }
 
 /// Computes the ECNTT, or a batch of several ECNTTs inplace.

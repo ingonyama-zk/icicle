@@ -269,8 +269,7 @@ fn check_vec_ops_args_slice<F>(
 
 fn check_execute_program<F, Data>(data: &Vec<&Data>, cfg: &VecOpsConfig) -> VecOpsConfig
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
     Data: HostOrDeviceSlice<F> + ?Sized,
 {
     // All parameters' config should match so each one is compared to the first one
@@ -350,11 +349,10 @@ pub fn sub_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::sub(a, b, result, &cfg)
+    F::sub(a, b, result, &cfg)
 }
 
 pub fn mul_scalars<F>(
@@ -364,11 +362,10 @@ pub fn mul_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::mul(a, b, result, &cfg)
+    F::mul(a, b, result, &cfg)
 }
 
 pub fn mixed_mul_scalars<F, T>(
@@ -378,11 +375,11 @@ pub fn mixed_mul_scalars<F, T>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: MixedVecOps<F, T>,
+    F: PrimeField + MixedVecOps<T>,
+    T: PrimeField,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as PrimeField>::Config as MixedVecOps<F, T>>::mul(a, b, result, &cfg)
+    F::mul(a, b, result, &cfg)
 }
 
 pub fn div_scalars<F>(
@@ -392,11 +389,10 @@ pub fn div_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::div(a, b, result, &cfg)
+    F::div(a, b, result, &cfg)
 }
 
 pub fn inv_scalars<F>(
@@ -405,11 +401,10 @@ pub fn inv_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args(input, input, output, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::inv(input, output, &cfg)
+    F::inv(input, output, &cfg)
 }
 
 pub fn sum_scalars<F>(
@@ -418,11 +413,10 @@ pub fn sum_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::sum(a, result, &cfg)
+    F::sum(a, result, &cfg)
 }
 
 pub fn product_scalars<F>(
@@ -431,11 +425,10 @@ pub fn product_scalars<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_reduction_ops(a, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::product(a, result, &cfg)
+    F::product(a, result, &cfg)
 }
 
 pub fn scalar_add<F>(
@@ -445,11 +438,10 @@ pub fn scalar_add<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::scalar_add(a, b, result, &cfg)
+    F::scalar_add(a, b, result, &cfg)
 }
 
 pub fn scalar_sub<F>(
@@ -459,11 +451,10 @@ pub fn scalar_sub<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::scalar_sub(a, b, result, &cfg)
+    F::scalar_sub(a, b, result, &cfg)
 }
 
 pub fn scalar_mul<F>(
@@ -473,11 +464,10 @@ pub fn scalar_mul<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_scalar_ops(a, b, result, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::scalar_mul(a, b, result, &cfg)
+    F::scalar_mul(a, b, result, &cfg)
 }
 
 pub fn transpose_matrix<F>(
@@ -488,11 +478,10 @@ pub fn transpose_matrix<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_transpose(input, nof_rows, nof_cols, output, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
+    F::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
 pub fn bit_reverse<F>(
@@ -501,11 +490,10 @@ pub fn bit_reverse<F>(
     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args(input, input /*dummy*/, output, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::bit_reverse(input, &cfg, output)
+    F::bit_reverse(input, &cfg, output)
 }
 
 pub fn bit_reverse_inplace<F>(
@@ -513,11 +501,10 @@ pub fn bit_reverse_inplace<F>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args(input, input /*dummy*/, input, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::bit_reverse_inplace(input, &cfg)
+    F::bit_reverse_inplace(input, &cfg)
 }
 
 pub fn slice<F>(
@@ -530,11 +517,10 @@ pub fn slice<F>(
     output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
 {
     let cfg = check_vec_ops_args_slice(input, offset, stride, size_in, size_out, output, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
+    F::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
 pub fn execute_program<F, Prog, Data>(
@@ -543,13 +529,12 @@ pub fn execute_program<F, Prog, Data>(
     cfg: &VecOpsConfig,
 ) -> Result<(), eIcicleError>
 where
-    F: PrimeField,
-    <F as PrimeField>::Config: VecOps<F>,
+    F: PrimeField + VecOps,
     Data: HostOrDeviceSlice<F> + ?Sized,
     Prog: Program<F>,
 {
     let cfg = check_execute_program(&data, cfg);
-    <<F as PrimeField>::Config as VecOps<F>>::execute_program(data, program, &cfg)
+    F::execute_program(data, program, &cfg)
 }
 
 #[macro_export]
@@ -562,6 +547,7 @@ macro_rules! impl_vec_ops_field {
         mod $field_prefix_ident {
             use super::*;
             use crate::vec_ops::{HostOrDeviceSlice, VecOpsConfig};
+            use icicle_core::program::ProgramHandle;
             use icicle_runtime::errors::eIcicleError;
 
             extern "C" {
@@ -969,7 +955,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError>
             where
-                <Self as PrimeField>::Config: VecOps<Self>,
+                Self: VecOps,
                 Data: HostOrDeviceSlice<Self> + ?Sized,
                 Prog: Program<Self>,
             {
@@ -998,8 +984,7 @@ macro_rules! impl_vec_ops_mixed_field {
         $field_prefix:literal,
         $field_prefix_ident:ident,
         $ext_field:ident,
-        $field:ident,
-        $ext_field_config:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
 
@@ -1019,7 +1004,7 @@ macro_rules! impl_vec_ops_mixed_field {
             }
         }
 
-        impl MixedVecOps<$ext_field> for $ext_field_config {
+        impl MixedVecOps<$field> for $ext_field {
             fn mul(
                 a: &(impl HostOrDeviceSlice<$ext_field> + ?Sized),
                 b: &(impl HostOrDeviceSlice<$field> + ?Sized),

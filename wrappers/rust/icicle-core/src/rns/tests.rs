@@ -23,7 +23,7 @@ where
 
     let mut cfg = VecOpsConfig::default();
     cfg.batch_size = batch_size as i32;
-    let input_direct: Vec<Zq> = Zq::Config::generate_random(total_size);
+    let input_direct: Vec<Zq> = Zq::generate_random(total_size);
 
     // Convert Zq -> ZqRns on reference device
     test_utilities::test_set_ref_device();
@@ -75,8 +75,8 @@ where
 ///   - Matches `c_from_rns = from_rns(a_rns * b_rns)` computed in `ZqRns`
 pub fn check_rns_arithmetic_consistency<Zq, ZqRns>()
 where
-    Zq: PrimeField + VecOps<Zq> + RnsConversion<Zq, ZqRns> + GenerateRandom,
-    ZqRns: PrimeField + VecOps<ZqRns>,
+    Zq: PrimeField + VecOps + RnsConversion<Zq, ZqRns> + GenerateRandom,
+    ZqRns: PrimeField + VecOps,
 {
     use crate::vec_ops::mul_scalars;
 
@@ -89,8 +89,8 @@ where
     cfg.batch_size = batch_size as i32;
 
     // Allocate inputs in Zq
-    let a = Zq::Config::generate_random(size);
-    let b = Zq::Config::generate_random(size);
+    let a = Zq::generate_random(size);
+    let b = Zq::generate_random(size);
     let mut c = vec![Zq::zero(); size];
 
     // Allocate corresponding RNS representations
@@ -108,8 +108,8 @@ where
     .unwrap();
 
     // Convert a, b to RNS representation (a_rns, b_rns)
-    Zq::Config::to_rns(HostSlice::from_slice(&a), HostSlice::from_mut_slice(&mut a_rns), &cfg).unwrap();
-    Zq::Config::to_rns(HostSlice::from_slice(&b), HostSlice::from_mut_slice(&mut b_rns), &cfg).unwrap();
+    Zq::to_rns(HostSlice::from_slice(&a), HostSlice::from_mut_slice(&mut a_rns), &cfg).unwrap();
+    Zq::to_rns(HostSlice::from_slice(&b), HostSlice::from_mut_slice(&mut b_rns), &cfg).unwrap();
 
     // Compute in RNS domain: c_rns = a_rns * b_rns
     mul_scalars(
@@ -122,7 +122,7 @@ where
 
     // Convert c_rns back to Zq: c_from_rns = from_rns(c_rns)
     let mut c_from_rns = vec![Zq::zero(); size];
-    Zq::Config::from_rns(
+    Zq::from_rns(
         HostSlice::from_slice(&c_rns),
         HostSlice::from_mut_slice(&mut c_from_rns),
         &cfg,

@@ -11,7 +11,7 @@ where
     let total_size = batch * size;
     let bases = [2, 3, 4, 16, 77];
 
-    let input = F::Config::generate_random(total_size as usize); // vec![F::zero(); size];
+    let input = F::generate_random(total_size as usize); // vec![F::zero(); size];
     let mut recomposed = vec![F::zero(); total_size as usize];
 
     let mut cfg = VecOpsConfig::default();

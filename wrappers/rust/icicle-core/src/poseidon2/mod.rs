@@ -37,15 +37,14 @@ macro_rules! impl_poseidon2 {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon2::{$field, $field_cfg};
+            use crate::poseidon2::$field;
             use icicle_core::{
+                field::PrimeField,
                 hash::{Hasher, HasherHandle},
                 poseidon2::Poseidon2Hasher,
-                traits::PrimeField,
             };
             use icicle_runtime::errors::eIcicleError;
             use std::marker::PhantomData;
@@ -56,7 +55,7 @@ macro_rules! impl_poseidon2 {
             }
 
             // Implement the `Poseidon2Hasher` trait for the given field configuration.
-            impl Poseidon2Hasher<$field> for $field_cfg {
+            impl Poseidon2Hasher for $field {
                 fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon2_hasher(t, domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field))

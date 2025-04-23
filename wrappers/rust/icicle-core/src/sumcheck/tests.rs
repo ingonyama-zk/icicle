@@ -11,7 +11,7 @@ where
     F: GenerateRandom,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::generate_random(1)[0];
 
     // Test `new` constructor
     let config1 = SumcheckTranscriptConfig::new(
@@ -52,6 +52,7 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
@@ -123,6 +124,7 @@ where
 pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
@@ -208,6 +210,7 @@ where
 pub fn check_sumcheck_user_defined_combine<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;

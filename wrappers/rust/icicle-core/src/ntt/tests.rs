@@ -278,7 +278,7 @@ where
 // also testing column batch with transpose against row batch
 pub fn check_ntt_batch<F: PrimeField>()
 where
-    F: NTT<F> + GenerateRandom + VecOps<F>,
+    F: NTT<F> + GenerateRandom + VecOps,
 {
     test_utilities::test_set_main_device();
     let test_sizes = [1 << 4, 1 << 12];
