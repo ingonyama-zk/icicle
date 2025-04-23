@@ -182,8 +182,6 @@ namespace m31 {
       return MersenneField{{t}};
     }
 
-    // HOST_DEVICE_INLINE MersenneField operator-(const MersenneField& ys) const { return *this + ys.neg(); }
-
     HOST_DEVICE_INLINE MersenneField operator*(const MersenneField& ys) const
     {
       uint64_t x = (uint64_t)(get_limb())*ys.get_limb();
@@ -204,8 +202,6 @@ namespace m31 {
     {
       return mul_wide(*this);
     }
-
-    // constexpr HOST_DEVICE_INLINE MersenneField sqr() const { return *this * *this; }
 
     constexpr HOST_DEVICE_INLINE MersenneField to_montgomery() const { return *this; }
 

@@ -18,7 +18,7 @@ extern "C" bool CONCAT_EXPAND(ICICLE_FFI_PREFIX, eq)(projective_t* point1, proje
 extern "C" void
 CONCAT_EXPAND(ICICLE_FFI_PREFIX, ecsub)(projective_t* point1, projective_t* point2, projective_t* result)
 {
-  *result = point1->operator-(*point2);
+  *result = *point1 - *point2;
 }
 
 extern "C" void
