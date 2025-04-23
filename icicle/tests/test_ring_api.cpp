@@ -286,19 +286,19 @@ TEST_F(RingTestBase, NormBounded)
   // Test L-infinity norm
   {
     // Compute actual L-infinity norm
-    uint128_t actual_norm = 0;
+    uint64_t actual_norm = 0;
     for (size_t i = 0; i < size; ++i) {
-      uint128_t val = abs_centered(*(int64_t*)&input[i], q);
+      uint64_t val = abs_centered(*(int64_t*)&input[i], q);
       actual_norm = std::max(actual_norm, val);
     }
 
     // Test with bound just above actual norm
-    uint64_t bound = static_cast<uint64_t>(actual_norm) + 1;
+    uint64_t bound = actual_norm + 1;
     ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
     ASSERT_TRUE(output) << "L-infinity norm check failed with bound " << bound;
 
     // Test with bound just below actual norm
-    bound = static_cast<uint64_t>(actual_norm) - 1;
+    bound = actual_norm - 1;
     ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
     ASSERT_FALSE(output) << "L-infinity norm check should fail with bound " << bound;
   }
