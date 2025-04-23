@@ -29,13 +29,26 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  using scalarMatrixOpImpl = std::function<eIcicleError(
+  using scalarUnaryMatrixOpImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* in,
     uint32_t nof_rows,
     uint32_t nof_cols,
     const VecOpsConfig& config,
     scalar_t* out)>;
+
+  using scalarBinaryMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* in_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* in_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    scalar_t* out)>;
+
+
 
   using scalarBitReverseOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
@@ -200,7 +213,7 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_matrix_transpose(const std::string& deviceType, scalarMatrixOpImpl impl);
+  void register_matrix_transpose(const std::string& deviceType, scalarUnaryMatrixOpImpl impl);
 
 #define REGISTER_MATRIX_TRANSPOSE_BACKEND(DEVICE_TYPE, FUNC)                                                           \
   namespace {                                                                                                          \
@@ -209,6 +222,20 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
+
+
+  void register_matrix_mult(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
+
+#define REGISTER_MATRIX_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_matrix_mul) = []() -> bool {                                                               \
+      register_matrix_mult(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  } 
+
+
+
 
   void register_scalar_bit_reverse(const std::string& deviceType, scalarBitReverseOpImpl);
 

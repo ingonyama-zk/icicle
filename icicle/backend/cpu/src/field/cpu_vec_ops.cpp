@@ -36,6 +36,7 @@ enum VecOperation {
   SLICE,
   REPLACE_ELEMENTS,
   OUT_OF_PLACE_MATRIX_TRANSPOSE,
+  MATRIX_MULTIPLICATION,
 
   NOF_VECTOR_OPERATIONS
 };
@@ -173,6 +174,23 @@ public:
     m_output = mat_out;
     dispatch();
   }
+
+  void send_matrix_multiplication_task(
+    VecOperation operation,
+    const T* mat_a,
+    const uint32_t nof_rows_a,
+    const uint32_t nof_cols_a,
+    const T* mat_b,   
+    const uint32_t nof_rows_b,
+    const uint32_t nof_cols_b,
+    const uint32_t stride,
+    T* mat_out)
+  {
+    m_operation = operation;
+
+    dispatch();
+  }    
+  
 
   // Execute the selected function based on m_operation
   virtual void execute() { (this->*functionPtrs[static_cast<size_t>(m_operation)])(); }
@@ -751,6 +769,24 @@ eIcicleError cpu_matrix_transpose(
 }
 
 REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
+
+
+/*********************************** MATRIX MULTIPLICATION ***********************************/
+
+
+template <typename T>   
+static eIcicleError cpu_matrix_mult(
+  const Device& device,
+  const T* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
+  const T* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, T* mat_out)
+{
+    //TODO: Implement matrix multiplication
+  return eIcicleError::SUCCESS;
+}   
+
+REGISTER_MATRIX_MUL_BACKEND("CPU", cpu_matrix_mult<scalar_t>);
+
+
 
 /*********************************** BIT REVERSE ***********************************/
 template <typename T>

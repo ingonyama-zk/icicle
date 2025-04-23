@@ -4,6 +4,7 @@
 #include "icicle/fri/fri_config.h"
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
+#include "test_matrix_api.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
