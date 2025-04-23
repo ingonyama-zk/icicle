@@ -252,9 +252,19 @@ TEST_F(RingTestBase, NormBounded)
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
   const size_t size = 1 << 10;
   auto input = std::vector<field_t>(size);
-  field_t::rand_host_many(input.data(), size);
+  
+  for (size_t i = 0; i < size; ++i) {
+    int32_t val = rand_uint_32b();
+    if (val > square_root) {
+      val = val % square_root;
+    }
+    input[i] = field_t::from(val);
+  }
+  
   bool output;
 
   // Test L2 norm
