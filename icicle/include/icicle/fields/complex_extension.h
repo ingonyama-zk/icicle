@@ -86,9 +86,9 @@ public:
   }
 
   template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus(const ComplexExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE ComplexExtensionField sub_modulus() const
   {
-    return ComplexExtensionField{FF::sub_modulus<REDUCTION_SIZE>(xs.c0), FF::sub_modulus<REDUCTION_SIZE>(xs.c1)};
+    return ComplexExtensionField{c0.template sub_modulus<REDUCTION_SIZE>(), c1.template sub_modulus<REDUCTION_SIZE>()};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const ComplexExtensionField& xs)

@@ -81,11 +81,11 @@ public:
   }
 
   template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE CubicExtensionField sub_modulus(const CubicExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE CubicExtensionField sub_modulus() const
   {
     return CubicExtensionField{
-      FF::sub_modulus<REDUCTION_SIZE>(xs.c0), FF::sub_modulus<REDUCTION_SIZE>(xs.c1),
-      FF::sub_modulus<REDUCTION_SIZE>(xs.c2)};
+      c0.template sub_modulus<REDUCTION_SIZE>(), c1.template sub_modulus<REDUCTION_SIZE>(),
+      c2.template sub_modulus<REDUCTION_SIZE>()};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const CubicExtensionField& xs)

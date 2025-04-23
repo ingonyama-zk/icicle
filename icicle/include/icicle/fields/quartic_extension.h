@@ -93,11 +93,11 @@ public:
   }
 
   template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField sub_modulus(const QuarticExtensionField& xs)
+  constexpr HOST_DEVICE_INLINE QuarticExtensionField sub_modulus() const
   {
     return QuarticExtensionField{
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1),
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.c2), FF::sub_modulus<REDUCTION_SIZE>(&xs.c3)};
+      c0.sub_modulus<REDUCTION_SIZE>(), c1.sub_modulus<REDUCTION_SIZE>(),
+      c2.sub_modulus<REDUCTION_SIZE>(), c3.sub_modulus<REDUCTION_SIZE>()};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const QuarticExtensionField& xs)

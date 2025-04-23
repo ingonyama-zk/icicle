@@ -333,12 +333,12 @@ public:
   }
 
   template <unsigned REDUCTION_SIZE = 1>
-  static constexpr HOST_DEVICE_INLINE Derived sub_modulus(const Derived& xs)
+  constexpr HOST_DEVICE_INLINE Derived sub_modulus() const
   {
-    if (REDUCTION_SIZE == 0) return xs;
+    if (REDUCTION_SIZE == 0) return static_cast<const Derived&>(*this);
     const ff_storage modulus = get_modulus<REDUCTION_SIZE>();
     Derived rs = {};
-    return sub_limbs<TLC, true>(xs.limbs_storage, modulus, rs.limbs_storage) ? xs : rs;
+    return sub_limbs<TLC, true>(limbs_storage, modulus, rs.limbs_storage) ? static_cast<const Derived&>(*this) : rs;
   }
 
   friend std::ostream& operator<<(std::ostream& os, const Derived& xs)
@@ -372,7 +372,7 @@ public:
   {
     Derived rs = {};
     add_limbs<TLC, false>(limbs_storage, ys.limbs_storage, rs.limbs_storage);
-    return sub_modulus<1>(rs);
+    return rs.template sub_modulus<1>();
   }
 
   HOST_DEVICE Derived operator-(const Derived& ys) const
@@ -580,7 +580,7 @@ public:
   {
     Derived rs = {};
     icicle_math::template div2<TLC>(limbs_storage, rs.limbs_storage);
-    return sub_modulus<MODULUS_MULTIPLE>(rs);
+    return rs.template sub_modulus<MODULUS_MULTIPLE>();
   }
 
   static constexpr HOST_DEVICE_INLINE bool lt(const Derived& xs, const Derived& ys)
