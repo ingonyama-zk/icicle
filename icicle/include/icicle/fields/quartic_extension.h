@@ -96,8 +96,8 @@ public:
   constexpr HOST_DEVICE_INLINE QuarticExtensionField sub_modulus() const
   {
     return QuarticExtensionField{
-      c0.sub_modulus<REDUCTION_SIZE>(), c1.sub_modulus<REDUCTION_SIZE>(),
-      c2.sub_modulus<REDUCTION_SIZE>(), c3.sub_modulus<REDUCTION_SIZE>()};
+      c0.template sub_modulus<REDUCTION_SIZE>(), c1.template sub_modulus<REDUCTION_SIZE>(),
+      c2.template sub_modulus<REDUCTION_SIZE>(), c3.template sub_modulus<REDUCTION_SIZE>()};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const QuarticExtensionField& xs)

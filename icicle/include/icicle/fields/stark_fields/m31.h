@@ -78,7 +78,7 @@ namespace m31 {
     HOST_DEVICE_INLINE uint32_t get_limb() const { return this->limbs_storage.limbs[0]; }
 
     //  The `Wide` struct represents a redundant 32-bit form of the Mersenne Field.
-    struct Wide : Base::Wide {
+    struct Wide {
       uint32_t storage;
       static constexpr HOST_DEVICE_INLINE Wide from_field(const MersenneField& xs)
       {
@@ -118,6 +118,11 @@ namespace m31 {
         uint64_t t1 = (uint64_t)storage * ys.storage; // max: 2^64 - 2^33+1 = 2^32(2^32 - 2) + 1
         t1 = ((t1 >> 32) << 1) + (uint32_t)(t1);      // max: 2(2^32 - 2) + 1 = 2^32(1) + (2^32 - 3)
         return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
+      }
+
+      constexpr HOST_DEVICE_INLINE MersenneField reduce() const
+      {
+        return MersenneField::reduce(*this);
       }
     };
 
@@ -177,7 +182,7 @@ namespace m31 {
       return MersenneField{{t}};
     }
 
-    HOST_DEVICE_INLINE MersenneField operator-(const MersenneField& ys) const { return *this + ys.neg(); }
+    // HOST_DEVICE_INLINE MersenneField operator-(const MersenneField& ys) const { return *this + ys.neg(); }
 
     HOST_DEVICE_INLINE MersenneField operator*(const MersenneField& ys) const
     {
@@ -195,29 +200,16 @@ namespace m31 {
       return Wide::from_field(*this) * Wide::from_field(ys);
     }
 
-    template <unsigned MODULUS_MULTIPLE = 1>
     constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
     {
       return mul_wide(*this);
     }
 
-    constexpr HOST_DEVICE_INLINE MersenneField sqr() const { return *this * *this; }
+    // constexpr HOST_DEVICE_INLINE MersenneField sqr() const { return *this * *this; }
 
     constexpr HOST_DEVICE_INLINE MersenneField to_montgomery() const { return *this; }
 
     constexpr HOST_DEVICE_INLINE MersenneField from_montgomery() const { return *this; }
-
-    constexpr HOST_DEVICE_INLINE MersenneField pow(int exp) const
-    {
-      MersenneField res = one();
-      MersenneField base = *this;
-      while (exp > 0) {
-        if (exp & 1) res = res * base;
-        base = base * base;
-        exp >>= 1;
-      }
-      return res;
-    }
   };
 
   struct fp_config {
