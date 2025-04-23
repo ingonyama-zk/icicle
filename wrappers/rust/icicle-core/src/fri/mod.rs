@@ -24,11 +24,6 @@ pub fn fri_merkle_tree_prove<F: FieldImpl>(
 where
     <F as FieldImpl>::Config: FriMerkleTree<F>,
 {
-    if input_data.is_on_device() && !input_data.is_on_active_device() {
-        panic!("input_data not allocated on the active device");
-    }
-    let mut local_cfg = config.clone();
-    local_cfg.are_inputs_on_device = true;
     <F::Config as FriMerkleTree<F>>::fri_merkle_tree_prove(
         config,
         fri_transcript_config,
@@ -71,7 +66,7 @@ pub struct FriConfig {
     pub stopping_degree: u64,              // The minimal polynomial degree at which folding stops.
     pub pow_bits: u64,                     // Number of leading zeros required for proof-of-work. Default is 0.
     pub nof_queries: u64,                  // Number of queries, computed for each folded layer of FRI. Default is 1.
-    are_inputs_on_device: bool, // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
+    pub are_inputs_on_device: bool, // True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false.
     pub is_async: bool,         // True to run operations asynchronously, false to run synchronously. Default is false.
     pub ext: ConfigExtension,   // Pointer to backend-specific configuration extensions. Default is nullptr.
 }
@@ -168,8 +163,15 @@ macro_rules! impl_fri {
                     merkle_tree_compress_hash: &Hasher,
                     merkle_tree_min_layer_to_store: u64,
                 ) -> Result<FriProof, eIcicleError> {
+                    if input_data.is_on_device() && !input_data.is_on_active_device() {
+                        return Err(eIcicleError::InvalidDevice);
+                    }
+                    let mut local_cfg = config.clone();
+                    if input_data.is_on_device() {
+                        local_cfg.are_inputs_on_device = true;
+                    }
                     let ffi_transcript_config = FFIFriTranscriptConfig::<$field>::from(transcript_config);
-                    let mut fri_proof = FriProof::new();
+                    let mut fri_proof = FriProof::new()?;
                     unsafe {
                         icicle_fri_merkle_tree_prove(
                             config as *const FriConfig,

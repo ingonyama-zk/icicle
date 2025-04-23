@@ -26,7 +26,7 @@ pub fn check_fri<F: FieldImpl>(
 
         let merkle_tree_min_layer_to_store = 0;
 
-        let fri_proof = fri_merkle_tree_prove::<F>(
+        let fri_proof = <F as FieldImpl>::Config::fri_merkle_tree_prove(
             &fri_config,
             &transcript_config,
             HostSlice::from_slice(&scalars),
@@ -35,10 +35,22 @@ pub fn check_fri<F: FieldImpl>(
             merkle_tree_min_layer_to_store,
         )
         .unwrap();
-        let valid = fri_merkle_tree_verify(
+
+        let query_proofs = fri_proof
+            .get_query_proofs()
+            .unwrap();
+        let final_poly = fri_proof
+            .get_final_poly()
+            .unwrap();
+        let pow_nonce = fri_proof
+            .get_pow_nonce()
+            .unwrap();
+        let fri_proof_copy = FriProof::<F>::create_with_arguments(query_proofs, final_poly, pow_nonce).unwrap();
+
+        let valid = <F as FieldImpl>::Config::fri_merkle_tree_verify(
             &fri_config,
             &transcript_config,
-            &fri_proof,
+            &fri_proof_copy,
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
         )
@@ -60,7 +72,7 @@ pub fn check_fri_on_device<F: FieldImpl>(
 {
     let check = || {
         const SIZE: u64 = 1 << 10;
-        let stream = IcicleStream::create().unwrap();
+        let mut stream = IcicleStream::create().unwrap();
         let mut fri_config = FriConfig::default();
         fri_config.is_async = true;
         fri_config.stream_handle = *stream;
@@ -88,21 +100,10 @@ pub fn check_fri_on_device<F: FieldImpl>(
             .synchronize()
             .unwrap();
 
-        let query_proofs = fri_proof
-            .get_query_proofs::<u8>()
-            .unwrap();
-        let final_poly = fri_proof
-            .get_final_poly()
-            .unwrap();
-        let pow_nonce = fri_proof
-            .get_pow_nonce()
-            .unwrap();
-        let fri_proof_copy = FriProof::<F>::create_with_arguments(query_proofs, final_poly, pow_nonce).unwrap();
-
         let valid = fri_merkle_tree_verify(
             &fri_config,
             &transcript_config,
-            &fri_proof_copy,
+            &fri_proof,
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
         )
@@ -112,6 +113,7 @@ pub fn check_fri_on_device<F: FieldImpl>(
             .unwrap();
 
         assert!(valid);
+        stream.destroy().unwrap();
     };
     test_utilities::test_set_main_device();
     check();
@@ -157,10 +159,10 @@ pub fn check_fri_proof_serialization<F: FieldImpl, S, D, T>(
     let fri_proof_deserialized = deserialize(&fri_proof_serialized);
 
     let merkle_proofs = fri_proof
-        .get_query_proofs::<u8>()
+        .get_query_proofs()
         .unwrap();
     let merkle_proofs_deserialized = fri_proof_deserialized
-        .get_query_proofs::<u8>()
+        .get_query_proofs()
         .unwrap();
     for i in 0..merkle_proofs.len() {
         for j in 0..merkle_proofs[i].len() {
