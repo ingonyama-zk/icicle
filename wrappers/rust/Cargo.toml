@@ -9,6 +9,7 @@ members = [
   "icicle-curves/icicle-bn254",
   "icicle-curves/icicle-grumpkin",
   "icicle-fields/icicle-babybear",
+  "icicle-fields/icicle-goldilocks",
   "icicle-fields/icicle-koalabear",
   "icicle-fields/icicle-m31",
   "icicle-fields/icicle-stark252",
@@ -18,7 +19,7 @@ members = [
 exclude = []
 
 [workspace.package]
-version = "3.6.0"
+version = "3.7.1"
 edition = "2021"
 authors = ["Ingonyama"]
 homepage = "https://www.ingonyama.com"

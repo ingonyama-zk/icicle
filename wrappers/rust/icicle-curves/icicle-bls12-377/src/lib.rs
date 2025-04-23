@@ -11,3 +11,5 @@ pub mod vec_ops;
 
 #[cfg(not(feature = "no_ecntt"))]
 pub mod ecntt;
+#[cfg(not(feature = "no_g2"))]
+pub mod pairing;

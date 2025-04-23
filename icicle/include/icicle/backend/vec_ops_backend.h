@@ -101,6 +101,16 @@ namespace icicle {
     }();                                                                                                               \
   }
 
+  void register_vector_inv(const std::string& deviceType, VectorReduceOpImpl impl);
+
+#define REGISTER_VECTOR_INV_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_inv) = []() -> bool {                                                                  \
+      register_vector_inv(DEVICE_TYPE, FUNC);                                                                          \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
   void register_vector_sub(const std::string& deviceType, scalarVectorOpImpl impl);
 #define REGISTER_VECTOR_SUB_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
   namespace {                                                                                                          \
@@ -299,6 +309,16 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_vec_accumulate_ext_field) = []() -> bool {                                               \
         register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                       \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_extension_vector_inv(const std::string& deviceType, extFieldVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_INV_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_inv_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_inv(DEVICE_TYPE, FUNC);                                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
@@ -563,6 +583,16 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  void register_ring_rns_vector_inv(const std::string& deviceType, ringRnsVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_INV_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_inv_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_inv(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   void register_ring_rns_scalar_mul_vec(const std::string& deviceType, ringRnsVectorOpImpl impl);
 
   #define REGISTER_SCALAR_MUL_VEC_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
@@ -720,6 +750,27 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_program_execution_rns) = []() -> bool {                                                  \
         register_rns_execute_program(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  using balancedDecompositionImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig& config,
+    field_t* output,
+    size_t output_size)>;
+
+  void register_decompose_balanced_digits(const std::string& deviceType, balancedDecompositionImpl impl);
+  void register_recompose_from_balanced_digits(const std::string& deviceType, balancedDecompositionImpl impl);
+
+  #define REGISTER_BALANCED_DECOMPOSITION_BACKEND(DEVICE_TYPE, DECOMPOSE, RECOMPOSE)                                   \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_balanced_recomposition) = []() -> bool {                                                 \
+        register_decompose_balanced_digits(DEVICE_TYPE, DECOMPOSE);                                                    \
+        register_recompose_from_balanced_digits(DEVICE_TYPE, RECOMPOSE);                                               \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

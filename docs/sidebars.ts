@@ -98,8 +98,13 @@ const cppApi = [
   },
   {
     type: "doc",
-    label: "Fri",
+    label: "FRI",
     id: "icicle/primitives/fri",
+  },
+  {
+    type: "doc",
+    label: "Pairings",
+    id: "icicle/primitives/pairings",
   },
 ];
 
@@ -172,6 +177,11 @@ const rustBindingsApi = [
     type: "doc",
     label: "Vector operations",
     id: "icicle/rust-bindings/vec-ops",
+  },
+  {
+    type: "doc",
+    label: "Program",
+    id: "icicle/rust-bindings/program", 
   },
   {
     type: "doc",

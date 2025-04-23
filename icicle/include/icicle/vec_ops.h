@@ -165,6 +165,24 @@ namespace icicle {
   eIcicleError vector_div(const T* vec_a, const T* vec_b, uint64_t size, const VecOpsConfig& config, T* output);
 
   /**
+   * @brief Invert vector `a` element-wise.
+   *
+   * @tparam T Type of the elements in the vectors.
+   * @param vec_a Pointer to the first input vector(s).
+   *              - If `config.batch_size > 1`, this should be a concatenated array of vectors.
+   *              - The layout depends on `config.columns_batch`:
+   *                - If `false`, vectors are stored contiguously in memory.
+   *                - If `true`, vectors are stored as columns in a 2D array.
+   * @param size Number of elements in each vector.
+   * @param config Configuration for the operation.
+   * @param output Pointer to the output vector(s) where the results will be stored.
+   *               The output array should have the same storage layout as the input vectors.
+   * @return eIcicleError Error code indicating success or failure.
+   */
+  template <typename T>
+  eIcicleError vector_inv(const T* vec_a, uint64_t size, const VecOpsConfig& config, T* output);
+
+  /**
    * @brief Converts elements to and from Montgomery form.
    *
    * @tparam T Type of the elements.

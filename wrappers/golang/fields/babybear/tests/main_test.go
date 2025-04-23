@@ -38,7 +38,7 @@ func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
 }
 
 func TestMain(m *testing.M) {
-	runtime.LoadBackendFromEnvOrDefault()
+	test_helpers.LOAD_AND_INIT_MAIN_DEVICE()
 	devices, e := runtime.GetRegisteredDevices()
 	if e != runtime.Success {
 		panic("Failed to load registered devices")

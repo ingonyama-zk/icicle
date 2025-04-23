@@ -27,6 +27,7 @@ function(handle_ring TARGET)
     src/matrix_ops.cpp
     src/program/program_c_api.cpp
     src/symbol/symbol_api.cpp
+    src/balanced_decomposition.cpp
   )
 endfunction()
 
@@ -110,6 +111,13 @@ function(handle_sumcheck TARGET FEATURE_LIST)
     set(SUMCHECK ON CACHE BOOL "Enable SUMCHECK feature" FORCE)
   else()
     set(SUMCHECK OFF CACHE BOOL "SUMCHECK not available for this field" FORCE)
+  endif()
+endfunction()
+
+function(handle_pairing TARGET FEATURE_LIST)
+  if(G2 AND "PAIRING" IN_LIST FEATURE_LIST)
+    target_compile_definitions(${TARGET} PUBLIC PAIRING=1)
+    target_sources(${TARGET} PRIVATE src/pairing.cpp)
   endif()
 endfunction()
 

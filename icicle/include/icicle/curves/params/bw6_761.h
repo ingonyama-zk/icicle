@@ -3,6 +3,8 @@
 #include "icicle/curves/projective.h"
 #include "icicle/fields/snark_fields/bw6_761_base.h"
 #include "icicle/fields/snark_fields/bw6_761_scalar.h"
+#include "icicle/fields/complex_extension.h"
+#include "icicle/fields/cubic_extension.h"
 
 namespace bw6_761 {
   struct G1;
