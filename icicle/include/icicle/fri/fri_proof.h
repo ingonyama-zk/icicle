@@ -23,6 +23,11 @@ namespace icicle {
     // Constructor
     FriProof() : m_pow_nonce(0) {}
 
+    FriProof(std::vector<std::vector<MerkleProof>> query_proofs, std::vector<F> final_poly, uint64_t pow_nonce)
+        : m_query_proofs(std::move(query_proofs)), m_final_poly(std::move(final_poly)), m_pow_nonce(pow_nonce)
+    {
+    }
+
     /**
      * @brief Initialize the Merkle proofs and final polynomial storage for the FRI proof.
      *
@@ -44,6 +49,17 @@ namespace icicle {
       m_final_poly.resize(final_poly_size);
 
       return eIcicleError::SUCCESS;
+    }
+
+    // Move assignment operator
+    FriProof& operator=(FriProof&& other) noexcept
+    {
+      if (this != &other) {
+        m_query_proofs = std::move(other.m_query_proofs);
+        m_final_poly = std::move(other.m_final_poly);
+        m_pow_nonce = other.m_pow_nonce;
+      }
+      return *this;
     }
 
     /**
@@ -88,11 +104,19 @@ namespace icicle {
     }
 
     /**
+     * @brief Get the number of FRI queries in the proof.
+     *
+     * @return Number of FRI queries.
+     */
+    size_t get_nof_fri_queries() const { return m_query_proofs.size(); }
+
+    /**
      * @brief Get the number of FRI rounds in the proof.
      *
      * @return Number of FRI rounds.
      */
     size_t get_nof_fri_rounds() const { return m_query_proofs[0].size(); }
+
     /**
      * @brief Get the final poly size.
      *
@@ -100,12 +124,32 @@ namespace icicle {
      */
     size_t get_final_poly_size() const { return m_final_poly.size(); }
 
+    /**
+     * @brief Set the proof-of-work nonce.
+     *
+     * @param pow_nonce The proof-of-work nonce to set.
+     */
     void set_pow_nonce(uint64_t pow_nonce) { m_pow_nonce = pow_nonce; }
 
+    /**
+     * @brief Get the proof-of-work nonce.
+     *
+     * @return The current proof-of-work nonce.
+     */
     uint64_t get_pow_nonce() const { return m_pow_nonce; }
 
-    // get pointer to the final polynomial
+    /**
+     * @brief Get a mutable pointer to the final polynomial data.
+     *
+     * @return Pointer to the first element of the final polynomial.
+     */
     F* get_final_poly() { return m_final_poly.data(); }
+
+    /**
+     * @brief Get a const pointer to the final polynomial data.
+     *
+     * @return Const pointer to the first element of the final polynomial.
+     */
     const F* get_final_poly() const { return m_final_poly.data(); }
 
   private:
