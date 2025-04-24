@@ -732,12 +732,14 @@ jobs:
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
         ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Get CUDA Backend Commit SHA
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
       working-directory: ./icicle/backend/cuda
       id: extract-cuda-sha
       run: |
         CUDA_BACKEND_SHA=$(git rev-parse HEAD)
         echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
     - name: Set CUDA backend flag
+      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
       id: cuda-flag
       run: |
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
