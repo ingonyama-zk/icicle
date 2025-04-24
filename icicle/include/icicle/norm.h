@@ -15,6 +15,10 @@ namespace icicle {
   namespace norm {
     /**
      * @brief Checks whether the norm of a vector is within a specified bound.
+     * @note This function assumes that:
+     * - Each element in the input vector is at most sqrt(q) in magnitude
+     * - The vector size is at most 2^16 elements
+     * If these assumptions are violated, the function will return eIcicleError::INVALID_ARGUMENT
      *
      * @tparam T             Element type of the input vector (e.g., int64_t, uint64_t)
      * @param input          Pointer to the input vector
@@ -35,6 +39,10 @@ namespace icicle {
      *
      * This is useful in lattice-based schemes and other relative-norm comparisons
      * where an exact bound is not known in advance but depends on a second input vector.
+     * @note This function assumes that:
+     * - Each element in the input vectors is at most sqrt(q) in magnitude
+     * - The vector size is at most 2^16 elements
+     * If these assumptions are violated, the function will return eIcicleError::INVALID_ARGUMENT
      *
      * @tparam T             Element type of the input vectors
      * @param input_a        Pointer to the input vector whose norm is being checked

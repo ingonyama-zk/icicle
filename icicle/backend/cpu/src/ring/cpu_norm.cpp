@@ -40,6 +40,11 @@ static eIcicleError cpu_check_norm_bound(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
+  if (size > 65536) {
+    ICICLE_LOG_ERROR << "Invalid argument: vector size must be at most 65536.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
   if (size == 0) {
     for (uint32_t i = 0; i < config.batch_size; ++i) {
       output[i] = true;
@@ -176,6 +181,11 @@ static eIcicleError cpu_check_norm_relative(
 {
   if (!input_a || !input_b || !output) {
     ICICLE_LOG_ERROR << "Invalid argument: null pointer.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  if (size > 65536) {
+    ICICLE_LOG_ERROR << "Invalid argument: vector size must be at most 65536.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
