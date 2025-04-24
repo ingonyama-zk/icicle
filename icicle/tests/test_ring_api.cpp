@@ -458,7 +458,8 @@ TEST_F(RingTestBase, NormRelative)
   }
 }
 
-TEST_F(RingTestBase, NormBoundedBatch) {
+TEST_F(RingTestBase, NormBoundedBatch)
+{
   static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
@@ -498,15 +499,13 @@ TEST_F(RingTestBase, NormBoundedBatch) {
       min_bound = std::min(min_bound, static_cast<uint64_t>(std::sqrt(actual_norm[i])));
     }
 
-    ICICLE_CHECK(norm::check_norm_bound(
-      input_a.data(), size, eNormType::L2, max_bound + 1, cfg, output));
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::L2, max_bound + 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_TRUE(output[i]) << "L2 norm check should pass for batch " << i << " on device " << device;
     }
 
-    ICICLE_CHECK(norm::check_norm_bound(
-      input_a.data(), size, eNormType::L2, min_bound - 1, cfg, output));
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::L2, min_bound - 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_FALSE(output[i]) << "L2 norm check should fail for batch " << i << " on device " << device;
@@ -538,15 +537,13 @@ TEST_F(RingTestBase, NormBoundedBatch) {
       min_bound = std::min(min_bound, actual_max_abs[i]);
     }
 
-    ICICLE_CHECK(norm::check_norm_bound(
-      input_a.data(), size, eNormType::LInfinity, max_bound + 1, cfg, output));
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::LInfinity, max_bound + 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_TRUE(output[i]) << "L-infinity norm check should pass for batch " << i << " on device " << device;
     }
 
-    ICICLE_CHECK(norm::check_norm_bound(
-      input_a.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_FALSE(output[i]) << "L-infinity norm check should fail for batch " << i << " on device " << device;
@@ -557,7 +554,8 @@ TEST_F(RingTestBase, NormBoundedBatch) {
   }
 }
 
-TEST_F(RingTestBase, NormRelativeBatch) {
+TEST_F(RingTestBase, NormRelativeBatch)
+{
   static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
@@ -600,9 +598,11 @@ TEST_F(RingTestBase, NormRelativeBatch) {
     uint128_t* passing_scale = new uint128_t[batch_size];
 
     for (size_t i = 0; i < batch_size; ++i) {
-      passing_scale[i] = static_cast<uint128_t>(std::sqrt(static_cast<double>(norm_a_squared[i]) / static_cast<double>(norm_b_squared[i]))) + 1;
+      passing_scale[i] = static_cast<uint128_t>(
+                           std::sqrt(static_cast<double>(norm_a_squared[i]) / static_cast<double>(norm_b_squared[i]))) +
+                         1;
     }
-    
+
     uint128_t max_bound = passing_scale[0];
     uint128_t min_bound = passing_scale[0];
     for (size_t i = 1; i < batch_size; ++i) {
@@ -610,15 +610,15 @@ TEST_F(RingTestBase, NormRelativeBatch) {
       min_bound = std::min(min_bound, passing_scale[i]);
     }
 
-    ICICLE_CHECK(norm::check_norm_relative(
-      input_a.data(), input_b.data(), size, eNormType::L2, max_bound + 1, cfg, output));
+    ICICLE_CHECK(
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, max_bound + 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_TRUE(output[i]) << "L2 relative norm check should pass for batch " << i << " on device " << device;
     }
 
-    ICICLE_CHECK(norm::check_norm_relative(
-      input_a.data(), input_b.data(), size, eNormType::L2, min_bound - 1, cfg, output));
+    ICICLE_CHECK(
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, min_bound - 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_FALSE(output[i]) << "L2 relative norm check should fail for batch " << i << " on device " << device;
@@ -664,13 +664,14 @@ TEST_F(RingTestBase, NormRelativeBatch) {
 
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_TRUE(output[i]) << "L-infinity relative norm check should pass for batch " << i << " on device " << device;
-    } 
+    }
 
     ICICLE_CHECK(norm::check_norm_relative(
       input_a.data(), input_b.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
 
     for (size_t i = 0; i < batch_size; ++i) {
-      ASSERT_FALSE(output[i]) << "L-infinity relative norm check should fail for batch " << i << " on device " << device;
+      ASSERT_FALSE(output[i]) << "L-infinity relative norm check should fail for batch " << i << " on device "
+                              << device;
     }
-  } 
+  }
 }
