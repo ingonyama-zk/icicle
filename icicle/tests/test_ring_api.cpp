@@ -264,71 +264,75 @@ TEST_F(RingTestBase, NormBounded)
     input[i] = field_t::from(val);
   }
 
-  bool output;
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
 
-  // Test L2 norm
-  {
-    uint128_t actual_norm_squared = 0;
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val = abs_centered(*(int64_t*)&input[i], q);
-      actual_norm_squared += static_cast<uint64_t>(val) * static_cast<uint64_t>(val);
+    bool output;
+
+    // Test L2 norm
+    {
+      uint128_t actual_norm_squared = 0;
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val = abs_centered(*(int64_t*)&input[i], q);
+        actual_norm_squared += static_cast<uint64_t>(val) * static_cast<uint64_t>(val);
+      }
+
+      uint64_t bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) + 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L2 norm check failed with bound " << bound << " on device " << device;
+
+      bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) - 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L2 norm check should fail with bound " << bound << " on device " << device;
     }
 
-    uint64_t bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) + 1;
-    ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
-    ASSERT_TRUE(output) << "L2 norm check failed with bound " << bound;
+    // Test L-infinity norm
+    {
+      // Compute actual L-infinity norm
+      uint64_t actual_norm = 0;
+      for (size_t i = 0; i < size; ++i) {
+        uint64_t val = abs_centered(*(int64_t*)&input[i], q);
+        actual_norm = std::max(actual_norm, val);
+      }
 
-    bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) - 1;
-    ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
-    ASSERT_FALSE(output) << "L2 norm check should fail with bound " << bound;
-  }
+      // Test with bound just above actual norm
+      uint64_t bound = actual_norm + 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L-infinity norm check failed with bound " << bound << " on device " << device;
 
-  // Test L-infinity norm
-  {
-    // Compute actual L-infinity norm
-    uint64_t actual_norm = 0;
-    for (size_t i = 0; i < size; ++i) {
-      uint64_t val = abs_centered(*(int64_t*)&input[i], q);
-      actual_norm = std::max(actual_norm, val);
+      // Test with bound just below actual norm
+      bound = actual_norm - 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L-infinity norm check should fail with bound " << bound << " on device " << device;
     }
 
-    // Test with bound just above actual norm
-    uint64_t bound = actual_norm + 1;
-    ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
-    ASSERT_TRUE(output) << "L-infinity norm check failed with bound " << bound;
+    // Test error cases
+    {
+      field_t* nullptr_field_t = nullptr;
+      bool* nullptr_bool = nullptr;
 
-    // Test with bound just below actual norm
-    bound = actual_norm - 1;
-    ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
-    ASSERT_FALSE(output) << "L-infinity norm check should fail with bound " << bound;
-  }
+      // Test null input
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(nullptr_field_t, size, eNormType::L2, 100, VecOpsConfig{}, &output));
 
-  // Test error cases
-  {
-    field_t* nullptr_field_t = nullptr;
-    bool* nullptr_bool = nullptr;
+      // Test null output
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
 
-    // Test null input
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_bound(nullptr_field_t, size, eNormType::L2, 100, VecOpsConfig{}, &output));
+      // Test zero size
+      ASSERT_EQ(
+        eIcicleError::SUCCESS, norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "Norm check should pass for empty vector on device " << device;
 
-    // Test null output
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
-
-    // Test zero size
-    ASSERT_EQ(
-      eIcicleError::SUCCESS, norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
-    ASSERT_TRUE(output) << "Norm check should pass for empty vector";
-
-    // Test with values exceeding sqrt(q)
-    auto invalid_input = std::vector<field_t>(size);
-    invalid_input[0] = field_t::from(square_root + 1);
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_bound(invalid_input.data(), size, eNormType::L2, 100, VecOpsConfig{}, &output));
+      // Test with values exceeding sqrt(q)
+      auto invalid_input = std::vector<field_t>(size);
+      invalid_input[0] = field_t::from(square_root + 1);
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(invalid_input.data(), size, eNormType::L2, 100, VecOpsConfig{}, &output));
+    }
   }
 }
 
@@ -352,96 +356,100 @@ TEST_F(RingTestBase, NormRelative)
     input_b[i] = field_t::from(val_b);
   }
 
-  bool output;
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
 
-  // Test L2 norm
-  {
-    uint128_t norm_a_squared = 0;
-    uint128_t norm_b_squared = 0;
+    bool output;
 
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
-      int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
-      norm_a_squared += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
-      norm_b_squared += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
+    // Test L2 norm
+    {
+      uint128_t norm_a_squared = 0;
+      uint128_t norm_b_squared = 0;
+
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
+        norm_a_squared += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
+        norm_b_squared += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
+      }
+
+      // Calculate scale that should make the check pass
+      uint64_t passing_scale =
+        static_cast<uint64_t>(std::sqrt(static_cast<double>(norm_a_squared) / static_cast<double>(norm_b_squared))) + 1;
+      // Test with scale that should pass
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::L2, passing_scale, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L2 relative norm check failed with scale " << passing_scale << " on device " << device;
+
+      // Test with scale that should fail
+      uint64_t failing_scale = passing_scale - 1;
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::L2, failing_scale, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale << " on device " << device;
     }
 
-    // Calculate scale that should make the check pass
-    uint64_t passing_scale =
-      static_cast<uint64_t>(std::sqrt(static_cast<double>(norm_a_squared) / static_cast<double>(norm_b_squared))) + 1;
-    // Test with scale that should pass
-    ICICLE_CHECK(norm::check_norm_relative(
-      input_a.data(), input_b.data(), size, eNormType::L2, passing_scale, VecOpsConfig{}, &output));
-    ASSERT_TRUE(output) << "L2 relative norm check failed with scale " << passing_scale;
+    // Test L-infinity norm
+    {
+      int64_t max_abs_a = 0;
+      int64_t max_abs_b = 0;
 
-    // Test with scale that should fail
-    uint64_t failing_scale = passing_scale - 1;
-    ICICLE_CHECK(norm::check_norm_relative(
-      input_a.data(), input_b.data(), size, eNormType::L2, failing_scale, VecOpsConfig{}, &output));
-    ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale;
-  }
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
+        max_abs_a = std::max(max_abs_a, val_a);
+        max_abs_b = std::max(max_abs_b, val_b);
+      }
 
-  // Test L-infinity norm
-  {
-    int64_t max_abs_a = 0;
-    int64_t max_abs_b = 0;
+      // Calculate scale that should make the check pass
+      uint64_t passing_scale = static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
 
-    for (size_t i = 0; i < size; ++i) {
-      int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
-      int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
-      max_abs_a = std::max(max_abs_a, val_a);
-      max_abs_b = std::max(max_abs_b, val_b);
+      // Test with scale that should pass
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::LInfinity, passing_scale, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale << " on device " << device;
+
+      // Test with scale that should fail
+      uint64_t failing_scale = passing_scale - 1;
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::LInfinity, failing_scale, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale << " on device " << device;
     }
 
-    // Calculate scale that should make the check pass
-    uint64_t passing_scale = static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
+    // Test error cases
+    {
+      field_t* nullptr_field_t = nullptr;
+      bool* nullptr_bool = nullptr;
 
-    // Test with scale that should pass
-    ICICLE_CHECK(norm::check_norm_relative(
-      input_a.data(), input_b.data(), size, eNormType::LInfinity, passing_scale, VecOpsConfig{}, &output));
-    ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale;
+      // Test null input_a
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(nullptr_field_t, input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
 
-    // Test with scale that should fail
-    uint64_t failing_scale = passing_scale - 2;
-    ICICLE_CHECK(norm::check_norm_relative(
-      input_a.data(), input_b.data(), size, eNormType::LInfinity, failing_scale, VecOpsConfig{}, &output));
-    ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale;
-  }
+      // Test null input_b
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), nullptr_field_t, size, eNormType::L2, 2, VecOpsConfig{}, &output));
 
-  // Test error cases
-  {
-    field_t* nullptr_field_t = nullptr;
-    bool* nullptr_bool = nullptr;
+      // Test null output
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
 
-    // Test null input_a
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_relative(nullptr_field_t, input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+      // Test zero size
+      ASSERT_EQ(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "Relative norm check should pass for empty vectors on device " << device;
 
-    // Test null input_b
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_relative(input_a.data(), nullptr_field_t, size, eNormType::L2, 2, VecOpsConfig{}, &output));
-
-    // Test null output
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
-
-    // Test zero size
-    ASSERT_EQ(
-      eIcicleError::SUCCESS,
-      norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
-    ASSERT_TRUE(output) << "Relative norm check should pass for empty vectors";
-
-    // Test with values exceeding sqrt(q)
-    auto invalid_input = std::vector<field_t>(size);
-    invalid_input[0] = field_t::from(square_root + 1);
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_relative(invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
-    ASSERT_NE(
-      eIcicleError::SUCCESS,
-      norm::check_norm_relative(input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+      // Test with values exceeding sqrt(q)
+      auto invalid_input = std::vector<field_t>(size);
+      invalid_input[0] = field_t::from(square_root + 1);
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    }
   }
 }
