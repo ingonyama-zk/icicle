@@ -55,6 +55,7 @@ impl MerkleTreeConfig {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleProofData<T> {
     pub is_pruned: bool,
     pub leaf_idx: u64,
@@ -86,6 +87,7 @@ impl<T: Clone> From<&MerkleProof> for MerkleProofData<T> {
 
 pub type MerkleProofHandle = *const c_void;
 
+#[derive(Debug)]
 pub struct MerkleProof {
     handle: MerkleProofHandle,
 }

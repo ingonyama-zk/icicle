@@ -2,6 +2,7 @@ use std::fmt::{self, Display};
 
 #[repr(C)]
 #[derive(Debug, PartialEq)]
+#[allow(non_camel_case_types)]
 pub enum eIcicleError {
     Success = 0,             // Operation completed successfully
     InvalidDevice,           // The specified device is invalid

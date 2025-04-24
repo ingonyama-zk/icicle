@@ -37,7 +37,7 @@ let deserialized_proof: SumcheckProof = serde_json::from_str(&serialized_proof).
 
 The following structs are currently supported for serialization and deserialization:
 
-- `MerkleProof`
-- `SumcheckProof`
-- `FriProof`
+- [`MerkleProof`](./merkle.md)
+- [`SumcheckProof`](./sumcheck.md)
+- [`FriProof`](./fri.md)
 
