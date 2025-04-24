@@ -97,7 +97,6 @@ static eIcicleError cpu_check_norm_bound(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-
     uint128_t total_sum = 0;
     for (const auto& sum : thread_sums) {
       total_sum += sum;

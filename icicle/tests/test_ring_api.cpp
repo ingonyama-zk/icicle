@@ -385,7 +385,8 @@ TEST_F(RingTestBase, NormRelative)
       uint64_t failing_scale = passing_scale - 1;
       ICICLE_CHECK(norm::check_norm_relative(
         input_a.data(), input_b.data(), size, eNormType::L2, failing_scale, VecOpsConfig{}, &output));
-      ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale << " on device " << device;
+      ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale << " on device "
+                           << device;
     }
 
     // Test L-infinity norm
@@ -401,18 +402,21 @@ TEST_F(RingTestBase, NormRelative)
       }
 
       // Calculate scale that should make the check pass
-      uint64_t passing_scale = static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
+      uint64_t passing_scale =
+        static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
 
       // Test with scale that should pass
       ICICLE_CHECK(norm::check_norm_relative(
         input_a.data(), input_b.data(), size, eNormType::LInfinity, passing_scale, VecOpsConfig{}, &output));
-      ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale << " on device " << device;
+      ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale << " on device "
+                          << device;
 
       // Test with scale that should fail
       uint64_t failing_scale = passing_scale - 1;
       ICICLE_CHECK(norm::check_norm_relative(
         input_a.data(), input_b.data(), size, eNormType::LInfinity, failing_scale, VecOpsConfig{}, &output));
-      ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale << " on device " << device;
+      ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale << " on device "
+                           << device;
     }
 
     // Test error cases
@@ -432,8 +436,8 @@ TEST_F(RingTestBase, NormRelative)
 
       // Test null output
       ASSERT_NE(
-        eIcicleError::SUCCESS,
-        norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
+        eIcicleError::SUCCESS, norm::check_norm_relative(
+                                 input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
 
       // Test zero size
       ASSERT_EQ(
@@ -446,10 +450,12 @@ TEST_F(RingTestBase, NormRelative)
       invalid_input[0] = field_t::from(square_root + 1);
       ASSERT_NE(
         eIcicleError::SUCCESS,
-        norm::check_norm_relative(invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+        norm::check_norm_relative(
+          invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
       ASSERT_NE(
         eIcicleError::SUCCESS,
-        norm::check_norm_relative(input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+        norm::check_norm_relative(
+          input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
     }
   }
 }
