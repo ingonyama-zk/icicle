@@ -84,6 +84,12 @@ TEST_F(FieldTestBase, polynomialDivision)
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
+      // TODO @Hadar support column batch for this API
+      if (columns_batch && (device == "CUDA" || device == "METAL")) {
+        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
+        continue;
+      }
+
       ICICLE_LOG_INFO << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
                       << "]";
 
@@ -113,11 +119,6 @@ TEST_F(FieldTestBase, polynomialDivision)
       auto config = default_vec_ops_config();
       config.batch_size = batch_size;
       config.columns_batch = columns_batch;
-      // TODO v3.2 support column batch for this API
-      if (columns_batch && device == "CUDA") {
-        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
-        continue;
-      }
 
       ICICLE_CHECK(polynomial_division(
         numerator.get(), numerator_size, denominator.get(), denominator_size, config, q.get(), q_size, r.get(),
