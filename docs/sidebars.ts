@@ -106,6 +106,11 @@ const cppApi = [
     label: "Pairings",
     id: "icicle/primitives/pairings",
   },
+  {
+    type: "doc",
+    label: "Serialization",
+    id: "icicle/primitives/serialization",
+  }
 ];
 
 const golangBindingsApi = [
@@ -207,7 +212,12 @@ const rustBindingsApi = [
     "type": "doc",
     "label": "FRI",
     "id": "icicle/rust-bindings/fri"
-  }
+  },
+  {
+    type: "doc",
+    label: "Serialization",
+    id: "icicle/rust-bindings/serialization",
+  },
   // {
   //   type: "doc",
   //   label: "Multi GPU Support (TODO)",
