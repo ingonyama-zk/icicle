@@ -1,6 +1,7 @@
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/utils.h"
 #include "icicle/sumcheck/sumcheck.h"
+#include "icicle/sumcheck/sumcheck_proof_serializer.h"
 
 using namespace field_config;
 
@@ -260,5 +261,79 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_print)(SumcheckProo
 
   return eIcicleError::SUCCESS;
 }
+
+/**
+ * @brief Gets the serialized size of the given SumcheckProof instance.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance.
+ * @param size Pointer to store the serialized size of the SumcheckProof instance.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, size_t* size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!size) {
+    ICICLE_LOG_ERROR << "Cannot write serialized size in a null pointer.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(*sumcheck_proof_handle, *size);
+}
+
+/**
+ * @brief Serializes the given SumcheckProof instance to a buffer.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to serialize.
+ * @param buffer The buffer to serialize the SumcheckProof to.
+ * @param size The size of the buffer.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, std::byte* buffer, size_t size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "Cannot serialize to a null buffer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(*sumcheck_proof_handle, expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of SumcheckProof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize SumcheckProof";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialize(buffer, size, *sumcheck_proof_handle);
+}
+
+/**
+ * @brief Deserializes the given SumcheckProof instance from a buffer.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to deserialize.
+ * @param buffer The buffer to deserialize the SumcheckProof from.
+ * @param size The size of the buffer.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(
+  SumcheckProof<scalar_t>** sumcheck_proof_handle, std::byte* buffer, size_t size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
+  return BinarySerializer<SumcheckProof<scalar_t>>::deserialize(buffer, size, **sumcheck_proof_handle);
+}
+
 /***************** END SumcheckProof **********************/
 } // extern "C"

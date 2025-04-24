@@ -5,9 +5,8 @@ on:
     branches:
       - main
 
-
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group:  ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -16,8 +15,8 @@ jobs:
     name: Check Spelling
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: codespell-project/actions-codespell@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: codespell-project/actions-codespell@fad9339798e1ee3fe979ae0a022c931786a408b8
         with:
           # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
           skip: ./**/target,./**/build,./docs/*.js,./docs/*.json,./*.svg
@@ -33,12 +32,13 @@ jobs:
     needs: check-changed-files
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Setup go
       if: needs.check-changed-files.outputs.golang == 'true'
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
+        cache: false
     - name: Check clang-format
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
@@ -53,66 +53,127 @@ jobs:
       run: cargo fmt --all -- --check
 
   extract-cuda-backend-branch:
-    uses: ./.github/workflows/extract-backends.yml
+    uses: ./.github/workflows/extract-backend.yml
     with:
       pr-number: ${{ github.event.pull_request.number }}
+      backend-type: cuda
 
-  test-linux-curve:
-    name: Test curve on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+  extract-metal-backend-branch:
+    uses: ./.github/workflows/extract-backend.yml
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      backend-type: metal
+  
+  test-curve:
+    name: Test Curve ${{ matrix.curve.name }} on ${{ matrix.os }} with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            os: Linux
+            runner: [self-hosted, Linux, X64, icicle]
+            skip-rust-all-curves: ""
+            skip-cpp-all-curves: ""
+            skip-golang-all-curves: "false"
+            initial-support: false
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            os: macOS
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-rust-all-curves: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing
+            skip-cpp-all-curves: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
+            skip-golang-all-curves: "true"
+            initial-support: true
         curve:
           - name: bn254
             build_args: -DG2=ON -DECNTT=ON
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
           - name: bls12_381
             build_args: -DG2=ON -DECNTT=ON
+            # metal-cpp-flaky-tests: "ModArithTest.ntt|PolynomialTest.multiplication|PolynomialTest.divideByVanishingPolynomial|PolynomialTest.QAP|FieldTest.vectorDivision|FieldTestBase.polynomialDivision"
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
           - name: bls12_377
             build_args: -DG2=ON -DECNTT=ON
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
           - name: bw6_761
             build_args: -DG2=ON -DECNTT=ON
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
           - name: grumpkin
             build_args: -DG2=OFF -DECNTT=OFF
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
 
     steps:
+    - name: Set Backend Secret Key
+      id: pull_key
+      run: |
+          {
+            echo "PULL_KEY<<EOF"
+            echo "${{ secrets[matrix.secret_key] }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+    - name: Set Backend Branch Name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Checkout CUDA Backend
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
-    - name: Get CUDA Backend Commit SHA
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend }}
+        ssh-key: ${{ steps.pull_key.outputs.PULL_KEY }}
+        ref: ${{ env.BACKEND_BRANCH }}
+    - name: Get ${{ matrix.backend_upper }} Backend Commit SHA
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      working-directory: ./icicle/backend/cuda
-      id: extract-cuda-sha
+      working-directory: ./icicle/backend/${{ matrix.backend }}
+      id: extract-backend-sha
       run: |
-        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
-        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
-        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
-    - name: Set CUDA backend flag
+          BACKEND_SHA=$(git rev-parse HEAD)
+          echo "Backend Commit SHA: $BACKEND_SHA"
+          echo "extracted-backend-sha=$BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set ${{ matrix.backend_upper }} backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      id: cuda-flag
+      id: curve-backend-flag
       run: |
-        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        BACKEND_SHA=${{ steps.extract-backend-sha.outputs.extracted-backend-sha }}
         CURVE=${{ matrix.curve.name }}
-        COMMIT_FILE="gh_commit_sha_${CURVE}_${CUDA_BACKEND_SHA}"
-        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+        COMMIT_FILE="gh_commit_sha_${CURVE}_${BACKEND_SHA}"
+        if [ "${{ env.BACKEND_BRANCH }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE
           echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -123,11 +184,11 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -138,27 +199,33 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ matrix.curve.build_args }} ${{ steps.curve-backend-flag.outputs.BACKEND_FLAG }} ${{ steps.curve-backend-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
         cmake --build build --target install -j
-        rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
-        touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+        rm -rf ${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
+        touch ${{ steps.curve-backend-flag.outputs.COMMIT_FILE_PATH }}
+
     - name: Run C++ Curve Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        ctest --output-on-failure
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export SKIP_TESTS="${{ matrix.skip-cpp-all-curves }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-skip-cpp-curve-specific }}" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp-all-curves }}|${{ matrix.curve.metal-skip-cpp-curve-specific }}"
+        fi
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        ctest --output-on-failure -E "$SKIP_TESTS"
     - name: Run C++ examples
       working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      if: (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true') && matrix.backend != 'metal'
       run: |
         CURVE=${{ matrix.curve.name }}
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         for dir in $(grep -l -r "\\-DCURVE=$CURVE" . | xargs -L1 dirname | sort -u); do
             if [ -d "$dir" ]; then
                 echo "Running command in $dir"
                 cd $dir
-                ./run.sh -d CUDA
+                ./run.sh -d ${{ matrix.backend_upper }}
                 cd -
             fi
         done
@@ -168,83 +235,148 @@ jobs:
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=icicle-${CURVE//_/-}
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}
         cd ./$CURVE_DIR
-        cargo test --release --verbose -- --skip phase
+        export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-curves }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-skip-rust-curve-specific }}" ]; then
+          export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-curves }} ${{ matrix.curve.metal-skip-rust-curve-specific }}"
+        fi
+        cargo test --release --verbose -- --skip phase $SKIP_RUST_TESTS
         cargo test phase2 --release
         cargo test phase3 --release
+        cargo test phase4 --release
     - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang-all-curves == 'false' }}
       timeout-minutes: 15
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
+        cache: false
     - name: Run Golang curve Tests
       working-directory: ./wrappers/golang/curves
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang-all-curves == 'false' }}
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         go test ./$CURVE_DIR/tests -count=1 -failfast -p 2 -timeout 60m -v
 
-  test-linux-field:
-    name: Test field on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+
+  test-field:
+    name: Test field ${{ matrix.field.name }} on ${{ matrix.os }} with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            os: Linux
+            runner: [self-hosted, Linux, X64, icicle]
+            skip-rust-all-fields: ""
+            skip-cpp-all-fields: ""
+            skip-golang-all-fields: "false"
+            initial-support: false
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            os: macOS
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-rust-all-fields: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip vec_ops_scalars_inv
+            skip-cpp-all-fields: .*QuarticExtensionField.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
+            skip-golang-all-fields: "true"
+            initial-support: true
+        exclude:
+          - backend: metal
+            field:
+              name: goldilocks
         field:
           - name: babybear
             build_args: -DEXT_FIELD=ON
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: "--skip phase2"
+            metal-skip-golang-field-specific: ""
           - name: stark252
             build_args: -DEXT_FIELD=OFF
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
           - name: m31
             build_args: -DEXT_FIELD=ON
+            # metal-cpp-failing-tests: "FieldTest.vectorDivision<m31::MersenneField<m31::fp_config>>|ModArithTestBase.VectorReduceOps|ModArithTestBase.scalarVectorOps|ModArithTestBase.polynomialEval|ModArithTest.vectorVectorOps<m31::MersenneField<m31::fp_config>>"
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
           - name: koalabear
             build_args: -DEXT_FIELD=ON
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
           - name: goldilocks
             build_args: -DEXT_FIELD=OFF
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
     steps:
+    - name: Set Backend Secret Key
+      id: pull_key
+      run: |
+          {
+            echo "PULL_KEY<<EOF"
+            echo "${{ secrets[matrix.secret_key] }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+    - name: Set Backend Branch Name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Checkout CUDA Backend
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
-    - name: Get CUDA Backend Commit SHA
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend }}
+        ssh-key: ${{ steps.pull_key.outputs.PULL_KEY }}
+        ref: ${{ env.BACKEND_BRANCH }}
+    - name: Get ${{ matrix.backend_upper }} Backend Commit SHA
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      working-directory: ./icicle/backend/cuda
-      id: extract-cuda-sha
+      working-directory: ./icicle/backend/${{ matrix.backend }}
+      id: extract-backend-sha
       run: |
-        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
-        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
-        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
-    - name: Set CUDA backend flag
+          BACKEND_SHA=$(git rev-parse HEAD)
+          echo "Backend Commit SHA: $BACKEND_SHA"
+          echo "extracted-backend-sha=$BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set ${{ matrix.backend_upper }} backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      id: cuda-flag
+      id: field-backend-flag
       run: |
-        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
+        BACKEND_SHA=${{ steps.extract-backend-sha.outputs.extracted-backend-sha }}
         FIELD=${{ matrix.field.name }}
-        COMMIT_FILE="gh_commit_sha_${FIELD}_${CUDA_BACKEND_SHA}"
-        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+        COMMIT_FILE="gh_commit_sha_${CURVE}_${BACKEND_SHA}"
+        if [ "${{ env.BACKEND_BRANCH }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD
           echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/field/$FIELD" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -255,11 +387,11 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -270,27 +402,34 @@ jobs:
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} ${{ steps.field-backend-flag.outputs.BACKEND_FLAG }} ${{ steps.field-backend-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
         cmake --build build --target install -j
-        rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.field.name }}*
-        touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+        rm -rf ${{ steps.field-backend-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.field.name }}*
+        touch ${{ steps.field-backend-flag.outputs.COMMIT_FILE_PATH }}
+
     - name: Run C++ field Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        ctest --output-on-failure
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-skip-cpp-field-specific }}" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}|${{ matrix.field.metal-skip-cpp-field-specific }}"
+        fi
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        ctest --output-on-failure -E "$SKIP_TESTS"
+
     - name: Run C++ examples
       working-directory: ./examples/c++
-      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true'
+      if: (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true') && matrix.backend != 'metal'
       run: |
         FIELD=${{ matrix.field.name }}
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
             if [ -d "$dir" ]; then
                 echo "Running command in $dir"
                 cd $dir
-                ./run.sh -d CUDA
+                ./run.sh -d ${{ matrix.backend_upper }}
                 cd -
             fi
         done
@@ -300,26 +439,31 @@ jobs:
       run: |
         FIELD=${{ matrix.field.name }}
         FIELD_DIR=icicle-${FIELD//_/-}
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.INSTALL_PATH }}
         cd ./$FIELD_DIR
-        cargo test --release --verbose -- --skip phase
-        cargo test phase2 --release
+        export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-skip-rust-field-specific }}" ]; then
+          export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }} ${{ matrix.field.metal-skip-rust-field-specific }}"
+        fi
+        cargo test --release --verbose -- --skip phase $SKIP_RUST_TESTS
+        cargo test phase2 --release -- $SKIP_RUST_TESTS
         cargo test phase3 --release
+        cargo test phase4 --release
     - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang-all-curves == 'false' }}
       timeout-minutes: 15
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
+        cache: false
     - name: Run Golang field Tests
       working-directory: ./wrappers/golang/fields
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      # if: matrix.field.name == 'babybear' #&& matrix.field.name == 'babybear'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang-all-curves == 'false' }}
       run: |
         FIELD=${{ matrix.field.name }}
         FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.field-backend-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$FIELD -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         if [ -d "./$FIELD/tests" ]; then
           echo "Running tests for $FIELD..."
@@ -332,6 +476,7 @@ jobs:
     name: Test ring on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
     needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    # not supporeted in Metal yet
     strategy:
       matrix:
         ring:
@@ -340,10 +485,10 @@ jobs:
           
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout CUDA Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-cuda-backend
         path: ./icicle/backend/cuda
@@ -422,51 +567,91 @@ jobs:
         cargo test --release --verbose -- --skip phase
         cargo test phase2 --release
         cargo test phase3 --release
+        cargo test phase4 --release
     
     # TODO: C++ examples
     # TODO: Go tests
 
-  test-linux-hash:
-    name: Build and test Go & RUST hash on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+  test-hash:
+    name: Build and test Go & RUST hash on ${{ matrix.os }} with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
+    strategy:
+      matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            os: Linux
+            runner: [self-hosted, Linux, X64, icicle]
+            skip-rust: ""
+            skip-golang: "false"
+            initial-support: false
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            os: macOS
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-rust: "--skip poseidon --skip pow --skip merkle"
+            skip-golang: "true"
+            initial-support: true
     steps:
+    - name: Set Backend Secret Key
+      id: pull_key
+      run: |
+          {
+            echo "PULL_KEY<<EOF"
+            echo "${{ secrets[matrix.secret_key] }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+    - name: Set Backend Branch Name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Checkout CUDA Backend
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} Backend
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
-    - name: Get CUDA Backend Commit SHA
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend }}
+        ssh-key: ${{ steps.pull_key.outputs.PULL_KEY }}
+        ref: ${{ env.BACKEND_BRANCH }}
+    - name: Get ${{ matrix.backend_upper }} Backend Commit SHA
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      working-directory: ./icicle/backend/cuda
-      id: extract-cuda-sha
+      working-directory: ./icicle/backend/${{ matrix.backend }}
+      id: extract-backend-sha
       run: |
-        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
-        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
-        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
-    - name: Set CUDA backend flag
+        BACKEND_SHA=$(git rev-parse HEAD)
+        echo "${{ matrix.backend_upper }} Backend Commit SHA: $BACKEND_SHA"
+        echo "backend-sha=$BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set ${{ matrix.backend_upper }} backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      id: cuda-flag
+      id: hash-backend-flag
       run: |
-        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
-        COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
-        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+        BACKEND_SHA=${{ steps.extract-backend-sha.outputs.extracted-backend-sha }}
+        CURVE=${{ matrix.curve.name }}
+        COMMIT_FILE="gh_commit_sha_${CURVE}_${BACKEND_SHA}"
+        if [ "${{ env.BACKEND_BRANCH }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash
           echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/hash" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -477,54 +662,57 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         fi
+
     - name: Build
       working-directory: ./icicle
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
-      # builds the hash and merkle tree lib using a local copy of the CUDA backend
+      # builds the hash and merkle tree lib using a local copy of the backend
       run:  |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release  -DHASH=ON ${{ steps.cuda-flag.outputs.CUDA_FLAG }} ${{ steps.cuda-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DHASH=ON ${{ steps.hash-backend-flag.outputs.BACKEND_FLAG }} ${{ steps.hash-backend-flag.outputs.CMAKE_INSTALL_PREFIX }} -S . -B build
         cmake --build build --target install -j
-        rm -rf ${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
-        touch ${{ steps.cuda-flag.outputs.COMMIT_FILE_PATH }}
+        rm -rf ${{ steps.hash-backend-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_hash*
+        touch ${{ steps.hash-backend-flag.outputs.COMMIT_FILE_PATH }}
     - name: Run RUST Hash Tests
       working-directory: ./wrappers/rust/icicle-hash
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.INSTALL_PATH }}
-        cargo test --release --verbose -- --skip phase
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.hash-backend-flag.outputs.INSTALL_PATH }}
+        cargo test --release --verbose -- --skip phase ${{ matrix.skip-rust }}
         cargo test phase2 --release
         cargo test phase3 --release
+        cargo test phase4 --release
     - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
       timeout-minutes: 15
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
+        cache: false
     - name: Test GoLang Hashes
       working-directory: ./wrappers/golang/hash
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.hash-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.hash-backend-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
     - name: Test GoLang Merkle Tree
       working-directory: ./wrappers/golang/merkle-tree
-      if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-        export LD_LIBRARY_PATH=${{ steps.cuda-flag.outputs.INSTALL_PATH }}/lib
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.hash-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export LD_LIBRARY_PATH=${{ steps.hash-backend-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_hash -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
 
@@ -590,6 +778,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.0'
+        cache: false
     - name: Run Golang Runtime Tests
       working-directory: ./wrappers/golang/runtime
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
@@ -600,45 +789,82 @@ jobs:
         go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
 
   run-rust-examples:
-    name: Run Rust Examples
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    name: Run Rust Examples on ${{ matrix.os }} with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
+    strategy:
+      matrix:
+        backend: [cuda]
+        # TODO: @jeremy enable metal backend when it supports more features
+        # backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            os: Linux
+            runner: [self-hosted, Linux, X64, icicle]
+            initial-support: false
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: METAL_PULL_KEY
+          #   os: macOS
+          #   runner: [self-hosted, macOS, ARM64, icicle, metal]
+          #   initial-support: true
     steps:
+    - name: Set Backend Secret Key
+      id: pull_key
+      run: |
+          {
+            echo "PULL_KEY<<EOF"
+            echo "${{ secrets[matrix.secret_key] }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+    - name: Set Backend Branch Name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
     - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Checkout CUDA Backend
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} Backend
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
-    - name: Get CUDA Backend Commit SHA
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend}}
+        ssh-key: ${{ steps.pull_key.outputs.PULL_KEY }}
+        ref: ${{ env.BACKEND_BRANCH }}
+    - name: Get ${{ matrix.backend_upper }} Backend Commit SHA
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      working-directory: ./icicle/backend/cuda
-      id: extract-cuda-sha
+      working-directory: ./icicle/backend/${{ matrix.backend}}
+      id: extract-backend-sha
       run: |
-        CUDA_BACKEND_SHA=$(git rev-parse HEAD)
-        echo "CUDA Backend Commit SHA: $CUDA_BACKEND_SHA"
-        echo "cuda-backend-sha=$CUDA_BACKEND_SHA" >> $GITHUB_OUTPUT
-    - name: Set CUDA backend flag
+        BACKEND_SHA=$(git rev-parse HEAD)
+        echo "${{ matrix.backend_upper }} Backend Commit SHA: $BACKEND_SHA"
+        echo "backend-sha=$BACKEND_SHA" >> $GITHUB_OUTPUT
+    - name: Set ${{ matrix.backend_upper }} backend flag
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true'
-      id: cuda-flag
+      id: examples-backend-flag
       run: |
-        CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
-        COMMIT_FILE="gh_commit_sha_hash_${CUDA_BACKEND_SHA}"
-        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+        BACKEND_SHA=${{ steps.extract-backend-sha.outputs.extracted-backend-sha }}
+        CURVE=${{ matrix.curve.name }}
+        COMMIT_FILE="gh_commit_sha_${CURVE}_${BACKEND_SHA}"
+        if [ "${{ env.BACKEND_BRANCH }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/rust-examples
           echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/rust-examples" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
 
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
@@ -649,28 +875,29 @@ jobs:
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
           echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
           if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting CUDA_FLAG="
-            echo "CUDA_FLAG=" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
+            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
           else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting CUDA_FLAG=-DCUDA_BACKEND=local"
-            echo "CUDA_FLAG=-DCUDA_BACKEND=local" >> $GITHUB_OUTPUT
+            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
+            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
             rm -rf ${INSTALL_PATH}
           fi
           echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
           echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
         fi
+
     - name: Rust examples
       working-directory: ./examples/rust
       if: needs.check-changed-files.outputs.rust == 'true' || needs.check-changed-files.outputs.examples == 'true'
       run: |        
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.examples-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
         export RUST_ICICLE_BACKEND_INSTALL_DIR=$ICICLE_BACKEND_INSTALL_DIR/backend
         # loop over all directories in the current directory
         for dir in $(find . -mindepth 1 -maxdepth 1 -type d); do
           if [ -d "$dir" ]; then
             echo "Running command in $dir"
             cd $dir
-            ./run.sh -d CUDA
+            ./run.sh -d ${{ matrix.backend_upper }}
             cd -
           fi
         done
