@@ -147,6 +147,11 @@
               "id": "icicle/primitives/pairings"
             },
             {
+              "type": "doc",
+              "label": "Serialization",
+              "id": "icicle/primitives/serialization"
+            },
+            {
               "type": "category",
               "label": "Golang bindings",
               "link": {
@@ -261,6 +266,11 @@
                   "type": "doc",
                   "label": "FRI",
                   "id": "icicle/rust-bindings/fri"
+                },
+                {
+                  "type": "doc",
+                  "label": "Serialization",
+                  "id": "icicle/rust-bindings/serialization"
                 }
               ]
             }
