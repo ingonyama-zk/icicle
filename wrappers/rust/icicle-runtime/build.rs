@@ -29,8 +29,9 @@ fn main() {
     let target = std::env::var("TARGET").unwrap();
     if target.contains("android") {
         config.define("BUILD_FOR_ANDROID", "ON");
+    } else if target.contains("apple-ios") {
+        config.define("BUILD_FOR_IOS", "ON");
     }
-    config.define("BUILD_FOR_ANDROID", "ON");
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
     if cfg!(feature = "cuda_backend") {
