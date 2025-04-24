@@ -41,7 +41,9 @@ static eIcicleError cpu_check_norm_bound(
   }
 
   if (size == 0) {
-    *output = true;
+    for (uint32_t i = 0; i < config.batch_size; ++i) {
+      output[i] = true;
+    }
     return eIcicleError::SUCCESS;
   }
 
@@ -66,7 +68,7 @@ static eIcicleError cpu_check_norm_bound(
   if (norm == eNormType::L2) {
     const uint128_t bound_squared = static_cast<uint128_t>(norm_bound) * static_cast<uint128_t>(norm_bound);
     const int nof_workers = get_nof_workers(config);
-    std::vector<uint128_t> thread_sums(nof_workers, 0);
+    std::vector<std::vector<uint128_t>> thread_sums(config.batch_size, std::vector<uint128_t>(nof_workers, 0));
     std::atomic<bool> validation_failed(false);
 
     tf::Taskflow taskflow;
@@ -76,19 +78,23 @@ static eIcicleError cpu_check_norm_bound(
     for (uint64_t start_idx = 0, thread_idx = 0; start_idx < size; start_idx += worker_task_size, ++thread_idx) {
       taskflow.emplace([=, &thread_sums, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
-        uint128_t local_sum = 0;
+        std::vector<uint128_t> local_sums(config.batch_size, 0);
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
-          int64_t val = input_i64[idx];
-          if (!validate_input_range(val, sqrt_q)) {
-            validation_failed.store(true, std::memory_order_relaxed);
-            return;
+          for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+            int64_t val = input_i64[batch_idx * size + idx];
+            if (!validate_input_range(val, sqrt_q)) {
+              validation_failed.store(true, std::memory_order_relaxed);
+              return;
+            }
+            val = abs_centered(val, q);
+            local_sums[batch_idx] += static_cast<uint128_t>(val) * static_cast<uint128_t>(val);
           }
-          val = abs_centered(val, q);
-          local_sum += static_cast<uint128_t>(val) * static_cast<uint128_t>(val);
         }
 
-        thread_sums[thread_idx] = local_sum;
+        for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+          thread_sums[batch_idx][thread_idx] = local_sums[batch_idx];
+        }
       });
     }
 
@@ -97,16 +103,20 @@ static eIcicleError cpu_check_norm_bound(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-    uint128_t total_sum = 0;
-    for (const auto& sum : thread_sums) {
-      total_sum += sum;
+    for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+      uint128_t total_sum = 0;
+      for (const auto& sum : thread_sums[batch_idx]) {
+        total_sum += sum;
+      }
+      output[batch_idx] = total_sum <= bound_squared;
     }
-
-    *output = total_sum <= bound_squared;
   }
   // For L-infinity norm, we just need to check the max(|input|) < norm_bound
   else if (norm == eNormType::LInfinity) {
-    std::atomic<int64_t> max_abs(0);
+    std::vector<std::atomic<int64_t>> max_abs(config.batch_size);
+    for (auto& max : max_abs) {
+      max.store(0, std::memory_order_relaxed);
+    }
     std::atomic<bool> validation_failed(false);
 
     tf::Taskflow taskflow;
@@ -117,21 +127,26 @@ static eIcicleError cpu_check_norm_bound(
     for (uint64_t start_idx = 0; start_idx < size; start_idx += worker_task_size) {
       taskflow.emplace([=, &max_abs, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
-        int64_t local_max = 0;
+        std::vector<int64_t> local_max(config.batch_size, 0);
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
-          int64_t val = input_i64[idx];
-          if (!validate_input_range(val, sqrt_q)) {
-            validation_failed.store(true, std::memory_order_relaxed);
-            return;
+          for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+            int64_t val = input_i64[batch_idx * size + idx];
+            if (!validate_input_range(val, sqrt_q)) {
+              validation_failed.store(true, std::memory_order_relaxed);
+              return;
+            }
+            val = abs_centered(val, q);
+            local_max[batch_idx] = std::max(local_max[batch_idx], val);
           }
-          val = abs_centered(val, q);
-          local_max = std::max(local_max, val);
         }
 
-        int64_t current_max = max_abs.load(std::memory_order_relaxed);
-        if (local_max > current_max) {
-          max_abs.compare_exchange_weak(current_max, local_max, std::memory_order_relaxed, std::memory_order_relaxed);
+        for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+          int64_t current_max = max_abs[batch_idx].load(std::memory_order_relaxed);
+          if (local_max[batch_idx] > current_max) {
+            max_abs[batch_idx].compare_exchange_weak(
+              current_max, local_max[batch_idx], std::memory_order_relaxed, std::memory_order_relaxed);
+          }
         }
       });
     }
@@ -141,7 +156,9 @@ static eIcicleError cpu_check_norm_bound(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-    *output = max_abs.load(std::memory_order_relaxed) <= static_cast<int64_t>(norm_bound);
+    for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+      output[batch_idx] = max_abs[batch_idx].load(std::memory_order_relaxed) <= static_cast<int64_t>(norm_bound);
+    }
   }
 
   return eIcicleError::SUCCESS;
@@ -163,7 +180,9 @@ static eIcicleError cpu_check_norm_relative(
   }
 
   if (size == 0) {
-    *output = true;
+    for (uint32_t i = 0; i < config.batch_size; ++i) {
+      output[i] = true;
+    }
     return eIcicleError::SUCCESS;
   }
 
@@ -188,8 +207,8 @@ static eIcicleError cpu_check_norm_relative(
   // For L2 norm, we need to check ||input_a||² < scale² * ||input_b||²
   if (norm == eNormType::L2) {
     const int nof_workers = get_nof_workers(config);
-    std::vector<uint128_t> thread_sums_a(nof_workers, 0);
-    std::vector<uint128_t> thread_sums_b(nof_workers, 0);
+    std::vector<std::vector<uint128_t>> thread_sums_a(config.batch_size, std::vector<uint128_t>(nof_workers, 0));
+    std::vector<std::vector<uint128_t>> thread_sums_b(config.batch_size, std::vector<uint128_t>(nof_workers, 0));
     std::atomic<bool> validation_failed(false);
 
     tf::Taskflow taskflow;
@@ -199,29 +218,33 @@ static eIcicleError cpu_check_norm_relative(
     for (uint64_t start_idx = 0, thread_idx = 0; start_idx < size; start_idx += worker_task_size, ++thread_idx) {
       taskflow.emplace([=, &thread_sums_a, &thread_sums_b, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
-        uint128_t local_sum_a = 0;
-        uint128_t local_sum_b = 0;
+        std::vector<uint128_t> local_sum_a(config.batch_size, 0);
+        std::vector<uint128_t> local_sum_b(config.batch_size, 0);
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
-          int64_t val_a = input_a_i64[idx];
-          if (!validate_input_range(val_a, sqrt_q)) {
-            validation_failed.store(true, std::memory_order_relaxed);
-            return;
-          }
-          val_a = abs_centered(val_a, q);
-          local_sum_a += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
+          for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+            int64_t val_a = input_a_i64[batch_idx * size + idx];
+            if (!validate_input_range(val_a, sqrt_q)) {
+              validation_failed.store(true, std::memory_order_relaxed);
+              return;
+            }
+            val_a = abs_centered(val_a, q);
+            local_sum_a[batch_idx] += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
 
-          int64_t val_b = input_b_i64[idx];
-          if (!validate_input_range(val_b, sqrt_q)) {
-            validation_failed.store(true, std::memory_order_relaxed);
-            return;
+            int64_t val_b = input_b_i64[batch_idx * size + idx];
+            if (!validate_input_range(val_b, sqrt_q)) {
+              validation_failed.store(true, std::memory_order_relaxed);
+              return;
+            }
+            val_b = abs_centered(val_b, q);
+            local_sum_b[batch_idx] += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
           }
-          val_b = abs_centered(val_b, q);
-          local_sum_b += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
         }
 
-        thread_sums_a[thread_idx] = local_sum_a;
-        thread_sums_b[thread_idx] = local_sum_b;
+        for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+          thread_sums_a[batch_idx][thread_idx] = local_sum_a[batch_idx];
+          thread_sums_b[batch_idx][thread_idx] = local_sum_b[batch_idx];
+        }
       });
     }
 
@@ -230,21 +253,28 @@ static eIcicleError cpu_check_norm_relative(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-    // Sum up all thread results in the main thread
-    uint128_t norm_a_squared = 0;
-    uint128_t norm_b_squared = 0;
-    for (size_t i = 0; i < nof_workers; ++i) {
-      norm_a_squared += thread_sums_a[i];
-      norm_b_squared += thread_sums_b[i];
-    }
+    for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+      uint128_t norm_a_squared = 0;
+      uint128_t norm_b_squared = 0;
+      for (size_t i = 0; i < nof_workers; ++i) {
+        norm_a_squared += thread_sums_a[batch_idx][i];
+        norm_b_squared += thread_sums_b[batch_idx][i];
+      }
 
-    const uint128_t scale_squared = static_cast<uint128_t>(scale) * static_cast<uint128_t>(scale);
-    *output = norm_a_squared < scale_squared * norm_b_squared;
+      const uint128_t scale_squared = static_cast<uint128_t>(scale) * static_cast<uint128_t>(scale);
+      output[batch_idx] = norm_a_squared < scale_squared * norm_b_squared;
+    }
   }
   // For L-infinity norm, we need to check max(|input_a|) < scale * max(|input_b|)
   else if (norm == eNormType::LInfinity) {
-    std::atomic<int64_t> max_abs_a(0);
-    std::atomic<int64_t> max_abs_b(0);
+    std::vector<std::atomic<int64_t>> max_abs_a(config.batch_size);
+    std::vector<std::atomic<int64_t>> max_abs_b(config.batch_size);
+    for (auto& max : max_abs_a) {
+      max.store(0, std::memory_order_relaxed);
+    }
+    for (auto& max : max_abs_b) {
+      max.store(0, std::memory_order_relaxed);
+    }
     std::atomic<bool> validation_failed(false);
 
     tf::Taskflow taskflow;
@@ -255,40 +285,44 @@ static eIcicleError cpu_check_norm_relative(
     for (uint64_t start_idx = 0; start_idx < size; start_idx += worker_task_size) {
       taskflow.emplace([=, &max_abs_a, &max_abs_b, &validation_failed]() {
         const uint64_t end_idx = std::min(start_idx + worker_task_size, static_cast<uint64_t>(size));
-        int64_t local_max_a = 0;
-        int64_t local_max_b = 0;
+        std::vector<int64_t> local_max_a(config.batch_size, 0);
+        std::vector<int64_t> local_max_b(config.batch_size, 0);
 
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
-          int64_t val_a = input_a_i64[idx];
-          if (!validate_input_range(val_a, sqrt_q)) {
-            validation_failed.store(true, std::memory_order_relaxed);
-            return;
-          }
-          val_a = abs_centered(val_a, q);
-          local_max_a = std::max(local_max_a, val_a);
+          for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+            int64_t val_a = input_a_i64[batch_idx * size + idx];
+            if (!validate_input_range(val_a, sqrt_q)) {
+              validation_failed.store(true, std::memory_order_relaxed);
+              return;
+            }
+            val_a = abs_centered(val_a, q);
+            local_max_a[batch_idx] = std::max(local_max_a[batch_idx], val_a);
 
-          int64_t val_b = input_b_i64[idx];
-          if (!validate_input_range(val_b, sqrt_q)) {
-            validation_failed.store(true, std::memory_order_relaxed);
-            return;
-          }
-          val_b = abs_centered(val_b, q);
-          local_max_b = std::max(local_max_b, val_b);
-        }
-
-        int64_t current_max_a = max_abs_a.load(std::memory_order_relaxed);
-        while (local_max_a > current_max_a) {
-          if (max_abs_a.compare_exchange_weak(
-                current_max_a, local_max_a, std::memory_order_relaxed, std::memory_order_relaxed)) {
-            break;
+            int64_t val_b = input_b_i64[batch_idx * size + idx];
+            if (!validate_input_range(val_b, sqrt_q)) {
+              validation_failed.store(true, std::memory_order_relaxed);
+              return;
+            }
+            val_b = abs_centered(val_b, q);
+            local_max_b[batch_idx] = std::max(local_max_b[batch_idx], val_b);
           }
         }
 
-        int64_t current_max_b = max_abs_b.load(std::memory_order_relaxed);
-        while (local_max_b > current_max_b) {
-          if (max_abs_b.compare_exchange_weak(
-                current_max_b, local_max_b, std::memory_order_relaxed, std::memory_order_relaxed)) {
-            break;
+        for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+          int64_t current_max_a = max_abs_a[batch_idx].load(std::memory_order_relaxed);
+          while (local_max_a[batch_idx] > current_max_a) {
+            if (max_abs_a[batch_idx].compare_exchange_weak(
+                  current_max_a, local_max_a[batch_idx], std::memory_order_relaxed, std::memory_order_relaxed)) {
+              break;
+            }
+          }
+
+          int64_t current_max_b = max_abs_b[batch_idx].load(std::memory_order_relaxed);
+          while (local_max_b[batch_idx] > current_max_b) {
+            if (max_abs_b[batch_idx].compare_exchange_weak(
+                  current_max_b, local_max_b[batch_idx], std::memory_order_relaxed, std::memory_order_relaxed)) {
+              break;
+            }
           }
         }
       });
@@ -299,10 +333,12 @@ static eIcicleError cpu_check_norm_relative(
 
     if (validation_failed.load(std::memory_order_relaxed)) { return eIcicleError::INVALID_ARGUMENT; }
 
-    const int64_t norm_a = max_abs_a.load(std::memory_order_relaxed);
-    const int64_t norm_b = max_abs_b.load(std::memory_order_relaxed);
+    for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
+      const int64_t norm_a = max_abs_a[batch_idx].load(std::memory_order_relaxed);
+      const int64_t norm_b = max_abs_b[batch_idx].load(std::memory_order_relaxed);
 
-    *output = norm_a < static_cast<int64_t>(scale) * norm_b;
+      output[batch_idx] = norm_a < static_cast<int64_t>(scale) * norm_b;
+    }
   }
 
   return eIcicleError::SUCCESS;
