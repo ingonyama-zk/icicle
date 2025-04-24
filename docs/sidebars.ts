@@ -202,6 +202,11 @@ const rustBindingsApi = [
     "type": "doc",
     "label": "Sumcheck",
     "id": "icicle/rust-bindings/sumcheck"
+  },
+  {
+    "type": "doc",
+    "label": "FRI",
+    "id": "icicle/rust-bindings/fri"
   }
   // {
   //   type: "doc",
