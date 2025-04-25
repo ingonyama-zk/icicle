@@ -30,15 +30,15 @@ option(VULKAN_BACKEND "Branch/commit to pull for VULKAN backend or `local` if un
 
 # features that some fields/curves have and some don't.
 option(NTT "Build NTT" ON)
-option(ECNTT "Build ECNTT" ON)
+option(ECNTT "Build ECNTT" OFF)
 option(MSM "Build MSM" ON)
 option(G2 "Build G2 MSM" ON)
 option(EXT_FIELD "Build extension field" ON)
-option(HASH "Build hashes and tree builders" OFF)
-option(POSEIDON "Build poseidon hash" OFF)
-option(POSEIDON2 "Build poseidon2 hash" OFF)
-option(SUMCHECK "Build sumcheck" OFF)
-option(FRI "Build fri" OFF)
+option(HASH "Build hashes and tree builders" ON)
+option(POSEIDON "Build poseidon hash" ON)
+option(POSEIDON2 "Build poseidon2 hash" ON)
+option(SUMCHECK "Build sumcheck" ON)
+option(FRI "Build fri" ON)
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
@@ -48,7 +48,7 @@ if(SANITIZE)
 endif()
 
 # device API library
-add_library(icicle_device SHARED
+add_library(icicle_device
   src/device_api.cpp
   src/runtime.cpp
   src/config_extension.cpp

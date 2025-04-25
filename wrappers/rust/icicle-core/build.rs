@@ -13,4 +13,11 @@ fn main() {
 
     // Add RPATH linker arguments
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/icicle/lib", deps_dir.display());
+
+    // Add iOS-specific configuration
+    let target = std::env::var("TARGET").unwrap();
+    if target.contains("apple-ios") {
+        println!("cargo:rustc-link-lib=framework=Foundation");
+        println!("cargo:rustc-link-lib=framework=Security");
+    }
 }

@@ -31,6 +31,16 @@ fn main() {
         config.define("BUILD_FOR_ANDROID", "ON");
     } else if target.contains("apple-ios") {
         config.define("BUILD_FOR_IOS", "ON");
+        
+        // Determine if we're building for simulator or device
+        let is_simulator = target.ends_with("-sim");
+        if is_simulator {
+            config.define("IOS_SIMULATOR", "ON");
+            config.define("IOS_DEVICE", "OFF");
+        } else {
+            config.define("IOS_SIMULATOR", "OFF");
+            config.define("IOS_DEVICE", "ON");
+        }
     }
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
@@ -58,6 +68,12 @@ fn main() {
     println!("cargo:rustc-link-search={}/lib", icicle_install_dir.display());
     println!("cargo:rustc-link-lib=icicle_device");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
+
+    // Add iOS-specific linker flags
+    if target.contains("apple-ios") {
+        println!("cargo:rustc-link-lib=framework=Foundation");
+        println!("cargo:rustc-link-lib=framework=Security");
+    }
 
     // default backends dir
     if cfg!(feature = "cuda_backend")

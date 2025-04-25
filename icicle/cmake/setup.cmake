@@ -34,16 +34,35 @@ if (BUILD_FOR_ANDROID)
 
 endif()
 
-# Option to cross-compile for iOS
+# Options for iOS cross-compilation
 option(BUILD_FOR_IOS "Cross-compile for iOS" OFF)
+option(IOS_SIMULATOR "Build for iOS simulator" OFF)
+option(IOS_DEVICE "Build for iOS device" OFF)
 
 if (BUILD_FOR_IOS)
     message(STATUS "Configuring for iOS...")
     
+    # Force static library building for iOS
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+    
     # Set iOS specific variables
     set(CMAKE_SYSTEM_NAME iOS CACHE STRING "Target system name for iOS")
-    set(CMAKE_OSX_SYSROOT iphonesimulator CACHE STRING "iOS simulator SDK")
-    set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "iOS architectures")
+    
+    if (IOS_SIMULATOR)
+        message(STATUS "Configuring for iOS Simulator...")
+        set(CMAKE_OSX_SYSROOT iphonesimulator CACHE STRING "iOS simulator SDK")
+        set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "iOS architectures")
+        set(CMAKE_C_COMPILER_TARGET arm64-apple-ios14.0-simulator)
+        set(CMAKE_CXX_COMPILER_TARGET arm64-apple-ios14.0-simulator)
+    else()
+        message(STATUS "Configuring for iOS Device...")
+        set(CMAKE_OSX_SYSROOT iphoneos CACHE STRING "iOS device SDK")
+        set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "iOS architectures")
+        set(CMAKE_C_COMPILER_TARGET arm64-apple-ios14.0)
+        set(CMAKE_CXX_COMPILER_TARGET arm64-apple-ios14.0)
+    endif()
+    
+    # Common iOS settings
     set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0" CACHE STRING "iOS deployment target")
     
     # Set compiler flags for iOS
@@ -55,29 +74,35 @@ if (BUILD_FOR_IOS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fPIC")
     
-    # Set iOS SDK path
-    execute_process(
-        COMMAND xcrun --sdk iphonesimulator --show-sdk-path
-        OUTPUT_VARIABLE IOS_SDK_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
+    # Set iOS SDK path based on target
+    if (IOS_SIMULATOR)
+        execute_process(
+            COMMAND xcrun --sdk iphonesimulator --show-sdk-path
+            OUTPUT_VARIABLE IOS_SDK_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    else()
+        execute_process(
+            COMMAND xcrun --sdk iphoneos --show-sdk-path
+            OUTPUT_VARIABLE IOS_SDK_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    endif()
     set(CMAKE_OSX_SYSROOT ${IOS_SDK_PATH} CACHE PATH "iOS SDK path")
-
+    
     # Set up the toolchain
     set(CMAKE_C_COMPILER clang)
     set(CMAKE_CXX_COMPILER clang++)
-    set(CMAKE_C_COMPILER_TARGET arm64-apple-ios14.0-simulator)
-    set(CMAKE_CXX_COMPILER_TARGET arm64-apple-ios14.0-simulator)
     
     # Set toolchain variables
     set(CMAKE_SYSTEM_PROCESSOR arm64)
     set(CMAKE_SYSTEM_VERSION 14.0)
-    set(CMAKE_OSX_ARCHITECTURES arm64)
     
     message(STATUS "Using iOS SDK: ${CMAKE_OSX_SYSROOT}")
     message(STATUS "Using iOS architectures: ${CMAKE_OSX_ARCHITECTURES}")
     message(STATUS "Using iOS deployment target: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
     message(STATUS "Using iOS toolchain: ${CMAKE_C_COMPILER_TARGET}")
+    message(STATUS "Building static libraries for iOS")
 endif()
 
 # Platform specific libraries and compiler
