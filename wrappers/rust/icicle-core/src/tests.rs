@@ -164,3 +164,10 @@ where
 
     assert_eq!(proj_points, projective_copy);
 }
+
+pub fn check_generator<C: Curve>() {
+    let generator = C::get_generator();
+    let zero = Projective::<C>::zero();
+    assert_ne!(generator, zero);
+    assert!(C::is_on_curve(generator));
+}

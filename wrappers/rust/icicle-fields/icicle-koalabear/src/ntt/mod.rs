@@ -21,6 +21,7 @@ pub(crate) mod tests {
     use icicle_core::ntt::tests::*;
     use serial_test::{parallel, serial};
     impl_ntt_tests!(ScalarField);
+<<<<<<< HEAD
 
     // Tests against risc0 and plonky3
     use super::ExtensionField;
@@ -33,4 +34,6 @@ pub(crate) mod tests {
         baby_bear::{Elem, ExtElem},
         Elem as FieldElem, RootsOfUnity,
     };
+=======
+>>>>>>> V4
 }

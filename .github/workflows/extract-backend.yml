@@ -1,0 +1,41 @@
+name: Extract Icicle Backend Branch
+
+on:
+  workflow_call:
+    inputs:
+      pr-number:
+        description: 'The PR number to fetch the description for'
+        required: true
+        type: number
+      backend-type:
+        description: 'The backend type to extract'
+        required: true
+        type: string
+    outputs:
+      backend-branch:
+        description: "Branch name for backend"
+        value: ${{ jobs.extract-backend-branch.outputs.backend-branch }}
+
+jobs:
+  extract-backend-branch:
+    name: Extract branch name
+    runs-on: ubuntu-22.04
+    outputs:
+      backend-branch: ${{ steps.extract.outputs.backend-branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Extract Private Branch from PR Description
+        id: extract
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DESCRIPTION=$(gh pr view ${{ inputs.pr-number }} --json body -q '.body')
+          echo "PR Description: $DESCRIPTION"
+          BACKEND_BRANCH=$(echo "$DESCRIPTION" | grep -oP '${{ inputs.backend-type }}-backend-branch:\s*\K[^\s]+') || true
+          if [ -z "$BACKEND_BRANCH" ]; then
+            BACKEND_BRANCH="main" # Default branch if not specified
+            echo "No branch specified, using default branch: $BACKEND_BRANCH"
+          fi
+          echo "Extracted ${{ inputs.backend-type }} Backend Branch: $BACKEND_BRANCH"
+          echo "backend-branch=$BACKEND_BRANCH" >> "$GITHUB_OUTPUT"

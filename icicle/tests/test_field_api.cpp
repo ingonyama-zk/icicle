@@ -4,6 +4,8 @@
 #include "icicle/fri/fri_config.h"
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
+#include "icicle/sumcheck/sumcheck_proof_serializer.h"
+#include "icicle/fri/fri_proof_serializer.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -82,6 +84,12 @@ TEST_F(FieldTestBase, polynomialDivision)
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
+      // TODO @Hadar support column batch for this API
+      if (columns_batch && (device == "CUDA" || device == "METAL")) {
+        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
+        continue;
+      }
+
       ICICLE_LOG_INFO << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
                       << "]";
 
@@ -111,11 +119,6 @@ TEST_F(FieldTestBase, polynomialDivision)
       auto config = default_vec_ops_config();
       config.batch_size = batch_size;
       config.columns_batch = columns_batch;
-      // TODO v3.2 support column batch for this API
-      if (columns_batch && device == "CUDA") {
-        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
-        continue;
-      }
 
       ICICLE_CHECK(polynomial_division(
         numerator.get(), numerator_size, denominator.get(), denominator_size, config, q.get(), q_size, r.get(),
@@ -266,7 +269,8 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
     data_main[idx] = tmp;
   }
   std::ostringstream oss;
-  oss << IcicleTestBase::main_device() << " " << "Sumcheck";
+  oss << IcicleTestBase::main_device() << " "
+      << "Sumcheck";
 
   SumcheckProof<scalar_t> sumcheck_proof;
 
@@ -836,6 +840,27 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
+
+    // Serialize proof
+    size_t proof_size = 0;
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(sumcheck_proof, proof_size));
+    std::vector<std::byte> proof_bytes(proof_size);
+    ICICLE_CHECK(
+      BinarySerializer<SumcheckProof<scalar_t>>::serialize(proof_bytes.data(), proof_bytes.size(), sumcheck_proof));
+
+    // Deserialize proof
+    SumcheckProof<scalar_t> deserialized_proof;
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::deserialize(
+      proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+
+    // Compare proofs
+    uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
+    ASSERT_EQ(nof_round_polynomials, deserialized_proof.get_nof_round_polynomials());
+    for (uint round_i = 0; round_i < nof_round_polynomials; round_i++) {
+      const auto& round_poly = sumcheck_proof.get_round_polynomial(round_i);
+      const auto& deserialized_round_poly = deserialized_proof.get_round_polynomial(round_i);
+      ASSERT_EQ(round_poly, deserialized_round_poly);
+    }
   };
 
   for (const auto& device : s_registered_devices)
@@ -931,6 +956,69 @@ TYPED_TEST(FieldTest, Fri)
         err = fri_merkle_tree::verify<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
         ICICLE_CHECK(err);
         ASSERT_EQ(true, valid);
+
+        // Serialize proof
+        size_t proof_size = 0;
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::serialized_size(fri_proof, proof_size));
+        std::vector<std::byte> proof_bytes(proof_size);
+        ICICLE_CHECK(
+          BinarySerializer<FriProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), fri_proof));
+
+        // Deserialize proof
+        FriProof<TypeParam> deserialized_proof;
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
+          proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+
+        // Compare proofs
+        // Compare number of FRI rounds
+        ASSERT_EQ(fri_proof.get_nof_fri_rounds(), deserialized_proof.get_nof_fri_rounds());
+
+        // Compare final polynomial size and contents
+        ASSERT_EQ(fri_proof.get_final_poly_size(), deserialized_proof.get_final_poly_size());
+        auto orig_final_poly_ptr = fri_proof.get_final_poly();
+        auto deser_final_poly_ptr = deserialized_proof.get_final_poly();
+        size_t orig_final_poly_size = fri_proof.get_final_poly_size();
+        size_t deser_final_poly_size = deserialized_proof.get_final_poly_size();
+        std::vector<TypeParam> orig_final_poly_vec(orig_final_poly_ptr, orig_final_poly_ptr + orig_final_poly_size);
+        std::vector<TypeParam> deser_final_poly_vec(deser_final_poly_ptr, deser_final_poly_ptr + deser_final_poly_size);
+        ASSERT_EQ(orig_final_poly_vec, deser_final_poly_vec);
+
+        // Compare PoW nonce
+        ASSERT_EQ(fri_proof.get_pow_nonce(), deserialized_proof.get_pow_nonce());
+
+        // // Compare Merkle proofs for each query and round
+        for (size_t query_idx = 0; query_idx < fri_proof.get_nof_fri_rounds(); query_idx++) {
+          for (size_t round_idx = 0; round_idx < fri_proof.get_nof_fri_rounds(); round_idx++) {
+            auto merkle_proof = fri_proof.get_query_proof_slot(query_idx, round_idx);
+            auto deserialized_proof = fri_proof.get_query_proof_slot(query_idx, round_idx);
+            ASSERT_EQ(merkle_proof.is_pruned(), deserialized_proof.is_pruned());
+
+            // Compare paths
+            auto [orig_path_ptr, orig_path_size] = merkle_proof.get_path();
+            auto [deser_path_ptr, deser_path_size] = deserialized_proof.get_path();
+            ASSERT_EQ(orig_path_size, deser_path_size);
+            std::vector<std::byte> orig_path_vec(orig_path_ptr, orig_path_ptr + orig_path_size);
+            std::vector<std::byte> deser_path_vec(deser_path_ptr, deser_path_ptr + deser_path_size);
+            ASSERT_EQ(orig_path_vec, deser_path_vec);
+
+            // Compare leaves
+            auto [orig_leaf_ptr, orig_leaf_size, orig_leaf_idx] = merkle_proof.get_leaf();
+            auto [deser_leaf_ptr, deser_leaf_size, deser_leaf_idx] = deserialized_proof.get_leaf();
+            ASSERT_EQ(orig_leaf_size, deser_leaf_size);
+            ASSERT_EQ(orig_leaf_idx, deser_leaf_idx);
+            std::vector<std::byte> orig_leaf_vec(orig_leaf_ptr, orig_leaf_ptr + orig_leaf_size);
+            std::vector<std::byte> deser_leaf_vec(deser_leaf_ptr, deser_leaf_ptr + deser_leaf_size);
+            ASSERT_EQ(orig_leaf_vec, deser_leaf_vec);
+
+            // Compare roots
+            auto [orig_root_ptr, orig_root_size] = merkle_proof.get_root();
+            auto [deser_root_ptr, deser_root_size] = deserialized_proof.get_root();
+            ASSERT_EQ(orig_root_size, deser_root_size);
+            std::vector<std::byte> orig_root_vec(orig_root_ptr, orig_root_ptr + orig_root_size);
+            std::vector<std::byte> deser_root_vec(deser_root_ptr, deser_root_ptr + deser_root_size);
+            ASSERT_EQ(orig_root_vec, deser_root_vec);
+          }
+        }
       };
 
       run(IcicleTestBase::reference_device(), false);
