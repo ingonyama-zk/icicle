@@ -1,8 +1,8 @@
 use icicle_core::impl_fri;
 
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::{ScalarField};
 
-impl_fri!("stark252", stark252_fri, ScalarField, ScalarCfg);
+impl_fri!("stark252", stark252_fri, ScalarField);
 
 #[cfg(test)]
 mod tests {

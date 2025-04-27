@@ -1,8 +1,8 @@
 use icicle_core::impl_fri;
 
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 
-impl_fri!("goldilocks", goldilocks_fri, ScalarField, ScalarCfg);
+impl_fri!("goldilocks", goldilocks_fri, ScalarField);
 
 #[cfg(test)]
 mod tests {
@@ -10,3 +10,4 @@ mod tests {
     use icicle_core::impl_fri_tests;
     impl_fri_tests!(ScalarField, ScalarField);
 }
+

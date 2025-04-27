@@ -42,8 +42,7 @@ macro_rules! impl_symbol_field {
   (
     $field_prefix:literal,
     $field_prefix_ident:ident,
-    $field:ident,
-    $field_config:ident
+    $field:ident
   ) => {
     pub mod $field_prefix_ident {
       use crate::symbol::$field;

@@ -4,7 +4,7 @@ pub mod tests;
 use crate::field::PrimeField;
 use crate::hash::Hasher;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, GenerateRandom};
+use crate::traits::Arithmetic;
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -251,7 +251,7 @@ where
 /// Macro to implement Sumcheck functionality for a specific field.
 #[macro_export]
 macro_rules! impl_sumcheck {
-    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
+    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident) => {
         use crate::symbol::$field_prefix_ident::FieldSymbol;
         use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
         use icicle_core::sumcheck::{

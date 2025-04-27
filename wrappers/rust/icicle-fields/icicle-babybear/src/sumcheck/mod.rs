@@ -1,7 +1,7 @@
-use crate::field::BabybearField;
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("babybear", babybear, BabybearField);
+impl_sumcheck!("babybear", babybear, ScalarField);
 impl_sumcheck!("babybear_extension", babybear_extension, ExtensionField);
 
 // Re-export types from the babybear module

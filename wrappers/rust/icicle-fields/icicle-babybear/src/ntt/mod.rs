@@ -10,8 +10,8 @@ impl_ntt_without_domain!("babybear_extension", BabybearField, NTT, "_ntt", Babyb
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::field::{BabybearExtensionField, BabybearField};
+    use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
-    use icicle_core::{field::PrimeField, impl_ntt_tests};
     use serial_test::{parallel, serial};
     impl_ntt_tests!(BabybearField);
 
