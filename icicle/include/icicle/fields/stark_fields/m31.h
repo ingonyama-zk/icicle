@@ -120,10 +120,7 @@ namespace m31 {
         return from_number((((uint32_t)(t1 >> 32)) << 1) + (uint32_t)(t1)); // max: 2(1) - (2^32 - 3) = 2^32 - 1
       }
 
-      constexpr HOST_DEVICE_INLINE MersenneField reduce() const
-      {
-        return MersenneField::reduce(*this);
-      }
+      constexpr HOST_DEVICE_INLINE MersenneField reduce() const { return MersenneField::reduce(*this); }
     };
 
     constexpr HOST_DEVICE_INLINE MersenneField div2(const uint32_t& power = 1) const
@@ -198,10 +195,7 @@ namespace m31 {
       return Wide::from_field(*this) * Wide::from_field(ys);
     }
 
-    constexpr HOST_DEVICE_INLINE Wide sqr_wide() const
-    {
-      return mul_wide(*this);
-    }
+    constexpr HOST_DEVICE_INLINE Wide sqr_wide() const { return mul_wide(*this); }
 
     constexpr HOST_DEVICE_INLINE MersenneField to_montgomery() const { return *this; }
 

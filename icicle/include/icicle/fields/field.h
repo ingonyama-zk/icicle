@@ -51,10 +51,7 @@ public:
 
 template <class CONFIG>
 struct std::hash<Field<CONFIG>> {
-  std::size_t operator()(const Field<CONFIG>& key) const
-  {
-    return key.hash();
-  }
+  std::size_t operator()(const Field<CONFIG>& key) const { return key.hash(); }
 };
 
 #ifdef __CUDACC__

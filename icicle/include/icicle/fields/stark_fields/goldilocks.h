@@ -252,10 +252,7 @@ namespace goldilocks {
 
 template <class CONFIG>
 struct std::hash<goldilocks::GoldilocksField<CONFIG>> {
-  std::size_t operator()(const goldilocks::GoldilocksField<CONFIG>& key) const
-  {
-    return key.hash();
-  }
+  std::size_t operator()(const goldilocks::GoldilocksField<CONFIG>& key) const { return key.hash(); }
 };
 
 #ifdef __CUDACC__
