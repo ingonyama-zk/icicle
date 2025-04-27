@@ -1,10 +1,17 @@
 ## Describe the changes
 
-This PR...
+This PR (fixes, updates, adds, etc).....
 
-## Linked Issues
+## Describe the rational
 
-Resolves #
+Why is this change necessary?
 
-## (optional) CUDA backend branch
-# cuda-backend-branch: main # specify the branch here
+Does it increase performance?
+
+## Backend branches
+
+Replace "main" with the branch this PR should work with
+
+cuda-backend-branch: main
+
+metal-backend-branch: main

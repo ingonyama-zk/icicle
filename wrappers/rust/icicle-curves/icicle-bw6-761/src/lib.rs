@@ -1,4 +1,5 @@
 pub mod curve;
+pub mod fri;
 pub mod msm;
 pub mod ntt;
 pub mod poseidon;
