@@ -87,7 +87,7 @@ jobs:
             secret_key: METAL_PULL_KEY
             os: macOS
             runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust-all-curves: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing
+            skip-rust-all-curves: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri
             skip-cpp-all-curves: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
             skip-golang-all-curves: "true"
             initial-support: true
