@@ -378,20 +378,6 @@ public:
     return os;
   }
 
-  HOST_DEVICE_INLINE uint32_t* export_limbs() { return (uint32_t*)limbs_storage.limbs; }
-
-  HOST_DEVICE_INLINE unsigned get_scalar_digit(unsigned digit_num, unsigned digit_width) const
-  {
-    const uint32_t limb_lsb_idx = (digit_num * digit_width) / 32;
-    const uint32_t shift_bits = (digit_num * digit_width) % 32;
-    unsigned rv = limbs_storage.limbs[limb_lsb_idx] >> shift_bits;
-    if ((shift_bits + digit_width > 32) && (limb_lsb_idx + 1 < TLC)) {
-      rv += limbs_storage.limbs[limb_lsb_idx + 1] << (32 - shift_bits);
-    }
-    rv &= ((1 << digit_width) - 1);
-    return rv;
-  }
-
   HOST_DEVICE Derived operator+(const Derived& ys) const
   {
     Derived rs = {};
