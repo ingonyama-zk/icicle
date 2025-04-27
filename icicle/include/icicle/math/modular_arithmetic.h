@@ -344,7 +344,7 @@ public:
     return os;
   }
 
-  friend HOST_DEVICE Derived operator+(Derived xs, const Derived& ys)
+  HOST_DEVICE Derived operator+(const Derived& ys) const
   {
     Derived rs = {};
     add_limbs<TLC, false>(xs.limbs_storage, ys.limbs_storage, rs.limbs_storage);
