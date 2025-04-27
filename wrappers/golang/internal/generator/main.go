@@ -79,7 +79,9 @@ func generateFiles() {
 			extensionFieldPrefix := "Extension"
 			fields.Generate(extensionsDir, "extension", extensionField, extensionFieldPrefix, true, field.ExtensionLimbsNum)
 			vecops.Generate(extensionsDir, fieldDir, extensionField, extensionFieldPrefix, field.Field)
-			ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
+			if field.SupportsNTT {
+				ntt.Generate(fieldDir, "extension", field.Field, scalarFieldPrefix, field.GnarkImport, field.ROU, false, extensionField, extensionFieldPrefix)
+			}
 		}
 
 		if field.SupportsPoseidon {
