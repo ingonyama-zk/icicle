@@ -36,6 +36,52 @@ public:
   void MSM_test()
   {
     const int logn = 12;
+    const int batch = 1;
+    const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
+    const int precompute_factor = 1;
+    const int total_nof_elemets = batch * N;
+
+    auto scalars = std::make_unique<scalar_t[]>(total_nof_elemets);
+    auto bases = std::make_unique<A[]>(N);
+    auto precomp_bases = std::make_unique<A[]>(N * precompute_factor);
+    scalar_t::rand_host_many(scalars.get(), total_nof_elemets);
+    P::rand_host_many(bases.get(), N);
+
+    auto result_main = std::make_unique<P[]>(batch);
+    auto result_ref = std::make_unique<P[]>(batch);
+
+    auto config = default_msm_config();
+    config.batch_size = batch;
+    config.are_points_shared_in_batch = true;
+    config.precompute_factor = precompute_factor;
+
+    auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      START_TIMER(MSM_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(msm(scalars.get(), precomp_bases.get(), N, config, result));
+      }
+      END_TIMER(MSM_sync, oss.str().c_str(), measure);
+    };
+
+    run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    for (int res_idx = 0; res_idx < batch; ++res_idx) {
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
+      ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
+    }
+  }
+
+  template <typename A, typename P>
+  void MSM_PRE_COMPUTE_test()
+  {
+    const int logn = 12;
     const int batch = 3;
     const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
     const int precompute_factor = rand_uint_32b(0, 7) + 1;  // between 1 and 8
@@ -183,6 +229,7 @@ public:
 
 #ifdef MSM
 TEST_F(CurveApiTest, msm) { MSM_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, msm_pre_compute) { MSM_PRE_COMPUTE_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionProjective) { mont_conversion_test<projective_t, projective_t>(); }

@@ -21,9 +21,9 @@ public:
 
   HOST_DEVICE_INLINE Affine from_montgomery() const { return {x.from_montgomery(), y.from_montgomery()}; }
 
-  HOST_DEVICE_INLINE bool operator==(const Affine& ys) { return (x == ys.x) && (y == ys.y); }
+  HOST_DEVICE_INLINE bool operator==(const Affine& ys) const { return (x == ys.x) && (y == ys.y); }
 
-  HOST_DEVICE_INLINE bool operator!=(const Affine& ys) { return !(*this == ys); }
+  HOST_DEVICE_INLINE bool operator!=(const Affine& ys) const { return !(*this == ys); }
 
   HOST_DEVICE_INLINE bool is_zero() const { return x == FF::zero() && y == FF::zero(); }
 
