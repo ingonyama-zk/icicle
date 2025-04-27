@@ -1,39 +1,23 @@
-use crate::field::{ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{KoalabearExtensionField, KoalabearField};
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;
 
-impl_ntt!("koalabear", koalabear, ScalarField, ScalarCfg);
+impl_ntt!("koalabear", koalabear, KoalabearField);
 impl_ntt_without_domain!(
     "koalabear_extension",
-    ScalarField,
-    ScalarCfg,
+    KoalabearField,
     NTT,
     "_ntt",
-    ExtensionField
+    KoalabearExtensionField
 );
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::ScalarField;
+    use crate::field::KoalabearField;
     use icicle_core::impl_ntt_tests;
     use icicle_core::ntt::tests::*;
     use serial_test::{parallel, serial};
-    impl_ntt_tests!(ScalarField);
-<<<<<<< HEAD
-
-    // Tests against risc0 and plonky3
-    use super::ExtensionField;
-    use icicle_core::{
-        ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
-        traits::{PrimeField, GenerateRandom},
-    };
-    use icicle_runtime::memory::HostSlice;
-    use risc0_core::field::{
-        baby_bear::{Elem, ExtElem},
-        Elem as FieldElem, RootsOfUnity,
-    };
-=======
->>>>>>> V4
+    impl_ntt_tests!(KoalabearField);
 }

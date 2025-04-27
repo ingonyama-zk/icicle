@@ -1,12 +1,14 @@
-use crate::field::{ScalarCfg, ScalarField};
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("m31", m31, ScalarField, ScalarCfg);
+use crate::field::M31Field;
+
+impl_sumcheck!("m31", m31, M31Field);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::ScalarField;
     use icicle_core::impl_sumcheck_tests;
 
-    impl_sumcheck_tests!(m31, ScalarField);
+    use crate::field::M31Field;
+
+    impl_sumcheck_tests!(m31, M31Field);
 }
