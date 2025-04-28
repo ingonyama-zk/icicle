@@ -10,8 +10,8 @@ namespace icicle {
   using vectorVectorOpImplInplaceA = std::function<eIcicleError(
     const Device& device, scalar_t* vec_a, const scalar_t* vec_b, uint64_t size, const VecOpsConfig& config)>;
 
-  using VectorOpImplInplaceA = std::function<eIcicleError(
-    const Device& device, scalar_t* vec_a, uint64_t size, const VecOpsConfig& config)>;
+  using VectorOpImplInplaceA =
+    std::function<eIcicleError(const Device& device, scalar_t* vec_a, uint64_t size, const VecOpsConfig& config)>;
 
   using scalarConvertMontgomeryImpl = std::function<eIcicleError(
     const Device& device,

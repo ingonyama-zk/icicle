@@ -1,6 +1,6 @@
 use crate::field::{ScalarCfg, ScalarField};
 
-use icicle_core::gate_ops::{GateOps, GateOpsConfig, GateData, CalculationData, HornerData};
+use icicle_core::gate_ops::{GateOps, GateOpsConfig, GateData, LookupData, LookupConfig, CalculationData, HornerData};
 use icicle_core::{impl_gate_ops_field};
 use icicle_runtime::errors::eIcicleError;
 use icicle_runtime::memory::HostOrDeviceSlice;

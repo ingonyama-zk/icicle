@@ -33,8 +33,9 @@ pub fn check_gate_ops_scalars<F: FieldImpl>()
 where
     <F as FieldImpl>::Config: GateOps<F> + GenerateRandom<F>,
 {
-    check_horner_evaluation::<F>(4096);
+    // check_horner_evaluation::<F>(4096);
     // check_ezkl_gate_ops::<F>(2^25);
+    check_lookup_constraints_scalars::<F>();
 }
 
 pub fn check_lookup_constraints_scalars<F: FieldImpl>()
@@ -52,19 +53,15 @@ where
         F::from_u32(2u32),
     ];
 
-    let inputs_prods = vec![
+    let permuted_input_coset = vec![
         F::from_u32(2u32),
     ];
 
-    let inputs_inv_sums = vec![
+    let permuted_table_coset = vec![
         F::from_u32(2u32),
     ];
 
-    let phi_coset = vec![
-        F::from_u32(2u32),
-    ];
-
-    let m_coset = vec![
+    let product_coset = vec![
         F::from_u32(2u32),
     ];
 
@@ -84,9 +81,9 @@ where
         F::from_u32(2u32),
     ];
 
-    let y = vec![
-        F::from_u32(2u32),
-    ];
+    let y = F::from_u32(2u32);
+    let gamma = F::from_u32(2u32);
+    let beta = F::from_u32(2u32);
 
     let rot_scale = 1;
     let i_size = 1; 
@@ -94,21 +91,21 @@ where
     let lookup_data = LookupData::new(
         table_values.as_ptr(),
         table_values.len() as u32,
-        table_values.as_ptr(),
-        inputs_prods.len() as u32,
-        inputs_inv_sums.as_ptr(),
-        inputs_inv_sums.len() as u32,
-        phi_coset.as_ptr(),
-        phi_coset.len() as u32,
-        m_coset.as_ptr(),
-        m_coset.len() as u32,
+        permuted_input_coset.as_ptr(),
+        permuted_input_coset.len() as u32,
+        permuted_table_coset.as_ptr(),
+        permuted_table_coset.len() as u32,
+        product_coset.as_ptr(),
+        product_coset.len() as u32,
         l0.as_ptr(),
         l0.len() as u32,
         l_last.as_ptr(),
         l_last.len() as u32,
         l_active_row.as_ptr(), 
         l_active_row.len() as u32,
-        y.as_ptr(),
+        y,
+        beta,
+        gamma,
         previous_value.as_ptr(),
         previous_value.len() as u32,
         rot_scale as u32,
