@@ -11,10 +11,7 @@ use crate::{
 pub mod tests;
 
 #[doc(hidden)]
-pub trait ECNTT<C: Curve>: ECNTTUnchecked<Projective<C>> {}
-
-#[doc(hidden)]
-pub trait ECNTTUnchecked<T>: PrimeField {
+pub trait ECNTT<T>: PrimeField {
     fn ntt_unchecked(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
@@ -27,31 +24,23 @@ pub trait ECNTTUnchecked<T>: PrimeField {
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
     ) -> Result<(), eIcicleError>;
-}
 
-#[macro_export]
-macro_rules! impl_ecntt {
-    (
-        $field_prefix:literal,
-        $field_prefix_ident:ident,
-        $field:ident,
-        $curve:ident
-    ) => {
-        mod $field_prefix_ident {
-            use crate::curve;
-            use crate::ecntt::Projective;
-            use crate::ecntt::{$curve, $field};
-            use icicle_core::ecntt::{ECNTTUnchecked, ECNTT};
-            use icicle_core::impl_ntt_without_domain;
-            use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
-            use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+    fn ntt(
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<Self>,
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    ) -> Result<(), eIcicleError> {
+        Self::ntt_unchecked(input, dir, cfg, output)
+    }
 
-            pub type ProjectiveC = Projective<$curve>;
-            impl_ntt_without_domain!($field_prefix, $field, ECNTTUnchecked, "_ecntt", ProjectiveC);
-
-            impl ECNTT<$curve> for $field {}
-        }
-    };
+    fn ntt_inplace(
+        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<Self>,
+    ) -> Result<(), eIcicleError> {
+        Self::ntt_inplace_unchecked(inout, dir, cfg)
+    }
 }
 
 /// Computes the ECNTT, or a batch of several ECNTTs.
@@ -72,9 +61,9 @@ pub fn ecntt<C: Curve>(
     output: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
 ) -> Result<(), eIcicleError>
 where
-    C::ScalarField: PrimeField + ECNTT<C>,
+    C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {
-    <C::ScalarField as ECNTTUnchecked<Projective<C>>>::ntt_unchecked(input, dir, &cfg, output)
+    <C::ScalarField as ECNTT<Projective<C>>>::ntt(input, dir, cfg, output)
 }
 
 /// Computes the ECNTT, or a batch of several ECNTTs inplace.
@@ -92,9 +81,32 @@ pub fn ecntt_inplace<C: Curve>(
     cfg: &NTTConfig<C::ScalarField>,
 ) -> Result<(), eIcicleError>
 where
-    C::ScalarField: PrimeField + ECNTT<C>,
+    C::ScalarField: PrimeField + ECNTT<Projective<C>>,
 {
-    <C::ScalarField as ECNTTUnchecked<Projective<C>>>::ntt_inplace_unchecked(inout, dir, &cfg)
+    <C::ScalarField as ECNTT<Projective<C>>>::ntt_inplace(inout, dir, &cfg)
+}
+
+#[macro_export]
+macro_rules! impl_ecntt {
+    (
+        $field_prefix:literal,
+        $field_prefix_ident:ident,
+        $field:ident,
+        $curve:ident
+    ) => {
+        mod $field_prefix_ident {
+            use crate::curve;
+            use crate::ecntt::Projective;
+            use crate::ecntt::{$curve, $field};
+            use icicle_core::ecntt::ECNTT;
+            use icicle_core::impl_ntt_without_domain;
+            use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
+            use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+
+            type ProjectiveType = Projective<$curve>;
+            impl_ntt_without_domain!($field_prefix, $field, ECNTT, "_ecntt", ProjectiveType);
+        }
+    };
 }
 
 #[macro_export]
@@ -190,7 +202,7 @@ macro_rules! impl_ecntt_bench {
 
         fn benchmark_ecntt<C: Curve>(c: &mut Criterion)
         where
-            C::ScalarField: ECNTT<C> + NTTDomain,
+            C::ScalarField: ECNTT<Projective<C>> + NTTDomain,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;

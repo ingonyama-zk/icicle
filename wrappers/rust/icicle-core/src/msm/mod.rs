@@ -86,6 +86,73 @@ pub trait MSM<C: Curve> {
         cfg: &MSMConfig,
         output_bases: &mut DeviceSlice<Affine<C>>,
     ) -> Result<(), eIcicleError>;
+
+    fn msm(
+        scalars: &(impl HostOrDeviceSlice<C::ScalarField> + ?Sized),
+        bases: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        cfg: &MSMConfig,
+        results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
+    ) -> Result<(), eIcicleError> {
+        if bases.len() % (cfg.precompute_factor as usize) != 0 {
+            panic!(
+                "Precompute factor {} does not divide the number of bases {}",
+                cfg.precompute_factor,
+                bases.len()
+            );
+        }
+        let bases_size = bases.len() / (cfg.precompute_factor as usize);
+        if scalars.len() % bases_size != 0 {
+            panic!(
+                "Number of bases {} does not divide the number of scalars {}",
+                bases_size,
+                scalars.len()
+            );
+        }
+        if scalars.len() % results.len() != 0 {
+            panic!(
+                "Number of results {} does not divide the number of scalars {}",
+                results.len(),
+                scalars.len()
+            );
+        }
+
+        // check device slices are on active device
+        if scalars.is_on_device() && !scalars.is_on_active_device() {
+            panic!("scalars not allocated on an inactive device");
+        }
+        if bases.is_on_device() && !bases.is_on_active_device() {
+            panic!("bases not allocated on an inactive device");
+        }
+        if results.is_on_device() && !results.is_on_active_device() {
+            panic!("results not allocated on an inactive device");
+        }
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_points_shared_in_batch = bases_size < scalars.len();
+        local_cfg.batch_size = results.len() as i32;
+        local_cfg.are_scalars_on_device = scalars.is_on_device();
+        local_cfg.are_bases_on_device = bases.is_on_device();
+        local_cfg.are_results_on_device = results.is_on_device();
+
+        Self::msm_unchecked(scalars, bases, &local_cfg, results)
+    }
+
+    fn precompute_bases(
+        points: &(impl HostOrDeviceSlice<Affine<C>> + ?Sized),
+        config: &MSMConfig,
+        output_bases: &mut DeviceSlice<Affine<C>>,
+    ) -> Result<(), eIcicleError> {
+        assert_eq!(
+            output_bases.len(),
+            points.len() * (config.precompute_factor as usize),
+            "Precompute factor is probably incorrect: expected {} but got {}",
+            output_bases.len() / points.len(),
+            config.precompute_factor
+        );
+        assert!(output_bases.is_on_device());
+
+        Self::precompute_bases_unchecked(points, config, output_bases)
+    }
 }
 
 /// Computes the multi-scalar multiplication, or MSM: `s1*P1 + s2*P2 + ... + sn*Pn`, or a batch of several MSMs.
@@ -109,48 +176,7 @@ pub fn msm<C: Curve + MSM<C>>(
     cfg: &MSMConfig,
     results: &mut (impl HostOrDeviceSlice<Projective<C>> + ?Sized),
 ) -> Result<(), eIcicleError> {
-    if bases.len() % (cfg.precompute_factor as usize) != 0 {
-        panic!(
-            "Precompute factor {} does not divide the number of bases {}",
-            cfg.precompute_factor,
-            bases.len()
-        );
-    }
-    let bases_size = bases.len() / (cfg.precompute_factor as usize);
-    if scalars.len() % bases_size != 0 {
-        panic!(
-            "Number of bases {} does not divide the number of scalars {}",
-            bases_size,
-            scalars.len()
-        );
-    }
-    if scalars.len() % results.len() != 0 {
-        panic!(
-            "Number of results {} does not divide the number of scalars {}",
-            results.len(),
-            scalars.len()
-        );
-    }
-
-    // check device slices are on active device
-    if scalars.is_on_device() && !scalars.is_on_active_device() {
-        panic!("scalars not allocated on an inactive device");
-    }
-    if bases.is_on_device() && !bases.is_on_active_device() {
-        panic!("bases not allocated on an inactive device");
-    }
-    if results.is_on_device() && !results.is_on_active_device() {
-        panic!("results not allocated on an inactive device");
-    }
-
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_points_shared_in_batch = bases_size < scalars.len();
-    local_cfg.batch_size = results.len() as i32;
-    local_cfg.are_scalars_on_device = scalars.is_on_device();
-    local_cfg.are_bases_on_device = bases.is_on_device();
-    local_cfg.are_results_on_device = results.is_on_device();
-
-    C::msm_unchecked(scalars, bases, &local_cfg, results)
+    C::msm(scalars, bases, cfg, results)
 }
 
 /// A function that precomputes MSM bases by extending them with their shifted copies.
@@ -177,16 +203,7 @@ pub fn precompute_bases<C: Curve + MSM<C>>(
     config: &MSMConfig,
     output_bases: &mut DeviceSlice<Affine<C>>,
 ) -> Result<(), eIcicleError> {
-    assert_eq!(
-        output_bases.len(),
-        points.len() * (config.precompute_factor as usize),
-        "Precompute factor is probably incorrect: expected {} but got {}",
-        output_bases.len() / points.len(),
-        config.precompute_factor
-    );
-    assert!(output_bases.is_on_device());
-
-    C::precompute_bases_unchecked(points, config, output_bases)
+    C::precompute_bases(points, config, output_bases)
 }
 
 #[macro_export]
