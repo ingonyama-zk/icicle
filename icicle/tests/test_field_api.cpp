@@ -1,4 +1,3 @@
-
 #include "test_mod_arithmetic_api.h"
 
 // Derive all ModArith tests and add ring specific tests here
@@ -24,6 +23,79 @@ TYPED_TEST(FieldTest, FieldSanityTest)
   ASSERT_EQ(a * TypeParam::zero(), TypeParam::zero());
   ASSERT_EQ(b * b_inv, TypeParam::one());
   ASSERT_EQ(a * scalar_t::from(2), a + a);
+}
+
+TYPED_TEST(FieldTest, NTTTest)
+{
+  const uint64_t N = 1 << rand_uint_32b(3, 17);
+  const int batch_size = 1 << rand_uint_32b(0, 4);
+  const bool columns_batch = rand_uint_32b(0, 1);
+  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1));
+  const bool inplace = rand_uint_32b(0, 1);
+
+  ICICLE_LOG_DEBUG << "N = " << N;
+  ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
+  ICICLE_LOG_DEBUG << "columns_batch = " << columns_batch;
+  ICICLE_LOG_DEBUG << "dir = " << (dir == NTTDir::kForward ? "forward" : "inverse");
+  ICICLE_LOG_DEBUG << "inplace = " << inplace;
+
+  const int total_size = N * batch_size;
+  auto in_a = std::make_unique<TypeParam[]>(total_size);
+  auto out_main = std::make_unique<TypeParam[]>(total_size);
+  auto out_ref = std::make_unique<TypeParam[]>(total_size);
+
+  auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    auto config = default_ntt_config();
+    config.batch_size = batch_size;
+    config.columns_batch = columns_batch;
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    START_TIMER(NTT_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(ntt(in_a.get(), N, dir, config, inplace ? in_a.get() : out));
+    }
+    END_TIMER(NTT_sync, oss.str().c_str(), measure);
+  };
+
+  // Initialize input data
+  TypeParam::rand_host_many(in_a.get(), total_size);
+
+  // Run reference implementation if available
+  if (!IcicleTestBase::is_main_device_available()) {
+    // Simple reference implementation for testing
+    for (int i = 0; i < total_size; i++) {
+      out_ref[i] = in_a[i];
+    }
+  } else {
+    run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE, "NTT", ITERS);
+  }
+
+  // Run main implementation
+  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE, "NTT", ITERS);
+
+  // Compare results
+  if (inplace) {
+    ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  } else {
+    ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  }
+
+  // Run Vulkan implementation if available
+  if (std::find(s_registered_devices.begin(), s_registered_devices.end(), "VULKAN") != s_registered_devices.end()) {
+    auto out_vulkan = std::make_unique<TypeParam[]>(total_size);
+    run("VULKAN", out_vulkan.get(), VERBOSE, "NTT", ITERS);
+    
+    // Compare Vulkan results with reference
+    if (inplace) {
+      ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+    } else {
+      ASSERT_EQ(0, memcmp(out_vulkan.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+    }
+  }
 }
 
 TYPED_TEST(FieldTest, vectorDivision)
