@@ -11,8 +11,6 @@ import (
 	{{end -}}
 	{{if .SupportsNTT -}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}
-	{{if .SupportsNTT -}}
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
@@ -33,8 +31,7 @@ func initDomain({{if ne .GnarkImport "" -}}largestTestSize int, {{end -}}cfg cor
 
 	rouIcicle.FromLimbs(limbs)
 	{{else -}}
-	rouIcicle := {{.Field}}.{{.FieldPrefix}}Field{}
-	rouIcicle.FromUint32({{.ROU}})
+	rouIcicle := ntt.GetRootOfUnity(uint64(1 << largestTestSize))
 	{{end -}}
 	e := ntt.InitDomain(rouIcicle, cfg)
 	return e
