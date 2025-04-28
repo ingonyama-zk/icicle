@@ -12,12 +12,12 @@ use std::ops::{Add, Mul, Sub};
 pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 8;
 
-impl_field!(GrumpkinScalarField, "grumpkin_scalar_field", SCALAR_LIMBS);
+impl_field!(GrumpkinScalarField, "grumpkin_scalar_field", SCALAR_LIMBS, true);
 impl_field_arithmetic!(GrumpkinScalarField, "grumpkin_scalar_field", grumpkin_sf);
 impl_montgomery_convertible!(GrumpkinScalarField, grumpkin_scalar_convert_montgomery);
 impl_generate_random!(GrumpkinScalarField, grumpkin_scalar_generate_random);
 
-impl_field!(GrumpkinBaseField, "grumpkin_base_field", BASE_LIMBS);
+impl_field!(GrumpkinBaseField, "grumpkin_base_field", BASE_LIMBS, false);
 
 impl_curve!(
     "grumpkin",

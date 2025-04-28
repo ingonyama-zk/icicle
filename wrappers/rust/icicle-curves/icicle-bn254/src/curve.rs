@@ -14,12 +14,12 @@ pub(crate) const BASE_LIMBS: usize = 8;
 #[cfg(feature = "g2")]
 pub(crate) const G2_BASE_LIMBS: usize = 16;
 
-impl_field!(ScalarField, "bn254", SCALAR_LIMBS);
+impl_field!(ScalarField, "bn254", SCALAR_LIMBS, true);
 impl_field_arithmetic!(ScalarField, "bn254", bn254_sf);
 impl_montgomery_convertible!(ScalarField, bn254_scalar_convert_montgomery);
 impl_generate_random!(ScalarField, bn254_generate_scalars);
 
-impl_field!(BaseField, "bn254_base_field", BASE_LIMBS);
+impl_field!(BaseField, "bn254_base_field", BASE_LIMBS, false);
 impl_curve!(
     "bn254",
     bn254,
@@ -31,7 +31,7 @@ impl_curve!(
 );
 
 #[cfg(feature = "g2")]
-impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS);
+impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS, false);
 #[cfg(feature = "g2")]
 impl_curve!(
     "bn254_g2",

@@ -13,19 +13,16 @@ use std::ops::{Add, Mul, Sub};
 pub(crate) const SCALAR_LIMBS: usize = 12;
 pub(crate) const BASE_LIMBS: usize = 24;
 
-impl_field!(BaseField, "bw6_761_g2_base_field", BASE_LIMBS);
-
-pub type ScalarField = Bls12_377BaseField;
-impl_scalar_field!("bw6_761", bw6_761_sf, SCALAR_LIMBS, ScalarField);
+impl_field!(BaseField, "bw6_761_g2_base_field", BASE_LIMBS, false);
 impl_field_arithmetic!(BaseField, "bw6_761_g2_base_field", bw6_761_g2_base_field);
 impl_montgomery_convertible!(BaseField, bw6_761_g2_base_field_convert_montgomery);
 impl_generate_random!(BaseField, bw6_761_g2_base_field_generate_random);
 
 // NOTE: Even though both G1 and G2 use the same base field, we define two different field types
 //       to avoid using incorrect FFI functions.
-impl_field!("bw6_761_base_field", BASE_LIMBS, BaseField);
+impl_field!("bw6_761_base_field", BASE_LIMBS, BaseField, false);
 #[cfg(feature = "g2")]
-impl_field!("bw6_761_g2_base_field", BASE_LIMBS, G2BaseField);
+impl_field!("bw6_761_g2_base_field", BASE_LIMBS, G2BaseField, false);
 
 impl_curve!(
     "bw6_761",

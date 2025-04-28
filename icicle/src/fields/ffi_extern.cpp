@@ -30,7 +30,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, inv)(scalar_t* scalar1, scalar_
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, sqr)(scalar_t* scalar1, scalar_t* result)
 {
-  *result = scalar_t::sqr(*scalar1);
+  *result = (*scalar1).sqr();
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pow)(scalar_t* base, int exp, scalar_t* result)
@@ -41,6 +41,11 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pow)(scalar_t* base, int exp, s
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, from_u32)(uint32_t val, scalar_t* result)
 {
   *result = scalar_t::from(val);
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, eq)(scalar_t* scalar1, scalar_t* scalar2, bool* result)
+{
+  *result = *scalar1 == *scalar2;
 }
 
 #ifdef EXT_FIELD
@@ -74,7 +79,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_inv)(extension_t* sca
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_sqr)(extension_t* scalar1, extension_t* result)
 {
-  *result = extension_t::sqr(*scalar1);
+  *result = (*scalar1).sqr();
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_pow)(extension_t* base, int exp, extension_t* result)
@@ -85,6 +90,11 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_pow)(extension_t* bas
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_from_u32)(uint32_t val, extension_t* result)
 {
   *result = extension_t::from(val);
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_eq)(extension_t* scalar1, extension_t* scalar2, bool* result)
+{
+  *result = *scalar1 == *scalar2;
 }
 
 #endif // EXT_FIELD
@@ -120,7 +130,7 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_inv)(scalar_rns_t* scalar1,
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_sqr)(scalar_rns_t* scalar1, scalar_rns_t* result)
 {
-  *result = scalar_rns_t::sqr(*scalar1);
+  *result = (*scalar1).sqr();
 }
 
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_pow)(scalar_rns_t* base, int exp, scalar_rns_t* result)
@@ -131,5 +141,10 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_pow)(scalar_rns_t* base, in
 extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_from_u32)(uint32_t val, scalar_rns_t* result)
 {
   *result = scalar_rns_t::from(val);
+}
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_eq)(scalar_rns_t* scalar1, scalar_rns_t* scalar2, bool* result)
+{
+  *result = *scalar1 == *scalar2;
 }
 #endif // RING
