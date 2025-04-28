@@ -402,7 +402,7 @@ macro_rules! impl_curve_tests {
             #[test]
             fn test_point_equality() {
                 initialize();
-                check_point_equality::<$base_limbs, <<$curve as Curve>::BaseField as PrimeField>::Config, $curve>()
+                check_point_equality::<<$curve as Curve>::BaseField, $curve>()
             }
 
             #[test]

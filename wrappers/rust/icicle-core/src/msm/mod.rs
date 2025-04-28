@@ -304,7 +304,7 @@ macro_rules! impl_msm_bench {
         use criterion::{criterion_group, criterion_main, Criterion};
         use icicle_core::curve::{Affine, Curve, Projective};
         use icicle_core::msm::{msm, MSMConfig, CUDA_MSM_LARGE_BUCKET_FACTOR, MSM};
-        use icicle_core::traits::{GenerateRandom, PrimeField};
+        use icicle_core::traits::GenerateRandom;
         use icicle_runtime::{
             device::Device,
             get_active_device, is_device_available,
@@ -338,7 +338,7 @@ macro_rules! impl_msm_bench {
 
         fn check_msm_batch<C: Curve + MSM<C>>(c: &mut Criterion)
         where
-            <C::ScalarField as PrimeField>::Config: GenerateRandom<C::ScalarField>,
+            C::ScalarField: GenerateRandom,
         {
             use criterion::black_box;
             use criterion::SamplingMode;
@@ -391,8 +391,8 @@ macro_rules! impl_msm_bench {
                             continue;
                         }
 
-                        let mut scalars = <C::ScalarField as PrimeField>::Config::generate_random(full_size);
-                        let scalars = <C::ScalarField as PrimeField>::Config::generate_random(full_size);
+                        let mut scalars = C::ScalarField::generate_random(full_size);
+                        let scalars = C::ScalarField::generate_random(full_size);
                         // a version of batched msm without using `cfg.points_size`, requires copying bases
 
                         let scalars_h = HostSlice::from_slice(&scalars);

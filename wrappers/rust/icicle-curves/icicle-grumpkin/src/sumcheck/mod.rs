@@ -1,12 +1,12 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::GrumpkinScalarField;
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("grumpkin", grumpkin, ScalarField, ScalarCfg);
+impl_sumcheck!("grumpkin", grumpkin, GrumpkinScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::curve::ScalarField;
+    use crate::curve::GrumpkinScalarField;
     use icicle_core::impl_sumcheck_tests;
 
-    impl_sumcheck_tests!(grumpkin, ScalarField);
+    impl_sumcheck_tests!(grumpkin, GrumpkinScalarField);
 }
