@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VULKAN_BACKEND=${1:-main}
+VULKAN_BACKEND=${1:-develop/vhnat/vulcan-ntt}
 BACKEND_DIR=${2:-./icicle/backend}
 
 # Check if BACKEND_DIR exists
@@ -37,6 +37,6 @@ else
     echo "Directory ${ABS_VULKAN_DIR} is empty or does not exist. Cloning..."
     mkdir -p ${ABS_VULKAN_DIR}
     cd ${ABS_VULKAN_DIR}
-    git clone git@github.com:ingonyama-zk/icicle-vulkan-backend.git ${ABS_VULKAN_DIR}
+    git clone https://github.com/ingonyama-zk/icicle-vulkan-backend.git ${ABS_VULKAN_DIR}
     git checkout ${VULKAN_BACKEND}
 fi
