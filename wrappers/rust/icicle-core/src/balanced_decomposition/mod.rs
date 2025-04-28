@@ -61,11 +61,8 @@ pub fn recompose<T: PrimeField + BalancedDecomposition>(
 macro_rules! impl_balanced_decomposition {
     (
         $field_prefix: literal,
-        $field_type: ident,
-        $field_cfg_type: ident
+        $field_type: ident
     ) => {
-        use icicle_core::balanced_decomposition::BalancedDecomposition;
-
         extern "C" {
             #[link_name = concat!($field_prefix, "_balanced_decomposition_nof_digits")]
             fn balanced_decomposition_nof_digits(base: u32) -> u32;
