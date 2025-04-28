@@ -112,16 +112,25 @@ namespace icicle {
           }
         }
 
+        F alpha_value = F::zero();
         switch (round_idx) {
           case 0:
             round_polynomial[0] = claimed_sum - round_polynomial[1];
             break;
           default: {
             std::vector<F>& prev_round_polynomial = sumcheck_proof.get_round_polynomial(round_idx - 1);
-            const F alpha_value = lagrange_interpolation(prev_round_polynomial, alpha);
+            alpha_value = lagrange_interpolation(prev_round_polynomial, alpha);
             round_polynomial[0] = alpha_value - round_polynomial[1];
           }
             break;
+        }
+
+        if (nof_mle_poly > 1) {
+          // last element is the claimed sum - the sum of the round polynomial (except the last element)
+          round_polynomial[round_polynomial.size() - 1] = claimed_sum - alpha_value; // alpha_value is the sumc of the first two elements of the round polynomial
+          for (int k = 2; k < round_polynomial.size() - 1; ++k) {
+            round_polynomial[round_polynomial.size() - 1] = round_polynomial[round_polynomial.size() - 1] - round_polynomial[k];
+          }
         }
       }
       return eIcicleError::SUCCESS;
@@ -191,7 +200,7 @@ namespace icicle {
       program_executor.m_variable_ptrs[nof_polynomials] = &combine_func_result;
 
       for (int element_idx = start_element_idx; element_idx < start_element_idx + nof_iterations; ++element_idx) {
-        for (int k = 1; k < round_polynomial.size(); ++k) {
+        for (int k = 1; k < round_polynomial.size() - 1; ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
             combine_func_inputs[poly_idx] =                              // (1-k)*element_i + k*element_i+1
