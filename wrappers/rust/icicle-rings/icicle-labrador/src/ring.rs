@@ -12,12 +12,12 @@ use icicle_runtime::stream::IcicleStream;
 
 pub(crate) const SCALAR_LIMBS: usize = 2;
 
-impl_field!(LabradorScalarRing, "labrador", SCALAR_LIMBS);
+impl_field!(LabradorScalarRing, "labrador", SCALAR_LIMBS, true);
 impl_field_arithmetic!(LabradorScalarRing, "labrador", labrador);
 impl_montgomery_convertible!(LabradorScalarRing, labrador_scalar_convert_montgomery);
 impl_generate_random!(LabradorScalarRing, labrador_generate_scalars);
 
-impl_field!(LabradorScalarRingRns, "labrador_rns", SCALAR_LIMBS);
+impl_field!(LabradorScalarRingRns, "labrador_rns", SCALAR_LIMBS, true);
 impl_field_arithmetic!(LabradorScalarRingRns, "labrador_rns", labrador_rns);
 impl_montgomery_convertible!(LabradorScalarRingRns, labrador_rns_scalar_convert_montgomery);
 impl_generate_random!(LabradorScalarRingRns, labrador_rns_generate_scalars);

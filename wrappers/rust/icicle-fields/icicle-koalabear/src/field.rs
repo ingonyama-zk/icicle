@@ -13,12 +13,12 @@ use icicle_runtime::stream::IcicleStream;
 pub(crate) const SCALAR_LIMBS: usize = 1;
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
-impl_field!(KoalabearField, "koalabear", SCALAR_LIMBS);
+impl_field!(KoalabearField, "koalabear", SCALAR_LIMBS, true);
 impl_field_arithmetic!(KoalabearField, "koalabear", koalabear);
 impl_montgomery_convertible!(KoalabearField, koalabear_scalar_convert_montgomery);
 impl_generate_random!(KoalabearField, koalabear_generate_scalars);
 
-impl_field!(KoalabearExtensionField, "koalabear_extension", EXTENSION_LIMBS);
+impl_field!(KoalabearExtensionField, "koalabear_extension", EXTENSION_LIMBS, true);
 impl_field_arithmetic!(KoalabearExtensionField, "koalabear_extension", koalabear_extension);
 impl_montgomery_convertible!(KoalabearExtensionField, koalabear_extension_scalar_convert_montgomery);
 impl_generate_random!(KoalabearExtensionField, koalabear_extension_generate_scalars);
