@@ -35,30 +35,21 @@ macro_rules! impl_ecntt {
         $field_prefix:literal,
         $field_prefix_ident:ident,
         $field:ident,
-        $field_config:ident,
         $curve:ident
     ) => {
         mod $field_prefix_ident {
             use crate::curve;
-            use crate::curve::BaseCfg;
             use crate::ecntt::Projective;
-            use crate::ecntt::{$curve, $field, $field_config};
+            use crate::ecntt::{$curve, $field};
             use icicle_core::ecntt::{ECNTTUnchecked, ECNTT};
             use icicle_core::impl_ntt_without_domain;
             use icicle_core::ntt::{NTTConfig, NTTDir, NTTInitDomainConfig, NTT};
             use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
             pub type ProjectiveC = Projective<$curve>;
-            impl_ntt_without_domain!(
-                $field_prefix,
-                $field,
-                $field_config,
-                ECNTTUnchecked,
-                "_ecntt",
-                ProjectiveC
-            );
+            impl_ntt_without_domain!($field_prefix, $field, ECNTTUnchecked, "_ecntt", ProjectiveC);
 
-            impl ECNTT<$curve> for $field_config {}
+            impl ECNTT<$curve> for $field {}
         }
     };
 }
@@ -160,8 +151,9 @@ macro_rules! impl_ecntt_bench {
         use icicle_core::{
             curve::{Affine, Curve, Projective},
             ecntt::{ecntt, ECNTT},
+            field::PrimeField,
             ntt::{ntt, NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NttAlgorithm, Ordering, NTT},
-            traits::{GenerateRandom, PrimeField},
+            traits::GenerateRandom,
             vec_ops::VecOps,
         };
         use icicle_runtime::{
@@ -198,8 +190,7 @@ macro_rules! impl_ecntt_bench {
 
         fn benchmark_ecntt<C: Curve>(c: &mut Criterion)
         where
-            <C::ScalarField as PrimeField>::Config: ECNTT<C>,
-            <C::ScalarField as PrimeField>::Config: NTTDomain<C::ScalarField>,
+            C::ScalarField: ECNTT<C> + NTTDomain,
         {
             use criterion::SamplingMode;
             use icicle_core::ntt::tests::init_domain;

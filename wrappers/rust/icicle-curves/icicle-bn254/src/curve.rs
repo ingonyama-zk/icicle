@@ -1,23 +1,37 @@
+use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
 use icicle_core::{
     curve::{Affine, Curve, Projective},
-    field::{Field, MontgomeryConvertibleField},
-    impl_curve, impl_field, impl_scalar_field,
-    traits::{FieldConfig, PrimeField, GenerateRandom},
+    field::PrimeField,
+    impl_curve, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
     vec_ops::VecOpsConfig,
 };
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
+use std::fmt::{Debug, Display};
+use std::ops::{Add, Mul, Sub};
 
 pub(crate) const SCALAR_LIMBS: usize = 8;
 pub(crate) const BASE_LIMBS: usize = 8;
 #[cfg(feature = "g2")]
 pub(crate) const G2_BASE_LIMBS: usize = 16;
 
-impl_scalar_field!("bn254", bn254_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
-impl_field!("bn254_base_field", BASE_LIMBS, BaseField, BaseCfg);
-impl_curve!("bn254", bn254, CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
+impl_field!(ScalarField, "bn254", SCALAR_LIMBS);
+impl_field_arithmetic!(ScalarField, "bn254", bn254_sf);
+impl_montgomery_convertible!(ScalarField, bn254_scalar_convert_montgomery);
+impl_generate_random!(ScalarField, bn254_generate_scalars);
+
+impl_field!(BaseField, "bn254_base_field", BASE_LIMBS);
+impl_curve!(
+    "bn254",
+    bn254,
+    CurveCfg,
+    ScalarField,
+    BaseField,
+    G1Affine,
+    G1Projective
+);
 
 #[cfg(feature = "g2")]
-impl_field!("bn254_g2_base_field", G2_BASE_LIMBS, G2BaseField, G2BaseCfg);
+impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS);
 #[cfg(feature = "g2")]
 impl_curve!(
     "bn254_g2",
@@ -31,12 +45,11 @@ impl_curve!(
 
 #[cfg(test)]
 mod tests {
-    use super::{CurveCfg, ScalarField, BASE_LIMBS};
     #[cfg(feature = "g2")]
-    use super::{G2CurveCfg, G2_BASE_LIMBS};
+    use super::G2CurveCfg;
+    use super::{ScalarField, CurveCfg};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;
-    use icicle_core::traits::PrimeField;
     use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_runtime::test_utilities;
 

@@ -1,20 +1,20 @@
 use crate::curve::CurveCfg;
 use crate::curve::G2CurveCfg;
 use icicle_core::curve::Affine;
-use icicle_core::field::Field;
+use icicle_core::field::PrimeField;
 use icicle_core::impl_field;
 use icicle_core::impl_pairing;
 use icicle_core::pairing::Pairing;
-use icicle_core::traits::{FieldConfig, PrimeField};
 use icicle_runtime::eIcicleError;
+
+use std::fmt::{Debug, Display};
 
 pub(crate) const PAIRING_TARGET_FIELD_LIMBS: usize = 288;
 
 impl_field!(
-    "bls12_381_pairing_target_field",
-    PAIRING_TARGET_FIELD_LIMBS,
     PairingTargetField,
-    PairingTargetFieldCfg
+    "bls12_381_pairing_target_field",
+    PAIRING_TARGET_FIELD_LIMBS
 );
 impl_pairing!("bls12_381", bls12_381, CurveCfg, G2CurveCfg, PairingTargetField);
 
