@@ -456,6 +456,7 @@ macro_rules! impl_ntt_bench {
             let target = env::var("BENCH_TARGET").unwrap_or_else(|_| {
                 // If not defined, try CUDA first, fallback to CPU
                 if is_device_available(&Device::new("CUDA", 0)) {
+                    // println!("cuda found");
                     "CUDA".to_string()
                 } else {
                     "CPU".to_string()
