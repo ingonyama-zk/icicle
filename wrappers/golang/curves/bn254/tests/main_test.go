@@ -8,6 +8,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
+	bn254 "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/curves/bn254/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"

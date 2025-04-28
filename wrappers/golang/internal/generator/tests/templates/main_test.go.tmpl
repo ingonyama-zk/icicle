@@ -9,6 +9,8 @@ import (
 	{{if ne .GnarkImport "" -}}
 	"github.com/consensys/gnark-crypto/ecc/{{.GnarkImport}}/fr/fft"
 	{{end -}}
+	{{if ne .GnarkImport "" -}}
+	{{.Field}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}"{{end}}
 	{{if .SupportsNTT -}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}/ntt"{{end}}
