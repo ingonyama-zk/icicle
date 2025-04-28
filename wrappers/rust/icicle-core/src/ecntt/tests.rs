@@ -9,7 +9,7 @@ use crate::{
 
 pub fn check_ecntt<C: Curve>()
 where
-    C::ScalarField: ECNTT<C>,
+    C::ScalarField: ECNTT<Projective<C>>,
 {
     let test_sizes = [1 << 4, 1 << 9, 1 << 11];
     for test_size in test_sizes {
@@ -56,7 +56,7 @@ where
 
 pub fn check_ecntt_batch<C: Curve>()
 where
-    C::ScalarField: ECNTT<C>,
+    C::ScalarField: ECNTT<Projective<C>>,
 {
     test_utilities::test_set_main_device();
 

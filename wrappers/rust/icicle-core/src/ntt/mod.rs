@@ -140,11 +140,53 @@ pub trait NTT<T>: NTTDomain {
         cfg: &NTTConfig<Self>,
         output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
+
     fn ntt_inplace_unchecked(
         inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
         dir: NTTDir,
         cfg: &NTTConfig<Self>,
     ) -> Result<(), eIcicleError>;
+
+    fn ntt(
+        input: &(impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<Self>,
+        output: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+    ) -> Result<(), eIcicleError> {
+        if input.len() != output.len() {
+            panic!(
+                "input and output lengths {}; {} do not match",
+                input.len(),
+                output.len()
+            );
+        }
+
+        // check device slices are on active device
+        if input.is_on_device() && !input.is_on_active_device() {
+            panic!("input not allocated on an inactive device");
+        }
+        if output.is_on_device() && !output.is_on_active_device() {
+            panic!("output not allocated on an inactive device");
+        }
+
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_inputs_on_device = input.is_on_device();
+        local_cfg.are_outputs_on_device = output.is_on_device();
+
+        Self::ntt_unchecked(input, dir, &local_cfg, output)
+    }
+
+    fn ntt_inplace(
+        inout: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+        dir: NTTDir,
+        cfg: &NTTConfig<Self>,
+    ) -> Result<(), eIcicleError> {
+        let mut local_cfg = cfg.clone();
+        local_cfg.are_inputs_on_device = inout.is_on_device();
+        local_cfg.are_outputs_on_device = inout.is_on_device();
+
+        Self::ntt_inplace_unchecked(inout, dir, &local_cfg)
+    }
 }
 
 /// Computes the NTT, or a batch of several NTTs.
@@ -167,27 +209,7 @@ pub fn ntt<T, F>(
 where
     F: PrimeField + NTT<T>,
 {
-    if input.len() != output.len() {
-        panic!(
-            "input and output lengths {}; {} do not match",
-            input.len(),
-            output.len()
-        );
-    }
-
-    // check device slices are on active device
-    if input.is_on_device() && !input.is_on_active_device() {
-        panic!("input not allocated on an inactive device");
-    }
-    if output.is_on_device() && !output.is_on_active_device() {
-        panic!("output not allocated on an inactive device");
-    }
-
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_inputs_on_device = input.is_on_device();
-    local_cfg.are_outputs_on_device = output.is_on_device();
-
-    <F as NTT<T>>::ntt_unchecked(input, dir, &local_cfg, output)
+    F::ntt(input, dir, cfg, output)
 }
 
 /// Computes the NTT, or a batch of several NTTs inplace.
@@ -207,11 +229,7 @@ pub fn ntt_inplace<T, F>(
 where
     F: PrimeField + NTT<T>,
 {
-    let mut local_cfg = cfg.clone();
-    local_cfg.are_inputs_on_device = inout.is_on_device();
-    local_cfg.are_outputs_on_device = inout.is_on_device();
-
-    <F as NTT<T>>::ntt_inplace_unchecked(inout, dir, &local_cfg)
+    F::ntt_inplace(inout, dir, cfg)
 }
 
 /// Generates twiddle factors which will be used to compute NTTs.
