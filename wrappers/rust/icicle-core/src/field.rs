@@ -79,12 +79,38 @@ macro_rules! impl_field {
     (
         $field:ident,
         $field_prefix:literal,
-        $num_limbs:ident
+        $num_limbs:ident,
+        $use_ffi:expr
     ) => {
-        #[derive(PartialEq, Copy, Clone)]
+        #[derive(Copy, Clone)]
         #[repr(C)]
         pub struct $field {
             limbs: [u32; $num_limbs],
+        }
+
+        impl PartialEq for $field {
+            fn eq(&self, other: &Self) -> bool {
+                if $use_ffi {
+                    extern "C" {
+                        #[link_name = concat!($field_prefix, "_eq")]
+                        pub(crate) fn _eq(left: *const $field, right: *const $field, result: *mut bool);
+                    }
+                    let mut result = false;
+                    unsafe {
+                        _eq(
+                            self.limbs
+                                .as_ptr() as *const $field,
+                            other
+                                .limbs
+                                .as_ptr() as *const $field,
+                            &mut result,
+                        );
+                    }
+                    result
+                } else {
+                    self.limbs == other.limbs
+                }
+            }
         }
 
         impl Into<[u32; $num_limbs]> for $field {
@@ -112,20 +138,26 @@ macro_rules! impl_field {
             }
 
             fn from_u32(val: u32) -> Self {
-                extern "C" {
-                    #[link_name = concat!($field_prefix, "_from_u32")]
-                    pub(crate) fn from_u32(val: u32, result: *mut $field);
+                if $use_ffi {
+                    extern "C" {
+                        #[link_name = concat!($field_prefix, "_from_u32")]
+                        pub(crate) fn from_u32(val: u32, result: *mut $field);
+                    }
+
+                    let mut limbs = [0u32; $num_limbs];
+
+                    unsafe {
+                        // Convert `val` into field representation using an external FFI call.
+                        // Casting `limbs` ensures compatibility without tightly coupling `FieldConfig` and `Field`.
+                        from_u32(val, limbs.as_mut_ptr() as *mut $field);
+                    }
+
+                    Self { limbs }
+                } else {
+                    let mut limbs = [0u32; $num_limbs];
+                    limbs[0] = val;
+                    Self { limbs }
                 }
-
-                let mut limbs = [0u32; $num_limbs];
-
-                unsafe {
-                    // Convert `val` into field representation using an external FFI call.
-                    // Casting `limbs` ensures compatibility without tightly coupling `FieldConfig` and `Field`.
-                    from_u32(val, limbs.as_mut_ptr() as *mut $field);
-                }
-
-                Self { limbs }
             }
         }
 

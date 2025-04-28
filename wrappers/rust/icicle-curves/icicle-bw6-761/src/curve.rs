@@ -12,10 +12,7 @@ use std::ops::{Add, Mul, Sub};
 
 pub(crate) const BASE_LIMBS: usize = 24;
 
-impl_field!(Bw6761BaseField, "bw6_761_g2_base_field", BASE_LIMBS);
-impl_field_arithmetic!(Bw6761BaseField, "bw6_761_g2_base_field", bw6_761_g2_base_field);
-impl_montgomery_convertible!(Bw6761BaseField, bw6_761_g2_base_field_convert_montgomery);
-impl_generate_random!(Bw6761BaseField, bw6_761_g2_base_field_generate_random);
+impl_field!(Bw6761BaseField, "bw6_761_g2_base_field", BASE_LIMBS, false);
 
 pub type Bw6761ScalarField = Bls12_377BaseField;
 impl_curve!(

@@ -15,12 +15,12 @@ pub(crate) const BASE_LIMBS: usize = 12;
 #[cfg(not(feature = "no_g2"))]
 pub(crate) const G2_BASE_LIMBS: usize = 24;
 
-impl_field!(Bls12_381ScalarField, "bls12_381_scalar_field", SCALAR_LIMBS);
+impl_field!(Bls12_381ScalarField, "bls12_381_scalar_field", SCALAR_LIMBS, true);
 impl_field_arithmetic!(Bls12_381ScalarField, "bls12_381_scalar_field", bls12_381_sf);
 impl_montgomery_convertible!(Bls12_381ScalarField, bls12_381_scalar_convert_montgomery);
 impl_generate_random!(Bls12_381ScalarField, bls12_381_scalar_generate_random);
 
-impl_field!(Bls12381BaseField, "bls12_381_base_field", BASE_LIMBS);
+impl_field!(Bls12381BaseField, "bls12_381_base_field", BASE_LIMBS, false);
 
 impl_curve!(
     "bls12_381",
@@ -33,7 +33,7 @@ impl_curve!(
 );
 
 #[cfg(not(feature = "no_g2"))]
-impl_field!(Bls12381G2BaseField, "bls12_381_g2_base_field", G2_BASE_LIMBS);
+impl_field!(Bls12381G2BaseField, "bls12_381_g2_base_field", G2_BASE_LIMBS, false);
 
 #[cfg(not(feature = "no_g2"))]
 impl_curve!(

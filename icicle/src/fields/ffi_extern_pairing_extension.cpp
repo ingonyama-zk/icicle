@@ -43,3 +43,8 @@ extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_from_u32)(
 {
   *result = target_field_t::from(val);
 }
+
+extern "C" void CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing_target_field_eq)(target_field_t* scalar1, target_field_t* scalar2, bool* result)
+{
+  *result = *scalar1 == *scalar2;
+}
