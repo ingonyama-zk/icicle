@@ -54,8 +54,7 @@ macro_rules! impl_rns_conversions {
     (
         $ring_prefix: literal,
         $ZqType: ident,
-        $ZqRnsType: ident,
-        $ZqConfigType: ident
+        $ZqRnsType: ident
     ) => {
         extern "C" {
             #[link_name = concat!($ring_prefix, "_convert_to_rns")]
@@ -77,7 +76,7 @@ macro_rules! impl_rns_conversions {
 
         use icicle_core::rns::RnsConversion;
 
-        impl RnsConversion<$ZqType, $ZqRnsType> for $ZqConfigType {
+        impl RnsConversion<$ZqType, $ZqRnsType> for $ZqType {
             fn to_rns(
                 input: &(impl HostOrDeviceSlice<$ZqType> + ?Sized),
                 output: &mut (impl HostOrDeviceSlice<$ZqRnsType> + ?Sized),

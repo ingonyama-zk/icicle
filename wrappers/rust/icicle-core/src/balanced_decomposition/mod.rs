@@ -62,8 +62,6 @@ macro_rules! impl_balanced_decomposition {
         $prefix: literal,
         $ring_type: ident
     ) => {
-        use icicle_core::balanced_decomposition::BalancedDecomposition;
-
         extern "C" {
             #[link_name = concat!($prefix, "_balanced_decomposition_nof_digits")]
             fn balanced_decomposition_nof_digits(base: u32) -> u32;

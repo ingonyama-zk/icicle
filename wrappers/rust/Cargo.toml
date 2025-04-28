@@ -13,7 +13,7 @@ members = [
   "icicle-fields/icicle-koalabear",
   "icicle-fields/icicle-m31",
   "icicle-fields/icicle-stark252",
-  #"icicle-rings/icicle-labrador",
+  "icicle-rings/icicle-labrador",
   "icicle-hash",
   "icicle-pqc",
 ]
