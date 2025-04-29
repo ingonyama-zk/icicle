@@ -11,6 +11,7 @@ fi
 
 # Get the absolute path of the backend directory
 ABS_VULKAN_DIR=$(realpath ${BACKEND_DIR})/vulkan
+ABS_CUDA_DIR=$(realpath ${BACKEND_DIR})/cuda
 
 echo "Trying to pull vulkan backend commit '${VULKAN_BACKEND}' to '${ABS_VULKAN_DIR}'"
 
@@ -38,5 +39,6 @@ else
     mkdir -p ${ABS_VULKAN_DIR}
     cd ${ABS_VULKAN_DIR}
     git clone https://github.com/ingonyama-zk/icicle-vulkan-backend.git ${ABS_VULKAN_DIR}
+    git clone https://github.com/ingonyama-zk/icicle-cuda-backend.git ${ABS_CUDA_DIR}
     git checkout ${VULKAN_BACKEND}
 fi

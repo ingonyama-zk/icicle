@@ -22,5 +22,5 @@
 **tar.gz
 
 #ignore all backends except cpu
-icicle/backend/*
+#icicle/backend/*
 !icicle/backend/cpu
