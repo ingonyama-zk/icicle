@@ -1,4 +1,4 @@
-use icicle_babybear::field::ScalarField;
+use icicle_koalabear::field::ScalarField;
 
 use icicle_core::impl_ntt_bench;
 

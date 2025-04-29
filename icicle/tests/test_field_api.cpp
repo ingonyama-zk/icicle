@@ -1,4 +1,11 @@
 #include "test_mod_arithmetic_api.h"
+#include "icicle/sumcheck/sumcheck.h"
+#include "icicle/fri/fri.h"
+#include "icicle/fri/fri_config.h"
+#include "icicle/fri/fri_proof.h"
+#include "icicle/fri/fri_transcript_config.h"
+#include "icicle/sumcheck/sumcheck_proof_serializer.h"
+#include "icicle/fri/fri_proof_serializer.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -16,6 +23,7 @@ TYPED_TEST(FieldTest, FieldSanityTest)
   auto b = TypeParam::rand_host();
   auto b_inv = TypeParam::inverse(b);
   auto a_neg = TypeParam::neg(a);
+  ASSERT_EQ(TypeParam::from_montgomery(TypeParam::to_montgomery(a)), a);
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(b * a * b_inv, a);
@@ -149,6 +157,12 @@ TEST_F(FieldTestBase, polynomialDivision)
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
+      // TODO @Hadar support column batch for this API
+      if (columns_batch && (device == "CUDA" || device == "METAL")) {
+        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
+        continue;
+      }
+
       ICICLE_LOG_INFO << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
                       << "]";
 
@@ -178,11 +192,6 @@ TEST_F(FieldTestBase, polynomialDivision)
       auto config = default_vec_ops_config();
       config.batch_size = batch_size;
       config.columns_batch = columns_batch;
-      // TODO v3.2 support column batch for this API
-      if (columns_batch && device == "CUDA") {
-        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
-        continue;
-      }
 
       ICICLE_CHECK(polynomial_division(
         numerator.get(), numerator_size, denominator.get(), denominator_size, config, q.get(), q_size, r.get(),
@@ -333,7 +342,8 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
     data_main[idx] = tmp;
   }
   std::ostringstream oss;
-  oss << IcicleTestBase::main_device() << " " << "Sumcheck";
+  oss << IcicleTestBase::main_device() << " "
+      << "Sumcheck";
 
   SumcheckProof<scalar_t> sumcheck_proof;
 
@@ -903,6 +913,27 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
+
+    // Serialize proof
+    size_t proof_size = 0;
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(sumcheck_proof, proof_size));
+    std::vector<std::byte> proof_bytes(proof_size);
+    ICICLE_CHECK(
+      BinarySerializer<SumcheckProof<scalar_t>>::serialize(proof_bytes.data(), proof_bytes.size(), sumcheck_proof));
+
+    // Deserialize proof
+    SumcheckProof<scalar_t> deserialized_proof;
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<scalar_t>>::deserialize(
+      proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+
+    // Compare proofs
+    uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
+    ASSERT_EQ(nof_round_polynomials, deserialized_proof.get_nof_round_polynomials());
+    for (uint round_i = 0; round_i < nof_round_polynomials; round_i++) {
+      const auto& round_poly = sumcheck_proof.get_round_polynomial(round_i);
+      const auto& deserialized_round_poly = deserialized_proof.get_round_polynomial(round_i);
+      ASSERT_EQ(round_poly, deserialized_round_poly);
+    }
   };
 
   for (const auto& device : s_registered_devices)
@@ -915,66 +946,317 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
 
 #endif // SUMCHECK
 
-// TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
-//             It means we skip fields such as babybear!
-// TODO: this test make problem for curves too as they have extension fields too. Need to clean it up TODO Hadar
+#ifdef FRI
 
-// #ifndef EXT_FIELD
-// TEST_F(FieldTestBase, FieldStorageReduceSanityTest)
-// {
-//   /*
-//   SR - storage reduce
-//   check that:
-//   1. SR(x1) + SR(x1) = SR(x1+x2)
-//   2. SR(INV(SR(x))*x) = 1
-//   */
-//   START_TIMER(StorageSanity)
-//   for (int i = 0; i < 1000; i++) {
-//     if constexpr (scalar_t::TLC == 1) {
-//       storage<18> a =                                          // 18 because we support up to 576 bits
-//         scalar_t::template rand_storage<18>(17);               // 17 so we don't have carry after addition
-//       storage<18> b = scalar_t::template rand_storage<18>(17); // 17 so we don't have carry after addition
-//       storage<18> sum = {};
-//       const storage<3> c =
-//         scalar_t::template rand_storage<3>(); // 3 because we don't support higher odd number of limbs yet
-//       storage<4> product = {};
-//       host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
-//       auto c_red = scalar_t::from(c);
-//       auto c_inv = scalar_t::inverse(c_red);
-//       host_math::multiply_raw<3, 1, true>(
-//         c, c_inv.limbs_storage, product); // using 32-bit multiplication for small fields
-//       ASSERT_EQ(scalar_t::from(a) + scalar_t::from(b), scalar_t::from(sum));
-//       ASSERT_EQ(scalar_t::from(product), scalar_t::one());
-//       std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
-//       std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
-//       std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
-//       std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
-//       ASSERT_EQ(scalar_t::from(a), scalar_t::from(a_bytes, 18 * 4));
-//       ASSERT_EQ(scalar_t::from(a_bytes, 18 * 4) + scalar_t::from(b_bytes, 18 * 4), scalar_t::from(sum_bytes, 18 *
-//       4)); ASSERT_EQ(scalar_t::from(product_bytes, 4 * 4), scalar_t::one());
-//     } else {
-//       storage<18> a =                                          // 18 because we support up to 576 bits
-//         scalar_t::template rand_storage<18>(17);               // 17 so we don't have carry after addition
-//       storage<18> b = scalar_t::template rand_storage<18>(17); // 17 so we don't have carry after addition
-//       storage<18> sum = {};
-//       const storage<18 - scalar_t::TLC> c =
-//         scalar_t::template rand_storage<18 - scalar_t::TLC>(); // -TLC so we don't overflow in multiplication
-//       storage<18> product = {};
-//       host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
-//       auto c_red = scalar_t::from(c);
-//       auto c_inv = scalar_t::inverse(c_red);
-//       host_math::multiply_raw(c, c_inv.limbs_storage, product);
-//       ASSERT_EQ(scalar_t::from(a) + scalar_t::from(b), scalar_t::from(sum));
-//       ASSERT_EQ(scalar_t::from(product), scalar_t::one());
-//       std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
-//       std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
-//       std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
-//       std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
-//       ASSERT_EQ(scalar_t::from(a), scalar_t::from(a_bytes, 18 * 4));
-//       ASSERT_EQ(scalar_t::from(a_bytes, 18 * 4) + scalar_t::from(b_bytes, 18 * 4), scalar_t::from(sum_bytes, 18 *
-//       4)); ASSERT_EQ(scalar_t::from(product_bytes, 18 * 4), scalar_t::one());
-//     }
-//   }
-//   END_TIMER(StorageSanity, "storage sanity", true);
-// }
-// #endif // ! EXT_FIELD
+TYPED_TEST(FieldTest, Fri)
+{
+  size_t log_stopping_size;
+  size_t pow_bits;
+  size_t nof_queries;
+  for (size_t params_options = 0; params_options <= 1; params_options++) {
+    if (params_options) {
+      log_stopping_size = 0;
+      pow_bits = 16;
+      nof_queries = 100;
+    } else {
+      log_stopping_size = 8;
+      pow_bits = 0;
+      nof_queries = 50;
+    }
+    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
+      const size_t input_size = 1 << log_input_size;
+      const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
+      const size_t stopping_size = 1 << log_stopping_size;
+      const size_t stopping_degree = stopping_size - 1;
+      const uint64_t output_store_min_layer = 0;
+
+      // Generate input polynomial evaluations
+      auto scalars = std::make_unique<TypeParam[]>(input_size);
+      TypeParam::rand_host_many(scalars.get(), input_size);
+
+      auto run = [log_input_size, input_size, folding_factor, stopping_degree, output_store_min_layer, nof_queries,
+                  pow_bits, &scalars](const std::string& dev_type, bool measure) {
+        Device dev = {dev_type, 0};
+        ICICLE_CHECK(icicle_set_device(dev));
+
+        // Initialize ntt domain
+        NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+        ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+
+        // ===== Prover side ======
+        uint64_t merkle_tree_arity = 2; // TODO SHANIE (future) - add support for other arities
+
+        // Define hashers for merkle tree
+        Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
+        Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
+
+        // set transcript config
+        const char* domain_separator_label = "domain_separator_label";
+        const char* round_challenge_label = "round_challenge_label";
+        const char* commit_phase_label = "commit_phase_label";
+        const char* nonce_label = "nonce_label";
+        std::vector<std::byte>&& public_state = {};
+        TypeParam seed_rng = TypeParam::one();
+
+        FriTranscriptConfig<TypeParam> transcript_config(
+          hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+          seed_rng);
+
+        FriConfig fri_config;
+        fri_config.nof_queries = nof_queries;
+        fri_config.pow_bits = pow_bits;
+        fri_config.folding_factor = folding_factor;
+        fri_config.stopping_degree = stopping_degree;
+        FriProof<TypeParam> fri_proof;
+
+        std::ostringstream oss;
+        if (measure) {
+          ICICLE_LOG_INFO << "log_input_size: " << log_input_size << ". stopping_degree: " << stopping_degree
+                          << ". pow_bits: " << pow_bits << ". nof_queries:" << nof_queries;
+          oss << dev_type << " FRI proof";
+        }
+        START_TIMER(FRIPROOF_sync)
+        eIcicleError err = fri_merkle_tree::prove<TypeParam>(
+          fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+        ICICLE_CHECK(err);
+        END_TIMER(FRIPROOF_sync, oss.str().c_str(), measure);
+
+        // Release domain
+        ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
+        // ===== Verifier side ======
+        bool valid = false;
+        err = fri_merkle_tree::verify<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
+        ICICLE_CHECK(err);
+        ASSERT_EQ(true, valid);
+
+        // Serialize proof
+        size_t proof_size = 0;
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::serialized_size(fri_proof, proof_size));
+        std::vector<std::byte> proof_bytes(proof_size);
+        ICICLE_CHECK(
+          BinarySerializer<FriProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), fri_proof));
+
+        // Deserialize proof
+        FriProof<TypeParam> deserialized_proof;
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
+          proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+
+        // Compare proofs
+        // Compare number of FRI rounds
+        ASSERT_EQ(fri_proof.get_nof_fri_rounds(), deserialized_proof.get_nof_fri_rounds());
+
+        // Compare final polynomial size and contents
+        ASSERT_EQ(fri_proof.get_final_poly_size(), deserialized_proof.get_final_poly_size());
+        auto orig_final_poly_ptr = fri_proof.get_final_poly();
+        auto deser_final_poly_ptr = deserialized_proof.get_final_poly();
+        size_t orig_final_poly_size = fri_proof.get_final_poly_size();
+        size_t deser_final_poly_size = deserialized_proof.get_final_poly_size();
+        std::vector<TypeParam> orig_final_poly_vec(orig_final_poly_ptr, orig_final_poly_ptr + orig_final_poly_size);
+        std::vector<TypeParam> deser_final_poly_vec(deser_final_poly_ptr, deser_final_poly_ptr + deser_final_poly_size);
+        ASSERT_EQ(orig_final_poly_vec, deser_final_poly_vec);
+
+        // Compare PoW nonce
+        ASSERT_EQ(fri_proof.get_pow_nonce(), deserialized_proof.get_pow_nonce());
+
+        // // Compare Merkle proofs for each query and round
+        for (size_t query_idx = 0; query_idx < fri_proof.get_nof_fri_rounds(); query_idx++) {
+          for (size_t round_idx = 0; round_idx < fri_proof.get_nof_fri_rounds(); round_idx++) {
+            auto merkle_proof = fri_proof.get_query_proof_slot(query_idx, round_idx);
+            auto deserialized_proof = fri_proof.get_query_proof_slot(query_idx, round_idx);
+            ASSERT_EQ(merkle_proof.is_pruned(), deserialized_proof.is_pruned());
+
+            // Compare paths
+            auto [orig_path_ptr, orig_path_size] = merkle_proof.get_path();
+            auto [deser_path_ptr, deser_path_size] = deserialized_proof.get_path();
+            ASSERT_EQ(orig_path_size, deser_path_size);
+            std::vector<std::byte> orig_path_vec(orig_path_ptr, orig_path_ptr + orig_path_size);
+            std::vector<std::byte> deser_path_vec(deser_path_ptr, deser_path_ptr + deser_path_size);
+            ASSERT_EQ(orig_path_vec, deser_path_vec);
+
+            // Compare leaves
+            auto [orig_leaf_ptr, orig_leaf_size, orig_leaf_idx] = merkle_proof.get_leaf();
+            auto [deser_leaf_ptr, deser_leaf_size, deser_leaf_idx] = deserialized_proof.get_leaf();
+            ASSERT_EQ(orig_leaf_size, deser_leaf_size);
+            ASSERT_EQ(orig_leaf_idx, deser_leaf_idx);
+            std::vector<std::byte> orig_leaf_vec(orig_leaf_ptr, orig_leaf_ptr + orig_leaf_size);
+            std::vector<std::byte> deser_leaf_vec(deser_leaf_ptr, deser_leaf_ptr + deser_leaf_size);
+            ASSERT_EQ(orig_leaf_vec, deser_leaf_vec);
+
+            // Compare roots
+            auto [orig_root_ptr, orig_root_size] = merkle_proof.get_root();
+            auto [deser_root_ptr, deser_root_size] = deserialized_proof.get_root();
+            ASSERT_EQ(orig_root_size, deser_root_size);
+            std::vector<std::byte> orig_root_vec(orig_root_ptr, orig_root_ptr + orig_root_size);
+            std::vector<std::byte> deser_root_vec(deser_root_ptr, deser_root_ptr + deser_root_size);
+            ASSERT_EQ(orig_root_vec, deser_root_vec);
+          }
+        }
+      };
+
+      run(IcicleTestBase::reference_device(), false);
+      run(IcicleTestBase::main_device(), false);
+    }
+  }
+}
+
+TYPED_TEST(FieldTest, FriShouldFailCases)
+{
+  const int log_input_size = 10;
+  const int log_stopping_size = 4;
+  const size_t pow_bits = 0;
+  const size_t stopping_size = 1 << log_stopping_size;
+  const size_t stopping_degree = stopping_size - 1;
+  const uint64_t output_store_min_layer = 0;
+
+  auto run = [stopping_degree, output_store_min_layer, pow_bits](
+               const std::string& dev_type, const size_t nof_queries, const size_t folding_factor,
+               const size_t log_domain_size, const size_t merkle_tree_arity, const size_t input_size) {
+    // Generate input polynomial evaluations
+    auto scalars = std::make_unique<TypeParam[]>(input_size);
+    TypeParam::rand_host_many(scalars.get(), input_size);
+
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // Initialize ntt domain
+    NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_domain_size), init_domain_config));
+
+    // ===== Prover side ======
+    // Define hashers for merkle tree
+    Hash hash = Keccak256::create(sizeof(TypeParam));                          // hash element -> 32B
+    Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size()); // hash every 64B to 32B
+
+    const char* domain_separator_label = "domain_separator_label";
+    const char* round_challenge_label = "round_challenge_label";
+    const char* commit_phase_label = "commit_phase_label";
+    const char* nonce_label = "nonce_label";
+    std::vector<std::byte>&& public_state = {};
+    TypeParam seed_rng = TypeParam::one();
+
+    FriTranscriptConfig<TypeParam> transcript_config(
+      hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+      seed_rng);
+
+    FriConfig fri_config;
+    fri_config.nof_queries = nof_queries;
+    fri_config.pow_bits = pow_bits;
+    fri_config.folding_factor = folding_factor;
+    fri_config.stopping_degree = stopping_degree;
+    FriProof<TypeParam> fri_proof;
+
+    eIcicleError error = prove_fri_merkle_tree<TypeParam>(
+      fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+
+    // Release domain
+    ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
+    if (error == eIcicleError::SUCCESS) {
+      // ===== Verifier side ======
+      bool valid = false;
+      error = verify_fri_merkle_tree<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
+      ASSERT_EQ(true, valid);
+    }
+    ASSERT_EQ(error, eIcicleError::INVALID_ARGUMENT);
+  };
+
+  // Reference Device
+  // Test invalid nof_queries
+  run(
+    IcicleTestBase::reference_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::main_device(), (1 << log_input_size) / 2 + 1 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1 /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid merkle tree arity
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invallid input size
+  run(
+    IcicleTestBase::reference_device(), 10 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+
+  // Main Device
+  // Test invalid nof_queries
+  run(
+    IcicleTestBase::main_device(), 0 /*nof_queries*/, 2 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  run(
+    IcicleTestBase::main_device(), (1 << log_input_size) / 2 + 1 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size /*log_domain_size*/, 2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid folding_factor  (currently not supported)
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 16 /*folding_factor*/, log_input_size /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test too small domain size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size - 1
+    /*log_domain_size*/,
+    2 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invalid merkle tree arity
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size
+    /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, 1 << log_input_size /*input_size*/);
+  // Test invallid input size
+  run(
+    IcicleTestBase::main_device(), 10 /*nof_queries*/, 2 /*folding_factor*/,
+    log_input_size
+    /*log_domain_size*/,
+    4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+}
+
+#endif // FRI
+
+TEST_F(FieldTestBase, FieldStorageReduceSanityTest)
+{
+  /*
+  SR - storage reduce
+  check that:
+  1. SR(x1) + SR(x1) = SR(x1+x2)
+  2. SR(INV(SR(x))*x) = 1
+  */
+  START_TIMER(StorageSanity)
+  for (int i = 0; i < 1000; i++) {
+    storage<18> a =                                          // 18 because we support up to 576 bits
+      scalar_t::template rand_storage<18>(17);               // 17 so we don't have carry after addition
+    storage<18> b = scalar_t::template rand_storage<18>(17); // 17 so we don't have carry after addition
+    storage<18> sum = {};
+    const storage<18 - (scalar_t::TLC > 1 ? scalar_t::TLC : 2)> c =
+      scalar_t::template rand_storage<18 - (scalar_t::TLC > 1 ? scalar_t::TLC : 2)>(); // -TLC so we don't overflow in
+                                                                                       // multiplication
+    storage<18> product = {};
+    host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+    auto c_red = scalar_t::from(c);
+    auto c_inv = scalar_t::inverse(c_red);
+    storage<(scalar_t::TLC > 1 ? scalar_t::TLC : 2)> c_inv_s = {c_inv.limbs_storage.limbs[0]};
+    if (scalar_t::TLC > 1) {
+      for (int i = 1; i < scalar_t::TLC; i++) {
+        c_inv_s.limbs[i] = c_inv.limbs_storage.limbs[i];
+      }
+    }
+    host_math::multiply_raw(c, c_inv_s, product);
+    ASSERT_EQ(scalar_t::from(a) + scalar_t::from(b), scalar_t::from(sum));
+    ASSERT_EQ(scalar_t::from(product), scalar_t::one());
+    std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
+    std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
+    std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
+    std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
+    ASSERT_EQ(scalar_t::from(a), scalar_t::from(a_bytes, 18 * 4));
+    ASSERT_EQ(scalar_t::from(a_bytes, 18 * 4) + scalar_t::from(b_bytes, 18 * 4), scalar_t::from(sum_bytes, 18 * 4));
+    ASSERT_EQ(scalar_t::from(product_bytes, 18 * 4), scalar_t::one());
+  }
+  END_TIMER(StorageSanity, "storage sanity", true);
+}

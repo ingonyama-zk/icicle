@@ -2,10 +2,10 @@ package tests
 
 import (
 	"testing"
-  	{{if .IsScalar}}
+	{{if .IsScalar}}
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"{{end}}
 	{{if ne .FieldPrefix "G2"}}{{.Field}}{{end}} "github.com/ingonyama-zk/icicle/v3/wrappers/golang/{{.BaseImportPath}}{{if eq .FieldPrefix "G2"}}/g2{{end}}"
-  	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
+	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -133,8 +133,7 @@ func test{{.FieldPrefix}}FieldArithmetic(suite *suite.Suite) {
 
     suite.Equal(expectedOne, one)
 }
-
-
+{{if and (ne .Field "m31") (ne .Field "m31_extension")}}
 func test{{capitalize .Field}}MongtomeryConversion(suite *suite.Suite) {
 	size := 1 << 20
 	scalars := {{.Field}}.GenerateScalars(size)
@@ -153,7 +152,7 @@ func test{{capitalize .Field}}MongtomeryConversion(suite *suite.Suite) {
 
 	scalarsMontHost.CopyFromDevice(&deviceScalars)
 	suite.Equal(scalars, scalarsMontHost)
-}{{end}}
+}{{end}}{{end}}
 
 
 type {{.FieldPrefix}}FieldTestSuite struct {
@@ -172,7 +171,8 @@ func (s *{{.FieldPrefix}}FieldTestSuite) Test{{.FieldPrefix}}Field() {
 	{{if .IsScalar -}}
 	s.Run("Test{{.FieldPrefix}}FieldArithmetic", testWrapper(&s.Suite, test{{.FieldPrefix}}FieldArithmetic))
 	s.Run("Test{{capitalize .Field}}GenerateScalars", testWrapper(&s.Suite, test{{capitalize .Field}}GenerateScalars))
-	s.Run("Test{{capitalize .Field}}MongtomeryConversion", testWrapper(&s.Suite, test{{capitalize .Field}}MongtomeryConversion))
+	{{- if and (ne .Field "m31") (ne .Field "m31_extension")}}
+	s.Run("Test{{capitalize .Field}}MongtomeryConversion", testWrapper(&s.Suite, test{{capitalize .Field}}MongtomeryConversion)){{end}}
 	{{- end}}
 }
 

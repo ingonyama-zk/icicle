@@ -66,8 +66,6 @@ namespace icicle {
                 nullptr, // No key used
                 0        // Key length is 0
               );
-
-              if (result != 0) { return eIcicleError::UNKNOWN_ERROR; }
             }
           });
         }

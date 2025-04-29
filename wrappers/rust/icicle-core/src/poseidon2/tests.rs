@@ -73,20 +73,24 @@ where
         test_utilities::test_set_main_device();
         let poseidon_hasher_main = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let main_device_err = poseidon_hasher_main.hash(
-            HostSlice::from_slice(&inputs),
-            &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_main),
-        ).unwrap();
+        let main_device_err = poseidon_hasher_main
+            .hash(
+                HostSlice::from_slice(&inputs),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut outputs_main),
+            )
+            .unwrap();
 
         test_utilities::test_set_ref_device();
         let poseidon_hasher_ref = Poseidon2::new::<F>(t as u32, None /*domain_tag*/).unwrap();
 
-        let ref_device_err = poseidon_hasher_ref.hash(
-            HostSlice::from_slice(&inputs),
-            &HashConfig::default(),
-            HostSlice::from_mut_slice(&mut outputs_ref),
-        ).unwrap();
+        let ref_device_err = poseidon_hasher_ref
+            .hash(
+                HostSlice::from_slice(&inputs),
+                &HashConfig::default(),
+                HostSlice::from_mut_slice(&mut outputs_ref),
+            )
+            .unwrap();
 
         assert_eq!(main_device_err, ref_device_err);
     }

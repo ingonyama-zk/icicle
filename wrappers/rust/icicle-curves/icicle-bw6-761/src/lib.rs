@@ -1,8 +1,9 @@
 pub mod curve;
+pub mod fri;
 pub mod msm;
 pub mod ntt;
 pub mod poseidon;
 pub mod poseidon2;
-pub mod vec_ops;
 pub mod program;
 pub mod symbol;
+pub mod vec_ops;

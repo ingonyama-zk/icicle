@@ -30,6 +30,9 @@ using namespace poseidon2_constants_stark252;
 #elif FIELD_ID == KOALA_BEAR
   #include "icicle/hash/poseidon2_constants/constants/koalabear_poseidon2.h"
 using namespace poseidon2_constants_koalabear;
+#elif FIELD_ID == GOLDILOCKS
+  #include "icicle/hash/poseidon2_constants/constants/goldilocks_poseidon2.h"
+using namespace poseidon2_constants_goldilocks;
 #endif
 
 namespace icicle {
@@ -184,7 +187,7 @@ namespace icicle {
       bool is_unsupported_T_for_this_field = m_poseidon2_constants.nof_upper_full_rounds == 0;
       if (is_unsupported_T_for_this_field) {
         ICICLE_LOG_ERROR << "Unsupported poseidon2 width (t=" << t << ") for this field!";
-        return eIcicleError::API_NOT_IMPLEMENTED;
+        return eIcicleError::INVALID_ARGUMENT;
       }
 
       int input_size_in_scalars = size / sizeof(S);

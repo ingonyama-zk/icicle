@@ -38,6 +38,7 @@ option(HASH "Build hashes and tree builders" ON)
 option(POSEIDON "Build poseidon hash" ON)
 option(POSEIDON2 "Build poseidon2 hash" ON)
 option(SUMCHECK "Build sumcheck" ON)
+option(FRI "Build fri" ON)
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer

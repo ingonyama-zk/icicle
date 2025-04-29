@@ -71,6 +71,13 @@ namespace icicle {
     }
   }
 
+#define ICICLE_RETURN_IF_ERR(api_call)                                                                                 \
+  do {                                                                                                                 \
+    using namespace icicle;                                                                                            \
+    eIcicleError _err = (api_call);                                                                                    \
+    if (_err != eIcicleError::SUCCESS) return _err;                                                                    \
+  } while (0)
+
 #define ICICLE_CHECK(api_call)                                                                                         \
   do {                                                                                                                 \
     using namespace icicle;                                                                                            \
