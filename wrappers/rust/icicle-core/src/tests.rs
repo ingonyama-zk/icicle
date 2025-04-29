@@ -48,6 +48,7 @@ pub fn check_affine_projective_convert<C: Curve>() {
         assert_eq!(affine_point, projective_eqivalent.into());
     }
     for projective_point in projective_points {
+        println!("{:?}", projective_point);
         let affine_eqivalent: Affine<C> = projective_point.into();
         assert_eq!(projective_point, affine_eqivalent.into());
     }
