@@ -1,0 +1,48 @@
+name: Sign CLA
+
+on:
+  issue_comment:
+    types:
+      - created
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - closed
+      - synchronize
+
+jobs:
+  sign-cla:
+    name: Sign CLA
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: Check if PR author is org member
+        id: check_membership
+        if: github.event_name == 'pull_request_target'
+        run: |
+          # Get PR author
+          if gh api -X GET /orgs/ingonyama-zk/members/${{ github.event.pull_request.user.login }} > /dev/null 2>&1; then
+            echo "cla_signature_check_needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "cla_signature_check_needed=true" >> $GITHUB_OUTPUT
+          fi
+      - name: CLA Assistant
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have hereby read the ICICLE CLA and agree to its terms') || (github.event_name == 'pull_request_target' && steps.check_membership.outputs.cla_signature_check_needed == 'true')
+        uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERSONAL_ACCESS_TOKEN: ${{ secrets.CONTRIBUTOR_LICENSE_AGREEMENT_TOKEN }}
+        with:
+          path-to-signatures: 'signatures/version1/signatures.json'
+          branch: 'main'
+          allowlist: 
+          remote-organization-name: ingonyama-zk
+          remote-repository-name: icicle-cla-sigs
+          custom-notsigned-prcomment: 'Thanks for contributing 🚀! Before we can accept your PR, please read the [ICICLE Contributor License Agreement (CLA)](https://github.com/ingonyama-zk/icicle/blob/main/Contributor_License_Agreement_v1.pdf) and sign it by posting a comment with the following text:'
+          custom-pr-sign-comment: "I have hereby read the ICICLE CLA and agree to its terms"
