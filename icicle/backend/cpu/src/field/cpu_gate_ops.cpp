@@ -15,18 +15,18 @@ namespace icicle {
 
       E a_minus_s = lookup_data.permuted_input_coset[idx] - lookup_data.permuted_table_coset[idx];
 
-      E res = lookup_data.previous_values[idx] * lookup_data.y +
+      E res = lookup_data.previous_values[idx] * lookup_data.y[0] +
               (E::one() - lookup_data.product_coset[idx]) * lookup_data.l0[idx];
-      res = res * lookup_data.y +
+      res = res * lookup_data.y[0] +
             (lookup_data.product_coset[idx] * lookup_data.product_coset[idx] - lookup_data.product_coset[idx]) *
               lookup_data.l_last[idx];
-      res = res * lookup_data.y +
-            ((lookup_data.product_coset[r_next] * (lookup_data.permuted_input_coset[idx] + lookup_data.beta) *
-                (lookup_data.permuted_table_coset[idx] + lookup_data.gamma) -
+      res = res * lookup_data.y[0] +
+            ((lookup_data.product_coset[r_next] * (lookup_data.permuted_input_coset[idx] + lookup_data.beta[0]) *
+                (lookup_data.permuted_table_coset[idx] + lookup_data.gamma[0]) -
               lookup_data.product_coset[idx] * lookup_data.table_values[idx]) *
              lookup_data.l_active_row[idx]);
-      res = res * lookup_data.y + (a_minus_s * lookup_data.l0[idx]);
-      res = res * lookup_data.y +
+      res = res * lookup_data.y[0] + (a_minus_s * lookup_data.l0[idx]);
+      res = res * lookup_data.y[0] +
             (a_minus_s * (lookup_data.permuted_input_coset[idx] - lookup_data.permuted_input_coset[r_prev]) *
              lookup_data.l_active_row[idx]);
 

@@ -105,9 +105,9 @@ namespace icicle {
     uint32_t num_l_last;
     const T* l_active_row;
     uint32_t num_l_active_row;
-    const T y;
-    const T beta;
-    const T gamma;
+    const T* y;
+    const T* beta;
+    const T* gamma;
     const T* previous_values;
     uint32_t num_elements;
     uint32_t rot_scale;

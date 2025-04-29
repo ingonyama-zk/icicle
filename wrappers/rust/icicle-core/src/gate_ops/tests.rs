@@ -81,9 +81,9 @@ where
         F::from_u32(2u32),
     ];
 
-    let y = F::from_u32(2u32);
-    let gamma = F::from_u32(2u32);
-    let beta = F::from_u32(2u32);
+    let y = vec![F::from_u32(2u32)];
+    let gamma = vec![F::from_u32(2u32)];
+    let beta = vec![F::from_u32(2u32)];
 
     let rot_scale = 1;
     let i_size = 1; 
@@ -103,9 +103,9 @@ where
         l_last.len() as u32,
         l_active_row.as_ptr(), 
         l_active_row.len() as u32,
-        y,
-        beta,
-        gamma,
+        y.as_ptr(),
+        beta.as_ptr(),
+        gamma.as_ptr(),
         previous_value.as_ptr(),
         previous_value.len() as u32,
         rot_scale as u32,
