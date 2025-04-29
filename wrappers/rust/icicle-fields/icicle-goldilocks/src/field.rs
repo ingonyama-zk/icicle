@@ -13,11 +13,11 @@ use icicle_runtime::stream::IcicleStream;
 pub(crate) const SCALAR_LIMBS: usize = 2; // Goldilocks uses 2 limbs for 64-bit field
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
-impl_field!(ScalarField, "goldilocks", SCALAR_LIMBS);
+impl_field!(ScalarField, "goldilocks", SCALAR_LIMBS, true);
 impl_field_arithmetic!(ScalarField, "goldilocks", goldilocks);
 impl_montgomery_convertible!(ScalarField, goldilocks_scalar_convert_montgomery);
 impl_generate_random!(ScalarField, goldilocks_generate_scalars);
-impl_field!(ExtensionField, "goldilocks_extension", EXTENSION_LIMBS);
+impl_field!(ExtensionField, "goldilocks_extension", EXTENSION_LIMBS, true);
 impl_field_arithmetic!(ExtensionField, "goldilocks_extension", goldilocks_extension);
 impl_montgomery_convertible!(ExtensionField, goldilocks_extension_convert_montgomery);
 impl_generate_random!(ExtensionField, goldilocks_extension_generate_scalars);

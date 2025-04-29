@@ -122,6 +122,12 @@ impl<C: Curve> Projective<C> {
             z: C::BaseField::from(z),
         }
     }
+
+    pub fn to_affine(&self) -> Affine<C> {
+        let mut aff = Affine::<C>::zero();
+        C::to_affine(self as *const Self, &mut aff as *mut Affine<C>);
+        aff
+    }
 }
 
 impl<C: Curve> PartialEq for Projective<C> {
