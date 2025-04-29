@@ -215,7 +215,7 @@ macro_rules! impl_curve {
             use super::{eIcicleError, $affine_type, $projective_type, $scalar_field, IcicleStream, VecOpsConfig};
 
             extern "C" {
-                #[link_name = concat!($curve_prefix, "_eq")]
+                #[link_name = concat!($curve_prefix, "_projective_eq")]
                 pub(crate) fn eq(point1: *const $projective_type, point2: *const $projective_type) -> bool;
                 #[link_name = concat!($curve_prefix, "_to_affine")]
                 pub(crate) fn proj_to_affine(point: *const $projective_type, point_out: *mut $affine_type);
