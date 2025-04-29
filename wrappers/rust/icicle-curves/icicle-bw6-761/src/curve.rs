@@ -1,14 +1,12 @@
 use icicle_bls12_377::curve::Bls12_377BaseField;
-use icicle_core::traits::{Arithmetic, GenerateRandom, MontgomeryConvertible};
 use icicle_core::{
     curve::{Affine, Curve, Projective},
     field::PrimeField,
-    impl_curve, impl_field, impl_field_arithmetic, impl_generate_random, impl_montgomery_convertible,
+    impl_curve, impl_field,
     vec_ops::VecOpsConfig,
 };
-use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
+use icicle_runtime::{eIcicleError, stream::IcicleStream};
 use std::fmt::{Debug, Display};
-use std::ops::{Add, Mul, Sub};
 
 pub(crate) const BASE_LIMBS: usize = 24;
 
