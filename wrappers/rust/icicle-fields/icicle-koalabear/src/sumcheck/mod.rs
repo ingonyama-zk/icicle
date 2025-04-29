@@ -1,7 +1,6 @@
 use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_sumcheck;
 
-
 impl_sumcheck!("koalabear", koalabear, ScalarField);
 impl_sumcheck!("koalabear_extension", koalabear_extension, ExtensionField);
 

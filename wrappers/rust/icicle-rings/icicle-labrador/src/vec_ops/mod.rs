@@ -7,7 +7,6 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 
 use icicle_core::traits::PrimeField;
 
-
 impl_vec_ops_field!("labrador", labrador, ScalarRing);
 impl_vec_ops_field!("labrador_rns", labrador_rns, ScalarRingRns);
 

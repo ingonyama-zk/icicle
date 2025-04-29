@@ -2,7 +2,9 @@
 use crate::field::PrimeField;
 use crate::program::{Instruction, PreDefinedProgram, Program, ReturningValueProgram};
 use crate::symbol::Symbol;
-use crate::traits::{Arithmetic, {Arithmetic, GenerateRandom}};
+use crate::traits::{
+    Arithmetic, {Arithmetic, GenerateRandom},
+};
 use crate::vec_ops::poly_vecops::{polyvec_add, polyvec_mul, polyvec_mul_by_scalar, polyvec_sub, polyvec_sum_reduce};
 use crate::vec_ops::{
     accumulate_scalars, add_scalars, bit_reverse, bit_reverse_inplace, div_scalars, execute_program, inv_scalars,

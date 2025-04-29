@@ -1,4 +1,4 @@
-use crate::curve::{ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::{
     impl_vec_ops_field,
     vec_ops::{/*BitReverseConfig,*/ VecOps, VecOpsConfig},

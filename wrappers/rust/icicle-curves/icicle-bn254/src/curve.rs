@@ -20,15 +20,7 @@ impl_montgomery_convertible!(ScalarField, bn254_scalar_convert_montgomery);
 impl_generate_random!(ScalarField, bn254_generate_scalars);
 
 impl_field!(BaseField, "bn254_base_field", BASE_LIMBS, false);
-impl_curve!(
-    "bn254",
-    bn254,
-    CurveCfg,
-    ScalarField,
-    BaseField,
-    G1Affine,
-    G1Projective
-);
+impl_curve!("bn254", bn254, CurveCfg, ScalarField, BaseField, G1Affine, G1Projective);
 
 #[cfg(feature = "g2")]
 impl_field!(G2BaseField, "bn254_g2_base_field", G2_BASE_LIMBS, false);
@@ -47,7 +39,7 @@ impl_curve!(
 mod tests {
     #[cfg(feature = "g2")]
     use super::G2CurveCfg;
-    use super::{ScalarField, CurveCfg};
+    use super::{CurveCfg, ScalarField};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;
     use icicle_core::{impl_curve_tests, impl_field_tests};

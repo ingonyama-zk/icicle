@@ -10,4 +10,3 @@ mod tests {
     use icicle_core::impl_fri_tests;
     impl_fri_tests!(ScalarField, ScalarField);
 }
-

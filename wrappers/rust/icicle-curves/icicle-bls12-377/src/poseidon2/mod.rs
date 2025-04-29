@@ -1,4 +1,4 @@
-use crate::curve::{ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::impl_poseidon2;
 
 impl_poseidon2!("bls12_377", bls12_377, ScalarField);

@@ -1,6 +1,6 @@
 use icicle_core::impl_fri;
 
-use crate::field::{ScalarField};
+use crate::field::ScalarField;
 
 impl_fri!("stark252", stark252_fri, ScalarField);
 

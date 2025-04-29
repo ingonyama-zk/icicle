@@ -25,7 +25,7 @@ pub(crate) mod tests {
     use super::ExtensionField;
     use icicle_core::{
         ntt::{initialize_domain, ntt_inplace, release_domain, NTTConfig, NTTDir, NTTInitDomainConfig},
-        traits::{PrimeField, GenerateRandom},
+        traits::{GenerateRandom, PrimeField},
     };
     use icicle_runtime::memory::HostSlice;
     use risc0_core::field::{
