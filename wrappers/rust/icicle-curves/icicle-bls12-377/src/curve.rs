@@ -19,6 +19,8 @@ impl_field_arithmetic!(Bls12_377ScalarField, "bls12_377", bls12_377_sf);
 impl_montgomery_convertible!(Bls12_377ScalarField, bls12_377_scalar_convert_montgomery);
 impl_generate_random!(Bls12_377ScalarField, bls12_377_generate_scalars);
 
+#[cfg(not(feature = "bw6-761"))]
+impl_field!(Bls12_377BaseField, "bw6_761", BASE_LIMBS, false);
 #[cfg(feature = "bw6-761")]
 impl_field!(Bls12_377BaseField, "bw6_761", BASE_LIMBS, true);
 #[cfg(feature = "bw6-761")]

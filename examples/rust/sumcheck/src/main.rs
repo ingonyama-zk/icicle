@@ -1,11 +1,11 @@
 pub mod transcript;
 pub mod utils;
 
-use icicle_bn254::curve::ScalarField as Fr;
+use icicle_bn254::curve::Bn254ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckWrapper;
+use icicle_core::field::PrimeField;
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-use icicle_core::traits::FieldImpl;
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
 use merlin::Transcript;
@@ -52,7 +52,7 @@ pub fn verify_proof(sumcheck: SumcheckWrapper, proof: icicle_bn254::sumcheck::Su
             assert!(false, "Sumcheck proof verification failed!");
         }
         Err(err) => {
-            eprintln!("Error in verification {:?}",err);
+            eprintln!("Error in verification {:?}", err);
             assert!(false, "Sumcheck proof verification encountered an error!");
         }
     }

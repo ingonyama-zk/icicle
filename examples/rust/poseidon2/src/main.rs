@@ -1,11 +1,11 @@
-use icicle_babybear::field::ScalarField as Frbb;
+use icicle_babybear::field::BabybearField;
 use icicle_core::{
+    field::PrimeField,
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
     poseidon2::Poseidon2,
-    traits::FieldImpl,
 };
-use icicle_m31::field::ScalarField as Frm31;
+use icicle_m31::field::M31Field;
 use icicle_runtime::memory::HostSlice;
 use rand::{random, Rng};
 use std::convert::TryInto;
@@ -33,7 +33,7 @@ fn try_load_and_set_backend_device(args: &Args) {
     icicle_runtime::set_device(&device).unwrap();
 }
 
-pub fn hash_test<F: FieldImpl>(test_vec: Vec<F>, config: HashConfig, hash: Hasher) {
+pub fn hash_test<F: PrimeField>(test_vec: Vec<F>, config: HashConfig, hash: Hasher) {
     let input_slice = HostSlice::from_slice(&test_vec);
     let out_init: F = F::zero();
     let mut binding = [out_init];
@@ -48,7 +48,7 @@ pub fn hash_test<F: FieldImpl>(test_vec: Vec<F>, config: HashConfig, hash: Hashe
     );
 }
 
-pub fn compute_binary_tree<F: FieldImpl>(
+pub fn compute_binary_tree<F: PrimeField>(
     mut test_vec: Vec<F>,
     leaf_size: u64,
     hasher: Hasher,
@@ -112,15 +112,15 @@ pub fn main() {
     // Input state (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
     // Output state [785637949, 311566256, 241540729, 1641553353, 851108667, 1648913123, 510139232, 616108837, 707720633, 1357404478, 1539840236, 275323287, 899761440, 732341189, 664618988, 1426148993, 1498654335, 792736017, 1804085503, 402731039, 659103866, 1036635937, 1016617890, 1470732388]
     let t_vec = [2, 3, 4, 8, 12, 16, 20, 24];
-    let expected_digest_bb: Vec<Frbb> = vec![
-        Frbb::from_u32(833751247),
-        Frbb::from_u32(1850148672),
-        Frbb::from_u32(472702774),
-        Frbb::from_u32(1077997898),
-        Frbb::from_u32(1605336739),
-        Frbb::from_u32(771677727),
-        Frbb::from_u32(1224149815),
-        Frbb::from_u32(311566256),
+    let expected_digest_bb: Vec<BabybearField> = vec![
+        BabybearField::from_u32(833751247),
+        BabybearField::from_u32(1850148672),
+        BabybearField::from_u32(472702774),
+        BabybearField::from_u32(1077997898),
+        BabybearField::from_u32(1605336739),
+        BabybearField::from_u32(771677727),
+        BabybearField::from_u32(1224149815),
+        BabybearField::from_u32(311566256),
     ];
     println!("Baby Bear");
     let config = HashConfig::default();
@@ -128,15 +128,15 @@ pub fn main() {
         .iter()
         .zip(expected_digest_bb.iter())
     {
-        let input_state_bb: Vec<Frbb> = (0..*t)
-            .map(Frbb::from_u32)
+        let input_state_bb: Vec<BabybearField> = (0..*t)
+            .map(BabybearField::from_u32)
             .collect();
         println!("test vector {:?}", input_state_bb);
         println!("expected digest {:?}", digest);
-        hash_test::<Frbb>(
+        hash_test::<BabybearField>(
             input_state_bb,
             config.clone(),
-            Poseidon2::new::<Frbb>(*t, None).unwrap(),
+            Poseidon2::new::<BabybearField>(*t, None).unwrap(),
         );
         println!(" ");
     }
@@ -168,15 +168,15 @@ pub fn main() {
     // Input state (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
     // Output state [813042329, 956159494, 2017691352, 906353481, 1909737181, 1568930368, 1051192156, 1915448194, 114779228, 1695016063, 56353577, 991257558, 1283398606, 1782986529, 89100699, 1011002020, 71058136, 1382771657, 1734747710, 184579357, 1201113333, 2002016011, 1347833245, 1026595486]
 
-    let expected_digest_m31: Vec<Frm31> = vec![
-        Frm31::from_u32(1321841424),
-        Frm31::from_u32(1808522380),
-        Frm31::from_u32(1937028579),
-        Frm31::from_u32(1040745210),
-        Frm31::from_u32(495013829),
-        Frm31::from_u32(996460804),
-        Frm31::from_u32(33722680),
-        Frm31::from_u32(956159494),
+    let expected_digest_m31: Vec<M31Field> = vec![
+        M31Field::from_u32(1321841424),
+        M31Field::from_u32(1808522380),
+        M31Field::from_u32(1937028579),
+        M31Field::from_u32(1040745210),
+        M31Field::from_u32(495013829),
+        M31Field::from_u32(996460804),
+        M31Field::from_u32(33722680),
+        M31Field::from_u32(956159494),
     ];
     println!("M31");
     let config = HashConfig::default();
@@ -184,15 +184,15 @@ pub fn main() {
         .iter()
         .zip(expected_digest_m31.iter())
     {
-        let input_state_m31: Vec<Frm31> = (0..*t)
-            .map(Frm31::from_u32)
+        let input_state_m31: Vec<M31Field> = (0..*t)
+            .map(M31Field::from_u32)
             .collect();
         println!("test vector {:?}", input_state_m31);
         println!("expected digest {:?}", digest);
-        hash_test::<Frm31>(
+        hash_test::<M31Field>(
             input_state_m31,
             config.clone(),
-            Poseidon2::new::<Frm31>(*t, None).unwrap(),
+            Poseidon2::new::<M31Field>(*t, None).unwrap(),
         );
         println!(" ");
     }
@@ -205,20 +205,20 @@ pub fn main() {
 
     let nof_leaves = 1 << args.log_nof_leaves as usize;
     let nof_elements = nof_leaves * poseidon_state_size;
-    let mut test_vec = vec![Frm31::from_u32(random::<u32>()); nof_elements];
+    let mut test_vec = vec![M31Field::from_u32(random::<u32>()); nof_elements];
     println!("Generated random vector of size {:?}", nof_elements);
     //to use later for merkle proof
     let mut binding = test_vec.clone();
     let test_vec_slice = HostSlice::from_mut_slice(&mut binding);
     //define hash and compression functions (both t-->1 arity)
-    let hasher: Hasher = Poseidon2::new::<Frm31>(
+    let hasher: Hasher = Poseidon2::new::<M31Field>(
         poseidon_state_size // t-->1
             .try_into()
             .unwrap(),
         None,
     )
     .unwrap();
-    let compress: Hasher = Poseidon2::new::<Frm31>(
+    let compress: Hasher = Poseidon2::new::<M31Field>(
         poseidon_state_size // t-->1
             .try_into()
             .unwrap(),
@@ -232,7 +232,7 @@ pub fn main() {
     println!(
         "computed Merkle root {:?}",
         merk_tree
-            .get_root::<Frm31>()
+            .get_root::<M31Field>()
             .unwrap()
     );
 
@@ -242,7 +242,7 @@ pub fn main() {
         test_vec[random_test_index], random_test_index
     );
     let merkle_proof = merk_tree
-        .get_proof::<Frm31>(
+        .get_proof::<M31Field>(
             test_vec_slice,
             random_test_index
                 .try_into()

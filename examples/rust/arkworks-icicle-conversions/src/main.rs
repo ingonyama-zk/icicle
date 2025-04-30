@@ -4,12 +4,13 @@ use std::time::Instant;
 
 use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
-use ark_ff::{BigInteger, PrimeField, Field};
+use ark_ff::{BigInteger, Field, PrimeField as ArkPrimeField};
 
-use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField as IcicleScalar};
+use icicle_bn254::curve::{Bn254ScalarField, G1Affine as IcicleAffine, G1Projective as IcicleProjective};
 use icicle_core::{
+    field::PrimeField,
     msm::{msm, MSMConfig},
-    traits::{FieldImpl, MontgomeryConvertible},
+    traits::MontgomeryConvertible,
 };
 use icicle_runtime::{
     memory::{DeviceVec, HostSlice},
@@ -41,7 +42,7 @@ fn try_load_and_set_backend_device(args: &Args) {
 //============================ Generate ark scalars and ec points ============================//
 //============================================================================================//
 
-fn random_ark_scalars<T: PrimeField>(size: usize) -> Vec<T> {
+fn random_ark_scalars<T: ArkPrimeField>(size: usize) -> Vec<T> {
     let mut rng = rand::thread_rng();
     (0..size)
         .map(|_| T::rand(&mut rng))
@@ -70,9 +71,8 @@ fn incremental_ark_projective_points(size: usize) -> Vec<ArkProjective> {
 fn from_ark<T, I>(ark: &T) -> I
 where
     T: Field,
-    I: FieldImpl,
+    I: PrimeField,
 {
-
     let mut ark_bytes = vec![];
     for base_elem in ark.to_base_prime_field_elements() {
         ark_bytes.extend_from_slice(
@@ -87,7 +87,7 @@ where
 fn to_ark<T, I>(icicle: &I) -> T
 where
     T: Field,
-    I: FieldImpl,
+    I: PrimeField,
 {
     T::from_random_bytes(&icicle.to_bytes_le()).unwrap()
 }
@@ -99,8 +99,8 @@ where
 // Generic function to transmute Arkworks field elements to Icicle format and return a mutable slice
 fn transmute_ark_to_icicle_scalars<T, I>(ark_scalars: &mut [T]) -> &mut [I]
 where
-    T: PrimeField,
-    I: FieldImpl + MontgomeryConvertible,
+    T: ArkPrimeField,
+    I: PrimeField + MontgomeryConvertible,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
     let icicle_scalars = unsafe { &mut *(ark_scalars as *mut _ as *mut [I]) };
@@ -115,8 +115,8 @@ where
 
 fn ark_to_icicle_scalars_async<T, I>(ark_scalars: &[T], stream: &IcicleStream) -> DeviceVec<I>
 where
-    T: PrimeField,
-    I: FieldImpl + MontgomeryConvertible,
+    T: ArkPrimeField,
+    I: PrimeField + MontgomeryConvertible,
 {
     // SAFETY: Reinterpreting Arkworks field elements as Icicle-specific scalars
     let icicle_scalars = unsafe { &*(ark_scalars as *const _ as *const [I]) };
@@ -136,8 +136,8 @@ where
 
 fn ark_to_icicle_scalars<T, I>(ark_scalars: &[T]) -> DeviceVec<I>
 where
-    T: PrimeField,
-    I: FieldImpl + MontgomeryConvertible,
+    T: ArkPrimeField,
+    I: PrimeField + MontgomeryConvertible,
 {
     ark_to_icicle_scalars_async(ark_scalars, &IcicleStream::default()) // default stream is sync
 }
@@ -226,14 +226,14 @@ fn main() {
     //================================ Part 1: copy ark scalars ==================================//
     //============================================================================================//
     let start = Instant::now();
-    let icicle_scalars_dev: DeviceVec<IcicleScalar> = ark_to_icicle_scalars(&ark_scalars);
+    let icicle_scalars_dev: DeviceVec<Bn254ScalarField> = ark_to_icicle_scalars(&ark_scalars);
     let duration = start.elapsed();
     println!("Time taken for copying {} scalars: {:?}", args.size, duration);
 
     // Can also do it async using a stream
     let mut stream = IcicleStream::create().unwrap();
     let start = Instant::now();
-    let _icicle_scalars_dev: DeviceVec<IcicleScalar> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
+    let _icicle_scalars_dev: DeviceVec<Bn254ScalarField> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
     let duration = start.elapsed();
     println!("Time taken for dispatching async copy: {:?}", duration);
 
@@ -249,7 +249,7 @@ fn main() {
     //============================================================================================//
     let mut ark_scalars_copy = ark_scalars.clone(); // copy since transmute modifies the scalars in-place
     let start = Instant::now();
-    let _icicle_transumated_scalars: &mut [IcicleScalar] = transmute_ark_to_icicle_scalars(&mut ark_scalars_copy);
+    let _icicle_transumated_scalars: &mut [Bn254ScalarField] = transmute_ark_to_icicle_scalars(&mut ark_scalars_copy);
     let duration = start.elapsed();
     println!("Time taken for transmuting {} scalars: {:?}", args.size, duration);
 
