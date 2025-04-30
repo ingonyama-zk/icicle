@@ -1,5 +1,6 @@
 use clap::Parser;
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::field::PrimeField;
+use icicle_core::traits::GenerateRandom;
 use icicle_runtime::{runtime, Device};
 
 #[derive(Parser, Debug)]
@@ -24,9 +25,9 @@ pub fn set_backend_cpu() {
     icicle_runtime::set_device(&device_cpu).unwrap();
 }
 
-pub fn generate_random_vector<F: FieldImpl>(size: usize) -> Vec<F>
+pub fn generate_random_vector<F: PrimeField>(size: usize) -> Vec<F>
 where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+    F: GenerateRandom,
 {
-    F::Config::generate_random(size)
+    F::generate_random(size)
 }
