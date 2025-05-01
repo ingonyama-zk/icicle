@@ -11,7 +11,7 @@ typedef struct projective_t projective_t;
 typedef struct affine_t affine_t;
 typedef struct VecOpsConfig VecOpsConfig;
 
-bool bn254_eq(projective_t* point1, projective_t* point2);
+bool bn254_projective_eq(projective_t* point1, projective_t* point2);
 void bn254_ecadd(projective_t* point, projective_t* point2, projective_t* res); 
 void bn254_ecsub(projective_t* point, projective_t* point2, projective_t* res); 
 void bn254_to_affine(projective_t* point, affine_t* point_out);
