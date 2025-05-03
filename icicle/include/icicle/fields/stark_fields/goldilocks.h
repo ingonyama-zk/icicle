@@ -3,6 +3,8 @@
 #include "icicle/math/storage.h"
 #include "icicle/fields/field.h"
 #include "icicle/fields/params_gen.h"
+#include "icicle/fields/complex_extension.h"
+#include "icicle/fields/quartic_extension.h"
 #ifdef __CUDACC__
   #include "goldilocks_cuda_math.h"
 #endif // __CUDACC__
@@ -346,6 +348,20 @@ namespace goldilocks {
    */
   typedef GoldilocksField<fp_config> scalar_t;
 
+  /**
+   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef ComplexExtensionField<fp_config, scalar_t> c_extension_t;
+
+  /**
+   * Quartic extension field of `scalar_t` enabled if `-DEXT_FIELD` env variable is.
+   */
+  typedef QuarticExtensionField<fp_config, scalar_t> q_extension_t;
+
+  /**
+   * The default extension type
+   */
+  typedef c_extension_t extension_t;
 } // namespace goldilocks
 
 template <class CONFIG>
