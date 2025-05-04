@@ -6,6 +6,7 @@
 #include "icicle/program/program.h"
 #include "icicle/sumcheck/sumcheck_transcript.h"
 #include "cpu_program_executor.h"
+#include "icicle/sumcheck/sumcheck.h"
 #include "icicle/backend/sumcheck_backend.h"
 #include "taskflow/taskflow.hpp"
 
@@ -112,22 +113,19 @@ namespace icicle {
           }
         }
 
-        F alpha_value = F::zero();
-        switch (round_idx) {
-        case 0:
+        F alpha_value = claimed_sum;
+        if (round_idx == 0) {
           round_polynomial[0] = claimed_sum - round_polynomial[1];
-          break;
-        default: {
+        } else {
           std::vector<F>& prev_round_polynomial = sumcheck_proof.get_round_polynomial(round_idx - 1);
           alpha_value = lagrange_interpolation(prev_round_polynomial, alpha);
           round_polynomial[0] = alpha_value - round_polynomial[1];
-        } break;
         }
 
-        if (nof_mle_poly > 1) {
+        if (round_polynomial.size() > 2) {
           // last element is the claimed sum - the sum of the round polynomial (except the last element)
           round_polynomial[round_polynomial.size() - 1] =
-            claimed_sum - alpha_value; // alpha_value is the sumc of the first two elements of the round polynomial
+            claimed_sum - alpha_value; // alpha_value is the sum of the first two elements of the round polynomial
           for (int k = 2; k < round_polynomial.size() - 1; ++k) {
             round_polynomial[round_polynomial.size() - 1] =
               round_polynomial[round_polynomial.size() - 1] - round_polynomial[k];
@@ -141,32 +139,6 @@ namespace icicle {
     // members
     tf::Taskflow m_taskflow; // Accumulate tasks
     tf::Executor m_executor; // execute all tasks accumulated on multiple threads
-
-    // functions
-    F lagrange_interpolation(const std::vector<F>& poly_evaluations, const F& x) const
-    {
-      uint poly_degree = poly_evaluations.size();
-      F result = F::zero();
-
-      // For each coefficient we want to compute
-      for (uint i = 0; i < poly_degree; ++i) {
-        // Compute the i-th coefficient
-        F numerator = poly_evaluations[i];
-        F denumerator = F::one();
-
-        // Use Lagrange interpolation formula
-        const F i_field = F::from(i);
-        for (uint j = 0; j < poly_degree; ++j) {
-          if (j != i) {
-            const F j_field = F::from(j);
-            numerator = numerator * (x - j_field);
-            denumerator = denumerator * (i_field - j_field);
-          }
-        }
-        result = result + (numerator * F::inverse(denumerator));
-      }
-      return result;
-    }
 
     int get_nof_workers(const SumcheckConfig& config) const
     {
@@ -201,6 +173,7 @@ namespace icicle {
       program_executor.m_variable_ptrs[nof_polynomials] = &combine_func_result;
 
       for (int element_idx = start_element_idx; element_idx < start_element_idx + nof_iterations; ++element_idx) {
+        // k=0 is skipped because the sum of evaluations 0 and 1 is alpha, and we use that later to calculate for k=0
         for (int k = 1; k < round_polynomial.size() - 1; ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
@@ -254,7 +227,8 @@ namespace icicle {
               (in_mle_polynomials[poly_idx][4 * element_idx + 3] - in_mle_polynomials[poly_idx][4 * element_idx + 2]);
         }
 
-        for (int k = 1; k < round_polynomial.size(); ++k) {
+        // k=0 is skipped because the sum of evaluations 0 and 1 is alpha, and we use that later to calculate for k=0
+        for (int k = 1; k < round_polynomial.size() - 1; ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
             combine_func_inputs[poly_idx] =                                      // (1-k)*element_i + k*element_i+1
@@ -309,7 +283,8 @@ namespace icicle {
 
         // update_round_polynomial(element_idx, folded_mle_polynomials, mle_polynomial_size, program_executor,
         // round_polynomial);
-        for (int k = 1; k < round_polynomial.size(); ++k) {
+        // k=0 is skipped because the sum of evaluations 0 and 1 is alpha, and we use that later to calculate for k=0
+        for (int k = 1; k < round_polynomial.size() - 1; ++k) {
           // update the combine program inputs for k
           for (int poly_idx = 0; poly_idx < nof_polynomials; ++poly_idx) {
             combine_func_inputs[poly_idx] = // (1-k)*element_i + k*element_i+1

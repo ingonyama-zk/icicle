@@ -25,6 +25,43 @@ namespace icicle {
   Sumcheck<F> create_sumcheck();
 
   /**
+   * @brief Perform Lagrange interpolation on a set of polynomial evaluations.
+   *
+   * This function takes a set of polynomial evaluations at points 0,1,2,... and returns
+   * the evaluation of the polynomial at a given point x using Lagrange interpolation.
+   *
+   * @tparam F The field type used for the polynomial coefficients and evaluations.
+   * @param poly_evaluations Vector of polynomial evaluations at points 0,1,2,...
+   * @param x The point at which to evaluate the polynomial.
+   * @return The evaluation of the polynomial at point x.
+   */
+  template <typename F>
+  F lagrange_interpolation(const std::vector<F>& poly_evaluations, const F& x)
+  {
+    uint poly_degree = poly_evaluations.size();
+    F result = F::zero();
+
+    // For each coefficient we want to compute
+    for (uint i = 0; i < poly_degree; ++i) {
+      // Compute the i-th coefficient
+      F numerator = poly_evaluations[i];
+      F denumerator = F::one();
+
+      // Use Lagrange interpolation formula
+      const F i_field = F::from(i);
+      for (uint j = 0; j < poly_degree; ++j) {
+        if (j != i) {
+          const F j_field = F::from(j);
+          numerator = numerator * (x - j_field);
+          denumerator = denumerator * (i_field - j_field);
+        }
+      }
+      result = result + (numerator * F::inverse(denumerator));
+    }
+    return result;
+  }
+
+  /**
    * @brief Class for performing Sumcheck operations.
    *
    * This class provides a high-level interface for building and managing Sumcheck. The underlying
@@ -158,33 +195,6 @@ namespace icicle {
   private:
     std::shared_ptr<SumcheckBackend<F>>
       m_backend; ///< Shared pointer to the backend responsible for Sumcheck operations.
-
-    // Receive the polynomial in evaluation on x=0,1,2...
-    // return the evaluation of the polynomial at x
-    F lagrange_interpolation(const std::vector<F>& poly_evaluations, const F& x) const
-    {
-      uint poly_degree = poly_evaluations.size();
-      F result = F::zero();
-
-      // For each coefficient we want to compute
-      for (uint i = 0; i < poly_degree; ++i) {
-        // Compute the i-th coefficient
-        F numerator = poly_evaluations[i];
-        F denumerator = F::one();
-
-        // Use Lagrange interpolation formula
-        const F i_field = F::from(i);
-        for (uint j = 0; j < poly_degree; ++j) {
-          if (j != i) {
-            const F j_field = F::from(j);
-            numerator = numerator * (x - j_field);
-            denumerator = denumerator * (i_field - j_field);
-          }
-        }
-        result = result + (numerator * F::inverse(denumerator));
-      }
-      return result;
-    }
   };
 
 } // namespace icicle
