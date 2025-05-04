@@ -17,6 +17,7 @@
 #include "icicle/decision_tree.h"
 #include "taskflow/taskflow.hpp"
 #include "icicle/backend/msm_config.h"
+#include "icicle/utils/platform.h"
 #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
 #endif
@@ -31,6 +32,7 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
+    m_cpu_vendor = get_cpu_vendor_as_int();
     // TBD: for small size MSM - prefer double and add
     calc_optimal_parameters();
     // Resize the thread buckets according to optimal parameters
@@ -61,7 +63,7 @@ public:
 
   // Calculate the optimal number of workers based on the problem size, config and machine parameters.
   static unsigned get_optimal_nof_workers(
-    const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor)
+    const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor, const double cpu_vendor)
   {
     uint32_t nof_cores =
       config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
@@ -87,7 +89,8 @@ public:
     const int msm_size,
     const uint32_t scalar_size,
     const uint32_t precompute_factor,
-    const uint32_t nof_workers)
+    const uint32_t nof_workers,
+    const double cpu_vendor)
   {
     if (config.c > 0) { return config.c; }
 
@@ -96,7 +99,7 @@ public:
     double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
     double nof_cores = (double)nof_workers;
-    double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, pcm};
+    double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, cpu_vendor, pcm};
     unsigned optimal_c = c_tree.predict(features);
     return optimal_c;
   }
@@ -127,6 +130,7 @@ private:
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
   uint32_t m_segment_size;       // segments size for phase 2.
   uint32_t m_nof_workers;        // number of threads in current machine
+  int m_cpu_vendor;              // CPU vendor
   std::unique_ptr<std::thread> m_phase3_thread = nullptr;
 
   // per worker:
@@ -140,10 +144,10 @@ private:
   {
     m_precompute_factor = m_config.precompute_factor;
     m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-    m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor);
+    m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor, (double)m_cpu_vendor);
 
     // phase 1 properties
-    m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers);
+    m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers, (double)m_cpu_vendor);
 
     m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
@@ -415,8 +419,9 @@ eIcicleError cpu_msm_precompute_bases(
 {
   const int precompute_factor = config.precompute_factor;
   const uint scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-  const uint32_t nof_workers = Msm<A, P>::get_optimal_nof_workers(config, nof_bases, scalar_size, precompute_factor);
-  const int c = Msm<A, P>::get_optimal_c(config, nof_bases, scalar_size, precompute_factor, nof_workers);
+  const int cpu_vendor = get_cpu_vendor_as_int();
+  const uint32_t nof_workers = Msm<A, P>::get_optimal_nof_workers(config, nof_bases, scalar_size, precompute_factor, (double)cpu_vendor);
+  const int c = Msm<A, P>::get_optimal_c(config, nof_bases, scalar_size, precompute_factor, nof_workers, (double)cpu_vendor);
   const bool is_mont = config.are_points_montgomery_form;
   const unsigned int num_bms_no_precomp = (scalar_size - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
