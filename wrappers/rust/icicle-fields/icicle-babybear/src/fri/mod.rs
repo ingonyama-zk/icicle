@@ -1,13 +1,11 @@
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_fri;
 
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
-
-impl_fri!("babybear", babybear_fri, ScalarField, ScalarCfg);
+impl_fri!("babybear", babybear_fri, ScalarField);
 impl_fri!(
     "babybear_extension",
     babybear_extension_fri,
-    ExtensionField,
-    ExtensionCfg
+    ExtensionField
 );
 
 #[cfg(test)]

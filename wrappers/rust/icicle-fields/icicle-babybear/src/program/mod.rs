@@ -1,4 +1,4 @@
-use crate::field::{BabybearExtensionField, BabybearField};
+use crate::field::{ExtensionField, ScalarField};
 
 use icicle_core::impl_program_field;
 

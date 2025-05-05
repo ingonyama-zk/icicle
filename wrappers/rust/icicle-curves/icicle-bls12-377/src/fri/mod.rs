@@ -1,4 +1,4 @@
-use crate::curve::{BaseField, ScalarField};
+use crate::curve::ScalarField;
 
 use icicle_core::impl_fri;
 

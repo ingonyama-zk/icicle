@@ -25,6 +25,6 @@ pub(crate) mod tests {
 
     mod rns {
         use super::*;
-        impl_ntt_tests!(LabradorScalarRingRns);
+        impl_ntt_tests!(ScalarRingRns);
     }
 }

@@ -1,11 +1,11 @@
 use icicle_core::impl_univariate_polynomial_api;
 
-use crate::field::BabybearField;
+use crate::field::ScalarField;
 
-impl_univariate_polynomial_api!("babybear", babybear, BabybearField);
+impl_univariate_polynomial_api!("babybear", babybear, ScalarField);
 
 #[cfg(test)]
 mod tests {
     use icicle_core::impl_polynomial_tests;
-    impl_polynomial_tests!(babybear, BabybearField);
+    impl_polynomial_tests!(babybear, ScalarField);
 }

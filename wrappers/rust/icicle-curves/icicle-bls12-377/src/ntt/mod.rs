@@ -1,4 +1,4 @@
-use crate::curve::{BaseField, ScalarField};
+use crate::curve::ScalarField;
 
 use icicle_core::ntt::{NTTConfig, NTTDir, NTTDomain, NTTInitDomainConfig, NTT};
 use icicle_core::{impl_ntt, impl_ntt_without_domain};
