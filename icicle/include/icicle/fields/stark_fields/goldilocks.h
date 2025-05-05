@@ -169,7 +169,7 @@ namespace goldilocks {
     /*This function performs the goldilocks reduction:
     xs[63:0] + xs[95:64] * (2^32 - 1) - xs[127:96]
      */
-    template<unsigned MODULUS_MULTIPLE = 1>
+    template <unsigned MODULUS_MULTIPLE = 1>
     static constexpr HOST_DEVICE_INLINE GoldilocksField reduce(const typename Field<CONFIG>::Wide xs)
     {
       GoldilocksField rs = {};
@@ -307,9 +307,12 @@ namespace goldilocks {
     static constexpr storage<limbs_count> neg_modulus = {0xffffffff, 0x00000000};
     static constexpr storage<limbs_count> montgomery_r = {0xffffffff, 0x00000000};
     static constexpr storage<limbs_count> montgomery_r_inv = {0x00000001, 0xfffffffe};
-    static constexpr storage<2 * limbs_count> modulus_squared = params_gen::template get_square<limbs_count, 0>(modulus); 
-    static constexpr storage<2 * limbs_count> modulus_squared_2 = host_math::template left_shift<2 * limbs_count, 1>(modulus_squared);
-    static constexpr storage<2 * limbs_count> modulus_squared_4 = host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2);
+    static constexpr storage<2 * limbs_count> modulus_squared =
+      params_gen::template get_square<limbs_count, 0>(modulus);
+    static constexpr storage<2 * limbs_count> modulus_squared_2 =
+      host_math::template left_shift<2 * limbs_count, 1>(modulus_squared);
+    static constexpr storage<2 * limbs_count> modulus_squared_4 =
+      host_math::template left_shift<2 * limbs_count, 1>(modulus_squared_2);
     static constexpr storage<limbs_count> modulus_2 = host_math::template left_shift<limbs_count, 1>(modulus);
     static constexpr storage<limbs_count> modulus_4 = host_math::template left_shift<limbs_count, 1>(modulus_2);
     MOD_SQR_SUBS()
@@ -343,7 +346,7 @@ namespace goldilocks {
        {0x00000801, 0xfffff7ff}, {0x00000401, 0xfffffbff}, {0x00000201, 0xfffffdff}, {0x00000101, 0xfffffeff},
        {0x00000081, 0xffffff7f}, {0x00000041, 0xffffffbf}, {0x00000021, 0xffffffdf}, {0x00000011, 0xffffffef},
        {0x00000009, 0xfffffff7}, {0x00000005, 0xfffffffb}, {0x00000003, 0xfffffffd}, {0x00000002, 0xfffffffe}}};
-  
+
     // nonresidue to generate the extension field
     static constexpr uint32_t nonresidue = 7;
     // true if nonresidue is negative.
@@ -357,8 +360,10 @@ namespace goldilocks {
   typedef GoldilocksField<fp_config> scalar_t;
 
   template <class CONFIG, class T>
-  class GoldilocksComplexExtensionField {
+  class GoldilocksComplexExtensionField
+  {
     friend T;
+
   public:
     typedef T FF;
     static constexpr unsigned TLC = 2 * FF::TLC;
@@ -368,27 +373,30 @@ namespace goldilocks {
 
     typedef typename Field<CONFIG>::Wide FWide;
 
-  struct Wide {
-    FWide c0;
-    FWide c1;
+    struct Wide {
+      FWide c0;
+      FWide c1;
 
-    static constexpr Wide HOST_DEVICE_INLINE from_field(const GoldilocksComplexExtensionField& xs)
-    {
-      return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1)};
-    }
+      static constexpr Wide HOST_DEVICE_INLINE from_field(const GoldilocksComplexExtensionField& xs)
+      {
+        return Wide{FWide::from_field(xs.c0), FWide::from_field(xs.c1)};
+      }
 
-    friend HOST_DEVICE_INLINE Wide operator+(const Wide& xs, const Wide& ys)
-    {
-      return Wide{xs.c0 + ys.c0, xs.c1 + ys.c1};
-    }
+      friend HOST_DEVICE_INLINE Wide operator+(const Wide& xs, const Wide& ys)
+      {
+        return Wide{xs.c0 + ys.c0, xs.c1 + ys.c1};
+      }
 
-    friend HOST_DEVICE_INLINE Wide operator-(const Wide& xs, const Wide& ys)
-    {
-      return Wide{xs.c0 - ys.c0, xs.c1 - ys.c1};
-    }
+      friend HOST_DEVICE_INLINE Wide operator-(const Wide& xs, const Wide& ys)
+      {
+        return Wide{xs.c0 - ys.c0, xs.c1 - ys.c1};
+      }
 
-    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs) { return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1)}; }
-  };
+      static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
+      {
+        return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1)};
+      }
+    };
 
     static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField zero()
     {
@@ -405,12 +413,14 @@ namespace goldilocks {
       return GoldilocksComplexExtensionField{FF::from(val), FF::zero()};
     }
 
-    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField to_montgomery(const GoldilocksComplexExtensionField& xs)
+    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    to_montgomery(const GoldilocksComplexExtensionField& xs)
     {
       return GoldilocksComplexExtensionField{FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1)};
     }
 
-    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField from_montgomery(const GoldilocksComplexExtensionField& xs)
+    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    from_montgomery(const GoldilocksComplexExtensionField& xs)
     {
       return GoldilocksComplexExtensionField{FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1)};
     }
@@ -427,9 +437,11 @@ namespace goldilocks {
     }
 
     template <unsigned REDUCTION_SIZE = 1>
-    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField sub_modulus(const GoldilocksComplexExtensionField& xs)
+    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    sub_modulus(const GoldilocksComplexExtensionField& xs)
     {
-      return GoldilocksComplexExtensionField{FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1)};
+      return GoldilocksComplexExtensionField{
+        FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1)};
     }
 
     friend std::ostream& operator<<(std::ostream& os, const GoldilocksComplexExtensionField& xs)
@@ -438,32 +450,38 @@ namespace goldilocks {
       return os;
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator+(GoldilocksComplexExtensionField xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator+(GoldilocksComplexExtensionField xs, const GoldilocksComplexExtensionField& ys)
     {
       return GoldilocksComplexExtensionField{xs.c0 + ys.c0, xs.c1 + ys.c1};
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator-(GoldilocksComplexExtensionField xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator-(GoldilocksComplexExtensionField xs, const GoldilocksComplexExtensionField& ys)
     {
       return GoldilocksComplexExtensionField{xs.c0 - ys.c0, xs.c1 - ys.c1};
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator+(FF xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator+(FF xs, const GoldilocksComplexExtensionField& ys)
     {
       return GoldilocksComplexExtensionField{xs + ys.c0, ys.c1};
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator-(FF xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator-(FF xs, const GoldilocksComplexExtensionField& ys)
     {
       return GoldilocksComplexExtensionField{xs - ys.c0, FF::neg(ys.c1)};
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator+(GoldilocksComplexExtensionField xs, const FF& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator+(GoldilocksComplexExtensionField xs, const FF& ys)
     {
       return GoldilocksComplexExtensionField{xs.c0 + ys, xs.c1};
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator-(GoldilocksComplexExtensionField xs, const FF& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator-(GoldilocksComplexExtensionField xs, const FF& ys)
     {
       return GoldilocksComplexExtensionField{xs.c0 - ys, xs.c1};
     }
@@ -509,10 +527,7 @@ namespace goldilocks {
       return *this;
     }
 
-    static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs)
-    {
-      return xs * FF::from(CONFIG::nonresidue);
-    }
+    static constexpr HOST_DEVICE FF mul_by_nonresidue(const FF& xs) { return xs * FF::from(CONFIG::nonresidue); }
 
     static constexpr HOST_DEVICE FWide mul_by_nonresidue(const FWide& xs)
     {
@@ -522,7 +537,8 @@ namespace goldilocks {
     }
 
     template <unsigned MODULUS_MULTIPLE = 1>
-    static constexpr HOST_DEVICE Wide mul_wide(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
+    static constexpr HOST_DEVICE Wide
+    mul_wide(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
     {
       FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
       FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
@@ -550,29 +566,34 @@ namespace goldilocks {
         FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1)};
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator*(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator*(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
     {
       Wide xy = mul_wide(xs, ys);
       return reduce(xy);
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator*(const GoldilocksComplexExtensionField& xs, const FF& ys)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator*(const GoldilocksComplexExtensionField& xs, const FF& ys)
     {
       Wide xy = mul_wide(xs, ys);
       return reduce(xy);
     }
 
-    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField operator*(const FF& ys, const GoldilocksComplexExtensionField& xs)
+    friend HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    operator*(const FF& ys, const GoldilocksComplexExtensionField& xs)
     {
       return xs * ys;
     }
 
-    friend HOST_DEVICE_INLINE bool operator==(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE bool
+    operator==(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
     {
       return (xs.c0 == ys.c0) && (xs.c1 == ys.c1);
     }
 
-    friend HOST_DEVICE_INLINE bool operator!=(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
+    friend HOST_DEVICE_INLINE bool
+    operator!=(const GoldilocksComplexExtensionField& xs, const GoldilocksComplexExtensionField& ys)
     {
       return !(xs == ys);
     }
@@ -591,7 +612,8 @@ namespace goldilocks {
     }
 
     // inverse of zero is set to be zero which is what we want most of the time
-    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField inverse(const GoldilocksComplexExtensionField& xs)
+    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField
+    inverse(const GoldilocksComplexExtensionField& xs)
     {
       GoldilocksComplexExtensionField xs_conjugate = {xs.c0, FF::neg(xs.c1)};
       FF nonresidue_times_im = mul_by_nonresidue(FF::sqr(xs.c1));
@@ -613,7 +635,8 @@ namespace goldilocks {
     }
 
     template <unsigned NLIMBS>
-    static constexpr HOST_DEVICE GoldilocksComplexExtensionField pow(GoldilocksComplexExtensionField base, storage<NLIMBS> exp)
+    static constexpr HOST_DEVICE GoldilocksComplexExtensionField
+    pow(GoldilocksComplexExtensionField base, storage<NLIMBS> exp)
     {
       GoldilocksComplexExtensionField res = one();
       while (host_math::is_zero(exp)) {
@@ -624,17 +647,17 @@ namespace goldilocks {
       return res;
     }
 
-  /* Receives an array of bytes and its size and returns extension field element. */
-  static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
-  {
-    if (nof_bytes < 2 * sizeof(FF)) {
+    /* Receives an array of bytes and its size and returns extension field element. */
+    static constexpr HOST_DEVICE_INLINE GoldilocksComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
+    {
+      if (nof_bytes < 2 * sizeof(FF)) {
 #ifndef __CUDACC__
-      ICICLE_LOG_ERROR << "Input size is too small";
+        ICICLE_LOG_ERROR << "Input size is too small";
 #endif // __CUDACC__
-      return GoldilocksComplexExtensionField::zero();
+        return GoldilocksComplexExtensionField::zero();
+      }
+      return GoldilocksComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
     }
-    return GoldilocksComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
-  }
   };
 
   /**

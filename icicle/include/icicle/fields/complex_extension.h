@@ -218,7 +218,8 @@ public:
       FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1)};
   }
 
-  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField
+  operator*(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     Wide xy = mul_wide(xs, ys);
     return reduce(xy);
