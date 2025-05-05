@@ -3,7 +3,7 @@
 
 #if defined(_MSC_VER)
 #include <intrin.h>
-#elif defined(__GNUC__) || defined(__clang__)
+#elif (defined(__GNUC__) || defined(__clang__)) && (defined(__x86_64__) || defined(__i386__))
 #include <cpuid.h>
 #endif
 
@@ -11,7 +11,7 @@ inline std::string get_cpu_vendor()
 {
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
     return "Apple";
-#elif defined(_MSC_VER) || defined(__GNUC__) || defined(__clang__)
+#elif (defined(_MSC_VER) || defined(__GNUC__) || defined(__clang__)) && (defined(__x86_64__) || defined(__i386__))
     // x86/x86_64: Use CPUID
     char vendor[0x20] = {};
 #if defined(_MSC_VER)
