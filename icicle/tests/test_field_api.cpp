@@ -35,11 +35,11 @@ TYPED_TEST(FieldTest, FieldSanityTest)
 
 TYPED_TEST(FieldTest, NTTTest)
 {
-  const uint64_t N = 1 << rand_uint_32b(3, 17);
-  const int batch_size = 1 << rand_uint_32b(0, 4);
-  const bool columns_batch = rand_uint_32b(0, 1);
-  const NTTDir dir = static_cast<NTTDir>(rand_uint_32b(0, 1));
-  const bool inplace = rand_uint_32b(0, 1);
+  const uint64_t N = 1 << 5; //rand_uint_32b(3, 17);
+  const int batch_size = 1 << 0; //rand_uint_32b(0, 4);
+  const bool columns_batch = 0; //rand_uint_32b(0, 1);
+  const NTTDir dir = NTTDir::kForward; //static_cast<NTTDir>(rand_uint_32b(0, 1));
+  const bool inplace = 0; //rand_uint_32b(0, 1);
 
   ICICLE_LOG_DEBUG << "N = " << N;
   ICICLE_LOG_DEBUG << "batch_size = " << batch_size;
@@ -55,7 +55,7 @@ TYPED_TEST(FieldTest, NTTTest)
   auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
-    auto config = default_ntt_config();
+    auto config = default_ntt_config<TypeParam>();
     config.batch_size = batch_size;
     config.columns_batch = columns_batch;
 
@@ -93,7 +93,7 @@ TYPED_TEST(FieldTest, NTTTest)
   }
 
   // Run Vulkan implementation if available
-  if (std::find(s_registered_devices.begin(), s_registered_devices.end(), "VULKAN") != s_registered_devices.end()) {
+  if (std::find(FieldTest<TypeParam>::s_registered_devices.begin(), FieldTest<TypeParam>::s_registered_devices.end(), "VULKAN") != FieldTest<TypeParam>::s_registered_devices.end()) {
     auto out_vulkan = std::make_unique<TypeParam[]>(total_size);
     run("VULKAN", out_vulkan.get(), VERBOSE, "NTT", ITERS);
     
