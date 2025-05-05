@@ -37,7 +37,6 @@ where
         let one = scalar_a.mul(inv);
         assert_eq!(one, F::one());
     }
-
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
