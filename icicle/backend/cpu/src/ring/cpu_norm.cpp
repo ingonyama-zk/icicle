@@ -36,11 +36,11 @@ static eIcicleError cpu_check_norm_bound(
   bool* output)
 {
   if (!input || !output) {
-    ICICLE_LOG_ERROR << "Invalid argument: null pointer.";
-    return eIcicleError::INVALID_ARGUMENT;
+    ICICLE_LOG_ERROR << "Invalid pointer: null pointer.";
+    return eIcicleError::INVALID_POINTER;
   }
 
-  if (size > 65536) {
+  if (size > 65536) { // size of the element shouldn't be bigger than 2^16
     ICICLE_LOG_ERROR << "Invalid argument: vector size must be at most 65536.";
     return eIcicleError::INVALID_ARGUMENT;
   }
@@ -180,11 +180,11 @@ static eIcicleError cpu_check_norm_relative(
   bool* output)
 {
   if (!input_a || !input_b || !output) {
-    ICICLE_LOG_ERROR << "Invalid argument: null pointer.";
-    return eIcicleError::INVALID_ARGUMENT;
+    ICICLE_LOG_ERROR << "Invalid pointer: null pointer.";
+    return eIcicleError::INVALID_POINTER;
   }
 
-  if (size > 65536) {
+  if (size > 65536) { // size of the element shouldn't be bigger than 2^16
     ICICLE_LOG_ERROR << "Invalid argument: vector size must be at most 65536.";
     return eIcicleError::INVALID_ARGUMENT;
   }
