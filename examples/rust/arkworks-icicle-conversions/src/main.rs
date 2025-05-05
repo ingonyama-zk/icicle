@@ -6,7 +6,7 @@ use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::{BigInteger, Field, PrimeField as ArkPrimeField};
 
-use icicle_bn254::curve::{Bn254ScalarField, G1Affine as IcicleAffine, G1Projective as IcicleProjective};
+use icicle_bn254::curve::{ScalarField, G1Affine as IcicleAffine, G1Projective as IcicleProjective};
 use icicle_core::{
     field::PrimeField,
     msm::{msm, MSMConfig},
@@ -226,14 +226,14 @@ fn main() {
     //================================ Part 1: copy ark scalars ==================================//
     //============================================================================================//
     let start = Instant::now();
-    let icicle_scalars_dev: DeviceVec<Bn254ScalarField> = ark_to_icicle_scalars(&ark_scalars);
+    let icicle_scalars_dev: DeviceVec<ScalarField> = ark_to_icicle_scalars(&ark_scalars);
     let duration = start.elapsed();
     println!("Time taken for copying {} scalars: {:?}", args.size, duration);
 
     // Can also do it async using a stream
     let mut stream = IcicleStream::create().unwrap();
     let start = Instant::now();
-    let _icicle_scalars_dev: DeviceVec<Bn254ScalarField> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
+    let _icicle_scalars_dev: DeviceVec<ScalarField> = ark_to_icicle_scalars_async(&ark_scalars, &stream);
     let duration = start.elapsed();
     println!("Time taken for dispatching async copy: {:?}", duration);
 
@@ -249,7 +249,7 @@ fn main() {
     //============================================================================================//
     let mut ark_scalars_copy = ark_scalars.clone(); // copy since transmute modifies the scalars in-place
     let start = Instant::now();
-    let _icicle_transumated_scalars: &mut [Bn254ScalarField] = transmute_ark_to_icicle_scalars(&mut ark_scalars_copy);
+    let _icicle_transumated_scalars: &mut [ScalarField] = transmute_ark_to_icicle_scalars(&mut ark_scalars_copy);
     let duration = start.elapsed();
     println!("Time taken for transmuting {} scalars: {:?}", args.size, duration);
 

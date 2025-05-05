@@ -1,6 +1,6 @@
-use icicle_babybear::field::BabybearField;
+use icicle_babybear::field::ScalarField;
 use icicle_babybear::polynomials::DensePolynomial as PolynomialBabyBear;
-use icicle_bn254::curve::Bn254ScalarField;
+use icicle_bn254::curve::ScalarField as Bn254ScalarField;
 use icicle_bn254::polynomials::DensePolynomial as PolynomialBn254;
 
 use icicle_runtime::memory::{DeviceVec, HostSlice};
@@ -47,7 +47,7 @@ fn init_ntt_domain(max_ntt_size: u64) {
     let rou_bn254: Bn254ScalarField = get_root_of_unity(max_ntt_size);
     initialize_domain(rou_bn254, &NTTInitDomainConfig::default()).unwrap();
 
-    let rou_babybear: BabybearField = get_root_of_unity(max_ntt_size);
+    let rou_babybear: ScalarField = get_root_of_unity(max_ntt_size);
     initialize_domain(rou_babybear, &NTTInitDomainConfig::default()).unwrap();
 }
 

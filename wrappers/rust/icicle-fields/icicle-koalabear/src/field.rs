@@ -13,26 +13,26 @@ use icicle_runtime::stream::IcicleStream;
 pub(crate) const SCALAR_LIMBS: usize = 1;
 pub(crate) const EXTENSION_LIMBS: usize = 4;
 
-impl_field!(KoalabearField, "koalabear", SCALAR_LIMBS, true);
-impl_field_arithmetic!(KoalabearField, "koalabear", koalabear);
-impl_montgomery_convertible!(KoalabearField, koalabear_scalar_convert_montgomery);
-impl_generate_random!(KoalabearField, koalabear_generate_scalars);
+impl_field!(ScalarField, "koalabear", SCALAR_LIMBS, true);
+impl_field_arithmetic!(ScalarField, "koalabear", koalabear);
+impl_montgomery_convertible!(ScalarField, koalabear_scalar_convert_montgomery);
+impl_generate_random!(ScalarField, koalabear_generate_scalars);
 
-impl_field!(KoalabearExtensionField, "koalabear_extension", EXTENSION_LIMBS, true);
-impl_field_arithmetic!(KoalabearExtensionField, "koalabear_extension", koalabear_extension);
-impl_montgomery_convertible!(KoalabearExtensionField, koalabear_extension_scalar_convert_montgomery);
-impl_generate_random!(KoalabearExtensionField, koalabear_extension_generate_scalars);
+impl_field!(ExtensionField, "koalabear_extension", EXTENSION_LIMBS, true);
+impl_field_arithmetic!(ExtensionField, "koalabear_extension", koalabear_extension);
+impl_montgomery_convertible!(ExtensionField, koalabear_extension_scalar_convert_montgomery);
+impl_generate_random!(ExtensionField, koalabear_extension_generate_scalars);
 
 #[cfg(test)]
 mod tests {
-    use super::{KoalabearExtensionField, KoalabearField};
+    use super::{ExtensionField, ScalarField};
     use icicle_core::impl_field_tests;
     use icicle_core::tests::*;
 
-    impl_field_tests!(KoalabearField);
+    impl_field_tests!(ScalarField);
     mod extension {
         use super::*;
 
-        impl_field_tests!(KoalabearExtensionField);
+        impl_field_tests!(ExtensionField);
     }
 }

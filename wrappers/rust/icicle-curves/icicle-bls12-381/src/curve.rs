@@ -15,33 +15,33 @@ pub(crate) const BASE_LIMBS: usize = 12;
 #[cfg(not(feature = "no_g2"))]
 pub(crate) const G2_BASE_LIMBS: usize = 24;
 
-impl_field!(Bls12_381ScalarField, "bls12_381", SCALAR_LIMBS, true);
-impl_field_arithmetic!(Bls12_381ScalarField, "bls12_381", bls12_381_sf);
-impl_montgomery_convertible!(Bls12_381ScalarField, bls12_381_scalar_convert_montgomery);
-impl_generate_random!(Bls12_381ScalarField, bls12_381_generate_scalars);
+impl_field!(ScalarField, "bls12_381", SCALAR_LIMBS, true);
+impl_field_arithmetic!(ScalarField, "bls12_381", bls12_381_sf);
+impl_montgomery_convertible!(ScalarField, bls12_381_scalar_convert_montgomery);
+impl_generate_random!(ScalarField, bls12_381_generate_scalars);
 
-impl_field!(Bls12381BaseField, "bls12_381_base_field", BASE_LIMBS, false);
+impl_field!(BaseField, "bls12_381_base_field", BASE_LIMBS, false);
 
 impl_curve!(
     "bls12_381",
     bls12_381,
     CurveCfg,
-    Bls12_381ScalarField,
-    Bls12381BaseField,
+    ScalarField,
+    BaseField,
     G1Affine,
     G1Projective
 );
 
 #[cfg(not(feature = "no_g2"))]
-impl_field!(Bls12381G2BaseField, "bls12_381_g2_base_field", G2_BASE_LIMBS, false);
+impl_field!(G2BaseField, "bls12_381_g2_base_field", G2_BASE_LIMBS, false);
 
 #[cfg(not(feature = "no_g2"))]
 impl_curve!(
     "bls12_381_g2",
     bls12_381_g2,
     G2CurveCfg,
-    Bls12_381ScalarField,
-    Bls12381G2BaseField,
+    ScalarField,
+    G2BaseField,
     G2Affine,
     G2Projective
 );
@@ -50,13 +50,13 @@ impl_curve!(
 mod tests {
     #[cfg(not(feature = "no_g2"))]
     use super::G2CurveCfg;
-    use super::{Bls12_381ScalarField, CurveCfg};
+    use super::{CurveCfg, ScalarField};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;
     use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_runtime::test_utilities;
 
-    impl_field_tests!(Bls12_381ScalarField);
+    impl_field_tests!(ScalarField);
     impl_curve_tests!(BASE_LIMBS, CurveCfg);
     #[cfg(not(feature = "no_g2"))]
     mod g2 {

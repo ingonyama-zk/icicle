@@ -1,5 +1,5 @@
-use crate::field::GoldilocksField;
+use crate::field::ScalarField;
 
 use icicle_core::impl_symbol_field;
 
-impl_symbol_field!("goldilocks", goldilocks, GoldilocksField);
+impl_symbol_field!("goldilocks", goldilocks, ScalarField);

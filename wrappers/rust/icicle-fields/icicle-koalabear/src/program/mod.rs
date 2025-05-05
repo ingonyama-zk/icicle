@@ -1,6 +1,6 @@
-use crate::field::{KoalabearExtensionField, KoalabearField};
+use crate::field::{ExtensionField, ScalarField};
 
 use icicle_core::impl_program_field;
 
-impl_program_field!("koalabear", koalabear, KoalabearField);
-impl_program_field!("koalabear_extension", koalabear_extension, KoalabearExtensionField);
+impl_program_field!("koalabear", koalabear, ScalarField);
+impl_program_field!("koalabear_extension", koalabear_extension, ExtensionField);

@@ -1,4 +1,4 @@
-use icicle_babybear::field::BabybearField;
+use icicle_babybear::field::ScalarField;
 use icicle_core::{
     ntt::{self, get_root_of_unity, initialize_domain, ntt, NTTConfig},
     traits::GenerateRandom,
@@ -26,12 +26,12 @@ fn main() {
     // Example input (on host memory) for NTT
     let log_ntt_size = 2;
     let ntt_size = 1 << log_ntt_size;
-    let input_cpu = BabybearField::generate_random(ntt_size);
+    let input_cpu = ScalarField::generate_random(ntt_size);
 
     // Allocate output on host memory
-    let mut output_cpu = vec![BabybearField::zero(); ntt_size];
-    let root_of_unity = get_root_of_unity::<BabybearField>(ntt_size as u64);
-    let ntt_config = NTTConfig::<BabybearField>::default();
+    let mut output_cpu = vec![ScalarField::zero(); ntt_size];
+    let root_of_unity = get_root_of_unity::<ScalarField>(ntt_size as u64);
+    let ntt_config = NTTConfig::<ScalarField>::default();
 
     // Part 1: Running NTT on CPU
     println!("Part 1: compute on CPU: ");
@@ -62,9 +62,9 @@ fn main() {
     // Part 2 (cont.): Compute on GPU (from/to GPU memory)
     println!("Part 2: compute on GPU (from/to GPU memory): ");
     let mut input_gpu =
-        DeviceVec::<BabybearField>::device_malloc(ntt_size).expect("Failed to allocate device memory for input");
+        DeviceVec::<ScalarField>::device_malloc(ntt_size).expect("Failed to allocate device memory for input");
     let mut output_gpu =
-        DeviceVec::<BabybearField>::device_malloc(ntt_size).expect("Failed to allocate device memory for output");
+        DeviceVec::<ScalarField>::device_malloc(ntt_size).expect("Failed to allocate device memory for output");
     input_gpu
         .copy_from_host(HostSlice::from_slice(&input_cpu))
         .expect("Failed to copy data to GPU");
@@ -76,7 +76,7 @@ fn main() {
     println!("{:?}", output_cpu);
 
     // Part 3: Using both CPU and GPU to compute NTT (GPU) and inverse INTT (CPU)
-    let mut output_intt_cpu = vec![BabybearField::zero(); ntt_size];
+    let mut output_intt_cpu = vec![ScalarField::zero(); ntt_size];
 
     // Step 1: Compute NTT on GPU
     println!("Part 3: compute NTT on GPU (NTT input): ");

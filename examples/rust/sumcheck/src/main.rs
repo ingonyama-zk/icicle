@@ -1,7 +1,7 @@
 pub mod transcript;
 pub mod utils;
 
-use icicle_bn254::curve::Bn254ScalarField as Fr;
+use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckWrapper;
 use icicle_core::field::PrimeField;
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};

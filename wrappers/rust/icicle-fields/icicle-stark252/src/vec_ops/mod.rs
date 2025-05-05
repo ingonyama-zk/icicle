@@ -1,4 +1,4 @@
-use crate::field::Stark252Field;
+use crate::field::ScalarField;
 
 use icicle_core::impl_vec_ops_field;
 use icicle_core::vec_ops::{VecOps, VecOpsConfig};
@@ -7,13 +7,13 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 
 use icicle_core::program::Program;
 
-impl_vec_ops_field!("stark252", stark252, Stark252Field);
+impl_vec_ops_field!("stark252", stark252, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::Stark252Field;
+    use crate::field::ScalarField;
     use icicle_core::impl_vec_ops_tests;
     use icicle_core::vec_ops::tests::*;
 
-    impl_vec_ops_tests!(stark252, Stark252Field);
+    impl_vec_ops_tests!(stark252, ScalarField);
 }

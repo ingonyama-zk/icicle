@@ -1,11 +1,11 @@
-use icicle_babybear::field::BabybearField;
+use icicle_babybear::field::ScalarField;
 use icicle_core::{
     field::PrimeField,
     hash::{HashConfig, Hasher},
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy},
     poseidon2::Poseidon2,
 };
-use icicle_m31::field::M31Field;
+use icicle_m31::field::ScalarField as M31Field;
 use icicle_runtime::memory::HostSlice;
 use rand::{random, Rng};
 use std::convert::TryInto;
@@ -112,15 +112,15 @@ pub fn main() {
     // Input state (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
     // Output state [785637949, 311566256, 241540729, 1641553353, 851108667, 1648913123, 510139232, 616108837, 707720633, 1357404478, 1539840236, 275323287, 899761440, 732341189, 664618988, 1426148993, 1498654335, 792736017, 1804085503, 402731039, 659103866, 1036635937, 1016617890, 1470732388]
     let t_vec = [2, 3, 4, 8, 12, 16, 20, 24];
-    let expected_digest_bb: Vec<BabybearField> = vec![
-        BabybearField::from_u32(833751247),
-        BabybearField::from_u32(1850148672),
-        BabybearField::from_u32(472702774),
-        BabybearField::from_u32(1077997898),
-        BabybearField::from_u32(1605336739),
-        BabybearField::from_u32(771677727),
-        BabybearField::from_u32(1224149815),
-        BabybearField::from_u32(311566256),
+    let expected_digest_bb: Vec<ScalarField> = vec![
+        ScalarField::from_u32(833751247),
+        ScalarField::from_u32(1850148672),
+        ScalarField::from_u32(472702774),
+        ScalarField::from_u32(1077997898),
+        ScalarField::from_u32(1605336739),
+        ScalarField::from_u32(771677727),
+        ScalarField::from_u32(1224149815),
+        ScalarField::from_u32(311566256),
     ];
     println!("Baby Bear");
     let config = HashConfig::default();
@@ -128,15 +128,15 @@ pub fn main() {
         .iter()
         .zip(expected_digest_bb.iter())
     {
-        let input_state_bb: Vec<BabybearField> = (0..*t)
-            .map(BabybearField::from_u32)
+        let input_state_bb: Vec<ScalarField> = (0..*t)
+            .map(ScalarField::from_u32)
             .collect();
         println!("test vector {:?}", input_state_bb);
         println!("expected digest {:?}", digest);
-        hash_test::<BabybearField>(
+        hash_test::<ScalarField>(
             input_state_bb,
             config.clone(),
-            Poseidon2::new::<BabybearField>(*t, None).unwrap(),
+            Poseidon2::new::<ScalarField>(*t, None).unwrap(),
         );
         println!(" ");
     }

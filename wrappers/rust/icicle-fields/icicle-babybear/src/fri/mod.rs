@@ -1,15 +1,15 @@
-use crate::field::{BabybearExtensionField, BabybearField};
+use crate::field::{ExtensionField, ScalarField};
 use icicle_core::impl_fri;
 
-impl_fri!("babybear", babybear_fri, BabybearField);
-impl_fri!("babybear_extension", babybear_extension_fri, BabybearExtensionField);
+impl_fri!("babybear", babybear_fri, ScalarField);
+impl_fri!("babybear_extension", babybear_extension_fri, ExtensionField);
 
 #[cfg(test)]
 mod tests {
     use icicle_core::impl_fri_tests;
 
-    use crate::field::{BabybearExtensionField, BabybearField};
+    use crate::field::{ExtensionField, ScalarField};
 
-    impl_fri_tests!(babybear_fri_test, BabybearField, BabybearField);
-    impl_fri_tests!(babybear_extension_fri_test, BabybearField, BabybearExtensionField);
+    impl_fri_tests!(babybear_fri_test, ScalarField, ScalarField);
+    impl_fri_tests!(babybear_extension_fri_test, ScalarField, ExtensionField);
 }

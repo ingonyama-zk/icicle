@@ -1,4 +1,4 @@
-use crate::field::{BabybearExtensionField, BabybearField};
+use crate::field::{ExtensionField, ScalarField};
 
 use icicle_core::vec_ops::{MixedVecOps, VecOps, VecOpsConfig};
 use icicle_core::{impl_vec_ops_field, impl_vec_ops_mixed_field};
@@ -7,27 +7,22 @@ use icicle_runtime::memory::HostOrDeviceSlice;
 
 use icicle_core::program::Program;
 
-impl_vec_ops_field!("babybear", babybear, BabybearField);
-impl_vec_ops_field!("babybear_extension", babybear_extension, BabybearExtensionField);
-impl_vec_ops_mixed_field!(
-    "babybear_extension",
-    babybear_mixed,
-    BabybearExtensionField,
-    BabybearField
-);
+impl_vec_ops_field!("babybear", babybear, ScalarField);
+impl_vec_ops_field!("babybear_extension", babybear_extension, ExtensionField);
+impl_vec_ops_mixed_field!("babybear_extension", babybear_mixed, ExtensionField, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::field::{BabybearExtensionField, BabybearField};
+    use crate::field::{ExtensionField, ScalarField};
     use icicle_core::vec_ops::tests::*;
     use icicle_core::{impl_mixed_vec_ops_tests, impl_vec_ops_tests};
 
-    impl_vec_ops_tests!(babybear, BabybearField);
+    impl_vec_ops_tests!(babybear, ScalarField);
 
     mod extension {
         use super::*;
 
-        impl_vec_ops_tests!(babybear_extension, BabybearExtensionField);
-        impl_mixed_vec_ops_tests!(BabybearExtensionField, BabybearField);
+        impl_vec_ops_tests!(babybear_extension, ExtensionField);
+        impl_mixed_vec_ops_tests!(ExtensionField, ScalarField);
     }
 }
