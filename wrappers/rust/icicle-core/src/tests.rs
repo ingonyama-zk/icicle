@@ -17,26 +17,32 @@ where
     let scalars_a = F::Config::generate_random(size);
     let scalars_b = F::Config::generate_random(size);
 
+    let inv = F::from_u32(42) .inv();
+    println!("inv: {:?}", inv);
+
     for i in 0..size {
+        println!("{:?}", i);
         let result1 = scalars_a[i] + scalars_b[i];
         let result2 = result1 - scalars_b[i];
         assert_eq!(result2, scalars_a[i]);
+
+        // Test field multiplication API
+        let scalar_a = scalars_a[i];
+        let square = scalar_a.sqr();
+        let mul_by_self = scalar_a.mul(scalar_a);
+        assert_eq!(square, mul_by_self);
+
+        // Test field pow API
+        let pow_4 = scalar_a.pow(4);
+        let mul_mul = mul_by_self.mul(mul_by_self);
+        assert_eq!(pow_4, mul_mul);
+
+        let inv = scalar_a.inv();
+        let one = scalar_a.mul(inv);
+        println!("scalar: {:?}, inv: {:?}, one: {:?}", scalar_a, inv, one);
+        assert_eq!(one, F::one());
     }
 
-    // Test field multiplication API
-    let scalar_a = scalars_a[0];
-    let square = scalar_a.sqr();
-    let mul_by_self = scalar_a.mul(scalar_a);
-    assert_eq!(square, mul_by_self);
-
-    // Test field pow API
-    let pow_4 = scalar_a.pow(4);
-    let mul_mul = mul_by_self.mul(mul_by_self);
-    assert_eq!(pow_4, mul_mul);
-
-    let inv = scalar_a.inv();
-    let one = scalar_a.mul(inv);
-    assert_eq!(one, F::one());
 }
 
 pub fn check_affine_projective_convert<C: Curve>() {
