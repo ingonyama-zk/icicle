@@ -90,7 +90,7 @@ pub fn check_fri_on_device<F: FieldImpl>(
         let fri_proof = fri_merkle_tree_prove::<F>(
             &fri_config,
             &transcript_config,
-            scalars_d,
+            &scalars_d,
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
