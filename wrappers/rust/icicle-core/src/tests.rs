@@ -17,11 +17,7 @@ where
     let scalars_a = F::Config::generate_random(size);
     let scalars_b = F::Config::generate_random(size);
 
-    let inv = F::from_u32(42) .inv();
-    println!("inv: {:?}", inv);
-
     for i in 0..size {
-        println!("{:?}", i);
         let result1 = scalars_a[i] + scalars_b[i];
         let result2 = result1 - scalars_b[i];
         assert_eq!(result2, scalars_a[i]);
@@ -39,7 +35,6 @@ where
 
         let inv = scalar_a.inv();
         let one = scalar_a.mul(inv);
-        println!("scalar: {:?}, inv: {:?}, one: {:?}", scalar_a, inv, one);
         assert_eq!(one, F::one());
     }
 
