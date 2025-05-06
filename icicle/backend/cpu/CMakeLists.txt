@@ -1,15 +1,16 @@
 cmake_minimum_required(VERSION 3.18)
 
 # Find Taskflow package
-message(STATUS "Checking for Taskflow v3.8.0")
+message(DEBUG "Checking for Taskflow v3.8.0")
 find_package(Taskflow 3.8.0 EXACT QUIET)
 
 if(Taskflow_FOUND)
   message(STATUS "Found Taskflow v${Taskflow_VERSION}, using existing installation.")
   # Use icicle_device as interface for TaskFlow headers
-  target_include_directories(icicle_device INTERFACE ${Taskflow_INCLUDE_DIRS})
+  target_link_libraries(icicle_device INTERFACE Taskflow::Taskflow)
 else()
   message(STATUS "Taskflow not found locally. Fetching Taskflow v3.8.0 (CPU backend)")
+  message(WARNING "Unless this project is itself installed, Taskflow will not be cached for future builds (and may therefore be re-fetched).")
   include(FetchContent)
   # Temporarily redefine set message log level to WARNING for fetched content
   set(ORIG_CMAKE_MESSAGE_LOG_LEVEL "${CMAKE_MESSAGE_LOG_LEVEL}")
