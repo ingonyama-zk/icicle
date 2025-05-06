@@ -118,7 +118,7 @@ public:
       if (cpu_vendor == "Apple") {
         optimal_c = msm_c_tree_apple_g2.predict(features);
       } else if (cpu_vendor == "AMD") {
-        //optimal_c = msm_c_tree_amd_g2.predict(features);
+        optimal_c = msm_c_tree_amd_g2.predict(features);
       } else { // Intel
         //optimal_c = msm_c_tree_intel_g2.predict(features);
       }

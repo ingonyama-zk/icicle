@@ -8,7 +8,8 @@
 
 #ifdef G2_ENABLED
   #include "decision tree params/msm_c_tree_apple_params_g2.h"
-
+  #include "decision tree params/msm_c_tree_amd_params_g2.h"
+  
   DecisionTree<NOF_CLASSES_C_TREE_APPLE_G2> msm_c_tree_apple_g2 = DecisionTree<NOF_CLASSES_C_TREE_APPLE_G2>(
     NOF_FEATURES_C_TREE_APPLE_G2,
     thresholds_c_tree_apple_g2,
@@ -17,6 +18,15 @@
     right_childs_c_tree_apple_g2,
     class_predictions_c_tree_apple_g2,
     classes_c_tree_apple_g2);
+
+  DecisionTree<NOF_CLASSES_C_TREE_AMD_G2> msm_c_tree_amd_g2 = DecisionTree<NOF_CLASSES_C_TREE_AMD_G2>(
+    NOF_FEATURES_C_TREE_AMD_G2,
+    thresholds_c_tree_amd_g2,
+    indices_c_tree_amd_g2,
+    left_childs_c_tree_amd_g2,
+    right_childs_c_tree_amd_g2,
+    class_predictions_c_tree_amd_g2,
+    classes_c_tree_amd_g2);
 #endif
 
 DecisionTree<NOF_CLASSES_C_TREE_INTEL> msm_c_tree_intel = DecisionTree<NOF_CLASSES_C_TREE_INTEL>(
