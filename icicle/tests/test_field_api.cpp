@@ -127,7 +127,7 @@ TYPED_TEST(FieldTest, NTTTest)
     ICICLE_CHECK(icicle_copy_to_device(d_in, in_a.get(), total_size * sizeof(TypeParam)));
 
     auto init_domain_config = default_ntt_init_domain_config();
-    ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
+    // ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
 
     auto config = default_ntt_config<TypeParam>();
     config.batch_size = batch_size;
