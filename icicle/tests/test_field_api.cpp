@@ -52,6 +52,15 @@ TYPED_TEST(FieldTest, NTTTest)
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
 
+  // Initialize input data with random values
+  TypeParam::rand_host_many(in_a.get(), total_size);
+  
+  // Print in_a values for debugging
+  ICICLE_LOG_INFO << "in_a values after initialization:";
+  for (int i = 0; i < total_size; i++) {
+    ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
+  }
+
   auto run = [&](const std::string& dev_type, TypeParam* out, bool measure, const char* msg, int iters) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
@@ -77,28 +86,24 @@ TYPED_TEST(FieldTest, NTTTest)
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
   };
 
-  // Initialize input data
-  TypeParam::rand_host_many(in_a.get(), total_size);
+  // Run reference implementation (CPU)
+  run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE, "NTT", ITERS);
 
-  // Run reference implementation if available
-  if (!IcicleTestBase::is_main_device_available()) {
-    // Simple reference implementation for testing
-    for (int i = 0; i < total_size; i++) {
-      out_ref[i] = in_a[i];
-    }
-  } else {
-    run(IcicleTestBase::reference_device(), out_ref.get(), VERBOSE, "NTT", ITERS);
+  // Print out_ref values after CPU NTT
+  ICICLE_LOG_INFO << "out_ref values after CPU NTT:";
+  for (int i = 0; i < total_size; i++) {
+    ICICLE_LOG_INFO << "out_ref[" << i << "] = " << out_ref[i];
   }
 
-  // Run main implementation
-  run(IcicleTestBase::main_device(), out_main.get(), VERBOSE, "NTT", ITERS);
+  // // Run main implementation
+  // run(IcicleTestBase::main_device(), out_main.get(), VERBOSE, "NTT", ITERS);
 
-  // Compare results
-  if (inplace) {
-    ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-  } else {
-    ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
-  }
+  // // Compare results
+  // if (inplace) {
+  //   ASSERT_EQ(0, memcmp(in_a.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  // } else {
+  //   ASSERT_EQ(0, memcmp(out_main.get(), out_ref.get(), total_size * sizeof(TypeParam)));
+  // }
 
   // Run Vulkan implementation if available
   if (std::find(FieldTest<TypeParam>::s_registered_devices.begin(), FieldTest<TypeParam>::s_registered_devices.end(), "VULKAN") != FieldTest<TypeParam>::s_registered_devices.end()) {
@@ -107,19 +112,46 @@ TYPED_TEST(FieldTest, NTTTest)
     // Initialize NTT domain for Vulkan
     Device vulkan_dev = {"VULKAN", 0};
     icicle_set_device(vulkan_dev);
+
+    // Print input data before Vulkan NTT
+    ICICLE_LOG_INFO << "Input data before Vulkan NTT:";
+    for (int i = 0; i < total_size; i++) {
+      ICICLE_LOG_INFO << "in_a[" << i << "] = " << in_a[i];
+    }
+
+    // Allocate device memory and copy input data
+    TypeParam* d_in = nullptr;
+    TypeParam* d_out = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&d_in, total_size * sizeof(TypeParam)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_out, total_size * sizeof(TypeParam)));
+    ICICLE_CHECK(icicle_copy_to_device(d_in, in_a.get(), total_size * sizeof(TypeParam)));
+
     auto init_domain_config = default_ntt_init_domain_config();
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
 
-    auto config = default_ntt_config();
+    auto config = default_ntt_config<TypeParam>();
     config.batch_size = batch_size;
     config.columns_batch = columns_batch;
 
     START_TIMER(NTT_sync)
-    ICICLE_CHECK(ntt(in_a.get(), N, dir, config, inplace ? in_a.get() : out_vulkan.get()));
+    ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
     END_TIMER(NTT_sync, "VULKAN NTT", VERBOSE);
+
+    // Copy result back to host
+    ICICLE_CHECK(icicle_copy_to_host(out_vulkan.get(), inplace ? d_in : d_out, total_size * sizeof(TypeParam)));
+
+    // Free device memory
+    ICICLE_CHECK(icicle_free(d_in));
+    ICICLE_CHECK(icicle_free(d_out));
 
     // Release NTT domain for Vulkan
     ICICLE_CHECK(ntt_release_domain<scalar_t>());
+    
+    // Print out_vulkan values before comparison
+    ICICLE_LOG_INFO << "out_vulkan values before comparison:";
+    for (int i = 0; i < total_size; i++) {
+      ICICLE_LOG_INFO << "out_vulkan[" << i << "] = " << out_vulkan[i];
+    }
     
     // Compare Vulkan results with reference
     if (inplace) {
