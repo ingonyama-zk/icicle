@@ -211,11 +211,29 @@ public:
     return ys.mul_wide(xs);
   }
 
+  template <unsigned MODULUS_MULTIPLE = 1>
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField reduce(const Wide& xs)
+  {
+    return ComplexExtensionField{
+      FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1)};
+  }
+
   template <class T2>
   friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const T2& ys)
   {
     Wide xy = xs.mul_wide(ys);
     return xy.reduce();
+  }
+
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const FF& ys)
+  {
+    Wide xy = xs.mul_wide(ys);
+    return xy.reduce();
+  }
+
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const FF& ys, const ComplexExtensionField& xs)
+  {
+    return xs * ys;
   }
 
   HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& ys) const { return (c0 == ys.c0) && (c1 == ys.c1); }
