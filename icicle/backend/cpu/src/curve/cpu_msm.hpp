@@ -25,7 +25,7 @@
 using namespace icicle;
 using namespace curve_config;
 
-#define NOF_FEATURES_C_TREE 3
+#define NOF_FEATURES_C_TREE      3
 #define FIXED_SCALAR_SIZE_C_TREE 254
 
 template <typename A, typename P>
@@ -117,10 +117,10 @@ public:
     else if (std::is_same_v<A, g2_affine_t>) {
       if (cpu_vendor == "Apple") {
         optimal_c = msm_c_tree_apple_g2.predict(features);
-      } else if (cpu_vendor == "AMD") {
-        optimal_c = msm_c_tree_amd_g2.predict(features);
-      } else { // Intel
+      } else if (cpu_vendor == "Intel") {
         optimal_c = msm_c_tree_intel_g2.predict(features);
+      } else { // AMD
+        optimal_c = msm_c_tree_amd_g2.predict(features);
       }
     }
 #endif
