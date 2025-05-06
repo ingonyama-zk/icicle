@@ -318,7 +318,7 @@ jobs:
             metal-skip-rust-field-specific: ""
             metal-skip-golang-field-specific: ""
           - name: goldilocks
-            build_args: -DEXT_FIELD=OFF
+            build_args: -DEXT_FIELD=ON
             metal-skip-cpp-field-specific: ""
             metal-skip-rust-field-specific: ""
             metal-skip-golang-field-specific: ""
