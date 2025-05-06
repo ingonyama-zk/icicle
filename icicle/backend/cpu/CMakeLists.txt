@@ -7,7 +7,7 @@ find_package(Taskflow 3.8.0 EXACT QUIET)
 if(Taskflow_FOUND)
   message(STATUS "Found Taskflow v${Taskflow_VERSION}, using existing installation.")
   # Use icicle_device as interface for TaskFlow headers
-  target_include_directories(icicle_device INTERFACE ${Taskflow_INCLUDE_DIRS})
+  target_link_libraries(icicle_device INTERFACE Taskflow::Taskflow)
 else()
   message(STATUS "Taskflow not found locally. Fetching Taskflow v3.8.0 (CPU backend)")
   include(FetchContent)
