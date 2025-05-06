@@ -104,13 +104,26 @@ public:
     double nof_cores = (double)nof_workers;
     double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, pcm};
     unsigned optimal_c;
-    if (cpu_vendor == "Apple") {
-      optimal_c = msm_c_tree_apple.predict(features);
-    } else if (cpu_vendor == "AMD") {
-      optimal_c = msm_c_tree_amd.predict(features);
-    } else { // Intel
-      optimal_c = msm_c_tree_intel.predict(features);
+    if (std::is_same_v<A, affine_t>) {
+      if (cpu_vendor == "Apple") {
+        optimal_c = msm_c_tree_apple.predict(features);
+      } else if (cpu_vendor == "AMD") {
+        optimal_c = msm_c_tree_amd.predict(features);
+      } else { // Intel
+        optimal_c = msm_c_tree_intel.predict(features);
+      }
     }
+#ifdef G2_ENABLED
+    else if (std::is_same_v<A, g2_affine_t>) {
+      if (cpu_vendor == "Apple") {
+        optimal_c = msm_c_tree_apple_g2.predict(features);
+      } else if (cpu_vendor == "AMD") {
+        //optimal_c = msm_c_tree_amd_g2.predict(features);
+      } else { // Intel
+        //optimal_c = msm_c_tree_intel_g2.predict(features);
+      }
+    }
+#endif
     return optimal_c;
   }
 
