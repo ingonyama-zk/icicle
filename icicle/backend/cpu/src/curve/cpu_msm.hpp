@@ -107,10 +107,10 @@ public:
     if (std::is_same_v<A, affine_t>) {
       if (cpu_vendor == "Apple") {
         optimal_c = msm_c_tree_apple.predict(features);
-      } else if (cpu_vendor == "AMD") {
-        optimal_c = msm_c_tree_amd.predict(features);
-      } else { // Intel
+      } else if (cpu_vendor == "Intel") {
         optimal_c = msm_c_tree_intel.predict(features);
+      } else { // AMD
+        optimal_c = msm_c_tree_amd.predict(features);
       }
     }
 #ifdef G2_ENABLED
