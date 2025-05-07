@@ -76,7 +76,7 @@ namespace icicle {
     {
       const std::byte* inst_arr = reinterpret_cast<const std::byte*>(&instruction);
       *m_variable_ptrs[(int)inst_arr[Program<S>::INST_RESULT]] =
-        S::inverse(*m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]]);
+        m_variable_ptrs[(int)inst_arr[Program<S>::INST_OPERAND1]]->inverse();
     }
 
     void exe_predef_ab_minus_c(const InstructionType instruction)

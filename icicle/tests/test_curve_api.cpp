@@ -72,8 +72,8 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -120,8 +120,8 @@ public:
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
     for (int res_idx = 0; res_idx < batch; ++res_idx) {
-      ASSERT_EQ(true, P::is_on_curve(result_main[res_idx]));
-      ASSERT_EQ(true, P::is_on_curve(result_ref[res_idx]));
+      ASSERT_EQ(true, result_main[res_idx].is_on_curve());
+      ASSERT_EQ(true, result_ref[res_idx].is_on_curve());
       ASSERT_EQ(result_main[res_idx], result_ref[res_idx]);
     }
   }
@@ -177,8 +177,8 @@ public:
       run(IcicleTestBase::reference_device(), result_single_thread.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
 
       for (int res_idx = 0; res_idx < batch; ++res_idx) {
-        ASSERT_EQ(true, P::is_on_curve(result_multi_thread[res_idx]));
-        ASSERT_EQ(true, P::is_on_curve(result_single_thread[res_idx]));
+        ASSERT_EQ(true, result_multi_thread[res_idx].is_on_curve());
+        ASSERT_EQ(true, result_single_thread[res_idx].is_on_curve());
         ASSERT_EQ(result_multi_thread[res_idx], result_single_thread[res_idx]);
       }
     }
@@ -277,7 +277,7 @@ TEST_F(CurveApiTest, ecntt)
 
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
-    ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
+    ASSERT_FALSE(out_ref[i].is_zero());
     ASSERT_EQ(out_ref[i], out_main[i]);
   }
 }
@@ -346,7 +346,7 @@ TEST_F(CurveApiTest, ecnttDeviceMem)
   run(IcicleTestBase::main_device(), out_main.get(), "ecntt", VERBOSE /*=measure*/, 1 /*=iters*/);
   // note that memcmp is tricky here because projetive points can have many representations
   for (uint64_t i = 0; i < N; ++i) {
-    ASSERT_FALSE(projective_t::is_zero(out_ref[i]));
+    ASSERT_FALSE(out_ref[i].is_zero());
     ASSERT_EQ(out_ref[i], out_main[i]);
   }
 }
@@ -372,14 +372,14 @@ TYPED_TEST(CurveSanity, CurveSanityTest)
 {
   auto a = TypeParam::rand_host();
   auto b = TypeParam::rand_host();
-  ASSERT_EQ(true, TypeParam::is_on_curve(a) && TypeParam::is_on_curve(b));               // rand is on curve
+  ASSERT_EQ(true, a.is_on_curve() && b.is_on_curve());                                   // rand is on curve
   ASSERT_EQ(a + TypeParam::zero(), a);                                                   // zero addition
   ASSERT_EQ(a + b - a, b);                                                               // addition,subtraction cancel
-  ASSERT_EQ(a + TypeParam::neg(a), TypeParam::zero());                                   // addition with neg cancel
+  ASSERT_EQ(a + a.neg(), TypeParam::zero());                                             // addition with neg cancel
   ASSERT_EQ(a + a + a, scalar_t::from(3) * a);                                           // scalar multiplication
   ASSERT_EQ(scalar_t::from(3) * (a + b), scalar_t::from(3) * a + scalar_t::from(3) * b); // distributive
-  ASSERT_EQ(a + b, a + TypeParam::to_affine(b)); // mixed addition projective+affine
-  ASSERT_EQ(a - b, a - TypeParam::to_affine(b)); // mixed subtraction projective-affine
+  ASSERT_EQ(a + b, a + b.to_affine()); // mixed addition projective+affine
+  ASSERT_EQ(a - b, a - b.to_affine()); // mixed subtraction projective-affine
 }
 
 #ifdef PAIRING
@@ -391,8 +391,8 @@ TEST(CurveSanity, TargetFieldSanityTest)
 {
   auto a = TargetField::rand_host();
   auto b = TargetField::rand_host();
-  auto b_inv = TargetField::inverse(b);
-  auto a_neg = TargetField::neg(a);
+  auto b_inv = b.inverse();
+  auto a_neg = a.neg();
 
   ASSERT_EQ(a + TargetField::zero(), a);
   ASSERT_EQ(a + b - a, b);
@@ -411,8 +411,8 @@ TEST(CurveSanity, PairingBilinearityTest)
     // Proper TargetField/ScalarField multiplication is not implemented yet, so we need a uint32_t coefficient
     uint32_t coeff = 42;
     scalar_t s = scalar_t::from(coeff);
-    affine_t ps = projective_t::to_affine(projective_t::from_affine(p) * s);
-    g2_affine_t qs = g2_projective_t::to_affine(g2_projective_t::from_affine(q) * s);
+    affine_t ps = (projective_t::from_affine(p) * s).to_affine();
+    g2_affine_t qs = (g2_projective_t::from_affine(q) * s).to_affine();
 
     TargetField f1, f2, f3, f4;
     pairing<PairingConfig>(ps, q, f1);
@@ -420,8 +420,8 @@ TEST(CurveSanity, PairingBilinearityTest)
     pairing<PairingConfig>(p, q, f3);
     pairing<PairingConfig>(ps, qs, f4);
 
-    ASSERT_EQ(f1, f2);                                  // e(ps, q) == e(p, qs)
-    ASSERT_EQ(TargetField::pow(f3, coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
+    ASSERT_EQ(f1, f2);                    // e(ps, q) == e(p, qs)
+    ASSERT_EQ(f3.pow(coeff * coeff), f4); // e(ps, qs) == e(p, q) ^ (s^2)
   }
 }
 
@@ -448,7 +448,7 @@ TYPED_TEST(CurveSanity, ScalarMultTest)
   auto expected_mult = TypeParam::zero();
   START_TIMER(ref)
   for (int i = 0; i < scalar_t::NBITS; i++) {
-    if (i > 0) { expected_mult = TypeParam::dbl(expected_mult); }
+    if (i > 0) { expected_mult = expected_mult.dbl(); }
     if (scalar.get_scalar_digit(scalar_t::NBITS - i - 1, 1)) { expected_mult = expected_mult + point; }
   }
   END_TIMER(ref, "scalar mult double-and-add", true);
