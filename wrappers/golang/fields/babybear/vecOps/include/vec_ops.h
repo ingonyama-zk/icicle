@@ -57,6 +57,13 @@ int babybear_vector_product(
   scalar_t* result
 );
 
+int babybear_vector_inv(
+  scalar_t* vec_in,
+  int n,
+  VecOpsConfig* config,
+  scalar_t* result
+);
+
 
 #ifdef __cplusplus
 }
