@@ -493,7 +493,7 @@ jobs:
         repository: ingonyama-zk/icicle-cuda-backend
         path: ./icicle/backend/cuda
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
     - name: Get CUDA Backend Commit SHA
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
       working-directory: ./icicle/backend/cuda
@@ -509,7 +509,7 @@ jobs:
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
         RING=${{ matrix.ring.name }}
         COMMIT_FILE="gh_commit_sha_${RING}_${CUDA_BACKEND_SHA}"
-        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/ring/$RING
           echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/ring/$RING" >> $GITHUB_OUTPUT
           COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
@@ -730,7 +730,7 @@ jobs:
         repository: ingonyama-zk/icicle-cuda-backend
         path: ./icicle/backend/cuda
         ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
     - name: Get CUDA Backend Commit SHA
       if: needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true' ||  needs.check-changed-files.outputs.rust == 'true'
       working-directory: ./icicle/backend/cuda
@@ -744,7 +744,7 @@ jobs:
       run: |
         CUDA_BACKEND_SHA=${{ steps.extract-cuda-sha.outputs.cuda-backend-sha }}
         COMMIT_FILE="gh_commit_sha_runtime_${CUDA_BACKEND_SHA}"
-        if [ "${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}" == "main" ]; then
+        if [ "${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" == "main" ]; then
           INSTALL_PATH=${{ github.workspace }}/../../main_lib/runtime
         else
           INSTALL_PATH=${{ github.workspace }}/../../temp_lib/runtime
