@@ -39,7 +39,7 @@ public:
     if constexpr (Gen::is_b_u32) { // assumes that 3b is also u32
       r = ModArith<Field<CONFIG>, CONFIG>::template mul_unsigned<b_mult.limbs_storage.limbs[0], Field>(xs);
       if constexpr (Gen::is_b_neg)
-        return ModArith<Field<CONFIG>, CONFIG>::template neg<>(r);
+        return r.neg();
       else {
         return r;
       }
@@ -51,15 +51,7 @@ public:
 
 template <class CONFIG>
 struct std::hash<Field<CONFIG>> {
-  std::size_t operator()(const Field<CONFIG>& key) const
-  {
-    std::size_t hash = 0;
-    // boost hashing, see
-    // https://stackoverflow.com/questions/35985960/c-why-is-boosthash-combine-the-best-way-to-combine-hash-values/35991300#35991300
-    for (int i = 0; i < CONFIG::limbs_count; i++)
-      hash ^= std::hash<uint32_t>()(key.limbs_storage.limbs[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    return hash;
-  }
+  std::size_t operator()(const Field<CONFIG>& key) const { return key.hash(); }
 };
 
 #ifdef __CUDACC__
