@@ -5,3 +5,4 @@ pub mod program;
 pub mod sumcheck;
 pub mod symbol;
 pub mod vec_ops;
+pub mod gate_ops;
