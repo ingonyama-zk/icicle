@@ -1,19 +1,19 @@
+use crate::field::PrimeField;
 use crate::hash::Hasher;
 use crate::program::{PreDefinedProgram, ReturningValueProgram};
 use crate::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use crate::traits::{FieldImpl, GenerateRandom};
+use crate::traits::GenerateRandom;
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 /// Tests the `SumcheckTranscriptConfig` struct with different constructors.
-
-pub fn check_sumcheck_transcript_config<F: FieldImpl>(hash: &Hasher)
+pub fn check_sumcheck_transcript_config<F: PrimeField>(hash: &Hasher)
 where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+    F: GenerateRandom,
 {
     // Generate a random seed for the test.
-    let seed_rng = F::Config::generate_random(1)[0];
+    let seed_rng = F::generate_random(1)[0];
 
     // Test `new` constructor
     let config1 = SumcheckTranscriptConfig::new(
@@ -54,13 +54,14 @@ where
 pub fn check_sumcheck_simple<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -74,11 +75,11 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = <<SW as Sumcheck>::Field as PrimeField>::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -125,21 +126,22 @@ where
 pub fn check_sumcheck_simple_device<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    SW::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
 
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = <<SW as Sumcheck>::Field as PrimeField>::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -210,13 +212,14 @@ where
 pub fn check_sumcheck_user_defined_combine<SW, P>(hash: &Hasher)
 where
     SW: Sumcheck,
+    <SW as Sumcheck>::Field: GenerateRandom,
     P: ReturningValueProgram,
 {
     let log_mle_poly_size = 13u64;
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = SW::Field::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -230,11 +233,11 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = SW::Field::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = SW::Field::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];
@@ -289,6 +292,7 @@ where
 pub fn check_sumcheck_proof_serialization<SW, P, S, D, T>(hash: &Hasher, serialize: S, deserialize: D)
 where
     SW: Sumcheck,
+    <SW as Sumcheck>::Field: GenerateRandom,
     P: ReturningValueProgram,
     SW::Proof: Serialize + DeserializeOwned,
     S: Fn(&SW::Proof) -> T,
@@ -298,7 +302,7 @@ where
     let mle_poly_size = 1 << log_mle_poly_size;
     let nof_mle_poly = 4;
     // Generate a random seed for the test.
-    let seed_rng = <<SW as Sumcheck>::FieldConfig>::generate_random(1)[0];
+    let seed_rng = <<SW as Sumcheck>::Field as GenerateRandom>::generate_random(1)[0];
 
     // Create a transcript configuration.
     let config = SumcheckTranscriptConfig::new(
@@ -312,11 +316,11 @@ where
 
     let mut mle_polys = Vec::with_capacity(nof_mle_poly);
     for _ in 0..nof_mle_poly {
-        let mle_poly_random = <<SW as Sumcheck>::FieldConfig>::generate_random(mle_poly_size);
+        let mle_poly_random = <<SW as Sumcheck>::Field as GenerateRandom>::generate_random(mle_poly_size);
         mle_polys.push(mle_poly_random);
     }
 
-    let mut claimed_sum = <<SW as Sumcheck>::Field as FieldImpl>::zero();
+    let mut claimed_sum = <<SW as Sumcheck>::Field as PrimeField>::zero();
     for i in 0..mle_poly_size {
         let a = mle_polys[0][i];
         let b = mle_polys[1][i];

@@ -1,24 +1,23 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::{hash::Hasher, traits::FieldImpl};
+use crate::{field::PrimeField, hash::Hasher};
 use icicle_runtime::errors::eIcicleError;
 
 /// Trait to define the behavior of a Poseidon hasher for different field types.
-/// This allows the implementation of Poseidon hashing for various field types that implement `FieldImpl`.
-pub trait PoseidonHasher<F: FieldImpl> {
+/// This allows the implementation of Poseidon hashing for various field types that implement `PrimeField`.
+pub trait PoseidonHasher: PrimeField {
     /// Method to create a new Poseidon hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>;
+    fn new(t: u32, domain_tag: Option<&Self>) -> Result<Hasher, eIcicleError>;
 }
 
 /// Function to create a Poseidon hasher for a specific field type and t (branching factor).
 /// Delegates the creation to the `new` method of the `PoseidonHasher` trait.
 pub fn create_poseidon_hasher<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: PoseidonHasher<F>, // Requires that the `Config` associated with `F` implements `PoseidonHasher`.
+    F: PrimeField + PoseidonHasher,
 {
-    <<F as FieldImpl>::Config as PoseidonHasher<F>>::new(t, domain_tag)
+    <F as PoseidonHasher>::new(t, domain_tag)
 }
 
 pub struct Poseidon;
@@ -26,8 +25,7 @@ pub struct Poseidon;
 impl Poseidon {
     pub fn new<F>(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>
     where
-        F: FieldImpl,                 // F must implement the FieldImpl trait
-        F::Config: PoseidonHasher<F>, // The Config associated with F must implement PoseidonHasher<F>
+        F: PrimeField + PoseidonHasher, // F must implement the PrimeField trait
     {
         create_poseidon_hasher::<F>(t, domain_tag)
     }
@@ -38,15 +36,14 @@ macro_rules! impl_poseidon {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_cfg:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use crate::poseidon::{$field, $field_cfg};
+            use crate::poseidon::$field;
             use icicle_core::{
+                field::PrimeField,
                 hash::{Hasher, HasherHandle},
                 poseidon::PoseidonHasher,
-                traits::FieldImpl,
             };
             use icicle_runtime::errors::eIcicleError;
             use std::marker::PhantomData;
@@ -57,7 +54,7 @@ macro_rules! impl_poseidon {
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
-            impl PoseidonHasher<$field> for $field_cfg {
+            impl PoseidonHasher for $field {
                 fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon_hasher(t, domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field))

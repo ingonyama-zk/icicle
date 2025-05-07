@@ -1,13 +1,17 @@
-use icicle_core::traits::FieldImpl;
+use icicle_core::field::PrimeField;
+use icicle_core::traits::GenerateRandom;
 use merlin::Transcript;
 
-pub trait TranscriptProtocol<F: FieldImpl> {
+pub trait TranscriptProtocol<F: PrimeField> {
     fn challenge_scalar(&mut self, label: &'static [u8]) -> F;
     /// Append a `scalar` with the given `label`.
     fn append_data(&mut self, label: &'static [u8], scalar: &F);
 }
 
-impl<F: FieldImpl> TranscriptProtocol<F> for Transcript {
+impl<F: PrimeField> TranscriptProtocol<F> for Transcript
+where
+    F: GenerateRandom,
+{
     fn challenge_scalar(&mut self, label: &'static [u8]) -> F {
         let mut buf = [0u8; 64];
         self.challenge_bytes(label, &mut buf);

@@ -1,12 +1,12 @@
 #[cfg(feature = "bw6-761")]
-use crate::curve::{BaseCfg, BaseField};
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::BaseField;
+use crate::curve::ScalarField;
 
 use icicle_core::impl_fri;
 
-impl_fri!("bls12_377", bls12_377_fri, ScalarField, ScalarCfg);
+impl_fri!("bls12_377", bls12_377_fri, ScalarField);
 #[cfg(feature = "bw6-761")]
-impl_fri!("bw6_761", bw6_761, BaseField, BaseCfg);
+impl_fri!("bw6_761", bw6_761, BaseField);
 
 #[cfg(test)]
 mod tests {

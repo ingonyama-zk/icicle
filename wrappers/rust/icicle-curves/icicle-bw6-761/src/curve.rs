@@ -1,17 +1,18 @@
-use icicle_bls12_377::curve::BaseField as bls12_377BaseField;
+use icicle_bls12_377::curve::BaseField as Bls12377BaseField;
 use icicle_core::{
     curve::{Affine, Curve, Projective},
-    field::Field,
+    field::PrimeField,
     impl_curve, impl_field,
-    traits::FieldConfig,
     vec_ops::VecOpsConfig,
 };
 use icicle_runtime::{eIcicleError, stream::IcicleStream};
+use std::fmt::{Debug, Display};
 
 pub(crate) const BASE_LIMBS: usize = 24;
 
-impl_field!("bw6_761_g2_base_field", BASE_LIMBS, BaseField, BaseCfg);
-pub type ScalarField = bls12_377BaseField;
+impl_field!(BaseField, "bw6_761_g2_base_field", BASE_LIMBS, false);
+
+pub type ScalarField = Bls12377BaseField;
 impl_curve!(
     "bw6_761",
     bw6_761,
@@ -36,10 +37,9 @@ impl_curve!(
 mod tests {
     #[cfg(not(feature = "no_g2"))]
     use super::G2CurveCfg;
-    use super::{CurveCfg, ScalarField, BASE_LIMBS};
+    use super::{CurveCfg, ScalarField};
     use icicle_core::curve::Curve;
     use icicle_core::tests::*;
-    use icicle_core::traits::FieldImpl;
     use icicle_core::{impl_curve_tests, impl_field_tests};
     use icicle_runtime::test_utilities;
 

@@ -1,7 +1,7 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("babybear", babybear, ScalarField, ScalarCfg);
+impl_sumcheck!("babybear", babybear, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

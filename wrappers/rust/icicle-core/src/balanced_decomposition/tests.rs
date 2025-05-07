@@ -1,22 +1,17 @@
-use crate::{
-    balanced_decomposition,
-    traits::{FieldImpl, GenerateRandom},
-    vec_ops::VecOpsConfig,
-};
+use crate::{balanced_decomposition, field::PrimeField, traits::GenerateRandom, vec_ops::VecOpsConfig};
 
 use icicle_runtime::memory::{DeviceVec, HostSlice};
 
 pub fn check_balanced_decomposition<F>()
 where
-    F: FieldImpl,
-    F::Config: balanced_decomposition::BalancedDecomposition<F> + GenerateRandom<F>,
+    F: PrimeField + balanced_decomposition::BalancedDecomposition + GenerateRandom,
 {
     let batch = 5;
     let size = 1 << 10;
     let total_size = batch * size;
     let bases = [2, 3, 4, 16, 77];
 
-    let input = F::Config::generate_random(total_size as usize); // vec![F::zero(); size];
+    let input = F::generate_random(total_size as usize); // vec![F::zero(); size];
     let mut recomposed = vec![F::zero(); total_size as usize];
 
     let mut cfg = VecOpsConfig::default();

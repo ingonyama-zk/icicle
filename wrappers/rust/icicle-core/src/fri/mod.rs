@@ -1,30 +1,28 @@
 pub mod fri_proof;
 pub mod fri_transcript_config;
 pub mod tests;
-use crate::traits::{FieldConfig, FieldImpl, GenerateRandom};
-use crate::{field::FieldArithmetic, hash::Hasher};
+use crate::hash::Hasher;
+use crate::traits::Arithmetic;
+use crate::{field::PrimeField, traits::GenerateRandom};
 use fri_proof::FriProofOps;
 use fri_transcript_config::FriTranscriptConfig;
 use icicle_runtime::{config::ConfigExtension, eIcicleError, memory::HostOrDeviceSlice, IcicleStreamHandle};
 
-pub type FriProof<F> = <<F as FieldImpl>::Config as FriMerkleTree<F>>::FriProof;
+pub type FriProof<F> = <F as FriMerkleTree>::FriProof;
 
 /// Computes the FRI proof using the given configuration and input data.
 /// # Returns
 /// - `Ok(())` if the FRI proof was successfully computed.
 /// - `Err(eIcicleError)` if an error occurred during proof generation.
-pub fn fri_merkle_tree_prove<F: FieldImpl>(
+pub fn fri_merkle_tree_prove<F: FriMerkleTree>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
     merkle_tree_min_layer_to_store: u64,
-) -> Result<FriProof<F>, eIcicleError>
-where
-    <F as FieldImpl>::Config: FriMerkleTree<F>,
-{
-    <F::Config as FriMerkleTree<F>>::fri_merkle_tree_prove(
+) -> Result<FriProof<F>, eIcicleError> {
+    F::fri_merkle_tree_prove(
         config,
         fri_transcript_config,
         input_data,
@@ -39,17 +37,14 @@ where
 /// - `Ok(true)` if the proof is valid.
 /// - `Ok(false)` if the proof is invalid.
 /// - `Err(eIcicleError)` if verification failed due to an error.
-pub fn fri_merkle_tree_verify<F: FieldImpl>(
+pub fn fri_merkle_tree_verify<F: FriMerkleTree>(
     config: &FriConfig,
     fri_transcript_config: &FriTranscriptConfig<F>,
     fri_proof: &FriProof<F>,
     merkle_tree_leaves_hash: &Hasher,
     merkle_tree_compress_hash: &Hasher,
-) -> Result<bool, eIcicleError>
-where
-    <F as FieldImpl>::Config: FriMerkleTree<F>,
-{
-    <F::Config as FriMerkleTree<F>>::fri_merkle_tree_verify(
+) -> Result<bool, eIcicleError> {
+    F::fri_merkle_tree_verify(
         config,
         fri_transcript_config,
         fri_proof,
@@ -87,13 +82,12 @@ impl Default for FriConfig {
     }
 }
 
-pub trait FriMerkleTree<F: FieldImpl> {
-    type FieldConfig: FieldConfig + GenerateRandom<F> + FieldArithmetic<F>;
-    type FriProof: FriProofOps<F>;
+pub trait FriMerkleTree: PrimeField + GenerateRandom + Arithmetic {
+    type FriProof: FriProofOps<Self>;
     fn fri_merkle_tree_prove(
         config: &FriConfig,
-        fri_transcript_config: &FriTranscriptConfig<F>,
-        input_data: &(impl HostOrDeviceSlice<F> + ?Sized),
+        fri_transcript_config: &FriTranscriptConfig<Self>,
+        input_data: &(impl HostOrDeviceSlice<Self> + ?Sized),
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
         merkle_tree_min_layer_to_store: u64,
@@ -101,7 +95,7 @@ pub trait FriMerkleTree<F: FieldImpl> {
 
     fn fri_merkle_tree_verify(
         config: &FriConfig,
-        fri_transcript_config: &FriTranscriptConfig<F>,
+        fri_transcript_config: &FriTranscriptConfig<Self>,
         fri_proof: &Self::FriProof,
         merkle_tree_leaves_hash: &Hasher,
         merkle_tree_compress_hash: &Hasher,
@@ -113,21 +107,19 @@ macro_rules! impl_fri {
     (
         $field_prefix:literal,
         $field_prefix_ident:ident,
-        $field:ident,
-        $field_config:ident
+        $field:ident
     ) => {
         mod $field_prefix_ident {
-            use super::{$field, $field_config};
+            use super::$field;
             use icicle_core::fri::fri_transcript_config::FriTranscriptConfig;
             use icicle_core::{
                 fri::{fri_transcript_config::FFIFriTranscriptConfig, FriConfig, FriMerkleTree},
                 hash::{Hasher, HasherHandle},
                 impl_fri_proof,
-                traits::FieldImpl,
             };
             use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
-            impl_fri_proof!($field_prefix, $field, $field_config);
+            impl_fri_proof!($field_prefix, $field);
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_fri_merkle_tree_prove")]
@@ -151,8 +143,7 @@ macro_rules! impl_fri {
                     valid: *mut bool,
                 ) -> eIcicleError;
             }
-            impl FriMerkleTree<$field> for $field_config {
-                type FieldConfig = $field_config;
+            impl FriMerkleTree for $field {
                 type FriProof = FriProof;
 
                 fn fri_merkle_tree_prove(

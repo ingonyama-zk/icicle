@@ -1,10 +1,10 @@
 #[doc(hidden)]
 pub mod tests;
 
-use crate::field::FieldArithmetic;
+use crate::field::PrimeField;
 use crate::hash::Hasher;
 use crate::program::ReturningValueProgram;
-use crate::traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom};
+use crate::traits::Arithmetic;
 use icicle_runtime::config::ConfigExtension;
 use icicle_runtime::stream::IcicleStreamHandle;
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
@@ -84,7 +84,7 @@ pub struct FFISumcheckTranscriptConfig<F> {
 
 impl<'a, F> From<&SumcheckTranscriptConfig<'a, F>> for FFISumcheckTranscriptConfig<F>
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     fn from(config: &SumcheckTranscriptConfig<'a, F>) -> Self {
         FFISumcheckTranscriptConfig {
@@ -147,8 +147,7 @@ impl Default for SumcheckConfig {
 
 /// Trait for Sumcheck operations, including proving and verification.
 pub trait Sumcheck {
-    type Field: FieldImpl + Arithmetic;
-    type FieldConfig: FieldConfig + GenerateRandom<Self::Field> + FieldArithmetic<Self::Field>;
+    type Field: PrimeField + Arithmetic;
     type Proof: SumcheckProofOps<Self::Field>;
 
     fn new() -> Result<Self, eIcicleError>
@@ -175,7 +174,7 @@ pub trait Sumcheck {
 
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialize + DeserializeOwned
 where
-    F: FieldImpl,
+    F: PrimeField,
 {
     fn get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
     fn print(&self) -> eIcicleError;
@@ -184,13 +183,13 @@ where
 /// Macro to implement Sumcheck functionality for a specific field.
 #[macro_export]
 macro_rules! impl_sumcheck {
-    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
+    ($field_prefix:literal, $field_prefix_ident:ident, $field:ident) => {
         use crate::symbol::$field_prefix_ident::FieldSymbol;
         use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
         use icicle_core::sumcheck::{
             FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
         };
-        use icicle_core::traits::{FieldImpl, Handle};
+        use icicle_core::traits::Handle;
         use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
         use serde::de::{self, Visitor};
         use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -276,7 +275,6 @@ macro_rules! impl_sumcheck {
 
         impl Sumcheck for SumcheckWrapper {
             type Field = $field;
-            type FieldConfig = $field_cfg;
             type Proof = SumcheckProof;
 
             fn new() -> Result<Self, eIcicleError> {

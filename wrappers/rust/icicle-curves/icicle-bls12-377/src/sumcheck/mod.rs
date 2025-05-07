@@ -1,7 +1,7 @@
-use crate::curve::{ScalarCfg, ScalarField};
+use crate::curve::ScalarField;
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("bls12_377", bls12_377, ScalarField, ScalarCfg);
+impl_sumcheck!("bls12_377", bls12_377, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

@@ -1,7 +1,7 @@
-use crate::field::{ScalarCfg, ScalarField};
+use crate::field::ScalarField;
 use icicle_core::impl_sumcheck;
 
-impl_sumcheck!("goldilocks", goldilocks, ScalarField, ScalarCfg);
+impl_sumcheck!("goldilocks", goldilocks, ScalarField);
 
 #[cfg(test)]
 pub(crate) mod tests {

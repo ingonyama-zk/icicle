@@ -1,13 +1,13 @@
 use crate::{
     curve::{Affine, Curve},
-    traits::FieldImpl,
+    field::PrimeField,
 };
 use icicle_runtime::errors::eIcicleError;
 
 #[doc(hidden)]
 pub mod tests;
 
-pub trait Pairing<C1: Curve, C2: Curve, F: FieldImpl> {
+pub trait Pairing<C1: Curve, C2: Curve, F: PrimeField> {
     fn pairing(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, eIcicleError>;
 }
 
@@ -15,7 +15,7 @@ pub fn pairing<C1, C2, F>(p: &Affine<C1>, q: &Affine<C2>) -> Result<F, eIcicleEr
 where
     C1: Curve,
     C2: Curve,
-    F: FieldImpl,
+    F: PrimeField,
     C1: Pairing<C1, C2, F>,
 {
     C1::pairing(p, q)

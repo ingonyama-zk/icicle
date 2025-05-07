@@ -1,4 +1,5 @@
-use crate::traits::{FieldImpl, Handle};
+use crate::field::PrimeField;
+use crate::traits::Handle;
 use icicle_runtime::errors::eIcicleError;
 use std::ffi::c_void;
 use std::marker::Copy;
@@ -6,7 +7,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 pub type SymbolHandle = *const c_void;
 #[doc(hidden)]
-pub trait Symbol<F: FieldImpl>:
+pub trait Symbol<F: PrimeField>:
     Add<Output = Self>
     + Sub<Output = Self>
     + Mul<Output = Self>
@@ -41,8 +42,7 @@ macro_rules! impl_symbol_field {
   (
     $field_prefix:literal,
     $field_prefix_ident:ident,
-    $field:ident,
-    $field_config:ident
+    $field:ident
   ) => {
     pub mod $field_prefix_ident {
       use crate::symbol::$field;
