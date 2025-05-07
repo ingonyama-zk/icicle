@@ -40,7 +40,7 @@ function(check_ring RING RING_INDEX_OUT FEATURES_STRING_OUT)
 endfunction()
 
 function(setup_ring_target RING RING_INDEX FEATURES_STRING)
-  add_library(icicle_ring SHARED)
+  add_library(icicle_ring STATIC)
 
   # Split FEATURES_STRING into a list using "," as the separator
   string(REPLACE "," ";" FEATURES_LIST ${FEATURES_STRING})
