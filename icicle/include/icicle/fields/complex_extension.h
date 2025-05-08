@@ -218,11 +218,22 @@ public:
       FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1)};
   }
 
-  template <class T2>
-  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const T2& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField
+  operator*(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     Wide xy = mul_wide(xs, ys);
     return reduce(xy);
+  }
+
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const FF& ys)
+  {
+    Wide xy = mul_wide(xs, ys);
+    return reduce(xy);
+  }
+
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const FF& ys, const ComplexExtensionField& xs)
+  {
+    return xs * ys;
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
