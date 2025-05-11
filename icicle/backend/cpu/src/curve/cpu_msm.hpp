@@ -13,11 +13,21 @@
 #include "icicle/curves/projective.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
-#include "cpu_msm_tree.hpp"
 #include "icicle/decision_tree.h"
 #include "taskflow/taskflow.hpp"
 #include "icicle/backend/msm_config.h"
 #include "icicle/utils/platform.h"
+
+#include "decision tree params/msm_nof_cores_tree_params.h"
+#include "decision tree params/msm_c_tree_amd_params.h"
+#include "decision tree params/msm_c_tree_intel_params.h"
+#include "decision tree params/msm_c_tree_apple_params.h"
+#ifdef G2_ENABLED
+  #include "decision tree params/msm_c_tree_intel_params_g2.h"
+  #include "decision tree params/msm_c_tree_amd_params_g2.h"
+  #include "decision tree params/msm_c_tree_apple_params_g2.h"
+#endif
+
 #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
 #endif
@@ -82,7 +92,10 @@ public:
     double pcm = (double)precompute_factor;
     double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
     double features[NOF_FEATURES_CORES_TREE] = {msm_log_size, pcm};
-    unsigned nof_workers = msm_nof_cores_tree.predict(features);
+    DecisionTree nof_cores_tree = DecisionTree(
+      NOF_FEATURES_CORES_TREE, thresholds_cores_tree, indices_cores_tree, left_childs_cores_tree,
+      right_childs_cores_tree, class_predictions_cores_tree);
+    unsigned nof_workers = nof_cores_tree.predict(features);
     return std::min(nof_cores, nof_workers);
   }
 
@@ -106,21 +119,39 @@ public:
     unsigned optimal_c;
     if (std::is_same_v<A, affine_t>) {
       if (cpu_vendor == "Apple") {
-        optimal_c = msm_c_tree_apple.predict(features);
+        DecisionTree apple_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_APPLE, thresholds_c_tree_apple, indices_c_tree_apple, left_childs_c_tree_apple,
+          right_childs_c_tree_apple, class_predictions_c_tree_apple);
+        optimal_c = apple_tree.predict(features);
       } else if (cpu_vendor == "Intel") {
-        optimal_c = msm_c_tree_intel.predict(features);
+        DecisionTree intel_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_INTEL, thresholds_c_tree_intel, indices_c_tree_intel, left_childs_c_tree_intel,
+          right_childs_c_tree_intel, class_predictions_c_tree_intel);
+        optimal_c = intel_tree.predict(features);
       } else { // AMD
-        optimal_c = msm_c_tree_amd.predict(features);
+        DecisionTree amd_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_AMD, thresholds_c_tree_amd, indices_c_tree_amd, left_childs_c_tree_amd,
+          right_childs_c_tree_amd, class_predictions_c_tree_amd);
+        optimal_c = amd_tree.predict(features);
       }
     }
 #ifdef G2_ENABLED
     else if (std::is_same_v<A, g2_affine_t>) {
       if (cpu_vendor == "Apple") {
-        optimal_c = msm_c_tree_apple_g2.predict(features);
+        DecisionTree apple_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_APPLE_G2, thresholds_c_tree_apple_g2, indices_c_tree_apple_g2,
+          left_childs_c_tree_apple_g2, right_childs_c_tree_apple_g2, class_predictions_c_tree_apple_g2);
+        optimal_c = apple_tree.predict(features);
       } else if (cpu_vendor == "Intel") {
-        optimal_c = msm_c_tree_intel_g2.predict(features);
+        DecisionTree intel_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_INTEL_G2, thresholds_c_tree_intel_g2, indices_c_tree_intel_g2,
+          left_childs_c_tree_intel_g2, right_childs_c_tree_intel_g2, class_predictions_c_tree_intel_g2);
+        optimal_c = intel_tree.predict(features);
       } else { // AMD
-        optimal_c = msm_c_tree_amd_g2.predict(features);
+        DecisionTree amd_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_AMD_G2, thresholds_c_tree_amd_g2, indices_c_tree_amd_g2, left_childs_c_tree_amd_g2,
+          right_childs_c_tree_amd_g2, class_predictions_c_tree_amd_g2);
+        optimal_c = amd_tree.predict(features);
       }
     }
 #endif

@@ -1,6 +1,5 @@
 #pragma once
 
-template <int NofClasses>
 class DecisionTree
 {
 public:
@@ -11,10 +10,9 @@ public:
     const int* indices,
     const int* left_childs,
     const int* right_childs,
-    const int (*class_predictions)[NofClasses],
-    const int* classes)
+    const int* class_predictions)
       : m_nof_features(nof_features), m_thresholds(thresholds), m_indices(indices), m_left_childs(left_childs),
-        m_right_childs(right_childs), m_class_predictions(class_predictions), m_classes(classes)
+        m_right_childs(right_childs), m_class_predictions(class_predictions)
   {
   }
 
@@ -33,16 +31,7 @@ private:
   const int* const m_indices;
   const int* const m_left_childs;
   const int* const m_right_childs;
-  const int (*const m_class_predictions)[NofClasses];
-  const int* const m_classes;
-  int find_max(const int* nums)
-  {
-    int index = 0;
-    for (int i = 0; i < NofClasses; i++) {
-      index = nums[i] > nums[index] ? i : index;
-    }
-    return index;
-  }
+  const int* const m_class_predictions;
 
   int predict(double* features, int node)
   {
@@ -53,7 +42,6 @@ private:
         return predict(features, m_right_childs[node]);
       }
     }
-    int class_idx = find_max(m_class_predictions[node]);
-    return m_classes[class_idx];
+    return m_class_predictions[node];
   }
 };
