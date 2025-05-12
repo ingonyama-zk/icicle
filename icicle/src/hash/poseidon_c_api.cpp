@@ -10,8 +10,8 @@ using namespace icicle;
 extern "C" {
 typedef icicle::Hash* HasherHandle;
 
-HasherHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, create_poseidon_hasher)(unsigned t, const scalar_t* domain_tag)
+HasherHandle CONCAT_EXPAND(ICICLE_FFI_PREFIX, create_poseidon_hasher)(unsigned t, const scalar_t* domain_tag, unsigned input_size)
 {
-  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(t, domain_tag));
+  return new icicle::Hash(icicle::create_poseidon_hash<scalar_t>(t, domain_tag, input_size));
 }
 }

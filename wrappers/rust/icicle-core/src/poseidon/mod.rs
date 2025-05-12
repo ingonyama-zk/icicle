@@ -9,6 +9,7 @@ use icicle_runtime::errors::eIcicleError;
 pub trait PoseidonHasher<F: FieldImpl> {
     /// Method to create a new Poseidon hasher for a given t (branching factor).
     fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>;
+    fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>;
 }
 
 /// Function to create a Poseidon hasher for a specific field type and t (branching factor).
@@ -30,6 +31,14 @@ impl Poseidon {
         F::Config: PoseidonHasher<F>, // The Config associated with F must implement PoseidonHasher<F>
     {
         create_poseidon_hasher::<F>(t, domain_tag)
+    }
+
+    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
+    where
+        F: FieldImpl,
+        F::Config: PoseidonHasher<F>,
+    {
+        <<F as FieldImpl>::Config as PoseidonHasher<F>>::new_with_input_size(t, domain_tag, input_size)
     }
 }
 
@@ -53,19 +62,36 @@ macro_rules! impl_poseidon {
 
             extern "C" {
                 #[link_name = concat!($field_prefix, "_create_poseidon_hasher")]
-                fn create_poseidon_hasher(t: u32, domain_tag: *const $field) -> HasherHandle;
+                fn create_poseidon_hasher(t: u32, domain_tag: *const $field, input_size: u32) -> HasherHandle;
             }
 
             // Implement the `PoseidonHasher` trait for the given field configuration.
             impl PoseidonHasher<$field> for $field_cfg {
                 fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
-                        create_poseidon_hasher(t, domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field))
+                        create_poseidon_hasher(
+                            t,
+                            domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field),
+                            0,
+                        )
                     }; // Calls the external FFI function to create the hasher.
                     if handle.is_null() {
                         return Err(eIcicleError::UnknownError); // Checks if the handle is null and returns an error if so.
                     }
                     Ok(Hasher::from_handle(handle)) // Wraps the handle in a `Hasher` object and returns it.
+                }
+                fn new_with_input_size(t: u32, domain_tag: Option<&$field>, input_size: u32) -> Result<Hasher, eIcicleError> {
+                    let handle: HasherHandle = unsafe {
+                        create_poseidon_hasher(
+                            t,
+                            domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field),
+                            input_size,
+                        )
+                    };
+                    if handle.is_null() {
+                        return Err(eIcicleError::UnknownError);
+                    }
+                    Ok(Hasher::from_handle(handle))
                 }
             }
         }

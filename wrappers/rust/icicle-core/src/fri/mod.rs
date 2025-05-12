@@ -306,8 +306,7 @@ macro_rules! impl_fri_test_with_poseidon {
             use icicle_core::poseidon2::Poseidon2;
             use icicle_core::traits::FieldImpl;
             initialize();
-            let merkle_tree_leaves_hash = Poseidon2::new::<$field>(2, None).unwrap();
-            // let merkle_tree_leaves_hash = Poseidon2::new::<$field>(2, Some(&$field::zero())).unwrap();
+            let merkle_tree_leaves_hash = Poseidon2::new_with_input_size::<$field>(3, None, 1).unwrap();
             let merkle_tree_compress_hash = Poseidon2::new::<$field>(2, None).unwrap();
             let transcript_hash = Keccak256::new(0).unwrap();
             check_fri::<$field>(
@@ -322,8 +321,8 @@ macro_rules! impl_fri_test_with_poseidon {
             use icicle_core::poseidon::Poseidon;
             use icicle_core::traits::FieldImpl;
             initialize();
-            let merkle_tree_leaves_hash = Poseidon::new::<$field>(3, None).unwrap();
-            let merkle_tree_compress_hash = Poseidon::new::<$field>(3, Some(&$field::zero())).unwrap();
+            let merkle_tree_leaves_hash = Poseidon::new_with_input_size::<$field>(3, None, 1).unwrap();
+            let merkle_tree_compress_hash = Poseidon::new_with_input_size::<$field>(5, None, 2).unwrap();
             let transcript_hash = Keccak256::new(0).unwrap();
             check_fri::<$field>(
                 &merkle_tree_leaves_hash,

@@ -34,6 +34,14 @@ impl Poseidon2 {
     {
         create_poseidon2_hasher::<F>(t, domain_tag)
     }
+
+    pub fn new_with_input_size<F>(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>
+    where
+        F: FieldImpl,                  // F must implement the FieldImpl trait
+        F::Config: Poseidon2Hasher<F>, // The Config associated with F must implement Poseidon2Hasher<F>
+    {
+        <<F as FieldImpl>::Config as Poseidon2Hasher<F>>::new_with_input_size(t, domain_tag, input_size)
+    }
 }
 
 #[macro_export]

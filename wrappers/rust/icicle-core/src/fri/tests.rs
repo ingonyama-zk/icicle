@@ -20,10 +20,7 @@ pub fn check_fri<F: FieldImpl>(
     let check = || {
         const SIZE: u64 = 1 << 10;
         let fri_config = FriConfig::default();
-        let mut scalars = F::Config::generate_random(SIZE as usize);
-        for i in 0usize..SIZE as usize {
-            scalars[i] = F::one();
-        }
+        let scalars = F::Config::generate_random(SIZE as usize);
 
         let transcript_config = FriTranscriptConfig::new_default_labels(&transcript_hash, F::one());
 
