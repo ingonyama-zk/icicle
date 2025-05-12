@@ -47,7 +47,7 @@ namespace icicle {
   // calling.
 
   using CreatePoseidon2Impl = std::function<eIcicleError(
-    const Device& device, unsigned t, const scalar_t* domain_tag, std::shared_ptr<HashBackend>& /*OUT*/)>;
+    const Device& device, unsigned t, const scalar_t* domain_tag, unsigned input_size, std::shared_ptr<HashBackend>& /*OUT*/)>;
 
   // poseidon2 init constants
   void register_create_poseidon2(const std::string& deviceType, CreatePoseidon2Impl impl);
