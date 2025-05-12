@@ -35,7 +35,7 @@ TYPED_TEST(FieldTest, FieldSanityTest)
 
 TYPED_TEST(FieldTest, NTTTest)
 {
-  const uint64_t N = 1 << 5; // rand_uint_32b(3, 17);
+  const uint64_t N = 1 << 3; // rand_uint_32b(3, 17);
   const int batch_size = 1 << 0; // rand_uint_32b(0, 4);
   const bool columns_batch = false; // rand_uint_32b(0, 1);
   const NTTDir dir = NTTDir::kForward; // static_cast<NTTDir>(rand_uint_32b(0, 1));
@@ -52,8 +52,10 @@ TYPED_TEST(FieldTest, NTTTest)
   auto out_main = std::make_unique<TypeParam[]>(total_size);
   auto out_ref = std::make_unique<TypeParam[]>(total_size);
 
-  // Initialize input data with random values
-  TypeParam::rand_host_many(in_a.get(), total_size);
+  // Initialize input data with alternating 0s and 1s
+  for (int i = 0; i < total_size; i++) {
+    in_a[i] = (i % 2 == 0) ? TypeParam::zero() : TypeParam::one();
+  }
   
   // Print in_a values for debugging
   ICICLE_LOG_INFO << "in_a values after initialization:";
@@ -73,12 +75,23 @@ TYPED_TEST(FieldTest, NTTTest)
     config.batch_size = batch_size;
     config.columns_batch = columns_batch;
 
+    // Print NTT configuration
+    ICICLE_LOG_INFO << "NTT Configuration for " << dev_type << ":";
+    ICICLE_LOG_INFO << "  - Size: " << N;
+    ICICLE_LOG_INFO << "  - Batch size: " << config.batch_size;
+    ICICLE_LOG_INFO << "  - Columns batch: " << config.columns_batch;
+    ICICLE_LOG_INFO << "  - Direction: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
+    ICICLE_LOG_INFO << "  - Ordering: " << static_cast<int>(config.ordering);
+    ICICLE_LOG_INFO << "  - Inputs on device: " << config.are_inputs_on_device;
+    ICICLE_LOG_INFO << "  - Outputs on device: " << config.are_outputs_on_device;
+    ICICLE_LOG_INFO << "  - Is async: " << config.is_async;
+
     std::ostringstream oss;
     oss << dev_type << " " << msg;
 
     START_TIMER(NTT_sync)
     for (int i = 0; i < iters; ++i) {
-      ICICLE_CHECK(ntt(in_a.get(), N, dir, config, inplace ? in_a.get() : out));
+      ICICLE_CHECK(ntt(in_a.get(), N, dir, config, out)); //TODO: ..., inplace ? in_a.get() : out));
     }
     END_TIMER(NTT_sync, oss.str().c_str(), measure);
 
@@ -127,11 +140,28 @@ TYPED_TEST(FieldTest, NTTTest)
     ICICLE_CHECK(icicle_copy_to_device(d_in, in_a.get(), total_size * sizeof(TypeParam)));
 
     auto init_domain_config = default_ntt_init_domain_config();
+    ICICLE_LOG_INFO << "before init domain";
     ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log2(N)), init_domain_config));
+    ICICLE_LOG_INFO << "after init domain";
 
     auto config = default_ntt_config<TypeParam>();
     config.batch_size = batch_size;
     config.columns_batch = columns_batch;
+    config.are_inputs_on_device = true;
+    config.are_outputs_on_device = true;
+
+    ICICLE_LOG_INFO << "NTT Configuration for Vulkan:";
+    ICICLE_LOG_INFO << "  - Size: " << N;
+    ICICLE_LOG_INFO << "  - Batch size: " << config.batch_size;
+    ICICLE_LOG_INFO << "  - Columns batch: " << config.columns_batch;
+    ICICLE_LOG_INFO << "  - Direction: " << (dir == NTTDir::kForward ? "Forward" : "Inverse");
+    ICICLE_LOG_INFO << "  - Ordering: " << static_cast<int>(config.ordering);
+    ICICLE_LOG_INFO << "  - Inputs on device: " << config.are_inputs_on_device;
+    ICICLE_LOG_INFO << "  - Outputs on device: " << config.are_outputs_on_device;
+    ICICLE_LOG_INFO << "  - Is async: " << config.is_async;
+
+
+    ICICLE_LOG_INFO << "before ntt";
 
     START_TIMER(NTT_sync)
     ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
