@@ -19,7 +19,7 @@ func NewHasher(t uint64, domainTag *m31.ScalarField) (hash.Hasher, runtime.EIcic
 		cDomainTag = (*C.scalar_t)(unsafe.Pointer(domainTag.AsPointer()))
 	}
 
-	handle := C.m31_create_poseidon_hasher(cT, cDomainTag)
+	handle := C.m31_create_poseidon_hasher(cT, cDomainTag, 0)
 
 	if handle == nil {
 		return hash.Hasher{}, runtime.UnknownError
