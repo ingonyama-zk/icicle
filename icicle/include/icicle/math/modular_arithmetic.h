@@ -517,24 +517,19 @@ public:
     return mult * xs;
   }
 
- 
   template <uint32_t multiplier, class T, unsigned REDUCTION_SIZE = 1>
   static constexpr HOST_DEVICE_INLINE T mul_unsigned(const T& xs)
   {
     T rs = {};
     T temp = xs;
-  #ifdef __CUDA_ARCH__
+#ifdef __CUDA_ARCH__
     UNROLL
-  #else
+#else
   #pragma unroll
-  #endif
+#endif
     for (unsigned i = 0; i < 32; i++) {
-      if ((multiplier >> i) == 0) {
-        break;
-      }
-      if ((multiplier >> i) & 1) {
-        rs = rs + temp;
-      }
+      if ((multiplier >> i) == 0) { break; }
+      if ((multiplier >> i) & 1) { rs = rs + temp; }
       temp = temp + temp;
     }
     return rs;

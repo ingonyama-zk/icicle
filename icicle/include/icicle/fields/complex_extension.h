@@ -191,13 +191,6 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
-    // FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
-    // FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
-    // FWide prod_of_sums = FF::mul_wide(xs.c0 + xs.c1, ys.c0 + ys.c1);
-    // FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    // nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    // return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
-    
     FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
     FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
     FWide ab = FF::mul_wide(xs.c0, ys.c1);
@@ -205,12 +198,6 @@ public:
     FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
     nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
     return Wide{real_prod + nonresidue_times_im, ab + ba};
-
-    // FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
-    // FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
-    // FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    // nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    // return Wide{real_prod, nonresidue_times_im};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
