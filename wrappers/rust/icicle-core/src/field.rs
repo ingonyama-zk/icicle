@@ -95,9 +95,9 @@ impl<const NUM_LIMBS: usize, F: FieldConfig> FieldImpl for Field<NUM_LIMBS, F> {
     }
 
     fn from_u32(val: u32) -> Self {
-        let mut limbs = [0u32; NUM_LIMBS];
-        limbs[0] = val;
-        Field { limbs, p: PhantomData }
+        // Convert the given u32 into an array of limbs using FieldConfig,
+        // then construct the Field instance from the resulting limb representation.
+        Self::from(F::from_u32(val))
     }
 }
 
@@ -183,6 +183,7 @@ where
 #[macro_export]
 macro_rules! impl_field {
     (
+        $field_prefix:literal,
         $num_limbs:ident,
         $field_name:ident,
         $field_cfg:ident
@@ -191,7 +192,25 @@ macro_rules! impl_field {
         #[derive(Debug, PartialEq, Copy, Clone)]
         pub struct $field_cfg {}
 
-        impl FieldConfig for $field_cfg {}
+        impl FieldConfig for $field_cfg {
+            fn from_u32<const NUM_LIMBS: usize>(val: u32) -> [u32; NUM_LIMBS] {
+                extern "C" {
+                    #[link_name = concat!($field_prefix, "_from_u32")]
+                    pub(crate) fn from_u32(val: u32, result: *mut $field_name);
+                }
+
+                let mut limbs = [0u32; NUM_LIMBS];
+
+                unsafe {
+                    // Convert `val` into field representation using an external FFI call.
+                    // Casting `limbs` ensures compatibility without tightly coupling `FieldConfig` and `Field`.
+                    from_u32(val, limbs.as_mut_ptr() as *mut $field_name);
+                }
+
+                limbs
+            }
+        }
+
         pub type $field_name = Field<$num_limbs, $field_cfg>;
     };
 }
@@ -205,7 +224,7 @@ macro_rules! impl_scalar_field {
         $field_name:ident,
         $field_cfg:ident
     ) => {
-        impl_field!($num_limbs, $field_name, $field_cfg);
+        impl_field!($field_prefix, $num_limbs, $field_name, $field_cfg);
 
         mod $field_prefix_ident {
             use super::{$field_name, HostOrDeviceSlice};
@@ -399,12 +418,6 @@ macro_rules! impl_field_tests {
             fn test_field_convert_montgomery() {
                 initialize();
                 check_field_convert_montgomery::<$field_name>()
-            }
-
-            #[test]
-            fn test_field_equality() {
-                initialize();
-                check_field_equality::<$field_name>()
             }
 
             #[test]

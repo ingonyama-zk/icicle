@@ -11,8 +11,9 @@ pub trait GenerateRandom<F> {
 }
 
 #[doc(hidden)]
-pub trait FieldConfig: Debug + PartialEq + Copy + Clone {}
-
+pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
+    fn from_u32<const NUM_LIMBS: usize>(val: u32) -> [u32; NUM_LIMBS];
+}
 pub trait FieldImpl:
     Display + Debug + PartialEq + Copy + Clone + Into<Self::Repr> + From<Self::Repr> + Send + Sync
 {

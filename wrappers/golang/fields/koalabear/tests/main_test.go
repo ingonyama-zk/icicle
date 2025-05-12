@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	koalabear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/koalabear/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
@@ -19,8 +18,7 @@ const (
 )
 
 func initDomain(cfg core.NTTInitDomainConfig) runtime.EIcicleError {
-	rouIcicle := koalabear.ScalarField{}
-	rouIcicle.FromUint32(1791270792)
+	rouIcicle := ntt.GetRootOfUnity(uint64(1 << largestTestSize))
 	e := ntt.InitDomain(rouIcicle, cfg)
 	return e
 }
@@ -38,7 +36,7 @@ func testWrapper(suite *suite.Suite, fn func(*suite.Suite)) func() {
 }
 
 func TestMain(m *testing.M) {
-	runtime.LoadBackendFromEnvOrDefault()
+	test_helpers.LOAD_AND_INIT_MAIN_DEVICE()
 	devices, e := runtime.GetRegisteredDevices()
 	if e != runtime.Success {
 		panic("Failed to load registered devices")

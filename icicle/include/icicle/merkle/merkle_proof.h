@@ -7,7 +7,6 @@
 #include <stdexcept>
 #include <utility> // For std::pair
 #include "icicle/runtime.h"
-
 namespace icicle {
 
   /**
@@ -21,6 +20,52 @@ namespace icicle {
   {
   public:
     explicit MerkleProof() = default;
+    MerkleProof(const MerkleProof&) = default;
+    MerkleProof& operator=(const MerkleProof&) = default;
+
+    /**
+     * @brief Constructs a MerkleProof with specified leaf, root, and path data.
+     *
+     * This constructor initializes the Merkle proof by setting the pruned status, leaf index,
+     * and moving the provided leaf, root, and path data into the respective member variables.
+     * Default values are used for pruned_path and leaf_idx if not provided.
+     *
+     * @param pruned_path Whether the Merkle path is pruned. Defaults to false.
+     * @param leaf_idx The index of the leaf for which this is a proof. Defaults to 0.
+     * @param leaf Vector containing the leaf data as bytes.
+     * @param root Vector containing the root data as bytes.
+     * @param path Vector containing the path data as bytes.
+     */
+    MerkleProof(
+      bool pruned_path,
+      int64_t leaf_idx,
+      std::vector<std::byte> leaf,
+      std::vector<std::byte> root,
+      std::vector<std::byte> path)
+        : m_pruned(pruned_path), m_leaf_index(leaf_idx), m_leaf(std::move(leaf)), m_root(std::move(root)),
+          m_path(std::move(path))
+    {
+    }
+
+    // Move constructor
+    MerkleProof(MerkleProof&& other) noexcept
+        : m_pruned(other.m_pruned), m_leaf_index(other.m_leaf_index), m_leaf(std::move(other.m_leaf)),
+          m_root(std::move(other.m_root)), m_path(std::move(other.m_path))
+    {
+    }
+
+    // Move assignment operator
+    MerkleProof& operator=(MerkleProof&& other) noexcept
+    {
+      if (this != &other) {
+        m_pruned = other.m_pruned;
+        m_leaf_index = other.m_leaf_index;
+        m_leaf = std::move(other.m_leaf);
+        m_root = std::move(other.m_root);
+        m_path = std::move(other.m_path);
+      }
+      return *this;
+    }
 
     /**
      * @brief Allocates memory for the Merkle proof and copies the leaf and root data.

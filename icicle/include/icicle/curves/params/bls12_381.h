@@ -4,6 +4,7 @@
 #include "icicle/fields/snark_fields/bls12_381_base.h"
 #include "icicle/fields/snark_fields/bls12_381_scalar.h"
 #include "icicle/fields/complex_extension.h"
+#include "icicle/fields/cubic_extension.h"
 
 namespace bls12_381 {
   struct G1;
@@ -60,5 +61,4 @@ namespace bls12_381 {
     static constexpr g2_point_field_t gen_y = {g2_gen_y_re, g2_gen_y_im};
     static constexpr g2_point_field_t weierstrass_b = {weierstrass_b_g2_re, weierstrass_b_g2_im};
   };
-
 } // namespace bls12_381

@@ -36,7 +36,12 @@ const architectureDropdown = [
   {
     type: "doc",
     label: "CUDA Backend",
-    id: "icicle/install_cuda_backend"
+    id: "icicle/install_gpu_backend"
+  },
+   {
+    type: "doc",
+    label: "METAL Backend",
+    id: "icicle/install_gpu_backend"
   },
   {
     type: "doc",
@@ -91,6 +96,21 @@ const cppApi = [
     label: "Sumcheck",
     id: "icicle/primitives/sumcheck",
   },
+  {
+    type: "doc",
+    label: "FRI",
+    id: "icicle/primitives/fri",
+  },
+  {
+    type: "doc",
+    label: "Pairings",
+    id: "icicle/primitives/pairings",
+  },
+  {
+    type: "doc",
+    label: "Serialization",
+    id: "icicle/primitives/serialization",
+  }
 ];
 
 const golangBindingsApi = [
@@ -165,6 +185,11 @@ const rustBindingsApi = [
   },
   {
     type: "doc",
+    label: "Program",
+    id: "icicle/rust-bindings/program", 
+  },
+  {
+    type: "doc",
     label: "Polynomials",
     id: "icicle/rust-bindings/polynomials",
   },
@@ -182,7 +207,17 @@ const rustBindingsApi = [
     "type": "doc",
     "label": "Sumcheck",
     "id": "icicle/rust-bindings/sumcheck"
-  }
+  },
+  {
+    "type": "doc",
+    "label": "FRI",
+    "id": "icicle/rust-bindings/fri"
+  },
+  {
+    type: "doc",
+    label: "Serialization",
+    id: "icicle/rust-bindings/serialization",
+  },
   // {
   //   type: "doc",
   //   label: "Multi GPU Support (TODO)",
@@ -319,7 +354,7 @@ export default {
         {
           type: "link",
           label: "Ingopedia",
-          href: "https://www.ingonyama.com/ingopedia"
+          href: "https://www.ingonyama.com/ingopedia/glossary"
         },
         {
           href: 'https://github.com/ingonyama-zk',

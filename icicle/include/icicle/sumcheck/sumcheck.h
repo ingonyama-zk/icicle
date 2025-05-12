@@ -8,6 +8,11 @@
 #include "icicle/backend/sumcheck_backend.h"
 #include "icicle/sumcheck/sumcheck_transcript.h"
 
+// Limitations due to device limitations (for CPU they are not needed)
+constexpr int MAX_COMBINE_POLY_DEG = 6; // Max degree of combine polynomial supported
+constexpr int MAX_NOF_POLYNIMOALS = 8;  // Max nof polynomials supported
+constexpr int MAX_TOTAL_NOF_VARS = 20;  // Max nof vars allowed in the  of the combine function
+
 namespace icicle {
   template <typename F>
   class Sumcheck;
@@ -57,10 +62,46 @@ namespace icicle {
       const uint64_t mle_polynomial_size,
       const F& claimed_sum,
       const CombineFunction<F>& combine_function,
-      const SumcheckTranscriptConfig<F>&& transcript_config,
+      SumcheckTranscriptConfig<F>&& transcript_config,
       const SumcheckConfig& sumcheck_config,
       SumcheckProof<F>& sumcheck_proof /*out*/) const
     {
+      // Limitations due to device limitations (for CPU they are not needed)
+      // Check here to make sure all backends have same behavior
+      if (sumcheck_config.use_extension_field) {
+        ICICLE_LOG_ERROR << "SumcheckConfig::use_extension_field = true is currently unsupported";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+
+      // check that the combine function has a legal polynomial degree
+      const int combine_function_poly_degree = combine_function.get_polynomial_degree();
+      if (combine_function_poly_degree < 0) {
+        ICICLE_LOG_ERROR << "Illegal polynomial degree (" << combine_function_poly_degree
+                         << ") for provided combine function";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+
+      // check that combine polynomial degree does not exceeds the highest allowed degree
+      if (combine_function_poly_degree > MAX_COMBINE_POLY_DEG) {
+        ICICLE_LOG_ERROR << "Too high polynomial degree (" << combine_function_poly_degree
+                         << "). Max allowed degree is " << MAX_COMBINE_POLY_DEG;
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+
+      // check that number of polynomials does not exceeds the max allowed number
+      const int nof_polys = mle_polynomials.size();
+      if (nof_polys > MAX_NOF_POLYNIMOALS) {
+        ICICLE_LOG_ERROR << "Too many polynomials. " << nof_polys << " were given, but maximum number of "
+                         << MAX_NOF_POLYNIMOALS << " is allowed";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+
+      const int total_nof_vars = combine_function.get_nof_vars();
+      if (total_nof_vars > MAX_TOTAL_NOF_VARS) {
+        ICICLE_LOG_ERROR << "Too complex combine function. Max num of variables allowed is " << MAX_TOTAL_NOF_VARS
+                         << ", but " << total_nof_vars << " were given";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
       return m_backend->get_proof(
         mle_polynomials, mle_polynomial_size, claimed_sum, combine_function, std::move(transcript_config),
         sumcheck_config, sumcheck_proof);
@@ -77,7 +118,7 @@ namespace icicle {
     eIcicleError verify(
       const SumcheckProof<F>& sumcheck_proof,
       const F& claimed_sum,
-      const SumcheckTranscriptConfig<F>&& transcript_config,
+      SumcheckTranscriptConfig<F>&& transcript_config,
       bool& valid /*out*/)
     {
       valid = false;

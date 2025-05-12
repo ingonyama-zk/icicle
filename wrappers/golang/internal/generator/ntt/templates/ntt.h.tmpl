@@ -15,7 +15,7 @@ int {{if .WithDomain}}{{.Field}}{{else}}{{.FieldNoDomain}}{{end}}_ntt(const scal
 {{if .WithDomain -}}
 int {{.Field}}_ntt_init_domain(scalar_t* primitive_root, NTTInitDomainConfig* ctx);
 int {{.Field}}_ntt_release_domain();
-int* {{.Field}}_get_root_of_unity(size_t size);{{end}}
+int {{.Field}}_get_root_of_unity(size_t size, scalar_t* output);{{end}}
 
 #ifdef __cplusplus
 }

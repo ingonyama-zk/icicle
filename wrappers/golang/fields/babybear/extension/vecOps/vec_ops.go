@@ -30,6 +30,24 @@ func VecOp(a, b, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.V
 	return ret
 }
 
+func ReductionVecOp(in, out core.HostOrDeviceSlice, config core.VecOpsConfig, op core.ReductionVecOp) (ret runtime.EIcicleError) {
+	inPointer, outPointer, cfgPointer, size := core.VecOpCheckReduction(in, out, &config)
+
+	cIn := (*C.scalar_t)(inPointer)
+	cOut := (*C.scalar_t)(outPointer)
+	cConfig := (*C.VecOpsConfig)(cfgPointer)
+	cSize := (C.int)(size)
+
+	switch op {
+	case core.Sum:
+		ret = (runtime.EIcicleError)(C.babybear_extension_vector_sum(cIn, cSize, cConfig, cOut))
+	case core.Product:
+		ret = (runtime.EIcicleError)(C.babybear_extension_vector_product(cIn, cSize, cConfig, cOut))
+	}
+
+	return ret
+}
+
 func TransposeMatrix(in, out core.HostOrDeviceSlice, columnSize, rowSize int, config core.VecOpsConfig) runtime.EIcicleError {
 	inPointer, _, outPointer, cfgPointer, _ := core.VecOpCheck(in, in, out, &config)
 

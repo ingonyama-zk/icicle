@@ -89,4 +89,68 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
+
+#ifdef RING
+  /*************************** NTT ***************************/
+  using NttRingRnsImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_rns_t* input,
+    int size,
+    NTTDir dir,
+    const NTTConfig<scalar_rns_t>& config,
+    scalar_rns_t* output)>;
+
+  void register_ring_rns_ntt(const std::string& deviceType, NttRingRnsImpl impl);
+
+  #define REGISTER_NTT_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                             \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ntt_ring_rns) = []() -> bool {                                                           \
+        register_ring_rns_ntt(DEVICE_TYPE, FUNC);                                                                      \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  /*************************** INIT DOMAIN ***************************/
+  using NttInitDomainRingRnsImpl = std::function<eIcicleError(
+    const Device& device, const scalar_rns_t& primitive_root, const NTTInitDomainConfig& config)>;
+
+  void register_ring_rns_ntt_init_domain(const std::string& deviceType, NttInitDomainRingRnsImpl);
+
+  #define REGISTER_NTT_INIT_DOMAIN_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                 \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ntt_init_domain_ring_rns) = []() -> bool {                                               \
+        register_ring_rns_ntt_init_domain(DEVICE_TYPE, FUNC);                                                          \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  /*************************** RELEASE DOMAIN ***************************/
+  // Note: 'phantom' is a workaround for the function required per field but need to differentiate by type when
+  // calling.
+  using NttReleaseDomainRingRnsImpl = std::function<eIcicleError(const Device& device, const scalar_rns_t& phantom)>;
+
+  void register_ring_rns_ntt_release_domain(const std::string& deviceType, NttReleaseDomainRingRnsImpl);
+
+  #define REGISTER_NTT_RELEASE_DOMAIN_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                              \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ntt_release_domain_ring_rns) = []() -> bool {                                            \
+        register_ring_rns_ntt_release_domain(DEVICE_TYPE, FUNC);                                                       \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  /*************************** GET ROU FROM DOMAIN ***************************/
+  using NttGetRouFromDomainRingRnsImpl =
+    std::function<eIcicleError(const Device& device, uint64_t logn, scalar_rns_t* rou)>;
+
+  void register_ring_rns_ntt_get_rou_from_domain(const std::string& deviceType, NttGetRouFromDomainRingRnsImpl);
+
+  #define REGISTER_NTT_GET_ROU_FROM_DOMAIN_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                         \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_ntt_get_rou_from_domain_ring_rns) = []() -> bool {                                       \
+        register_ring_rns_ntt_get_rou_from_domain(DEVICE_TYPE, FUNC);                                                  \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+#endif // RING
 } // namespace icicle

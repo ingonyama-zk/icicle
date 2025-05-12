@@ -4,74 +4,68 @@ import math
 
 # Prime fields - find generator
 
-def is_generator(g, p, factors):
-    """Checks if g is a primitive root modulo p by verifying its order."""
-    for q in factors:
-        if pow(g, (p - 1) // q, p) == 1:  # g^( (p-1)/q ) should NOT be 1
-            return False
-    return True
-
-def find_generator(p):
-    """Finds a primitive root (generator) of the multiplicative group F_p*."""
-    if p <= 2:
-        return 1  # The only generator of F_2* is 1
-    
-    phi = p - 1  # The order of F_p*
-    factors = list(factorint(phi).keys())  # Prime factorization of p-1
-
-    for g in range(2,p):
-        if is_generator(g, p, factors):
-            return g  # Found a valid generator!
-    return None
-
-# CRT - from RNS to Direct representation
-
-def from_rns(p1, p2, g1, g2):
-    """Computes a generator of Z_q^* given generators for Z_p1^* and Z_p2^* using SymPy's CRT."""
-    q = p1 * p2
-    
-    # Compute CRT
-    g, _ = crt([p1, p2], [g1, g2])
-    
-    return g % q  # Ensure g is within the correct range
+from sympy import factorint
 
 def is_primitive_root(g, q, phi, factors):
     """Checks if g is a primitive root mod q by verifying its order."""
     for p in factors:
-        if pow(g, phi // p, q) == 1:  # If g^((p1-1)(p2-1)/p) ≡ 1 (mod q), g is NOT a generator
+        if pow(g, phi // p, q) == 1:
             return False
     return True
 
-def find_roots_of_unity(p1, p2, generator):
-    """Finds the n-th primitive root of unity modulo q and all roots."""
-    q = p1 * p2
-    factors_p1 = factorint(p1-1)
-    factors_p2 = factorint(p2-1) 
-    print(f"factors-p1={factors_p1}")
-    print(f"factors-p2={factors_p2}")
+def find_generator(prime):
+    """Finds a primitive root (generator) of F_p*."""
+    if prime <= 2:
+        return 1
+
+    phi = prime - 1  # The order of F_p*
+    factors = list(factorint(phi).keys())  # Prime factorization of p-1
+
+    for g in range(2, prime):
+        if is_primitive_root(g, prime, phi, factors):
+            return g  # Found a valid generator!
+    return None
+
+def largest_power_of_two_subgroup_in_prime_field(p):
+    """Computes logn, the largest power of 2 that divides (p-1)."""
+    factors = factorint(p - 1)  # Factorize p-1
+    return factors.get(2, 0)  # Return the exponent of 2, or 0 if not present
+
+
+def find_primitive_root_of_unity(prime, logn):
     
-     # Merge dictionaries, taking the max exponent for each prime
-    combined_factors = {}
-    for prime in set(factors_p1.keys()).union(factors_p2.keys()):
-        combined_factors[prime] = max(factors_p1.get(prime, 0), factors_p2.get(prime, 0))
-        
-    print(f"combined_factors={combined_factors}")
+    """Finds a primitive 2^logn-th root of unity modulo prime."""
+    generator = find_generator(prime)
+    order = (prime - 1) // (2 ** logn)  # Compute exponent for the root of unity
+    return pow(generator, order, prime)
 
-    # Compute the final product
-    multiplicative_group_size = 1
-    for prime, exponent in combined_factors.items():
-        multiplicative_group_size *= prime ** exponent
+# CRT - from RNS to Direct representation
 
-    max_power_of_two = 2 ** combined_factors.get(2, 0)
+from sympy.ntheory.modular import crt
 
-    # Find a primitive root of q
-    if not is_primitive_root(generator, q, multiplicative_group_size, combined_factors):
-        raise ValueError("Invalid generator")
+def from_rns(p_list, g_list):
+    """
+    Computes a generator of Z_q^* given generators for Z_p^* using SymPy's CRT.
 
-    # Compute the primitive n-th root of unity
-    omega = pow(generator, multiplicative_group_size // max_power_of_two, q)
+    Arguments:
+    - p_list: List of primes [p1, p2, ..., pn].
+    - g_list: Corresponding generators [g1, g2, ..., gn].
 
-    return max_power_of_two, omega, q
+    Returns:
+    - A single generator for Z_q^* using the Chinese Remainder Theorem (CRT).
+    """
+    assert len(p_list) == len(g_list), "Lists must be of the same length"
+
+    # Compute the modulus q = p1 * p2 * ... * pn
+    q = 1
+    for p in p_list:
+        q *= p
+
+    # Compute CRT for all primes and generators
+    g, _ = crt(p_list, g_list)
+
+    return g % q  # Ensure g is within the correct range
+
 
 def to_32b_limbs_str(value):
     """Prints a value in 32-bit limbs starting from LSB first."""
@@ -84,30 +78,75 @@ def to_32b_limbs_str(value):
     # Format as a string
     return "{ " + ", ".join(f"0x{limb:08x}" for limb in limbs) + " }"
 
-# Example usage:
-p1 = 0x78000001
-p2 = 0x7f000001
-g1 = find_generator(p1)  # Example generator of Z_p1^*
-g2 = find_generator(p2)  # Example generator of Z_p2^*
-print(f"Generator of p1: {hex(g1)}")
-print(f"Generator of p2: {hex(g2)}")
 
-g = from_rns(p1, p2, g1, g2)
-print(f"Generator of a multiplicative subgroup (<Zq*) of Z_q: {g}")
+######################################################
 
-n, omega, q = find_roots_of_unity(p1, p2, g)
-omega_limbs = to_32b_limbs_str(omega)
+def labrador():
+    pbb = 0x78000001            # babybear
+    pkb = 0x7f000001            # koalabear
+    q = pbb*pkb
+    print(f"Labrador: {hex(q)}")
+    print(f"Labrador: {to_32b_limbs_str(q)}")
+    print(f"Labrador bitcount={q.bit_length()}")
 
-# Print results
-print(f"logn (power-of-two order): {int(math.log2(n))}")
-print(f"Primitive n-th root of unity (w): {hex(omega)}, limbs: {omega_limbs}")
-print(f"w^n mod q = {pow(omega, n, q)}")
+    bb_max_rou_order = largest_power_of_two_subgroup_in_prime_field(pbb)
+    kb_max_rou_order = largest_power_of_two_subgroup_in_prime_field(pkb)
+    print(f"Max order of 2 in koalabear: {kb_max_rou_order}")
+    print(f"Max order of 2 in babybear: {bb_max_rou_order}")
+    max_order_in_labrador = min(bb_max_rou_order, kb_max_rou_order)
+    print(f"Max order of 2 in labrador: {max_order_in_labrador}")
+    
+    # bb_rou_27 = 0x00000089 # Baby bear
+    # bb_rou = pow(bb_rou_27, 8, pbb) #w^8 mod p1 for w or order logn=27
+    # kb_rou = 0x6ac49f88 # Koala bear
+    
+    bb_rou = find_primitive_root_of_unity(pbb, max_order_in_labrador)
+    kb_rou = find_primitive_root_of_unity(pkb, max_order_in_labrador)
+    print(f"babybear rou: {hex(bb_rou)}")
+    print(f"koalabear rou: {hex(kb_rou)}")
+    q_rou = from_rns([pbb, pkb], [bb_rou, kb_rou])
+    
+    print(f"(logn={max_order_in_labrador}) w^n mod q = {pow(q_rou, 1<<max_order_in_labrador, q)}")
+    print(f"Rou in the ring q = {to_32b_limbs_str(q_rou)}")
+    
+    # precompute RNS Wi
+    M0 = pkb # pbb*pkb / pbb
+    M1 = pbb # pbb*pkb / pkb
+    M0_inv = pow(M0, -1, pbb)
+    M1_inv = pow(M1, -1, pkb)
+    W0 = M0*M0_inv % q
+    W1 = M1*M1_inv % q
+    print(f"W0 = {to_32b_limbs_str(W0)}")
+    print(f"W1 = {to_32b_limbs_str(W1)}")
+    
+    # Test conversion to RNS and back for a random number
+    import random
+    x = random.randint(0, q-1)
+    x0 = x % pbb
+    x1 = x % pkb
+    print(f"x = {x}")
+    print(f"x0 = {x0}")
+    print(f"x1 = {x1}")
+    x_ = (W0*x0 + W1*x1) % q
+    print(f"x_ = {x_}")
+    assert x == x_, "Wi computation failed"    
 
-# compute root of unity of order logn=24 in the ring q based on Rou of the prime fields
-p1_rou_27 = 0x00000089 # Baby bear
-p1_rou_24 = pow(p1_rou_27, 8, p1) #w^8 mod p1 for w or order logn=27
-p2_rou_24 = 0x6ac49f88 # Koala bear
-q_rou_24 = from_rns(p1, p2, p1_rou_24, p2_rou_24) #crt
-print(f"(logn=24) w^n mod q = {pow(q_rou_24, 1<<24, q)}")
-print(f"Rou in the ring q = {to_32b_limbs_str(q_rou_24)}")
+def greyhound():
+    Pbb = 0x78000001
+    Pkb = 0x7f000001
+    Ptb = (2**32)-(2**30)+1
+    Pcb = (2**30)+(2**25)+1
+    Pgb = (2**29)-(2**26)+1
+    q_greyhound = Pbb*Pkb*Ptb*Pcb*Pgb
+    # q_greyhound = q_greyhound*q_greyhound # TODO remove
+    print(f"Greyhound: {hex(q_greyhound)}")
+    print(f"Greyhound: {to_32b_limbs_str(q_greyhound)}")
+    print(f"Greyhound bitcount={q_greyhound.bit_length()}")
 
+    # compute root of unity of order logn=24 for greyhound
+
+######################################################
+
+if __name__ == "__main__":
+    labrador()
+    # greyhound()

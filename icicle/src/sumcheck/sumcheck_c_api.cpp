@@ -1,6 +1,7 @@
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/utils.h"
 #include "icicle/sumcheck/sumcheck.h"
+#include "icicle/sumcheck/sumcheck_proof_serializer.h"
 
 using namespace field_config;
 
@@ -28,7 +29,7 @@ struct TranscriptConfigFFI {
  * @param ffi_transcript_config Pointer to the FFI transcript configuration structure.
  * @return Pointer to the created Sumcheck instance.
  */
-SumcheckHandle* CONCAT_EXPAND(FIELD, sumcheck_create)()
+SumcheckHandle* CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_create)()
 {
   ICICLE_LOG_DEBUG << "Constructing Sumcheck instance from FFI";
   // Create and return the Sumcheck instance
@@ -40,7 +41,7 @@ SumcheckHandle* CONCAT_EXPAND(FIELD, sumcheck_create)()
  * @param sumcheck_handle Pointer to the Sumcheck instance to be deleted.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(FIELD, sumcheck_delete)(const SumcheckHandle* sumcheck_handle)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_delete)(const SumcheckHandle* sumcheck_handle)
 {
   if (!sumcheck_handle) {
     ICICLE_LOG_ERROR << "Cannot delete a null Sumcheck instance.";
@@ -65,7 +66,7 @@ eIcicleError CONCAT_EXPAND(FIELD, sumcheck_delete)(const SumcheckHandle* sumchec
  * @param sumcheck_config - The sumcheck config to use in the Sumcheck protocol
  * @return SumcheckProof<scalar_t>* a pointer to the SumcheckProof that contains the round_polynomials.
  */
-SumcheckProof<scalar_t>* CONCAT_EXPAND(FIELD, sumcheck_get_proof)(
+SumcheckProof<scalar_t>* CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_proof)(
   const SumcheckHandle* sumcheck_handle,
   const scalar_t** ffi_mle_polynomials,
   const uint64_t mle_polynomial_size,
@@ -121,7 +122,7 @@ SumcheckProof<scalar_t>* CONCAT_EXPAND(FIELD, sumcheck_get_proof)(
  * @param ffi_transcript_config - The transcript config to use in the Sumcheck protocol
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(FIELD, sumcheck_verify)(
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_verify)(
   SumcheckHandle* sumcheck_handle,
   const SumcheckProof<scalar_t>* sumcheck_proof_handle,
   const scalar_t* claimed_sum,
@@ -165,8 +166,8 @@ eIcicleError CONCAT_EXPAND(FIELD, sumcheck_verify)(
  * @param poly_size - The size of the round polynomials of the proof
  * @return Pointer to the created SumcheckProof instance.
  */
-SumcheckProof<scalar_t>*
-CONCAT_EXPAND(FIELD, sumcheck_proof_create)(scalar_t** polys, const uint64_t nof_polynomials, const uint64_t poly_size)
+SumcheckProof<scalar_t>* CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_create)(
+  scalar_t** polys, const uint64_t nof_polynomials, const uint64_t poly_size)
 {
   ICICLE_LOG_DEBUG << "Reconstructing SumcheckProof from values from FFI";
   // Start constructing SumcheckProof from the round_polynomials
@@ -186,7 +187,7 @@ CONCAT_EXPAND(FIELD, sumcheck_proof_create)(scalar_t** polys, const uint64_t nof
  * @param nof_polys - Pointer to store the number of round polynomials in the proof
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_get_poly_sizes)(
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_poly_sizes)(
   SumcheckProof<scalar_t>* sumcheck_proof_handle, uint64_t* poly_size, uint64_t* nof_polys)
 {
   if (!sumcheck_proof_handle) {
@@ -206,8 +207,8 @@ eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_get_poly_sizes)(
  * @param index The round_polynomial index to get.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-scalar_t*
-CONCAT_EXPAND(FIELD, sumcheck_proof_get_round_poly_at)(SumcheckProof<scalar_t>* sumcheck_proof_handle, uint64_t index)
+scalar_t* CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_round_poly_at)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, uint64_t index)
 {
   if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot delete a null SumcheckProof instance.";
@@ -229,7 +230,8 @@ CONCAT_EXPAND(FIELD, sumcheck_proof_get_round_poly_at)(SumcheckProof<scalar_t>* 
  * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to be deleted.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_delete)(const SumcheckProof<scalar_t>* sumcheck_proof_handle)
+eIcicleError
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_delete)(const SumcheckProof<scalar_t>* sumcheck_proof_handle)
 {
   if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot delete a null SumcheckProof instance.";
@@ -247,7 +249,7 @@ eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_delete)(const SumcheckProof<sca
  * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to print.
  * @return eIcicleError indicating the success or failure of the operation.
  */
-eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_print)(SumcheckProof<scalar_t>* sumcheck_proof_handle)
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_print)(SumcheckProof<scalar_t>* sumcheck_proof_handle)
 {
   if (!sumcheck_proof_handle) {
     ICICLE_LOG_ERROR << "Cannot delete a null SumcheckProof instance.";
@@ -259,5 +261,79 @@ eIcicleError CONCAT_EXPAND(FIELD, sumcheck_proof_print)(SumcheckProof<scalar_t>*
 
   return eIcicleError::SUCCESS;
 }
+
+/**
+ * @brief Gets the serialized size of the given SumcheckProof instance.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance.
+ * @param size Pointer to store the serialized size of the SumcheckProof instance.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_get_serialized_size)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, size_t* size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!size) {
+    ICICLE_LOG_ERROR << "Cannot write serialized size in a null pointer.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(*sumcheck_proof_handle, *size);
+}
+
+/**
+ * @brief Serializes the given SumcheckProof instance to a buffer.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to serialize.
+ * @param buffer The buffer to serialize the SumcheckProof to.
+ * @param size The size of the buffer.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_serialize)(
+  SumcheckProof<scalar_t>* sumcheck_proof_handle, std::byte* buffer, size_t size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot serialize a null SumcheckProof instance.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "Cannot serialize to a null buffer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  size_t expected_size = 0;
+  eIcicleError err = BinarySerializer<SumcheckProof<scalar_t>>::serialized_size(*sumcheck_proof_handle, expected_size);
+  if (err != eIcicleError::SUCCESS) {
+    ICICLE_LOG_ERROR << "Cannot get serialized size of SumcheckProof";
+    return err;
+  }
+  if (size < expected_size) {
+    ICICLE_LOG_ERROR << "buffer is too small — cannot serialize SumcheckProof";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  return BinarySerializer<SumcheckProof<scalar_t>>::serialize(buffer, size, *sumcheck_proof_handle);
+}
+
+/**
+ * @brief Deserializes the given SumcheckProof instance from a buffer.
+ * @param sumcheck_proof_handle Pointer to the SumcheckProof instance to deserialize.
+ * @param buffer The buffer to deserialize the SumcheckProof from.
+ * @param size The size of the buffer.
+ * @return eIcicleError indicating the success or failure of the operation.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(
+  SumcheckProof<scalar_t>** sumcheck_proof_handle, std::byte* buffer, size_t size)
+{
+  if (!sumcheck_proof_handle) {
+    ICICLE_LOG_ERROR << "Cannot deserialize into a null SumcheckProof instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!buffer) {
+    ICICLE_LOG_ERROR << "Cannot deserialize from a null buffer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+  *sumcheck_proof_handle = new SumcheckProof<scalar_t>();
+  return BinarySerializer<SumcheckProof<scalar_t>>::deserialize(buffer, size, **sumcheck_proof_handle);
+}
+
 /***************** END SumcheckProof **********************/
 } // extern "C"

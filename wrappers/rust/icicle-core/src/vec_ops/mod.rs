@@ -1,3 +1,4 @@
+use crate::program::Program;
 use crate::traits::FieldImpl;
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
@@ -69,6 +70,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    fn inv(
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
     fn sum(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -130,6 +137,17 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
         output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
     ) -> Result<(), eIcicleError>;
+
+    fn execute_program<Prog, Data>(
+        data: &mut Vec<&Data>,
+        program: &Prog,
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>
+    where
+        F: FieldImpl,
+        <F as FieldImpl>::Config: VecOps<F>,
+        Data: HostOrDeviceSlice<F> + ?Sized,
+        Prog: Program<F>;
 }
 
 #[doc(hidden)]
@@ -251,6 +269,36 @@ fn check_vec_ops_args_slice<F>(
     setup_config(input, input, output, cfg, batch_size)
 }
 
+fn check_execute_program<F, Data>(data: &Vec<&Data>, cfg: &VecOpsConfig) -> VecOpsConfig
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+{
+    // All parameters' config should match so each one is compared to the first one
+    let nof_iterations = data[0].len();
+    let is_on_device = data[0].is_on_device();
+
+    for i in 1..data.len() {
+        if data[i].len() != nof_iterations {
+            panic!(
+                "First parameter length ({}) and parameter[{}] length do not match",
+                nof_iterations,
+                data[i].len()
+            );
+        }
+        if data[i].is_on_device() != is_on_device {
+            panic!(
+                "First parameter length ({}) and parameter[{}] length ({}) do not match",
+                nof_iterations,
+                i,
+                data[i].len()
+            );
+        }
+    }
+    setup_config(data[0], data[0], data[0], cfg, 1)
+}
+
 /// Modify VecopsConfig according to the given vectors
 fn setup_config<F, T>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
@@ -359,6 +407,19 @@ where
 {
     let cfg = check_vec_ops_args(a, b, result, cfg);
     <<F as FieldImpl>::Config as VecOps<F>>::div(a, b, result, &cfg)
+}
+
+pub fn inv_scalars<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(input, input, output, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::inv(input, output, &cfg)
 }
 
 pub fn sum_scalars<F>(
@@ -486,6 +547,21 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::slice(input, offset, stride, size_in, size_out, &cfg, output)
 }
 
+pub fn execute_program<F, Prog, Data>(
+    data: &mut Vec<&Data>,
+    program: &Prog,
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+    Data: HostOrDeviceSlice<F> + ?Sized,
+    Prog: Program<F>,
+{
+    let cfg = check_execute_program(&data, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::execute_program(data, program, &cfg)
+}
+
 #[macro_export]
 macro_rules! impl_vec_ops_field {
     (
@@ -495,8 +571,9 @@ macro_rules! impl_vec_ops_field {
         $field_config:ident
     ) => {
         mod $field_prefix_ident {
-
             use crate::vec_ops::{$field, HostOrDeviceSlice};
+            use icicle_core::program::{Program, ProgramHandle};
+            use icicle_core::symbol::Symbol;
             use icicle_core::vec_ops::VecOpsConfig;
             use icicle_runtime::errors::eIcicleError;
 
@@ -543,6 +620,14 @@ macro_rules! impl_vec_ops_field {
                     size: u32,
                     cfg: *const VecOpsConfig,
                     result: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_vector_inv")]
+                pub(crate) fn vector_inv_ffi(
+                    input: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    output: *mut $field,
                 ) -> eIcicleError;
 
                 #[link_name = concat!($field_prefix, "_vector_sum")]
@@ -614,6 +699,15 @@ macro_rules! impl_vec_ops_field {
                     size_out: u64,
                     cfg: *const VecOpsConfig,
                     output: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_execute_program")]
+                pub(crate) fn execute_program_ffi(
+                    data_ptr: *const *const $field,
+                    nof_params: u64,
+                    program: ProgramHandle,
+                    nof_iterations: u64,
+                    cfg: *const VecOpsConfig,
                 ) -> eIcicleError;
             }
         }
@@ -702,6 +796,22 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn inv(
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_inv_ffi(
+                        input.as_ptr(),
+                        input.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        output.as_mut_ptr(),
                     )
                     .wrap()
                 }
@@ -865,6 +975,32 @@ macro_rules! impl_vec_ops_field {
                     .wrap()
                 }
             }
+
+            fn execute_program<Prog, Data>(
+                data: &mut Vec<&Data>,
+                program: &Prog,
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError>
+            where
+                <$field as FieldImpl>::Config: VecOps<$field>,
+                Data: HostOrDeviceSlice<$field> + ?Sized,
+                Prog: Program<$field>,
+            {
+                unsafe {
+                    let data_vec: Vec<*const $field> = data
+                        .iter()
+                        .map(|s| s.as_ptr())
+                        .collect();
+                    $field_prefix_ident::execute_program_ffi(
+                        data_vec.as_ptr(),
+                        data.len() as u64,
+                        program.handle(),
+                        data[0].len() as u64,
+                        cfg as *const VecOpsConfig,
+                    )
+                    .wrap()
+                }
+            }
         }
     };
 }
@@ -921,10 +1057,12 @@ macro_rules! impl_vec_ops_mixed_field {
 #[macro_export]
 macro_rules! impl_vec_ops_tests {
     (
+      $field_prefix_ident: ident,
       $field:ident
     ) => {
         pub(crate) mod test_vecops {
             use super::*;
+            use crate::program::$field_prefix_ident::{FieldProgram, FieldReturningValueProgram};
             use icicle_runtime::test_utilities;
             use icicle_runtime::{device::Device, runtime};
             use std::sync::Once;
@@ -935,9 +1073,80 @@ macro_rules! impl_vec_ops_tests {
             }
 
             #[test]
-            pub fn test_vec_ops_scalars() {
+            pub fn test_vec_ops_scalars_add() {
                 initialize();
-                check_vec_ops_scalars::<$field>()
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_add::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sub() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sub::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_mul() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_mul::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_div() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_div::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sum() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sum::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_product() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_product::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_add_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_add_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sub_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sub_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_mul_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_mul_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_accumulate() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_accumulate::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_inv() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_inv::<$field>(test_size);
             }
 
             #[test]
@@ -962,6 +1171,24 @@ macro_rules! impl_vec_ops_tests {
             pub fn test_slice() {
                 initialize();
                 check_slice::<$field>()
+            }
+
+            #[test]
+            pub fn test_program() {
+                initialize();
+                test_utilities::test_set_main_device();
+                check_program::<$field, FieldProgram>();
+                test_utilities::test_set_ref_device();
+                check_program::<$field, FieldProgram>()
+            }
+
+            #[test]
+            pub fn test_predefined_program() {
+                initialize();
+                test_utilities::test_set_main_device();
+                check_predefined_program::<$field, FieldProgram>();
+                test_utilities::test_set_ref_device();
+                check_predefined_program::<$field, FieldProgram>()
             }
         }
     };
