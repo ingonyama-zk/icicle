@@ -80,7 +80,11 @@ macro_rules! impl_poseidon {
                     }
                     Ok(Hasher::from_handle(handle)) // Wraps the handle in a `Hasher` object and returns it.
                 }
-                fn new_with_input_size(t: u32, domain_tag: Option<&$field>, input_size: u32) -> Result<Hasher, eIcicleError> {
+                fn new_with_input_size(
+                    t: u32,
+                    domain_tag: Option<&$field>,
+                    input_size: u32,
+                ) -> Result<Hasher, eIcicleError> {
                     let handle: HasherHandle = unsafe {
                         create_poseidon_hasher(
                             t,
