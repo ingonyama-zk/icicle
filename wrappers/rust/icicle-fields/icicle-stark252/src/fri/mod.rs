@@ -6,9 +6,10 @@ impl_fri!("stark252", stark252_fri, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 mod tests {
-    use icicle_core::impl_fri_tests;
-
-    use crate::field::ScalarField;
-
-    impl_fri_tests!(stark252_fri_test, ScalarField, ScalarField);
+    mod stark252_fri_test {
+        use icicle_core::{impl_fri_test_with_poseidon, impl_fri_tests};
+        use crate::field::ScalarField;
+        impl_fri_tests!(ScalarField, ScalarField);
+        impl_fri_test_with_poseidon!(ScalarField, ScalarField);
+    }
 }
