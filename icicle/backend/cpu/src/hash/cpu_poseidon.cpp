@@ -113,7 +113,8 @@ namespace icicle {
   {
   public:
     PoseidonBackendCPU(unsigned t, const S* domain_tag, unsigned input_size)
-        : HashBackend("Poseidon-CPU", sizeof(S), sizeof(S) * (input_size ? input_size : (nullptr != domain_tag ? t - 1 : t))),
+        : HashBackend(
+            "Poseidon-CPU", sizeof(S), sizeof(S) * (input_size ? input_size : (nullptr != domain_tag ? t - 1 : t))),
           m_domain_tag(nullptr != domain_tag ? *domain_tag : S::zero()), m_use_domain_tag(nullptr != domain_tag), m_t(t)
     {
       init_default_constants();
@@ -287,7 +288,11 @@ namespace icicle {
   }; // class PoseidonBackendCPU : public HashBackend
 
   static eIcicleError create_cpu_poseidon_hash_backend(
-    const Device& device, unsigned t, const scalar_t* domain_tag, unsigned input_size, std::shared_ptr<HashBackend>& backend /*OUT*/)
+    const Device& device,
+    unsigned t,
+    const scalar_t* domain_tag,
+    unsigned input_size,
+    std::shared_ptr<HashBackend>& backend /*OUT*/)
   {
     backend = std::make_shared<PoseidonBackendCPU<scalar_t>>(t, domain_tag, input_size);
     return eIcicleError::SUCCESS;

@@ -294,7 +294,6 @@ macro_rules! impl_fri_tests {
     };
 }
 
-
 #[macro_export]
 macro_rules! impl_fri_test_with_poseidon {
     (

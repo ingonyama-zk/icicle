@@ -2015,7 +2015,8 @@ TEST_F(HashApiTest, poseidon2_merkle_tree)
     int output_store_min_layer = 0;
 
     auto config = default_merkle_tree_config();
-    test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves, reinterpret_cast<std::byte*>(leaves.get()), leaf_size);
+    test_merkle_tree(
+      hashes, config, output_store_min_layer, nof_leaves, reinterpret_cast<std::byte*>(leaves.get()), leaf_size);
   }
 }
 

@@ -13,7 +13,6 @@ impl_fri!(
 #[cfg(test)]
 mod tests {
 
-
     mod babybear_fri_test {
         use icicle_core::{impl_fri_test_with_poseidon, impl_fri_tests};
 

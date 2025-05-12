@@ -7,8 +7,8 @@ impl_fri!("bls12_381", bls12_381_fri, ScalarField, ScalarCfg);
 #[cfg(test)]
 mod tests {
     mod bls12_381_fri_test {
-        use icicle_core::{impl_fri_test_with_poseidon, impl_fri_tests};
         use crate::curve::ScalarField;
+        use icicle_core::{impl_fri_test_with_poseidon, impl_fri_tests};
         impl_fri_tests!(ScalarField, ScalarField);
         impl_fri_test_with_poseidon!(ScalarField, ScalarField);
     }
