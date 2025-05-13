@@ -55,7 +55,7 @@ func BuildMerkleTree[T any](
 
 A binary tree with **5 layers**, using **Keccak-256**:
 
-![Merkle Tree Diagram](../primitives/merkle_diagrams/diagram1.png)
+![Merkle Tree Diagram](/img/merkle_diagrams/diagram1.png)
 
 ```go
 import (
@@ -79,7 +79,7 @@ merkletree.BuildMerkleTree[byte](&mt, core.HostSliceFromElements(input), core.Ge
 
 ### Example B: Tree with Arity 4
 
-![Merkle Tree Diagram](../primitives/merkle_diagrams/diagram2.png)
+![Merkle Tree Diagram](/img/merkle_diagrams/diagram2.png)
 
 This example uses **Blake2s** in upper layers:
 
@@ -151,7 +151,7 @@ A Merkle proof contains:
 - **Index** (leaf_idx): The position of the leaf in the original dataset.
 - **Path**: A sequence of sibling hashes (tree nodes) needed to recompute the path from the leaf to the root.
 
-![Merkle Pruned Phat Diagram](../primitives/merkle_diagrams/diagram1_path.png)
+![Merkle Pruned Phat Diagram](/img/merkle_diagrams/diagram1_path.png)
 
 ```go
 /// * `leaves` - A slice of leaves (input data).
@@ -212,7 +212,7 @@ There are two types of paths that can be computed:
 - [**Pruned Path:**](#generating-merkle-proofs) Contains only necessary sibling hashes.
 - **Full Path:** Contains all sibling nodes and intermediate hashes.
 
-![Merkle Full Path Diagram](../primitives//merkle_diagrams/diagram1_path_full.png)
+![Merkle Full Path Diagram](/img/merkle_diagrams/diagram1_path_full.png)
 
 To compute a full path, specify `pruned=false`:
 

@@ -1,367 +1,293 @@
-const gettingStartedDropdown = [
-  {
-    type: "doc",
-    label: "Build ICICLE from source",
-    id: "icicle/build_from_source",
-  },
-  {
-    type: "category",
-    label: "Programmers guide",
-    link: {
-      type: `doc`,
-      id: "icicle/programmers_guide/general",
-    },
-    collapsed: false,
-    items: [
-      {
-        type: "doc",
-        label: "C++",
-        id: "icicle/programmers_guide/cpp",
-      },
-      {
-        type: "doc",
-        label: "Rust",
-        id: "icicle/programmers_guide/rust",
-      },
-      {
-        type: "doc",
-        label: "Go",
-        id: "icicle/programmers_guide/go",
-      }
-    ],
-  },
-];
-
-const architectureDropdown = [
-  {
-    type: "doc",
-    label: "CUDA Backend",
-    id: "icicle/install_gpu_backend"
-  },
-   {
-    type: "doc",
-    label: "METAL Backend",
-    id: "icicle/install_gpu_backend"
-  },
-  {
-    type: "doc",
-    label: "Multi-Device Support",
-    id: "icicle/multi-device",
-  },
-  // {
-  //   type: "doc",
-  //   label: "Build Your Own Backend",
-  //   id: "icicle/build_your_own_backend"
-  // },
-];
-
-const cppApi = [
-  {
-    type: "doc",
-    label: "MSM",
-    id: "icicle/primitives/msm",
-  },
-  {
-    type: "doc",
-    label: "NTT / ECNTT",
-    id: "icicle/primitives/ntt",
-  },
-  {
-    type: "doc",
-    label: "Vector operations",
-    id: "icicle/primitives/vec_ops",
-  },
-  {
-    type: "doc",
-    label: "Program",
-    id: "icicle/primitives/program",
-  },
-  {
-    type: "doc",
-    label: "Polynomials",
-    id: "icicle/polynomials/overview",
-  },
-  {
-    type: "doc",
-    label: "Hash",
-    id: "icicle/primitives/hash",
-  },
-  {
-    type: "doc",
-    label: "Merkle-Tree",
-    id: "icicle/primitives/merkle",
-  },
-  {
-    type: "doc",
-    label: "Sumcheck",
-    id: "icicle/primitives/sumcheck",
-  },
-  {
-    type: "doc",
-    label: "FRI",
-    id: "icicle/primitives/fri",
-  },
-  {
-    type: "doc",
-    label: "Pairings",
-    id: "icicle/primitives/pairings",
-  },
-  {
-    type: "doc",
-    label: "Serialization",
-    id: "icicle/primitives/serialization",
-  }
-];
-
-const golangBindingsApi = [
-  {
-    type: "category",
-    label: "MSM",
-    link: {
-      type: `doc`,
-      id: "icicle/golang-bindings/msm",
-    },
-    collapsed: true,
-    items: [
-      {
-        type: "doc",
-        label: "MSM pre computation",
-        id: "icicle/golang-bindings/msm-pre-computation",
-      }
-    ]
-  },
-  {
-    type: "doc",
-    label: "NTT",
-    id: "icicle/golang-bindings/ntt",
-  },
-  {
-    type: "doc",
-    label: "EC-NTT",
-    id: "icicle/golang-bindings/ecntt",
-  },
-  {
-    type: "doc",
-    label: "Vector operations",
-    id: "icicle/golang-bindings/vec-ops",
-  },
-  {
-    type: "doc",
-    label: "Multi GPU Support",
-    id: "icicle/golang-bindings/multi-gpu",
-  },
-  {
-    type: "doc",
-    label: "Hash",
-    id: "icicle/golang-bindings/hash",
-  },
-  {
-    type: "doc",
-    label: "Merkle-Tree",
-    id: "icicle/golang-bindings/merkle",
-  }
-];
-
-const rustBindingsApi = [
-  {
-    type: "doc",
-    label: "MSM",
-    id: "icicle/rust-bindings/msm",
-  },
-  {
-    type: "doc",
-    label: "NTT",
-    id: "icicle/rust-bindings/ntt",
-  },
-  {
-    type: "doc",
-    label: "ECNTT",
-    id: "icicle/rust-bindings/ecntt",
-  },
-  {
-    type: "doc",
-    label: "Vector operations",
-    id: "icicle/rust-bindings/vec-ops",
-  },
-  {
-    type: "doc",
-    label: "Program",
-    id: "icicle/rust-bindings/program", 
-  },
-  {
-    type: "doc",
-    label: "Polynomials",
-    id: "icicle/rust-bindings/polynomials",
-  },
-  {
-    type: "doc",
-    label: "Hash",
-    id: "icicle/rust-bindings/hash",
-  },
-  {
-    type: "doc",
-    label: "Merkle-Tree",
-    id: "icicle/rust-bindings/merkle",
-  },
-  {
-    "type": "doc",
-    "label": "Sumcheck",
-    "id": "icicle/rust-bindings/sumcheck"
-  },
-  {
-    "type": "doc",
-    "label": "FRI",
-    "id": "icicle/rust-bindings/fri"
-  },
-  {
-    type: "doc",
-    label: "Serialization",
-    id: "icicle/rust-bindings/serialization",
-  },
-  // {
-  //   type: "doc",
-  //   label: "Multi GPU Support (TODO)",
-  //   id: "icicle/rust-bindings/multi-gpu",
-  // },
-];
-
 export default {
   GettingStartedSidebar: [
     {
-      type: "doc",
+      type: "category",
       label: "Introduction",
-      id: "introduction",
+      collapsed: false,
+      items: [
+        {
+          type: "doc",
+          id: "start/intro/start",
+        },
+        {
+          type: "doc",
+          id: "start/intro/getting_started",
+        },
+      ],
     },
     {
       type: "category",
-      label: "ICICLE",
-      link: {
-        type: `doc`,
-        id: 'icicle/overview',
-      },
+      label: "Architecture",
+      collapsed: false,
+      items: [
+        {
+          type: "doc",
+          id: "start/architecture/arch_overview",
+        },
+        {
+          type: "doc",
+          id: "start/architecture/build_your_own_backend",
+        },
+        {
+          type: "doc",
+          id: "start/architecture/install_gpu_backend",
+        },
+        {
+          type: "doc",
+          id: "start/architecture/libraries",
+        },
+        {
+          type: "doc",
+          id: "start/architecture/multi-device",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Programmer's Guide",
+      collapsed: false,
+      items: [
+        {
+          type: "doc",
+          id: "start/programmers_guide/general",
+        },
+        {
+          type: "doc",
+          id: "start/programmers_guide/build_from_source",
+        },
+        {
+          type: "doc",
+          id: "start/programmers_guide/cpp",
+        },
+        {
+          type: "doc",
+          id: "start/programmers_guide/go",
+        },
+        {
+          type: "doc",
+          id: "start/programmers_guide/rust",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Integration & Support",
+      collapsed: false,
+      items: [
+        {
+          type: "doc",
+          id: "start/integration-&-support/benchmarks",
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/colab-instructions",
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/contributor-guide",
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/faq_and_troubleshooting",
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/grants",
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/integrations",
+        },
+        {
+          type: "doc",
+          id: "start/integration-&-support/migrate_from_v2",
+        },
+      ],
+    },
+  ],
+
+  apisidebar: [
+    {
+      type: "doc",
+      label: "API",
+      id: "api/overview",
+    },
+    {
+      type: "category",
+      label: "C++",
+      collapsed: false,
+      items: [
+        {
+          type: "doc",
+          label: "MSM",
+          id: "api/cpp/msm",
+        },
+        {
+          type: "doc",
+          label: "NTT / ECNTT",
+          id: "api/cpp/ntt",
+        },
+        {
+          type: "doc",
+          label: "Vector operations",
+          id: "api/cpp/vec_ops",
+        },
+        {
+          type: "doc",
+          label: "Program",
+          id: "api/cpp/program",
+        },
+        {
+          type: "doc",
+          label: "Polynomials",
+          id: "api/cpp/polynomials/overview",
+        },
+        {
+          type: "doc",
+          label: "Hash",
+          id: "api/cpp/hash",
+        },
+        {
+          type: "doc",
+          label: "Merkle-Tree",
+          id: "api/cpp/merkle",
+        },
+        {
+          type: "doc",
+          label: "Sumcheck",
+          id: "api/cpp/sumcheck",
+        },
+        {
+          type: "doc",
+          label: "FRI",
+          id: "api/cpp/fri",
+        },
+        {
+          type: "doc",
+          label: "Pairings",
+          id: "api/cpp/pairings",
+        },
+        {
+          type: "doc",
+          label: "Serialization",
+          id: "api/cpp/serialization",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Golang Bindings",
       collapsed: false,
       items: [
         {
           type: "category",
-          label: "Getting started",
+          label: "MSM",
           link: {
-            type: `doc`,
-            id: "icicle/getting_started",
-          },
-          collapsed: false,
-          items: gettingStartedDropdown
-        },
-        {
-          type: "category",
-          label: "Architecture overview",
-          link: {
-            type: `doc`,
-            id: "icicle/arch_overview"
-          },
-          collapsed: false,
-          items: architectureDropdown
-        },
-        {
-          type: "doc",
-          label: "ICICLE libraries",
-          id: "icicle/libraries",
-        },
-        {
-          type: "category",
-          label: "Compute API",
-          link: {
-            type: `doc`,
-            id: 'icicle/primitives/overview',
+            type: "doc",
+            id: "api/golang-bindings/msm",
           },
           collapsed: true,
           items: [
-            ...cppApi,
             {
-              type: "category",
-              label: "Golang bindings",
-              link: {
-                type: `doc`,
-                id: "icicle/golang-bindings",
-              },
-              collapsed: true,
-              items: golangBindingsApi
-            },
-            {
-              type: "category",
-              label: "Rust bindings",
-              link: {
-                type: `doc`,
-                id: "icicle/rust-bindings",
-              },
-              collapsed: true,
-              items: rustBindingsApi
+              type: "doc",
+              label: "MSM pre computation",
+              id: "api/golang-bindings/msm-pre-computation",
             },
           ],
         },
         {
           type: "doc",
-          label: "Migrate from ICICLE v2",
-          id: "icicle/migrate_from_v2",
-        },
-        // {
-        //   type: "doc",
-        //   label: "Benchmarks",
-        //   id: "icicle/benchmarks",
-        // },
-        // {
-        //   type: "doc",
-        //   label: "FAQ and Troubleshooting",
-        //   id: "icicle/faq_and_troubleshooting",
-        // },
-        {
-          type: "doc",
-          label: "Google Colab Instructions",
-          id: "icicle/colab-instructions",
+          label: "NTT",
+          id: "api/golang-bindings/ntt",
         },
         {
           type: "doc",
-          label: "ICICLE Provers",
-          id: "icicle/integrations"
+          label: "EC-NTT",
+          id: "api/golang-bindings/ecntt",
         },
-      ]
-    },
-    {
-      type: "doc",
-      label: "Ingonyama Grant program",
-      id: "grants",
-    },
-    {
-      type: "doc",
-      label: "Contributor guide",
-      id: "contributor-guide",
+        {
+          type: "doc",
+          label: "Vector operations",
+          id: "api/golang-bindings/vec-ops",
+        },
+        {
+          type: "doc",
+          label: "Multi GPU Support",
+          id: "api/golang-bindings/multi-gpu",
+        },
+        {
+          type: "doc",
+          label: "Hash",
+          id: "api/golang-bindings/hash",
+        },
+        {
+          type: "doc",
+          label: "Merkle-Tree",
+          id: "api/golang-bindings/merkle",
+        },
+      ],
     },
     {
       type: "category",
-      label: "Additional Resources",
+      label: "Rust Bindings",
       collapsed: false,
-      collapsible: false,
       items: [
         {
-          type: "link",
-          label: "YouTube",
-          href: "https://www.youtube.com/@ingo_ZK"
+          type: "doc",
+          label: "MSM",
+          id: "api/rust-bindings/msm",
         },
         {
-          type: "link",
-          label: "Ingonyama Blog",
-          href: "https://www.ingonyama.com/blog"
+          type: "doc",
+          label: "NTT",
+          id: "api/rust-bindings/ntt",
         },
         {
-          type: "link",
-          label: "Ingopedia",
-          href: "https://www.ingonyama.com/ingopedia/glossary"
+          type: "doc",
+          label: "ECNTT",
+          id: "api/rust-bindings/ecntt",
         },
         {
-          href: 'https://github.com/ingonyama-zk',
-          type: "link",
-          label: 'GitHub',
-        }
-      ]
-    }
+          type: "doc",
+          label: "Vector operations",
+          id: "api/rust-bindings/vec-ops",
+        },
+        {
+          type: "doc",
+          label: "Program",
+          id: "api/rust-bindings/program",
+        },
+        {
+          type: "doc",
+          label: "Polynomials",
+          id: "api/rust-bindings/polynomials",
+        },
+        {
+          type: "doc",
+          label: "Hash",
+          id: "api/rust-bindings/hash",
+        },
+        {
+          type: "doc",
+          label: "Merkle-Tree",
+          id: "api/rust-bindings/merkle",
+        },
+        {
+          type: "doc",
+          label: "Sumcheck",
+          id: "api/rust-bindings/sumcheck",
+        },
+        {
+          type: "doc",
+          label: "FRI",
+          id: "api/rust-bindings/fri",
+        },
+        {
+          type: "doc",
+          label: "Serialization",
+          id: "api/rust-bindings/serialization",
+        },
+      ],
+    },
   ],
 };
