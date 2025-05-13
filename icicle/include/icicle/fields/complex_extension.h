@@ -191,11 +191,13 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
-    #ifdef __CUDA_ARCH__
-      constexpr bool do_karatsuba = FF::TLC >= 8;
-    #else
-      constexpr bool do_karatsuba = FF::TLC >= 16;
-    #endif
+#ifdef __CUDA_ARCH__
+    constexpr bool do_karatsuba = FF::TLC >= 8; // The basix multiplier size is 1 limb, Karatsuba is more efficient when
+                                                // the multiplication is 8 times wider or more
+#else
+    constexpr bool do_karatsuba = FF::TLC >= 16; // The basix multiplier size is 2 limbs, Karatsuba is more efficient
+                                                 // when the multiplication is 8 times wider or more
+#endif
 
     if constexpr (do_karatsuba) {
       FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
@@ -204,8 +206,7 @@ public:
       FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
       nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
       return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
-    }
-    else {
+    } else {
       FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
       FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
       FWide ab = FF::mul_wide(xs.c0, ys.c1);
