@@ -28,6 +28,7 @@ function(handle_ring TARGET)
     src/program/program_c_api.cpp
     src/symbol/symbol_api.cpp
     src/balanced_decomposition.cpp
+    src/jl_projection.cpp
   )
 endfunction()
 
