@@ -4,14 +4,31 @@ displayed_sidebar: apisidebar
 title: 'API Overview'
 ---
 
-# ICICLE Compute APIs
+# ICICLE APIs
 
-This section of the documentation is dedicated to the main APIs provided by ICICLE. We will cover the usage and internal details of our core primitives, such as Multi-Scalar Multiplication (MSM), Number Theoretic Transform (NTT), and various hashing algorithms. Each primitive has its own dedicated page with examples and explanations for C++, Rust, and Go.
+This section provides detailed documentation for ICICLE’s core APIs, including MSM, NTT, and hashing primitives. Each API includes dedicated examples for C++, Go, and Rust—choose your preferred language to get started.
 
-- [MSM](./msm.md)
-- [NTT](./ntt.md)
-- [Vector Operations](./vec_ops.md)
-- [Polynomials](../polynomials/overview.md)
-- [Hash](./hash.md)
-- [Merkle-tree commitment](./merkle.md)
-- [Sumcheck](./sumcheck.md)
+import Link from '@docusaurus/Link';
+
+<div className="card-row-3">
+
+  <Link to="/docs/cpp" className="card-link">
+    <div className="card-box icon-only">
+      <img src="/img/cpp.png" alt="C++" className="card-icon-top" />
+    </div>
+  </Link>
+
+  <Link to="/docs/go" className="card-link">
+    <div className="card-box icon-only">
+      <img src="/img/go.png" alt="Golang" className="card-icon-top" />
+    </div>
+  </Link>
+
+  <Link to="/docs/rust" className="card-link">
+    <div className="card-box icon-only">
+      <img src="/img/rust.png" alt="Rust" className="card-icon-top" />
+    </div>
+  </Link>
+
+</div>
+

@@ -45,12 +45,9 @@ const navBarLeftSide = [
     to: '/apioverview',
     activeBaseRegex: '^/apioverview', 
   },
-] satisfies NavbarItem[];
-
-const navBarRightSide = [
   {
     type: 'html',
-    position: 'right',
+    position: 'left',
     value: `
       <a href="https://github.com/ingonyama-zk/icicle"
          class="github-cta-button"
@@ -60,6 +57,9 @@ const navBarRightSide = [
       </a>
     `,
   },
+] satisfies NavbarItem[];
+
+const navBarRightSide = [
 
   {
     type: 'docsVersionDropdown',
