@@ -16,4 +16,17 @@ namespace icicle {
   {
     return JLProjectionDispatcher::execute(input, N, seed, seed_len, *cfg, output);
   }
+
+  template <>
+  eIcicleError jl_projection(
+    const field_t* input,
+    size_t N,
+    const std::byte* seed,
+    size_t seed_len,
+    const VecOpsConfig& cfg,
+    field_t* output // length 256
+  )
+  {
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, jl_projection)(input, N, seed, seed_len, &cfg, output);
+  }
 } // namespace icicle

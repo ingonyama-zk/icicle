@@ -1,6 +1,7 @@
 
 #include "test_mod_arithmetic_api.h"
 #include "icicle/balanced_decomposition.h"
+#include "icicle/jl_projection.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -230,4 +231,30 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
       balanced_decomposition::recompose(decomposed.data(), decomposed_size, 1 /*=base*/, cfg, input.data(), size));
 
   } // device loop
+}
+
+TEST_F(RingTestBase, JLProjectionTest)
+{
+  const size_t N = 1 << 16;
+  auto input = std::vector<field_t>(N);
+  field_t::rand_host_many(input.data(), N);
+  auto output = std::vector<field_t>(256);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    auto cfg = VecOpsConfig{};
+
+    // Generate a random seed
+    std::byte seed[32];
+    for (size_t i = 0; i < sizeof(seed); ++i) {
+      seed[i] = static_cast<std::byte>(rand() % 256);
+    }
+
+    // Perform JL projection
+    ICICLE_CHECK(jl_projection(input.data(), N, seed, sizeof(seed), cfg, output.data()));
+
+    // TODO Yuval: how to test correctness of the projection? Maybe compute the norm of input and then check that output
+    // norm is bound based on the JL theorem?
+  }
 }
