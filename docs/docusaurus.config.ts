@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: true,
     showLastUpdateTime: true,
-    includeCurrentVersion: false,
+    includeCurrentVersion: true,
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -35,60 +35,77 @@ const ingoPreset = {
 const navBarLeftSide = [
   {
     position: 'left',
-    label: 'Docs',
+    label: 'Guide',
     to: '/',
-  }
-] satisfies NavbarItem[]
+    activeBaseRegex: '^/$', // exact match for home
+  },
+  {
+    position: 'left',
+    label: 'API',
+    to: '/apioverview',
+    activeBaseRegex: '^/apioverview', 
+  },
+] satisfies NavbarItem[];
 
 const navBarRightSide = [
+  {
+    type: 'html',
+    position: 'right',
+    value: `
+      <a href="https://github.com/ingonyama-zk/icicle"
+         class="github-cta-button"
+         target="_blank"
+         rel="noopener noreferrer">
+        Go to ICICLE
+      </a>
+    `,
+  },
+
   {
     type: 'docsVersionDropdown',
     position: 'right',
     dropdownActiveClassDisabled: true,
   },
-  {
-    href: 'https://github.com/ingonyama-zk',
-    position: 'right',
-    label: 'GitHub',
-  },
-  {
-    href: 'https://www.ingonyama.com/ingopedia/glossary',
-    position: 'right',
-    label: 'Ingopedia',
-  },
+
   {
     type: 'dropdown',
     position: 'right',
     label: 'Community',
     items: [
-      {
-        label: 'Discord',
-        href: 'https://discord.gg/6vYrE7waPj',
-      },
-      {
-        label: 'Twitter',
-        href: 'https://x.com/Ingo_zk',
-      },
-      {
-        label: 'YouTube',
-        href: 'https://www.youtube.com/@ingo_ZK'
-      },
-      {
-        label: 'Mailing List',
-        href: 'https://wkf.ms/3LKCbdj',
-      }
-    ]
+      { label: 'Discord', href: 'https://discord.gg/6vYrE7waPj' },
+      { label: 'LinkedIn', href: 'https://www.linkedin.com/company/ingonyama' },
+      { label: 'X/Twitter', href: 'https://x.com/Ingo_zk' },
+      { label: 'YouTube', href: 'https://www.youtube.com/@ingo_ZK' },
+      { label: 'Mailing List', href: 'https://wkf.ms/3LKCbdj' },
+    ],
+  },
+
+  {
+    type: 'html',
+    position: 'right',
+    value: `
+      <a href="https://ingonyama.com"
+         class="navbar__item ingo-paw"
+         title="Visit Ingonyama"
+         target="_blank"
+         rel="noopener noreferrer">
+        <img src="/img/ingologo.svg" alt="Ingonyama logo" />
+      </a>
+    `,
   }
-] satisfies NavbarItem[]
+  
+  
+] satisfies NavbarItem[];
+
 
 const config: Config = {
-  title: 'Ingonyama Developer Documentation',
-  tagline: 'Ingonyama is a next-generation semiconductor company, focusing on Zero-Knowledge Proof hardware acceleration. We build accelerators for advanced cryptography, unlocking real-time applications.',
+  title: 'ICICLE Docs',
+  tagline: 'Explore the High-Speed Cryptography Library.',
   url: 'https://dev.ingonyama.com/',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/logo.png',
+  favicon: '/img/iciclelogo.png',
   organizationName: 'ingonyama-zk',
   projectName: 'developer-docs',
   trailingSlash: false,
@@ -142,7 +159,8 @@ const config: Config = {
       }
     },
     colorMode: {
-      defaultMode: 'dark',
+      defaultMode: 'light',
+      disableSwitch: true,
       respectPrefersColorScheme: false,
     },
     algolia: {
@@ -159,10 +177,11 @@ const config: Config = {
       searchPagePath: 'search',
     },
     navbar: {
-      title: 'Ingonyama Developer Documentation',
+      title: '',
       logo: {
         alt: 'Ingonyama Logo',
-        src: 'img/logo.png',
+        src: '/img/icicledocslogo.png',
+        className: 'custom-navbar-logo',
       },
       items: [
         ...navBarLeftSide,

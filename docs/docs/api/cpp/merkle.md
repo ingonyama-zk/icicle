@@ -81,7 +81,7 @@ inline eIcicleError build(
 
 A binary tree with **5 layers**, using **Keccak-256**:
 
-![Merkle Tree Diagram](./merkle_diagrams/diagram1.png)
+![Merkle Tree Diagram](/img/merkle_diagrams/diagram1.png)
 
 ```cpp
 const uint64_t leaf_size = 1024;
@@ -107,7 +107,7 @@ merkle_tree.build(input.get(), max_input_size / sizeof(uint64_t), default_merkle
 
 This example uses **Blake2s** in the upper layer:
 
-![Merkle Tree Diagram](./merkle_diagrams/diagram2.png)
+![Merkle Tree Diagram](/img/merkle_diagrams/diagram2.png)
 
 ```cpp
 #include "icicle/merkle/merkle_tree.h"
@@ -179,7 +179,7 @@ A Merkle proof contains:
 - **Index** (leaf_idx): The position of the leaf in the original dataset.
 - **Path**: A sequence of sibling hashes (tree nodes) needed to recompute the path from the leaf to the root.
 
-![Merkle Pruned Phat Diagram](./merkle_diagrams/diagram1_path.png)
+![Merkle Pruned Phat Diagram](/img/merkle_diagrams/diagram1_path.png)
 
 
 ```cpp
@@ -241,7 +241,7 @@ There are two types of paths that can be computed:
 - **Full Path:** Contains all sibling nodes and intermediate hashes.
 
 
-![Merkle Full Path Diagram](./merkle_diagrams/diagram1_path_full.png)
+![Merkle Full Path Diagram](/img/merkle_diagrams/diagram1_path_full.png)
 
 To compute a full path, specify `pruned=false`:
 
