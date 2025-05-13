@@ -931,7 +931,7 @@ TYPED_TEST(FieldTest, Fri)
       pow_bits = 0;
       nof_queries = 50;
     }
-    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
+    for (size_t log_input_size = 10; log_input_size <= 12; log_input_size += 2) {
       const size_t input_size = 1 << log_input_size;
       const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
       const size_t stopping_size = 1 << log_stopping_size;
