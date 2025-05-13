@@ -192,10 +192,10 @@ public:
   static constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
 #ifdef __CUDA_ARCH__
-    constexpr bool do_karatsuba = FF::TLC >= 8; // The basix multiplier size is 1 limb, Karatsuba is more efficient when
+    constexpr bool do_karatsuba = FF::TLC >= 8; // The basic multiplier size is 1 limb, Karatsuba is more efficient when
                                                 // the multiplication is 8 times wider or more
 #else
-    constexpr bool do_karatsuba = FF::TLC >= 16; // The basix multiplier size is 2 limbs, Karatsuba is more efficient
+    constexpr bool do_karatsuba = FF::TLC >= 16; // The basic multiplier size is 2 limbs, Karatsuba is more efficient
                                                  // when the multiplication is 8 times wider or more
 #endif
 
