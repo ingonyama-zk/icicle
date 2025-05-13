@@ -40,6 +40,7 @@ fn main() {
         } else {
             config.define("IOS_SIMULATOR", "OFF");
             config.define("IOS_DEVICE", "ON");
+            config.define("METAL_BACKEND","local");
         }
     }
     // build (or pull and build) cuda backend if feature enabled.

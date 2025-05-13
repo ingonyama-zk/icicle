@@ -44,6 +44,7 @@ fn main() {
         } else {
             config.define("IOS_SIMULATOR", "OFF");
             config.define("IOS_DEVICE", "ON");
+            config.define("METAL_BACKEND","local");
         }
     }
 
