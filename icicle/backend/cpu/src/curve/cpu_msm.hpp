@@ -18,14 +18,14 @@
 #include "icicle/backend/msm_config.h"
 #include "icicle/utils/platform.h"
 
-#include "decision tree params/msm_nof_cores_tree_params.h"
-#include "decision tree params/msm_c_tree_amd_params.h"
-#include "decision tree params/msm_c_tree_intel_params.h"
-#include "decision tree params/msm_c_tree_apple_params.h"
+#include "decision_tree_params/msm_nof_cores_tree_params.h"
+#include "decision_tree_params/msm_c_tree_amd_params.h"
+#include "decision_tree_params/msm_c_tree_intel_params.h"
+#include "decision_tree_params/msm_c_tree_apple_params.h"
 #ifdef G2_ENABLED
-  #include "decision tree params/msm_c_tree_intel_params_g2.h"
-  #include "decision tree params/msm_c_tree_amd_params_g2.h"
-  #include "decision tree params/msm_c_tree_apple_params_g2.h"
+  #include "decision_tree_params/msm_c_tree_intel_params_g2.h"
+  #include "decision_tree_params/msm_c_tree_amd_params_g2.h"
+  #include "decision_tree_params/msm_c_tree_apple_params_g2.h"
 #endif
 
 #ifdef MEASURE_MSM_TIMES
