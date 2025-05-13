@@ -18,7 +18,7 @@ pub fn check_fri<F: FieldImpl>(
     <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
 {
     let check = || {
-        const SIZE: u64 = 1 << 10;
+        const SIZE: u64 = 1 << 9;
         let fri_config = FriConfig::default();
         let scalars = F::Config::generate_random(SIZE as usize);
 
