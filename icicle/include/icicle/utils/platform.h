@@ -10,7 +10,7 @@
   #include <stdint.h>
 #endif
 
-inline bool is_apple_silicon()
+inline bool is_arm_platform()
 {
   struct utsname unameData;
   if (uname(&unameData) == 0) {
@@ -32,7 +32,7 @@ inline bool is_x86_platform()
 
 inline std::string get_cpu_vendor()
 {
-  if (is_apple_silicon()) { return "Apple"; }
+  if (is_arm_platform()) { return "ARM"; }
 
   if (is_x86_platform()) {
     // x86/x86_64: Use CPUID
@@ -63,7 +63,7 @@ inline std::string get_cpu_vendor()
 inline int get_cpu_vendor_as_int()
 {
   std::string vendor = get_cpu_vendor();
-  if (vendor == "Apple") return 2;
+  if (vendor == "ARM") return 2;
   if (vendor == "AMD") return 1;
   return 0;
 }

@@ -21,11 +21,11 @@
 #include "decision_tree_params/msm_nof_cores_tree_params.h"
 #include "decision_tree_params/msm_c_tree_amd_params.h"
 #include "decision_tree_params/msm_c_tree_intel_params.h"
-#include "decision_tree_params/msm_c_tree_apple_params.h"
+#include "decision_tree_params/msm_c_tree_arm_params.h"
 #ifdef G2_ENABLED
   #include "decision_tree_params/msm_c_tree_intel_params_g2.h"
   #include "decision_tree_params/msm_c_tree_amd_params_g2.h"
-  #include "decision_tree_params/msm_c_tree_apple_params_g2.h"
+  #include "decision_tree_params/msm_c_tree_arm_params_g2.h"
 #endif
 
 #ifdef MEASURE_MSM_TIMES
@@ -118,11 +118,11 @@ public:
     double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, pcm};
     unsigned optimal_c;
     if (std::is_same_v<A, affine_t>) {
-      if (cpu_vendor == "Apple") {
-        DecisionTree apple_tree = DecisionTree(
-          NOF_FEATURES_C_TREE_APPLE, thresholds_c_tree_apple, indices_c_tree_apple, left_childs_c_tree_apple,
-          right_childs_c_tree_apple, class_predictions_c_tree_apple);
-        optimal_c = apple_tree.predict(features);
+      if (cpu_vendor == "ARM") {
+        DecisionTree arm_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_ARM, thresholds_c_tree_arm, indices_c_tree_arm, left_childs_c_tree_arm,
+          right_childs_c_tree_arm, class_predictions_c_tree_arm);
+        optimal_c = arm_tree.predict(features);
       } else if (cpu_vendor == "Intel") {
         DecisionTree intel_tree = DecisionTree(
           NOF_FEATURES_C_TREE_INTEL, thresholds_c_tree_intel, indices_c_tree_intel, left_childs_c_tree_intel,
@@ -137,11 +137,11 @@ public:
     }
 #ifdef G2_ENABLED
     else if (std::is_same_v<A, g2_affine_t>) {
-      if (cpu_vendor == "Apple") {
-        DecisionTree apple_tree = DecisionTree(
-          NOF_FEATURES_C_TREE_APPLE_G2, thresholds_c_tree_apple_g2, indices_c_tree_apple_g2,
-          left_childs_c_tree_apple_g2, right_childs_c_tree_apple_g2, class_predictions_c_tree_apple_g2);
-        optimal_c = apple_tree.predict(features);
+      if (cpu_vendor == "ARM") {
+        DecisionTree arm_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_ARM_G2, thresholds_c_tree_arm_g2, indices_c_tree_arm_g2, left_childs_c_tree_arm_g2,
+          right_childs_c_tree_arm_g2, class_predictions_c_tree_arm_g2);
+        optimal_c = arm_tree.predict(features);
       } else if (cpu_vendor == "Intel") {
         DecisionTree intel_tree = DecisionTree(
           NOF_FEATURES_C_TREE_INTEL_G2, thresholds_c_tree_intel_g2, indices_c_tree_intel_g2,
