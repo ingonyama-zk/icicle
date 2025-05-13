@@ -1,4 +1,3 @@
-
 #include "icicle/backend/vec_ops_backend.h"
 #include "icicle/errors.h"
 #include "icicle/runtime.h"
@@ -9,10 +8,13 @@
 #include <cstdint>
 #include <sys/types.h>
 #include <vector>
+#include "icicle/utils/log.h"
+
 
 #include "taskflow/taskflow.hpp"
 #include "icicle/program/program.h"
 #include "cpu_program_executor.h"
+#include "util.h"
 
 using namespace field_config;
 using namespace icicle;
@@ -402,17 +404,6 @@ public:
 };
 
 #define NOF_OPERATIONS_PER_TASK 512
-#define CONFIG_NOF_THREADS_KEY  "n_threads"
-
-// extract the number of threads to run from config
-int get_nof_workers(const VecOpsConfig& config)
-{
-  if (config.ext && config.ext->has(CONFIG_NOF_THREADS_KEY)) { return config.ext->get<int>(CONFIG_NOF_THREADS_KEY); }
-
-  const int hw_threads = std::thread::hardware_concurrency();
-  // Note: no need to account for the main thread in vec-ops since it's doing little work
-  return std::max(1, hw_threads);
-}
 
 // Execute a full task from the type vector = vector (op) vector
 template <typename T, typename U>
@@ -641,151 +632,6 @@ eIcicleError cpu_scalar_mul(
 }
 
 REGISTER_SCALAR_MUL_VEC_BACKEND("CPU", cpu_scalar_mul<scalar_t>);
-
-/*********************************** TRANSPOSE ***********************************/
-
-template <typename T>
-eIcicleError out_of_place_matrix_transpose(
-  const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
-{
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
-  uint32_t stride = config.columns_batch ? config.batch_size : 1;
-  const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;
-  const uint32_t NOF_ROWS_PER_TASK =
-    std::min((uint64_t)nof_rows, std::max((uint64_t)(NOF_OPERATIONS_PER_TASK / nof_cols), (uint64_t)1));
-  for (uint32_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
-    const T* cur_mat_in = config.columns_batch ? mat_in + idx_in_batch : mat_in + idx_in_batch * total_elements_one_mat;
-    T* cur_mat_out = config.columns_batch ? mat_out + idx_in_batch : mat_out + idx_in_batch * total_elements_one_mat;
-    // Perform the matrix transpose
-    for (uint32_t i = 0; i < nof_rows; i += NOF_ROWS_PER_TASK) {
-      VectorOpTask<T, T>* task_p = task_manager.get_idle_or_completed_task();
-      task_p->send_out_of_place_matrix_transpose_task(
-        OUT_OF_PLACE_MATRIX_TRANSPOSE, cur_mat_in + stride * i * nof_cols,
-        std::min((uint64_t)NOF_ROWS_PER_TASK, (uint64_t)nof_rows - i), nof_rows, nof_cols, stride,
-        cur_mat_out + (stride * i));
-    }
-  }
-  task_manager.wait_done();
-  return eIcicleError::SUCCESS;
-}
-
-uint32_t gcd(uint32_t a, uint32_t b)
-{
-  while (b != 0) {
-    uint32_t temp = b;
-    b = a % b;
-    a = temp;
-  }
-  return a;
-}
-
-// Recursive function to generate all k-ary necklaces and to replace the elements within the necklaces
-template <typename T>
-void gen_necklace(
-  uint32_t t,
-  uint32_t p,
-  uint32_t k,
-  uint32_t length,
-  std::vector<uint32_t>& necklace,
-  std::vector<uint64_t>& task_indices)
-{
-  if (t > length) {
-    if (
-      length % p == 0 &&
-      !std::all_of(necklace.begin() + 1, necklace.begin() + length + 1, [first_element = necklace[1]](uint32_t x) {
-        return x == first_element;
-      })) {
-      uint32_t start_idx = 0;
-      uint64_t multiplier = 1;
-      for (int i = length; i >= 1; --i) { // Compute start_idx as the decimal representation of the necklace
-        start_idx += necklace[i] * multiplier;
-        multiplier *= k;
-      }
-      task_indices.push_back(start_idx);
-    }
-    return;
-  }
-
-  necklace[t] = necklace[t - p];
-  gen_necklace<T>(t + 1, p, k, length, necklace, task_indices);
-
-  for (int i = necklace[t - p] + 1; i < k; ++i) {
-    necklace[t] = i;
-    gen_necklace<T>(t + 1, t, k, length, necklace, task_indices);
-  }
-}
-
-template <typename T>
-eIcicleError matrix_transpose_necklaces(
-  const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
-{
-  uint32_t log_nof_rows = static_cast<uint32_t>(std::floor(std::log2(nof_rows)));
-  uint32_t log_nof_cols = static_cast<uint32_t>(std::floor(std::log2(nof_cols)));
-  uint32_t gcd_value = gcd(log_nof_rows, log_nof_cols);
-  uint32_t k = 1 << gcd_value; // Base of necklaces
-  uint32_t length =
-    (log_nof_cols + log_nof_rows) / gcd_value; // length of necklaces. Since all are powers of 2, equivalent to
-                                               // (log_nof_cols + log_nof_rows) / gcd_value;
-  const uint64_t max_nof_operations = NOF_OPERATIONS_PER_TASK / length;
-  const uint64_t total_elements_one_mat = static_cast<uint64_t>(nof_rows) * nof_cols;
-
-  std::vector<uint32_t> necklace(length + 1, 0);
-  std::vector<uint64_t> start_indices_in_mat; // Collect start indices
-  gen_necklace<T>(1, 1, k, length, necklace, start_indices_in_mat);
-
-  TasksManager<VectorOpTask<T, T>> task_manager(get_nof_workers(config));
-  for (uint64_t i = 0; i < start_indices_in_mat.size(); i += max_nof_operations) {
-    uint64_t nof_operations = std::min((uint64_t)max_nof_operations, start_indices_in_mat.size() - i);
-    for (uint64_t idx_in_batch = 0; idx_in_batch < config.batch_size; idx_in_batch++) {
-      VectorOpTask<T, T>* task_p = task_manager.get_idle_or_completed_task();
-      task_p->send_replace_elements_task(
-        REPLACE_ELEMENTS, config.columns_batch ? mat_in + idx_in_batch : mat_in + idx_in_batch * total_elements_one_mat,
-        nof_operations, start_indices_in_mat, i, log_nof_rows, log_nof_cols,
-        config.columns_batch ? config.batch_size : 1,
-        config.columns_batch ? mat_out + idx_in_batch : mat_out + idx_in_batch * total_elements_one_mat);
-    }
-  }
-  task_manager.wait_done();
-  return eIcicleError::SUCCESS;
-}
-
-template <typename T>
-eIcicleError cpu_matrix_transpose(
-  const Device& device, const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out)
-{
-  ICICLE_ASSERT(mat_in && mat_out && nof_rows != 0 && nof_cols != 0) << "Invalid argument";
-
-  // check if the number of rows and columns are powers of 2, if not use the basic transpose
-  bool is_power_of_2 = (nof_rows & (nof_rows - 1)) == 0 && (nof_cols & (nof_cols - 1)) == 0;
-  bool is_inplace = mat_in == mat_out;
-  if (!is_inplace) {
-    return (out_of_place_matrix_transpose(device, mat_in, nof_rows, nof_cols, config, mat_out));
-  } else if (is_power_of_2) {
-    return (matrix_transpose_necklaces<T>(mat_in, nof_rows, nof_cols, config, mat_out));
-  } else {
-    ICICLE_LOG_ERROR << "Matrix transpose is not supported for inplace non power of 2 rows and columns";
-    return eIcicleError::INVALID_ARGUMENT;
-  }
-}
-
-REGISTER_MATRIX_TRANSPOSE_BACKEND("CPU", cpu_matrix_transpose<scalar_t>);
-
-
-/*********************************** MATRIX MULTIPLICATION ***********************************/
-
-
-template <typename T>   
-static eIcicleError cpu_matrix_mult(
-  const Device& device,
-  const T* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-  const T* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, T* mat_out)
-{
-    //TODO: Implement matrix multiplication
-  return eIcicleError::SUCCESS;
-}   
-
-REGISTER_MATRIX_MUL_BACKEND("CPU", cpu_matrix_mult<scalar_t>);
-
 
 
 /*********************************** BIT REVERSE ***********************************/
@@ -1038,7 +884,6 @@ eIcicleError cpu_poly_divide(
 REGISTER_POLYNOMIAL_DIVISION("CPU", cpu_poly_divide<scalar_t>);
 
 #ifdef EXT_FIELD
-REGISTER_MATRIX_TRANSPOSE_EXT_FIELD_BACKEND("CPU", cpu_matrix_transpose<extension_t>);
 REGISTER_BIT_REVERSE_EXT_FIELD_BACKEND("CPU", cpu_bit_reverse<extension_t>);
 REGISTER_SLICE_EXT_FIELD_BACKEND("CPU", cpu_slice<extension_t>);
 REGISTER_VECTOR_ADD_EXT_FIELD_BACKEND("CPU", cpu_vector_add<extension_t>);
@@ -1059,7 +904,6 @@ REGISTER_EXECUTE_PROGRAM_EXT_FIELD_BACKEND("CPU", cpu_execute_program<extension_
 
 #ifdef RING
 // Register APIs for rns type
-REGISTER_MATRIX_TRANSPOSE_RING_RNS_BACKEND("CPU", cpu_matrix_transpose<scalar_rns_t>);
 REGISTER_BIT_REVERSE_RING_RNS_BACKEND("CPU", cpu_bit_reverse<scalar_rns_t>);
 REGISTER_SLICE_RING_RNS_BACKEND("CPU", cpu_slice<scalar_rns_t>);
 REGISTER_VECTOR_ADD_RING_RNS_BACKEND("CPU", cpu_vector_add<scalar_rns_t>);

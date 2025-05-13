@@ -340,6 +340,29 @@ namespace icicle {
     const T* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
     const T* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, T* mat_out);   
 
+  /**
+   * @brief Multiplies two matrices in RQ mode.
+   *
+   * @tparam T Type of the elements in the matrices.
+   * @param d The RQ parameter.
+   * @param mat_a Pointer to the first input matrix.
+   * @param nof_rows_a Number of rows in the first input matrix.
+   * @param nof_cols_a Number of columns in the first input matrix.
+   * @param mat_b Pointer to the second input matrix.
+   * @param nof_rows_b Number of rows in the second input matrix.
+   * @param nof_cols_b Number of columns in the second input matrix.
+   * @param config Configuration for the operation.
+   * @param mat_out Pointer to the output matrix where the results will be stored.
+   * @return eIcicleError Error code indicating success or failure.
+   * @note The input matrices are assumed to be stored in row-major order.
+   *       This function multiplies a matrix A or a batch of matrices with matrix B in RQ mode.
+   */ 
+  template <typename T>
+  eIcicleError rq_matrix_mult(
+    uint32_t d,
+    const T* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
+    const T* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, T* mat_out);
+
   // Miscellaneous operations
 
   /**
