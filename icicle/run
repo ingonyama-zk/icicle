@@ -1,5 +1,0 @@
-#rm -rf build
-#cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCUDA_BACKEND=main -DMSM=ON -DSUMCHECK=ON -DPOSEIDON=ON -DHASH=ON -DG2=ON -DECNTT=OFF -DEXT_FIELD=OFF -DCURVE=bn254 -S . -B build
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DMSM=ON -DCUDA_BACKEND=OFF -DG2=ON -DECNTT=OFF -DEXT_FIELD=OFF -DCURVE=bn254 -S . -B build
-cmake --build build -j
-build/tests/test_curve_api --gtest_filter="*"
