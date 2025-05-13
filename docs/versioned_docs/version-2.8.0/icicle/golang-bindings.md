@@ -31,7 +31,7 @@ For a specific commit
 go get github.com/ingonyama-zk/icicle@<commit_id>
 ```
 
-To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/tree/main/wrappers/golang/build.sh) script:
+To build the shared libraries you can run [this](https://github.com/ingonyama-zk/icicle/blob/main/scripts/release/build_all.sh) script:
 
 ```sh
 ./build.sh [-curve=<curve>] [-field=<field>] [-hash=<hash>] [-cuda_version=<version>] [-g2] [-ecntt] [-devmode]
