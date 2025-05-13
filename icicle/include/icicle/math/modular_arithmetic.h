@@ -522,6 +522,7 @@ public:
   {
     T rs = {};
     T temp = xs;
+    bool is_zero = true;
 #ifdef __CUDA_ARCH__
     UNROLL
 #else
@@ -529,7 +530,10 @@ public:
 #endif
     for (unsigned i = 0; i < 32; i++) {
       if ((multiplier >> i) == 0) { break; }
-      if ((multiplier >> i) & 1) { rs = rs + temp; }
+      if ((multiplier >> i) & 1) {
+        rs = is_zero ? temp : rs + temp;
+        is_zero = false;
+      }
       temp = temp + temp;
     }
     return rs;
