@@ -73,12 +73,16 @@
   font-weight: 500;
   font-size: 0.9rem;
   text-transform: none;
+  margin-left: 10px;
   transition: background-color 0.2s ease;
   display: inline-block;
 }
 .github-cta-button:hover {
   background-color: #0056b3;
   text-decoration: none;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
   color: #fff;
 }
 
@@ -191,6 +195,33 @@
   width: 70px;
   height: auto;
 }
+/* api cards */
+
+.card-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+  width: 100%;
+  height: auto;
+}
+.card-icon-top {
+  display: block;
+  width: 150px;        /* or whatever size you want */
+  height: auto;       /* maintain aspect ratio */
+  margin-bottom: 0.75rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+/* Responsive fallback: stack on mobile */
+@media (max-width: 996px) {
+  .card-row-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ========== LOGO IN TOC =========== */
 
 /* Wrapper for the logo inside the Table of Contents */

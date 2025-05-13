@@ -19,7 +19,7 @@ import Link from '@docusaurus/Link';
     </div>
   </Link>
 
-  <Link to="/docs/theming" className="card-link">
+  <Link to="/start/programmers_guide/general" className="card-link">
     <div className="card-box">
       <img src="/img/Programguide.png" alt="Prog Icon" className="card-icon-left" />
       <div className="card-text">
@@ -29,7 +29,7 @@ import Link from '@docusaurus/Link';
     </div>
   </Link>
 
-  <Link to="/docs/theming" className="card-link">
+  <Link to="/start/integration-&-support/benchmarks" className="card-link">
     <div className="card-box">
       <img src="/img/Intandsup.png" alt="Int&Sup Icon" className="card-icon-left" />
       <div className="card-text">
@@ -39,7 +39,7 @@ import Link from '@docusaurus/Link';
     </div>
   </Link>
 
-  <Link to="/docs/theming" className="card-link">
+  <Link to="/apioverview" className="card-link">
     <div className="card-box">
       <img src="/img/API.png" alt="API Icon" className="card-icon-left" />
       <div className="card-text">

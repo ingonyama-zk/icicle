@@ -109,7 +109,7 @@ export default {
   apisidebar: [
     {
       type: "doc",
-      label: "API",
+      label: "API Overview",
       id: "api/overview",
     },
     {
@@ -117,6 +117,11 @@ export default {
       label: "C++",
       collapsed: false,
       items: [
+        {
+          type: "doc",
+          label: "C++ Overview",
+          id: "api/cpp/cppstart",
+        },
         {
           type: "doc",
           label: "MSM",
@@ -180,20 +185,19 @@ export default {
       collapsed: false,
       items: [
         {
-          type: "category",
+          type: "doc",
+          label: "Golang Overview",
+          id: "api/golang-bindings/gostart",
+        },
+        {
+          type: "doc",
           label: "MSM",
-          link: {
-            type: "doc",
-            id: "api/golang-bindings/msm",
-          },
-          collapsed: true,
-          items: [
-            {
-              type: "doc",
-              label: "MSM pre computation",
-              id: "api/golang-bindings/msm-pre-computation",
-            },
-          ],
+          id: "api/golang-bindings/msm",
+        },
+        {
+          type: "doc",
+          label: "MSM pre-computation",
+          id: "api/golang-bindings/msm-pre-computation",
         },
         {
           type: "doc",
@@ -232,6 +236,11 @@ export default {
       label: "Rust Bindings",
       collapsed: false,
       items: [
+        {
+          type: "doc",
+          label: "Rust Overview",
+          id: "api/rust-bindings/ruststart",
+        },
         {
           type: "doc",
           label: "MSM",
