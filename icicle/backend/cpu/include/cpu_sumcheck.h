@@ -107,7 +107,7 @@ namespace icicle {
 
         std::vector<F>& round_polynomial = sumcheck_proof.get_round_polynomial(round_idx);
         for (int worker_idx = 0; worker_idx < nof_workers; ++worker_idx) {
-          for (int k = 0; k < round_polynomial.size(); ++k) {
+          for (int k = 1; k < round_polynomial.size(); ++k) {
             round_polynomial[k] = round_polynomial[k] + worker_round_polynomial[worker_idx][k];
             worker_round_polynomial[worker_idx][k] = F::zero();
           }
