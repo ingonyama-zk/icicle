@@ -529,9 +529,10 @@ public:
   #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
-      if ((multiplier >> i) == 0) { break; }
-      if ((multiplier >> i) & 1) {
+      const uint32_t remain = (multiplier >> i);
+      if (remain & 1) {
         rs = is_zero ? temp : rs + temp;
+        if ((remain ^ 1) == 0) { return rs; }
         is_zero = false;
       }
       temp = temp + temp;
