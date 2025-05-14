@@ -11,7 +11,7 @@ int get_nof_workers(const VecOpsConfig& config);
 
 using uint128_t = __uint128_t;
 
-static int64_t abs_centered(int64_t val, int64_t q)
+static uint64_t abs_centered(uint64_t val, uint64_t q)
 {
   if (val > q / 2) { val = q - val; }
   return val;
@@ -88,11 +88,11 @@ static eIcicleError cpu_check_norm_bound(
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
             int64_t val = input_i64[batch_idx * size + idx];
+            val = abs_centered(val, q);
             if (!validate_input_range(val, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            val = abs_centered(val, q);
             local_sums[batch_idx] += static_cast<uint128_t>(val) * static_cast<uint128_t>(val);
           }
         }
@@ -137,11 +137,11 @@ static eIcicleError cpu_check_norm_bound(
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
             int64_t val = input_i64[batch_idx * size + idx];
+            val = abs_centered(val, q);
             if (!validate_input_range(val, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            val = abs_centered(val, q);
             local_max[batch_idx] = std::max(local_max[batch_idx], val);
           }
         }
@@ -234,19 +234,19 @@ static eIcicleError cpu_check_norm_relative(
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
             int64_t val_a = input_a_i64[batch_idx * size + idx];
+            val_a = abs_centered(val_a, q);
             if (!validate_input_range(val_a, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            val_a = abs_centered(val_a, q);
             local_sum_a[batch_idx] += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
 
             int64_t val_b = input_b_i64[batch_idx * size + idx];
+            val_b = abs_centered(val_b, q);
             if (!validate_input_range(val_b, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            val_b = abs_centered(val_b, q);
             local_sum_b[batch_idx] += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
           }
         }
@@ -301,19 +301,19 @@ static eIcicleError cpu_check_norm_relative(
         for (uint64_t idx = start_idx; idx < end_idx; ++idx) {
           for (uint32_t batch_idx = 0; batch_idx < config.batch_size; ++batch_idx) {
             int64_t val_a = input_a_i64[batch_idx * size + idx];
+            val_a = abs_centered(val_a, q);
             if (!validate_input_range(val_a, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            val_a = abs_centered(val_a, q);
             local_max_a[batch_idx] = std::max(local_max_a[batch_idx], val_a);
 
             int64_t val_b = input_b_i64[batch_idx * size + idx];
+            val_b = abs_centered(val_b, q);
             if (!validate_input_range(val_b, sqrt_q)) {
               validation_failed.store(true, std::memory_order_relaxed);
               return;
             }
-            val_b = abs_centered(val_b, q);
             local_max_b[batch_idx] = std::max(local_max_b[batch_idx], val_b);
           }
         }

@@ -10,7 +10,7 @@ using namespace icicle;
 using uint128_t = __uint128_t;
 
 // Helper function for norm checking
-static int64_t abs_centered(int64_t val, int64_t q)
+static uint64_t abs_centered(uint64_t val, uint64_t q)
 {
   if (val > q / 2) { val = q - val; }
   return val;
