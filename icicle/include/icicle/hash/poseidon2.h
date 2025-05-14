@@ -4,7 +4,7 @@
 
 namespace icicle {
   /**
-   * @brief Creates a Poseidon2 hash instance with the specified width and optional domain tag.
+   * @brief Creates a Poseidon2 hash instance with the specified width, optional domain tag and optional input size.
    *
    * This function generates a Poseidon2 hash with customizable parameters to suit various cryptographic
    * contexts and use cases. The width parameter (`t`) determines the number of elements in the state,
@@ -30,14 +30,14 @@ namespace icicle {
    *       unsupported value for `t` is provided.
    */
   template <typename S>
-  Hash create_poseidon2_hash(unsigned t, const S* domain_tag = nullptr);
+  Hash create_poseidon2_hash(unsigned t, const S* domain_tag = nullptr, unsigned input_size = 0);
 
   // Poseidon2 struct providing a static interface to Poseidon2-related operations.
   struct Poseidon2 {
     template <typename S>
-    inline static Hash create(unsigned t, const S* domain_tag = nullptr)
+    inline static Hash create(unsigned t, const S* domain_tag = nullptr, unsigned input_size = 0)
     {
-      return create_poseidon2_hash<S>(t, domain_tag);
+      return create_poseidon2_hash<S>(t, domain_tag, input_size);
     }
   };
 

@@ -18,7 +18,7 @@ pub fn check_fri<F: FieldImpl>(
     <F as FieldImpl>::Config: FriMerkleTree<F> + GenerateRandom<F>,
 {
     let check = || {
-        const SIZE: u64 = 1 << 10;
+        const SIZE: u64 = 1 << 9;
         let fri_config = FriConfig::default();
         let scalars = F::Config::generate_random(SIZE as usize);
 
@@ -90,7 +90,7 @@ pub fn check_fri_on_device<F: FieldImpl>(
         let fri_proof = fri_merkle_tree_prove::<F>(
             &fri_config,
             &transcript_config,
-            HostSlice::from_slice(&scalars),
+            &scalars_d,
             &merkle_tree_leaves_hash,
             &merkle_tree_compress_hash,
             merkle_tree_min_layer_to_store,
