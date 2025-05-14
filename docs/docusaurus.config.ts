@@ -130,11 +130,11 @@ const config: Config = {
       {name: 'twitter:site', content: '@Ingo_zk'},
       {name: 'twitter:title', content: 'Ingonyama Developer Documentation'},
       {name: 'twitter:description', content: 'Ingonyama is a next-generation semiconductor company focusing on Zero-Knowledge Proof hardware acceleration...'},
-      {name: 'twitter:image', content: 'https://dev.ingonyama.com/static/img/ICICLELOGONEW.png'},
+      {name: 'twitter:image', content: 'https://dev.ingonyama.com/img/ICICLELOGONEW.png'},
       // title
       {name: 'og:title', content: 'Ingonyama Developer Documentation'},
       {name: 'og:description', content: 'Ingonyama is a next-generation semiconductor company focusing on Zero-Knowledge Proof hardware acceleration...'},
-      {name: 'og:image', content: 'https://dev.ingonyama.com/static/img/ICICLELOGONEW.png'},
+      {name: 'og:image', content: 'https://dev.ingonyama.com/img/ICICLELOGONEW.png'},
     ],
     docs: {
       sidebar: {
