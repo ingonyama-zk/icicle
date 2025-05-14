@@ -196,12 +196,30 @@ public:
 
   constexpr HOST_DEVICE_INLINE Wide mul_wide(const ComplexExtensionField& ys) const
   {
-    FWide real_prod = c0.mul_wide(ys.c0);
-    FWide imaginary_prod = c1.mul_wide(ys.c1);
-    FWide prod_of_sums = (c0 + c1).mul_wide(ys.c0 + ys.c1);
-    FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
-    return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+#ifdef __CUDA_ARCH__
+    constexpr bool do_karatsuba = FF::TLC >= 8; // The basic multiplier size is 1 limb, Karatsuba is more efficient when
+                                                // the multiplication is 8 times wider or more
+#else
+    constexpr bool do_karatsuba = FF::TLC >= 16; // The basic multiplier size is 2 limbs, Karatsuba is more efficient
+                                                 // when the multiplication is 8 times wider or more
+#endif
+
+    if constexpr (do_karatsuba) {
+      FWide real_prod = c0.mul_wide(ys.c0);
+      FWide imaginary_prod = c1.mul_wide(ys.c1);
+      FWide prod_of_sums = (c0 + c1).mul_wide(ys.c0 + ys.c1);
+      FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? nonresidue_times_im.neg() : nonresidue_times_im;
+      return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    } else {
+      FWide real_prod = c0.mul_wide(ys.c0);
+      FWide imaginary_prod = c1.mul_wide(ys.c1);
+      FWide ab = c0.mul_wide(ys.c1);
+      FWide ba = c1.mul_wide(ys.c0);
+      FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
+      return Wide{real_prod + nonresidue_times_im, ab + ba};
+    }
   }
 
   constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& ys) const { return Wide{c0.mul_wide(ys), c1.mul_wide(ys)}; }

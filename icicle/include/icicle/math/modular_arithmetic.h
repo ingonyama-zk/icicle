@@ -534,11 +534,11 @@ public:
   #pragma unroll
 #endif
     for (unsigned i = 0; i < 32; i++) {
-      if (multiplier & (1 << i)) {
-        rs = is_zero ? temp : (rs + temp);
+      if ((multiplier >> i) == 0) { break; }
+      if ((multiplier >> i) & 1) {
+        rs = is_zero ? temp : rs + temp;
         is_zero = false;
       }
-      if (multiplier & ((1 << (31 - i - 1)) << (i + 1))) break;
       temp = temp + temp;
     }
     return rs;
