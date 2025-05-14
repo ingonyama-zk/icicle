@@ -12,10 +12,18 @@ impl_fri!(
 
 #[cfg(test)]
 mod tests {
-    use icicle_core::impl_fri_tests;
 
-    use crate::field::{ExtensionField, ScalarField};
+    mod babybear_fri_test {
+        use icicle_core::{impl_fri_test_with_poseidon, impl_fri_tests};
 
-    impl_fri_tests!(babybear_fri_test, ScalarField, ScalarField);
-    impl_fri_tests!(babybear_extension_fri_test, ScalarField, ExtensionField);
+        use crate::field::ScalarField;
+        impl_fri_tests!(ScalarField, ScalarField);
+        impl_fri_test_with_poseidon!(ScalarField, ScalarField);
+    }
+    mod babybear_extension_fri_test {
+        use icicle_core::impl_fri_tests;
+
+        use crate::field::{ExtensionField, ScalarField};
+        impl_fri_tests!(ScalarField, ExtensionField);
+    }
 }
