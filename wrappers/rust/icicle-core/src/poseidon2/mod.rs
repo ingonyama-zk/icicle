@@ -8,7 +8,9 @@ use icicle_runtime::errors::eIcicleError;
 /// This allows the implementation of Poseidon2 hashing for various field types that implement `FieldImpl`.
 pub trait Poseidon2Hasher<F: FieldImpl> {
     /// Method to create a new Poseidon2 hasher for a given t (branching factor).
-    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError>;
+    fn new(t: u32, domain_tag: Option<&F>) -> Result<Hasher, eIcicleError> {
+        Self::new_with_input_size(t, domain_tag, 0)
+    }
 
     /// Method to create a new Poseidon2 hasher for a given t, overriding input size.
     fn new_with_input_size(t: u32, domain_tag: Option<&F>, input_size: u32) -> Result<Hasher, eIcicleError>;
@@ -69,19 +71,6 @@ macro_rules! impl_poseidon2 {
 
             // Implement the `Poseidon2Hasher` trait for the given field configuration.
             impl Poseidon2Hasher<$field> for $field_cfg {
-                fn new(t: u32, domain_tag: Option<&$field>) -> Result<Hasher, eIcicleError> {
-                    let handle: HasherHandle = unsafe {
-                        create_poseidon2_hasher(
-                            t,
-                            domain_tag.map_or(std::ptr::null(), |tag| tag as *const $field),
-                            0,
-                        )
-                    }; // Calls the external FFI function to create the hasher.
-                    if handle.is_null() {
-                        return Err(eIcicleError::UnknownError); // Checks if the handle is null and returns an error if so.
-                    }
-                    Ok(Hasher::from_handle(handle)) // Wraps the handle in a `Hasher` object and returns it.
-                }
                 fn new_with_input_size(
                     t: u32,
                     domain_tag: Option<&$field>,
