@@ -42,7 +42,7 @@ Each library has a corresponding crate. See [programmers guide](./programmers_gu
 | [Vector operations](./primitives/vec_ops) |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ✅     |
 | [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |  ❌   |     ✅      |     ✅     |
 | [NTT](primitives/ntt)                     |                        ✅                         |                                                 ✅                                                  |  ❌   |     ✅      |     ✅     |
-| Extension Field                           |                        ✅                         |                                                 ❌                                                  |  ✅   |     ✅      |     ❌     |
+| Extension Field                           |                        ✅                         |                                                 ❌                                                  |  ✅   |     ✅      |     ✅     |
 | [Poseidon](primitives/hash#poseidon)      |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ❌     |
 | [Poseidon2](primitives/hash#poseidon2)    |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ✅    |
 
