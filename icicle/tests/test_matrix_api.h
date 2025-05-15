@@ -46,6 +46,32 @@ protected:
     }
   }
 
+    void rq_multiply_matrices(
+    size_t d, 
+    const std::vector<scalar_t>& a,
+    const std::vector<scalar_t>& b, 
+    std::vector<scalar_t>& out,
+    size_t rows_a,
+    size_t cols_a,  // also rows_b
+    size_t cols_b)
+  {
+    // For each element of output matrix
+    for (size_t i = 0; i < rows_a; i++) {
+      for (size_t j = 0; j < cols_b; j++) {
+        // Initialize accumulator for dot product
+        std::vector<scalar_t>& sum_vector = std::vector<scalar_t>::zero();
+        
+        // Compute dot product of row i from A and col j from B
+        for (size_t k = 0; k < cols_a; k++) {
+          sum = sum + (a[i * cols_a + k] * b[k * cols_b + j]);
+        }
+        
+        out[i * cols_b + j] = sum;
+      }
+    }
+  }
+
+
 };
 
 

@@ -19,11 +19,6 @@
 using namespace field_config;
 using namespace icicle;
 
-/****** util ********/
-
-
-
-
 /*********************************** MATRIX MULTIPLICATION ***********************************/
 
 
