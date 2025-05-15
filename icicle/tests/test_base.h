@@ -23,7 +23,7 @@ class IcicleTestBase : public ::testing::Test
 {
 public:
   static inline std::vector<std::string> s_registered_devices;
-  static inline std::string s_main_device = UNKOWN_DEVICE;
+  static inline std::string s_main_device = "CPU";
   static inline std::string s_ref_device = "CPU"; // assuming always present
   // SetUpTestSuite/TearDownTestSuite are called once for the entire test suite
   static void SetUpTestSuite()

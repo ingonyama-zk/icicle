@@ -1,0 +1,22 @@
+export CPATH=$CPATH:/usr/local/cuda/include
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-12.4/targets/x86_64-linux/lib
+rm -rf build
+rm build/tests/test_curve_api
+
+################################################
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/cuda-12.4/targets/x86_64-linux/lib -lnvToolsExt" -DBUILD_TESTS=ON -DMSM=ON -DCUDA_BACKEND=OFF -DG2=ON -DECNTT=OFF -DEXT_FIELD=OFF  -DCMAKE_CXX_FLAGS="-DENABLE_NVTX_RANGE -DENABLE_NVTX_PRINT"  -DCURVE=bls12_381 -S . -B build
+
+cmake --build build -j
+build/tests/test_curve_api --gtest_filter="*msm*" |& tee msm_free_big.log
+
+nsys profile --trace=cuda,nvtx build/tests/test_curve_api --gtest_filter="*msmG2*" |& tee msmg2_prof_big.log
+#################################################################
+rm -rf build
+
+
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DMSM=ON -DCUDA_BACKEND=OFF -DG2=ON -DECNTT=OFF -DEXT_FIELD=OFF -DCURVE=bls12_381 -S . -B build
+
+cmake --build build -j
+build/tests/test_curve_api --gtest_filter="*msm*" |& tee msm_free_no.log
+
+########################################################

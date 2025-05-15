@@ -35,7 +35,7 @@ public:
   template <typename A, typename P>
   void MSM_test()
   {
-    const int logn = 12;
+    const int logn = 20;
     const int batch = 1;
     const int N = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
     const int precompute_factor = 1;

@@ -1,4 +1,4 @@
-curve=1
+curve=2
 
 build_msm_test:
 	mkdir -p build

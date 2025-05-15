@@ -6,8 +6,8 @@
 #include <cassert>
 #include "timer.hpp"
 
-#define DUMMY_TYPES
-#define DEBUG_PRINTS
+// #define DUMMY_TYPES
+// #define DEBU_G_PRINTS
 #define P_MACRO 1000
 
 class DummyScalar
@@ -185,7 +185,7 @@ std::vector<Point> msm_bucket_accumulator(
         uint32_t curr_coeff = scalar.get_scalar_digit(num_bms * j + k, c) + carry;
         if ((curr_coeff & ((1 << c) - 1)) != 0) {
           if (curr_coeff < num_bkts) {
-#ifdef DEBUG_PRINTS
+#ifdef DEBU_G_PRINTS
             int bkt_idx = num_bkts * k + curr_coeff;
             if (Point::is_zero(bkts[bkt_idx])) {
               trace_f << '#' << bkt_idx << ":\tWrite free cell:\t" << point.x << '\n';
@@ -203,7 +203,7 @@ std::vector<Point> msm_bucket_accumulator(
                                                 : bkts[num_bkts * k + curr_coeff] + point;
             carry = 0;
           } else {
-#ifdef DEBUG_PRINTS
+#ifdef DEbBUG_PRINTS
             int bkt_idx = num_bkts * k + ((-curr_coeff) & coeff_bit_mask);
             if (Point::is_zero(bkts[bkt_idx])) {
               trace_f << '#' << bkt_idx << ":\tWrite free cell:\t" << A::neg(point).x << '\n';
@@ -228,7 +228,7 @@ std::vector<Point> msm_bucket_accumulator(
       }
     }
   }
-#ifdef DEBUG_PRINTS
+#ifdef DEnBUG_PRINTS
   trace_f.close();
   std::string b_fname = "buckets_single.txt";
   std::ofstream bkts_f_single(b_fname);
@@ -410,7 +410,7 @@ int main()
     auto scalars = std::make_unique<scalar_t[]>(N * batch_size);
     auto bases = std::make_unique<A[]>(N);
     get_inputs(bases.get(), scalars.get(), N, batch_size, gen_new);
-#ifdef DEBUG_PRINTS
+#ifdef DEBU_G_PRINTS
     std::cout << "Inputs:\n";
     for (int i = 0; i < N; i++) {
       std::cout << scalars[i] << " * " << bases[i] << " + ";

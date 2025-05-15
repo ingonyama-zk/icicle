@@ -15,6 +15,7 @@
 #include "icicle/msm.h"
 #include "taskflow/taskflow.hpp"
 #include "icicle/backend/msm_config.h"
+#include "icicle/utils/utils2.h"
 #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
 #endif
@@ -44,12 +45,18 @@ public:
   // run MSM based on pippenger algorithm
   void run_msm(const scalar_t* scalars, const A* bases, P* results)
   {
+    NVTX_TIMED("phase1_populate_buckets");
     phase1_populate_buckets(scalars, bases);
+    NVTX_TIMED_POP();
 
+    NVTX_TIMED("phase2_collapse_segments");
     phase2_collapse_segments();
+    NVTX_TIMED_POP();
 
     // TBD: start the next task in batch in parallel to phase 3
+    NVTX_TIMED("phase3_final_accumulator");
     phase3_final_accumulator(results);
+    NVTX_TIMED_POP();
   }
 
   // Calculate the optimal C based on the problem size, config and machine parameters.
@@ -157,6 +164,7 @@ private:
   // Each worker run this function and update its buckets - this function needs re writing
   void worker_run_phase1(const int worker_idx, const scalar_t* scalars, const A* bases, const int msm_size)
   {
+    NVTX_TIMED("worker_run_phase1");
     // Init My buckets:
     std::vector<Bucket>& buckets = m_workers_buckets[worker_idx];
     std::vector<bool>& buckets_busy = m_workers_buckets_busy[worker_idx];
@@ -215,6 +223,7 @@ private:
         }
       }
     }
+    NVTX_TIMED_POP();
   }
 
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
@@ -236,6 +245,7 @@ private:
   // single worker task - accumulate a single segment
   void worker_collapse_segment(Segment& segment, const int64_t bucket_start, const uint32_t segment_size)
   {
+    // NVTX_TIMED("worker_collapse_segment");
     const int64_t last_bucket_i = bucket_start + segment_size;
     const int64_t init_bucket_i = (last_bucket_i % m_bm_size) ? last_bucket_i
                                                               : // bucket 0 at the BM contains the last element
@@ -248,25 +258,72 @@ private:
     }
     segment.line_sum = segment.triangle_sum;
 
-    // run over the buckets and accumulate the to the segment
-    for (int64_t bucket_i = last_bucket_i - 1; bucket_i > bucket_start; bucket_i--) {
-      // add busy buckets to line sum
-      accumulate_all_workers_buckets(bucket_i, segment.line_sum);
-      // Add line_sum to triangle_sum
-      segment.triangle_sum = segment.triangle_sum + segment.line_sum; // TBD: inplace
+    // Batch size for accumulation to reduce memory pressure
+    constexpr int BATCH_SIZE = 4;  // Tune this based on your specific hardware
+    
+    // Main loop with batching
+    int64_t bucket_i = last_bucket_i - 1;
+    while (bucket_i > bucket_start) {
+      // NVTX_TIMED("batch_accumulate");
+      
+      // Process BATCH_SIZE buckets at once
+      P batch_line_sums[BATCH_SIZE];
+      int batch_count = 0;
+      
+      // Fill batch
+      for (; batch_count < BATCH_SIZE && bucket_i > bucket_start; --bucket_i) {
+        P& current_sum = batch_line_sums[batch_count];
+        current_sum = P::zero();
+        
+        // Prefetch next bucket data - only prefetch the point data since bool vector is bit-packed
+        if (bucket_i > bucket_start) {
+          __builtin_prefetch(&m_workers_buckets[0][bucket_i-1].point, 0, 0);
+        }
+        
+        // Accumulate current bucket across all workers
+        #pragma omp simd
+        for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
+          if (m_workers_buckets_busy[worker_i][bucket_i]) {
+            current_sum = current_sum + m_workers_buckets[worker_i][bucket_i].point;
+          }
+        }
+        batch_count++;
+      }
+      
+      // Accumulate batch results
+      for (int i = 0; i < batch_count; i++) {
+        segment.line_sum = segment.line_sum + batch_line_sums[i];
+        segment.triangle_sum = segment.triangle_sum + segment.line_sum;
+      }
+      
+      // NVTX_TIMED_POP();
     }
+    // NVTX_TIMED_POP();
   }
 
-  // run over all workers and sum their bucket_idx to sum
+  // Optimized helper for batch accumulation
   void accumulate_all_workers_buckets(const uint64_t bucket_idx, P& sum)
   {
+    // NVTX_TIMED("accumulate_all_workers_buckets");
+    
+    // Pre-check which workers have data to avoid unnecessary operations
+    std::vector<int> active_workers;
+    active_workers.reserve(m_nof_workers);
+    
+    #pragma omp simd
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
       if (m_workers_buckets_busy[worker_i][bucket_idx]) {
-        sum = sum + m_workers_buckets[worker_i][bucket_idx].point; // TBD: inplace
+        active_workers.push_back(worker_i);
       }
     }
+    
+    // Accumulate only from workers that have data
+    for (int worker_i : active_workers) {
+      sum = sum + m_workers_buckets[worker_i][bucket_idx].point;
+    }
+    
+    // NVTX_TIMED_POP();
   }
-
   // Serial phase - accumulate all segments to final result
   void phase3_final_accumulator(P* result)
   {
@@ -338,11 +395,13 @@ eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
   Msm<A, P> msm(msm_size, config);
+  NVTX_TIMED("cpu_msm");
   for (int batch_i = 0; batch_i < config.batch_size; batch_i++) {
     const int batch_start_idx = msm_size * batch_i;
     const int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
     msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i]);
   }
+  NVTX_TIMED_POP();
   return eIcicleError::SUCCESS;
 }
 
@@ -364,6 +423,7 @@ eIcicleError cpu_msm_precompute_bases(
   const MSMConfig& config,
   A* output_bases) // Pre assigned?
 {
+  NVTX_TIMED("cpu_msm_precompute_bases");
   int c = Msm<A, P>::get_optimal_c(nof_bases, config);
 
   const int precompute_factor = config.precompute_factor;
@@ -381,5 +441,7 @@ eIcicleError cpu_msm_precompute_bases(
       output_bases[precompute_factor * i + j] = is_mont ? A::to_montgomery(P::to_affine(point)) : P::to_affine(point);
     }
   }
+  NVTX_TIMED_POP();
   return eIcicleError::SUCCESS;
 }
+
