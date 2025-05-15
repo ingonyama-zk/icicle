@@ -123,10 +123,11 @@ public:
   {
     FWide real_prod = FF::mul_wide(xs.real, ys.real);
     FWide imaginary_prod = FF::mul_wide(xs.imaginary, ys.imaginary);
-    FWide prod_of_sums = FF::mul_wide(xs.real + xs.imaginary, ys.real + ys.imaginary);
+    FWide ab = FF::mul_wide(xs.real, ys.imaginary);
+    FWide ba = FF::mul_wide(xs.imaginary, ys.real);
     FWide nonresidue_times_im = FF::template mul_unsigned<CONFIG::nonresidue>(imaginary_prod);
     nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    return ExtensionWide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    return ExtensionWide{real_prod + nonresidue_times_im, ab + ba};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
