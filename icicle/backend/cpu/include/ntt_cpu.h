@@ -97,7 +97,7 @@ namespace ntt_cpu {
                            ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1]);
           nof_subntts = 1;
         }
-        size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+        size_t num_chunks = (ntt_data.config.n_cores) << 1; // Adjust based on the number of threads
         size_t chunk_size = (nof_blocks * nof_subntts + num_chunks - 1) / num_chunks;
 
         for (size_t i = 0; i < num_chunks; ++i) {
@@ -164,7 +164,7 @@ namespace ntt_cpu {
               nof_subntts = 1;
             }
             nof_blocks = nof_blocks >> 1;
-            size_t num_chunks = (std::thread::hardware_concurrency()) << 5; // Adjust based on the number of threads
+            size_t num_chunks = (ntt_data.config.n_cores) << 5; // Adjust based on the number of threads
             size_t chunk_size =
               (nof_blocks * nof_subntts * nof_hierarchy_1_subntts_todo_in_parallel + num_chunks - 1) / num_chunks;
             for (size_t i = 0; i < num_chunks; ++i) {
@@ -326,7 +326,7 @@ namespace ntt_cpu {
       E* current_elements =
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
 
-      size_t num_chunks = (std::thread::hardware_concurrency()) << 1; // Adjust based on the number of threads
+      size_t num_chunks = (ntt_data.config.n_cores) << 1; // Adjust based on the number of threads
       size_t chunk_size = (ntt_data.size + num_chunks - 1) / num_chunks;
 
       for (size_t cunk = 0; cunk < num_chunks; ++cunk) {
@@ -381,7 +381,7 @@ namespace ntt_cpu {
         ntt_data.config.columns_batch ? ntt_data.elements + batch : ntt_data.elements + batch * ntt_data.size;
       E* cur_temp_elements =
         ntt_data.config.columns_batch ? temp_elements.get() + batch : temp_elements.get() + batch * ntt_data.size;
-      size_t num_chunks = std::thread::hardware_concurrency(); // Adjust based on the number of threads
+      size_t num_chunks = ntt_data.config.n_cores; // Adjust based on the number of threads
       size_t chunk_size = (static_cast<size_t>(nof_sntts * sntt_size) + num_chunks - 1) / num_chunks;
       for (size_t chunk = 0; chunk < num_chunks; ++chunk) {
         size_t start_index = chunk * chunk_size;
@@ -478,18 +478,23 @@ namespace ntt_cpu {
   template <typename S, typename E>
   bool NttCpu<S, E>::compute_if_is_parallel(uint32_t logn, const NTTConfig<S>& config)
   {
-    uint32_t log_batch_size = uint32_t(log2(config.batch_size));
-    // For ecntt we want parallelism unless really small case
-    if constexpr (IS_ECNTT) {
-      return logn > 5;
-    } else {
-      uint32_t scalar_size = sizeof(S);
-      // for small scalars, the threshold for when it is faster to use parallel NTT is higher
-      if ((scalar_size >= 32 && (logn + log_batch_size) <= 11) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
-        return false;
-      }
+    if (config.layers_sub_logn[1]==0 && config.layers_sub_logn[2]==0){
+      return false;
     }
     return true;
+    
+    // uint32_t log_batch_size = uint32_t(log2(config.batch_size));
+    // // For ecntt we want parallelism unless really small case
+    // if constexpr (IS_ECNTT) {
+    //   return logn > 5;
+    // } else {
+    //   uint32_t scalar_size = sizeof(S);
+    //   // for small scalars, the threshold for when it is faster to use parallel NTT is higher
+    //   if ((scalar_size >= 32 && (logn + log_batch_size) <= 11) || (scalar_size < 32 && (logn + log_batch_size) <= 16)) {
+    //     return false;
+    //   }
+    // }
+    // return true;
   }
 
 } // namespace ntt_cpu

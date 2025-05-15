@@ -57,6 +57,8 @@ namespace icicle {
     bool
       columns_batch; /**< True if batches are columns of an input matrix (strided in memory). Default value is false. */
     Ordering ordering;              /**< Ordering of inputs and outputs. Default value is `Ordering::kNN`. */
+    uint32_t layers_sub_logn[3]; /**< Logarithmic sizes of sub-NTTs. Default value is {0, 0, 0}. */
+    uint32_t n_cores;         /**< Number of cores to use for parallel execution. Default value is 1. */
     bool are_inputs_on_device;      /**< True if inputs are on device, false if on host. Default value is false. */
     bool are_outputs_on_device;     /**< True if outputs are on device, false if on host. Default value is false. */
     bool is_async;                  /**< True if operation is asynchronous. Default value is false. */
@@ -78,6 +80,8 @@ namespace icicle {
       1,             // batch_size
       false,         // columns_batch
       Ordering::kNN, // ordering
+      {0, 0, 0},     // layers_sub_logn
+      1,             // n_cores
       false,         // are_inputs_on_device
       false,         // are_outputs_on_device
       false,         // is_async

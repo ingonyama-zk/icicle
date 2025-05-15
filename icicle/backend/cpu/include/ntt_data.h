@@ -1,5 +1,7 @@
 #pragma once
 #include "cpu_ntt_domain.h"
+#include "icicle/utils/log.h"
+
 
 #include <sys/types.h>
 #include <deque>
@@ -19,7 +21,7 @@ namespace ntt_cpu {
    * Example: `layers_sub_logn[14] = {14, 13, 0}` means for `logn = 14`, the sub-NTT log sizes are 14 for the first
    * layer, 13 for the second, and 0 for the third.
    */
-  constexpr uint32_t layers_sub_logn[31][3] = {
+  constexpr uint32_t constexpr_layers_sub_logn[31][3] = {
     {0, 0, 0},  {1, 0, 0},  {2, 0, 0},  {3, 0, 0},   {4, 0, 0},   {5, 0, 0},   {3, 3, 0},  {4, 3, 0},
     {4, 4, 0},  {5, 4, 0},  {5, 5, 0},  {4, 4, 3},   {4, 4, 4},   {5, 4, 4},   {5, 5, 4},  {5, 5, 5},
     {5, 5, 6},  {5, 5, 7},  {5, 5, 8},  {5, 5, 9},   {5, 5, 10},  {5, 5, 11},  {5, 5, 12}, {5, 5, 13},
@@ -41,24 +43,26 @@ namespace ntt_cpu {
     std::vector<uint32_t> hierarchy_1_layers_sub_logn;              // Log sizes of sub-NTTs in hierarchy 1 layers
 
     // Constructor to initialize the struct
-    NttSubHierarchies(uint32_t logn)
+    NttSubHierarchies(uint32_t logn, const uint32_t layers_sub_logn[3])
     {
+      // debug print layers_sub_logn
+      ICICLE_LOG_INFO << "logn = " << logn << ", layers_sub_logn = " << layers_sub_logn[0] << ", "
+                       << layers_sub_logn[1] << ", " << layers_sub_logn[2];
       if (logn > HIERARCHY_1) {
         // Initialize hierarchy_1_layers_sub_logn
         hierarchy_1_layers_sub_logn =
-          std::vector<uint32_t>(std::begin(layers_sub_logn[logn]), std::end(layers_sub_logn[logn]));
+          std::vector<uint32_t>(std::begin(constexpr_layers_sub_logn[logn]), std::end(constexpr_layers_sub_logn[logn]));
         // Initialize hierarchy_0_layers_sub_logn
         hierarchy_0_layers_sub_logn = {
           std::vector<uint32_t>(
-            std::begin(layers_sub_logn[hierarchy_1_layers_sub_logn[0]]),
-            std::end(layers_sub_logn[hierarchy_1_layers_sub_logn[0]])),
+            std::begin(constexpr_layers_sub_logn[hierarchy_1_layers_sub_logn[0]]),
+            std::end(constexpr_layers_sub_logn[hierarchy_1_layers_sub_logn[0]])),
           std::vector<uint32_t>(
-            std::begin(layers_sub_logn[hierarchy_1_layers_sub_logn[1]]),
-            std::end(layers_sub_logn[hierarchy_1_layers_sub_logn[1]]))};
+            std::begin(constexpr_layers_sub_logn[hierarchy_1_layers_sub_logn[1]]),
+            std::end(constexpr_layers_sub_logn[hierarchy_1_layers_sub_logn[1]]))};
       } else {
         hierarchy_1_layers_sub_logn = {0, 0, 0};
-        hierarchy_0_layers_sub_logn = {
-          std::vector<uint32_t>(std::begin(layers_sub_logn[logn]), std::end(layers_sub_logn[logn])), {0, 0, 0}};
+        hierarchy_0_layers_sub_logn = {{layers_sub_logn[0], layers_sub_logn[1],layers_sub_logn[2]}, {0, 0, 0}};
       }
     }
   };
@@ -75,7 +79,7 @@ namespace ntt_cpu {
     uint32_t coset_stride = 0; // Stride value for coset multiplication, retrieved from the NTT domain.
     std::unique_ptr<S[]> arbitrary_coset = nullptr; // Array holding arbitrary coset values if needed.
     NttData(uint32_t logn, E* elements, const NTTConfig<S>& config, NTTDir direction, bool is_parallel)
-        : logn(logn), size(1 << logn), ntt_sub_hierarchies(logn), elements(elements), config(config),
+        : logn(logn), size(1 << logn), ntt_sub_hierarchies(logn, config.layers_sub_logn), elements(elements), config(config),
           direction(direction), is_parallel(is_parallel)
     {
       if (config.coset_gen != S::one()) {
