@@ -1,0 +1,43 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# ICICLE - Main Rule Index
+
+This document serves as the central index for all active Cursor rules within this repository, organized by category. These rules define processes, structures, and guidelines for development.
+
+In general, ICICLE should be upper case unless being used in code.
+
+When updating this file, do not change when this file is ap
+
+## Core & General
+
+Fundamental project structure, setup, and general development guidelines.
+
+| Rule File                          | Description                                                 |
+| :--------------------------------- | :---------------------------------------------------------- |
+| @cursor-rules.mdc                  | How to add or edit Cursor rules in our project              |
+| @project-structure.mdc             | Project structure and file organization guidelines          |
+
+## Frontend and wrapper languages
+
+Guidelines for building frontend libraries and wrapper languages like Rust and Golang.
+
+| Rule File                          | Description                                                 |
+| :--------------------------------- | :---------------------------------------------------------- |
+| @add-feature-go-wrapper.mdc        | Guidelines for adding new feature in Go wrapper             |
+
+## Backends
+
+Guidelines for implementing backend logic.
+
+| Rule File                          | Description                                                 |
+| :--------------------------------- | :---------------------------------------------------------- |
+
+## Testing and CI
+
+Guidelines for application testing.
+
+| Rule File                          | Description                                                 |
+| :--------------------------------- | :---------------------------------------------------------- |
