@@ -46,6 +46,32 @@ protected:
     }
   }
 
+
+
+
+    std::vector<scalar_t> element_wise_multiply(
+      const std::vector<scalar_t>& a,
+      const std::vector<scalar_t>& b)
+    {
+      
+      std::vector<scalar_t> result(a.size());
+      for (size_t i = 0; i < a.size(); i++) {
+        result[i] = a[i] * b[i];
+      }
+      return result;
+    }
+
+    std::vector<scalar_t> element_wise_add(
+      const std::vector<scalar_t>& a,
+      const std::vector<scalar_t>& b)
+    {
+      std::vector<scalar_t> result(a.size());
+      for (size_t i = 0; i < a.size(); i++) {
+        result[i] = a[i] + b[i];
+      }
+      return result;
+    }
+
     void rq_multiply_matrices(
     size_t d, 
     const std::vector<scalar_t>& a,
@@ -56,17 +82,22 @@ protected:
     size_t cols_b)
   {
     // For each element of output matrix
-    for (size_t i = 0; i < rows_a; i++) {
-      for (size_t j = 0; j < cols_b; j++) {
+    for (size_t i = 0; i < rows_a; i+=d) {
+      for (size_t j = 0; j < cols_b; j+=d) {
         // Initialize accumulator for dot product
-        std::vector<scalar_t>& sum_vector = std::vector<scalar_t>::zero();
+        std::vector<scalar_t> sum_vector;
         
-        // Compute dot product of row i from A and col j from B
+        // Compute polynomial product of row i from A and col j from B
         for (size_t k = 0; k < cols_a; k++) {
-          sum = sum + (a[i * cols_a + k] * b[k * cols_b + j]);
+          
+          std::vector<scalar_t> rq_vector_1(a.begin() + (i * cols_a + k), a.begin() + (i * cols_a + k )+d);
+          std::vector<scalar_t> rq_vector_2(b.begin() + (k * cols_b + j), b.begin() + (k * cols_b + j)+d);
+
+          const std::vector<scalar_t>& zk_product = element_wise_multiply(rq_vector_1, rq_vector_2);
+          sum_vector = element_wise_add(sum_vector, zk_product);
         }
         
-        out[i * cols_b + j] = sum;
+        std::copy(sum_vector.begin(), sum_vector.end(), out.begin()+ i * cols_b + j);
       }
     }
   }
