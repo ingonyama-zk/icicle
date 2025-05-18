@@ -11,7 +11,7 @@ ICICLE is designed with flexibility and extensibility in mind, offering a robust
 ## CUDA Backend
 
 - **CUDA Backend:** ICICLE also features a high-performance, closed-source CUDA backend optimized for NVIDIA GPUs. It delivers significant acceleration for cryptographic operations.
-- **Installation and Licensing:** The CUDA backend must be downloaded and installed separately. For detailed instructions, refer to the [installation guide](./install_gpu_backend).
+- **Installation and Licensing:** The CUDA backend must be downloaded and installed separately. For detailed instructions, refer to the [installation guide](start/architecture/install_gpu_backend).
 
 ## Multi-Device Support
 
@@ -22,6 +22,6 @@ ICICLE is designed with flexibility and extensibility in mind, offering a robust
 
 ICICLE is designed with a modular architecture that allows developers to integrate new backends or customize existing ones to meet their specific requirements. The architecture supports:
 
-- **Custom Backends:** Developers can build their own backends to target specific hardware or optimize for particular use cases. The integration process is outlined in the [Build Your Own Backend](./build_your_own_backend.md) section.
+- **Custom Backends:** Developers can build their own backends to target specific hardware or optimize for particular use cases. The integration process is outlined in the [Build Your Own Backend](start/architecture/build_your_own_backend.md) section.
 - **Pluggable Components:** ICICLE’s architecture supports the seamless integration of additional cryptographic primitives and enhancements, enabling the framework to evolve alongside advances in cryptography and hardware acceleration.
 

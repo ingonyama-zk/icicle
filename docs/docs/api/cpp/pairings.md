@@ -70,8 +70,8 @@ eIcicleError err = icicle::pairing<Bn254>(p, q, result);
 
 ## Further Reading
 
-- [Architecture Overview](../arch_overview.md)
-- [Getting Started Guide](../getting_started.md)
-- [Programmer's Guide](../programmers_guide/general.md)
+- [Architecture Overview](start/architecture/arch_overview.md)
+- [Getting Started Guide](start/intro/getting_started.md)
+- [Programmer's Guide](start/programmers_guide/general.md)
 
 For specific implementation details and advanced usage, refer to the API documentation in the source code. 

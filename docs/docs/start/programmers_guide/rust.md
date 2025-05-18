@@ -1,4 +1,3 @@
-
 # Icicle Rust Usage Guide
 
 ## Overview
@@ -18,6 +17,7 @@ icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", branch="
 ```
 
 Once the dependencies are defined, you can build and run your application using the following command:
+
 ```bash
 cargo run --release
 ```
@@ -96,6 +96,7 @@ The memory is released when the `DeviceVec` object is dropped.
 ### Asynchronous Memory Operations
 
 Asynchronous memory operations can be performed using streams. This allows for non-blocking execution, with memory allocation and deallocation occurring asynchronously.
+
 ```rust
 use icicle_runtime::stream::IcicleStream;
 use icicle_runtime::memory::DeviceVec;
@@ -154,6 +155,7 @@ d_mem.copy_to_host(HostSlice::from_mut_slice(&mut output)).unwrap();
 // OR
 d_mem.copy_to_host_async(HostSlice::from_mut_slice(&mut output, &stream)).unwrap();
 ```
+
 ## Stream Management
 
 ### Creating and Destroying Streams
@@ -185,6 +187,7 @@ stream.synchronize().unwrap();
 // Synchronize the device
 icicle_runtime::device_synchronize().unwrap();
 ```
+
 These functions ensure that your operations are properly ordered and completed before the program proceeds, which is critical in parallel computing environments.
 
 ## Device Properties
@@ -192,6 +195,7 @@ These functions ensure that your operations are properly ordered and completed b
 ### Checking Device Availability
 
 Check if a specific device is available and retrieve a list of registered devices:
+
 ```rust
 use icicle_runtime::Device;
 

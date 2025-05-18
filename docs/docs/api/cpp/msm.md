@@ -122,8 +122,8 @@ User is allocating the `output_bases` (on host or device memory) and later use i
 
 The Rust and Go bindings provide equivalent functionality for their respective environments. Refer to their documentation for details on usage.
 
-- [Golang](../golang-bindings/msm.md)
-- [Rust](../rust-bindings/msm.md)
+- [Golang](api/golang-bindings/msm.md)
+- [Rust](api/rust-bindings/msm.md)
 
 ## CUDA backend MSM
 This section describes the CUDA msm implementation and how to customize it (optional).

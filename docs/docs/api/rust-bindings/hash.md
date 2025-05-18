@@ -1,7 +1,7 @@
 # ICICLE Hashing in Rust
 
 :::note
-For a general overview of ICICLE's hashing logic and supported algorithms, check out the [ICICLE Hashing Overview](../primitives/hash.md).
+For a general overview of ICICLE's hashing logic and supported algorithms, check out the [ICICLE Hashing Overview](api/cpp/hash.md).
 :::
 
 ## Overview

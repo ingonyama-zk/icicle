@@ -1,7 +1,7 @@
 # Merkle Tree API Documentation (Golang)
 
-This is the Golang version of the **Merkle Tree API Documentation** ([C++ documentation](../primitives/merkle.md)). It mirrors the structure and functionality of the C++ version, providing equivalent APIs in Golang.
-For more detailed explanations, refer to the [C++ documentation](../primitives/merkle.md).
+This is the Golang version of the **Merkle Tree API Documentation** ([C++ documentation](api/cpp/merkle.md)). It mirrors the structure and functionality of the C++ version, providing equivalent APIs in Golang.
+For more detailed explanations, refer to the [C++ documentation](api/cpp/merkle.md).
 
 To see a complete implementation, visit the [Hash and Merkle example](https://github.com/ingonyama-zk/icicle/tree/main/examples/rust/hash-and-merkle) for a full example.
 

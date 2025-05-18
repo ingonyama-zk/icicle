@@ -7,13 +7,13 @@ title: Setup Guide
 
 This guide will walk you through the entire process of building, testing, and installing ICICLE using your preferred programming language: C++, Rust, or Go. Whether you're deploying on a CPU or leveraging CUDA for accelerated performance, this guide provides comprehensive instructions to get you started. It also outlines the typical workflow for a user, including key installation steps:
 
-1. **Install ICICLE or build it from source**: This is explained in this guide. For building from source, refer to the [Build from Source page](./build_from_source.md).
-2. **Follow the [Programmer’s Guide](./programmers_guide/general.md)**: Learn how to use ICICLE APIs.
+1. **Install ICICLE or build it from source**: This is explained in this guide. For building from source, refer to the [Build from Source page](start/programmers_guide/build_from_source.md).
+2. **Follow the [Programmer’s Guide](start/programmers_guide/general.md)**: Learn how to use ICICLE APIs.
 3. **Start using ICICLE APIs on your CPU**: Your application will now use ICICLE on the CPU.
-4. **Accelerate your application on a GPU**: [install the GPU backend](./install_gpu_backend), load it, and select it in your application ([C++](./programmers_guide/cpp.md#loading-a-backend),[Rust](./programmers_guide/rust.md#loading-a-backend), [Go](./programmers_guide/go.md#loading-a-backend)).
+4. **Accelerate your application on a GPU**: [install the GPU backend](start/architecture/install_gpu_backend), load it, and select it in your application ([C++](start/programmers_guide/cpp.md#loading-a-backend),[Rust](start/programmers_guide/rust.md#loading-a-backend), [Go](start/programmers_guide/go.md#loading-a-backend)).
 5. **Run on the GPU**: Once the GPU backend is selected, all subsequent API calls will execute on the GPU.
-6. **Optimize for multi-GPU environments**: Refer to the [Multi-GPU](./multi-device.md) Guide to fully utilize your system’s capabilities.
-7. **Review memory management**: Revisit the [Memory Management section](./programmers_guide/general.md#device-abstraction) to allocate memory on the device efficiently and try to keep data on the GPU as long as possible.
+6. **Optimize for multi-GPU environments**: Refer to the [Multi-GPU](start/architecture/multi-device.md) Guide to fully utilize your system’s capabilities.
+7. **Review memory management**: Revisit the [Memory Management section](start/programmers_guide/general.md#device-abstraction) to allocate memory on the device efficiently and try to keep data on the GPU as long as possible.
 
 The rest of this page details the content of a release, how to install it, and how to use it. ICICLE binaries are released for multiple Linux distributions, including Ubuntu 20.04, Ubuntu 22.04, RHEL 8, and RHEL 9.
 
@@ -85,28 +85,27 @@ Applications need to link to the ICICLE device library and to every field and/or
 
 - Or via cmake
 
+  ```bash
+  # Add the executable
+  add_executable(example example.cpp)
+  # Link the libraries
+  target_link_libraries(example icicle_device icicle_field_bn254 icicle_curve_bn254)
 
-    ```bash
-    # Add the executable
-    add_executable(example example.cpp)
-    # Link the libraries
-    target_link_libraries(example icicle_device icicle_field_bn254 icicle_curve_bn254)
+  # OPTIONAL (if not installed in default location)
 
-    # OPTIONAL (if not installed in default location)
+  # The following is setting compile and runtime paths for headers and libs assuming
+  #   - headers in /custom/path/icicle/include
+  #   - libs in/custom/path/icicle/lib
 
-    # The following is setting compile and runtime paths for headers and libs assuming
-    #   - headers in /custom/path/icicle/include
-    #   - libs in/custom/path/icicle/lib
-
-    # Include directories
-    target_include_directories(example PUBLIC /custom/path/icicle/include)
-    # Library directories
-    target_link_directories(example PUBLIC /custom/path/icicle/lib/)
-    # Set the RPATH so linker finds icicle libs at runtime
-    set_target_properties(example PROPERTIES
-                          BUILD_RPATH /custom/path/icicle/lib/
-                          INSTALL_RPATH /custom/path/icicle/lib/)
-    ```
+  # Include directories
+  target_include_directories(example PUBLIC /custom/path/icicle/include)
+  # Library directories
+  target_link_directories(example PUBLIC /custom/path/icicle/lib/)
+  # Set the RPATH so linker finds icicle libs at runtime
+  set_target_properties(example PROPERTIES
+                        BUILD_RPATH /custom/path/icicle/lib/
+                        INSTALL_RPATH /custom/path/icicle/lib/)
+  ```
 
 :::tip
 If you face linkage issues, try `ldd myapp` to see the runtime dependencies. If ICICLE libs are not found, you need to add the install directory to the search path of the linker. In a development environment, you can do that using the environment variable export `LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/custom/path/icicle/lib` or similar (for non-Linux). For deployment, make sure it can be found and avoid using LD_LIBRARY_PATH.

@@ -2,7 +2,7 @@
 # Multi-Device with ICICLE
 
 :::info
-If you are looking for the Multi-Device API documentation refer [here](./rust-bindings/multi-gpu.md) for Rust and [here](./golang-bindings/multi-gpu.md) for Golang.
+If you are looking for the Multi-Device API documentation refer [here](api/rust-bindings/multi-gpu.md) for Rust and [here](api/golang-bindings/multi-gpu.md) for Golang.
 :::
 
 One common challenge with Zero-Knowledge (ZK) computation is managing large input sizes. It's not uncommon to encounter circuits surpassing 2^25 constraints, which can push even the most advanced compute devices to their limits. To effectively scale and process such large circuits, leveraging multiple devices becomes a necessity.

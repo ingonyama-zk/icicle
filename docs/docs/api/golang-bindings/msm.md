@@ -160,11 +160,11 @@ out.Malloc(p.Size(), batchSize)
 
 ## Parameters for optimal performance
 
-Please refer to the [primitive description](../primitives/msm#choosing-optimal-parameters)
+Please refer to the [primitive description](api/cpp/msm#choosing-optimal-parameters)
 
 ## Support for G2 group
 
-To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled as described in the [Golang building instructions](../golang-bindings.md#using-icicle-golang-bindings-in-your-project).
+To activate G2 support first you must make sure you are building the static libraries with G2 feature enabled as described in the [Golang building instructions](api/golang-bindings.md#using-icicle-golang-bindings-in-your-project).
 
 Now you may import `g2` package of the specified curve.
 

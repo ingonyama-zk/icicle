@@ -163,7 +163,7 @@ To generate a FRI proof using the Merkle Tree commit scheme, use one of the foll
 
 - **`input_data: const F*`**: Evaluations of The input polynomial.
 - **`fri_proof: FriProof<F>&`**: The output `FriProof` object containing the generated proof.
-* `merkle_tree_leaves_hash`, `merkle_tree_compress_hash` and `output_store_min_layer` refer to the hashes used in the Merkle Trees built in each round of the folding. For further information about ICICLE's Merkle Trees, see [Merkle-Tree documentation](./merkle.md) and [Hash documentation](./merkle.md).
+* `merkle_tree_leaves_hash`, `merkle_tree_compress_hash` and `output_store_min_layer` refer to the hashes used in the Merkle Trees built in each round of the folding. For further information about ICICLE's Merkle Trees, see [Merkle-Tree documentation](api/cpp/merkle.md) and [Hash documentation](api/cpp/hash.md).
 
 :::note
 `folding_factor` must be divisible by `merkle_tree_compress_hash`.
@@ -171,7 +171,7 @@ To generate a FRI proof using the Merkle Tree commit scheme, use one of the foll
 
 
 :::note
-An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](./ntt.md).
+An NTT domain is used for proof generation, so before generating a proof, an NTT domain of at least the input_data size must be initialized. For more information see [NTT documentation](api/cpp/ntt.md).
 :::
 
 ```cpp

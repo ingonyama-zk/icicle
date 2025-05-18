@@ -39,7 +39,7 @@ If you have access to cuda backend repo, it can be built along ICICLE frontend b
    ```bash
    cmake --build build -j
    ```
-   This is building the [libicicle_device](./libraries.md#icicle-device) and the [libicicle_field_babybear](./libraries.md#icicle-core) frontend lib that correspond to the field or curve.
+   This is building the [libicicle_device](start/architecture/libraries.md#icicle-device) and the [libicicle_field_babybear](/start/architecture/libraries.md#icicle-core) frontend lib that correspond to the field or curve.
 
 4. **Link:**
 Link you application (or library) to ICICLE:
@@ -48,7 +48,7 @@ target_link_libraries(yourApp PRIVATE icicle_field_babybear icicle_device)
 ```
 
 5. **Installation (optional):**
-To install the libs, specify the install prefix in the [cmake command](./build_from_source.md#build-commands)
+To install the libs, specify the install prefix in the [cmake command](start/programmers_guide/build_from_source.md#build-commands)
 `-DCMAKE_INSTALL_PREFIX=/install/dir/`. Default install path on linux is `/usr/local` if not specified. For other systems it may differ. The cmake command will print it to the log
 ```
 -- CMAKE_INSTALL_PREFIX=/install/dir/for/cmake/install
@@ -61,7 +61,7 @@ cmake --install build # install icicle to /path/to/install/dir/
 ```
 
 6. **Run tests (optional):**
-Add `-DBUILD_TESTS=ON` to the [cmake command](./build_from_source.md#build-commands) and build.
+Add `-DBUILD_TESTS=ON` to the [cmake command](start/programmers_guide/build_from_source.md#build-commands) and build.
 Execute all tests
 ```bash
 cmake -S icicle -B build -DFIELD=babybear -DBUILD_TESTS=ON
@@ -90,7 +90,7 @@ You can customize your ICICLE build with the following flags:
 
 #### Features
 
-By default, all [features](./libraries.md#supported-curves-and-operations) are enabled. 
+By default, all [features](/start/architecture/libraries.md#supported-curves-and-operations) are enabled. 
 This is since installed backends may implement and register all APIs. Missing APIs in the frontend would cause linkage to fail due to missing symbols. Therefore by default we include them in the frontend part too.
 
 To disable features, add the following to the cmake command.
@@ -176,4 +176,4 @@ Make sure to install icicle libs when installing a library/application that depe
 ### Go: Build, Test, and Install (TODO)
 
 --- 
-**To install CUDA backend and license click [here](./install_gpu_backend#installation)**
+**To install CUDA backend and license click [here](/start/architecture/install_gpu_backend#installation)**

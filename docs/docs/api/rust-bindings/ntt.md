@@ -94,7 +94,7 @@ ntt::ntt(
 
 ### NTT Domain
 
-Before performing NTT operations, it is mandatory to construct the domain as [explained here](../primitives/ntt.md#ntt-domain).
+Before performing NTT operations, it is mandatory to construct the domain as [explained here](api/cpp/ntt.md#ntt-domain).
 In rust, we have the following functions to construct, destruct the domain and retrieve a root of unity from it:
 
 ```rust

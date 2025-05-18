@@ -90,7 +90,7 @@ execute_program(std::vector<T*>& data, const Program<T>& program, uint64_t size,
 
 `is_result_on_device` of VecOpsConfig is not used here.
 
-For more details see [program](./program.md).
+For more details see [program](api/cpp/program.md).
 
 #### `vector_accumulate`
 
@@ -225,5 +225,5 @@ eIcicleError polynomial_division(const T* numerator, int64_t numerator_deg, cons
 
 ### Rust and Go bindings
 
-- [Golang](../golang-bindings/vec-ops.md)
-- [Rust](../rust-bindings/vec-ops.md)
+- [Golang](api/golang-bindings/vec-ops.md)
+- [Rust](api/rust-bindings/vec-ops.md)

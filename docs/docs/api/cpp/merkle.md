@@ -14,7 +14,7 @@ A **Merkle tree** is a cryptographic data structure that allows for **efficient 
 
 With ICICLE, you have the **flexibility** to build various tree topologies based on your needs. A tree is defined by:
 
-1. **Hasher per layer** ([Link to Hasher API](./hash.md)) with a **default input size**.
+1. **Hasher per layer** ([Link to Hasher API](/api/cpp/hash.md)) with a **default input size**.
 2. **Size of a leaf element** (in bytes): This defines the **granularity** of the data used for opening proofs.
 
 The **root node** is assumed to be a single node. The **height of the tree** is determined by the **number of layers**.

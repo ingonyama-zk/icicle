@@ -1,7 +1,7 @@
 # Rust FFI Bindings for Program
 
 :::note
-Please refer to the [Program overview](../primitives/program.md) page for additional detail. This section is a brief description of the Rust FFI bindings.
+Please refer to the [Program overview](api/cpp/program.md) page for additional detail. This section is a brief description of the Rust FFI bindings.
 :::
 
 This documentation is designed to bring developers up to speed about the Rust API wrapping the cpp implementation of program.
@@ -9,7 +9,7 @@ This documentation is designed to bring developers up to speed about the Rust AP
 ## Introduction
 Program is a class that let users define expressions on vector elements, and have ICICLE compile it for the backends for a fused implementation. This solves memory bottlenecks and also let users customize algorithms such as sumcheck. Program can create only element-wise lambda functions. Program itself works for definition while actual execution is handled through other functionalities like [Vector Operations](./vec-ops.md).
 
-The following would list the implemented Rust functionality with some examples paralleling those given in the [original program overview](../primitives/program.md).
+The following would list the implemented Rust functionality with some examples paralleling those given in the [original program overview](api/cpp/program.md).
 # Symbol
 Symbol is the basic (template) class that allow users to define their own program, representing an arithmetic operation. The [function](#defining-a-function-for-program) the user define will operate on symbols.
 ## `Symbol` Trait Definition
@@ -71,7 +71,7 @@ pub struct Program {
 ```
 
 # Usage
-This section will outline how to use Program and Symbol, mirroring the examples from the [cpp overview](../primitives/program.md). The program use-case splits to three steps:
+This section will outline how to use Program and Symbol, mirroring the examples from the [cpp overview](api/cpp/program.md). The program use-case splits to three steps:
 1. Defining a function/lambda that describes the program to be ran (or choosing one of the predefined list).
 2. Creating a new program given the above function.
 3. Executing the program using the Vector Operations API.

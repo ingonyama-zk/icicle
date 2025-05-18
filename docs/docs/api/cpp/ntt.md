@@ -164,8 +164,8 @@ To compute a batch, set the `batch_size` and `columns_batch` fields of the confi
 
 ### Rust and Go bindings
 
-- [Golang](../golang-bindings/ntt.md)
-- [Rust](../rust-bindings/ntt.md)
+- [Golang](api/golang-bindings/ntt.md)
+- [Rust](api/rust-bindings/ntt.md)
 
 ### Example
 
