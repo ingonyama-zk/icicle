@@ -47,11 +47,9 @@ static eIcicleError cpu_jl_projection(
   const size_t entries_per_hash = keccak512.output_size() * 8 / bits_per_entry; // 4 × hash bytes
   const size_t hashes_per_row = (num_cols + entries_per_hash - 1) / entries_per_hash;
 
-  tf::Taskflow taskflow;
-  tf::Executor executor;
-  const uint64_t total_nof_operations = num_rows;
   const int nof_workers = get_nof_workers(config);
-  const uint64_t worker_task_size = (total_nof_operations + nof_workers - 1) / nof_workers; // round up
+  tf::Taskflow taskflow;
+  tf::Executor executor(nof_workers);
 
   for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
     taskflow.emplace([=]() {
