@@ -74,13 +74,9 @@ export default {
       label: "Integration & Support",
       collapsed: false,
       items: [
-        {
+                {
           type: "doc",
-          id: "start/integration-&-support/benchmarks",
-        },
-        {
-          type: "doc",
-          id: "start/integration-&-support/colab-instructions",
+          id: "start/integration-&-support/faq_and_troubleshooting",
         },
         {
           type: "doc",
@@ -88,19 +84,23 @@ export default {
         },
         {
           type: "doc",
-          id: "start/integration-&-support/faq_and_troubleshooting",
-        },
-        {
-          type: "doc",
           id: "start/integration-&-support/grants",
-        },
-        {
+        },  
+                {
           type: "doc",
           id: "start/integration-&-support/integrations",
-        },
+        }, 
+        {
+          type: "doc",
+          id: "start/integration-&-support/colab-instructions",
+        },  
         {
           type: "doc",
           id: "start/integration-&-support/migrate_from_v2",
+        },                   
+        {
+          type: "doc",
+          id: "start/integration-&-support/benchmarks",
         },
       ],
     },
