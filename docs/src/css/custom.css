@@ -222,6 +222,57 @@
   }
 }
 
+/* ===ecosystem cards==== */
+.ecosystem-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 996px) {
+  .ecosystem-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ecosystemcard {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ecosystemcard:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+}
+
+.ecosystemcard img {
+  width: 100px;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.ecosystemcard h4 {
+  margin: 0.5rem 0 0.3rem;
+  font-size: 1.1rem;
+}
+
+.ecosystemcard p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+
 /* ========== LOGO IN TOC =========== */
 
 /* Wrapper for the logo inside the Table of Contents */

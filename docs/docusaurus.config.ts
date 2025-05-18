@@ -11,8 +11,8 @@ const darkCodeTheme = themes.dracula;
 
 const ingoPreset = {
   docs: {
-    showLastUpdateAuthor: true,
-    showLastUpdateTime: true,
+    showLastUpdateAuthor: false,
+    showLastUpdateTime: false,
     includeCurrentVersion: true,
     routeBasePath: '/',
     remarkPlugins: [math],
