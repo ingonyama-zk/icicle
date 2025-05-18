@@ -6,45 +6,52 @@ namespace icicle {
 
   /// @brief Performs Johnson–Lindenstrauss (JL) projection on an input vector.
   ///
-  /// Projects an input vector of length N to a fixed output vector of length 256
-  /// using a pseudo-random projection matrix with entries in {-1, 0, 1}.
-  /// The matrix is not stored explicitly; instead, each column is deterministically
-  /// generated on-demand from a cryptographic hash:
+  /// Projects an input vector of length N to a fixed lower-dimensional output vector
+  /// of length `output_size` (commonly 256) using a pseudo-random projection matrix
+  /// with entries in {-1, 0, 1}.
   ///
-  ///     column_i = decode(Hash(seed || i))
+  /// The projection matrix is not stored explicitly. Instead, each **row** of the matrix
+  /// is generated on-the-fly using a cryptographic hash:
   ///
-  /// Each hash output is 512 bits, interpreted as 256 2-bit pairs, each mapped to
-  /// a matrix entry according to:
+  ///     chunk = decode(Hash(seed || counter))
+  ///
+  /// where `counter = row_index * num_chunks_per_row + chunk_index`.
+  /// Each 512-bit hash output yields 256 2-bit pairs, interpreted as:
   ///     00 →  0
   ///     01 →  1
   ///     10 → -1
   ///     11 →  0
   ///
-  /// This yields the correct probability distribution:
+  /// This results in the correct probability distribution for JL projection:
   ///     Pr[0] = 0.5, Pr[1] = 0.25, Pr[-1] = 0.25
   ///
-  /// The JL projection is computed as a sum of weighted columns:
-  ///     output = ∑_{i=0}^{N-1} input[i] * column_i
+  /// Each output element is computed as the inner product of a pseudo-random row with the input vector:
+  ///     output[i] = ∑_{j=0}^{N-1} A[i][j] * input[j]
   ///
-  /// The implementation involves only additions and subtractions (no multiplications),
-  /// and is designed to be efficient and parallel-friendly.
+  /// where A[i][j] ∈ {-1, 0, 1} is derived from the hash-based row generation.
   ///
-  /// @tparam T         Element type (e.g., Zq)
-  /// @param input      Pointer to input vector (length = N)
-  /// @param N          Length of the input vector
-  /// @param seed       Pointer to seed for deterministic hash-based sampling
-  /// @param seed_len   Length of the seed buffer in bytes
-  /// @param cfg        Vector operation configuration (e.g., backend, batching)
-  /// @param output     Pointer to output buffer (length = 256 elements)
-  /// @return           eIcicleError::SUCCESS on success, or an appropriate error code
+  /// The implementation avoids multiplications (only additions and subtractions),
+  /// is memory-efficient (no matrix stored), and designed to support parallel row-wise execution.
+  ///
+  /// @tparam T            Element type (e.g., Zq)
+  /// @param input         Pointer to input vector (length = input_size)
+  /// @param input_size    Length of the input vector
+  /// @param seed          Pointer to seed used for deterministic hash-based sampling
+  /// @param seed_len      Length of the seed buffer in bytes
+  /// @param cfg           Vector operation configuration (e.g., backend, batching)
+  /// @param output        Pointer to output buffer (length = output_size)
+  /// @param output_size   Number of projection rows (i.e., reduced dimension)
+  /// @return              eIcicleError::SUCCESS on success, or an appropriate error code
   template <typename T>
   eIcicleError jl_projection(
     const T* input,
-    size_t N,
+    size_t input_size,
     const std::byte* seed,
     size_t seed_len,
     const VecOpsConfig& cfg,
-    T* output // length 256
-  );
+    T* output,
+    size_t output_size);
+
+  // TODO Yuval: try std::span
 
 } // namespace icicle

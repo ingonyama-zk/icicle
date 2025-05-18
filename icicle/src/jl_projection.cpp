@@ -7,26 +7,27 @@ namespace icicle {
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, jl_projection)(
     const field_t* input,
-    size_t N,
+    size_t input_size,
     const std::byte* seed,
     size_t seed_len,
     const VecOpsConfig* cfg,
-    field_t* output // length 256
-  )
+    field_t* output,
+    size_t output_size)
   {
-    return JLProjectionDispatcher::execute(input, N, seed, seed_len, *cfg, output);
+    return JLProjectionDispatcher::execute(input, input_size, seed, seed_len, *cfg, output, output_size);
   }
 
   template <>
   eIcicleError jl_projection(
     const field_t* input,
-    size_t N,
+    size_t input_size,
     const std::byte* seed,
     size_t seed_len,
     const VecOpsConfig& cfg,
-    field_t* output // length 256
-  )
+    field_t* output,
+    size_t output_size)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, jl_projection)(input, N, seed, seed_len, &cfg, output);
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, jl_projection)(
+      input, input_size, seed, seed_len, &cfg, output, output_size);
   }
 } // namespace icicle

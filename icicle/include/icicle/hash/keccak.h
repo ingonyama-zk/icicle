@@ -60,8 +60,8 @@ namespace icicle {
    * @return Hash object encapsulating the SHA3-512 backend.
    */
   Hash create_sha3_512_hash(uint64_t input_chunk_size = 0);
-  struct Sha3_512 {
+  namespace Sha3_512 {
     inline static Hash create(uint64_t input_chunk_size = 0) { return create_sha3_512_hash(input_chunk_size); }
-  };
+  }; // namespace Sha3_512
 
 } // namespace icicle

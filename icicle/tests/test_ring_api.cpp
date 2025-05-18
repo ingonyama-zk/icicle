@@ -252,7 +252,7 @@ TEST_F(RingTestBase, JLProjectionTest)
     }
 
     // Perform JL projection
-    ICICLE_CHECK(jl_projection(input.data(), N, seed, sizeof(seed), cfg, output.data()));
+    ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, output.data(), output.size()));
 
     // TODO Yuval: how to test correctness of the projection? Maybe compute the norm of input and then check that output
     // norm is bound based on the JL theorem?

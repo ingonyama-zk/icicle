@@ -30,6 +30,7 @@ function(handle_ring TARGET)
     src/balanced_decomposition.cpp
     src/jl_projection.cpp
   )
+  target_link_libraries(${TARGET} PRIVATE icicle_hash) # Random sampling APIs depend on hashing
 endfunction()
 
 function(handle_ntt TARGET FEATURE_LIST)
