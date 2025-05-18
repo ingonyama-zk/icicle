@@ -271,6 +271,7 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const auto cfg = VecOpsConfig{};
   for (auto device : s_registered_devices) {
+    if (device != "CPU") continue; // TODO implement for CUDA too
     ICICLE_CHECK(icicle_set_device(device));
     std::stringstream timer_label;
     timer_label << "JL-projection [device=" << device << "]";
