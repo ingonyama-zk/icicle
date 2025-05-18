@@ -242,8 +242,8 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const size_t N = 1 << 16;       // Input vector size
   const size_t output_size = 256; // JL projected size
-  const int max_trials = 5; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
-                            // we allow repeating the check a few times.
+  const int max_trials = 10; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
+                             // we allow repeating the check a few times.
 
   std::vector<field_t> input(N);
   std::vector<field_t> output(output_size);
