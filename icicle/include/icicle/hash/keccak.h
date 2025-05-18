@@ -7,7 +7,7 @@ namespace icicle {
   /**
    * @brief Creates a Keccak-256 hash object.
    *
-   * This function connamespaces a Hash object configured for Keccak-256, with the
+   * This function constructs a Hash object configured for Keccak-256, with the
    * appropriate backend selected based on the current device.
    *
    * @param default_input_chunk_size default size of input in bytes for the Keccak-256 hash.
@@ -25,7 +25,7 @@ namespace icicle {
   /**
    * @brief Creates a Keccak-512 hash object.
    *
-   * This function connamespaces a Hash object configured for Keccak-512, with the
+   * This function constructs a Hash object configured for Keccak-512, with the
    * appropriate backend selected based on the current device.
    *
    * @param input_chunk_size size of input in bytes for the Keccak-512 hash.
@@ -39,7 +39,7 @@ namespace icicle {
   /**
    * @brief Creates a SHA3-256 hash object.
    *
-   * This function connamespaces a Hash object configured for SHA3-256, which is a
+   * This function constructs a Hash object configured for SHA3-256, which is a
    * variant of Keccak-256, with the appropriate backend selected based on the current device.
    *
    * @param input_chunk_size size of input in bytes for the SHA3-256 hash.
@@ -53,7 +53,7 @@ namespace icicle {
   /**
    * @brief Creates a SHA3-512 hash object.
    *
-   * This function connamespaces a Hash object configured for SHA3-512, with the
+   * This function constructs a Hash object configured for SHA3-512, with the
    * appropriate backend selected based on the current device.
    *
    * @param input_chunk_size size of input in bytes for the SHA3-512 hash.
