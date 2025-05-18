@@ -235,26 +235,69 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
 
 TEST_F(RingTestBase, JLProjectionTest)
 {
-  const size_t N = 1 << 16;
-  auto input = std::vector<field_t>(N);
-  field_t::rand_host_many(input.data(), N);
-  auto output = std::vector<field_t>(256);
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
+  const size_t N = 1 << 16;       // Input vector size
+  const size_t output_size = 256; // JL projected size
+  const int max_trials = 5; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
+                            // we allow repeating the check a few times.
+
+  std::vector<field_t> input(N);
+  std::vector<field_t> output(output_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL lemma
+  // won't hold.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  auto norm_squared = [&](const std::vector<field_t>& v) -> double {
+    double sum = 0.0;
+    for (const auto& x : v) {
+      const int64_t val = *reinterpret_cast<const int64_t*>(&x);
+      const int64_t centered = (val > q / 2) ? val - q : val; // Convert to signed representative
+      sum += static_cast<double>(centered) * static_cast<double>(centered);
+    }
+    return sum;
+  };
+
+  const double input_norm = std::sqrt(norm_squared(input));
+  ASSERT_GT(input_norm, 0.0) << "Input norm is zero, invalid for JL test";
+
+  const auto cfg = VecOpsConfig{};
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
 
-    auto cfg = VecOpsConfig{};
+    bool passed = false;
+    for (int trial = 0; trial < max_trials; ++trial) {
+      std::byte seed[32];
+      for (auto& b : seed) {
+        b = static_cast<std::byte>(rand_uint_32b() % 256);
+      }
 
-    // Generate a random seed
-    std::byte seed[32];
-    for (size_t i = 0; i < sizeof(seed); ++i) {
-      seed[i] = static_cast<std::byte>(rand() % 256);
+      START_TIMER(projection);
+      ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, output.data(), output.size()));
+      END_TIMER(projection, timer_label.str().c_str(), true);
+
+      const double output_norm = std::sqrt(norm_squared(output));
+      ASSERT_GT(output_norm, 0.0) << "JL projection output norm is zero (trial " << trial << ")";
+
+      const double bound = std::sqrt(128.0) * input_norm;
+      passed = (output_norm <= bound);
+
+      ICICLE_LOG_INFO << "Input norm = " << input_norm << ", Output norm = " << output_norm
+                      << ", Ratio = " << (output_norm / input_norm) << ", Bound = " << bound
+                      << ", Passed = " << (passed ? "true" : "false");
+      if (passed) break;
     }
 
-    // Perform JL projection
-    ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, output.data(), output.size()));
-
-    // TODO Yuval: how to test correctness of the projection? Maybe compute the norm of input and then check that output
-    // norm is bound based on the JL theorem?
+    ASSERT_TRUE(passed) << "JL projection norm exceeded sqrt(128)*input_norm in all " << max_trials << " trials";
   }
 }
