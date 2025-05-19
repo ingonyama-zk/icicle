@@ -29,14 +29,14 @@ namespace labrador {
   /**
    * @brief Defines the integer ring ℤ_q.
    */
-  using ZqRing = IntegerRing<zq_config>;
-  using scalar_t = ZqRing;
+  using Zq = IntegerRing<zq_config>;
+  using scalar_t = Zq;
 
   /**
    * @brief Defines the field 𝔽_q.
    * Although Labrador doesn't use it directly, it simplifies generic compilation of the library.
    */
-  using field_t = ZqRing;
+  using field_t = Zq;
 
   /**
    * @brief Configuration for the RNS representation of Zq.
@@ -65,5 +65,21 @@ namespace labrador {
    * @brief Defines the integer ring Zq in RNS representation.
    */
   using scalar_rns_t = IntegerRingRns<zq_rns_config>;
+
+  /**
+   * @brief Conceptual definition of the polynomial ring R_q = ℤ_q[x]/(x^d + 1).
+   *
+   * This is provided for API compatibility, testing, and documentation purposes.
+   * Internally, Labrador uses flat arrays of Zq elements and custom implementations
+   * that are optimized and aware of the polynomial ring structure.
+   */
+  struct Rq {
+    constexpr static unsigned d = 64; ///< Degree of modulus polynomial X^d + 1
+    Zq coeffs[d];                     ///< Coefficients of the polynomial
+  };
+
+  using Tq = Rq; // Alias for terminology (Tq = torus polynomial ring)
+
+  // TODO: Add RqRns / TqRns variants if needed for RNS-based polynomial arithmetic
 
 } // namespace labrador
