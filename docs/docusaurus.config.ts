@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
     showLastUpdateTime: false,
-    includeCurrentVersion: true,
+    includeCurrentVersion: false,
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -35,15 +35,14 @@ const ingoPreset = {
 const navBarLeftSide = [
   {
     position: 'left',
-    label: 'Guide',
+    label: 'Docs',
     to: '/',
     activeBaseRegex: '^/$', // exact match for home
   },
   {
+    label: 'API',           
+    to: '/apioverview',    
     position: 'left',
-    label: 'API',
-    to: '/apioverview',
-    activeBaseRegex: '^/apioverview', 
   },
   {
     type: 'html',

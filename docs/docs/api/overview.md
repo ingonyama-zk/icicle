@@ -18,13 +18,13 @@ import Link from '@docusaurus/Link';
     </div>
   </Link>
 
-  <Link to="/gostart" className="card-link">
+  <Link to="/gooverview" className="card-link">
     <div className="card-box icon-only">
       <img src="/img/go.png" alt="Golang" className="card-icon-top" />
     </div>
   </Link>
 
-  <Link to="/ruststart" className="card-link">
+  <Link to="(./api/rust-bindings/rustoveriew)" className="card-link">
     <div className="card-box icon-only">
       <img src="/img/rust.png" alt="Rust" className="card-icon-top" />
     </div>

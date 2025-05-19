@@ -1,3 +1,8 @@
+---
+slug: /gooverview
+title: Golang Overview
+---
+
 # Golang bindings
 
 Golang bindings allow you to use ICICLE as a golang library.

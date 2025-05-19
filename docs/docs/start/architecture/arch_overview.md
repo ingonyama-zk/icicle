@@ -11,7 +11,7 @@ ICICLE is designed with flexibility and extensibility in mind, offering a robust
 ## CUDA Backend
 
 - **CUDA Backend:** ICICLE also features a high-performance, closed-source CUDA backend optimized for NVIDIA GPUs. It delivers significant acceleration for cryptographic operations.
-- **Installation and Licensing:** The CUDA backend must be downloaded and installed separately. For detailed instructions, refer to the [installation guide](start/architecture/install_gpu_backend).
+- **Installation and Licensing:** The CUDA backend must be downloaded and installed separately. For detailed instructions, refer to the [installation guide](./install_gpu_backend).
 
 ## Multi-Device Support
 

@@ -1,3 +1,8 @@
+---
+slug: /rustoverview
+title: Rust Overview
+---
+
 # Rust bindings
 
 Rust bindings allow you to use ICICLE as a rust library.

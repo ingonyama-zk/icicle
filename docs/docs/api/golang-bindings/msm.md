@@ -160,7 +160,7 @@ out.Malloc(p.Size(), batchSize)
 
 ## Parameters for optimal performance
 
-Please refer to the [primitive description](api/cpp/msm#choosing-optimal-parameters)
+Please refer to the [primitive description](../../cpp/msm#choosing-optimal-parameters)
 
 ## Support for G2 group
 

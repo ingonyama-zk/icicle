@@ -187,7 +187,7 @@ export default {
         {
           type: "doc",
           label: "Golang Overview",
-          id: "api/golang-bindings/gostart",
+          id: "api/golang-bindings/golang-bindings",
         },
         {
           type: "doc",
@@ -239,7 +239,7 @@ export default {
         {
           type: "doc",
           label: "Rust Overview",
-          id: "api/rust-bindings/ruststart",
+          id: "api/rust-bindings/rust-bindings",
         },
         {
           type: "doc",
