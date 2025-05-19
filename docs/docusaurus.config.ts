@@ -43,7 +43,7 @@ const navBarLeftSide = [
     position: 'left',
     label: 'API',
     to: '/apioverview',
-    activeBaseRegex: '^/apioverview', 
+    activeBaseRegex: '^/api', // everything under the /api route
   },
   {
     type: 'html',
