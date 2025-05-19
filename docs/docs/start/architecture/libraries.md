@@ -42,7 +42,7 @@ Each library has a corresponding crate. See [programmers guide](start/programmer
 | [Vector operations](api/cpp/vec_ops) |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ✅     |
 | [Polynomials](./polynomials/overview)     |                        ✅                         |                                                 ✅                                                  |  ❌   |     ✅      |     ✅     |
 | [NTTapi(cpp/ntt)                     |                        ✅                         |                                                 ✅                                                  |  ❌   |     ✅      |     ✅     |
-| Extension Field                           |                        ✅                         |                                                 ❌                                                  |  ✅   |     ✅      |     ❌     |
+| Extension Field                           |                        ✅                         |                                                 ❌                                                  |  ✅   |     ✅      |     ✅     |
 | [Poseidonapi(cpp/hash#poseidon)      |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ❌     |
 | [Poseidon2api(cpp/hash#poseidon2)    |                        ✅                         |                                                 ✅                                                  |  ✅   |     ✅      |     ✅    |
 
