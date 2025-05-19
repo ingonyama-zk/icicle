@@ -1,5 +1,6 @@
 #include "test_mod_arithmetic_api.h"
 #include "icicle/balanced_decomposition.h"
+#include "icicle/jl_projection.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -229,4 +230,74 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
       balanced_decomposition::recompose(decomposed.data(), decomposed_size, 1 /*=base*/, cfg, input.data(), size));
 
   } // device loop
+}
+
+TEST_F(RingTestBase, JLProjectionTest)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = 1 << 16;       // Input vector size
+  const size_t output_size = 256; // JL projected size
+  const int max_trials = 10; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
+                             // we allow repeating the check a few times.
+
+  std::vector<field_t> input(N);
+  std::vector<field_t> output(output_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL lemma
+  // won't hold.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  auto norm_squared = [&](const std::vector<field_t>& v) -> double {
+    double sum = 0.0;
+    for (const auto& x : v) {
+      const int64_t val = *reinterpret_cast<const int64_t*>(&x);
+      const int64_t centered = (val > q / 2) ? val - q : val; // Convert to signed representative
+      sum += static_cast<double>(centered) * static_cast<double>(centered);
+    }
+    return sum;
+  };
+
+  const double input_norm = std::sqrt(norm_squared(input));
+  ASSERT_GT(input_norm, 0.0) << "Input norm is zero, invalid for JL test";
+
+  const auto cfg = VecOpsConfig{};
+  for (auto device : s_registered_devices) {
+    if (device != "CPU") continue; // TODO implement for CUDA too
+    ICICLE_CHECK(icicle_set_device(device));
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
+
+    bool passed = false;
+    for (int trial = 0; trial < max_trials; ++trial) {
+      std::byte seed[32];
+      for (auto& b : seed) {
+        b = static_cast<std::byte>(rand_uint_32b() % 256);
+      }
+
+      START_TIMER(projection);
+      ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, output.data(), output.size()));
+      END_TIMER(projection, timer_label.str().c_str(), true);
+
+      const double output_norm = std::sqrt(norm_squared(output));
+      ASSERT_GT(output_norm, 0.0) << "JL projection output norm is zero (trial " << trial << ")";
+
+      const double bound = std::sqrt(128.0) * input_norm;
+      passed = (output_norm <= bound);
+
+      ICICLE_LOG_INFO << "Input norm = " << input_norm << ", Output norm = " << output_norm
+                      << ", Ratio = " << (output_norm / input_norm) << ", Bound = " << bound
+                      << ", Passed = " << (passed ? "true" : "false");
+      if (passed) break;
+    }
+
+    ASSERT_TRUE(passed) << "JL projection norm exceeded sqrt(128)*input_norm in all " << max_trials << " trials";
+  }
 }
