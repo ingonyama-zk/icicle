@@ -72,6 +72,9 @@ int main(int argc, char* argv[])
   std::vector<Rq> S1(witness_size);
   std::vector<Rq> S2(witness_size);
 
+  // TODO eventually we will use icicle_malloc() and icicle_copy() to allocate and copy that is device agnostic and
+  // support GPU too. First step can be with hots memory and then we can add device support.
+
   auto randomize_Rq_vec = [](std::vector<Rq>& vec, int64_t max_value) {
     for (auto& x : vec) {
       for (size_t i = 0; i < Rq::d; ++i) {                // randomize each coefficient
