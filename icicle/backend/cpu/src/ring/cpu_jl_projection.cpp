@@ -29,8 +29,13 @@ static eIcicleError cpu_jl_projection(
   field_t* output,
   size_t output_size)
 {
-  if (!input || !output || !seed || input_size == 0 || output_size == 0 || seed_len == 0) {
-    ICICLE_LOG_ERROR << "Invalid argument: null pointer or zero size.";
+  if (!input || !output || !seed) {
+    ICICLE_LOG_ERROR << "Invalid argument: null pointer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+
+  if (input_size == 0 || output_size == 0 || seed_len == 0) {
+    ICICLE_LOG_ERROR << "Invalid argument: zero size.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
