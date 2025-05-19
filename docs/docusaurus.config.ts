@@ -37,12 +37,18 @@ const navBarLeftSide = [
     position: 'left',
     label: 'Docs',
     to: '/',
-    activeBaseRegex: '^/$', // exact match for home
+    activeBaseRegex: '^(?!\/api).*', // everything not starting with /api
   },
   {
     label: 'API',           
     to: '/apioverview',    
     position: 'left',
+<<<<<<< HEAD
+=======
+    label: 'API',
+    to: '/apioverview',
+    activeBaseRegex: '^/api', // everything under the /api route
+>>>>>>> 46c6e314b3c99b151826c83cab913d2bbe7a2275
   },
   {
     type: 'html',
