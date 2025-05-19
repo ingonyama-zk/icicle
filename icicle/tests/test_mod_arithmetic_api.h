@@ -896,8 +896,9 @@ TYPED_TEST(ModArithTest, ntt_decision_tree)
   for (int log_cores = min_log_cores; log_cores <= max_log_cores; log_cores++){
     int n_cores = (1 << log_cores);
     result_table << ", " << n_cores;
-    result_table << std::endl;
   }
+  result_table << std::endl;
+
   for (int logn = logn_min; logn <= logn_max; logn++){
     result_table << logn;
     double best_n_core_time = 0;
@@ -952,11 +953,11 @@ TYPED_TEST(ModArithTest, ntt_decision_tree)
           config.layers_sub_logn[1] = layers_sub_logn[logn][division][1];
           config.layers_sub_logn[2] = layers_sub_logn[logn][division][2];
 
-          result_detailed << "logN = " << logn << ", n_cores = " << n_cores << ", division = " << division;
+          result_detailed << "logN = " << logn << ", n_cores = " << n_cores << ", division = " << division << ", {" << layers_sub_logn[logn][division][0] << ", " << layers_sub_logn[logn][division][1] << ", " << layers_sub_logn[logn][division][2] << "}";
           double accumulated_time = 0;
           for (int i = 0; i < iters; ++i) {
             std::ostringstream oss;
-            oss << "logN = " << logn << ", n_cores = " << n_cores << ", division = " << division << ", Iter = " << i;
+            oss << "logN = " << logn << ", n_cores = " << n_cores << ", division = " << division << ", {" << layers_sub_logn[logn][division][0] << ", " << layers_sub_logn[logn][division][1] << ", " << layers_sub_logn[logn][division][2] << "}, Iter = " << i;
             START_TIMER(NTT_sync)
             ICICLE_CHECK(ntt(d_in, N, dir, config, inplace ? d_in : d_out));
             double elapsed = FpMiliseconds(std::chrono::high_resolution_clock::now() - NTT_sync_start).count();
@@ -973,8 +974,13 @@ TYPED_TEST(ModArithTest, ntt_decision_tree)
           }
           result_detailed << std::endl;
         }
+        std::string best_division_str = "{" + 
+                                      std::to_string(layers_sub_logn[logn][best_devision][0]) + 
+                                      ", " + std::to_string(layers_sub_logn[logn][best_devision][1]) + 
+                                      ", " + std::to_string(layers_sub_logn[logn][best_devision][2]) + 
+                                      "} " + std::to_string(best_devision);
         result_detailed << "---------------------------" << std::endl;
-        result_table << ", " << best_devision << "(" << best_devision<< ")";
+        result_table << ", " << best_division_str << " " << "(" << best_time<< ")";
         if (best_n_cores == 0 || best_n_core_time > best_time) {
           best_n_cores = n_cores;
           best_n_core_time = best_time;
