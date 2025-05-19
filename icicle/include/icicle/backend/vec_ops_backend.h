@@ -795,6 +795,15 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  void register_jl_projection(const std::string& deviceType, JLProjectionImpl impl);
+  #define REGISTER_JL_PROJECTION_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
+        register_jl_projection(DEVICE_TYPE, FUNC);                                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   // Norm checking implementations
   using normCheckImpl = std::function<eIcicleError(
     const Device& device,
