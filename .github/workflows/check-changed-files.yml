@@ -3,6 +3,15 @@ name: Check Changed Files
 on:
   workflow_call:
     outputs:
+      docs:
+        description: "Flag for if docs files changed"
+        value: ${{ jobs.check-changed-files.outputs.docs }}
+      examples:
+        description: "Flag for if examples files changed"
+        value: ${{ jobs.check-changed-files.outputs.examples }}
+      any:
+        description: "Flag for if any code files changed"
+        value: ${{ jobs.check-changed-files.outputs.any }}
       # Cpp specific outputs
       field:
         description: "Flag for if field files changed"
@@ -129,6 +138,9 @@ jobs:
     name: Check Changed Files
     runs-on: ubuntu-22.04
     outputs:
+      docs: ${{ steps.changed_files.outputs.docs }}
+      examples: ${{ steps.changed_files.outputs.examples }}
+      any: ${{ steps.changed_files.outputs.any }}
       # Feature-specific outputs
       field: ${{ steps.changed_files.outputs.field }}
       curve: ${{ steps.changed_files.outputs.curve }}
@@ -184,6 +196,10 @@ jobs:
       id: changed_files
       # https://github.com/tj-actions/changed-files#outputs-
       run: |
+        echo "docs=${{ steps.changed-files-yaml.outputs.docs_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "examples=${{ steps.changed-files-yaml.outputs.examples_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "any=${{ steps.changed-files-yaml.outputs.any_any_modified }}" >> "$GITHUB_OUTPUT"
+
         echo "field=${{ steps.changed-files-yaml.outputs.field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "curve=${{ steps.changed-files-yaml.outputs.curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "ring=${{ steps.changed-files-yaml.outputs.ring_any_modified }}" >> "$GITHUB_OUTPUT"
