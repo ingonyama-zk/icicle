@@ -50,4 +50,10 @@ namespace icicle {
   // backend implementation for each coefficient. ICICLE only needs a backend
   // implementation for Zq; higher-level types are handled via templated wrappers.
 
+  // Random-challenge polynomial sampling
+  // TODO: this needs to take tau1, tau2
+  template <typename T>
+  eIcicleError random_challenge_polynomial(
+    const std::byte* seed, size_t seed_len, const SamplingConfig& cfg, T* output, size_t output_size);
+
 } // namespace icicle
