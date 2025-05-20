@@ -13,46 +13,52 @@ on:
         description: "Flag for if any code files changed"
         value: ${{ jobs.check-changed-files.outputs.any }}
       # Cpp specific outputs
+      cpp:
+        description: "Flag for if C++ code files changed"
+        value: ${{ jobs.check-changed-files.outputs.cpp }}
       field:
-        description: "Flag for if field files changed"
+        description: "Flag for if C++ field files changed"
         value: ${{ jobs.check-changed-files.outputs.field }}
       curve:
-        description: "Flag for if curve files changed"
+        description: "Flag for if C++ curve files changed"
         value: ${{ jobs.check-changed-files.outputs.curve }}
       ring:
-        description: "Flag for if ring files changed"
+        description: "Flag for if C++ ring files changed"
         value: ${{ jobs.check-changed-files.outputs.ring }}
       msm:
-        description: "Flag for if msm files changed"
+        description: "Flag for if C++ msm files changed"
         value: ${{ jobs.check-changed-files.outputs.msm }}
       ntt:
-        description: "Flag for if ntt files changed"
+        description: "Flag for if C++ ntt files changed"
         value: ${{ jobs.check-changed-files.outputs.ntt }}
       ecntt:
-        description: "Flag for if ecntt files changed"
+        description: "Flag for if C++ ecntt files changed"
         value: ${{ jobs.check-changed-files.outputs.ecntt }}
       fri:
-        description: "Flag for if fri files changed"
+        description: "Flag for if C++ fri files changed"
         value: ${{ jobs.check-changed-files.outputs.fri }}
       sumcheck:
-        description: "Flag for if sumcheck files changed"
+        description: "Flag for if C++ sumcheck files changed"
         value: ${{ jobs.check-changed-files.outputs.sumcheck }}
       pairing:
-        description: "Flag for if pairing files changed"
+        description: "Flag for if C++ pairing files changed"
         value: ${{ jobs.check-changed-files.outputs.pairing }}
       poseidon:
-        description: "Flag for if poseidon files changed"
+        description: "Flag for if C++ poseidon files changed"
         value: ${{ jobs.check-changed-files.outputs.poseidon }}
       poseidon2:
-        description: "Flag for if poseidon2 files changed"
+        description: "Flag for if C++ poseidon2 files changed"
         value: ${{ jobs.check-changed-files.outputs.poseidon2 }}
       hash:
-        description: "Flag for if hash files changed"
+        description: "Flag for if C++ hash files changed"
         value: ${{ jobs.check-changed-files.outputs.hash }}
       runtime:
-        description: "Flag for if runtime files changed"
+        description: "Flag for if C++ runtime files changed"
         value: ${{ jobs.check-changed-files.outputs.runtime }}
       # Rust specific outputs
+      rust:
+        description: "Flag for if Rust code files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust }}
       rust-field:
         description: "Flag for if Rust field files changed"
         value: ${{ jobs.check-changed-files.outputs.rust-field }}
@@ -93,6 +99,9 @@ on:
         description: "Flag for if Rust runtime files changed"
         value: ${{ jobs.check-changed-files.outputs.rust-runtime }}
       # Go specific outputs
+      go:
+        description: "Flag for if Go code files changed"
+        value: ${{ jobs.check-changed-files.outputs.go }}
       go-field:
         description: "Flag for if Go field files changed"
         value: ${{ jobs.check-changed-files.outputs.go-field }}
@@ -142,6 +151,7 @@ jobs:
       examples: ${{ steps.changed_files.outputs.examples }}
       any: ${{ steps.changed_files.outputs.any }}
       # Feature-specific outputs
+      cpp: ${{ steps.changed_files.outputs.cpp }}
       field: ${{ steps.changed_files.outputs.field }}
       curve: ${{ steps.changed_files.outputs.curve }}
       ring: ${{ steps.changed_files.outputs.ring }}
@@ -156,6 +166,7 @@ jobs:
       hash: ${{ steps.changed_files.outputs.hash }}
       runtime: ${{ steps.changed_files.outputs.runtime }}
       # Rust specific outputs
+      rust: ${{ steps.changed_files.outputs.rust }}
       rust-field: ${{ steps.changed_files.outputs.rust-field }}
       rust-curve: ${{ steps.changed_files.outputs.rust-curve }}
       rust-ring: ${{ steps.changed_files.outputs.rust-ring }}
@@ -170,6 +181,7 @@ jobs:
       rust-hash: ${{ steps.changed_files.outputs.rust-hash }}
       rust-runtime: ${{ steps.changed_files.outputs.rust-runtime }}
       # Go specific outputs
+      go: ${{ steps.changed_files.outputs.go }}
       go-field: ${{ steps.changed_files.outputs.go-field }}
       go-curve: ${{ steps.changed_files.outputs.go-curve }}
       go-ring: ${{ steps.changed_files.outputs.go-ring }}
@@ -200,6 +212,7 @@ jobs:
         echo "examples=${{ steps.changed-files-yaml.outputs.examples_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "any=${{ steps.changed-files-yaml.outputs.any_any_modified }}" >> "$GITHUB_OUTPUT"
 
+        echo "cpp=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "field=${{ steps.changed-files-yaml.outputs.field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "curve=${{ steps.changed-files-yaml.outputs.curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "ring=${{ steps.changed-files-yaml.outputs.ring_any_modified }}" >> "$GITHUB_OUTPUT"
@@ -214,6 +227,7 @@ jobs:
         echo "hash=${{ steps.changed-files-yaml.outputs.hash_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "runtime=${{ steps.changed-files-yaml.outputs.runtime_any_modified }}" >> "$GITHUB_OUTPUT"
 
+        echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-field=${{ steps.changed-files-yaml.outputs.rust-field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-curve=${{ steps.changed-files-yaml.outputs.rust-curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-ring=${{ steps.changed-files-yaml.outputs.rust-ring_any_modified }}" >> "$GITHUB_OUTPUT"
@@ -228,6 +242,7 @@ jobs:
         echo "rust-hash=${{ steps.changed-files-yaml.outputs.rust-hash_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-runtime=${{ steps.changed-files-yaml.outputs.rust-runtime_any_modified }}" >> "$GITHUB_OUTPUT"
 
+        echo "go=${{ steps.changed-files-yaml.outputs.go_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go-field=${{ steps.changed-files-yaml.outputs.go-field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go-curve=${{ steps.changed-files-yaml.outputs.go-curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go-ring=${{ steps.changed-files-yaml.outputs.go-ring_any_modified }}" >> "$GITHUB_OUTPUT"
