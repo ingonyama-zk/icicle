@@ -3,7 +3,7 @@ slug: /
 title: Overview
 ---
 
-# Intoduction to ICICLE
+# Introduction to ICICLE
 
 ICICLE is a versatile cryptography library supporting multiple compute backends—including CUDA, CPU, Metal, and upcoming backends like WebGPU, Vulkan, and ZPU. It enables you to build cryptographic applications with ease, leveraging the best available hardware for your needs.
 
@@ -102,7 +102,7 @@ Below are just a select *few* of the teams building with ICICLE:
 
   <a href="https://www.eigenda.xyz/" className="ecosystemcard" target="_blank" rel="noopener">
     <img src="/img/eigendalogo.png" alt="EigenDA logo" />
-    <p>Improving data availability bandwidth, utilizing GPUs to parallize encoding.</p>
+    <p>Improving data availability bandwidth, utilizing GPUs to parallelize encoding.</p>
   </a>
 
   <a href="https://github.com/Consensys/gnark" className="ecosystemcard" target="_blank" rel="noopener">
