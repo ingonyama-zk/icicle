@@ -11,10 +11,10 @@ pub mod fri;
 pub mod msm;
 #[cfg(feature = "ntt")]
 pub mod ntt;
-#[cfg(feature = "ntt")]
-pub mod polynomials;
 #[cfg(feature = "pairing")]
 pub mod pairing;
+#[cfg(feature = "ntt")]
+pub mod polynomials;
 #[cfg(feature = "poseidon")]
 pub mod poseidon;
 #[cfg(feature = "poseidon2")]

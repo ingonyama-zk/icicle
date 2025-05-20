@@ -27,7 +27,7 @@ fn main() {
         .define("CURVE", "grumpkin")
         .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
-    
+
     // Define feature flags
     // Default is ON for all features via the default feature in Cargo.toml
     if cfg!(feature = "msm") {
