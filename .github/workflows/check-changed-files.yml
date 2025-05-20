@@ -4,9 +4,6 @@ on:
   workflow_call:
     outputs:
       # Cpp specific outputs
-      base:
-        description: "Flag for if base files changed"
-        value: ${{ jobs.check-changed-files.outputs.base }}
       field:
         description: "Flag for if field files changed"
         value: ${{ jobs.check-changed-files.outputs.field }}
@@ -47,9 +44,6 @@ on:
         description: "Flag for if runtime files changed"
         value: ${{ jobs.check-changed-files.outputs.runtime }}
       # Rust specific outputs
-      rust-base:
-        description: "Flag for if Rust base files changed"
-        value: ${{ jobs.check-changed-files.outputs.rust-base }}
       rust-field:
         description: "Flag for if Rust field files changed"
         value: ${{ jobs.check-changed-files.outputs.rust-field }}
@@ -90,9 +84,6 @@ on:
         description: "Flag for if Rust runtime files changed"
         value: ${{ jobs.check-changed-files.outputs.rust-runtime }}
       # Go specific outputs
-      go-base:
-        description: "Flag for if Go base files changed"
-        value: ${{ jobs.check-changed-files.outputs.go-base }}
       go-field:
         description: "Flag for if Go field files changed"
         value: ${{ jobs.check-changed-files.outputs.go-field }}
@@ -139,7 +130,6 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       # Feature-specific outputs
-      base: ${{ steps.changed_files.outputs.base }}
       field: ${{ steps.changed_files.outputs.field }}
       curve: ${{ steps.changed_files.outputs.curve }}
       ring: ${{ steps.changed_files.outputs.ring }}
@@ -154,7 +144,6 @@ jobs:
       hash: ${{ steps.changed_files.outputs.hash }}
       runtime: ${{ steps.changed_files.outputs.runtime }}
       # Rust specific outputs
-      rust-base: ${{ steps.changed_files.outputs.rust-base }}
       rust-field: ${{ steps.changed_files.outputs.rust-field }}
       rust-curve: ${{ steps.changed_files.outputs.rust-curve }}
       rust-ring: ${{ steps.changed_files.outputs.rust-ring }}
@@ -169,7 +158,6 @@ jobs:
       rust-hash: ${{ steps.changed_files.outputs.rust-hash }}
       rust-runtime: ${{ steps.changed_files.outputs.rust-runtime }}
       # Go specific outputs
-      go-base: ${{ steps.changed_files.outputs.go-base }}
       go-field: ${{ steps.changed_files.outputs.go-field }}
       go-curve: ${{ steps.changed_files.outputs.go-curve }}
       go-ring: ${{ steps.changed_files.outputs.go-ring }}
@@ -185,7 +173,7 @@ jobs:
       go-runtime: ${{ steps.changed_files.outputs.go-runtime }}
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Get all changed files
       id: changed-files-yaml
       uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c
@@ -196,7 +184,6 @@ jobs:
       id: changed_files
       # https://github.com/tj-actions/changed-files#outputs-
       run: |
-      # Cpp specific outputs
         echo "field=${{ steps.changed-files-yaml.outputs.field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "curve=${{ steps.changed-files-yaml.outputs.curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "ring=${{ steps.changed-files-yaml.outputs.ring_any_modified }}" >> "$GITHUB_OUTPUT"
@@ -210,7 +197,7 @@ jobs:
         echo "poseidon2=${{ steps.changed-files-yaml.outputs.poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "hash=${{ steps.changed-files-yaml.outputs.hash_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "runtime=${{ steps.changed-files-yaml.outputs.runtime_any_modified }}" >> "$GITHUB_OUTPUT"
-      # Rust specific outputs
+
         echo "rust-field=${{ steps.changed-files-yaml.outputs.rust-field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-curve=${{ steps.changed-files-yaml.outputs.rust-curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-ring=${{ steps.changed-files-yaml.outputs.rust-ring_any_modified }}" >> "$GITHUB_OUTPUT"
@@ -224,7 +211,7 @@ jobs:
         echo "rust-poseidon2=${{ steps.changed-files-yaml.outputs.rust-poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-hash=${{ steps.changed-files-yaml.outputs.rust-hash_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust-runtime=${{ steps.changed-files-yaml.outputs.rust-runtime_any_modified }}" >> "$GITHUB_OUTPUT"
-      # Go specific outputs
+
         echo "go-field=${{ steps.changed-files-yaml.outputs.go-field_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go-curve=${{ steps.changed-files-yaml.outputs.go-curve_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go-ring=${{ steps.changed-files-yaml.outputs.go-ring_any_modified }}" >> "$GITHUB_OUTPUT"
