@@ -42,20 +42,20 @@ Each library has a corresponding crate. See [programmers guide](start/programmer
 | ------------------------------------- | :----------------------------------------------: | :--------------------------------------------------------------------------------------: | :-: | :-------: | :--------: |
 | [Vector operations](../../api/cpp/vec_ops)   |                        ✅                        |                                            ✅                                            | ✅  |    ✅     |     ✅     |
 | [Polynomials](../../api/cpp/polynomials/overview) |                        ✅                        |                                            ✅                                            | ❌  |    ✅     |     ✅     |
-| [NTTapi(cpp/ntt)                      |                        ✅                        |                                            ✅                                            | ❌  |    ✅     |     ✅     |
+| [NTTapi](../../api/cpp/ntt)                      |                        ✅                        |                                            ✅                                            | ❌  |    ✅     |     ✅     |
 | Extension Field                       |                        ✅                        |                                            ❌                                            | ✅  |    ✅     |     ✅     |
-| [Poseidonapi(cpp/hash#poseidon)       |                        ✅                        |                                            ✅                                            | ✅  |    ✅     |     ❌     |
-| [Poseidon2api(cpp/hash#poseidon2)     |                        ✅                        |                                            ✅                                            | ✅  |    ✅     |     ✅     |
+| [Poseidonapi](../../api/cpp/hash#poseidon)       |                        ✅                        |                                            ✅                                            | ✅  |    ✅     |     ❌     |
+| [Poseidon2api](../../api/cpp/hash#poseidon2)     |                        ✅                        |                                            ✅                                            | ✅  |    ✅     |     ✅     |
 
 ### Misc
 
 | Operation                            |                 Description                  |
 | ------------------------------------ | :------------------------------------------: |
-| [Keccakapi(cpp/hash#keccak-and-sha3) |       supporting 256b and 512b digest        |
-| [SHA3api(cpp/hash#keccak-and-sha3)   |       supporting 256b and 512b digest        |
-| [Blake2sapi(cpp/hash#blake2s)        |                digest is 256b                |
-| [Blake3api(cpp/hash#blake3)          |                digest is 256b                |
-| [Merkle-Treeapi(cpp/merkle)          | works with any combination of hash functions |
+| [Keccakapi](../../api/cpp/hash#keccak-and-sha3) |       supporting 256b and 512b digest        |
+| [SHA3api](../../api/cpp/hash#keccak-and-sha3)   |       supporting 256b and 512b digest        |
+| [Blake2sapi](../../api/cpp/hash#blake2s)        |                digest is 256b                |
+| [Blake3api](../../api/cpp/hash#blake3)          |                digest is 256b                |
+| [Merkle-Treeapi](../../api/cpp/merkle)          | works with any combination of hash functions |
 
 ## Backend
 
