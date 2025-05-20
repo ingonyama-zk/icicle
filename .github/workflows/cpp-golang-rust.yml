@@ -170,7 +170,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'msm') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS msm"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,msm,g2"
           fi
         fi
         
@@ -182,7 +182,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'ntt') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ntt"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
           fi
         fi
         
@@ -194,7 +194,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ecntt"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'ecntt') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ecntt"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ecntt"
           fi
         fi
 
@@ -207,7 +207,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,pairing"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'pairing') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS pairing"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,pairing,g2"
           fi
         fi
         
@@ -219,7 +219,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'fri') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS fri"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,fri"
           fi
         fi
         
@@ -231,7 +231,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'sumcheck') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS sumcheck"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,sumcheck"
           fi
         fi
 
@@ -243,7 +243,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon"
           fi
         fi
 
@@ -255,7 +255,7 @@ jobs:
             RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
           fi
           if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon2') }}" = "true" ]]; then
-            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon2"
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon2"
           fi
         fi
 
