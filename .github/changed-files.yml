@@ -1,24 +1,268 @@
-golang:
-  - wrappers/golang/**/*.go
-  - wrappers/golang/**/*.h
-  - wrappers/golang/**/*.tmpl
-  - go.mod
-  - .github/workflows/cpp-golang-rust.yml
-rust:
-  - wrappers/rust/**/*
-  - '!wrappers/rust/README.md'
-  - .github/workflows/cpp-golang-rust.yml
-cpp:
-  - icicle/**/*.cu
-  - icicle/**/*.cuh
-  - icicle/**/*.cpp
-  - icicle/**/*.hpp
-  - icicle/**/*.c
-  - icicle/**/*.h
-  - icicle/CMakeLists.txt
-  - icicle/cmake/**/*.cmake
-  - .github/workflows/cpp-golang-rust.yml
+any:
+  - *cpp
+  - *rust
+  - *golang
+
+docs:
+  - docs/docs/**/*
+  - docs/src/**/*
+  - docs/static/**/*
+  - docs/versioned_docs/**/*
+  - docs/versioned_sidebars/**/*
+  - docs/docusaurus.config.js
+  - docs/package.json
+  - docs/sidebar.ts
+  - docs/versions.json
+
 examples:
   - examples/**/*
-  - .github/workflows/cpp-golang-rust.yml
-  - .github/workflows/rust-examples.yml
+  
+# C/C++ file feature mappings
+cpp: &cpp
+  - icicle/**/*
+program: &program
+  - icicle/src/program/**/*
+  - icicle/include/icicle/program/**/*
+  - icicle/src/symbol/**/*
+  - icicle/include/icicle/symbol/**/*
+
+base: &base
+  - *program
+  - icicle/include/icicle/math/**/*
+  - icicle/src/vec_ops.cpp
+  - icicle/include/icicle/vec_ops.h
+  - icicle/src/fields/ffi_extern.cpp
+  - icicle/src/matrix_ops.cpp
+  - icicle/include/icicle/matrix_ops.h
+field: &field
+  - *base
+  - icicle/src/fields/**/*
+  - icicle/include/icicle/fields/**/*
+curve: &curve
+  - *field
+  - icicle/src/curves/**/*
+  - icicle/include/icicle/curves/**/*
+ring: &ring
+  - *base
+  - icicle/src/rings/**/*
+  - icicle/include/icicle/rings/**/*
+  - icicle/src/balanced_decomposition.cpp
+  - icicle/include/icicle/balanced_decomposition.h
+
+# Feature-specific file patterns
+msm: &msm
+  - icicle/src/msm.cpp
+  - icicle/include/icicle/msm.h
+ntt: &ntt
+  - icicle/src/ntt.cpp
+  - icicle/include/icicle/ntt.h
+  - icicle/src/polynomials/**/*
+  - icicle/include/icicle/polynomials/**/*
+ecntt: &ecntt
+  - icicle/src/ecntt.cpp
+  - icicle/include/icicle/ecntt.h
+fri: &fri
+  - icicle/src/fri/**/*
+  - icicle/include/icicle/fri/**/*
+sumcheck: &sumcheck
+  - *program
+  - icicle/src/sumcheck/**/*
+  - icicle/include/icicle/sumcheck/**/*
+pairing: &pairing
+  - icicle/src/pairing.cpp
+  - icicle/include/icicle/pairing.h
+poseidon: &poseidon
+  - icicle/src/hash/poseidon.cpp
+  - icicle/src/hash/poseidon_c_api.cpp
+  - icicle/include/icicle/hash/poseidon.h
+  - icicle/include/icicle/hash/poseidon_constants/**/*
+poseidon2: &poseidon2
+  - icicle/src/hash/poseidon2.cpp
+  - icicle/src/hash/poseidon2_c_api.cpp
+  - icicle/include/icicle/hash/poseidon2.h
+  - icicle/include/icicle/hash/poseidon2_constants/**/*
+hash: &hash
+  - icicle/src/hash/**/*
+  - icicle/include/icicle/hash/**/*
+  - "!icicle/src/hash/poseidon*"
+  - "!icicle/include/icicle/hash/poseidon*"
+  - "!icicle/src/hash/poseidon2*"
+  - "!icicle/include/icicle/hash/poseidon2*"
+runtime: &runtime
+  - icicle/src/runtime.cpp
+  - icicle/include/icicle/runtime.h
+
+# Rust file feature mappings
+rust:
+  - *cpp
+  - wrappers/rust
+rust-program: &rust-program
+  - *program
+  - wrappers/rust/icicle-core/src/program/mod.rs
+  - wrappers/rust/icicle-core/src/symbol/mod.rs
+  - wrappers/rust/icicle-curves/**/src/program/mod.rs
+  - wrappers/rust/icicle-fields/**/src/program/mod.rs
+  - wrappers/rust/icicle-rings/**/src/program/mod.rs
+  - wrappers/rust/icicle-curves/**/src/symbol/mod.rs
+  - wrappers/rust/icicle-fields/**/src/symbol/mod.rs
+  - wrappers/rust/icicle-rings/**/src/symbol/mod.rs
+rust-base: &rust-base
+  - *base
+  - *rust-program
+  - wrappers/rust/icicle-core/src/vec_ops/tests.rs
+  - wrappers/rust/icicle-core/src/vec_ops/mod.rs
+  - wrappers/rust/icicle-curves/**/src/vec_ops/mod.rs
+  - wrappers/rust/icicle-fields/**/src/vec_ops/mod.rs
+  - wrappers/rust/icicle-rings/**/src/vec_ops/mod.rs
+  
+rust-field: &rust-field
+  - *field
+  - *rust-base
+  - wrappers/rust/icicle-core/src/field.rs
+  - wrappers/rust/icicle-fields/**/*
+rust-curve:
+  - *curve
+  - *rust-field
+  - wrappers/rust/icicle-core/src/curve.rs
+  - wrappers/rust/icicle-curves/**/*
+rust-ring:
+  - *ring
+  - *rust-field
+  - wrappers/rust/icicle-core/src/rns/test.rs
+  - wrappers/rust/icicle-core/src/balanced_decomposition/mod.rs
+  - wrappers/rust/icicle-core/src/balanced_decomposition/test.rs
+  - wrappers/rust/icicle-rings/**/*
+
+# Rust feature-specific file patterns
+rust-msm:
+  - *msm
+  - wrappers/rust/icicle-core/src/msm/mod.rs
+  - wrappers/rust/icicle-core/src/msm/test.rs
+  - wrappers/rust/icicle-curves/**/msm/mod.rs
+rust-ntt:
+  - *ntt
+  - wrappers/rust/icicle-core/src/ntt/mod.rs
+  - wrappers/rust/icicle-core/src/ntt/test.rs
+  - wrappers/rust/icicle-core/src/polynomials/mod.rs
+  - wrappers/rust/icicle-curves/**/ntt/mod.rs
+  - wrappers/rust/icicle-fields/**/ntt/mod.rs
+  - wrappers/rust/icicle-rings/**/ntt/mod.rs
+rust-ecntt:
+  - *ecntt
+  - wrappers/rust/icicle-core/src/ecntt/mod.rs
+  - wrappers/rust/icicle-core/src/ecntt/test.rs
+  - wrappers/rust/icicle-curves/**/ecntt/mod.rs
+rust-fri:
+  - *fri
+  - wrappers/rust/icicle-core/src/fri/mod.rs
+  - wrappers/rust/icicle-core/src/fri/test.rs
+  - wrappers/rust/icicle-core/src/fri/fri_proof.rs
+  - wrappers/rust/icicle-core/src/fri/fri_transcript_config.rs
+  - wrappers/rust/icicle-curves/**/fri/mod.rs
+  - wrappers/rust/icicle-fields/**/fri/mod.rs
+rust-sumcheck:
+  - *sumcheck
+  - *rust-program
+  - wrappers/rust/icicle-core/src/sumcheck/mod.rs
+  - wrappers/rust/icicle-core/src/sumcheck/test.rs
+  - wrappers/rust/icicle-curves/**/sumcheck/mod.rs
+  - wrappers/rust/icicle-fields/**/sumcheck/mod.rs
+rust-pairing:
+  - *pairing
+  - wrappers/rust/icicle-core/src/pairing/mod.rs
+  - wrappers/rust/icicle-core/src/pairing/test.rs
+  - wrappers/rust/icicle-curves/**/pairing/mod.rs
+rust-poseidon:
+  - *poseidon
+  - wrappers/rust/icicle-core/src/poseidon/mod.rs
+  - wrappers/rust/icicle-core/src/poseidon/tests.rs
+  - wrappers/rust/icicle-curves/**/poseidon/mod.rs
+  - wrappers/rust/icicle-fields/**/poseidon/mod.rs
+rust-poseidon2:
+  - *poseidon2
+  - wrappers/rust/icicle-core/src/poseidon2/mod.rs
+  - wrappers/rust/icicle-core/src/poseidon2/tests.rs
+  - wrappers/rust/icicle-curves/**/poseidon2/mod.rs
+  - wrappers/rust/icicle-fields/**/poseidon2/mod.rs
+rust-hash:
+  - *hash
+  - wrappers/rust/icicle-core/src/hash/mod.rs
+  - wrappers/rust/icicle-core/src/merkle/mod.rs
+  - wrappers/rust/icicle-hash/**/*
+rust-runtime:
+  - *runtime
+  - wrappers/rust/icicle-runtime/**/*
+  
+# Go file feature mappings
+golang:
+  - *cpp
+  - wrappers/golang
+  - '!wrappers/golang/README.md'
+  - '!wrappers/golang/internal/generator/main.go'
+  - '!wrappers/golang/internal/build-libs.go'
+go-program: &go-program
+  - *program
+  - wrappers/golang/internal/generator/program/**/*
+  - wrappers/golang/internal/generator/symbol/**/*
+
+go-base: &go-base
+  - *base
+  - *go-program
+  - wrappers/golang/internal/generator/vecOps/**/*
+  - wrappers/golang/core/vec_ops.go
+  - wrappers/golang/core/vec_ops_test.go
+go-field: &go-field
+  - *field
+  - *go-base
+  - wrappers/golang/internal/generator/fields/**/*
+go-curve:
+  - *curve
+  - *go-field
+  - wrappers/golang/internal/generator/curves/**/*
+go-ring:
+  - *ring
+  - *go-field
+  - wrappers/golang/internal/generator/rings/**/*
+
+# Go feature-specific file patterns
+go-msm:
+  - *msm
+  - wrappers/golang/internal/generator/msm/**/*
+  - wrappers/golang/core/msm.go
+  - wrappers/golang/core/msm_test.go
+go-ntt:
+  - *ntt
+  - wrappers/golang/internal/generator/ntt/**/*
+  - wrappers/golang/internal/generator/polynomials/**/*
+  - wrappers/golang/core/ntt.go
+  - wrappers/golang/core/ntt_test.go
+go-ecntt:
+  - *ecntt
+  - wrappers/golang/internal/generator/ecntt/**/*
+go-fri:
+  - *fri
+  - wrappers/golang/internal/generator/fri/**/*
+go-sumcheck:
+  - *sumcheck
+  - *go-program
+  - wrappers/golang/internal/generator/sumcheck/**/*
+go-pairing:
+  - *pairing
+  - wrappers/golang/internal/generator/pairing/**/*
+go-poseidon:
+  - *poseidon
+  - wrappers/golang/internal/generator/poseidon/**/*
+go-poseidon2:
+  - *poseidon2
+  - wrappers/golang/internal/generator/poseidon2/**/*
+go-hash:
+  - *hash
+  - wrappers/golang/hash/**/*
+  - wrappers/golang/merkle-tree/**/*
+  - wrappers/golang/core/hash.go
+  - wrappers/golang/core/hash_test.go
+  - wrappers/golang/core/merkletree.go
+  - wrappers/golang/core/merkletree_test.go
+go-runtime:
+  - *runtime
+  - wrappers/golang/runtime/**/*

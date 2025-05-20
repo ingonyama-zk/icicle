@@ -1,3 +1,5 @@
+//go:build !ecntt
+
 package tests
 
 import (

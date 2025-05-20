@@ -1,3 +1,5 @@
+//go:build !msm
+
 package g2
 
 // #cgo CFLAGS: -I./include/

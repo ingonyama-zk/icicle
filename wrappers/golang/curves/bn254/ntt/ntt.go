@@ -1,3 +1,5 @@
+//go:build !ntt
+
 package ntt
 
 // #cgo CFLAGS: -I./include/

@@ -29,6 +29,36 @@ fn main() {
         .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
+    // Define feature flags
+    // Default is ON for all features via the default feature in Cargo.toml
+    if cfg!(feature = "msm") {
+        config.define("MSM", "ON");
+        config.define("G2", "ON");
+    }
+    if cfg!(feature = "ntt") {
+        config.define("NTT", "ON");
+    }
+    if cfg!(feature = "ecntt") {
+        config.define("ECNTT", "ON");
+        config.define("NTT", "ON");
+    }
+    if cfg!(feature = "fri") {
+        config.define("FRI", "ON");
+    }
+    if cfg!(feature = "sumcheck") {
+        config.define("SUMCHECK", "ON");
+    }
+    if cfg!(feature = "pairing") {
+        config.define("PAIRING", "ON");
+        config.define("G2", "ON");
+    }
+    if cfg!(feature = "poseidon") {
+        config.define("POSEIDON", "ON");
+    }
+    if cfg!(feature = "poseidon2") {
+        config.define("POSEIDON2", "ON");
+    }
+
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
     if cfg!(feature = "cuda_backend") {
@@ -45,13 +75,6 @@ fn main() {
         config.define("VULKAN_BACKEND", "local");
     } else if cfg!(feature = "pull_vulkan_backend") {
         config.define("VULKAN_BACKEND", "main");
-    }
-    // Optional Features that are default ON (so that default matches any backend)
-    if cfg!(feature = "no_g2") {
-        config.define("G2", "OFF");
-    }
-    if cfg!(feature = "no_ecntt") {
-        config.define("ECNTT", "OFF");
     }
 
     // Build
