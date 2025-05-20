@@ -24,10 +24,44 @@ using Tq = labrador::Tq;
 // Parameters
 constexpr size_t beta = 10; // TODO(Ash): set beta according to the protocol
 
-// === TODO(Ash): Consider addinf protocol-specific types ===
-// struct Statement { ... }
-// struct Witness  { ... }
-// struct Proof    { ... }
+// === TODO(Ash): Consider adding protocol-specific types ===
+struct EqualityInstance {
+  size_t r;                         // Number of witness vectors
+  size_t n;                         // Dimension of each vector in Rq
+  std::vector<std::vector<Rq>> a;   // a[i][j] matrix over Rq (r x r matrix)
+  std::vector<std::vector<Rq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
+  Rq b;                             // Polynomial in Rq
+
+  EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Rq>(r)), phi(r, std::vector<Rq>(n)), b() {}
+};
+
+struct ConstZeroInstance {
+  size_t r;                         // Number of witness vectors
+  size_t n;                         // Dimension of each vector in Rq
+  std::vector<std::vector<Rq>> a;   // a[i][j] matrix over Rq (r x r matrix)
+  std::vector<std::vector<Rq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
+  Rq b;                             // Polynomial in Rq
+
+  ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Rq>(r)), phi(r, std::vector<Rq>(n)), b() {}
+};
+
+struct LabradorInstance {
+  size_t r;                                              // Number of witness vectors
+  size_t n;                                              // Dimension of each vector in Rq
+  double beta;                                           // Norm bound
+  std::vector<EqualityInstance> equality_constraints;    // K EqualityInstances
+  std::vector<ConstZeroInstance> const_zero_constraints; // L ConstZeroInstances
+
+  LabradorInstance(size_t r, size_t n, double beta) : r(r), n(n), beta(beta) {}
+
+  // Add an EqualityInstance
+  void add_equality_constraint(const EqualityInstance& instance) { equality_constraints.push_back(instance); }
+
+  // Add a ConstZeroInstance
+  void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
+};
+
+eIcicleError nega_cyc_NTT(const std::vector<Rq> input, std::vector<Rq> output) { return eIcicleError::SUCCESS; }
 
 // === TODO(Ash): Implement protocol logic ===
 
@@ -37,7 +71,7 @@ eIcicleError setup(/*TODO params*/)
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError prove(/*TODO params*/)
+eIcicleError base_prover(const LabradorInstance LabInst, const std::vector<std::vector<Rq>> S, std::vector<Zq> proof)
 {
   // TODO(Ash): Implement prover logic
   return eIcicleError::SUCCESS;
@@ -67,13 +101,12 @@ int main(int argc, char* argv[])
 
   // randomize the witness Si with low norm
   // TODO Ash: maybe want to allocate them consecutive in memory
-  const size_t witness_size = 1 << 10;
-  std::vector<Rq> S0(witness_size);
-  std::vector<Rq> S1(witness_size);
-  std::vector<Rq> S2(witness_size);
+  const size_t n = 1 << 8;
+  const size_t r = 1 << 8;
+  std::vector<std::vector<Rq>> S(r, std::vector<Rq>(n));
 
   // TODO eventually we will use icicle_malloc() and icicle_copy() to allocate and copy that is device agnostic and
-  // support GPU too. First step can be with hots memory and then we can add device support.
+  // support GPU too. First step can be with host memory and then we can add device support.
 
   auto randomize_Rq_vec = [](std::vector<Rq>& vec, int64_t max_value) {
     for (auto& x : vec) {
@@ -84,16 +117,21 @@ int main(int argc, char* argv[])
     }
   };
 
+  // std::cout << "0= " << Zq::from(0) << std::endl
+  //           << "1= " << Zq::from(1) << std::endl
+  //           << "31= " << Zq::from(31) << std::endl;
+
   // generate random values in [0, sqrt(q)]. We assume witness is low norm.
   const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
-  randomize_Rq_vec(S0, sqrt_q);
-  randomize_Rq_vec(S1, sqrt_q);
-  randomize_Rq_vec(S2, sqrt_q);
+  for (size_t i = 0; i < r; ++i) {
+    randomize_Rq_vec(S[i], sqrt_q);
+  }
 
   // === Call the protocol ===
-  ICICLE_CHECK(setup(/* TODO(Ash): add arguments */));
-  ICICLE_CHECK(prove(/* TODO(Ash): add arguments */));
-  ICICLE_CHECK(verify(/* TODO(Ash): add arguments */));
+  // ICICLE_CHECK(setup(/* TODO(Ash): add arguments */));
+  // ICICLE_CHECK(prove(/* TODO(Ash): add arguments */));
+  // ICICLE_CHECK(verify(/* TODO(Ash): add arguments */));
 
+  std::cout << "Hello\n";
   return 0;
 }
