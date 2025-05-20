@@ -319,7 +319,7 @@ jobs:
         if [ "${{ needs.check-changed-files.outputs.rust-ntt }}" = "true" ]; then
           cargo test phase3 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
         fi
-        if [ "${{ needs.check-changed-files.outputs.rust-fri }}" = "true" && "${{ contains(matrix.curve.rust-supported-features, "fri") }}" = "true" ]; then
+        if [ "${{ needs.check-changed-files.outputs.rust-fri }}" = "true" && "${{ contains(matrix.curve.rust-supported-features, fri) }}" = "true" ]; then
           cargo test phase4 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
         fi
         
