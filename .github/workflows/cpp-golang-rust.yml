@@ -271,8 +271,14 @@ jobs:
 
         echo "Feature flags: $FEATURE_FLAGS"
         echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
+        
+        echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
         echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
+
+        echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
         echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
+
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
         echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
         
     - name: Build curve
