@@ -1,4 +1,4 @@
-//go:build !ecntt
+//go:build !icicle_exclude_all || ecntt
 
 package ecntt
 

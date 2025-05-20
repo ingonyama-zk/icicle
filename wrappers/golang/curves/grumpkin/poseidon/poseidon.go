@@ -1,4 +1,4 @@
-//go:build !poseidon
+//go:build !icicle_exclude_all || poseidon
 
 package poseidon
 

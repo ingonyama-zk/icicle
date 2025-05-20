@@ -1,4 +1,4 @@
-//go:build !poseidon2
+//go:build !icicle_exclude_all || poseidon2
 
 package tests
 

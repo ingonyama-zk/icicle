@@ -1,4 +1,4 @@
-//go:build !ntt
+//go:build !icicle_exclude_all || ntt
 
 package polynomial
 
