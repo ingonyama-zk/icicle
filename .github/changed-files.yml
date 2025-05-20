@@ -189,7 +189,7 @@ rust-runtime:
   - wrappers/rust/icicle-runtime/**/*
   
 # Go file feature mappings
-golang: &golang
+go: &go
   - *cpp
   - wrappers/golang
   - '!wrappers/golang/README.md'
@@ -265,4 +265,4 @@ go-runtime:
 any:
   - *cpp
   - *rust
-  - *golang
+  - *go
