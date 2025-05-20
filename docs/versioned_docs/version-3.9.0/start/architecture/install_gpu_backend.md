@@ -11,7 +11,7 @@ GPU backends are closed-source components that require a valid license. [To inst
 ## Licensing
 
 :::note
-GPU backends (CUDA and Metal) are currently free to use by default **for research and development purposes** via Ingonyama’s backend license server.
+By default, ICICLE connects to Ingonyama’s backend license server and runs with a **free Research & Development license**, enabling GPU backends (CUDA and Metal) for development and testing purposes—no setup required.
 For **production use**, please contact sales@ingonyama.com.  
   
 For additional support, email support@ingonyama.com.
