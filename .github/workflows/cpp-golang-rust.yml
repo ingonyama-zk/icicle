@@ -278,8 +278,8 @@ jobs:
         echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
         echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
 
-        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
-        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
+        echo "GO_TEST_BUILD_TAGS_TO_IGNORE: $GO_TEST_BUILD_TAGS_TO_IGNORE"
+        echo "GO_TEST_BUILD_TAGS_TO_IGNORE=$GO_TEST_BUILD_TAGS_TO_IGNORE" >> $GITHUB_OUTPUT
         
     - name: Build curve
       working-directory: ./icicle
@@ -303,7 +303,7 @@ jobs:
         fi
         echo "SKIP_TESTS: $SKIP_TESTS"
         
-        ctest --output-on-failure -R ${{ steps.feature_flags.outputs.CPP_TEST_REGEX }} -E "$SKIP_TESTS"
+        ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
         
     - name: Run RUST Curve Tests
       working-directory: ./wrappers/rust/icicle-curves
