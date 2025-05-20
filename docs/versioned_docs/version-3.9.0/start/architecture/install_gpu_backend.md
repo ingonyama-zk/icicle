@@ -6,7 +6,7 @@ ICICLE v3 supports high-performance GPU backends, including **CUDA** (for NVIDIA
 
 ## Installation
 
-GPU backends are closed-source components that require a valid license. [To install and configure GPU backends in ICICLE, see here](../intro/getting_started#installing-and-using-icicl
+GPU backends are closed-source components that require a valid license. [To install and configure GPU backends in ICICLE, see here](../intro/getting_started#installing-and-using-icicle)
 
 ## Licensing
 
