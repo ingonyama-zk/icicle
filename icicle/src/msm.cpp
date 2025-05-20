@@ -19,6 +19,7 @@ namespace icicle {
   eIcicleError
   msm(const scalar_t* scalars, const affine_t* bases, int msm_size, const MSMConfig& config, projective_t* results)
   {
+    ICICLE_LOG_DEBUG("msm");
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, msm)(scalars, bases, msm_size, &config, results);
   }
 
