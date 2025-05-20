@@ -99,7 +99,7 @@ jobs:
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bls12_381
-            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"] 
             # metal-cpp-flaky-tests: "ModArithTest.ntt|PolynomialTest.multiplication|PolynomialTest.divideByVanishingPolynomial|PolynomialTest.QAP|FieldTest.vectorDivision|FieldTestBase.polynomialDivision"
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
