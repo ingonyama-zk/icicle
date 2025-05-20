@@ -1,7 +1,7 @@
 #pragma once
 
-#include "icicle/vec_ops.h" // For VecOpsConfig
-#include "icicle/hash.h"    // For cryptographic hashing utilities
+#include "icicle/vec_ops.h"   // For VecOpsConfig
+#include "icicle/hash/hash.h" // For cryptographic hashing utilities
 
 namespace icicle {
 

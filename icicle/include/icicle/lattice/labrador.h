@@ -4,6 +4,9 @@
 /// @brief Types and APIs for the LaBRADOR protocol.
 
 #include "icicle/rings/integer_rings/labrador.h" // Zq, Rq, Tq, etc.
+#include "icicle/vec_ops.h"                      // VecOpsConfig
+#include "icicle/ntt.h"                          // NTTConfig
+#include "icicle/random_sampling.h"              // Random sampling
 
 namespace icicle {
   namespace labrador {
@@ -12,10 +15,10 @@ namespace icicle {
     // Types
     //------------------------------------------------------------------------------
 
-    using Zq = scalar_t;
-    // using ZqRns = scalar_rns_t; // TODO: Consider RNS later for performance
-    using Rq = Rq; // Rq: flat arrays of Zq[d] elements
-    using Tq = Tq; // Tq: flat arrays of Zq[d] elements, typically in NTT domain
+    using Zq = ::labrador::Zq;
+    // using ZqRns = labrador::ZqRns; // TODO: Consider RNS later for performance
+    using Rq = ::labrador::Rq; // Rq: flat arrays of Zq[d] elements
+    using Tq = ::labrador::Tq; // Tq: flat arrays of Zq[d] elements, typically in NTT domain
 
     //------------------------------------------------------------------------------
     // NTT: Rq <-> Tq transforms (negacyclic, d-odd roots of -1)
