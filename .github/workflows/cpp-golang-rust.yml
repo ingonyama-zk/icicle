@@ -153,7 +153,7 @@ jobs:
       if: needs.check-changed-files.outputs.any == 'true'
       run: |
         FEATURE_FLAGS=""
-        CPP_TEST_REGEX="(?i)CurveSanity|ModArith|Symbol|Program"
+        CPP_TEST_REGEX="CurveSanity|ModArith|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS_TO_IGNORE=""
         
