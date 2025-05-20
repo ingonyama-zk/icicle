@@ -75,8 +75,8 @@ export default {
       collapsed: false,
       items: [
         {
-          "type": "doc",
-          "id": "start/integration-&-support/contributor-guide"
+          type: "doc",
+          id: "start/integration-&-support/contributor-guide"
         },
         {
           "type": "doc",
