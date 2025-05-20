@@ -74,13 +74,13 @@ export default {
       label: "Integration & Support",
       collapsed: false,
       items: [
-                {
+        {
           type: "doc",
-          id: "start/integration-&-support/faq_and_troubleshooting",
+          id: "start/integration-&-support/contributor-guide"
         },
         {
           type: "doc",
-          id: "start/integration-&-support/contributor-guide",
+          id: "start/integration-&-support/faq_and_troubleshooting"
         },
         {
           type: "doc",

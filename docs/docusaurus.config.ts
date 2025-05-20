@@ -89,7 +89,7 @@ const navBarRightSide = [
          title="Visit Ingonyama"
          target="_blank"
          rel="noopener noreferrer">
-        <img src="/img/ingologo.svg" alt="Ingonyama logo" />
+        <img src="/img/Ingologo.svg" alt="Ingonyama logo" />
       </a>
     `,
   }
