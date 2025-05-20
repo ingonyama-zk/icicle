@@ -33,8 +33,8 @@ Each library has a corresponding crate. See [programmers guide](start/programmer
 | ECNTT                                             |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ❌    |
 | [Vector operations](../../api/cpp/vec_ops)        |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ✅    |
 | [Polynomials](../../api/cpp/polynomials/overview) |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ❌    |
-| [Poseidonapi(cpp/hash#poseidon)                   |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ✅    |
-| [Poseidon2api(cpp/hash#poseidon2)                 |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ✅    |
+| [Poseidonapi](../../api/cpp/hash#poseidon)                   |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ✅    |
+| [Poseidon2api](../../api/cpp/hash#poseidon2)                 |                      ✅                      |                          ✅                           |                          ✅                           |                     ✅                      |    ✅    |
 
 #### Supported fields and operations
 
