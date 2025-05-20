@@ -148,53 +148,6 @@ jobs:
         path: ./icicle/backend/${{ matrix.backend }}
         ssh-key: ${{ steps.pull_key.outputs.PULL_KEY }}
         ref: ${{ env.BACKEND_BRANCH }}
-    - name: Get ${{ matrix.backend_upper }} Backend Commit SHA
-      if: needs.check-changed-files.outputs.any == 'true'
-      working-directory: ./icicle/backend/${{ matrix.backend }}
-      id: extract-backend-sha
-      run: |
-          BACKEND_SHA=$(git rev-parse HEAD)
-          echo "Backend Commit SHA: $BACKEND_SHA"
-          echo "extracted-backend-sha=$BACKEND_SHA" >> $GITHUB_OUTPUT
-    - name: Set ${{ matrix.backend_upper }} backend flag
-      if: needs.check-changed-files.outputs.any == 'true'
-      id: curve-backend-flag
-      run: |
-        BACKEND_SHA=${{ steps.extract-backend-sha.outputs.extracted-backend-sha }}
-        CURVE=${{ matrix.curve.name }}
-        COMMIT_FILE="gh_commit_sha_${CURVE}_${BACKEND_SHA}"
-        if [ "${{ env.BACKEND_BRANCH }}" == "main" ]; then
-          INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE
-          echo "INSTALL_PATH=${{ github.workspace }}/../../main_lib/curve/$CURVE" >> $GITHUB_OUTPUT
-          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
-
-          if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
-            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
-          else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
-            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
-            rm -rf ${INSTALL_PATH}
-          fi
-          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
-          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
-        else
-          INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE
-          echo "INSTALL_PATH=${{ github.workspace }}/../../temp_lib/curve/$CURVE" >> $GITHUB_OUTPUT
-          COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}
-          echo "COMMIT_FILE_PATH=${INSTALL_PATH}/lib/${COMMIT_FILE}" >> $GITHUB_OUTPUT
-          if [ -f "$COMMIT_FILE_PATH" ]; then
-            echo "${COMMIT_FILE} exists in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG="
-            echo "BACKEND_FLAG=" >> $GITHUB_OUTPUT
-          else
-            echo "${COMMIT_FILE} does not exist in ${INSTALL_PATH}/lib. Setting BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local"
-            echo "BACKEND_FLAG=-D${{ matrix.backend_upper }}_BACKEND=local" >> $GITHUB_OUTPUT
-            rm -rf ${INSTALL_PATH}
-          fi
-          echo "CMAKE_INSTALL_PREFIX=-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}" >> $GITHUB_OUTPUT
-          echo "ICICLE_BACKEND_INSTALL_DIR=${INSTALL_PATH}/lib" >> $GITHUB_OUTPUT
-        fi
     - name: Set feature flags
       id: feature_flags
       if: needs.check-changed-files.outputs.any == 'true'
@@ -286,7 +239,7 @@ jobs:
       if: needs.check-changed-files.outputs.any == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} ${{ steps.curve-backend-flag.outputs.BACKEND_FLAG }} ${{ steps.curve-backend-flag.outputs.CMAKE_INSTALL_PREFIX }} ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build --target install -j
         rm -rf ${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}/lib/gh_commit_sha_${{ matrix.curve.name }}*
         touch ${{ steps.curve-backend-flag.outputs.COMMIT_FILE_PATH }}
