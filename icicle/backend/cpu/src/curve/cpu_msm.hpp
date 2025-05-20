@@ -232,7 +232,7 @@ private:
     uint64_t bucket_start = 0;
     for (int segment_idx = 0; segment_idx < m_segments.size();
          segment_idx++) { // TBD: divide the work among m_nof_workers only.
-      // Each thread is responsible for a sinעle thread
+      // Each thread is responsible for a single segment
       m_taskflow.emplace([=]() {
         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
@@ -259,7 +259,7 @@ private:
     segment.line_sum = segment.triangle_sum;
 
     // Batch size for accumulation to reduce memory pressure
-    constexpr int BATCH_SIZE = 4;  // Tune this based on your specific hardware
+    constexpr int BATCH_SIZE = 2;  // Tune this based on your specific hardware
     
     // Main loop with batching
     int64_t bucket_i = last_bucket_i - 1;
@@ -321,7 +321,7 @@ private:
     for (int worker_i : active_workers) {
       sum = sum + m_workers_buckets[worker_i][bucket_idx].point;
     }
-    
+
     // NVTX_TIMED_POP();
   }
   // Serial phase - accumulate all segments to final result
