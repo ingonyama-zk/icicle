@@ -35,7 +35,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Setup go
-      if: needs.check-changed-files.outputs.golang == 'true'
+      if: needs.check-changed-files.outputs.go == 'true'
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
@@ -46,7 +46,7 @@ jobs:
         clang-format --version  
         ./scripts/format_all.sh . --check --exclude "build|wrappers"
     - name: Check gofmt
-      if: needs.check-changed-files.outputs.golang == 'true'
+      if: needs.check-changed-files.outputs.go == 'true'
       run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
     - name: Check rustfmt
       if: needs.check-changed-files.outputs.rust == 'true'
@@ -271,7 +271,7 @@ jobs:
 
         echo "Feature flags: $FEATURE_FLAGS"
         echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
-        
+
         echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
         echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
 
@@ -330,14 +330,14 @@ jobs:
         fi
         
     - name: Setup go
-      if: ${{ needs.check-changed-files.outputs.golang == 'true' && matrix.skip-golang-all-curves == 'false' }}
+      if: ${{ needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false' }}
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Golang curve Tests
       working-directory: ./wrappers/golang/curves
-      if: ${{ needs.check-changed-files.outputs.golang == 'true' && matrix.skip-golang-all-curves == 'false' }}
+      if: ${{ needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false' }}
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
