@@ -91,7 +91,7 @@ ICICLE is also great for prototyping and smaller projects. With bindings for Gol
 
 ICICLE is already trusted by leading cryptography teams to supercharge their proving systems. From general-purpose ZK frameworks to specialized proof systems, ICICLE helps teams break performance bottlenecks and scale efficiently.
 
-Below are just a select *few* of the teams building with ICICLE:
+Below are just a select _few_ of the teams building with ICICLE:
 
 <div className="ecosystem-grid">
 
