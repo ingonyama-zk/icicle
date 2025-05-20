@@ -93,7 +93,7 @@ runtime: &runtime
   - icicle/include/icicle/runtime.h
 
 # Rust file feature mappings
-rust:
+rust: &rust
   - *cpp
   - wrappers/rust
 rust-program: &rust-program
@@ -194,7 +194,7 @@ rust-runtime:
   - wrappers/rust/icicle-runtime/**/*
   
 # Go file feature mappings
-golang:
+golang: &golang
   - *cpp
   - wrappers/golang
   - '!wrappers/golang/README.md'
