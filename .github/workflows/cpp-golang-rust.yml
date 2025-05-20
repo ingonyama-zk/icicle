@@ -95,27 +95,32 @@ jobs:
         curve:
           - name: bn254
             rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bls12_381
-            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"] 
+            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             # metal-cpp-flaky-tests: "ModArithTest.ntt|PolynomialTest.multiplication|PolynomialTest.divideByVanishingPolynomial|PolynomialTest.QAP|FieldTest.vectorDivision|FieldTestBase.polynomialDivision"
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bls12_377
             rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: bw6_761
             rust-supported-features: ["msm", "ntt", "fri", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
           - name: grumpkin
             rust-supported-features: ["msm", "sumcheck", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "poseidon", "poseidon2"]
             metal-skip-cpp-curve-specific: ""
             metal-skip-rust-curve-specific: ""
             metal-skip-golang-curve-specific: ""
@@ -161,24 +166,36 @@ jobs:
         if [[ "${{ needs.check-changed-files.outputs.msm }}" == "true" || "${{ needs.check-changed-files.outputs.rust-msm }}" == "true" || "${{ needs.check-changed-files.outputs.go-msm }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS msm"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'msm') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'msm') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS msm"
+          fi
         fi
         
         # NTT module (includes polynomials)
         if [[ "${{ needs.check-changed-files.outputs.ntt }}" == "true" || "${{ needs.check-changed-files.outputs.rust-ntt }}" == "true" || "${{ needs.check-changed-files.outputs.go-ntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ntt"
+          fi
         fi
         
         # ECNTT module
         if [[ "${{ needs.check-changed-files.outputs.ecntt }}" == "true" || "${{ needs.check-changed-files.outputs.rust-ecntt }}" == "true" || "${{ needs.check-changed-files.outputs.go-ecntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DECNTT=ON -DNTT=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|ecntt"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ecntt"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ecntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ecntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ecntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ecntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ecntt"
+          fi
         fi
 
         # Pairing module
@@ -186,40 +203,60 @@ jobs:
           # Pairing requires G2 point operations
           FEATURE_FLAGS="$FEATURE_FLAGS -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|pairing"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,pairing"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS pairing"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'pairing') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,pairing"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'pairing') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS pairing"
+          fi
         fi
         
         # FRI module
         if [[ "${{ needs.check-changed-files.outputs.fri }}" == "true" || "${{ needs.check-changed-files.outputs.rust-fri }}" == "true" || "${{ needs.check-changed-files.outputs.go-fri }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|fri"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS fri"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'fri') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'fri') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS fri"
+          fi
         fi
         
         # Sumcheck module
         if [[ "${{ needs.check-changed-files.outputs.sumcheck }}" == "true" || "${{ needs.check-changed-files.outputs.rust-sumcheck }}" == "true" || "${{ needs.check-changed-files.outputs.go-sumcheck }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|SumcheckTest"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS sumcheck"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'sumcheck') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'sumcheck') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS sumcheck"
+          fi
         fi
 
         # Poseidon module
         if [[ "${{ needs.check-changed-files.outputs.poseidon }}" == "true" || "${{ needs.check-changed-files.outputs.rust-poseidon }}" == "true" || "${{ needs.check-changed-files.outputs.go-poseidon }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon"
+          fi
         fi
 
         # Poseidon2 module
         if [[ "${{ needs.check-changed-files.outputs.poseidon2 }}" == "true" || "${{ needs.check-changed-files.outputs.rust-poseidon2 }}" == "true" || "${{ needs.check-changed-files.outputs.go-poseidon2 }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON2=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon2"
-          RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
-          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon2"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon2') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon2') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon2"
+          fi
         fi
 
         echo "Feature flags: $FEATURE_FLAGS"
