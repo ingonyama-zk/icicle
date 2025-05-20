@@ -330,7 +330,6 @@ jobs:
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        export LD_LIBRARY_PATH=${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}/lib
-        export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
         
         go test ./$CURVE_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 60m -v
