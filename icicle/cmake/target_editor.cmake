@@ -1,4 +1,3 @@
-
 # The following functions, each adds a function to a target.
 # In addition, some can check feature is enabled for target, given FEATURE_LIST.
 
@@ -113,6 +112,17 @@ function(handle_sumcheck TARGET FEATURE_LIST)
     set(SUMCHECK ON CACHE BOOL "Enable SUMCHECK feature" FORCE)
   else()
     set(SUMCHECK OFF CACHE BOOL "SUMCHECK not available for this field" FORCE)
+  endif()
+endfunction()
+
+
+function(handle_gateops TARGET FEATURE_LIST)
+  if(GATEOPS AND "GATEOPS" IN_LIST FEATURE_LIST)
+    target_compile_definitions(${TARGET} PUBLIC GATEOPS=${GATEOPS})
+    target_sources(${TARGET} PRIVATE src/gate_ops.cpp)
+    set(GATEOPS ON CACHE BOOL "Enable GATEOPS feature" FORCE)
+  else()
+    set(GATEOPS OFF CACHE BOOL "GATEOPS not available for this field" FORCE)
   endif()
 endfunction()
 
