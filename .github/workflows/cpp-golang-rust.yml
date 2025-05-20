@@ -246,7 +246,7 @@ jobs:
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         # Base skip tests from matrix
         export SKIP_TESTS="${{ matrix.skip-cpp-all-curves }}"
         if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-skip-cpp-curve-specific }}" ]; then
@@ -262,7 +262,7 @@ jobs:
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=icicle-${CURVE//_/-}
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         cd ./$CURVE_DIR
         
         # Base skip tests from matrix
@@ -292,7 +292,7 @@ jobs:
       run: |
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.curve-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export LD_LIBRARY_PATH=${{ steps.curve-backend-flag.outputs.INSTALL_PATH }}/lib
         export CGO_LDFLAGS="-L$LD_LIBRARY_PATH -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath=LD_LIBRARY_PATH"
         
