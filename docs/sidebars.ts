@@ -79,8 +79,8 @@ export default {
           id: "start/integration-&-support/contributor-guide"
         },
         {
-          "type": "doc",
-          "id": "start/integration-&-support/faq_and_troubleshooting"
+          type: "doc",
+          id: "start/integration-&-support/faq_and_troubleshooting"
         },
         {
           type: "doc",
