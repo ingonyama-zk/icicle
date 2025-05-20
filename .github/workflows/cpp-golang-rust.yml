@@ -155,14 +155,14 @@ jobs:
         FEATURE_FLAGS=""
         CPP_TEST_REGEX="CurveSanity|ModArith|Symbol|Program"
         RUST_TEST_FEATURES=""
-        GO_TEST_BUILD_TAGS_TO_IGNORE=""
+        GO_TEST_BUILD_TAGS="icicle_exclude_all"
         
         # MSM module
         if [[ "${{ needs.check-changed-files.outputs.msm }}" == "true" || "${{ needs.check-changed-files.outputs.rust-msm }}" == "true" || "${{ needs.check-changed-files.outputs.go-msm }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE msm"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS msm"
         fi
         
         # NTT module (includes polynomials)
@@ -170,7 +170,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE ntt"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ntt"
         fi
         
         # ECNTT module
@@ -178,7 +178,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DECNTT=ON -DNTT=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|ecntt"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ecntt"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE ecntt"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS ecntt"
         fi
 
         # Pairing module
@@ -187,7 +187,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|pairing"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,pairing"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE pairing"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS pairing"
         fi
         
         # FRI module
@@ -195,7 +195,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|fri"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE fri"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS fri"
         fi
         
         # Sumcheck module
@@ -203,7 +203,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|SumcheckTest"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE sumcheck"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS sumcheck"
         fi
 
         # Poseidon module
@@ -211,7 +211,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE poseidon"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon"
         fi
 
         # Poseidon2 module
@@ -219,7 +219,7 @@ jobs:
           FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON2=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon2"
           RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
-          GO_TEST_BUILD_TAGS_TO_IGNORE="$GO_TEST_BUILD_TAGS_TO_IGNORE poseidon2"
+          GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS poseidon2"
         fi
 
         echo "Feature flags: $FEATURE_FLAGS"
@@ -231,8 +231,8 @@ jobs:
         echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
         echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
 
-        echo "GO_TEST_BUILD_TAGS_TO_IGNORE: $GO_TEST_BUILD_TAGS_TO_IGNORE"
-        echo "GO_TEST_BUILD_TAGS_TO_IGNORE=$GO_TEST_BUILD_TAGS_TO_IGNORE" >> $GITHUB_OUTPUT
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
+        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
         
     - name: Build curve
       working-directory: ./icicle
