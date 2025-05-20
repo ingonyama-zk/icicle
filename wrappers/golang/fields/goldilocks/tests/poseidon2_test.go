@@ -1,3 +1,5 @@
+//go:build !poseidon2
+
 package tests
 
 import (

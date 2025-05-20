@@ -1,3 +1,5 @@
+//go:build !poseidon
+
 package poseidon
 
 // #cgo CFLAGS: -I./include/

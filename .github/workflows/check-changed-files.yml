@@ -3,28 +3,186 @@ name: Check Changed Files
 on:
   workflow_call:
     outputs:
-      golang:
-        description: "Flag for if GoLang files changed"
-        value: ${{ jobs.check-changed-files.outputs.golang }}
-      rust:
-        description: "Flag for if Rust files changed"
-        value: ${{ jobs.check-changed-files.outputs.rust }}
-      cpp:
-        description: "Flag for if C++ files changed"
-        value: ${{ jobs.check-changed-files.outputs.cpp }}
-      examples:
-        description: "Flag for if example files changed"
-        value: ${{ jobs.check-changed-files.outputs.examples }}
+      # Cpp specific outputs
+      base:
+        description: "Flag for if base files changed"
+        value: ${{ jobs.check-changed-files.outputs.base }}
+      field:
+        description: "Flag for if field files changed"
+        value: ${{ jobs.check-changed-files.outputs.field }}
+      curve:
+        description: "Flag for if curve files changed"
+        value: ${{ jobs.check-changed-files.outputs.curve }}
+      ring:
+        description: "Flag for if ring files changed"
+        value: ${{ jobs.check-changed-files.outputs.ring }}
+      msm:
+        description: "Flag for if msm files changed"
+        value: ${{ jobs.check-changed-files.outputs.msm }}
+      ntt:
+        description: "Flag for if ntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.ntt }}
+      ecntt:
+        description: "Flag for if ecntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.ecntt }}
+      fri:
+        description: "Flag for if fri files changed"
+        value: ${{ jobs.check-changed-files.outputs.fri }}
+      sumcheck:
+        description: "Flag for if sumcheck files changed"
+        value: ${{ jobs.check-changed-files.outputs.sumcheck }}
+      pairing:
+        description: "Flag for if pairing files changed"
+        value: ${{ jobs.check-changed-files.outputs.pairing }}
+      poseidon:
+        description: "Flag for if poseidon files changed"
+        value: ${{ jobs.check-changed-files.outputs.poseidon }}
+      poseidon2:
+        description: "Flag for if poseidon2 files changed"
+        value: ${{ jobs.check-changed-files.outputs.poseidon2 }}
+      hash:
+        description: "Flag for if hash files changed"
+        value: ${{ jobs.check-changed-files.outputs.hash }}
+      runtime:
+        description: "Flag for if runtime files changed"
+        value: ${{ jobs.check-changed-files.outputs.runtime }}
+      # Rust specific outputs
+      rust-base:
+        description: "Flag for if Rust base files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-base }}
+      rust-field:
+        description: "Flag for if Rust field files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-field }}
+      rust-curve:
+        description: "Flag for if Rust curve files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-curve }}
+      rust-ring:
+        description: "Flag for if Rust ring files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-ring }}
+      rust-msm:
+        description: "Flag for if Rust msm files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-msm }}
+      rust-ntt:
+        description: "Flag for if Rust ntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-ntt }}
+      rust-ecntt:
+        description: "Flag for if Rust ecntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-ecntt }}
+      rust-fri:
+        description: "Flag for if Rust fri files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-fri }}
+      rust-sumcheck:
+        description: "Flag for if Rust sumcheck files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-sumcheck }}
+      rust-pairing:
+        description: "Flag for if Rust pairing files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-pairing }}
+      rust-poseidon:
+        description: "Flag for if Rust poseidon files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-poseidon }}
+      rust-poseidon2:
+        description: "Flag for if Rust poseidon2 files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-poseidon2 }}
+      rust-hash:
+        description: "Flag for if Rust hash files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-hash }}
+      rust-runtime:
+        description: "Flag for if Rust runtime files changed"
+        value: ${{ jobs.check-changed-files.outputs.rust-runtime }}
+      # Go specific outputs
+      go-base:
+        description: "Flag for if Go base files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-base }}
+      go-field:
+        description: "Flag for if Go field files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-field }}
+      go-curve:
+        description: "Flag for if Go curve files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-curve }}
+      go-ring:
+        description: "Flag for if Go ring files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-ring }}
+      go-msm:
+        description: "Flag for if Go msm files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-msm }}
+      go-ntt:
+        description: "Flag for if Go ntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-ntt }}
+      go-ecntt:
+        description: "Flag for if Go ecntt files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-ecntt }}
+      go-fri:
+        description: "Flag for if Go fri files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-fri }}
+      go-sumcheck:
+        description: "Flag for if Go sumcheck files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-sumcheck }}
+      go-pairing:
+        description: "Flag for if Go pairing files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-pairing }}
+      go-poseidon:
+        description: "Flag for if Go poseidon files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-poseidon }}
+      go-poseidon2:
+        description: "Flag for if Go poseidon2 files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-poseidon2 }}
+      go-hash:
+        description: "Flag for if Go hash files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-hash }}
+      go-runtime:
+        description: "Flag for if Go runtime files changed"
+        value: ${{ jobs.check-changed-files.outputs.go-runtime }}
 
 jobs:
   check-changed-files:
     name: Check Changed Files
     runs-on: ubuntu-22.04
     outputs:
-      golang: ${{ steps.changed_files.outputs.golang }}
-      rust: ${{ steps.changed_files.outputs.rust }}
-      cpp: ${{ steps.changed_files.outputs.cpp }}
-      examples: ${{ steps.changed_files.outputs.examples }}
+      # Feature-specific outputs
+      base: ${{ steps.changed_files.outputs.base }}
+      field: ${{ steps.changed_files.outputs.field }}
+      curve: ${{ steps.changed_files.outputs.curve }}
+      ring: ${{ steps.changed_files.outputs.ring }}
+      msm: ${{ steps.changed_files.outputs.msm }}
+      ntt: ${{ steps.changed_files.outputs.ntt }}
+      ecntt: ${{ steps.changed_files.outputs.ecntt }}
+      fri: ${{ steps.changed_files.outputs.fri }}
+      sumcheck: ${{ steps.changed_files.outputs.sumcheck }}
+      pairing: ${{ steps.changed_files.outputs.pairing }}
+      poseidon: ${{ steps.changed_files.outputs.poseidon }}
+      poseidon2: ${{ steps.changed_files.outputs.poseidon2 }}
+      hash: ${{ steps.changed_files.outputs.hash }}
+      runtime: ${{ steps.changed_files.outputs.runtime }}
+      # Rust specific outputs
+      rust-base: ${{ steps.changed_files.outputs.rust-base }}
+      rust-field: ${{ steps.changed_files.outputs.rust-field }}
+      rust-curve: ${{ steps.changed_files.outputs.rust-curve }}
+      rust-ring: ${{ steps.changed_files.outputs.rust-ring }}
+      rust-msm: ${{ steps.changed_files.outputs.rust-msm }}
+      rust-ntt: ${{ steps.changed_files.outputs.rust-ntt }}
+      rust-ecntt: ${{ steps.changed_files.outputs.rust-ecntt }}
+      rust-fri: ${{ steps.changed_files.outputs.rust-fri }}
+      rust-sumcheck: ${{ steps.changed_files.outputs.rust-sumcheck }}
+      rust-pairing: ${{ steps.changed_files.outputs.rust-pairing }}
+      rust-poseidon: ${{ steps.changed_files.outputs.rust-poseidon }}
+      rust-poseidon2: ${{ steps.changed_files.outputs.rust-poseidon2 }}
+      rust-hash: ${{ steps.changed_files.outputs.rust-hash }}
+      rust-runtime: ${{ steps.changed_files.outputs.rust-runtime }}
+      # Go specific outputs
+      go-base: ${{ steps.changed_files.outputs.go-base }}
+      go-field: ${{ steps.changed_files.outputs.go-field }}
+      go-curve: ${{ steps.changed_files.outputs.go-curve }}
+      go-ring: ${{ steps.changed_files.outputs.go-ring }}
+      go-msm: ${{ steps.changed_files.outputs.go-msm }}
+      go-ntt: ${{ steps.changed_files.outputs.go-ntt }}
+      go-ecntt: ${{ steps.changed_files.outputs.go-ecntt }}
+      go-fri: ${{ steps.changed_files.outputs.go-fri }}
+      go-sumcheck: ${{ steps.changed_files.outputs.go-sumcheck }}
+      go-pairing: ${{ steps.changed_files.outputs.go-pairing }}
+      go-poseidon: ${{ steps.changed_files.outputs.go-poseidon }}
+      go-poseidon2: ${{ steps.changed_files.outputs.go-poseidon2 }}
+      go-hash: ${{ steps.changed_files.outputs.go-hash }}
+      go-runtime: ${{ steps.changed_files.outputs.go-runtime }}
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
@@ -38,7 +196,45 @@ jobs:
       id: changed_files
       # https://github.com/tj-actions/changed-files#outputs-
       run: |
-        echo "golang=${{ steps.changed-files-yaml.outputs.golang_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "cpp=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "examples=${{ steps.changed-files-yaml.outputs.examples_any_modified }}" >> "$GITHUB_OUTPUT"
+      # Cpp specific outputs
+        echo "field=${{ steps.changed-files-yaml.outputs.field_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "curve=${{ steps.changed-files-yaml.outputs.curve_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ring=${{ steps.changed-files-yaml.outputs.ring_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "msm=${{ steps.changed-files-yaml.outputs.msm_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ntt=${{ steps.changed-files-yaml.outputs.ntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ecntt=${{ steps.changed-files-yaml.outputs.ecntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "fri=${{ steps.changed-files-yaml.outputs.fri_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "sumcheck=${{ steps.changed-files-yaml.outputs.sumcheck_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "pairing=${{ steps.changed-files-yaml.outputs.pairing_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "poseidon=${{ steps.changed-files-yaml.outputs.poseidon_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "poseidon2=${{ steps.changed-files-yaml.outputs.poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "hash=${{ steps.changed-files-yaml.outputs.hash_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "runtime=${{ steps.changed-files-yaml.outputs.runtime_any_modified }}" >> "$GITHUB_OUTPUT"
+      # Rust specific outputs
+        echo "rust-field=${{ steps.changed-files-yaml.outputs.rust-field_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-curve=${{ steps.changed-files-yaml.outputs.rust-curve_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-ring=${{ steps.changed-files-yaml.outputs.rust-ring_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-msm=${{ steps.changed-files-yaml.outputs.rust-msm_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-ntt=${{ steps.changed-files-yaml.outputs.rust-ntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-ecntt=${{ steps.changed-files-yaml.outputs.rust-ecntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-fri=${{ steps.changed-files-yaml.outputs.rust-fri_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-sumcheck=${{ steps.changed-files-yaml.outputs.rust-sumcheck_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-pairing=${{ steps.changed-files-yaml.outputs.rust-pairing_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-poseidon=${{ steps.changed-files-yaml.outputs.rust-poseidon_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-poseidon2=${{ steps.changed-files-yaml.outputs.rust-poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-hash=${{ steps.changed-files-yaml.outputs.rust-hash_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "rust-runtime=${{ steps.changed-files-yaml.outputs.rust-runtime_any_modified }}" >> "$GITHUB_OUTPUT"
+      # Go specific outputs
+        echo "go-field=${{ steps.changed-files-yaml.outputs.go-field_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-curve=${{ steps.changed-files-yaml.outputs.go-curve_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-ring=${{ steps.changed-files-yaml.outputs.go-ring_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-msm=${{ steps.changed-files-yaml.outputs.go-msm_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-ntt=${{ steps.changed-files-yaml.outputs.go-ntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-ecntt=${{ steps.changed-files-yaml.outputs.go-ecntt_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-fri=${{ steps.changed-files-yaml.outputs.go-fri_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-sumcheck=${{ steps.changed-files-yaml.outputs.go-sumcheck_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-pairing=${{ steps.changed-files-yaml.outputs.go-pairing_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-poseidon=${{ steps.changed-files-yaml.outputs.go-poseidon_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-poseidon2=${{ steps.changed-files-yaml.outputs.go-poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-hash=${{ steps.changed-files-yaml.outputs.go-hash_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "go-runtime=${{ steps.changed-files-yaml.outputs.go-runtime_any_modified }}" >> "$GITHUB_OUTPUT"

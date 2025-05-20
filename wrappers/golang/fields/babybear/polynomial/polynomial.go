@@ -1,3 +1,5 @@
+//go:build !ntt
+
 package polynomial
 
 // #cgo CFLAGS: -I./include/

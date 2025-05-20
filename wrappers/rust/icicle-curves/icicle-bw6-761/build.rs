@@ -28,6 +28,25 @@ fn main() {
         .define("HASH", "ON")
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
+    // Define feature flags
+    config.define("G2", "ON"); // Necessary for curve base field
+    // Default is ON for all features via the default feature in Cargo.toml
+    if cfg!(feature = "msm") {
+        config.define("MSM", "ON");
+    }
+    if cfg!(feature = "ntt") {
+        config.define("NTT", "ON");
+    }
+    if cfg!(feature = "fri") {
+        config.define("FRI", "ON");
+    }
+    if cfg!(feature = "poseidon") {
+        config.define("POSEIDON", "ON");
+    }
+    if cfg!(feature = "poseidon2") {
+        config.define("POSEIDON2", "ON");
+    }
+
     // build (or pull and build) cuda backend if feature enabled.
     // Note: this requires access to the repo
     if cfg!(feature = "cuda_backend") {

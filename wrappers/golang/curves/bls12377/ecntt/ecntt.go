@@ -1,3 +1,5 @@
+//go:build !ecntt
+
 package ecntt
 
 // #cgo CFLAGS: -I./include/

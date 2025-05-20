@@ -22,11 +22,20 @@ serde_json = "1.0.140"
 cmake = "0.1.50"
 
 [features]
-default = []
-no_g2 = []
-no_ecntt = []
+default = ["ecntt", "fri", "g2", "msm", "ntt", "pairing", "poseidon", "poseidon2", "sumcheck"]
+ecntt = []
+fri = []
+g2 = []
+msm = ["g2"]
+ntt = []
+pairing = []
+poseidon = []
+poseidon2 = []
+sumcheck = []
+
 bw6-761 = []
-no_bw6_g2 = []
+
+# Internal dev backend features
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
 metal_backend = ["icicle-runtime/metal_backend"]
