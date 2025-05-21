@@ -392,9 +392,8 @@ TEST_F(RingTestBase, NormBounded)
         norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
 
       // Test zero size
-      ASSERT_EQ(
+      ASSERT_NE(
         eIcicleError::SUCCESS, norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
-      ASSERT_TRUE(output) << "Norm check should pass for empty vector on device " << device;
 
       // Test with values exceeding sqrt(q)
       auto invalid_input = std::vector<field_t>(size);
@@ -508,10 +507,9 @@ TEST_F(RingTestBase, NormRelative)
                                  input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
 
       // Test zero size
-      ASSERT_EQ(
+      ASSERT_NE(
         eIcicleError::SUCCESS,
         norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
-      ASSERT_TRUE(output) << "Relative norm check should pass for empty vectors on device " << device;
 
       // Test with values exceeding sqrt(q)
       auto invalid_input = std::vector<field_t>(size);
