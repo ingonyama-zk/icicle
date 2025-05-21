@@ -73,7 +73,30 @@ eIcicleError setup(/*TODO params*/)
 
 eIcicleError base_prover(const LabradorInstance LabInst, const std::vector<std::vector<Rq>> S, std::vector<Zq> proof)
 {
-  // TODO(Ash): Implement prover logic
+  // Step 1: Pack the Witnesses into a Matrix S
+
+  const size_t r = LabInst.r; // Number of witness vectors
+  const size_t n = LabInst.n; // Dimension of witness vectors
+
+  // Ensure S is of the correct size
+  if (S.size() != r) { return eIcicleError::INVALID_ARGUMENT; }
+  for (const auto& row : S) {
+    if (row.size() != n) { return eIcicleError::INVALID_ARGUMENT; }
+  }
+
+  // Step 2: Convert S to the NTT Domain
+  std::vector<std::vector<Rq>> S_hat(r, std::vector<Rq>(n));
+
+  for (size_t i = 0; i < r; ++i) {
+    // Perform negacyclic NTT on the i-th row
+    eIcicleError err = nega_cyc_NTT(S[i], S_hat[i]);
+    if (err != eIcicleError::SUCCESS) {
+      return err; // Propagate any errors from NTT
+    }
+  }
+
+  // (S_hat is now ready for use in the subsequent steps)
+
   return eIcicleError::SUCCESS;
 }
 
