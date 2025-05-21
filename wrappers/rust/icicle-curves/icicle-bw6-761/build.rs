@@ -94,8 +94,8 @@ fn main() {
             || cfg!(feature = "metal_backend")
             || cfg!(feature = "pull_metal_backend")
         {
-        println!(
-            "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend",
+            println!(
+                "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend",
                 icicle_install_dir.display()
             );
         }
