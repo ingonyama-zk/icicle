@@ -11,7 +11,6 @@ repository.workspace = true
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 icicle-hash = { workspace = true }
-icicle-bls12-377 = { path = "../../icicle-curves/icicle-bls12-377", features = ["bw6-761"], default-features = false }
 serde = "1.0.219"
 
 [dev-dependencies]
@@ -24,19 +23,19 @@ cmake = "0.1.50"
 
 [features]
 default = ["fri", "msm", "ntt", "poseidon", "poseidon2"]
-fri = ["icicle-bls12-377/fri"]
+fri = []
 msm = []
-ntt = ["icicle-bls12-377/ntt"]
-poseidon = ["icicle-bls12-377/poseidon"]
-poseidon2 = ["icicle-bls12-377/poseidon2"]
+ntt = []
+poseidon = []
+poseidon2 = []
 
 # Internal dev backend features
-cuda_backend = ["icicle-bls12-377/cuda_backend"]
-pull_cuda_backend = ["icicle-bls12-377/pull_cuda_backend"]
-metal_backend = ["icicle-bls12-377/metal_backend"]
-pull_metal_backend = ["icicle-bls12-377/pull_metal_backend"]
-vulkan_backend = ["icicle-bls12-377/vulkan_backend"]
-pull_vulkan_backend = ["icicle-bls12-377/pull_vulkan_backend"]
+cuda_backend = ["icicle-runtime/cuda_backend"]
+pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
+metal_backend = ["icicle-runtime/metal_backend"]
+pull_metal_backend = ["icicle-runtime/pull_metal_backend"]
+vulkan_backend = ["icicle-runtime/vulkan_backend"]
+pull_vulkan_backend = ["icicle-runtime/pull_vulkan_backend"]
 
 [[bench]]
 name = "ntt"

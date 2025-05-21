@@ -33,8 +33,6 @@ poseidon = []
 poseidon2 = []
 sumcheck = []
 
-bw6-761 = []
-
 # Internal dev backend features
 cuda_backend = ["icicle-runtime/cuda_backend"]
 pull_cuda_backend = ["icicle-runtime/pull_cuda_backend"]
