@@ -3,25 +3,10 @@
 // ICICLE runtime
 #include "icicle/runtime.h"
 
-// Labrador ring types
-#include "icicle/rings/integer_rings/labrador.h" // Zq, ZqRns, Rq, etc.
+#include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
 
-// ICICLE APIs
-#include "icicle/ntt.h"                    // Number-theoretic transforms
-#include "icicle/balanced_decomposition.h" // Balanced decomposition/recomposition
-#include "icicle/jl_projection.h"          // Johnson–Lindenstrauss projection
-#include "icicle/norm.h"                   // Norm computation and bounds
-#include "icicle/vec_ops.h"                // Vector operations (add, mul, etc.)
-// TODO(Ash): add more includes as needed, such as Matmul, etc.
-// TODO (Ash): Define missing APIs here or in another header that is included here
+using namespace icicle::labrador;
 
-// Type aliases
-using Zq = labrador::scalar_t;
-using ZqRns = labrador::scalar_rns_t;
-using Rq = labrador::Rq;
-using Tq = labrador::Tq;
-
-// Parameters
 constexpr size_t beta = 10; // TODO(Ash): set beta according to the protocol
 
 // === TODO(Ash): Consider adding protocol-specific types ===
