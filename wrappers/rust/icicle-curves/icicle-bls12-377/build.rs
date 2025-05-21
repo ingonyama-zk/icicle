@@ -8,7 +8,7 @@ fn main() {
         println!("cargo:rustc-link-lib=icicle_field_bls12_377");
         println!("cargo:rustc-link-lib=icicle_curve_bls12_377");
         println!("cargo:rustc-link-lib=icicle_hash");
-        println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", path);
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path);
     } else {
         println!("cargo:warning=ICICLE_PREBUILT_FRONTEND_LIBS_PATH is not set...building icicle libs from source");
         // Construct the path to the deps directory
