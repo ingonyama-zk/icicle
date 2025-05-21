@@ -6,7 +6,7 @@ fn main() {
     if let Ok(path) = icicle_prebuilt_frontend_libs_path {
         println!("cargo:rustc-link-search={}", path);
         println!("cargo:rustc-link-lib=icicle_hash");
-        println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", path);
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path);
     } else {
         println!("cargo:warning=ICICLE_PREBUILT_FRONTEND_LIBS_PATH is not set...building icicle libs from source");
         // Construct the path to the deps directory
