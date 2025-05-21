@@ -300,6 +300,7 @@ jobs:
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=icicle-${CURVE//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export ICICLE_PREBUILT_FRONTEND_LIBS_PATH=${{ github.workspace }}/icicle/build/
         cd ./$CURVE_DIR
         
         # Base skip tests from matrix
