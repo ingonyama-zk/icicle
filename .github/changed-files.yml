@@ -1,3 +1,4 @@
+# Outputs for check-changed-files.yml
 docs:
   - docs/docs/**/*
   - docs/src/**/*
@@ -11,98 +12,181 @@ docs:
 
 examples:
   - examples/**/*
-  
-# C/C++ file feature mappings
+
+any:
+  - *cpp
+  - *rust
+  - *go
+  - *cpu-backend
+  - *backend-api
+
+backend-api: &backend-api
+  - icicle/include/icicle/backend/**/*
+  - '!icicle/include/icicle/backend/README.md'
+
 cpp: &cpp
   - icicle/**/*
-program: &program
-  - icicle/src/program/**/*
-  - icicle/include/icicle/program/**/*
-  - icicle/src/symbol/**/*
-  - icicle/include/icicle/symbol/**/*
+  - '!icicle/backend/**/*'
+  - '!icicle/include/icicle/backend/**/*'
 
-base: &base
-  - *program
+rust: &rust
+  - *cpp
+  - wrappers/rust
+
+go: &go
+  - *cpp
+  - wrappers/golang
+  - '!wrappers/golang/README.md'
+  - '!wrappers/golang/internal/generator/main.go'
+  - '!wrappers/golang/internal/build-libs.go'
+
+cpu-backend: &cpu-backend
+  - icicle/backend/cpu/**/*
+
+runtime:
+  - *cpp-runtime
+  - *rust-runtime
+  - *go-runtime
+  - *cpu-backend-runtime
+
+# All file <--> feature flag mappings
+msm:
+  - *cpp-msm
+  - *rust-msm
+  - *go-msm
+  - *cpu-backend-msm
+ntt:
+  - *cpp-ntt
+  - *rust-ntt
+  - *go-ntt
+  - *cpu-backend-ntt
+ecntt:
+  - *cpp-ecntt
+  - *rust-ecntt
+  - *go-ecntt
+  - *cpu-backend-ecntt
+fri:
+  - *cpp-fri
+  - *rust-fri
+  - *go-fri
+  - *cpu-backend-fri
+sumcheck:
+  - *cpp-sumcheck
+  - *rust-sumcheck
+  - *go-sumcheck
+  - *cpu-backend-sumcheck
+pairing:
+  - *cpp-pairing
+  - *rust-pairing
+  - *go-pairing
+poseidon:
+  - *cpp-poseidon
+  - *rust-poseidon
+  - *go-poseidon
+  - *cpu-backend-poseidon
+poseidon2:
+  - *cpp-poseidon2
+  - *rust-poseidon2
+  - *go-poseidon2
+  - *cpu-backend-poseidon2
+hash:
+  - *cpp-hash
+  - *rust-hash
+  - *go-hash
+  - *cpu-backend-hash
+
+# NOTE: The following are not direct outputs in the check-changed-files.yml
+# but are used as building blocks for the outputs above
+
+# C/C++ file feature mappings
+cpp-base: &cpp-base
+  - *cpp-program
   - icicle/include/icicle/math/**/*
   - icicle/src/vec_ops.cpp
   - icicle/include/icicle/vec_ops.h
   - icicle/src/fields/ffi_extern.cpp
   - icicle/src/matrix_ops.cpp
   - icicle/include/icicle/matrix_ops.h
-field: &field
-  - *base
+  - icicle/include/icicle/backend/vec_ops_backend.h
+cpp-field: &cpp-field
+  - *cpp-base
   - icicle/src/fields/**/*
   - icicle/include/icicle/fields/**/*
-curve: &curve
-  - *field
+cpp-curve: &cpp-curve
+  - *cpp-field
   - icicle/src/curves/**/*
   - icicle/include/icicle/curves/**/*
-ring: &ring
-  - *base
+cpp-ring: &cpp-ring
+  - *cpp-base
   - icicle/src/rings/**/*
   - icicle/include/icicle/rings/**/*
   - icicle/src/balanced_decomposition.cpp
   - icicle/include/icicle/balanced_decomposition.h
+cpp-program: &cpp-program
+  - icicle/src/program/**/*
+  - icicle/include/icicle/program/**/*
+  - icicle/src/symbol/**/*
+  - icicle/include/icicle/symbol/**/*
 
-# Feature-specific file patterns
-msm: &msm
+# C/C++ feature-specific file patterns
+cpp-msm: &cpp-msm
   - icicle/src/msm.cpp
   - icicle/include/icicle/msm.h
-ntt: &ntt
+  - icicle/include/icicle/backend/msm_backend.h
+  - icicle/include/icicle/backend/msm_config.h
+cpp-ntt: &cpp-ntt
   - icicle/src/ntt.cpp
   - icicle/include/icicle/ntt.h
   - icicle/src/polynomials/**/*
   - icicle/include/icicle/polynomials/**/*
-ecntt: &ecntt
+  - icicle/include/icicle/backend/ntt_backend.h
+  - icicle/include/icicle/backend/ntt_config.h
+  - icicle/include/icicle/backend/polynomial_backend.h
+cpp-ecntt: &cpp-ecntt
   - icicle/src/ecntt.cpp
   - icicle/include/icicle/ecntt.h
-fri: &fri
+  - icicle/include/icicle/backend/ecntt_backend.h
+cpp-fri: &cpp-fri
   - icicle/src/fri/**/*
   - icicle/include/icicle/fri/**/*
-sumcheck: &sumcheck
-  - *program
+  - icicle/include/icicle/backend/fri_backend.h
+cpp-sumcheck: &cpp-sumcheck
+  - *cpp-program
   - icicle/src/sumcheck/**/*
   - icicle/include/icicle/sumcheck/**/*
-pairing: &pairing
+  - icicle/include/icicle/backend/sumcheck_backend.h
+cpp-pairing: &cpp-pairing
   - icicle/src/pairing.cpp
   - icicle/include/icicle/pairing.h
-poseidon: &poseidon
+cpp-poseidon: &cpp-poseidon
   - icicle/src/hash/poseidon.cpp
   - icicle/src/hash/poseidon_c_api.cpp
   - icicle/include/icicle/hash/poseidon.h
   - icicle/include/icicle/hash/poseidon_constants/**/*
-poseidon2: &poseidon2
+  - icicle/include/icicle/backend/hash/poseidon_backend.h
+cpp-poseidon2: &cpp-poseidon2
   - icicle/src/hash/poseidon2.cpp
   - icicle/src/hash/poseidon2_c_api.cpp
   - icicle/include/icicle/hash/poseidon2.h
   - icicle/include/icicle/hash/poseidon2_constants/**/*
-hash: &hash
+  - icicle/include/icicle/backend/hash/poseidon2_backend.h
+cpp-hash: &cpp-hash
   - icicle/src/hash/**/*
   - icicle/include/icicle/hash/**/*
+  - icicle/include/icicle/backend/hash/**/*
+  - icicle/include/icicle/backend/merkle/**/*
   - "!icicle/src/hash/poseidon*"
   - "!icicle/include/icicle/hash/poseidon*"
+  - "!icicle/include/icicle/backend/hash/poseidon_backend.h"
   - "!icicle/src/hash/poseidon2*"
   - "!icicle/include/icicle/hash/poseidon2*"
-runtime: &runtime
+  - "!icicle/include/icicle/backend/hash/poseidon2_backend.h"
+cpp-runtime: &cpp-runtime
   - icicle/src/runtime.cpp
   - icicle/include/icicle/runtime.h
 
 # Rust file feature mappings
-rust: &rust
-  - *cpp
-  - wrappers/rust
-rust-program: &rust-program
-  - *program
-  - wrappers/rust/icicle-core/src/program/mod.rs
-  - wrappers/rust/icicle-core/src/symbol/mod.rs
-  - wrappers/rust/icicle-curves/**/src/program/mod.rs
-  - wrappers/rust/icicle-fields/**/src/program/mod.rs
-  - wrappers/rust/icicle-rings/**/src/program/mod.rs
-  - wrappers/rust/icicle-curves/**/src/symbol/mod.rs
-  - wrappers/rust/icicle-fields/**/src/symbol/mod.rs
-  - wrappers/rust/icicle-rings/**/src/symbol/mod.rs
 rust-base: &rust-base
-  - *base
   - *rust-program
   - wrappers/rust/icicle-core/src/vec_ops/tests.rs
   - wrappers/rust/icicle-core/src/vec_ops/mod.rs
@@ -111,158 +195,164 @@ rust-base: &rust-base
   - wrappers/rust/icicle-rings/**/src/vec_ops/mod.rs
   
 rust-field: &rust-field
-  - *field
   - *rust-base
   - wrappers/rust/icicle-core/src/field.rs
   - wrappers/rust/icicle-fields/**/*
-rust-curve:
-  - *curve
+rust-curve: &rust-curve
   - *rust-field
   - wrappers/rust/icicle-core/src/curve.rs
   - wrappers/rust/icicle-curves/**/*
-rust-ring:
-  - *ring
+rust-ring: &rust-ring
   - *rust-field
   - wrappers/rust/icicle-core/src/rns/test.rs
   - wrappers/rust/icicle-core/src/balanced_decomposition/mod.rs
   - wrappers/rust/icicle-core/src/balanced_decomposition/test.rs
   - wrappers/rust/icicle-rings/**/*
+rust-program: &rust-program
+  - wrappers/rust/icicle-core/src/program/mod.rs
+  - wrappers/rust/icicle-core/src/symbol/mod.rs
+  - wrappers/rust/icicle-curves/**/src/program/mod.rs
+  - wrappers/rust/icicle-fields/**/src/program/mod.rs
+  - wrappers/rust/icicle-rings/**/src/program/mod.rs
+  - wrappers/rust/icicle-curves/**/src/symbol/mod.rs
+  - wrappers/rust/icicle-fields/**/src/symbol/mod.rs
+  - wrappers/rust/icicle-rings/**/src/symbol/mod.rs
 
 # Rust feature-specific file patterns
-rust-msm:
-  - *msm
+rust-msm: &rust-msm
   - wrappers/rust/icicle-core/src/msm/mod.rs
   - wrappers/rust/icicle-core/src/msm/test.rs
   - wrappers/rust/icicle-curves/**/msm/mod.rs
-rust-ntt:
-  - *ntt
+rust-ntt: &rust-ntt
   - wrappers/rust/icicle-core/src/ntt/mod.rs
   - wrappers/rust/icicle-core/src/ntt/test.rs
   - wrappers/rust/icicle-core/src/polynomials/mod.rs
   - wrappers/rust/icicle-curves/**/ntt/mod.rs
   - wrappers/rust/icicle-fields/**/ntt/mod.rs
   - wrappers/rust/icicle-rings/**/ntt/mod.rs
-rust-ecntt:
-  - *ecntt
+rust-ecntt: &rust-ecntt
   - wrappers/rust/icicle-core/src/ecntt/mod.rs
   - wrappers/rust/icicle-core/src/ecntt/test.rs
   - wrappers/rust/icicle-curves/**/ecntt/mod.rs
-rust-fri:
-  - *fri
+rust-fri: &rust-fri
   - wrappers/rust/icicle-core/src/fri/mod.rs
   - wrappers/rust/icicle-core/src/fri/test.rs
   - wrappers/rust/icicle-core/src/fri/fri_proof.rs
   - wrappers/rust/icicle-core/src/fri/fri_transcript_config.rs
   - wrappers/rust/icicle-curves/**/fri/mod.rs
   - wrappers/rust/icicle-fields/**/fri/mod.rs
-rust-sumcheck:
-  - *sumcheck
+rust-sumcheck: &rust-sumcheck
   - *rust-program
   - wrappers/rust/icicle-core/src/sumcheck/mod.rs
   - wrappers/rust/icicle-core/src/sumcheck/test.rs
   - wrappers/rust/icicle-curves/**/sumcheck/mod.rs
   - wrappers/rust/icicle-fields/**/sumcheck/mod.rs
-rust-pairing:
-  - *pairing
+rust-pairing: &rust-pairing
   - wrappers/rust/icicle-core/src/pairing/mod.rs
   - wrappers/rust/icicle-core/src/pairing/test.rs
   - wrappers/rust/icicle-curves/**/pairing/mod.rs
-rust-poseidon:
-  - *poseidon
+rust-poseidon: &rust-poseidon
   - wrappers/rust/icicle-core/src/poseidon/mod.rs
   - wrappers/rust/icicle-core/src/poseidon/tests.rs
   - wrappers/rust/icicle-curves/**/poseidon/mod.rs
   - wrappers/rust/icicle-fields/**/poseidon/mod.rs
-rust-poseidon2:
-  - *poseidon2
+rust-poseidon2: &rust-poseidon2
   - wrappers/rust/icicle-core/src/poseidon2/mod.rs
   - wrappers/rust/icicle-core/src/poseidon2/tests.rs
   - wrappers/rust/icicle-curves/**/poseidon2/mod.rs
   - wrappers/rust/icicle-fields/**/poseidon2/mod.rs
-rust-hash:
-  - *hash
+rust-hash: &rust-hash
   - wrappers/rust/icicle-core/src/hash/mod.rs
   - wrappers/rust/icicle-core/src/merkle/mod.rs
   - wrappers/rust/icicle-hash/**/*
-rust-runtime:
-  - *runtime
+rust-runtime: &rust-runtime
   - wrappers/rust/icicle-runtime/**/*
   
 # Go file feature mappings
-go: &go
-  - *cpp
-  - wrappers/golang
-  - '!wrappers/golang/README.md'
-  - '!wrappers/golang/internal/generator/main.go'
-  - '!wrappers/golang/internal/build-libs.go'
-go-program: &go-program
-  - *program
-  - wrappers/golang/internal/generator/program/**/*
-  - wrappers/golang/internal/generator/symbol/**/*
-
 go-base: &go-base
-  - *base
   - *go-program
   - wrappers/golang/internal/generator/vecOps/**/*
   - wrappers/golang/core/vec_ops.go
   - wrappers/golang/core/vec_ops_test.go
 go-field: &go-field
-  - *field
   - *go-base
   - wrappers/golang/internal/generator/fields/**/*
-go-curve:
-  - *curve
+go-curve: &go-curve
   - *go-field
   - wrappers/golang/internal/generator/curves/**/*
-go-ring:
-  - *ring
+go-ring: &go-ring
   - *go-field
   - wrappers/golang/internal/generator/rings/**/*
+go-program: &go-program
+  - wrappers/golang/internal/generator/program/**/*
+  - wrappers/golang/internal/generator/symbol/**/*
 
 # Go feature-specific file patterns
-go-msm:
-  - *msm
+go-msm: &go-msm
   - wrappers/golang/internal/generator/msm/**/*
   - wrappers/golang/core/msm.go
   - wrappers/golang/core/msm_test.go
-go-ntt:
-  - *ntt
+go-ntt: &go-ntt
   - wrappers/golang/internal/generator/ntt/**/*
   - wrappers/golang/internal/generator/polynomials/**/*
   - wrappers/golang/core/ntt.go
   - wrappers/golang/core/ntt_test.go
-go-ecntt:
-  - *ecntt
+go-ecntt: &go-ecntt
   - wrappers/golang/internal/generator/ecntt/**/*
-go-fri:
-  - *fri
+go-fri: &go-fri
   - wrappers/golang/internal/generator/fri/**/*
-go-sumcheck:
-  - *sumcheck
+go-sumcheck: &go-sumcheck
   - *go-program
   - wrappers/golang/internal/generator/sumcheck/**/*
-go-pairing:
-  - *pairing
+go-pairing: &go-pairing
   - wrappers/golang/internal/generator/pairing/**/*
-go-poseidon:
-  - *poseidon
+go-poseidon: &go-poseidon
   - wrappers/golang/internal/generator/poseidon/**/*
-go-poseidon2:
-  - *poseidon2
+go-poseidon2: &go-poseidon2
   - wrappers/golang/internal/generator/poseidon2/**/*
-go-hash:
-  - *hash
+go-hash: &go-hash
   - wrappers/golang/hash/**/*
   - wrappers/golang/merkle-tree/**/*
   - wrappers/golang/core/hash.go
   - wrappers/golang/core/hash_test.go
   - wrappers/golang/core/merkletree.go
   - wrappers/golang/core/merkletree_test.go
-go-runtime:
-  - *runtime
+go-runtime: &go-runtime
   - wrappers/golang/runtime/**/*
 
-any:
-  - *cpp
-  - *rust
-  - *go
+# CPU backend feature-specific file patterns
+cpu-backend-msm: &cpu-backend-msm
+  - icicle/backend/cpu/src/curve/cpu_msm.hpp
+  - icicle/backend/cpu/src/curve/cpu_msm.cpp
+  - icicle/backend/cpu/include/decision_tree_params/**/*
+cpu-backend-ntt: &cpu-backend-ntt
+  - icicle/backend/cpu/src/field/cpu_ntt.cpp
+  - icicle/backend/cpu/src/polynomial/cpu_polynomial_backend.cpp
+  - icicle/backend/cpu/include/ntt_cpu.h
+  - icicle/backend/cpu/include/ntt_data.h
+  - icicle/backend/cpu/include/ntt_task.h
+  - icicle/backend/cpu/include/ntt_utils.h
+  - icicle/backend/cpu/include/cpu_ntt_domain.h
+  - icicle/backend/cpu/include/cpu_ntt_main.h
+cpu-backend-ecntt: &cpu-backend-ecntt
+  - icicle/backend/cpu/src/curve/cpu_ecntt.cpp
+cpu-backend-fri: &cpu-backend-fri
+  - icicle/backend/cpu/src/field/cpu_fri.cpp
+  - icicle/backend/cpu/include/cpu_fri_backend.h
+  - icicle/backend/cpu/include/cpu_fri_rounds.h
+cpu-backend-sumcheck: &cpu-backend-sumcheck
+  - icicle/backend/cpu/src/field/cpu_sumcheck.cpp
+  - icicle/backend/cpu/include/cpu_sumcheck.h
+cpu-backend-poseidon: &cpu-backend-poseidon
+  - icicle/backend/cpu/src/hash/cpu_poseidon.cpp
+cpu-backend-poseidon2: &cpu-backend-poseidon2
+  - icicle/backend/cpu/src/hash/cpu_poseidon2.cpp
+cpu-backend-hash: &cpu-backend-hash
+  - icicle/backend/cpu/src/hash/**/*
+  - '!icicle/backend/cpu/src/hash/cpu_poseidon.cpp'
+  - '!icicle/backend/cpu/src/hash/cpu_poseidon2.cpp'
+  - icicle/backend/cpu/include/tasks_manager.h
+cpu-backend-runtime: &cpu-backend-runtime
+  - icicle/backend/cpu/src/cpu_device_api.cpp
+cpu-backend-ring: &cpu-backend-ring
+  - icicle/backend/cpu/src/ring/**/*
