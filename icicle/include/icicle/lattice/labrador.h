@@ -85,17 +85,6 @@ namespace icicle {
       Zq* output,
       size_t output_size);
 
-    /// @brief Compute inner products with conjugated JL matrix rows.
-    /// Matrix is not stored, but derived from `seed` on-the-fly.
-    eIcicleError inner_product_with_conjugate_jl_matrix(
-      const Rq* input,
-      size_t input_size,
-      const std::byte* seed,
-      size_t seed_len,
-      const VecOpsConfig& cfg,
-      Rq* output,
-      size_t output_size);
-
     //------------------------------------------------------------------------------
     // Norm Bounds
     //------------------------------------------------------------------------------
