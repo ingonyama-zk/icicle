@@ -2,7 +2,7 @@ use cmake::Config;
 use std::{env, path::PathBuf};
 
 fn main() {
-    let icicle_prebuilt_frontend_libs_path = env::var("ICICLE_PREBUILT_FRONTEND_LIBS_PATH");
+    let icicle_prebuilt_frontend_libs_path = env::var("ICICLE_FRONTEND_INSTALL_DIR");
     if let Ok(path) = icicle_prebuilt_frontend_libs_path {
         println!("cargo:rustc-link-search={}", path);
         println!("cargo:rustc-link-lib=icicle_field_grumpkin");
@@ -10,7 +10,7 @@ fn main() {
         println!("cargo:rustc-link-lib=icicle_hash");
         println!("cargo:rustc-link-arg=-Wl,-rpath,{}", path);
     } else {
-        println!("cargo:warning=ICICLE_PREBUILT_FRONTEND_LIBS_PATH is not set...building icicle libs from source");
+        println!("cargo:warning=ICICLE_FRONTEND_INSTALL_DIR is not set...building icicle libs from source");
 
         // Construct the path to the deps directory
         let out_dir = env::var("OUT_DIR").expect("OUT_DIR is not set");
@@ -35,23 +35,8 @@ fn main() {
         };
         config
             .define("CURVE", "grumpkin")
-            .define("HASH", "ON")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-        // Define feature flags
-        // Default is ON for all features via the default feature in Cargo.toml
-        if cfg!(feature = "msm") {
-            config.define("MSM", "ON");
-        }
-        if cfg!(feature = "sumcheck") {
-            config.define("SUMCHECK", "ON");
-        }
-        if cfg!(feature = "poseidon") {
-            config.define("POSEIDON", "ON");
-        }
-        if cfg!(feature = "poseidon2") {
-            config.define("POSEIDON2", "ON");
-        }
 
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo

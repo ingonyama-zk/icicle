@@ -276,7 +276,7 @@ jobs:
       if: needs.check-changed-files.outputs.any == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
 
     - name: Run C++ Curve Tests
@@ -300,7 +300,7 @@ jobs:
         CURVE=${{ matrix.curve.name }}
         CURVE_DIR=icicle-${CURVE//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        export ICICLE_PREBUILT_FRONTEND_LIBS_PATH=${{ github.workspace }}/icicle/build/
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cd ./$CURVE_DIR
         
         # Base skip tests from matrix
