@@ -163,7 +163,7 @@ jobs:
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
         
         # MSM module
-        if [[ "${{ needs.check-changed-files.outputs.msm }}" == "true" || "${{ needs.check-changed-files.outputs.rust-msm }}" == "true" || "${{ needs.check-changed-files.outputs.go-msm }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.msm }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'msm') }}" = "true" ]]; then
@@ -175,7 +175,7 @@ jobs:
         fi
         
         # NTT module (includes polynomials)
-        if [[ "${{ needs.check-changed-files.outputs.ntt }}" == "true" || "${{ needs.check-changed-files.outputs.rust-ntt }}" == "true" || "${{ needs.check-changed-files.outputs.go-ntt }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.ntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'ntt') }}" = "true" ]]; then
@@ -187,7 +187,7 @@ jobs:
         fi
         
         # ECNTT module
-        if [[ "${{ needs.check-changed-files.outputs.ecntt }}" == "true" || "${{ needs.check-changed-files.outputs.rust-ecntt }}" == "true" || "${{ needs.check-changed-files.outputs.go-ecntt }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.ecntt }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DECNTT=ON -DNTT=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|ecntt"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'ecntt') }}" = "true" ]]; then
@@ -199,7 +199,7 @@ jobs:
         fi
 
         # Pairing module
-        if [[ "${{ needs.check-changed-files.outputs.pairing }}" == "true" || "${{ needs.check-changed-files.outputs.rust-pairing }}" == "true" || "${{ needs.check-changed-files.outputs.go-pairing }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.pairing }}" == "true" ]]; then
           # Pairing requires G2 point operations
           FEATURE_FLAGS="$FEATURE_FLAGS -DG2=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|pairing"
@@ -212,7 +212,7 @@ jobs:
         fi
         
         # FRI module
-        if [[ "${{ needs.check-changed-files.outputs.fri }}" == "true" || "${{ needs.check-changed-files.outputs.rust-fri }}" == "true" || "${{ needs.check-changed-files.outputs.go-fri }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.fri }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|fri"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'fri') }}" = "true" ]]; then
@@ -224,7 +224,7 @@ jobs:
         fi
         
         # Sumcheck module
-        if [[ "${{ needs.check-changed-files.outputs.sumcheck }}" == "true" || "${{ needs.check-changed-files.outputs.rust-sumcheck }}" == "true" || "${{ needs.check-changed-files.outputs.go-sumcheck }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.sumcheck }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|SumcheckTest"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'sumcheck') }}" = "true" ]]; then
@@ -236,7 +236,7 @@ jobs:
         fi
 
         # Poseidon module
-        if [[ "${{ needs.check-changed-files.outputs.poseidon }}" == "true" || "${{ needs.check-changed-files.outputs.rust-poseidon }}" == "true" || "${{ needs.check-changed-files.outputs.go-poseidon }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.poseidon }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon') }}" = "true" ]]; then
@@ -248,7 +248,7 @@ jobs:
         fi
 
         # Poseidon2 module
-        if [[ "${{ needs.check-changed-files.outputs.poseidon2 }}" == "true" || "${{ needs.check-changed-files.outputs.rust-poseidon2 }}" == "true" || "${{ needs.check-changed-files.outputs.go-poseidon2 }}" == "true" ]]; then
+        if [[ "${{ needs.check-changed-files.outputs.poseidon2 }}" == "true" ]]; then
           FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON2=ON -DHASH=ON"
           CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon2"
           if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon2') }}" = "true" ]]; then
@@ -281,7 +281,7 @@ jobs:
 
     - name: Run C++ Curve Tests
       working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.cpp == 'true'
+      if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         # Base skip tests from matrix
@@ -310,13 +310,8 @@ jobs:
         fi
 
         cargo test --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
-
-        if [ "${{ needs.check-changed-files.outputs.rust-ntt }}" = "true" ]; then
-          cargo test phase3 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
-        fi
-        if [ "${{ needs.check-changed-files.outputs.rust-fri }}" = "true" && "${{ contains(matrix.curve.rust-supported-features, 'fri') }}" = "true" ]; then
-          cargo test phase4 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
-        fi
+        cargo test phase3 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
+        cargo test phase4 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
         
     - name: Setup go
       if: ${{ needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false' }}
