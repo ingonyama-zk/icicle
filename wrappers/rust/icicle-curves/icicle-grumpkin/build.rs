@@ -37,7 +37,6 @@ fn main() {
             .define("CURVE", "grumpkin")
             .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
-
         // build (or pull and build) cuda backend if feature enabled.
         // Note: this requires access to the repo
         if cfg!(feature = "cuda_backend") {
