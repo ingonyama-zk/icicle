@@ -1,102 +1,7 @@
-# Outputs for check-changed-files.yml
-docs:
-  - docs/docs/**/*
-  - docs/src/**/*
-  - docs/static/**/*
-  - docs/versioned_docs/**/*
-  - docs/versioned_sidebars/**/*
-  - docs/docusaurus.config.js
-  - docs/package.json
-  - docs/sidebar.ts
-  - docs/versions.json
-
-examples:
-  - examples/**/*
-
-any:
-  - *cpp
-  - *rust
-  - *go
-  - *cpu-backend
-  - *backend-api
-
-backend-api: &backend-api
-  - icicle/include/icicle/backend/**/*
-  - '!icicle/include/icicle/backend/README.md'
-
-cpp: &cpp
-  - icicle/**/*
-  - '!icicle/backend/**/*'
-  - '!icicle/include/icicle/backend/**/*'
-
-rust: &rust
-  - *cpp
-  - wrappers/rust
-
-go: &go
-  - *cpp
-  - wrappers/golang
-  - '!wrappers/golang/README.md'
-  - '!wrappers/golang/internal/generator/main.go'
-  - '!wrappers/golang/internal/build-libs.go'
-
-cpu-backend: &cpu-backend
-  - icicle/backend/cpu/**/*
-
-runtime:
-  - *cpp-runtime
-  - *rust-runtime
-  - *go-runtime
-  - *cpu-backend-runtime
-
-# All file <--> feature flag mappings
-msm:
-  - *cpp-msm
-  - *rust-msm
-  - *go-msm
-  - *cpu-backend-msm
-ntt:
-  - *cpp-ntt
-  - *rust-ntt
-  - *go-ntt
-  - *cpu-backend-ntt
-ecntt:
-  - *cpp-ecntt
-  - *rust-ecntt
-  - *go-ecntt
-  - *cpu-backend-ecntt
-fri:
-  - *cpp-fri
-  - *rust-fri
-  - *go-fri
-  - *cpu-backend-fri
-sumcheck:
-  - *cpp-sumcheck
-  - *rust-sumcheck
-  - *go-sumcheck
-  - *cpu-backend-sumcheck
-pairing:
-  - *cpp-pairing
-  - *rust-pairing
-  - *go-pairing
-poseidon:
-  - *cpp-poseidon
-  - *rust-poseidon
-  - *go-poseidon
-  - *cpu-backend-poseidon
-poseidon2:
-  - *cpp-poseidon2
-  - *rust-poseidon2
-  - *go-poseidon2
-  - *cpu-backend-poseidon2
-hash:
-  - *cpp-hash
-  - *rust-hash
-  - *go-hash
-  - *cpu-backend-hash
-
 # NOTE: The following are not direct outputs in the check-changed-files.yml
-# but are used as building blocks for the outputs above
+# but are used as building blocks for the outputs at the end of the file
+
+# START ANCHORS
 
 # C/C++ file feature mappings
 cpp-base: &cpp-base
@@ -356,3 +261,101 @@ cpu-backend-runtime: &cpu-backend-runtime
   - icicle/backend/cpu/src/cpu_device_api.cpp
 cpu-backend-ring: &cpu-backend-ring
   - icicle/backend/cpu/src/ring/**/*
+# END ANCHORS
+
+# Outputs for check-changed-files.yml
+docs:
+  - docs/docs/**/*
+  - docs/src/**/*
+  - docs/static/**/*
+  - docs/versioned_docs/**/*
+  - docs/versioned_sidebars/**/*
+  - docs/docusaurus.config.js
+  - docs/package.json
+  - docs/sidebar.ts
+  - docs/versions.json
+
+examples:
+  - examples/**/*
+
+backend-api: &backend-api
+  - icicle/include/icicle/backend/**/*
+  - '!icicle/include/icicle/backend/README.md'
+
+cpp: &cpp
+  - icicle/**/*
+  - '!icicle/backend/**/*'
+  - '!icicle/include/icicle/backend/**/*'
+
+rust: &rust
+  - *cpp
+  - wrappers/rust
+
+go: &go
+  - *cpp
+  - wrappers/golang
+  - '!wrappers/golang/README.md'
+  - '!wrappers/golang/internal/generator/main.go'
+  - '!wrappers/golang/internal/build-libs.go'
+
+cpu-backend: &cpu-backend
+  - icicle/backend/cpu/**/*
+
+any:
+  - *cpp
+  - *rust
+  - *go
+  - *cpu-backend
+  - *backend-api
+
+runtime:
+  - *cpp-runtime
+  - *rust-runtime
+  - *go-runtime
+  - *cpu-backend-runtime
+
+# All file <--> feature flag mappings
+msm:
+  - *cpp-msm
+  - *rust-msm
+  - *go-msm
+  - *cpu-backend-msm
+ntt:
+  - *cpp-ntt
+  - *rust-ntt
+  - *go-ntt
+  - *cpu-backend-ntt
+ecntt:
+  - *cpp-ecntt
+  - *rust-ecntt
+  - *go-ecntt
+  - *cpu-backend-ecntt
+fri:
+  - *cpp-fri
+  - *rust-fri
+  - *go-fri
+  - *cpu-backend-fri
+sumcheck:
+  - *cpp-sumcheck
+  - *rust-sumcheck
+  - *go-sumcheck
+  - *cpu-backend-sumcheck
+pairing:
+  - *cpp-pairing
+  - *rust-pairing
+  - *go-pairing
+poseidon:
+  - *cpp-poseidon
+  - *rust-poseidon
+  - *go-poseidon
+  - *cpu-backend-poseidon
+poseidon2:
+  - *cpp-poseidon2
+  - *rust-poseidon2
+  - *go-poseidon2
+  - *cpu-backend-poseidon2
+hash:
+  - *cpp-hash
+  - *rust-hash
+  - *go-hash
+  - *cpu-backend-hash
