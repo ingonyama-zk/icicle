@@ -4,6 +4,7 @@
 #include "icicle/runtime.h"
 
 #include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
+#include "icicle/hash/keccak.h"      // For Hash
 
 using namespace icicle::labrador;
 
@@ -177,8 +178,52 @@ eIcicleError base_prover(
   }
 
   // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
+  // add u1 to the proof
+  for (size_t i = 0; i < kappa1; i++) {
+    proof.insert(proof.end(), u1[i].coeffs, u1[i].coeffs + Rq::d);
+  }
+  // hash and get a challenge
+  Hash hasher = create_sha3_256_hash();
+  // TODO: add serialization to lab_inst, ajtai_seed, u1 and put them in the placeholder
+  std::vector<std::byte> seed1(hasher.output_size());
+  hasher.hash("Placeholder", 11, {}, seed1.data());
 
   // Step 12: Select a JL projection
+  const size_t JL_out = 256;
+  std::vector<Zq> p(JL_out, Zq::from(0));
+  size_t JL_i = 0;
+  while (true) {
+    std::vector<std::byte> base_jl_seed(seed1);
+    base_jl_seed.push_back(std::byte(JL_i));
+
+    for (size_t j = 0; j < r; j++) {
+      // add byte j to the seed
+      std::vector<std::byte> jl_seed(base_jl_seed);
+      jl_seed.push_back(std::byte(j));
+
+      std::vector<Zq> input, output(JL_out);
+      // unpack row k of S into input
+      for (size_t k = 0; k < n; k++) {
+        input.insert(input.end(), S[j * n + k].coeffs, S[j * n + k].coeffs + Rq::d);
+      }
+      // create JL projection: P_j*s_j
+      ICICLE_CHECK(
+        jl_projection(input.data(), input.size(), jl_seed.data(), jl_seed.size(), {}, output.data(), JL_out));
+      // add output to p
+      vector_add(p.data(), output.data(), JL_out, {}, p.data());
+    }
+    // check norm
+    bool JL_check = false;
+    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(128) * beta), {}, &JL_check));
+
+    if (JL_check) {
+      break;
+    } else {
+      p.assign(p.size(), Zq::from(0));
+      JL_i++;
+    }
+  }
+  // at the end JL projection is defined by JL_i and p is the projection output
 
   return eIcicleError::SUCCESS;
 }
