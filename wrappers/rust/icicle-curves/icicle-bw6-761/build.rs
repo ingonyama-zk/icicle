@@ -2,8 +2,8 @@ use cmake::Config;
 use std::{env, path::PathBuf};
 
 fn main() {
-    let icicle_prebuilt_frontend_libs_path = env::var("ICICLE_FRONTEND_INSTALL_DIR");
-    if let Ok(path) = icicle_prebuilt_frontend_libs_path {
+    let icicle_frontend_install_dir = env::var("ICICLE_FRONTEND_INSTALL_DIR");
+    if let Ok(path) = icicle_frontend_install_dir {
         println!("cargo:rustc-link-search={}", path);
         println!("cargo:rustc-link-lib=icicle_field_bw6_761");
         println!("cargo:rustc-link-lib=icicle_curve_bw6_761");
