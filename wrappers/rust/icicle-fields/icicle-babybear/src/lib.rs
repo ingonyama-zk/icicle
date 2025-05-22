@@ -1,5 +1,6 @@
 pub mod field;
 pub mod fri;
+mod merkle; // tests only
 pub mod ntt;
 pub mod polynomials;
 pub mod poseidon;
