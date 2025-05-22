@@ -13,6 +13,7 @@ include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/ring.cmake)
 include(cmake/hash.cmake)
+include(CMakeDependentOption)
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
 if(SANITIZE AND CUDA_BACKEND)
@@ -29,16 +30,16 @@ option(METAL_BACKEND "Branch/commit to pull for METAL backend or `local` if unde
 option(VULKAN_BACKEND "Branch/commit to pull for VULKAN backend or `local` if under icicle/backend/vulkan. Default=OFF" OFF)
 
 # features that some fields/curves have and some don't.
-option(EXT_FIELD "Build extension field" ON)
-option(MSM "Build MSM" OFF)
-option(G2 "Build G2 MSM" OFF)
-option(NTT "Build NTT" OFF)
-option(ECNTT "Build ECNTT" OFF)
-option(HASH "Build hashes and tree builders" OFF)
-option(POSEIDON "Build poseidon hash" OFF)
-option(POSEIDON2 "Build poseidon2 hash" OFF)
-option(SUMCHECK "Build sumcheck" OFF)
-option(FRI "Build fri" OFF)
+CMAKE_DEPENDENT_OPTION(NTT "Build NTT" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(ECNTT "Build ECNTT" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(MSM "Build MSM" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(G2 "Build G2 MSM" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(EXT_FIELD "Build extension field" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(HASH "Build hashes and tree builders" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(POSEIDON "Build poseidon hash" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(POSEIDON2 "Build poseidon2 hash" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(SUMCHECK "Build sumcheck" OFF "DEFINED INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(FRI "Build fri" OFF "DEFINED INGO_CI_ENV" ON)
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
