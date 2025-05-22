@@ -21,7 +21,7 @@ mod tests {
     fn test_merkle_tree_segfault() {
         initialize();
 
-        let n = 6;
+        let n = 18;
         let field_element_size = std::mem::size_of::<ScalarField>() as u64;
         for elements_per_leaf in [1, 5] {
             // calc tree parameters
