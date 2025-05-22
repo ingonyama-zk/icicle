@@ -4,6 +4,11 @@
 # START ANCHORS
 
 # C/C++ file feature mappings
+cpp-program: &cpp-program
+  - icicle/src/program/**/*
+  - icicle/include/icicle/program/**/*
+  - icicle/src/symbol/**/*
+  - icicle/include/icicle/symbol/**/*
 cpp-base: &cpp-base
   - *cpp-program
   - icicle/include/icicle/math/**/*
@@ -27,11 +32,6 @@ cpp-ring: &cpp-ring
   - icicle/include/icicle/rings/**/*
   - icicle/src/balanced_decomposition.cpp
   - icicle/include/icicle/balanced_decomposition.h
-cpp-program: &cpp-program
-  - icicle/src/program/**/*
-  - icicle/include/icicle/program/**/*
-  - icicle/src/symbol/**/*
-  - icicle/include/icicle/symbol/**/*
 
 # C/C++ feature-specific file patterns
 cpp-msm: &cpp-msm
@@ -91,6 +91,15 @@ cpp-runtime: &cpp-runtime
   - icicle/include/icicle/runtime.h
 
 # Rust file feature mappings
+rust-program: &rust-program
+  - wrappers/rust/icicle-core/src/program/mod.rs
+  - wrappers/rust/icicle-core/src/symbol/mod.rs
+  - wrappers/rust/icicle-curves/**/src/program/mod.rs
+  - wrappers/rust/icicle-fields/**/src/program/mod.rs
+  - wrappers/rust/icicle-rings/**/src/program/mod.rs
+  - wrappers/rust/icicle-curves/**/src/symbol/mod.rs
+  - wrappers/rust/icicle-fields/**/src/symbol/mod.rs
+  - wrappers/rust/icicle-rings/**/src/symbol/mod.rs
 rust-base: &rust-base
   - *rust-program
   - wrappers/rust/icicle-core/src/vec_ops/tests.rs
@@ -98,7 +107,6 @@ rust-base: &rust-base
   - wrappers/rust/icicle-curves/**/src/vec_ops/mod.rs
   - wrappers/rust/icicle-fields/**/src/vec_ops/mod.rs
   - wrappers/rust/icicle-rings/**/src/vec_ops/mod.rs
-  
 rust-field: &rust-field
   - *rust-base
   - wrappers/rust/icicle-core/src/field.rs
@@ -113,15 +121,6 @@ rust-ring: &rust-ring
   - wrappers/rust/icicle-core/src/balanced_decomposition/mod.rs
   - wrappers/rust/icicle-core/src/balanced_decomposition/test.rs
   - wrappers/rust/icicle-rings/**/*
-rust-program: &rust-program
-  - wrappers/rust/icicle-core/src/program/mod.rs
-  - wrappers/rust/icicle-core/src/symbol/mod.rs
-  - wrappers/rust/icicle-curves/**/src/program/mod.rs
-  - wrappers/rust/icicle-fields/**/src/program/mod.rs
-  - wrappers/rust/icicle-rings/**/src/program/mod.rs
-  - wrappers/rust/icicle-curves/**/src/symbol/mod.rs
-  - wrappers/rust/icicle-fields/**/src/symbol/mod.rs
-  - wrappers/rust/icicle-rings/**/src/symbol/mod.rs
 
 # Rust feature-specific file patterns
 rust-msm: &rust-msm
@@ -174,6 +173,9 @@ rust-runtime: &rust-runtime
   - wrappers/rust/icicle-runtime/**/*
   
 # Go file feature mappings
+go-program: &go-program
+  - wrappers/golang/internal/generator/program/**/*
+  - wrappers/golang/internal/generator/symbol/**/*
 go-base: &go-base
   - *go-program
   - wrappers/golang/internal/generator/vecOps/**/*
@@ -188,9 +190,6 @@ go-curve: &go-curve
 go-ring: &go-ring
   - *go-field
   - wrappers/golang/internal/generator/rings/**/*
-go-program: &go-program
-  - wrappers/golang/internal/generator/program/**/*
-  - wrappers/golang/internal/generator/symbol/**/*
 
 # Go feature-specific file patterns
 go-msm: &go-msm
