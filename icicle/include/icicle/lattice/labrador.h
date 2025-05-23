@@ -85,6 +85,19 @@ namespace icicle {
       Zq* output,
       size_t output_size);
 
+    /// Helper function to get a single row from JL projection matrix
+    eIcicleError get_jl_matrix_row(
+      const std::byte* seed,
+      size_t seed_len,
+      size_t matrix_rows, // N parameter (256 in our case)
+      size_t matrix_cols, // M parameter (n*d in our case)
+      size_t row_index,   // which row to extract
+      const VecOpsConfig& cfg,
+      Zq* output) // output array of size matrix_cols
+    {
+      return eIcicleError::SUCCESS;
+    }
+
     //------------------------------------------------------------------------------
     // Norm Bounds
     //------------------------------------------------------------------------------
