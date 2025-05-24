@@ -48,7 +48,25 @@ let device = icicle_runtime::Device::new("CUDA", 0 /* =device_id*/);
 icicle_runtime::set_device(&device).unwrap();
 ```
 
-### Go (TODO)
+### Go
+
+```go
+import "github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
+
+// Set the device to the first CUDA GPU (GPU-0)
+device := runtime.CreateDevice("CUDA", 0)
+err := runtime.SetDevice(&device)
+if err != runtime.Success {
+    panic("Failed to set device")
+}
+
+// Alternatively, set the device to CPU
+cpuDevice := runtime.CreateDevice("CPU", 0)
+err = runtime.SetDevice(&cpuDevice)
+if err != runtime.Success {
+    panic("Failed to set CPU device")
+}
+```
 
 ## Best Practices
 
