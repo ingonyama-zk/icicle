@@ -66,24 +66,8 @@ private:
   // append a field to hash input
   void append_field(std::vector<std::byte>& byte_vec, const S& field)
   {
-#ifdef EXT_FIELD
-    if constexpr (std::is_same_v<S, extension_t>) {
-      for (const auto& component : {field.c0, field.c1}) {
-        const std::byte* data_bytes = reinterpret_cast<const std::byte*>(component.limbs_storage.limbs);
-        byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(component));
-      }
-      if constexpr (std::is_same_v<S, QuarticExtensionField<fp_config, scalar_t>>) {
-        for (const auto& component : {field.c2, field.c3}) {
-          const std::byte* data_bytes = reinterpret_cast<const std::byte*>(component.limbs_storage.limbs);
-          byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(component));
-        }
-      }
-    } else
-#endif // EXT_FIELD
-    {
-      const std::byte* data_bytes = reinterpret_cast<const std::byte*>(field.limbs_storage.limbs);
-      byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
-    }
+    const std::byte* data_bytes = reinterpret_cast<const std::byte*>(&field);
+    byte_vec.insert(byte_vec.end(), data_bytes, data_bytes + sizeof(S));
   }
 
   // round 0 hash input
