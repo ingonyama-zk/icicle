@@ -9,13 +9,7 @@ on:
       examples:
         description: "Flag for if examples files changed"
         value: ${{ jobs.check-changed-files.outputs.examples }}
-      # Any code files changed
-      any:
-        description: "Flag for if any code files changed"
-        value: ${{ jobs.check-changed-files.outputs.any }}
-      backend-api:
-        description: "Flag for if backend API files changed"
-        value: ${{ jobs.check-changed-files.outputs.backend-api }}
+      
       cpp:
         description: "Flag for if C++ code files changed"
         value: ${{ jobs.check-changed-files.outputs.cpp }}
@@ -28,9 +22,25 @@ on:
       cpu-backend:
         description: "Flag for if CPU backend files changed"
         value: ${{ jobs.check-changed-files.outputs.cpu-backend }}
+      backend-api:
+        description: "Flag for if backend API files changed"
+        value: ${{ jobs.check-changed-files.outputs.backend-api }}
+      curve:
+        description: "Flag for if curve files changed"
+        value: ${{ jobs.check-changed-files.outputs.curve }}
+      field:
+        description: "Flag for if field files changed"
+        value: ${{ jobs.check-changed-files.outputs.field }}
+      ring:
+        description: "Flag for if any (C++, Rust, Go) ring files changed"
+        value: ${{ jobs.check-changed-files.outputs.ring }}
+      hash:
+        description: "Flag for if any (C++, Rust, Go) hash files changed"
+        value: ${{ jobs.check-changed-files.outputs.hash }}
       runtime:
         description: "Flag for if C++ runtime files changed"
         value: ${{ jobs.check-changed-files.outputs.runtime }}
+
       # Feature specific outputs
       msm:
         description: "Flag for if any (C++, Rust, Go) msm files changed"
@@ -56,9 +66,6 @@ on:
       poseidon2:
         description: "Flag for if any (C++, Rust, Go) poseidon2 files changed"
         value: ${{ jobs.check-changed-files.outputs.poseidon2 }}
-      hash:
-        description: "Flag for if any (C++, Rust, Go) hash files changed"
-        value: ${{ jobs.check-changed-files.outputs.hash }}
 
 jobs:
   check-changed-files:
@@ -68,12 +75,15 @@ jobs:
       docs: ${{ steps.changed_files.outputs.docs }}
       examples: ${{ steps.changed_files.outputs.examples }}
       
-      any: ${{ steps.changed_files.outputs.any }}
-      backend-api: ${{ steps.changed_files.outputs.backend-api }}
       cpp: ${{ steps.changed_files.outputs.cpp }}
       rust: ${{ steps.changed_files.outputs.rust }}
       go: ${{ steps.changed_files.outputs.go }}
+      backend-api: ${{ steps.changed_files.outputs.backend-api }}
       cpu-backend: ${{ steps.changed_files.outputs.cpu-backend }}
+      curve: ${{ steps.changed_files.outputs.curve }}
+      field: ${{ steps.changed_files.outputs.field }}
+      ring: ${{ steps.changed_files.outputs.ring }}
+      hash: ${{ steps.changed_files.outputs.hash }}
       runtime: ${{ steps.changed_files.outputs.runtime }}
 
       msm: ${{ steps.changed_files.outputs.msm }}
@@ -84,7 +94,6 @@ jobs:
       pairing: ${{ steps.changed_files.outputs.pairing }}
       poseidon: ${{ steps.changed_files.outputs.poseidon }}
       poseidon2: ${{ steps.changed_files.outputs.poseidon2 }}
-      hash: ${{ steps.changed_files.outputs.hash }}
     steps:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -101,12 +110,15 @@ jobs:
         echo "docs=${{ steps.changed-files-yaml.outputs.docs_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "examples=${{ steps.changed-files-yaml.outputs.examples_any_modified }}" >> "$GITHUB_OUTPUT"
 
-        echo "any=${{ steps.changed-files-yaml.outputs.any_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "backend-api=${{ steps.changed-files-yaml.outputs.backend-api_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "cpp=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go=${{ steps.changed-files-yaml.outputs.go_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "cpu-backend=${{ steps.changed-files-yaml.outputs.cpu-backend_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "backend-api=${{ steps.changed-files-yaml.outputs.backend-api_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "curve=${{ steps.changed-files-yaml.outputs.curve_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "field=${{ steps.changed-files-yaml.outputs.field_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "ring=${{ steps.changed-files-yaml.outputs.ring_any_modified }}" >> "$GITHUB_OUTPUT"
+        echo "hash=${{ steps.changed-files-yaml.outputs.hash_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "runtime=${{ steps.changed-files-yaml.outputs.runtime_any_modified }}" >> "$GITHUB_OUTPUT"
         
         echo "msm=${{ steps.changed-files-yaml.outputs.msm_any_modified }}" >> "$GITHUB_OUTPUT"
@@ -117,4 +129,3 @@ jobs:
         echo "pairing=${{ steps.changed-files-yaml.outputs.pairing_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "poseidon=${{ steps.changed-files-yaml.outputs.poseidon_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "poseidon2=${{ steps.changed-files-yaml.outputs.poseidon2_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "hash=${{ steps.changed-files-yaml.outputs.hash_any_modified }}" >> "$GITHUB_OUTPUT"

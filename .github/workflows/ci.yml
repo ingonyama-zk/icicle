@@ -1,0 +1,781 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - ci/separate-testing-by-feature
+
+concurrency:
+  group:  ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  spelling-checker:
+    name: Check Spelling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: codespell-project/actions-codespell@fad9339798e1ee3fe979ae0a022c931786a408b8
+        with:
+          # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-skip
+          skip: ./**/target,./**/build,./docs/*.js,./docs/*.json,./*.svg
+          # https://github.com/codespell-project/actions-codespell?tab=readme-ov-file#parameter-ignore_words_file
+          ignore_words_file: .codespellignore
+
+  check-changed-files:
+    uses: ./.github/workflows/check-changed-files.yml
+
+  check-format:
+    name: Check Code Format
+    runs-on: [self-hosted, Linux, X64, formatter]
+    needs: check-changed-files
+    steps:
+    - name: Checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Setup go
+      if: needs.check-changed-files.outputs.go == 'true'
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+    - name: Check clang-format
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        clang-format --version  
+        ./scripts/format_all.sh . --check --exclude "build|wrappers"
+    - name: Check gofmt
+      if: needs.check-changed-files.outputs.go == 'true'
+      run: if [[ $(go list ./... | xargs go fmt) ]]; then echo "Please run go fmt"; exit 1; fi
+    - name: Check rustfmt
+      if: needs.check-changed-files.outputs.rust == 'true'
+      working-directory: ./wrappers/rust
+      run: cargo fmt --all -- --check
+
+  extract-cuda-backend-branch:
+    uses: ./.github/workflows/extract-backend.yml
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      backend-type: cuda
+
+  extract-metal-backend-branch:
+    uses: ./.github/workflows/extract-backend.yml
+    with:
+      pr-number: ${{ github.event.pull_request.number }}
+      backend-type: metal
+  
+  test-curve:
+    name: Test ${{ matrix.curve.name }} with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
+    strategy:
+      matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            runner: [self-hosted, Linux, X64, icicle]
+            skip-rust-all-curves: ""
+            skip-cpp-all-curves: ""
+            skip-golang-all-curves: "false"
+            initial-support: false
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-rust-all-curves: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri
+            skip-cpp-all-curves: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
+            skip-golang-all-curves: "true"
+            initial-support: true
+        curve:
+          - name: bn254
+            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
+          - name: bls12_381
+            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+            # metal-cpp-flaky-tests: "ModArithTest.ntt|PolynomialTest.multiplication|PolynomialTest.divideByVanishingPolynomial|PolynomialTest.QAP|FieldTest.vectorDivision|FieldTestBase.polynomialDivision"
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
+          - name: bls12_377
+            rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
+          - name: bw6_761
+            rust-supported-features: ["msm", "ntt", "fri", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "ntt", "ecntt", "poseidon", "poseidon2"]
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
+          - name: grumpkin
+            rust-supported-features: ["msm", "sumcheck", "poseidon", "poseidon2"]
+            go-supported-features: ["msm", "poseidon", "poseidon2"]
+            metal-skip-cpp-curve-specific: ""
+            metal-skip-rust-curve-specific: ""
+            metal-skip-golang-curve-specific: ""
+
+    steps:
+    - name: Set backend branch name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} backend
+      if: needs.check-changed-files.outputs.curve == 'true'
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend }}
+        ssh-key: ${{ secrets[matrix.secret_key] }}
+        ref: ${{ env.BACKEND_BRANCH }}
+    - name: Set feature and build flags
+      id: feature_flags
+      if: needs.check-changed-files.outputs.curve == 'true'
+      run: |
+        FEATURE_FLAGS=""
+        CPP_TEST_REGEX="CurveSanity|ModArith|Symbol|Program"
+        RUST_TEST_FEATURES=""
+        GO_TEST_BUILD_TAGS="icicle_exclude_all"
+        
+        # MSM module
+        if [[ "${{ needs.check-changed-files.outputs.msm }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DMSM=ON -DG2=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|msm"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'msm') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,msm"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'msm') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,msm,g2"
+          fi
+        fi
+        
+        # NTT module (includes polynomials)
+        if [[ "${{ needs.check-changed-files.outputs.ntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
+          fi
+        fi
+        
+        # ECNTT module
+        if [[ "${{ needs.check-changed-files.outputs.ecntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DECNTT=ON -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ecntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ecntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ecntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ecntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ecntt"
+          fi
+        fi
+
+        # Pairing module
+        if [[ "${{ needs.check-changed-files.outputs.pairing }}" == "true" ]]; then
+          # Pairing requires G2 point operations
+          FEATURE_FLAGS="$FEATURE_FLAGS -DG2=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|pairing"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'pairing') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,pairing"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'pairing') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,pairing,g2"
+          fi
+        fi
+        
+        # FRI module
+        if [[ "${{ needs.check-changed-files.outputs.fri }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|fri"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'fri') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'fri') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,fri"
+          fi
+        fi
+        
+        # Sumcheck module
+        if [[ "${{ needs.check-changed-files.outputs.sumcheck }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|SumcheckTest"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'sumcheck') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'sumcheck') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,sumcheck"
+          fi
+        fi
+
+        # Poseidon module
+        if [[ "${{ needs.check-changed-files.outputs.poseidon }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon"
+          fi
+        fi
+
+        # Poseidon2 module
+        if [[ "${{ needs.check-changed-files.outputs.poseidon2 }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON2=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon2"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon2') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon2') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon2"
+          fi
+        fi
+
+        echo "FEATURE_FLAGS: $FEATURE_FLAGS"
+        echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
+
+        echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
+        echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
+
+        echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
+        echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
+
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
+        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
+        
+    - name: Build curve
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.curve == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCURVE=${{ matrix.curve.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --build build
+
+    - name: Run C++ curve tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.curve == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+
+        export SKIP_TESTS="${{ matrix.skip-cpp-all-curves }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-skip-cpp-curve-specific }}" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp-all-curves }}|${{ matrix.curve.metal-skip-cpp-curve-specific }}"
+        fi
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        
+        ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
+        
+    - name: Run Rust curve tests
+      working-directory: ./wrappers/rust/icicle-curves
+      if: needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=icicle-${CURVE//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+        cd ./$CURVE_DIR
+        
+        export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-curves }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.curve.metal-skip-rust-curve-specific }}" ]; then
+          export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-curves }} ${{ matrix.curve.metal-skip-rust-curve-specific }}"
+        fi
+
+        cargo test --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
+        # NOTE: phase2 is not needed here since it is specific for field tests
+        cargo test phase3 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
+        cargo test phase4 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
+        
+    - name: Setup go
+      if: needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false'
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+    - name: Run Golang curve tests
+      working-directory: ./wrappers/golang/curves
+      if: needs.check-changed-files.outputs.curve == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-curves == 'false'
+      run: |
+        CURVE=${{ matrix.curve.name }}
+        CURVE_DIR=$(echo ${{ matrix.curve.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+        
+        go test ./$CURVE_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 60m -v
+
+
+  test-field:
+    name: Test ${{ matrix.field.name }} with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
+    strategy:
+      matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            runner: [self-hosted, Linux, X64, icicle]
+            skip-rust-all-fields: ""
+            skip-cpp-all-fields: ""
+            skip-golang-all-fields: "false"
+            initial-support: false
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-rust-all-fields: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip vec_ops_scalars_inv --skip fri
+            skip-cpp-all-fields: .*QuarticExtensionField.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
+            skip-golang-all-fields: "true"
+            initial-support: true
+        exclude:
+          - backend: metal
+            field:
+              name: goldilocks
+        field:
+          - name: babybear
+            rust-supported-features: ["ntt", "fri","sumcheck", "poseidon", "poseidon2"]
+            go-supported-features: ["ntt", "poseidon", "poseidon2"]
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: "--skip phase2"
+            metal-skip-golang-field-specific: ""
+          - name: stark252
+            rust-supported-features: ["ntt", "fri", "sumcheck", "poseidon", "poseidon2"]
+            go-supported-features: ["ntt", "poseidon", "poseidon2"]
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
+          - name: m31
+            rust-supported-features: ["sumcheck", "poseidon", "poseidon2"]
+            go-supported-features: ["poseidon", "poseidon2"]
+            # metal-cpp-failing-tests: "FieldTest.vectorDivision<m31::MersenneField<m31::fp_config>>|ModArithTestBase.VectorReduceOps|ModArithTestBase.scalarVectorOps|ModArithTestBase.polynomialEval|ModArithTest.vectorVectorOps<m31::MersenneField<m31::fp_config>>"
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
+          - name: koalabear
+            rust-supported-features: ["ntt", "fri", "sumcheck", "poseidon", "poseidon2"]
+            go-supported-features: ["ntt", "poseidon", "poseidon2"]
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
+          - name: goldilocks
+            rust-supported-features: ["ntt", "fri", "sumcheck", "poseidon2"]
+            go-supported-features: ["ntt", "poseidon2"]
+            metal-skip-cpp-field-specific: ""
+            metal-skip-rust-field-specific: ""
+            metal-skip-golang-field-specific: ""
+    steps:
+    - name: Set backend branch name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} backend
+      if: needs.check-changed-files.outputs.field == 'true'
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend }}
+        ssh-key: ${{ secrets[matrix.secret_key] }}
+        ref: ${{ env.BACKEND_BRANCH }}
+    
+    - name: Set feature and build flags
+      id: feature_flags
+      if: needs.check-changed-files.outputs.field == 'true'
+      run: |
+        FEATURE_FLAGS=""
+        CPP_TEST_REGEX="FieldTest|ModArith|Symbol|Program"
+        RUST_TEST_FEATURES=""
+        GO_TEST_BUILD_TAGS="icicle_exclude_all"
+
+        # Add EXT_FIELD if not stark252
+        if [[ "${{ matrix.field.name }}" != "stark252" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DEXT_FIELD=ON"
+        fi
+        
+        # NTT module (includes polynomials)
+        if [[ "${{ needs.check-changed-files.outputs.ntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
+          fi
+        fi
+        
+        # FRI module
+        if [[ "${{ needs.check-changed-files.outputs.fri }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DFRI=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|fri"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'fri') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,fri"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'fri') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,fri"
+          fi
+        fi
+        
+        # Sumcheck module
+        if [[ "${{ needs.check-changed-files.outputs.sumcheck }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DSUMCHECK=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|SumcheckTest"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'sumcheck') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,sumcheck"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'sumcheck') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,sumcheck"
+          fi
+        fi
+
+        # Poseidon module
+        if [[ "${{ needs.check-changed-files.outputs.poseidon }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon"
+          fi
+        fi
+
+        # Poseidon2 module
+        if [[ "${{ needs.check-changed-files.outputs.poseidon2 }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DPOSEIDON2=ON -DHASH=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|poseidon2"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'poseidon2') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,poseidon2"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'poseidon2') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,poseidon2"
+          fi
+        fi
+
+        echo "FEATURE_FLAGS: $FEATURE_FLAGS"
+        echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
+
+        echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
+        echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
+
+        echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
+        echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
+
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
+        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
+    
+    - name: Build field
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.field == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DFIELD=${{ matrix.field.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --build build
+
+    - name: Run C++ field tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.field == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-skip-cpp-field-specific }}" ]; then
+          export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}|${{ matrix.field.metal-skip-cpp-field-specific }}"
+        fi
+        echo "SKIP_TESTS: $SKIP_TESTS"
+        ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
+
+    # - name: Run C++ examples
+    #   working-directory: ./examples/c++
+    #   if: (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true') && matrix.backend != 'metal'
+    #   run: |
+    #     FIELD=${{ matrix.field.name }}
+    #     export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+    #     for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
+    #         if [ -d "$dir" ]; then
+    #             echo "Running command in $dir"
+    #             cd $dir
+    #             ./run.sh -d ${{ matrix.backend_upper }}
+    #             cd -
+    #         fi
+    #     done
+    - name: Run Rust field tests
+      working-directory: ./wrappers/rust/icicle-fields
+      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=icicle-${FIELD//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+        cd ./$FIELD_DIR
+        
+        export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }}"
+        if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-skip-rust-field-specific }}" ]; then
+          export SKIP_RUST_TESTS="${{ matrix.skip-rust-all-fields }} ${{ matrix.field.metal-skip-rust-field-specific }}"
+        fi
+
+        cargo test --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
+        cargo test phase2 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
+        cargo test phase3 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
+        cargo test phase4 --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- $SKIP_RUST_TESTS
+    - name: Setup go
+      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.golang == 'true' && matrix.skip-golang-all-curves == 'false'
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+    - name: Run Golang field tests
+      working-directory: ./wrappers/golang/fields
+      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.golang == 'true' && matrix.skip-golang-all-curves == 'false'
+      run: |
+        FIELD=${{ matrix.field.name }}
+        FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$FIELD -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+
+        go test ./$FIELD_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 60m -v
+
+  test-ring:
+    name: Test ${{ matrix.ring.name }} on ${{ matrix.backend }}
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    strategy:
+      matrix:
+        # not supported in Metal yet
+        backend: [cuda]
+        ring:
+          - name: labrador
+            rust-supported-features: ["ntt"]
+            go-supported-features: ["ntt"]
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout CUDA backend
+      if: needs.check-changed-files.outputs.ring == 'true'
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+    - name: Set feature and build flags
+      id: feature_flags
+      if: needs.check-changed-files.outputs.ring == 'true'
+      run: |
+        FEATURE_FLAGS=""
+        CPP_TEST_REGEX="ModArith|Symbol|Program"
+        RUST_TEST_FEATURES=""
+        GO_TEST_BUILD_TAGS="icicle_exclude_all"
+        
+        # NTT module (includes polynomials)
+        if [[ "${{ needs.check-changed-files.outputs.ntt }}" == "true" ]]; then
+          FEATURE_FLAGS="$FEATURE_FLAGS -DNTT=ON"
+          CPP_TEST_REGEX="$CPP_TEST_REGEX|ntt"
+          if [[ "${{ contains(matrix.curve.rust-supported-features, 'ntt') }}" = "true" ]]; then
+            RUST_TEST_FEATURES="$RUST_TEST_FEATURES,ntt"
+          fi
+          if [[ "${{ contains(matrix.curve.go-supported-features, 'ntt') }}" = "true" ]]; then
+            GO_TEST_BUILD_TAGS="$GO_TEST_BUILD_TAGS,ntt"
+          fi
+        fi
+
+        echo "FEATURE_FLAGS: $FEATURE_FLAGS"
+        echo "FEATURE_FLAGS=$FEATURE_FLAGS" >> $GITHUB_OUTPUT
+
+        echo "CPP_TEST_REGEX: $CPP_TEST_REGEX"
+        echo "CPP_TEST_REGEX=$CPP_TEST_REGEX" >> $GITHUB_OUTPUT
+
+        echo "RUST_TEST_FEATURES: $RUST_TEST_FEATURES"
+        echo "RUST_TEST_FEATURES=$RUST_TEST_FEATURES" >> $GITHUB_OUTPUT
+
+        echo "GO_TEST_BUILD_TAGS: $GO_TEST_BUILD_TAGS"
+        echo "GO_TEST_BUILD_TAGS=$GO_TEST_BUILD_TAGS" >> $GITHUB_OUTPUT
+
+    - name: Build ring
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.ring == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DRING=${{ matrix.ring.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --build build
+    - name: Run C++ ring tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.ring == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.cuda-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        ctest --output-on-failure -R "Ring"
+    - name: Run Rust ring tests
+      working-directory: ./wrappers/rust/icicle-rings
+      if: needs.check-changed-files.outputs.ring == 'true' && needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        RING=${{ matrix.ring.name }}
+        RING_DIR=icicle-${RING//_/-}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        cd ./$RING_DIR
+        cargo test --release --no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} -- --skip phase2
+        # NOTE: phase2 is not needed here since it is for specific field tests
+    # TODO: Go tests
+
+  test-hash:
+    name: Test hash with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
+    strategy:
+      matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            runner: [self-hosted, Linux, X64, icicle]
+            skip-rust: ""
+            skip-golang: "false"
+            initial-support: false
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-rust: "--skip poseidon --skip pow --skip merkle"
+            skip-golang: "true"
+            initial-support: true
+    steps:
+    - name: Set backend branch name
+      run: |
+        if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+        echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+          echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+          echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+          echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+        fi
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - name: Checkout ${{ matrix.backend_upper }} backend
+      if: needs.check-changed-files.outputs.hash == 'true'
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+        path: ./icicle/backend/${{ matrix.backend }}
+        ssh-key: ${{ secrets[matrix.secret_key] }}
+        ref: ${{ env.BACKEND_BRANCH }}
+
+    - name: Build
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.hash == 'true'
+      run:  |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DHASH=ON -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake --build build
+    - name: Run C++ hash tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.hash == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        ctest --output-on-failure -R HashApiTest
+
+    - name: Run Rust hash tests
+      working-directory: ./wrappers/rust/icicle-hash
+      if: needs.check-changed-files.outputs.hash == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        cargo test --release --verbose -- ${{ matrix.skip-rust }}
+    - name: Setup go
+      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+    - name: Run Go hash and merkle tree tests
+      working-directory: ./wrappers/golang
+      if: needs.check-changed-files.outputs.hash == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_hash -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+        go test ./hash/tests -count=1 -failfast -p 2 -timeout 60m -v
+        go test ./merkle-tree/tests -count=1 -failfast -p 2 -timeout 60m -v
+
+  test-linux-runtime:
+    name: Test runtime with ${{ matrix.backend }}
+    runs-on: ${{ matrix.runner }}
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    continue-on-error: ${{ matrix.initial-support }}
+    strategy:
+      matrix:
+        backend: [cuda, metal]
+        include:
+          - backend: cuda
+            backend_upper: CUDA
+            secret_key: CUDA_PULL_KEY
+            runner: [self-hosted, Linux, X64, icicle]
+          - backend: metal
+            backend_upper: METAL
+            secret_key: METAL_PULL_KEY
+            runner: [self-hosted, Linux, X64, icicle, metal]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Checkout CUDA Backend
+      if: needs.check-changed-files.outputs.runtime == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ingonyama-zk/icicle-cuda-backend
+        path: ./icicle/backend/cuda
+        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
+        ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
+    - name: Build Runtime
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.runtime == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DINGO_CI_ENV=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
+        cmake --build build
+    - name: Run C++ Runtime Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        ctest --output-on-failure -R "DeviceApiTest"
+    - name: Run Rust Runtime Tests
+      working-directory: ./wrappers/rust/icicle-runtime
+      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        cargo test --release --verbose
+    - name: Setup go
+      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22.0'
+        cache: false
+    - name: Run Golang Runtime Tests
+      working-directory: ./wrappers/golang/runtime
+      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
+      run: |
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_device -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+        go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
