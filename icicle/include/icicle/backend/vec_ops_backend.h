@@ -775,6 +775,25 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  using JLProjectionImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input,
+    size_t input_size,
+    const std::byte* seed,
+    size_t seed_len,
+    const VecOpsConfig& cfg,
+    field_t* output,
+    size_t output_size)>;
+
+  void register_jl_projection(const std::string& deviceType, JLProjectionImpl impl);
+  #define REGISTER_JL_PROJECTION_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
+        register_jl_projection(DEVICE_TYPE, FUNC);                                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
 #endif // RING
 
 } // namespace icicle

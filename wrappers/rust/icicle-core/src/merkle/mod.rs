@@ -47,7 +47,7 @@ impl MerkleTreeConfig {
         Self {
             stream_handle: ptr::null_mut(),      // Default stream handle (synchronous).
             is_leaves_on_device: false,          // Default: leaves on host (CPU).
-            is_tree_on_device: false,            // Default: tree results on host (CPU).
+            is_tree_on_device: true,             // Default: tree results on device (GPU memory).
             is_async: false,                     // Default: synchronous execution.
             padding_policy: PaddingPolicy::None, // Default: no padding.
             ext: ConfigExtension::new(),         // Default: no backend-specific extensions.
