@@ -294,7 +294,7 @@ TYPED_TEST(FieldTest, SumcheckDataOnDevice)
   }
 }
 
-template<typename T>
+template <typename T>
 Symbol<T> user_defined_combine(const std::vector<Symbol<T>>& inputs)
 {
   const Symbol<T>& A = inputs[0];
@@ -371,8 +371,8 @@ TYPED_TEST(FieldTest, SumcheckUserDefinedCombine)
   }
 }
 
-template<typename T>
-Symbol<T>  max_allowed_degree_combine(const std::vector<Symbol<T>>& inputs)
+template <typename T>
+Symbol<T> max_allowed_degree_combine(const std::vector<Symbol<T>>& inputs)
 {
   const Symbol<T>& A = inputs[0];
   const Symbol<T>& B = inputs[1];
@@ -452,8 +452,8 @@ TYPED_TEST(FieldTest, SumcheckMaxAllowedDegreeCombine)
   }
 }
 
-template<typename T>
-Symbol<T>  max_allowed_nof_polys_comine(const std::vector<Symbol<T>>& inputs)
+template <typename T>
+Symbol<T> max_allowed_nof_polys_comine(const std::vector<Symbol<T>>& inputs)
 {
   const Symbol<T>& A = inputs[0];
   const Symbol<T>& B = inputs[1];
@@ -537,8 +537,11 @@ TYPED_TEST(FieldTest, SumcheckMaxAllowedNofPolys)
   }
 }
 
-template<typename T>
-Symbol<T> identity(const std::vector<Symbol<T>>& inputs) { return inputs[0]; }
+template <typename T>
+Symbol<T> identity(const std::vector<Symbol<T>>& inputs)
+{
+  return inputs[0];
+}
 
 TYPED_TEST(FieldTest, SumcheckDifferentTranscriptShouldFail)
 {
@@ -786,8 +789,11 @@ TYPED_TEST(FieldTest, SumcheckIdentity)
   }
 }
 
-template<typename T>
-Symbol<T> single_input(const std::vector<Symbol<T>>& inputs) { return Symbol<T>(T::from(2)) * inputs[0]; }
+template <typename T>
+Symbol<T> single_input(const std::vector<Symbol<T>>& inputs)
+{
+  return Symbol<T>(T::from(2)) * inputs[0];
+}
 
 TYPED_TEST(FieldTest, SumcheckSingleInputProgram)
 {
