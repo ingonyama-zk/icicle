@@ -436,6 +436,9 @@ impl MerkleTree {
             return Err(eIcicleError::InvalidPointer);
         }
 
+        let mut local_cfg = config.clone();
+        local_cfg.is_leaves_on_device = leaves.is_on_device();
+
         let proof = MerkleProof::new().unwrap();
         let byte_size = (leaves.len() * std::mem::size_of::<T>()) as u64;
         let result = unsafe {
@@ -445,7 +448,7 @@ impl MerkleTree {
                 byte_size,
                 leaf_idx as u64,
                 pruned_path,
-                config,
+                &local_cfg,
                 proof.handle,
             )
         };
