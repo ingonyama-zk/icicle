@@ -51,7 +51,9 @@ jobs:
     - name: Check rustfmt
       if: needs.check-changed-files.outputs.rust == 'true'
       working-directory: ./wrappers/rust
-      run: cargo fmt --all -- --check
+      run: |
+        rustup override set nightly
+        cargo fmt --all -- --check
 
   extract-cuda-backend-branch:
     uses: ./.github/workflows/extract-backend.yml
@@ -305,6 +307,7 @@ jobs:
           FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
         fi
 
+        rustup override set nightly
         cargo test --release $FEATURES -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
         # NOTE: phase2 is not needed here since it is specific for field tests
         cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
@@ -536,6 +539,8 @@ jobs:
         else
           FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
         fi
+
+        rustup override set nightly
         cargo test --release $FEATURES -- $SKIP_RUST_TESTS --skip phase2 --skip phase3 --skip phase4
         cargo test phase2 --release $FEATURES -- $SKIP_RUST_TESTS
         cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
@@ -641,6 +646,8 @@ jobs:
         else
           FEATURES="--no-default-features --features ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }}"
         fi
+
+        rustup override set nightly
         cargo test --release $FEATURES -- --skip phase2
         # NOTE: phase2 is not needed here since it is for specific field tests
     # TODO: Go tests
@@ -710,6 +717,8 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+
+        rustup override set nightly
         cargo test --release --verbose -- ${{ matrix.skip-rust }}
     - name: Setup go
       if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.golang == 'true'
@@ -773,6 +782,8 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+
+        rustup override set nightly
         cargo test --release --verbose
     - name: Setup go
       if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
