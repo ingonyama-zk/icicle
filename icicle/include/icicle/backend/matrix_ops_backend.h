@@ -56,17 +56,17 @@ namespace icicle {
       register_matrix_mult(DEVICE_TYPE, FUNC);                                                                         \
       return true;                                                                                                     \
     }();                                                                                                               \
-  } 
+  }
 
   void register_rq_matrix_mult(const std::string& deviceType, rqBinaryMatrixOpImpl impl);
 
-#define REGISTER_RQ_MATRIX_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                             \
+#define REGISTER_RQ_MATRIX_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                              \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_rq_matrix_mul) = []() -> bool {                                                           \
+    static bool UNIQUE(_reg_rq_matrix_mul) = []() -> bool {                                                            \
       register_rq_matrix_mult(DEVICE_TYPE, FUNC);                                                                      \
       return true;                                                                                                     \
     }();                                                                                                               \
-  } 
+  }
 
 #ifdef EXT_FIELD
   using extFieldMatrixOpImpl = std::function<eIcicleError(
@@ -108,4 +108,4 @@ namespace icicle {
     }
 #endif // RING
 
-} // namespace icicle 
+} // namespace icicle

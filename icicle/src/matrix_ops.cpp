@@ -52,49 +52,186 @@ namespace icicle {
   }
 #endif // RING
 
-  /*********************************** MATRIX MULTIPLICATION ***********************************/   
+  /*********************************** MATRIX MULTIPLICATION ***********************************/
   ICICLE_DISPATCHER_INST(MatrixMulDispatcher, matrix_mult, scalarBinaryMatrixOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, matrix_mult)(
-    const scalar_t* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const scalar_t* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig* config, scalar_t* mat_out)
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig* config,
+    scalar_t* mat_out)
   {
-    ICICLE_LOG_INFO << "FFI matrix_mult entry point called with dimensions: A(" << nof_rows_a << "x" << nof_cols_a 
+    ICICLE_LOG_INFO << "FFI matrix_mult entry point called with dimensions: A(" << nof_rows_a << "x" << nof_cols_a
                     << "), B(" << nof_rows_b << "x" << nof_cols_b << "), batch_size: " << config->batch_size;
     return MatrixMulDispatcher::execute(mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
   }
 
   template <>
   eIcicleError matrix_mult(
-    const scalar_t* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const scalar_t* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, scalar_t* mat_out)
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    scalar_t* mat_out)
   {
-    ICICLE_LOG_INFO << "matrix_mult template called with dimensions: A(" << nof_rows_a << "x" << nof_cols_a 
-                    << "), B(" << nof_rows_b << "x" << nof_cols_b << "), batch_size: " << config.batch_size;
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, matrix_mult)(mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
-  }       
+    ICICLE_LOG_INFO << "matrix_mult template called with dimensions: A(" << nof_rows_a << "x" << nof_cols_a << "), B("
+                    << nof_rows_b << "x" << nof_cols_b << "), batch_size: " << config.batch_size;
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, matrix_mult)(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+  }
 
-  /*********************************** RQ MATRIX MULTIPLICATION ***********************************/   
+  /*********************************** RQ MATRIX MULTIPLICATION ***********************************/
   ICICLE_DISPATCHER_INST(RqMatrixMulDispatcher, rq_matrix_mult, rqBinaryMatrixOpImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, rq_matrix_mult)(
     uint32_t d,
-    const scalar_t* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const scalar_t* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig* config, scalar_t* mat_out)
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig* config,
+    scalar_t* mat_out)
   {
-    ICICLE_LOG_INFO << "FFI rq_matrix_mult entry point called with d: " << d << ", dimensions: A(" << nof_rows_a << "x" << nof_cols_a 
-                    << "), B(" << nof_rows_b << "x" << nof_cols_b << "), batch_size: " << config->batch_size;
-    return RqMatrixMulDispatcher::execute(d, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
+    ICICLE_LOG_INFO << "FFI rq_matrix_mult entry point called with d: " << d << ", dimensions: A(" << nof_rows_a << "x"
+                    << nof_cols_a << "), B(" << nof_rows_b << "x" << nof_cols_b
+                    << "), batch_size: " << config->batch_size;
+    return RqMatrixMulDispatcher::execute(
+      d, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
   }
 
   template <>
   eIcicleError rq_matrix_mult(
     uint32_t d,
-    const scalar_t* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const scalar_t* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, scalar_t* mat_out)
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    scalar_t* mat_out)
   {
-    ICICLE_LOG_INFO << "rq_matrix_mult template called with d: " << d << ", dimensions: A(" << nof_rows_a << "x" << nof_cols_a 
-                    << "), B(" << nof_rows_b << "x" << nof_cols_b << "), batch_size: " << config.batch_size;
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, rq_matrix_mult)(d, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
-  }       
+    ICICLE_LOG_INFO << "rq_matrix_mult template called with d: " << d << ", dimensions: A(" << nof_rows_a << "x"
+                    << nof_cols_a << "), B(" << nof_rows_b << "x" << nof_cols_b
+                    << "), batch_size: " << config.batch_size;
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, rq_matrix_mult)(
+      d, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+  }
+
+#ifdef EXT_FIELD
+  // Extension field matrix multiplication
+  using extFieldBinaryMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const extension_t* in_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const extension_t* in_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    extension_t* out)>;
+
+  ICICLE_DISPATCHER_INST(ExtFieldMatrixMulDispatcher, extension_matrix_mult, extFieldBinaryMatrixOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_matrix_mult)(
+    const extension_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const extension_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig* config,
+    extension_t* mat_out)
+  {
+    ICICLE_LOG_INFO << "FFI extension_matrix_mult entry point called with dimensions: A(" << nof_rows_a << "x" 
+                    << nof_cols_a << "), B(" << nof_rows_b << "x" << nof_cols_b 
+                    << "), batch_size: " << config->batch_size;
+    return ExtFieldMatrixMulDispatcher::execute(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
+  }
+
+  template <>
+  eIcicleError matrix_mult(
+    const extension_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const extension_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    extension_t* mat_out)
+  {
+    ICICLE_LOG_INFO << "matrix_mult template called for extension_t with dimensions: A(" << nof_rows_a << "x" 
+                    << nof_cols_a << "), B(" << nof_rows_b << "x" << nof_cols_b 
+                    << "), batch_size: " << config.batch_size;
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_matrix_mult)(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+  }
+
+  // Extension field RQ matrix multiplication
+  using extRqBinaryMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    uint32_t d,
+    const extension_t* in_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const extension_t* in_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    extension_t* out)>;
+
+  ICICLE_DISPATCHER_INST(ExtRqMatrixMulDispatcher, extension_rq_matrix_mult, extRqBinaryMatrixOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_rq_matrix_mult)(
+    uint32_t d,
+    const extension_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const extension_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig* config,
+    extension_t* mat_out)
+  {
+    ICICLE_LOG_INFO << "FFI extension_rq_matrix_mult entry point called with d: " << d << ", dimensions: A(" 
+                    << nof_rows_a << "x" << nof_cols_a << "), B(" << nof_rows_b << "x" << nof_cols_b 
+                    << "), batch_size: " << config->batch_size;
+    return ExtRqMatrixMulDispatcher::execute(
+      d, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
+  }
+
+  template <>
+  eIcicleError rq_matrix_mult(
+    uint32_t d,
+    const extension_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const extension_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    extension_t* mat_out)
+  {
+    ICICLE_LOG_INFO << "rq_matrix_mult template called for extension_t with d: " << d << ", dimensions: A(" 
+                    << nof_rows_a << "x" << nof_cols_a << "), B(" << nof_rows_b << "x" << nof_cols_b 
+                    << "), batch_size: " << config.batch_size;
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_rq_matrix_mult)(
+      d, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+  }
+#endif // EXT_FIELD
+
+#ifdef RING
+  // Ring RNS matrix multiplication implementations would go here
+#endif // RING
+
 } // namespace icicle

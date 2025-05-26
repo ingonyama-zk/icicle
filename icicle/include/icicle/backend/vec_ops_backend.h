@@ -37,7 +37,6 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* out)>;
 
-
   using scalarBitReverseOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
 
@@ -200,9 +199,6 @@ namespace icicle {
       return true;                                                                                                     \
     }();                                                                                                               \
   }
-
-
-
 
   void register_scalar_bit_reverse(const std::string& deviceType, scalarBitReverseOpImpl);
 
