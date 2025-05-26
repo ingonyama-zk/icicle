@@ -633,6 +633,7 @@ jobs:
         RING=${{ matrix.ring.name }}
         RING_DIR=icicle-${RING//_/-}
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cd ./$RING_DIR
         FEATURES=""
         if [[ -z ${{ steps.feature_flags.outputs.RUST_TEST_FEATURES }} ]]; then
@@ -708,6 +709,7 @@ jobs:
       if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.rust == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cargo test --release --verbose -- ${{ matrix.skip-rust }}
     - name: Setup go
       if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.golang == 'true'
@@ -770,6 +772,7 @@ jobs:
       if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.rust == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
         cargo test --release --verbose
     - name: Setup go
       if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
