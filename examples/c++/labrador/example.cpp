@@ -14,26 +14,26 @@ constexpr size_t beta = 10; // TODO(Ash): set beta according to the protocol
 struct EqualityInstance {
   const size_t r;                   // Number of witness vectors
   const size_t n;                   // Dimension of each vector in Rq
-  std::vector<std::vector<Rq>> a;   // a[i][j] matrix over Rq (r x r matrix)
-  std::vector<std::vector<Rq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
-  Rq b;                             // Polynomial in Rq
+  std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Rq (r x r matrix)
+  std::vector<std::vector<Tq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
+  Tq b;                             // Polynomial in Rq
 
-  EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Rq>(r)), phi(r, std::vector<Rq>(n)), b() {}
+  EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
 };
 
 struct ConstZeroInstance {
   const size_t r;                   // Number of witness vectors
   const size_t n;                   // Dimension of each vector in Rq
-  std::vector<std::vector<Rq>> a;   // a[i][j] matrix over Rq (r x r matrix)
-  std::vector<std::vector<Rq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
-  Rq b;                             // Polynomial in Rq
+  std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Tq (r x r matrix)
+  std::vector<std::vector<Tq>> phi; // phi[i] vector over Tq (r vectors, each of size n)
+  Tq b;                             // Polynomial in Rq
 
-  ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Rq>(r)), phi(r, std::vector<Rq>(n)), b() {}
+  ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
 };
 
 struct LabradorInstance {
   const size_t r;                                        // Number of witness vectors
-  const size_t n;                                        // Dimension of each vector in Rq
+  const size_t n;                                        // Dimension of each vector in Tq
   double beta;                                           // Norm bound
   std::vector<EqualityInstance> equality_constraints;    // K EqualityInstances
   std::vector<ConstZeroInstance> const_zero_constraints; // L ConstZeroInstances
@@ -79,10 +79,7 @@ eIcicleError setup(/*TODO params*/)
 }
 
 eIcicleError base_prover(
-  const LabradorInstance lab_inst,
-  const std::vector<std::byte> ajtai_seed,
-  const std::vector<Rq> S,
-  std::vector<Zq> proof)
+  LabradorInstance lab_inst, const std::vector<std::byte> ajtai_seed, const std::vector<Rq> S, std::vector<Zq> proof)
 {
   // Step 1: Pack the Witnesses into a Matrix S
 
@@ -138,7 +135,7 @@ eIcicleError base_prover(
 
   // Step 6: Convert T to T_tilde
   uint32_t base1 = 1 << 16;
-  size_t l1 = std::log2(get_q<Zq>()) / std::log2(base1) + 1;
+  size_t l1 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base1));
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
 
@@ -150,8 +147,10 @@ eIcicleError base_prover(
   ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
 
   std::vector<Rq> g;
+  std::vector<Tq> g_hat;
   for (size_t i = 0; i < r; i++) {
     for (size_t j = i; j < r; j++) {
+      g_hat.push_back(G_hat[i * r + j]);
       Rq temp;
       ICICLE_CHECK(ntt(G_hat[i * r + j].coeffs, d, NTTDir::kInverse, default_ntt_config<Zq>(), temp.coeffs));
       g.push_back(temp);
@@ -160,7 +159,7 @@ eIcicleError base_prover(
 
   // Step 8: Convert g to g_tilde
   uint32_t base2 = 1 << 16;
-  size_t l2 = std::log2(get_q<Zq>()) / std::log2(base2) + 1;
+  size_t l2 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base2));
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
 
@@ -172,7 +171,7 @@ eIcicleError base_prover(
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
   const size_t kappa1 = 1 << 4;
-  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * r * (r + 1) * l2 / 2);
+  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * (r * (r + 1) / 2) * l2);
 
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
@@ -194,7 +193,7 @@ eIcicleError base_prover(
   ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_ntt.data(), l1 * r * kappa, 1, {}, v1.data()));
   // v2 = C@g_tilde
   ICICLE_CHECK(
-    matmul(C.data(), kappa1, r * (r + 1) * l2 / 2, g_tilde_ntt.data(), r * (r + 1) * l2 / 2, 1, {}, v2.data()));
+    matmul(C.data(), kappa1, (r * (r + 1) / 2) * l2, g_tilde_ntt.data(), (r * (r + 1) / 2) * l2, 1, {}, v2.data()));
   for (size_t i = 0; i < kappa1; i++) {
     // TODO: can we flatten v1, v2 as Zq and run this?
     vector_add(v1[i].coeffs, v2[i].coeffs, d, {}, u1[i].coeffs);
@@ -260,7 +259,7 @@ eIcicleError base_prover(
   // Step 15, 16: already done
 
   // Step 17: Create polynomial vectors from JL matrix rows
-  std::vector<Rq> r_ijk(r * JL_out * n), q_ijk(r * JL_out * n);
+  std::vector<Rq> R(r * JL_out * n), Q(r * JL_out * n);
   // indexes into a multidim array of dim = r X JL_out X n
   auto rq_index = [n](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
 
@@ -281,15 +280,15 @@ eIcicleError base_prover(
         {},     // config
         R_ij.data()));
 
-      // Convert R_ij to polynomial vector r_ijk[i,j,:] ∈ R_q^n
+      // Convert R_ij to polynomial vector R[i,j,:] ∈ R_q^n
       for (size_t k = 0; k < n; k++) {
         // Use R_ij[k*d:(k+1)*d] as coefficients for polynomial k
         for (size_t coeff = 0; coeff < d; coeff++) {
-          r_ijk[rq_index(i, j, k)].coeffs[coeff] = R_ij[k * d + coeff];
+          R[rq_index(i, j, k)].coeffs[coeff] = R_ij[k * d + coeff];
         }
 
-        // Define q_ijk[k] = conjugation(r_ijk[k])
-        q_ijk[rq_index(i, j, k)] = conjugate(r_ijk[rq_index(i, j, k)]);
+        // Define Q[k] = conjugation(R[k])
+        Q[rq_index(i, j, k)] = conjugate(R[rq_index(i, j, k)]);
       }
     }
   }
@@ -297,7 +296,7 @@ eIcicleError base_prover(
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
   // For 0 ≤ k < ceil(128/log(q)), sample the following random vectors:
   const size_t L = lab_inst.const_zero_constraints.size();
-  const size_t num_aggregation_rounds = static_cast<size_t>(std::ceil(128.0 / std::log2(get_q<Zq>())));
+  const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
 
   std::vector<Zq> psi_k(num_aggregation_rounds * L), omega_k(num_aggregation_rounds * JL_out);
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
@@ -313,6 +312,117 @@ eIcicleError base_prover(
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
   ICICLE_CHECK(random_sampling<Zq>(omega_seed.data(), omega_seed.size(), false, {}, omega_k.data(), omega_k.size()));
+
+  // Step 19: Aggregate ConstZeroInstance constraints
+  // For every 0 ≤ k < ceil(128/log(q)) compute aggregated constraints
+
+  std::vector<Zq> msg3;
+  for (size_t k = 0; k < num_aggregation_rounds; k++) {
+    EqualityInstance new_constraint(r, n);
+
+    // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
+    for (size_t i = 0; i < r; i++) {
+      for (size_t j = 0; j < r; j++) {
+        Tq sum = Tq(); // Initialize to zero polynomial
+
+        for (size_t l = 0; l < L; l++) {
+          // Get psi^{(k)}(l) as scalar
+          Zq psi_scalar = psi_k[psi_index(k, l)];
+
+          // Get a_{ij}^{(l)} from const_zero_constraints
+          Tq a_ij_l = lab_inst.const_zero_constraints[l].a[i][j];
+
+          // Scalar multiply and add: sum += psi_scalar * a_ij_l
+          Tq temp;
+          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, a_ij_l.coeffs, d, {}, temp.coeffs));
+          ICICLE_CHECK(vector_add(sum.coeffs, temp.coeffs, d, {}, sum.coeffs));
+        }
+
+        new_constraint.a[i][j] = sum;
+      }
+    }
+
+    // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
+    for (size_t i = 0; i < r; i++) {
+      // First sum: over const_zero_constraints
+      for (size_t l = 0; l < L; l++) {
+        Zq psi_scalar = psi_k[psi_index(k, l)];
+
+        for (size_t m = 0; m < n; m++) {
+          Tq phi_il_m = lab_inst.const_zero_constraints[l].phi[i][m];
+
+          // phi_prime[i,m] += psi_scalar * phi_il_m
+          Tq temp;
+          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, phi_il_m.coeffs, d, {}, temp.coeffs));
+          ICICLE_CHECK(
+            vector_add(new_constraint.phi[i][m].coeffs, temp.coeffs, d, {}, new_constraint.phi[i][m].coeffs));
+        }
+      }
+
+      // Second sum: over JL projection rows (256 rows)
+      for (size_t l = 0; l < JL_out; l++) { // JL_out = 256
+        Zq omega_scalar = omega_k[omega_index(k, l)];
+
+        for (size_t m = 0; m < n; m++) {
+          // q_{il} is stored in Q[i][l][:]
+          Rq q_ilm = Q[rq_index(i, l, m)];
+          Tq q_ilm_hat;
+          ntt(q_ilm.coeffs, d, NTTDir::kForward, {}, q_ilm_hat.coeffs);
+
+          // phi_i_k[m] += omega_scalar * q_ilm
+          Tq temp;
+          ICICLE_CHECK(scalar_mul_vec(&omega_scalar, q_ilm_hat.coeffs, d, {}, temp.coeffs));
+          ICICLE_CHECK(
+            vector_add(new_constraint.phi[i][m].coeffs, temp.coeffs, d, {}, new_constraint.phi[i][m].coeffs));
+        }
+      }
+    }
+
+    // Compute B^{(k)} = (sum_{i<j} (a''_{ij}^{(k)} + a''_{ji}^{(k)}) * g_{ij} + sum_i a''_{ii}^{(k)} * g_{ii})
+    //                       + sum_i <phi'_i^{(k)}, s_i>
+
+    // First part: sum over g terms
+
+    std::vector<Tq> a_vec;
+    // shape a_vec like g
+    for (size_t i = 0; i < r; i++) {
+      for (size_t j = i; j < r; j++) {
+        if (i == j) {
+          a_vec.push_back(new_constraint.a[i][i]);
+        } else {
+          // Off-diagonal: (a''_{ij} + a''_{ji})
+          Tq a_ij = new_constraint.a[i][j];
+          Tq a_ji = new_constraint.a[j][i];
+          Tq temp;
+          ICICLE_CHECK(vector_add(a_ij.coeffs, a_ji.coeffs, d, {}, temp.coeffs));
+          a_vec.push_back(temp);
+        }
+      }
+    }
+
+    ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
+
+    // Second part: sum_i <phi'_i^{(k)}, s_i>
+    for (size_t i = 0; i < r; i++) {
+      // Compute inner product <phi'_i^{(k)}, s_i>
+      Tq prod;
+      ICICLE_CHECK(matmul(new_constraint.phi[i].data(), 1, n, &S_hat[i * n], n, 1, {}, &prod));
+      ICICLE_CHECK(vector_add(new_constraint.b.coeffs, prod.coeffs, d, {}, new_constraint.b.coeffs));
+    }
+
+    // Add the EqualityInstance to LabradorInstance
+    lab_inst.add_equality_constraint(new_constraint);
+
+    // Send B^(k) to the Verifier
+    msg3.insert(msg3.end(), new_constraint.b.coeffs, new_constraint.b.coeffs + d);
+  }
+
+  // Step 20: seed3 = hash(seed2, msg3)
+  // TODO: add serialization to msg3 and put them in the placeholder
+  std::vector<std::byte> seed3(hasher.output_size());
+  hasher.hash("Placeholder3", 12, {}, seed3.data());
+
+  proof.insert(proof.end(), msg3.begin(), msg3.end());
 
   return eIcicleError::SUCCESS;
 }
