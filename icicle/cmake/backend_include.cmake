@@ -23,6 +23,12 @@ if (CUDA_BACKEND)
     endif()
 endif()
 
+if (CUDA_PQC_BACKEND)
+  string(TOLOWER "${CUDA_PQC_BACKEND}" CUDA_PQC_BACKEND_LOWER)      
+  message(STATUS "Building CUDA-PQC backend")
+  add_subdirectory(backend/cuda_pqc)
+endif()
+
 if (METAL_BACKEND)
   string(TOLOWER "${METAL_BACKEND}" METAL_BACKEND_LOWER)
   if (METAL_BACKEND_LOWER STREQUAL "local")
