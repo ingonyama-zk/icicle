@@ -501,7 +501,7 @@ jobs:
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.field == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
       run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
+        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}"
         if [ "${{ matrix.backend }}" = "metal" ] && [ ! -z "${{ matrix.field.metal-skip-cpp-field-specific }}" ]; then
           export SKIP_TESTS="${{ matrix.skip-cpp-all-fields }}|${{ matrix.field.metal-skip-cpp-field-specific }}"
