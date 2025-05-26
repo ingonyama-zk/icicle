@@ -3,13 +3,6 @@ name: Check Changed Files
 on:
   workflow_call:
     outputs:
-      docs:
-        description: "Flag for if docs files changed"
-        value: ${{ jobs.check-changed-files.outputs.docs }}
-      examples:
-        description: "Flag for if examples files changed"
-        value: ${{ jobs.check-changed-files.outputs.examples }}
-      
       cpp:
         description: "Flag for if C++ code files changed"
         value: ${{ jobs.check-changed-files.outputs.cpp }}
@@ -71,10 +64,7 @@ jobs:
   check-changed-files:
     name: Check Changed Files
     runs-on: ubuntu-22.04
-    outputs:
-      docs: ${{ steps.changed_files.outputs.docs }}
-      examples: ${{ steps.changed_files.outputs.examples }}
-      
+    outputs:      
       cpp: ${{ steps.changed_files.outputs.cpp }}
       rust: ${{ steps.changed_files.outputs.rust }}
       go: ${{ steps.changed_files.outputs.go }}
@@ -107,9 +97,6 @@ jobs:
       id: changed_files
       # https://github.com/tj-actions/changed-files#outputs-
       run: |
-        echo "docs=${{ steps.changed-files-yaml.outputs.docs_any_modified }}" >> "$GITHUB_OUTPUT"
-        echo "examples=${{ steps.changed-files-yaml.outputs.examples_any_modified }}" >> "$GITHUB_OUTPUT"
-
         echo "cpp=${{ steps.changed-files-yaml.outputs.cpp_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "rust=${{ steps.changed-files-yaml.outputs.rust_any_modified }}" >> "$GITHUB_OUTPUT"
         echo "go=${{ steps.changed-files-yaml.outputs.go_any_modified }}" >> "$GITHUB_OUTPUT"

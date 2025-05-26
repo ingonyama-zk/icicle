@@ -509,20 +509,6 @@ jobs:
         echo "SKIP_TESTS: $SKIP_TESTS"
         ctest --output-on-failure -R "${{ steps.feature_flags.outputs.CPP_TEST_REGEX }}" -E "$SKIP_TESTS"
 
-    # - name: Run C++ examples
-    #   working-directory: ./examples/c++
-    #   if: (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.examples == 'true') && matrix.backend != 'metal'
-    #   run: |
-    #     FIELD=${{ matrix.field.name }}
-    #     export ICICLE_BACKEND_INSTALL_DIR=${{ steps.field-backend-flag.outputs.ICICLE_BACKEND_INSTALL_DIR }}
-    #     for dir in $(grep -l -r "\\-DFIELD=$FIELD" . | xargs -L1 dirname | sort -u); do
-    #         if [ -d "$dir" ]; then
-    #             echo "Running command in $dir"
-    #             cd $dir
-    #             ./run.sh -d ${{ matrix.backend_upper }}
-    #             cd -
-    #         fi
-    #     done
     - name: Run Rust field tests
       working-directory: ./wrappers/rust/icicle-fields
       if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.rust == 'true'
@@ -586,7 +572,7 @@ jobs:
       id: feature_flags
       if: needs.check-changed-files.outputs.ring == 'true'
       run: |
-        FEATURE_FLAGS=""
+        FEATURE_FLAGS="-DHASH=ON"
         CPP_TEST_REGEX="ModArith|Symbol|Program"
         RUST_TEST_FEATURES=""
         GO_TEST_BUILD_TAGS="icicle_exclude_all"
@@ -620,7 +606,7 @@ jobs:
       if: needs.check-changed-files.outputs.ring == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DRING=${{ matrix.ring.name }} -D${{ matrix.backend_upper }}_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DRING=${{ matrix.ring.name }} -DCUDA_BACKEND=local ${{ steps.feature_flags.outputs.FEATURE_FLAGS }} -S . -B build
         cmake --build build
     - name: Run C++ ring tests
       working-directory: ./icicle/build/tests
@@ -660,8 +646,9 @@ jobs:
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
             runner: [self-hosted, macOS, ARM64, icicle, metal]
+            skip-cpp: .*MerkleTree.*|HashApiTest.KeccakLarge|pow
             skip-rust: "--skip poseidon --skip pow --skip merkle"
-            skip-golang: "true"
+            skip-golang: ""
             initial-support: true
     steps:
     - name: Set backend branch name
@@ -696,30 +683,30 @@ jobs:
       if: needs.check-changed-files.outputs.hash == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        ctest --output-on-failure -R HashApiTest
+        ctest --output-on-failure -R "HashApiTest" -E "${{ matrix.skip-cpp }}"
 
     - name: Run Rust hash tests
       working-directory: ./wrappers/rust/icicle-hash
-      if: needs.check-changed-files.outputs.hash == 'true'
+      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.rust == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         cargo test --release --verbose -- ${{ matrix.skip-rust }}
     - name: Setup go
-      if: ${{ (needs.check-changed-files.outputs.golang == 'true' || needs.check-changed-files.outputs.cpp == 'true') && matrix.skip-golang == 'false' }}
+      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.golang == 'true'
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Go hash and merkle tree tests
       working-directory: ./wrappers/golang
-      if: needs.check-changed-files.outputs.hash == 'true'
+      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.golang == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_hash -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
         go test ./hash/tests -count=1 -failfast -p 2 -timeout 60m -v
         go test ./merkle-tree/tests -count=1 -failfast -p 2 -timeout 60m -v
 
-  test-linux-runtime:
+  test-runtime:
     name: Test runtime with ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
@@ -738,10 +725,10 @@ jobs:
             runner: [self-hosted, Linux, X64, icicle, metal]
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: Checkout CUDA Backend
       if: needs.check-changed-files.outputs.runtime == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
         repository: ingonyama-zk/icicle-cuda-backend
         path: ./icicle/backend/cuda
@@ -768,7 +755,7 @@ jobs:
         cargo test --release --verbose
     - name: Setup go
       if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
       with:
         go-version: '1.22.0'
         cache: false

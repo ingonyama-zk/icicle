@@ -366,19 +366,8 @@ go:
   - '!wrappers/golang/internal/generator/main.go'
   - '!wrappers/golang/internal/build-libs.go'
 
-docs:
-  - docs/docs/**/*
-  - docs/src/**/*
-  - docs/static/**/*
-  - docs/versioned_docs/**/*
-  - docs/versioned_sidebars/**/*
-  - docs/docusaurus.config.js
-  - docs/package.json
-  - docs/sidebar.ts
-  - docs/versions.json
-
-examples:
-  - examples/**/*
-
 cpu-backend:
   - icicle/backend/cpu/**/*
+
+backend-api:
+  - icicle/include/icicle/backend/**/*
