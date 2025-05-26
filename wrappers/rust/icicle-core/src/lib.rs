@@ -6,6 +6,7 @@ pub mod fri;
 pub mod hash;
 pub mod merkle;
 pub mod msm;
+pub mod norm;
 pub mod ntt;
 pub mod pairing;
 pub mod polynomials;
