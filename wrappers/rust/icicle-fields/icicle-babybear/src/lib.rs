@@ -1,11 +1,17 @@
 pub mod field;
+#[cfg(feature = "fri")]
 pub mod fri;
 mod merkle; // tests only
+#[cfg(feature = "ntt")]
 pub mod ntt;
+#[cfg(feature = "ntt")]
 pub mod polynomials;
+#[cfg(feature = "poseidon")]
 pub mod poseidon;
+#[cfg(feature = "poseidon2")]
 pub mod poseidon2;
 pub mod program;
+#[cfg(feature = "sumcheck")]
 pub mod sumcheck;
 pub mod symbol;
 pub mod vec_ops;
