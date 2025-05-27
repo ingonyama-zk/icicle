@@ -47,7 +47,7 @@ struct LabradorInstance {
   void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
 };
 
-Rq conjugate(const Rq& p)
+Rq icicle::labrador::conjugate(const Rq& p)
 {
   Rq result;
   // Copy constant term (index 0)
@@ -423,6 +423,65 @@ eIcicleError base_prover(
   hasher.hash("Placeholder3", 12, {}, seed3.data());
 
   proof.insert(proof.end(), msg3.begin(), msg3.end());
+
+  // Step 21: Sample random polynomial vectors α using seed3
+  // Let K be the number of EqualityInstances in the LabradorInstance
+  const size_t K = lab_inst.equality_constraints.size();
+
+  std::vector<Tq> alpha_hat(K);
+  std::vector<std::byte> alpha_seed(seed3);
+  alpha_seed.push_back(std::byte('1'));
+  ICICLE_CHECK(random_sampling<Tq>(alpha_seed.data(), alpha_seed.size(), false, {}, alpha_hat.data(), K));
+
+  // Step 22: Say the EqualityInstances in LabradorInstance are:
+  // [{a_{ij}^{(k)}; 0 ≤ i,j < r} ⊂ T_q, b^{(k)} ∈ T_q, {φ_i^{(k)} : 0 ≤ i < r} ⊂ T_q^n : 0 ≤ k < K]
+
+  // For 0 ≤ i,j < r, the Prover computes a''_{ij}:
+  std::vector<std::vector<Tq>> a_final(r, std::vector<Tq>(r, Tq()));
+  for (size_t i = 0; i < r; i++) {
+    for (size_t j = 0; j < r; j++) {
+      // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)} (multiplication in T_q)
+      for (size_t k = 0; k < K; k++) {
+        // Get a_{ij}^{(k)} from equality constraint k (already in T_q)
+        Tq a_ij_k = lab_inst.equality_constraints[k].a[i][j];
+
+        // Multiply by α_k and add to sum (T_q operations)
+        Tq temp;
+        ICICLE_CHECK(vector_mul(alpha_hat[k].coeffs, a_ij_k.coeffs, d, {}, temp.coeffs));
+        ICICLE_CHECK(vector_add(a_final[i][j].coeffs, temp.coeffs, d, {}, a_final[i][j].coeffs));
+      }
+    }
+  }
+
+  // For 0 ≤ i < r, the Prover computes φ'_i:
+  std::vector<std::vector<Tq>> phi_final(r, std::vector<Tq>(n, Tq()));
+  for (size_t i = 0; i < r; i++) {
+    for (size_t m = 0; m < n; m++) {
+      // φ'_i[m] = ∑_{k=0}^{K-1} α_k * φ_i^{(k)}[m] (multiplication in T_q)
+      for (size_t k = 0; k < K; k++) {
+        // Get φ_i^{(k)}[m] from equality constraint k (already in T_q)
+        Tq phi_i_k_m = lab_inst.equality_constraints[k].phi[i][m];
+
+        // Multiply by α_k and add to sum (T_q operations)
+        Tq temp;
+        ICICLE_CHECK(vector_mul(alpha_hat[k].coeffs, phi_i_k_m.coeffs, d, {}, temp.coeffs));
+        ICICLE_CHECK(vector_add(phi_final[i][m].coeffs, temp.coeffs, d, {}, phi_final[i][m].coeffs));
+      }
+    }
+  }
+
+  // The Prover also computes b':
+  Tq b_final;
+
+  for (size_t k = 0; k < K; k++) {
+    // Get b^{(k)} from equality constraint k (already in T_q)
+    Tq b_k = lab_inst.equality_constraints[k].b;
+
+    // Multiply by α_k and add to sum (T_q operations)
+    Tq temp;
+    ICICLE_CHECK(vector_mul(alpha_hat[k].coeffs, b_k.coeffs, d, {}, temp.coeffs));
+    ICICLE_CHECK(vector_add(b_final.coeffs, temp.coeffs, d, {}, b_final.coeffs));
+  }
 
   return eIcicleError::SUCCESS;
 }

@@ -71,6 +71,12 @@ namespace icicle {
       const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig& cfg, Rq* output, size_t output_size);
 
     //------------------------------------------------------------------------------
+    // Polynomial conjugation
+    //------------------------------------------------------------------------------
+
+    /// @brief takes input polynomial p and returns its conjugate polynomial
+    Rq conjugate(const Rq& p);
+    //------------------------------------------------------------------------------
     // Johnson–Lindenstrauss Projection
     //------------------------------------------------------------------------------
 
