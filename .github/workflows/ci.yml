@@ -546,14 +546,14 @@ jobs:
         cargo test phase3 --release $FEATURES -- $SKIP_RUST_TESTS
         cargo test phase4 --release $FEATURES -- $SKIP_RUST_TESTS
     - name: Setup go
-      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.golang == 'true' && matrix.skip-golang-all-curves == 'false'
+      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-fields == 'false'
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Golang field tests
       working-directory: ./wrappers/golang/fields
-      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.golang == 'true' && matrix.skip-golang-all-curves == 'false'
+      if: needs.check-changed-files.outputs.field == 'true' && needs.check-changed-files.outputs.go == 'true' && matrix.skip-golang-all-fields == 'false'
       run: |
         FIELD=${{ matrix.field.name }}
         FIELD_DIR=$(echo ${{ matrix.field.name }} | sed -e 's/_//g')
@@ -721,14 +721,14 @@ jobs:
         rustup override set nightly
         cargo test --release --verbose -- ${{ matrix.skip-rust }}
     - name: Setup go
-      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.golang == 'true'
+      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.go == 'true'
       uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Go hash and merkle tree tests
       working-directory: ./wrappers/golang
-      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.golang == 'true'
+      if: needs.check-changed-files.outputs.hash == 'true' && needs.check-changed-files.outputs.go == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_hash -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
@@ -786,14 +786,14 @@ jobs:
         rustup override set nightly
         cargo test --release --verbose
     - name: Setup go
-      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
+      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true'
       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
       with:
         go-version: '1.22.0'
         cache: false
     - name: Run Golang Runtime Tests
       working-directory: ./wrappers/golang/runtime
-      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.golang == 'true'
+      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true'
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_device -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
