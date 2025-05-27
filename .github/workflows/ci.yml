@@ -751,7 +751,7 @@ jobs:
           - backend: metal
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
-            runner: [self-hosted, Linux, X64, icicle, metal]
+            runner: [self-hosted, macOS, ARM64, icicle, metal]
             initial-support: true
     steps:
     - name: Checkout Repo
