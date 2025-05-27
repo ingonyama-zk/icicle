@@ -27,6 +27,7 @@ public:
 
 TEST_F(PqcTest, MLkemTest)
 {
+  ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
   // TODO: test all security categories on all devices, with batch
   using namespace ml_kem;
   constexpr SecurityCategory category = SecurityCategory::KYBER_512;

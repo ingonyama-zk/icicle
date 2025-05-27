@@ -30,15 +30,15 @@ namespace icicle {
         std::byte* shared_secrets)>;
 
       void register_ml_kem_keygen(const std::string& deviceType, MlKemKeygenImpl impl);
-      void register_ml_kem_encapsulate(const std::string& deviceType, MlKemEncapsulateImpl impl);
-      void register_ml_kem_decapsulate(const std::string& deviceType, MlKemDecapsulateImpl impl);
+      void register_ml_kem_encaps(const std::string& deviceType, MlKemEncapsulateImpl impl);
+      void register_ml_kem_decaps(const std::string& deviceType, MlKemDecapsulateImpl impl);
 
-#define REGISTER_ML_KEM_BACKEND(DEVICE_TYPE, KEYGEN, ENCAP, DECAP)                                                     \
+#define REGISTER_ML_KEM_BACKEND(DEVICE_TYPE, KEYGEN, ENCAPS, DECAPS)                                                   \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_balanced_recomposition) = []() -> bool {                                                   \
       register_ml_kem_keygen(DEVICE_TYPE, KEYGEN);                                                                     \
-      register_ml_kem_encapsulate(DEVICE_TYPE, ENCAP);                                                                 \
-      register_ml_kem_decapsulate(DEVICE_TYPE, DECAP);                                                                 \
+      register_ml_kem_encaps(DEVICE_TYPE, ENCAPS);                                                                     \
+      register_ml_kem_decaps(DEVICE_TYPE, DECAPS);                                                                     \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

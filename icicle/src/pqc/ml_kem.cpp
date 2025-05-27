@@ -9,8 +9,8 @@ namespace icicle {
     namespace ml_kem {
 
       ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher, ml_kem_keygen, MlKemKeygenImpl);
-      ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher, ml_kem_encapsulate, MlKemKeygenImpl);
-      ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher, ml_kem_decapsualte, MlKemDecapsulateImpl);
+      ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher, ml_kem_encaps, MlKemKeygenImpl);
+      ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher, ml_kem_decaps, MlKemDecapsulateImpl);
 
       eIcicleError keygen(
         SecurityCategory category,
