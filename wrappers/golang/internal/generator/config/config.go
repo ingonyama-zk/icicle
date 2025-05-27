@@ -10,7 +10,6 @@ type FieldData struct {
 	SupportsNTT       bool
 	SupportsPoseidon  bool
 	SupportsPoseidon2 bool
-	ROU               int
 }
 
 type CurveData struct {

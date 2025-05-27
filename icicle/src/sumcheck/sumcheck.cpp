@@ -15,4 +15,18 @@ namespace icicle {
     Sumcheck<scalar_t> sumcheck{backend};
     return sumcheck;
   }
+
+#ifdef EXT_FIELD
+  ICICLE_DISPATCHER_INST(SumcheckExtDispatcher, extension_sumcheck_factory, SumcheckExtFieldImpl<extension_t>);
+
+  template <>
+  Sumcheck<extension_t> create_sumcheck()
+  {
+    std::shared_ptr<SumcheckBackend<extension_t>> backend;
+    ICICLE_CHECK(SumcheckExtDispatcher::execute(backend));
+    Sumcheck<extension_t> sumcheck{backend};
+    return sumcheck;
+  }
+#endif // EXT_FIELD
+
 } // namespace icicle

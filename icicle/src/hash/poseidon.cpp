@@ -7,7 +7,7 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(CreatePoseidonHasherDispatcher, create_poseidon, CreatePoseidonImpl);
 
   template <>
-  Hash create_poseidon_hash<scalar_t>(unsigned t, const scalar_t* domain_tag)
+  Hash create_poseidon_hash<scalar_t>(unsigned t, const scalar_t* domain_tag, unsigned input_size)
   {
     // Assert that t is valid. Ideally would like to return an eIcicleError but the API doesn't let us do it
     constexpr std::array<int, 4> validTValues = {3, 5, 9, 12};
@@ -18,7 +18,7 @@ namespace icicle {
     }
 
     std::shared_ptr<HashBackend> backend;
-    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(t, domain_tag, backend));
+    ICICLE_CHECK(CreatePoseidonHasherDispatcher::execute(t, domain_tag, input_size, backend));
     Hash poseidon{backend};
     return poseidon;
   }

@@ -13,14 +13,30 @@
 #include "icicle/curves/projective.h"
 #include "icicle/curves/curve_config.h"
 #include "icicle/msm.h"
+#include "icicle/decision_tree.h"
 #include "taskflow/taskflow.hpp"
 #include "icicle/backend/msm_config.h"
+#include "icicle/utils/platform.h"
+
+#include "decision_tree_params/msm_nof_cores_tree_params.h"
+#include "decision_tree_params/msm_c_tree_amd_params.h"
+#include "decision_tree_params/msm_c_tree_intel_params.h"
+#include "decision_tree_params/msm_c_tree_arm_params.h"
+#ifdef G2_ENABLED
+  #include "decision_tree_params/msm_c_tree_intel_params_g2.h"
+  #include "decision_tree_params/msm_c_tree_amd_params_g2.h"
+  #include "decision_tree_params/msm_c_tree_arm_params_g2.h"
+#endif
+
 #ifdef MEASURE_MSM_TIMES
   #include "icicle/utils/timer.hpp"
 #endif
 
 using namespace icicle;
 using namespace curve_config;
+
+#define NOF_FEATURES_C_TREE      3
+#define FIXED_SCALAR_SIZE_C_TREE 254
 
 template <typename A, typename P>
 class Msm
@@ -29,9 +45,9 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
-    // TBD: for sall size MSM - prefer double and add
+    m_cpu_vendor = get_cpu_vendor();
+    // TBD: for small size MSM - prefer double and add
     calc_optimal_parameters();
-
     // Resize the thread buckets according to optimal parameters
     m_workers_buckets.resize(m_nof_workers);
     m_workers_buckets_busy.resize(m_nof_workers);
@@ -42,22 +58,103 @@ public:
   }
 
   // run MSM based on pippenger algorithm
-  void run_msm(const scalar_t* scalars, const A* bases, P* results)
+  void run_msm(const scalar_t* scalars, const A* bases, P* results, bool last_task_in_batch)
   {
     phase1_populate_buckets(scalars, bases);
 
+    wait_last_task_completed();
+
     phase2_collapse_segments();
 
-    // TBD: start the next task in batch in parallel to phase 3
-    phase3_final_accumulator(results);
+    if (last_task_in_batch) {
+      phase3_final_accumulator(results);
+      m_phase3_thread = nullptr;
+    } else {
+      m_phase3_thread = std::make_unique<std::thread>(std::thread(&Msm::phase3_final_accumulator, this, results));
+    }
+  }
+
+  // Calculate the optimal number of workers based on the problem size, config and machine parameters.
+  static unsigned get_optimal_nof_workers(
+    const MSMConfig& config, const int msm_size, const uint32_t scalar_size, const uint32_t precompute_factor)
+  {
+    uint32_t nof_cores =
+      config.ext && config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
+        ? config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS) // number of threads provided by config
+        : std::thread::hardware_concurrency();                    // check machine properties
+    if (nof_cores <= 0) {
+      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
+      nof_cores = 1;
+    }
+
+    // Use decision tree to predict the optimal number of workers
+    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_CORES_TREE;
+    double pcm = (double)precompute_factor;
+    double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
+    double features[NOF_FEATURES_CORES_TREE] = {msm_log_size, pcm};
+    DecisionTree nof_cores_tree = DecisionTree(
+      NOF_FEATURES_CORES_TREE, thresholds_cores_tree, indices_cores_tree, left_childs_cores_tree,
+      right_childs_cores_tree, class_predictions_cores_tree);
+    unsigned nof_workers = nof_cores_tree.predict(features);
+    return std::min(nof_cores, nof_workers);
   }
 
   // Calculate the optimal C based on the problem size, config and machine parameters.
-  static unsigned get_optimal_c(unsigned msm_size, const MSMConfig& config)
+  static unsigned get_optimal_c(
+    const MSMConfig& config,
+    const int msm_size,
+    const uint32_t scalar_size,
+    const uint32_t precompute_factor,
+    const uint32_t nof_workers,
+    const std::string& cpu_vendor)
   {
-    // TBD: optimize - condsider nof workers, do experiments
-    int optimal_c = config.c > 0 ? config.c :                                                   // c given by config.
-                      std::max((int)(0.7 * std::log2(msm_size * config.precompute_factor)), 8); // Empirical formula
+    if (config.c > 0) { return config.c; }
+
+    // Use decision tree to predict the optimal c
+    double field_size_to_fixed_size_ratio = scalar_size / FIXED_SCALAR_SIZE_C_TREE;
+    double pcm = (double)precompute_factor;
+    double msm_log_size = (double)std::log2(msm_size * field_size_to_fixed_size_ratio);
+    double nof_cores = (double)nof_workers;
+    double features[NOF_FEATURES_C_TREE] = {msm_log_size, nof_cores, pcm};
+    unsigned optimal_c;
+    if (std::is_same_v<A, affine_t>) {
+      if (cpu_vendor == "ARM") {
+        DecisionTree arm_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_ARM, thresholds_c_tree_arm, indices_c_tree_arm, left_childs_c_tree_arm,
+          right_childs_c_tree_arm, class_predictions_c_tree_arm);
+        optimal_c = arm_tree.predict(features);
+      } else if (cpu_vendor == "Intel") {
+        DecisionTree intel_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_INTEL, thresholds_c_tree_intel, indices_c_tree_intel, left_childs_c_tree_intel,
+          right_childs_c_tree_intel, class_predictions_c_tree_intel);
+        optimal_c = intel_tree.predict(features);
+      } else { // AMD
+        DecisionTree amd_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_AMD, thresholds_c_tree_amd, indices_c_tree_amd, left_childs_c_tree_amd,
+          right_childs_c_tree_amd, class_predictions_c_tree_amd);
+        optimal_c = amd_tree.predict(features);
+      }
+    }
+#ifdef G2_ENABLED
+    else if (std::is_same_v<A, g2_affine_t>) {
+      if (cpu_vendor == "ARM") {
+        DecisionTree arm_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_ARM_G2, thresholds_c_tree_arm_g2, indices_c_tree_arm_g2, left_childs_c_tree_arm_g2,
+          right_childs_c_tree_arm_g2, class_predictions_c_tree_arm_g2);
+        optimal_c = arm_tree.predict(features);
+      } else if (cpu_vendor == "Intel") {
+        DecisionTree intel_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_INTEL_G2, thresholds_c_tree_intel_g2, indices_c_tree_intel_g2,
+          left_childs_c_tree_intel_g2, right_childs_c_tree_intel_g2, class_predictions_c_tree_intel_g2);
+        optimal_c = intel_tree.predict(features);
+      } else { // AMD
+        DecisionTree amd_tree = DecisionTree(
+          NOF_FEATURES_C_TREE_AMD_G2, thresholds_c_tree_amd_g2, indices_c_tree_amd_g2, left_childs_c_tree_amd_g2,
+          right_childs_c_tree_amd_g2, class_predictions_c_tree_amd_g2);
+        optimal_c = amd_tree.predict(features);
+      }
+    }
+#endif
     return optimal_c;
   }
 
@@ -87,6 +184,8 @@ private:
   uint32_t m_precompute_factor;  // the number of bases precomputed for each scalar
   uint32_t m_segment_size;       // segments size for phase 2.
   uint32_t m_nof_workers;        // number of threads in current machine
+  std::string m_cpu_vendor;      // CPU vendor
+  std::unique_ptr<std::thread> m_phase3_thread = nullptr;
 
   // per worker:
   std::vector<std::vector<Bucket>> m_workers_buckets;    // all buckets used by the worker
@@ -97,23 +196,13 @@ private:
   // set the parameters based on the problem size and the machine properties
   void calc_optimal_parameters()
   {
-    // set nof workers
-    m_nof_workers = std::thread::hardware_concurrency();
-    if (m_config.ext && m_config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)) {
-      m_nof_workers = m_config.ext && m_config.ext->has(CpuBackendConfig::CPU_NOF_THREADS)
-                        ? m_config.ext->get<int>(CpuBackendConfig::CPU_NOF_THREADS)
-                        :                                    // number of threads provided by config
-                        std::thread::hardware_concurrency(); // check machine properties
-    }
-    if (m_nof_workers <= 0) {
-      ICICLE_LOG_WARNING << "Unable to detect number of hardware supported threads - fixing it to 1\n";
-      m_nof_workers = 1;
-    }
+    m_precompute_factor = m_config.precompute_factor;
+    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+    m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor);
 
     // phase 1 properties
-    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
-    m_c = get_optimal_c(m_msm_size, m_config);
-    m_precompute_factor = m_config.precompute_factor;
+    m_c = get_optimal_c(m_config, m_msm_size, m_scalar_size, m_precompute_factor, m_nof_workers, m_cpu_vendor);
+
     m_nof_buckets_module = ((m_scalar_size - 1) / (m_config.precompute_factor * m_c)) + 1;
     m_bm_size = 1 << (m_c - 1);
     const uint64_t last_bm_size =
@@ -134,6 +223,12 @@ private:
     m_taskflow.clear();
   }
 
+  // if there is a phase3 task runninf, wait for it to complete
+  void wait_last_task_completed()
+  {
+    if (m_phase3_thread) { m_phase3_thread->join(); }
+  }
+
   // phase 1: Each worker process a portion of the inputs and populate its buckets
   void phase1_populate_buckets(const scalar_t* scalars, const A* bases)
   {
@@ -142,7 +237,7 @@ private:
 
     // Run workers to build their buckets on a subset of the scalars and bases
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
-      m_taskflow.emplace([=]() {
+      m_taskflow.emplace([&, worker_i]() {
         const int scalars_start_idx = worker_msm_size * worker_i;
         const int bases_start_idx = scalars_start_idx * m_precompute_factor;
         const int cur_worker_msm_size = std::min(worker_msm_size, m_msm_size - worker_i * worker_msm_size);
@@ -176,27 +271,23 @@ private:
       if (negate_p_and_s) { scalar = scalar_t::neg(scalar); } // TBD: inplace
 
       for (int j = 0; j < m_precompute_factor; j++) {
-        // Handle required preprocess of base P
-        A base = m_config.are_points_montgomery_form ? A::from_montgomery(bases[m_precompute_factor * i + j])
-                                                     : bases[m_precompute_factor * i + j]; // TDB: avoid copy
+        // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
+        const A& base = bases[m_precompute_factor * i + j];
         if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
-        A base_neg = A::neg(base);
+        const A base_neg = A::neg(base);
 
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
 
           uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + carry;
-          int bkt_idx = 0; // TBD: move inside if and change to ( = ? : )
+
           // For the edge case of curr_coeff = c (limb=c-1, carry=1) use the sign bit mask
           if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
             // Remove sign to infer the bkt idx.
             carry = curr_coeff > m_bm_size;
-            if (!carry) {
-              bkt_idx = m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
-            } else {
-              bkt_idx = m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit);
-            }
+            int bkt_idx = carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
+                                : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
 
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
             if (buckets_busy[bkt_idx]) {
@@ -217,18 +308,33 @@ private:
     }
   }
 
+  //   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
+  //   void phase2_collapse_segments()
+  //   {
+  //     for (int worker_i = 0; worker_i < 10;
+  //       worker_i++) { // TBD: divide the work among m_nof_workers only.
+  //       // Each thread is responsible for a sinעle thread
+  //       m_taskflow.emplace([&, worker_i]() {
+  //         for (int segment_idx = worker_i*16; segment_idx < worker_i*16+16; segment_idx++) {
+  //         const uint64_t bucket_start = segment_idx * m_segment_size;
+  //         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
+  //         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
+  //         }
+  //       });
+  //     }
+  //     run_workers_and_wait();
+  //   }
+
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
   {
-    uint64_t bucket_start = 0;
-    for (int segment_idx = 0; segment_idx < m_segments.size();
-         segment_idx++) { // TBD: divide the work among m_nof_workers only.
+    for (int segment_idx = 0; segment_idx < m_segments.size(); segment_idx++) {
       // Each thread is responsible for a sinעle thread
-      m_taskflow.emplace([=]() {
+      m_taskflow.emplace([&, segment_idx]() {
+        const uint64_t bucket_start = segment_idx * m_segment_size;
         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
       });
-      bucket_start += m_segment_size;
     }
     run_workers_and_wait();
   }
@@ -341,7 +447,8 @@ eIcicleError cpu_msm(
   for (int batch_i = 0; batch_i < config.batch_size; batch_i++) {
     const int batch_start_idx = msm_size * batch_i;
     const int bases_start_idx = config.are_points_shared_in_batch ? 0 : batch_start_idx;
-    msm.run_msm(&scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i]);
+    msm.run_msm(
+      &scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i], batch_i + 1 == config.batch_size);
   }
   return eIcicleError::SUCCESS;
 }
@@ -364,11 +471,12 @@ eIcicleError cpu_msm_precompute_bases(
   const MSMConfig& config,
   A* output_bases) // Pre assigned?
 {
-  int c = Msm<A, P>::get_optimal_c(nof_bases, config);
-
   const int precompute_factor = config.precompute_factor;
-  const bool is_mont = config.are_points_montgomery_form;
   const uint scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+  const std::string cpu_vendor = get_cpu_vendor();
+  const uint32_t nof_workers = Msm<A, P>::get_optimal_nof_workers(config, nof_bases, scalar_size, precompute_factor);
+  const int c = Msm<A, P>::get_optimal_c(config, nof_bases, scalar_size, precompute_factor, nof_workers, cpu_vendor);
+  const bool is_mont = config.are_points_montgomery_form;
   const unsigned int num_bms_no_precomp = (scalar_size - 1) / c + 1;
   const unsigned int shift = c * ((num_bms_no_precomp - 1) / precompute_factor + 1);
   for (int i = 0; i < nof_bases; i++) {

@@ -6,7 +6,7 @@
 
 <p align="center">
   <br>
-  <img alt="ICICLE" width="300" height="300" src="ICICLELOGONEW.png"/>
+  <img alt="ICICLE" width="300" height="300" src="docs/static/img/ICICLELOGONEW.png"/>
 </p>
 
 <p align="center">

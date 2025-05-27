@@ -74,13 +74,14 @@ namespace icicle {
                 eIcicleError err = sha3_hash_buffer(
                   8 * digest_size_in_bytes /*=bitsize*/, is_keccak, input + batch_idx * single_input_size,
                   single_input_size, output + batch_idx * digest_size_in_bytes);
-
                 if (err != eIcicleError::SUCCESS) { return err; }
               }
+              return eIcicleError::SUCCESS;
             });
         }
         executor.run(taskflow).wait();
       }
+      // TODO Aviad: check if threads had errors
       return eIcicleError::SUCCESS;
     }
 

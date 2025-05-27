@@ -191,12 +191,30 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE Wide mul_wide(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
-    FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
-    FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
-    FWide prod_of_sums = FF::mul_wide(xs.c0 + xs.c1, ys.c0 + ys.c1);
-    FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
-    nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
-    return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+#ifdef __CUDA_ARCH__
+    constexpr bool do_karatsuba = FF::TLC >= 8; // The basic multiplier size is 1 limb, Karatsuba is more efficient when
+                                                // the multiplication is 8 times wider or more
+#else
+    constexpr bool do_karatsuba = FF::TLC >= 16; // The basic multiplier size is 2 limbs, Karatsuba is more efficient
+                                                 // when the multiplication is 8 times wider or more
+#endif
+
+    if constexpr (do_karatsuba) {
+      FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
+      FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
+      FWide prod_of_sums = FF::mul_wide(xs.c0 + xs.c1, ys.c0 + ys.c1);
+      FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
+      return Wide{real_prod + nonresidue_times_im, prod_of_sums - real_prod - imaginary_prod};
+    } else {
+      FWide real_prod = FF::mul_wide(xs.c0, ys.c0);
+      FWide imaginary_prod = FF::mul_wide(xs.c1, ys.c1);
+      FWide ab = FF::mul_wide(xs.c0, ys.c1);
+      FWide ba = FF::mul_wide(xs.c1, ys.c0);
+      FWide nonresidue_times_im = mul_by_nonresidue(imaginary_prod);
+      nonresidue_times_im = CONFIG::nonresidue_is_negative ? FWide::neg(nonresidue_times_im) : nonresidue_times_im;
+      return Wide{real_prod + nonresidue_times_im, ab + ba};
+    }
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
@@ -218,11 +236,22 @@ public:
       FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1)};
   }
 
-  template <class T2>
-  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const T2& ys)
+  friend HOST_DEVICE_INLINE ComplexExtensionField
+  operator*(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
   {
     Wide xy = mul_wide(xs, ys);
     return reduce(xy);
+  }
+
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const ComplexExtensionField& xs, const FF& ys)
+  {
+    Wide xy = mul_wide(xs, ys);
+    return reduce(xy);
+  }
+
+  friend HOST_DEVICE_INLINE ComplexExtensionField operator*(const FF& ys, const ComplexExtensionField& xs)
+  {
+    return xs * ys;
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const ComplexExtensionField& xs, const ComplexExtensionField& ys)
@@ -398,7 +427,12 @@ public:
   /* Receives an array of bytes and its size and returns extension field element. */
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
-    if (nof_bytes < 2 * sizeof(FF)) { ICICLE_LOG_ERROR << "Input size is too small"; }
+    if (nof_bytes < 2 * sizeof(FF)) {
+#ifndef __CUDACC__
+      ICICLE_LOG_ERROR << "Input size is too small";
+#endif // __CUDACC__
+      return ComplexExtensionField::zero();
+    }
     return ComplexExtensionField{FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF))};
   }
 };

@@ -26,7 +26,6 @@ fn main() {
     config
         .define("FIELD", "goldilocks")
         .define("HASH", "ON")
-        .define("EXT_FIELD", "OFF")  // Disable extension field support
         .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
 
     // build (or pull and build) cuda backend if feature enabled.

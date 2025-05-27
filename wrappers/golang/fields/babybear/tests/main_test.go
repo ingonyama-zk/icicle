@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/core"
-	babybear "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear"
 	ntt "github.com/ingonyama-zk/icicle/v3/wrappers/golang/fields/babybear/ntt"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/internal/test_helpers"
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"
@@ -19,8 +18,7 @@ const (
 )
 
 func initDomain(cfg core.NTTInitDomainConfig) runtime.EIcicleError {
-	rouIcicle := babybear.ScalarField{}
-	rouIcicle.FromUint32(1461624142)
+	rouIcicle := ntt.GetRootOfUnity(uint64(1 << largestTestSize))
 	e := ntt.InitDomain(rouIcicle, cfg)
 	return e
 }

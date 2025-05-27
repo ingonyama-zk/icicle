@@ -136,6 +136,12 @@ func testNttBatch(suite *suite.Suite) {
 	}
 }
 
+func testGetRootOfUnity(suite *suite.Suite) {
+	n := uint64(1 << largestTestSize)
+	rou := ntt.GetRootOfUnity(n)
+	suite.NotNil(rou, "GetRootOfUnity returned nil")
+}
+
 type NTTTestSuite struct {
 	suite.Suite
 }
@@ -145,6 +151,7 @@ func (s *NTTTestSuite) TestNTT() {
 	s.Run("TestNTT", testWrapper(&s.Suite, testNtt))
 	s.Run("TestNttDeviceAsync", testWrapper(&s.Suite, testNttDeviceAsync))
 	s.Run("TestNttBatch", testWrapper(&s.Suite, testNttBatch))
+	s.Run("TestGetRootOfUnity", testWrapper(&s.Suite, testGetRootOfUnity))
 }
 
 func TestSuiteNTT(t *testing.T) {

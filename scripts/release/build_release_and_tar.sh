@@ -8,7 +8,7 @@ ICICLE_OS=${2:-unknown_os}              # Default to "unknown_os" if not set
 ICICLE_CUDA_VERSION=${3:-cuda_unknown} # Default to "cuda_unknown" if not set
 
 # List of fields and curves
-fields=("babybear" "stark252" "m31" "koalabear")
+fields=("babybear" "stark252" "m31" "koalabear" "goldilocks")
 curves=("bn254" "bls12_381" "bls12_377" "bw6_761" "grumpkin")
 
 cd /
@@ -21,7 +21,7 @@ for field in "${fields[@]}"; do
     mkdir -p build && rm -rf build/*
     # Configure, build, and install
     # Precompile SASS for modern architectures (Turing, Ampere, etc.) and include PTX fallback (?)
-    cmake -S icicle -B build -G Ninja -DFIELD=$field -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86"
+    cmake -S icicle -B build -G Ninja -DFIELD=$field -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86;89"
     cmake --build build     # build
     cmake --install build   # install
 done
@@ -33,7 +33,7 @@ for curve in "${curves[@]}"; do
     mkdir -p build && rm -rf build/*
     # Configure, build, and install
     # Precompile SASS for modern architectures (Turing, Ampere, etc.) and include PTX fallback (?)
-    cmake -S icicle -B build -G Ninja -DCURVE=$curve -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86"
+    cmake -S icicle -B build -G Ninja -DCURVE=$curve -DCUDA_BACKEND=local -DCMAKE_INSTALL_PREFIX=install_dir/icicle -DCMAKE_BUILD_TYPE=Release -DCUDA_ARCH="75;80;86;89"
     cmake --build build     # build
     cmake --install build   # install
 done

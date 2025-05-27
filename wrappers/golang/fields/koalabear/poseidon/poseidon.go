@@ -19,7 +19,7 @@ func NewHasher(t uint64, domainTag *koalabear.ScalarField) (hash.Hasher, runtime
 		cDomainTag = (*C.scalar_t)(unsafe.Pointer(domainTag.AsPointer()))
 	}
 
-	handle := C.koalabear_create_poseidon_hasher(cT, cDomainTag)
+	handle := C.koalabear_create_poseidon_hasher(cT, cDomainTag, 0)
 
 	if handle == nil {
 		return hash.Hasher{}, runtime.UnknownError

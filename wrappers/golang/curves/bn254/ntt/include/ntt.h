@@ -14,7 +14,7 @@ typedef struct NTTInitDomainConfig NTTInitDomainConfig;
 int bn254_ntt(const scalar_t* input, int size, int dir, NTTConfig* config, scalar_t* output);
 int bn254_ntt_init_domain(scalar_t* primitive_root, NTTInitDomainConfig* ctx);
 int bn254_ntt_release_domain();
-int* bn254_get_root_of_unity(size_t size);
+int bn254_get_root_of_unity(size_t size, scalar_t* output);
 
 #ifdef __cplusplus
 }

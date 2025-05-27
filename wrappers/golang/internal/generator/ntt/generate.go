@@ -12,7 +12,7 @@ var nttTemplates = map[string]string{
 	"header": "ntt/templates/ntt.h.tmpl",
 }
 
-func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string, rou int, withDomain bool, fieldNoDomain, fieldNoDomainPrefix string) {
+func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string, withDomain bool, fieldNoDomain, fieldNoDomainPrefix string) {
 	baseImportPathNoDomain := ""
 	if !withDomain {
 		baseImportPathNoDomain = path.Join(baseDir, additionalDirPath)
@@ -25,7 +25,6 @@ func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string
 		WithDomain             bool
 		BaseImportPath         string
 		GnarkImport            string
-		ROU                    int
 		FieldNoDomain          string
 		FieldNoDomainPrefix    string
 		BaseImportPathNoDomain string
@@ -36,7 +35,6 @@ func Generate(baseDir, additionalDirPath, field, fieldPrefix, gnarkImport string
 		withDomain,
 		baseDir,
 		gnarkImport,
-		rou,
 		fieldNoDomain,
 		fieldNoDomainPrefix,
 		baseImportPathNoDomain,

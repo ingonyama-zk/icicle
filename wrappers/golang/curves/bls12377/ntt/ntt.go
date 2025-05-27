@@ -38,9 +38,11 @@ func GetDefaultNttConfig() core.NTTConfig[[bls12_377.SCALAR_LIMBS]uint32] {
 }
 
 func GetRootOfUnity(size uint64) bls12_377.ScalarField {
-	cRes := C.bls12_377_get_root_of_unity((C.size_t)(size))
 	var res bls12_377.ScalarField
-	res.FromLimbs(*(*[]uint32)(unsafe.Pointer(cRes)))
+	cErr := C.bls12_377_get_root_of_unity((C.size_t)(size), (*C.scalar_t)(unsafe.Pointer(&res)))
+	if runtime.EIcicleError(cErr) != runtime.Success {
+		panic("Failed to get root of unity")
+	}
 	return res
 }
 

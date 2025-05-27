@@ -28,7 +28,10 @@ function(handle_ring TARGET)
     src/program/program_c_api.cpp
     src/symbol/symbol_api.cpp
     src/balanced_decomposition.cpp
+    src/norm.cpp
+    src/jl_projection.cpp
   )
+  target_link_libraries(${TARGET} PRIVATE icicle_hash) # Random sampling APIs depend on hashing
 endfunction()
 
 function(handle_ntt TARGET FEATURE_LIST)
@@ -124,7 +127,7 @@ endfunction()
 function(handle_fri TARGET FEATURE_LIST)
   if(FRI AND "FRI" IN_LIST FEATURE_LIST)
     target_compile_definitions(${TARGET} PUBLIC FRI=${FRI})
-    target_sources(${TARGET} PRIVATE src/fri/fri.cpp)
+    target_sources(${TARGET} PRIVATE src/fri/fri.cpp src/fri/fri_c_api.cpp)
     target_link_libraries(${TARGET} PRIVATE icicle_hash)
     set(FRI ON CACHE BOOL "Enable FRI feature" FORCE)
   else()

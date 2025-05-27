@@ -1,6 +1,21 @@
-
 #include "test_mod_arithmetic_api.h"
 #include "icicle/balanced_decomposition.h"
+#include "icicle/jl_projection.h"
+#include "icicle/norm.h"
+#include "icicle/fields/field_config.h"
+#include "icicle/fields/field.h"
+
+using namespace field_config;
+using namespace icicle;
+
+using uint128_t = __uint128_t;
+
+// Helper function for norm checking
+static uint64_t abs_centered(uint64_t val, uint64_t q)
+{
+  if (val > q / 2) { val = q - val; }
+  return val;
+}
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -230,4 +245,501 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
       balanced_decomposition::recompose(decomposed.data(), decomposed_size, 1 /*=base*/, cfg, input.data(), size));
 
   } // device loop
+}
+
+TEST_F(RingTestBase, JLProjectionTest)
+{
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  const size_t N = 1 << 16;       // Input vector size
+  const size_t output_size = 256; // JL projected size
+  const int max_trials = 10; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
+                             // we allow repeating the check a few times.
+
+  std::vector<field_t> input(N);
+  std::vector<field_t> output(output_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL lemma
+  // won't hold.
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& x : input) {
+    uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+    x = field_t::from(val);
+  }
+
+  auto norm_squared = [&](const std::vector<field_t>& v) -> double {
+    double sum = 0.0;
+    for (const auto& x : v) {
+      const int64_t val = *reinterpret_cast<const int64_t*>(&x);
+      const int64_t centered = (val > q / 2) ? val - q : val; // Convert to signed representative
+      sum += static_cast<double>(centered) * static_cast<double>(centered);
+    }
+    return sum;
+  };
+
+  const double input_norm = std::sqrt(norm_squared(input));
+  ASSERT_GT(input_norm, 0.0) << "Input norm is zero, invalid for JL test";
+
+  const auto cfg = VecOpsConfig{};
+  for (auto device : s_registered_devices) {
+    if (device != "CPU") continue; // TODO implement for CUDA too
+    ICICLE_CHECK(icicle_set_device(device));
+    std::stringstream timer_label;
+    timer_label << "JL-projection [device=" << device << "]";
+
+    bool passed = false;
+    for (int trial = 0; trial < max_trials; ++trial) {
+      std::byte seed[32];
+      for (auto& b : seed) {
+        b = static_cast<std::byte>(rand_uint_32b() % 256);
+      }
+
+      START_TIMER(projection);
+      ICICLE_CHECK(jl_projection(input.data(), input.size(), seed, sizeof(seed), cfg, output.data(), output.size()));
+      END_TIMER(projection, timer_label.str().c_str(), true);
+
+      const double output_norm = std::sqrt(norm_squared(output));
+      ASSERT_GT(output_norm, 0.0) << "JL projection output norm is zero (trial " << trial << ")";
+
+      const double bound = std::sqrt(128.0) * input_norm;
+      passed = (output_norm <= bound);
+
+      ICICLE_LOG_INFO << "Input norm = " << input_norm << ", Output norm = " << output_norm
+                      << ", Ratio = " << (output_norm / input_norm) << ", Bound = " << bound
+                      << ", Passed = " << (passed ? "true" : "false");
+      if (passed) break;
+    }
+
+    ASSERT_TRUE(passed) << "JL projection norm exceeded sqrt(128)*input_norm in all " << max_trials << " trials";
+  }
+}
+
+TEST_F(RingTestBase, NormBounded)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  auto input = std::vector<field_t>(size);
+
+  for (size_t i = 0; i < size; ++i) {
+    int32_t val = rand_uint_32b();
+    if (val > square_root) { val = val % square_root; }
+    input[i] = field_t::from(val);
+  }
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    bool output;
+
+    // Test L2 norm
+    {
+      uint128_t actual_norm_squared = 0;
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val = abs_centered(*(int64_t*)&input[i], q);
+        actual_norm_squared += static_cast<uint64_t>(val) * static_cast<uint64_t>(val);
+      }
+
+      uint64_t bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) + 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L2 norm check failed with bound " << bound << " on device " << device;
+
+      bound = static_cast<uint64_t>(std::sqrt(actual_norm_squared)) - 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::L2, bound, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L2 norm check should fail with bound " << bound << " on device " << device;
+    }
+
+    // Test L-infinity norm
+    {
+      // Compute actual L-infinity norm
+      uint64_t actual_norm = 0;
+      for (size_t i = 0; i < size; ++i) {
+        uint64_t val = abs_centered(*(int64_t*)&input[i], q);
+        actual_norm = std::max(actual_norm, val);
+      }
+
+      // Test with bound just above actual norm
+      uint64_t bound = actual_norm + 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L-infinity norm check failed with bound " << bound << " on device " << device;
+
+      // Test with bound just below actual norm
+      bound = actual_norm - 1;
+      ICICLE_CHECK(norm::check_norm_bound(input.data(), size, eNormType::LInfinity, bound, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L-infinity norm check should fail with bound " << bound << " on device " << device;
+    }
+
+    // Test error cases
+    {
+      field_t* nullptr_field_t = nullptr;
+      bool* nullptr_bool = nullptr;
+
+      // Test null input
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(nullptr_field_t, size, eNormType::L2, 100, VecOpsConfig{}, &output));
+
+      // Test null output
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(input.data(), size, eNormType::L2, 100, VecOpsConfig{}, nullptr_bool));
+
+      // Test zero size
+      ASSERT_NE(
+        eIcicleError::SUCCESS, norm::check_norm_bound(input.data(), 0, eNormType::L2, 100, VecOpsConfig{}, &output));
+
+      // Test with values exceeding sqrt(q)
+      auto invalid_input = std::vector<field_t>(size);
+      invalid_input[0] = field_t::from(square_root + 1);
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_bound(invalid_input.data(), size, eNormType::L2, 100, VecOpsConfig{}, &output));
+    }
+  }
+}
+
+TEST_F(RingTestBase, NormRelative)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  auto input_a = std::vector<field_t>(size);
+  auto input_b = std::vector<field_t>(size);
+
+  for (size_t i = 0; i < size; ++i) {
+    int32_t val_a = rand_uint_32b() % (square_root / 4);
+    int32_t val_b = rand_uint_32b() % square_root;
+    input_a[i] = field_t::from(val_a);
+    input_b[i] = field_t::from(val_b);
+  }
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    bool output;
+
+    // Test L2 norm
+    {
+      uint128_t norm_a_squared = 0;
+      uint128_t norm_b_squared = 0;
+
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
+        norm_a_squared += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
+        norm_b_squared += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
+      }
+
+      uint64_t passing_scale =
+        static_cast<uint64_t>(std::sqrt(static_cast<double>(norm_a_squared) / static_cast<double>(norm_b_squared))) + 1;
+
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::L2, passing_scale, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L2 relative norm check failed with scale " << passing_scale << " on device " << device;
+
+      uint64_t failing_scale = passing_scale - 1;
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::L2, failing_scale, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L2 relative norm check should fail with scale " << failing_scale << " on device "
+                           << device;
+    }
+
+    // Test L-infinity norm
+    {
+      int64_t max_abs_a = 0;
+      int64_t max_abs_b = 0;
+
+      for (size_t i = 0; i < size; ++i) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i], q);
+        max_abs_a = std::max(max_abs_a, val_a);
+        max_abs_b = std::max(max_abs_b, val_b);
+      }
+
+      // Calculate scale that should make the check pass
+      uint64_t passing_scale =
+        static_cast<uint64_t>(static_cast<double>(max_abs_a) / static_cast<double>(max_abs_b)) + 1;
+
+      // Test with scale that should pass
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::LInfinity, passing_scale, VecOpsConfig{}, &output));
+      ASSERT_TRUE(output) << "L-infinity relative norm check failed with scale " << passing_scale << " on device "
+                          << device;
+
+      // Test with scale that should fail
+      uint64_t failing_scale = passing_scale - 1;
+      ICICLE_CHECK(norm::check_norm_relative(
+        input_a.data(), input_b.data(), size, eNormType::LInfinity, failing_scale, VecOpsConfig{}, &output));
+      ASSERT_FALSE(output) << "L-infinity relative norm check should fail with scale " << failing_scale << " on device "
+                           << device;
+    }
+
+    // Test error cases
+    {
+      field_t* nullptr_field_t = nullptr;
+      bool* nullptr_bool = nullptr;
+
+      // Test null input_a
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(nullptr_field_t, input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+
+      // Test null input_b
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), nullptr_field_t, size, eNormType::L2, 2, VecOpsConfig{}, &output));
+
+      // Test null output
+      ASSERT_NE(
+        eIcicleError::SUCCESS, norm::check_norm_relative(
+                                 input_a.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, nullptr_bool));
+
+      // Test zero size
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(input_a.data(), input_b.data(), 0, eNormType::L2, 2, VecOpsConfig{}, &output));
+
+      // Test with values exceeding sqrt(q)
+      auto invalid_input = std::vector<field_t>(size);
+      invalid_input[0] = field_t::from(square_root + 1);
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(
+          invalid_input.data(), input_b.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+      ASSERT_NE(
+        eIcicleError::SUCCESS,
+        norm::check_norm_relative(
+          input_a.data(), invalid_input.data(), size, eNormType::L2, 2, VecOpsConfig{}, &output));
+    }
+  }
+}
+
+TEST_F(RingTestBase, NormBoundedBatch)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  const size_t batch_size = 4;
+
+  auto input_a = std::vector<field_t>(size * batch_size);
+
+  for (size_t i = 0; i < size * batch_size; ++i) {
+    input_a[i] = field_t::from(rand_uint_32b() % square_root);
+  }
+
+  // Test L2 norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint128_t* actual_norm = new uint128_t[batch_size];
+    for (size_t i = 0; i < batch_size; ++i) {
+      actual_norm[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        actual_norm[i] += static_cast<uint64_t>(val) * static_cast<uint64_t>(val);
+      }
+    }
+
+    uint64_t max_bound = 0;
+    uint64_t min_bound = std::numeric_limits<uint64_t>::max();
+    for (size_t i = 0; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, static_cast<uint64_t>(std::sqrt(actual_norm[i])));
+      min_bound = std::min(min_bound, static_cast<uint64_t>(std::sqrt(actual_norm[i])));
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::L2, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L2 norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::L2, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L2 norm check should fail for batch " << i << " on device " << device;
+    }
+
+    delete[] output;
+  }
+
+  // Test L-infinity norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint64_t* actual_max_abs = new uint64_t[batch_size];
+    for (size_t i = 0; i < batch_size; ++i) {
+      actual_max_abs[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        actual_max_abs[i] = std::max(actual_max_abs[i], static_cast<uint64_t>(val));
+      }
+    }
+
+    uint64_t max_bound = 0;
+    uint64_t min_bound = std::numeric_limits<uint64_t>::max();
+    for (size_t i = 0; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, actual_max_abs[i]);
+      min_bound = std::min(min_bound, actual_max_abs[i]);
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::LInfinity, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L-infinity norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(norm::check_norm_bound(input_a.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L-infinity norm check should fail for batch " << i << " on device " << device;
+    }
+
+    delete[] output;
+    delete[] actual_max_abs;
+  }
+}
+
+TEST_F(RingTestBase, NormRelativeBatch)
+{
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+
+  auto square_root = static_cast<uint32_t>(std::sqrt(q));
+
+  const size_t size = 1 << 10;
+  const size_t batch_size = 4;
+
+  auto input_a = std::vector<field_t>(size * batch_size);
+  auto input_b = std::vector<field_t>(size * batch_size);
+
+  for (size_t i = 0; i < size * batch_size; ++i) {
+    input_a[i] = field_t::from(rand_uint_32b() % square_root);
+    input_b[i] = field_t::from(rand_uint_32b() % square_root);
+  }
+
+  // Test L2 norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint128_t* norm_a_squared = new uint128_t[batch_size];
+    uint128_t* norm_b_squared = new uint128_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      norm_a_squared[i] = 0;
+      norm_b_squared[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i * size + j], q);
+        norm_a_squared[i] += static_cast<uint128_t>(val_a) * static_cast<uint128_t>(val_a);
+        norm_b_squared[i] += static_cast<uint128_t>(val_b) * static_cast<uint128_t>(val_b);
+      }
+    }
+
+    uint128_t* passing_scale = new uint128_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      passing_scale[i] = static_cast<uint128_t>(
+                           std::sqrt(static_cast<double>(norm_a_squared[i]) / static_cast<double>(norm_b_squared[i]))) +
+                         1;
+    }
+
+    uint128_t max_bound = passing_scale[0];
+    uint128_t min_bound = passing_scale[0];
+    for (size_t i = 1; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, passing_scale[i]);
+      min_bound = std::min(min_bound, passing_scale[i]);
+    }
+
+    ICICLE_CHECK(
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L2 relative norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(
+      norm::check_norm_relative(input_a.data(), input_b.data(), size, eNormType::L2, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L2 relative norm check should fail for batch " << i << " on device " << device;
+    }
+  }
+
+  // Test L-infinity norm
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    bool* output = new bool[batch_size];
+    VecOpsConfig cfg = VecOpsConfig{};
+    cfg.batch_size = batch_size;
+
+    uint64_t* max_abs_a = new uint64_t[batch_size];
+    uint64_t* max_abs_b = new uint64_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      max_abs_a[i] = 0;
+      max_abs_b[i] = 0;
+      for (size_t j = 0; j < size; ++j) {
+        int64_t val_a = abs_centered(*(int64_t*)&input_a[i * size + j], q);
+        int64_t val_b = abs_centered(*(int64_t*)&input_b[i * size + j], q);
+        max_abs_a[i] = std::max(max_abs_a[i], static_cast<uint64_t>(val_a));
+        max_abs_b[i] = std::max(max_abs_b[i], static_cast<uint64_t>(val_b));
+      }
+    }
+
+    uint64_t* passing_scale = new uint64_t[batch_size];
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      passing_scale[i] = static_cast<uint64_t>(max_abs_a[i]) / static_cast<uint64_t>(max_abs_b[i]) + 1;
+    }
+
+    uint64_t max_bound = passing_scale[0];
+    uint64_t min_bound = passing_scale[0];
+    for (size_t i = 1; i < batch_size; ++i) {
+      max_bound = std::max(max_bound, passing_scale[i]);
+      min_bound = std::min(min_bound, passing_scale[i]);
+    }
+
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::LInfinity, max_bound + 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_TRUE(output[i]) << "L-infinity relative norm check should pass for batch " << i << " on device " << device;
+    }
+
+    ICICLE_CHECK(norm::check_norm_relative(
+      input_a.data(), input_b.data(), size, eNormType::LInfinity, min_bound - 1, cfg, output));
+
+    for (size_t i = 0; i < batch_size; ++i) {
+      ASSERT_FALSE(output[i]) << "L-infinity relative norm check should fail for batch " << i << " on device "
+                              << device;
+    }
+  }
 }

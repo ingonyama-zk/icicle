@@ -12,11 +12,13 @@ repository.workspace = true
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 icicle-hash = { workspace = true }
+serde = "1.0.219"
 
 [dev-dependencies]
 criterion = "0.3"
 serial_test = "3.0.0"
 lambdaworks-math = "0.6.0"
+serde_json = "1.0.140"
 
 [build-dependencies]
 cmake = "0.1.50"
