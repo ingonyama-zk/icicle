@@ -1,5 +1,5 @@
 #include "icicle/backend/pqc/ml_kem_backend.h"
-
+#include "cuda_ml_kem_device_code.cuh"
 namespace icicle {
   namespace pqc {
     namespace ml_kem {
@@ -12,6 +12,7 @@ namespace icicle {
         std::byte* public_keys,
         std::byte* secret_keys)
       {
+        ml_kem_keygen_kernel_stub<<<1, 32>>>();
         return eIcicleError::API_NOT_IMPLEMENTED;
       }
 
