@@ -24,7 +24,7 @@ endif()
 option(BUILD_TESTS "Build unit test2s. Default=OFF" OFF)
 # Backends: typically CPU is built into the frontend, the rest are DSOs loaded at runtime from installation
 option(CPU_BACKEND "Build CPU backend. Default=ON" ON)
-option(CUDA_PQC_BACKEND "Build CUDA-PQC backend. Default=ON" OFF)
+option(CUDA_PQC_BACKEND "Build CUDA-PQC backend. Default=OFF" OFF)
 # To enable building backends, use the following options: (note they are in private repos)
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend or `local` if under icicle/backend/cuda. Default=OFF" OFF)
 option(METAL_BACKEND "Branch/commit to pull for METAL backend or `local` if under icicle/backend/metal. Default=OFF" OFF)
