@@ -8,12 +8,41 @@ namespace icicle {
   namespace pqc {
     namespace ml_kem {
 
-      //
       ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher, ml_kem_keygen, MlKemKeygenImpl);
       ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher, ml_kem_encapsulate, MlKemKeygenImpl);
       ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher, ml_kem_decapsualte, MlKemDecapsulateImpl);
 
-      // TODO implement the ml kem api with the dispatchers
+      eIcicleError keygen(
+        SecurityCategory category,
+        const std::byte* entropy,
+        MlKemConfig config,
+        std::byte* public_keys,
+        std::byte* secret_keys)
+      {
+        return MlKemKeygenDispatcher::execute(category, entropy, config, public_keys, secret_keys);
+      }
+
+      eIcicleError encapsulate(
+        SecurityCategory category,
+        const std::byte* public_keys,
+        MlKemConfig config,
+        std::byte* ciphertext,
+        std::byte* shared_secrets)
+      {
+        return MlKemEncapsulateDispatcher::execute(category, public_keys, config, ciphertext, shared_secrets);
+      }
+
+      eIcicleError decapsulate(
+        SecurityCategory category,
+        const std::byte* secret_keys,
+        const std::byte* ciphertext,
+        MlKemConfig config,
+        std::byte* shared_secrets)
+      {
+        return MlKemDecapsulateDispatcher::execute(category, secret_keys, ciphertext, config, shared_secrets);
+      }
+
+      // TODO: C FFI
 
     } // namespace ml_kem
   } // namespace pqc

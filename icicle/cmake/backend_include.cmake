@@ -23,7 +23,7 @@ if (CUDA_BACKEND)
     endif()
 endif()
 
-if (CUDA_PQC_BACKEND)
+if (CUDA_PQC_BACKEND AND PQC)
   string(TOLOWER "${CUDA_PQC_BACKEND}" CUDA_PQC_BACKEND_LOWER)      
   message(STATUS "Building CUDA-PQC backend")
   add_subdirectory(backend/cuda_pqc)
