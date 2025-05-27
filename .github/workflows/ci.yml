@@ -770,11 +770,11 @@ jobs:
       if: needs.check-changed-files.outputs.runtime == 'true'
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DINGO_CI_ENV=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
         cmake --build build
     - name: Run C++ Runtime Tests
       working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true' || needs.check-changed-files.outputs.backend-api == 'true')
+      if: needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true')
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         ctest --output-on-failure -R "DeviceApiTest"
