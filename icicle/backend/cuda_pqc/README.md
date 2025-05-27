@@ -40,6 +40,7 @@ cmake -DCUDA_PQC_BACKEND=ON -DCUDA_BACKEND=<branch|commit|local> ...
 ```
 
 This results in **three available devices**:
+
 1. `CPU`
 2. `CUDA`
 3. `CUDA-PQC`
@@ -70,9 +71,8 @@ Think of them as **two orthogonal, mutually exclusive backends**, each supportin
 
 ## 🧪 Testing Strategy
 
-- You can test **each backend independently**, or build both and test them together.
+- Can test **each backend independently**, or build both and test them together.
 - ICICLE will recognize all available devices (`CUDA`, `CUDA-PQC`, `CPU`) and route API tests accordingly.
-- Each backend has its own dedicated **test suite** and **crate support**.
 
 ## 📎 Summary
 
