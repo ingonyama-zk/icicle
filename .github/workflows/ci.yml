@@ -748,10 +748,12 @@ jobs:
             backend_upper: CUDA
             secret_key: CUDA_PULL_KEY
             runner: [self-hosted, Linux, X64, icicle]
+            initial-support: false
           - backend: metal
             backend_upper: METAL
             secret_key: METAL_PULL_KEY
             runner: [self-hosted, Linux, X64, icicle, metal]
+            initial-support: true
     steps:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
