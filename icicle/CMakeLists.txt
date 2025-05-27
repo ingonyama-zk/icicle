@@ -13,6 +13,7 @@ include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/ring.cmake)
 include(cmake/hash.cmake)
+include(cmake/pqc.cmake)
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
 if(SANITIZE AND CUDA_BACKEND)
@@ -40,6 +41,7 @@ option(POSEIDON "Build poseidon hash" ON)
 option(POSEIDON2 "Build poseidon2 hash" ON)
 option(SUMCHECK "Build sumcheck" ON)
 option(FRI "Build fri" ON)
+option(PQC "Build pqc" ON) # Post-Quantum Cryptography
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
@@ -99,6 +101,10 @@ endif()
 
 if (HASH)
   setup_hash_target()
+endif()
+
+if (PQC)
+  setup_pqc_target()
 endif()
 
 if (CPU_BACKEND)

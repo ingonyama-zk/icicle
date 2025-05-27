@@ -1,0 +1,16 @@
+
+
+function(setup_pqc_target)
+  add_library(icicle_pqc SHARED)
+  target_sources(icicle_pqc PRIVATE 
+   src/pqc/ml-kem.cpp
+  )
+  
+  target_link_libraries(icicle_pqc PUBLIC icicle_device)
+
+  install(TARGETS icicle_pqc
+    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/")
+endfunction()
+
