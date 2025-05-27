@@ -20,7 +20,6 @@ add_library(icicle_backend_cuda_pqc_device_whole INTERFACE)
 target_link_libraries(icicle_backend_cuda_pqc_device_whole INTERFACE
 "-Wl,--whole-archive" icicle_backend_cuda_pqc_device "-Wl,--no-whole-archive")
 
-# Link into main libs
+# Link into icicle-pqc
 target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc_device_whole)
 target_link_libraries(icicle_pqc PRIVATE CUDA::cudart)
-# TODO: link icicle_pqc to icicle_backend_cuda_pqc_device_whole

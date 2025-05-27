@@ -29,6 +29,7 @@ TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
 {
   using namespace ml_kem;
 
+  // TODO: implement for CPU too?
   ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
 
   // TODO: test all security categories on all devices, with batch

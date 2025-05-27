@@ -41,7 +41,7 @@ option(POSEIDON "Build poseidon hash" ON)
 option(POSEIDON2 "Build poseidon2 hash" ON)
 option(SUMCHECK "Build sumcheck" ON)
 option(FRI "Build fri" ON)
-option(PQC "Build pqc" ON) # Post-Quantum Cryptography
+option(PQC "Build pqc" CUDA_PQC_BACKEND) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
