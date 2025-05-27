@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <sys/types.h>
 #include <vector>
-#include "icicle/utils/log.h"
 
 #include "taskflow/taskflow.hpp"
 #include "icicle/program/program.h"
@@ -93,24 +92,31 @@ static eIcicleError cpu_rq_matrix_mult(
     for (uint32_t row_start = 0; row_start < nof_rows_a; row_start += rows_per_task) {
       uint32_t row_end = std::min(row_start + rows_per_task, nof_rows_a);
 
+      // TODO: smarter task split
       taskflow.emplace([=]() {
         // Compute a block of the output matrix
         for (uint32_t i = row_start; i < row_end; i++) {
           for (uint32_t j = 0; j < nof_cols_b; j++) {
             // Initialize result element to zero
-            T sum = T::zero();
+            std::vector<T> rq_sum(d, T::zero());
 
             // Compute dot product of row i from A and column j from B
             for (uint32_t k = 0; k < nof_cols_a; k++) {
               uint64_t a_idx = config.columns_batch ? (i * nof_cols_a + k) * stride : i * nof_cols_a + k;
               uint64_t b_idx = config.columns_batch ? (k * nof_cols_b + j) * stride : k * nof_cols_b + j;
 
-              sum = sum + curr_mat_a[a_idx] * curr_mat_b[b_idx];
+              for (uint32_t l = 0; l < d; l++) {
+                rq_sum[l] = rq_sum[l] + curr_mat_a[a_idx + l] * curr_mat_b[b_idx + l];
+              }
             }
 
             // Store result
             uint64_t out_idx = config.columns_batch ? (i * nof_cols_b + j) * stride : i * nof_cols_b + j;
-            curr_mat_out[out_idx] = sum;
+
+            // TODO: use memcpy for speed, merge w/ above
+            for (uint32_t l = 0; l < d; l++) {
+              curr_mat_out[out_idx + l] = rq_sum[l];
+            }
           }
         }
       });
