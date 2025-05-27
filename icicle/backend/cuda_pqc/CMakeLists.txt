@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
+# TODO: share cmake code with the closed CUDA backend ? worth it?
 include(cmake/Common.cmake)
 find_cuda_compiler()
 
