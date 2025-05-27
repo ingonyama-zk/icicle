@@ -3,7 +3,7 @@
 function(setup_pqc_target)
   add_library(icicle_pqc SHARED)
   target_sources(icicle_pqc PRIVATE 
-   src/pqc/ml-kem.cpp
+   src/pqc/ml_kem.cpp
   )
   
   target_link_libraries(icicle_pqc PUBLIC icicle_device)
