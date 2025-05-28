@@ -7,7 +7,7 @@ namespace icicle {
 
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
 
-  /*********************************** BALANCED DECOMPOSITION/RECOMPOSITION ************************/
+  /*********************************** BALANCED DECOMPOSITION/RECOMPOSITION Zq ************************/
   ICICLE_DISPATCHER_INST(BalancedDecomposeDispatcher, decompose_balanced_digits, balancedDecompositionImpl);
 
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits)(
@@ -69,4 +69,40 @@ namespace icicle {
     return balanced_decomposition::compute_nof_digits<field_t>(base);
   }
 
+  /*********************************** BALANCED DECOMPOSITION/RECOMPOSITION Rq ************************/
+  ICICLE_DISPATCHER_INST(BalancedDecomposeRqDispatcher, decompose_balanced_digits_rq, balancedDecompositionRqImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits_rq)(
+    const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig* config, Rq* output, size_t output_size)
+  {
+    return BalancedDecomposeRqDispatcher::execute(input, input_size, base, *config, output, output_size);
+  }
+
+  namespace balanced_decomposition {
+    template <>
+    eIcicleError decompose(
+      const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig& config, Rq* output, size_t output_size)
+    {
+      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits_rq)(
+        input, input_size, base, &config, output, output_size);
+    }
+  } // namespace balanced_decomposition
+
+  ICICLE_DISPATCHER_INST(BalancedRecomposeRqDispatcher, recompose_from_balanced_digits_rq, balancedDecompositionRqImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits_rq)(
+    const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig* config, Rq* output, size_t output_size)
+  {
+    return BalancedRecomposeRqDispatcher::execute(input, input_size, base, *config, output, output_size);
+  }
+
+  namespace balanced_decomposition {
+    template <>
+    eIcicleError recompose(
+      const Rq* input, size_t input_size, uint32_t base, const VecOpsConfig& config, Rq* output, size_t output_size)
+    {
+      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits_rq)(
+        input, input_size, base, &config, output, output_size);
+    }
+  } // namespace balanced_decomposition
 } // namespace icicle
