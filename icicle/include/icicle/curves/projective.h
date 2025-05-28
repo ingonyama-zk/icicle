@@ -8,6 +8,14 @@
 #include "icicle/curves/affine.h"
 #include <array>
 
+#include "icicle/fields/field.h"
+// #include "icicle/fields/id.h"
+#include "bn254_mont.h"
+
+namespace bn254 {
+  struct G1;
+  struct G2;
+}
 template <typename FF, class SCALAR_FF, typename Gen>
 class Projective
 {
@@ -51,8 +59,92 @@ public:
 
   static HOST_DEVICE_INLINE Projective neg(const Projective& point) { return {point.x, FF::neg(point.y), point.z}; }
 
+  // -- [CUSTOM BN254 MONT] ----------------------------------------------------------------------------
+  static __attribute__((always_inline)) FF mul_b3(const FF &a) {
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      FF a2 = a + a;
+      FF a4 = a2 + a2;
+      FF a8 = a4 + a4;
+      FF a9 = a8 + a;
+      return a9;
+    } else {
+      return FF::template mul_weierstrass_b<Gen, true>(a);
+    }
+  }
+
+  static __attribute__((always_inline)) FF mont_mul(const FF &a, const FF &b) {
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      FF res;
+      auto &c = reinterpret_cast<mp_256_t &>(res);
+      c = bn254_mont_t::mul(reinterpret_cast<const mp_256_t &>(a), reinterpret_cast<const mp_256_t &>(b));
+      return res;
+    } else if constexpr (std::is_same_v<Gen, bn254::G2>) {
+      FF res;
+      auto a_sum = a.c0 + a.c1;
+      auto b_sum = b.c0 + b.c1;
+      auto &a_re = reinterpret_cast<const mp_256_t &>(a.c0);
+      auto &a_im = reinterpret_cast<const mp_256_t &>(a.c1);
+      auto &b_re = reinterpret_cast<const mp_256_t &>(b.c0);
+      auto &b_im = reinterpret_cast<const mp_256_t &>(b.c1);
+      mp_256_t re_prod = bn254_mont_t::mul(a_re, b_re);
+      mp_256_t im_prod = bn254_mont_t::mul(a_im, b_im);
+      mp_256_t sum_prod = bn254_mont_t::mul(reinterpret_cast<const mp_256_t &>(a_sum), reinterpret_cast<const mp_256_t &>(b_sum));
+      res.c0 = reinterpret_cast<decltype(res.c0) &>(re_prod) - reinterpret_cast<decltype(res.c0) &>(im_prod);
+      res.c1 = reinterpret_cast<decltype(res.c0) &>(sum_prod) - reinterpret_cast<decltype(res.c0) &>(re_prod) - reinterpret_cast<decltype(res.c0) &>(im_prod);
+      return res;
+    } else {
+      return a * b;
+    }
+  }
+
+  static __attribute__((always_inline)) typename FF::Wide mul_wide(const FF &a, const FF &b) {
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      typename FF::Wide res{};
+      auto &c = reinterpret_cast<mp_512_t &>(res.limbs_storage);
+      c = bn254_mont_t::schoolbook_mul(reinterpret_cast<const mp_256_t &>(a), reinterpret_cast<const mp_256_t &>(b));
+      return res;
+    } else {
+      return FF::mul_wide(a, b);
+    }
+  }
+
+  static __attribute__((always_inline)) FF mont_reduce(const FF &a) {
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      FF res;
+      auto &c = reinterpret_cast<mp_256_t &>(res);
+      c = bn254_mont_t::reduce(reinterpret_cast<const mp_256_t &>(a));
+      return res;
+    } else if constexpr (std::is_same_v<Gen, bn254::G2>) {
+      FF res;
+      auto &re = reinterpret_cast<mp_256_t &>(res.c0);
+      auto &im = reinterpret_cast<mp_256_t &>(res.c1);
+      re = bn254_mont_t::reduce(reinterpret_cast<const mp_256_t &>(a.c0));
+      im = bn254_mont_t::reduce(reinterpret_cast<const mp_256_t &>(a.c1));
+      return res;
+    } else {
+      return a;
+    }
+  }
+
+  static __attribute__((always_inline)) FF mont_reduce(const typename FF::Wide &a) {
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      FF res;
+      auto &c = reinterpret_cast<mp_256_t &>(res);
+      c = bn254_mont_t::reduce(reinterpret_cast<const mp_512_t &>(a));
+      return res;
+    } else {
+      return FF::reduce(a);
+    }
+  }
+  // ---------------------------------------------------------------------------------------------------
+
   static HOST_DEVICE Projective dbl(const Projective& point)
   {
+    // thread_local long long cnt = 0;
+    // cnt++;
+    // if (cnt % 1000 == 0) {
+    //   std::cout << "2P: " << cnt << std::endl;
+    // }
     const FF X = point.x;
     const FF Y = point.y;
     const FF Z = point.z;
@@ -81,91 +173,267 @@ public:
 
   friend HOST_DEVICE Projective operator+(Projective p1, const Projective& p2)
   {
-    const FF X1 = p1.x;                                            //                   < 2
-    const FF Y1 = p1.y;                                            //                   < 2
-    const FF Z1 = p1.z;                                            //                   < 2
-    const FF X2 = p2.x;                                            //                   < 2
-    const FF Y2 = p2.y;                                            //                   < 2
-    const FF Z2 = p2.z;                                            //                   < 2
-    const FF t00 = X1 * X2;                                        // t00 ← X1 · X2     < 2
-    const FF t01 = Y1 * Y2;                                        // t01 ← Y1 · Y2     < 2
-    const FF t02 = Z1 * Z2;                                        // t02 ← Z1 · Z2     < 2
-    const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
-    const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
-    const FF t05 = t03 * t04;                                      // t03 ← t03 · t04   < 3
-    const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
-    const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
-    const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
-    const FF t09 = Y2 + Z2;                                        // t09 ← Y2 + Z2     < 4
-    const FF t10 = t08 * t09;                                      // t10 ← t08 · t09   < 3
-    const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
-    const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
-    const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
-    const FF t14 = X2 + Z2;                                        // t14 ← X2 + Z2     < 4
-    const FF t15 = t13 * t14;                                      // t15 ← t13 · t14   < 3
-    const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
-    const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
-    const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
-    const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
-    const FF t20 = FF::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
-    const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
-    const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
-    const FF t23 = FF::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
-    const auto t24 = FF::mul_wide(t12, t23);                       // t24 ← t12 · t23   < 2
-    const auto t25 = FF::mul_wide(t07, t22);                       // t25 ← t07 · t22   < 2
-    const FF X3 = FF::reduce(t25 - t24);                           // X3 ← t25 − t24    < 2
-    const auto t27 = FF::mul_wide(t23, t19);                       // t27 ← t23 · t19   < 2
-    const auto t28 = FF::mul_wide(t22, t21);                       // t28 ← t22 · t21   < 2
-    const FF Y3 = FF::reduce(t28 + t27);                           // Y3 ← t28 + t27    < 2
-    const auto t30 = FF::mul_wide(t19, t07);                       // t30 ← t19 · t07   < 2
-    const auto t31 = FF::mul_wide(t21, t12);                       // t31 ← t21 · t12   < 2
-    const FF Z3 = FF::reduce(t31 + t30);                           // Z3 ← t31 + t30    < 2
-    return {X3, Y3, Z3};
+    // thread_local long long cnt = 0;
+    // cnt++;
+    // if (cnt % 1000 == 0) {
+    //   std::cout << "P + P: " << cnt << std::endl;
+    // }
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      const FF X1 = p1.x;                                            //                   < 2
+      const FF Y1 = p1.y;                                            //                   < 2
+      const FF Z1 = p1.z;                                            //                   < 2
+      const FF X2 = p2.x;                                            //                   < 2
+      const FF Y2 = p2.y;                                            //                   < 2
+      const FF Z2 = p2.z;                                            //                   < 2
+      const FF t00 = mont_mul(X1, X2);                                     // t00 ← X1 · X2     < 2
+      const FF t01 = mont_mul(Y1, Y2);                                     // t01 ← Y1 · Y2     < 2
+      const FF t02 = mont_mul(Z1, Z2);                                     // t02 ← Z1 · Z2     < 2
+      const FF t03 = X1 + Y1;                                              // t03 ← X1 + Y1     < 4
+      const FF t04 = X2 + Y2;                                              // t04 ← X2 + Y2     < 4
+      const FF t05 = mont_mul(t03, t04);                                   // t03 ← t03 · t04   < 3
+      const FF t06 = t00 + t01;                                            // t06 ← t00 + t01   < 4
+      const FF t07 = t05 - t06;                                            // t05 ← t05 − t06   < 2
+      const FF t08 = Y1 + Z1;                                              // t08 ← Y1 + Z1     < 4
+      const FF t09 = Y2 + Z2;                                              // t09 ← Y2 + Z2     < 4
+      const FF t10 = mont_mul(t08, t09);                                   // t10 ← t08 · t09   < 3
+      const FF t11 = t01 + t02;                                            // t11 ← t01 + t02   < 4
+      const FF t12 = t10 - t11;                                            // t12 ← t10 − t11   < 2
+      const FF t13 = X1 + Z1;                                              // t13 ← X1 + Z1     < 4
+      const FF t14 = X2 + Z2;                                              // t14 ← X2 + Z2     < 4
+      const FF t15 = mont_mul(t13, t14);                                   // t15 ← t13 · t14   < 3
+      const FF t16 = t00 + t02;                                            // t16 ← t00 + t02   < 4
+      const FF t17 = t15 - t16;                                            // t17 ← t15 − t16   < 2
+      const FF t18 = t00 + t00;                                            // t18 ← t00 + t00   < 2
+      const FF t19 = t18 + t00;                                            // t19 ← t18 + t00   < 2
+      const FF t20 = mul_b3(t02);// t20 ← b3 · t02    < 2
+      const FF t21 = t01 + t20;                                            // t21 ← t01 + t20   < 2
+      const FF t22 = t01 - t20;                                            // t22 ← t01 − t20   < 2
+      const FF t23 = mul_b3(t17);// t23 ← b3 · t17    < 2
+      const auto t24 = mul_wide(t12, t23);                                  // t24 ← t12 · t23   < 2
+      const auto t25 = mul_wide(t07, t22);                                  // t25 ← t07 · t22   < 2
+      const FF X3 = mont_reduce(t25 - t24);                                // X3 ← t25 − t24    < 2
+      const auto t27 = mul_wide(t23, t19);                                  // t27 ← t23 · t19   < 2
+      const auto t28 = mul_wide(t22, t21);                                  // t28 ← t22 · t21   < 2
+      const FF Y3 = mont_reduce(t28 + t27);                                // Y3 ← t28 + t27    < 2
+      const auto t30 = mul_wide(t19, t07);                                  // t30 ← t19 · t07   < 2
+      const auto t31 = mul_wide(t21, t12);                                  // t31 ← t21 · t12   < 2
+      const FF Z3 = mont_reduce(t31 + t30);                                // Z3 ← t31 + t30    < 2
+      return {X3, Y3, Z3};
+    } else if constexpr (std::is_same_v<Gen, bn254::G2>) {
+      const FF X1 = p1.x;                                            //                   < 2
+      const FF Y1 = p1.y;                                            //                   < 2
+      const FF Z1 = p1.z;                                            //                   < 2
+      const FF X2 = p2.x;                                            //                   < 2
+      const FF Y2 = p2.y;                                            //                   < 2
+      const FF Z2 = p2.z;                                            //                   < 2
+      const FF t00 = mont_mul(X1, X2);                                     // t00 ← X1 · X2     < 2
+      const FF t01 = mont_mul(Y1, Y2);                                     // t01 ← Y1 · Y2     < 2
+      const FF t02 = mont_mul(Z1, Z2);                                     // t02 ← Z1 · Z2     < 2
+      const FF t03 = X1 + Y1;                                              // t03 ← X1 + Y1     < 4
+      const FF t04 = X2 + Y2;                                              // t04 ← X2 + Y2     < 4
+      const FF t05 = mont_mul(t03, t04);                                   // t03 ← t03 · t04   < 3
+      const FF t06 = t00 + t01;                                            // t06 ← t00 + t01   < 4
+      const FF t07 = t05 - t06;                                            // t05 ← t05 − t06   < 2
+      const FF t08 = Y1 + Z1;                                              // t08 ← Y1 + Z1     < 4
+      const FF t09 = Y2 + Z2;                                              // t09 ← Y2 + Z2     < 4
+      const FF t10 = mont_mul(t08, t09);                                   // t10 ← t08 · t09   < 3
+      const FF t11 = t01 + t02;                                            // t11 ← t01 + t02   < 4
+      const FF t12 = t10 - t11;                                            // t12 ← t10 − t11   < 2
+      const FF t13 = X1 + Z1;                                              // t13 ← X1 + Z1     < 4
+      const FF t14 = X2 + Z2;                                              // t14 ← X2 + Z2     < 4
+      const FF t15 = mont_mul(t13, t14);                                   // t15 ← t13 · t14   < 3
+      const FF t16 = t00 + t02;                                            // t16 ← t00 + t02   < 4
+      const FF t17 = t15 - t16;                                            // t17 ← t15 − t16   < 2
+      const FF t18 = t00 + t00;                                            // t18 ← t00 + t00   < 2
+      const FF t19 = t18 + t00;                                            // t19 ← t18 + t00   < 2
+      const FF t20 = mul_b3(t02);// t20 ← b3 · t02    < 2
+      const FF t21 = t01 + t20;                                            // t21 ← t01 + t20   < 2
+      const FF t22 = t01 - t20;                                            // t22 ← t01 − t20   < 2
+      const FF t23 = mul_b3(t17);// t23 ← b3 · t17    < 2
+      const auto t24 = mont_mul(t12, t23);                                  // t24 ← t12 · t23   < 2
+      const auto t25 = mont_mul(t07, t22);                                  // t25 ← t07 · t22   < 2
+      const FF X3 = t25 - t24;                                             // X3 ← t25 − t24    < 2
+      const auto t27 = mont_mul(t23, t19);                                  // t27 ← t23 · t19   < 2
+      const auto t28 = mont_mul(t22, t21);                                  // t28 ← t22 · t21   < 2
+      const FF Y3 = t28 + t27;                                             // Y3 ← t28 + t27    < 2
+      const auto t30 = mont_mul(t19, t07);                                  // t30 ← t19 · t07   < 2
+      const auto t31 = mont_mul(t21, t12);                                  // t31 ← t21 · t12   < 2
+      const FF Z3 = t31 + t30;                                             // Z3 ← t31 + t30    < 2
+      return {X3, Y3, Z3};
+    } else {
+      const FF X1 = p1.x;                                            //                   < 2
+      const FF Y1 = p1.y;                                            //                   < 2
+      const FF Z1 = p1.z;                                            //                   < 2
+      const FF X2 = p2.x;                                            //                   < 2
+      const FF Y2 = p2.y;                                            //                   < 2
+      const FF Z2 = p2.z;                                            //                   < 2
+      const FF t00 = X1 * X2;                                        // t00 ← X1 · X2     < 2
+      const FF t01 = Y1 * Y2;                                        // t01 ← Y1 · Y2     < 2
+      const FF t02 = Z1 * Z2;                                        // t02 ← Z1 · Z2     < 2
+      const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
+      const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
+      const FF t05 = t03 * t04;                                      // t03 ← t03 · t04   < 3
+      const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
+      const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
+      const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
+      const FF t09 = Y2 + Z2;                                        // t09 ← Y2 + Z2     < 4
+      const FF t10 = t08 * t09;                                      // t10 ← t08 · t09   < 3
+      const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
+      const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
+      const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
+      const FF t14 = X2 + Z2;                                        // t14 ← X2 + Z2     < 4
+      const FF t15 = t13 * t14;                                      // t15 ← t13 · t14   < 3
+      const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
+      const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
+      const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
+      const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
+      const FF t20 = FF::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
+      const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
+      const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
+      const FF t23 = FF::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
+      const auto t24 = FF::mul_wide(t12, t23);                       // t24 ← t12 · t23   < 2
+      const auto t25 = FF::mul_wide(t07, t22);                       // t25 ← t07 · t22   < 2
+      const FF X3 = FF::reduce(t25 - t24);                           // X3 ← t25 − t24    < 2
+      const auto t27 = FF::mul_wide(t23, t19);                       // t27 ← t23 · t19   < 2
+      const auto t28 = FF::mul_wide(t22, t21);                       // t28 ← t22 · t21   < 2
+      const FF Y3 = FF::reduce(t28 + t27);                           // Y3 ← t28 + t27    < 2
+      const auto t30 = FF::mul_wide(t19, t07);                       // t30 ← t19 · t07   < 2
+      const auto t31 = FF::mul_wide(t21, t12);                       // t31 ← t21 · t12   < 2
+      const FF Z3 = FF::reduce(t31 + t30);                           // Z3 ← t31 + t30    < 2
+      return {X3, Y3, Z3};
+    }
   }
 
   friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Projective& p2) { return p1 + neg(p2); }
 
   friend HOST_DEVICE Projective operator+(Projective p1, const Affine<FF>& p2)
   {
-    const FF X1 = p1.x;                                            //                   < 2
-    const FF Y1 = p1.y;                                            //                   < 2
-    const FF Z1 = p1.z;                                            //                   < 2
-    const FF X2 = p2.x;                                            //                   < 2
-    const FF Y2 = p2.y;                                            //                   < 2
-    const FF t00 = X1 * X2;                                        // t00 ← X1 · X2     < 2
-    const FF t01 = Y1 * Y2;                                        // t01 ← Y1 · Y2     < 2
-    const FF t02 = Z1;                                             // t02 ← Z1          < 2
-    const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
-    const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
-    const FF t05 = t03 * t04;                                      // t03 ← t03 · t04   < 3
-    const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
-    const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
-    const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
-    const FF t09 = Y2 + FF::one();                                 // t09 ← Y2 + 1      < 4
-    const FF t10 = t08 * t09;                                      // t10 ← t08 · t09   < 3
-    const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
-    const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
-    const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
-    const FF t14 = X2 + FF::one();                                 // t14 ← X2 + 1      < 4
-    const FF t15 = t13 * t14;                                      // t15 ← t13 · t14   < 3
-    const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
-    const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
-    const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
-    const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
-    const FF t20 = FF::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
-    const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
-    const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
-    const FF t23 = FF::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
-    const auto t24 = FF::mul_wide(t12, t23);                       // t24 ← t12 · t23   < 2
-    const auto t25 = FF::mul_wide(t07, t22);                       // t25 ← t07 · t22   < 2
-    const FF X3 = FF::reduce(t25 - t24);                           // X3 ← t25 − t24    < 2
-    const auto t27 = FF::mul_wide(t23, t19);                       // t27 ← t23 · t19   < 2
-    const auto t28 = FF::mul_wide(t22, t21);                       // t28 ← t22 · t21   < 2
-    const FF Y3 = FF::reduce(t28 + t27);                           // Y3 ← t28 + t27    < 2
-    const auto t30 = FF::mul_wide(t19, t07);                       // t30 ← t19 · t07   < 2
-    const auto t31 = FF::mul_wide(t21, t12);                       // t31 ← t21 · t12   < 2
-    const FF Z3 = FF::reduce(t31 + t30);                           // Z3 ← t31 + t30    < 2
-    return {X3, Y3, Z3};
+    // thread_local long long cnt = 0;
+    // cnt++;
+    // if (cnt % 1000 == 0) {
+    //   std::cout << "P + A: " << cnt << std::endl;
+    // }
+    if constexpr (std::is_same_v<Gen, bn254::G1>) {
+      const FF X1 = p1.x;                                            //                   < 2
+      const FF Y1 = p1.y;                                            //                   < 2
+      const FF Z1 = p1.z;                                            //                   < 2
+      const FF X2 = p2.x;                                            //                   < 2
+      const FF Y2 = p2.y;                                            //                   < 2
+      const FF t00 = mont_mul(X1, X2);                               // t00 ← X1 · X2     < 2
+      const FF t01 = mont_mul(Y1, Y2);                               // t01 ← Y1 · Y2     < 2
+      const FF t02 = mont_reduce(Z1);                                // t02 ← Z1          < 2
+      const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
+      const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
+      const FF t05 = mont_mul(t03, t04);                                      // t03 ← t03 · t04   < 3
+      const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
+      const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
+      const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
+      const FF t09 = Y2 + FF::one();                                 // t09 ← Y2 + 1      < 4
+      const FF t10 = mont_mul(t08, t09);                                      // t10 ← t08 · t09   < 3
+      const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
+      const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
+      const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
+      const FF t14 = X2 + FF::one();                                 // t14 ← X2 + 1      < 4
+      const FF t15 = mont_mul(t13, t14);                                      // t15 ← t13 · t14   < 3
+      const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
+      const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
+      const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
+      const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
+      const FF t20 = mul_b3(t02); // t20 ← b3 · t02    < 2
+      const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
+      const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
+      const FF t23 = mul_b3(t17); // t23 ← b3 · t17    < 2
+      const auto t24 = mul_wide(t12, t23);                       // t24 ← t12 · t23   < 2
+      const auto t25 = mul_wide(t07, t22);                       // t25 ← t07 · t22   < 2
+      const FF X3 = mont_reduce(t25 - t24);                           // X3 ← t25 − t24    < 2
+      const auto t27 = mul_wide(t23, t19);                       // t27 ← t23 · t19   < 2
+      const auto t28 = mul_wide(t22, t21);                       // t28 ← t22 · t21   < 2
+      const FF Y3 = mont_reduce(t28 + t27);                           // Y3 ← t28 + t27    < 2
+      const auto t30 = mul_wide(t19, t07);                       // t30 ← t19 · t07   < 2
+      const auto t31 = mul_wide(t21, t12);                       // t31 ← t21 · t12   < 2
+      const FF Z3 = mont_reduce(t31 + t30);                           // Z3 ← t31 + t30    < 2
+      return {X3, Y3, Z3};
+    } else if constexpr (std::is_same_v<Gen, bn254::G2>) {
+      const FF X1 = p1.x;                                            //                   < 2
+      const FF Y1 = p1.y;                                            //                   < 2
+      const FF Z1 = p1.z;                                            //                   < 2
+      const FF X2 = p2.x;                                            //                   < 2
+      const FF Y2 = p2.y;                                            //                   < 2
+      const FF t00 = mont_mul(X1, X2);                                        // t00 ← X1 · X2     < 2
+      const FF t01 = mont_mul(Y1, Y2);                                        // t01 ← Y1 · Y2     < 2
+      const FF t02 = mont_reduce(Z1);                                             // t02 ← Z1          < 2
+      const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
+      const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
+      const FF t05 = mont_mul(t03, t04);                                      // t03 ← t03 · t04   < 3
+      const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
+      const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
+      const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
+      const FF t09 = Y2 + FF::one();                                 // t09 ← Y2 + 1      < 4
+      const FF t10 = mont_mul(t08, t09);                                      // t10 ← t08 · t09   < 3
+      const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
+      const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
+      const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
+      const FF t14 = X2 + FF::one();                                 // t14 ← X2 + 1      < 4
+      const FF t15 = mont_mul(t13, t14);                                      // t15 ← t13 · t14   < 3
+      const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
+      const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
+      const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
+      const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
+      const FF t20 = mul_b3(t02); // t20 ← b3 · t02    < 2
+      const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
+      const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
+      const FF t23 = mul_b3(t17); // t23 ← b3 · t17    < 2
+      const auto t24 = mont_mul(t12, t23);                       // t24 ← t12 · t23   < 2
+      const auto t25 = mont_mul(t07, t22);                       // t25 ← t07 · t22   < 2
+      const FF X3 = (t25 - t24);                           // X3 ← t25 − t24    < 2
+      const auto t27 = mont_mul(t23, t19);                       // t27 ← t23 · t19   < 2
+      const auto t28 = mont_mul(t22, t21);                       // t28 ← t22 · t21   < 2
+      const FF Y3 = (t28 + t27);                           // Y3 ← t28 + t27    < 2
+      const auto t30 = mont_mul(t19, t07);                       // t30 ← t19 · t07   < 2
+      const auto t31 = mont_mul(t21, t12);                       // t31 ← t21 · t12   < 2
+      const FF Z3 = (t31 + t30);                           // Z3 ← t31 + t30    < 2
+      return {X3, Y3, Z3};
+    } else {
+      const FF X1 = p1.x;                                            //                   < 2
+      const FF Y1 = p1.y;                                            //                   < 2
+      const FF Z1 = p1.z;                                            //                   < 2
+      const FF X2 = p2.x;                                            //                   < 2
+      const FF Y2 = p2.y;                                            //                   < 2
+      const FF t00 = X1 * X2;                                        // t00 ← X1 · X2     < 2
+      const FF t01 = Y1 * Y2;                                        // t01 ← Y1 · Y2     < 2
+      const FF t02 = Z1;                                             // t02 ← Z1          < 2
+      const FF t03 = X1 + Y1;                                        // t03 ← X1 + Y1     < 4
+      const FF t04 = X2 + Y2;                                        // t04 ← X2 + Y2     < 4
+      const FF t05 = t03 * t04;                                      // t03 ← t03 · t04   < 3
+      const FF t06 = t00 + t01;                                      // t06 ← t00 + t01   < 4
+      const FF t07 = t05 - t06;                                      // t05 ← t05 − t06   < 2
+      const FF t08 = Y1 + Z1;                                        // t08 ← Y1 + Z1     < 4
+      const FF t09 = Y2 + FF::one();                                 // t09 ← Y2 + 1      < 4
+      const FF t10 = t08 * t09;                                      // t10 ← t08 · t09   < 3
+      const FF t11 = t01 + t02;                                      // t11 ← t01 + t02   < 4
+      const FF t12 = t10 - t11;                                      // t12 ← t10 − t11   < 2
+      const FF t13 = X1 + Z1;                                        // t13 ← X1 + Z1     < 4
+      const FF t14 = X2 + FF::one();                                 // t14 ← X2 + 1      < 4
+      const FF t15 = t13 * t14;                                      // t15 ← t13 · t14   < 3
+      const FF t16 = t00 + t02;                                      // t16 ← t00 + t02   < 4
+      const FF t17 = t15 - t16;                                      // t17 ← t15 − t16   < 2
+      const FF t18 = t00 + t00;                                      // t18 ← t00 + t00   < 2
+      const FF t19 = t18 + t00;                                      // t19 ← t18 + t00   < 2
+      const FF t20 = FF::template mul_weierstrass_b<Gen, true>(t02); // t20 ← b3 · t02    < 2
+      const FF t21 = t01 + t20;                                      // t21 ← t01 + t20   < 2
+      const FF t22 = t01 - t20;                                      // t22 ← t01 − t20   < 2
+      const FF t23 = FF::template mul_weierstrass_b<Gen, true>(t17); // t23 ← b3 · t17    < 2
+      const auto t24 = FF::mul_wide(t12, t23);                       // t24 ← t12 · t23   < 2
+      const auto t25 = FF::mul_wide(t07, t22);                       // t25 ← t07 · t22   < 2
+      const FF X3 = FF::reduce(t25 - t24);                           // X3 ← t25 − t24    < 2
+      const auto t27 = FF::mul_wide(t23, t19);                       // t27 ← t23 · t19   < 2
+      const auto t28 = FF::mul_wide(t22, t21);                       // t28 ← t22 · t21   < 2
+      const FF Y3 = FF::reduce(t28 + t27);                           // Y3 ← t28 + t27    < 2
+      const auto t30 = FF::mul_wide(t19, t07);                       // t30 ← t19 · t07   < 2
+      const auto t31 = FF::mul_wide(t21, t12);                       // t31 ← t21 · t12   < 2
+      const FF Z3 = FF::reduce(t31 + t30);                           // Z3 ← t31 + t30    < 2
+      return {X3, Y3, Z3};
+    }
   }
 
   friend HOST_DEVICE_INLINE Projective operator-(Projective p1, const Affine<FF>& p2)
