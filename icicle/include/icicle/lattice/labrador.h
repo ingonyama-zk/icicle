@@ -17,6 +17,7 @@ namespace icicle {
 
     using Zq = ::labrador::Zq;
     // using ZqRns = labrador::ZqRns; // TODO: Consider RNS later for performance
+    // throughout assuming Rq and Tq are initialised to 0
     using Rq = ::labrador::Rq; // Rq: flat arrays of Zq[d] elements
     using Tq = ::labrador::Tq; // Tq: flat arrays of Zq[d] elements, typically in NTT domain
 
@@ -116,6 +117,7 @@ namespace icicle {
 
     /// @brief Check whether the norm of a vector is under the bound.
     /// Supports L2, L∞, or Operator norm.
+    /// Does the norm_bound have to be uint64_t? What about float? -- could be needed for operatorNorm
     eIcicleError check_norm_bound(
       const Zq* input, size_t size, eNormType norm, uint64_t norm_bound, const VecOpsConfig& cfg, bool* output);
 
@@ -138,13 +140,16 @@ namespace icicle {
 
     /// @brief Sample Rq challenge polynomials from challenge space C.
     /// Does not ensure norm constraints (e.g., τ, T) hold. User must check and possibly return with another seed.
+    /// seed, seed_len: random seed for sampling and its length
+    /// coeff_val = [a1,a2,a3, ..., aN]
+    /// num_occur = [m1,m2,m3, ..., mN]
+    /// assert(coeff_val.size() == num_occur.size())
+    /// Sampling should initialise a polynomial with coefficients consisting of m1 number of a1s, m2 number of a2s, ...,
+    /// mN number of aNs. The rest of the coefficients should be 0.
+    /// Then, you should randomly flip the signs of the coefficients.
+    /// Finally, you need to permute the coefficients randomly
     eIcicleError sample_challenge_polynomials(
-      const std::byte* seed,
-      size_t seed_len,
-      bool fast_mode,
-      const SamplingConfig& cfg,
-      Rq* output,
-      size_t output_size);
+      const std::byte* seed, size_t seed_len, std::vector<size_t> coeff_val, std::vector<size_t> num_occur, Rq output);
 
     //------------------------------------------------------------------------------
     // TODO / Notes

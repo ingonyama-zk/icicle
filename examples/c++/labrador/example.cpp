@@ -171,7 +171,7 @@ eIcicleError base_prover(
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
   const size_t kappa1 = 1 << 4;
-  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * (r * (r + 1) / 2) * l2);
+  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * ((r * (r + 1)) / 2) * l2);
 
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
@@ -193,7 +193,7 @@ eIcicleError base_prover(
   ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_ntt.data(), l1 * r * kappa, 1, {}, v1.data()));
   // v2 = C@g_tilde
   ICICLE_CHECK(
-    matmul(C.data(), kappa1, (r * (r + 1) / 2) * l2, g_tilde_ntt.data(), (r * (r + 1) / 2) * l2, 1, {}, v2.data()));
+    matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_ntt.data(), ((r * (r + 1)) / 2) * l2, 1, {}, v2.data()));
   for (size_t i = 0; i < kappa1; i++) {
     // TODO: can we flatten v1, v2 as Zq and run this?
     vector_add(v1[i].coeffs, v2[i].coeffs, d, {}, u1[i].coeffs);
@@ -483,6 +483,112 @@ eIcicleError base_prover(
     ICICLE_CHECK(vector_add(b_final.coeffs, temp.coeffs, d, {}, b_final.coeffs));
   }
 
+  // Step 23: For 0 ≤ i ≤ j < r, the Prover computes:
+  // h_{ij} = 2^{-1}(<φ'_i, s_j> + <φ'_j, s_i>) ∈ R_q
+  // Alternatively, view as a matrix multiplication between matrix
+  // Λ = (φ'_0|φ'_1|···|φ'_{r-1})^T ∈ R_q^{r×n} and S ∈ R_q^{r×n} defined earlier.
+  // Let H ∈ R_q^{r×r}, such that H_{ij} = h_{ij}
+  // Then, H = 2^{-1}(Λ @ S^T + (Λ @ S^T)^T)
+
+  // Construct Lambda_hat
+  std::vector<Tq> Lambda_hat(r * n);
+  for (size_t i = 0; i < r; i++) {
+    for (size_t j = 0; j < n; j++) {
+      Lambda_hat[i * n + j] = phi_final[i][j];
+    }
+  }
+
+  // Compute Λ @ S^T using the transposed S_hat
+  std::vector<Tq> LS_hat(r * r);
+  ICICLE_CHECK(matmul(Lambda_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, LS_hat.data()));
+
+  // Convert back to Rq domain
+  std::vector<Rq> LS(r * r);
+  for (size_t i = 0; i < r * r; i++) {
+    ICICLE_CHECK(ntt(LS_hat[i].coeffs, d, NTTDir::kInverse, default_ntt_config<Zq>(), LS[i].coeffs));
+  }
+
+  // Compute H = 2^{-1}(LS + LS^T)
+  std::vector<Rq> H;
+  Zq two_inv = Zq::inverse(Zq::from(2)); // 2^{-1} in Z_q
+
+  for (size_t i = 0; i < r; i++) {
+    // only upper triangular elements
+    for (size_t j = i; j < r; j++) {
+      // H[i][j] = 2^{-1} * (LS[i][j] + LS[j][i])
+      Rq temp;
+      ICICLE_CHECK(vector_add(LS[i * r + j].coeffs, LS[j * r + i].coeffs, d, {}, temp.coeffs));
+      ICICLE_CHECK(scalar_mul_vec(&two_inv, temp.coeffs, d, {}, temp.coeffs));
+      H.push_back(temp);
+    }
+  }
+
+  // Step 24: Decompose h
+  uint32_t base3 = 1 << 16; // Choose appropriate base
+  size_t l3 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base3));
+
+  std::vector<Rq> H_tilde(l3 * H.size());
+  ICICLE_CHECK(decompose(H.data(), H.size(), base3, {}, H_tilde.data(), H_tilde.size()));
+  std::vector<Tq> H_tilde_ntt;
+  for (const auto& poly : H_tilde) {
+    Tq temp;
+    ICICLE_CHECK(ntt(poly.coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), temp.coeffs));
+    H_tilde_ntt.push_back(temp);
+  }
+
+  // Step 25: already done
+  // Step 26: commit to H_tilde
+  constexpr size_t kappa2 = 1 << 4;
+  std::vector<Tq> D(kappa2 * l3 * ((r * (r + 1)) / 2));
+
+  std::vector<Tq> u2(kappa2);
+  // u2 = D@H_tilde
+  ICICLE_CHECK(
+    matmul(D.data(), kappa2, l3 * ((r * (r + 1)) / 2), H_tilde_ntt.data(), H_tilde_ntt.size(), 1, {}, u2.data()));
+
+  // Step 27:
+  // add u2 to the proof
+  for (size_t i = 0; i < kappa2; i++) {
+    proof.insert(proof.end(), u2[i].coeffs, u2[i].coeffs + d);
+  }
+  // TODO: add serialization to u2 and put them in the placeholder
+  std::vector<std::byte> seed4(hasher.output_size());
+  hasher.hash("Placeholder4", 12, {}, seed4.data());
+
+  // Step 28: sampling low operator norm challenges
+  std::vector<Rq> challenge(r);
+  std::vector<size_t> j_ch(r, 0);
+  for (size_t i = 0; i < r; i++) {
+    while (true) {
+      std::vector<std::byte> ch_seed(seed4);
+      ch_seed.push_back(std::byte(i));
+      ch_seed.push_back(std::byte(j_ch[i]));
+      ICICLE_CHECK(sample_challenge_polynomials(ch_seed.data(), ch_seed.size(), {1, 2}, {31, 10}, challenge[i]));
+
+      bool norm_bound = false;
+      ICICLE_CHECK(check_norm_bound(challenge[i].coeffs, d, eNormType::Lop, 15, {}, &norm_bound));
+
+      if (norm_bound) {
+        break;
+      } else {
+        j_ch[i]++;
+      }
+    }
+  }
+
+  std::vector<Tq> challenge_hat(r);
+  for (size_t i = 0; i < r; i++) {
+    ICICLE_CHECK(ntt(challenge[i].coeffs, d, NTTDir::kForward, {}, challenge_hat[i].coeffs));
+  }
+
+  std::vector<Tq> z_hat(n);
+  for (size_t i = 0; i < n; i++) {
+    for (size_t j = 0; j < r; j++) {
+      Tq temp;
+      ICICLE_CHECK(vector_mul(challenge_hat[j].coeffs, S_hat[j * n + i].coeffs, d, {}, temp.coeffs));
+      ICICLE_CHECK(vector_add(z_hat[i].coeffs, temp.coeffs, d, {}, z_hat[i].coeffs));
+    }
+  }
   return eIcicleError::SUCCESS;
 }
 
