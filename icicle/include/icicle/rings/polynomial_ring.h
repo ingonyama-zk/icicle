@@ -17,8 +17,10 @@ namespace icicle {
   class PolynomialRing
   {
   public:
+    using Base = F;                       ///< Base ring or field type
     static constexpr uint32_t d = degree; ///< Degree of the polynomial (number of coefficients)
-    F coeffs[d];                          ///< Coefficients in standard (coefficient) domain
+
+    F coeffs[d]; ///< Coefficients in standard (coefficient) domain
   };
 
   /**
@@ -35,6 +37,7 @@ namespace icicle {
   class NTTPolynomialRing
   {
   public:
+    using Base = F;                       ///< Base ring or field type
     static constexpr uint32_t d = degree; ///< Degree of the polynomial (number of evaluations)
     F evaluations[d];                     ///< Evaluations at NTT domain points
   };
