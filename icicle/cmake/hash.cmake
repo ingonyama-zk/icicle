@@ -1,5 +1,3 @@
-
-
 function(setup_hash_target)
   add_library(icicle_hash SHARED)
   target_sources(icicle_hash PRIVATE 
@@ -10,6 +8,7 @@ function(setup_hash_target)
     src/hash/hash_c_api.cpp
     src/hash/merkle_c_api.cpp
     src/hash/pow.cpp
+    src/hash/skyscraper.cpp
   )
   
   target_link_libraries(icicle_hash PUBLIC icicle_device)

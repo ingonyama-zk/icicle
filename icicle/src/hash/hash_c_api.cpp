@@ -4,6 +4,7 @@
 #include "icicle/hash/keccak.h"
 #include "icicle/hash/blake2s.h"
 #include "icicle/hash/blake3.h"
+#include "icicle/hash/skyscraper.h"
 
 extern "C" {
 // Define a type for the HasherHandle (which is a pointer to Hash)
@@ -136,5 +137,20 @@ HasherHandle icicle_create_blake2s(uint64_t input_chunk_size)
 HasherHandle icicle_create_blake3(uint64_t input_chunk_size)
 {
   return new icicle::Hash(icicle::create_blake3_hash(input_chunk_size));
+}
+
+/**
+ * @brief Creates a Skyscraper hash object.
+ *
+ * This function constructs a Hash object configured for Skyscraper.
+ *
+ * @param n Extension degree for the field (GF(p^n)).
+ * @param beta Modulus for extension field x^n + beta.
+ * @param s Decomposition size (bits).
+ * @return HasherHandle A handle to the created Skyscraper Hash object.
+ */
+HasherHandle icicle_create_skyscraper(unsigned n, unsigned beta, unsigned s)
+{
+  return new icicle::Hash(icicle::create_skyscraper_hash(n, beta, s));
 }
 }

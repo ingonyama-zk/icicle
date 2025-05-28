@@ -9,6 +9,7 @@
 #include "icicle/hash/blake2s.h"
 #include "icicle/hash/blake3.h"
 #include "icicle/hash/poseidon2.h"
+#include "icicle/hash/skyscraper.h"
 #include "icicle/merkle/merkle_tree.h"
 #include "icicle/fields/field.h"
 
@@ -2080,3 +2081,38 @@ TEST_F(SumcheckTest, InitializeWithByteVector)
   EXPECT_EQ(config.get_seed_rng(), seed);
 }
 #endif // SUMCHECK
+
+TEST_F(HashApiTest, skyscraper_bn254_two_inputs)
+{
+  auto config = default_hash_config();
+  config.batch = 1;
+
+  // Input: [1, 2] (2*n for compress)
+  std::array<scalar_t, 2> input = {scalar_t::from(1), scalar_t::from(2)};
+  const std::string expected_output = "20761324971341765266503912041887861549078717976691296979396100400192621787260";
+
+  auto output_cpu = std::make_unique<std::byte[]>(config.batch * sizeof(scalar_t));
+  auto output_mainDev = std::make_unique<std::byte[]>(config.batch * sizeof(scalar_t));
+
+  auto run = [&](const std::string& dev_type, std::byte* out, bool measure, const char* msg, int iters) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+    auto skyscraper = Skyscraper::create(1, 5, 8);
+    START_TIMER(SKYSCRAPER_sync)
+    for (int i = 0; i < iters; ++i) {
+      ICICLE_CHECK(skyscraper.hash(input.data(), 2, config, out));
+    }
+    END_TIMER(SKYSCRAPER_sync, oss.str().c_str(), measure);
+  };
+
+  run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE, "skyscraper", ITERS);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE, "skyscraper", ITERS);
+
+  std::string output_cpu_as_str = voidPtrToHexString(output_cpu.get(), config.batch * sizeof(scalar_t));
+  std::string output_mainDev_as_str = voidPtrToHexString(output_mainDev.get(), config.batch * sizeof(scalar_t));
+
+  ASSERT_EQ(output_cpu_as_str, expected_output);
+  ASSERT_EQ(output_mainDev_as_str, expected_output);
+}
