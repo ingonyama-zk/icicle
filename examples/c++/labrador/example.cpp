@@ -19,6 +19,20 @@ struct EqualityInstance {
   Tq b;                             // Polynomial in Rq
 
   EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
+  EqualityInstance(size_t r, size_t n, std::vector<std::vector<Tq>> a, std::vector<std::vector<Tq>> phi, Tq b)
+      : r(r), n(n), a(std::move(a)), phi(std::move(phi)), b(std::move(b))
+  {
+    // check if the sizes of a and phi are correct
+    if (a.size() != r || phi.size() != r) {
+      throw std::invalid_argument("EqualityInstance: 'a' and 'phi' must have size r");
+    }
+    for (const auto& row : a) {
+      if (row.size() != r) { throw std::invalid_argument("EqualityInstance: each row of 'a' must have size r"); }
+    }
+    for (const auto& vec : phi) {
+      if (vec.size() != n) { throw std::invalid_argument("EqualityInstance: each vector in 'phi' must have size n"); }
+    }
+  }
 };
 
 struct ConstZeroInstance {
@@ -483,6 +497,9 @@ eIcicleError base_prover(
     ICICLE_CHECK(vector_add(b_final.coeffs, temp.coeffs, d, {}, b_final.coeffs));
   }
 
+  // roll a_final, phi_final, b_final into a single EqualityInstance
+  EqualityInstance final_const(r, n, a_final, phi_final, b_final);
+
   // Step 23: For 0 ≤ i ≤ j < r, the Prover computes:
   // h_{ij} = 2^{-1}(<φ'_i, s_j> + <φ'_j, s_i>) ∈ R_q
   // Alternatively, view as a matrix multiplication between matrix
@@ -581,6 +598,7 @@ eIcicleError base_prover(
     ICICLE_CHECK(ntt(challenge[i].coeffs, d, NTTDir::kForward, {}, challenge_hat[i].coeffs));
   }
 
+  // Step 29: Compute z_hat
   std::vector<Tq> z_hat(n);
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < r; j++) {
@@ -589,6 +607,18 @@ eIcicleError base_prover(
       ICICLE_CHECK(vector_add(z_hat[i].coeffs, temp.coeffs, d, {}, z_hat[i].coeffs));
     }
   }
+  return eIcicleError::SUCCESS;
+}
+
+eIcicleError prepare_recursive_problem(
+  EqualityInstance final_const,
+  std::vector<std::byte> ajtai_seed,
+  std::vector<Tq> challenges_hat,
+  std::vector<Tq> z_hat,
+  std::vector<Tq> t,
+  std::vector<Tq> g,
+  std::vector<Tq> h)
+{
   return eIcicleError::SUCCESS;
 }
 
