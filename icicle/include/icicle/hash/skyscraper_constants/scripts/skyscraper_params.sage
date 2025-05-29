@@ -32,10 +32,9 @@ def get_rcons(F, n, R, bar):
     rcons_field = [bar.IL2FFE(rcons_int[i:i + n]) for i in range(0, len(rcons_int), n)]
     return [F.zero()] + rcons_field + [F.zero()]
 
-def to_hex(val, p):
-    # Output as hex string, zero-padded to modulus size
-    hexlen = (p.bit_length() + 3) // 4
-    return f"0x{int(val):0{hexlen}x}"
+def to_bytes(val, byte_len, endianess='little'):
+    b = int(val).to_bytes(byte_len, endianess)
+    return ', '.join(f'0x{byte:02x}' for byte in b)
 
 def main():
     if len(sys.argv) < 5:
@@ -51,21 +50,22 @@ def main():
         f.write(f"#pragma once\n")
         f.write(f"#ifndef {field_name.upper()}_SKYSCRAPER_H\n")
         f.write(f"#define {field_name.upper()}_SKYSCRAPER_H\n\n")
-        f.write(f"#include <string>\n\n")
+        f.write(f"#include <cstdint>\n\n")
         f.write(f"namespace skyscraper_constants_{field_name} {{\n\n")
         for n in n_list:
             bar = Bar(p, n)
             F = bar.F
             rcons = get_rcons(F, n, R, bar)
-            f.write(f"static const std::string round_constants_{n}[] = {{\n")
+            byte_len = (p.bit_length() + 7) // 8
+            f.write(f"unsigned char round_constants_{n}[] = {{\n")
             for elem in rcons:
                 if n == 1:
-                    f.write(f'  "{to_hex(elem, p)}",\n')
+                    f.write(f'  {to_bytes(elem, byte_len)},\n')
                 else:
                     coeffs = elem.polynomial().list()
                     coeffs += [0] * (n - len(coeffs))
                     for c in coeffs:
-                        f.write(f'  "{to_hex(c, p)}",\n')
+                        f.write(f'  {to_bytes(c, byte_len)},\n')
             f.write("};\n\n")
         f.write("} // namespace\n")
         f.write(f"#endif // {field_name.upper()}_SKYSCRAPER_H\n")
