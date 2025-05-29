@@ -2082,6 +2082,7 @@ TEST_F(SumcheckTest, InitializeWithByteVector)
 }
 #endif // SUMCHECK
 
+#ifdef SKYSCRAPER
 TEST_F(HashApiTest, skyscraper_bn254_two_inputs)
 {
   auto config = default_hash_config();
@@ -2116,3 +2117,4 @@ TEST_F(HashApiTest, skyscraper_bn254_two_inputs)
   ASSERT_EQ(output_cpu_as_str, expected_output);
   ASSERT_EQ(output_mainDev_as_str, expected_output);
 }
+#endif // SKYSCRAPER
