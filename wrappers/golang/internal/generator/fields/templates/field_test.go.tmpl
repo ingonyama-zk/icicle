@@ -1,3 +1,6 @@
+{{if eq .FieldPrefix "G2Base" -}}
+//go:build !icicle_exclude_all || g2
+{{end}}
 package tests
 
 import (

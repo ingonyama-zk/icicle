@@ -1,17 +1,18 @@
-use icicle_bls12_377::curve::BaseField as bls12_377BaseField;
 use icicle_core::{
     curve::{Affine, Curve, Projective},
-    field::Field,
-    impl_curve, impl_field,
-    traits::FieldConfig,
+    field::{Field, MontgomeryConvertibleField},
+    impl_curve, impl_field, impl_scalar_field,
+    traits::{FieldConfig, FieldImpl, GenerateRandom},
     vec_ops::VecOpsConfig,
 };
-use icicle_runtime::{eIcicleError, stream::IcicleStream};
+use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 
+pub(crate) const SCALAR_LIMBS: usize = 12;
 pub(crate) const BASE_LIMBS: usize = 24;
 
+impl_scalar_field!("bw6_761", bw6_761_sf, SCALAR_LIMBS, ScalarField, ScalarCfg);
 impl_field!("bw6_761_g2_base_field", BASE_LIMBS, BaseField, BaseCfg);
-pub type ScalarField = bls12_377BaseField;
+
 impl_curve!(
     "bw6_761",
     bw6_761,
@@ -21,7 +22,6 @@ impl_curve!(
     G1Affine,
     G1Projective
 );
-#[cfg(not(feature = "no_g2"))]
 impl_curve!(
     "bw6_761_g2",
     bw6_761_g2,
@@ -34,7 +34,6 @@ impl_curve!(
 
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "no_g2"))]
     use super::G2CurveCfg;
     use super::{CurveCfg, ScalarField, BASE_LIMBS};
     use icicle_core::curve::Curve;
@@ -45,7 +44,6 @@ mod tests {
 
     impl_field_tests!(ScalarField);
     impl_curve_tests!(BASE_LIMBS, CurveCfg);
-    #[cfg(not(feature = "no_g2"))]
     mod g2 {
         use super::*;
         impl_curve_tests!(BASE_LIMBS, G2CurveCfg);
