@@ -13,6 +13,9 @@ using namespace curve_config;
   #define IS_ECNTT false
 #endif
 
+#include "icicle/decision_tree.h"
+#include "decision_tree_params/ntt_division_tree_amd_params.h"
+
 using namespace field_config;
 using namespace icicle;
 
@@ -65,10 +68,23 @@ namespace ntt_cpu {
       temp_elements = std::make_unique<E[]>(ntt_data.size * config.batch_size);
     }
   }
+  void get_optimal_division(uint32_t log_size, uint32_t n_cores, uint32_t layers_sub_logn[3]) {
 
+    double NTT_log_size = (double)log_size;
+    double nof_cores = (double)n_cores;
+    double features[NOF_FEATURES_DIVISION_TREE_AMD] = {NTT_log_size, nof_cores};
+
+    DecisionTree amd_tree = DecisionTree(NOF_FEATURES_DIVISION_TREE_AMD, thresholds_division_tree_amd, indices_division_tree_amd,
+    left_childs_division_tree_amd, right_childs_division_tree_amd, class_predictions_division_tree_amd);
+
+    layers_sub_logn[0] = amd_tree.predict(features);
+    layers_sub_logn[1] = log_size - layers_sub_logn[0];
+    layers_sub_logn[2] = 0;
+  }
   template <typename S, typename E>
   eIcicleError NttCpu<S, E>::run()
   {
+    uint32_t* layers_sub_logn = new uint32_t[3];
     copy_and_reorder_if_needed(input, ntt_data.elements);
     if (ntt_data.direction == NTTDir::kForward && ntt_data.config.coset_gen != S::one()) { coset_mul(); }
     if (!ntt_data.is_parallel) {
@@ -78,23 +94,29 @@ namespace ntt_cpu {
     } else if (__builtin_expect((ntt_data.logn <= HIERARCHY_1), 1)) {
       tf::Taskflow taskflow;
       tf::Executor executor;
-      uint32_t nof_hierarchy_0_layers = (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2] != 0)   ? 3
-                                        : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1] != 0) ? 2
-                                                                                                                : 1;
+      layers_sub_logn[0] = ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0];
+      layers_sub_logn[1] = ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1];
+      layers_sub_logn[2] = ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2];
+      if (ntt_data.config.layers_sub_logn[0]==0 && ntt_data.config.layers_sub_logn[1]==0 && ntt_data.config.layers_sub_logn[2]==0){
+        get_optimal_division(ntt_data.logn, ntt_data.config.n_cores, layers_sub_logn);
+      }
+      uint32_t nof_hierarchy_0_layers = (layers_sub_logn[2] != 0)   ? 3
+                                        : (layers_sub_logn[1] != 0) ? 2
+                                        : 1;
       for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers;
            hierarchy_0_layer_idx++) {
         uint64_t nof_blocks;
         uint64_t nof_subntts;
         if (hierarchy_0_layer_idx == 0) {
-          nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2];
-          nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1];
+          nof_blocks = 1 << layers_sub_logn[2];
+          nof_subntts = 1 << layers_sub_logn[1];
         } else if (hierarchy_0_layer_idx == 1) {
-          nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][2];
-          nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0];
+          nof_blocks = 1 << layers_sub_logn[2];
+          nof_subntts = 1 << layers_sub_logn[0];
         } else {
           nof_blocks = 1
-                       << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][0] +
-                           ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[0][1]);
+                       << (layers_sub_logn[0] +
+                           layers_sub_logn[1]);
           nof_subntts = 1;
         }
         size_t num_chunks = (ntt_data.config.n_cores) << 1; // Adjust based on the number of threads
@@ -144,23 +166,23 @@ namespace ntt_cpu {
         for (uint32_t hierarchy_1_subntts_chunk_idx = 0; hierarchy_1_subntts_chunk_idx < nof_subntts_chunks;
              hierarchy_1_subntts_chunk_idx++) {
           uint32_t nof_hierarchy_0_layers =
-            (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2] != 0)   ? 3
-            : (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1] != 0) ? 2
+            (layers_sub_logn[2] != 0)   ? 3
+            : (layers_sub_logn[1] != 0) ? 2
                                                                                                         : 1;
           for (uint32_t hierarchy_0_layer_idx = 0; hierarchy_0_layer_idx < nof_hierarchy_0_layers;
                hierarchy_0_layer_idx++) {
             uint64_t nof_blocks;
             uint64_t nof_subntts;
             if (hierarchy_0_layer_idx == 0) {
-              nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-              nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1];
+              nof_blocks = 1 << layers_sub_logn[2];
+              nof_subntts = 1 << layers_sub_logn[1];
             } else if (hierarchy_0_layer_idx == 1) {
-              nof_blocks = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][2];
-              nof_subntts = 1 << ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0];
+              nof_blocks = 1 << layers_sub_logn[2];
+              nof_subntts = 1 << layers_sub_logn[0];
             } else {
               nof_blocks = 1
-                           << (ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][0] +
-                               ntt_data.ntt_sub_hierarchies.hierarchy_0_layers_sub_logn[hierarchy_1_layer_idx][1]);
+                           << (layers_sub_logn[0] +
+                               layers_sub_logn[1]);
               nof_subntts = 1;
             }
             nof_blocks = nof_blocks >> 1;
