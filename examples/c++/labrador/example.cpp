@@ -61,6 +61,8 @@ struct LabradorInstance {
   void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
 };
 
+// TODO: add a LabradorProver struct which contains all the relevant parameters
+
 Rq icicle::labrador::conjugate(const Rq& p)
 {
   Rq result;
@@ -610,7 +612,7 @@ eIcicleError base_prover(
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError prepare_recursive_problem(
+std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
   EqualityInstance final_const,
   std::vector<std::byte> ajtai_seed,
   std::vector<Tq> challenges_hat,
@@ -619,7 +621,92 @@ eIcicleError prepare_recursive_problem(
   std::vector<Tq> g,
   std::vector<Tq> h)
 {
-  return eIcicleError::SUCCESS;
+  const size_t r = final_const.r;
+  const size_t n = final_const.n;
+  constexpr size_t d = Rq::d;
+
+  // Step 1: Convert z_hat back to polynomial domain
+  std::vector<Rq> z(n);
+  for (size_t i = 0; i < n; i++) {
+    ICICLE_CHECK(ntt(z_hat[i].coeffs, d, NTTDir::kInverse, default_ntt_config<Zq>(), z[i].coeffs));
+  }
+
+  // Step 2: Decompose z using base b_0
+  uint32_t base0 = 1 << 16; // Choose appropriate base (same pattern as base protocol)
+  size_t l0 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base0));
+
+  // Decompose all elements first
+  std::vector<Rq> z_decomposed_full(l0 * n);
+  ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_decomposed_full.data(), z_decomposed_full.size()));
+
+  // Take only first 2n elements (in NTT domain)- all the rest should be 0
+  std::vector<Tq> z_tilde(2 * n);
+  for (size_t i = 0; i < 2 * n && i < z_decomposed_full.size(); i++) {
+    ICICLE_CHECK(ntt(z_decomposed_full[i].coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), z_tilde[i].coeffs));
+  }
+
+  // Step 3:
+  // z0 = z_tilde[:n]
+  // z1 = z_tilde[n:2*n]
+
+  size_t m = t.size() + g.size() + h.size();
+
+  // Step 4, 5:
+  size_t nu = 1 << 3;
+  size_t mu = 1 << 3;
+  size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
+
+  // Step 6
+  // we will view s_prime as a multidimensional array. At the base level it consists of n_prime length vectors
+  std::vector<Tq> s_prime;
+
+  for (size_t i = 0; i < n; i++) {
+    s_prime.push_back(z_tilde[i]);
+  }
+  for (size_t i = n; i < nu * n_prime; i++) {
+    s_prime.push_back(Tq());
+  }
+  // now s_prime is nu*n_prime long and can be viewed as a nu long array of n_prime dimension Tq vectors
+
+  for (size_t i = 0; i < n; i++) {
+    s_prime.push_back(z_tilde[n + i]);
+  }
+  for (size_t i = n; i < nu * n_prime; i++) {
+    s_prime.push_back(Tq());
+  }
+  // now s_prime is 2*nu*n_prime long and can be viewed as a 2*nu long array of n_prime dimension Tq vectors
+
+  // add the polynomials in t to s_prime and zero pad to make them L_t*n_prime length
+  size_t L_t = std::ceil((double)t.size() / n_prime);
+  for (size_t i = 0; i < t.size(); i++) {
+    s_prime.push_back(t[i]);
+  }
+  for (size_t i = t.size(); i < L_t * n_prime; i++) {
+    s_prime.push_back(Tq());
+  }
+
+  // add the polynomials in g to s_prime and zero pad to make them L_g*n_prime length
+  size_t L_g = std::ceil((double)g.size() / n_prime);
+  for (size_t i = 0; i < g.size(); i++) {
+    s_prime.push_back(g[i]);
+  }
+  for (size_t i = g.size(); i < L_g * n_prime; i++) {
+    s_prime.push_back(Tq());
+  }
+
+  // add the polynomials in h to s_prime and zero pad to make them L_h*n_prime length
+  size_t L_h = std::ceil((double)h.size() / n_prime);
+  for (size_t i = 0; i < h.size(); i++) {
+    s_prime.push_back(h[i]);
+  }
+  for (size_t i = h.size(); i < L_h * n_prime; i++) {
+    s_prime.push_back(Tq());
+  }
+
+  LabradorInstance recursive_instance(0, 0, 0); // Placeholder
+  std::vector<Rq> recursive_witness;            // Placeholder
+
+  return std::make_pair(recursive_instance, recursive_witness);
 }
 
 eIcicleError verify(/*TODO params*/)
