@@ -27,6 +27,7 @@ namespace icicle {
 
     void register_deviceAPI(const std::string& deviceType, std::shared_ptr<DeviceAPI> api)
     {
+      Log::set_min_log_level(Log::Verbose);
       if (apiMap.find(deviceType) != apiMap.end()) {
         ICICLE_LOG_ERROR << "Attempting to register a duplicate API for device type: " << deviceType << ". Skipping";
         return;

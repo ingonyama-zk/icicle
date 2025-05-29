@@ -117,6 +117,29 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    fn matrix_mult(
+        mat_a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        nof_rows_a: u32,
+        nof_cols_a: u32,
+        mat_b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        nof_rows_b: u32,
+        nof_cols_b: u32,
+        mat_out: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
+    fn tq_matrix_mult(
+        d: u32,
+        mat_a: &(impl HostOrDeviceSlice<F> + ?Sized),
+        nof_rows_a: u32,
+        nof_cols_a: u32,
+        mat_b: &(impl HostOrDeviceSlice<F> + ?Sized),
+        nof_rows_b: u32,
+        nof_cols_b: u32,
+        mat_out: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
     fn bit_reverse(
         input: &(impl HostOrDeviceSlice<F> + ?Sized),
         cfg: &VecOpsConfig,
@@ -505,6 +528,53 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::transpose(input, nof_rows, nof_cols, output, &cfg)
 }
 
+/// Performs matrix multiplication: mat_out = mat_a * mat_b
+pub fn matrix_mult<F>(
+    mat_a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows_a: u32,
+    nof_cols_a: u32,
+    mat_b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows_b: u32,
+    nof_cols_b: u32,
+    mat_out: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{    
+    let cfg = setup_config(mat_a, mat_b, mat_out, cfg, 1);
+    <<F as FieldImpl>::Config as VecOps<F>>::matrix_mult(
+        mat_a, nof_rows_a, nof_cols_a, 
+        mat_b, nof_rows_b, nof_cols_b, 
+        mat_out, &cfg
+    )
+}
+
+/// Performs RQ matrix multiplication with dimension parameter d
+pub fn tq_matrix_mult<F>(
+    d: u32,
+    mat_a: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows_a: u32,
+    nof_cols_a: u32,
+    mat_b: &(impl HostOrDeviceSlice<F> + ?Sized),
+    nof_rows_b: u32,
+    nof_cols_b: u32,
+    mat_out: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = setup_config(mat_a, mat_b, mat_out, cfg, 1);
+    <<F as FieldImpl>::Config as VecOps<F>>::tq_matrix_mult(
+        d, mat_a, nof_rows_a, nof_cols_a, 
+        mat_b, nof_rows_b, nof_cols_b, 
+        mat_out, &cfg
+    )
+}
+
 pub fn bit_reverse<F>(
     input: &(impl HostOrDeviceSlice<F> + ?Sized),
     cfg: &VecOpsConfig,
@@ -682,6 +752,31 @@ macro_rules! impl_vec_ops_field {
                     output: *mut $field,
                 ) -> eIcicleError;
 
+                #[link_name = concat!($field_prefix, "_matrix_mult")]
+                pub(crate) fn matrix_mult_ffi(
+                    mat_a: *const $field,
+                    nof_rows_a: u32,
+                    nof_cols_a: u32,
+                    mat_b: *const $field,
+                    nof_rows_b: u32,
+                    nof_cols_b: u32,
+                    cfg: *const VecOpsConfig,
+                    mat_out: *mut $field,
+                ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_tq_matrix_mult")]
+                pub(crate) fn tq_matrix_mult_ffi(
+                    d: u32,
+                    mat_a: *const $field,
+                    nof_rows_a: u32,
+                    nof_cols_a: u32,
+                    mat_b: *const $field,
+                    nof_rows_b: u32,
+                    nof_cols_b: u32,
+                    cfg: *const VecOpsConfig,
+                    mat_out: *mut $field,
+                ) -> eIcicleError;
+
                 #[link_name = concat!($field_prefix, "_bit_reverse")]
                 pub(crate) fn bit_reverse_ffi(
                     input: *const $field,
@@ -839,7 +934,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::vector_sum_ffi(
+                    $field_prefix_ident::vector_product_ffi(
                         a.as_ptr(),
                         a.len() as u32 / cfg.batch_size as u32,
                         cfg as *const VecOpsConfig,
@@ -917,6 +1012,58 @@ macro_rules! impl_vec_ops_field {
                         nof_cols,
                         cfg as *const VecOpsConfig,
                         output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn matrix_mult(
+                mat_a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                nof_rows_a: u32,
+                nof_cols_a: u32,
+                mat_b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                nof_rows_b: u32,
+                nof_cols_b: u32,
+                mat_out: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::matrix_mult_ffi(
+                        mat_a.as_ptr(),
+                        nof_rows_a,
+                        nof_cols_a,
+                        mat_b.as_ptr(),
+                        nof_rows_b,
+                        nof_cols_b,
+                        cfg as *const VecOpsConfig,
+                        mat_out.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn tq_matrix_mult(
+                d: u32,
+                mat_a: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                nof_rows_a: u32,
+                nof_cols_a: u32,
+                mat_b: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                nof_rows_b: u32,
+                nof_cols_b: u32,
+                mat_out: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::tq_matrix_mult_ffi(
+                        d,
+                        mat_a.as_ptr(),
+                        nof_rows_a,
+                        nof_cols_a,
+                        mat_b.as_ptr(),
+                        nof_rows_b,
+                        nof_cols_b,
+                        cfg as *const VecOpsConfig,
+                        mat_out.as_mut_ptr(),
                     )
                     .wrap()
                 }

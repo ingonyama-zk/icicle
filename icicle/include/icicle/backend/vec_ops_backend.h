@@ -30,7 +30,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* output)>;
 
-  using scalarMatrixOpImpl = std::function<eIcicleError(
+  using scalarUnaryMatrixOpImpl = std::function<eIcicleError(
     const Device& device,
     const scalar_t* in,
     uint32_t nof_rows,
@@ -197,16 +197,6 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_scalar_sub_vec) = []() -> bool {                                                           \
       register_scalar_sub_vec(DEVICE_TYPE, FUNC);                                                                      \
-      return true;                                                                                                     \
-    }();                                                                                                               \
-  }
-
-  void register_matrix_transpose(const std::string& deviceType, scalarMatrixOpImpl impl);
-
-#define REGISTER_MATRIX_TRANSPOSE_BACKEND(DEVICE_TYPE, FUNC)                                                           \
-  namespace {                                                                                                          \
-    static bool UNIQUE(_reg_matrix_transpose) = []() -> bool {                                                         \
-      register_matrix_transpose(DEVICE_TYPE, FUNC);                                                                    \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
