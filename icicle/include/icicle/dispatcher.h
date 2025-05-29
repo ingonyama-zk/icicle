@@ -39,10 +39,15 @@ public:
   {
     const Device& device = DeviceAPI::get_thread_local_device();
     auto& apiMap = Global().apiMap;
+    ICICLE_LOG_INFO << "Dispatcher executing " << api_name << " for device: " << device.type << " (id: " << device.id
+                    << ")";
+
     auto it = apiMap.find(device.type);
     if (it != apiMap.end()) {
+      ICICLE_LOG_INFO << "Found implementation for " << api_name << " on device " << device.type;
       return it->second(device, std::forward<Args>(args)...);
     } else {
+      ICICLE_LOG_ERROR << "Implementation not found for " << api_name << " on device " << device.type;
       THROW_ICICLE_ERR(
         eIcicleError::INVALID_DEVICE, std::string(api_name) + " operation not supported on device " + device.type);
     }

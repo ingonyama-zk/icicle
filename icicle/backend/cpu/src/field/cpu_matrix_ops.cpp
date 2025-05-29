@@ -77,6 +77,7 @@ static eIcicleError cpu_tq_matrix_mult(
   // Divide the problem among workers
   const int nof_workers = get_nof_workers(config);
   const uint32_t rows_per_task = std::max(1U, (nof_rows_a + nof_workers - 1) / nof_workers); // ceil division
+  //const uint32_t points_per_task = std::max(1U, (d + nof_workers - 1) / nof_workers); // ceil division
 
   tf::Taskflow taskflow; // Accumulate tasks
   tf::Executor executor; // execute all tasks accumulated on multiple threads
@@ -101,6 +102,8 @@ static eIcicleError cpu_tq_matrix_mult(
             std::vector<T> tq_sum(d, T::zero());
 
             // Compute dot product of row i from A and column j from B
+            // For d > 1, we consieder each group of d elements 
+            // as the coefficients of an Rq polynomial in the Tq domain. 
             for (uint32_t k = 0; k < nof_cols_a; k++) {
               uint64_t a_idx = config.columns_batch ? (i * nof_cols_a + k) * stride : i * nof_cols_a + k;
               uint64_t b_idx = config.columns_batch ? (k * nof_cols_b + j) * stride : k * nof_cols_b + j;
@@ -112,11 +115,7 @@ static eIcicleError cpu_tq_matrix_mult(
 
             // Store result
             uint64_t out_idx = config.columns_batch ? (i * nof_cols_b + j) * stride : i * nof_cols_b + j;
-
-            // TODO: use memcpy for speed, merge w/ above
-            for (uint32_t l = 0; l < d; l++) {
-              curr_mat_out[out_idx + l] = tq_sum[l];
-            }
+            std::memcpy(&curr_mat_out[out_idx], tq_sum.data(), d * sizeof(T));
           }
         }
       });
