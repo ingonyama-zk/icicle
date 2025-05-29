@@ -26,7 +26,7 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* out)>;
 
-  using rqBinaryMatrixOpImpl = std::function<eIcicleError(
+  using tqBinaryMatrixOpImpl = std::function<eIcicleError(
     const Device& device,
     uint32_t d,
     const scalar_t* in_a,
@@ -58,12 +58,12 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_rq_matrix_mult(const std::string& deviceType, rqBinaryMatrixOpImpl impl);
+  void register_tq_matrix_mult(const std::string& deviceType, tqBinaryMatrixOpImpl impl);
 
-#define REGISTER_RQ_MATRIX_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                              \
+#define REGISTER_TQ_MATRIX_MUL_BACKEND(DEVICE_TYPE, FUNC)                                                              \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_rq_matrix_mul) = []() -> bool {                                                            \
-      register_rq_matrix_mult(DEVICE_TYPE, FUNC);                                                                      \
+    static bool UNIQUE(_reg_tq_matrix_mul) = []() -> bool {                                                            \
+      register_tq_matrix_mult(DEVICE_TYPE, FUNC);                                                                      \
       return true;                                                                                                     \
     }();                                                                                                               \
   }

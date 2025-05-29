@@ -318,7 +318,6 @@ namespace icicle {
   eIcicleError
   matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out);
 
-
   /**
    * @brief Multiplies two matrices.
    *
@@ -334,11 +333,17 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    * @note The input matrices are assumed to be stored in row-major order.
    *       This function multiplies an matrix A  or a batch of matrices with matrix B.
-   */ 
+   */
   template <typename T>
   eIcicleError matrix_mult(
-    const T* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const T* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, T* mat_out);   
+    const T* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const T* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    T* mat_out);
 
   /**
    * @brief Multiplies two matrices in RQ mode.
@@ -356,12 +361,18 @@ namespace icicle {
    * @return eIcicleError Error code indicating success or failure.
    * @note The input matrices are assumed to be stored in row-major order.
    *       This function multiplies a matrix A or a batch of matrices with matrix B in RQ mode.
-   */ 
+   */
   template <typename T>
-  eIcicleError rq_matrix_mult(
+  eIcicleError tq_matrix_mult(
     uint32_t d,
-    const T* mat_a, uint32_t nof_rows_a, uint32_t nof_cols_a,
-    const T* mat_b, uint32_t nof_rows_b, uint32_t nof_cols_b, const VecOpsConfig& config, T* mat_out);
+    const T* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const T* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    T* mat_out);
 
   // Miscellaneous operations
 

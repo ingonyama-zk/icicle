@@ -10,7 +10,6 @@
 #include <vector>
 #include "icicle/utils/log.h"
 
-
 #include "taskflow/taskflow.hpp"
 #include "icicle/program/program.h"
 #include "cpu_program_executor.h"
@@ -182,7 +181,7 @@ public:
     const T* mat_a,
     const uint32_t nof_rows_a,
     const uint32_t nof_cols_a,
-    const T* mat_b,   
+    const T* mat_b,
     const uint32_t nof_rows_b,
     const uint32_t nof_cols_b,
     const uint32_t stride,
@@ -191,8 +190,7 @@ public:
     m_operation = operation;
 
     dispatch();
-  }    
-  
+  }
 
   // Execute the selected function based on m_operation
   virtual void execute() { (this->*functionPtrs[static_cast<size_t>(m_operation)])(); }
@@ -632,7 +630,6 @@ eIcicleError cpu_scalar_mul(
 }
 
 REGISTER_SCALAR_MUL_VEC_BACKEND("CPU", cpu_scalar_mul<scalar_t>);
-
 
 /*********************************** BIT REVERSE ***********************************/
 template <typename T>

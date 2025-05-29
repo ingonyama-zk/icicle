@@ -31,15 +31,15 @@ static eIcicleError cpu_matrix_mult(
   const VecOpsConfig& config,
   T* mat_out)
 {
-  return cpu_rq_matrix_mult(device, 1, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
+  return cpu_tq_matrix_mult(device, 1, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
 }
 
 REGISTER_MATRIX_MUL_BACKEND("CPU", cpu_matrix_mult<scalar_t>);
 
-/*********************************** RQ MATRIX MULTIPLICATION ***********************************/
+/*********************************** TQ MATRIX MULTIPLICATION ***********************************/
 
 template <typename T>
-static eIcicleError cpu_rq_matrix_mult(
+static eIcicleError cpu_tq_matrix_mult(
   const Device& device,
   uint32_t d,
   const T* mat_a,
@@ -53,19 +53,19 @@ static eIcicleError cpu_rq_matrix_mult(
 {
   // Check for null pointers
   if (mat_a == nullptr || mat_b == nullptr || mat_out == nullptr) {
-    //ICICLE_LOG_ERROR << "Null pointer in rq_matrix_mult arguments";
+    //ICICLE_LOG_ERROR << "Null pointer in tq_matrix_mult arguments";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
   // Check for zero dimensions
   if (nof_rows_a == 0 || nof_cols_a == 0 || nof_rows_b == 0 || nof_cols_b == 0) {
-    //ICICLE_LOG_ERROR << "Zero dimension in rq_matrix_mult arguments";
+    //ICICLE_LOG_ERROR << "Zero dimension in tq_matrix_mult arguments";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
   // Check if inner dimensions match for matrix multiplication
   if (nof_cols_a != nof_rows_b) {
-    //ICICLE_LOG_ERROR << "Inner dimensions do not match in rq_matrix_mult arguments";
+    //ICICLE_LOG_ERROR << "Inner dimensions do not match in tq_matrix_mult arguments";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
@@ -98,7 +98,7 @@ static eIcicleError cpu_rq_matrix_mult(
         for (uint32_t i = row_start; i < row_end; i++) {
           for (uint32_t j = 0; j < nof_cols_b; j++) {
             // Initialize result element to zero
-            std::vector<T> rq_sum(d, T::zero());
+            std::vector<T> tq_sum(d, T::zero());
 
             // Compute dot product of row i from A and column j from B
             for (uint32_t k = 0; k < nof_cols_a; k++) {
@@ -106,7 +106,7 @@ static eIcicleError cpu_rq_matrix_mult(
               uint64_t b_idx = config.columns_batch ? (k * nof_cols_b + j) * stride : k * nof_cols_b + j;
 
               for (uint32_t l = 0; l < d; l++) {
-                rq_sum[l] = rq_sum[l] + curr_mat_a[a_idx + l] * curr_mat_b[b_idx + l];
+                tq_sum[l] = tq_sum[l] + curr_mat_a[a_idx + l] * curr_mat_b[b_idx + l];
               }
             }
 
@@ -115,7 +115,7 @@ static eIcicleError cpu_rq_matrix_mult(
 
             // TODO: use memcpy for speed, merge w/ above
             for (uint32_t l = 0; l < d; l++) {
-              curr_mat_out[out_idx + l] = rq_sum[l];
+              curr_mat_out[out_idx + l] = tq_sum[l];
             }
           }
         }
@@ -129,4 +129,4 @@ static eIcicleError cpu_rq_matrix_mult(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_RQ_MATRIX_MUL_BACKEND("CPU", cpu_rq_matrix_mult<scalar_t>);
+REGISTER_TQ_MATRIX_MUL_BACKEND("CPU", cpu_tq_matrix_mult<scalar_t>);

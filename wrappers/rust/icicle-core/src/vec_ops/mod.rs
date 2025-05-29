@@ -128,7 +128,7 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
-    fn rq_matrix_mult(
+    fn tq_matrix_mult(
         d: u32,
         mat_a: &(impl HostOrDeviceSlice<F> + ?Sized),
         nof_rows_a: u32,
@@ -552,7 +552,7 @@ where
 }
 
 /// Performs RQ matrix multiplication with dimension parameter d
-pub fn rq_matrix_mult<F>(
+pub fn tq_matrix_mult<F>(
     d: u32,
     mat_a: &(impl HostOrDeviceSlice<F> + ?Sized),
     nof_rows_a: u32,
@@ -568,7 +568,7 @@ where
     <F as FieldImpl>::Config: VecOps<F>,
 {
     let cfg = setup_config(mat_a, mat_b, mat_out, cfg, 1);
-    <<F as FieldImpl>::Config as VecOps<F>>::rq_matrix_mult(
+    <<F as FieldImpl>::Config as VecOps<F>>::tq_matrix_mult(
         d, mat_a, nof_rows_a, nof_cols_a, 
         mat_b, nof_rows_b, nof_cols_b, 
         mat_out, &cfg
@@ -764,8 +764,8 @@ macro_rules! impl_vec_ops_field {
                     mat_out: *mut $field,
                 ) -> eIcicleError;
 
-                #[link_name = concat!($field_prefix, "_rq_matrix_mult")]
-                pub(crate) fn rq_matrix_mult_ffi(
+                #[link_name = concat!($field_prefix, "_tq_matrix_mult")]
+                pub(crate) fn tq_matrix_mult_ffi(
                     d: u32,
                     mat_a: *const $field,
                     nof_rows_a: u32,
@@ -1042,7 +1042,7 @@ macro_rules! impl_vec_ops_field {
                 }
             }
 
-            fn rq_matrix_mult(
+            fn tq_matrix_mult(
                 d: u32,
                 mat_a: &(impl HostOrDeviceSlice<$field> + ?Sized),
                 nof_rows_a: u32,
@@ -1054,7 +1054,7 @@ macro_rules! impl_vec_ops_field {
                 cfg: &VecOpsConfig,
             ) -> Result<(), eIcicleError> {
                 unsafe {
-                    $field_prefix_ident::rq_matrix_mult_ffi(
+                    $field_prefix_ident::tq_matrix_mult_ffi(
                         d,
                         mat_a.as_ptr(),
                         nof_rows_a,

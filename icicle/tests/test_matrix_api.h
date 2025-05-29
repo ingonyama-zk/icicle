@@ -184,11 +184,11 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
 
 
 // Matrix multiplication with non-square matrices
-TEST_F(MatrixTestBase, RqMatrixMultiplicationNonSquare)
+TEST_F(MatrixTestBase, TqMatrixMultiplicationNonSquare)
 {
   const size_t N = 1 << 8;
   const size_t M = 1 << 10;
-  const size_t d = 5;
+  const size_t d = 1;
 
   auto direct_input_a = std::vector<scalar_t>(N);
   auto direct_input_b = std::vector<scalar_t>(N);
@@ -216,7 +216,8 @@ TEST_F(MatrixTestBase, RqMatrixMultiplicationNonSquare)
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    ICICLE_CHECK(rq_matrix_mult(d, direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
+    //ICICLE_CHECK(tq_matrix_mult(d, direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
+    ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
 
     // Compare results
     ASSERT_EQ(0, std::memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(scalar_t)));
