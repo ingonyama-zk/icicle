@@ -2,11 +2,36 @@
 #include "icicle/backend/vec_ops_backend.h"
 #include "taskflow/taskflow.hpp"
 #include <cmath>
+#include <cstdint>
 
 static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
 
 // extract the number of threads to run from config
 int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
+
+// Helper function that performs floor division and modulo like Python or standard math.
+// Ensures that the remainder is always non-negative and the quotient is rounded down
+// (i.e., toward negative infinity), unlike C++'s default behavior which rounds toward zero.
+static std::pair<int64_t, int64_t> divmod(int64_t a, uint32_t base)
+{
+  // Perform regular C++ integer division and modulo
+  int64_t q = a / base;
+  int64_t r = a % base;
+
+  // If remainder is non-zero AND a and base have opposite signs
+  // then C++ has rounded the quotient toward zero instead of toward -∞,
+  // and the remainder is negative. Fix it.
+  //
+  // (a ^ base) < 0 checks if the signs of a and base are different:
+  // - XOR of two values with the same sign yields a positive or zero result
+  // - XOR of two values with different signs yields a negative result
+  if ((r != 0) && ((a ^ base) < 0)) {
+    q -= 1;    // Round quotient down by one
+    r += base; // Adjust remainder to stay consistent with a = q * base + r
+  }
+
+  return {q, r};
+}
 
 // Zq balanced decomposition implementation
 
@@ -231,13 +256,48 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
+  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<Rq::Base>(base);
   if (output_size < input_size * digits_per_element) {
     ICICLE_LOG_ERROR << "Output buffer too small for balanced decomposition.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  return eIcicleError::API_NOT_IMPLEMENTED;
+  const auto base_div2 = base / 2;
+  const auto q_div2 = q / 2;
+
+  // To decompose Rq polynomials into balanced digits, we decompose all d elements, in t steps, creating a polynomial on
+  // each step. This should be more efficient than decomposing each coefficient separately
+  const size_t total_size = input_size * config.batch_size;
+  for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
+    const Rq& input_poly = input[poly_idx];
+    const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.coeffs);
+    for (int digit_idx = 0; digit_idx < digits_per_element /*=t (steps)*/; ++digit_idx) {
+      // Decompose each coefficient of the polynomial into balanced digits
+      Rq& output_poly = output[poly_idx * digits_per_element + digit_idx];
+      int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.coeffs);
+      // Copy the polynomial to stack memory (assuming d is not too large. Otherwise, use heap memory)
+      int64_t values[Rq::d];
+      for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
+        int64_t val = digit_idx == 0 ? input_coeffs[coeff_idx] : values[coeff_idx];
+        int64_t digit = 0;
+        // we need to handle case where val>q/2 by subtracting q (only for base>2)
+        if (base > 2 && val > q_div2) { val = val - q; }
+
+        std::tie(val, digit) = divmod(val, base);
+
+        // Shift into balanced digit range [-b/2, b/2)
+        if (digit > base_div2) {
+          digit -= base;
+          ++val;
+        }
+
+        values[coeff_idx] = val;                                  // store the updated value for the next digit
+        output_coeffs[coeff_idx] = digit < 0 ? digit + q : digit; // Wrap negative digits to [0, q]
+      }
+    }
+  }
+
+  return eIcicleError::SUCCESS;
 }
 
 static eIcicleError cpu_recompose_from_balanced_digits_rq(
