@@ -256,7 +256,7 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
   constexpr size_t degree = Rq::d;
-  const size_t size = 1 << 10;                    // TODO Yuval: set larger value
+  const size_t size = 1 << 10;
   const size_t total_zq_elements = degree * size; // Total number of Zq elements in all polys
 
   // Randomize Rq polynomials using Zq randomize
@@ -268,8 +268,8 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
   const std::vector<uint32_t> bases = {2, 3, 4, 27, 60, q_sqrt};
 
   for (auto device : s_registered_devices) {
-    // ICICLE_CHECK(icicle_set_device(device));
-    ICICLE_CHECK(icicle_set_device("CPU"));
+    if (device != "CPU") continue; // TODO Yuval
+    ICICLE_CHECK(icicle_set_device(device));
 
     Rq *d_input, *d_decomposed, *d_recomposed;
     ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(Rq)));

@@ -3,6 +3,8 @@
 #include "taskflow/taskflow.hpp"
 #include <cmath>
 #include <cstdint>
+#include <taskflow/core/executor.hpp>
+#include <taskflow/core/taskflow.hpp>
 
 static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
 
@@ -256,46 +258,61 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<Rq::Base>(base);
-  if (output_size < input_size * digits_per_element) {
-    ICICLE_LOG_ERROR << "Output buffer too small for balanced decomposition.";
+  const size_t digits_per_element = output_size / input_size;
+  if (output_size % input_size != 0) {
+    ICICLE_LOG_ERROR << "Balanced recomposition: output size must divide input size.";
     return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  const size_t expected_digits_per_element = balanced_decomposition::compute_nof_digits<Rq::Base>(base);
+  if (digits_per_element < expected_digits_per_element) {
+    ICICLE_LOG_WARNING << "Balanced Decomposition: Output buffer may be too small to decompose input polynomials. "
+                          "Decomposition will stop after "
+                       << digits_per_element << "digits, based on output size.";
   }
 
   const auto base_div2 = base / 2;
   const auto q_div2 = q / 2;
 
-  // To decompose Rq polynomials into balanced digits, we decompose all d elements, in t steps, creating a polynomial on
-  // each step. This should be more efficient than decomposing each coefficient separately
+  tf::Taskflow tasks;
+  tf::Executor executor(get_nof_workers(config));
+
+  // To decompose Rq polynomials into balanced digits, we decompose all d elements, in t steps, creating a polynomial
+  // on each step. This should be more efficient than decomposing each coefficient separately
   const size_t total_size = input_size * config.batch_size;
   for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
-    const Rq& input_poly = input[poly_idx];
-    const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.coeffs);
-    for (int digit_idx = 0; digit_idx < digits_per_element /*=t (steps)*/; ++digit_idx) {
-      // Decompose each coefficient of the polynomial into balanced digits
-      Rq& output_poly = output[poly_idx * digits_per_element + digit_idx];
-      int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.coeffs);
-      // Copy the polynomial to stack memory (assuming d is not too large. Otherwise, use heap memory)
-      int64_t values[Rq::d];
-      for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
-        int64_t val = digit_idx == 0 ? input_coeffs[coeff_idx] : values[coeff_idx];
-        int64_t digit = 0;
-        // we need to handle case where val>q/2 by subtracting q (only for base>2)
-        if (base > 2 && val > q_div2) { val = val - q; }
+    tasks.emplace([=] {
+      const Rq& input_poly = input[poly_idx];
+      const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.coeffs);
+      for (int digit_idx = 0; digit_idx < digits_per_element /*=t (steps)*/; ++digit_idx) {
+        // Decompose each coefficient of the polynomial into balanced digits
+        Rq& output_poly = output[poly_idx * digits_per_element + digit_idx];
+        int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.coeffs);
+        // Copy the polynomial to stack memory (assuming d is not too large. Otherwise, use heap memory)
+        int64_t values[Rq::d];
+        for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
+          int64_t val = digit_idx == 0 ? input_coeffs[coeff_idx] : values[coeff_idx];
+          int64_t digit = 0;
+          // we need to handle case where val>q/2 by subtracting q (only for base>2)
+          if (base > 2 && val > q_div2) { val = val - q; }
 
-        std::tie(val, digit) = divmod(val, base);
+          std::tie(val, digit) = divmod(val, base);
 
-        // Shift into balanced digit range [-b/2, b/2)
-        if (digit > base_div2) {
-          digit -= base;
-          ++val;
+          // Shift into balanced digit range [-b/2, b/2)
+          if (digit > base_div2) {
+            digit -= base;
+            ++val;
+          }
+
+          values[coeff_idx] = val;                                  // store the updated value for the next digit
+          output_coeffs[coeff_idx] = digit < 0 ? digit + q : digit; // Wrap negative digits to [0, q]
         }
-
-        values[coeff_idx] = val;                                  // store the updated value for the next digit
-        output_coeffs[coeff_idx] = digit < 0 ? digit + q : digit; // Wrap negative digits to [0, q]
       }
-    }
+    });
   }
+
+  executor.run(tasks).wait();
+  tasks.clear();
 
   return eIcicleError::SUCCESS;
 }
@@ -333,30 +350,38 @@ static eIcicleError cpu_recompose_from_balanced_digits_rq(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<Rq::Base>(base);
-  if (input_size < output_size * digits_per_element) {
-    ICICLE_LOG_ERROR << "Input buffer too small for balanced recomposition.";
+  const size_t digits_per_element = input_size / output_size;
+  if (input_size % output_size != 0) {
+    ICICLE_LOG_ERROR << "Balanced recomposition: output size must divide input size.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
   const Rq::Base base_as_field = Rq::Base::from(base);
 
+  tf::Taskflow tasks;
+  tf::Executor executor(get_nof_workers(config));
+
   const size_t total_size = output_size * config.batch_size;
   for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
-    Rq output_poly;
-    // Iterate of t input polynomials, one per digit, and recompose them into a single polynomial
-    for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
-      const bool is_first_digit = (digit_idx == digits_per_element - 1);
-      const Rq& input_poly = input[poly_idx * digits_per_element + digit_idx];
-      for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
-        Rq::Base output_coeff = is_first_digit ? Rq::Base::zero() : output_poly.coeffs[coeff_idx];
-        auto digit = input_poly.coeffs[coeff_idx];
-        output_coeff = output_coeff * base_as_field + digit;
-        output_poly.coeffs[coeff_idx] = output_coeff; // Store the recomposed coefficient
+    tasks.emplace([=]() {
+      Rq output_poly;
+      // Iterate of t input polynomials, one per digit, and recompose them into a single polynomial
+      for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
+        const bool is_first_digit = (digit_idx == digits_per_element - 1);
+        const Rq& input_poly = input[poly_idx * digits_per_element + digit_idx];
+        for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
+          Rq::Base output_coeff = is_first_digit ? Rq::Base::zero() : output_poly.coeffs[coeff_idx];
+          auto digit = input_poly.coeffs[coeff_idx];
+          output_coeff = output_coeff * base_as_field + digit;
+          output_poly.coeffs[coeff_idx] = output_coeff; // Store the recomposed coefficient
+        }
       }
-    }
-    output[poly_idx] = output_poly;
+      output[poly_idx] = output_poly;
+    });
   }
+
+  executor.run(tasks).wait();
+  tasks.clear();
 
   return eIcicleError::SUCCESS;
 }
