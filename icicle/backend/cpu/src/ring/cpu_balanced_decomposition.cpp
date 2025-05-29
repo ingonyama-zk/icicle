@@ -309,9 +309,8 @@ static eIcicleError cpu_recompose_from_balanced_digits_rq(
   Rq* output,
   size_t output_size)
 {
-  using scalar = typename Rq::Base;
-  static_assert(scalar::TLC == 2, "Balanced recomposition assumes q ~64b");
-  constexpr auto q_storage = scalar::get_modulus();
+  static_assert(Rq::Base::TLC == 2, "Balanced recomposition assumes q ~64b");
+  constexpr auto q_storage = Rq::Base::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
 
   if (q < 0) {
@@ -334,13 +333,32 @@ static eIcicleError cpu_recompose_from_balanced_digits_rq(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<field_t>(base);
+  const size_t digits_per_element = balanced_decomposition::compute_nof_digits<Rq::Base>(base);
   if (input_size < output_size * digits_per_element) {
     ICICLE_LOG_ERROR << "Input buffer too small for balanced recomposition.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  return eIcicleError::API_NOT_IMPLEMENTED;
+  const Rq::Base base_as_field = Rq::Base::from(base);
+
+  const size_t total_size = output_size * config.batch_size;
+  for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
+    Rq output_poly;
+    // Iterate of t input polynomials, one per digit, and recompose them into a single polynomial
+    for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
+      const bool is_first_digit = (digit_idx == digits_per_element - 1);
+      const Rq& input_poly = input[poly_idx * digits_per_element + digit_idx];
+      for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
+        Rq::Base output_coeff = is_first_digit ? Rq::Base::zero() : output_poly.coeffs[coeff_idx];
+        auto digit = input_poly.coeffs[coeff_idx];
+        output_coeff = output_coeff * base_as_field + digit;
+        output_poly.coeffs[coeff_idx] = output_coeff; // Store the recomposed coefficient
+      }
+    }
+    output[poly_idx] = output_poly;
+  }
+
+  return eIcicleError::SUCCESS;
 }
 
 REGISTER_BALANCED_DECOMPOSITION_RQ_BACKEND(

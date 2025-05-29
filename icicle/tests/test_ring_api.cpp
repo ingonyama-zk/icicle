@@ -256,7 +256,7 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
   constexpr size_t degree = Rq::d;
-  const size_t size = 1 << 2;                     // TODO Yuval: set larger value
+  const size_t size = 1 << 10;                    // TODO Yuval: set larger value
   const size_t total_zq_elements = degree * size; // Total number of Zq elements in all polys
 
   // Randomize Rq polynomials using Zq randomize
@@ -314,14 +314,14 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
       // should be norm bound but the Rq decomposition must be implemented in a certain way
 
       // (4) recompose the decomposed polynomials and check they match the original input
-      // START_TIMER(recompose);
-      // ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
-      // END_TIMER(recompose, label_recompose.str().c_str(), true);
+      START_TIMER(recompose);
+      ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
+      END_TIMER(recompose, label_recompose.str().c_str(), true);
 
-      // ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(Rq)));
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(Rq)));
 
-      // ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(Rq) * size))
-      //   << "Recomposition failed for base=" << base;
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(Rq) * size))
+        << "Recomposition failed for base=" << base;
 
       icicle_free(d_decomposed);
     }
