@@ -265,10 +265,9 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
   std::vector<Rq> recomposed(size);
 
   const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
-  const std::vector<uint32_t> bases = {2, 3, 4, 27, 60, q_sqrt};
+  const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, q_sqrt};
 
   for (auto device : s_registered_devices) {
-    if (device != "CPU") continue; // TODO Yuval
     ICICLE_CHECK(icicle_set_device(device));
 
     Rq *d_input, *d_decomposed, *d_recomposed;

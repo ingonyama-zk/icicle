@@ -14,7 +14,7 @@ int get_nof_workers(const VecOpsConfig& config); // defined in cpu_vec_ops.cpp
 // Helper function that performs floor division and modulo like Python or standard math.
 // Ensures that the remainder is always non-negative and the quotient is rounded down
 // (i.e., toward negative infinity), unlike C++'s default behavior which rounds toward zero.
-static std::pair<int64_t, int64_t> divmod(int64_t a, uint32_t base)
+static inline std::pair<int64_t, int64_t> divmod(int64_t a, uint32_t base)
 {
   // Perform regular C++ integer division and modulo
   int64_t q = a / base;
@@ -44,7 +44,7 @@ int64_t get_q()
 }
 
 template <typename T>
-eIcicleError verify_params(
+static eIcicleError verify_params(
   const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size)
 {
   static_assert(field_t::TLC == 2, "Balanced decomposition assumes q ~64b");
@@ -176,7 +176,7 @@ static eIcicleError cpu_recompose_from_balanced_digits(
       for (uint64_t out_idx = start_idx; out_idx < end_idx; ++out_idx) {
         field_t acc = field_t::zero();
         // computing 'x ≡ ∑ r_i * b^i mod q' in field_t
-        for (size_t digit_idx = digits_per_element; digit_idx-- > 0;) {
+        for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
           auto digit = input[out_idx * digits_per_element + digit_idx];
           acc = acc * base_as_field + digit;
         }
