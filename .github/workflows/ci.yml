@@ -754,48 +754,57 @@ jobs:
             runner: [self-hosted, macOS, ARM64, icicle, metal]
             initial-support: true
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.runtime == 'true'
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}
-    - name: Build Runtime
-      working-directory: ./icicle
-      if: needs.check-changed-files.outputs.runtime == 'true'
-      run: |
-        mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
-        cmake --build build
-    - name: Run C++ Runtime Tests
-      working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true')
-      run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        ctest --output-on-failure -R "DeviceApiTest"
-    - name: Run Rust Runtime Tests
-      working-directory: ./wrappers/rust/icicle-runtime
-      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.rust == 'true'
-      run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+      - name: Set backend branch name
+        run: |
+          if [[ "${{ matrix.backend }}" == "cuda" ]]; then
+          echo 'cuda backend branch: ${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}'
+            echo "BACKEND_BRANCH=${{ needs.extract-cuda-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+          elif [[ "${{ matrix.backend }}" == "metal" ]]; then
+            echo "metal backend branch: ${{ needs.extract-metal-backend-branch.outputs.backend-branch }}"
+            echo "BACKEND_BRANCH=${{ needs.extract-metal-backend-branch.outputs.backend-branch }}" >> $GITHUB_ENV
+          fi
+      - name: Checkout Repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Checkout ${{ matrix.backend_upper }} backend
+        if: needs.check-changed-files.outputs.field == 'true'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ingonyama-zk/icicle-${{ matrix.backend }}-backend
+          path: ./icicle/backend/${{ matrix.backend }}
+          ssh-key: ${{ secrets[matrix.secret_key] }}
+          ref: ${{ env.BACKEND_BRANCH }}
+      - name: Build Runtime
+        working-directory: ./icicle
+        if: needs.check-changed-files.outputs.runtime == 'true'
+        run: |
+          mkdir -p build && rm -rf build/*
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -D${{ matrix.backend_upper }}_BACKEND=local -S . -B build
+          cmake --build build
+      - name: Run C++ Runtime Tests
+        working-directory: ./icicle/build/tests
+        if: needs.check-changed-files.outputs.runtime == 'true' && (needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.cpu-backend == 'true')
+        run: |
+          export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+          ctest --output-on-failure -R "DeviceApiTest"
+      - name: Run Rust Runtime Tests
+        working-directory: ./wrappers/rust/icicle-runtime
+        if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.rust == 'true'
+        run: |
+          export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+          export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
 
-        rustup override set nightly
-        cargo test --release --verbose
-    - name: Setup go
-      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true'
-      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
-      with:
-        go-version: '1.22.0'
-        cache: false
-    - name: Run Golang Runtime Tests
-      working-directory: ./wrappers/golang/runtime
-      if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true'
-      run: |
-        export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
-        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_device -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
-        go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
+          rustup override set nightly
+          cargo test --release --verbose
+      - name: Setup go
+        if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true'
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version: '1.22.0'
+          cache: false
+      - name: Run Golang Runtime Tests
+        working-directory: ./wrappers/golang/runtime
+        if: needs.check-changed-files.outputs.runtime == 'true' && needs.check-changed-files.outputs.go == 'true'
+        run: |
+          export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
+          export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_device -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+          go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
