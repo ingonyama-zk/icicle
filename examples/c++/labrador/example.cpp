@@ -613,6 +613,51 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     s_prime.push_back(Tq());
   }
 
+  // Step 7: Let LabradorRecursion be a new empty LabradorInstance
+  size_t r_prime = 2 * nu + L_t + L_g + L_h;
+  assert(r_prime == (s_prime.size() / n_prime));
+  LabradorInstance recursive_instance(r_prime, n_prime, 10 * beta);
+
+  // Step 8: add the equality constraint u1=Bt + Cg to LabradorRecursion
+  // Generate B, C
+  // TODO: change this so that B,C need not be computed and stored
+  size_t l1 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base1));
+  size_t l2 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base2));
+  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * ((r * (r + 1)) / 2) * l2);
+
+  std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
+  seed_B.push_back(std::byte('1'));
+  seed_C.push_back(std::byte('2'));
+  ICICLE_CHECK(random_sampling<Tq>(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
+  ICICLE_CHECK(random_sampling<Tq>(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
+
+  assert(t.size() == l1 * r * kappa);
+  assert(g.size() == ((r * (r + 1)) / 2) * l2);
+
+  for (size_t i = 0; i < kappa1; i++) {
+    EqualityInstance new_constraint(r_prime, n_prime);
+    size_t j = 0;
+    while ((j + 1) * n_prime <= t.size()) {
+      // new_constraint.phi[2*nu+j] = B[i][j*n_prime: (j+1)*n_prime]
+      new_constraint.phi[2 * nu + j].assign(&B[i * t.size() + j * n_prime], &B[i * t.size() + (j + 1) * n_prime]);
+      j++;
+    }
+    for (size_t k = 0; k < t.size() - j * n_prime; k++) {
+      new_constraint.phi[2 * nu + j][k] = B[i * t.size() + j * n_prime + k];
+    }
+
+    j = 0;
+    while ((j + 1) * n_prime <= g.size()) {
+      // new_constraint.phi[2*nu + L_t + j] = C[i][j*n_prime: (j+1)*n_prime]
+      new_constraint.phi[2 * nu + L_t + j].assign(&C[i * g.size() + j * n_prime], &C[i * g.size() + (j + 1) * n_prime]);
+      j++;
+    }
+    for (size_t k = 0; k < g.size() - j * n_prime; k++) {
+      new_constraint.phi[2 * nu + j][k] = B[i * l1 * r * kappa + j * n_prime + k];
+    }
+    new_constraint.b = u1[i];
+  }
+
   LabradorInstance recursive_instance(0, 0, 0); // Placeholder
   std::vector<Rq> recursive_witness;            // Placeholder
 
