@@ -1,92 +1,8 @@
-#include "examples_utils.h"
-
-// ICICLE runtime
-#include "icicle/runtime.h"
-
-#include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
-#include "icicle/hash/keccak.h"      // For Hash
+#include "labrador_protocol.h"
+// #include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
+// #include "icicle/hash/keccak.h"      // For Hash
 
 using namespace icicle::labrador;
-
-constexpr size_t beta = 10; // TODO(Ash): set beta according to the protocol
-
-// === TODO(Ash): Consider adding protocol-specific types ===
-struct EqualityInstance {
-  const size_t r;                   // Number of witness vectors
-  const size_t n;                   // Dimension of each vector in Rq
-  std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Rq (r x r matrix)
-  std::vector<std::vector<Tq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
-  Tq b;                             // Polynomial in Rq
-
-  EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
-  EqualityInstance(size_t r, size_t n, std::vector<std::vector<Tq>> a, std::vector<std::vector<Tq>> phi, Tq b)
-      : r(r), n(n), a(std::move(a)), phi(std::move(phi)), b(std::move(b))
-  {
-    // check if the sizes of a and phi are correct
-    if (a.size() != r || phi.size() != r) {
-      throw std::invalid_argument("EqualityInstance: 'a' and 'phi' must have size r");
-    }
-    for (const auto& row : a) {
-      if (row.size() != r) { throw std::invalid_argument("EqualityInstance: each row of 'a' must have size r"); }
-    }
-    for (const auto& vec : phi) {
-      if (vec.size() != n) { throw std::invalid_argument("EqualityInstance: each vector in 'phi' must have size n"); }
-    }
-  }
-};
-
-struct ConstZeroInstance {
-  const size_t r;                   // Number of witness vectors
-  const size_t n;                   // Dimension of each vector in Rq
-  std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Tq (r x r matrix)
-  std::vector<std::vector<Tq>> phi; // phi[i] vector over Tq (r vectors, each of size n)
-  Tq b;                             // Polynomial in Rq
-
-  ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
-};
-
-struct LabradorInstance {
-  const size_t r;                                        // Number of witness vectors
-  const size_t n;                                        // Dimension of each vector in Tq
-  double beta;                                           // Norm bound
-  std::vector<EqualityInstance> equality_constraints;    // K EqualityInstances
-  std::vector<ConstZeroInstance> const_zero_constraints; // L ConstZeroInstances
-
-  LabradorInstance(size_t r, size_t n, double beta) : r(r), n(n), beta(beta) {}
-
-  // Add an EqualityInstance
-  void add_equality_constraint(const EqualityInstance& instance) { equality_constraints.push_back(instance); }
-
-  // Add a ConstZeroInstance
-  void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
-};
-
-// TODO: add a LabradorProver struct which contains all the relevant parameters
-
-Rq icicle::labrador::conjugate(const Rq& p)
-{
-  Rq result;
-  // Copy constant term (index 0)
-  result.coeffs[0] = p.coeffs[0];
-
-  // For remaining coefficients, flip and negate
-  for (size_t k = 1; k < Rq::d; k++) {
-    // TODO: neg is negate?
-    result.coeffs[k] = Zq::neg(p.coeffs[Rq::d - k]);
-  }
-
-  return result;
-}
-
-template <typename Zq>
-int64_t get_q()
-{
-  constexpr auto q_storage = Zq::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  return q;
-}
-
-// === TODO(Ash): Implement protocol logic ===
 
 eIcicleError setup(/*TODO params*/)
 {
@@ -94,8 +10,8 @@ eIcicleError setup(/*TODO params*/)
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError base_prover(
-  LabradorInstance lab_inst, const std::vector<std::byte> ajtai_seed, const std::vector<Rq> S, std::vector<Zq> proof)
+eIcicleError LabradorProtocol::base_prover(
+  LabradorInstance lab_inst, const std::vector<std::byte>& ajtai_seed, const std::vector<Rq>& S, std::vector<Zq>& proof)
 {
   // Step 1: Pack the Witnesses into a Matrix S
 
@@ -129,7 +45,6 @@ eIcicleError base_prover(
   // Step 3: S@A = T
   // Generate A
   // TODO: change this so that A need not be computed and stored
-  const size_t kappa = 1 << 4;
   std::vector<Tq> A(n * kappa);
 
   std::vector<std::byte> seed_A(ajtai_seed);
@@ -150,7 +65,6 @@ eIcicleError base_prover(
   }
 
   // Step 6: Convert T to T_tilde
-  uint32_t base1 = 1 << 16;
   size_t l1 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base1));
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
@@ -174,7 +88,6 @@ eIcicleError base_prover(
   }
 
   // Step 8: Convert g to g_tilde
-  uint32_t base2 = 1 << 16;
   size_t l2 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base2));
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
@@ -186,7 +99,6 @@ eIcicleError base_prover(
   // Step 10: u1 = B@T_tilde + C@g_tilde
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
-  const size_t kappa1 = 1 << 4;
   std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * ((r * (r + 1)) / 2) * l2);
 
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
@@ -206,10 +118,10 @@ eIcicleError base_prover(
 
   std::vector<Tq> u1(kappa1), v1(kappa1), v2(kappa1);
   // v1 = B@T_tilde
-  ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_ntt.data(), l1 * r * kappa, 1, {}, v1.data()));
+  ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_ntt.data(), T_tilde_ntt.size(), 1, {}, v1.data()));
   // v2 = C@g_tilde
   ICICLE_CHECK(
-    matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_ntt.data(), ((r * (r + 1)) / 2) * l2, 1, {}, v2.data()));
+    matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_ntt.data(), g_tilde_ntt.size(), 1, {}, v2.data()));
   for (size_t i = 0; i < kappa1; i++) {
     // TODO: can we flatten v1, v2 as Zq and run this?
     vector_add(v1[i].coeffs, v2[i].coeffs, d, {}, u1[i].coeffs);
@@ -227,7 +139,6 @@ eIcicleError base_prover(
   hasher.hash("Placeholder1", 12, {}, seed1.data());
 
   // Step 12: Select a JL projection
-  constexpr size_t JL_out = 256;
   std::vector<Zq> p(JL_out, Zq::from(0));
   size_t JL_i = 0;
   while (true) {
@@ -277,7 +188,7 @@ eIcicleError base_prover(
   // Step 17: Create polynomial vectors from JL matrix rows
   std::vector<Rq> R(r * JL_out * n), Q(r * JL_out * n);
   // indexes into a multidim array of dim = r X JL_out X n
-  auto rq_index = [n](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
+  auto rq_index = [n, this](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
 
   for (size_t i = 0; i < r; i++) {
     // Create seed for P_i matrix (same as in step 12)
@@ -317,7 +228,7 @@ eIcicleError base_prover(
   std::vector<Zq> psi_k(num_aggregation_rounds * L), omega_k(num_aggregation_rounds * JL_out);
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
   auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
-  auto omega_index = [](size_t k, size_t l) { return k * JL_out + l; };
+  auto omega_index = [this](size_t k, size_t l) { return k * JL_out + l; };
 
   // sample psi_k
   std::vector<std::byte> psi_seed(seed2);
@@ -543,7 +454,6 @@ eIcicleError base_prover(
   }
 
   // Step 24: Decompose h
-  uint32_t base3 = 1 << 16; // Choose appropriate base
   size_t l3 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base3));
 
   std::vector<Rq> H_tilde(l3 * H.size());
@@ -557,7 +467,6 @@ eIcicleError base_prover(
 
   // Step 25: already done
   // Step 26: commit to H_tilde
-  constexpr size_t kappa2 = 1 << 4;
   std::vector<Tq> D(kappa2 * l3 * ((r * (r + 1)) / 2));
 
   std::vector<Tq> u2(kappa2);
@@ -612,14 +521,18 @@ eIcicleError base_prover(
   return eIcicleError::SUCCESS;
 }
 
-std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
+std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive_problem(
   EqualityInstance final_const,
   std::vector<std::byte> ajtai_seed,
+  std::vector<Tq> u1,
+  std::vector<Tq> u2,
   std::vector<Tq> challenges_hat,
   std::vector<Tq> z_hat,
   std::vector<Tq> t,
   std::vector<Tq> g,
-  std::vector<Tq> h)
+  std::vector<Tq> h,
+  size_t mu,
+  size_t nu)
 {
   const size_t r = final_const.r;
   const size_t n = final_const.n;
@@ -631,8 +544,7 @@ std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
     ICICLE_CHECK(ntt(z_hat[i].coeffs, d, NTTDir::kInverse, default_ntt_config<Zq>(), z[i].coeffs));
   }
 
-  // Step 2: Decompose z using base b_0
-  uint32_t base0 = 1 << 16; // Choose appropriate base (same pattern as base protocol)
+  // Step 2: Decompose z using base0
   size_t l0 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base0));
 
   // Decompose all elements first
@@ -652,8 +564,6 @@ std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
   size_t m = t.size() + g.size() + h.size();
 
   // Step 4, 5:
-  size_t nu = 1 << 3;
-  size_t mu = 1 << 3;
   size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
 
   // Step 6
@@ -677,7 +587,7 @@ std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
   // now s_prime is 2*nu*n_prime long and can be viewed as a 2*nu long array of n_prime dimension Tq vectors
 
   // add the polynomials in t to s_prime and zero pad to make them L_t*n_prime length
-  size_t L_t = std::ceil((double)t.size() / n_prime);
+  size_t L_t = (t.size() + n_prime - 1) / n_prime;
   for (size_t i = 0; i < t.size(); i++) {
     s_prime.push_back(t[i]);
   }
@@ -686,7 +596,7 @@ std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
   }
 
   // add the polynomials in g to s_prime and zero pad to make them L_g*n_prime length
-  size_t L_g = std::ceil((double)g.size() / n_prime);
+  size_t L_g = (g.size() + n_prime - 1) / n_prime;
   for (size_t i = 0; i < g.size(); i++) {
     s_prime.push_back(g[i]);
   }
@@ -695,7 +605,7 @@ std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
   }
 
   // add the polynomials in h to s_prime and zero pad to make them L_h*n_prime length
-  size_t L_h = std::ceil((double)h.size() / n_prime);
+  size_t L_h = (h.size() + n_prime - 1) / n_prime;
   for (size_t i = 0; i < h.size(); i++) {
     s_prime.push_back(h[i]);
   }
