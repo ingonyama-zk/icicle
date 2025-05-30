@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <thread>
 #include <atomic>
 #include <string>
@@ -37,6 +38,14 @@ using namespace curve_config;
 
 #define NOF_FEATURES_C_TREE      3
 #define FIXED_SCALAR_SIZE_C_TREE 254
+
+std::atomic<uint64_t> prj_cnt = 0;
+std::atomic<uint64_t> dbl_cnt = 0;
+std::atomic<uint64_t> mix_cnt = 0;
+
+std::atomic<uint64_t> prj_time = 0;
+std::atomic<uint64_t> dbl_time = 0;
+std::atomic<uint64_t> mix_time = 0;
 
 template <typename A, typename P>
 class Msm
@@ -272,10 +281,35 @@ private:
 
       for (int j = 0; j < m_precompute_factor; j++) {
         // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
+        __builtin_prefetch(&bases[m_precompute_factor * i + j], 0, 1);
         const A& base = bases[m_precompute_factor * i + j];
         if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
         const A base_neg = A::neg(base);
 
+        // -- [prefetch next bucket for each bucket module] -----------------
+        int p_carry = 0;
+        for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
+          if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
+          uint32_t curr_coeff = scalar.get_scalar_digit(m_nof_buckets_module * j + bm_i, m_c) + p_carry;
+          if ((curr_coeff & coeff_bit_mask_with_sign_bit) != 0) {
+            p_carry = curr_coeff > m_bm_size;
+            int bkt_idx = p_carry ? m_bm_size * bm_i + ((-curr_coeff) & coeff_bit_mask_no_sign_bit)
+                                : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
+            char* ptr = (char *) &buckets[bkt_idx];
+            // prefetch into L1
+            if constexpr (sizeof(Bucket) == 96) {
+              __builtin_prefetch(ptr, 1, 3);
+              __builtin_prefetch(ptr + 64, 1, 3);
+            } else if constexpr (sizeof(Bucket) == 192) {
+              __builtin_prefetch(ptr, 1, 3);
+              __builtin_prefetch(ptr + 64, 1, 3);
+              __builtin_prefetch(ptr + 128, 1, 3);
+            }
+          } else {
+            p_carry = curr_coeff >> m_c;
+          }
+        }
+        // -------------------------------------------------------------------
         for (int bm_i = 0; bm_i < m_nof_buckets_module; bm_i++) {
           // Avoid seg fault in case precompute_factor*c exceeds the scalar width by comparing index with num additions
           if (m_nof_buckets_module * j + bm_i >= num_bms_before_precompute) { break; }
@@ -291,8 +325,9 @@ private:
 
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
             if (buckets_busy[bkt_idx]) {
-              buckets[bkt_idx].point =
-                buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
+              P::accum_prj_aff(buckets[bkt_idx].point, ((negate_p_and_s ^ (carry > 0)) ? base_neg : base));
+              // buckets[bkt_idx].point =
+              //   buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
             } else {
               buckets_busy[bkt_idx] = true;
               buckets[bkt_idx].point =
@@ -330,6 +365,9 @@ private:
   {
     for (int segment_idx = 0; segment_idx < m_segments.size(); segment_idx++) {
       // Each thread is responsible for a sinעle thread
+      // const uint64_t bucket_start = segment_idx * m_segment_size;
+      // const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
+      // worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
       m_taskflow.emplace([&, segment_idx]() {
         const uint64_t bucket_start = segment_idx * m_segment_size;
         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
@@ -368,7 +406,7 @@ private:
   {
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
       if (m_workers_buckets_busy[worker_i][bucket_idx]) {
-        sum = sum + m_workers_buckets[worker_i][bucket_idx].point; // TBD: inplace
+        P::accum_prj_prj(sum, m_workers_buckets[worker_i][bucket_idx].point); // TBD: inplace
       }
     }
   }
@@ -443,6 +481,13 @@ template <typename A, typename P>
 eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
+  dbl_cnt.store(0);
+  prj_cnt.store(0);
+  mix_cnt.store(0);
+  dbl_time.store(0);
+  prj_time.store(0);
+  mix_time.store(0);
+  auto start = get_clock_counter();
   Msm<A, P> msm(msm_size, config);
   for (int batch_i = 0; batch_i < config.batch_size; batch_i++) {
     const int batch_start_idx = msm_size * batch_i;
@@ -450,6 +495,24 @@ eIcicleError cpu_msm(
     msm.run_msm(
       &scalars[batch_start_idx], &bases[bases_start_idx], &results[batch_i], batch_i + 1 == config.batch_size);
   }
+  auto end = get_clock_counter();
+  // std::cout << "Counter frequency: " << get_counter_frequency() << " Hz\n";
+  // auto duration = counter_to_ns(end - start);
+  // uint64_t dbl_time_n = counter_to_ns(dbl_time.load());
+  // uint64_t prj_time_n = counter_to_ns(prj_time.load());
+  // uint64_t mix_time_n = counter_to_ns(mix_time.load());
+
+  // std::cout << "Time taken: " << duration / 1e6 << " ms\n";
+  // std::cout << "dbl_cnt: " << dbl_cnt.load() << "\n";
+  // std::cout << "prj_cnt: " << prj_cnt.load() << "\n";
+  // std::cout << "mix_cnt: " << mix_cnt.load() << "\n";
+  // std::cout << "dbl_time: " << dbl_time_n << "\n";
+  // std::cout << "prj_time: " << prj_time_n << "\n";
+  // std::cout << "mix_time: " << mix_time_n << "\n";
+  // std::cout << "dbl_ns: " << dbl_time_n / dbl_cnt.load() << "\n";
+  // std::cout << "prj_ns: " << prj_time_n / prj_cnt.load() << "\n";
+  // std::cout << "mix_ns: " << mix_time_n / mix_cnt.load() << "\n";
+  // std::cout << "non-ecadd-overhead: " << (duration - dbl_time_n - prj_time_n - mix_time_n) / 1e6 << " ms\n";
   return eIcicleError::SUCCESS;
 }
 

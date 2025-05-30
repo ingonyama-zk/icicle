@@ -14,7 +14,19 @@ using mp_512_t = std::array<uint64_t, 8>;
 
 struct bn254_mont_t {
 #define INLINE __attribute__((always_inline))
-
+    static INLINE mp_512_t add(const mp_512_t &a, const mp_512_t &b) {
+        unsigned long long c;
+        mp_512_t res;
+        res[0] = __builtin_addcll(a[0], b[0], 0, &c);
+        res[1] = __builtin_addcll(a[1], b[1], c, &c);
+        res[2] = __builtin_addcll(a[2], b[2], c, &c);
+        res[3] = __builtin_addcll(a[3], b[3], c, &c);
+        res[4] = __builtin_addcll(a[4], b[4], c, &c);
+        res[5] = __builtin_addcll(a[5], b[5], c, &c);
+        res[6] = __builtin_addcll(a[6], b[6], c, &c);
+        res[7] = __builtin_addcll(a[7], b[7], c, &c);
+        return res;
+    }
 
     static INLINE mp_256_t add(const mp_256_t &a, const mp_256_t &b) {
         unsigned long long c;
@@ -50,6 +62,20 @@ struct bn254_mont_t {
         return {r, c};
     }
 
+    static INLINE mp_512_t sub(const mp_512_t &a, const mp_512_t &b) {
+        unsigned long long c;
+        mp_512_t res;
+        res[0] = __builtin_subcll(a[0], b[0], 0, &c);
+        res[1] = __builtin_subcll(a[1], b[1], c, &c);
+        res[2] = __builtin_subcll(a[2], b[2], c, &c);
+        res[3] = __builtin_subcll(a[3], b[3], c, &c);
+        res[4] = __builtin_subcll(a[4], b[4], c, &c);
+        res[5] = __builtin_subcll(a[5], b[5], c, &c);
+        res[6] = __builtin_subcll(a[6], b[6], c, &c);
+        res[7] = __builtin_subcll(a[7], b[7], c, &c);
+        return res;
+    }
+
     static INLINE mp_256_t sub(const mp_256_t &a, const mp_256_t &b) {
         unsigned long long c;
         mp_256_t res;
@@ -78,6 +104,20 @@ struct bn254_mont_t {
         res[2] = __builtin_subcll(a[2], b[2], c, &c);
         res[3] = __builtin_subcll(a[3], b[3], c, &c);
         res[4] = __builtin_subcll(a[4], b[4], c, &c);
+        return {res, c};
+    }
+
+    static INLINE std::pair<mp_512_t, bool> subc(const mp_512_t &a, const mp_512_t &b) {
+        unsigned long long c;
+        mp_512_t res;
+        res[0] = __builtin_subcll(a[0], b[0], 0, &c);
+        res[1] = __builtin_subcll(a[1], b[1], c, &c);
+        res[2] = __builtin_subcll(a[2], b[2], c, &c);
+        res[3] = __builtin_subcll(a[3], b[3], c, &c);
+        res[4] = __builtin_subcll(a[4], b[4], c, &c);
+        res[5] = __builtin_subcll(a[5], b[5], c, &c);
+        res[6] = __builtin_subcll(a[6], b[6], c, &c);
+        res[7] = __builtin_subcll(a[7], b[7], c, &c);
         return {res, c};
     }
 
@@ -166,6 +206,7 @@ struct bn254_mont_t {
     static constexpr mp_256_t P2 = {0x7841182db0f9fa8e, 0x2f02d522d0e3951a, 0x70a08b6d0302b0bb, 0x60c89ce5c2634053};
     static constexpr mp_256_t P3 = {0xb461a4448976f7d5, 0xc6843fb439555fa7, 0x28f0d12384840918, 0x912ceb58a394e07d};
     static constexpr mp_256_t P4 = {0xf082305b61f3f51c, 0x5e05aa45a1c72a34, 0xe14116da06056176, 0xc19139cb84c680a6};
+    static constexpr mp_512_t PP = {0x3b5458a2275d69b1, 0xa602072d09eac101, 0x4a50189c6d96cadc, 0x4689e957a1242c8, 0x26edfa5c34c6b38d, 0xb00b855116375606, 0x599a6f7c0348d21c, 0x925c4b8763cbf9c};
     static constexpr mp_256_t I1 = {0x327d7c1b18f7bd41, 0xdb8ed52f824ed32f, 0x29b67b05eb29a6a1, 0x19ac99126b459dda};
     static constexpr mp_256_t I2 = {0x1da790e434ade680, 0x27a2f342f9905883, 0xb5ab34890dfa3d61, 0x1e07f71b064ef9b1};
     static constexpr mp_256_t I3 = {0xb334aa7264874f53, 0x62a52db096edbc9e, 0x235878f5c0a1dafe, 0x28f5dd496ed1da9d};
@@ -179,7 +220,7 @@ struct bn254_mont_t {
     //    static constexpr mp_256_t I3 = {0x9BACB016127CBE4E, 0x0B2051FA31944124, 0xB064EEA46091C76C, 0x2B062AAA49F80C7D};
     //    static constexpr uint64_t MU = 0xc2e1f593efffffff;
 
-    static INLINE mp_256_t mul(const mp_256_t &a, const mp_256_t &b) {
+    static mp_256_t mul(const mp_256_t &a, const mp_256_t &b) {
         auto [c00lo, c00hi] = mul_wide(a[0], b[0]);
         auto [c01lo, c01hi] = mul_wide(a[0], b[1]);
         auto [c02lo, c02hi] = mul_wide(a[0], b[2]);
@@ -288,11 +329,11 @@ struct bn254_mont_t {
 
         const uint8_t top_bits = r[3] >> 62;
         if (top_bits == 0b11) {
-            std::tie(r, std::ignore) = subc(r, P3);
+            r = sub(r, P3);
         } else if (top_bits == 0b10) {
-            std::tie(r, std::ignore) = subc(r, P2);
+            r = sub(r, P2);
         } else if (top_bits == 0b01) {
-            std::tie(r, std::ignore) = subc(r, P);
+            r = sub(r, P);
         }
         auto [rr, cc] = subc(r, P);
         r = cc ? r : rr;
@@ -300,7 +341,7 @@ struct bn254_mont_t {
         return r;
     }
 
-    static INLINE mp_256_t reduce(const mp_512_t &ab) {
+    INLINE static mp_256_t reduce(const mp_512_t &ab) {
         mp_320_t r1 = smul(ab[0], I3);
         mp_320_t r2 = smul(ab[1], I2);
         mp_320_t r3 = smul(ab[2], I1);
@@ -311,11 +352,11 @@ struct bn254_mont_t {
         mp_256_t r = {s[1], s[2], s[3], s[4]};
         const uint8_t top_bits = r[3] >> 62;
         if (top_bits == 0b11) {
-            std::tie(r, std::ignore) = subc(r, P3);
+            r = sub(r, P3);
         } else if (top_bits == 0b10) {
-            std::tie(r, std::ignore) = subc(r, P2);
+            r = sub(r, P2);
         } else if (top_bits == 0b01) {
-            std::tie(r, std::ignore) = subc(r, P);
+            r = sub(r, P);
         }
         auto [rr, cc] = subc(r, P);
         r = cc ? r : rr;
@@ -323,7 +364,7 @@ struct bn254_mont_t {
         return r;
     }
 
-    static INLINE mp_256_t reduce(const mp_256_t &a) {
+    static mp_256_t reduce(const mp_256_t &a) {
         mp_320_t r1 = smul(a[0], I3);
         mp_320_t r2 = smul(a[1], I2);
         mp_320_t r3 = smul(a[2], I1);
@@ -334,11 +375,11 @@ struct bn254_mont_t {
         mp_256_t r = {s[1], s[2], s[3], s[4]};
         const uint8_t top_bits = r[3] >> 62;
         if (top_bits == 0b11) {
-            std::tie(r, std::ignore) = subc(r, P3);
+            r = sub(r, P3);
         } else if (top_bits == 0b10) {
-            std::tie(r, std::ignore) = subc(r, P2);
+            r = sub(r, P2);
         } else if (top_bits == 0b01) {
-            std::tie(r, std::ignore) = subc(r, P);
+            r = sub(r, P);
         }
         auto [rr, cc] = subc(r, P);
         r = cc ? r : rr;
@@ -346,8 +387,24 @@ struct bn254_mont_t {
         return r;
     }
 
-    static mp_256_t mul_ss(mp_256_t &a, mp_256_t &b) {
-        mp_512_t ab = schoolbook_mul(a, b);
-        return reduce(ab);
+    static INLINE mp_256_t add_red(const mp_256_t &a, const mp_256_t &b) {
+        mp_256_t r = add(a, b);
+        auto [rr, cc] = subc(r, P);
+        r = cc ? r : rr;
+        return r;
+    }
+
+    static INLINE mp_256_t sub_red(const mp_256_t &a, const mp_256_t &b) {
+        auto [r, c] = subc(a, b);
+        mp_256_t rr = add(r, P);
+        r = c ? rr : r;
+        return r;
+    }
+
+    static INLINE mp_512_t sub_red(const mp_512_t &a, const mp_512_t &b) {
+        auto [r, c] = subc(a, b);
+        mp_512_t rr = add(r, PP);
+        r = c ? rr : r;
+        return r;
     }
 };
