@@ -42,7 +42,7 @@ func testIsDeviceAvailable(suite *suite.Suite) {
 	expectedNumDevicesAsString := strings.TrimRight(string(expectedNumDevicesRaw), " \n\r\t")
 	expectedNumDevices, _ := strconv.Atoi(expectedNumDevicesAsString)
 	if wcErr != nil {
-		t.Skip("Failed to get number of devices:", wcErr)
+		suite.T().Skip("Failed to get number of devices:", wcErr)
 	}
 
 	suite.Equal(icicle_runtime.Success, err)
@@ -109,7 +109,7 @@ func testActiveDevice(suite *suite.Suite) {
 	suite.Equal(test_helpers.MAIN_DEVICE, *activeDevice)
 	memory1, err := icicle_runtime.GetAvailableMemory()
 	if err == icicle_runtime.ApiNotImplemented {
-		suite.Skipf("GetAvailableMemory() function is not implemented on %s device", test_helpers.MAIN_DEVICE.GetDeviceType())
+		suite.T().Skipf("GetAvailableMemory() function is not implemented on %s device", test_helpers.MAIN_DEVICE.GetDeviceType())
 	}
 	suite.Equal(icicle_runtime.Success, err)
 	suite.Greater(memory1.Total, uint(0))
