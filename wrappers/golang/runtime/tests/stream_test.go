@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-	func testCreateStream(suite *suite.Suite) {
+func testCreateStream(suite *suite.Suite) {
 	test_helpers.ActivateMainDevice()
 
 	_, err := runtime.CreateStream()
