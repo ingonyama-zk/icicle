@@ -99,9 +99,9 @@ struct LabradorProtocol {
   std::pair<LabradorInstance, std::vector<Tq>> prepare_recursive_problem(
     EqualityInstance final_const,
     std::vector<std::byte> ajtai_seed,
-    std::vector<Tq> challenges_hat,
     std::vector<Tq> u1,
     std::vector<Tq> u2,
+    std::vector<Tq> challenges_hat,
     std::vector<Tq> z_hat,
     std::vector<Tq> t,
     std::vector<Tq> g,

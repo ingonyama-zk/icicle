@@ -467,7 +467,12 @@ eIcicleError LabradorProtocol::base_prover(
 
   // Step 25: already done
   // Step 26: commit to H_tilde
+  // TODO: change this so that D need not be computed and stored
   std::vector<Tq> D(kappa2 * l3 * ((r * (r + 1)) / 2));
+
+  std::vector<std::byte> seed_D(ajtai_seed);
+  seed_D.push_back(std::byte('3'));
+  ICICLE_CHECK(random_sampling<Tq>(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
 
   std::vector<Tq> u2(kappa2);
   // u2 = D@H_tilde
@@ -613,12 +618,12 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     s_prime.push_back(Tq());
   }
 
-  // Step 7: Let LabradorRecursion be a new empty LabradorInstance
+  // Step 7: Let recursive_instance be a new empty LabradorInstance
   size_t r_prime = 2 * nu + L_t + L_g + L_h;
   assert(r_prime == (s_prime.size() / n_prime));
   LabradorInstance recursive_instance(r_prime, n_prime, 10 * beta);
 
-  // Step 8: add the equality constraint u1=Bt + Cg to LabradorRecursion
+  // Step 8: add the equality constraint u1=Bt + Cg to recursive_instance
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
   size_t l1 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base1));
@@ -656,12 +661,97 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       new_constraint.phi[2 * nu + j][k] = B[i * l1 * r * kappa + j * n_prime + k];
     }
     new_constraint.b = u1[i];
+
+    recursive_instance.add_equality_constraint(new_constraint);
   }
 
-  LabradorInstance recursive_instance(0, 0, 0); // Placeholder
-  std::vector<Rq> recursive_witness;            // Placeholder
+  // Step 9: add the equality constraint u2=Dh to recursive_instance
+  // Generate D
+  // TODO: change this so that D need not be computed and stored
+  size_t l3 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base3));
+  std::vector<Tq> D(kappa2 * l3 * ((r * (r + 1)) / 2));
 
-  return std::make_pair(recursive_instance, recursive_witness);
+  std::vector<std::byte> seed_D(ajtai_seed);
+  seed_D.push_back(std::byte('3'));
+  ICICLE_CHECK(random_sampling<Tq>(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
+
+  assert(h.size() == l3 * ((r * (r + 1)) / 2));
+
+  for (size_t i = 0; i < kappa2; i++) {
+    EqualityInstance new_constraint(r_prime, n_prime);
+    size_t j = 0;
+    while ((j + 1) * n_prime <= h.size()) {
+      // new_constraint.phi[2*nu + L_t +L_g +j] = D[i][j*n_prime: (j+1)*n_prime]
+      new_constraint.phi[2 * nu + L_t + L_g + j].assign(
+        &D[i * h.size() + j * n_prime], &D[i * h.size() + (j + 1) * n_prime]);
+      j++;
+    }
+    for (size_t k = 0; k < h.size() - j * n_prime; k++) {
+      new_constraint.phi[2 * nu + L_t + L_g + j][k] = D[i * h.size() + j * n_prime + k];
+    }
+
+    new_constraint.b = u2[i];
+
+    recursive_instance.add_equality_constraint(new_constraint);
+  }
+
+  // Step 10: add the equality constraint Az - sum_i c_i t_i =0 to recursive_instance
+  // Generate A
+  // TODO: change this so that A need not be computed and stored
+  std::vector<Tq> A(n * kappa);
+
+  std::vector<std::byte> seed_A(ajtai_seed);
+  seed_A.push_back(std::byte('0'));
+  ICICLE_CHECK(random_sampling<Tq>(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
+
+  for (size_t i = 0; i < kappa; i++) {
+    EqualityInstance new_constraint(r_prime, n_prime);
+    size_t j = 0;
+    while ((j + 1) * n_prime <= h.size()) {
+      // new_constraint.phi[j] = A[i][j*n_prime: (j+1)*n_prime]
+      // new_constraint.phi[nu+ j] = A[i][j*n_prime: (j+1)*n_prime]
+      new_constraint.phi[j].assign(&A[i * n + j * n_prime], &A[i * n + (j + 1) * n_prime]);
+      new_constraint.phi[nu + j].assign(&A[i * n + j * n_prime], &A[i * n + (j + 1) * n_prime]);
+      j++;
+    }
+    for (size_t k = 0; k < n - j * n_prime; k++) {
+      new_constraint.phi[j][k] = A[i * n + j * n_prime + k];
+      new_constraint.phi[nu + j][k] = A[i * n + j * n_prime + k];
+    }
+
+    // new_constraint.phi[nu+ j] = base0*new_constraint.phi[nu+ j]
+    for (size_t k1 = 0; k1 < nu; k1++) {
+      for (size_t k2 = 0; k2 < n_prime; k2++) {
+        Zq base0_scalar = Zq::from(base0);
+        ICICLE_CHECK(scalar_mul_vec(
+          &base0_scalar, new_constraint.phi[nu + k1][k2].coeffs, d, {}, new_constraint.phi[nu + k1][k2].coeffs));
+      }
+    }
+
+    // Step 10.d
+    size_t k1 = 2 * nu, k2 = 0;
+    for (size_t i1 = 0; i1 < r; i1++) {
+      for (size_t i2 = 0; i2 < n; i2++) {
+        for (size_t i3 = 0; i3 < l1; i3++) {
+          if (i2 == i) {
+            Tq temp;
+            Zq base1_pow = Zq::from(static_cast<int64_t>(std::pow(base1, i3)));
+            ICICLE_CHECK(scalar_mul_vec(&base1_pow, challenges_hat[i2].coeffs, d, {}, temp.coeffs));
+            new_constraint.phi[k1][k2] = temp;
+          }
+          k2++;
+          if (k2 == n_prime) {
+            k2 = 0;
+            k1++;
+          }
+        }
+      }
+    }
+
+    recursive_instance.add_equality_constraint(new_constraint);
+  }
+
+  return std::make_pair(recursive_instance, s_prime);
 }
 
 eIcicleError verify(/*TODO params*/)
