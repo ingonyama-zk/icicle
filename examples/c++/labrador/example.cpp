@@ -707,7 +707,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   for (size_t i = 0; i < kappa; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
     size_t j = 0;
-    while ((j + 1) * n_prime <= h.size()) {
+    while ((j + 1) * n_prime <= n) {
       // new_constraint.phi[j] = A[i][j*n_prime: (j+1)*n_prime]
       // new_constraint.phi[nu+ j] = A[i][j*n_prime: (j+1)*n_prime]
       new_constraint.phi[j].assign(&A[i * n + j * n_prime], &A[i * n + (j + 1) * n_prime]);
@@ -751,6 +751,147 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     recursive_instance.add_equality_constraint(new_constraint);
   }
 
+  // Step 11:
+  EqualityInstance step11_constraint(r_prime, n_prime);
+  std::vector<Tq> c_times_phi(n);
+  for (size_t i = 0; i < r; i++) {
+    for (size_t j = 0; j < n; j++) {
+      Tq temp;
+      ICICLE_CHECK(vector_mul(challenges_hat[i].coeffs, final_const.phi[i][j].coeffs, d, {}, temp.coeffs));
+      ICICLE_CHECK(vector_add(c_times_phi[j].coeffs, temp.coeffs, d, {}, c_times_phi[j].coeffs));
+    }
+  }
+  size_t idx = 0;
+  while ((idx + 1) * n_prime <= n) {
+    // step11_constraint.phi[j] = c_times_phi[j*n_prime: (j+1)*n_prime]
+    // step11_constraint.phi[nu+ j] = c_times_phi[j*n_prime: (j+1)*n_prime]
+    step11_constraint.phi[idx].assign(&c_times_phi[idx * n_prime], &c_times_phi[(idx + 1) * n_prime]);
+    step11_constraint.phi[nu + idx].assign(&c_times_phi[idx * n_prime], &c_times_phi[(idx + 1) * n_prime]);
+    idx++;
+  }
+  for (size_t k = 0; k < n - idx * n_prime; k++) {
+    step11_constraint.phi[idx][k] = c_times_phi[idx * n_prime + k];
+    step11_constraint.phi[nu + idx][k] = c_times_phi[idx * n_prime + k];
+  }
+
+  // step11_constraint.phi[nu+ j] = base0*step11_constraint.phi[nu+ j]
+  for (size_t k1 = 0; k1 < nu; k1++) {
+    for (size_t k2 = 0; k2 < n_prime; k2++) {
+      Zq base0_scalar = Zq::from(base0);
+      ICICLE_CHECK(scalar_mul_vec(
+        &base0_scalar, step11_constraint.phi[nu + k1][k2].coeffs, d, {}, step11_constraint.phi[nu + k1][k2].coeffs));
+    }
+  }
+
+  size_t s11_k1 = 2 * nu + L_t + L_g, s11_k2 = 0;
+  for (size_t i1 = 0; i1 < r; i1++) {
+    for (size_t i2 = i1; i2 < r; i2++) {
+      for (size_t i3 = 0; i3 < l3; i3++) {
+        Tq temp;
+        ICICLE_CHECK(vector_mul(challenges_hat[i1].coeffs, challenges_hat[i2].coeffs, d, {}, temp.coeffs));
+        Zq multiplier = Zq::from(-1 * std::pow(base3, i3));
+        if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
+        ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.coeffs, d, {}, temp.coeffs));
+        step11_constraint.phi[s11_k1][s11_k2] = temp;
+        s11_k2++;
+        if (s11_k2 == n_prime) {
+          s11_k2 = 0;
+          s11_k1++;
+        }
+      }
+    }
+  }
+  recursive_instance.add_equality_constraint(step11_constraint);
+
+  // Step 12:
+  EqualityInstance step12_constraint(r_prime, n_prime);
+
+  size_t s12_k1 = 2 * nu + L_t, s12_k2 = 0;
+  for (size_t i1 = 0; i1 < r; i1++) {
+    for (size_t i2 = i1; i2 < r; i2++) {
+      for (size_t i3 = 0; i3 < l2; i3++) {
+        Tq temp = final_const.a[i1][i2];
+        Zq multiplier = Zq::from(std::pow(base2, i3));
+        if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
+
+        ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.coeffs, d, {}, temp.coeffs));
+        step12_constraint.phi[s12_k1][s12_k2] = temp;
+        s12_k2++;
+        if (s12_k2 == n_prime) {
+          s12_k2 = 0;
+          s12_k1++;
+        }
+      }
+    }
+  }
+  s12_k1 = 2 * nu + L_t + L_g, s12_k2 = 0;
+  for (size_t i1 = 0; i1 < r; i1++) {
+    for (size_t i2 = i1; i2 < r; i2++) {
+      for (size_t i3 = 0; i3 < l3; i3++) {
+        if (i1 == i2) {
+          Tq temp;
+          Zq multiplier = Zq::from(std::pow(base3, i3));
+          for (size_t k = 0; k < d; k++) {
+            temp.coeffs[k] = multiplier;
+          }
+          step12_constraint.phi[s12_k1][s12_k2] = temp;
+        }
+        s12_k2++;
+        if (s12_k2 == n_prime) {
+          s12_k2 = 0;
+          s12_k1++;
+        }
+      }
+    }
+  }
+  step12_constraint.b = final_const.b;
+  recursive_instance.add_equality_constraint(step12_constraint);
+
+  // Step 13:
+  EqualityInstance step13_constraint(r_prime, n_prime);
+
+  for (int i1 = 0; i1 < 2 * nu; i1++) {
+    for (int i2 = 0; i2 < 2 * nu; i2++) {
+      Zq c = Zq::from(0);
+      if (i1 == i2) {
+        if (i1 < nu) {
+          c = Zq::from(1);
+        } else {
+          c = Zq::from(base0 * base0);
+        }
+      } else if (abs(static_cast<int>(i2 - i1)) == nu) {
+        c = Zq::from(2 * base0);
+      }
+      Tq temp;
+      for (size_t k = 0; k < d; k++) {
+        temp.coeffs[k] = c;
+      }
+      step13_constraint.a[i1][i2] = temp;
+    }
+  }
+
+  size_t s13_k1 = 2 * nu + L_t, s13_k2 = 0;
+  for (size_t i1 = 0; i1 < r; i1++) {
+    for (size_t i2 = i1; i2 < r; i2++) {
+      for (size_t i3 = 0; i3 < l2; i3++) {
+        Tq temp;
+        ICICLE_CHECK(vector_mul(challenges_hat[i1].coeffs, challenges_hat[i2].coeffs, d, {}, temp.coeffs));
+        Zq multiplier = Zq::from(-1 * std::pow(base2, i3));
+        if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
+        ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.coeffs, d, {}, temp.coeffs));
+        step11_constraint.phi[s13_k1][s13_k2] = temp;
+        s13_k2++;
+        if (s13_k2 == n_prime) {
+          s13_k2 = 0;
+          s13_k1++;
+        }
+      }
+    }
+  }
+  recursive_instance.add_equality_constraint(step11_constraint);
+
+  // Step 14: set new beta
+  recursive_instance.beta = 100.0;
   return std::make_pair(recursive_instance, s_prime);
 }
 
