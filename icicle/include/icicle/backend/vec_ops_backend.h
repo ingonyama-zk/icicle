@@ -2,6 +2,7 @@
 
 #include "icicle/vec_ops.h"
 #include "icicle/fields/field_config.h"
+#include "icicle/norm.h"
 using namespace field_config;
 
 namespace icicle {
@@ -97,6 +98,16 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_vec_accumulate) = []() -> bool {                                                           \
       register_vector_accumulate(DEVICE_TYPE, FUNC);                                                                   \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  void register_vector_inv(const std::string& deviceType, VectorReduceOpImpl impl);
+
+#define REGISTER_VECTOR_INV_BACKEND(DEVICE_TYPE, FUNC)                                                                 \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_vec_inv) = []() -> bool {                                                                  \
+      register_vector_inv(DEVICE_TYPE, FUNC);                                                                          \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -299,6 +310,16 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_vec_accumulate_ext_field) = []() -> bool {                                               \
         register_extension_vector_accumulate(DEVICE_TYPE, FUNC);                                                       \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  void register_extension_vector_inv(const std::string& deviceType, extFieldVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_INV_EXT_FIELD_BACKEND(DEVICE_TYPE, FUNC)                                                     \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_inv_ext_field) = []() -> bool {                                                      \
+        register_extension_vector_inv(DEVICE_TYPE, FUNC);                                                              \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
@@ -563,6 +584,16 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  void register_ring_rns_vector_inv(const std::string& deviceType, ringRnsVectorReduceOpImpl impl);
+
+  #define REGISTER_VECTOR_INV_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                      \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_vec_inv_ring_rns) = []() -> bool {                                                       \
+        register_ring_rns_vector_inv(DEVICE_TYPE, FUNC);                                                               \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   void register_ring_rns_scalar_mul_vec(const std::string& deviceType, ringRnsVectorOpImpl impl);
 
   #define REGISTER_SCALAR_MUL_VEC_RING_RNS_BACKEND(DEVICE_TYPE, FUNC)                                                  \
@@ -745,6 +776,55 @@ namespace icicle {
       }();                                                                                                             \
     }
 
-#endif // RING
+  using JLProjectionImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input,
+    size_t input_size,
+    const std::byte* seed,
+    size_t seed_len,
+    const VecOpsConfig& cfg,
+    field_t* output,
+    size_t output_size)>;
 
+  void register_jl_projection(const std::string& deviceType, JLProjectionImpl impl);
+  #define REGISTER_JL_PROJECTION_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
+        register_jl_projection(DEVICE_TYPE, FUNC);                                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+  // Norm checking implementations
+  using normCheckImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input,
+    size_t size,
+    eNormType norm,
+    uint64_t norm_bound,
+    const VecOpsConfig& config,
+    bool* output)>;
+
+  using normCheckRelativeImpl = std::function<eIcicleError(
+    const Device& device,
+    const field_t* input_a,
+    const field_t* input_b,
+    size_t size,
+    eNormType norm,
+    uint64_t scale,
+    const VecOpsConfig& config,
+    bool* output)>;
+
+  void register_check_norm_bound(const std::string& deviceType, normCheckImpl impl);
+  void register_check_norm_relative(const std::string& deviceType, normCheckRelativeImpl impl);
+
+  #define REGISTER_NORM_CHECK_BACKEND(DEVICE_TYPE, CHECK_BOUND, CHECK_RELATIVE)                                        \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_norm_check) = []() -> bool {                                                             \
+        register_check_norm_bound(DEVICE_TYPE, CHECK_BOUND);                                                           \
+        register_check_norm_relative(DEVICE_TYPE, CHECK_RELATIVE);                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+#endif // RING
 } // namespace icicle

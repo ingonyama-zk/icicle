@@ -20,6 +20,7 @@
 
 #include "test_base.h"
 #include "icicle/utils/rand_gen.h"
+#include "icicle/merkle/merkle_proof_serializer.h"
 
 using namespace icicle;
 
@@ -147,11 +148,8 @@ TEST_F(HashApiTest, Keccak256Batch)
 TEST_F(HashApiTest, KeccakLarge)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 8;
-  ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
-  config.ext = &ext;
-  const unsigned chunk_size = 1 << 13; // 8KB chunks
+  config.batch = 1 << 13;
+  const unsigned chunk_size = 1 << 11; // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
   randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
@@ -195,14 +193,205 @@ TEST_F(HashApiTest, KeccakLarge)
   ICICLE_CHECK(icicle_free(d_output));
 }
 
+TEST_F(HashApiTest, KeccakLargeUglySize)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 12;
+  const unsigned chunk_size = 11 + (1 << 11); // 2KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  auto keccakCPU = Keccak256::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(keccakCPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU Keccak large time", true);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto keccakMainDev = Keccak256::create();
+
+  // test with host memory
+  START_TIMER(mainDev_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(keccakMainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev Keccak large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(mainDev_timer_device_mem);
+  ICICLE_CHECK(keccakMainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev Keccak large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
+}
+
+TEST_F(HashApiTest, Sha3Large)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 13;
+  const unsigned chunk_size = 1 << 11; // 2KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  auto Sha3CPU = Sha3_256::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(Sha3CPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU Sha3 large time", true);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto Sha3MainDev = Sha3_256::create();
+
+  // test with host memory
+  START_TIMER(mainDev_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(Sha3MainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev Keccak large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(mainDev_timer_device_mem);
+  // ICICLE_CHECK(keccakMainDev.hash(d_input, chunk_size, config, d_output));
+  ICICLE_CHECK(Sha3MainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev Sha3 large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
+}
+
+TEST_F(HashApiTest, Sha3LargeUgly)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 12;
+  const unsigned chunk_size = 11 + (1 << 11); // 2KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  auto Sha3CPU = Sha3_256::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(Sha3CPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU Sha3 large time", true);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto Sha3MainDev = Sha3_256::create();
+
+  // test with host memory
+  START_TIMER(mainDev_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(Sha3MainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev Keccak large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(mainDev_timer_device_mem);
+  // ICICLE_CHECK(keccakMainDev.hash(d_input, chunk_size, config, d_output));
+  ICICLE_CHECK(Sha3MainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev Sha3 large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
+}
+
 TEST_F(HashApiTest, Blake2sLarge)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 8;
-  ConfigExtension ext;
-  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
-  config.ext = &ext;
-  const unsigned chunk_size = 1 << 13; // 8KB chunks
+  config.batch = 1 << 13;
+  const unsigned chunk_size = 1 << 11; // 2KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  auto blake2sCPU = Blake2s::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(blake2sCPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU blake2s large time", true);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto blake2sMainDev = Blake2s::create();
+
+  // test with host memory
+  START_TIMER(mainDev_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(blake2sMainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev blake2s large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(mainDev_timer_device_mem);
+  ICICLE_CHECK(blake2sMainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev blake2s large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
+}
+
+TEST_F(HashApiTest, Blake2sLargeUgly)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 12;
+  const unsigned chunk_size = 11 + (1 << 11); // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
   randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
@@ -249,11 +438,62 @@ TEST_F(HashApiTest, Blake2sLarge)
 TEST_F(HashApiTest, Blake3Large)
 {
   auto config = default_hash_config();
-  config.batch = 1 << 8;
+  config.batch = 1 << 13;
   ConfigExtension ext;
   ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
   config.ext = &ext;
   const unsigned chunk_size = 1 << 11; // 2KB chunks
+  const unsigned total_size = chunk_size * config.batch;
+  auto input = std::make_unique<std::byte[]>(total_size);
+  randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
+
+  const uint64_t output_size = 32;
+  auto output_main = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_main_case_2 = std::make_unique<std::byte[]>(output_size * config.batch);
+  auto output_ref = std::make_unique<std::byte[]>(output_size * config.batch);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  auto blake3CPU = Blake3::create();
+  START_TIMER(cpu_timer);
+  ICICLE_CHECK(blake3CPU.hash(input.get(), chunk_size, config, output_ref.get()));
+  END_TIMER(cpu_timer, "CPU blake3 large time", true);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  auto blake3MainDev = Blake3::create();
+
+  // test with host memory
+  START_TIMER(mainDev_timer);
+  config.are_inputs_on_device = false;
+  config.are_outputs_on_device = false;
+  ICICLE_CHECK(blake3MainDev.hash(input.get(), chunk_size, config, output_main.get()));
+  END_TIMER(mainDev_timer, "MainDev blake3 large time (on host memory)", true);
+  ASSERT_EQ(0, memcmp(output_main.get(), output_ref.get(), output_size * config.batch));
+
+  // test with device memory
+  std::byte *d_input = nullptr, *d_output = nullptr;
+  ICICLE_CHECK(icicle_malloc((void**)&d_input, total_size));
+  ICICLE_CHECK(icicle_malloc((void**)&d_output, output_size * config.batch));
+  ICICLE_CHECK(icicle_copy(d_input, input.get(), total_size));
+  config.are_inputs_on_device = true;
+  config.are_outputs_on_device = true;
+  START_TIMER(mainDev_timer_device_mem);
+  ICICLE_CHECK(blake3MainDev.hash(d_input, chunk_size, config, d_output));
+  END_TIMER(mainDev_timer_device_mem, "MainDev blake3 large time (on device memory)", true);
+  ICICLE_CHECK(icicle_copy(output_main_case_2.get(), d_output, output_size * config.batch));
+  ASSERT_EQ(0, memcmp(output_main_case_2.get(), output_ref.get(), output_size * config.batch));
+
+  ICICLE_CHECK(icicle_free(d_input));
+  ICICLE_CHECK(icicle_free(d_output));
+}
+
+TEST_F(HashApiTest, Blake3LargeUgly)
+{
+  auto config = default_hash_config();
+  config.batch = 1 << 12;
+  ConfigExtension ext;
+  ext.set(CpuBackendConfig::CPU_NOF_THREADS, 0); // 0 means autoselect
+  config.ext = &ext;
+  const unsigned chunk_size = 11 + (1 << 11); // 2KB chunks
   const unsigned total_size = chunk_size * config.batch;
   auto input = std::make_unique<std::byte[]>(total_size);
   randomize((uint64_t*)input.get(), total_size / sizeof(uint64_t));
@@ -575,6 +815,46 @@ void test_merkle_tree(
     ICICLE_CHECK(verifier_tree.verify(merkle_proof, verification_valid));
     ASSERT_FALSE(verification_valid) << "Pruned proof of invalid inputs at index " << leaf_idx
                                      << " is valid (And should be invalid).";
+
+    // Serialize the proof
+    size_t serialized_proof_size;
+    ICICLE_CHECK(BinarySerializer<MerkleProof>::serialized_size(merkle_proof, serialized_proof_size));
+    auto serialized_proof = std::vector<std::byte>(serialized_proof_size);
+    ICICLE_CHECK(
+      BinarySerializer<MerkleProof>::serialize(serialized_proof.data(), serialized_proof.size(), merkle_proof));
+    // Deserialize the proof
+    MerkleProof deserialized_proof;
+    ICICLE_CHECK(
+      BinarySerializer<MerkleProof>::deserialize(serialized_proof.data(), serialized_proof.size(), deserialized_proof));
+
+    // Compare the original and deserialized proofs
+    // Compare pruned
+    ASSERT_EQ(merkle_proof.is_pruned(), deserialized_proof.is_pruned());
+
+    // Compare paths
+    auto [orig_path_ptr, orig_path_size] = merkle_proof.get_path();
+    auto [deser_path_ptr, deser_path_size] = deserialized_proof.get_path();
+    ASSERT_EQ(orig_path_size, deser_path_size);
+    std::vector<std::byte> orig_path_vec(orig_path_ptr, orig_path_ptr + orig_path_size);
+    std::vector<std::byte> deser_path_vec(deser_path_ptr, deser_path_ptr + deser_path_size);
+    ASSERT_EQ(orig_path_vec, deser_path_vec);
+
+    // Compare leaves
+    auto [orig_leaf_ptr, orig_leaf_size, orig_leaf_idx] = merkle_proof.get_leaf();
+    auto [deser_leaf_ptr, deser_leaf_size, deser_leaf_idx] = deserialized_proof.get_leaf();
+    ASSERT_EQ(orig_leaf_size, deser_leaf_size);
+    ASSERT_EQ(orig_leaf_idx, deser_leaf_idx);
+    std::vector<std::byte> orig_leaf_vec(orig_leaf_ptr, orig_leaf_ptr + orig_leaf_size);
+    std::vector<std::byte> deser_leaf_vec(deser_leaf_ptr, deser_leaf_ptr + deser_leaf_size);
+    ASSERT_EQ(orig_leaf_vec, deser_leaf_vec);
+
+    // Compare roots
+    auto [orig_root_ptr, orig_root_size] = merkle_proof.get_root();
+    auto [deser_root_ptr, deser_root_size] = deserialized_proof.get_root();
+    ASSERT_EQ(orig_root_size, deser_root_size);
+    std::vector<std::byte> orig_root_vec(orig_root_ptr, orig_root_ptr + orig_root_size);
+    std::vector<std::byte> deser_root_vec(deser_root_ptr, deser_root_ptr + deser_root_size);
+    ASSERT_EQ(orig_root_vec, deser_root_vec);
   }
 
   if (config.is_leaves_on_device) {
@@ -714,8 +994,12 @@ TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
     const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
                                                           32, 70, 99, 100}; // those cases will be tested with padding
     constexpr int input_size = nof_leaves * leaf_size;
-    std::byte leaves[input_size];
-    randomize(leaves, input_size);
+    std::vector<std::byte> leaves(input_size);
+    randomize(leaves.data(), input_size);
+
+    std::byte* d_leaves;
+    ICICLE_CHECK(icicle_malloc((void**)&d_leaves, input_size));
+    ICICLE_CHECK(icicle_copy(d_leaves, leaves.data(), input_size));
 
     // define the merkle tree
     auto layer0_hash = Keccak256::create(leaf_size);
@@ -732,12 +1016,13 @@ TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
 
     // test various cases of missing leaves in input, requiring padding.
     for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
-      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves.data(), leaf_size);
     }
 
     // Test that leaf_size divides input size for this kind of padding
     auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-    ASSERT_EQ(prover_tree.build(leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+    ASSERT_EQ(prover_tree.build(d_leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+    ICICLE_CHECK(icicle_free(d_leaves));
   }
 }
 
@@ -1123,11 +1408,9 @@ TEST_F(HashApiTest, poseidon2_3_single_hasher)
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch);
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  if (IcicleTestBase::main_device() == "CUDA") {
-    auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
-    run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-    ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
-  }
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_3_single_hasher
 
 // Sponge, chain of 2 hashers, no padding, no domain tag.
@@ -1161,13 +1444,12 @@ TEST_F(HashApiTest, poseidon2_4_sponge_2_hashers_without_dt)
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
   std::string main_device = IcicleTestBase::main_device();
-  if (IcicleTestBase::main_device() == "CUDA") {
-    auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
-    run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-    // std::cout << "Output CPU  = " << output_cpu[0] << std::endl;
-    // std::cout << "Output CUDA = " << output_mainDev[0] << std::endl;
-    ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
-  }
+
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  // std::cout << "Output CPU  = " << output_cpu[0] << std::endl;
+  // std::cout << "Output CUDA = " << output_mainDev[0] << std::endl;
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_4_sponge_2_hashers_without_dt
 
 // Test used to generate expected result of any hasher ccording to the parameters inside.
@@ -1238,7 +1520,8 @@ TEST_F(HashApiTest, poseidon2_non_sponge_all_included_test)
           icicle_set_device(device);
           auto out = std::make_unique<scalar_t[]>(config.batch);
           std::ostringstream oss;
-          oss << std::string(device) << " " << "poseidon2";
+          oss << std::string(device) << " "
+              << "poseidon2";
           if (use_domain_tag) {
             auto poseidon2 = Poseidon2::create<scalar_t>(t, &domain_tag);
             START_TIMER(POSEIDON2_sync)
@@ -1298,7 +1581,8 @@ TEST_F(HashApiTest, poseidon2_sponge_all_included_test)
               icicle_set_device(device);
               auto out = std::make_unique<scalar_t[]>(config.batch);
               std::ostringstream oss;
-              oss << std::string(device) << " " << "poseidon2";
+              oss << std::string(device) << " "
+                  << "poseidon2";
               if (use_domain_tag) {
                 auto poseidon2 = Poseidon2::create<scalar_t>(t, &domain_tag);
                 START_TIMER(POSEIDON2_sync)
@@ -1366,13 +1650,11 @@ TEST_F(HashApiTest, poseidon2_3_sponge_2_hashers_with_dt)
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  if (IcicleTestBase::main_device() == "CUDA") {
-    auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
-    run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-    // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
-    // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
-    ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
-  }
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
+  // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_3_sponge_2_hashers_with_dt
 
 // Sponge, chain of 1 hasher, with padding (2 scalars 1,0), no domain tag.
@@ -1405,13 +1687,11 @@ TEST_F(HashApiTest, poseidon2_4_sponge_1_hasher_without_dt_with_padding)
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  if (IcicleTestBase::main_device() == "CUDA") {
-    auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
-    run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-    // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
-    // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
-    ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
-  }
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  // std::cout << "CPU output  = " << output_cpu[0] << std::endl;
+  // std::cout << "CUDA output = " << output_mainDev[0] << std::endl;
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_4_sponge_1_hasher_without_dt_with_padding
 
 // Sponge, chain of 1 hasher, with padding (2 scalars 1,0), no domain tag.
@@ -1444,11 +1724,9 @@ TEST_F(HashApiTest, poseidon2_3_sponge_1_hasher_without_dt_with_padding_debug)
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  if (IcicleTestBase::main_device() == "CUDA") {
-    auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
-    run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-    ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
-  }
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_3_sponge_1_hasher_without_dt_with_padding_debug
 
 // Sponge, chain of 2 hashers, with padding (2 scalars 1,0), no domain tag.
@@ -1481,11 +1759,9 @@ TEST_F(HashApiTest, poseidon2_4_sponge_2_hashers_without_dt_with_padding)
   auto output_cpu = std::make_unique<scalar_t[]>(config.batch); // config.batch = 1 here.
   run(IcicleTestBase::reference_device(), output_cpu.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
 
-  if (IcicleTestBase::main_device() == "CUDA") {
-    auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
-    run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
-    ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
-  }
+  auto output_mainDev = std::make_unique<scalar_t[]>(config.batch);
+  run(IcicleTestBase::main_device(), output_mainDev.get(), VERBOSE /*=measure*/, "poseidon2", ITERS);
+  ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_4_sponge_2_hashers_without_dt_with_padding
 
 // Test check single hash without domain tag.
@@ -1577,7 +1853,7 @@ TEST_F(HashApiTest, poseidon2_invalid_t)
     auto poseidon2 = Poseidon2::create<scalar_t>(t);
     auto err = poseidon2.hash(input.get(), t, config, output.get());
     if (large_field) {
-      EXPECT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
+      EXPECT_EQ(err, eIcicleError::INVALID_ARGUMENT);
     } else {
       EXPECT_EQ(err, eIcicleError::SUCCESS);
     }
@@ -1722,6 +1998,33 @@ TEST_F(HashApiTest, poseidon2_3_1K_batch_without_dt)
   ASSERT_EQ(0, memcmp(output_cpu.get(), output_mainDev.get(), config.batch * sizeof(scalar_t)));
 } // poseidon2_3_1K_batch_without_dt
 
+TEST_F(HashApiTest, poseidon2_merkle_tree)
+{
+  for (const auto& device : s_registered_devices) {
+    ICICLE_LOG_INFO << "poseidon2_merkle_tree test on device=" << device;
+    ICICLE_CHECK(icicle_set_device(device));
+
+    constexpr int leaf_size = sizeof(scalar_t);
+    constexpr int nof_leaves = 8;
+    constexpr int input_size = nof_leaves * leaf_size;
+    auto leaves = std::make_unique<scalar_t[]>(input_size);
+    scalar_t::rand_host_many(leaves.get(), input_size);
+
+    // define the merkle tree
+    auto layer0_hash = Poseidon2::create<scalar_t>(2, nullptr, 1);
+    auto layer1_hash = Poseidon2::create<scalar_t>(2);
+    auto layer2_hash = Poseidon2::create<scalar_t>(2);
+    auto layer3_hash = Poseidon2::create<scalar_t>(2);
+
+    std::vector<Hash> hashes = {layer0_hash, layer1_hash, layer2_hash, layer3_hash};
+    int output_store_min_layer = 0;
+
+    auto config = default_merkle_tree_config();
+    test_merkle_tree(
+      hashes, config, output_store_min_layer, nof_leaves, reinterpret_cast<std::byte*>(leaves.get()), leaf_size);
+  }
+}
+
 #endif // POSEIDON2
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1777,4 +2080,3 @@ TEST_F(SumcheckTest, InitializeWithByteVector)
   EXPECT_EQ(config.get_seed_rng(), seed);
 }
 #endif // SUMCHECK
-       //

@@ -30,6 +30,9 @@ using namespace poseidon2_constants_stark252;
 #elif FIELD_ID == KOALA_BEAR
   #include "icicle/hash/poseidon2_constants/constants/koalabear_poseidon2.h"
 using namespace poseidon2_constants_koalabear;
+#elif FIELD_ID == GOLDILOCKS
+  #include "icicle/hash/poseidon2_constants/constants/goldilocks_poseidon2.h"
+using namespace poseidon2_constants_goldilocks;
 #endif
 
 namespace icicle {
@@ -37,8 +40,9 @@ namespace icicle {
   class Poseidon2BackendCPU : public HashBackend
   {
   public:
-    Poseidon2BackendCPU(unsigned t, const S* domain_tag)
-        : HashBackend("Poseidon2-CPU", sizeof(S), sizeof(S) * (nullptr != domain_tag ? t - 1 : t)),
+    Poseidon2BackendCPU(unsigned t, const S* domain_tag, unsigned input_size)
+        : HashBackend(
+            "Poseidon2-CPU", sizeof(S), sizeof(S) * (input_size ? input_size : (nullptr != domain_tag ? t - 1 : t))),
           m_domain_tag_value(nullptr != domain_tag ? *domain_tag : S::zero()), m_use_domain_tag(nullptr != domain_tag),
           t(t)
     {
@@ -184,7 +188,7 @@ namespace icicle {
       bool is_unsupported_T_for_this_field = m_poseidon2_constants.nof_upper_full_rounds == 0;
       if (is_unsupported_T_for_this_field) {
         ICICLE_LOG_ERROR << "Unsupported poseidon2 width (t=" << t << ") for this field!";
-        return eIcicleError::API_NOT_IMPLEMENTED;
+        return eIcicleError::INVALID_ARGUMENT;
       }
 
       int input_size_in_scalars = size / sizeof(S);
@@ -521,9 +525,13 @@ namespace icicle {
   }; // class Poseidon2BackendCUDA : public HashBackend
 
   static eIcicleError create_cpu_poseidon2_hash_backend(
-    const Device& device, unsigned t, const scalar_t* domain_tag, std::shared_ptr<HashBackend>& backend /*OUT*/)
+    const Device& device,
+    unsigned t,
+    const scalar_t* domain_tag,
+    unsigned input_size,
+    std::shared_ptr<HashBackend>& backend /*OUT*/)
   {
-    backend = std::make_shared<Poseidon2BackendCPU<scalar_t>>(t, domain_tag);
+    backend = std::make_shared<Poseidon2BackendCPU<scalar_t>>(t, domain_tag, input_size);
     return eIcicleError::SUCCESS;
   }
 

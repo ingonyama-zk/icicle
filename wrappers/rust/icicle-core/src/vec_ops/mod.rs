@@ -70,6 +70,12 @@ pub trait VecOps<F> {
         cfg: &VecOpsConfig,
     ) -> Result<(), eIcicleError>;
 
+    fn inv(
+        input: &(impl HostOrDeviceSlice<F> + ?Sized),
+        output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+        cfg: &VecOpsConfig,
+    ) -> Result<(), eIcicleError>;
+
     fn sum(
         a: &(impl HostOrDeviceSlice<F> + ?Sized),
         result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -403,6 +409,19 @@ where
     <<F as FieldImpl>::Config as VecOps<F>>::div(a, b, result, &cfg)
 }
 
+pub fn inv_scalars<F>(
+    input: &(impl HostOrDeviceSlice<F> + ?Sized),
+    output: &mut (impl HostOrDeviceSlice<F> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    F: FieldImpl,
+    <F as FieldImpl>::Config: VecOps<F>,
+{
+    let cfg = check_vec_ops_args(input, input, output, cfg);
+    <<F as FieldImpl>::Config as VecOps<F>>::inv(input, output, &cfg)
+}
+
 pub fn sum_scalars<F>(
     a: &(impl HostOrDeviceSlice<F> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<F> + ?Sized),
@@ -603,6 +622,14 @@ macro_rules! impl_vec_ops_field {
                     result: *mut $field,
                 ) -> eIcicleError;
 
+                #[link_name = concat!($field_prefix, "_vector_inv")]
+                pub(crate) fn vector_inv_ffi(
+                    input: *const $field,
+                    size: u32,
+                    cfg: *const VecOpsConfig,
+                    output: *mut $field,
+                ) -> eIcicleError;
+
                 #[link_name = concat!($field_prefix, "_vector_sum")]
                 pub(crate) fn vector_sum_ffi(
                     a: *const $field,
@@ -769,6 +796,22 @@ macro_rules! impl_vec_ops_field {
                         a.len() as u32,
                         cfg as *const VecOpsConfig,
                         result.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn inv(
+                input: &(impl HostOrDeviceSlice<$field> + ?Sized),
+                output: &mut (impl HostOrDeviceSlice<$field> + ?Sized),
+                cfg: &VecOpsConfig,
+            ) -> Result<(), eIcicleError> {
+                unsafe {
+                    $field_prefix_ident::vector_inv_ffi(
+                        input.as_ptr(),
+                        input.len() as u32,
+                        cfg as *const VecOpsConfig,
+                        output.as_mut_ptr(),
                     )
                     .wrap()
                 }
@@ -1030,9 +1073,80 @@ macro_rules! impl_vec_ops_tests {
             }
 
             #[test]
-            pub fn test_vec_ops_scalars() {
+            pub fn test_vec_ops_scalars_add() {
                 initialize();
-                check_vec_ops_scalars::<$field>()
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_add::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sub() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sub::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_mul() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_mul::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_div() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_div::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sum() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sum::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_product() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_product::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_add_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_add_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_sub_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_sub_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_mul_scalar() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_mul_scalar::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_accumulate() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_accumulate::<$field>(test_size);
+            }
+
+            #[test]
+            pub fn test_vec_ops_scalars_inv() {
+                initialize();
+                let test_size = 1 << 14;
+                check_vec_ops_scalars_inv::<$field>(test_size);
             }
 
             #[test]

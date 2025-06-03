@@ -1,8 +1,15 @@
-use crate::hash::{Hasher, HasherHandle};
+use crate::{
+    hash::{Hasher, HasherHandle},
+    traits::Handle,
+};
 use icicle_runtime::{
     config::ConfigExtension, errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStreamHandle,
 };
-use std::{ffi::c_void, mem, ptr, slice};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+use std::{ffi::c_void, fmt, mem, ptr, slice};
 
 /// Enum representing the padding policy when the input is smaller than expected by the tree structure.
 #[repr(C)]
@@ -40,7 +47,7 @@ impl MerkleTreeConfig {
         Self {
             stream_handle: ptr::null_mut(),      // Default stream handle (synchronous).
             is_leaves_on_device: false,          // Default: leaves on host (CPU).
-            is_tree_on_device: false,            // Default: tree results on host (CPU).
+            is_tree_on_device: true,             // Default: tree results on device (GPU memory).
             is_async: false,                     // Default: synchronous execution.
             padding_policy: PaddingPolicy::None, // Default: no padding.
             ext: ConfigExtension::new(),         // Default: no backend-specific extensions.
@@ -48,8 +55,39 @@ impl MerkleTreeConfig {
     }
 }
 
-type MerkleProofHandle = *const c_void;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MerkleProofData<T> {
+    pub is_pruned: bool,
+    pub leaf_idx: u64,
+    pub leaf: Vec<T>,
+    pub root: Vec<T>,
+    pub path: Vec<T>,
+}
 
+impl<T> MerkleProofData<T> {
+    pub fn new(is_pruned: bool, leaf_idx: u64, leaf: Vec<T>, root: Vec<T>, path: Vec<T>) -> Self {
+        Self {
+            is_pruned,
+            leaf_idx,
+            leaf,
+            root,
+            path,
+        }
+    }
+}
+
+impl<T: Clone> From<&MerkleProof> for MerkleProofData<T> {
+    fn from(proof: &MerkleProof) -> Self {
+        let (leaf, leaf_idx) = proof.get_leaf::<T>();
+        let root = proof.get_root::<T>();
+        let path = proof.get_path::<T>();
+        Self::new(proof.is_pruned(), leaf_idx, leaf.to_vec(), root.to_vec(), path.to_vec())
+    }
+}
+
+pub type MerkleProofHandle = *const c_void;
+
+#[derive(Debug)]
 pub struct MerkleProof {
     handle: MerkleProofHandle,
 }
@@ -57,6 +95,16 @@ pub struct MerkleProof {
 // External C functions for merkle proof
 extern "C" {
     fn icicle_merkle_proof_create() -> MerkleProofHandle;
+    fn icicle_merkle_proof_create_with_data(
+        pruned_path: bool,
+        leaf_idx: u64,
+        leaf: *const u8,
+        leaf_size: usize,
+        root: *const u8,
+        root_size: usize,
+        path: *const u8,
+        path_size: usize,
+    ) -> MerkleProofHandle;
     fn icicle_merkle_proof_delete(proof: MerkleProofHandle) -> eIcicleError;
     fn icicle_merkle_proof_is_pruned(proof: MerkleProofHandle) -> bool;
     fn icicle_merkle_proof_get_path(proof: MerkleProofHandle, out_size: *mut usize) -> *const u8;
@@ -66,6 +114,9 @@ extern "C" {
         out_leaf_idx: *mut u64,
     ) -> *const u8;
     fn icicle_merkle_proof_get_root(proof: MerkleProofHandle, out_size: *mut usize) -> *const u8;
+    fn icicle_merkle_proof_get_serialized_size(proof: MerkleProofHandle, out_size: *mut usize) -> eIcicleError;
+    fn icicle_merkle_proof_serialize(proof: MerkleProofHandle, buffer: *mut u8, size: usize) -> eIcicleError;
+    fn icicle_merkle_proof_deserialize(proof: *mut MerkleProofHandle, buffer: *const u8, size: usize) -> eIcicleError;
 }
 
 impl MerkleProof {
@@ -75,6 +126,37 @@ impl MerkleProof {
             let handle = icicle_merkle_proof_create();
             if handle.is_null() {
                 Err(eIcicleError::AllocationFailed)
+            } else {
+                Ok(MerkleProof { handle })
+            }
+        }
+    }
+
+    /// Create a new MerkleProof object with specified leaf, root, and path data.
+    pub fn create_with_data<T>(
+        is_pruned: bool,
+        leaf_idx: u64,
+        leaf: Vec<T>,
+        root: Vec<T>,
+        path: Vec<T>,
+    ) -> Result<Self, eIcicleError> {
+        let leaf_bytes = unsafe { slice::from_raw_parts(leaf.as_ptr() as *const u8, leaf.len() * mem::size_of::<T>()) };
+        let root_bytes = unsafe { slice::from_raw_parts(root.as_ptr() as *const u8, root.len() * mem::size_of::<T>()) };
+        let path_bytes = unsafe { slice::from_raw_parts(path.as_ptr() as *const u8, path.len() * mem::size_of::<T>()) };
+
+        unsafe {
+            let handle = icicle_merkle_proof_create_with_data(
+                is_pruned,
+                leaf_idx,
+                leaf_bytes.as_ptr(),
+                leaf_bytes.len(),
+                root_bytes.as_ptr(),
+                root_bytes.len(),
+                path_bytes.as_ptr(),
+                path_bytes.len(),
+            );
+            if handle.is_null() {
+                Err(eIcicleError::UnknownError)
             } else {
                 Ok(MerkleProof { handle })
             }
@@ -130,6 +212,95 @@ impl MerkleProof {
                 slice::from_raw_parts(ptr as *const T, element_count)
             }
         }
+    }
+
+    pub unsafe fn from_handle(handle: MerkleProofHandle) -> Self {
+        Self { handle }
+    }
+}
+
+impl Serialize for MerkleProof {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut size = 0;
+        unsafe {
+            icicle_merkle_proof_get_serialized_size(self.handle, &mut size)
+                .wrap_value(size)
+                .map_err(serde::ser::Error::custom)?;
+            let mut buffer = vec![0u8; size];
+            icicle_merkle_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
+                .wrap_value(buffer)
+                .map_err(serde::ser::Error::custom)
+                .and_then(|b| serializer.serialize_bytes(&b))
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for MerkleProof {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct MerkleProofVisitor;
+
+        impl<'de> Visitor<'de> for MerkleProofVisitor {
+            type Value = MerkleProof;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a byte array representing a MerkleProof")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                let mut handle = ptr::null();
+                unsafe {
+                    icicle_merkle_proof_deserialize(&mut handle, v.as_ptr(), v.len())
+                        .wrap_value(MerkleProof { handle })
+                        .map_err(de::Error::custom)
+                }
+            }
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut buffer = Vec::with_capacity(
+                    seq.size_hint()
+                        .unwrap_or(0),
+                );
+                while let Some(byte) = seq.next_element::<u8>()? {
+                    buffer.push(byte);
+                }
+                self.visit_bytes(&buffer)
+            }
+        }
+
+        deserializer.deserialize_bytes(MerkleProofVisitor)
+    }
+}
+
+impl Handle for MerkleProof {
+    fn handle(&self) -> *const c_void {
+        self.handle
+    }
+}
+
+impl<T: Clone> TryFrom<MerkleProofData<T>> for MerkleProof {
+    type Error = eIcicleError;
+    fn try_from(data: MerkleProofData<T>) -> Result<Self, Self::Error> {
+        Self::create_with_data(
+            data.is_pruned,
+            data.leaf_idx,
+            data.leaf
+                .to_vec(),
+            data.root
+                .to_vec(),
+            data.path
+                .to_vec(),
+        )
     }
 }
 
@@ -265,6 +436,9 @@ impl MerkleTree {
             return Err(eIcicleError::InvalidPointer);
         }
 
+        let mut local_cfg = config.clone();
+        local_cfg.is_leaves_on_device = leaves.is_on_device();
+
         let proof = MerkleProof::new().unwrap();
         let byte_size = (leaves.len() * std::mem::size_of::<T>()) as u64;
         let result = unsafe {
@@ -274,7 +448,7 @@ impl MerkleTree {
                 byte_size,
                 leaf_idx as u64,
                 pruned_path,
-                config,
+                &local_cfg,
                 proof.handle,
             )
         };

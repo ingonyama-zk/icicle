@@ -10,6 +10,7 @@
 #define STARK_252  1002
 #define M31        1003
 #define KOALA_BEAR 1004
+#define GOLDILOCKS 1005
 
 // Note: rings IDs are included here since most code is shared with fields.
 // In the future we may refactor the code to separate fields and rings.

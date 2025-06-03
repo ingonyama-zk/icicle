@@ -1,4 +1,5 @@
 pub mod curve;
+pub mod fri;
 pub mod msm;
 pub mod ntt;
 pub mod polynomials;
@@ -11,3 +12,5 @@ pub mod vec_ops;
 
 #[cfg(not(feature = "no_ecntt"))]
 pub mod ecntt;
+#[cfg(not(feature = "no_g2"))]
+pub mod pairing;

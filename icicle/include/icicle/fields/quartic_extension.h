@@ -14,31 +14,36 @@ class QuarticExtensionField
 private:
   typedef typename T::Wide FWide;
 
-  struct ExtensionWide {
-    FWide real;
-    FWide im1;
-    FWide im2;
-    FWide im3;
+public:
+  struct Wide {
+    FWide c0;
+    FWide c1;
+    FWide c2;
+    FWide c3;
 
-    friend HOST_DEVICE_INLINE ExtensionWide operator+(ExtensionWide xs, const ExtensionWide& ys)
+    friend HOST_DEVICE_INLINE Wide operator+(Wide xs, const Wide& ys)
     {
-      return ExtensionWide{xs.real + ys.real, xs.im1 + ys.im1, xs.im2 + ys.im2, xs.im3 + ys.im3};
+      return Wide{xs.c0 + ys.c0, xs.c1 + ys.c1, xs.c2 + ys.c2, xs.c3 + ys.c3};
     }
 
-    friend HOST_DEVICE_INLINE ExtensionWide operator-(ExtensionWide xs, const ExtensionWide& ys)
+    friend HOST_DEVICE_INLINE Wide operator-(Wide xs, const Wide& ys)
     {
-      return ExtensionWide{xs.real - ys.real, xs.im1 - ys.im1, xs.im2 - ys.im2, xs.im3 - ys.im3};
+      return Wide{xs.c0 - ys.c0, xs.c1 - ys.c1, xs.c2 - ys.c2, xs.c3 - ys.c3};
+    }
+
+    static constexpr HOST_DEVICE_INLINE Wide neg(const Wide& xs)
+    {
+      return Wide{FWide::neg(xs.c0), FWide::neg(xs.c1), FWide::neg(xs.c2), FWide::neg(xs.c3)};
     }
   };
 
-public:
   typedef T FF;
-  static constexpr unsigned TLC = 4 * CONFIG::limbs_count;
+  static constexpr unsigned TLC = 4 * FF::TLC;
 
-  FF real;
-  FF im1;
-  FF im2;
-  FF im3;
+  FF c0;
+  FF c1;
+  FF c2;
+  FF c3;
 
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField zero()
   {
@@ -60,14 +65,13 @@ public:
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField to_montgomery(const QuarticExtensionField& xs)
   {
     return QuarticExtensionField{
-      FF::to_montgomery(xs.real), FF::to_montgomery(xs.im1), FF::to_montgomery(xs.im2), FF::to_montgomery(xs.im3)};
+      FF::to_montgomery(xs.c0), FF::to_montgomery(xs.c1), FF::to_montgomery(xs.c2), FF::to_montgomery(xs.c3)};
   }
 
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from_montgomery(const QuarticExtensionField& xs)
   {
     return QuarticExtensionField{
-      FF::from_montgomery(xs.real), FF::from_montgomery(xs.im1), FF::from_montgomery(xs.im2),
-      FF::from_montgomery(xs.im3)};
+      FF::from_montgomery(xs.c0), FF::from_montgomery(xs.c1), FF::from_montgomery(xs.c2), FF::from_montgomery(xs.c3)};
   }
 
   static HOST_INLINE QuarticExtensionField rand_host()
@@ -85,107 +89,103 @@ public:
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField sub_modulus(const QuarticExtensionField& xs)
   {
     return QuarticExtensionField{
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.real), FF::sub_modulus<REDUCTION_SIZE>(&xs.im1),
-      FF::sub_modulus<REDUCTION_SIZE>(&xs.im2), FF::sub_modulus<REDUCTION_SIZE>(&xs.im3)};
+      FF::sub_modulus<REDUCTION_SIZE>(&xs.c0), FF::sub_modulus<REDUCTION_SIZE>(&xs.c1),
+      FF::sub_modulus<REDUCTION_SIZE>(&xs.c2), FF::sub_modulus<REDUCTION_SIZE>(&xs.c3)};
   }
 
   friend std::ostream& operator<<(std::ostream& os, const QuarticExtensionField& xs)
   {
-    os << "{ Real: " << xs.real << " }; { Im1: " << xs.im1 << " }; { Im2: " << xs.im2 << " }; { Im3: " << xs.im3
-       << " };";
+    os << "{ Real: " << xs.c0 << " }; { Im1: " << xs.c1 << " }; { Im2: " << xs.c2 << " }; { Im3: " << xs.c3 << " };";
     return os;
   }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator+(QuarticExtensionField xs, const QuarticExtensionField& ys)
   {
-    return QuarticExtensionField{xs.real + ys.real, xs.im1 + ys.im1, xs.im2 + ys.im2, xs.im3 + ys.im3};
+    return QuarticExtensionField{xs.c0 + ys.c0, xs.c1 + ys.c1, xs.c2 + ys.c2, xs.c3 + ys.c3};
   }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator-(QuarticExtensionField xs, const QuarticExtensionField& ys)
   {
-    return QuarticExtensionField{xs.real - ys.real, xs.im1 - ys.im1, xs.im2 - ys.im2, xs.im3 - ys.im3};
+    return QuarticExtensionField{xs.c0 - ys.c0, xs.c1 - ys.c1, xs.c2 - ys.c2, xs.c3 - ys.c3};
   }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator+(FF xs, const QuarticExtensionField& ys)
   {
-    return QuarticExtensionField{xs + ys.real, ys.im1, ys.im2, ys.im3};
+    return QuarticExtensionField{xs + ys.c0, ys.c1, ys.c2, ys.c3};
   }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator-(FF xs, const QuarticExtensionField& ys)
   {
-    return QuarticExtensionField{xs - ys.real, FF::neg(ys.im1), FF::neg(ys.im2), FF::neg(ys.im3)};
+    return QuarticExtensionField{xs - ys.c0, FF::neg(ys.c1), FF::neg(ys.c2), FF::neg(ys.c3)};
   }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator+(QuarticExtensionField xs, const FF& ys)
   {
-    return QuarticExtensionField{xs.real + ys, xs.im1, xs.im2, xs.im3};
+    return QuarticExtensionField{xs.c0 + ys, xs.c1, xs.c2, xs.c3};
   }
 
   friend HOST_DEVICE_INLINE QuarticExtensionField operator-(QuarticExtensionField xs, const FF& ys)
   {
-    return QuarticExtensionField{xs.real - ys, xs.im1, xs.im2, xs.im3};
+    return QuarticExtensionField{xs.c0 - ys, xs.c1, xs.c2, xs.c3};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide
-  mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
     if (CONFIG::nonresidue_is_negative)
-      return ExtensionWide{
-        FF::mul_wide(xs.real, ys.real) -
+      return Wide{
+        FF::mul_wide(xs.c0, ys.c0) -
           FF::template mul_unsigned<CONFIG::nonresidue>(
-            FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
-        FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
-        FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) -
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
-        FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
-          FF::mul_wide(xs.im3, ys.real)};
+            FF::mul_wide(xs.c1, ys.c3) + FF::mul_wide(xs.c2, ys.c2) + FF::mul_wide(xs.c3, ys.c1)),
+        FF::mul_wide(xs.c0, ys.c1) + FF::mul_wide(xs.c1, ys.c0) -
+          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, ys.c3) + FF::mul_wide(xs.c3, ys.c2)),
+        FF::mul_wide(xs.c0, ys.c2) + FF::mul_wide(xs.c1, ys.c1) + FF::mul_wide(xs.c2, ys.c0) -
+          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, ys.c3)),
+        FF::mul_wide(xs.c0, ys.c3) + FF::mul_wide(xs.c1, ys.c2) + FF::mul_wide(xs.c2, ys.c1) +
+          FF::mul_wide(xs.c3, ys.c0)};
     else
-      return ExtensionWide{
-        FF::mul_wide(xs.real, ys.real) +
+      return Wide{
+        FF::mul_wide(xs.c0, ys.c0) +
           FF::template mul_unsigned<CONFIG::nonresidue>(
-            FF::mul_wide(xs.im1, ys.im3) + FF::mul_wide(xs.im2, ys.im2) + FF::mul_wide(xs.im3, ys.im1)),
-        FF::mul_wide(xs.real, ys.im1) + FF::mul_wide(xs.im1, ys.real) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, ys.im3) + FF::mul_wide(xs.im3, ys.im2)),
-        FF::mul_wide(xs.real, ys.im2) + FF::mul_wide(xs.im1, ys.im1) + FF::mul_wide(xs.im2, ys.real) +
-          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, ys.im3)),
-        FF::mul_wide(xs.real, ys.im3) + FF::mul_wide(xs.im1, ys.im2) + FF::mul_wide(xs.im2, ys.im1) +
-          FF::mul_wide(xs.im3, ys.real)};
+            FF::mul_wide(xs.c1, ys.c3) + FF::mul_wide(xs.c2, ys.c2) + FF::mul_wide(xs.c3, ys.c1)),
+        FF::mul_wide(xs.c0, ys.c1) + FF::mul_wide(xs.c1, ys.c0) +
+          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, ys.c3) + FF::mul_wide(xs.c3, ys.c2)),
+        FF::mul_wide(xs.c0, ys.c2) + FF::mul_wide(xs.c1, ys.c1) + FF::mul_wide(xs.c2, ys.c0) +
+          FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, ys.c3)),
+        FF::mul_wide(xs.c0, ys.c3) + FF::mul_wide(xs.c1, ys.c2) + FF::mul_wide(xs.c2, ys.c1) +
+          FF::mul_wide(xs.c3, ys.c0)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const QuarticExtensionField& xs, const FF& ys)
+  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const QuarticExtensionField& xs, const FF& ys)
   {
-    return ExtensionWide{
-      FF::mul_wide(xs.real, ys), FF::mul_wide(xs.im1, ys), FF::mul_wide(xs.im2, ys), FF::mul_wide(xs.im3, ys)};
+    return Wide{FF::mul_wide(xs.c0, ys), FF::mul_wide(xs.c1, ys), FF::mul_wide(xs.c2, ys), FF::mul_wide(xs.c3, ys)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide mul_wide(const FF& xs, const QuarticExtensionField& ys)
+  static constexpr HOST_DEVICE_INLINE Wide mul_wide(const FF& xs, const QuarticExtensionField& ys)
   {
-    return ExtensionWide{
-      FF::mul_wide(xs, ys.real), FF::mul_wide(xs, ys.im1), FF::mul_wide(xs, ys.im2), FF::mul_wide(xs, ys.im3)};
+    return Wide{FF::mul_wide(xs, ys.c0), FF::mul_wide(xs, ys.c1), FF::mul_wide(xs, ys.c2), FF::mul_wide(xs, ys.c3)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce(const ExtensionWide& xs)
+  static constexpr HOST_DEVICE_INLINE QuarticExtensionField reduce(const Wide& xs)
   {
     return QuarticExtensionField{
-      FF::template reduce<MODULUS_MULTIPLE>(xs.real), FF::template reduce<MODULUS_MULTIPLE>(xs.im1),
-      FF::template reduce<MODULUS_MULTIPLE>(xs.im2), FF::template reduce<MODULUS_MULTIPLE>(xs.im3)};
+      FF::template reduce<MODULUS_MULTIPLE>(xs.c0), FF::template reduce<MODULUS_MULTIPLE>(xs.c1),
+      FF::template reduce<MODULUS_MULTIPLE>(xs.c2), FF::template reduce<MODULUS_MULTIPLE>(xs.c3)};
   }
 
   template <class T1, class T2>
   friend HOST_DEVICE_INLINE QuarticExtensionField operator*(const T1& xs, const T2& ys)
   {
-    ExtensionWide xy = mul_wide(xs, ys);
+    Wide xy = mul_wide(xs, ys);
     return reduce(xy);
   }
 
   friend HOST_DEVICE_INLINE bool operator==(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
   {
-    return (xs.real == ys.real) && (xs.im1 == ys.im1) && (xs.im2 == ys.im2) && (xs.im3 == ys.im3);
+    return (xs.c0 == ys.c0) && (xs.c1 == ys.c1) && (xs.c2 == ys.c2) && (xs.c3 == ys.c3);
   }
 
   friend HOST_DEVICE_INLINE bool operator!=(const QuarticExtensionField& xs, const QuarticExtensionField& ys)
@@ -197,12 +197,12 @@ public:
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField mul_unsigned(const QuarticExtensionField& xs)
   {
     return {
-      FF::template mul_unsigned<multiplier>(xs.real), FF::template mul_unsigned<multiplier>(xs.im1),
-      FF::template mul_unsigned<multiplier>(xs.im2), FF::template mul_unsigned<multiplier>(xs.im3)};
+      FF::template mul_unsigned<multiplier>(xs.c0), FF::template mul_unsigned<multiplier>(xs.c1),
+      FF::template mul_unsigned<multiplier>(xs.c2), FF::template mul_unsigned<multiplier>(xs.c3)};
   }
 
   template <unsigned MODULUS_MULTIPLE = 1>
-  static constexpr HOST_DEVICE_INLINE ExtensionWide sqr_wide(const QuarticExtensionField& xs)
+  static constexpr HOST_DEVICE_INLINE Wide sqr_wide(const QuarticExtensionField& xs)
   {
     // TODO: change to a more efficient squaring
     return mul_wide<MODULUS_MULTIPLE>(xs, xs);
@@ -218,7 +218,7 @@ public:
   template <unsigned MODULUS_MULTIPLE = 1>
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField neg(const QuarticExtensionField& xs)
   {
-    return {FF::neg(xs.real), FF::neg(xs.im1), FF::neg(xs.im2), FF::neg(xs.im3)};
+    return {FF::neg(xs.c0), FF::neg(xs.c1), FF::neg(xs.c2), FF::neg(xs.c3)};
   }
 
   // inverse of zero is set to be zero which is what we want most of the time
@@ -227,19 +227,19 @@ public:
     FF x, x0, x2;
     if (CONFIG::nonresidue_is_negative) {
       x0 = FF::reduce(
-        FF::sqr_wide(xs.real) +
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im1, xs.im3 + xs.im3) - FF::sqr_wide(xs.im2)));
+        FF::sqr_wide(xs.c0) +
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c1, xs.c3 + xs.c3) - FF::sqr_wide(xs.c2)));
       x2 = FF::reduce(
-        FF::mul_wide(xs.real, xs.im2 + xs.im2) - FF::sqr_wide(xs.im1) +
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.im3)));
+        FF::mul_wide(xs.c0, xs.c2 + xs.c2) - FF::sqr_wide(xs.c1) +
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.c3)));
       x = FF::reduce(FF::sqr_wide(x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(x2)));
     } else {
       x0 = FF::reduce(
-        FF::sqr_wide(xs.real) -
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im1, xs.im3 + xs.im3) - FF::sqr_wide(xs.im2)));
+        FF::sqr_wide(xs.c0) -
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c1, xs.c3 + xs.c3) - FF::sqr_wide(xs.c2)));
       x2 = FF::reduce(
-        FF::mul_wide(xs.real, xs.im2 + xs.im2) - FF::sqr_wide(xs.im1) -
-        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.im3)));
+        FF::mul_wide(xs.c0, xs.c2 + xs.c2) - FF::sqr_wide(xs.c1) -
+        FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(xs.c3)));
       x = FF::reduce(FF::sqr_wide(x0) - FF::template mul_unsigned<CONFIG::nonresidue>(FF::sqr_wide(x2)));
     }
     FF x_inv = FF::inverse(x);
@@ -248,15 +248,15 @@ public:
     return {
       FF::reduce(
         (CONFIG::nonresidue_is_negative
-           ? (FF::mul_wide(xs.real, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))
-           : (FF::mul_wide(xs.real, x0))-FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im2, x2)))),
+           ? (FF::mul_wide(xs.c0, x0) + FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, x2)))
+           : (FF::mul_wide(xs.c0, x0))-FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c2, x2)))),
       FF::reduce(
         (CONFIG::nonresidue_is_negative
-           ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2)))
-           : FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.im3, x2))) -
-        FF::mul_wide(xs.im1, x0)),
-      FF::reduce(FF::mul_wide(xs.im2, x0) - FF::mul_wide(xs.real, x2)),
-      FF::reduce(FF::mul_wide(xs.im1, x2) - FF::mul_wide(xs.im3, x0)),
+           ? FWide::neg(FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, x2)))
+           : FF::template mul_unsigned<CONFIG::nonresidue>(FF::mul_wide(xs.c3, x2))) -
+        FF::mul_wide(xs.c1, x0)),
+      FF::reduce(FF::mul_wide(xs.c2, x0) - FF::mul_wide(xs.c0, x2)),
+      FF::reduce(FF::mul_wide(xs.c1, x2) - FF::mul_wide(xs.c3, x0)),
     };
   }
 
@@ -274,7 +274,13 @@ public:
   // Receives an array of bytes and its size and returns extension field element.
   static constexpr HOST_DEVICE_INLINE QuarticExtensionField from(const std::byte* in, unsigned nof_bytes)
   {
-    if (nof_bytes < 4 * sizeof(FF)) { ICICLE_LOG_ERROR << "Input size is too small"; }
+    if (nof_bytes < 4 * sizeof(FF)) {
+#ifndef __CUDACC__
+      ICICLE_LOG_ERROR << "Input size is too small";
+#endif // __CUDACC__
+      return QuarticExtensionField::zero();
+    }
+
     return QuarticExtensionField{
       FF::from(in, sizeof(FF)), FF::from(in + sizeof(FF), sizeof(FF)), FF::from(in + 2 * sizeof(FF), sizeof(FF)),
       FF::from(in + 3 * sizeof(FF), sizeof(FF))};

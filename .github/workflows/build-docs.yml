@@ -1,0 +1,44 @@
+name: Build Docs Website
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+  workflow_call:
+    inputs:
+      artifact_name:
+        description: "The name for the uploaded artifact"
+        required: true
+        type: string
+      invoked:
+        description: "Whether the workflow was invoked by a workflow_call event; THIS SHOULD NOT BE SUPPLIED BY THE USER"
+        required: false
+        type: string
+        default: "true"
+
+jobs:
+  build:
+    name: Build docs website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ./docs/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./docs
+      - name: Build website
+        run: npm run build
+        working-directory: ./docs
+      - name: Upload artifact
+        if: inputs.invoked != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: docs/build

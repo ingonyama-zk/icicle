@@ -4,6 +4,8 @@
 #include "icicle/fri/fri_config.h"
 #include "icicle/fri/fri_proof.h"
 #include "icicle/fri/fri_transcript_config.h"
+#include "icicle/sumcheck/sumcheck_proof_serializer.h"
+#include "icicle/fri/fri_proof_serializer.h"
 
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
@@ -21,6 +23,7 @@ TYPED_TEST(FieldTest, FieldSanityTest)
   auto b = TypeParam::rand_host();
   auto b_inv = TypeParam::inverse(b);
   auto a_neg = TypeParam::neg(a);
+  ASSERT_EQ(TypeParam::from_montgomery(TypeParam::to_montgomery(a)), a);
   ASSERT_EQ(a + TypeParam::zero(), a);
   ASSERT_EQ(a + b - a, b);
   ASSERT_EQ(b * a * b_inv, a);
@@ -81,6 +84,12 @@ TEST_F(FieldTestBase, polynomialDivision)
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
     for (int columns_batch = 0; columns_batch <= 1; columns_batch++) {
+      // TODO @Hadar support column batch for this API
+      if (columns_batch && (device == "CUDA" || device == "METAL")) {
+        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
+        continue;
+      }
+
       ICICLE_LOG_INFO << "testing polynomial division on device " << device << " [column_batch=" << columns_batch
                       << "]";
 
@@ -110,11 +119,6 @@ TEST_F(FieldTestBase, polynomialDivision)
       auto config = default_vec_ops_config();
       config.batch_size = batch_size;
       config.columns_batch = columns_batch;
-      // TODO v3.2 support column batch for this API
-      if (columns_batch && device == "CUDA") {
-        ICICLE_LOG_INFO << "Skipping polynomial division column batch";
-        continue;
-      }
 
       ICICLE_CHECK(polynomial_division(
         numerator.get(), numerator_size, denominator.get(), denominator_size, config, q.get(), q_size, r.get(),
@@ -140,40 +144,40 @@ TEST_F(FieldTestBase, polynomialDivision)
 
 #ifdef SUMCHECK
   #include "icicle/hash/keccak.h"
-TEST_F(FieldTestBase, Sumcheck)
+TYPED_TEST(FieldTest, Sumcheck)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t eq = mle_polynomials[3][element_i];
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam eq = mle_polynomials[3][element_i];
     claimed_sum = claimed_sum + (a * b - c) * eq;
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     // ===== Prover side ======
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config(
-      create_keccak_256_hash(), "labelA", "labelB", "LabelC", scalar_t::from(12));
+    SumcheckTranscriptConfig<TypeParam> transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", TypeParam::from(12));
 
     ASSERT_NE(transcript_config.get_domain_separator_label().size(),
               0); // assert label exists
@@ -182,11 +186,11 @@ TEST_F(FieldTestBase, Sumcheck)
     oss << dev_type << " " << msg;
 
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
+    CombineFunction<TypeParam> combine_func(EQ_X_AB_MINUS_C);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -200,18 +204,17 @@ TEST_F(FieldTestBase, Sumcheck)
     // Note that the verifier is another machine and needs to regenerate the same transcript config.
     // Also note that even if the same process, the transcript-config is moved since it may be large, so cannot reuse
     // twice.
-    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config(
-      create_keccak_256_hash(), "labelA", "labelB", "LabelC", scalar_t::from(12));
+    SumcheckTranscriptConfig<TypeParam> verifier_transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", TypeParam::from(12));
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
-
-  for (const auto& device : s_registered_devices)
+  for (const auto& device : IcicleTestBase::s_registered_devices)
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
@@ -219,56 +222,56 @@ TEST_F(FieldTestBase, Sumcheck)
   }
 }
 
-TEST_F(FieldTestBase, SumcheckDataOnDevice)
+TYPED_TEST(FieldTest, SumcheckDataOnDevice)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t eq = mle_polynomials[3][element_i];
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam eq = mle_polynomials[3][element_i];
     claimed_sum = claimed_sum + (a * b - c) * eq;
   }
 
-  std::vector<scalar_t*> data_main = std::vector<scalar_t*>(nof_mle_poly);
+  std::vector<TypeParam*> data_main = std::vector<TypeParam*>(nof_mle_poly);
   icicle_set_device(IcicleTestBase::main_device());
 
   // create transcript_config
-  SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
-  SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
+  SumcheckTranscriptConfig<TypeParam> transcript_config_prover;   // default configuration
+  SumcheckTranscriptConfig<TypeParam> transcript_config_verifier; // default configuration
 
   // ===== Prover side ======
   // create sumcheck
-  auto prover_sumcheck = create_sumcheck<scalar_t>();
+  auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-  CombineFunction<scalar_t> combine_func(EQ_X_AB_MINUS_C);
+  CombineFunction<TypeParam> combine_func(EQ_X_AB_MINUS_C);
   SumcheckConfig sumcheck_config;
 
   sumcheck_config.are_inputs_on_device = true;
 
   for (int idx = 0; idx < nof_mle_poly; ++idx) {
-    scalar_t* tmp = nullptr;
-    icicle_malloc((void**)&tmp, mle_poly_size * sizeof(scalar_t));
-    icicle_copy_to_device(tmp, mle_polynomials[idx], mle_poly_size * sizeof(scalar_t));
+    TypeParam* tmp = nullptr;
+    icicle_malloc((void**)&tmp, mle_poly_size * sizeof(TypeParam));
+    icicle_copy_to_device(tmp, mle_polynomials[idx], mle_poly_size * sizeof(TypeParam));
     data_main[idx] = tmp;
   }
   std::ostringstream oss;
   oss << IcicleTestBase::main_device() << " "
       << "Sumcheck";
 
-  SumcheckProof<scalar_t> sumcheck_proof;
+  SumcheckProof<TypeParam> sumcheck_proof;
 
   START_TIMER(sumcheck);
   ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -277,9 +280,9 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   END_TIMER(sumcheck, oss.str().c_str(), true);
 
   // ===== Verifier side ======
-  SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
+  SumcheckTranscriptConfig<TypeParam> verifier_transcript_config; // default configuration
   // create sumcheck
-  auto verifier_sumcheck = create_sumcheck<scalar_t>();
+  auto verifier_sumcheck = create_sumcheck<TypeParam>();
   bool verification_pass = false;
   ICICLE_CHECK(
     verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
@@ -291,56 +294,57 @@ TEST_F(FieldTestBase, SumcheckDataOnDevice)
   }
 }
 
-MlePoly user_defined_combine(const std::vector<MlePoly>& inputs)
+template <typename T>
+Symbol<T> user_defined_combine(const std::vector<Symbol<T>>& inputs)
 {
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  const MlePoly& D = inputs[3];
-  return A * B - MlePoly(scalar_t::from(2)) * C + D;
+  const Symbol<T>& A = inputs[0];
+  const Symbol<T>& B = inputs[1];
+  const Symbol<T>& C = inputs[2];
+  const Symbol<T>& D = inputs[3];
+  return A * B - Symbol<T>(T::from(2)) * C + D;
 }
 
-TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
+TYPED_TEST(FieldTest, SumcheckUserDefinedCombine)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 4;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t d = mle_polynomials[3][element_i];
-    claimed_sum = claimed_sum + (a * b - scalar_t::from(2) * c + d);
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam d = mle_polynomials[3][element_i];
+    claimed_sum = claimed_sum + (a * b - TypeParam::from(2) * c + d);
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config; // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(user_defined_combine, nof_mle_poly);
+    CombineFunction<TypeParam> combine_func(user_defined_combine<TypeParam>, nof_mle_poly);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -349,16 +353,16 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
-    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
+    SumcheckTranscriptConfig<TypeParam> verifier_transcript_config; // default configuration
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
-  for (const auto& device : s_registered_devices) {
+  for (const auto& device : IcicleTestBase::s_registered_devices) {
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
   }
 
@@ -367,61 +371,62 @@ TEST_F(FieldTestBase, SumcheckUserDefinedCombine)
   }
 }
 
-MlePoly max_allowed_degree_combine(const std::vector<MlePoly>& inputs)
+template <typename T>
+Symbol<T> max_allowed_degree_combine(const std::vector<Symbol<T>>& inputs)
 {
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  const MlePoly& D = inputs[3];
-  const MlePoly& E = inputs[4];
-  const MlePoly& F = inputs[5];
+  const Symbol<T>& A = inputs[0];
+  const Symbol<T>& B = inputs[1];
+  const Symbol<T>& C = inputs[2];
+  const Symbol<T>& D = inputs[3];
+  const Symbol<T>& E = inputs[4];
+  const Symbol<T>& F = inputs[5];
   return A * B * C * D * E * F;
 }
 
-TEST_F(FieldTestBase, SumcheckMaxAllowedDegreeCombine)
+TYPED_TEST(FieldTest, SumcheckMaxAllowedDegreeCombine)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 6;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t d = mle_polynomials[3][element_i];
-    const scalar_t e = mle_polynomials[4][element_i];
-    const scalar_t f = mle_polynomials[5][element_i];
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam d = mle_polynomials[3][element_i];
+    const TypeParam e = mle_polynomials[4][element_i];
+    const TypeParam f = mle_polynomials[5][element_i];
     claimed_sum = claimed_sum + (a * b * c * d * e * f);
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
-    SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_prover;   // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(max_allowed_degree_combine, nof_mle_poly);
+    CombineFunction<TypeParam> combine_func(max_allowed_degree_combine<TypeParam>, nof_mle_poly);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -431,14 +436,14 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedDegreeCombine)
 
     // ===== Verifier side ======
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config_verifier), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
-  for (const auto& device : s_registered_devices) {
+  for (const auto& device : IcicleTestBase::s_registered_devices) {
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
   }
 
@@ -447,65 +452,66 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedDegreeCombine)
   }
 }
 
-MlePoly max_allowed_nof_polys_comine(const std::vector<MlePoly>& inputs)
+template <typename T>
+Symbol<T> max_allowed_nof_polys_comine(const std::vector<Symbol<T>>& inputs)
 {
-  const MlePoly& A = inputs[0];
-  const MlePoly& B = inputs[1];
-  const MlePoly& C = inputs[2];
-  const MlePoly& D = inputs[3];
-  const MlePoly& E = inputs[4];
-  const MlePoly& F = inputs[5];
-  const MlePoly& G = inputs[6];
-  const MlePoly& H = inputs[7];
+  const Symbol<T>& A = inputs[0];
+  const Symbol<T>& B = inputs[1];
+  const Symbol<T>& C = inputs[2];
+  const Symbol<T>& D = inputs[3];
+  const Symbol<T>& E = inputs[4];
+  const Symbol<T>& F = inputs[5];
+  const Symbol<T>& G = inputs[6];
+  const Symbol<T>& H = inputs[7];
   return A * B * C + D * E * F + G - H;
 }
 
-TEST_F(FieldTestBase, SumcheckMaxAllowedNofPolys)
+TYPED_TEST(FieldTest, SumcheckMaxAllowedNofPolys)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 8;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    const scalar_t b = mle_polynomials[1][element_i];
-    const scalar_t c = mle_polynomials[2][element_i];
-    const scalar_t d = mle_polynomials[3][element_i];
-    const scalar_t e = mle_polynomials[4][element_i];
-    const scalar_t f = mle_polynomials[5][element_i];
-    const scalar_t g = mle_polynomials[6][element_i];
-    const scalar_t h = mle_polynomials[7][element_i];
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam d = mle_polynomials[3][element_i];
+    const TypeParam e = mle_polynomials[4][element_i];
+    const TypeParam f = mle_polynomials[5][element_i];
+    const TypeParam g = mle_polynomials[6][element_i];
+    const TypeParam h = mle_polynomials[7][element_i];
     claimed_sum = claimed_sum + (a * b * c + d * e * f + g - h);
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
-    SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_prover;   // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(max_allowed_nof_polys_comine, nof_mle_poly);
+    CombineFunction<TypeParam> combine_func(max_allowed_nof_polys_comine<TypeParam>, nof_mle_poly);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -515,14 +521,14 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedNofPolys)
 
     // ===== Verifier side ======
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config_verifier), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
   };
-  for (const auto& device : s_registered_devices) {
+  for (const auto& device : IcicleTestBase::s_registered_devices) {
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
   }
 
@@ -531,31 +537,35 @@ TEST_F(FieldTestBase, SumcheckMaxAllowedNofPolys)
   }
 }
 
-MlePoly identity(const std::vector<MlePoly>& inputs) { return inputs[0]; }
+template <typename T>
+Symbol<T> identity(const std::vector<Symbol<T>>& inputs)
+{
+  return inputs[0];
+}
 
-TEST_F(FieldTestBase, SumcheckDifferentTranscriptShouldFail)
+TYPED_TEST(FieldTest, SumcheckDifferentTranscriptShouldFail)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 1;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
+    const TypeParam a = mle_polynomials[0][element_i];
     claimed_sum = claimed_sum + a;
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
@@ -563,23 +573,23 @@ TEST_F(FieldTestBase, SumcheckDifferentTranscriptShouldFail)
     const char* domain_label = "ingonyama";
     const char* poly_label = "poly_label";
     const char* challenge_label = "icicle";
-    scalar_t seed = scalar_t::from(18);
+    TypeParam seed = TypeParam::from(18);
     bool little_endian = true;
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover(
+    SumcheckTranscriptConfig<TypeParam> transcript_config_prover(
       hasher, domain_label, poly_label, challenge_label, seed, little_endian);
-    SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(identity, nof_mle_poly);
+    CombineFunction<TypeParam> combine_func(identity<TypeParam>, nof_mle_poly);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -589,7 +599,7 @@ TEST_F(FieldTestBase, SumcheckDifferentTranscriptShouldFail)
 
     // ===== Verifier side ======
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(transcript_config_verifier), verification_pass));
@@ -597,7 +607,7 @@ TEST_F(FieldTestBase, SumcheckDifferentTranscriptShouldFail)
     ASSERT_EQ(false, verification_pass);
   };
 
-  for (const auto& device : s_registered_devices)
+  for (const auto& device : IcicleTestBase::s_registered_devices)
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
@@ -708,29 +718,29 @@ TEST_F(FieldTestBase, SumcheckDeviceShouldFailCases)
   }
 }
 
-TEST_F(FieldTestBase, SumcheckIdentity)
+TYPED_TEST(FieldTest, SumcheckIdentity)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 1;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
+    const TypeParam a = mle_polynomials[0][element_i];
     claimed_sum = claimed_sum + a;
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
@@ -738,21 +748,21 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     const char* domain_label = "ingonyama";
     const char* poly_label = "poly_label";
     const char* challenge_label = "icicle";
-    scalar_t seed = scalar_t::from(18);
+    TypeParam seed = TypeParam::from(18);
     bool little_endian = true;
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> config_prover; // default configuration
+    SumcheckTranscriptConfig<TypeParam> config_prover; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(identity, nof_mle_poly);
+    CombineFunction<TypeParam> combine_func(identity<TypeParam>, nof_mle_poly);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -761,9 +771,9 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
-    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
+    SumcheckTranscriptConfig<TypeParam> verifier_transcript_config; // default configuration
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
@@ -771,7 +781,7 @@ TEST_F(FieldTestBase, SumcheckIdentity)
     ASSERT_EQ(true, verification_pass);
   };
 
-  for (const auto& device : s_registered_devices)
+  for (const auto& device : IcicleTestBase::s_registered_devices)
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
@@ -779,47 +789,51 @@ TEST_F(FieldTestBase, SumcheckIdentity)
   }
 }
 
-MlePoly single_input(const std::vector<MlePoly>& inputs) { return MlePoly(scalar_t::from(2)) * inputs[0]; }
+template <typename T>
+Symbol<T> single_input(const std::vector<Symbol<T>>& inputs)
+{
+  return Symbol<T>(T::from(2)) * inputs[0];
+}
 
-TEST_F(FieldTestBase, SumcheckSingleInputProgram)
+TYPED_TEST(FieldTest, SumcheckSingleInputProgram)
 {
   int log_mle_poly_size = 13;
   int mle_poly_size = 1 << log_mle_poly_size;
   int nof_mle_poly = 1;
 
   // generate inputs
-  std::vector<scalar_t*> mle_polynomials(nof_mle_poly);
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
   for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
-    mle_polynomials[poly_i] = new scalar_t[mle_poly_size];
-    scalar_t::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
   }
 
   // calculate the claimed sum
-  scalar_t claimed_sum = scalar_t::zero();
+  TypeParam claimed_sum = TypeParam::zero();
   for (int element_i = 0; element_i < mle_poly_size; element_i++) {
-    const scalar_t a = mle_polynomials[0][element_i];
-    claimed_sum = claimed_sum + scalar_t::from(2) * a;
+    const TypeParam a = mle_polynomials[0][element_i];
+    claimed_sum = claimed_sum + TypeParam::from(2) * a;
   }
 
   auto run = [&](
-               const std::string& dev_type, std::vector<scalar_t*>& mle_polynomials, const int mle_poly_size,
-               const scalar_t claimed_sum, const char* msg) {
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
     Device dev = {dev_type, 0};
     icicle_set_device(dev);
 
     // create transcript_config
-    SumcheckTranscriptConfig<scalar_t> transcript_config_prover;   // default configuration
-    SumcheckTranscriptConfig<scalar_t> transcript_config_verifier; // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_prover;   // default configuration
+    SumcheckTranscriptConfig<TypeParam> transcript_config_verifier; // default configuration
 
     std::ostringstream oss;
     oss << dev_type << " " << msg;
     // ===== Prover side ======
     // create sumcheck
-    auto prover_sumcheck = create_sumcheck<scalar_t>();
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
 
-    CombineFunction<scalar_t> combine_func(single_input, nof_mle_poly);
+    CombineFunction<TypeParam> combine_func(single_input<TypeParam>, nof_mle_poly);
     SumcheckConfig sumcheck_config;
-    SumcheckProof<scalar_t> sumcheck_proof;
+    SumcheckProof<TypeParam> sumcheck_proof;
 
     START_TIMER(sumcheck);
     ICICLE_CHECK(prover_sumcheck.get_proof(
@@ -828,17 +842,38 @@ TEST_F(FieldTestBase, SumcheckSingleInputProgram)
     END_TIMER(sumcheck, oss.str().c_str(), true);
 
     // ===== Verifier side ======
-    SumcheckTranscriptConfig<scalar_t> verifier_transcript_config; // default configuration
+    SumcheckTranscriptConfig<TypeParam> verifier_transcript_config; // default configuration
     // create sumcheck
-    auto verifier_sumcheck = create_sumcheck<scalar_t>();
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
     bool verification_pass = false;
     ICICLE_CHECK(
       verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
 
     ASSERT_EQ(true, verification_pass);
+
+    // Serialize proof
+    size_t proof_size = 0;
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<TypeParam>>::serialized_size(sumcheck_proof, proof_size));
+    std::vector<std::byte> proof_bytes(proof_size);
+    ICICLE_CHECK(
+      BinarySerializer<SumcheckProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), sumcheck_proof));
+
+    // Deserialize proof
+    SumcheckProof<TypeParam> deserialized_proof;
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<TypeParam>>::deserialize(
+      proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+
+    // Compare proofs
+    uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
+    ASSERT_EQ(nof_round_polynomials, deserialized_proof.get_nof_round_polynomials());
+    for (uint round_i = 0; round_i < nof_round_polynomials; round_i++) {
+      const auto& round_poly = sumcheck_proof.get_round_polynomial(round_i);
+      const auto& deserialized_round_poly = deserialized_proof.get_round_polynomial(round_i);
+      ASSERT_EQ(round_poly, deserialized_round_poly);
+    }
   };
 
-  for (const auto& device : s_registered_devices)
+  for (const auto& device : IcicleTestBase::s_registered_devices)
     run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
 
   for (auto& mle_poly_ptr : mle_polynomials) {
@@ -865,7 +900,7 @@ TYPED_TEST(FieldTest, Fri)
       pow_bits = 0;
       nof_queries = 50;
     }
-    for (size_t log_input_size = 16; log_input_size <= 24; log_input_size += 4) {
+    for (size_t log_input_size = 10; log_input_size <= 12; log_input_size += 2) {
       const size_t input_size = 1 << log_input_size;
       const size_t folding_factor = 2; // TODO SHANIE (future) - add support for other folding factors
       const size_t stopping_size = 1 << log_stopping_size;
@@ -931,6 +966,69 @@ TYPED_TEST(FieldTest, Fri)
         err = fri_merkle_tree::verify<TypeParam>(fri_config, transcript_config, fri_proof, hash, compress, valid);
         ICICLE_CHECK(err);
         ASSERT_EQ(true, valid);
+
+        // Serialize proof
+        size_t proof_size = 0;
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::serialized_size(fri_proof, proof_size));
+        std::vector<std::byte> proof_bytes(proof_size);
+        ICICLE_CHECK(
+          BinarySerializer<FriProof<TypeParam>>::serialize(proof_bytes.data(), proof_bytes.size(), fri_proof));
+
+        // Deserialize proof
+        FriProof<TypeParam> deserialized_proof;
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
+          proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+
+        // Compare proofs
+        // Compare number of FRI rounds
+        ASSERT_EQ(fri_proof.get_nof_fri_rounds(), deserialized_proof.get_nof_fri_rounds());
+
+        // Compare final polynomial size and contents
+        ASSERT_EQ(fri_proof.get_final_poly_size(), deserialized_proof.get_final_poly_size());
+        auto orig_final_poly_ptr = fri_proof.get_final_poly();
+        auto deser_final_poly_ptr = deserialized_proof.get_final_poly();
+        size_t orig_final_poly_size = fri_proof.get_final_poly_size();
+        size_t deser_final_poly_size = deserialized_proof.get_final_poly_size();
+        std::vector<TypeParam> orig_final_poly_vec(orig_final_poly_ptr, orig_final_poly_ptr + orig_final_poly_size);
+        std::vector<TypeParam> deser_final_poly_vec(deser_final_poly_ptr, deser_final_poly_ptr + deser_final_poly_size);
+        ASSERT_EQ(orig_final_poly_vec, deser_final_poly_vec);
+
+        // Compare PoW nonce
+        ASSERT_EQ(fri_proof.get_pow_nonce(), deserialized_proof.get_pow_nonce());
+
+        // // Compare Merkle proofs for each query and round
+        for (size_t query_idx = 0; query_idx < fri_proof.get_nof_fri_rounds(); query_idx++) {
+          for (size_t round_idx = 0; round_idx < fri_proof.get_nof_fri_rounds(); round_idx++) {
+            auto merkle_proof = fri_proof.get_query_proof_slot(query_idx, round_idx);
+            auto deserialized_proof = fri_proof.get_query_proof_slot(query_idx, round_idx);
+            ASSERT_EQ(merkle_proof.is_pruned(), deserialized_proof.is_pruned());
+
+            // Compare paths
+            auto [orig_path_ptr, orig_path_size] = merkle_proof.get_path();
+            auto [deser_path_ptr, deser_path_size] = deserialized_proof.get_path();
+            ASSERT_EQ(orig_path_size, deser_path_size);
+            std::vector<std::byte> orig_path_vec(orig_path_ptr, orig_path_ptr + orig_path_size);
+            std::vector<std::byte> deser_path_vec(deser_path_ptr, deser_path_ptr + deser_path_size);
+            ASSERT_EQ(orig_path_vec, deser_path_vec);
+
+            // Compare leaves
+            auto [orig_leaf_ptr, orig_leaf_size, orig_leaf_idx] = merkle_proof.get_leaf();
+            auto [deser_leaf_ptr, deser_leaf_size, deser_leaf_idx] = deserialized_proof.get_leaf();
+            ASSERT_EQ(orig_leaf_size, deser_leaf_size);
+            ASSERT_EQ(orig_leaf_idx, deser_leaf_idx);
+            std::vector<std::byte> orig_leaf_vec(orig_leaf_ptr, orig_leaf_ptr + orig_leaf_size);
+            std::vector<std::byte> deser_leaf_vec(deser_leaf_ptr, deser_leaf_ptr + deser_leaf_size);
+            ASSERT_EQ(orig_leaf_vec, deser_leaf_vec);
+
+            // Compare roots
+            auto [orig_root_ptr, orig_root_size] = merkle_proof.get_root();
+            auto [deser_root_ptr, deser_root_size] = deserialized_proof.get_root();
+            ASSERT_EQ(orig_root_size, deser_root_size);
+            std::vector<std::byte> orig_root_vec(orig_root_ptr, orig_root_ptr + orig_root_size);
+            std::vector<std::byte> deser_root_vec(deser_root_ptr, deser_root_ptr + deser_root_size);
+            ASSERT_EQ(orig_root_vec, deser_root_vec);
+          }
+        }
       };
 
       run(IcicleTestBase::reference_device(), false);
@@ -1059,66 +1157,43 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
 
 #endif // FRI
 
-// TODO Hadar: this is a workaround for 'storage<18 - scalar_t::TLC>' failing due to 17 limbs not supported.
-//             It means we skip fields such as babybear!
-// TODO: this test make problem for curves too as they have extension fields too. Need to clean it up TODO Hadar
-
-// #ifndef EXT_FIELD
-// TEST_F(FieldTestBase, FieldStorageReduceSanityTest)
-// {
-//   /*
-//   SR - storage reduce
-//   check that:
-//   1. SR(x1) + SR(x1) = SR(x1+x2)
-//   2. SR(INV(SR(x))*x) = 1
-//   */
-//   START_TIMER(StorageSanity)
-//   for (int i = 0; i < 1000; i++) {
-//     if constexpr (scalar_t::TLC == 1) {
-//       storage<18> a =                                          // 18 because we support up to 576 bits
-//         scalar_t::template rand_storage<18>(17);               // 17 so we don't have carry after addition
-//       storage<18> b = scalar_t::template rand_storage<18>(17); // 17 so we don't have carry after addition
-//       storage<18> sum = {};
-//       const storage<3> c =
-//         scalar_t::template rand_storage<3>(); // 3 because we don't support higher odd number of limbs yet
-//       storage<4> product = {};
-//       host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
-//       auto c_red = scalar_t::from(c);
-//       auto c_inv = scalar_t::inverse(c_red);
-//       host_math::multiply_raw<3, 1, true>(
-//         c, c_inv.limbs_storage, product); // using 32-bit multiplication for small fields
-//       ASSERT_EQ(scalar_t::from(a) + scalar_t::from(b), scalar_t::from(sum));
-//       ASSERT_EQ(scalar_t::from(product), scalar_t::one());
-//       std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
-//       std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
-//       std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
-//       std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
-//       ASSERT_EQ(scalar_t::from(a), scalar_t::from(a_bytes, 18 * 4));
-//       ASSERT_EQ(scalar_t::from(a_bytes, 18 * 4) + scalar_t::from(b_bytes, 18 * 4), scalar_t::from(sum_bytes, 18 *
-//       4)); ASSERT_EQ(scalar_t::from(product_bytes, 4 * 4), scalar_t::one());
-//     } else {
-//       storage<18> a =                                          // 18 because we support up to 576 bits
-//         scalar_t::template rand_storage<18>(17);               // 17 so we don't have carry after addition
-//       storage<18> b = scalar_t::template rand_storage<18>(17); // 17 so we don't have carry after addition
-//       storage<18> sum = {};
-//       const storage<18 - scalar_t::TLC> c =
-//         scalar_t::template rand_storage<18 - scalar_t::TLC>(); // -TLC so we don't overflow in multiplication
-//       storage<18> product = {};
-//       host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
-//       auto c_red = scalar_t::from(c);
-//       auto c_inv = scalar_t::inverse(c_red);
-//       host_math::multiply_raw(c, c_inv.limbs_storage, product);
-//       ASSERT_EQ(scalar_t::from(a) + scalar_t::from(b), scalar_t::from(sum));
-//       ASSERT_EQ(scalar_t::from(product), scalar_t::one());
-//       std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
-//       std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
-//       std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
-//       std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
-//       ASSERT_EQ(scalar_t::from(a), scalar_t::from(a_bytes, 18 * 4));
-//       ASSERT_EQ(scalar_t::from(a_bytes, 18 * 4) + scalar_t::from(b_bytes, 18 * 4), scalar_t::from(sum_bytes, 18 *
-//       4)); ASSERT_EQ(scalar_t::from(product_bytes, 18 * 4), scalar_t::one());
-//     }
-//   }
-//   END_TIMER(StorageSanity, "storage sanity", true);
-// }
-// #endif // ! EXT_FIELD
+TEST_F(FieldTestBase, FieldStorageReduceSanityTest)
+{
+  /*
+  SR - storage reduce
+  check that:
+  1. SR(x1) + SR(x1) = SR(x1+x2)
+  2. SR(INV(SR(x))*x) = 1
+  */
+  START_TIMER(StorageSanity)
+  for (int i = 0; i < 1000; i++) {
+    storage<18> a =                                          // 18 because we support up to 576 bits
+      scalar_t::template rand_storage<18>(17);               // 17 so we don't have carry after addition
+    storage<18> b = scalar_t::template rand_storage<18>(17); // 17 so we don't have carry after addition
+    storage<18> sum = {};
+    const storage<18 - (scalar_t::TLC > 1 ? scalar_t::TLC : 2)> c =
+      scalar_t::template rand_storage<18 - (scalar_t::TLC > 1 ? scalar_t::TLC : 2)>(); // -TLC so we don't overflow in
+                                                                                       // multiplication
+    storage<18> product = {};
+    host_math::template add_sub_limbs<18, false, false, true>(a, b, sum);
+    auto c_red = scalar_t::from(c);
+    auto c_inv = scalar_t::inverse(c_red);
+    storage<(scalar_t::TLC > 1 ? scalar_t::TLC : 2)> c_inv_s = {c_inv.limbs_storage.limbs[0]};
+    if (scalar_t::TLC > 1) {
+      for (int i = 1; i < scalar_t::TLC; i++) {
+        c_inv_s.limbs[i] = c_inv.limbs_storage.limbs[i];
+      }
+    }
+    host_math::multiply_raw(c, c_inv_s, product);
+    ASSERT_EQ(scalar_t::from(a) + scalar_t::from(b), scalar_t::from(sum));
+    ASSERT_EQ(scalar_t::from(product), scalar_t::one());
+    std::byte* a_bytes = reinterpret_cast<std::byte*>(a.limbs);
+    std::byte* b_bytes = reinterpret_cast<std::byte*>(b.limbs);
+    std::byte* sum_bytes = reinterpret_cast<std::byte*>(sum.limbs);
+    std::byte* product_bytes = reinterpret_cast<std::byte*>(product.limbs);
+    ASSERT_EQ(scalar_t::from(a), scalar_t::from(a_bytes, 18 * 4));
+    ASSERT_EQ(scalar_t::from(a_bytes, 18 * 4) + scalar_t::from(b_bytes, 18 * 4), scalar_t::from(sum_bytes, 18 * 4));
+    ASSERT_EQ(scalar_t::from(product_bytes, 18 * 4), scalar_t::one());
+  }
+  END_TIMER(StorageSanity, "storage sanity", true);
+}
