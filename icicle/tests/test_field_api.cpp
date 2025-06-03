@@ -860,8 +860,9 @@ TYPED_TEST(FieldTest, SumcheckSingleInputProgram)
 
     // Deserialize proof
     SumcheckProof<TypeParam> deserialized_proof;
-    ICICLE_CHECK(BinarySerializer<SumcheckProof<TypeParam>>::deserialize(
-      proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+    ICICLE_CHECK(
+      BinarySerializer<SumcheckProof<TypeParam>>::deserialize(
+        proof_bytes.data(), proof_bytes.size(), deserialized_proof));
 
     // Compare proofs
     uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
@@ -976,8 +977,9 @@ TYPED_TEST(FieldTest, Fri)
 
         // Deserialize proof
         FriProof<TypeParam> deserialized_proof;
-        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
-          proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+        ICICLE_CHECK(
+          BinarySerializer<FriProof<TypeParam>>::deserialize(
+            proof_bytes.data(), proof_bytes.size(), deserialized_proof));
 
         // Compare proofs
         // Compare number of FRI rounds
@@ -1153,6 +1155,79 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     log_input_size
     /*log_domain_size*/,
     4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+}
+
+TYPED_TEST(FieldTest, FriRejectsHighDegreeFinalPoly)
+{
+  // Use similar parameters as FriShouldFailCases
+  const int log_input_size = 10;
+  const int log_stopping_size = 4;
+  const size_t pow_bits = 0;
+  const size_t stopping_size = 1 << log_stopping_size;
+  const size_t stopping_degree = stopping_size - 1;
+  const size_t folding_factor = 2;
+  const size_t nof_queries = 10;
+  const size_t input_size = 1 << log_input_size;
+  const uint64_t output_store_min_layer = 0;
+  const size_t merkle_tree_arity = 2;
+
+  // Generate input polynomial evaluations
+  auto scalars = std::make_unique<TypeParam[]>(input_size);
+  TypeParam::rand_host_many(scalars.get(), input_size);
+
+  // Set up device
+  Device dev = {IcicleTestBase::reference_device(), 0};
+  icicle_set_device(dev);
+
+  // Initialize ntt domain
+  NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+  ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+
+  // Define hashers for merkle tree
+  Hash hash = Keccak256::create(sizeof(TypeParam));
+  Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size());
+
+  // Transcript config
+  const char* domain_separator_label = "domain_separator_label";
+  const char* round_challenge_label = "round_challenge_label";
+  const char* commit_phase_label = "commit_phase_label";
+  const char* nonce_label = "nonce_label";
+  std::vector<std::byte>&& public_state = {};
+  TypeParam seed_rng = TypeParam::one();
+
+  FriTranscriptConfig<TypeParam> transcript_config(
+    hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+    seed_rng);
+
+  FriConfig fri_config;
+  fri_config.nof_queries = nof_queries;
+  fri_config.pow_bits = pow_bits;
+  fri_config.folding_factor = folding_factor;
+  fri_config.stopping_degree = stopping_degree;
+  FriProof<TypeParam> fri_proof;
+
+  // Prove
+  eIcicleError err = prove_fri_merkle_tree<TypeParam>(
+    fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+  ICICLE_CHECK(err);
+
+  // Release domain
+  ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
+  // Maliciously append a nonzero coefficient to the final polynomial (length mismatch)
+  std::vector<TypeParam> final_poly_vec(
+    fri_proof.get_final_poly(), fri_proof.get_final_poly() + fri_proof.get_final_poly_size());
+  final_poly_vec.push_back(TypeParam::from(42)); // Nonzero value
+  final_poly_vec.push_back(TypeParam::from(420));
+
+  // Replace the final polynomial in the proof (length mismatch)
+  FriProof<TypeParam> malicious_proof_length(fri_proof.get_query_proofs(), final_poly_vec, fri_proof.get_pow_nonce());
+
+  // Verify (length mismatch)
+  bool valid = true;
+  err = verify_fri_merkle_tree<TypeParam>(fri_config, transcript_config, malicious_proof_length, hash, compress, valid);
+  ASSERT_EQ(err, eIcicleError::INVALID_ARGUMENT);
+  ASSERT_EQ(valid, false);
 }
 
 #endif // FRI

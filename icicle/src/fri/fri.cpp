@@ -52,6 +52,21 @@ namespace icicle {
       const FriProof<F>& fri_proof,
       bool& valid /* OUT */) const
     {
+      // === Final polynomial degree and length check
+      // If the final polynomial degree is higher than expected, we fail it before the collinearity check
+      // Note: we are not trimming zeros etc for proof size optimizations.
+      size_t expected_final_poly_size = fri_config.stopping_degree + 1;
+      const size_t final_poly_size_from_proof = fri_proof.get_final_poly_size();
+      const F* final_poly = fri_proof.get_final_poly();
+      if (final_poly_size_from_proof != expected_final_poly_size) {
+        valid = false;
+        ICICLE_LOG_ERROR << "Security check failed: FRI final polynomial degree is " << final_poly_size_from_proof - 1
+                         << ", expected degree is " << fri_config.stopping_degree
+                         << ". This may indicate a malicious proof (degree attack).";
+        return eIcicleError::INVALID_ARGUMENT;
+      }
+      // === End degree/length check ===
+
       if (__builtin_expect(fri_config.nof_queries <= 0, 0)) { ICICLE_LOG_ERROR << "Number of queries must be > 0"; }
 
       const size_t nof_fri_rounds = fri_proof.get_nof_fri_rounds();
@@ -337,9 +352,10 @@ namespace icicle {
       layer_hashes.pop_back();
     }
     std::shared_ptr<FriBackend<S, F>> backend;
-    ICICLE_CHECK(FriDispatcher::execute(
-      folding_factor, stopping_degree, merkle_trees,
-      backend)); // The MerkleTree class only holds a shared_ptr to MerkleTreeBackend, so copying is lightweight.
+    ICICLE_CHECK(
+      FriDispatcher::execute(
+        folding_factor, stopping_degree, merkle_trees,
+        backend)); // The MerkleTree class only holds a shared_ptr to MerkleTreeBackend, so copying is lightweight.
 
     Fri<S, F> fri{backend};
     return fri;
