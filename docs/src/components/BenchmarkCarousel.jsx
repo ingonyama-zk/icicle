@@ -81,7 +81,7 @@ export default function BenchmarkCarousel() {
 
   const getImageFilename = (baseImg) => {
     return isDarkMode 
-      ? `/img/${baseImg.replace('_', 'drk_')}.svg`
+      ? `/img/${baseImg.replace('_', 'drk_')}.png`
       : `/img/${baseImg}.png`;
   };
 
