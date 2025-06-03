@@ -240,7 +240,7 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
       for (int digit_idx = 0; digit_idx < digits_per_element /*=t (steps)*/; ++digit_idx) {
         Rq& output_poly = output[poly_idx * digits_per_element + digit_idx];
         int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.coeffs);
-        // Store intermediate vlaue of the decomposition in stack memory (assuming d is not too large. Otherwise, use
+        // Store intermediate value of the decomposition in stack memory (assuming d is not too large. Otherwise, use
         // heap memory)
         int64_t values[Rq::d]; // Those are intermediate values computed during the decomposition
         for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
