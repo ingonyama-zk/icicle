@@ -98,7 +98,7 @@
 
 /* Dark mode logo */
 [data-theme='dark'] .ingo-paw-logo {
-  content: url('/img/Ingologo_drk.svg');
+  content: url('../../static/img/Ingologo_drk.svg');
 }
 
 
