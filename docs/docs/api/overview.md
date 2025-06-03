@@ -12,7 +12,7 @@ import Link from '@docusaurus/Link';
 
 <div className="card-row-3">
 
-  <Link to="/api/cppstart" className="card-link">
+  <Link to="/cppstart" className="card-link">
     <div className="card-box icon-only">
       <img src="/img/cpp.png" alt="C++" className="card-icon-top cpp-icon" />
     </div>

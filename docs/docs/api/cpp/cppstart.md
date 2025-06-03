@@ -1,5 +1,5 @@
 ---
-slug: /api/cppstart
+slug: /cppstart
 title: C++ Overview
 ---
 
