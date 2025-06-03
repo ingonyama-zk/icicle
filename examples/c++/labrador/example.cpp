@@ -10,7 +10,7 @@ eIcicleError setup(/*TODO params*/)
   return eIcicleError::SUCCESS;
 }
 
-eIcicleError LabradorProtocol::base_prover(
+LabradorRecursionRawInstance LabradorProtocol::base_prover(
   LabradorInstance lab_inst, const std::vector<std::byte>& ajtai_seed, const std::vector<Rq>& S, std::vector<Zq>& proof)
 {
   // Step 1: Pack the Witnesses into a Matrix S
@@ -19,7 +19,7 @@ eIcicleError LabradorProtocol::base_prover(
   const size_t n = lab_inst.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
   // Ensure S is of the correct size
-  if (S.size() != r * n) { return eIcicleError::INVALID_ARGUMENT; }
+  if (S.size() != r * n) { throw std::invalid_argument("S must have size r * n"); }
 
   // Setup negacyclic NTT config for Zq
   // TODO: not sure how this code gets modified
@@ -108,20 +108,20 @@ eIcicleError LabradorProtocol::base_prover(
   ICICLE_CHECK(random_sampling<Tq>(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
   // compute NTTs for T_tilde, g_tilde
-  std::vector<Tq> T_tilde_ntt(T_tilde.size()), g_tilde_ntt(g_tilde.size());
+  std::vector<Tq> T_tilde_hat(T_tilde.size()), g_tilde_hat(g_tilde.size());
   for (size_t i = 0; i < T_tilde.size(); ++i) {
-    ICICLE_CHECK(ntt(T_tilde[i].coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), T_tilde_ntt[i].coeffs));
+    ICICLE_CHECK(ntt(T_tilde[i].coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), T_tilde_hat[i].coeffs));
   }
   for (size_t i = 0; i < g_tilde.size(); ++i) {
-    ICICLE_CHECK(ntt(g_tilde[i].coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), g_tilde_ntt[i].coeffs));
+    ICICLE_CHECK(ntt(g_tilde[i].coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), g_tilde_hat[i].coeffs));
   }
 
   std::vector<Tq> u1(kappa1), v1(kappa1), v2(kappa1);
   // v1 = B@T_tilde
-  ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_ntt.data(), T_tilde_ntt.size(), 1, {}, v1.data()));
+  ICICLE_CHECK(matmul(B.data(), kappa1, l1 * r * kappa, T_tilde_hat.data(), T_tilde_hat.size(), 1, {}, v1.data()));
   // v2 = C@g_tilde
   ICICLE_CHECK(
-    matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_ntt.data(), g_tilde_ntt.size(), 1, {}, v2.data()));
+    matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_hat.data(), g_tilde_hat.size(), 1, {}, v2.data()));
   for (size_t i = 0; i < kappa1; i++) {
     // TODO: can we flatten v1, v2 as Zq and run this?
     vector_add(v1[i].coeffs, v2[i].coeffs, d, {}, u1[i].coeffs);
@@ -458,11 +458,11 @@ eIcicleError LabradorProtocol::base_prover(
 
   std::vector<Rq> H_tilde(l3 * H.size());
   ICICLE_CHECK(decompose(H.data(), H.size(), base3, {}, H_tilde.data(), H_tilde.size()));
-  std::vector<Tq> H_tilde_ntt;
+  std::vector<Tq> H_tilde_hat;
   for (const auto& poly : H_tilde) {
     Tq temp;
     ICICLE_CHECK(ntt(poly.coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), temp.coeffs));
-    H_tilde_ntt.push_back(temp);
+    H_tilde_hat.push_back(temp);
   }
 
   // Step 25: already done
@@ -477,7 +477,7 @@ eIcicleError LabradorProtocol::base_prover(
   std::vector<Tq> u2(kappa2);
   // u2 = D@H_tilde
   ICICLE_CHECK(
-    matmul(D.data(), kappa2, l3 * ((r * (r + 1)) / 2), H_tilde_ntt.data(), H_tilde_ntt.size(), 1, {}, u2.data()));
+    matmul(D.data(), kappa2, l3 * ((r * (r + 1)) / 2), H_tilde_hat.data(), H_tilde_hat.size(), 1, {}, u2.data()));
 
   // Step 27:
   // add u2 to the proof
@@ -523,22 +523,29 @@ eIcicleError LabradorProtocol::base_prover(
       ICICLE_CHECK(vector_add(z_hat[i].coeffs, temp.coeffs, d, {}, z_hat[i].coeffs));
     }
   }
-  return eIcicleError::SUCCESS;
+  LabradorRecursionRawInstance raw_inst{final_const, u1, u2, challenge_hat, z_hat, T_tilde, g_tilde, H_tilde};
+
+  return raw_inst;
 }
 
+/// Returns the LabradorInstance for recursion problem and the witness for it
+///
+/// ajtai_seed: is the same seed used for Ajtai hashing in `base_prover`
+///
+/// rec_inst: contains the recursion problem and the witness for it
+///
+/// mu, nu: parameters for recursion
 std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive_problem(
-  EqualityInstance final_const,
-  std::vector<std::byte> ajtai_seed,
-  std::vector<Tq> u1,
-  std::vector<Tq> u2,
-  std::vector<Tq> challenges_hat,
-  std::vector<Tq> z_hat,
-  std::vector<Tq> t,
-  std::vector<Tq> g,
-  std::vector<Tq> h,
-  size_t mu,
-  size_t nu)
+  std::vector<std::byte> ajtai_seed, LabradorRecursionRawInstance rec_inst, size_t mu, size_t nu)
 {
+  EqualityInstance final_const = rec_inst.final_const;
+  std::vector<Tq> u1 = rec_inst.u1;
+  std::vector<Tq> u2 = rec_inst.u2;
+  std::vector<Tq> challenges_hat = rec_inst.challenges_hat;
+  std::vector<Tq> z_hat = rec_inst.z_hat;
+  std::vector<Rq> t = rec_inst.t;
+  std::vector<Rq> g = rec_inst.g;
+  std::vector<Rq> h = rec_inst.h;
   const size_t r = final_const.r;
   const size_t n = final_const.n;
   constexpr size_t d = Rq::d;
@@ -553,14 +560,10 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   size_t l0 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base0));
 
   // Decompose all elements first
-  std::vector<Rq> z_decomposed_full(l0 * n);
-  ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_decomposed_full.data(), z_decomposed_full.size()));
-
-  // Take only first 2n elements (in NTT domain)- all the rest should be 0
-  std::vector<Tq> z_tilde(2 * n);
-  for (size_t i = 0; i < 2 * n && i < z_decomposed_full.size(); i++) {
-    ICICLE_CHECK(ntt(z_decomposed_full[i].coeffs, d, NTTDir::kForward, default_ntt_config<Zq>(), z_tilde[i].coeffs));
-  }
+  std::vector<Rq> z_tilde(l0 * n);
+  ICICLE_CHECK(decompose(z.data(), n, base0, {}, z_tilde.data(), z_tilde.size()));
+  // Keep only first 2n elements- all the rest should be 0
+  z_tilde.resize(2 * n);
 
   // Step 3:
   // z0 = z_tilde[:n]
@@ -573,13 +576,13 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
 
   // Step 6
   // we will view s_prime as a multidimensional array. At the base level it consists of n_prime length vectors
-  std::vector<Tq> s_prime;
+  std::vector<Rq> s_prime;
 
   for (size_t i = 0; i < n; i++) {
     s_prime.push_back(z_tilde[i]);
   }
   for (size_t i = n; i < nu * n_prime; i++) {
-    s_prime.push_back(Tq());
+    s_prime.push_back(Rq());
   }
   // now s_prime is nu*n_prime long and can be viewed as a nu long array of n_prime dimension Tq vectors
 
@@ -587,7 +590,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     s_prime.push_back(z_tilde[n + i]);
   }
   for (size_t i = n; i < nu * n_prime; i++) {
-    s_prime.push_back(Tq());
+    s_prime.push_back(Rq());
   }
   // now s_prime is 2*nu*n_prime long and can be viewed as a 2*nu long array of n_prime dimension Tq vectors
 
@@ -597,7 +600,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     s_prime.push_back(t[i]);
   }
   for (size_t i = t.size(); i < L_t * n_prime; i++) {
-    s_prime.push_back(Tq());
+    s_prime.push_back(Rq());
   }
 
   // add the polynomials in g to s_prime and zero pad to make them L_g*n_prime length
@@ -606,7 +609,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     s_prime.push_back(g[i]);
   }
   for (size_t i = g.size(); i < L_g * n_prime; i++) {
-    s_prime.push_back(Tq());
+    s_prime.push_back(Rq());
   }
 
   // add the polynomials in h to s_prime and zero pad to make them L_h*n_prime length
@@ -615,7 +618,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     s_prime.push_back(h[i]);
   }
   for (size_t i = h.size(); i < L_h * n_prime; i++) {
-    s_prime.push_back(Tq());
+    s_prime.push_back(Rq());
   }
 
   // Step 7: Let recursive_instance be a new empty LabradorInstance
@@ -891,8 +894,26 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   recursive_instance.add_equality_constraint(step11_constraint);
 
   // Step 14: set new beta
+  // TODO: what should the value be?
   recursive_instance.beta = 100.0;
   return std::make_pair(recursive_instance, s_prime);
+}
+
+void prover(LabradorInstance lab_inst, const std::vector<Rq>& S, size_t num_rec)
+{
+  std::vector<std::byte> ajtai_seed;
+  const char* str = "INSERT PREFIXED RANDOM VALUE HERE";
+  ajtai_seed.assign(reinterpret_cast<const std::byte*>(str), reinterpret_cast<const std::byte*>(str + strlen(str)));
+  std::vector<Zq> proof;
+  std::vector<Rq> witness(S);
+  LabradorProtocol L;
+  for (size_t i = 0; i < num_rec; i++) {
+    ajtai_seed.push_back(std::byte(i));
+    LabradorRecursionRawInstance raw_inst = L.base_prover(lab_inst, ajtai_seed, witness, proof);
+    auto [new_lab_inst, new_witness] = L.prepare_recursive_problem(ajtai_seed, raw_inst, 1 << 4, 1 << 4);
+    lab_inst = new_lab_inst;
+    witness = new_witness;
+    }
 }
 
 eIcicleError verify(/*TODO params*/)

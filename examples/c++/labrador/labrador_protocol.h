@@ -30,6 +30,9 @@ struct EqualityInstance {
       if (vec.size() != n) { throw std::invalid_argument("EqualityInstance: each vector in 'phi' must have size n"); }
     }
   }
+
+  // Copy constructor
+  EqualityInstance(const EqualityInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
 };
 
 struct ConstZeroInstance {
@@ -40,16 +43,26 @@ struct ConstZeroInstance {
   Tq b;                             // Polynomial in Rq
 
   ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
+
+  // Copy constructor
+  ConstZeroInstance(const ConstZeroInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
 };
 
 struct LabradorInstance {
-  const size_t r;                                        // Number of witness vectors
-  const size_t n;                                        // Dimension of each vector in Tq
+  size_t r;                                              // Number of witness vectors
+  size_t n;                                              // Dimension of each vector in Tq
   double beta;                                           // Norm bound
   std::vector<EqualityInstance> equality_constraints;    // K EqualityInstances
   std::vector<ConstZeroInstance> const_zero_constraints; // L ConstZeroInstances
 
   LabradorInstance(size_t r, size_t n, double beta) : r(r), n(n), beta(beta) {}
+
+  // Copy constructor
+  LabradorInstance(const LabradorInstance& other)
+      : r(other.r), n(other.n), beta(other.beta), equality_constraints(other.equality_constraints),
+        const_zero_constraints(other.const_zero_constraints)
+  {
+  }
 
   // Add an EqualityInstance
   void add_equality_constraint(const EqualityInstance& instance) { equality_constraints.push_back(instance); }
@@ -90,24 +103,58 @@ struct LabradorProtocol {
   }
 
   // Method declarations
-  eIcicleError base_prover(
+  LabradorRecursionRawInstance base_prover(
     LabradorInstance lab_inst,
     const std::vector<std::byte>& ajtai_seed,
     const std::vector<Rq>& S,
     std::vector<Zq>& proof);
 
-  std::pair<LabradorInstance, std::vector<Tq>> prepare_recursive_problem(
+  std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
+    std::vector<std::byte> ajtai_seed, LabradorRecursionRawInstance raw_inst, size_t mu, size_t nu);
+};
+
+/// Encapsulates the problem and witness for the recursion instance
+///
+/// final_const: is the EqualityInstance prepared in Step 22
+///
+/// u1: is the commitment prepared in Step 10 of the base_prover
+///
+/// u2: is the commitment prepared in Step 26 of the base_prover
+///
+/// challenges_hat: are the polynomial challenges sent by the Verifier in Step 28
+///
+/// z_hat: is the vector computed in Step 29
+///
+/// t: vector computed in Step 9 (T_tilde in the code)
+///
+/// g: vector computed in Step 9 (g_tilde in the code)
+///
+/// h: vector computed in Step 25 (H_tilde in the code)
+struct LabradorRecursionRawInstance {
+  EqualityInstance final_const;
+  std::vector<Tq> u1;
+  std::vector<Tq> u2;
+  std::vector<Tq> challenges_hat;
+  std::vector<Tq> z_hat;
+  std::vector<Rq> t;
+  std::vector<Rq> g;
+  std::vector<Rq> h;
+
+  LabradorRecursionRawInstance(size_t r, size_t n)
+      : final_const(r, n), u1(), u2(), challenges_hat(), z_hat(), t(), g(), h() {};
+  LabradorRecursionRawInstance(
     EqualityInstance final_const,
-    std::vector<std::byte> ajtai_seed,
     std::vector<Tq> u1,
     std::vector<Tq> u2,
     std::vector<Tq> challenges_hat,
     std::vector<Tq> z_hat,
     std::vector<Tq> t,
     std::vector<Tq> g,
-    std::vector<Tq> h,
-    size_t mu,
-    size_t nu);
+    std::vector<Tq> h)
+      : final_const(final_const), u1(std::move(u1)), u2(std::move(u2)), challenges_hat(std::move(challenges_hat)),
+        z_hat(std::move(z_hat)), t(std::move(t)), g(std::move(g)), h(std::move(h))
+  {
+  }
 };
 
 Rq icicle::labrador::conjugate(const Rq& p)
