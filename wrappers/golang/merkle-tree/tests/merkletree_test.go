@@ -69,7 +69,7 @@ func testMerkleTree(s *suite.Suite) {
 		d_hashers[i] = d_keccak256
 	}
 
-	d_mt, err := merkletree.CreateMerkleTree(hashers, uint64(leafElemSize), 0)
+	d_mt, err := merkletree.CreateMerkleTree(d_hashers, uint64(leafElemSize), 0)
 	if err != runtime.Success {
 		s.FailNow(fmt.Sprintf("TestMerkleTree: Could not create merkle tree due to: %v", err.AsString()))
 	}
