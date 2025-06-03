@@ -175,30 +175,15 @@ struct bn254_mont_t {
         return ab;
     }
 
-    INLINE static mp_320_t addv(const mp_320_t &a, const mp_320_t &b) {
-        mp_320_t r;
-        uint64_t carry = 0, tmp, c;
-
-        std::tie(tmp, c) = addc(a[0], b[0]);
-        std::tie(r[0], carry) = addc(tmp, carry);
-        carry += c;
-
-        std::tie(tmp, c) = addc(a[1], b[1]);
-        std::tie(r[1], carry) = addc(tmp, carry);
-        carry += c;
-
-        std::tie(tmp, c) = addc(a[2], b[2]);
-        std::tie(r[2], carry) = addc(tmp, carry);
-        carry += c;
-
-        std::tie(tmp, c) = addc(a[3], b[3]);
-        std::tie(r[3], carry) = addc(tmp, carry);
-        carry += c;
-
-        std::tie(tmp, c) = addc(a[4], b[4]);
-        std::tie(r[4], carry) = addc(tmp, carry);
-
-        return r;
+    INLINE static mp_320_t add(const mp_320_t &a, const mp_320_t &b) {
+        unsigned long long c;
+        mp_320_t res;
+        res[0] = __builtin_addcll(a[0], b[0], 0, &c);
+        res[1] = __builtin_addcll(a[1], b[1], c, &c);
+        res[2] = __builtin_addcll(a[2], b[2], c, &c);
+        res[3] = __builtin_addcll(a[3], b[3], c, &c);
+        res[4] = __builtin_addcll(a[4], b[4], c, &c);
+        return res;
     }
 
     static constexpr mp_256_t ZERO = {0, 0, 0, 0};
@@ -345,10 +330,10 @@ struct bn254_mont_t {
         mp_320_t r1 = smul(ab[0], I3);
         mp_320_t r2 = smul(ab[1], I2);
         mp_320_t r3 = smul(ab[2], I1);
-        mp_320_t s = addv(addv({ab[3], ab[4], ab[5], ab[6], ab[7]}, r1), addv(r2, r3));
+        mp_320_t s = add(add({ab[3], ab[4], ab[5], ab[6], ab[7]}, r1), add(r2, r3));
         uint64_t m = MU * s[0];
         mp_320_t mp = smul(m, P);
-        s = addv(s, mp);
+        s = add(s, mp);
         mp_256_t r = {s[1], s[2], s[3], s[4]};
         const uint8_t top_bits = r[3] >> 62;
         if (top_bits == 0b11) {
@@ -368,10 +353,10 @@ struct bn254_mont_t {
         mp_320_t r1 = smul(a[0], I3);
         mp_320_t r2 = smul(a[1], I2);
         mp_320_t r3 = smul(a[2], I1);
-        mp_320_t s = addv(addv({a[3], 0, 0, 0, 0}, r1), addv(r2, r3));
+        mp_320_t s = add(add({a[3], 0, 0, 0, 0}, r1), add(r2, r3));
         uint64_t m = MU * s[0];
         mp_320_t mp = smul(m, P);
-        s = addv(s, mp);
+        s = add(s, mp);
         mp_256_t r = {s[1], s[2], s[3], s[4]};
         const uint8_t top_bits = r[3] >> 62;
         if (top_bits == 0b11) {
@@ -390,6 +375,13 @@ struct bn254_mont_t {
     static INLINE mp_256_t add_red(const mp_256_t &a, const mp_256_t &b) {
         mp_256_t r = add(a, b);
         auto [rr, cc] = subc(r, P);
+        r = cc ? r : rr;
+        return r;
+    }
+
+    static INLINE mp_512_t add_red(const mp_512_t &a, const mp_512_t &b) {
+        mp_512_t r = add(a, b);
+        auto [rr, cc] = subc(r, PP);
         r = cc ? r : rr;
         return r;
     }

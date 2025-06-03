@@ -281,7 +281,6 @@ private:
 
       for (int j = 0; j < m_precompute_factor; j++) {
         // Handle required preprocess of base P. Note: no need to convert to montgomery. Projective point handles it)
-        __builtin_prefetch(&bases[m_precompute_factor * i + j], 0, 1);
         const A& base = bases[m_precompute_factor * i + j];
         if (base == A::zero()) { continue; } // TBD: why is that? can be done more efficiently?
         const A base_neg = A::neg(base);
