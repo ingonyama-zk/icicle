@@ -951,11 +951,11 @@ TYPED_TEST(FieldTest, SumcheckGetChallengeVector)
 
     ASSERT_EQ(true, verification_pass);
 
-    ASSERT_EQ(prover_sumcheck.get_challenge_vector(0), TypeParam::zero());
+    std::vector<TypeParam> challenge_vector = prover_sumcheck.get_challenge_vector();
+    ASSERT_EQ(challenge_vector[0], TypeParam::zero());
 
     for (int i = 0; i < std::log2(mle_poly_size); i++) {
-      TypeParam challenge = prover_sumcheck.get_challenge_vector(i);
-      ICICLE_LOG_INFO << "challenge_vector[" << i << "] = " << challenge;
+      ICICLE_LOG_INFO << "challenge_vector[" << i << "] = " << challenge_vector[i];
     }
   };
   for (const auto& device : IcicleTestBase::s_registered_devices)
