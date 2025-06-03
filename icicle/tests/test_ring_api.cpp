@@ -247,30 +247,88 @@ TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
   } // device loop
 }
 
+// This test verifies that balanced decomposition of an Rq polynomial is implemented correctly by recomposing manually
 TEST_F(RingTestBase, BalancedDecompositionRq)
 {
-  static_assert(Rq::Base::TLC == 2, "Decomposition assumes q ~64b");
+  static_assert(Rq::Base::TLC == 2, "Decomposition assumes q ~64-bit");
 
+  // Get q from Rq::Base as signed 64-bit for safe arithmetic
   constexpr auto q_storage = Rq::Base::get_modulus();
   const int64_t q = *(int64_t*)&q_storage;
-  ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
+  ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
 
-  constexpr size_t degree = Rq::d;
-  const size_t size = 1 << 10;
-  const size_t total_zq_elements = degree * size; // Total number of Zq elements in all polys
-
-  // Randomize Rq polynomials using Zq randomize
-  std::vector<Rq> input(size);
-  Zq::rand_host_many((Zq*)input.data(), total_zq_elements);
-  std::vector<Rq> recomposed(size);
-
-  const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
-  const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, q_sqrt};
+  // Generate a random input polynomial over Rq
+  Rq input_polynomial;
+  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), Rq::d);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    Rq *d_input, *d_decomposed, *d_recomposed;
+    VecOpsConfig cfg{};
+    const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+    const std::vector<uint32_t> bases = {2, 3, 16, (1 << 20) + 1, q_sqrt};
+
+    for (uint32_t base : bases) {
+      // Compute the number of digits for the given base
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
+      std::vector<Rq> decomposed_polynomials(num_digits);
+
+      // Perform balanced decomposition into digits (for a single polynomial)
+      ICICLE_CHECK(
+        balanced_decomposition::decompose(&input_polynomial, 1, base, cfg, decomposed_polynomials.data(), num_digits));
+
+      // Recompose the original polynomial from digits
+      Rq recomposed_polynomial;
+      // Generate powers of base: [1, base, base^2, ..., base^{t-1}]
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(num_digits);
+      std::generate(powers.begin(), powers.end(), [&]() {
+        Zq current = power;
+        power = power * Zq::from(base);
+        return current;
+      });
+
+      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all Rq polynomials:
+      //            P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
+      std::vector<Rq> scaled_digits(num_digits);
+      ICICLE_CHECK(
+        vector_mul(decomposed_polynomials.data(), powers.data(), num_digits, VecOpsConfig{}, scaled_digits.data()));
+      // Sum across the digits to reconstruct the original polynomial
+      ICICLE_CHECK(vector_sum(scaled_digits.data(), num_digits, VecOpsConfig{}, &recomposed_polynomial));
+
+      // Verify recomposed polynomial matches the original input
+      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(Rq)));
+    }
+  }
+}
+
+// This test verifies that batch balanced decomposition and recomposition
+// on device memory correctly reconstruct the original Rq polynomials.
+// It also checks that the decomposition satisfies the L∞ bound.
+TEST_F(RingTestBase, BalancedDecompositionRqBatch)
+{
+  static_assert(Rq::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  constexpr size_t degree = Rq::d;
+  constexpr size_t size = 1 << 10; // Number of Rq polynomials
+  const size_t total_zq_elements = degree * size;
+
+  // Get modulus q as signed integer for arithmetic safety
+  constexpr auto q_storage = Rq::Base::get_modulus();
+  const int64_t q = *(const int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive q to allow int64 arithmetic";
+
+  // Generate random input polynomials over Rq
+  std::vector<Rq> input(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), total_zq_elements);
+
+  std::vector<Rq> recomposed(size);
+  const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    Rq *d_input = nullptr, *d_decomposed = nullptr, *d_recomposed = nullptr;
     ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(Rq)));
     ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(Rq)));
     ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(Rq)));
@@ -279,7 +337,7 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
     cfg.is_a_on_device = true;
     cfg.is_result_on_device = true;
 
-    for (const auto base : bases) {
+    for (uint32_t base : bases) {
       const size_t digits_per_coeff = balanced_decomposition::compute_nof_digits<Zq>(base);
       const size_t decomposed_size = size * digits_per_coeff;
 
@@ -289,38 +347,37 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
 
       ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(Rq)));
 
-      // (1) decompose vector of Rq polynomials
+      // --- Step 1: Decomposition ---
       START_TIMER(decompose);
       ICICLE_CHECK(balanced_decomposition::decompose(d_input, size, base, cfg, d_decomposed, decomposed_size));
       END_TIMER(decompose, label_decompose.str().c_str(), true);
 
-      // (2) Check the decomposed polyonmials are norm (L-infinity) bound by b/2
-      // Note that we do it over Zq coefficients, with size d and batch=#polys*t since this API is defined for Zq
-      VecOpsConfig norm_cfg{};
-      norm_cfg.is_a_on_device = true;
-      norm_cfg.batch_size =
-        digits_per_coeff * size; // each Rq polynomial is composed into 'digits_per_coeff' polynomials
-      std::vector<char> is_norm_bound(
-        norm_cfg.batch_size, false); // using vector<bool> won't work here due to alignment
-      norm::check_norm_bound(
-        (Zq*)d_decomposed, Rq::d, eNormType::LInfinity, base / 2 + 1, norm_cfg, (bool*)is_norm_bound.data());
-      for (size_t i = 0; i < norm_cfg.batch_size; ++i) {
-        ASSERT_TRUE(is_norm_bound[i]) << "Decomposed Rq polynomial " << i
-                                      << " is out of expected balanced range for base=" << base;
+      // --- Step 2: Norm Bound Check (L∞) ---
+      {
+        VecOpsConfig norm_cfg{};
+        norm_cfg.is_a_on_device = true;
+        norm_cfg.batch_size = digits_per_coeff * size;
+
+        std::vector<char> is_norm_bound(norm_cfg.batch_size, false);
+        norm::check_norm_bound(
+          reinterpret_cast<Zq*>(d_decomposed), degree, eNormType::LInfinity, base / 2 + 1, norm_cfg,
+          reinterpret_cast<bool*>(is_norm_bound.data()));
+
+        for (size_t i = 0; i < norm_cfg.batch_size; ++i) {
+          ASSERT_TRUE(is_norm_bound[i]) << "Decomposed Rq polynomial " << i
+                                        << " exceeds expected balanced range for base = " << base;
+        }
       }
 
-      // (3) TODO Yuval: test the decomposition is as expected in terms of memory layout. Note that any decomposition
-      // should be norm bound but the Rq decomposition must be implemented in a certain way
-
-      // (4) recompose the decomposed polynomials and check they match the original input
+      // --- Step 3: Recomposition and Validation ---
       START_TIMER(recompose);
       ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
       END_TIMER(recompose, label_recompose.str().c_str(), true);
 
       ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(Rq)));
 
-      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), sizeof(Rq) * size))
-        << "Recomposition failed for base=" << base;
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), size * sizeof(Rq)))
+        << "Recomposition mismatch for base = " << base;
 
       icicle_free(d_decomposed);
     }
@@ -339,8 +396,8 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const size_t N = 1 << 16;       // Input vector size
   const size_t output_size = 256; // JL projected size
-  const int max_trials = 10; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
-                             // we allow repeating the check a few times.
+  const int max_trials = 10;      // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5.
+                                  // Therefore we allow repeating the check a few times.
 
   std::vector<field_t> input(N);
   std::vector<field_t> output(output_size);
