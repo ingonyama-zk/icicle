@@ -17,6 +17,7 @@ add_library(icicle_backend_cuda_pqc_device STATIC
 src/cuda_pqc_device_api.cu
 src/cuda_pqc_ml_kem.cu
 )
+target_include_directories(icicle_backend_cuda_pqc_device PRIVATE include)
 add_library(icicle_backend_cuda_pqc_device_whole INTERFACE)
 target_link_libraries(icicle_backend_cuda_pqc_device_whole INTERFACE
 "-Wl,--whole-archive" icicle_backend_cuda_pqc_device "-Wl,--no-whole-archive")
