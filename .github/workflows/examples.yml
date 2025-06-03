@@ -1,8 +1,8 @@
 name: Run Examples
 
 on:
-  schedule:
-    - cron: '00 23 * * 6'
+  # schedule:
+  #   - cron: '00 23 * * 6'
   workflow_dispatch:
   workflow_call:
 
@@ -19,13 +19,6 @@ jobs:
         with:
           toolchain: stable
           override: true
-
-      # TODO: Add Go examples
-      # - name: Setup Go
-      #   uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
-      #   with:
-      #     go-version: '1.22.0'
-      #     cache: false
 
       - name: Run C++ Examples
         working-directory: ./examples/c++
@@ -50,6 +43,13 @@ jobs:
               cd -
             fi
           done
+
+      # TODO: Add Go examples
+      # - name: Setup Go
+      #   uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      #   with:
+      #     go-version: '1.22.0'
+      #     cache: false
 
       # TODO: Add Golang examples
       # - name: Run Golang Examples

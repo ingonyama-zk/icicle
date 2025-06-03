@@ -67,7 +67,7 @@ jobs:
       backend-type: metal
   
   test-curve:
-    name: Test ${{ matrix.curve.name }} with ${{ matrix.backend }}
+    name: Test ${{ matrix.curve.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
@@ -331,7 +331,7 @@ jobs:
 
 
   test-field:
-    name: Test ${{ matrix.field.name }} with ${{ matrix.backend }}
+    name: Test ${{ matrix.field.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
@@ -652,7 +652,7 @@ jobs:
     # TODO: Go tests
 
   test-hash:
-    name: Test hash with ${{ matrix.backend }}
+    name: Test hash on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
@@ -735,7 +735,7 @@ jobs:
         go test ./merkle-tree/tests -count=1 -failfast -p 2 -timeout 60m -v
 
   test-runtime:
-    name: Test runtime with ${{ matrix.backend }}
+    name: Test runtime on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
     needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
