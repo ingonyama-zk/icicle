@@ -16,9 +16,9 @@ namespace icicle {
       // ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher768, ml_kem_encaps, MlKemEncapsulateImpl<Kyber768Params>);
       // ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher768, ml_kem_decaps, MlKemDecapsulateImpl<Kyber768Params>);
 
-      ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher512, ml_kem_keygen, MlKemKeygenImpl<Kyber512Params>);
-      ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher512, ml_kem_encaps, MlKemEncapsulateImpl<Kyber512Params>);
-      ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher512, ml_kem_decaps, MlKemDecapsulateImpl<Kyber512Params>);
+      ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher512, ml_kem_keygen512, MlKemKeygenImpl);
+      ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher512, ml_kem_encaps512, MlKemEncapsulateImpl);
+      ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher512, ml_kem_decaps512, MlKemDecapsulateImpl);
 
       eIcicleError keygen512(
         const std::byte* entropy,

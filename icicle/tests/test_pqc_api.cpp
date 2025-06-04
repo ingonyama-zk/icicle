@@ -33,7 +33,7 @@ TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
   ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
 
   // TODO: test all security categories on all devices, with batch
-  constexpr SecurityCategory category = SecurityCategory::KYBER_512;
+  // constexpr SecurityCategory category = SecurityCategory::KYBER_512;
 
   const int batch_size = 5;
   // Config
@@ -54,18 +54,18 @@ TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
 
   // Key generation
   auto err = keygen512(entropy.data(), config, public_key.data(), secret_key.data());
-  ASSERT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
+  ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Encapsulation
   err = encapsulate512(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
-  ASSERT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
+  ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Decapsulation
   err = decapsulate512(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
-  ASSERT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
+  ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Check equality
-  // EXPECT_EQ(std::memcmp(shared_secret_enc.data(), shared_secret_dec.data(), Kyber512::SHARED_SECRET_BYTES), 0);
+  EXPECT_EQ(shared_secret_enc, shared_secret_dec);
 }
 
 // TODO test against another implementation (e.g. reference implementation)

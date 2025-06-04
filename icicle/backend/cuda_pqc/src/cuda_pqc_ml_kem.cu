@@ -25,7 +25,7 @@ namespace icicle::pqc::ml_kem {
     Zq* d_A; // TODO: move to arguments? (send a buffer of bytes and cast to Zq*)
     CHK_IF_RETURN(cudaMallocAsync(&d_A, PolyMatrix<256, Category::K, Category::K, Zq>::byte_size() * config.batch_size, cuda_stream));
 
-    ml_kem_keygen_kernel<Category::K, Category::ETA1><<<config.batch_size, 128, 0, cuda_stream>>>((uint8_t*)entropy, (uint8_t*)public_keys, (uint8_t*)secret_keys, d_A);
+    ml_kem_keygen_kernel<Category::K, Category::ETA1><<<config.batch_size, 128, 0, cuda_stream>>>((uint8_t*)entropy, (uint8_t*)d_public_keys, (uint8_t*)d_secret_keys, d_A);
 
     CHK_IF_RETURN(cudaFreeAsync((void*)d_A, cuda_stream));
 
@@ -72,7 +72,7 @@ namespace icicle::pqc::ml_kem {
     Zq* d_A; // TODO: move to arguments? (send a buffer of bytes and cast to Zq*)
     CHK_IF_RETURN(cudaMallocAsync(&d_A, PolyMatrix<256, Category::K, Category::K, Zq>::byte_size() * config.batch_size, cuda_stream));
 
-    ml_kem_encaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV><<<config.batch_size, 128, 0, cuda_stream>>>((uint8_t*)public_keys, (uint8_t*)message, (uint8_t*)shared_secrets, (uint8_t*)ciphertext, d_A);
+    ml_kem_encaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV><<<config.batch_size, 128, 0, cuda_stream>>>((uint8_t*)public_keys, (uint8_t*)message, (uint8_t*)d_shared_secrets, (uint8_t*)d_ciphertext, d_A);
 
     CHK_IF_RETURN(cudaFreeAsync((void*)d_A, cuda_stream));
 
@@ -122,7 +122,7 @@ namespace icicle::pqc::ml_kem {
     Zq* d_A; // TODO: move to arguments? (send a buffer of bytes and cast to Zq*)
     CHK_IF_RETURN(cudaMallocAsync(&d_A, PolyMatrix<256, Category::K, Category::K, Zq>::byte_size() * config.batch_size, cuda_stream));
 
-    ml_kem_decaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV><<<config.batch_size, 128, 0, cuda_stream>>>((uint8_t*)secret_keys, (uint8_t*)ciphertext, (uint8_t*)shared_secrets, d_A);
+    ml_kem_decaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV><<<config.batch_size, 128, 0, cuda_stream>>>((uint8_t*)secret_keys, (uint8_t*)ciphertext, (uint8_t*)d_shared_secrets, d_A);
 
     CHK_IF_RETURN(cudaFreeAsync((void*)d_A, cuda_stream));
 
