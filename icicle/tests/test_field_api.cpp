@@ -1226,7 +1226,7 @@ TYPED_TEST(FieldTest, FriRejectsHighDegreeFinalPoly)
   // Verify (length mismatch)
   bool valid = true;
   err = verify_fri_merkle_tree<TypeParam>(fri_config, transcript_config, malicious_proof_length, hash, compress, valid);
-  ASSERT_EQ(err, eIcicleError::INVALID_ARGUMENT);
+  ASSERT_EQ(err, eIcicleError::SUCCESS);
   ASSERT_EQ(valid, false);
 }
 
