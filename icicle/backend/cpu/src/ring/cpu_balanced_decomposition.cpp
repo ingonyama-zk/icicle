@@ -213,7 +213,7 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
   // Note that not enough digits might be an issue but treated as warning.
   const size_t digits_per_element = output_size / input_size;
   if (output_size % input_size != 0) {
-    ICICLE_LOG_ERROR << "Balanced recomposition: output size must divide input size.";
+    ICICLE_LOG_ERROR << "Balanced decomposition: output size must divide input size.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
