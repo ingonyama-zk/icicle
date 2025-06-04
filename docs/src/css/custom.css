@@ -98,7 +98,7 @@
 
 /* Dark mode logo */
 [data-theme='dark'] .ingo-paw-logo {
-  content: url('/img/ingologo_drk.svg');
+  content: url('/img/darkmode/ingologo_drk.svg');
 }
 
 
@@ -259,16 +259,16 @@
 
 /* === Dark mode card icons === */
 [data-theme='dark'] .arch-icon {
-  content: url('/img/Arch_drk.svg');
+  content: url('/img/darkmode/Arch_drk.svg');
 }
 [data-theme='dark'] .prog-icon {
-  content: url('/img/Programguide_drk.svg');
+  content: url('/img/darkmode/Programguide_drk.svg');
 }
 [data-theme='dark'] .intsup-icon {
-  content: url('/img/Intandsup_drk.svg');
+  content: url('/img/darkmode/Intandsup_drk.svg');
 }
 [data-theme='dark'] .api-icon {
-  content: url('/img/API_drk.svg');
+  content: url('/img/darkmode/API_drk.svg');
 }
 
 /* === Swap navbar logo in dark mode === */
@@ -280,7 +280,7 @@
 
 /* Dark theme */
 [data-theme='dark'] .custom-navbar-logo {
-  content: url('/img/icicledocslogo_drk.svg');
+  content: url('/img/darkmode/icicledocslogo_drk.svg');
 }
 
 
@@ -410,13 +410,13 @@
 
 /* === Dark mode swap === */
 [data-theme='dark'] .cpp-icon {
-  content: url('/img/cpp_drk.svg');
+  content: url('/img/darkmode/cpp_drk.svg');
 }
 [data-theme='dark'] .go-icon {
-  content: url('/img/go_drk.svg');
+  content: url('/img/darkmode/go_drk.svg');
 }
 [data-theme='dark'] .rust-icon {
-  content: url('/img/rust_drk.svg');
+  content: url('/img/darkmode/rust_drk.svg');
 }
 
 

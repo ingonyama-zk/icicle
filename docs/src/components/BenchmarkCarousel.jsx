@@ -32,7 +32,7 @@ const slides = [
 // Custom arrows with dynamic SVG
 function NextArrow({ onClick, isDarkMode, isMobile }) {
   if (isMobile) return null;
-  const arrow = isDarkMode ? '/img/warr.svg' : '/img/barr.svg';
+  const arrow = isDarkMode ? '/img/darkmode/warr.svg' : '/img/barr.svg';
   return (
     <div
       style={{
@@ -52,7 +52,7 @@ function NextArrow({ onClick, isDarkMode, isMobile }) {
 
 function PrevArrow({ onClick, isDarkMode, isMobile }) {
   if (isMobile) return null;
-  const arrow = isDarkMode ? '/img/warl.svg' : '/img/barl.svg';
+  const arrow = isDarkMode ? '/img/darkmode/warl.svg' : '/img/barl.svg';
   return (
     <div
       style={{
