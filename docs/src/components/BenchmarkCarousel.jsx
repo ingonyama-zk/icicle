@@ -1,82 +1,105 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Slider from 'react-slick';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { useColorMode } from '@docusaurus/theme-common';
 
-// The slides data (base names only)
+// Hook to track screen size
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+}
+
+// The slides data
 const slides = [
-  {
-    baseImg: 'FRI_graph_1',
-  },
-  {
-    baseImg: 'MSM_graph_1',
-  },
-  {
-    baseImg: 'SHA3_graph_1',
-  },
-  {
-    baseImg: 'Sumcheck_graph_1',
-  }
+  { baseImg: 'FRI_graph_1' },
+  { baseImg: 'MSM_graph_1' },
+  { baseImg: 'SHA3_graph_1' },
+  { baseImg: 'Sumcheck_graph_1' },
 ];
 
-// Custom arrows with dynamic color
-function NextArrow({ onClick, color }) {
+// Custom arrows with dynamic SVG
+function NextArrow({ onClick, isDarkMode, isMobile }) {
+  if (isMobile) return null;
+  const arrow = isDarkMode ? '/img/warr.svg' : '/img/barr.svg';
   return (
     <div
       style={{
         position: 'absolute',
         top: '50%',
-        right: '-40px',
+        right: '-5%',
         transform: 'translateY(-50%)',
         zIndex: 1,
         cursor: 'pointer',
-        fontSize: '24px',
-        color: color
       }}
       onClick={onClick}
     >
-      ➔
+      <img src={arrow} alt="Next" style={{ width: '40px', height: '40px' }} />
     </div>
   );
 }
 
-function PrevArrow({ onClick, color }) {
+function PrevArrow({ onClick, isDarkMode, isMobile }) {
+  if (isMobile) return null;
+  const arrow = isDarkMode ? '/img/warl.svg' : '/img/barl.svg';
   return (
     <div
       style={{
         position: 'absolute',
         top: '50%',
-        left: '-40px',
+        left: '-5%',
         transform: 'translateY(-50%)',
         zIndex: 1,
         cursor: 'pointer',
-        fontSize: '24px',
-        color: color
       }}
       onClick={onClick}
     >
-      ←
+      <img src={arrow} alt="Previous" style={{ width: '40px', height: '40px' }} />
     </div>
   );
 }
 
-// Main carousel component
 export default function BenchmarkCarousel() {
   const { colorMode } = useColorMode();
   const isDarkMode = colorMode === 'dark';
-  const arrowColor = isDarkMode ? '#eee' : '#333';
+  const isMobile = useIsMobile();
 
   const settings = {
     dots: true,
     infinite: true,
     speed: 500,
-    fade: true, // <--- THE MAIN CHANGE
+    fade: true,
     slidesToShow: 1,
     slidesToScroll: 1,
-    arrows: true,
-    nextArrow: <NextArrow color={arrowColor} />,
-    prevArrow: <PrevArrow color={arrowColor} />
+    swipe: true,
+    arrows: !isMobile,
+    nextArrow: <NextArrow isDarkMode={isDarkMode} isMobile={isMobile} />,
+    prevArrow: <PrevArrow isDarkMode={isDarkMode} isMobile={isMobile} />,
+    appendDots: dots => (
+      <div style={{ bottom: '-30px' }}>
+        <ul style={{ margin: '0px' }}>{dots}</ul>
+      </div>
+    ),
+    customPaging: i => (
+      <div
+        style={{
+          width: '12px',
+          height: '12px',
+          borderRadius: '50%',
+          background: isDarkMode ? '#bbb' : '#999',
+          display: 'inline-block',
+        }}
+      />
+    ),
   };
 
   const getImageFilename = (baseImg) => {

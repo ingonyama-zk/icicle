@@ -45,7 +45,6 @@ import Link from '@docusaurus/Link';
 
 </div>
 
-
 ## Overview
 
 #### High-Speed Cryptography

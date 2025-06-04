@@ -14,21 +14,23 @@ import Link from '@docusaurus/Link';
 
   <Link to="/cppstart" className="card-link">
     <div className="card-box icon-only">
-      <img src="/img/cpp.png" alt="C++" className="card-icon-top cpp-icon" />
+      <img alt="C++" className="card-icon-top cpp-icon" />
     </div>
   </Link>
 
   <Link to="/gooverview" className="card-link">
     <div className="card-box icon-only">
-      <img src="/img/go.png" alt="Golang" className="card-icon-top go-icon" />
+      <img alt="Golang" className="card-icon-top go-icon" />
     </div>
   </Link>
 
   <Link to="/rustoverview" className="card-link">
     <div className="card-box icon-only">
-      <img src="/img/rust.png" alt="Rust" className="card-icon-top rust-icon" />
+      <img alt="Rust" className="card-icon-top rust-icon" />
     </div>
   </Link>
-
 </div>
+
+
+
 

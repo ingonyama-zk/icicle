@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
     showLastUpdateTime: true,
-    includeCurrentVersion: false,
+    includeCurrentVersion: true,
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -80,19 +80,19 @@ const navBarRightSide = [
     ],
   },
 
-{
-  type: 'html',
-  position: 'right',
-  value: `
-    <a href="https://ingonyama.com"
-       class="navbar__item ingo-paw"
-       title="Visit Ingonyama"
-       target="_blank"
-       rel="noopener noreferrer">
-      <img src="/img/Ingologo.svg" alt="Ingonyama logo" class="ingo-paw-logo" />
-    </a>
-  `,
-}
+  {
+    type: 'html',
+    position: 'right',
+    value: `
+      <a href="https://ingonyama.com"
+        class="navbar__item ingo-paw"
+        title="Visit Ingonyama"
+        target="_blank"
+        rel="noopener noreferrer">
+        <img src="/img/Ingologo.svg" alt="Ingonyama logo" class="ingo-paw-logo" />
+      </a>
+    `,
+  }
 
   
 ] satisfies NavbarItem[];
