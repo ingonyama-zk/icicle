@@ -860,9 +860,8 @@ TYPED_TEST(FieldTest, SumcheckSingleInputProgram)
 
     // Deserialize proof
     SumcheckProof<TypeParam> deserialized_proof;
-    ICICLE_CHECK(
-      BinarySerializer<SumcheckProof<TypeParam>>::deserialize(
-        proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+    ICICLE_CHECK(BinarySerializer<SumcheckProof<TypeParam>>::deserialize(
+      proof_bytes.data(), proof_bytes.size(), deserialized_proof));
 
     // Compare proofs
     uint nof_round_polynomials = sumcheck_proof.get_nof_round_polynomials();
@@ -977,9 +976,8 @@ TYPED_TEST(FieldTest, Fri)
 
         // Deserialize proof
         FriProof<TypeParam> deserialized_proof;
-        ICICLE_CHECK(
-          BinarySerializer<FriProof<TypeParam>>::deserialize(
-            proof_bytes.data(), proof_bytes.size(), deserialized_proof));
+        ICICLE_CHECK(BinarySerializer<FriProof<TypeParam>>::deserialize(
+          proof_bytes.data(), proof_bytes.size(), deserialized_proof));
 
         // Compare proofs
         // Compare number of FRI rounds
