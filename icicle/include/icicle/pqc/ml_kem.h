@@ -15,39 +15,39 @@ namespace icicle {
       constexpr size_t MESSAGE_BYTES = 32;
 
       struct Kyber512Params {
-        static constexpr size_t PUBLIC_KEY_BYTES    = 800;
-        static constexpr size_t SECRET_KEY_BYTES    = 1632;
-        static constexpr size_t CIPHERTEXT_BYTES    = 768;
+        static constexpr size_t PUBLIC_KEY_BYTES = 800;
+        static constexpr size_t SECRET_KEY_BYTES = 1632;
+        static constexpr size_t CIPHERTEXT_BYTES = 768;
         static constexpr size_t SHARED_SECRET_BYTES = 32;
-        static constexpr uint8_t K                  = 2;
-        static constexpr uint8_t ETA1               = 3;
-        static constexpr uint8_t ETA2               = 2;
-        static constexpr uint8_t DU                 = 10;
-        static constexpr uint8_t DV                 = 4;
+        static constexpr uint8_t K = 2;
+        static constexpr uint8_t ETA1 = 3;
+        static constexpr uint8_t ETA2 = 2;
+        static constexpr uint8_t DU = 10;
+        static constexpr uint8_t DV = 4;
       };
 
       struct Kyber768Params {
-        static constexpr size_t PUBLIC_KEY_BYTES    = 1184;
-        static constexpr size_t SECRET_KEY_BYTES    = 2400;
-        static constexpr size_t CIPHERTEXT_BYTES    = 1088;
+        static constexpr size_t PUBLIC_KEY_BYTES = 1184;
+        static constexpr size_t SECRET_KEY_BYTES = 2400;
+        static constexpr size_t CIPHERTEXT_BYTES = 1088;
         static constexpr size_t SHARED_SECRET_BYTES = 32;
-        static constexpr uint8_t K                  = 3;
-        static constexpr uint8_t ETA1               = 2;
-        static constexpr uint8_t ETA2               = 2;
-        static constexpr uint8_t DU                 = 10;
-        static constexpr uint8_t DV                 = 4;
+        static constexpr uint8_t K = 3;
+        static constexpr uint8_t ETA1 = 2;
+        static constexpr uint8_t ETA2 = 2;
+        static constexpr uint8_t DU = 10;
+        static constexpr uint8_t DV = 4;
       };
 
       struct Kyber1024Params {
-        static constexpr size_t PUBLIC_KEY_BYTES    = 1568;
-        static constexpr size_t SECRET_KEY_BYTES    = 3168;
-        static constexpr size_t CIPHERTEXT_BYTES    = 1568;
+        static constexpr size_t PUBLIC_KEY_BYTES = 1568;
+        static constexpr size_t SECRET_KEY_BYTES = 3168;
+        static constexpr size_t CIPHERTEXT_BYTES = 1568;
         static constexpr size_t SHARED_SECRET_BYTES = 32;
-        static constexpr uint8_t K                  = 4;
-        static constexpr uint8_t ETA1               = 2;
-        static constexpr uint8_t ETA2               = 2;
-        static constexpr uint8_t DU                 = 11;
-        static constexpr uint8_t DV                 = 5;
+        static constexpr uint8_t K = 4;
+        static constexpr uint8_t ETA1 = 2;
+        static constexpr uint8_t ETA2 = 2;
+        static constexpr uint8_t DU = 11;
+        static constexpr uint8_t DV = 5;
       };
 
       /// @brief Security category = parameter set = NIST level
@@ -85,11 +85,7 @@ namespace icicle {
        * @param secret_keys   Output buffer [batch_size × SECRET_KEY_BYTES]
        */
       template <typename Params>
-      eIcicleError keygen(
-        const std::byte* entropy,
-        MlKemConfig config,
-        std::byte* public_keys,
-        std::byte* secret_keys);
+      eIcicleError keygen(const std::byte* entropy, MlKemConfig config, std::byte* public_keys, std::byte* secret_keys);
 
       /**
        * @brief Perform encapsulation for a batch of public keys.
@@ -119,10 +115,7 @@ namespace icicle {
        */
       template <typename Params>
       eIcicleError decapsulate(
-        const std::byte* secret_keys,
-        const std::byte* ciphertext,
-        MlKemConfig config,
-        std::byte* shared_secrets);
+        const std::byte* secret_keys, const std::byte* ciphertext, MlKemConfig config, std::byte* shared_secrets);
 
     } // namespace ml_kem
   } // namespace pqc

@@ -26,9 +26,11 @@ public:
     }
     return buf;
   }
+
 protected:
   // You can factor out any common setup here if needed.
-  void SetUp() override {
+  void SetUp() override
+  {
     // For example, force device “CUDA-PQC” each time.
     ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
   }
@@ -39,7 +41,6 @@ TYPED_TEST_SUITE(PqcTest, MLkemTypes);
 
 TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTest)
 {
-
   // TODO: implement for CPU too?
 
   // TODO: test all security categories on all devices, with batch

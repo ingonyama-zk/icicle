@@ -88,4 +88,4 @@ namespace icicle::pqc::ml_kem {
     uint8_t lane = threadIdx.x % 32;
     if (lane < 8) rho_sigma[lane] = s;
   }
-}
+} // namespace icicle::pqc::ml_kem

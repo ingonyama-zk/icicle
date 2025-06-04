@@ -13,10 +13,7 @@ namespace icicle {
 
       template <>
       eIcicleError keygen<Kyber512Params>(
-        const std::byte* entropy,
-        MlKemConfig config,
-        std::byte* public_keys,
-        std::byte* secret_keys)
+        const std::byte* entropy, MlKemConfig config, std::byte* public_keys, std::byte* secret_keys)
       {
         return MlKemKeygenDispatcher::execute(entropy, config, public_keys, secret_keys);
       }
@@ -34,20 +31,14 @@ namespace icicle {
 
       template <>
       eIcicleError decapsulate<Kyber512Params>(
-        const std::byte* secret_keys,
-        const std::byte* ciphertext,
-        MlKemConfig config,
-        std::byte* shared_secrets)
+        const std::byte* secret_keys, const std::byte* ciphertext, MlKemConfig config, std::byte* shared_secrets)
       {
         return MlKemDecapsulateDispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
       }
 
       template <>
       eIcicleError keygen<Kyber768Params>(
-        const std::byte* entropy,
-        MlKemConfig config,
-        std::byte* public_keys,
-        std::byte* secret_keys)
+        const std::byte* entropy, MlKemConfig config, std::byte* public_keys, std::byte* secret_keys)
       {
         return MlKemKeygenDispatcher::execute(entropy, config, public_keys, secret_keys);
       }
@@ -65,20 +56,14 @@ namespace icicle {
 
       template <>
       eIcicleError decapsulate<Kyber768Params>(
-        const std::byte* secret_keys,
-        const std::byte* ciphertext,
-        MlKemConfig config,
-        std::byte* shared_secrets)
+        const std::byte* secret_keys, const std::byte* ciphertext, MlKemConfig config, std::byte* shared_secrets)
       {
         return MlKemDecapsulateDispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
       }
 
       template <>
       eIcicleError keygen<Kyber1024Params>(
-        const std::byte* entropy,
-        MlKemConfig config,
-        std::byte* public_keys,
-        std::byte* secret_keys)
+        const std::byte* entropy, MlKemConfig config, std::byte* public_keys, std::byte* secret_keys)
       {
         return MlKemKeygenDispatcher::execute(entropy, config, public_keys, secret_keys);
       }
@@ -96,10 +81,7 @@ namespace icicle {
 
       template <>
       eIcicleError decapsulate<Kyber1024Params>(
-        const std::byte* secret_keys,
-        const std::byte* ciphertext,
-        MlKemConfig config,
-        std::byte* shared_secrets)
+        const std::byte* secret_keys, const std::byte* ciphertext, MlKemConfig config, std::byte* shared_secrets)
       {
         return MlKemDecapsulateDispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
       }

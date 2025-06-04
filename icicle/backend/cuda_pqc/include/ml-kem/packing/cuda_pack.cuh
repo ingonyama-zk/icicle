@@ -211,4 +211,4 @@ namespace icicle::pqc::ml_kem {
       m[threadIdx.x] |= t << j;
     }
   }
-}
+} // namespace icicle::pqc::ml_kem
