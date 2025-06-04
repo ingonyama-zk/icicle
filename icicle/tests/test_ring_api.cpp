@@ -2,6 +2,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
 
@@ -882,4 +883,52 @@ TEST_F(RingTestBase, NormRelativeBatch)
                               << device;
     }
   }
+}
+
+TEST_F(RingTestBase, NegacyclicNTT)
+{
+  constexpr size_t degree = Rq::d;
+
+  // randomize a,b in Rq and compute c=a*b directly
+  Rq a, b;
+  Zq::rand_host_many(reinterpret_cast<Zq*>(&a), Rq::d);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(&b), Rq::d);
+
+  auto rq_multiplication = [](const Rq& a, const Rq& b) -> Rq {
+    const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+    const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+    Rq c;
+    Zq* c_zq = reinterpret_cast<Zq*>(&c);
+    // zero initialize c
+    for (size_t k = 0; k < degree; ++k)
+      c_zq[k] = Zq::zero();
+
+    // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
+    // with negation when i+j >= n
+    for (size_t i = 0; i < degree; ++i) {
+      for (size_t j = 0; j < degree; ++j) {
+        size_t ij = i + j;
+        size_t k = ij % degree;
+        Zq prod = a_zq[i] * b_zq[j];
+        if (ij >= degree) {
+          c_zq[k] = c_zq[k] - prod; // negacyclic
+        } else {
+          c_zq[k] = c_zq[k] + prod;
+        }
+      }
+    }
+    return c;
+  };
+
+  Rq c = rq_multiplication(a, b);
+
+  // Now compute c via ntt, mul,intt and verify correctness
+  Tq a_tq, b_tq, c_tq;
+  ICICLE_CHECK(ntt(&a, 1, NegacyclicNTTConfig{}, &a_tq));
+  ICICLE_CHECK(ntt(&b, 1, NegacyclicNTTConfig{}, &b_tq));
+  ICICLE_CHECK(vector_mul((Zq*)&a_tq, (Zq*)&b_tq, degree, VecOpsConfig{}, (Zq*)&c_tq));
+
+  Rq c_via_ntt;
+  ICICLE_CHECK(intt(&c_tq, 1, NegacyclicNTTConfig{}, &c_via_ntt));
+  ASSERT_EQ(0, memcmp(&c, &c_via_ntt, sizeof(Rq)));
 }
