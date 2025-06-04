@@ -71,16 +71,8 @@ namespace labrador {
   /**
    * @brief Polynomial ring R_q = Z_q[x] / (x^d + 1), where d = 64.
    *
-   * This is used as the core ring for lattice-based proofs and encryption schemes in Labrador.
+   * This structure supports both coefficient and NTT (evaluation) domain representations.
    */
-  using Rq = icicle::PolynomialRing<Zq, 64>;
-
-  /**
-   * @brief Evaluation-domain version of R_q (NTT-transformed polynomials).
-   *
-   * Mathematically equivalent to Rq but represented in the NTT (evaluation) domain
-   * for efficient multiplication.
-   */
-  using Tq = icicle::NTTPolynomialRing<Zq, 64>; // If you add an NTTPolynomialRing later, rename Tq to use that
+  using PolyRing = icicle::PolynomialRing<Zq, 64>;
 
 } // namespace labrador

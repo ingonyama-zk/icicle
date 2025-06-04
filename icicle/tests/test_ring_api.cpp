@@ -248,19 +248,19 @@ TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
   } // device loop
 }
 
-// This test verifies that balanced decomposition of an Rq polynomial is implemented correctly by recomposing manually
-TEST_F(RingTestBase, BalancedDecompositionRq)
+// This test verifies that balanced decomposition of a PolyRing is implemented correctly by recomposing manually
+TEST_F(RingTestBase, BalancedDecompositionPolyRing)
 {
-  static_assert(Rq::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
 
-  // Get q from Rq::Base as signed 64-bit for safe arithmetic
-  constexpr auto q_storage = Rq::Base::get_modulus();
+  // Get q from PolyRing::Base as signed 64-bit for safe arithmetic
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
   const int64_t q = *(int64_t*)&q_storage;
   ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
 
-  // Generate a random input polynomial over Rq
-  Rq input_polynomial;
-  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), Rq::d);
+  // Generate a random input polynomial over PolyRing
+  PolyRing input_polynomial;
+  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), PolyRing::d);
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
@@ -272,14 +272,14 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
     for (uint32_t base : bases) {
       // Compute the number of digits for the given base
       const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
-      std::vector<Rq> decomposed_polynomials(num_digits);
+      std::vector<PolyRing> decomposed_polynomials(num_digits);
 
       // Perform balanced decomposition into digits (for a single polynomial)
       ICICLE_CHECK(
         balanced_decomposition::decompose(&input_polynomial, 1, base, cfg, decomposed_polynomials.data(), num_digits));
 
       // Recompose the original polynomial from digits
-      Rq recomposed_polynomial;
+      PolyRing recomposed_polynomial;
       // Generate powers of base: [1, base, base^2, ..., base^{t-1}]
       Zq power = Zq::from(1);
       std::vector<Zq> powers(num_digits);
@@ -289,50 +289,50 @@ TEST_F(RingTestBase, BalancedDecompositionRq)
         return current;
       });
 
-      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all Rq polynomials:
+      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all PolyRing polynomials:
       //            P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
-      std::vector<Rq> scaled_digits(num_digits);
+      std::vector<PolyRing> scaled_digits(num_digits);
       ICICLE_CHECK(
         vector_mul(decomposed_polynomials.data(), powers.data(), num_digits, VecOpsConfig{}, scaled_digits.data()));
       // Sum across the digits to reconstruct the original polynomial
       ICICLE_CHECK(vector_sum(scaled_digits.data(), num_digits, VecOpsConfig{}, &recomposed_polynomial));
 
       // Verify recomposed polynomial matches the original input
-      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(Rq)));
+      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(PolyRing)));
     }
   }
 }
 
 // This test verifies that batch balanced decomposition and recomposition
-// on device memory correctly reconstruct the original Rq polynomials.
+// on device memory correctly reconstruct the original PolyRing polynomials.
 // It also checks that the decomposition satisfies the L∞ bound.
-TEST_F(RingTestBase, BalancedDecompositionRqBatch)
+TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
 {
-  static_assert(Rq::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
 
-  constexpr size_t degree = Rq::d;
-  constexpr size_t size = 1 << 10; // Number of Rq polynomials
+  constexpr size_t degree = PolyRing::d;
+  constexpr size_t size = 1 << 10; // Number of PolyRing polynomials
   const size_t total_zq_elements = degree * size;
 
   // Get modulus q as signed integer for arithmetic safety
-  constexpr auto q_storage = Rq::Base::get_modulus();
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
   const int64_t q = *(const int64_t*)&q_storage;
   ICICLE_ASSERT(q > 0) << "Expecting positive q to allow int64 arithmetic";
 
-  // Generate random input polynomials over Rq
-  std::vector<Rq> input(size);
+  // Generate random input polynomials over PolyRing
+  std::vector<PolyRing> input(size);
   Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), total_zq_elements);
 
-  std::vector<Rq> recomposed(size);
+  std::vector<PolyRing> recomposed(size);
   const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
 
   for (auto device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    Rq *d_input = nullptr, *d_decomposed = nullptr, *d_recomposed = nullptr;
-    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(Rq)));
-    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(Rq)));
-    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(Rq)));
+    PolyRing *d_input = nullptr, *d_decomposed = nullptr, *d_recomposed = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(PolyRing)));
 
     VecOpsConfig cfg{};
     cfg.is_a_on_device = true;
@@ -343,10 +343,10 @@ TEST_F(RingTestBase, BalancedDecompositionRqBatch)
       const size_t decomposed_size = size * digits_per_coeff;
 
       std::stringstream label_decompose, label_recompose;
-      label_decompose << "Rq Decomposition [device=" << device << ", base=" << base << "]";
-      label_recompose << "Rq Recomposition [device=" << device << ", base=" << base << "]";
+      label_decompose << "PolyRing Decomposition [device=" << device << ", base=" << base << "]";
+      label_recompose << "PolyRing Recomposition [device=" << device << ", base=" << base << "]";
 
-      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(Rq)));
+      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(PolyRing)));
 
       // --- Step 1: Decomposition ---
       START_TIMER(decompose);
@@ -365,7 +365,7 @@ TEST_F(RingTestBase, BalancedDecompositionRqBatch)
           reinterpret_cast<bool*>(is_norm_bound.data()));
 
         for (size_t i = 0; i < norm_cfg.batch_size; ++i) {
-          ASSERT_TRUE(is_norm_bound[i]) << "Decomposed Rq polynomial " << i
+          ASSERT_TRUE(is_norm_bound[i]) << "Decomposed PolyRing polynomial " << i
                                         << " exceeds expected balanced range for base = " << base;
         }
       }
@@ -375,9 +375,9 @@ TEST_F(RingTestBase, BalancedDecompositionRqBatch)
       ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
       END_TIMER(recompose, label_recompose.str().c_str(), true);
 
-      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(Rq)));
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(PolyRing)));
 
-      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), size * sizeof(Rq)))
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), size * sizeof(PolyRing)))
         << "Recomposition mismatch for base = " << base;
 
       icicle_free(d_decomposed);
