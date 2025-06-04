@@ -7,45 +7,101 @@
 namespace icicle {
   namespace pqc {
     namespace ml_kem {
+      ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher, ml_kem_keygen, MlKemKeygenImpl);
+      ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher, ml_kem_encaps, MlKemEncapsulateImpl);
+      ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher, ml_kem_decaps, MlKemDecapsulateImpl);
 
-      // ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher1024, ml_kem_keygen, MlKemKeygenImpl<Kyber1024Params>);
-      // ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher1024, ml_kem_encaps, MlKemEncapsulateImpl<Kyber1024Params>);
-      // ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher1024, ml_kem_decaps, MlKemDecapsulateImpl<Kyber1024Params>);
-
-      // ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher768, ml_kem_keygen, MlKemKeygenImpl<Kyber768Params>);
-      // ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher768, ml_kem_encaps, MlKemEncapsulateImpl<Kyber768Params>);
-      // ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher768, ml_kem_decaps, MlKemDecapsulateImpl<Kyber768Params>);
-
-      ICICLE_DISPATCHER_INST(MlKemKeygenDispatcher512, ml_kem_keygen512, MlKemKeygenImpl);
-      ICICLE_DISPATCHER_INST(MlKemEncapsulateDispatcher512, ml_kem_encaps512, MlKemEncapsulateImpl);
-      ICICLE_DISPATCHER_INST(MlKemDecapsulateDispatcher512, ml_kem_decaps512, MlKemDecapsulateImpl);
-
-      eIcicleError keygen512(
+      template <>
+      eIcicleError keygen<Kyber512Params>(
         const std::byte* entropy,
         MlKemConfig config,
         std::byte* public_keys,
         std::byte* secret_keys)
       {
-        return MlKemKeygenDispatcher512::execute(entropy, config, public_keys, secret_keys);
+        return MlKemKeygenDispatcher::execute(entropy, config, public_keys, secret_keys);
       }
 
-      eIcicleError encapsulate512(
+      template <>
+      eIcicleError encapsulate<Kyber512Params>(
         const std::byte* message,
         const std::byte* public_keys,
         MlKemConfig config,
         std::byte* ciphertext,
         std::byte* shared_secrets)
       {
-        return MlKemEncapsulateDispatcher512::execute(message, public_keys, config, ciphertext, shared_secrets);
+        return MlKemEncapsulateDispatcher::execute(message, public_keys, config, ciphertext, shared_secrets);
       }
 
-      eIcicleError decapsulate512(
+      template <>
+      eIcicleError decapsulate<Kyber512Params>(
         const std::byte* secret_keys,
         const std::byte* ciphertext,
         MlKemConfig config,
         std::byte* shared_secrets)
       {
-        return MlKemDecapsulateDispatcher512::execute(secret_keys, ciphertext, config, shared_secrets);
+        return MlKemDecapsulateDispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
+      }
+
+      template <>
+      eIcicleError keygen<Kyber768Params>(
+        const std::byte* entropy,
+        MlKemConfig config,
+        std::byte* public_keys,
+        std::byte* secret_keys)
+      {
+        return MlKemKeygenDispatcher::execute(entropy, config, public_keys, secret_keys);
+      }
+
+      template <>
+      eIcicleError encapsulate<Kyber768Params>(
+        const std::byte* message,
+        const std::byte* public_keys,
+        MlKemConfig config,
+        std::byte* ciphertext,
+        std::byte* shared_secrets)
+      {
+        return MlKemEncapsulateDispatcher::execute(message, public_keys, config, ciphertext, shared_secrets);
+      }
+
+      template <>
+      eIcicleError decapsulate<Kyber768Params>(
+        const std::byte* secret_keys,
+        const std::byte* ciphertext,
+        MlKemConfig config,
+        std::byte* shared_secrets)
+      {
+        return MlKemDecapsulateDispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
+      }
+
+      template <>
+      eIcicleError keygen<Kyber1024Params>(
+        const std::byte* entropy,
+        MlKemConfig config,
+        std::byte* public_keys,
+        std::byte* secret_keys)
+      {
+        return MlKemKeygenDispatcher::execute(entropy, config, public_keys, secret_keys);
+      }
+
+      template <>
+      eIcicleError encapsulate<Kyber1024Params>(
+        const std::byte* message,
+        const std::byte* public_keys,
+        MlKemConfig config,
+        std::byte* ciphertext,
+        std::byte* shared_secrets)
+      {
+        return MlKemEncapsulateDispatcher::execute(message, public_keys, config, ciphertext, shared_secrets);
+      }
+
+      template <>
+      eIcicleError decapsulate<Kyber1024Params>(
+        const std::byte* secret_keys,
+        const std::byte* ciphertext,
+        MlKemConfig config,
+        std::byte* shared_secrets)
+      {
+        return MlKemDecapsulateDispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
       }
 
       // TODO: C FFI

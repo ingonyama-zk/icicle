@@ -148,17 +148,19 @@ namespace icicle::pqc::ml_kem {
     return CHK_LAST();
   }
 
-  static eIcicleError cuda_keygen_handler512(
+  template <typename Params>
+  static eIcicleError cuda_keygen_handler(
     const Device& device,
     const std::byte* entropy,
     MlKemConfig config,
     std::byte* public_keys,
     std::byte* secret_keys)
   {
-    return translateCudaError(cuda_keygen<Kyber512Params>(entropy, config, public_keys, secret_keys));
+    return translateCudaError(cuda_keygen<Params>(entropy, config, public_keys, secret_keys));
   }
 
-  static eIcicleError cuda_encapsulate_handler512(
+  template <typename Params>
+  static eIcicleError cuda_encapsulate_handler(
     const Device& device,
     const std::byte* message,
     const std::byte* public_keys,
@@ -166,20 +168,21 @@ namespace icicle::pqc::ml_kem {
     std::byte* ciphertext,
     std::byte* shared_secrets)
   {
-    return translateCudaError(cuda_encapsulate<Kyber512Params>(message, public_keys, config, ciphertext, shared_secrets));
+    return translateCudaError(cuda_encapsulate<Params>(message, public_keys, config, ciphertext, shared_secrets));
   }
 
-  static eIcicleError cuda_decapsulate_handler512(
+  template <typename Params>
+  static eIcicleError cuda_decapsulate_handler(
     const Device& device,
     const std::byte* secret_keys,
     const std::byte* ciphertext,
     MlKemConfig config,
     std::byte* shared_secrets)
   {
-    return translateCudaError(cuda_decapsulate<Kyber512Params>(secret_keys, ciphertext, config, shared_secrets));
+    return translateCudaError(cuda_decapsulate<Params>(secret_keys, ciphertext, config, shared_secrets));
   }
 
   // REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber1024Params, cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
   // REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber768Params, cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
-  REGISTER_ML_KEM_BACKEND("CUDA-PQC", cuda_keygen_handler512, cuda_encapsulate_handler512, cuda_decapsulate_handler512);
+  REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber512Params, cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
 } // namespace icicle::pqc::ml_kem

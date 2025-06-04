@@ -9,6 +9,9 @@
 
 using namespace icicle;
 using namespace icicle::pqc;
+using namespace icicle::pqc::ml_kem;
+
+template <typename TypeParam>
 class PqcTest : public IcicleTestBase
 {
 public:
@@ -23,14 +26,21 @@ public:
     }
     return buf;
   }
+protected:
+  // You can factor out any common setup here if needed.
+  void SetUp() override {
+    // For example, force device “CUDA-PQC” each time.
+    ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
+  }
 };
 
-TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
+typedef testing::Types<Kyber512Params, Kyber768Params, Kyber1024Params> MLkemTypes;
+TYPED_TEST_SUITE(PqcTest, MLkemTypes);
+
+TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTest)
 {
-  using namespace ml_kem;
 
   // TODO: implement for CPU too?
-  ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
 
   // TODO: test all security categories on all devices, with batch
   // constexpr SecurityCategory category = SecurityCategory::KYBER_512;
@@ -41,27 +51,25 @@ TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
   config.batch_size = batch_size;
 
   // Allocate buffers
-  auto entropy = random_entropy(batch_size * ENTROPY_BYTES);
-  std::vector<std::byte> public_key(batch_size * Kyber512Params::PUBLIC_KEY_BYTES);
-  std::vector<std::byte> secret_key(batch_size * Kyber512Params::SECRET_KEY_BYTES);
-  std::vector<std::byte> ciphertext(batch_size * Kyber512Params::CIPHERTEXT_BYTES);
-  std::vector<std::byte> shared_secret_enc(batch_size * Kyber512Params::SHARED_SECRET_BYTES);
-  std::vector<std::byte> shared_secret_dec(batch_size * Kyber512Params::SHARED_SECRET_BYTES);
+  auto entropy = this->random_entropy(batch_size * ENTROPY_BYTES);
+  std::vector<std::byte> public_key(batch_size * TypeParam::PUBLIC_KEY_BYTES);
+  std::vector<std::byte> secret_key(batch_size * TypeParam::SECRET_KEY_BYTES);
+  std::vector<std::byte> ciphertext(batch_size * TypeParam::CIPHERTEXT_BYTES);
+  std::vector<std::byte> shared_secret_enc(batch_size * TypeParam::SHARED_SECRET_BYTES);
+  std::vector<std::byte> shared_secret_dec(batch_size * TypeParam::SHARED_SECRET_BYTES);
 
-  // TODO: expect success once API is imlpemented and test shared_secret computed correctly
-
-  auto message = random_entropy(batch_size * MESSAGE_BYTES);
+  auto message = this->random_entropy(batch_size * MESSAGE_BYTES);
 
   // Key generation
-  auto err = keygen512(entropy.data(), config, public_key.data(), secret_key.data());
+  auto err = keygen<TypeParam>(entropy.data(), config, public_key.data(), secret_key.data());
   ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Encapsulation
-  err = encapsulate512(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
+  err = encapsulate<TypeParam>(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
   ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Decapsulation
-  err = decapsulate512(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
+  err = decapsulate<TypeParam>(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
   ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Check equality
@@ -71,8 +79,8 @@ TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
 // TODO test against another implementation (e.g. reference implementation)
 // TODO test with device memory
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+// int main(int argc, char** argv)
+// {
+//   ::testing::InitGoogleTest(&argc, argv);
+//   return RUN_ALL_TESTS();
+// }

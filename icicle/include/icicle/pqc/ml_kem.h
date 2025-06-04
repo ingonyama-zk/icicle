@@ -84,7 +84,8 @@ namespace icicle {
        * @param public_keys   Output buffer [batch_size × PUBLIC_KEY_BYTES]
        * @param secret_keys   Output buffer [batch_size × SECRET_KEY_BYTES]
        */
-      eIcicleError keygen512(
+      template <typename Params>
+      eIcicleError keygen(
         const std::byte* entropy,
         MlKemConfig config,
         std::byte* public_keys,
@@ -99,7 +100,8 @@ namespace icicle {
        * @param ciphertext      Output buffer [batch_size × CIPHERTEXT_BYTES]
        * @param shared_secrets  Output buffer [batch_size × SHARED_SECRET_BYTES]
        */
-      eIcicleError encapsulate512(
+      template <typename Params>
+      eIcicleError encapsulate(
         const std::byte* message,
         const std::byte* public_keys,
         MlKemConfig config,
@@ -115,7 +117,8 @@ namespace icicle {
        * @param config          Execution + memory config
        * @param shared_secrets  Output buffer [batch_size × SHARED_SECRET_BYTES]
        */
-      eIcicleError decapsulate512(
+      template <typename Params>
+      eIcicleError decapsulate(
         const std::byte* secret_keys,
         const std::byte* ciphertext,
         MlKemConfig config,

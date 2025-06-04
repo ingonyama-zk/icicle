@@ -28,18 +28,16 @@ namespace icicle {
         MlKemConfig config,
         std::byte* shared_secrets)>;
 
-      void register_ml_kem_keygen512(const std::string& deviceType, MlKemKeygenImpl impl);
+      void register_ml_kem_keygen(const std::string& deviceType, MlKemKeygenImpl impl);
+      void register_ml_kem_encaps(const std::string& deviceType, MlKemEncapsulateImpl impl);
+      void register_ml_kem_decaps(const std::string& deviceType, MlKemDecapsulateImpl impl);
 
-      void register_ml_kem_encaps512(const std::string& deviceType, MlKemEncapsulateImpl impl);
-
-      void register_ml_kem_decaps512(const std::string& deviceType, MlKemDecapsulateImpl impl);
-
-#define REGISTER_ML_KEM_BACKEND(DEVICE_TYPE, KEYGEN, ENCAPS, DECAPS)                                                   \
+#define REGISTER_ML_KEM_BACKEND(DEVICE_TYPE, PARAMS, KEYGEN, ENCAPS, DECAPS)                                                   \
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_ml_kem) = []() -> bool {                                                   \
-      register_ml_kem_keygen512(DEVICE_TYPE, KEYGEN);                                                                     \
-      register_ml_kem_encaps512(DEVICE_TYPE, ENCAPS);                                                                     \
-      register_ml_kem_decaps512(DEVICE_TYPE, DECAPS);                                                                     \
+      register_ml_kem_keygen(DEVICE_TYPE, KEYGEN<PARAMS>);                                                                     \
+      register_ml_kem_encaps(DEVICE_TYPE, ENCAPS<PARAMS>);                                                                     \
+      register_ml_kem_decaps(DEVICE_TYPE, DECAPS<PARAMS>);                                                                     \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
