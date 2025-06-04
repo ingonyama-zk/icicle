@@ -17,13 +17,13 @@
 
 namespace icicle::pqc::ml_kem {
 
-  template <const uint8_t k, const uint8_t eta1, const int batch_size>
+  template <const uint8_t k, const uint8_t eta1>
   __launch_bounds__(128) __global__ void ml_kem_keygen_kernel(
-    const uint8_t entropy[ENTROPY_BYTES * batch_size], // this points to 32 bytes after d. (we allocate d and z together like so: d0, z0, d1, z1, ...
+    const uint8_t* entropy, // this points to 32 bytes after d. (we allocate d and z together like so: d0, z0, d1, z1, ...
                         // d_{batch - 1}, z_{batch - 1})
-    uint8_t ek[(384 * k + 32) * batch_size],
-    uint8_t dk[(768 * k + 96) * batch_size],
-    Zq A[256 * k * k * batch_size]) {
+    uint8_t* ek,
+    uint8_t* dk,
+    Zq* A) {
 
     // update the pointers according to the batch index
     const uint8_t* d = entropy + blockIdx.x * 64; // 32 bytes for d, 32 bytes for z
@@ -40,16 +40,14 @@ namespace icicle::pqc::ml_kem {
     const uint8_t eta_1,
     const uint8_t eta_2,
     const uint8_t du,
-    const uint8_t dv,
-    const int batch_size = 1>
+    const uint8_t dv>
   __launch_bounds__(128) __global__ void ml_kem_encaps_kernel(
-    const uint8_t ek[batch_size * (384 * k + 32)],
-    const uint8_t m[batch_size * 32],
-    uint8_t K[batch_size * 32],
-    uint8_t c[batch_size * (32 * (du * k + dv))],
+    const uint8_t* ek,
+    const uint8_t* m,
+    uint8_t* K,
+    uint8_t* c,
     Zq* A)
   {
-    if (blockIdx.x >= batch_size) { return; }
     ek += blockIdx.x * (384 * k + 32);
     m += blockIdx.x * 32;
     K += blockIdx.x * 32;
@@ -63,15 +61,13 @@ namespace icicle::pqc::ml_kem {
     const uint8_t eta_1,
     const uint8_t eta_2,
     const uint8_t du,
-    const uint8_t dv,
-    const int batch_size = 1>
+    const uint8_t dv>
   __launch_bounds__(128) __global__ void ml_kem_decaps_kernel(
-    const uint8_t dk[batch_size * (768 * k + 96)],
-    const uint8_t c[batch_size * (32 * (du * k + dv))],
-    uint8_t K[batch_size * 32],
+    const uint8_t* dk,
+    const uint8_t* c,
+    uint8_t* K,
     Zq* A)
   {
-    if (blockIdx.x >= batch_size) { return; }
     dk += blockIdx.x * (768 * k + 96);
     c += blockIdx.x * (32 * (du * k + dv));
     K += blockIdx.x * 32;

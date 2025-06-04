@@ -42,24 +42,26 @@ TEST_F(PqcTest, MLkemSharedSecretConsistencyTest)
 
   // Allocate buffers
   auto entropy = random_entropy(batch_size * ENTROPY_BYTES);
-  std::vector<std::byte> public_key(batch_size * Kyber512::PUBLIC_KEY_BYTES);
-  std::vector<std::byte> secret_key(batch_size * Kyber512::SECRET_KEY_BYTES);
-  std::vector<std::byte> ciphertext(batch_size * Kyber512::CIPHERTEXT_BYTES);
-  std::vector<std::byte> shared_secret_enc(batch_size * Kyber512::SHARED_SECRET_BYTES);
-  std::vector<std::byte> shared_secret_dec(batch_size * Kyber512::SHARED_SECRET_BYTES);
+  std::vector<std::byte> public_key(batch_size * Kyber512Params::PUBLIC_KEY_BYTES);
+  std::vector<std::byte> secret_key(batch_size * Kyber512Params::SECRET_KEY_BYTES);
+  std::vector<std::byte> ciphertext(batch_size * Kyber512Params::CIPHERTEXT_BYTES);
+  std::vector<std::byte> shared_secret_enc(batch_size * Kyber512Params::SHARED_SECRET_BYTES);
+  std::vector<std::byte> shared_secret_dec(batch_size * Kyber512Params::SHARED_SECRET_BYTES);
 
   // TODO: expect success once API is imlpemented and test shared_secret computed correctly
 
+  auto message = random_entropy(batch_size * MESSAGE_BYTES);
+
   // Key generation
-  auto err = keygen(category, entropy.data(), config, public_key.data(), secret_key.data());
+  auto err = keygen512(entropy.data(), config, public_key.data(), secret_key.data());
   ASSERT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
 
   // Encapsulation
-  err = encapsulate(category, public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
+  err = encapsulate512(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
   ASSERT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
 
   // Decapsulation
-  err = decapsulate(category, secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
+  err = decapsulate512(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
   ASSERT_EQ(err, eIcicleError::API_NOT_IMPLEMENTED);
 
   // Check equality
