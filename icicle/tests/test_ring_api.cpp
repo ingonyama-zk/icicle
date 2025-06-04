@@ -938,9 +938,7 @@ TEST_F(RingTestBase, NegacyclicNTT)
     ICICLE_CHECK(ntt(b.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, b.data()));
 
     // Pointwise multiplication in NTT domain
-    VecOpsConfig mul_cfg{};
-    mul_cfg.batch_size = 1;
-    ICICLE_CHECK(vector_mul(a.data(), b.data(), size, mul_cfg, res.data()));
+    ICICLE_CHECK(vector_mul(a.data(), b.data(), size, VecOpsConfig{}, res.data()));
 
     // Inverse NTT: Tq → Rq
     ICICLE_CHECK(ntt(res.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, res.data()));
