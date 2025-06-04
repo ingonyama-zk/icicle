@@ -193,21 +193,21 @@ static eIcicleError cpu_recompose_from_balanced_digits(
 
 REGISTER_BALANCED_DECOMPOSITION_BACKEND("CPU", cpu_decompose_balanced_digits, cpu_recompose_from_balanced_digits);
 
-// Decompose Rq polynomials into balanced base-b digits
-static eIcicleError cpu_decompose_balanced_digits_rq(
+// Decompose PolyRing polynomials into balanced base-b digits
+static eIcicleError cpu_decompose_balanced_digits_PolyRing(
   const Device& device,
-  const Rq* input,
+  const PolyRing* input,
   size_t input_size,
   uint32_t base,
   const VecOpsConfig& config,
-  Rq* output,
+  PolyRing* output,
   size_t output_size)
 {
-  auto params_valid =
-    verify_params<Rq::Base>((Rq::Base*)input, input_size, base, config, (Rq::Base*)output, output_size);
+  auto params_valid = verify_params<PolyRing::Base>(
+    (PolyRing::Base*)input, input_size, base, config, (PolyRing::Base*)output, output_size);
   if (eIcicleError::SUCCESS != params_valid) { return params_valid; }
 
-  auto q = get_q<Rq::Base>();
+  auto q = get_q<PolyRing::Base>();
 
   // Check that the sizes make sense and that we have enough digits.
   // Note that not enough digits might be an issue but treated as warning.
@@ -217,7 +217,7 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const size_t expected_digits_per_element = balanced_decomposition::compute_nof_digits<Rq::Base>(base);
+  const size_t expected_digits_per_element = balanced_decomposition::compute_nof_digits<PolyRing::Base>(base);
   if (digits_per_element < expected_digits_per_element) {
     ICICLE_LOG_WARNING << "Balanced Decomposition: Output buffer may be too small to decompose input polynomials. "
                           "Decomposition will stop after "
@@ -230,20 +230,20 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
   tf::Taskflow tasks;
   tf::Executor executor(get_nof_workers(config));
 
-  // To decompose Rq polynomials into balanced digits, we decompose all d coefficients, in num_digits steps, creating a
-  // polynomial on each step.
+  // To decompose PolyRing polynomials into balanced digits, we decompose all d coefficients, in num_digits steps,
+  // creating a polynomial on each step.
   const size_t total_size = input_size * config.batch_size;
   for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
     tasks.emplace([=] {
-      const Rq& input_poly = input[poly_idx];
-      const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.coeffs);
+      const PolyRing& input_poly = input[poly_idx];
+      const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.values);
       for (int digit_idx = 0; digit_idx < digits_per_element /*=t (steps)*/; ++digit_idx) {
-        Rq& output_poly = output[poly_idx * digits_per_element + digit_idx];
-        int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.coeffs);
+        PolyRing& output_poly = output[poly_idx * digits_per_element + digit_idx];
+        int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.values);
         // Store intermediate value of the decomposition in stack memory (assuming d is not too large. Otherwise, use
         // heap memory)
-        int64_t values[Rq::d]; // Those are intermediate values computed during the decomposition
-        for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
+        int64_t values[PolyRing::d]; // Those are intermediate values computed during the decomposition
+        for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
           int64_t val = digit_idx == 0 ? input_coeffs[coeff_idx] : values[coeff_idx];
           int64_t digit = 0;
           // we need to handle case where val>q/2 by subtracting q (only for base>2)
@@ -270,18 +270,18 @@ static eIcicleError cpu_decompose_balanced_digits_rq(
   return eIcicleError::SUCCESS;
 }
 
-// Recompose Rq polynomials from balanced base-b digits
-static eIcicleError cpu_recompose_from_balanced_digits_rq(
+// Recompose PolyRing polynomials from balanced base-b digits
+static eIcicleError cpu_recompose_from_balanced_digits_PolyRing(
   const Device& device,
-  const Rq* input,
+  const PolyRing* input,
   size_t input_size,
   uint32_t base,
   const VecOpsConfig& config,
-  Rq* output,
+  PolyRing* output,
   size_t output_size)
 {
-  auto params_valid =
-    verify_params<Rq::Base>((Rq::Base*)input, input_size, base, config, (Rq::Base*)output, output_size);
+  auto params_valid = verify_params<PolyRing::Base>(
+    (PolyRing::Base*)input, input_size, base, config, (PolyRing::Base*)output, output_size);
   if (eIcicleError::SUCCESS != params_valid) { return params_valid; }
 
   const size_t digits_per_element = input_size / output_size;
@@ -290,7 +290,7 @@ static eIcicleError cpu_recompose_from_balanced_digits_rq(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  const Rq::Base base_as_field = Rq::Base::from(base);
+  const PolyRing::Base base_as_field = PolyRing::Base::from(base);
 
   tf::Taskflow tasks;
   tf::Executor executor(get_nof_workers(config));
@@ -298,16 +298,16 @@ static eIcicleError cpu_recompose_from_balanced_digits_rq(
   const size_t total_size = output_size * config.batch_size;
   for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
     tasks.emplace([=]() {
-      Rq output_poly;
+      PolyRing output_poly;
       // Iterate of 'digits_per_element' input polynomials, one per digit, and recompose them into a single polynomial
       for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
         const bool is_first_digit = (digit_idx == digits_per_element - 1);
-        const Rq& input_poly = input[poly_idx * digits_per_element + digit_idx];
-        for (int coeff_idx = 0; coeff_idx < Rq::d; ++coeff_idx) {
-          Rq::Base output_coeff = is_first_digit ? Rq::Base::zero() : output_poly.coeffs[coeff_idx];
-          auto digit = input_poly.coeffs[coeff_idx];
+        const PolyRing& input_poly = input[poly_idx * digits_per_element + digit_idx];
+        for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
+          PolyRing::Base output_coeff = is_first_digit ? PolyRing::Base::zero() : output_poly.values[coeff_idx];
+          auto digit = input_poly.values[coeff_idx];
           output_coeff = output_coeff * base_as_field + digit;
-          output_poly.coeffs[coeff_idx] = output_coeff; // Store the recomposed coefficient
+          output_poly.values[coeff_idx] = output_coeff; // Store the recomposed coefficient
         }
       }
       output[poly_idx] = output_poly;
@@ -320,5 +320,5 @@ static eIcicleError cpu_recompose_from_balanced_digits_rq(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_BALANCED_DECOMPOSITION_RQ_BACKEND(
-  "CPU", cpu_decompose_balanced_digits_rq, cpu_recompose_from_balanced_digits_rq);
+REGISTER_BALANCED_DECOMPOSITION_POLYRING_BACKEND(
+  "CPU", cpu_decompose_balanced_digits_PolyRing, cpu_recompose_from_balanced_digits_PolyRing);
