@@ -4,14 +4,16 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { useColorMode } from '@docusaurus/theme-common';
 
-// Hook to track screen size
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     function handleResize() {
       setIsMobile(window.innerWidth <= 768);
     }
+
+    handleResize(); // Call once on mount
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
