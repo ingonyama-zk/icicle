@@ -2,6 +2,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
 
@@ -880,6 +881,78 @@ TEST_F(RingTestBase, NormRelativeBatch)
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_FALSE(output[i]) << "L-infinity relative norm check should fail for batch " << i << " on device "
                               << device;
+    }
+  }
+}
+
+TEST_F(RingTestBase, NegacyclicNTT)
+{
+  auto PolyRing_multiplication = [](const PolyRing& a, const PolyRing& b) -> PolyRing {
+    PolyRing c;
+    constexpr size_t degree = PolyRing::d;
+    const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+    const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+    Zq* c_zq = reinterpret_cast<Zq*>(&c);
+    // zero initialize c
+    for (size_t k = 0; k < degree; ++k)
+      c_zq[k] = Zq::zero();
+
+    // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
+    // with negation when i+j >= n
+    for (size_t i = 0; i < degree; ++i) {
+      for (size_t j = 0; j < degree; ++j) {
+        size_t ij = i + j;
+        size_t k = ij % degree;
+        Zq prod = a_zq[i] * b_zq[j];
+        if (ij >= degree) {
+          c_zq[k] = c_zq[k] - prod; // negacyclic
+        } else {
+          c_zq[k] = c_zq[k] + prod;
+        }
+      }
+    }
+    return c;
+  };
+
+  int size = 1 << 15;
+  std::vector<PolyRing> a(size);
+  std::vector<PolyRing> b(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * size);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    // Dummy NTT to initialize NTT domain for this device (first call per device)
+    PolyRing dummy;
+    ICICLE_CHECK(ntt(&dummy, 1, NTTDir::kForward, NegacyclicNTTConfig{}, &dummy));
+
+    std::vector<PolyRing> res(size);
+
+    std::stringstream timer_label;
+    timer_label << "Rq multiplication via NTT [device=" << device << "]";
+    START_TIMER(RqMul);
+
+    // Forward NTT: Rq → Tq
+    ICICLE_CHECK(ntt(a.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, a.data()));
+    ICICLE_CHECK(ntt(b.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, b.data()));
+
+    // Pointwise multiplication in NTT domain
+    ICICLE_CHECK(vector_mul(a.data(), b.data(), size, VecOpsConfig{}, res.data()));
+
+    // Inverse NTT: Tq → Rq
+    ICICLE_CHECK(ntt(res.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, res.data()));
+
+    END_TIMER(RqMul, timer_label.str().c_str(), true);
+
+    // Convert a, b back to coefficient domain (in-place inverse NTT)
+    ICICLE_CHECK(ntt(a.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, a.data()));
+    ICICLE_CHECK(ntt(b.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, b.data()));
+
+    // Verify correctness
+    for (int i = 0; i < size; ++i) {
+      PolyRing expected = PolyRing_multiplication(a[i], b[i]);
+      EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
   }
 }
