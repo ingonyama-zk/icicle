@@ -21,7 +21,7 @@ namespace icicle {
   };
 
   /**
-   * @brief Negacyclic NTT for R_q = Z_q[x] / (x^d + 1)   
+   * @brief Negacyclic NTT for R_q = Z_q[x] / (x^d + 1)
    *
    * @tparam PolyRing    Polynomial type with static degree and base field Zq
    * @param input        Input polynomials (in coefficient or evaluation domain)
