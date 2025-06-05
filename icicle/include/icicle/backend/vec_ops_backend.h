@@ -776,6 +776,29 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  using balancedDecompositionPolyRingImpl = std::function<eIcicleError(
+    const Device& device,
+    const PolyRing* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig& config,
+    PolyRing* output,
+    size_t output_size)>;
+
+  void
+  register_decompose_balanced_digits_poly_ring(const std::string& deviceType, balancedDecompositionPolyRingImpl impl);
+  void register_recompose_from_balanced_digits_poly_ring(
+    const std::string& deviceType, balancedDecompositionPolyRingImpl impl);
+
+  #define REGISTER_BALANCED_DECOMPOSITION_POLYRING_BACKEND(DEVICE_TYPE, DECOMPOSE, RECOMPOSE)                          \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_balanced_recomposition_poly_ring) = []() -> bool {                                       \
+        register_decompose_balanced_digits_poly_ring(DEVICE_TYPE, DECOMPOSE);                                          \
+        register_recompose_from_balanced_digits_poly_ring(DEVICE_TYPE, RECOMPOSE);                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   using JLProjectionImpl = std::function<eIcicleError(
     const Device& device,
     const field_t* input,
