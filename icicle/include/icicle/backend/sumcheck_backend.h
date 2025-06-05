@@ -51,6 +51,7 @@ namespace icicle {
       const CombineFunction<F>& combine_function,
       SumcheckTranscriptConfig<F>&& transcript_config,
       const SumcheckConfig& sumcheck_config,
+      F* challenge_vector /*out*/,
       SumcheckProof<F>& sumcheck_proof /*out*/) = 0;
   };
 
