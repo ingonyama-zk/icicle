@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_poly.cuh"
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/hash/cuda_hashes.cuh"
-#include "ml-kem/pke/cuda_pke_encrypt.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/hash/cuda_hashes.cuh"
+#include "ml_kem/pke/cuda_pke_encrypt.cuh"
 
 namespace icicle::pqc::ml_kem {
   template <const uint8_t k, const uint8_t eta1, const uint8_t eta2, const uint8_t du, const uint8_t dv>

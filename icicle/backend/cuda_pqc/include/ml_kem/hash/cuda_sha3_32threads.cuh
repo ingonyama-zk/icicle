@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ml-kem/hash/cuda_hash_consts.cuh"
-#include "ml-kem/hash/cuda_sha3_5threads.cuh"
+#include "ml_kem/hash/cuda_hash_consts.cuh"
+#include "ml_kem/hash/cuda_sha3_5threads.cuh"
 
 namespace icicle::pqc::ml_kem {
   // todo: join with the 5 threaded shared memory

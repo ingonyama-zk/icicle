@@ -3,8 +3,8 @@
 #include "gpu-utils/error_handler.h"
 #include "gpu-utils/error_translation.h"
 #include "cuda_ml_kem_kernels.cuh"
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/ring/cuda_poly.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
 
 namespace icicle::pqc::ml_kem {
 
@@ -13,8 +13,6 @@ namespace icicle::pqc::ml_kem {
   cuda_keygen(const std::byte* entropy, MlKemConfig config, std::byte* public_keys, std::byte* secret_keys)
   {
     CHK_INIT_IF_RETURN();
-
-    ICICLE_LOG_INFO << "keygen k: " << (int)Category::K;
 
     cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
     entropy =

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ml-kem/samplers/cuda_samplers.cuh"
-#include "ml-kem/ring/cuda_zq_math.cuh"
-#include "ml-kem/ring/cuda_poly.cuh"
-#include "ml-kem/packing/cuda_pack.cuh"
-#include "ml-kem/packing/cuda_unpack.cuh"
+#include "ml_kem/samplers/cuda_samplers.cuh"
+#include "ml_kem/ring/cuda_zq_math.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
+#include "ml_kem/packing/cuda_pack.cuh"
+#include "ml_kem/packing/cuda_unpack.cuh"
 
 namespace icicle::pqc::ml_kem::pke {
   template <const uint8_t k, const uint8_t eta1, const uint8_t eta2, const uint8_t du, const uint8_t dv>

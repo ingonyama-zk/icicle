@@ -1,11 +1,11 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_poly.cuh"
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/ring/cuda_zq_math.cuh"
-#include "ml-kem/samplers/cuda_samplers.cuh"
-#include "ml-kem/hash/cuda_hashes.cuh"
-#include "ml-kem/packing/cuda_pack.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/ring/cuda_zq_math.cuh"
+#include "ml_kem/samplers/cuda_samplers.cuh"
+#include "ml_kem/hash/cuda_hashes.cuh"
+#include "ml_kem/packing/cuda_pack.cuh"
 
 namespace icicle::pqc::ml_kem::pke {
 

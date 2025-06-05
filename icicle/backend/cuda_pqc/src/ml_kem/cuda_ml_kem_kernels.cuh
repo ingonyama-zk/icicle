@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cuda_runtime.h>
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/cuda_ml_kem_keygen.cuh"
-#include "ml-kem/ring/cuda_poly.cuh"
-#include "ml-kem/cuda_ml_kem_encaps.cuh"
-#include "ml-kem/cuda_ml_kem_decaps.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/cuda_ml_kem_keygen.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
+#include "ml_kem/cuda_ml_kem_encaps.cuh"
+#include "ml_kem/cuda_ml_kem_decaps.cuh"
 
 /// @file
 /// @brief Device-level CUDA code for ML-KEM cryptographic operations.

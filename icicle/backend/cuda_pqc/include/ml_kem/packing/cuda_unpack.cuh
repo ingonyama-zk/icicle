@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/ring/cuda_poly.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
 
 namespace icicle::pqc::ml_kem {
   template <const uint8_t d>

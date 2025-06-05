@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ml-kem/hash/cuda_sha3_32threads.cuh"
+#include "ml_kem/hash/cuda_sha3_32threads.cuh"
 
 namespace icicle::pqc::ml_kem {
   template <const uint8_t k, const uint8_t du, const uint8_t dv>

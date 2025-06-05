@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/hash/cuda_hash_consts.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/hash/cuda_hash_consts.cuh"
 
 namespace icicle::pqc::ml_kem {
   // Inline device function to perform 64-bit reduction using addition across threads within a warp

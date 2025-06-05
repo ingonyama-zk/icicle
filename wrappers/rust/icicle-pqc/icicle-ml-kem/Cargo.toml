@@ -1,0 +1,18 @@
+[package]
+name = "icicle-ml-kem"
+description = "Rust wrapper for the implementation of ML-KEM by Ingonyama"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true }
+
+[build-dependencies]
+cmake = "0.1.50"
+
+[dev-dependencies]
+rand = "0.9.1"

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/ring/cuda_poly.cuh"
-#include "ml-kem/cuda_ml_kem_encaps.cuh"
-#include "ml-kem/pke/cuda_pke_decrypt.cuh"
-#include "ml-kem/pke/cuda_pke_encrypt.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
+#include "ml_kem/cuda_ml_kem_encaps.cuh"
+#include "ml_kem/pke/cuda_pke_decrypt.cuh"
+#include "ml_kem/pke/cuda_pke_encrypt.cuh"
 
 namespace icicle::pqc::ml_kem {
 

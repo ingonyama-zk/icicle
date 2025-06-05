@@ -15,7 +15,7 @@ find_package(CUDAToolkit REQUIRED)
 # Note: whole-archive is used to ensure all symbols are included in the final binary, otherwise registration is skipped
 add_library(icicle_backend_cuda_pqc_device STATIC 
 src/cuda_pqc_device_api.cu
-src/cuda_pqc_ml_kem.cu
+src/ml_kem/cuda_pqc_ml_kem.cu
 )
 target_include_directories(icicle_backend_cuda_pqc_device PRIVATE include)
 add_library(icicle_backend_cuda_pqc_device_whole INTERFACE)

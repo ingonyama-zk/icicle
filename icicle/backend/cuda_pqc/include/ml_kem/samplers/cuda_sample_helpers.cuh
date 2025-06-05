@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_zq.cuh"
-#include "ml-kem/hash/cuda_sha3_32threads.cuh"
-#include "ml-kem/samplers/cuda_sample_utils.cuh"
+#include "ml_kem/ring/cuda_zq.cuh"
+#include "ml_kem/hash/cuda_sha3_32threads.cuh"
+#include "ml_kem/samplers/cuda_sample_utils.cuh"
 
 namespace icicle::pqc::ml_kem {
   __device__ void samplePolyCBD_2(const uint64_t sigma[4], Zq* poly, uint32_t N)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ml-kem/hash/cuda_hash_consts.cuh"
+#include "ml_kem/hash/cuda_hash_consts.cuh"
 
 namespace icicle::pqc::ml_kem {
   /*

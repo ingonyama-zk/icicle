@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ml-kem/ring/cuda_zq_math.cuh"
-#include "ml-kem/ring/cuda_poly.cuh"
-#include "ml-kem/packing/cuda_pack.cuh"
-#include "ml-kem/packing/cuda_unpack.cuh"
+#include "ml_kem/ring/cuda_zq_math.cuh"
+#include "ml_kem/ring/cuda_poly.cuh"
+#include "ml_kem/packing/cuda_pack.cuh"
+#include "ml_kem/packing/cuda_unpack.cuh"
 #include <cuda/barrier>
 
 namespace icicle::pqc::ml_kem::pke {
