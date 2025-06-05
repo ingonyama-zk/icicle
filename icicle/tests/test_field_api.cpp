@@ -881,6 +881,91 @@ TYPED_TEST(FieldTest, SumcheckSingleInputProgram)
   }
 }
 
+TYPED_TEST(FieldTest, SumcheckGetChallengeVector)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 4;
+
+  // generate inputs
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  TypeParam claimed_sum = TypeParam::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam eq = mle_polynomials[3][element_i];
+    claimed_sum = claimed_sum + (a * b - c) * eq;
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // ===== Prover side ======
+
+    // create transcript_config
+    SumcheckTranscriptConfig<TypeParam> transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", TypeParam::from(12));
+
+    ASSERT_NE(transcript_config.get_domain_separator_label().size(),
+              0); // assert label exists
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
+
+    CombineFunction<TypeParam> combine_func(EQ_X_AB_MINUS_C);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<TypeParam> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    ASSERT_EQ(transcript_config.get_domain_separator_label().size(), 0); // assert data was moved and not copied
+
+    // ===== Verifier side ======
+    // Note that the verifier is another machine and needs to regenerate the same transcript config.
+    // Also note that even if the same process, the transcript-config is moved since it may be large, so cannot reuse
+    // twice.
+    SumcheckTranscriptConfig<TypeParam> verifier_transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", TypeParam::from(12));
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+
+    std::vector<TypeParam> challenge_vector = prover_sumcheck.get_challenge_vector();
+    ASSERT_EQ(challenge_vector[0], TypeParam::zero());
+
+    for (int i = 0; i < std::log2(mle_poly_size); i++) {
+      ICICLE_LOG_INFO << "challenge_vector[" << i << "] = " << challenge_vector[i];
+    }
+  };
+  for (const auto& device : IcicleTestBase::s_registered_devices)
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
 #endif // SUMCHECK
 
 #ifdef FRI
