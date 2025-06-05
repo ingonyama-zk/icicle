@@ -1,6 +1,7 @@
 #include "icicle/errors.h"
 #include "icicle/backend/hash/poseidon_backend.h"
 #include "icicle/dispatcher.h"
+#include <algorithm>
 
 namespace icicle {
 

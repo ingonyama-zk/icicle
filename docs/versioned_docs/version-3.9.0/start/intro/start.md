@@ -13,7 +13,7 @@ import Link from '@docusaurus/Link';
 
   <Link to="/start/architecture/arch_overview" className="card-link">
     <div className="card-box">
-    <img src="/img/Arch.png" alt="Arch Icon" className="card-icon-left" />
+      <img alt="Arch Icon" className="card-icon-left arch-icon" />
       <h3>Architecture</h3>
       <p>Flexible, extensible framework for cryptographic multi-backend support.</p>
     </div>
@@ -21,31 +21,25 @@ import Link from '@docusaurus/Link';
 
   <Link to="/start/programmers_guide/general" className="card-link">
     <div className="card-box">
-      <img src="/img/Programguide.png" alt="Prog Icon" className="card-icon-left" />
-      <div className="card-text">
-        <h3>Programmer's Guide</h3>
-        <p>Consistent cryptographic APIs: NTT, MSM, ECNTT, polynomials.</p>
-      </div>
+      <img alt="Programmer's Guide Icon" className="card-icon-left prog-icon" />
+      <h3>Programmer's Guide</h3>
+      <p>Consistent cryptographic APIs: NTT, MSM, ECNTT, polynomials.</p>
     </div>
   </Link>
 
   <Link to="/start/integration-&-support/contributor-guide" className="card-link">
     <div className="card-box">
-      <img src="/img/Intandsup.png" alt="Int&Sup Icon" className="card-icon-left" />
-      <div className="card-text">
-        <h3>Integrations & Support</h3>
-        <p>Broad integrations with strong community and developer support.</p>
-      </div>
+      <img alt="Integrations & Support Icon" className="card-icon-left intsup-icon" />
+      <h3>Integrations & Support</h3>
+      <p>Broad integrations with strong community and developer support.</p>
     </div>
   </Link>
 
   <Link to="/apioverview" className="card-link">
     <div className="card-box">
-      <img src="/img/API.png" alt="API Icon" className="card-icon-left" />
-      <div className="card-text">
-        <h3>API</h3>
-        <p>Core ICICLE APIs: MSM, NTT, hashing with examples.</p>
-      </div>
+      <img alt="API Icon" className="card-icon-left api-icon" />
+      <h3>API</h3>
+      <p>Core ICICLE APIs: MSM, NTT, hashing with examples.</p>
     </div>
   </Link>
 

@@ -152,6 +152,11 @@ namespace icicle {
      */
     const F* get_final_poly() const { return m_final_poly.data(); }
 
+    /**
+     * @brief Get a const reference to the query proofs (for test and reconstruction purposes only).
+     */
+    const std::vector<std::vector<MerkleProof>>& get_query_proofs() const { return m_query_proofs; }
+
   private:
     std::vector<std::vector<MerkleProof>>
       m_query_proofs; // Matrix of Merkle proofs [query][round] - contains path, root, leaf. for each query, we have 2

@@ -12,7 +12,7 @@ const darkCodeTheme = themes.dracula;
 const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
-    showLastUpdateTime: false,
+    showLastUpdateTime: true,
     includeCurrentVersion: false,
     routeBasePath: '/',
     remarkPlugins: [math],
@@ -85,15 +85,15 @@ const navBarRightSide = [
     position: 'right',
     value: `
       <a href="https://ingonyama.com"
-         class="navbar__item ingo-paw"
-         title="Visit Ingonyama"
-         target="_blank"
-         rel="noopener noreferrer">
-        <img src="/img/Ingologo.svg" alt="Ingonyama logo" />
+        class="navbar__item ingo-paw"
+        title="Visit Ingonyama"
+        target="_blank"
+        rel="noopener noreferrer">
+        <img src="/img/Ingologo.svg" alt="Ingonyama logo" class="ingo-paw-logo" />
       </a>
     `,
   }
-  
+
   
 ] satisfies NavbarItem[];
 
@@ -160,7 +160,7 @@ const config: Config = {
     },
     colorMode: {
       defaultMode: 'light',
-      disableSwitch: true,
+      disableSwitch: false,
       respectPrefersColorScheme: false,
     },
     algolia: {
@@ -198,5 +198,7 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
 };
+
+
 
 export default config;

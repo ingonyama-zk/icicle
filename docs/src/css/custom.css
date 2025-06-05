@@ -15,6 +15,33 @@
   --ifm-code-font-size: 95%;
 }
 
+/* Force primary-colored links to use custom color in dark mode */
+
+/* Navbar link (e.g. "Docs") */
+[data-theme='dark'] .navbar__item.navbar__link--active {
+  color: #339BFF !important;
+}
+
+/* "Edit this page" link */
+[data-theme='dark'] .theme-edit-this-page {
+  color: #339BFF !important;
+}
+
+/* Pagination buttons (Previous/Next links) */
+[data-theme='dark'] .pagination-nav__link {
+  color: #339BFF !important;
+}
+
+/* Sidebar active item */
+[data-theme='dark'] .menu__link--active {
+  color: #339BFF !important;
+}
+
+/* Breadcrumbs active item */
+[data-theme='dark'] .breadcrumbs__item--active .breadcrumbs__link {
+  color: #339BFF !important;
+}
+
 /* ========== LOGO ABOVE SIDEBAR ========== */
 .navbar__brand {
   position: absolute;
@@ -64,6 +91,17 @@
   display: block;
 }
 
+/* Default (light mode) logo */
+.ingo-paw-logo {
+  content: url('/img/Ingologo.svg');
+}
+
+/* Dark mode logo */
+[data-theme='dark'] .ingo-paw-logo {
+  content: url('/img/darkmode/ingologo_drk.svg');
+}
+
+
 /* ========== GITHUB CTA BUTTON ========== */
 .github-cta-button {
   background-color: var(--ifm-color-primary);
@@ -87,115 +125,55 @@
 }
 
 /* ========== SIDEBAR STYLING ========== */
-/* Folder (group) items */
+
+/* Folder (group) titles */
 .menu__link--sublist {
   font-weight: bold !important;
   color: #000 !important;
   font-size: 1rem !important;
   margin-top: 1rem;
 }
-/* Remove top margin from the first group */
+
+/* First group: remove top margin */
 .menu__list > .menu__list-item:first-child > .menu__link--sublist {
   margin-top: 0;
 }
-/* Child items */
+
+/* Child items (files) */
 .menu__list .menu__list .menu__link {
   font-size: 0.85rem;
   color: #666;
   font-weight: normal;
 }
-/* Active sidebar item */
+
+/* Active item */
 .menu__link--active {
   color: var(--ifm-color-primary);
   font-weight: bold;
 }
-/* ========== CARDS STYLING ======== */
+
+/* ========== DARK MODE OVERRIDES ========== */
+[data-theme='dark'] .menu__link--sublist {
+  color: #fff !important;
+}
+
+[data-theme='dark'] .menu__list .menu__list .menu__link {
+  color: #dadada !important;
+}
+
+/* ========== CARDS STYLING ========== */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   margin-top: 2rem;
 }
 
-/* Stack cards on small screens */
 @media (max-width: 768px) {
   .card-grid {
     grid-template-columns: 1fr;
   }
 }
-
-.card-link {
-  text-decoration: none;
-  color: inherit;
-}
-
-.card-box {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 1.25rem;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.card-box:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  transform: translateY(-4px);
-}
-
-.card-box h3 {
-  margin-bottom: 0.5rem;
-  font-size: 1.1rem;
-}
-
-.card-box p {
-  font-size: 0.9rem;
-  color: #666;
-}
-
-
-.card-link {
-  text-decoration: none;
-  color: inherit;
-}
-
-.card-box {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 1.25rem;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.card-box:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  transform: translateY(-4px);
-}
-
-.card-box h3 {
-  margin-bottom: 0.5rem;
-  font-size: 1.1rem;
-}
-
-.card-box p {
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.card-icon-left {
-  width: 70px;
-  height: auto;
-}
-/* api cards */
 
 .card-row-3 {
   display: grid;
@@ -205,22 +183,106 @@
   width: 100%;
   height: auto;
 }
-.card-icon-top {
-  display: block;
-  width: 150px;        /* or whatever size you want */
-  height: auto;       /* maintain aspect ratio */
-  margin-bottom: 0.75rem;
-  margin-left: auto;
-  margin-right: auto;
-}
 
-
-/* Responsive fallback: stack on mobile */
 @media (max-width: 996px) {
   .card-row-3 {
     grid-template-columns: 1fr;
   }
 }
+
+.card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.card-box {
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-box:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+}
+
+.card-box h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+/* Light mode description text */
+.card-box p {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Dark mode: fix unreadable description */
+[data-theme='dark'] .card-box p {
+  color: #dadada;
+}
+
+.card-icon-left {
+  width: 70px;
+  height: auto;
+}
+
+.card-icon-top {
+  display: block;
+  width: 150px;
+  height: auto;
+  margin-bottom: 0.75rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* === Light mode card icons === */
+.arch-icon {
+  content: url('/img/Arch.png');
+}
+.prog-icon {
+  content: url('/img/Programguide.png');
+}
+.intsup-icon {
+  content: url('/img/Intandsup.png');
+}
+.api-icon {
+  content: url('/img/API.png');
+}
+
+/* === Dark mode card icons === */
+[data-theme='dark'] .arch-icon {
+  content: url('/img/darkmode/Arch_drk.svg');
+}
+[data-theme='dark'] .prog-icon {
+  content: url('/img/darkmode/Programguide_drk.svg');
+}
+[data-theme='dark'] .intsup-icon {
+  content: url('/img/darkmode/Intandsup_drk.svg');
+}
+[data-theme='dark'] .api-icon {
+  content: url('/img/darkmode/API_drk.svg');
+}
+
+/* === Swap navbar logo in dark mode === */
+
+/* Light theme (default) */
+.custom-navbar-logo {
+  content: url('/img/icicledocslogo.png');
+}
+
+/* Dark theme */
+[data-theme='dark'] .custom-navbar-logo {
+  content: url('/img/darkmode/icicledocslogo_drk.svg');
+}
+
 
 /* ===ecosystem cards==== */
 .ecosystem-grid {
@@ -272,6 +334,13 @@
   color: #555;
 }
 
+/* Hide duplicated logo ONLY inside sidebar on mobile */
+@media (max-width: 996px) {
+  .navbar-sidebar .navbar__brand {
+    display: none !important;
+  }
+}
+
 
 /* ========== LOGO IN TOC =========== */
 
@@ -295,6 +364,26 @@
     display: none;
   }
 }
+@media (max-width: 996px) {
+  .global-logo-corner {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (min-width: 997px) {
+  .global-logo-corner {
+    position: relative;
+    z-index: 10;
+  }
+}
+
+.theme-doc-sidebar-container {
+  position: relative;
+  z-index: 1;
+}
 
 
 /* ========== CODE BLOCK HIGHLIGHTING ========== */
@@ -307,6 +396,30 @@
 [data-theme='dark'] .docusaurus-highlight-code-line {
   background-color: rgba(0, 0, 0, 0.3);
 }
+
+/* === Light mode (default) === */
+.cpp-icon {
+  content: url('/img/cpp.png');
+}
+.go-icon {
+  content: url('/img/go.png');
+}
+.rust-icon {
+  content: url('/img/rust.png');
+}
+
+/* === Dark mode swap === */
+[data-theme='dark'] .cpp-icon {
+  content: url('/img/darkmode/cpp_drk.svg');
+}
+[data-theme='dark'] .go-icon {
+  content: url('/img/darkmode/go_drk.svg');
+}
+[data-theme='dark'] .rust-icon {
+  content: url('/img/darkmode/rust_drk.svg');
+}
+
+
 
 /* ========== MERMAID DARK MODE FIX ========== */
 [data-theme='dark'] {
