@@ -21,17 +21,14 @@ namespace icicle {
   };
 
   /**
-   * @brief Negacyclic NTT wrapper for R_q = Z_q[x] / (x^d + 1)
-   *
-   * Applies an NTT or inverse NTT (depending on `dir`) using a root of unity
-   * compatible with negacyclic convolution, i.e., using ψ where ω = ψ².
+   * @brief Negacyclic NTT for R_q = Z_q[x] / (x^d + 1)   
    *
    * @tparam PolyRing    Polynomial type with static degree and base field Zq
-   * @param Rq_vec       Input polynomials (in coefficient or evaluation domain)
+   * @param input        Input polynomials (in coefficient or evaluation domain)
    * @param size         Number of polynomials
-   * @param dir          Direction: NTT_FORWARD or NTT_INVERSE
+   * @param dir          Direction (ntt/intt)
    * @param config       NTT execution and layout configuration
-   * @param Tq_vec       Output polynomials (in evaluation or coefficient domain)
+   * @param output       Output polynomials (in evaluation or coefficient domain)
    */
   template <typename PolyRing>
   eIcicleError ntt(const PolyRing* input, size_t size, NTTDir dir, const NegacyclicNTTConfig& config, PolyRing* output)
@@ -54,8 +51,7 @@ namespace icicle {
     cyclic_ntt_config.batch_size = size;
     cyclic_ntt_config.columns_batch = false;
     cyclic_ntt_config.coset_gen = psi;
-    cyclic_ntt_config.ordering =
-      dir == NTTDir::kForward ? Ordering::kNR : Ordering::kRN; // Maybe can consider Mixed-order but it's not faster
+    cyclic_ntt_config.ordering = dir == NTTDir::kForward ? Ordering::kNR : Ordering::kRN;
 
     return ntt(reinterpret_cast<const Zq*>(input), degree, dir, cyclic_ntt_config, reinterpret_cast<Zq*>(output));
   }
