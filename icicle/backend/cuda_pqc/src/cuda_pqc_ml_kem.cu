@@ -14,6 +14,8 @@ namespace icicle::pqc::ml_kem {
   {
     CHK_INIT_IF_RETURN();
 
+    ICICLE_LOG_INFO << "keygen k: " << (int)Category::K;
+
     cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(config.stream);
     entropy =
       config.entropy_on_device
@@ -209,6 +211,7 @@ namespace icicle::pqc::ml_kem {
   // REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber1024Params, cuda_keygen_handler, cuda_encapsulate_handler,
   // cuda_decapsulate_handler); REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber768Params, cuda_keygen_handler,
   // cuda_encapsulate_handler, cuda_decapsulate_handler);
-  REGISTER_ML_KEM_BACKEND(
-    "CUDA-PQC", Kyber512Params, cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
+  REGISTER_ML_KEM512_BACKEND("CUDA-PQC", cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
+  REGISTER_ML_KEM768_BACKEND("CUDA-PQC", cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
+  REGISTER_ML_KEM1024_BACKEND("CUDA-PQC", cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
 } // namespace icicle::pqc::ml_kem

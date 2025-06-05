@@ -26,10 +26,7 @@ public:
   }
 
 protected:
-  void SetUp() override
-  {
-    ICICLE_CHECK(icicle_set_device("CUDA-PQC"));
-  }
+  void SetUp() override { ICICLE_CHECK(icicle_set_device("CUDA-PQC")); }
 };
 
 typedef testing::Types<Kyber512Params, Kyber768Params, Kyber1024Params> MLkemTypes;
