@@ -113,7 +113,7 @@ TEST_F(RingTestBase, VectorRnsConversion)
   }
 }
 
-TEST_F(RingTestBase, BalancedDecomposition)
+TEST_F(RingTestBase, BalancedDecompositionZQ)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
@@ -187,7 +187,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   } // device loop
 }
 
-TEST_F(RingTestBase, BalancedDecompositionErrorCases)
+TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
@@ -247,6 +247,146 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
   } // device loop
 }
 
+// This test verifies that balanced decomposition of a PolyRing is implemented correctly by recomposing manually
+TEST_F(RingTestBase, BalancedDecompositionPolyRing)
+{
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  // Get q from PolyRing::Base as signed 64-bit for safe arithmetic
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
+
+  // Generate a random input polynomial over PolyRing
+  PolyRing input_polynomial;
+  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), PolyRing::d);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    VecOpsConfig cfg{};
+    const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+    const std::vector<uint32_t> bases = {2, 3, 16, (1 << 20) + 1, q_sqrt};
+
+    for (uint32_t base : bases) {
+      // Compute the number of digits for the given base
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
+      std::vector<PolyRing> decomposed_polynomials(num_digits);
+
+      // Perform balanced decomposition into digits (for a single polynomial)
+      ICICLE_CHECK(
+        balanced_decomposition::decompose(&input_polynomial, 1, base, cfg, decomposed_polynomials.data(), num_digits));
+
+      // Recompose the original polynomial from digits
+      PolyRing recomposed_polynomial;
+      // Generate powers of base: [1, base, base^2, ..., base^{t-1}]
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(num_digits);
+      std::generate(powers.begin(), powers.end(), [&]() {
+        Zq current = power;
+        power = power * Zq::from(base);
+        return current;
+      });
+
+      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all PolyRing polynomials:
+      //            P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
+      std::vector<PolyRing> scaled_digits(num_digits);
+      ICICLE_CHECK(
+        vector_mul(decomposed_polynomials.data(), powers.data(), num_digits, VecOpsConfig{}, scaled_digits.data()));
+      // Sum across the digits to reconstruct the original polynomial
+      ICICLE_CHECK(vector_sum(scaled_digits.data(), num_digits, VecOpsConfig{}, &recomposed_polynomial));
+
+      // Verify recomposed polynomial matches the original input
+      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(PolyRing)));
+    }
+  }
+}
+
+// This test verifies that batch balanced decomposition and recomposition
+// on device memory correctly reconstruct the original PolyRing polynomials.
+// It also checks that the decomposition satisfies the L∞ bound.
+TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
+{
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  constexpr size_t degree = PolyRing::d;
+  constexpr size_t size = 1 << 10; // Number of PolyRing polynomials
+  const size_t total_zq_elements = degree * size;
+
+  // Get modulus q as signed integer for arithmetic safety
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
+  const int64_t q = *(const int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive q to allow int64 arithmetic";
+
+  // Generate random input polynomials over PolyRing
+  std::vector<PolyRing> input(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), total_zq_elements);
+
+  std::vector<PolyRing> recomposed(size);
+  const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    PolyRing *d_input = nullptr, *d_decomposed = nullptr, *d_recomposed = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(PolyRing)));
+
+    VecOpsConfig cfg{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    for (uint32_t base : bases) {
+      const size_t digits_per_coeff = balanced_decomposition::compute_nof_digits<Zq>(base);
+      const size_t decomposed_size = size * digits_per_coeff;
+
+      std::stringstream label_decompose, label_recompose;
+      label_decompose << "PolyRing Decomposition [device=" << device << ", base=" << base << "]";
+      label_recompose << "PolyRing Recomposition [device=" << device << ", base=" << base << "]";
+
+      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(PolyRing)));
+
+      // --- Step 1: Decomposition ---
+      START_TIMER(decompose);
+      ICICLE_CHECK(balanced_decomposition::decompose(d_input, size, base, cfg, d_decomposed, decomposed_size));
+      END_TIMER(decompose, label_decompose.str().c_str(), true);
+
+      // --- Step 2: Norm Bound Check (L∞) ---
+      {
+        VecOpsConfig norm_cfg{};
+        norm_cfg.is_a_on_device = true;
+        norm_cfg.batch_size = digits_per_coeff * size;
+
+        std::vector<char> is_norm_bound(norm_cfg.batch_size, false);
+        norm::check_norm_bound(
+          reinterpret_cast<Zq*>(d_decomposed), degree, eNormType::LInfinity, base / 2 + 1, norm_cfg,
+          reinterpret_cast<bool*>(is_norm_bound.data()));
+
+        for (size_t i = 0; i < norm_cfg.batch_size; ++i) {
+          ASSERT_TRUE(is_norm_bound[i]) << "Decomposed PolyRing polynomial " << i
+                                        << " exceeds expected balanced range for base = " << base;
+        }
+      }
+
+      // --- Step 3: Recomposition and Validation ---
+      START_TIMER(recompose);
+      ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
+      END_TIMER(recompose, label_recompose.str().c_str(), true);
+
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(PolyRing)));
+
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), size * sizeof(PolyRing)))
+        << "Recomposition mismatch for base = " << base;
+
+      icicle_free(d_decomposed);
+    }
+
+    icicle_free(d_input);
+    icicle_free(d_recomposed);
+  }
+}
+
 TEST_F(RingTestBase, JLProjectionTest)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
@@ -256,14 +396,14 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const size_t N = 1 << 16;       // Input vector size
   const size_t output_size = 256; // JL projected size
-  const int max_trials = 10; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
-                             // we allow repeating the check a few times.
+  const int max_trials = 10;      // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5.
+                                  // Therefore we allow repeating the check a few times.
 
   std::vector<field_t> input(N);
   std::vector<field_t> output(output_size);
 
-  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL lemma
-  // won't hold.
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL
+  // lemma won't hold.
   const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
   for (auto& x : input) {
     uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
