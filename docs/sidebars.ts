@@ -174,6 +174,11 @@ export default {
         },
         {
           type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/cpp/pqc_ml_kem",
+        },
+        {
+          type: "doc",
           label: "Serialization",
           id: "api/cpp/serialization",
         },
@@ -285,6 +290,11 @@ export default {
           type: "doc",
           label: "Sumcheck",
           id: "api/rust-bindings/sumcheck",
+        },
+        {
+          type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/rust-bindings/pqc-ml-kem",
         },
         {
           type: "doc",
