@@ -903,3 +903,34 @@ jobs:
             cd -
           fi
         done
+
+  test-pqc-ml-kem:
+    name: Build and test PQC ML-KEM on Linux
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format]
+    if: needs.check-changed-files.outputs.cpp == 'true' || needs.check-changed-files.outputs.rust == 'true'
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Build PQC library & tests
+      working-directory: ./icicle
+      run: |
+        INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPQC=ON -DCUDA_PQC_BACKEND=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -S . -B build
+        cmake --build build --target install -j
+
+    - name: Run C++ PQC Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        ctest --output-on-failure
+
+    - name: Run Rust ML-KEM Tests
+      working-directory: ./wrappers/rust/icicle-pqc/icicle-ml-kem
+      if: needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        export ICICLE_INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install
+        export LD_LIBRARY_PATH=$ICICLE_INSTALL_DIR/lib:$LD_LIBRARY_PATH
+        cargo test --release --verbose
