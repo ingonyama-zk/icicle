@@ -924,7 +924,7 @@ jobs:
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        ./icicle_pqc_tests --output-on-failure
+        ./test_pqc_api --output-on-failure
 
     - name: Run Rust ML-KEM Tests
       working-directory: ./wrappers/rust/icicle-pqc/icicle-ml-kem
