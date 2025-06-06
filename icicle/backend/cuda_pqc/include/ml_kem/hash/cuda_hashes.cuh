@@ -23,7 +23,7 @@ namespace icicle::pqc::ml_kem {
       c += SHAKE_256_RATE;
     }
 
-    // last aborb
+    // last absorb
     s_new = absorb<
       ((32 * (du * k + dv) - (SHAKE_256_RATE - 32)) % SHAKE_256_RATE), SHAKE_256_RATE, SHAKE_DELIM_BITS,
       SHAKE_DELIM_SUFFIX, false>(c, 0);
@@ -61,7 +61,7 @@ namespace icicle::pqc::ml_kem {
       ek += SHA3_256_RATE;
     }
 
-    // last aborb
+    // last absorb
     s_new = absorb<((384 * k + 32) % SHA3_256_RATE), SHA3_256_RATE, SHA3_DELIM_BITS, SHA3_DELIM_SUFFIX, false>(ek, 0);
     s ^= s_new;
     s = keccakf(s);

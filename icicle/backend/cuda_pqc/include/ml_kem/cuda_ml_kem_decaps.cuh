@@ -64,7 +64,7 @@ namespace icicle::pqc::ml_kem {
     compare_ciphertexts<k, du, dv>(c_pke, c, &success);
     // __shared__ __align__(16) uint8_t shared_key_bar[32];
     if (threadIdx.x < 32) {
-      // todo: make sure compare ciphertexts finished before using succsess in here
+      // todo: make sure compare ciphertexts finished before using success in here
       shared_key[threadIdx.x] =
         shared_key_bar[threadIdx.x] ^ (success & (shared_key_bar[threadIdx.x] ^ k_r[threadIdx.x]));
     }

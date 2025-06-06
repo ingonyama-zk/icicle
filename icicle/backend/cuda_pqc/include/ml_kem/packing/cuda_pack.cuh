@@ -28,7 +28,7 @@ namespace icicle::pqc::ml_kem {
     // todo: remove this somehow
     if (threadIdx.x >= 32) { return; }
 
-    // Pack into bytes. we need 8*d bits which is at mose 8*12=96 bits
+    // Pack into bytes. we need 8*d bits which is at most 8*12=96 bits
     __uint128_t packed_coeffs = 0;
 #pragma unroll
     for (int i = 0; i < coeffs_per_thread; ++i) {
