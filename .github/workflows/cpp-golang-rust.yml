@@ -917,7 +917,7 @@ jobs:
       working-directory: ./icicle
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=OFF -DCUDA_PQC_BACKEND=ON -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=OFF -DCUDA_PQC_BACKEND=ON -DPQC=ON -S . -B build
         cmake --build build -j
 
     - name: Run C++ PQC Tests
