@@ -881,6 +881,91 @@ TYPED_TEST(FieldTest, SumcheckSingleInputProgram)
   }
 }
 
+TYPED_TEST(FieldTest, SumcheckGetChallengeVector)
+{
+  int log_mle_poly_size = 13;
+  int mle_poly_size = 1 << log_mle_poly_size;
+  int nof_mle_poly = 4;
+
+  // generate inputs
+  std::vector<TypeParam*> mle_polynomials(nof_mle_poly);
+  for (int poly_i = 0; poly_i < nof_mle_poly; poly_i++) {
+    mle_polynomials[poly_i] = new TypeParam[mle_poly_size];
+    TypeParam::rand_host_many(mle_polynomials[poly_i], mle_poly_size);
+  }
+
+  // calculate the claimed sum
+  TypeParam claimed_sum = TypeParam::zero();
+  for (int element_i = 0; element_i < mle_poly_size; element_i++) {
+    const TypeParam a = mle_polynomials[0][element_i];
+    const TypeParam b = mle_polynomials[1][element_i];
+    const TypeParam c = mle_polynomials[2][element_i];
+    const TypeParam eq = mle_polynomials[3][element_i];
+    claimed_sum = claimed_sum + (a * b - c) * eq;
+  }
+
+  auto run = [&](
+               const std::string& dev_type, std::vector<TypeParam*>& mle_polynomials, const int mle_poly_size,
+               const TypeParam claimed_sum, const char* msg) {
+    Device dev = {dev_type, 0};
+    icicle_set_device(dev);
+
+    // ===== Prover side ======
+
+    // create transcript_config
+    SumcheckTranscriptConfig<TypeParam> transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", TypeParam::from(12));
+
+    ASSERT_NE(transcript_config.get_domain_separator_label().size(),
+              0); // assert label exists
+
+    std::ostringstream oss;
+    oss << dev_type << " " << msg;
+
+    // create sumcheck
+    auto prover_sumcheck = create_sumcheck<TypeParam>();
+
+    CombineFunction<TypeParam> combine_func(EQ_X_AB_MINUS_C);
+    SumcheckConfig sumcheck_config;
+    SumcheckProof<TypeParam> sumcheck_proof;
+
+    START_TIMER(sumcheck);
+    ICICLE_CHECK(prover_sumcheck.get_proof(
+      mle_polynomials, mle_poly_size, claimed_sum, combine_func, std::move(transcript_config), sumcheck_config,
+      sumcheck_proof));
+    END_TIMER(sumcheck, oss.str().c_str(), true);
+
+    ASSERT_EQ(transcript_config.get_domain_separator_label().size(), 0); // assert data was moved and not copied
+
+    // ===== Verifier side ======
+    // Note that the verifier is another machine and needs to regenerate the same transcript config.
+    // Also note that even if the same process, the transcript-config is moved since it may be large, so cannot reuse
+    // twice.
+    SumcheckTranscriptConfig<TypeParam> verifier_transcript_config(
+      create_keccak_256_hash(), "labelA", "labelB", "LabelC", TypeParam::from(12));
+    // create sumcheck
+    auto verifier_sumcheck = create_sumcheck<TypeParam>();
+    bool verification_pass = false;
+    ICICLE_CHECK(
+      verifier_sumcheck.verify(sumcheck_proof, claimed_sum, std::move(verifier_transcript_config), verification_pass));
+
+    ASSERT_EQ(true, verification_pass);
+
+    std::vector<TypeParam> challenge_vector = prover_sumcheck.get_challenge_vector();
+    ASSERT_EQ(challenge_vector[0], TypeParam::zero());
+
+    for (int i = 0; i < std::log2(mle_poly_size); i++) {
+      ICICLE_LOG_INFO << "challenge_vector[" << i << "] = " << challenge_vector[i];
+    }
+  };
+  for (const auto& device : IcicleTestBase::s_registered_devices)
+    run(device, mle_polynomials, mle_poly_size, claimed_sum, "Sumcheck");
+
+  for (auto& mle_poly_ptr : mle_polynomials) {
+    delete[] mle_poly_ptr;
+  }
+}
+
 #endif // SUMCHECK
 
 #ifdef FRI
@@ -1153,6 +1238,79 @@ TYPED_TEST(FieldTest, FriShouldFailCases)
     log_input_size
     /*log_domain_size*/,
     4 /*merkle_tree_arity*/, (1 << log_input_size) - 1 /*input_size*/);
+}
+
+TYPED_TEST(FieldTest, FriRejectsHighDegreeFinalPoly)
+{
+  // Use similar parameters as FriShouldFailCases
+  const int log_input_size = 10;
+  const int log_stopping_size = 4;
+  const size_t pow_bits = 0;
+  const size_t stopping_size = 1 << log_stopping_size;
+  const size_t stopping_degree = stopping_size - 1;
+  const size_t folding_factor = 2;
+  const size_t nof_queries = 10;
+  const size_t input_size = 1 << log_input_size;
+  const uint64_t output_store_min_layer = 0;
+  const size_t merkle_tree_arity = 2;
+
+  // Generate input polynomial evaluations
+  auto scalars = std::make_unique<TypeParam[]>(input_size);
+  TypeParam::rand_host_many(scalars.get(), input_size);
+
+  // Set up device
+  Device dev = {IcicleTestBase::reference_device(), 0};
+  icicle_set_device(dev);
+
+  // Initialize ntt domain
+  NTTInitDomainConfig init_domain_config = default_ntt_init_domain_config();
+  ICICLE_CHECK(ntt_init_domain(scalar_t::omega(log_input_size), init_domain_config));
+
+  // Define hashers for merkle tree
+  Hash hash = Keccak256::create(sizeof(TypeParam));
+  Hash compress = Keccak256::create(merkle_tree_arity * hash.output_size());
+
+  // Transcript config
+  const char* domain_separator_label = "domain_separator_label";
+  const char* round_challenge_label = "round_challenge_label";
+  const char* commit_phase_label = "commit_phase_label";
+  const char* nonce_label = "nonce_label";
+  std::vector<std::byte>&& public_state = {};
+  TypeParam seed_rng = TypeParam::one();
+
+  FriTranscriptConfig<TypeParam> transcript_config(
+    hash, domain_separator_label, round_challenge_label, commit_phase_label, nonce_label, std::move(public_state),
+    seed_rng);
+
+  FriConfig fri_config;
+  fri_config.nof_queries = nof_queries;
+  fri_config.pow_bits = pow_bits;
+  fri_config.folding_factor = folding_factor;
+  fri_config.stopping_degree = stopping_degree;
+  FriProof<TypeParam> fri_proof;
+
+  // Prove
+  eIcicleError err = prove_fri_merkle_tree<TypeParam>(
+    fri_config, transcript_config, scalars.get(), input_size, hash, compress, output_store_min_layer, fri_proof);
+  ICICLE_CHECK(err);
+
+  // Release domain
+  ICICLE_CHECK(ntt_release_domain<scalar_t>());
+
+  // Maliciously append a nonzero coefficient to the final polynomial (length mismatch)
+  std::vector<TypeParam> final_poly_vec(
+    fri_proof.get_final_poly(), fri_proof.get_final_poly() + fri_proof.get_final_poly_size());
+  final_poly_vec.push_back(TypeParam::from(42)); // Nonzero value
+  final_poly_vec.push_back(TypeParam::from(420));
+
+  // Replace the final polynomial in the proof (length mismatch)
+  FriProof<TypeParam> malicious_proof_length(fri_proof.get_query_proofs(), final_poly_vec, fri_proof.get_pow_nonce());
+
+  // Verify (length mismatch)
+  bool valid = true;
+  err = verify_fri_merkle_tree<TypeParam>(fri_config, transcript_config, malicious_proof_length, hash, compress, valid);
+  ASSERT_EQ(err, eIcicleError::SUCCESS);
+  ASSERT_EQ(valid, false);
 }
 
 #endif // FRI

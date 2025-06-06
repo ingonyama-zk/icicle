@@ -3,96 +3,100 @@
 #include "icicle/vec_ops.h" // For VecOpsConfig
 
 namespace icicle {
-
   namespace balanced_decomposition {
+
     /**
-     * @brief Compute the number of digits required to represent any element in Z_q
-     *        using balanced base decomposition with the given base.
+     * @brief Compute the number of digits required to represent any element
+     *        using balanced base-b decomposition.
      *
-     * Each field element (in [0, q)) may be represented using digits in the range
-     * [-b/2, b/2), where b = base. This method returns the number of such digits
-     * needed to fully represent any field element.
+     * Supports both:
+     *   - Scalar rings (e.g., Zq)
+     *   - Polynomial rings (e.g., Rq = Zq[x]/(X^d + 1), modeled as PolynomialRing<Zq, d>)
      *
-     * If base > 2, we add one extra digit to safely account for any additional
-     * carry caused by shifting digits into the balanced range (e.g., digit > b/2).
+     * The number of digits is computed per scalar coefficient (Zq), and applies
+     * equally to each coefficient in a polynomial.
      *
-     * @tparam T    Field element type (must match field_t::TLC == 2).
-     * @param base  The base to use for balanced decomposition (must be >= 2).
-     * @return      Number of digits needed for full representation.
+     * Each Zq element is represented using digits in the range (-b/2, b/2], and
+     * an extra digit is added when base > 2 to handle carry propagation.
+     *
+     * @tparam T    Element type. Must define `T::TLC == 2` and `T::get_modulus()`.
+     *              Typically `Zq` or `PolynomialRing<Zq, d>`.
+     * @param base  Decomposition base b (must be ≥ 2).
+     * @return      Number of balanced digits required to represent any element of type T.
      */
     template <typename T>
     static constexpr inline uint32_t compute_nof_digits(uint32_t base)
     {
       static_assert(T::TLC == 2, "Balanced decomposition assumes q ~64-bit");
 
-      // Get the modulus q as an int64_t
       constexpr auto q_storage = T::get_modulus();
       const int64_t q = *(const int64_t*)&q_storage;
       ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
 
-      // Compute minimum number of digits based on log(q) / log(base)
       const double log2_q = std::log2(static_cast<double>(q));
-      const double log2_base = std::log2(static_cast<double>(base));
-      const uint32_t base_digits = static_cast<uint32_t>(std::ceil(log2_q / log2_base));
+      const double log2_b = std::log2(static_cast<double>(base));
+      const uint32_t digits = static_cast<uint32_t>(std::ceil(log2_q / log2_b));
 
-      // For base > 2, we may need an extra digit due to the carry when balancing
-      return base > 2 ? base_digits + 1 : base_digits;
+      return base > 2 ? digits + 1 : digits;
     }
 
     /**
      * @brief Decomposes elements into balanced base-b digits.
      *
-     * For each input element x ∈ T, where T is a finite integer ring or field (e.g., Zq), this function computes a
-     * sequence of balanced digits r_i ∈ (-b/2, b/2] (interpreted in T) such that:
+     * For scalars (T = Zq):
+     *   Each element x ∈ Zq is decomposed as:
      *
-     *     x ≡ ∑ r_i * b^i mod q
+     *     x ≡ r₀ + b·r₁ + b²·r₂ + ... + b^{t−1}·r_{t−1} mod q
      *
-     * @tparam T Element type of the ring or field
+     * For polynomials (T = PolynomialRing<Zq, d>):
+     *   Each coefficient a_j ∈ Zq of a polynomial P(x) is decomposed independently into t digits:
      *
-     * @param input         Pointer to input elements.
-     *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
-     * @param input_size    Number of elements to decompose.
-     * @param base          The base b for decomposition (must fit in uint32_t).
-     * @param config        Configuration for the operation.
-     * @param output        Output buffer to store balanced digits per input element.
-     *                      Must have space for input_size * compute_nof_digits<T>(base) elements.
-     *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
-     * @param output_size   Number of output digits.
+     *     a_j = r_{j,0} + b·r_{j,1} + ... + b^{t−1}·r_{j,t−1}
      *
-     * @return              eIcicleError indicating success or failure.
+     *   The result is a sequence of t polynomials:
+     *
+     *     P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
+     *
+     *   Layout in memory: [P₀(x), P₁(x), P₂(x),..., P_{t−1}(x)] such that the t digits of each coefficient are d
+     * elements apart. output[i * t + k].coeffs[j] = r_{j,k} where:
+     *
+     * @tparam T             Element type (`Zq` or `PolynomialRing<Zq, d>`)
+     * @param input          Pointer to input elements.
+     * @param input_size     Number of input elements.
+     * @param base           Decomposition base `b`.
+     * @param config         Vectorization and device configuration.
+     * @param output         Output buffer (must hold input_size × digits elements).
+     * @param output_size    Number of output elements.
+     * @return               eIcicleError indicating success or failure.
      */
     template <typename T>
     eIcicleError decompose(
       const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size);
 
     /**
-     * @brief Recomposes T elements from balanced base-b digits.
+     * @brief Recomposes elements from balanced base-b digits.
      *
-     * Given a sequence of digits r_i ∈ (-b/2, b/2] per element,
-     * this function reconstructs:
+     * For each element x ∈ T, reconstructs:
      *
-     *     x ≡ ∑ r_i * b^i mod q
+     *     x = ∑ r_i · b^i mod q
      *
-     * and returns the result in canonical T representation.
+     * For PolynomialRing<Zq, d>, this applies to each coefficient independently.
+     * The input layout must match the output of `decompose()` and the output reconstructs each original polynomial as:
      *
-     * @tparam T Element type of the ring or field (e.g., uint64_t, int64_t).
+     *     P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
      *
-     * @param input         Pointer to input digits (flattened array).
-     *                      Must contain output_size * compute_nof_digits<T>(base) elements.
-     *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
-     * @param input_size    Number of input digits.
-     * @param base          The base b used in decomposition.
-     * @param config        Configuration for the operation.
-     * @param output        Output buffer to store recomposed elements.
-     *                      Must have space for output_size elements.
-     *                      If `config.batch_size > 1`, this should be a concatenated array of vectors.
-     * @param output_size   Number of elements to recompose.
-     *
-     * @return              eIcicleError indicating success or failure.
+     * @tparam T             Element type (`Zq` or `PolynomialRing<Zq, d>`)
+     * @param input          Pointer to flattened input digits.
+     * @param input_size     Number of input elements (digits × input_size).
+     * @param base           The base `b` used in decomposition.
+     * @param config         Vectorization and device configuration.
+     * @param output         Output buffer to store recomposed elements.
+     * @param output_size    Number of elements to reconstruct.
+     * @return               eIcicleError indicating success or failure.
      */
     template <typename T>
     eIcicleError recompose(
       const T* input, size_t input_size, uint32_t base, const VecOpsConfig& config, T* output, size_t output_size);
-  } // namespace balanced_decomposition
 
+  } // namespace balanced_decomposition
 } // namespace icicle
