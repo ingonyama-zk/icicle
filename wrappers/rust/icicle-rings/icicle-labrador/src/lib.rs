@@ -1,5 +1,6 @@
 pub mod balanced_decomposition;
 pub mod norm;
+#[cfg(feature = "ntt")]
 pub mod ntt;
 pub mod program;
 pub mod ring;
