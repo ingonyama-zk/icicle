@@ -46,6 +46,9 @@ fn main() {
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_path.display());
 
     // if cfg!(feature = "cuda_pqc_backend") { // currently only cuda_pqc_backend is supported, move to optional features after cpu support is added
-    println!("cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend", icicle_install_dir.display());
+    println!(
+        "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend",
+        icicle_install_dir.display()
+    );
     // }
 }

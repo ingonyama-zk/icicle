@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 icicle-core = { workspace = true }
-icicle-runtime = { workspace = true, features = ["cuda_pqc_backend"] } # currenty only cuda_pqc_backend is supported, move to optional features after cpu support is added
+icicle-runtime = { workspace = true, features = ["cuda_pqc_backend"] } # currently only cuda_pqc_backend is supported, move to optional features after cpu support is added
 
 [build-dependencies]
 cmake = "0.1.50"
