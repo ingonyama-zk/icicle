@@ -916,10 +916,9 @@ jobs:
     - name: Build PQC library & tests
       working-directory: ./icicle
       run: |
-        INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPQC=ON -DCUDA_PQC_BACKEND=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -S . -B build
-        cmake --build build --target install -j
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPQC=ON -DCUDA_PQC_BACKEND=ON -S . -B build
+        cmake --build build -j
 
     - name: Run C++ PQC Tests
       working-directory: ./icicle/build/tests
