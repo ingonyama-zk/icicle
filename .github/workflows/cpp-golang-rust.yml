@@ -917,14 +917,14 @@ jobs:
       working-directory: ./icicle
       run: |
         mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPQC=ON -DCUDA_PQC_BACKEND=ON -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=OFF -DCUDA_PQC_BACKEND=ON -S . -B build
         cmake --build build -j
 
     - name: Run C++ PQC Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: |
-        ctest --output-on-failure
+        ./icicle_pqc_tests --output-on-failure
 
     - name: Run Rust ML-KEM Tests
       working-directory: ./wrappers/rust/icicle-pqc/icicle-ml-kem

@@ -24,4 +24,4 @@ target_link_libraries(icicle_backend_cuda_pqc_device_whole INTERFACE
 
 # Link into icicle-pqc
 target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc_device_whole)
-target_link_libraries(icicle_pqc PRIVATE cudart)
+target_link_libraries(icicle_pqc PRIVATE CUDA::cudart)
