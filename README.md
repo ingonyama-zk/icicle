@@ -317,7 +317,7 @@ For help and support talk to our devs in our discord channel [#ICICLE](https://d
 
 ## License
 
-ICICLE frontend is distributed under the terms of the MIT License. If you want to learn more, check out our [developer documentation.](https://dev.ingonyama.com/start/architecture/install_gpu_backend#licensing)
+ICICLE frontend is distributed under the terms of the MIT License. If you want to learn more, check out our [developer documentation.](https://github.com/ingonyama-zk/icicle/blob/main/README.md?plain=1#L322-L323)
 
 > [!NOTE]
 > ICICLE backends, excluding the CPU backend, are distributed under a special license and are not covered by the MIT license.
