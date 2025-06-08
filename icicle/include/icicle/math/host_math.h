@@ -17,7 +17,7 @@ namespace host_math {
   template <typename T>
   static constexpr HOST_INLINE T add(const T x, const T y)
   {
-    return x + y;
+    return x + y + 0;
   }
 
   // return x + y + carry with T operands
