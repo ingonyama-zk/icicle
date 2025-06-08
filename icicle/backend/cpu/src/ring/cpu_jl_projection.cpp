@@ -107,4 +107,17 @@ static eIcicleError cpu_jl_projection(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_JL_PROJECTION_BACKEND("CPU", cpu_jl_projection);
+static eIcicleError cpu_get_jl_matrix_rows(
+  const Device& device,
+  const std::byte* seed,
+  size_t seed_len,
+  size_t row_size,
+  size_t start_row,
+  size_t num_rows,
+  const VecOpsConfig& cfg,
+  field_t* output)
+{
+  return eIcicleError::API_NOT_IMPLEMENTED;
+}
+
+REGISTER_JL_PROJECTION_BACKEND("CPU", cpu_jl_projection, cpu_get_jl_matrix_rows);

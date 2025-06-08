@@ -1,5 +1,6 @@
 #pragma once
 
+#include "errors.h"
 #include "icicle/vec_ops.h" // For VecOpsConfig
 
 namespace icicle {
@@ -52,6 +53,32 @@ namespace icicle {
     T* output,
     size_t output_size);
 
-  // TODO Yuval: try std::span
+  /// @brief Generates one or more rows of the JL projection matrix.
+  ///
+  /// Each row is generated on-the-fly using the same deterministic hash procedure used in jl_projection.
+  /// The values are in {-1, 0, 1} represented in the Zq field, and the result is returned in row-major order.
+  ///
+  /// This API enables downstream use of the raw JL matrix rows in constraint systems.
+  ///
+  /// @tparam T            Element type (e.g., Zq)
+  /// @param seed          Pointer to seed used for deterministic row generation
+  /// @param seed_len      Length of the seed buffer in bytes
+  /// @param row_size      Number of elements per row
+  /// @param start_row     Index of the first row to generate
+  /// @param num_rows      Number of rows to generate
+  /// @param cfg           Vector operation configuration
+  /// @param output        Output buffer (row-major layout, size = num_rows * row_size)
+  /// @return              eIcicleError::SUCCESS on success, or an appropriate error code
+  template <typename T>
+  eIcicleError get_jl_matrix_rows(
+    const std::byte* seed,
+    size_t seed_len,
+    size_t row_size,
+    size_t start_row,
+    size_t num_rows,
+    const VecOpsConfig& cfg,
+    T* output);
+
+  // Future: fused JL row generation into Rq polynomials with optional conjugation
 
 } // namespace icicle
