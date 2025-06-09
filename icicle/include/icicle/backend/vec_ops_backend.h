@@ -816,6 +816,8 @@ namespace icicle {
     size_t row_size,
     size_t start_row,
     size_t num_rows,
+    bool negacyclic_conjugate,
+    size_t polyring_size_for_conjugate,
     const VecOpsConfig& cfg,
     field_t* output)>;
 

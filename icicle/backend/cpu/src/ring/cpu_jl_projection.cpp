@@ -114,6 +114,8 @@ static eIcicleError cpu_get_jl_matrix_rows(
   size_t row_size,
   size_t start_row,
   size_t num_rows,
+  bool negacyclic_conjugate,
+  size_t polyring_size_for_conjugate,
   const VecOpsConfig& cfg,
   field_t* output)
 {
@@ -127,8 +129,13 @@ static eIcicleError cpu_get_jl_matrix_rows(
     return eIcicleError::INVALID_ARGUMENT;
   }
 
-  if (cfg.batch_size != 1) { // Required?
+  if (cfg.batch_size != 1) {
     ICICLE_LOG_ERROR << "Unsupported config: JL matrix row generation does not support batch.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  if (negacyclic_conjugate && polyring_size_for_conjugate == 0) {
+    ICICLE_LOG_ERROR << "Invalid conjugation config: conjugation requested but polynomial size is zero.";
     return eIcicleError::INVALID_ARGUMENT;
   }
 
@@ -152,6 +159,14 @@ static eIcicleError cpu_get_jl_matrix_rows(
 
       HashConfig hash_cfg{};
 
+      // Static table: 0b00 → 0, 0b01 → +1, 0b10 → -1, 0b11 → 0
+      static const field_t JL_LUT[4] = {
+        field_t::zero(),              // 0b00
+        field_t::one(),               // 0b01
+        field_t::neg(field_t::one()), // 0b10
+        field_t::zero()               // 0b11
+      };
+
       for (size_t hash_idx = 0; hash_idx < hashes_per_row; ++hash_idx) {
         uint32_t counter = static_cast<uint32_t>(row_index * hashes_per_row + hash_idx);
         std::memcpy(hash_input.data() + seed_len, &counter, sizeof(counter));
@@ -164,16 +179,25 @@ static eIcicleError cpu_get_jl_matrix_rows(
           const size_t byte_idx = entry_idx >> 2;
           const size_t bit_offset = (entry_idx & 0x3) * 2;
           const uint8_t byte = std::to_integer<uint8_t>(hash_output[byte_idx]);
-          const uint8_t rnd_2b = (byte >> bit_offset) & 0x3;
+          uint8_t rnd_2b = (byte >> bit_offset) & 0x3;
 
-          // Static table: 0b00 → 0, 0b01 → +1, 0b10 → -1, 0b11 → 0
-          static const field_t JL_LUT[4] = {
-            field_t::zero(),              // 0b00
-            field_t::one(),               // 0b01
-            field_t::neg(field_t::one()), // 0b10
-            field_t::zero()               // 0b11
-          };
-          row_out[col_idx] = JL_LUT[rnd_2b];
+          // Conjugation in a negacyclic polynomial-ring is implemented by flipping and inverting indices
+          if (negacyclic_conjugate) {
+            const size_t d = polyring_size_for_conjugate;
+            const size_t which_poly = col_idx / d;
+            const size_t j = col_idx % d;
+
+            size_t conj_idx = which_poly * d + (d - j - 1);
+
+            // Flip sign for odd powers
+            if (j % 2 != 0) {
+              // Swaps 1 ↔ 2, leaves 0 and 3 unchanged. This flips 1 and -1.
+              rnd_2b = (rnd_2b ^ 0x3) & 0x3;
+            }
+            row_out[conj_idx] = JL_LUT[rnd_2b];
+          } else { // no conjugate
+            row_out[col_idx] = JL_LUT[rnd_2b];
+          }
         }
       }
     });
