@@ -1,5 +1,4 @@
 #include "test_mod_arithmetic_api.h"
-#include "test_matrix_api.h"
 #include "icicle/sumcheck/sumcheck.h"
 #include "icicle/fri/fri.h"
 #include "icicle/fri/fri_config.h"
@@ -7,7 +6,7 @@
 #include "icicle/fri/fri_transcript_config.h"
 #include "icicle/sumcheck/sumcheck_proof_serializer.h"
 #include "icicle/fri/fri_proof_serializer.h"
-
+#include "test_matrix_api.h"
 // Derive all ModArith tests and add ring specific tests here
 template <typename T>
 class FieldTest : public ModArithTest<T>

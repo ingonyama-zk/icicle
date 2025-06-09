@@ -38,6 +38,19 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* out)>;
 
+    using scalarBinaryMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    scalar_t* mat_out)>;
+
+
+
   using scalarBitReverseOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_t* input, uint64_t size, const VecOpsConfig& config, scalar_t* output)>;
 
@@ -207,6 +220,18 @@ namespace icicle {
   namespace {                                                                                                          \
     static bool UNIQUE(_reg_matrix_transpose) = []() -> bool {                                                         \
       register_matrix_transpose(DEVICE_TYPE, FUNC);                                                                    \
+      return true;                                                                                                     \
+    }();                                                                                                               \
+  }
+
+  
+
+  void register_matrix_mult(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
+
+#define REGISTER_MATRIX_MULT_BACKEND(DEVICE_TYPE, FUNC)                                                               \
+  namespace {                                                                                                          \
+    static bool UNIQUE(_reg_matrix_mult) = []() -> bool {                                                             \
+      register_matrix_mult(DEVICE_TYPE, FUNC);                                                                       \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -814,6 +839,27 @@ namespace icicle {
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
         register_jl_projection(DEVICE_TYPE, FUNC);                                                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
+
+  using polyRingBinaryMatrixOpImpl = std::function<eIcicleError(
+    const Device& device,
+    const PolyRing* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const PolyRing* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    PolyRing* mat_out)>;
+
+  void register_poly_ring_matrix_mult(const std::string& deviceType, polyRingBinaryMatrixOpImpl impl);
+  #define REGISTER_POLY_RING_MATRIX_MULT_BACKEND(DEVICE_TYPE, FUNC)                                             \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_poly_ring_matrix_mult) = []() -> bool {                                           \
+        register_poly_ring_matrix_mult(DEVICE_TYPE, FUNC);                                                      \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
