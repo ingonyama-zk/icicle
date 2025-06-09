@@ -144,7 +144,7 @@ static eIcicleError cpu_get_jl_matrix_rows(
   const size_t entries_per_hash = keccak512.output_size() * 8 / bits_per_entry;
   const size_t hashes_per_row = (row_size + entries_per_hash - 1) / entries_per_hash;
 
-  const int nof_workers = get_nof_workers(cfg);
+  const int nof_workers = std::min((int)num_rows, get_nof_workers(cfg));
   tf::Taskflow taskflow;
   tf::Executor executor(nof_workers);
 
@@ -185,15 +185,15 @@ static eIcicleError cpu_get_jl_matrix_rows(
           if (negacyclic_conjugate) {
             const size_t d = polyring_size_for_conjugate;
             const size_t which_poly = col_idx / d;
-            const size_t j = col_idx % d;
+            const size_t coeff_idx = col_idx % d;
+            const bool is_constant_term = coeff_idx == 0;
 
-            size_t conj_idx = which_poly * d + (d - j - 1);
+            size_t conj_idx = which_poly * d + (is_constant_term ? 0 : d - coeff_idx);
 
-            // Flip sign for odd powers
-            if (j % 2 != 0) {
-              // Swaps 1 ↔ 2, leaves 0 and 3 unchanged. This flips 1 and -1.
-              rnd_2b = (rnd_2b ^ 0x3) & 0x3;
-            }
+            // Flip sign except for firs coeff
+            rnd_2b = is_constant_term
+                       ? rnd_2b
+                       : (rnd_2b ^ 0x3) & 0x3; // Swaps 1 ↔ 2, leaves 0 and 3 unchanged. This flips 1 and -1.
             row_out[conj_idx] = JL_LUT[rnd_2b];
           } else { // no conjugate
             row_out[col_idx] = JL_LUT[rnd_2b];

@@ -514,51 +514,77 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
   }
 }
 
+// This test verifies the JL-projection lemma: projecting an input vector of Rq polynomials
+// via Zq yields the same value as the constant term of an inner product in Rq with conjugated rows.
 TEST_F(RingTestBase, JLprojectionLemma)
 {
-  const size_t input_size = 1;        // Number of Rq polynomials
-  const size_t projected_size = 1;    // Number of projected rows
-  const size_t d = PolyRing::d;       // Degree of each Rq poly
-  const size_t row_size = input_size; // Number of Rq polys per row
+  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+
+  const size_t input_size = 8;        // Number of Rq polynomials in the input
+  const size_t projected_size = 16;   // Number of projected output values
+  const size_t d = PolyRing::d;       // Degree of each Rq polynomial
+  const size_t row_size = input_size; // Each JL row is composed of `input_size` Rq polynomials
 
   std::vector<PolyRing> input(input_size);
   std::vector<field_t> projected(projected_size);
 
-  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL
-  // lemma won't hold.
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
-  for (auto& p : input) {
-    for (auto& coeff : p.values) {
-      uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+  // Generate low-norm random input values to ensure correctness of the JL projection
+  for (auto& poly : input) {
+    for (auto& coeff : poly.values) {
+      const uint64_t val = rand_uint_32b() % (sqrt_q + 1); // Uniform in [0, sqrt_q]
       coeff = field_t::from(val);
     }
   }
 
-  // JL project using flat Zq view
+  // Prepare random seed
   std::byte seed[32];
   for (auto& b : seed) {
-    b = static_cast<std::byte>(rand_uint_32b() % 256);
+    b = static_cast<std::byte>(rand_uint_32b() & 0xFF);
   }
 
-  ICICLE_CHECK(jl_projection((const Zq*)input.data(), input_size * d, seed, 32, {}, projected.data(), projected_size));
+  for (const auto& device : s_registered_devices) {
+    if (device == "CUDA") continue; // TODO: implement CUDA backend
 
-  // Generate JL matrix row-by-row, compute inner product and check the contant-term is exactly like the projected value
-  // computed above
-  for (int row_idx = 0; row_idx < projected_size; ++row_idx) {
-    std::vector<PolyRing> jl_matrix_row(row_size);
-    ICICLE_CHECK(get_jl_matrix_rows<PolyRing>(
-      seed, 32, row_size, row_idx, 1 /*=1 row*/, true /*=conjugate*/, {}, jl_matrix_row.data()));
+    ICICLE_CHECK(icicle_set_device(device));
 
-    // For each row, compute ⟨row, input_rq⟩ and check coeff 0 == projected[i]
-    std::vector<PolyRing> elementwise_mul(row_size);
-    PolyRing inner_product_res;
-    ICICLE_CHECK(vector_mul(input.data(), jl_matrix_row.data(), input_size, {}, elementwise_mul.data()));
-    ICICLE_CHECK(vector_sum(elementwise_mul.data(), row_size, {}, &inner_product_res));
+    std::vector<PolyRing> input_ntt(input_size);
 
-    const field_t& constant_term_of_inner_product = reinterpret_cast<field_t&>(inner_product_res.values[0]);
-    EXPECT_EQ(constant_term_of_inner_product, projected[row_idx]);
+    // Project using flat Zq view (as if input is Zq vector)
+    ICICLE_CHECK(jl_projection(
+      reinterpret_cast<const Zq*>(input.data()), input_size * d, seed, sizeof(seed), {}, projected.data(),
+      projected_size));
+
+    // Pre-transform input into NTT domain
+    ICICLE_CHECK(ntt(input.data(), input_size, NTTDir::kForward, {}, input_ntt.data()));
+
+    for (size_t row_idx = 0; row_idx < projected_size; ++row_idx) {
+      std::vector<PolyRing> jl_row_conj(row_size);
+
+      // Generate JL matrix row as Rq polynomials, with conjugation
+      ICICLE_CHECK(get_jl_matrix_rows<PolyRing>(
+        seed, sizeof(seed), row_size, row_idx, 1, /* 1 row */
+        true /* conjugate */, {}, jl_row_conj.data()));
+
+      // Transform conjugated row into NTT domain
+      ICICLE_CHECK(ntt(jl_row_conj.data(), row_size, NTTDir::kForward, {}, jl_row_conj.data()));
+
+      // Compute ⟨JL_row, input⟩ using elementwise multiplication in NTT domain
+      std::vector<PolyRing> mul_result(row_size);
+      ICICLE_CHECK(vector_mul(input_ntt.data(), jl_row_conj.data(), row_size, {}, mul_result.data()));
+
+      PolyRing inner_product_ntt;
+      ICICLE_CHECK(vector_sum(mul_result.data(), row_size, {}, &inner_product_ntt));
+
+      // Inverse NTT to recover polynomial inner product
+      ICICLE_CHECK(ntt(&inner_product_ntt, 1, NTTDir::kInverse, {}, &inner_product_ntt));
+
+      // Validate that the constant term equals the Zq projection result
+      const field_t constant_term = inner_product_ntt.values[0];
+      EXPECT_EQ(constant_term, projected[row_idx]) << "Mismatch at row " << row_idx;
+    }
   }
 }
 
