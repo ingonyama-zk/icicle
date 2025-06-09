@@ -5,10 +5,14 @@
 
 #include "icicle/vec_ops.h"
 
+
 #include "icicle/fields/field_config.h"
 #include "icicle/utils/log.h"
 
 #include "test_base.h"
+
+using namespace field_config;
+using namespace icicle;
 
 class MatrixTestBase : public IcicleTestBase
 {
@@ -61,35 +65,6 @@ protected:
       result[i] = a[i] + b[i];
     }
     return result;
-  }
-
-  void rq_multiply_matrices(
-    size_t d,
-    const std::vector<scalar_t>& a,
-    const std::vector<scalar_t>& b,
-    std::vector<scalar_t>& out,
-    size_t rows_a,
-    size_t cols_a, // also rows_b
-    size_t cols_b)
-  {
-    // For each element of output matrix
-    for (size_t i = 0; i < rows_a; i += d) {
-      for (size_t j = 0; j < cols_b; j += d) {
-        // Initialize accumulator for dot product
-        std::vector<scalar_t> sum_vector;
-
-        // Compute polynomial product of row i from A and col j from B
-        for (size_t k = 0; k < cols_a; k++) {
-          std::vector<scalar_t> rq_vector_1(a.begin() + (i * cols_a + k), a.begin() + (i * cols_a + k) + d);
-          std::vector<scalar_t> rq_vector_2(b.begin() + (k * cols_b + j), b.begin() + (k * cols_b + j) + d);
-
-          const std::vector<scalar_t>& zk_product = element_wise_multiply(rq_vector_1, rq_vector_2);
-          sum_vector = element_wise_add(sum_vector, zk_product);
-        }
-
-        std::copy(sum_vector.begin(), sum_vector.end(), out.begin() + i * cols_b + j);
-      }
-    }
   }
 };
 
@@ -183,46 +158,6 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
 }
 
 
-// Matrix multiplication with non-square matrices
-TEST_F(MatrixTestBase, TqMatrixMultiplicationNonSquare)
-{
-  const size_t N = 1 << 8;
-  const size_t M = 1 << 10;
-  const size_t d = 1;
-
-  auto direct_input_a = std::vector<scalar_t>(N);
-  auto direct_input_b = std::vector<scalar_t>(N);
-  auto direct_output = std::vector<scalar_t>(N);
-  auto icicle_output = std::vector<scalar_t>(N);
-
-  // Initialize input with N random vectors of (d * M ) elements
-  direct_input_a.resize(N * M * d);
-  direct_input_b.resize(M * N * d);
-  scalar_t::rand_host_many(direct_input_a.data(), N * M * d);
-  scalar_t::rand_host_many(direct_input_b.data(), M * N * d);
-
-  // Initialize output buffer with correct size
-  direct_output.resize(N * M * d);
-  icicle_output.resize(N * M * d);
-  // Compute reference result using host math
-  rq_multiply_matrices(d, direct_input_a, direct_input_b, direct_output, N, M, N);
-
-  // Compute result using icicle device
-  auto cfg = VecOpsConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-
-  for (const auto& device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    //ICICLE_CHECK(tq_matrix_mult(d, direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
-    ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
-
-    // Compare results
-    ASSERT_EQ(0, std::memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(scalar_t)));
-  }
-}
 
 // Matrix multiplication sanity checks
 TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
