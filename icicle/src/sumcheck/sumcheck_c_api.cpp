@@ -335,5 +335,35 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_proof_deserialize)(
   return BinarySerializer<SumcheckProof<scalar_t>>::deserialize(buffer, size, **sumcheck_proof_handle);
 }
 
+/**
+ * @brief Gets the challenge vector from a Sumcheck instance.
+ * 
+ * The challenge vector contains the alpha values used in each round of the sumcheck protocol.
+ * The first challenge is always zero (as per protocol design), while subsequent challenges
+ * are derived from the previous round's polynomial.
+ * 
+ * @param sumcheck_handle Pointer to the Sumcheck instance to get the challenge vector from.
+ * @param challenge_vector Pointer to store the challenge vector. Must have sufficient space allocated.
+ * @param challenge_vector_size Pointer to store the size of the challenge vector.
+ * @return eIcicleError indicating the success or failure of the operation.
+ *         - SUCCESS if the challenge vector was retrieved successfully
+ *         - INVALID_ARGUMENT if sumcheck_handle is null
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_challenge_vector)(
+  SumcheckHandle* sumcheck_handle, scalar_t* challenge_vector, uint64_t* challenge_vector_size)
+{
+  if (!sumcheck_handle) {
+    ICICLE_LOG_ERROR << "Cannot get challenge vector from a null Sumcheck instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  ICICLE_LOG_DEBUG << "Getting challenge vector from Sumcheck instance from FFI";
+  std::vector<scalar_t> vec = sumcheck_handle->get_challenge_vector();
+  *challenge_vector_size = vec.size();
+  std::copy(vec.begin(), vec.end(), challenge_vector);
+
+  return eIcicleError::SUCCESS;
+}
+
 /***************** END SumcheckProof **********************/
 } // extern "C"

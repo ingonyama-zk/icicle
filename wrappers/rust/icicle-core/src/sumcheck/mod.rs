@@ -12,12 +12,21 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::ffi::c_void;
 
 /// Configuration for the Sumcheck protocol's transcript.
+/// 
+/// This structure holds the configuration parameters needed for the transcript
+/// in the Sumcheck protocol, including hash function, domain labels, and RNG settings.
 pub struct SumcheckTranscriptConfig<'a, F> {
+    /// The hash function used for transcript generation
     pub hash: &'a Hasher,
+    /// Label used for domain separation in the transcript
     pub domain_separator_label: Vec<u8>,
+    /// Label used for round polynomials in the transcript
     pub round_poly_label: Vec<u8>,
+    /// Label used for round challenges in the transcript
     pub round_challenge_label: Vec<u8>,
+    /// Whether to use little-endian byte order
     pub little_endian: bool,
+    /// Random number generator seed for transcript generation
     pub seed_rng: F,
 }
 
@@ -115,20 +124,28 @@ where
     }
 }
 
+/// Configuration for the Sumcheck protocol.
+/// 
+/// This structure holds runtime configuration parameters that control how the
+/// Sumcheck protocol executes, including device settings and performance options.
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct SumcheckConfig {
-    /**< Stream for asynchronous execution. Default is nullptr. */
+    /// Stream for asynchronous execution. Default is nullptr.
     pub stream: IcicleStreamHandle,
-    /**< If true, then use extension field for the fiat shamir result. Recommended for small fields for security*/
+    /// If true, use extension field for the fiat shamir result.
+    /// Recommended for small fields for security.
     pub use_extension_field: bool,
-    /**< Number of input chunks to hash in batch. Default is 1. */
+    /// Number of input chunks to hash in batch. Default is 1.
     pub batch: u64,
-    /**< True if inputs reside on the device (e.g., GPU), false if on the host (CPU). Default is false. */
+    /// True if inputs reside on the device (e.g., GPU), false if on the host (CPU).
+    /// Default is false.
     pub are_inputs_on_device: bool,
-    /**< True to run the hash asynchronously, false to run synchronously. Default is false. */
+    /// True to run the hash asynchronously, false to run synchronously.
+    /// Default is false.
     pub is_async: bool,
-    /**< Pointer to backend-specific configuration extensions. Default is nullptr. */
+    /// Pointer to backend-specific configuration extensions.
+    /// Default is nullptr.
     pub ext: ConfigExtension,
 }
 
@@ -146,15 +163,32 @@ impl Default for SumcheckConfig {
 }
 
 /// Trait for Sumcheck operations, including proving and verification.
+/// 
+/// This trait defines the core functionality of the Sumcheck protocol,
+/// including proof generation and verification. It is generic over the
+/// field type and configuration.
 pub trait Sumcheck {
+    /// The field type used in the protocol
     type Field: FieldImpl + Arithmetic;
+    /// The field configuration type
     type FieldConfig: FieldConfig + GenerateRandom<Self::Field> + FieldArithmetic<Self::Field>;
+    /// The proof type used in the protocol
     type Proof: SumcheckProofOps<Self::Field>;
 
+    /// Creates a new instance of the Sumcheck protocol.
     fn new() -> Result<Self, eIcicleError>
     where
         Self: Sized;
 
+    /// Generates a proof for the given MLE polynomials and claimed sum.
+    /// 
+    /// # Arguments
+    /// * `mle_polys` - Slice of MLE polynomials to prove
+    /// * `mle_poly_size` - Size of each MLE polynomial
+    /// * `claimed_sum` - The claimed sum to prove
+    /// * `combine_function` - Function to combine MLE polynomials
+    /// * `transcript_config` - Configuration for the transcript
+    /// * `sumcheck_config` - Runtime configuration
     fn prove(
         &self,
         mle_polys: &[&(impl HostOrDeviceSlice<Self::Field> + ?Sized)],
@@ -165,19 +199,56 @@ pub trait Sumcheck {
         sumcheck_config: &SumcheckConfig,
     ) -> Self::Proof;
 
+    /// Verifies a Sumcheck proof against a claimed sum.
+    /// 
+    /// # Arguments
+    /// * `proof` - The proof to verify
+    /// * `claimed_sum` - The claimed sum to verify against
+    /// * `transcript_config` - Configuration for the transcript
+    /// 
+    /// # Returns
+    /// * `Ok(true)` if verification succeeds
+    /// * `Ok(false)` if verification fails
+    /// * `Err(e)` if an error occurs during verification
     fn verify(
         &self,
         proof: &Self::Proof,
         claimed_sum: Self::Field,
         transcript_config: &SumcheckTranscriptConfig<Self::Field>,
     ) -> Result<bool, eIcicleError>;
+
+    /// Retrieves the challenge vector from the Sumcheck instance.
+    /// 
+    /// The challenge vector contains the alpha values used in each round
+    /// of the protocol. The first challenge is always zero (as per protocol
+    /// design), while subsequent challenges are derived from the previous
+    /// round's polynomial.
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<Field>)` containing the challenge vector
+    /// * `Err(e)` if an error occurs
+    fn get_challenge_vector(&self) -> Result<Vec<Self::Field>, eIcicleError>;
 }
 
+/// Trait for Sumcheck proof operations.
+/// 
+/// This trait defines operations that can be performed on a Sumcheck proof,
+/// including retrieving round polynomials and printing the proof.
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialize + DeserializeOwned
 where
     F: FieldImpl,
 {
+    /// Retrieves the round polynomials from the proof.
+    /// 
+    /// # Returns
+    /// * `Ok(Vec<Vec<F>>)` containing the round polynomials
+    /// * `Err(e)` if an error occurs
     fn get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
+    
+    /// Prints the proof for debugging purposes.
+    /// 
+    /// # Returns
+    /// * `eIcicleError` indicating success or failure
     fn print(&self) -> eIcicleError;
 }
 
@@ -223,6 +294,13 @@ macro_rules! impl_sumcheck {
                 claimed_sum: *const $field,
                 transcript_config: &FFISumcheckTranscriptConfig<$field>,
                 is_verified: &mut bool,
+            ) -> eIcicleError;
+
+            #[link_name = concat!($field_prefix, "_sumcheck_get_challenge_vector")]
+            fn icicle_sumcheck_get_challenge_vector(
+                handle: SumcheckHandle,
+                challenge_vector: *mut $field,
+                challenge_vector_size: *mut u64,
             ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_create")]
@@ -351,6 +429,29 @@ macro_rules! impl_sumcheck {
                 }
 
                 Ok(is_verified)
+            }
+
+            fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
+                let mut challenge_vector = Vec::with_capacity(20); // MAX_TOTAL_NOF_VARS
+                let mut size = 0u64;
+                
+                let err = unsafe {
+                    icicle_sumcheck_get_challenge_vector(
+                        self.handle,
+                        challenge_vector.as_mut_ptr(),
+                        &mut size,
+                    )
+                };
+
+                if err != eIcicleError::Success {
+                    return Err(err);
+                }
+
+                unsafe {
+                    challenge_vector.set_len(size as usize);
+                }
+
+                Ok(challenge_vector)
             }
         }
 
@@ -570,6 +671,14 @@ macro_rules! impl_sumcheck_tests {
                 |proof| serde_json::to_string(proof).unwrap(),
                 |s| serde_json::from_str(&s).unwrap(),
             );
+        }
+
+        #[test]
+        fn test_sumcheck_challenge_vector() {
+            // initialize();
+            test_utilities::test_set_ref_device();
+            let hash = Keccak256::new(0).unwrap();
+            check_sumcheck_challenge_vector::<SumcheckWrapper, Program>(&hash);
         }
     };
 }
