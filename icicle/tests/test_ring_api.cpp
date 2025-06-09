@@ -518,26 +518,14 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
 // via Zq yields the same value as the constant term of an inner product in Rq with conjugated rows.
 TEST_F(RingTestBase, JLprojectionLemma)
 {
-  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
-  constexpr auto q_storage = field_t::get_modulus();
-  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
-  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
-
   const size_t input_size = 8;        // Number of Rq polynomials in the input
   const size_t projected_size = 16;   // Number of projected output values
   const size_t d = PolyRing::d;       // Degree of each Rq polynomial
   const size_t row_size = input_size; // Each JL row is composed of `input_size` Rq polynomials
 
+  // Randomize input polynomials
   std::vector<PolyRing> input(input_size);
-  std::vector<field_t> projected(projected_size);
-
-  // Generate low-norm random input values to ensure correctness of the JL projection
-  for (auto& poly : input) {
-    for (auto& coeff : poly.values) {
-      const uint64_t val = rand_uint_32b() % (sqrt_q + 1); // Uniform in [0, sqrt_q]
-      coeff = field_t::from(val);
-    }
-  }
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), input_size * PolyRing::d);
 
   // Prepare random seed
   std::byte seed[32];
@@ -547,19 +535,19 @@ TEST_F(RingTestBase, JLprojectionLemma)
 
   for (const auto& device : s_registered_devices) {
     if (device == "CUDA") continue; // TODO: implement CUDA backend
-
     ICICLE_CHECK(icicle_set_device(device));
 
+    // Pre-transform input into NTT domain
     std::vector<PolyRing> input_ntt(input_size);
+    ICICLE_CHECK(ntt(input.data(), input_size, NTTDir::kForward, {}, input_ntt.data()));
 
     // Project using flat Zq view (as if input is Zq vector)
+    std::vector<field_t> projected(projected_size);
     ICICLE_CHECK(jl_projection(
       reinterpret_cast<const Zq*>(input.data()), input_size * d, seed, sizeof(seed), {}, projected.data(),
       projected_size));
 
-    // Pre-transform input into NTT domain
-    ICICLE_CHECK(ntt(input.data(), input_size, NTTDir::kForward, {}, input_ntt.data()));
-
+    // Check the JL-lemma
     for (size_t row_idx = 0; row_idx < projected_size; ++row_idx) {
       std::vector<PolyRing> jl_row_conj(row_size);
 
