@@ -1,4 +1,5 @@
 #include "test_mod_arithmetic_api.h"
+#include "test_matrix_api.h"
 #include "icicle/sumcheck/sumcheck.h"
 #include "icicle/fri/fri.h"
 #include "icicle/fri/fri_config.h"

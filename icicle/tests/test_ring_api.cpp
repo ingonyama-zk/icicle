@@ -1,4 +1,5 @@
 #include "test_mod_arithmetic_api.h"
+#include "test_matrix_api.h"
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
