@@ -458,6 +458,62 @@ TEST_F(RingTestBase, JLProjectionTest)
   }
 }
 
+TEST_F(RingTestBase, JLprojectionGetRowsTest)
+{
+  const size_t N = 1 << 20;       // Input vector size
+  const size_t output_size = 256; // Number of JL projection rows
+
+  std::vector<field_t> input(N, field_t::one()); // Input vector: all ones
+  std::vector<field_t> projected(output_size);   // Output from jl_projection
+  std::vector<field_t> matrix(output_size * N);  // Raw JL matrix rows (row-major)
+  std::vector<field_t> expected(output_size);    // Expected output computed via matrix row sums
+
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  for (const auto& device : s_registered_devices) {
+    if (device != "CPU") continue; // TODO: Extend to CUDA
+
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::stringstream projection_timer_label, generate_timer_label;
+    projection_timer_label << "JL-projection [device=" << device << "]";
+    generate_timer_label << "JL-generate [device=" << device << "]";
+
+    // Step 1: Compute projection via JL API
+    START_TIMER(projection);
+    ICICLE_CHECK(jl_projection(input.data(), N, seed, sizeof(seed), cfg, projected.data(), output_size));
+    END_TIMER(projection, projection_timer_label.str().c_str(), true);
+
+    // Step 2: Generate JL matrix rows explicitly
+    START_TIMER(generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      matrix.data() // Output: [num_rows x row_size]
+      ));
+    END_TIMER(generate, generate_timer_label.str().c_str(), true);
+
+    // Step 3: Since input = {1,1,...,1}, matrix-vector product is just summing each row
+    VecOpsConfig sum_cfg{};
+    sum_cfg.batch_size = output_size;
+    ICICLE_CHECK(vector_sum(matrix.data(), N, sum_cfg, expected.data()));
+
+    // Step 4: Compare expected vs projected
+    for (size_t i = 0; i < output_size; ++i) {
+      ASSERT_EQ(projected[i], expected[i])
+        << "Mismatch at output[" << i << "]: projected = " << projected[i] << ", expected = " << expected[i];
+    }
+  }
+}
+
 TEST_F(RingTestBase, NormBounded)
 {
   static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
