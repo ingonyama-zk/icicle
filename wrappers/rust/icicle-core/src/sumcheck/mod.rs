@@ -216,6 +216,13 @@ macro_rules! impl_sumcheck {
                 sumcheck_config: &SumcheckConfig,
             ) -> SumcheckProofHandle;
 
+            #[link_name = concat!($field_prefix, "_sumcheck_get_challenge_vector")]
+            fn icicle_sumcheck_get_challenge_vector(
+                handle: SumcheckHandle,
+                challenge_vector_out: *mut $field,
+                challenge_vector_size: *mut usize,
+            ) -> eIcicleError;
+
             #[link_name = concat!($field_prefix, "_sumcheck_verify")]
             fn icicle_sumcheck_verify(
                 handle: SumcheckHandle,
@@ -351,6 +358,44 @@ macro_rules! impl_sumcheck {
                 }
 
                 Ok(is_verified)
+            }
+        }
+
+        impl SumcheckWrapper {
+            /// Gets the challenge vector from the sumcheck instance.
+            /// This method should be called after `prove` to retrieve the challenge vector
+            /// that was generated during the proof process.
+            pub fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
+                let mut challenge_vector_size: usize = 0;
+
+                // First call to get the size
+                let err = unsafe {
+                    icicle_sumcheck_get_challenge_vector(
+                        self.handle,
+                        std::ptr::null_mut(),
+                        &mut challenge_vector_size,
+                    )
+                };
+
+                if err != eIcicleError::Success {
+                    return Err(err);
+                }
+
+                // Allocate vector and get the actual challenge vector
+                let mut challenge_vector = vec![$field::zero(); challenge_vector_size];
+                let err = unsafe {
+                    icicle_sumcheck_get_challenge_vector(
+                        self.handle,
+                        challenge_vector.as_mut_ptr(),
+                        &mut challenge_vector_size,
+                    )
+                };
+
+                if err != eIcicleError::Success {
+                    return Err(err);
+                }
+
+                Ok(challenge_vector)
             }
         }
 
@@ -513,8 +558,13 @@ macro_rules! impl_sumcheck_tests {
         use super::SumcheckWrapper;
         use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
+        use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
+        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+        use icicle_core::traits::{FieldImpl, Arithmetic, GenerateRandom};
+        use icicle_runtime::errors::eIcicleError;
         use icicle_hash::keccak::Keccak256;
         use icicle_runtime::{device::Device, runtime, test_utilities};
+        use icicle_runtime::memory::HostSlice;
         use serde_json;
         use std::sync::Once;
 
@@ -571,5 +621,72 @@ macro_rules! impl_sumcheck_tests {
                 |s| serde_json::from_str(&s).unwrap(),
             );
         }
+
+        #[test]
+        fn test_sumcheck_get_challenge_vector() {
+            // Custom initialization that doesn't require 2 devices
+            use icicle_runtime::runtime;
+            runtime::load_backend_from_env_or_default().unwrap();
+
+            let hash = Keccak256::new(0).unwrap();
+
+            let log_mle_poly_size = 10u64;
+            let mle_poly_size = 1 << log_mle_poly_size;
+            let nof_mle_poly = 4;
+            let seed_rng = <$field as FieldImpl>::Config::generate_random(1)[0];
+
+            let config = SumcheckTranscriptConfig::new(
+                &hash,
+                b"DomainLabel".to_vec(),
+                b"PolyLabel".to_vec(),
+                b"ChallengeLabel".to_vec(),
+                true,
+                seed_rng,
+            );
+
+            let mut mle_polys = Vec::with_capacity(nof_mle_poly);
+            for _ in 0..nof_mle_poly {
+                let mle_poly_random = <$field as FieldImpl>::Config::generate_random(mle_poly_size);
+                mle_polys.push(mle_poly_random);
+            }
+
+            let mut claimed_sum = <$field as FieldImpl>::zero();
+            for i in 0..mle_poly_size {
+                let a = mle_polys[0][i];
+                let b = mle_polys[1][i];
+                let c = mle_polys[2][i];
+                let eq = mle_polys[3][i];
+                claimed_sum = claimed_sum + (a * b - c) * eq;
+            }
+
+            let mle_poly_hosts = mle_polys
+                .iter()
+                .map(|poly| HostSlice::from_slice(poly))
+                .collect::<Vec<&HostSlice<$field>>>();
+
+            let sumcheck = SumcheckWrapper::new().unwrap();
+            let combine_func = Program::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+            let sumcheck_config = SumcheckConfig::default();
+
+            // Test challenge vector before prove (should be empty)
+            let challenges_before = sumcheck.get_challenge_vector().unwrap();
+            assert_eq!(challenges_before.len(), 0);
+
+            // Generate proof
+            let _proof = sumcheck.prove(
+                mle_poly_hosts.as_slice(),
+                mle_poly_size as u64,
+                claimed_sum,
+                combine_func,
+                &config,
+                &sumcheck_config,
+            );
+
+            // Test challenge vector after prove
+            let challenges_after = sumcheck.get_challenge_vector().unwrap();
+            assert_eq!(challenges_after.len(), log_mle_poly_size as usize);
+            assert_eq!(challenges_after[0], <$field as FieldImpl>::zero());
+        }
+
     };
 }

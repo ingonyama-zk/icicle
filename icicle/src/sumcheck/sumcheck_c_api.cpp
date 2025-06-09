@@ -4,6 +4,7 @@
 #include "icicle/sumcheck/sumcheck_proof_serializer.h"
 
 using namespace field_config;
+using namespace icicle;
 
 extern "C" {
 
@@ -112,6 +113,33 @@ SumcheckProof<scalar_t>* CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_proof)(
     *sumcheck_config, *sumcheck_proof);
 
   return sumcheck_proof;
+}
+
+/**
+ * @brief Gets the challenge vector from a Sumcheck instance.
+ * @param sumcheck_handle Pointer to the Sumcheck instance.
+ * @param challenge_vector_out Pointer to output array where challenge vector will be written.
+ * @param challenge_vector_size Pointer to size_t that will be set to the size of the challenge vector.
+ * @return Error code of type eIcicleError.
+ */
+eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_challenge_vector)(
+  const SumcheckHandle* sumcheck_handle,
+  scalar_t* challenge_vector_out,
+  size_t* challenge_vector_size)
+{
+  try {
+    std::vector<scalar_t> challenge_vector = sumcheck_handle->get_challenge_vector();
+    *challenge_vector_size = challenge_vector.size();
+
+    if (challenge_vector_out != nullptr) {
+      std::copy(challenge_vector.begin(), challenge_vector.end(), challenge_vector_out);
+    }
+
+    return eIcicleError::SUCCESS;
+  } catch (const std::exception& ex) {
+    ICICLE_LOG_ERROR << "Error in sumcheck_get_challenge_vector: " << ex.what();
+    return eIcicleError::UNKNOWN_ERROR;
+  }
 }
 
 /**

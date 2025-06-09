@@ -129,6 +129,10 @@ pub fn main() {
             PreDefinedProgram::EQtimesABminusC,
         )
         .unwrap();
+    // Check challenge vector before proving (should be empty)
+    let challenges_before = sumcheck.get_challenge_vector().unwrap();
+    info!("Challenge vector before prove: length={}", challenges_before.len());
+
     let prover_time = Instant::now();
     let proof = sumcheck.prove(
         &mle_poly_hosts,
@@ -141,6 +145,32 @@ pub fn main() {
         &sumcheck_config,
     );
     info!("Prover time {:?}", prover_time.elapsed());
+
+    // Check challenge vector after proving
+    let challenges_after = sumcheck.get_challenge_vector().unwrap();
+    let expected_length = SAMPLES.ilog2() as usize;
+    info!("Challenge vector after prove: length={}, expected={}", challenges_after.len(), expected_length);
+
+    // Validate challenge vector length and protocol correctness
+    if challenges_after.len() != expected_length {
+        eprintln!("Challenge vector length mismatch!");
+    }
+
+    // Verify first challenge is zero (sumcheck protocol property)
+    if !challenges_after.is_empty() && challenges_after[0] != Fr::zero() {
+        info!("First challenge is non-zero: {:?}", challenges_after[0]);
+    }
+
+    // Display first few and last few challenges for inspection
+    // if challenges_after.len() > 0 {
+    //     info!("First challenge: {:?}", challenges_after[0]);
+    //     if challenges_after.len() > 1 {
+    //         info!("Second challenge: {:?}", challenges_after[1]);
+    //     }
+    //     if challenges_after.len() > 2 {
+    //         info!("Last challenge: {:?}", challenges_after[challenges_after.len()-1]);
+    //     }
+    // }
     set_backend_cpu();
     //experiment with fake sum or fake proof
     let verify_time = Instant::now();

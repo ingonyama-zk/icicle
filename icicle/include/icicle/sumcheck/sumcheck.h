@@ -110,7 +110,7 @@ namespace icicle {
         mle_polynomials, mle_polynomial_size, claimed_sum, combine_function, std::move(transcript_config),
         sumcheck_config, const_cast<F*>(m_challenge_vector.data()), sumcheck_proof);
     }
-    std::vector<F> get_challenge_vector() { return m_challenge_vector; }
+    std::vector<F> get_challenge_vector() const { return m_challenge_vector; }
 
     /**
      * @brief Verify an element against the Sumcheck round polynomial.
