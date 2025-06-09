@@ -123,9 +123,7 @@ SumcheckProof<scalar_t>* CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_proof)(
  * @return Error code of type eIcicleError.
  */
 eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_challenge_vector)(
-  const SumcheckHandle* sumcheck_handle,
-  scalar_t* challenge_vector_out,
-  size_t* challenge_vector_size)
+  const SumcheckHandle* sumcheck_handle, scalar_t* challenge_vector_out, size_t* challenge_vector_size)
 {
   try {
     std::vector<scalar_t> challenge_vector = sumcheck_handle->get_challenge_vector();

@@ -370,11 +370,7 @@ macro_rules! impl_sumcheck {
 
                 // First call to get the size
                 let err = unsafe {
-                    icicle_sumcheck_get_challenge_vector(
-                        self.handle,
-                        std::ptr::null_mut(),
-                        &mut challenge_vector_size,
-                    )
+                    icicle_sumcheck_get_challenge_vector(self.handle, std::ptr::null_mut(), &mut challenge_vector_size)
                 };
 
                 if err != eIcicleError::Success {
@@ -557,14 +553,14 @@ macro_rules! impl_sumcheck_tests {
     ) => {
         use super::SumcheckWrapper;
         use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
+        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
         use icicle_core::sumcheck::tests::*;
         use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-        use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
-        use icicle_core::traits::{FieldImpl, Arithmetic, GenerateRandom};
-        use icicle_runtime::errors::eIcicleError;
+        use icicle_core::traits::{Arithmetic, FieldImpl, GenerateRandom};
         use icicle_hash::keccak::Keccak256;
-        use icicle_runtime::{device::Device, runtime, test_utilities};
+        use icicle_runtime::errors::eIcicleError;
         use icicle_runtime::memory::HostSlice;
+        use icicle_runtime::{device::Device, runtime, test_utilities};
         use serde_json;
         use std::sync::Once;
 
@@ -669,7 +665,9 @@ macro_rules! impl_sumcheck_tests {
             let sumcheck_config = SumcheckConfig::default();
 
             // Test challenge vector before prove (should be empty)
-            let challenges_before = sumcheck.get_challenge_vector().unwrap();
+            let challenges_before = sumcheck
+                .get_challenge_vector()
+                .unwrap();
             assert_eq!(challenges_before.len(), 0);
 
             // Generate proof
@@ -683,10 +681,11 @@ macro_rules! impl_sumcheck_tests {
             );
 
             // Test challenge vector after prove
-            let challenges_after = sumcheck.get_challenge_vector().unwrap();
+            let challenges_after = sumcheck
+                .get_challenge_vector()
+                .unwrap();
             assert_eq!(challenges_after.len(), log_mle_poly_size as usize);
             assert_eq!(challenges_after[0], <$field as FieldImpl>::zero());
         }
-
     };
 }
