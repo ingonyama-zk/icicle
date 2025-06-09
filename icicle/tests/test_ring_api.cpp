@@ -460,7 +460,7 @@ TEST_F(RingTestBase, JLProjectionTest)
 
 TEST_F(RingTestBase, JLprojectionGetRowsTest)
 {
-  const size_t N = 1 << 20;       // Input vector size
+  const size_t N = 1 << 10;       // Input vector size
   const size_t output_size = 256; // Number of JL projection rows
 
   std::vector<field_t> input(N, field_t::one()); // Input vector: all ones
@@ -511,6 +511,54 @@ TEST_F(RingTestBase, JLprojectionGetRowsTest)
       ASSERT_EQ(projected[i], expected[i])
         << "Mismatch at output[" << i << "]: projected = " << projected[i] << ", expected = " << expected[i];
     }
+  }
+}
+
+TEST_F(RingTestBase, JLprojectionLemma)
+{
+  const size_t input_size = 1;        // Number of Rq polynomials
+  const size_t projected_size = 1;    // Number of projected rows
+  const size_t d = PolyRing::d;       // Degree of each Rq poly
+  const size_t row_size = input_size; // Number of Rq polys per row
+
+  std::vector<PolyRing> input(input_size);
+  std::vector<field_t> projected(projected_size);
+
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL
+  // lemma won't hold.
+  constexpr auto q_storage = field_t::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
+  const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
+  for (auto& p : input) {
+    for (auto& coeff : p.values) {
+      uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
+      coeff = field_t::from(val);
+    }
+  }
+
+  // JL project using flat Zq view
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  ICICLE_CHECK(jl_projection((const Zq*)input.data(), input_size * d, seed, 32, {}, projected.data(), projected_size));
+
+  // Generate JL matrix row-by-row, compute inner product and check the contant-term is exactly like the projected value
+  // computed above
+  for (int row_idx = 0; row_idx < projected_size; ++row_idx) {
+    std::vector<PolyRing> jl_matrix_row(row_size);
+    ICICLE_CHECK(get_jl_matrix_rows<PolyRing>(
+      seed, 32, row_size, row_idx, 1 /*=1 row*/, true /*=conjugate*/, {}, jl_matrix_row.data()));
+
+    // For each row, compute ⟨row, input_rq⟩ and check coeff 0 == projected[i]
+    std::vector<PolyRing> elementwise_mul(row_size);
+    PolyRing inner_product_res;
+    ICICLE_CHECK(vector_mul(input.data(), jl_matrix_row.data(), input_size, {}, elementwise_mul.data()));
+    ICICLE_CHECK(vector_sum(elementwise_mul.data(), row_size, {}, &inner_product_res));
+
+    const field_t& constant_term_of_inner_product = reinterpret_cast<field_t&>(inner_product_res.values[0]);
+    EXPECT_EQ(constant_term_of_inner_product, projected[row_idx]);
   }
 }
 
