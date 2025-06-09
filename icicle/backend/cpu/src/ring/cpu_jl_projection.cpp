@@ -190,7 +190,7 @@ static eIcicleError cpu_get_jl_matrix_rows(
 
             size_t conj_idx = which_poly * d + (is_constant_term ? 0 : d - coeff_idx);
 
-            // Flip sign except for firs coeff
+            // Flip sign except for constant-term coeff
             rnd_2b = is_constant_term
                        ? rnd_2b
                        : (rnd_2b ^ 0x3) & 0x3; // Swaps 1 ↔ 2, leaves 0 and 3 unchanged. This flips 1 and -1.
