@@ -21,6 +21,8 @@ namespace icicle {
   extern "C" void
   CONCAT_EXPAND(ICICLE_FFI_PREFIX, pairing)(const affine_t* p, const g2_affine_t* q, PairingConfig::TargetField* output)
   {
+    ICICLE_LOG_INFO << "SP: Entering pairing c++";
     pairing<PairingConfig>(*p, *q, *output);
+    ICICLE_LOG_INFO << "SP: Exiting pairing c++";
   }
 } // namespace icicle

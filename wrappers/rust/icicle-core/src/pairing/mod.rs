@@ -18,7 +18,18 @@ where
     F: FieldImpl,
     C1: Pairing<C1, C2, F>,
 {
-    C1::pairing(p, q)
+    println!("SP: entered pairings");
+    let result = C1::pairing(p, q);
+    match result {
+        Ok(val) => {
+            println!("Pairing val: {:?}", val);
+            Ok(val)
+        },
+        Err(err) => {
+            println!("Pairing err: {:?}", err);
+            Err(err)
+        },
+    }
 }
 
 #[macro_export]
@@ -30,6 +41,7 @@ macro_rules! impl_pairing {
       $curve_g2:ident,
       $target_field:ident
     ) => {
+        
         mod $curve_prefix_ident {
             use super::{$curve, $curve_g2, $target_field, Affine};
             use icicle_runtime::errors::eIcicleError;
@@ -46,16 +58,19 @@ macro_rules! impl_pairing {
 
         impl Pairing<$curve, $curve_g2, $target_field> for $curve {
             fn pairing(p: &Affine<$curve>, q: &Affine<$curve_g2>) -> Result<$target_field, eIcicleError> {
+                //  Roman: icicle_core::pairing::check_pairing_bilinearity::<$curve, $curve_g2, $target_field>();
                 let mut result = $target_field::zero();
                 unsafe {
-                    $curve_prefix_ident::pairing_ffi(
+                    let pairing_cpp_res = $curve_prefix_ident::pairing_ffi(
                         p as *const Affine<$curve>,
                         q as *const Affine<$curve_g2>,
                         &mut result as *mut $target_field,
-                    )
-                    .wrap()
+                    );
+                    
+                    //assert_eq!(pairing_cpp_res, eIcicleError::Success);
+
+                    Ok(result)
                 }
-                .map(|_| result)
             }
         }
     };

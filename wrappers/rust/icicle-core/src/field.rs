@@ -401,6 +401,191 @@ macro_rules! impl_scalar_field {
 }
 
 #[macro_export]
+macro_rules! impl_pairing_field {
+    (
+        $field_prefix:literal,
+        $field_prefix_ident:ident,
+        $num_limbs:ident,
+        $field_name:ident,
+        $field_cfg:ident
+    ) => {
+        impl_field!($field_prefix, $num_limbs, $field_name, $field_cfg);
+
+        mod $field_prefix_ident {
+            use super::{$field_name, HostOrDeviceSlice};
+            use icicle_core::{traits::FieldImpl, vec_ops::VecOpsConfig};
+            use icicle_runtime::errors::eIcicleError;
+            use icicle_runtime::stream::{IcicleStream, IcicleStreamHandle};
+
+            extern "C" {
+                #[link_name = concat!($field_prefix, "_generate_scalars")]
+                pub(crate) fn generate_scalars(scalars: *mut $field_name, size: usize);
+
+                // #[link_name = concat!($field_prefix, "_scalar_convert_montgomery")]
+                // fn _convert_scalars_montgomery(
+                //     scalars: *const $field_name,
+                //     size: u64,
+                //     is_into: bool,
+                //     config: &VecOpsConfig,
+                //     output: *mut $field_name,
+                // ) -> eIcicleError;
+
+                #[link_name = concat!($field_prefix, "_add")]
+                pub(crate) fn add(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_sub")]
+                pub(crate) fn sub(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_mul")]
+                pub(crate) fn mul(a: *const $field_name, b: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_inv")]
+                pub(crate) fn inv(a: *const $field_name, result: *mut $field_name);
+
+                #[link_name = concat!($field_prefix, "_pow")]
+                pub(crate) fn pow(a: *const $field_name, exp: usize, result: *mut $field_name);
+            }
+
+            // pub(crate) fn convert_scalars_montgomery(
+            //     scalars: *mut $field_name,
+            //     len: usize,
+            //     is_into: bool,
+            //     config: &VecOpsConfig,
+            // ) -> eIcicleError {
+            //     unsafe { _convert_scalars_montgomery(scalars, len as u64, is_into, &config, scalars) }
+            // }
+        }
+
+        impl icicle_core::field::FieldArithmetic<$field_name> for $field_cfg {
+            fn add(first: $field_name, second: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::add(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn sub(first: $field_name, second: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::sub(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn mul(first: $field_name, second: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::mul(
+                        &first as *const $field_name,
+                        &second as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn sqr(first: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::mul(
+                        &first as *const $field_name,
+                        &first as *const $field_name,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+
+            fn inv(first: $field_name) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::inv(&first as *const $field_name, &mut result as *mut $field_name);
+                }
+
+                result
+            }
+            fn pow(first: $field_name, exp: usize) -> $field_name {
+                let mut result = $field_name::zero();
+                unsafe {
+                    $field_prefix_ident::pow(
+                        &first as *const $field_name,
+                        exp as usize,
+                        &mut result as *mut $field_name,
+                    );
+                }
+
+                result
+            }
+        }
+
+        impl GenerateRandom<$field_name> for $field_cfg {
+            fn generate_random(size: usize) -> Vec<$field_name> {
+                let mut res = vec![$field_name::zero(); size];
+                unsafe { $field_prefix_ident::generate_scalars(&mut res[..] as *mut _ as *mut $field_name, size) };
+                res
+            }
+        }
+
+        // impl MontgomeryConvertibleField<$field_name> for $field_cfg {
+        //     fn to_mont(
+        //         values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
+        //         stream: &IcicleStream,
+        //     ) -> eIcicleError {
+        //         use icicle_core::vec_ops::VecOpsConfig;
+        //         // check device slice is on active device
+        //         if values.is_on_device() && !values.is_on_active_device() {
+        //             panic!("input not allocated on the active device");
+        //         }
+        //         let mut config = VecOpsConfig::default();
+        //         config.is_a_on_device = values.is_on_device();
+        //         config.is_async = !stream.is_null();
+        //         config.stream_handle = (&*stream).into();
+        //         $field_prefix_ident::convert_scalars_montgomery(
+        //             unsafe { values.as_mut_ptr() },
+        //             values.len(),
+        //             true,
+        //             &config,
+        //         )
+        //     }
+
+        //     fn from_mont(
+        //         values: &mut (impl HostOrDeviceSlice<$field_name> + ?Sized),
+        //         stream: &IcicleStream,
+        //     ) -> eIcicleError {
+        //         use icicle_core::vec_ops::VecOpsConfig;
+        //         // check device slice is on active device
+        //         if values.is_on_device() && !values.is_on_active_device() {
+        //             panic!("input not allocated on the active device");
+        //         }
+        //         let mut config = VecOpsConfig::default();
+        //         config.is_a_on_device = values.is_on_device();
+        //         config.is_async = !stream.is_null();
+        //         config.stream_handle = (&*stream).into();
+        //         $field_prefix_ident::convert_scalars_montgomery(
+        //             unsafe { values.as_mut_ptr() },
+        //             values.len(),
+        //             false,
+        //             &config,
+        //         )
+        //     }
+        // }
+    };
+}
+
+#[macro_export]
 macro_rules! impl_field_tests {
     (
         $field_name:ident

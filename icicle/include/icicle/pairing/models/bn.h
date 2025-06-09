@@ -13,6 +13,7 @@ namespace icicle_bn_pairing {
   typename Config::Fp12
   miller_loop(const typename Config::G1Affine& p, const std::vector<typename Config::Fp6>& q_coeffs)
   {
+    ICICLE_LOG_INFO << "SP: enter miller_loop";
     using Fp12 = typename Config::Fp12;
 
     Fp12 f = Fp12::one();
@@ -28,12 +29,14 @@ namespace icicle_bn_pairing {
     if (Config::Z_IS_NEGATIVE) { f.c1 = -f.c1; }
     ell<Config>(f, q_coeffs[i++], p); // q1
     ell<Config>(f, q_coeffs[i++], p); // q2
+    ICICLE_LOG_INFO << "SP: exit miller_loop";
     return f;
   }
 
   template <typename Config>
   void final_exponentiation(typename Config::Fp12& f)
   {
+    ICICLE_LOG_INFO << "SP: enter final_exponentiation";
     // https://eprint.iacr.org/2020/875
     using Fp12 = typename Config::Fp12;
 
@@ -90,6 +93,7 @@ namespace icicle_bn_pairing {
     Fp12 y16 = y15 * y14;
 
     f = y16;
+    ICICLE_LOG_INFO << "SP: exit final_exponentiation";
   }
 
   template <typename Config>
@@ -107,6 +111,7 @@ namespace icicle_bn_pairing {
   template <typename Config>
   std::vector<typename Config::Fp6> prepare_q(const typename Config::G2Affine& q)
   {
+    ICICLE_LOG_INFO << "SP: enter prepare_q";
     typename Config::Fp two_inv = Config::Fp::inverse(Config::Fp::one() + Config::Fp::one());
     std::vector<typename Config::Fp6> coeffs;
     typename Config::Fp6 r = {q.x, q.y, Config::Fp2::one()};
@@ -132,7 +137,7 @@ namespace icicle_bn_pairing {
 
     coeffs.push_back(add_in_place<Config>(r, q1));
     coeffs.push_back(add_in_place<Config>(r, q2));
-
+    ICICLE_LOG_INFO << "SP: exit prepare_q";
     return coeffs;
   }
 } // namespace icicle_bn_pairing
