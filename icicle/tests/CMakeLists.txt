@@ -1,4 +1,3 @@
-
 include(GoogleTest)
 include(FetchContent)
 FetchContent_Declare(
@@ -83,6 +82,8 @@ endif()
 if (PQC)
     add_executable(test_pqc_api test_pqc_api.cpp)
     target_include_directories(test_pqc_api PRIVATE ${CMAKE_SOURCE_DIR}/include/)
-    target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main icicle_device icicle_pqc)
+    #target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main icicle_device icicle_pqc)
+    target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main icicle_device icicle_pqc cudart)
+    #target_link_libraries(test_pqc_api PRIVATE GTest::gtest_main icicle_device icicle_pqc CUDA::cudart)
     gtest_discover_tests(test_pqc_api)
 endif()

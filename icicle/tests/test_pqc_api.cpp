@@ -5,6 +5,7 @@
 #include "icicle/runtime.h"
 #include "icicle/utils/rand_gen.h"
 #include "icicle/pqc/ml_kem.h"
+#include <cuda_runtime.h>
 
 using namespace icicle;
 using namespace icicle::pqc::ml_kem;
