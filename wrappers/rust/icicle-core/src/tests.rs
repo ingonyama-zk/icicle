@@ -123,10 +123,13 @@ where
 
     let affine_points = C::generate_random_affine_points(size);
     let mut d_affine = DeviceVec::device_malloc(size).unwrap();
+    let mut affine_points_copy = affine_points.clone();
+    let h_affine = HostSlice::from_mut_slice(&mut affine_points_copy);
     d_affine
-        .copy_from_host(HostSlice::from_slice(&affine_points))
+        .copy_from_host(h_affine)
         .unwrap();
 
+    // Test affine montgomery conversion with Device Memory
     Affine::<C>::to_mont(&mut d_affine, &IcicleStream::default())
         .wrap()
         .unwrap();
@@ -141,12 +144,26 @@ where
 
     assert_eq!(affine_points, affine_copy);
 
-    let proj_points = C::generate_random_projective_points(size);
-    let mut d_proj = DeviceVec::device_malloc(size).unwrap();
-    d_proj
-        .copy_from_host(HostSlice::from_slice(&proj_points))
+    // Test affine montgomery conversion with Host Memory
+    Affine::<C>::to_mont(h_affine, &IcicleStream::default())
+        .wrap()
+        .unwrap();
+    Affine::<C>::from_mont(h_affine, &IcicleStream::default())
+        .wrap()
         .unwrap();
 
+    assert_eq!(affine_points, affine_points_copy);
+
+
+    let proj_points = C::generate_random_projective_points(size);
+    let mut d_proj = DeviceVec::device_malloc(size).unwrap();
+    let mut proj_points_copy = proj_points.clone();
+    let h_proj = HostSlice::from_mut_slice(&mut proj_points_copy);
+    d_proj
+        .copy_from_host(h_proj)
+        .unwrap();
+
+    // Test projective montgomery conversion with Device Memory
     Projective::<C>::to_mont(&mut d_proj, &IcicleStream::default())
         .wrap()
         .unwrap();
@@ -160,6 +177,16 @@ where
         .unwrap();
 
     assert_eq!(proj_points, projective_copy);
+
+    // Test projective montgomery conversion with Host Memory
+    Projective::<C>::to_mont(h_proj, &IcicleStream::default())
+        .wrap()
+        .unwrap();
+    Projective::<C>::from_mont(h_proj, &IcicleStream::default())
+        .wrap()
+        .unwrap();
+
+    assert_eq!(proj_points, proj_points_copy);
 }
 
 pub fn check_generator<C: Curve>() {

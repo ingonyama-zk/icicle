@@ -1,4 +1,4 @@
-use crate::traits::{FieldImpl, MontgomeryConvertible};
+use crate::{traits::{FieldImpl, MontgomeryConvertible}, vec_ops::VecOpsConfig};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
@@ -20,14 +20,14 @@ pub trait Curve: Debug + PartialEq + Copy + Clone {
         points: *mut Affine<Self>,
         len: usize,
         is_into: bool,
-        stream: &IcicleStream,
+        config: &VecOpsConfig,
     ) -> eIcicleError;
     #[doc(hidden)]
     fn convert_projective_montgomery(
         points: *mut Projective<Self>,
         len: usize,
         is_into: bool,
-        stream: &IcicleStream,
+        config: &VecOpsConfig,
     ) -> eIcicleError;
     #[doc(hidden)]
     fn add(point1: Projective<Self>, point2: Projective<Self>) -> Projective<Self>;
@@ -139,33 +139,49 @@ impl<C: Curve> From<Projective<C>> for Affine<C> {
 
 impl<C: Curve> MontgomeryConvertible for Affine<C> {
     fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device() {
-            panic!("values not allocated on an inactive device");
+        if values.is_on_device() && !values.is_on_active_device() {
+            panic!("values not allocated on the active device");
         }
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
+        let mut config = VecOpsConfig::default();
+        config.is_a_on_device = values.is_on_device();
+        config.is_async = !stream.is_null();
+        config.stream_handle = (&*stream).into();
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config)
     }
 
     fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device() {
-            panic!("values not allocated on an inactive device");
+        if values.is_on_device() && !values.is_on_active_device() {
+            panic!("values not allocated on the active device");
         }
-        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
+        let mut config = VecOpsConfig::default();
+        config.is_a_on_device = values.is_on_device();
+        config.is_async = !stream.is_null();
+        config.stream_handle = (&*stream).into();
+        C::convert_affine_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config)
     }
 }
 
 impl<C: Curve> MontgomeryConvertible for Projective<C> {
     fn to_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device() {
-            panic!("values not allocated on an inactive device");
+        if values.is_on_device() && !values.is_on_active_device() {
+            panic!("values not allocated on the active device");
         }
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, stream)
+        let mut config = VecOpsConfig::default();
+        config.is_a_on_device = values.is_on_device();
+        config.is_async = !stream.is_null();
+        config.stream_handle = (&*stream).into();
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), true, &config)
     }
 
     fn from_mont(values: &mut (impl HostOrDeviceSlice<Self> + ?Sized), stream: &IcicleStream) -> eIcicleError {
-        if !values.is_on_active_device() {
-            panic!("values not allocated on an inactive device");
+        if values.is_on_device() && !values.is_on_active_device() {
+            panic!("values not allocated on the active device");
         }
-        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, stream)
+        let mut config = VecOpsConfig::default();
+        config.is_a_on_device = values.is_on_device();
+        config.is_async = !stream.is_null();
+        config.stream_handle = (&*stream).into();
+        C::convert_projective_montgomery(unsafe { values.as_mut_ptr() }, values.len(), false, &config)
     }
 }
 
@@ -340,13 +356,8 @@ macro_rules! impl_curve {
                 points: *mut $affine_type,
                 len: usize,
                 is_into: bool,
-                stream: &IcicleStream,
+                config: &VecOpsConfig,
             ) -> eIcicleError {
-                let mut config = VecOpsConfig::default();
-                config.is_a_on_device = true;
-                config.is_result_on_device = true;
-                config.is_async = false;
-                config.stream_handle = (&*stream).into();
                 unsafe { $curve_prefix_ident::_convert_affine_montgomery(points, len, is_into, &config, points) }
             }
 
@@ -354,13 +365,8 @@ macro_rules! impl_curve {
                 points: *mut $projective_type,
                 len: usize,
                 is_into: bool,
-                stream: &IcicleStream,
+                config: &VecOpsConfig,
             ) -> eIcicleError {
-                let mut config = VecOpsConfig::default();
-                config.is_a_on_device = true;
-                config.is_result_on_device = true;
-                config.is_async = false;
-                config.stream_handle = (&*stream).into();
                 unsafe { $curve_prefix_ident::_convert_projective_montgomery(points, len, is_into, &config, points) }
             }
 
