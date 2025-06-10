@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || msm
+
 package g2
 
 // #cgo CFLAGS: -I./include/

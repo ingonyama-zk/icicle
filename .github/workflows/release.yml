@@ -24,11 +24,11 @@ jobs:
     runs-on: [self-hosted, Linux, X64, icicle, release]  
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
       - name: Checkout CUDA Backend
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           repository: ingonyama-zk/icicle-cuda-backend
           path: ./icicle/backend/cuda
@@ -37,7 +37,7 @@ jobs:
           ref: main
       - name: Setup Cache
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
         with:
           path: |
             ~/.cargo/bin/
@@ -56,7 +56,7 @@ jobs:
           git config user.name release-bot
           git config user.email release-bot@ingonyama.com
           cargo workspaces version ${{ inputs.releaseType }} -y --no-individual-tags --no-git-push -m "Bump rust crates' version"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 18
       - name: Bump docs version
@@ -81,7 +81,7 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0)
           gh release create $LATEST_TAG --generate-notes -d --verify-tag -t "Release $LATEST_TAG"
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

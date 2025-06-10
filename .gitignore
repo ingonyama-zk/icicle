@@ -16,6 +16,7 @@
 **/.DS_Store
 **/Cargo.lock
 **/icicle/build/
+**/icicle/Testing/
 **/wrappers/rust/icicle-cuda-runtime/src/bindings.rs
 **/build*/*
 .cache*

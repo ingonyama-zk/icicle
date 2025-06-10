@@ -1,3 +1,5 @@
+//go:build !icicle_exclude_all || poseidon
+
 package poseidon
 
 // #cgo CFLAGS: -I./include/
