@@ -154,7 +154,6 @@ where
 
     assert_eq!(affine_points, affine_points_copy);
 
-
     let proj_points = C::generate_random_projective_points(size);
     let mut d_proj = DeviceVec::device_malloc(size).unwrap();
     let mut proj_points_copy = proj_points.clone();

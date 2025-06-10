@@ -1,4 +1,7 @@
-use crate::{traits::{FieldImpl, MontgomeryConvertible}, vec_ops::VecOpsConfig};
+use crate::{
+    traits::{FieldImpl, MontgomeryConvertible},
+    vec_ops::VecOpsConfig,
+};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice, stream::IcicleStream};
 use std::fmt::Debug;
 use std::ops::{Add, Mul, Sub};
