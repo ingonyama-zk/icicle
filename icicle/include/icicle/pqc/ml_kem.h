@@ -70,6 +70,10 @@ namespace icicle {
 
         size_t batch_size = 1;
 
+        // Timing-related fields
+        bool measure_kernel_time = false;  // If true, only measure kernel execution time
+        float* kernel_time_ms = nullptr;   // Pointer to store kernel execution time in milliseconds
+
         ConfigExtension* ext = nullptr; // Optional backend-specific settings
       };
 

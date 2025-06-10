@@ -32,8 +32,28 @@ namespace icicle::pqc::ml_kem {
     CHK_IF_RETURN(cudaMallocAsync(
       &d_A, config.batch_size * PolyMatrixView<256, Category::K, Category::K, Zq>::byte_size(), cuda_stream));
 
+    // Create events for timing if requested
+    cudaEvent_t start = nullptr, stop = nullptr;
+    if (config.measure_kernel_time) {
+      cudaEventCreate(&start);
+      cudaEventCreate(&stop);
+      cudaEventRecord(start, cuda_stream);
+    }
+
     ml_kem_keygen_kernel<Category::K, Category::ETA1><<<config.batch_size, 128, 0, cuda_stream>>>(
       (uint8_t*)entropy, (uint8_t*)d_public_keys, (uint8_t*)d_secret_keys, d_A);
+
+    if (config.measure_kernel_time) {
+      cudaEventRecord(stop, cuda_stream);
+      cudaEventSynchronize(stop);
+      float milliseconds = 0;
+      cudaEventElapsedTime(&milliseconds, start, stop);
+      if (config.kernel_time_ms) {
+        *config.kernel_time_ms = milliseconds;
+      }
+      cudaEventDestroy(start);
+      cudaEventDestroy(stop);
+    }
 
     CHK_IF_RETURN(cudaFreeAsync((void*)d_A, cuda_stream));
 
@@ -94,9 +114,29 @@ namespace icicle::pqc::ml_kem {
     CHK_IF_RETURN(cudaMallocAsync(
       &d_A, config.batch_size * PolyMatrixView<256, Category::K, Category::K, Zq>::byte_size(), cuda_stream));
 
+    // Create events for timing if requested
+    cudaEvent_t start = nullptr, stop = nullptr;
+    if (config.measure_kernel_time) {
+      cudaEventCreate(&start);
+      cudaEventCreate(&stop);
+      cudaEventRecord(start, cuda_stream);
+    }
+
     ml_kem_encaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV>
       <<<config.batch_size, 128, 0, cuda_stream>>>(
         (uint8_t*)public_keys, (uint8_t*)message, (uint8_t*)d_shared_secrets, (uint8_t*)d_ciphertext, d_A);
+
+    if (config.measure_kernel_time) {
+      cudaEventRecord(stop, cuda_stream);
+      cudaEventSynchronize(stop);
+      float milliseconds = 0;
+      cudaEventElapsedTime(&milliseconds, start, stop);
+      if (config.kernel_time_ms) {
+        *config.kernel_time_ms = milliseconds;
+      }
+      cudaEventDestroy(start);
+      cudaEventDestroy(stop);
+    }
 
     CHK_IF_RETURN(cudaFreeAsync((void*)d_A, cuda_stream));
 
@@ -152,9 +192,29 @@ namespace icicle::pqc::ml_kem {
     CHK_IF_RETURN(cudaMallocAsync(
       &d_A, config.batch_size * PolyMatrixView<256, Category::K, Category::K, Zq>::byte_size(), cuda_stream));
 
+    // Create events for timing if requested
+    cudaEvent_t start = nullptr, stop = nullptr;
+    if (config.measure_kernel_time) {
+      cudaEventCreate(&start);
+      cudaEventCreate(&stop);
+      cudaEventRecord(start, cuda_stream);
+    }
+
     ml_kem_decaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV>
       <<<config.batch_size, 128, 0, cuda_stream>>>(
         (uint8_t*)secret_keys, (uint8_t*)ciphertext, (uint8_t*)d_shared_secrets, d_A);
+
+    if (config.measure_kernel_time) {
+      cudaEventRecord(stop, cuda_stream);
+      cudaEventSynchronize(stop);
+      float milliseconds = 0;
+      cudaEventElapsedTime(&milliseconds, start, stop);
+      if (config.kernel_time_ms) {
+        *config.kernel_time_ms = milliseconds;
+      }
+      cudaEventDestroy(start);
+      cudaEventDestroy(stop);
+    }
 
     CHK_IF_RETURN(cudaFreeAsync((void*)d_A, cuda_stream));
 

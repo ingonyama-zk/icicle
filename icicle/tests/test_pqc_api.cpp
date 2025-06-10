@@ -42,13 +42,13 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTest)
 
   // Allocate buffers
   auto entropy = this->random_entropy(batch_size * ENTROPY_BYTES);
-  std::vector<std::byte> public_key(batch_size * TypeParam::PUBLIC_KEY_BYTES);
-  std::vector<std::byte> secret_key(batch_size * TypeParam::SECRET_KEY_BYTES);
-  std::vector<std::byte> ciphertext(batch_size * TypeParam::CIPHERTEXT_BYTES);
-  std::vector<std::byte> shared_secret_enc(batch_size * TypeParam::SHARED_SECRET_BYTES);
-  std::vector<std::byte> shared_secret_dec(batch_size * TypeParam::SHARED_SECRET_BYTES);
+  std::vector<std::byte> public_key(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::PUBLIC_KEY_BYTES));
+  std::vector<std::byte> secret_key(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SECRET_KEY_BYTES));
+  std::vector<std::byte> ciphertext(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::CIPHERTEXT_BYTES));
+  std::vector<std::byte> shared_secret_enc(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES));
+  std::vector<std::byte> shared_secret_dec(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES));
 
-  auto message = this->random_entropy(batch_size * MESSAGE_BYTES);
+  auto message = this->random_entropy(static_cast<size_t>(batch_size) * static_cast<size_t>(MESSAGE_BYTES));
 
   // Key generation
   auto err = keygen<TypeParam>(entropy.data(), config, public_key.data(), secret_key.data());
@@ -92,41 +92,41 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
   // Allocate device buffers
   std::byte* d_entropy;
   ICICLE_CHECK(
-    icicle_malloc_async(reinterpret_cast<void**>(&d_entropy), batch_size * ENTROPY_BYTES * sizeof(std::byte), stream));
+    icicle_malloc_async(reinterpret_cast<void**>(&d_entropy), static_cast<size_t>(batch_size) * static_cast<size_t>(ENTROPY_BYTES) * sizeof(std::byte), stream));
   std::byte* d_public_key;
   ICICLE_CHECK(icicle_malloc_async(
-    reinterpret_cast<void**>(&d_public_key), batch_size * TypeParam::PUBLIC_KEY_BYTES * sizeof(std::byte), stream));
+    reinterpret_cast<void**>(&d_public_key), static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::PUBLIC_KEY_BYTES) * sizeof(std::byte), stream));
   std::byte* d_secret_key;
   ICICLE_CHECK(icicle_malloc_async(
-    reinterpret_cast<void**>(&d_secret_key), batch_size * TypeParam::SECRET_KEY_BYTES * sizeof(std::byte), stream));
+    reinterpret_cast<void**>(&d_secret_key), static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SECRET_KEY_BYTES) * sizeof(std::byte), stream));
   std::byte* d_ciphertext;
   ICICLE_CHECK(icicle_malloc_async(
-    reinterpret_cast<void**>(&d_ciphertext), batch_size * TypeParam::CIPHERTEXT_BYTES * sizeof(std::byte), stream));
+    reinterpret_cast<void**>(&d_ciphertext), static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::CIPHERTEXT_BYTES) * sizeof(std::byte), stream));
   std::byte* d_shared_secret_enc;
   ICICLE_CHECK(icicle_malloc_async(
-    reinterpret_cast<void**>(&d_shared_secret_enc), batch_size * TypeParam::SHARED_SECRET_BYTES * sizeof(std::byte),
+    reinterpret_cast<void**>(&d_shared_secret_enc), static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES) * sizeof(std::byte),
     stream));
   std::byte* d_shared_secret_dec;
   ICICLE_CHECK(icicle_malloc_async(
-    reinterpret_cast<void**>(&d_shared_secret_dec), batch_size * TypeParam::SHARED_SECRET_BYTES * sizeof(std::byte),
+    reinterpret_cast<void**>(&d_shared_secret_dec), static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES) * sizeof(std::byte),
     stream));
 
   // Generate random entropy and copy to device
   auto h_entropy = this->random_entropy(batch_size * ENTROPY_BYTES);
   ICICLE_CHECK(
-    icicle_copy_to_device_async(d_entropy, h_entropy.data(), batch_size * ENTROPY_BYTES * sizeof(std::byte), stream));
+    icicle_copy_to_device_async(d_entropy, h_entropy.data(), static_cast<size_t>(batch_size) * static_cast<size_t>(ENTROPY_BYTES) * sizeof(std::byte), stream));
 
   // Key generation
   auto err = keygen<TypeParam>(d_entropy, config, d_public_key, d_secret_key);
   ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Encapsulation
-  auto h_message = this->random_entropy(batch_size * MESSAGE_BYTES);
+  auto h_message = this->random_entropy(static_cast<size_t>(batch_size) * static_cast<size_t>(MESSAGE_BYTES));
   std::byte* d_message;
   ICICLE_CHECK(
-    icicle_malloc_async(reinterpret_cast<void**>(&d_message), batch_size * MESSAGE_BYTES * sizeof(std::byte), stream));
+    icicle_malloc_async(reinterpret_cast<void**>(&d_message), static_cast<size_t>(batch_size) * static_cast<size_t>(MESSAGE_BYTES) * sizeof(std::byte), stream));
   ICICLE_CHECK(
-    icicle_copy_to_device_async(d_message, h_message.data(), batch_size * MESSAGE_BYTES * sizeof(std::byte), stream));
+    icicle_copy_to_device_async(d_message, h_message.data(), static_cast<size_t>(batch_size) * static_cast<size_t>(MESSAGE_BYTES) * sizeof(std::byte), stream));
   err = encapsulate<TypeParam>(d_message, d_public_key, config, d_ciphertext, d_shared_secret_enc);
   ASSERT_EQ(err, eIcicleError::SUCCESS);
 
@@ -135,13 +135,13 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
   ASSERT_EQ(err, eIcicleError::SUCCESS);
 
   // Copy results back to host for comparison
-  std::vector<std::byte> h_shared_secret_enc(batch_size * TypeParam::SHARED_SECRET_BYTES);
-  std::vector<std::byte> h_shared_secret_dec(batch_size * TypeParam::SHARED_SECRET_BYTES);
+  std::vector<std::byte> h_shared_secret_enc(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES));
+  std::vector<std::byte> h_shared_secret_dec(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES));
   ICICLE_CHECK(icicle_copy_to_host_async(
-    h_shared_secret_enc.data(), d_shared_secret_enc, batch_size * TypeParam::SHARED_SECRET_BYTES * sizeof(std::byte),
+    h_shared_secret_enc.data(), d_shared_secret_enc, static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES) * sizeof(std::byte),
     stream));
   ICICLE_CHECK(icicle_copy_to_host_async(
-    h_shared_secret_dec.data(), d_shared_secret_dec, batch_size * TypeParam::SHARED_SECRET_BYTES * sizeof(std::byte),
+    h_shared_secret_dec.data(), d_shared_secret_dec, static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES) * sizeof(std::byte),
     stream));
 
   // Synchronize stream to ensure all operations are complete
@@ -161,4 +161,59 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
 
   // Destroy stream
   ICICLE_CHECK(icicle_destroy_stream(stream));
+}
+
+TYPED_TEST(PqcTest, MLkemSharedSecretBenchmark)
+{
+
+  for (size_t batch_size = 1 << 9; batch_size <= 1 << 22; batch_size <<= 1) {
+    printf("\nBenchmarking %s with batch size: %u\n",
+      std::is_same_v<TypeParam, Kyber512Params> ? "ML-KEM512" :
+      std::is_same_v<TypeParam, Kyber768Params> ? "ML-KEM768" :
+      std::is_same_v<TypeParam, Kyber1024Params> ? "ML-KEM1024" : "Unknown",
+      batch_size);
+
+    // Config
+    MlKemConfig config;
+    config.batch_size = batch_size;
+    config.measure_kernel_time = true;
+    float kernel_time_ms = 0;
+    config.kernel_time_ms = &kernel_time_ms;
+
+    // Allocate buffers
+    auto entropy = this->random_entropy(batch_size * ENTROPY_BYTES);
+    std::vector<std::byte> public_key(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::PUBLIC_KEY_BYTES));
+    std::vector<std::byte> secret_key(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SECRET_KEY_BYTES));
+    std::vector<std::byte> ciphertext(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::CIPHERTEXT_BYTES));
+    std::vector<std::byte> shared_secret_enc(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES));
+    std::vector<std::byte> shared_secret_dec(static_cast<size_t>(batch_size) * static_cast<size_t>(TypeParam::SHARED_SECRET_BYTES));
+
+    auto message = this->random_entropy(static_cast<size_t>(batch_size) * static_cast<size_t>(MESSAGE_BYTES));
+
+    // Key generation
+    auto err = keygen<TypeParam>(entropy.data(), config, public_key.data(), secret_key.data());
+    ASSERT_EQ(err, eIcicleError::SUCCESS);
+    double seconds = kernel_time_ms / 1000.0;
+    double throughput = batch_size / seconds;
+    printf("Key Generation Kernel Throughput: ~%.2f ops/sec\n", throughput);
+
+    // Encapsulation
+    err = encapsulate<TypeParam>(message.data(), public_key.data(), config, ciphertext.data(), shared_secret_enc.data());
+    ASSERT_EQ(err, eIcicleError::SUCCESS);
+    seconds = kernel_time_ms / 1000.0;
+    throughput = batch_size / seconds;
+    printf("Encapsulation Kernel Throughput: ~%.2f ops/sec\n", throughput);
+
+    // Decapsulation
+    err = decapsulate<TypeParam>(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
+    ASSERT_EQ(err, eIcicleError::SUCCESS);
+    seconds = kernel_time_ms / 1000.0;
+    throughput = batch_size / seconds;
+    printf("Decapsulation Kernel Throughput: ~%.2f ops/sec\n", throughput);
+
+    // Check equality
+    EXPECT_EQ(shared_secret_enc, shared_secret_dec);
+
+    printf("Benchmarking completed successfully for batch size %u\n", batch_size);
+  }
 }
