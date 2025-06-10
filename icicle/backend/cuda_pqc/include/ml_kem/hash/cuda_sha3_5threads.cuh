@@ -19,15 +19,15 @@ namespace icicle::pqc::ml_kem {
 
   /*
   This struct provides a 5x5 2D array view into a single hash state within the larger shared memory array.
-  
-  While the full state array has dimensions [4 warps][5 rows][6 hashes][5 cols], this struct fixes the warp_idx 
+
+  While the full state array has dimensions [4 warps][5 rows][6 hashes][5 cols], this struct fixes the warp_idx
   and hash_idx to provide clean access to just one 5x5 hash state matrix.
 
   This allows the hash implementation to work with the state as a simple 5x5 array without having to manually
   calculate offsets through the hash_lane dimension in the middle.
 
   Example usage:
-    StateSlice slice{warp_idx, hash_idx}; 
+    StateSlice slice{warp_idx, hash_idx};
     slice(2,3) = value;  // Access row 2, col 3 of the 5x5 state
   */
   struct StateSlice {

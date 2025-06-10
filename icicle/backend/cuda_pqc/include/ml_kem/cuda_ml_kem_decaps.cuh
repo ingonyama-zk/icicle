@@ -23,9 +23,7 @@ namespace icicle::pqc::ml_kem {
       auto c64 = reinterpret_cast<const uint64_t*>(c);
 
       for (int i = tid; i < chunks_amount; i += blockDim.x) {
-        if (c_pke64[i] != c64[i]) {
-          *success = 0;
-        }
+        if (c_pke64[i] != c64[i]) { *success = 0; }
       }
     }
   } // namespace
