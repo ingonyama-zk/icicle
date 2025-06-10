@@ -2,7 +2,7 @@
 #include "icicle/dispatcher.h"
 
 namespace icicle {
-  /*********************************** MATRIX  MULTIPLCATION *************************/
+  /*********************************** MATRIX  MULTIPLICATION *************************/
 
   ICICLE_DISPATCHER_INST(MatrixMultiplicationDispatcher, matrix_mult, scalarBinaryMatrixOpImpl);
 
