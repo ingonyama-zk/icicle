@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ml_kem/samplers/cuda_sample_utils.cuh"
+#include "ml_kem/hash/cuda_sha3_5threads.cuh"
 
 namespace icicle::pqc::ml_kem {
   __device__ void load_coeffs_shake5_threads(Zq* poly, int& j, const uint8_t& lane)

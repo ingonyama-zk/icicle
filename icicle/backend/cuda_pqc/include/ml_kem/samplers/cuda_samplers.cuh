@@ -2,7 +2,6 @@
 
 #include "ml_kem/ring/cuda_poly.cuh"
 #include "ml_kem/ring/cuda_zq.cuh"
-#include "ml_kem/samplers/cuda_sample_helpers.cuh"
 #include "ml_kem/samplers/cuda_sample_helpers_5threads.cuh"
 
 #define MAX_HASHES_PER_WRAP 6 // 32 / 5 = 6

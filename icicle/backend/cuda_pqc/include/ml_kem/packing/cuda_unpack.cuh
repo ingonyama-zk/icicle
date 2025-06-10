@@ -15,9 +15,6 @@ namespace icicle::pqc::ml_kem {
     static_assert(num_coeffs == coeffs_per_thread * 32, "Only 32-thread warp supported");
     constexpr uint16_t half = 1u << (d - 1);
 
-    // // todo: remove this somehow
-    // if (threadIdx.x >= 32) return;
-
     // Load the d bytes of packed data into a 128‑bit integer
     __uint128_t packed = 0;
     const int lane = threadIdx.x % 32;
@@ -70,18 +67,4 @@ namespace icicle::pqc::ml_kem {
     mu[i0] = mask0 & half_q;
     mu[i1] = mask1 & half_q;
   }
-
-  // template<const uint8_t k, const uint8_t du, const uint8_t dv>
-  // __forceinline__ __device__ void decode_ciphertext(const uint8_t* c, PolyVec<256, k, Zq>& u, Poly<256, Zq>& v) {
-
-  //   // only the first k warps enter this function
-  //   // const int i = threadIdx.x / 32;
-  //   // byte_decode_decompress<du>(c + i * 32 * du, u[i]);
-
-  //   #pragma unroll
-  //   for (int i = 0; i < k; ++i) {
-  //     byte_decode_decompress<du>(c + i * 32 * du, u[i]);
-  //   }
-  //   byte_decode_decompress<dv>(c + k * 32 * du, v);
-  // }
 } // namespace icicle::pqc::ml_kem

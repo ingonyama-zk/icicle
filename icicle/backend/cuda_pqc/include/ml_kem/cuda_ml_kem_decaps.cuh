@@ -25,7 +25,6 @@ namespace icicle::pqc::ml_kem {
       for (int i = tid; i < chunks_amount; i += blockDim.x) {
         if (c_pke64[i] != c64[i]) {
           *success = 0;
-          // printf("Thread %d in block %d entered here\n", threadIdx.x, blockIdx.x);
         }
       }
     }

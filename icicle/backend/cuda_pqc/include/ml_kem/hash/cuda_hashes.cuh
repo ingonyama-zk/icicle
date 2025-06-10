@@ -10,7 +10,6 @@ namespace icicle::pqc::ml_kem {
     // k = 3 -> size(c) = 32(10 * 3 + 4) = 32 * 34 = 1088
     // k = 4 -> size(c) = 32(10 * 4 + 4) = 32 * 44 = 1408
 
-    // uint64_t s = absorb_dual<64, SHAKE_256_RATE, SHAKE_DELIM_BITS, SHAKE_DELIM_SUFFIX, false>(z, c, 0);
     uint64_t s = absorb_intermediate_dual<SHAKE_256_RATE>(z, c);
     s = keccakf(s);
     c += SHAKE_256_RATE - 32;
