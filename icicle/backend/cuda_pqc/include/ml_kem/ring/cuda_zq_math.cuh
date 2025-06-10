@@ -217,10 +217,7 @@ namespace icicle::pqc::ml_kem {
         const Zq* A_elem = A.get_raw_element(TRANSPOSED ? j : i, TRANSPOSED ? i : j);
         Zq a0 = Zq::from_raw(__ldlu((const uint16_t*)&A_elem[threadIdx.x * 2]));
         Zq a1 = Zq::from_raw(__ldlu((const uint16_t*)&A_elem[threadIdx.x * 2 + 1]));
-        base_case_multiply(
-          a0, a1,
-          x[j][threadIdx.x * 2], x[j][threadIdx.x * 2 + 1], 
-          d_gamma[threadIdx.x], out0, out1);
+        base_case_multiply(a0, a1, x[j][threadIdx.x * 2], x[j][threadIdx.x * 2 + 1], d_gamma[threadIdx.x], out0, out1);
         // Accumulate result directly into output polynomial
         y[i][threadIdx.x * 2] += out0;
         y[i][threadIdx.x * 2 + 1] += out1;

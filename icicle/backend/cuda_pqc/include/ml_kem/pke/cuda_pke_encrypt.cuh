@@ -80,7 +80,13 @@ namespace icicle::pqc::ml_kem::pke {
     encode_ciphertext<k, du, dv>(u, v, c);
   }
 
-  template <const uint8_t k, const uint8_t eta1, const uint8_t eta2, const uint8_t du, const uint8_t dv, const bool dynamic_A = false>
+  template <
+    const uint8_t k,
+    const uint8_t eta1,
+    const uint8_t eta2,
+    const uint8_t du,
+    const uint8_t dv,
+    const bool dynamic_A = false>
   __forceinline__ __device__ void encrypt(
     const uint8_t ek_pke[384 * k + 32],
     const uint8_t m[32],
@@ -90,16 +96,16 @@ namespace icicle::pqc::ml_kem::pke {
   {
     const uint64_t* rou = (const uint64_t*)(ek_pke + 384 * k);
     if constexpr (dynamic_A) {
-      switch(k) {
-        case 2:
-        case 3:
-          generate_matrix_A<k, 1, 2>(rou, A);
-          break;
-        case 4:
-          generate_matrix_A<k, 1, 3>(rou, A);
-          break;
-        default:
-          __builtin_unreachable();
+      switch (k) {
+      case 2:
+      case 3:
+        generate_matrix_A<k, 1, 2>(rou, A);
+        break;
+      case 4:
+        generate_matrix_A<k, 1, 3>(rou, A);
+        break;
+      default:
+        __builtin_unreachable();
       }
     } else {
       generate_matrix_A<k, 1, 2>(rou, A);

@@ -22,7 +22,7 @@ namespace icicle::pqc::ml_kem {
     std::byte* d_public_keys = config.public_keys_on_device
                                  ? public_keys
                                  : allocate_on_device<std::byte>(
-                                      config.batch_size * Category::PUBLIC_KEY_BYTES * sizeof(std::byte), cuda_stream);
+                                     config.batch_size * Category::PUBLIC_KEY_BYTES * sizeof(std::byte), cuda_stream);
     std::byte* d_secret_keys = config.secret_keys_on_device
                                  ? secret_keys
                                  : allocate_on_device<std::byte>(
