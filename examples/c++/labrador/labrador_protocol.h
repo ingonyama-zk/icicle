@@ -9,8 +9,8 @@
 using namespace icicle::labrador;
 
 struct EqualityInstance {
-  const size_t r;                   // Number of witness vectors
-  const size_t n;                   // Dimension of each vector in Rq
+  size_t r;                         // Number of witness vectors
+  size_t n;                         // Dimension of each vector in Rq
   std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Rq (r x r matrix)
   std::vector<std::vector<Tq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
   Tq b;                             // Polynomial in Rq
@@ -36,8 +36,8 @@ struct EqualityInstance {
 };
 
 struct ConstZeroInstance {
-  const size_t r;                   // Number of witness vectors
-  const size_t n;                   // Dimension of each vector in Rq
+  size_t r;                         // Number of witness vectors
+  size_t n;                         // Dimension of each vector in Rq
   std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Tq (r x r matrix)
   std::vector<std::vector<Tq>> phi; // phi[i] vector over Tq (r vectors, each of size n)
   Tq b;                             // Polynomial in Rq
@@ -71,6 +71,7 @@ struct LabradorInstance {
   void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
 };
 
+struct LabradorRecursionRawInstance;
 // Struct containing parameters for Labrador protocol
 struct LabradorProtocol {
   // Matrix dimensions for Ajtai commitments
