@@ -8,33 +8,24 @@ For an in-depth explanation of the primitive, performance advice and backend-spe
 
 `icicle-ml-kem` is a Rust wrapper around Icicle's batched **ML-KEM** implementation (Kyber).  It exposes three functions – **`keygen`**, **`encapsulate`** and **`decapsulate`** – that work on host or device memory.
 
-Supported parameter sets (security categories):
-
-| Params type     | Public key | Secret key | Cipher-text | Shared secret | Entropy bytes | Message bytes | NIST level |
-|----------------:|-----------:|-----------:|------------:|--------------:|--------------:|--------------:|-----------:|
-| `Kyber512Params`  | 800 B  | 1632 B | 768 B  | 32 B | 64 B | 32 B | 1 |
-| `Kyber768Params`  | 1184 B | 2400 B | 1088 B | 32 B | 64 B | 32 B | 3 |
-| `Kyber1024Params` | 1568 B | 3168 B | 1568 B | 32 B | 64 B | 32 B | 5 |
-
 ---
 
 ## Public API
 
-### Function signatures
+### Key pair generation
 
 ```rust
-use icicle_ml_kem::{keygen, encapsulate, decapsulate};
-use icicle_ml_kem::kyber_params::{Kyber512Params, Kyber768Params, Kyber1024Params};
-use icicle_ml_kem::config::MlKemConfig;
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
-
 pub fn keygen<P: KyberParams>(
     entropy: &(impl HostOrDeviceSlice<u8> + ?Sized),
     cfg:     &MlKemConfig,
     pk:      &mut (impl HostOrDeviceSlice<u8> + ?Sized),
     sk:      &mut (impl HostOrDeviceSlice<u8> + ?Sized),
 ) -> Result<(), eIcicleError>;
+```
 
+### Encapsulation
+
+```rust
 pub fn encapsulate<P: KyberParams>(
     msg:      &(impl HostOrDeviceSlice<u8> + ?Sized),
     pk:       &(impl HostOrDeviceSlice<u8> + ?Sized),
@@ -42,7 +33,11 @@ pub fn encapsulate<P: KyberParams>(
     ct:       &mut (impl HostOrDeviceSlice<u8> + ?Sized),
     ss:       &mut (impl HostOrDeviceSlice<u8> + ?Sized),
 ) -> Result<(), eIcicleError>;
+```
 
+### Decapsulation
+
+```rust
 pub fn decapsulate<P: KyberParams>(
     sk:       &(impl HostOrDeviceSlice<u8> + ?Sized),
     ct:       &(impl HostOrDeviceSlice<u8> + ?Sized),
@@ -139,7 +134,7 @@ fn main() {
 
 ## Device & async execution
 
-The API works identically for GPU buffers – allocate input/output `DeviceVec`s, and provide an `IcicleStream` for non-blocking execution. See [`tests.rs`](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-pqc/icicle-ml-kem/src/tests.rs) in the crate for an end-to-end example.
+The API works identically for Device buffers – allocate input/output `DeviceVec`s, and provide an `IcicleStream` for non-blocking execution. See [`tests.rs`](https://github.com/ingonyama-zk/icicle/blob/main/wrappers/rust/icicle-pqc/icicle-ml-kem/src/tests.rs) in the crate for an end-to-end example.
 
 ---
 
@@ -151,5 +146,5 @@ All functions return `Result<(), eIcicleError>`.  An error is raised for invalid
 
 ## See also
 
-* [C++ ML-KEM guide](../cpp/pqc_ml_kem.md)
+* [C++ ML-KEM guide](../cpp/lattice/pqc_ml_kem.md)
 * [Icicle runtime documentation](multi-gpu.md) – streams, device management, buffer helpers

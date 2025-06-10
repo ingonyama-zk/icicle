@@ -2,7 +2,7 @@
 
 ## Overview
 
-**ML-KEM** (Multi-Layer Key Encapsulation Mechanism) – is a lattice-based key-encapsulation protocol selected by NIST for post-quantum cryptography ([FIPS 203 draft](https://csrc.nist.gov/pubs/fips/203/final)).  
+**ML-KEM** (Module-Lattice Key Encapsulation Mechanism) – is a lattice-based key-encapsulation protocol selected by NIST for post-quantum cryptography ([FIPS 203](https://csrc.nist.gov/pubs/fips/203/final)).  
 ML-KEM provides three security categories that correspond to the Kyber512 (Level 1), Kyber768 (Level 3) and Kyber1024 (Level 5) parameter sets.
 
 ---
@@ -79,10 +79,6 @@ eIcicleError decapsulate(
 );
 ```
 
-:::note
-All three functions return `eIcicleError::Success` on success.
-:::
-
 ---
 
 ## C API symbols
@@ -149,4 +145,4 @@ If you need to interface with C or another language, link to the symbols exporte
 
 ## References  
 
-• [NIST FIPS 203 draft – *Module-Lattice-Based Key-Encapsulation Mechanism Standard*](https://csrc.nist.gov/pubs/fips/203/final).
+• [NIST FIPS 203 – *Module-Lattice-Based Key-Encapsulation Mechanism Standard*](https://csrc.nist.gov/pubs/fips/203/final).

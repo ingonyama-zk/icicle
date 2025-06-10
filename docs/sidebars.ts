@@ -175,7 +175,7 @@ export default {
         {
           type: "doc",
           label: "PQC ML-KEM",
-          id: "api/cpp/pqc_ml_kem",
+          id: "api/cpp/lattice/pqc_ml_kem",
         },
         {
           type: "doc",
@@ -294,7 +294,7 @@ export default {
         {
           type: "doc",
           label: "PQC ML-KEM",
-          id: "api/rust-bindings/pqc-ml-kem",
+          id: "api/rust-bindings/lattice/pqc-ml-kem",
         },
         {
           type: "doc",
