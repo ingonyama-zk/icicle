@@ -11,6 +11,8 @@
 #include "icicle/norm.h"
 #include "icicle/random_sampling.h" // Random sampling
 
+// TODO Yuval: cleanup
+
 namespace icicle {
   namespace labrador {
 
@@ -49,19 +51,34 @@ namespace icicle {
       uint32_t B_nof_rows,
       uint32_t B_nof_cols,
       const VecOpsConfig& config,
-      Tq* C);
+      Tq* C)
+    {
+      return eIcicleError::API_NOT_IMPLEMENTED; // TODO integrate
+    }
 
     //------------------------------------------------------------------------------
     // Vector Operations in Zq
     //------------------------------------------------------------------------------
 
-    eIcicleError vector_add(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output);
-    eIcicleError vector_sub(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output);
-    eIcicleError vector_mul(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output);
+    // TODO Yuval: maybe I need a cpp file to simplify this header
+    inline eIcicleError vector_add(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output)
+    {
+      return icicle::vector_add(a, b, size, config, output);
+    }
+    inline eIcicleError vector_sub(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output)
+    {
+      return icicle::vector_sub(a, b, size, config, output);
+    }
+    inline eIcicleError vector_mul(const Zq* a, const Zq* b, uint64_t size, const VecOpsConfig& config, Zq* output)
+    {
+      return icicle::vector_mul(a, b, size, config, output);
+    }
 
     //------------------------------------------------------------------------------
     // Vector Operations in Rq/Tq
     //------------------------------------------------------------------------------
+
+    // TODO Yuval: replace Zq vecops with those
 
     // vectors <Rq/Tq, Rq/Tq> --> Rq/Tq
     eIcicleError
@@ -144,6 +161,12 @@ namespace icicle {
       const std::byte* seed, size_t seed_len, bool fast_mode, const SamplingConfig& cfg, Zq* output, size_t output_size)
     {
       return eIcicleError::API_NOT_IMPLEMENTED; // TODO
+    }
+
+    eIcicleError random_sampling(
+      const std::byte* seed, size_t seed_len, bool fast_mode, const SamplingConfig& cfg, Tq* output, size_t output_size)
+    {
+      return random_sampling(seed, seed_len, fast_mode, cfg, (Zq*)output, output_size * Tq::d);
     }
 
     /// @brief Sample Rq challenge polynomials from challenge space C.

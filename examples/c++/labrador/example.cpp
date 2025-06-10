@@ -4,12 +4,6 @@
 
 using namespace icicle::labrador;
 
-eIcicleError setup(/*TODO params*/)
-{
-  // TODO Ash: labrador setup
-  return eIcicleError::SUCCESS;
-}
-
 LabradorRecursionRawInstance LabradorProtocol::base_prover(
   LabradorInstance lab_inst, const std::vector<std::byte>& ajtai_seed, const std::vector<Rq>& S, std::vector<Zq>& proof)
 {
@@ -34,7 +28,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   std::vector<std::byte> seed_A(ajtai_seed);
   seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling<Tq>(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
+  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
 
   std::vector<Tq> T_hat(r * kappa);
   ICICLE_CHECK(matmul(S_hat.data(), r, n, A.data(), n, kappa, {}, T_hat.data()));
@@ -79,8 +73,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
   seed_C.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling<Tq>(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
-  ICICLE_CHECK(random_sampling<Tq>(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
+  ICICLE_CHECK(random_sampling(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
+  ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
   // compute NTTs for T_tilde, g_tilde
   std::vector<Tq> T_tilde_hat(T_tilde.size()), g_tilde_hat(g_tilde.size());
@@ -191,12 +185,12 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // sample psi_k
   std::vector<std::byte> psi_seed(seed2);
   psi_seed.push_back(std::byte('1'));
-  ICICLE_CHECK(random_sampling<Zq>(psi_seed.data(), psi_seed.size(), false, {}, psi_k.data(), psi_k.size()));
+  ICICLE_CHECK(random_sampling(psi_seed.data(), psi_seed.size(), false, {}, psi_k.data(), psi_k.size()));
 
   // Sample omega_k
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling<Zq>(omega_seed.data(), omega_seed.size(), false, {}, omega_k.data(), omega_k.size()));
+  ICICLE_CHECK(random_sampling(omega_seed.data(), omega_seed.size(), false, {}, omega_k.data(), omega_k.size()));
 
   // Step 19: Aggregate ConstZeroInstance constraints
   // For every 0 ≤ k < ceil(128/log(q)) compute aggregated constraints
@@ -317,7 +311,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   std::vector<Tq> alpha_hat(K);
   std::vector<std::byte> alpha_seed(seed3);
   alpha_seed.push_back(std::byte('1'));
-  ICICLE_CHECK(random_sampling<Tq>(alpha_seed.data(), alpha_seed.size(), false, {}, alpha_hat.data(), K));
+  ICICLE_CHECK(random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, alpha_hat.data(), K));
 
   // Step 22: Say the EqualityInstances in LabradorInstance are:
   // [{a_{ij}^{(k)}; 0 ≤ i,j < r} ⊂ T_q, b^{(k)} ∈ T_q, {φ_i^{(k)} : 0 ≤ i < r} ⊂ T_q^n : 0 ≤ k < K]
@@ -393,9 +387,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   // Convert back to Rq domain
   std::vector<Rq> LS(r * r);
-  for (size_t i = 0; i < r * r; i++) {
-    ICICLE_CHECK(ntt(LS_hat[i].values, d, NTTDir::kInverse, default_ntt_config<Zq>(), LS[i].values));
-  }
+  ICICLE_CHECK(ntt(LS_hat.data(), r * r, NTTDir::kInverse, {}, LS.data()));
 
   // Compute H = 2^{-1}(LS + LS^T)
   std::vector<Rq> H;
@@ -417,12 +409,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   std::vector<Rq> H_tilde(l3 * H.size());
   ICICLE_CHECK(decompose(H.data(), H.size(), base3, {}, H_tilde.data(), H_tilde.size()));
-  std::vector<Tq> H_tilde_hat;
-  for (const auto& poly : H_tilde) {
-    Tq temp;
-    ICICLE_CHECK(ntt(poly.values, d, NTTDir::kForward, default_ntt_config<Zq>(), temp.values));
-    H_tilde_hat.push_back(temp);
-  }
+  std::vector<Tq> H_tilde_hat(H_tilde.size());
+  ICICLE_CHECK(ntt(H_tilde.data(), H_tilde.size(), NTTDir::kForward, {}, H_tilde_hat.data()));
 
   // Step 25: already done
   // Step 26: commit to H_tilde
@@ -431,7 +419,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
-  ICICLE_CHECK(random_sampling<Tq>(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
+  ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
 
   std::vector<Tq> u2(kappa2);
   // u2 = D@H_tilde
@@ -509,7 +497,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
 
   // Step 1: Convert z_hat back to polynomial domain
   std::vector<Rq> z(n);
-  ICICLE_CHECK(ntt(z_hat.data(), n, NTTDir::kInverse, default_ntt_config<Zq>(), z.data()));
+  ICICLE_CHECK(ntt(z_hat.data(), z_hat.size(), NTTDir::kInverse, {}, z.data()));
 
   // Step 2: Decompose z using base0
   size_t l0 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base0));
@@ -591,8 +579,8 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
   seed_C.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling<Tq>(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
-  ICICLE_CHECK(random_sampling<Tq>(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
+  ICICLE_CHECK(random_sampling(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
+  ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
   assert(t.size() == l1 * r * kappa);
   assert(g.size() == ((r * (r + 1)) / 2) * l2);
@@ -631,7 +619,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
 
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
-  ICICLE_CHECK(random_sampling<Tq>(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
+  ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
 
   assert(h.size() == l3 * ((r * (r + 1)) / 2));
 
@@ -660,7 +648,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
 
   std::vector<std::byte> seed_A(ajtai_seed);
   seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling<Tq>(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
+  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
 
   for (size_t i = 0; i < kappa; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
