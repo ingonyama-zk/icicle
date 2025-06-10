@@ -9,7 +9,6 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
-#include "icicle/random_sampling.h" // Random sampling
 
 // TODO Yuval: cleanup
 
@@ -151,6 +150,15 @@ namespace icicle {
     //------------------------------------------------------------------------------
     // Sampling
     //------------------------------------------------------------------------------
+
+    // TODO integrate with Roman's APIs
+    struct SamplingConfig {
+      icicleStreamHandle stream = nullptr; ///< Stream for asynchronous execution (if supported).
+      bool is_result_on_device =
+        false; ///< If true, the output buffer remains on the device (e.g., GPU); otherwise, it's copied to host.
+      bool is_async = false;          ///< Whether to launch the sampling asynchronously.
+      ConfigExtension* ext = nullptr; ///< Optional backend-specific configuration (e.g., for CUDA/HIP/OpenCL).
+    };
 
     /// @brief Uniform Zq^n sampling.
     /// Used to sample aggregation scalars or projection vectors.
