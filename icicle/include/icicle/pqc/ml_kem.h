@@ -8,8 +8,6 @@ namespace icicle {
   namespace pqc {
     namespace ml_kem {
 
-      // TODO: maybe move SecuirityCategory to the config with a default value?
-
       // === Byte sizes ===
       constexpr size_t ENTROPY_BYTES = 64;
       constexpr size_t MESSAGE_BYTES = 32;

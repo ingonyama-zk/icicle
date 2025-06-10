@@ -80,7 +80,7 @@ public:
     Zq* d_A;
     cudaMalloc(&d_ek, ek_size * BATCH_SIZE);
     cudaMalloc(&d_dk, dk_size * BATCH_SIZE);
-    cudaMalloc(&d_A, PolyMatrix<256, k, k, Zq>::byte_size() * BATCH_SIZE);
+    cudaMalloc(&d_A, PolyMatrixView<256, k, k, Zq>::byte_size() * BATCH_SIZE);
 
     ml_kem_keygen_kernel<k, eta1><<<BATCH_SIZE, 128>>>(d_d, d_ek, d_dk, d_A);
 

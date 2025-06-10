@@ -13,7 +13,7 @@ namespace icicle::pqc::ml_kem::pke {
     const __restrict__ uint8_t m[32],
     const __restrict__ uint64_t r[4],
     uint8_t c[32 * (du * k + dv)],
-    const PolyMatrix<256, k, k, Zq>& A)
+    const PolyMatrixView<256, k, k, Zq>& A)
   {
     __shared__ __align__(16) Zq t_data[256 * k];
     __shared__ __align__(16) Zq u_data[256 * k];
@@ -22,12 +22,12 @@ namespace icicle::pqc::ml_kem::pke {
     __shared__ __align__(16) Zq mu_data[256];
     __shared__ __align__(16) Zq v_data[256];
 
-    PolyVec<256, k, Zq> t(t_data);
-    PolyVec<256, k, Zq> u(u_data);
-    PolyVec<256, k, Zq> y(y_data);
-    PolyVec<256, k + 1, Zq> e1_e2(e1_e2_data);
-    PolyVec<256, k, Zq> e1(e1_e2_data);
-    Poly<256, Zq> e2(e1_e2_data + 256 * k);
+    PolyVecView<256, k, Zq> t(t_data);
+    PolyVecView<256, k, Zq> u(u_data);
+    PolyVecView<256, k, Zq> y(y_data);
+    PolyVecView<256, k + 1, Zq> e1_e2(e1_e2_data);
+    PolyVecView<256, k, Zq> e1(e1_e2_data);
+    PolyView<256, Zq> e2(e1_e2_data + 256 * k);
     generate_error_vector<k, k, eta1, 0, true, 0, 0>(r, y);
     generate_error_vector<k, k + 1, eta2, k, false, 0, 0>(r, e1_e2);
 
@@ -60,12 +60,12 @@ namespace icicle::pqc::ml_kem::pke {
     // 20. unpack message
     // https://github.com/pq-crystals/kyber/blob/main/ref/poly.c#L168-L182
     // __shared__ Zq mu_data[256];
-    Poly<256, Zq> mu(mu_data);
+    PolyView<256, Zq> mu(mu_data);
     decode_message(m, mu);
 
     // 21. intt(t^T ∘ y) + e2 + mu
     // __shared__ Zq v_data[256];
-    Poly<256, Zq> v(v_data);
+    PolyView<256, Zq> v(v_data);
     // 21.a v = t^T ∘ y
     // returns Zq element in v
     transposed_vec_vec_mult(t, y, v);
@@ -92,7 +92,7 @@ namespace icicle::pqc::ml_kem::pke {
     const uint8_t m[32],
     const uint64_t r[4],
     uint8_t c[32 * (du * k + dv)],
-    PolyMatrix<256, k, k, Zq> A)
+    PolyMatrixView<256, k, k, Zq> A)
   {
     const uint64_t* rou = (const uint64_t*)(ek_pke + 384 * k);
     if constexpr (dynamic_A) {

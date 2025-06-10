@@ -123,7 +123,7 @@ mod tests {
         assert_eq!(shared_secrets_enc, shared_secrets_dec);
     }
 
-    fn test_consistency_for<P: KyberParams>(batch_size: usize) {
+    fn test_consistency<P: KyberParams>(batch_size: usize) {
         let device = Device::new("CUDA-PQC", 0);
         runtime::set_device(&device).unwrap();
         test_consistency_host::<P>(batch_size);
@@ -133,8 +133,8 @@ mod tests {
     #[test]
     fn test_consistency_all_param_sets() {
         const BATCH_SIZE: usize = 1 << 13;
-        test_consistency_for::<Kyber512Params>(BATCH_SIZE);
-        test_consistency_for::<Kyber768Params>(BATCH_SIZE);
-        test_consistency_for::<Kyber1024Params>(BATCH_SIZE);
+        test_consistency::<Kyber512Params>(BATCH_SIZE);
+        test_consistency::<Kyber768Params>(BATCH_SIZE);
+        test_consistency::<Kyber1024Params>(BATCH_SIZE);
     }
 }

@@ -34,8 +34,6 @@ TYPED_TEST_SUITE(PqcTest, MLkemTypes);
 
 TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTest)
 {
-  // TODO: implement for CPU too?
-
   const int batch_size = 1 << 12;
   // Config
   MlKemConfig config;
@@ -163,5 +161,3 @@ TYPED_TEST(PqcTest, MLkemSharedSecretConsistencyTestOnDevice)
   // Destroy stream
   ICICLE_CHECK(icicle_destroy_stream(stream));
 }
-
-// TODO test against another implementation (e.g. reference implementation)

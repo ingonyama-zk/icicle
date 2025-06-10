@@ -6,7 +6,7 @@
 namespace icicle::pqc::ml_kem {
   template <const uint8_t d>
   __forceinline__ __device__ void
-  byte_decode_decompress(const uint8_t* input_packed /*shared*/, Poly<256, Zq> output /*shared*/)
+  byte_decode_decompress(const uint8_t* input_packed /*shared*/, PolyView<256, Zq> output /*shared*/)
   {
     constexpr int num_coeffs = 256;
     constexpr int coeffs_per_thread = 8;
@@ -49,7 +49,7 @@ namespace icicle::pqc::ml_kem {
     output[index * 2 + 1] = Zq::from_raw(val2);
   }
 
-  __forceinline__ __device__ void decode_message(const uint8_t* __restrict__ m, Poly<256, Zq> mu)
+  __forceinline__ __device__ void decode_message(const uint8_t* __restrict__ m, PolyView<256, Zq> mu)
   {
     constexpr uint16_t half_q = 0x681;
 

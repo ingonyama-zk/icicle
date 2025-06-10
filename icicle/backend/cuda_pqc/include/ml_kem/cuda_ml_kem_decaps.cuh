@@ -31,7 +31,7 @@ namespace icicle::pqc::ml_kem {
   __forceinline__ __device__ void decaps_internal(
     const uint8_t dk[768 * k + 96],
     const uint8_t c[32 * (du * k + dv)],
-    PolyMatrix<256, k, k, Zq> A,
+    PolyMatrixView<256, k, k, Zq> A,
     uint8_t shared_key[32])
   {
     __shared__ uint8_t success;

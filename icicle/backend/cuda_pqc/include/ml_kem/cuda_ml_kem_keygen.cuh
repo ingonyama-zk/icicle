@@ -12,7 +12,7 @@ namespace icicle::pqc::ml_kem {
     uint8_t dk[768 * k + 96],
     Zq A[256 * k * k])
   {
-    pke::keygen<k, eta1>(d, ek, dk, PolyMatrix<256, k, k, Zq>(A));
+    pke::keygen<k, eta1>(d, ek, dk, PolyMatrixView<256, k, k, Zq>(A));
 
     // Have wrap 0 (threads 0-31) calculate the last hash
     if (threadIdx.x < 32) {

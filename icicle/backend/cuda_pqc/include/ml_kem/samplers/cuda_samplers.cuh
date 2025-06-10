@@ -9,7 +9,7 @@
 namespace icicle::pqc::ml_kem {
 
   template <const uint8_t k, const uint8_t start_warp = 3, const uint8_t end_warp = 3>
-  __forceinline__ __device__ void generate_matrix_A(const uint64_t seed[4], PolyMatrix<256, k, k, Zq> matrix_result)
+  __forceinline__ __device__ void generate_matrix_A(const uint64_t seed[4], PolyMatrixView<256, k, k, Zq> matrix_result)
   {
     const uint8_t warp_idx = threadIdx.x / 32;
 
@@ -69,7 +69,7 @@ namespace icicle::pqc::ml_kem {
     const uint8_t start_warp = 3,
     const uint8_t end_warp = 3>
   __forceinline__ __device__ void
-  generate_error_vector(const uint64_t seed[4], PolyVec<256, num_elements, Zq> error_vector_result)
+  generate_error_vector(const uint64_t seed[4], PolyVecView<256, num_elements, Zq> error_vector_result)
   {
     const uint8_t warp_idx = threadIdx.x / 32;
 
@@ -116,11 +116,11 @@ namespace icicle::pqc::ml_kem {
     if constexpr (ntt) {
 #pragma unroll
       for (int t = 0; t < min_hashes_per_warp; t++) {
-        ntt_inplace32(error_vector_result[t + start_idx]);
+        ntt_inplace_32threads(error_vector_result[t + start_idx]);
       }
 
       for (int t = min_hashes_per_warp; t < warp_hash_count; t++) {
-        ntt_inplace32(error_vector_result[t + start_idx]);
+        ntt_inplace_32threads(error_vector_result[t + start_idx]);
       }
     }
   }

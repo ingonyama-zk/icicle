@@ -11,7 +11,7 @@ namespace icicle::pqc::ml_kem::pke {
 
   template <const uint8_t k, const uint8_t eta1>
   __forceinline__ __device__ void
-  keygen(const uint8_t d[32], uint8_t ek_pke[384 * k + 32], uint8_t dk_pke[384 * k], PolyMatrix<256, k, k, Zq> A)
+  keygen(const uint8_t d[32], uint8_t ek_pke[384 * k + 32], uint8_t dk_pke[384 * k], PolyMatrixView<256, k, k, Zq> A)
   {
     __shared__ __align__(256) Zq s_e[256 * k * 2];  // s = s_e[0 : 256 * k], e = s_e[256 * k : 256 * k * 2]
     __shared__ __align__(64) uint64_t rho_sigma[8]; // rho = rho_sigma[0 : 4], sigma = rho_sigma[4 : 8]
@@ -28,15 +28,15 @@ namespace icicle::pqc::ml_kem::pke {
     switch (k) {
     case 2:
       generate_matrix_A<k, 2, 3>(rho_sigma, A);
-      generate_error_vector<k, 2 * k, eta1, 0, true, 1, 1>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
+      generate_error_vector<k, 2 * k, eta1, 0, true, 1, 1>(rho_sigma + 4, PolyVecView<256, 2 * k, Zq>(s_e));
       break;
     case 3:
       generate_matrix_A<k, 2, 3>(rho_sigma, A);
-      generate_error_vector<k, 2 * k, eta1, 0, true, 0, 1>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
+      generate_error_vector<k, 2 * k, eta1, 0, true, 0, 1>(rho_sigma + 4, PolyVecView<256, 2 * k, Zq>(s_e));
       break;
     case 4:
       generate_matrix_A<k, 1, 3>(rho_sigma, A);
-      generate_error_vector<k, 2 * k, eta1, 0, true, 0, 0>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
+      generate_error_vector<k, 2 * k, eta1, 0, true, 0, 0>(rho_sigma + 4, PolyVecView<256, 2 * k, Zq>(s_e));
       break;
     default:
       __builtin_unreachable();
@@ -51,8 +51,8 @@ namespace icicle::pqc::ml_kem::pke {
 
     // calculate t_hat = A * s_hat + e
     Zq* t_hat = (Zq*)(s_e + 256 * k);
-    PolyVec<256, k, Zq> vecS(s_e);
-    PolyVec<256, k, Zq> vecT(t_hat);
+    PolyVecView<256, k, Zq> vecS(s_e);
+    PolyVecView<256, k, Zq> vecT(t_hat);
     matrix_vec_mult<false, true, k>(A, vecS, vecT);
 
     // save s_hat to global memory (each thread saves 3 bytes)

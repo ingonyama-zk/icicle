@@ -16,7 +16,7 @@ namespace icicle::pqc::ml_kem {
 
   template <const uint8_t d>
   __forceinline__ __device__ void
-  byte_encode_compress(const Poly<256, Zq>& input /*shared*/, uint8_t* output_packed /*shared*/)
+  byte_encode_compress(const PolyView<256, Zq>& input /*shared*/, uint8_t* output_packed /*shared*/)
   {
     // We have n=256 coefficients in Rq and Tq, each is packed from 32 bits to d bits
     // Therefore we choose to use a single warp (32 threads) to encode 8 coefficients per thread
@@ -57,7 +57,7 @@ namespace icicle::pqc::ml_kem {
     output[index * 3 + 2] = val2 >> 4;
   }
 
-  __forceinline__ __device__ void poly_encode_compress4(const Poly<256, Zq>& a, uint8_t* r)
+  __forceinline__ __device__ void poly_encode_compress4(const PolyView<256, Zq>& a, uint8_t* r)
   {
     if (threadIdx.x >= 32) return;
 
@@ -83,7 +83,7 @@ namespace icicle::pqc::ml_kem {
     r[ro + 3] = t[6] | (t[7] << 4);
   }
 
-  __forceinline__ __device__ void poly_encode_compress5(const Poly<256, Zq>& a, uint8_t* r)
+  __forceinline__ __device__ void poly_encode_compress5(const PolyView<256, Zq>& a, uint8_t* r)
   {
     if (threadIdx.x >= 32) return;
 
@@ -110,7 +110,7 @@ namespace icicle::pqc::ml_kem {
   }
 
   template <uint8_t k>
-  __forceinline__ __device__ void polyvec_encode_compress10(const PolyVec<256, k, Zq>& a, uint8_t* r)
+  __forceinline__ __device__ void polyvec_encode_compress10(const PolyVecView<256, k, Zq>& a, uint8_t* r)
   {
     constexpr int tasks = k * (256 >> 2); // k * 64
     uint16_t t[4];
@@ -137,7 +137,7 @@ namespace icicle::pqc::ml_kem {
   }
 
   template <uint8_t k>
-  __forceinline__ __device__ void polyvec_encode_compress11(const PolyVec<256, k, Zq>& a, uint8_t* r)
+  __forceinline__ __device__ void polyvec_encode_compress11(const PolyVecView<256, k, Zq>& a, uint8_t* r)
   {
     constexpr int total_threads = k * (256 >> 3);
     if (threadIdx.x >= total_threads) return; // k = {2, 3, 4} total_threads = {64, 96, 128}
@@ -173,7 +173,8 @@ namespace icicle::pqc::ml_kem {
   }
 
   template <const uint8_t k, const uint8_t du, const uint8_t dv>
-  __forceinline__ __device__ void encode_ciphertext(const PolyVec<256, k, Zq>& u, const Poly<256, Zq>& v, uint8_t* c)
+  __forceinline__ __device__ void
+  encode_ciphertext(const PolyVecView<256, k, Zq>& u, const PolyView<256, Zq>& v, uint8_t* c)
   {
     if constexpr (du == 11) {
       polyvec_encode_compress11<k>(u, c);
@@ -194,7 +195,7 @@ namespace icicle::pqc::ml_kem {
     }
   }
 
-  __forceinline__ __device__ void encode_message(const Poly<256, Zq>& mu, uint8_t* m)
+  __forceinline__ __device__ void encode_message(const PolyView<256, Zq>& mu, uint8_t* m)
   {
     uint32_t t;
     m[threadIdx.x] = 0;

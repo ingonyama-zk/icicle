@@ -42,7 +42,7 @@ __launch_bounds__(128) __global__ void test_pke_encrypt_kernel(
   m += blockIdx.x * 32;
   r += blockIdx.x * 32;
   c += blockIdx.x * (32 * (du * k + dv));
-  pke::encrypt<k, eta1, eta2, du, dv>(ek, m, (uint64_t*)r, c, PolyMatrix<256, k, k, Zq>(A));
+  pke::encrypt<k, eta1, eta2, du, dv>(ek, m, (uint64_t*)r, c, PolyMatrixView<256, k, k, Zq>(A));
 }
 
 class PkeEncryptTest : public IcicleTestBase
@@ -98,7 +98,7 @@ public:
     cudaMalloc(&d_m, BATCH_SIZE * m_size);
     cudaMalloc(&d_r, BATCH_SIZE * r_size);
     cudaMalloc(&d_c, BATCH_SIZE * c_size);
-    cudaMalloc(&d_A, BATCH_SIZE * PolyMatrix<256, k, k, Zq>::byte_size());
+    cudaMalloc(&d_A, BATCH_SIZE * PolyMatrixView<256, k, k, Zq>::byte_size());
 
     // Copy same inputs into each batch slot
     for (int i = 0; i < BATCH_SIZE; ++i) {

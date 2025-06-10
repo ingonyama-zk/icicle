@@ -44,7 +44,7 @@ namespace icicle::pqc::ml_kem {
     K += static_cast<size_t>(blockIdx.x) * 32;
     c += static_cast<size_t>(blockIdx.x) * (32 * (du * k + dv));
     A += static_cast<size_t>(blockIdx.x) * k * k * 256;
-    encaps_internal<k, eta_1, eta_2, du, dv>(ek, m, PolyMatrix<256, k, k, Zq>(A), K, c);
+    encaps_internal<k, eta_1, eta_2, du, dv>(ek, m, PolyMatrixView<256, k, k, Zq>(A), K, c);
   }
 
   template <const uint8_t k, const uint8_t eta_1, const uint8_t eta_2, const uint8_t du, const uint8_t dv>
@@ -54,7 +54,7 @@ namespace icicle::pqc::ml_kem {
     c += static_cast<size_t>(blockIdx.x) * (32 * (du * k + dv));
     K += static_cast<size_t>(blockIdx.x) * 32;
     A += static_cast<size_t>(blockIdx.x) * k * k * 256;
-    decaps_internal<k, eta_1, eta_2, du, dv>(dk, c, PolyMatrix<256, k, k, Zq>(A), K);
+    decaps_internal<k, eta_1, eta_2, du, dv>(dk, c, PolyMatrixView<256, k, k, Zq>(A), K);
   }
 
 } // namespace icicle::pqc::ml_kem

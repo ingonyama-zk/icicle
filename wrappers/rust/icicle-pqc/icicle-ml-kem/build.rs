@@ -27,28 +27,17 @@ fn main() {
 
     config
         .define("PQC", "ON")
-        .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir);
+        .define("CMAKE_INSTALL_PREFIX", &icicle_install_dir)
+        .define("CUDA_PQC_BACKEND", "ON");
 
-    // if cfg!(feature = "cuda_pqc_backend") { // currently only cuda_pqc_backend is supported, move to optional features after cpu support is added
-    config.define("CUDA_PQC_BACKEND", "ON");
-    // }
-
-    // Build and install the shared library
+    // Build and install the library
     config
         .build_target("install")
         .build();
 
     let lib_path = icicle_install_dir.join("lib");
 
-    // Link against the installed shared library
+    // Link against the installed library
     println!("cargo:rustc-link-search={}", lib_path.display());
     println!("cargo:rustc-link-lib=icicle_pqc");
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_path.display());
-
-    // if cfg!(feature = "cuda_pqc_backend") { // currently only cuda_pqc_backend is supported, move to optional features after cpu support is added
-    println!(
-        "cargo:rustc-env=ICICLE_BACKEND_INSTALL_DIR={}/lib/backend",
-        icicle_install_dir.display()
-    );
-    // }
 }

@@ -17,10 +17,10 @@ namespace icicle::pqc::ml_kem::pke {
     // initialize barrier
     if (threadIdx.x == 0) { init(&bar, 128); }
 
-    PolyVec<256, k, Zq> u(poly_data);
-    PolyVec<256, k, Zq> s(poly_data + 256 * k);
-    Poly<256, Zq> v(poly_data + 256 * k * 2);
-    Poly<256, Zq> w(poly_data + 256 * (k * 2 + 1));
+    PolyVecView<256, k, Zq> u(poly_data);
+    PolyVecView<256, k, Zq> s(poly_data + 256 * k);
+    PolyView<256, Zq> v(poly_data + 256 * k * 2);
+    PolyView<256, Zq> w(poly_data + 256 * (k * 2 + 1));
 
 #pragma unroll
     for (int i = 0; i < k; ++i) {

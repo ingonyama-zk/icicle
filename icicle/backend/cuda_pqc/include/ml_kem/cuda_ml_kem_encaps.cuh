@@ -10,7 +10,7 @@ namespace icicle::pqc::ml_kem {
   __forceinline__ __device__ void encaps_internal(
     const uint8_t ek[384 * k + 32],
     const uint8_t m[32],
-    const PolyMatrix<256, k, k, Zq> A,
+    const PolyMatrixView<256, k, k, Zq> A,
     uint8_t shared_key[32],
     uint8_t c[32 * (du * k + dv)])
   {

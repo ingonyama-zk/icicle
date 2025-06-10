@@ -94,8 +94,6 @@ namespace icicle {
         return MlKemDecapsulate1024Dispatcher::execute(secret_keys, ciphertext, config, shared_secrets);
       }
 
-      // TODO: C FFI
-
     } // namespace ml_kem
   } // namespace pqc
 

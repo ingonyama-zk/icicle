@@ -74,7 +74,7 @@ public:
     cudaMalloc(&d_dk, dk_size * BATCH_SIZE);
     cudaMalloc(&d_c, c_size * BATCH_SIZE);
     cudaMalloc(&d_K_prime, K_size * BATCH_SIZE);
-    cudaMalloc(&d_A, PolyMatrix<256, k, k, Zq>::byte_size() * BATCH_SIZE);
+    cudaMalloc(&d_A, PolyMatrixView<256, k, k, Zq>::byte_size() * BATCH_SIZE);
 
     // Copy inputs from host to device
     for (int i = 0; i < BATCH_SIZE; ++i) {

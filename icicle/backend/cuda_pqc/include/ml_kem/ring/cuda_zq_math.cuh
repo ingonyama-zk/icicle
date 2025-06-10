@@ -23,7 +23,7 @@ namespace icicle::pqc::ml_kem {
     735,  2804, 525,  1092, 2237, 403,  2926, 1026, 2303, 1143, 2186, 2150, 1179, 2775, 554,  886,  2443, 1722, 1607,
     1212, 2117, 1874, 1455, 1029, 2300, 2110, 1219, 2935, 394,  885,  2444, 2154, 1175};
 
-  __forceinline__ __device__ void ntt_inplace32(Poly<256, Zq> poly)
+  __forceinline__ __device__ void ntt_inplace_32threads(PolyView<256, Zq> poly)
   {
     const int lane = threadIdx.x % 32;
     // assume poly is already in the shared memory
@@ -63,7 +63,7 @@ namespace icicle::pqc::ml_kem {
     }
   }
 
-  __forceinline__ __device__ void intt_inplace32(Poly<256, Zq> poly)
+  __forceinline__ __device__ void intt_inplace_32threads(PolyView<256, Zq> poly)
   {
     const int lane = threadIdx.x % 32;
     constexpr Zq d_inv_zq = 3303;
@@ -125,7 +125,7 @@ namespace icicle::pqc::ml_kem {
     }
   }
 
-  __forceinline__ __device__ void ntt_inplace(Poly<256, Zq> poly)
+  __forceinline__ __device__ void ntt_inplace(PolyView<256, Zq> poly)
   { // assume poly is already in the shared memory
     uint8_t k_offset = 1;
 #pragma unroll
@@ -149,7 +149,7 @@ namespace icicle::pqc::ml_kem {
     }
   }
 
-  __forceinline__ __device__ void intt_inplace(Poly<256, Zq> poly)
+  __forceinline__ __device__ void intt_inplace(PolyView<256, Zq> poly)
   {
     // assume poly is already in the shared memory
     constexpr Zq d_inv_zq = 3303;
@@ -185,7 +185,8 @@ namespace icicle::pqc::ml_kem {
   }
 
   // Algorithm 11: MultiplyNTTs
-  __forceinline__ __device__ void ntt_multiply(const Poly<256, Zq>& a, const Poly<256, Zq>& b, Poly<256, Zq>& out)
+  __forceinline__ __device__ void
+  ntt_multiply(const PolyView<256, Zq>& a, const PolyView<256, Zq>& b, PolyView<256, Zq>& out)
   {
     base_case_multiply(
       a[threadIdx.x * 2], a[threadIdx.x * 2 + 1], b[threadIdx.x * 2], b[threadIdx.x * 2 + 1], d_gamma[threadIdx.x],
@@ -199,7 +200,7 @@ namespace icicle::pqc::ml_kem {
   // y is the output vector of k polynomials in NTT form
   template <bool TRANSPOSED = false, bool ACCUMULATE = false, uint8_t k>
   __forceinline__ __device__ void
-  matrix_vec_mult(const PolyMatrix<256, k, k, Zq> A, const PolyVec<256, k, Zq> x, PolyVec<256, k, Zq> y)
+  matrix_vec_mult(const PolyMatrixView<256, k, k, Zq> A, const PolyVecView<256, k, Zq> x, PolyVecView<256, k, Zq> y)
   {
     // #pragma unroll
     for (int i = 0; i < k; ++i) {
@@ -229,7 +230,7 @@ namespace icicle::pqc::ml_kem {
 
   template <uint8_t k>
   __forceinline__ __device__ void
-  transposed_vec_vec_mult(const PolyVec<256, k, Zq> a, const PolyVec<256, k, Zq> b, Poly<256, Zq> out)
+  transposed_vec_vec_mult(const PolyVecView<256, k, Zq> a, const PolyVecView<256, k, Zq> b, PolyView<256, Zq> out)
   {
     // Zero out the output polynomial
     out[threadIdx.x * 2] = 0;

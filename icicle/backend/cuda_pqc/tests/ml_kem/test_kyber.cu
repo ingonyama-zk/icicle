@@ -391,7 +391,7 @@ __launch_bounds__(128) __global__ void nttInplaceKernel(Zq* array)
     shared_array[threadIdx.x * 2] = array[threadIdx.x * 2 + i * 256];
     shared_array[threadIdx.x * 2 + 1] = array[threadIdx.x * 2 + 1 + i * 256];
     __syncthreads();
-    Poly<256, Zq> poly(shared_array);
+    PolyView<256, Zq> poly(shared_array);
     ntt_inplace(poly);
     __syncthreads();
     array[threadIdx.x * 2 + i * 256] = shared_array[threadIdx.x * 2];
@@ -407,7 +407,7 @@ __launch_bounds__(128) __global__ void inttInplaceKernel(Zq* array)
     shared_array[threadIdx.x * 2] = array[threadIdx.x * 2 + i * 256];
     shared_array[threadIdx.x * 2 + 1] = array[threadIdx.x * 2 + 1 + i * 256];
     __syncthreads();
-    Poly<256, Zq> poly(shared_array);
+    PolyView<256, Zq> poly(shared_array);
     intt_inplace(poly);
     __syncthreads();
     array[threadIdx.x * 2 + i * 256] = shared_array[threadIdx.x * 2];
@@ -547,30 +547,30 @@ TEST_F(KyberTest, NTT)
 template <uint8_t k = 2>
 __global__ void sampleA_test_kernel(const uint64_t rho[4], Zq* A)
 {
-  // generate_matrix_A<k>(rho, PolyMatrix<256, k, k, Zq>(A), );
+  // generate_matrix_A<k>(rho, PolyMatrixView<256, k, k, Zq>(A), );
 
   // const uint8_t warp_idx = threadIdx.x / 32;
   // if constexpr (k == 2){
   //   if (warp_idx < 2) {
-  //     generate_matrix_A<k>(rho, PolyMatrix<256, k, k, Zq>(A), 2, warp_idx * 2);
+  //     generate_matrix_A<k>(rho, PolyMatrixView<256, k, k, Zq>(A), 2, warp_idx * 2);
   //   }
   // }else if constexpr (k == 3){
   //   if (warp_idx < 3) {
-  //     generate_matrix_A<k>(rho, PolyMatrix<256, k, k, Zq>(A), 3, warp_idx * 3);
+  //     generate_matrix_A<k>(rho, PolyMatrixView<256, k, k, Zq>(A), 3, warp_idx * 3);
   //   }
   // }else if constexpr (k == 4){
   //   if (warp_idx < 3) {
-  //     generate_matrix_A<k>(rho, PolyMatrix<256, k, k, Zq>(A), warp_idx == 0 ? 6 : 5, warp_idx * 5 + (warp_idx
+  //     generate_matrix_A<k>(rho, PolyMatrixView<256, k, k, Zq>(A), warp_idx == 0 ? 6 : 5, warp_idx * 5 + (warp_idx
   //     > 0));
   //   }
   // }
   switch (k) {
   case 2:
-    generate_matrix_A<k, 0, 1>(rho, PolyMatrix<256, k, k, Zq>(A));
+    generate_matrix_A<k, 0, 1>(rho, PolyMatrixView<256, k, k, Zq>(A));
     break;
   case 3:
   case 4:
-    generate_matrix_A<k, 0, 2>(rho, PolyMatrix<256, k, k, Zq>(A));
+    generate_matrix_A<k, 0, 2>(rho, PolyMatrixView<256, k, k, Zq>(A));
     break;
   default:
     __builtin_unreachable();
@@ -680,15 +680,15 @@ TEST_F(KyberTest, SampleA)
 template <const uint8_t k = 2, const uint8_t eta = 3>
 __global__ void samplePolyCBD_test_kernel(const uint64_t sigma[4], Zq* s_e)
 {
-  // generate_error_vector<k, 2 * k, eta, 0, false>(sigma, PolyVec<256, 2 * k, Zq>(s_e));
+  // generate_error_vector<k, 2 * k, eta, 0, false>(sigma, PolyVecView<256, 2 * k, Zq>(s_e));
 
   switch (k) {
   case 2:
-    generate_error_vector<k, 2 * k, eta, 0, false, 2, 3>(sigma, PolyVec<256, 2 * k, Zq>(s_e));
+    generate_error_vector<k, 2 * k, eta, 0, false, 2, 3>(sigma, PolyVecView<256, 2 * k, Zq>(s_e));
     break;
   case 3:
   case 4:
-    generate_error_vector<k, 2 * k, eta, 0, false, 3, 3>(sigma, PolyVec<256, 2 * k, Zq>(s_e));
+    generate_error_vector<k, 2 * k, eta, 0, false, 3, 3>(sigma, PolyVecView<256, 2 * k, Zq>(s_e));
     break;
   default:
     __builtin_unreachable();
@@ -878,7 +878,7 @@ base_case_multiply(const Zq& a0, const Zq& a1, const Zq& b0, const Zq& b1, const
 
 // Algorithm 11: MultiplyNTTs
 template <typename T>
-__device__ inline void ntt_multiply(const Poly<256, T>& a, const Poly<256, T>& b, Poly<256, T>& out)
+__device__ inline void ntt_multiply(const PolyView<256, T>& a, const PolyView<256, T>& b, PolyView<256, T>& out)
 {
   if (threadIdx.x >= 128) { return; }
   base_case_multiply(
@@ -889,18 +889,18 @@ __device__ inline void ntt_multiply(const Poly<256, T>& a, const Poly<256, T>& b
 template <typename T>
 __global__ void ntt_multiply_kernel(const T* a, const T* b, T* out)
 {
-  Poly<256, T> a_poly(const_cast<T*>(a));
-  Poly<256, T> b_poly(const_cast<T*>(b));
-  Poly<256, T> out_poly(out);
+  PolyView<256, T> a_poly(const_cast<T*>(a));
+  PolyView<256, T> b_poly(const_cast<T*>(b));
+  PolyView<256, T> out_poly(out);
   ntt_multiply(a_poly, b_poly, out_poly);
 }
 
 template <typename T, uint8_t COLS, uint8_t ROWS>
 __device__ inline void transposed_matrix_vec_mult(
-  const PolyMatrix<256, COLS, ROWS, T>& A, const PolyVec<256, COLS, T>& x, PolyVec<256, ROWS, T>& y)
+  const PolyMatrixView<256, COLS, ROWS, T>& A, const PolyVecView<256, COLS, T>& x, PolyVecView<256, ROWS, T>& y)
 {
   __shared__ T temp[256];
-  Poly<256, T> temp_poly(temp);
+  PolyView<256, T> temp_poly(temp);
 
   // each of the 128 threads does one pair (2 coefficients)
   if (threadIdx.x >= 128) return;
@@ -927,18 +927,18 @@ __device__ inline void transposed_matrix_vec_mult(
 template <typename T, uint8_t COLS, uint8_t ROWS>
 __global__ void transposed_matrix_vec_mult_kernel(T* A, T* x, T* y)
 {
-  PolyMatrix<256, COLS, ROWS, T> A_matrix(A);
-  PolyVec<256, COLS, T> x_vec(x);
-  PolyVec<256, ROWS, T> y_vec(y);
+  PolyMatrixView<256, COLS, ROWS, T> A_matrix(A);
+  PolyVecView<256, COLS, T> x_vec(x);
+  PolyVecView<256, ROWS, T> y_vec(y);
   transposed_matrix_vec_mult(A_matrix, x_vec, y_vec);
 }
 
 template <uint8_t k>
 __global__ void test_matrix_vec_mult(Zq* A, Zq* x, Zq* output)
 {
-  PolyMatrix<256, k, k, Zq> A_matrix(A);
-  PolyVec<256, k, Zq> x_vec(x);
-  PolyVec<256, k, Zq> y_vec(output);
+  PolyMatrixView<256, k, k, Zq> A_matrix(A);
+  PolyVecView<256, k, Zq> x_vec(x);
+  PolyVecView<256, k, Zq> y_vec(output);
   matrix_vec_mult<true, false, k>(A_matrix, x_vec, y_vec);
 }
 
@@ -973,21 +973,21 @@ __global__ void test_matrix_vec_mult(Zq* A, Zq* x, Zq* output)
 //     }
 //   }
 //   Zq internal_A[256 * 4 * 4] = {0};
-//   PolyMatrix<256, 4, 4, Zq> host_A(internal_A);
+//   PolyMatrixView<256, 4, 4, Zq> host_A(internal_A);
 //   for (int row = 0; row < K; row++) {
 //     for (int col = 0; col < K; col++) {
 //       for (int i = 0; i < 256; i++) {
 //         Zq zq_coeff = Zq(reference_matrix[row][col].coeffs[i]);
-//         PolyVec<256, 4, Zq> host_A_row = host_A[row];
-//         Poly<256, Zq> host_A_row_col = host_A_row[col];
+//         PolyVecView<256, 4, Zq> host_A_row = host_A[row];
+//         PolyView<256, Zq> host_A_row_col = host_A_row[col];
 //         host_A_row_col[i] = zq_coeff;
 //       }
 //     }
 //   }
 //   Zq internal_x[256 * 4] = {0};
-//   PolyVec<256, 4, Zq> host_x(internal_x);
+//   PolyVecView<256, 4, Zq> host_x(internal_x);
 //   Zq internal_y[256 * 4] = {0};
-//   PolyVec<256, 4, Zq> host_y(internal_y);
+//   PolyVecView<256, 4, Zq> host_y(internal_y);
 //   for (int i = 0; i < K; i++) {
 //     for (int j = 0; j < 256; j++) {
 //       host_x[i][j] = Zq(reference_vec[i].coeffs[j]);
@@ -996,15 +996,15 @@ __global__ void test_matrix_vec_mult(Zq* A, Zq* x, Zq* output)
 //   Zq* d_A;
 //   Zq* d_x;
 //   Zq* d_y;
-//   cudaMalloc(&d_A, PolyMatrix<256, 4, 4, Zq>::byte_size());
-//   cudaMalloc(&d_x, PolyVec<256, 4, Zq>::byte_size());
-//   cudaMalloc(&d_y, PolyVec<256, 4, Zq>::byte_size());
-//   cudaMemcpy(d_A, host_A.data(), PolyMatrix<256, 4, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
-//   cudaMemcpy(d_x, host_x.data(), PolyVec<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
-//   cudaMemcpy(d_y, host_y.data(), PolyVec<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
+//   cudaMalloc(&d_A, PolyMatrixView<256, 4, 4, Zq>::byte_size());
+//   cudaMalloc(&d_x, PolyVecView<256, 4, Zq>::byte_size());
+//   cudaMalloc(&d_y, PolyVecView<256, 4, Zq>::byte_size());
+//   cudaMemcpy(d_A, host_A.data(), PolyMatrixView<256, 4, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
+//   cudaMemcpy(d_x, host_x.data(), PolyVecView<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
+//   cudaMemcpy(d_y, host_y.data(), PolyVecView<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
 //   transposed_matrix_vec_mult_kernel<Zq, 4, 4><<<1, 128>>>(d_A, d_x, d_y);
 //   ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess) << "CUDA error: " << cudaGetErrorString(cudaGetLastError());
-//   cudaMemcpy(host_y.data(), d_y, PolyVec<256, 4, Zq>::byte_size(), cudaMemcpyDeviceToHost);
+//   cudaMemcpy(host_y.data(), d_y, PolyVecView<256, 4, Zq>::byte_size(), cudaMemcpyDeviceToHost);
 //   for (int i = 0; i < K; i++) {
 //     for (int j = 0; j < 256; j++) {
 //       ASSERT_EQ(host_y[i][j], Zq(reference_result[i].coeffs[j]));
@@ -1446,7 +1446,7 @@ TEST_F(KyberTest, TransposedMatrixVecMult)
   };
 
   Zq internal_A[256 * 4 * 4] = {0};
-  PolyMatrix<256, 4, 4, Zq> host_A(internal_A);
+  PolyMatrixView<256, 4, 4, Zq> host_A(internal_A);
   for (int row = 0; row < K; row++) {
     for (int col = 0; col < K; col++) {
       for (int i = 0; i < 256; i++) {
@@ -1457,9 +1457,9 @@ TEST_F(KyberTest, TransposedMatrixVecMult)
   }
 
   Zq internal_x[256 * 4] = {0};
-  PolyVec<256, 4, Zq> host_x(internal_x);
+  PolyVecView<256, 4, Zq> host_x(internal_x);
   Zq internal_y[256 * 4] = {0};
-  PolyVec<256, 4, Zq> host_y(internal_y);
+  PolyVecView<256, 4, Zq> host_y(internal_y);
   for (int i = 0; i < K; i++) {
     for (int j = 0; j < 256; j++) {
       host_x[i][j] = Zq(reference_vec[i][j]);
@@ -1469,16 +1469,16 @@ TEST_F(KyberTest, TransposedMatrixVecMult)
   Zq* d_A;
   Zq* d_x;
   Zq* d_y;
-  cudaMalloc(&d_A, PolyMatrix<256, 4, 4, Zq>::byte_size());
-  cudaMalloc(&d_x, PolyVec<256, 4, Zq>::byte_size());
-  cudaMalloc(&d_y, PolyVec<256, 4, Zq>::byte_size());
-  cudaMemcpy(d_A, host_A.data(), PolyMatrix<256, 4, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_x, host_x.data(), PolyVec<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
-  cudaMemcpy(d_y, host_y.data(), PolyVec<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
+  cudaMalloc(&d_A, PolyMatrixView<256, 4, 4, Zq>::byte_size());
+  cudaMalloc(&d_x, PolyVecView<256, 4, Zq>::byte_size());
+  cudaMalloc(&d_y, PolyVecView<256, 4, Zq>::byte_size());
+  cudaMemcpy(d_A, host_A.data(), PolyMatrixView<256, 4, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_x, host_x.data(), PolyVecView<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_y, host_y.data(), PolyVecView<256, 4, Zq>::byte_size(), cudaMemcpyHostToDevice);
 
   test_matrix_vec_mult<4><<<1, 128>>>(d_A, d_x, d_y);
   ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess) << "CUDA error: " << cudaGetErrorString(cudaGetLastError());
-  cudaMemcpy(host_y.data(), d_y, PolyVec<256, 4, Zq>::byte_size(), cudaMemcpyDeviceToHost);
+  cudaMemcpy(host_y.data(), d_y, PolyVecView<256, 4, Zq>::byte_size(), cudaMemcpyDeviceToHost);
 
   for (int i = 0; i < K; i++) {
     for (int j = 0; j < 256; j++) {
@@ -1490,7 +1490,7 @@ TEST_F(KyberTest, TransposedMatrixVecMult)
 template <const uint8_t d>
 __global__ void encode_compress_kernel(const Zq* input, uint8_t* output)
 {
-  Poly<256, Zq> input_poly(const_cast<Zq*>(input));
+  PolyView<256, Zq> input_poly(const_cast<Zq*>(input));
   // __shared__ uint16_t temp[256];
   byte_encode_compress<d>(input_poly, output);
   // byte_encode(temp, output, d);
@@ -1499,7 +1499,7 @@ __global__ void encode_compress_kernel(const Zq* input, uint8_t* output)
 template <const uint8_t d>
 __global__ void decode_decompress_kernel(const uint8_t* input, Zq* output)
 {
-  Poly<256, Zq> output_poly(const_cast<Zq*>(output));
+  PolyView<256, Zq> output_poly(const_cast<Zq*>(output));
   // __shared__ uint16_t temp[256];
   byte_decode_decompress<d>(input, output_poly);
   // byte_encode(temp, output, d);
@@ -1516,8 +1516,8 @@ void run_single_test(
   Zq host_decompressed[256];
 
   Zq* d_input;
-  cudaMalloc(&d_input, Poly<256, Zq>::byte_size());
-  cudaMemcpy(d_input, reference_input, Poly<256, Zq>::byte_size(), cudaMemcpyHostToDevice);
+  cudaMalloc(&d_input, PolyView<256, Zq>::byte_size());
+  cudaMemcpy(d_input, reference_input, PolyView<256, Zq>::byte_size(), cudaMemcpyHostToDevice);
 
   uint8_t* d_result;
   cudaMalloc(&d_result, 384 * sizeof(uint8_t));
@@ -2039,7 +2039,7 @@ __launch_bounds__(128) __global__ void pke_keygen(
   ek += blockIdx.x * (384 * k + 32);
   dk += blockIdx.x * (384 * k);
   A += blockIdx.x * 256 * k * k;
-  pke::keygen<k, eta1>(d, ek, dk, PolyMatrix<256, k, k, Zq>(A));
+  pke::keygen<k, eta1>(d, ek, dk, PolyMatrixView<256, k, k, Zq>(A));
 }
 
 TEST_F(KyberTest, PkeKeygen512)
@@ -2130,7 +2130,7 @@ __global__ void ntt_inplace_test_kernel(Zq* s_e)
 {
   // NTT on s and e
   for (int i = 0; i < k * 2; i++) {
-    ntt_inplace(Poly<256, Zq>(s_e + 256 * i));
+    ntt_inplace(PolyView<256, Zq>(s_e + 256 * i));
   }
 }
 
