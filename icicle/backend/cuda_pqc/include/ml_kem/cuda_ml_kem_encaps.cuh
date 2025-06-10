@@ -17,7 +17,7 @@ namespace icicle::pqc::ml_kem {
     // randomness must remain private, so we cannot expose it
     __shared__ __align__(16) uint8_t k_r[64];
     if (threadIdx.x < 32) { generate_k_r<k>(m, ek, k_r); }
-    pke::encrypt<k, eta1, eta2, du, dv>(ek, m, (uint64_t*)(k_r + 32), c, A);
+    pke::encrypt<k, eta1, eta2, du, dv, true>(ek, m, (uint64_t*)(k_r + 32), c, A);
     if (threadIdx.x < 32) { shared_key[threadIdx.x] = k_r[threadIdx.x]; }
   }
 } // namespace icicle::pqc::ml_kem

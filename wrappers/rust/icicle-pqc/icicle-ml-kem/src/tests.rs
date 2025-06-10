@@ -27,7 +27,7 @@ mod tests {
         rng.fill(&mut messages[..]);
 
         let mut config = MlKemConfig::default();
-        config.batch_size = batch_size as i32;
+        config.batch_size = batch_size;
 
         keygen::<P>(
             HostSlice::from_slice(&entropy),
@@ -65,7 +65,7 @@ mod tests {
         runtime::warmup(&stream).unwrap();
 
         let mut config = MlKemConfig::default();
-        config.batch_size = batch_size as i32;
+        config.batch_size = batch_size;
         config.stream = *stream;
         config.is_async = true;
 

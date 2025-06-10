@@ -18,19 +18,19 @@ namespace icicle::pqc::ml_kem {
     entropy =
       config.entropy_on_device
         ? entropy
-        : allocate_and_copy_to_device(entropy, ENTROPY_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+        : allocate_and_copy_to_device(entropy, config.batch_size * ENTROPY_BYTES * sizeof(std::byte), cuda_stream);
     std::byte* d_public_keys = config.public_keys_on_device
                                  ? public_keys
                                  : allocate_on_device<std::byte>(
-                                     Category::PUBLIC_KEY_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+                                      config.batch_size * Category::PUBLIC_KEY_BYTES * sizeof(std::byte), cuda_stream);
     std::byte* d_secret_keys = config.secret_keys_on_device
                                  ? secret_keys
                                  : allocate_on_device<std::byte>(
-                                     Category::SECRET_KEY_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+                                     config.batch_size * Category::SECRET_KEY_BYTES * sizeof(std::byte), cuda_stream);
 
     Zq* d_A; // TODO: move to arguments? (send a buffer of bytes and cast to Zq*)
     CHK_IF_RETURN(cudaMallocAsync(
-      &d_A, PolyMatrix<256, Category::K, Category::K, Zq>::byte_size() * config.batch_size, cuda_stream));
+      &d_A, config.batch_size * PolyMatrix<256, Category::K, Category::K, Zq>::byte_size(), cuda_stream));
 
     ml_kem_keygen_kernel<Category::K, Category::ETA1><<<config.batch_size, 128, 0, cuda_stream>>>(
       (uint8_t*)entropy, (uint8_t*)d_public_keys, (uint8_t*)d_secret_keys, d_A);
@@ -39,7 +39,7 @@ namespace icicle::pqc::ml_kem {
 
     if (!config.public_keys_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(
-        public_keys, d_public_keys, Category::PUBLIC_KEY_BYTES * config.batch_size * sizeof(std::byte),
+        public_keys, d_public_keys, config.batch_size * Category::PUBLIC_KEY_BYTES * sizeof(std::byte),
         cudaMemcpyDeviceToHost, cuda_stream));
       CHK_IF_RETURN(cudaFreeAsync((void*)d_public_keys, cuda_stream));
     } else {
@@ -47,7 +47,7 @@ namespace icicle::pqc::ml_kem {
     }
     if (!config.secret_keys_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(
-        secret_keys, d_secret_keys, Category::SECRET_KEY_BYTES * config.batch_size * sizeof(std::byte),
+        secret_keys, d_secret_keys, config.batch_size * Category::SECRET_KEY_BYTES * sizeof(std::byte),
         cudaMemcpyDeviceToHost, cuda_stream));
       CHK_IF_RETURN(cudaFreeAsync((void*)d_secret_keys, cuda_stream));
     } else {
@@ -75,24 +75,24 @@ namespace icicle::pqc::ml_kem {
     message =
       config.messages_on_device
         ? message
-        : allocate_and_copy_to_device(message, MESSAGE_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+        : allocate_and_copy_to_device(message, config.batch_size * MESSAGE_BYTES * sizeof(std::byte), cuda_stream);
     public_keys = config.public_keys_on_device
                     ? public_keys
                     : allocate_and_copy_to_device(
-                        public_keys, Category::PUBLIC_KEY_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+                        public_keys, config.batch_size * Category::PUBLIC_KEY_BYTES * sizeof(std::byte), cuda_stream);
     std::byte* d_ciphertext = config.ciphertexts_on_device
                                 ? ciphertext
                                 : allocate_on_device<std::byte>(
-                                    Category::CIPHERTEXT_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+                                    config.batch_size * Category::CIPHERTEXT_BYTES * sizeof(std::byte), cuda_stream);
     std::byte* d_shared_secrets =
       config.shared_secrets_on_device
         ? shared_secrets
         : allocate_on_device<std::byte>(
-            Category::SHARED_SECRET_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+            config.batch_size * Category::SHARED_SECRET_BYTES * sizeof(std::byte), cuda_stream);
 
     Zq* d_A; // TODO: move to arguments? (send a buffer of bytes and cast to Zq*)
     CHK_IF_RETURN(cudaMallocAsync(
-      &d_A, PolyMatrix<256, Category::K, Category::K, Zq>::byte_size() * config.batch_size, cuda_stream));
+      &d_A, config.batch_size * PolyMatrix<256, Category::K, Category::K, Zq>::byte_size(), cuda_stream));
 
     ml_kem_encaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV>
       <<<config.batch_size, 128, 0, cuda_stream>>>(
@@ -102,7 +102,7 @@ namespace icicle::pqc::ml_kem {
 
     if (!config.ciphertexts_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(
-        ciphertext, d_ciphertext, Category::CIPHERTEXT_BYTES * config.batch_size * sizeof(std::byte),
+        ciphertext, d_ciphertext, config.batch_size * Category::CIPHERTEXT_BYTES * sizeof(std::byte),
         cudaMemcpyDeviceToHost, cuda_stream));
       CHK_IF_RETURN(cudaFreeAsync((void*)d_ciphertext, cuda_stream));
     } else {
@@ -111,7 +111,7 @@ namespace icicle::pqc::ml_kem {
 
     if (!config.shared_secrets_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(
-        shared_secrets, d_shared_secrets, Category::SHARED_SECRET_BYTES * config.batch_size * sizeof(std::byte),
+        shared_secrets, d_shared_secrets, config.batch_size * Category::SHARED_SECRET_BYTES * sizeof(std::byte),
         cudaMemcpyDeviceToHost, cuda_stream));
       CHK_IF_RETURN(cudaFreeAsync((void*)d_shared_secrets, cuda_stream));
     } else {
@@ -137,20 +137,20 @@ namespace icicle::pqc::ml_kem {
     secret_keys = config.secret_keys_on_device
                     ? secret_keys
                     : allocate_and_copy_to_device(
-                        secret_keys, Category::SECRET_KEY_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+                        secret_keys, config.batch_size * Category::SECRET_KEY_BYTES * sizeof(std::byte), cuda_stream);
     ciphertext = config.ciphertexts_on_device
                    ? ciphertext
                    : allocate_and_copy_to_device(
-                       ciphertext, Category::CIPHERTEXT_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+                       ciphertext, config.batch_size * Category::CIPHERTEXT_BYTES * sizeof(std::byte), cuda_stream);
     std::byte* d_shared_secrets =
       config.shared_secrets_on_device
         ? shared_secrets
         : allocate_on_device<std::byte>(
-            Category::SHARED_SECRET_BYTES * config.batch_size * sizeof(std::byte), cuda_stream);
+            config.batch_size * Category::SHARED_SECRET_BYTES * sizeof(std::byte), cuda_stream);
 
     Zq* d_A; // TODO: move to arguments? (send a buffer of bytes and cast to Zq*)
     CHK_IF_RETURN(cudaMallocAsync(
-      &d_A, PolyMatrix<256, Category::K, Category::K, Zq>::byte_size() * config.batch_size, cuda_stream));
+      &d_A, config.batch_size * PolyMatrix<256, Category::K, Category::K, Zq>::byte_size(), cuda_stream));
 
     ml_kem_decaps_kernel<Category::K, Category::ETA1, Category::ETA2, Category::DU, Category::DV>
       <<<config.batch_size, 128, 0, cuda_stream>>>(
@@ -160,7 +160,7 @@ namespace icicle::pqc::ml_kem {
 
     if (!config.shared_secrets_on_device) {
       CHK_IF_RETURN(cudaMemcpyAsync(
-        shared_secrets, d_shared_secrets, Category::SHARED_SECRET_BYTES * config.batch_size * sizeof(std::byte),
+        shared_secrets, d_shared_secrets, config.batch_size * Category::SHARED_SECRET_BYTES * sizeof(std::byte),
         cudaMemcpyDeviceToHost, cuda_stream));
       CHK_IF_RETURN(cudaFreeAsync((void*)d_shared_secrets, cuda_stream));
     } else {

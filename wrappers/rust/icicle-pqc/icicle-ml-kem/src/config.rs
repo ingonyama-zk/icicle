@@ -14,7 +14,7 @@ pub struct MlKemConfig {
     pub ciphertexts_on_device: bool,
     pub shared_secrets_on_device: bool,
 
-    pub batch_size: i32,
+    pub batch_size: usize,
 
     pub ext: ConfigExtension, // Optional backend-specific settings
 }

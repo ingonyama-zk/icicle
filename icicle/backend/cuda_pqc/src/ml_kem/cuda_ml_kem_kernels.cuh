@@ -26,11 +26,11 @@ namespace icicle::pqc::ml_kem {
     Zq* A)
   {
     // update the pointers according to the batch index
-    const uint8_t* d = entropy + blockIdx.x * 64; // 32 bytes for d, 32 bytes for z
+    const uint8_t* d = entropy + static_cast<size_t>(blockIdx.x) * 64; // 32 bytes for d, 32 bytes for z
     const uint8_t* z = d + 32;
-    ek += blockIdx.x * (384 * k + 32);
-    dk += blockIdx.x * (768 * k + 96); // (dk_pke || ek || H(ek) || z)
-    A += blockIdx.x * 256 * k * k;
+    ek += static_cast<size_t>(blockIdx.x) * (384 * k + 32);
+    dk += static_cast<size_t>(blockIdx.x) * (768 * k + 96); // (dk_pke || ek || H(ek) || z)
+    A += static_cast<size_t>(blockIdx.x) * 256 * k * k;
 
     ml_kem_keygen_internal<k, eta1>(d, z, ek, dk, A);
   }
@@ -39,21 +39,21 @@ namespace icicle::pqc::ml_kem {
   __launch_bounds__(128) __global__
     void ml_kem_encaps_kernel(const uint8_t* ek, const uint8_t* m, uint8_t* K, uint8_t* c, Zq* A)
   {
-    ek += blockIdx.x * (384 * k + 32);
-    m += blockIdx.x * 32;
-    K += blockIdx.x * 32;
-    c += blockIdx.x * (32 * (du * k + dv));
-    A += blockIdx.x * k * k * 256;
+    ek += static_cast<size_t>(blockIdx.x) * (384 * k + 32);
+    m += static_cast<size_t>(blockIdx.x) * 32;
+    K += static_cast<size_t>(blockIdx.x) * 32;
+    c += static_cast<size_t>(blockIdx.x) * (32 * (du * k + dv));
+    A += static_cast<size_t>(blockIdx.x) * k * k * 256;
     encaps_internal<k, eta_1, eta_2, du, dv>(ek, m, PolyMatrix<256, k, k, Zq>(A), K, c);
   }
 
   template <const uint8_t k, const uint8_t eta_1, const uint8_t eta_2, const uint8_t du, const uint8_t dv>
   __launch_bounds__(128) __global__ void ml_kem_decaps_kernel(const uint8_t* dk, const uint8_t* c, uint8_t* K, Zq* A)
   {
-    dk += blockIdx.x * (768 * k + 96);
-    c += blockIdx.x * (32 * (du * k + dv));
-    K += blockIdx.x * 32;
-    A += blockIdx.x * k * k * 256;
+    dk += static_cast<size_t>(blockIdx.x) * (768 * k + 96);
+    c += static_cast<size_t>(blockIdx.x) * (32 * (du * k + dv));
+    K += static_cast<size_t>(blockIdx.x) * 32;
+    A += static_cast<size_t>(blockIdx.x) * k * k * 256;
     decaps_internal<k, eta_1, eta_2, du, dv>(dk, c, PolyMatrix<256, k, k, Zq>(A), K);
   }
 

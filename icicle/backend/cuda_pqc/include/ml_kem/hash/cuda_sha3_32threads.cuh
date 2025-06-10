@@ -104,7 +104,10 @@ namespace icicle::pqc::ml_kem {
         s ^= d;
         s = ROTL64(s, rot_amount[lane]);
 
-        cs[destination[lane]] = s;
+        const int col = lane % 5;
+        const int row = lane / 5;
+        const int dest = row + 5 * ((3 * row + 2 * col) % 5); // 6 -> 1
+        cs[dest] = s;
         const int row_start = lane - (lane % 5);
         const uint64_t s1 = cs[((lane + 1) % 5) + row_start];
         const uint64_t s2 = cs[((lane + 2) % 5) + row_start];

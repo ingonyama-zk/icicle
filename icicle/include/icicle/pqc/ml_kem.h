@@ -70,7 +70,7 @@ namespace icicle {
         bool ciphertexts_on_device = false;
         bool shared_secrets_on_device = false;
 
-        int batch_size = 1;
+        size_t batch_size = 1;
 
         ConfigExtension* ext = nullptr; // Optional backend-specific settings
       };

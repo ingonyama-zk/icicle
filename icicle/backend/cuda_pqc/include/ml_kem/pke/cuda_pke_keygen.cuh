@@ -27,16 +27,24 @@ namespace icicle::pqc::ml_kem::pke {
     // Each warp either helps generate matrix A or helps generate the error vector
     switch (k) {
     case 2:
-      generate_matrix_A<k, 0, 1>(rho_sigma, A);
-      generate_error_vector<k, 2 * k, eta1, 0, true, 3, 3>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
+      generate_matrix_A<k, 2, 3>(rho_sigma, A);
+      generate_error_vector<k, 2 * k, eta1, 0, true, 1, 1>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
       break;
     case 3:
+      generate_matrix_A<k, 2, 3>(rho_sigma, A);
+      generate_error_vector<k, 2 * k, eta1, 0, true, 0, 1>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
+      break;
     case 4:
-      generate_matrix_A<k, 0, 2>(rho_sigma, A);
-      generate_error_vector<k, 2 * k, eta1, 0, true, 3, 3>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
+      generate_matrix_A<k, 1, 3>(rho_sigma, A);
+      generate_error_vector<k, 2 * k, eta1, 0, true, 0, 0>(rho_sigma + 4, PolyVec<256, 2 * k, Zq>(s_e));
       break;
     default:
       __builtin_unreachable();
+    }
+
+    // Save rho to the end of ek using the last warp
+    if (threadIdx.x >= 96 && threadIdx.x < 104) {
+      ((uint32_t*)(ek_pke + 384 * k))[threadIdx.x % 32] = ((uint32_t*)rho_sigma)[threadIdx.x % 32];
     }
 
     __syncthreads();
@@ -55,11 +63,6 @@ namespace icicle::pqc::ml_kem::pke {
     // save t_hat to global memory (each thread saves 3 bytes)
     for (int i = 0; i < k; i++) {
       byteEncode12(t_hat + 256 * i, ek_pke + 384 * i, threadIdx.x);
-    }
-
-    // Save rho to the end of ek using the last warp
-    if (threadIdx.x >= 96 && threadIdx.x < 104) {
-      ((uint32_t*)(ek_pke + 384 * k))[threadIdx.x % 32] = ((uint32_t*)rho_sigma)[threadIdx.x % 32];
     }
 
     __syncthreads();

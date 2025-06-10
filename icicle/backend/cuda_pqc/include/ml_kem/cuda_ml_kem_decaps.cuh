@@ -60,11 +60,9 @@ namespace icicle::pqc::ml_kem {
     pke::encrypt<k, eta1, eta2, du, dv>(ek_pke, m, (uint64_t*)(k_r + 32), c_pke, A);
 
     __syncthreads();
-
     compare_ciphertexts<k, du, dv>(c_pke, c, &success);
-    // __shared__ __align__(16) uint8_t shared_key_bar[32];
+    __syncthreads();
     if (threadIdx.x < 32) {
-      // todo: make sure compare ciphertexts finished before using success in here
       shared_key[threadIdx.x] =
         shared_key_bar[threadIdx.x] ^ (success & (shared_key_bar[threadIdx.x] ^ k_r[threadIdx.x]));
     }

@@ -207,22 +207,20 @@ namespace icicle::pqc::ml_kem {
       if constexpr (!ACCUMULATE) {
         y[i][threadIdx.x * 2] = 0;
         y[i][threadIdx.x * 2 + 1] = 0;
-        __syncthreads();
+        // __syncthreads();
       }
 
 #pragma unroll
       for (int j = 0; j < k; ++j) {
         Zq out0, out1;
         // Multiply appropriate matrix element with vector element
-        if constexpr (TRANSPOSED) {
-          base_case_multiply(
-            A(j, i)[threadIdx.x * 2], A(j, i)[threadIdx.x * 2 + 1], x[j][threadIdx.x * 2], x[j][threadIdx.x * 2 + 1],
-            d_gamma[threadIdx.x], out0, out1);
-        } else {
-          base_case_multiply(
-            A(i, j)[threadIdx.x * 2], A(i, j)[threadIdx.x * 2 + 1], x[j][threadIdx.x * 2], x[j][threadIdx.x * 2 + 1],
-            d_gamma[threadIdx.x], out0, out1);
-        }
+        const Zq* A_elem = A.get_raw_element(TRANSPOSED ? j : i, TRANSPOSED ? i : j);
+        Zq a0 = Zq::from_raw(__ldlu((const uint16_t*)&A_elem[threadIdx.x * 2]));
+        Zq a1 = Zq::from_raw(__ldlu((const uint16_t*)&A_elem[threadIdx.x * 2 + 1]));
+        base_case_multiply(
+          a0, a1,
+          x[j][threadIdx.x * 2], x[j][threadIdx.x * 2 + 1], 
+          d_gamma[threadIdx.x], out0, out1);
         // Accumulate result directly into output polynomial
         y[i][threadIdx.x * 2] += out0;
         y[i][threadIdx.x * 2 + 1] += out1;
