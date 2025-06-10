@@ -215,6 +215,8 @@ namespace icicle::pqc::ml_kem {
         Zq out0, out1;
         // Multiply appropriate matrix element with vector element
         const Zq* A_elem = A.get_raw_element(TRANSPOSED ? j : i, TRANSPOSED ? i : j);
+        // Use __ldlu since this is the last time we access A in this computation
+        // This hints to the cache that the data won't be needed again
         Zq a0 = Zq::from_raw(__ldlu((const uint16_t*)&A_elem[threadIdx.x * 2]));
         Zq a1 = Zq::from_raw(__ldlu((const uint16_t*)&A_elem[threadIdx.x * 2 + 1]));
         base_case_multiply(a0, a1, x[j][threadIdx.x * 2], x[j][threadIdx.x * 2 + 1], d_gamma[threadIdx.x], out0, out1);

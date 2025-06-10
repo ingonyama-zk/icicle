@@ -39,6 +39,9 @@ namespace icicle::pqc::ml_kem {
       (warp_idx - start_warp) * min_hashes_per_warp + min(warp_idx - start_warp, hashes_per_warp_remainder);
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    // We split the loop into two parts:
+    // 1. A fully unrollable loop for the minimum number of complete iterations that we know at compile time
+    // 2. A final iteration that handles any remaining hashes
 #pragma unroll
     for (int iter = 0; iter < hash_iter - 1; iter++) {
       const int l = iter * MAX_HASHES_PER_WRAP + start_idx + hash_lane;
@@ -47,6 +50,7 @@ namespace icicle::pqc::ml_kem {
       sampleNTT5(seed, matrix_result.data() + 256 * l, (i << 8) | j, lane < 30);
     }
 
+    // indicate if the current 5 threaded group inside the warp should calculate a hash
     bool is_active = (((hash_iter - 1) * MAX_HASHES_PER_WRAP + hash_lane) < warp_hash_count) && (lane < 30);
     const int l = ((hash_iter - 1) * MAX_HASHES_PER_WRAP + hash_lane) + start_idx;
     const uint8_t i = l / k;
@@ -91,16 +95,21 @@ namespace icicle::pqc::ml_kem {
       (warp_idx - start_warp) * min_hashes_per_warp + min(warp_idx - start_warp, hashes_per_warp_remainder);
     // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    // We split the loop into two parts:
+    // 1. A fully unrollable loop for the minimum number of complete iterations that we know at compile time
+    // 2. A final iteration that handles any remaining hashes
 #pragma unroll
     for (int i = 0; i < hash_iter; i++) {
       const uint8_t start_idx_in_warp = i * MAX_HASHES_PER_WRAP + start_idx + hash_lane;
       if constexpr (eta == 3) {
         samplePolyCBD_3_5threads(
           seed, error_vector_result[start_idx_in_warp].data(), start_idx_in_warp + N,
+          // the number of hashes to calculate in this warp for this iteration
           min(MAX_HASHES_PER_WRAP, warp_hash_count - i * MAX_HASHES_PER_WRAP));
       } else {
         samplePolyCBD_2_5threads(
           seed, error_vector_result[start_idx_in_warp].data(), start_idx_in_warp + N,
+          // the number of hashes to calculate in this warp for this iteration
           min(MAX_HASHES_PER_WRAP, warp_hash_count - i * MAX_HASHES_PER_WRAP));
       }
     }

@@ -4,15 +4,14 @@
 #include "ml_kem/hash/cuda_sha3_5threads.cuh"
 
 namespace icicle::pqc::ml_kem {
-  // todo: join with the 5 threaded shared memory
-  // __shared__ __align__(16) uint64_t cs[BEST_STATE_SIZE];
-
-  // Original code with potential buffer overflow when INPUT_LEN = 96:
   template <
     const int INPUT_LEN = 32,
     const int RATE,
     const uint32_t PAD_DELIM,
     const uint64_t PAD_SUFFIX,
+    // USE_LDCS is a cache hint that reads from global memory in streaming mode,
+    // meaning we don't expect to reuse the data many times. This is useful for
+    // prefetching data that will only be read once.
     bool USE_LDCS = true>
   __device__ __forceinline__ uint64_t absorb(const uint8_t d[INPUT_LEN], uint32_t extra_input)
   {
@@ -84,6 +83,7 @@ namespace icicle::pqc::ml_kem {
       for (int i = 0; i < 24; i++) {
         cs[lane] = s;
 
+        // theta
         if (lane < 5) {
           const int col = lane % 5;
           uint64_t c = s;
@@ -100,14 +100,18 @@ namespace icicle::pqc::ml_kem {
         uint64_t c_minus_1 = cs[prev_col];
         uint64_t c_plus_1 = cs[next_col];
         uint64_t d = c_minus_1 ^ ROTL1(c_plus_1);
-
         s ^= d;
+
+        // rho
         s = ROTL64(s, rot_amount[lane]);
 
+        // phi
         const int col = lane % 5;
         const int row = lane / 5;
         const int dest = row + 5 * ((3 * row + 2 * col) % 5); // 6 -> 1
         cs[dest] = s;
+
+        // khi + iota
         const int row_start = lane - (lane % 5);
         const uint64_t s1 = cs[((lane + 1) % 5) + row_start];
         const uint64_t s2 = cs[((lane + 2) % 5) + row_start];

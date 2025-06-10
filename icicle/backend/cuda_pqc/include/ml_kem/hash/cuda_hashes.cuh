@@ -46,9 +46,6 @@ namespace icicle::pqc::ml_kem {
   template <const uint8_t k>
   __forceinline__ __device__ void H(const uint8_t ek[384 * k + 32], uint8_t dk[32])
   {
-    // todo: add a fence here to check that we finished
-    // todo: use other wraps to absorb to shared memory and only xor with it when needed
-
     uint64_t s = absorb_intermediate<SHA3_256_RATE>(ek);
     s = keccakf(s);
     ek += SHA3_256_RATE;

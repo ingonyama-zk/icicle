@@ -3,6 +3,7 @@
 #include "ml_kem/hash/cuda_hash_consts.cuh"
 
 namespace icicle::pqc::ml_kem {
+
   /*
   the state of each warp looks like this:
   [hash0 state]    [hash1 state]    [hash2 state]    [hash3 state]    [hash4 state]    [hash5 state]
@@ -16,7 +17,19 @@ namespace icicle::pqc::ml_kem {
   */
   __shared__ __align__(64) uint64_t sha3_state_raw[BEST_STATE_SIZE * 4 * MAX_HASHES_PER_WRAP];
 
-  // Slice view that handles state access with fixed warp and hash indices
+  /*
+  This struct provides a 5x5 2D array view into a single hash state within the larger shared memory array.
+  
+  While the full state array has dimensions [4 warps][5 rows][6 hashes][5 cols], this struct fixes the warp_idx 
+  and hash_idx to provide clean access to just one 5x5 hash state matrix.
+
+  This allows the hash implementation to work with the state as a simple 5x5 array without having to manually
+  calculate offsets through the hash_lane dimension in the middle.
+
+  Example usage:
+    StateSlice slice{warp_idx, hash_idx}; 
+    slice(2,3) = value;  // Access row 2, col 3 of the 5x5 state
+  */
   struct StateSlice {
     static constexpr int NUM_WARPS = 4;
     static constexpr int NUM_ROWS = 5;
@@ -115,6 +128,7 @@ namespace icicle::pqc::ml_kem {
 
     for (int j = 0; j < 24; j++) {
       uint64_t ss[5];
+
       // theta
       ss[0] = state(0, lane5);
       uint64_t c = ss[0];
@@ -132,28 +146,26 @@ namespace icicle::pqc::ml_kem {
       uint64_t d = c_minus_1 ^ c_plus_1;
 
       ss[0] ^= d;
+      // rho
       ss[0] = ROTL64(ss[0], rot_amount[lane5]);
 
 #pragma unroll
       for (int i = 1; i < 5; i++) {
+        // finish theta
         ss[i] ^= d;
+        // rho
         ss[i] = ROTL64(ss[i], rot_amount[lane5 + 5 * i]);
         state(i, lane5) = ss[i];
+        // loads diagonal for khi
         int idx = (lane5 + i) % 5; // 0, 6, 12, 18, 24
         ss[i] = state(i, idx);
       }
-
-      // #pragma unroll
-      // for (int i = 1; i < 5; i++) {
-      //     state(i, lane5) ^= d;
-      //     int idx = (lane5 + i) % 5; // 0, 6, 12, 18, 24
-      //     ss[i] = ROTL64(state(i, idx), rot_amount[5 * i + idx]);
-      // }
 
       // khi + iota
       state(lane5_inv, 0) = (RC[j] * (lane5 == 0)) ^ ss[0] ^ ((~ss[1]) & ss[2]);
 #pragma unroll
       for (int i = 1; i < 5; i++) {
+        // calculating khi + iota and saving according to phi permutation
         state(lane5_inv, i) = ss[i] ^ ((~ss[(i + 1) % 5]) & ss[(i + 2) % 5]);
       }
     }
