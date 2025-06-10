@@ -64,7 +64,8 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* mat_out)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(degree, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(
+      degree, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
   }
 #endif
 

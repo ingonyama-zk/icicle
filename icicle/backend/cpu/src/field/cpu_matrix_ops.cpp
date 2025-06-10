@@ -20,35 +20,34 @@ namespace {
   using namespace field_config;
   using namespace icicle;
 
-// #ifdef RING
-//   using namespace labrador;
+  // #ifdef RING
+  //   using namespace labrador;
 
-//   /* Poly ring inputs are presumed to be in NTT domain */
-//   auto operator*(const PolyRing& a, const PolyRing& b)
-//   {
-//     PolyRing c;
-//     constexpr size_t degree = PolyRing::d;
-//     const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
-//     const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
-//     Zq* c_zq = reinterpret_cast<Zq*>(&c);
-//     auto config = default_vec_ops_config();
-//     vector_mul(a_zq, b_zq, degree, config, c_zq);
-//     return c;
-//   }
+  //   /* Poly ring inputs are presumed to be in NTT domain */
+  //   auto operator*(const PolyRing& a, const PolyRing& b)
+  //   {
+  //     PolyRing c;
+  //     constexpr size_t degree = PolyRing::d;
+  //     const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+  //     const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+  //     Zq* c_zq = reinterpret_cast<Zq*>(&c);
+  //     auto config = default_vec_ops_config();
+  //     vector_mul(a_zq, b_zq, degree, config, c_zq);
+  //     return c;
+  //   }
 
-//   auto operator+(const PolyRing& a, const PolyRing& b)
-//   {
-//     PolyRing c;
-//     constexpr size_t degree = PolyRing::d;
-//     const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
-//     const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
-//     Zq* c_zq = reinterpret_cast<Zq*>(&c);
-//     auto config = default_vec_ops_config();
-//     vector_add(a_zq, b_zq, degree, config, c_zq);
-//     return c;
-//   }
-// #endif
-
+  //   auto operator+(const PolyRing& a, const PolyRing& b)
+  //   {
+  //     PolyRing c;
+  //     constexpr size_t degree = PolyRing::d;
+  //     const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+  //     const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+  //     Zq* c_zq = reinterpret_cast<Zq*>(&c);
+  //     auto config = default_vec_ops_config();
+  //     vector_add(a_zq, b_zq, degree, config, c_zq);
+  //     return c;
+  //   }
+  // #endif
 
   template <typename T>
   static eIcicleError cpu_tq_matrix_mult(
@@ -129,22 +128,20 @@ namespace {
     return eIcicleError::SUCCESS;
   }
 
-
-template <typename T>
-static eIcicleError cpu_matrix_mult(
-  const Device& device,
-  const T* mat_a,
-  uint32_t nof_rows_a,
-  uint32_t nof_cols_a,
-  const T* mat_b,  
-  uint32_t nof_rows_b,
-  uint32_t nof_cols_b,
-  const VecOpsConfig& config,
-  T* mat_out)
-{
-  return cpu_tq_matrix_mult(device, 1, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
-}
-
+  template <typename T>
+  static eIcicleError cpu_matrix_mult(
+    const Device& device,
+    const T* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const T* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    T* mat_out)
+  {
+    return cpu_tq_matrix_mult(device, 1, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
+  }
 
 } // namespace
 
