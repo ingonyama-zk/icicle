@@ -345,6 +345,18 @@ namespace icicle {
     const VecOpsConfig& config,
     T* mat_out);
 
+  template <typename T>
+  eIcicleError poly_ring_matrix_mult(
+    uint32_t degree,
+    const T* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const T* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    T* mat_out);
+
   // Miscellaneous operations
 
   /**

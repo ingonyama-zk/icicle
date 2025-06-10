@@ -91,4 +91,25 @@ namespace icicle {
     return vector_sum(zq_in, size, sum_cfg, zq_out);
   }
 
+  template <>
+  eIcicleError matrix_mult(
+    const PolyRing* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const PolyRing* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    PolyRing* mat_out)
+  {
+
+    const Zq * a = reinterpret_cast<const Zq*>(mat_a);
+    const Zq * b = reinterpret_cast<const Zq*>(mat_b);
+    Zq * c = reinterpret_cast<Zq*>(mat_out);
+    auto degree = PolyRing::d;
+
+    return poly_ring_matrix_mult(degree, a, nof_rows_a, nof_cols_a, b, nof_rows_b, nof_cols_b, config, c); 
+
+  }
+
 } // namespace icicle
