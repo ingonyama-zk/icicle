@@ -162,12 +162,12 @@ Rq icicle::labrador::conjugate(const Rq& p)
 {
   Rq result;
   // Copy constant term (index 0)
-  result.coeffs[0] = p.coeffs[0];
+  result.values[0] = p.values[0];
 
   // For remaining coefficients, flip and negate
   for (size_t k = 1; k < Rq::d; k++) {
     // TODO: neg is negate?
-    result.coeffs[k] = Zq::neg(p.coeffs[Rq::d - k]);
+    result.values[k] = Zq::neg(p.values[Rq::d - k]);
   }
 
   return result;

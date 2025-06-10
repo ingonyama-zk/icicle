@@ -8,8 +8,9 @@ namespace icicle {
    * @brief Enum to represent supported norm types for vectors.
    */
   enum class eNormType {
-    L2 = 0,   ///< Euclidean norm: sqrt(sum of squares)
-    LInfinity ///< Max norm: maximum absolute element value
+    L2 = 0,    ///< Euclidean norm: sqrt(sum of squares)
+    LInfinity, ///< Max norm: maximum absolute element value
+    Lop        ///< Op norm
   };
 
   namespace norm {
