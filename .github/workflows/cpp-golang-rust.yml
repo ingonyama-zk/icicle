@@ -920,6 +920,12 @@ jobs:
         cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DHASH=OFF -DCUDA_PQC_BACKEND=ON -DPQC=ON -S . -B build
         cmake --build build -j
 
+    - name: Run backend specific PQC Tests
+      working-directory: ./icicle/build/backend/cuda_pqc/tests
+      if: needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        ctest --output-on-failure
+
     - name: Run C++ PQC Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'

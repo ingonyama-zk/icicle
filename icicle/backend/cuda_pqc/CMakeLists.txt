@@ -25,3 +25,8 @@ target_link_libraries(icicle_backend_cuda_pqc_device_whole INTERFACE
 # Link into icicle-pqc
 target_link_libraries(icicle_pqc PRIVATE icicle_backend_cuda_pqc_device_whole)
 target_link_libraries(icicle_pqc PRIVATE CUDA::cudart)
+
+if(BUILD_TESTS)
+    set(PQC ON CACHE BOOL "Enable PQC tests" FORCE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
+endif()
