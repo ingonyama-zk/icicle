@@ -42,7 +42,6 @@ namespace icicle::pqc::ml_kem::pke {
     // 19. u = intt((A^T)*y) + e1
     // 19.a u = (A^T)*y
     matrix_vec_mult<true, false, k>(A, y, u);
-    // __syncthreads();
 
     // 19.b u = intt(u)
 #pragma unroll
@@ -75,6 +74,8 @@ namespace icicle::pqc::ml_kem::pke {
     // 21.c v = v + e2 + mu
     v[threadIdx.x] += (e2[threadIdx.x] + mu[threadIdx.x]);
     v[threadIdx.x + 128] += (e2[threadIdx.x + 128] + mu[threadIdx.x + 128]);
+
+    __syncthreads();
 
     // 22. 23. pack
     encode_ciphertext<k, du, dv>(u, v, c);
