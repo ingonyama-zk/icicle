@@ -46,6 +46,6 @@ namespace field_config = goldilocks;
 // Maybe we will refactor in the future
 
 #if RING_ID == LABRADOR
-  #include "icicle/rings/integer_rings/labrador.h"
+  #include "icicle/rings/params/labrador.h"
 namespace field_config = labrador;
 #endif

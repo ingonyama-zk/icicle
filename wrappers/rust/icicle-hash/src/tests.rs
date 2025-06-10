@@ -12,7 +12,11 @@ mod tests {
         hash::{HashConfig, Hasher},
         merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
     };
-    use icicle_runtime::{eIcicleError, memory::HostSlice, test_utilities};
+    use icicle_runtime::{
+        eIcicleError,
+        memory::{DeviceVec, HostSlice},
+        test_utilities,
+    };
     use rand::Rng;
     use std::sync::Once;
 
@@ -273,9 +277,20 @@ mod tests {
         assert_eq!(path, main_path);
         assert_eq!(leaf, main_leaf);
 
-        // TODOs :
-        // (1) test real backends: CPU + CUDA. Can also compare the proofs to see the root, path and leaf are the same.
-        // (2) test different cases of input padding
+        // test proving merkle-proof with device memory too
+        let mut device_leaves = DeviceVec::<u8>::device_malloc(input.len()).unwrap();
+        device_leaves
+            .copy_from_host(HostSlice::from_slice(&input))
+            .unwrap();
+        let merkle_proof_from_device_mem: MerkleProof = merkle_tree
+            .get_proof(&device_leaves, 2, false /*=pruned*/, &MerkleTreeConfig::default())
+            .unwrap();
+        assert_eq!(
+            merkle_tree
+                .verify(&merkle_proof_from_device_mem)
+                .unwrap(),
+            true
+        );
     }
 
     #[test]

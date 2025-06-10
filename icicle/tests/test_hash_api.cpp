@@ -994,8 +994,12 @@ TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
     const std::vector<int> test_cases_nof_input_leaves = {1,  8,  16, 17,
                                                           32, 70, 99, 100}; // those cases will be tested with padding
     constexpr int input_size = nof_leaves * leaf_size;
-    std::byte leaves[input_size];
-    randomize(leaves, input_size);
+    std::vector<std::byte> leaves(input_size);
+    randomize(leaves.data(), input_size);
+
+    std::byte* d_leaves;
+    ICICLE_CHECK(icicle_malloc((void**)&d_leaves, input_size));
+    ICICLE_CHECK(icicle_copy(d_leaves, leaves.data(), input_size));
 
     // define the merkle tree
     auto layer0_hash = Keccak256::create(leaf_size);
@@ -1012,12 +1016,13 @@ TEST_F(HashApiTest, MerkleTreeLastValuePaddingLeavesOnDevice)
 
     // test various cases of missing leaves in input, requiring padding.
     for (auto nof_leaves_iter : test_cases_nof_input_leaves) {
-      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves, leaf_size);
+      test_merkle_tree(hashes, config, output_store_min_layer, nof_leaves_iter, leaves.data(), leaf_size);
     }
 
     // Test that leaf_size divides input size for this kind of padding
     auto prover_tree = MerkleTree::create(hashes, leaf_size, output_store_min_layer);
-    ASSERT_EQ(prover_tree.build(leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+    ASSERT_EQ(prover_tree.build(d_leaves, (leaf_size - 1) * nof_leaves, config), eIcicleError::INVALID_ARGUMENT);
+    ICICLE_CHECK(icicle_free(d_leaves));
   }
 }
 

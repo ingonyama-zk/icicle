@@ -2,6 +2,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
 
@@ -113,7 +114,7 @@ TEST_F(RingTestBase, VectorRnsConversion)
   }
 }
 
-TEST_F(RingTestBase, BalancedDecomposition)
+TEST_F(RingTestBase, BalancedDecompositionZQ)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
@@ -187,7 +188,7 @@ TEST_F(RingTestBase, BalancedDecomposition)
   } // device loop
 }
 
-TEST_F(RingTestBase, BalancedDecompositionErrorCases)
+TEST_F(RingTestBase, BalancedDecompositionZqErrorCases)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
@@ -247,6 +248,146 @@ TEST_F(RingTestBase, BalancedDecompositionErrorCases)
   } // device loop
 }
 
+// This test verifies that balanced decomposition of a PolyRing is implemented correctly by recomposing manually
+TEST_F(RingTestBase, BalancedDecompositionPolyRing)
+{
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  // Get q from PolyRing::Base as signed 64-bit for safe arithmetic
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
+  const int64_t q = *(int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive modulus q to allow int64 arithmetic";
+
+  // Generate a random input polynomial over PolyRing
+  PolyRing input_polynomial;
+  Zq::rand_host_many(reinterpret_cast<Zq*>(&input_polynomial), PolyRing::d);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    VecOpsConfig cfg{};
+    const uint32_t q_sqrt = static_cast<uint32_t>(std::sqrt(q));
+    const std::vector<uint32_t> bases = {2, 3, 16, (1 << 20) + 1, q_sqrt};
+
+    for (uint32_t base : bases) {
+      // Compute the number of digits for the given base
+      const size_t num_digits = balanced_decomposition::compute_nof_digits<Zq>(base);
+      std::vector<PolyRing> decomposed_polynomials(num_digits);
+
+      // Perform balanced decomposition into digits (for a single polynomial)
+      ICICLE_CHECK(
+        balanced_decomposition::decompose(&input_polynomial, 1, base, cfg, decomposed_polynomials.data(), num_digits));
+
+      // Recompose the original polynomial from digits
+      PolyRing recomposed_polynomial;
+      // Generate powers of base: [1, base, base^2, ..., base^{t-1}]
+      Zq power = Zq::from(1);
+      std::vector<Zq> powers(num_digits);
+      std::generate(powers.begin(), powers.end(), [&]() {
+        Zq current = power;
+        power = power * Zq::from(base);
+        return current;
+      });
+
+      // Scale each decomposed digit (polynomial) by its corresponding base power and sum all PolyRing polynomials:
+      //            P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
+      std::vector<PolyRing> scaled_digits(num_digits);
+      ICICLE_CHECK(
+        vector_mul(decomposed_polynomials.data(), powers.data(), num_digits, VecOpsConfig{}, scaled_digits.data()));
+      // Sum across the digits to reconstruct the original polynomial
+      ICICLE_CHECK(vector_sum(scaled_digits.data(), num_digits, VecOpsConfig{}, &recomposed_polynomial));
+
+      // Verify recomposed polynomial matches the original input
+      ASSERT_EQ(0, memcmp(&recomposed_polynomial, &input_polynomial, sizeof(PolyRing)));
+    }
+  }
+}
+
+// This test verifies that batch balanced decomposition and recomposition
+// on device memory correctly reconstruct the original PolyRing polynomials.
+// It also checks that the decomposition satisfies the L∞ bound.
+TEST_F(RingTestBase, BalancedDecompositionPolyRingBatch)
+{
+  static_assert(PolyRing::Base::TLC == 2, "Decomposition assumes q ~64-bit");
+
+  constexpr size_t degree = PolyRing::d;
+  constexpr size_t size = 1 << 10; // Number of PolyRing polynomials
+  const size_t total_zq_elements = degree * size;
+
+  // Get modulus q as signed integer for arithmetic safety
+  constexpr auto q_storage = PolyRing::Base::get_modulus();
+  const int64_t q = *(const int64_t*)&q_storage;
+  ICICLE_ASSERT(q > 0) << "Expecting positive q to allow int64 arithmetic";
+
+  // Generate random input polynomials over PolyRing
+  std::vector<PolyRing> input(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), total_zq_elements);
+
+  std::vector<PolyRing> recomposed(size);
+  const std::vector<uint32_t> bases = {2, 3, 16, 155, 1024, static_cast<uint32_t>(std::sqrt(q))};
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    PolyRing *d_input = nullptr, *d_decomposed = nullptr, *d_recomposed = nullptr;
+    ICICLE_CHECK(icicle_malloc((void**)&d_input, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_malloc((void**)&d_recomposed, size * sizeof(PolyRing)));
+    ICICLE_CHECK(icicle_copy(d_input, input.data(), size * sizeof(PolyRing)));
+
+    VecOpsConfig cfg{};
+    cfg.is_a_on_device = true;
+    cfg.is_result_on_device = true;
+
+    for (uint32_t base : bases) {
+      const size_t digits_per_coeff = balanced_decomposition::compute_nof_digits<Zq>(base);
+      const size_t decomposed_size = size * digits_per_coeff;
+
+      std::stringstream label_decompose, label_recompose;
+      label_decompose << "PolyRing Decomposition [device=" << device << ", base=" << base << "]";
+      label_recompose << "PolyRing Recomposition [device=" << device << ", base=" << base << "]";
+
+      ICICLE_CHECK(icicle_malloc((void**)&d_decomposed, decomposed_size * sizeof(PolyRing)));
+
+      // --- Step 1: Decomposition ---
+      START_TIMER(decompose);
+      ICICLE_CHECK(balanced_decomposition::decompose(d_input, size, base, cfg, d_decomposed, decomposed_size));
+      END_TIMER(decompose, label_decompose.str().c_str(), true);
+
+      // --- Step 2: Norm Bound Check (L∞) ---
+      {
+        VecOpsConfig norm_cfg{};
+        norm_cfg.is_a_on_device = true;
+        norm_cfg.batch_size = digits_per_coeff * size;
+
+        std::vector<char> is_norm_bound(norm_cfg.batch_size, false);
+        norm::check_norm_bound(
+          reinterpret_cast<Zq*>(d_decomposed), degree, eNormType::LInfinity, base / 2 + 1, norm_cfg,
+          reinterpret_cast<bool*>(is_norm_bound.data()));
+
+        for (size_t i = 0; i < norm_cfg.batch_size; ++i) {
+          ASSERT_TRUE(is_norm_bound[i]) << "Decomposed PolyRing polynomial " << i
+                                        << " exceeds expected balanced range for base = " << base;
+        }
+      }
+
+      // --- Step 3: Recomposition and Validation ---
+      START_TIMER(recompose);
+      ICICLE_CHECK(balanced_decomposition::recompose(d_decomposed, decomposed_size, base, cfg, d_recomposed, size));
+      END_TIMER(recompose, label_recompose.str().c_str(), true);
+
+      ICICLE_CHECK(icicle_copy(recomposed.data(), d_recomposed, size * sizeof(PolyRing)));
+
+      ASSERT_EQ(0, memcmp(input.data(), recomposed.data(), size * sizeof(PolyRing)))
+        << "Recomposition mismatch for base = " << base;
+
+      icicle_free(d_decomposed);
+    }
+
+    icicle_free(d_input);
+    icicle_free(d_recomposed);
+  }
+}
+
 TEST_F(RingTestBase, JLProjectionTest)
 {
   static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
@@ -256,14 +397,14 @@ TEST_F(RingTestBase, JLProjectionTest)
 
   const size_t N = 1 << 16;       // Input vector size
   const size_t output_size = 256; // JL projected size
-  const int max_trials = 10; // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5. Therefore
-                             // we allow repeating the check a few times.
+  const int max_trials = 10;      // JL projection output is bound by sqrt(128)*norm(input) with probability 0.5.
+                                  // Therefore we allow repeating the check a few times.
 
   std::vector<field_t> input(N);
   std::vector<field_t> output(output_size);
 
-  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL lemma
-  // won't hold.
+  // generate random values in [0, sqrt(q)]. We assume input is low norm. Otherwise we may wrap around and the JL
+  // lemma won't hold.
   const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
   for (auto& x : input) {
     uint64_t val = rand_uint_32b() % (sqrt_q + 1); // uniform in [0, sqrt_q]
@@ -317,9 +458,127 @@ TEST_F(RingTestBase, JLProjectionTest)
   }
 }
 
+TEST_F(RingTestBase, JLprojectionGetRowsTest)
+{
+  const size_t N = 1 << 10;       // Input vector size
+  const size_t output_size = 256; // Number of JL projection rows
+
+  std::vector<field_t> input(N, field_t::one()); // Input vector: all ones
+  std::vector<field_t> projected(output_size);   // Output from jl_projection
+  std::vector<field_t> matrix(output_size * N);  // Raw JL matrix rows (row-major)
+  std::vector<field_t> expected(output_size);    // Expected output computed via matrix row sums
+
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() % 256);
+  }
+
+  const auto cfg = VecOpsConfig{};
+
+  for (const auto& device : s_registered_devices) {
+    if (device != "CPU") continue; // TODO: Extend to CUDA
+
+    ICICLE_CHECK(icicle_set_device(device));
+
+    std::stringstream projection_timer_label, generate_timer_label;
+    projection_timer_label << "JL-projection [device=" << device << "]";
+    generate_timer_label << "JL-generate [device=" << device << "]";
+
+    // Step 1: Compute projection via JL API
+    START_TIMER(projection);
+    ICICLE_CHECK(jl_projection(input.data(), N, seed, sizeof(seed), cfg, projected.data(), output_size));
+    END_TIMER(projection, projection_timer_label.str().c_str(), true);
+
+    // Step 2: Generate JL matrix rows explicitly
+    START_TIMER(generate);
+    ICICLE_CHECK(get_jl_matrix_rows(
+      seed, sizeof(seed),
+      N,           // row_size = input dimension
+      0,           // start_row
+      output_size, // num_rows
+      cfg,
+      matrix.data() // Output: [num_rows x row_size]
+      ));
+    END_TIMER(generate, generate_timer_label.str().c_str(), true);
+
+    // Step 3: Since input = {1,1,...,1}, matrix-vector product is just summing each row
+    VecOpsConfig sum_cfg{};
+    sum_cfg.batch_size = output_size;
+    ICICLE_CHECK(vector_sum(matrix.data(), N, sum_cfg, expected.data()));
+
+    // Step 4: Compare expected vs projected
+    for (size_t i = 0; i < output_size; ++i) {
+      ASSERT_EQ(projected[i], expected[i])
+        << "Mismatch at output[" << i << "]: projected = " << projected[i] << ", expected = " << expected[i];
+    }
+  }
+}
+
+// This test verifies the JL-projection lemma: projecting an input vector of Rq polynomials
+// via Zq yields the same value as the constant term of an inner product in Rq with conjugated rows.
+TEST_F(RingTestBase, JLprojectionLemma)
+{
+  const size_t input_size = 8;        // Number of Rq polynomials in the input
+  const size_t projected_size = 16;   // Number of projected output values
+  const size_t d = PolyRing::d;       // Degree of each Rq polynomial
+  const size_t row_size = input_size; // Each JL row is composed of `input_size` Rq polynomials
+
+  // Randomize input polynomials
+  std::vector<PolyRing> input(input_size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(input.data()), input_size * PolyRing::d);
+
+  // Prepare random seed
+  std::byte seed[32];
+  for (auto& b : seed) {
+    b = static_cast<std::byte>(rand_uint_32b() & 0xFF);
+  }
+
+  for (const auto& device : s_registered_devices) {
+    if (device == "CUDA") continue; // TODO: implement CUDA backend
+    ICICLE_CHECK(icicle_set_device(device));
+
+    // Pre-transform input into NTT domain
+    std::vector<PolyRing> input_ntt(input_size);
+    ICICLE_CHECK(ntt(input.data(), input_size, NTTDir::kForward, {}, input_ntt.data()));
+
+    // Project using flat Zq view (as if input is Zq vector)
+    std::vector<field_t> projected(projected_size);
+    ICICLE_CHECK(jl_projection(
+      reinterpret_cast<const Zq*>(input.data()), input_size * d, seed, sizeof(seed), {}, projected.data(),
+      projected_size));
+
+    // Check the JL-lemma
+    for (size_t row_idx = 0; row_idx < projected_size; ++row_idx) {
+      std::vector<PolyRing> jl_row_conj(row_size);
+
+      // Generate JL matrix row as Rq polynomials, with conjugation
+      ICICLE_CHECK(get_jl_matrix_rows<PolyRing>(
+        seed, sizeof(seed), row_size, row_idx, 1, /* 1 row */
+        true /* conjugate */, {}, jl_row_conj.data()));
+
+      // Transform conjugated row into NTT domain
+      ICICLE_CHECK(ntt(jl_row_conj.data(), row_size, NTTDir::kForward, {}, jl_row_conj.data()));
+
+      // Compute ⟨JL_row, input⟩ using elementwise multiplication in NTT domain
+      std::vector<PolyRing> mul_result(row_size);
+      ICICLE_CHECK(vector_mul(input_ntt.data(), jl_row_conj.data(), row_size, {}, mul_result.data()));
+
+      PolyRing inner_product_ntt;
+      ICICLE_CHECK(vector_sum(mul_result.data(), row_size, {}, &inner_product_ntt));
+
+      // Inverse NTT to recover polynomial inner product
+      ICICLE_CHECK(ntt(&inner_product_ntt, 1, NTTDir::kInverse, {}, &inner_product_ntt));
+
+      // Validate that the constant term equals the Zq projection result
+      const field_t constant_term = inner_product_ntt.values[0];
+      EXPECT_EQ(constant_term, projected[row_idx]) << "Mismatch at row " << row_idx;
+    }
+  }
+}
+
 TEST_F(RingTestBase, NormBounded)
 {
-  static_assert(field_t::TLC == 2, "Decomposition assumes q ~64b");
+  static_assert(field_t::TLC == 2, "Norm checking assumes q ~64b");
   constexpr auto q_storage = field_t::get_modulus();
   const int64_t q = *(int64_t*)&q_storage; // Note this is valid since TLC == 2
   ICICLE_ASSERT(q > 0) << "Expecting at least one slack bit to use int64 arithmetic";
@@ -742,6 +1001,78 @@ TEST_F(RingTestBase, NormRelativeBatch)
     for (size_t i = 0; i < batch_size; ++i) {
       ASSERT_FALSE(output[i]) << "L-infinity relative norm check should fail for batch " << i << " on device "
                               << device;
+    }
+  }
+}
+
+TEST_F(RingTestBase, NegacyclicNTT)
+{
+  auto PolyRing_multiplication = [](const PolyRing& a, const PolyRing& b) -> PolyRing {
+    PolyRing c;
+    constexpr size_t degree = PolyRing::d;
+    const Zq* a_zq = reinterpret_cast<const Zq*>(&a);
+    const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
+    Zq* c_zq = reinterpret_cast<Zq*>(&c);
+    // zero initialize c
+    for (size_t k = 0; k < degree; ++k)
+      c_zq[k] = Zq::zero();
+
+    // Manual negacyclic convolution: c_k = sum_{i+j ≡ k mod n} a_i * b_j,
+    // with negation when i+j >= n
+    for (size_t i = 0; i < degree; ++i) {
+      for (size_t j = 0; j < degree; ++j) {
+        size_t ij = i + j;
+        size_t k = ij % degree;
+        Zq prod = a_zq[i] * b_zq[j];
+        if (ij >= degree) {
+          c_zq[k] = c_zq[k] - prod; // negacyclic
+        } else {
+          c_zq[k] = c_zq[k] + prod;
+        }
+      }
+    }
+    return c;
+  };
+
+  int size = 1 << 15;
+  std::vector<PolyRing> a(size);
+  std::vector<PolyRing> b(size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * size);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * size);
+
+  for (auto device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+
+    // Dummy NTT to initialize NTT domain for this device (first call per device)
+    PolyRing dummy;
+    ICICLE_CHECK(ntt(&dummy, 1, NTTDir::kForward, NegacyclicNTTConfig{}, &dummy));
+
+    std::vector<PolyRing> res(size);
+
+    std::stringstream timer_label;
+    timer_label << "Rq multiplication via NTT [device=" << device << "]";
+    START_TIMER(RqMul);
+
+    // Forward NTT: Rq → Tq
+    ICICLE_CHECK(ntt(a.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, a.data()));
+    ICICLE_CHECK(ntt(b.data(), size, NTTDir::kForward, NegacyclicNTTConfig{}, b.data()));
+
+    // Pointwise multiplication in NTT domain
+    ICICLE_CHECK(vector_mul(a.data(), b.data(), size, VecOpsConfig{}, res.data()));
+
+    // Inverse NTT: Tq → Rq
+    ICICLE_CHECK(ntt(res.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, res.data()));
+
+    END_TIMER(RqMul, timer_label.str().c_str(), true);
+
+    // Convert a, b back to coefficient domain (in-place inverse NTT)
+    ICICLE_CHECK(ntt(a.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, a.data()));
+    ICICLE_CHECK(ntt(b.data(), size, NTTDir::kInverse, NegacyclicNTTConfig{}, b.data()));
+
+    // Verify correctness
+    for (int i = 0; i < size; ++i) {
+      PolyRing expected = PolyRing_multiplication(a[i], b[i]);
+      EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
   }
 }

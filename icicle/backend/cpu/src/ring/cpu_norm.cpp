@@ -46,10 +46,8 @@ static eIcicleError cpu_check_norm_bound(
   }
 
   if (size == 0) {
-    for (uint32_t i = 0; i < config.batch_size; ++i) {
-      output[i] = true;
-    }
-    return eIcicleError::SUCCESS;
+    ICICLE_LOG_ERROR << "Invalid argument: vector size must be greater than 0.";
+    return eIcicleError::INVALID_ARGUMENT;
   }
 
   if (config.columns_batch) {
@@ -190,10 +188,8 @@ static eIcicleError cpu_check_norm_relative(
   }
 
   if (size == 0) {
-    for (uint32_t i = 0; i < config.batch_size; ++i) {
-      output[i] = true;
-    }
-    return eIcicleError::SUCCESS;
+    ICICLE_LOG_ERROR << "Invalid argument: vector size must be greater than 0.";
+    return eIcicleError::INVALID_ARGUMENT;
   }
 
   if (config.columns_batch) {

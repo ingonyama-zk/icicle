@@ -776,6 +776,29 @@ namespace icicle {
       }();                                                                                                             \
     }
 
+  using balancedDecompositionPolyRingImpl = std::function<eIcicleError(
+    const Device& device,
+    const PolyRing* input,
+    size_t input_size,
+    uint32_t base,
+    const VecOpsConfig& config,
+    PolyRing* output,
+    size_t output_size)>;
+
+  void
+  register_decompose_balanced_digits_poly_ring(const std::string& deviceType, balancedDecompositionPolyRingImpl impl);
+  void register_recompose_from_balanced_digits_poly_ring(
+    const std::string& deviceType, balancedDecompositionPolyRingImpl impl);
+
+  #define REGISTER_BALANCED_DECOMPOSITION_POLYRING_BACKEND(DEVICE_TYPE, DECOMPOSE, RECOMPOSE)                          \
+    namespace {                                                                                                        \
+      static bool UNIQUE(_reg_balanced_recomposition_poly_ring) = []() -> bool {                                       \
+        register_decompose_balanced_digits_poly_ring(DEVICE_TYPE, DECOMPOSE);                                          \
+        register_recompose_from_balanced_digits_poly_ring(DEVICE_TYPE, RECOMPOSE);                                     \
+        return true;                                                                                                   \
+      }();                                                                                                             \
+    }
+
   using JLProjectionImpl = std::function<eIcicleError(
     const Device& device,
     const field_t* input,
@@ -786,20 +809,25 @@ namespace icicle {
     field_t* output,
     size_t output_size)>;
 
-  void register_jl_projection(const std::string& deviceType, JLProjectionImpl impl);
-  #define REGISTER_JL_PROJECTION_BACKEND(DEVICE_TYPE, FUNC)                                                            \
-    namespace {                                                                                                        \
-      static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
-        register_jl_projection(DEVICE_TYPE, FUNC);                                                                     \
-        return true;                                                                                                   \
-      }();                                                                                                             \
-    }
+  using JLProjectionGetRowsImpl = std::function<eIcicleError(
+    const Device& device,
+    const std::byte* seed,
+    size_t seed_len,
+    size_t row_size,
+    size_t start_row,
+    size_t num_rows,
+    bool negacyclic_conjugate,
+    size_t polyring_size_for_conjugate,
+    const VecOpsConfig& cfg,
+    field_t* output)>;
 
   void register_jl_projection(const std::string& deviceType, JLProjectionImpl impl);
-  #define REGISTER_JL_PROJECTION_BACKEND(DEVICE_TYPE, FUNC)                                                            \
+  void register_jl_projection_get_rows(const std::string& deviceType, JLProjectionGetRowsImpl impl);
+  #define REGISTER_JL_PROJECTION_BACKEND(DEVICE_TYPE, PROJECTION, GET_ROWS)                                            \
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_jl_projection) = []() -> bool {                                                          \
-        register_jl_projection(DEVICE_TYPE, FUNC);                                                                     \
+        register_jl_projection(DEVICE_TYPE, PROJECTION);                                                               \
+        register_jl_projection_get_rows(DEVICE_TYPE, GET_ROWS);                                                        \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

@@ -24,10 +24,12 @@ function(handle_ring TARGET)
     src/fields/ffi_extern.cpp
     src/vec_ops.cpp
     src/rings/rns_vec_ops.cpp
+    src/rings/polyring_vec_ops.cpp
     src/matrix_ops.cpp
     src/program/program_c_api.cpp
     src/symbol/symbol_api.cpp
     src/balanced_decomposition.cpp
+    src/norm.cpp
     src/jl_projection.cpp
     src/norm.cpp
   )
