@@ -12,7 +12,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::ffi::c_void;
 
 /// Configuration for the Sumcheck protocol's transcript.
-/// 
+///
 /// This structure holds the configuration parameters needed for the transcript
 /// in the Sumcheck protocol, including hash function, domain labels, and RNG settings.
 pub struct SumcheckTranscriptConfig<'a, F> {
@@ -125,7 +125,7 @@ where
 }
 
 /// Configuration for the Sumcheck protocol.
-/// 
+///
 /// This structure holds runtime configuration parameters that control how the
 /// Sumcheck protocol executes, including device settings and performance options.
 #[repr(C)]
@@ -163,7 +163,7 @@ impl Default for SumcheckConfig {
 }
 
 /// Trait for Sumcheck operations, including proving and verification.
-/// 
+///
 /// This trait defines the core functionality of the Sumcheck protocol,
 /// including proof generation and verification. It is generic over the
 /// field type and configuration.
@@ -181,7 +181,7 @@ pub trait Sumcheck {
         Self: Sized;
 
     /// Generates a proof for the given MLE polynomials and claimed sum.
-    /// 
+    ///
     /// # Arguments
     /// * `mle_polys` - Slice of MLE polynomials to prove
     /// * `mle_poly_size` - Size of each MLE polynomial
@@ -200,12 +200,12 @@ pub trait Sumcheck {
     ) -> Self::Proof;
 
     /// Verifies a Sumcheck proof against a claimed sum.
-    /// 
+    ///
     /// # Arguments
     /// * `proof` - The proof to verify
     /// * `claimed_sum` - The claimed sum to verify against
     /// * `transcript_config` - Configuration for the transcript
-    /// 
+    ///
     /// # Returns
     /// * `Ok(true)` if verification succeeds
     /// * `Ok(false)` if verification fails
@@ -218,12 +218,12 @@ pub trait Sumcheck {
     ) -> Result<bool, eIcicleError>;
 
     /// Retrieves the challenge vector from the Sumcheck instance.
-    /// 
+    ///
     /// The challenge vector contains the alpha values used in each round
     /// of the protocol. The first challenge is always zero (as per protocol
     /// design), while subsequent challenges are derived from the previous
     /// round's polynomial.
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Vec<Field>)` containing the challenge vector
     /// * `Err(e)` if an error occurs
@@ -231,7 +231,7 @@ pub trait Sumcheck {
 }
 
 /// Trait for Sumcheck proof operations.
-/// 
+///
 /// This trait defines operations that can be performed on a Sumcheck proof,
 /// including retrieving round polynomials and printing the proof.
 pub trait SumcheckProofOps<F>: From<Vec<Vec<F>>> + Serialize + DeserializeOwned
@@ -239,14 +239,14 @@ where
     F: FieldImpl,
 {
     /// Retrieves the round polynomials from the proof.
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Vec<Vec<F>>)` containing the round polynomials
     /// * `Err(e)` if an error occurs
     fn get_round_polys(&self) -> Result<Vec<Vec<F>>, eIcicleError>;
-    
+
     /// Prints the proof for debugging purposes.
-    /// 
+    ///
     /// # Returns
     /// * `eIcicleError` indicating success or failure
     fn print(&self) -> eIcicleError;
@@ -434,13 +434,9 @@ macro_rules! impl_sumcheck {
             fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
                 let mut challenge_vector = Vec::with_capacity(20); // MAX_TOTAL_NOF_VARS
                 let mut size = 0u64;
-                
+
                 let err = unsafe {
-                    icicle_sumcheck_get_challenge_vector(
-                        self.handle,
-                        challenge_vector.as_mut_ptr(),
-                        &mut size,
-                    )
+                    icicle_sumcheck_get_challenge_vector(self.handle, challenge_vector.as_mut_ptr(), &mut size)
                 };
 
                 if err != eIcicleError::Success {
