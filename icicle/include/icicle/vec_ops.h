@@ -318,9 +318,7 @@ namespace icicle {
   eIcicleError
   matrix_transpose(const T* mat_in, uint32_t nof_rows, uint32_t nof_cols, const VecOpsConfig& config, T* mat_out);
 
-
-
-/**
+  /**
    * @brief Multiplies two matrices.
    *
    * @tparam T Type of the elements in the matrices.
