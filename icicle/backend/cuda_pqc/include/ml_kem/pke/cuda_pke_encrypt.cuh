@@ -76,6 +76,8 @@ namespace icicle::pqc::ml_kem::pke {
     v[threadIdx.x] += (e2[threadIdx.x] + mu[threadIdx.x]);
     v[threadIdx.x + 128] += (e2[threadIdx.x + 128] + mu[threadIdx.x + 128]);
 
+    __syncthreads();
+
     // 22. 23. pack
     encode_ciphertext<k, du, dv>(u, v, c);
   }
