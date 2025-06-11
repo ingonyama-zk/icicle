@@ -1,6 +1,6 @@
 #include "labrador_protocol.h"
-// #include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
-// #include "icicle/hash/keccak.h"      // For Hash
+#include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
+#include "icicle/hash/keccak.h"      // For Hash
 
 using namespace icicle::labrador;
 
@@ -869,20 +869,20 @@ eIcicleError verify(/*TODO params*/)
 
 int main(int argc, char* argv[])
 {
+  ICICLE_LOG_INFO << "Labrador example";
   try_load_and_set_backend_device(argc, argv);
 
-  int64_t q = get_q<Zq>();
+  const int64_t q = get_q<Zq>();
+
+  // TODO use icicle_malloc() instead of std::vector. Consider a DeviceVector<T> that behaves like std::vector
 
   // randomize the witness Si with low norm
-  // TODO Ash: maybe want to allocate them consecutive in memory
   const size_t n = 1 << 8;
   const size_t r = 1 << 8;
   constexpr size_t d = Rq::d;
   std::vector<Rq> S(r * n);
 
-  // TODO eventually we will use icicle_malloc() and icicle_copy() to allocate and copy that is device agnostic and
-  // support GPU too. First step can be with host memory and then we can add device support.
-
+  // TODO: generate dot-product constraints and a witness that solve them for the proof to be valid
   auto randomize_Rq_vec = [](std::vector<Rq>& vec, int64_t max_value) {
     for (auto& x : vec) {
       for (size_t i = 0; i < d; ++i) {                    // randomize each coefficient
@@ -892,19 +892,13 @@ int main(int argc, char* argv[])
     }
   };
 
-  // std::cout << "0= " << Zq::from(0) << std::endl
-  //           << "1= " << Zq::from(1) << std::endl
-  //           << "31= " << Zq::from(31) << std::endl;
-
   // generate random values in [0, sqrt(q)]. We assume witness is low norm.
   const int64_t sqrt_q = static_cast<int64_t>(std::sqrt(q));
   randomize_Rq_vec(S, sqrt_q);
 
   // === Call the protocol ===
-  // ICICLE_CHECK(setup(/* TODO(Ash): add arguments */));
   // ICICLE_CHECK(prove(/* TODO(Ash): add arguments */));
   // ICICLE_CHECK(verify(/* TODO(Ash): add arguments */));
 
-  std::cout << "Hello\n";
   return 0;
 }

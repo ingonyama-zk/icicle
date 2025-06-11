@@ -4,7 +4,6 @@
 #include "icicle/runtime.h"
 
 #include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
-#include "icicle/hash/keccak.h"      // For Hash
 
 using namespace icicle::labrador;
 
@@ -35,6 +34,7 @@ struct EqualityInstance {
   EqualityInstance(const EqualityInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
 };
 
+// TODO: ConstZeroInstance and EqualityInstance are the same? consolidate to one type?
 struct ConstZeroInstance {
   size_t r;                         // Number of witness vectors
   size_t n;                         // Dimension of each vector in Rq
@@ -157,21 +157,6 @@ struct LabradorRecursionRawInstance {
   {
   }
 };
-
-Rq icicle::labrador::conjugate(const Rq& p)
-{
-  Rq result;
-  // Copy constant term (index 0)
-  result.values[0] = p.values[0];
-
-  // For remaining coefficients, flip and negate
-  for (size_t k = 1; k < Rq::d; k++) {
-    // TODO: neg is negate?
-    result.values[k] = Zq::neg(p.values[Rq::d - k]);
-  }
-
-  return result;
-}
 
 template <typename Zq>
 int64_t get_q()

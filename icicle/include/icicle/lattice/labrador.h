@@ -141,6 +141,8 @@ namespace icicle {
     // Norm Bounds
     //------------------------------------------------------------------------------
 
+    using icicle::eNormType;
+
     /// @brief Check whether the norm of a vector is under the bound.
     /// Supports [L2, L∞] norm.
     /// Does the norm_bound have to be uint64_t? What about float? -- could be needed for operatorNorm
