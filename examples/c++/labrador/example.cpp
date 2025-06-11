@@ -5,10 +5,12 @@
 using namespace icicle::labrador;
 
 LabradorRecursionRawInstance LabradorProtocol::base_prover(
-  LabradorInstance lab_inst, const std::vector<std::byte>& ajtai_seed, const std::vector<Rq>& S, std::vector<Zq>& proof)
+  LabradorInstance& lab_inst,
+  const std::vector<std::byte>& ajtai_seed,
+  const std::vector<Rq>& S,
+  std::vector<Zq>& proof)
 {
   // Step 1: Pack the Witnesses into a Matrix S
-
   const size_t r = lab_inst.r; // Number of witness vectors
   const size_t n = lab_inst.n; // Dimension of witness vectors
   constexpr size_t d = Rq::d;
@@ -17,15 +19,13 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   // Step 2: Convert S to the NTT Domain
   std::vector<Tq> S_hat(r * n);
-
   // Perform negacyclic NTT on the witness S
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
 
-  // Step 3: S@A = T
+  // Step 3: S@A = T (TODO Ash: should this be A@S?)
   // Generate A
   // TODO: change this so that A need not be computed and stored
   std::vector<Tq> A(n * kappa);
-
   std::vector<std::byte> seed_A(ajtai_seed);
   seed_A.push_back(std::byte('0'));
   ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
@@ -38,32 +38,30 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Step 5: Convert T_hat to Rq
   std::vector<Rq> T(r * kappa);
   // Perform negacyclic INTT
-  ICICLE_CHECK(ntt(T_hat.data(), r * kappa, NTTDir::kInverse, default_ntt_config<Zq>(), T.data()));
+  ICICLE_CHECK(ntt(T_hat.data(), r * kappa, NTTDir::kInverse, {}, T.data()));
 
-  // Step 6: Convert T to T_tilde
-  size_t l1 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base1));
+  // Step 6: decompose T to T_tilde
+  size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
+  // TODO: matrix_transpose for Tq
   ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
 
   std::vector<Tq> G_hat(r * r);
   ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
 
-  std::vector<Rq> g;
-  std::vector<Tq> g_hat; // TODO Ash: those are empty
-  ICICLE_CHECK(ntt(G_hat.data(), r * r, NTTDir::kInverse, {}, g_hat.data()));
+  std::vector<Rq> g(r * r);
+  ICICLE_CHECK(ntt(G_hat.data(), r * r, NTTDir::kInverse, {}, g.data()));
 
-  // Step 8: Convert g to g_tilde
-  size_t l2 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base2));
+  // Step 8: decompose g to g_tilde
+  size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
 
   // Step 9: already done
-  // vector(t) = T_tilde
-  // vector(g) = g_tilde
 
   // Step 10: u1 = B@T_tilde + C@g_tilde
   // Generate B, C
@@ -78,8 +76,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   // compute NTTs for T_tilde, g_tilde
   std::vector<Tq> T_tilde_hat(T_tilde.size()), g_tilde_hat(g_tilde.size());
-  ICICLE_CHECK(ntt(T_tilde.data(), T_tilde.size(), NTTDir::kForward, default_ntt_config<Zq>(), T_tilde_hat.data()));
-  ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, default_ntt_config<Zq>(), g_tilde_hat.data()));
+  ICICLE_CHECK(ntt(T_tilde.data(), T_tilde.size(), NTTDir::kForward, {}, T_tilde_hat.data()));
+  ICICLE_CHECK(ntt(g_tilde.data(), g_tilde.size(), NTTDir::kForward, {}, g_tilde_hat.data()));
 
   std::vector<Tq> u1(kappa1), v1(kappa1), v2(kappa1);
   // v1 = B@T_tilde
@@ -87,21 +85,22 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // v2 = C@g_tilde
   ICICLE_CHECK(
     matmul(C.data(), kappa1, ((r * (r + 1)) / 2) * l2, g_tilde_hat.data(), g_tilde_hat.size(), 1, {}, v2.data()));
-  for (size_t i = 0; i < kappa1; i++) {
-    // TODO: can we flatten v1, v2 as Zq and run this?
-    vector_add(v1[i].values, v2[i].values, d, {}, u1[i].values);
-  }
+  vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
 
   // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
   // add u1 to the proof
+  // TODO: this loop should be flattened and use icicle_copy() to handle device memory
   for (size_t i = 0; i < kappa1; i++) {
     proof.insert(proof.end(), u1[i].values, u1[i].values + d);
   }
   // hash and get a challenge
-  Hash hasher = create_sha3_256_hash();
+  Hash hasher = Sha3_256::create();
   // TODO: add serialization to lab_inst, ajtai_seed, u1 and put them in the placeholder
   std::vector<std::byte> seed1(hasher.output_size());
-  hasher.hash("Placeholder1", 12, {}, seed1.data());
+  {
+    const char* hash_input = "Placeholder1";
+    hasher.hash(hash_input, strlen(hash_input), {}, seed1.data());
+  }
 
   // Step 12: Select a JL projection
   std::vector<Zq> p(JL_out, Zq::from(0));
@@ -115,20 +114,17 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
       std::vector<std::byte> jl_seed(base_jl_seed);
       jl_seed.push_back(std::byte(j));
 
-      std::vector<Zq> input, output(JL_out);
-      // unpack row k of S into input
-      for (size_t k = 0; k < n; k++) {
-        input.insert(input.end(), S[j * n + k].values, S[j * n + k].values + d);
-      }
+      std::vector<Zq> s_projection(JL_out);
       // create JL projection: P_j*s_j
-      ICICLE_CHECK(
-        jl_projection(input.data(), input.size(), jl_seed.data(), jl_seed.size(), {}, output.data(), JL_out));
+      ICICLE_CHECK(jl_projection(
+        reinterpret_cast<const Zq*>(S.data() + j * n), n * d, jl_seed.data(), jl_seed.size(), {}, s_projection.data(),
+        s_projection.size()));
       // add output to p
-      vector_add(p.data(), output.data(), JL_out, {}, p.data());
+      vector_add(p.data(), s_projection.data(), s_projection.size(), {}, p.data());
     }
     // check norm
     bool JL_check = false;
-    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(128) * beta), {}, &JL_check));
+    ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
 
     if (JL_check) {
       break;
@@ -280,7 +276,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
       }
     }
 
-    ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
+    ICICLE_CHECK(matmul(G_hat.data(), 1, G_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
 
     // Second part: sum_i <phi'_i^{(k)}, s_i>
     for (size_t i = 0; i < r; i++) {

@@ -105,7 +105,7 @@ struct LabradorProtocol {
 
   // Method declarations
   LabradorRecursionRawInstance base_prover(
-    LabradorInstance lab_inst,
+    LabradorInstance& lab_inst,
     const std::vector<std::byte>& ajtai_seed,
     const std::vector<Rq>& S,
     std::vector<Zq>& proof);
