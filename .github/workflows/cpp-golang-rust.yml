@@ -933,7 +933,7 @@ jobs:
         ./test_pqc_api --output-on-failure
 
     - name: Run Rust ML-KEM Tests
-      working-directory: ./wrappers/rust/icicle-pqc/icicle-ml-kem
+      working-directory: ./wrappers/rust/icicle-pqc
       if: needs.check-changed-files.outputs.rust == 'true'
       run: |
         export ICICLE_INSTALL_DIR=$GITHUB_WORKSPACE/icicle/install
