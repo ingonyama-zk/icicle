@@ -293,13 +293,13 @@ export default {
         },
         {
           type: "doc",
-          label: "PQC ML-KEM",
-          id: "api/rust-bindings/lattice/pqc-ml-kem",
+          label: "FRI",
+          id: "api/rust-bindings/fri",
         },
         {
           type: "doc",
-          label: "FRI",
-          id: "api/rust-bindings/fri",
+          label: "PQC ML-KEM",
+          id: "api/rust-bindings/lattice/pqc-ml-kem",
         },
         {
           type: "doc",

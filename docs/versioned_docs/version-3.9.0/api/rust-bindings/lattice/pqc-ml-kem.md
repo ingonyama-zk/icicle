@@ -147,4 +147,4 @@ All functions return `Result<(), eIcicleError>`.  An error is raised for invalid
 ## See also
 
 * [C++ ML-KEM guide](../../cpp/lattice/pqc_ml_kem.md)
-* [Icicle runtime documentation](../../../start/architecture/multi-device.md) – streams, device management, buffer helpers
+* [Icicle programmer guide](../../../start/programmers_guide/general.md) – streams, device management, buffer helpers, and memory management
