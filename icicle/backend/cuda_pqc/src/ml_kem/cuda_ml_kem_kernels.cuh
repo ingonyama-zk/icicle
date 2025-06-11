@@ -8,12 +8,12 @@
 #include "ml_kem/cuda_ml_kem_decaps.cuh"
 
 /// @file
-/// @brief Device-level CUDA code for ML-KEM cryptographic operations.
+/// @brief CUDA kernel implementations for ML-KEM cryptographic operations.
 ///
-/// This file defines CUDA `__device__` and `__global__` routines for use within
-/// batched ML-KEM implementations on the GPU. It can be:
-/// - Directly used in fused kernels
-/// - Called via the ICICLE runtime, abstracting the backend
+/// This file defines CUDA `__global__` kernel routines for batched ML-KEM
+/// cryptographic primitives on the GPU. These kernels are:
+/// - Invoked directly for specific operations
+/// - Used by the ICICLE runtime as part of its backend abstraction
 
 namespace icicle::pqc::ml_kem {
 
