@@ -206,9 +206,6 @@ namespace icicle::pqc::ml_kem {
     return translateCudaError(cuda_decapsulate<Params>(secret_keys, ciphertext, config, shared_secrets));
   }
 
-  // REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber1024Params, cuda_keygen_handler, cuda_encapsulate_handler,
-  // cuda_decapsulate_handler); REGISTER_ML_KEM_BACKEND("CUDA-PQC", Kyber768Params, cuda_keygen_handler,
-  // cuda_encapsulate_handler, cuda_decapsulate_handler);
   REGISTER_ML_KEM512_BACKEND("CUDA-PQC", cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
   REGISTER_ML_KEM768_BACKEND("CUDA-PQC", cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);
   REGISTER_ML_KEM1024_BACKEND("CUDA-PQC", cuda_keygen_handler, cuda_encapsulate_handler, cuda_decapsulate_handler);

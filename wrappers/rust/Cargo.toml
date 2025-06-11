@@ -15,7 +15,7 @@ members = [
   "icicle-fields/icicle-stark252",
   "icicle-rings/icicle-labrador",
   "icicle-hash",
-  "icicle-pqc/icicle-ml-kem",
+  "icicle-pqc",
 ]
 exclude = []
 

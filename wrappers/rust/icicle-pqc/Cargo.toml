@@ -1,6 +1,6 @@
 [package]
-name = "icicle-ml-kem"
-description = "Rust wrapper for the implementation of ML-KEM by Ingonyama"
+name = "icicle-pqc"
+description = "Rust wrapper for the implementation of Post-quantum protocols by Ingonyama"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

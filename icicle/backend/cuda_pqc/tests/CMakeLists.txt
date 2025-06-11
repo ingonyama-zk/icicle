@@ -19,31 +19,29 @@ endforeach()
 
 enable_testing()
 
-if(PQC)
-    # Common include directories for CUDA tests
-    set(CUDA_TEST_INCLUDE_DIRS
-        ${CMAKE_SOURCE_DIR}/include/
-        ${CMAKE_CURRENT_SOURCE_DIR}/../include/ 
-        ${CMAKE_CURRENT_SOURCE_DIR}/../src/
-        ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem/
-        ${CMAKE_SOURCE_DIR}/tests/
-    )
+# Common include directories for CUDA tests
+set(CUDA_TEST_INCLUDE_DIRS
+    ${CMAKE_SOURCE_DIR}/include/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/ 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/
+    ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem/
+    ${CMAKE_SOURCE_DIR}/tests/
+)
 
-    # Helper macro to define test targets
-    function(add_cuda_test name)
-        add_executable(${name} ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem/${name}.cu)
-        target_include_directories(${name} PRIVATE ${CUDA_TEST_INCLUDE_DIRS})
-        target_link_libraries(${name} PRIVATE GTest::gtest_main icicle_pqc)
-        gtest_discover_tests(${name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem)
-    endfunction()
+# Helper macro to define test targets
+function(add_cuda_test name)
+    add_executable(${name} ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem/${name}.cu)
+    target_include_directories(${name} PRIVATE ${CUDA_TEST_INCLUDE_DIRS})
+    target_link_libraries(${name} PRIVATE GTest::gtest_main icicle_pqc)
+    gtest_discover_tests(${name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ml_kem)
+endfunction()
 
-    # Add all CUDA tests
-    add_cuda_test(test_kyber)
-    add_cuda_test(test_ml_kem_keygen)
-    add_cuda_test(test_pke_encrypt)
-    add_cuda_test(test_pke_decrypt)
-    add_cuda_test(test_kyber_hashes)
-    add_cuda_test(test_ml_kem)
-    add_cuda_test(test_ml_kem_encaps)
-    add_cuda_test(test_ml_kem_decaps)
-endif()
+# Add all CUDA tests
+add_cuda_test(test_kyber)
+add_cuda_test(test_ml_kem_keygen)
+add_cuda_test(test_pke_encrypt)
+add_cuda_test(test_pke_decrypt)
+add_cuda_test(test_kyber_hashes)
+add_cuda_test(test_ml_kem)
+add_cuda_test(test_ml_kem_encaps)
+add_cuda_test(test_ml_kem_decaps)

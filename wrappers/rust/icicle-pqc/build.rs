@@ -4,13 +4,13 @@ use std::{env, path::PathBuf};
 fn main() {
     // Get target build directories
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is not set");
-    let build_dir = PathBuf::from(format!("{}/../../../", &out_dir));
+    let build_dir = PathBuf::from(format!("{}/../../", &out_dir));
     let deps_dir = build_dir.join("deps");
 
     // Locate icicle source directory
     let main_dir = env::current_dir().expect("Failed to get current directory");
     let icicle_src_dir = main_dir
-        .join("../../../../icicle")
+        .join("../../../icicle")
         .canonicalize()
         .expect("Failed to canonicalize icicle path");
 

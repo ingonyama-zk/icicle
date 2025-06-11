@@ -81,23 +81,6 @@ eIcicleError decapsulate(
 
 ---
 
-## C API symbols
-
-For integration with C or other FFI layers, Icicle exposes thin wrappers with the naming scheme `icicle_ml_kem_<op><level>`:
-
-```c
-// Level-1 (Kyber512)
-eIcicleError icicle_ml_kem_keygen512(const uint8_t* entropy, const MlKemConfig* cfg,
-                                     uint8_t* pk, uint8_t* sk);
-eIcicleError icicle_ml_kem_encapsulate512(const uint8_t* msg, const uint8_t* pk,
-                                          const MlKemConfig* cfg, uint8_t* ct, uint8_t* ss);
-eIcicleError icicle_ml_kem_decapsulate512(const uint8_t* sk, const uint8_t* ct,
-                                          const MlKemConfig* cfg, uint8_t* ss);
-// … identical pattern for 768 / 1024
-```
-
----
-
 ## Example: generate & encapsulate (Kyber768)
 
 ```cpp
@@ -130,16 +113,6 @@ const int batch_size = 1 << 12;
   err = decapsulate<TypeParam>(secret_key.data(), ciphertext.data(), config, shared_secret_dec.data());
 }
 ```
-
----
-
-## FFI symbols
-
-If you need to interface with C or another language, link to the symbols exported by `icicle_pqc`:
-
-* `icicle_ml_kem_keygen512`, `icicle_ml_kem_encapsulate512`, `icicle_ml_kem_decapsulate512`
-* `icicle_ml_kem_keygen768`, `icicle_ml_kem_encapsulate768`, `icicle_ml_kem_decapsulate768`
-* `icicle_ml_kem_keygen1024`, `icicle_ml_kem_encapsulate1024`, `icicle_ml_kem_decapsulate1024`
 
 ---
 

@@ -3,6 +3,7 @@
 #include "ml_kem/hash/cuda_sha3_32threads.cuh"
 
 namespace icicle::pqc::ml_kem {
+  // Implements the `J` function from NIST FIPS 203 ("Module-Lattice-Based Key-Encapsulation Mechanism Standard")
   template <const uint8_t k, const uint8_t du, const uint8_t dv>
   __forceinline__ __device__ void J(const uint8_t z[32], const uint8_t c[32 * (du * k + dv)], uint8_t shared_key[32])
   {
@@ -33,6 +34,7 @@ namespace icicle::pqc::ml_kem {
     if (lane < 4) ((uint64_t*)shared_key)[lane] = s;
   }
 
+  // Implements the `G` function from NIST FIPS 203 ("Module-Lattice-Based Key-Encapsulation Mechanism Standard")
   __forceinline__ __device__ void G_m_ek(const uint8_t m[32], const uint8_t hashed_ek[32], uint8_t k_r[64])
   {
     uint64_t s = absorb_dual<64, SHA3_512_RATE, SHA3_DELIM_BITS, SHA3_DELIM_SUFFIX>(m, hashed_ek, 0);
@@ -42,6 +44,7 @@ namespace icicle::pqc::ml_kem {
     if (lane < 8) ((uint64_t*)k_r)[lane] = s;
   }
 
+  // Implements the `H` function from NIST FIPS 203 ("Module-Lattice-Based Key-Encapsulation Mechanism Standard")
   template <const uint8_t k>
   __forceinline__ __device__ void H(const uint8_t ek[384 * k + 32], uint8_t dk[32])
   {

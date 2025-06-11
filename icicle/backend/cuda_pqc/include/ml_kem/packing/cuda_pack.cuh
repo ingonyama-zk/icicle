@@ -147,7 +147,6 @@ namespace icicle::pqc::ml_kem {
     uint16_t t[8];
     uint64_t d0;
 #pragma unroll
-    // TODO: switch to mad operations
     for (int l = 0; l < 8; l++) {
       d0 = a[i][8 * j + l].raw();
       d0 <<= 11;
@@ -202,7 +201,6 @@ namespace icicle::pqc::ml_kem {
 
 #pragma unroll
     for (int j = 0; j < 8; j++) {
-      // TODO: switch to mad operations
       t = mu[8 * threadIdx.x + j].raw();
       t <<= 1;
       t += 1665;

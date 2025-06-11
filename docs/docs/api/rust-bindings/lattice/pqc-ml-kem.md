@@ -16,10 +16,10 @@ For an in-depth explanation of the primitive, performance advice and backend-spe
 
 ```rust
 pub fn keygen<P: KyberParams>(
-    entropy: &(impl HostOrDeviceSlice<u8> + ?Sized),
-    cfg:     &MlKemConfig,
-    pk:      &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    sk:      &mut (impl HostOrDeviceSlice<u8> + ?Sized),
+    entropy: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × 64 bytes
+    config: &MlKemConfig,
+    public_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × PUBLIC_KEY_BYTES
+    secret_keys: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SECRET_KEY_BYTES
 ) -> Result<(), eIcicleError>;
 ```
 
@@ -27,11 +27,11 @@ pub fn keygen<P: KyberParams>(
 
 ```rust
 pub fn encapsulate<P: KyberParams>(
-    msg:      &(impl HostOrDeviceSlice<u8> + ?Sized),
-    pk:       &(impl HostOrDeviceSlice<u8> + ?Sized),
-    cfg:      &MlKemConfig,
-    ct:       &mut (impl HostOrDeviceSlice<u8> + ?Sized),
-    ss:       &mut (impl HostOrDeviceSlice<u8> + ?Sized),
+    message: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × 32 bytes
+    public_keys: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × PUBLIC_KEY_BYTES
+    config: &MlKemConfig,
+    ciphertexts: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × CIPHERTEXT_BYTES
+    shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
 ) -> Result<(), eIcicleError>;
 ```
 
@@ -39,10 +39,10 @@ pub fn encapsulate<P: KyberParams>(
 
 ```rust
 pub fn decapsulate<P: KyberParams>(
-    sk:       &(impl HostOrDeviceSlice<u8> + ?Sized),
-    ct:       &(impl HostOrDeviceSlice<u8> + ?Sized),
-    cfg:      &MlKemConfig,
-    ss:       &mut (impl HostOrDeviceSlice<u8> + ?Sized),
+    secret_keys: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SECRET_KEY_BYTES
+    ciphertexts: &(impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × CIPHERTEXT_BYTES
+    config: &MlKemConfig,
+    shared_secrets: &mut (impl HostOrDeviceSlice<u8> + ?Sized), // batch_size × SHARED_SECRET_BYTES
 ) -> Result<(), eIcicleError>;
 ```
 
