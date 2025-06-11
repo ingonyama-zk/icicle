@@ -39,7 +39,7 @@ func testIsDeviceAvailable(suite *suite.Suite) {
 func testSetDefaultDevice(suite *suite.Suite) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	
+
 	defaultDevice := &test_helpers.MAIN_DEVICE
 	icicle_runtime.SetDefaultDevice(defaultDevice)
 
