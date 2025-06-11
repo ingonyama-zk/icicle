@@ -322,7 +322,7 @@ ICICLE frontend is distributed under the terms of the MIT License.
 See [LICENSE-MIT][LMIT] for details.
 
 > [!NOTE]
-> ICICLE backends, excluding the CPU backend, are distributed under a special license and are not covered by the MIT license. If you want to learn more, check out our [developer documentation.](https://dev.ingonyama.com/start/architecture/install_gpu_backend#licensing)
+> ICICLE backends, excluding backends exposed in this repository, are distributed under a special license and are not covered by the MIT license. If you want to learn more, check out our [developer documentation.](https://dev.ingonyama.com/start/architecture/install_gpu_backend#licensing)
 
 <!-- Begin Links -->
 [BLS12-381]: ./icicle/curves/
