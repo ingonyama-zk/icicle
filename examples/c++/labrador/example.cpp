@@ -146,11 +146,10 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Step 14: removed
   // Step 15, 16: already done
 
-  // Step 17: Create polynomial vectors from JL matrix rows
+  // Step 17: Create conjugated polynomial vectors from JL matrix rows
   std::vector<Rq> Q(r * JL_out * n);
   // indexes into a multidim array of dim = r X JL_out X n
   auto rq_index = [n, this](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
-
   for (size_t i = 0; i < r; i++) {
     // Create seed for P_i matrix (same as in step 12)
     std::vector<std::byte> base_jl_seed(seed1);
@@ -158,14 +157,14 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
     base_jl_seed.push_back(std::byte(i));
 
     // compute the PI matrix, conjugated in Rq
-    ICICLE_CHECK(get_jl_matrix_rows(
+    ICICLE_CHECK(get_jl_matrix_rows<Rq>(
       base_jl_seed.data(), base_jl_seed.size(),
       n * d,  // row_size (M = n*d)
       0,      // row_index
       JL_out, // num_rows
       true,   // conjugate
       {},     // config
-      &Q[r * JL_out * n]));
+      Q.data() + i * JL_out * n));
   }
 
   // Step 18: Let L be the number of constZeroInstance constraints in LabradorInstance.
@@ -200,6 +199,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
       for (size_t j = 0; j < r; j++) {
         Tq sum = Tq(); // Initialize to zero polynomial
 
+        // TODO vectorize loop
         for (size_t l = 0; l < L; l++) {
           // Get psi^{(k)}(l) as scalar
           Zq psi_scalar = psi_k[psi_index(k, l)];
@@ -208,6 +208,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
           Tq a_ij_l = lab_inst.const_zero_constraints[l].a[i][j];
 
           // Scalar multiply and add: sum += psi_scalar * a_ij_l
+          // TODO: use vector_mul<Rq,Zq> and vector_sum<Rq> to aggregate in a vectorized way
           Tq temp;
           ICICLE_CHECK(scalar_mul_vec(&psi_scalar, a_ij_l.values, d, {}, temp.values));
           ICICLE_CHECK(vector_add(sum.values, temp.values, d, {}, sum.values));
@@ -238,7 +239,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
       for (size_t l = 0; l < JL_out; l++) { // JL_out = 256
         Zq omega_scalar = omega_k[omega_index(k, l)];
 
-        // TODO Yuval: can vectorize the loop?
+        // TODO: can vectorize the loop?
         for (size_t m = 0; m < n; m++) {
           // q_{il} is stored in Q[i][l][:]
           Rq q_ilm = Q[rq_index(i, l, m)];
