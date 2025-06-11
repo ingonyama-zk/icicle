@@ -123,6 +123,53 @@ public:
   }
 
   template <typename A, typename P>
+  void msm_affine_montgomery()
+  {
+    const int logn = 12;
+    const int size = (1 << logn) - rand_uint_32b(0, 5 * logn); // make it not always power of two
+
+    auto scalars = std::make_unique<scalar_t[]>(size);
+    auto bases_mont = std::make_unique<A[]>(size);
+    scalar_t::rand_host_many(scalars.get(), size);
+    P::rand_host_many(bases_mont.get(), size);
+    auto vec_config = default_vec_ops_config();
+    ICICLE_CHECK(convert_montgomery(bases_mont.get(), size, true, vec_config, bases_mont.get()));
+
+    auto result_main = std::make_unique<P[]>(1);
+    auto result_ref = std::make_unique<P[]>(1);
+
+    auto config = default_msm_config();
+    config.are_points_montgomery_form = true;
+
+    auto run = [&](const std::string& dev_type, P* result, const char* msg, bool measure, int iters) {
+      Device dev = {dev_type, 0};
+      icicle_set_device(dev);
+
+      std::ostringstream oss;
+      oss << dev_type << " " << msg;
+
+      START_TIMER(MSM_sync)
+      for (int i = 0; i < iters; ++i) {
+        ICICLE_CHECK(msm(scalars.get(), bases_mont.get(), size, config, result));
+      }
+      END_TIMER(MSM_sync, oss.str().c_str(), measure);
+
+      if (dev_type == "CPU") {
+        *result = P::from_montgomery(*result);
+      }
+    };
+
+    run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    run(IcicleTestBase::reference_device(), result_ref.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);
+    ASSERT_EQ(true, P::is_on_curve(result_main[0]));
+    ASSERT_EQ(true, P::is_on_curve(result_ref[0]));
+    auto affine_main = result_main[0].to_affine();
+    auto affine_ref = result_ref[0].to_affine();
+    ASSERT_EQ(affine_main, affine_ref);
+    ASSERT_EQ(result_main[0], result_ref[0]);
+  }
+
+  template <typename A, typename P>
   void MSM_PRE_COMPUTE_test()
   {
     const int logn = 12;
@@ -273,6 +320,7 @@ public:
 
 #ifdef MSM
 TEST_F(CurveApiTest, msm) { MSM_test<affine_t, projective_t>(); }
+TEST_F(CurveApiTest, msm_affine_montgomery) { msm_affine_montgomery<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, msm_pre_compute) { MSM_PRE_COMPUTE_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, msmCpuThreads) { MSM_CPU_THREADS_test<affine_t, projective_t>(); }
 TEST_F(CurveApiTest, MontConversionAffine) { mont_conversion_test<affine_t, projective_t>(); }
