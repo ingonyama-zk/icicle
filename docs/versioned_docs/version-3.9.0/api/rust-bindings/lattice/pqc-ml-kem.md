@@ -1,7 +1,7 @@
 # ML-KEM (Kyber) – Rust bindings
 
 :::note
-For an in-depth explanation of the primitive, performance advice and backend-specific tuning knobs see the [C++ ML-KEM guide](../cpp/pqc_ml_kem.md).
+For an in-depth explanation of the primitive, performance advice and backend-specific tuning knobs see the [C++ ML-KEM guide](../../cpp/lattice/pqc_ml_kem.md).
 :::
 
 ## Overview
@@ -146,5 +146,5 @@ All functions return `Result<(), eIcicleError>`.  An error is raised for invalid
 
 ## See also
 
-* [C++ ML-KEM guide](../cpp/lattice/pqc_ml_kem.md)
-* [Icicle runtime documentation](multi-gpu.md) – streams, device management, buffer helpers
+* [C++ ML-KEM guide](../../cpp/lattice/pqc_ml_kem.md)
+* [Icicle programmer guide](../../../start/programmers_guide/general.md) – streams, device management, buffer helpers, and memory management
