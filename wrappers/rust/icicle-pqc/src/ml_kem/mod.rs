@@ -1,6 +1,6 @@
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
-use crate::{config::MlKemConfig, kyber_params::KyberParams};
+use crate::ml_kem::{config::MlKemConfig, kyber_params::KyberParams};
 
 pub mod config;
 mod ffi;

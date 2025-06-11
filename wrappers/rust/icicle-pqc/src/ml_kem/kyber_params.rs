@@ -1,6 +1,6 @@
 use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
 
-use crate::{config::MlKemConfig, ffi::*};
+use super::{config::MlKemConfig, ffi::*};
 
 // Constants for general configuration
 pub const ENTROPY_BYTES: usize = 64;

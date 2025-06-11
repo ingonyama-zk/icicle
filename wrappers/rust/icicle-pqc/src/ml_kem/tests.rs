@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{
+    use crate::ml_kem::{
         config::MlKemConfig,
         decapsulate, encapsulate, keygen,
         kyber_params::{Kyber1024Params, Kyber512Params, Kyber768Params, KyberParams, ENTROPY_BYTES, MESSAGE_BYTES},
