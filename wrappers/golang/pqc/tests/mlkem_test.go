@@ -45,7 +45,8 @@ func (s *mlkemTestSuite) runConsistencyHost(params *mlkem.KyberParams, batchSize
 	config := mlkem.GetDefaultMlKemConfig()
 	config.BatchSize = uint64(batchSize)
 
-	test_helpers.ActivateMainDevice()
+	device := runtime.CreateDevice("CUDA-PQC", 0)
+	runtime.SetDevice(&device)
 
 	// Keygen
 	err := mlkem.Keygen(params,
@@ -86,14 +87,15 @@ func (s *mlkemTestSuite) runConsistencyHost(params *mlkem.KyberParams, batchSize
 }
 
 func (s *mlkemTestSuite) TestKyberConsistencyHost() {
+	batch_size := 1 << 13
 	s.Run("Kyber512", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyHost(&mlkem.Kyber512Params, 4)
+		s.runConsistencyHost(&mlkem.Kyber512Params, batch_size)
 	}))
 	s.Run("Kyber768", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyHost(&mlkem.Kyber768Params, 4)
+		s.runConsistencyHost(&mlkem.Kyber768Params, batch_size)
 	}))
 	s.Run("Kyber1024", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyHost(&mlkem.Kyber1024Params, 4)
+		s.runConsistencyHost(&mlkem.Kyber1024Params, batch_size)
 	}))
 }
 
