@@ -300,7 +300,7 @@ macro_rules! impl_sumcheck {
             fn icicle_sumcheck_get_challenge_vector(
                 handle: SumcheckHandle,
                 challenge_vector: *mut $field,
-                challenge_vector_size: *mut u64,
+                challenge_vector_size: &mut usize,
             ) -> eIcicleError;
 
             #[link_name = concat!($field_prefix, "_sumcheck_proof_create")]
@@ -432,19 +432,19 @@ macro_rules! impl_sumcheck {
             }
 
             fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
-                let mut challenge_vector = Vec::with_capacity(20); // MAX_TOTAL_NOF_VARS
-                let mut size = 0u64;
+                let mut challenge_len = 0usize;
 
                 let err = unsafe {
-                    icicle_sumcheck_get_challenge_vector(self.handle, challenge_vector.as_mut_ptr(), &mut size)
+                    icicle_sumcheck_get_challenge_vector(self.handle, std::ptr::null_mut(), &mut challenge_len)
+                };
+                // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
+                let mut challenge_vector = vec![$field::zero(); challenge_len];
+                let err = unsafe {
+                    icicle_sumcheck_get_challenge_vector(self.handle, challenge_vector.as_mut_ptr(), &mut challenge_len)
                 };
 
                 if err != eIcicleError::Success {
                     return Err(err);
-                }
-
-                unsafe {
-                    challenge_vector.set_len(size as usize);
                 }
 
                 Ok(challenge_vector)
