@@ -54,6 +54,7 @@ Options:
   -cuda-version <string>    			Specifies the version of CUDA to use
   -cuda-compiler-path <string>    Specifies the path to the CUDA compiler
   -metal <string>           			Specifies the branch/commit for METAL backend, or "local"
+  -pqc                      			Enable Pqc (only CUDA)
   -install-path <string>    			Installation path for built libraries
 `, os.Args[0])
 }
@@ -223,6 +224,16 @@ func main() {
 		}
 		fmt.Println("Finished building hash ✅")
 	}
+
+	// build PQC if enabled
+	if config.Pqc == "ON" {
+		fmt.Println("Building PQC ...")
+		if err := buildPqc(config); err != nil {
+			fmt.Printf("Error building PQC: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Finished building PQC ✅")
+	}
 }
 
 func buildCurve(config Config, curve string) error {
@@ -325,6 +336,40 @@ func buildHash(config Config) error {
 		fmt.Sprintf("-DCUDA_BACKEND=%s", config.CudaBackend),
 		fmt.Sprintf("-DMETAL_BACKEND=%s", config.MetalBackend),
 		fmt.Sprintf("-DHASH=%s", config.Hash),
+		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
+		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
+		"-S", ".", "-B", "build",
+	}
+
+	cmd := exec.Command("cmake", cmakeArgs...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("cmake configure failed: %v\n%s", err, out)
+	}
+
+	// Run cmake build and install
+	cmd = exec.Command("cmake", "--build", "build", "--target", "install")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("cmake build failed: %v\n%s", err, out)
+	}
+
+	os.Remove("build_config.txt")
+	return nil
+}
+
+func buildPqc(config Config) error {
+	// Write build config
+	f, err := os.Create("build_config.txt")
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(f, "DEVMODE=%s\n", config.DevMode)
+	f.Close()
+
+	// Run cmake configure
+	cmakeArgs := []string{
+		fmt.Sprintf("-DCMAKE_CUDA_COMPILER=%s", config.CudaCompilerPath),
+		fmt.Sprintf("-DPQC=%s", config.Pqc),
+		fmt.Sprintf("-DCUDA_PQC_BACKEND=%s", config.CudaPqcBackend),
 		fmt.Sprintf("-DCMAKE_BUILD_TYPE=%s", config.ReleaseType),
 		fmt.Sprintf("-DCMAKE_INSTALL_PREFIX=%s", config.InstallPath),
 		"-S", ".", "-B", "build",
