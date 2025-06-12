@@ -303,6 +303,11 @@ export default {
         },
         {
           type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/rust-bindings/lattice/pqc-ml-kem",
+        },
+        {
+          type: "doc",
           label: "Serialization",
           id: "api/rust-bindings/serialization",
         },
