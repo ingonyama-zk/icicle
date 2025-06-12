@@ -7,6 +7,8 @@ use icicle_runtime::stream::IcicleStreamHandle;
 
 pub mod tests;
 
+// TODO Yuval: document
+
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct NegacyclicNttConfig {
@@ -44,6 +46,8 @@ pub trait NegacyclicNtt<P: PolynomialRing> {
     ) -> Result<(), eIcicleError>;
 }
 
+// TODO Yuval: floating functions
+
 #[macro_export]
 macro_rules! impl_negacyclic_ntt {
     ($prefix:literal, $poly:ty, $base:ty) => {
@@ -65,6 +69,7 @@ macro_rules! impl_negacyclic_ntt {
                 cfg: &NegacyclicNttConfig,
                 output: &mut (impl HostOrDeviceSlice<$poly> + ?Sized),
             ) -> Result<(), eIcicleError> {
+                // TODO Yuval: check device and update cfg
                 unsafe { ntt_ffi(input.as_ptr(), input.len() as i32, dir, cfg, output.as_mut_ptr()).wrap() }
             }
 
@@ -73,6 +78,7 @@ macro_rules! impl_negacyclic_ntt {
                 dir: NTTDir,
                 cfg: &NegacyclicNttConfig,
             ) -> Result<(), eIcicleError> {
+                // TODO Yuval: check device and update cfg
                 unsafe { ntt_ffi(inout.as_ptr(), inout.len() as i32, dir, cfg, inout.as_mut_ptr()).wrap() }
             }
         }
