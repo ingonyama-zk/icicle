@@ -1,3 +1,4 @@
+use crate::polynomial_ring::PolynomialRing;
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
@@ -193,4 +194,25 @@ pub fn check_generator<C: Curve>() {
     let zero = Projective::<C>::zero();
     assert_ne!(generator, zero);
     assert!(C::is_on_curve(generator));
+}
+
+pub fn check_zero_and_from_slice<P: PolynomialRing>()
+where
+    P::Base: FieldImpl,
+{
+    let zero = P::zero();
+    let expected = vec![P::Base::zero(); P::DEGREE];
+    assert_eq!(zero.values(), expected.as_slice());
+
+    let input = vec![P::Base::one(); P::DEGREE];
+    let poly = P::from_slice(&input);
+    assert_eq!(poly.values(), input.as_slice());
+}
+
+pub fn check_vector_alloc<P: PolynomialRing>()
+where
+    P: Clone,
+{
+    let vec = vec![P::zero(); 10];
+    assert_eq!(vec.len(), 10);
 }
