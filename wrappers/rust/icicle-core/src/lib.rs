@@ -9,6 +9,7 @@ pub mod msm;
 pub mod norm;
 pub mod ntt;
 pub mod pairing;
+pub mod polynomial_ring;
 pub mod polynomials;
 pub mod poseidon;
 pub mod poseidon2;
