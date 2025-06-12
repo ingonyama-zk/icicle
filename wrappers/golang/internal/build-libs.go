@@ -27,6 +27,8 @@ type Config struct {
 	BuildDir         string
 	InstallPath      string
 	ReleaseType      string
+	Pqc              string
+	CudaPqcBackend   string
 }
 
 var supportedCurves = []string{"bn254", "bls12_377", "bls12_381", "bw6_761", "grumpkin"}
@@ -70,6 +72,8 @@ func main() {
 		DevMode:          "OFF",
 		CudaBackend:      "OFF",
 		MetalBackend:     "OFF",
+		Pqc:              "OFF",
+		CudaPqcBackend:   "OFF",
 	}
 
 	// Setup command line flags
@@ -87,6 +91,7 @@ func main() {
 	cudaVersion := flag.String("cuda-version", "", "CUDA version")
 	cudaCompilerPath := flag.String("cuda-compiler-path", "", "CUDA compiler path")
 	metalBackend := flag.String("metal", "OFF", "Metal backend")
+	pqcEnabled := flag.Bool("pqc", false, "Enable Pqc (only CUDA)")
 	installPath := flag.String("install-path", "", "Installation path")
 	releaseType := flag.String("release-type", "Release", "Release type")
 	help := flag.Bool("help", false, "Show help message")
@@ -131,6 +136,11 @@ func main() {
 	}
 	config.CudaBackend = *cudaBackend
 	config.MetalBackend = *metalBackend
+
+	if *pqcEnabled {
+		config.Pqc = "ON"
+		config.CudaPqcBackend = "ON"
+	}
 
 	// Set CUDA compiler path
 	if *cudaVersion != "" {

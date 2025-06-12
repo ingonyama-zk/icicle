@@ -1,4 +1,4 @@
-package ml_kem
+package mlkem
 
 import (
 	"github.com/ingonyama-zk/icicle/v3/wrappers/golang/runtime"

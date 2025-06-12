@@ -1,4 +1,4 @@
-package ml_kem
+package mlkem
 
 // #cgo CFLAGS: -I./include/
 // #include "mlkem.h"
