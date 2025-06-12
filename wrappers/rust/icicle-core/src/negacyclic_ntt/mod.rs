@@ -69,8 +69,28 @@ macro_rules! impl_negacyclic_ntt {
                 cfg: &NegacyclicNttConfig,
                 output: &mut (impl HostOrDeviceSlice<$poly> + ?Sized),
             ) -> Result<(), eIcicleError> {
-                // TODO Yuval: check device and update cfg
-                unsafe { ntt_ffi(input.as_ptr(), input.len() as i32, dir, cfg, output.as_mut_ptr()).wrap() }
+                // check device slices are on active device
+                if input.is_on_device() && !input.is_on_active_device() {
+                    panic!("input not allocated on an inactive device");
+                }
+                if output.is_on_device() && !output.is_on_active_device() {
+                    panic!("output not allocated on an inactive device");
+                }
+
+                let mut local_cfg = cfg.clone();
+                local_cfg.are_inputs_on_device = input.is_on_device();
+                local_cfg.are_outputs_on_device = output.is_on_device();
+
+                unsafe {
+                    ntt_ffi(
+                        input.as_ptr(),
+                        input.len() as i32,
+                        dir,
+                        &local_cfg,
+                        output.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
 
             fn ntt_inplace(
@@ -78,8 +98,25 @@ macro_rules! impl_negacyclic_ntt {
                 dir: NTTDir,
                 cfg: &NegacyclicNttConfig,
             ) -> Result<(), eIcicleError> {
-                // TODO Yuval: check device and update cfg
-                unsafe { ntt_ffi(inout.as_ptr(), inout.len() as i32, dir, cfg, inout.as_mut_ptr()).wrap() }
+                // check device slices are on active device
+                if inout.is_on_device() && !inout.is_on_active_device() {
+                    panic!("input not allocated on an inactive device");
+                }
+
+                let mut local_cfg = cfg.clone();
+                local_cfg.are_inputs_on_device = inout.is_on_device();
+                local_cfg.are_outputs_on_device = inout.is_on_device();
+
+                unsafe {
+                    ntt_ffi(
+                        inout.as_ptr(),
+                        inout.len() as i32,
+                        dir,
+                        &local_cfg,
+                        inout.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
             }
         }
     };
