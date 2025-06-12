@@ -290,13 +290,17 @@ private:
                                 : m_bm_size * bm_i + (curr_coeff & coeff_bit_mask_no_sign_bit);
 
             // Check for collision in that bucket and either dispatch an addition or store the P accordingly.
-            if (buckets_busy[bkt_idx]) {
+            if (buckets_busy[bkt_idx]) { // TBD: inplace
               buckets[bkt_idx].point =
-                buckets[bkt_idx].point + ((negate_p_and_s ^ (carry > 0)) ? base_neg : base); // TBD: inplace
+                m_config.are_points_montgomery_form
+                  ? buckets[bkt_idx].point + P::from_montgomery_affine((negate_p_and_s ^ (carry > 0) ? base_neg : base))
+                  : buckets[bkt_idx].point + (negate_p_and_s ^ (carry > 0) ? base_neg : base); // TBD: inplace
             } else {
               buckets_busy[bkt_idx] = true;
               buckets[bkt_idx].point =
-                P::from_affine(((negate_p_and_s ^ (carry > 0)) ? base_neg : base)); // TBD: inplace
+                m_config.are_points_montgomery_form
+                  ? P::from_montgomery_affine(negate_p_and_s ^ (carry > 0) ? base_neg : base)
+                  : P::from_affine(negate_p_and_s ^ (carry > 0) ? base_neg : base); // TBD: inplace
             }
           } else {
             // Handle edge case where coeff = 1 << c due to carry overflow which means:
@@ -307,23 +311,6 @@ private:
       }
     }
   }
-
-  //   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
-  //   void phase2_collapse_segments()
-  //   {
-  //     for (int worker_i = 0; worker_i < 10;
-  //       worker_i++) { // TBD: divide the work among m_nof_workers only.
-  //       // Each thread is responsible for a sinעle thread
-  //       m_taskflow.emplace([&, worker_i]() {
-  //         for (int segment_idx = worker_i*16; segment_idx < worker_i*16+16; segment_idx++) {
-  //         const uint64_t bucket_start = segment_idx * m_segment_size;
-  //         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
-  //         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
-  //         }
-  //       });
-  //     }
-  //     run_workers_and_wait();
-  //   }
 
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
