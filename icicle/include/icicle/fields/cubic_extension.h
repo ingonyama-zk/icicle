@@ -58,6 +58,11 @@ public:
     return CubicExtensionField{FF::one(), FF::zero(), FF::zero()};
   }
 
+  static constexpr HOST_DEVICE_INLINE CubicExtensionField one_montgomery()
+  {
+    return CubicExtensionField{FF::one_montgomery(), FF::zero(), FF::zero()};
+  }
+
   static constexpr HOST_DEVICE_INLINE CubicExtensionField from(uint32_t val)
   {
     return CubicExtensionField{FF::from(val), FF::zero(), FF::zero()};

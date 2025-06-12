@@ -53,6 +53,11 @@ public:
     return ComplexExtensionField{FF::one(), FF::zero()};
   }
 
+  static constexpr HOST_DEVICE_INLINE ComplexExtensionField one_montgomery()
+  {
+    return ComplexExtensionField{FF::one_montgomery(), FF::zero()};
+  }
+
   // Converts a uint32_t value to a QuarticExtensionField element.
   // If `val` ≥ p, it wraps around modulo p, affecting only the first coefficient.
   static constexpr HOST_DEVICE_INLINE ComplexExtensionField from(uint32_t val)
