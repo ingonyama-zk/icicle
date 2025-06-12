@@ -153,10 +153,6 @@ public:
         ICICLE_CHECK(msm(scalars.get(), bases_mont.get(), size, config, result));
       }
       END_TIMER(MSM_sync, oss.str().c_str(), measure);
-
-      if (dev_type == "CPU") {
-        *result = P::from_montgomery(*result);
-      }
     };
 
     run(IcicleTestBase::main_device(), result_main.get(), "msm", VERBOSE /*=measure*/, 1 /*=iters*/);

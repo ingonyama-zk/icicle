@@ -25,37 +25,20 @@ public:
   BaseField z;
   static HOST_DEVICE_INLINE Projective zero() { return {BaseField::zero(), BaseField::one(), BaseField::zero()}; }
 
-  static HOST_DEVICE_INLINE Projective from_affine(const Affine<BaseField>& point)
+  static HOST_DEVICE_INLINE Affine<FF> to_affine(const Projective& point)
   {
     return point.is_zero() ? zero() : Projective{point.x, point.y, BaseField::one()};
   }
+  HOST_DEVICE_INLINE Affine<FF> to_affine() { return to_affine(*this); }
 
-  static HOST_DEVICE_INLINE Projective generator() { return {Gen::gen_x, Gen::gen_y, BaseField::one()}; }
-
-  static HOST_INLINE Affine<BaseField> rand_host_affine() { return rand_host().to_affine(); }
-
-  static Projective rand_host()
+  static HOST_DEVICE_INLINE Projective from_affine(const Affine<FF>& point)
   {
-    ScalarField rand_scalar = ScalarField::rand_host();
-    return rand_scalar * generator();
+    return point == Affine<FF>::zero() ? zero() : Projective{point.x, point.y, FF::one()};
   }
 
-  static void rand_host_many(Projective* out, int size)
+  static HOST_DEVICE_INLINE Projective from_montgomery_affine(const Affine<FF>& point)
   {
-    for (int i = 0; i < size; i++)
-      out[i] = (i % size < 100) ? rand_host() : out[i - 100];
-  }
-
-  static void rand_host_many(Affine<BaseField>* out, int size)
-  {
-    for (int i = 0; i < size; i++)
-      out[i] = (i % size < 100) ? rand_host().to_affine() : out[i - 100];
-  }
-
-  HOST_DEVICE_INLINE Affine<BaseField> to_affine()
-  {
-    BaseField denom = z.inverse();
-    return {x * denom, y * denom};
+    return point == Affine<FF>::zero() ? zero() : Projective{point.x, point.y, FF::one_montgomery()};
   }
 
   HOST_DEVICE_INLINE Projective to_montgomery() const

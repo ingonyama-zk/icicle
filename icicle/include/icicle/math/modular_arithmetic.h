@@ -37,6 +37,8 @@ public:
 
   static constexpr HOST_DEVICE_INLINE Derived one() { return Derived{CONFIG::one}; }
 
+  static constexpr HOST_DEVICE_INLINE Derived one_montgomery() { return Derived{CONFIG::montgomery_r}; }
+
   static constexpr HOST_DEVICE_INLINE Derived from(uint32_t value)
   {
     storage<TLC> scalar{};
