@@ -22,7 +22,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Perform negacyclic NTT on the witness S
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
 
-  // Step 3: S@A = T (TODO Ash: should this be A@S?)
+  // Step 3: S@A = T
   // Generate A
   // TODO: change this so that A need not be computed and stored
   std::vector<Tq> A(n * kappa);
@@ -47,14 +47,21 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   // Step 7: compute g
   std::vector<Tq> S_hat_transposed(n * r);
-  // TODO: matrix_transpose for Tq
   ICICLE_CHECK(matrix_transpose<Tq>(S_hat.data(), r, n, {}, S_hat_transposed.data()));
 
   std::vector<Tq> G_hat(r * r);
   ICICLE_CHECK(matmul(S_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, G_hat.data()));
 
-  std::vector<Rq> g(r * r);
-  ICICLE_CHECK(ntt(G_hat.data(), r * r, NTTDir::kInverse, {}, g.data()));
+  size_t r_choose_2 = (r * (r + 1)) / 2;
+  std::vector<Rq> g(r_choose_2);
+  std::vector<Tq> g_hat;
+  for (size_t i = 0; i < r; i++) {
+    for (size_t j = i; j < r; j++) {
+      g_hat.push_back(G_hat[i * r + j]);
+    }
+  }
+
+  ICICLE_CHECK(ntt(g_hat.data(), r_choose_2, NTTDir::kInverse, {}, g.data()));
 
   // Step 8: decompose g to g_tilde
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
@@ -105,6 +112,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Step 12: Select a JL projection
   std::vector<Zq> p(JL_out, Zq::from(0));
   size_t JL_i = 0;
+  // TODO:convert this to just 1 call of JL projection
   while (true) {
     std::vector<std::byte> base_jl_seed(seed1);
     base_jl_seed.push_back(std::byte(JL_i));
@@ -149,7 +157,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
   std::vector<Rq> Q(r * JL_out * n);
   // indexes into a multidim array of dim = r X JL_out X n
-  auto rq_index = [n, this](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
+  auto Q_index = [n, this](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
   for (size_t i = 0; i < r; i++) {
     // Create seed for P_i matrix (same as in step 12)
     std::vector<std::byte> base_jl_seed(seed1);
@@ -242,7 +250,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
         // TODO: can vectorize the loop?
         for (size_t m = 0; m < n; m++) {
           // q_{il} is stored in Q[i][l][:]
-          Rq q_ilm = Q[rq_index(i, l, m)];
+          Rq q_ilm = Q[Q_index(i, l, m)];
           Tq q_ilm_hat;
           ICICLE_CHECK(ntt(&q_ilm, 1, NTTDir::kForward, {}, &q_ilm_hat));
 
@@ -277,7 +285,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
       }
     }
 
-    ICICLE_CHECK(matmul(G_hat.data(), 1, G_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
+    ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
 
     // Second part: sum_i <phi'_i^{(k)}, s_i>
     for (size_t i = 0; i < r; i++) {
