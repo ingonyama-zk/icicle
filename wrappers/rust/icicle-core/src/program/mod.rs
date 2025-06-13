@@ -240,3 +240,65 @@ macro_rules! impl_program_field {
         }
     };
 }
+
+fn check_execute_program<F, Data>(data: &Vec<&Data>, cfg: &crate::vec_ops::VecOpsConfig) -> crate::vec_ops::VecOpsConfig
+where
+    F: crate::traits::FieldImpl,
+    <F as crate::traits::FieldImpl>::Config: crate::vec_ops::VecOps<F>,
+    Data: icicle_runtime::memory::HostOrDeviceSlice<F> + ?Sized,
+{
+    let nof_iterations = data[0].len();
+    let is_on_device = data[0].is_on_device();
+    for i in 1..data.len() {
+        if data[i].len() != nof_iterations {
+            panic!(
+                "First parameter length ({}) and parameter[{}] length do not match",
+                nof_iterations,
+                data[i].len()
+            );
+        }
+        if data[i].is_on_device() != is_on_device {
+            panic!(
+                "First parameter length ({}) and parameter[{}] length ({}) do not match",
+                nof_iterations,
+                i,
+                data[i].len()
+            );
+        }
+    }
+    crate::vec_ops::VecOpsConfig {
+        ..cfg.clone()
+    }
+}
+
+pub fn execute_program<F, Prog, Data>(
+    data: &mut Vec<&Data>,
+    program: &Prog,
+    cfg: &crate::vec_ops::VecOpsConfig,
+) -> Result<(), icicle_runtime::errors::eIcicleError>
+where
+    F: crate::traits::FieldImpl,
+    <F as crate::traits::FieldImpl>::Config: crate::vec_ops::VecOps<F>,
+    Data: icicle_runtime::memory::HostOrDeviceSlice<F> + ?Sized,
+    Prog: Program<F>,
+{
+    let cfg = check_execute_program::<F, Data>(&data, cfg);
+    <<F as crate::traits::FieldImpl>::Config as crate::vec_ops::VecOps<F>>::execute_program(data, program, &cfg)
+}
+
+// FFI for executing a program
+extern "C" {
+    #[link_name = "execute_program_ffi"]
+    pub(crate) fn execute_program_ffi(
+        data_ptr: *const *const std::ffi::c_void,
+        nof_params: u64,
+        program: *const std::ffi::c_void,
+        nof_iterations: u64,
+        cfg: *const crate::vec_ops::VecOpsConfig,
+    ) -> icicle_runtime::errors::eIcicleError;
+}
+
+#[macro_export]
+macro_rules! execute_program_ffi {
+    ($($arg:tt)*) => { execute_program_ffi($($arg)*) };
+}
