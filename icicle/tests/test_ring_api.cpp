@@ -3,6 +3,7 @@
 #include "icicle/balanced_decomposition.h"
 #include "icicle/jl_projection.h"
 #include "icicle/norm.h"
+#include "icicle/rings/random_sampling.h"
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
@@ -1082,5 +1083,26 @@ TEST_F(RingTestBase, NegacyclicNTT)
       PolyRing expected = PolyRing_multiplication(a[i], b[i]);
       EXPECT_EQ(0, memcmp(&expected, &res[i], sizeof(PolyRing)));
     }
+  }
+}
+
+TEST_F(RingTestBase, RandomSampling)
+{
+  size_t size = 1 << 15;
+  size_t seed_len = 32;
+  std::vector<std::byte> seed(seed_len);
+  for (size_t i = 0; i < seed_len; ++i) {
+    seed[i] = static_cast<std::byte>(rand_uint_32b());
+  }
+  std::vector<field_t> a(size);
+  std::vector<field_t> b(size);
+
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
+  ICICLE_CHECK(ring_random_sampling(size, false, seed.data(), seed_len, VecOpsConfig{}, a.data()));
+  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
+  ICICLE_CHECK(ring_random_sampling(size, false, seed.data(), seed_len, VecOpsConfig{}, b.data()));
+
+  for (size_t i = 0; i < size; ++i) {
+    ASSERT_EQ(a[i], b[i]);
   }
 }
