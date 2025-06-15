@@ -1,4 +1,4 @@
-use crate::negacyclic_ntt::{NegacyclicNtt, NegacyclicNttConfig};
+use crate::negacyclic_ntt::{ntt, ntt_inplace, NegacyclicNtt, NegacyclicNttConfig};
 use crate::ntt::NTTDir;
 use crate::{
     polynomial_ring::PolynomialRing,
@@ -40,7 +40,7 @@ where
 
         // (2) ntt host memory -> device memory
         let mut device_mem = DeviceVec::<P>::device_malloc(size).unwrap();
-        P::ntt(HostSlice::from_slice(&input), NTTDir::kForward, &cfg, &mut device_mem).unwrap();
+        ntt(HostSlice::from_slice(&input), NTTDir::kForward, &cfg, &mut device_mem).unwrap();
 
         // (3) compare (1) and (2)
         let mut host_buffer = vec![P::zero(); size];
@@ -51,7 +51,7 @@ where
 
         // (4) intt device memory -> host memory
         let mut roundtrip = vec![P::zero(); size];
-        P::ntt(
+        ntt(
             &device_mem,
             NTTDir::kInverse,
             &cfg,
@@ -61,7 +61,7 @@ where
         assert_eq!(input, roundtrip);
 
         // (5) intt inplace device memory and compare to input
-        P::ntt_inplace(&mut device_mem, NTTDir::kInverse, &cfg).unwrap();
+        ntt_inplace(&mut device_mem, NTTDir::kInverse, &cfg).unwrap();
         device_mem
             .copy_to_host(HostSlice::from_mut_slice(&mut host_buffer))
             .unwrap();

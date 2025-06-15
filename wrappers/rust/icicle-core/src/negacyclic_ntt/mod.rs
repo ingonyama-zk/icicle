@@ -7,20 +7,25 @@ use icicle_runtime::stream::IcicleStreamHandle;
 
 pub mod tests;
 
-// TODO Yuval: document
-
+/// Configuration for negacyclic NTT operations.
+/// Used to control execution mode, memory location, and async behavior.
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct NegacyclicNttConfig {
+    /// CUDA stream or CPU stream handle
     pub stream_handle: IcicleStreamHandle,
+    /// Whether inputs reside in device memory
     pub are_inputs_on_device: bool,
+    /// Whether outputs reside in device memory
     pub are_outputs_on_device: bool,
+    /// Whether the operation should be executed asynchronously
     pub is_async: bool,
+    /// Extension for backend-specific config values
     pub ext: ConfigExtension,
 }
 
-impl NegacyclicNttConfig {
-    pub fn default() -> Self {
+impl Default for NegacyclicNttConfig {
+    fn default() -> Self {
         Self {
             stream_handle: std::ptr::null_mut(),
             are_inputs_on_device: false,
@@ -31,7 +36,9 @@ impl NegacyclicNttConfig {
     }
 }
 
+/// Trait defining negacyclic NTT operations for a given polynomial ring.
 pub trait NegacyclicNtt<P: PolynomialRing> {
+    /// Executes a negacyclic NTT (forward or inverse) between slices.
     fn ntt(
         input: &(impl HostOrDeviceSlice<P> + ?Sized),
         dir: NTTDir,
@@ -39,6 +46,7 @@ pub trait NegacyclicNtt<P: PolynomialRing> {
         output: &mut (impl HostOrDeviceSlice<P> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
+    /// Executes an in-place negacyclic NTT (forward or inverse).
     fn ntt_inplace(
         inout: &mut (impl HostOrDeviceSlice<P> + ?Sized),
         dir: NTTDir,
@@ -46,8 +54,25 @@ pub trait NegacyclicNtt<P: PolynomialRing> {
     ) -> Result<(), eIcicleError>;
 }
 
-// TODO Yuval: floating functions
+/// Floating wrapper functions
+pub fn ntt<P: PolynomialRing + NegacyclicNtt<P>>(
+    input: &(impl HostOrDeviceSlice<P> + ?Sized),
+    dir: NTTDir,
+    cfg: &NegacyclicNttConfig,
+    output: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> Result<(), eIcicleError> {
+    P::ntt(input, dir, cfg, output)
+}
 
+pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
+    inout: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    dir: NTTDir,
+    cfg: &NegacyclicNttConfig,
+) -> Result<(), eIcicleError> {
+    P::ntt_inplace(inout, dir, cfg)
+}
+
+/// Macro to implement `NegacyclicNtt` trait and FFI binding for a concrete polynomial type.
 #[macro_export]
 macro_rules! impl_negacyclic_ntt {
     ($prefix:literal, $poly:ty, $base:ty) => {
@@ -69,12 +94,11 @@ macro_rules! impl_negacyclic_ntt {
                 cfg: &NegacyclicNttConfig,
                 output: &mut (impl HostOrDeviceSlice<$poly> + ?Sized),
             ) -> Result<(), eIcicleError> {
-                // check device slices are on active device
                 if input.is_on_device() && !input.is_on_active_device() {
-                    panic!("input not allocated on an inactive device");
+                    panic!("input not allocated on the active device");
                 }
                 if output.is_on_device() && !output.is_on_active_device() {
-                    panic!("output not allocated on an inactive device");
+                    panic!("output not allocated on the active device");
                 }
 
                 let mut local_cfg = cfg.clone();
@@ -98,9 +122,8 @@ macro_rules! impl_negacyclic_ntt {
                 dir: NTTDir,
                 cfg: &NegacyclicNttConfig,
             ) -> Result<(), eIcicleError> {
-                // check device slices are on active device
                 if inout.is_on_device() && !inout.is_on_active_device() {
-                    panic!("input not allocated on an inactive device");
+                    panic!("inout not allocated on the active device");
                 }
 
                 let mut local_cfg = cfg.clone();
