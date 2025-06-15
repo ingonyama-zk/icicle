@@ -131,7 +131,8 @@ macro_rules! impl_negacyclic_ntt_tests {
             use $crate::negacyclic_ntt::tests::*;
 
             #[test]
-            fn test_ntt_roundtrip() {
+            fn phase2_test_ntt_roundtrip() {
+                // Phase2 due to ntt-domain conflict
                 test_negacyclic_ntt_roundtrip::<$poly>();
             }
         }
