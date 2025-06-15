@@ -54,28 +54,22 @@ public:
   // Constructor
   Msm(const int msm_size, const MSMConfig& config) : m_msm_size(msm_size), m_config(config)
   {
-    ICICLE_LOG_INFO << "SP: enter Msm";
     m_cpu_vendor = get_cpu_vendor();
-    ICICLE_LOG_INFO << "SP: past get_cpu_vendor";
     // TBD: for small size MSM - prefer double and add
     calc_optimal_parameters();
-    ICICLE_LOG_INFO << "SP: past calc_optimal_parameters";
     // Resize the thread buckets according to optimal parameters
     m_workers_buckets.resize(m_nof_workers);
     m_workers_buckets_busy.resize(m_nof_workers);
-    ICICLE_LOG_INFO << "SP: m_nof_workers " << m_nof_workers;
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
       ICICLE_LOG_INFO << "worker " << worker_i;
       m_workers_buckets[worker_i].resize(m_nof_total_buckets);
       m_workers_buckets_busy[worker_i].resize(m_nof_total_buckets);
     }
-    ICICLE_LOG_INFO << "SP: past for loop";
   }
 
   // run MSM based on pippenger algorithm
   void run_msm(const scalar_t* scalars, const A* bases, P* results, bool last_task_in_batch)
   {
-    ICICLE_LOG_INFO << "SP: enter run_msm";
     phase1_populate_buckets(scalars, bases);
 
     wait_last_task_completed();
@@ -171,7 +165,6 @@ public:
           right_childs_c_tree_amd_g2, class_predictions_c_tree_amd_g2);
         optimal_c = amd_tree.predict(features);
       }
-      ICICLE_LOG_INFO << "SP: Optimal C " << optimal_c;
     }
 #endif
     return optimal_c;
@@ -490,7 +483,6 @@ template <typename A, typename P>
 eIcicleError cpu_msm(
   const Device& device, const scalar_t* scalars, const A* bases, int msm_size, const MSMConfig& config, P* results)
 {
-  std::cout << "SP: MSM Type A is: " << typeid(A).name() << std::endl;
   dbl_cnt.store(0);
   prj_cnt.store(0);
   mix_cnt.store(0);

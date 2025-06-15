@@ -18,11 +18,10 @@ where
     F: FieldImpl,
     C1: Pairing<C1, C2, F>,
 {
-    println!("SP: entered pairings");
     let result = C1::pairing(p, q);
     match result {
         Ok(val) => {
-            println!("Pairing val: {:?}", val);
+            // println!("Pairing val: {:?}", val);
             Ok(val)
         },
         Err(err) => {

@@ -8,6 +8,7 @@
 #include "icicle/utils/utils.h"
 #include "icicle/device.h"
 #include "icicle/errors.h"
+#include "icicle/utils/log.h"
 #include "icicle/memory_tracker.h"
 
 namespace icicle {
