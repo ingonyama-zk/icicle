@@ -64,7 +64,7 @@ namespace icicle {
     }
   } // namespace balanced_decomposition
 
-  extern "C" uint32_t CONCAT_EXPAND(ICICLE_FFI_PREFIX, balanced_decomposition_nof_digits)(uint32_t base)
+  extern "C" uint32_t CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_balanced_decomposition_nof_digits)(uint32_t base)
   {
     return balanced_decomposition::compute_nof_digits<field_t>(base);
   }
@@ -73,7 +73,7 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(
     BalancedDecomposePolyRingDispatcher, decompose_balanced_digits_poly_ring, balancedDecompositionPolyRingImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits_poly_ring)(
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_decompose_balanced_digits)(
     const PolyRing* input,
     size_t input_size,
     uint32_t base,
@@ -94,7 +94,7 @@ namespace icicle {
       PolyRing* output,
       size_t output_size)
     {
-      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, decompose_balanced_digits_poly_ring)(
+      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_decompose_balanced_digits)(
         input, input_size, base, &config, output, output_size);
     }
   } // namespace balanced_decomposition
@@ -102,7 +102,7 @@ namespace icicle {
   ICICLE_DISPATCHER_INST(
     BalancedRecomposePolyRingDispatcher, recompose_from_balanced_digits_poly_ring, balancedDecompositionPolyRingImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits_poly_ring)(
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_recompose_from_balanced_digits)(
     const PolyRing* input,
     size_t input_size,
     uint32_t base,
@@ -123,7 +123,7 @@ namespace icicle {
       PolyRing* output,
       size_t output_size)
     {
-      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, recompose_from_balanced_digits_poly_ring)(
+      return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_recompose_from_balanced_digits)(
         input, input_size, base, &config, output, output_size);
     }
   } // namespace balanced_decomposition
