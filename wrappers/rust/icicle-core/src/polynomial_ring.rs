@@ -1,5 +1,5 @@
 /// Trait representing a polynomial ring: R = Base[X] / (X^DEGREE - MODULUS_COEFF)
-pub trait PolynomialRing: Sized {
+pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
     /// Base field type
     type Base: Copy;
 
