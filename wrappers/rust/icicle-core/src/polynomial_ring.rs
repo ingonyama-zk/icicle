@@ -61,33 +61,29 @@ macro_rules! impl_polynomial_ring {
             }
         }
 
-impl icicle_core::traits::Generate for $name {
-    fn randomize(size: usize) -> Vec<Self> {
+impl icicle_core::traits::GenerateRandom<$name> for $name {
+    fn generate_random(size: usize) -> Vec<$name> {
         use std::mem::{forget, ManuallyDrop};
         use std::slice;
 
-        let flat: Vec<$base> = <<$base as icicle_core::traits::FieldImpl>::Config as icicle_core::traits::GenerateRandom<$base>>::generate_random(
+        let flat_base_field_vec: Vec<$base> = <<$base as icicle_core::traits::FieldImpl>::Config as icicle_core::traits::GenerateRandom<$base>>::generate_random(
             size * Self::DEGREE,
         );
 
-        // Safety preconditions:
-        // - $name must be #[repr(C)]
-        // - $name must contain only [$base; DEGREE]
-        // - $base must be Plain Old Data (no drop, no pointer fields)
-        // - layout: Vec<$base> is contiguous, so we can reinterpret it as Vec<$name>
-
-        let ptr = flat.as_ptr() as *mut $name;
+        let ptr = flat_base_field_vec.as_ptr() as *mut $name;
         let len = size;
-        let cap = flat.capacity() / Self::DEGREE;
+        let cap = flat_base_field_vec.capacity() / Self::DEGREE;
 
         // Avoid double-drop
-        forget(flat);
+        forget(flat_base_field_vec);
 
         unsafe {
             Vec::from_raw_parts(ptr, len, cap)
         }
     }
 }
+
+
     };
 }
 

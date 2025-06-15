@@ -1,20 +1,20 @@
 use crate::negacyclic_ntt::{NegacyclicNtt, NegacyclicNttConfig};
 use crate::ntt::NTTDir;
 use crate::polynomial_ring::PolynomialRing;
-use crate::traits::{FieldImpl, Generate};
+use crate::traits::{FieldImpl, GenerateRandom};
 use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
 
 /// Basic roundtrip test for NTT + inverse NTT
 pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P> + Clone + PartialEq + core::fmt::Debug>()
 where
     P::Base: FieldImpl,
-    P: Generate,
+    P: GenerateRandom<P>,
 {
     let cfg = NegacyclicNttConfig::default();
 
     // Create a test vector with alternating values
     let size = 1 << 10;
-    let input = P::randomize(size);
+    let input = P::generate_random(size);
     let mut output = vec![P::zero(); size];
     let mut roundtrip = vec![P::zero(); size];
 

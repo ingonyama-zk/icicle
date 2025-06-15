@@ -10,12 +10,6 @@ pub trait GenerateRandom<F> {
     fn generate_random(size: usize) -> Vec<F>;
 }
 
-// generator that can be implemented for Self
-#[doc(hidden)]
-pub trait Generate: Sized {
-    fn randomize(size: usize) -> Vec<Self>;
-}
-
 #[doc(hidden)]
 pub trait FieldConfig: Debug + PartialEq + Copy + Clone {
     fn from_u32<const NUM_LIMBS: usize>(val: u32) -> [u32; NUM_LIMBS];
