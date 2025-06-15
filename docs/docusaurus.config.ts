@@ -13,7 +13,7 @@ const ingoPreset = {
   docs: {
     showLastUpdateAuthor: false,
     showLastUpdateTime: true,
-    includeCurrentVersion: false,
+    includeCurrentVersion: true,
     routeBasePath: '/',
     remarkPlugins: [math],
     rehypePlugins: [katex],
@@ -79,6 +79,13 @@ const navBarRightSide = [
       { label: 'Mailing List', href: 'https://wkf.ms/3LKCbdj' },
     ],
   },
+
+  {
+          label: 'Leave Feedback',
+          position: 'right',
+          href: 'https://forms.monday.com/forms/7b51e0bdad766b71da8869704c301472?r=use1',
+          target: '_blank',
+        },
 
   {
     type: 'html',
