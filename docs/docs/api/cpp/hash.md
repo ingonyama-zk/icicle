@@ -55,6 +55,8 @@ Currently the Poseidon implementation is the [Optimized Poseidon](https://hackmd
 
 The optional `domain_tag` pointer parameter enables domain separation, allowing isolation of hash outputs across different contexts or applications.
 
+For more information go [here](/api/cpp/poseidon)
+
 ### Poseidon2
 
 [Poseidon2](https://eprint.iacr.org/2023/323.pdf) is a cryptographic hash function designed specifically for field elements.

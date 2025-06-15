@@ -3,7 +3,7 @@ slug: /
 title: Overview
 ---
 
-# Introduction to ICICLE
+# Introduction to ICICLE 
 
 ICICLE is a versatile cryptography library supporting multiple compute backends—including CUDA, CPU, Metal, and upcoming backends like WebGPU, Vulkan, and ZPU. It enables you to build cryptographic applications with ease, leveraging the best available hardware for your needs.
 
@@ -23,7 +23,7 @@ import Link from '@docusaurus/Link';
     <div className="card-box">
       <img alt="Programmer's Guide Icon" className="card-icon-left prog-icon" />
       <h3>Programmer's Guide</h3>
-      <p>Consistent cryptographic APIs: NTT, MSM, ECNTT, polynomials.</p>
+      <p>Step-by-step setup and usage instructions for ICICLE.</p>
     </div>
   </Link>
 
@@ -39,7 +39,7 @@ import Link from '@docusaurus/Link';
     <div className="card-box">
       <img alt="API Icon" className="card-icon-left api-icon" />
       <h3>API</h3>
-      <p>Core ICICLE APIs: MSM, NTT, hashing with examples.</p>
+      <p>Low-level API docs and language bindings.</p>
     </div>
   </Link>
 
