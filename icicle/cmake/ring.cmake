@@ -52,7 +52,7 @@ function(setup_ring_target RING RING_INDEX FEATURES_STRING)
   # Add additional feature handling calls here
 
   set_target_properties(icicle_ring PROPERTIES OUTPUT_NAME "icicle_ring_${RING}")
-  target_link_libraries(icicle_ring PUBLIC icicle_device icicle_hash)
+  target_link_libraries(icicle_ring PUBLIC icicle_device)
 
   # Ensure RING is defined in the cache for backends to see
   set(RING "${RING}" CACHE STRING "")
