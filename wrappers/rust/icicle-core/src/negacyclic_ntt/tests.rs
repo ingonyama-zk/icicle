@@ -10,7 +10,7 @@ use icicle_runtime::{
 };
 
 /// Basic roundtrip test for NTT + inverse NTT
-pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P> + Clone + PartialEq + core::fmt::Debug>()
+pub fn test_negacyclic_ntt_roundtrip<P: PolynomialRing + NegacyclicNtt<P>>()
 where
     P::Base: FieldImpl,
     P: GenerateRandom<P>,
