@@ -128,11 +128,18 @@ macro_rules! impl_negacyclic_ntt_tests {
         #[cfg(test)]
         mod negacyclic_ntt_tests {
             use super::*;
+            use icicle_runtime::test_utilities;
             use $crate::negacyclic_ntt::tests::*;
 
+            pub fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            // Phase2 due to ntt-domain conflict
             #[test]
             fn phase2_test_ntt_roundtrip() {
-                // Phase2 due to ntt-domain conflict
+                initialize();
                 test_negacyclic_ntt_roundtrip::<$poly>();
             }
         }
