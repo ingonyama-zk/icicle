@@ -671,7 +671,6 @@ macro_rules! impl_sumcheck_tests {
 
         #[test]
         fn test_sumcheck_challenge_vector() {
-            // initialize();
             test_utilities::test_set_ref_device();
             let hash = Keccak256::new(0).unwrap();
             check_sumcheck_challenge_vector::<SumcheckWrapper, Program>(&hash);
