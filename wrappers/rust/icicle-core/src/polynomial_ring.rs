@@ -24,16 +24,17 @@ pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
 
 #[macro_export]
 macro_rules! impl_polynomial_ring {
-    ($name:ident, $base:ty, $degree:expr, $modulus_coeff:expr) => {
+    ($polyring:ident, $base:ty, $degree:expr, $modulus_coeff:expr) => {
         #[derive(Clone, Copy, Debug, PartialEq)]
         #[repr(C)]
-        pub struct $name {
+        pub struct $polyring {
             values: [$base; $degree],
         }
 
         use icicle_core::polynomial_ring::PolynomialRing;
+        use icicle_core::traits::GenerateRandom;
 
-        impl PolynomialRing for $name {
+        impl PolynomialRing for $polyring {
             type Base = $base;
 
             const DEGREE: usize = $degree;
@@ -61,8 +62,8 @@ macro_rules! impl_polynomial_ring {
             }
         }
 
-impl icicle_core::traits::GenerateRandom<$name> for $name {
-    fn generate_random(size: usize) -> Vec<$name> {
+impl GenerateRandom<$polyring> for $polyring {
+    fn generate_random(size: usize) -> Vec<$polyring> {
         use std::mem::{forget, ManuallyDrop};
         use std::slice;
 
@@ -70,7 +71,7 @@ impl icicle_core::traits::GenerateRandom<$name> for $name {
             size * Self::DEGREE,
         );
 
-        let ptr = flat_base_field_vec.as_ptr() as *mut $name;
+        let ptr = flat_base_field_vec.as_ptr() as *mut $polyring;
         let len = size;
         let cap = flat_base_field_vec.capacity() / Self::DEGREE;
 

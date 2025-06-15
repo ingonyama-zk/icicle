@@ -75,7 +75,7 @@ pub fn ntt_inplace<P: PolynomialRing + NegacyclicNtt<P>>(
 /// Macro to implement `NegacyclicNtt` trait and FFI binding for a concrete polynomial type.
 #[macro_export]
 macro_rules! impl_negacyclic_ntt {
-    ($prefix:literal, $poly:ty, $base:ty) => {
+    ($prefix:literal, $poly:ty) => {
         extern "C" {
             #[link_name = concat!($prefix, "_negacyclic_ntt")]
             fn ntt_ffi(
