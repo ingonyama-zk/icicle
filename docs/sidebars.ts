@@ -154,11 +154,6 @@ export default {
         },
         {
           type: "doc",
-          label: "Poseidon",
-          id: "api/cpp/poseidon",
-        },
-        {
-          type: "doc",
           label: "Merkle-Tree",
           id: "api/cpp/merkle",
         },
