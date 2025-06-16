@@ -414,38 +414,102 @@ PolyRing operator+(const PolyRing& a, const PolyRing& b)
   return c;
 }
 
-// Matrix multiplication with non-square matrices
-TEST_F(MatrixTestBase, MatrixMultiplicationNonSquarePolyRing)
+TEST_F(MatrixTestBase, VectorTimesMatrix)
 {
-  const size_t N = 1 << 2;
-  const size_t M = 1 << 2;
+  const size_t N = 4;
+  const size_t M = 5;
 
-  auto degree = PolyRing::d;
-  auto direct_input_a = std::vector<PolyRing>(N * M);
-  auto direct_input_b = std::vector<PolyRing>(M * N);
-  auto direct_output = std::vector<PolyRing>(N * N);
-  auto icicle_output = std::vector<PolyRing>(N * N);
+  std::vector<PolyRing> vec(M), mat(M * N), expected(N), actual(N);
 
-  // Initialize input with N random vectors of M elements
-  Zq::rand_host_many(reinterpret_cast<Zq*>(direct_input_a.data()), PolyRing::d * N * M);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(direct_input_b.data()), PolyRing::d * M * N);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(vec.data()), PolyRing::d * M);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(mat.data()), PolyRing::d * M * N);
 
-  // Compute reference result using host math
-  matmul_ref(direct_input_a, direct_input_b, direct_output, N, M, N);
+  matmul_ref(vec, mat, expected, 1, M, N);
 
-  // Compute result using icicle device
-  auto cfg = VecOpsConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-
+  VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matrix_mult(vec.data(), 1, M, mat.data(), M, N, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * sizeof(PolyRing)));
+  }
+}
 
-    ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
+TEST_F(MatrixTestBase, MatrixTimesVector)
+{
+  const size_t N = 4;
+  const size_t M = 5;
 
-    // Compare results
-    ASSERT_EQ(0, memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(PolyRing)));
+  std::vector<PolyRing> mat(N * M), vec(M), expected(N), actual(N);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(mat.data()), PolyRing::d * N * M);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(vec.data()), PolyRing::d * M);
+
+  matmul_ref(mat, vec, expected, N, M, 1);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matrix_mult(mat.data(), N, M, vec.data(), M, 1, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * sizeof(PolyRing)));
+  }
+}
+
+TEST_F(MatrixTestBase, SquareMatrixTimesMatrix)
+{
+  const size_t N = 4;
+
+  std::vector<PolyRing> a(N * N), b(N * N), expected(N * N), actual(N * N);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * N * N);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * N * N);
+
+  matmul_ref(a, b, expected, N, N, N);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matrix_mult(a.data(), N, N, b.data(), N, N, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * N * sizeof(PolyRing)));
+  }
+}
+
+TEST_F(MatrixTestBase, NonSquareMatrixTimesMatrix)
+{
+  const size_t N = 4;
+  const size_t M = 5;
+  const size_t P = 3;
+
+  std::vector<PolyRing> a(N * M), b(M * P), expected(N * P), actual(N * P);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * N * M);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * M * P);
+
+  matmul_ref(a, b, expected, N, M, P);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matrix_mult(a.data(), N, M, b.data(), M, P, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * P * sizeof(PolyRing)));
+  }
+}
+
+TEST_F(MatrixTestBase, VectorTimesVector)
+{
+  const size_t N = 4;
+
+  std::vector<PolyRing> a(N), b(N), expected(1), actual(1);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * N);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * N);
+
+  matmul_ref(a, b, expected, 1, N, 1);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matrix_mult(a.data(), 1, N, b.data(), N, 1, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), sizeof(PolyRing)));
   }
 }
 
