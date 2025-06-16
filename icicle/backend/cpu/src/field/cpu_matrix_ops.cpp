@@ -6,8 +6,6 @@
 #include "icicle/fields/field_config.h"
 #include "tasks_manager.h"
 #include <cstdint>
-#include <vector>
-#include <cstring>
 
 #include "taskflow/taskflow.hpp"
 #include "icicle/program/program.h"
@@ -30,16 +28,16 @@ namespace {
    * - Zq: the base field type
    * - degree: number of coefficients per matrix element (e.g., PolyRing<Zq, d> has degree = d)
    */
-  template <typename Zq, uint32_t degree>
+  template <typename T, uint32_t degree>
   static eIcicleError cpu_matmul_internal(
-    const Zq* mat_a,
+    const T* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
-    const Zq* mat_b,
+    const T* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
     const VecOpsConfig& config,
-    Zq* mat_out)
+    T* mat_out)
   {
     if (!mat_a || !mat_b || !mat_out || nof_rows_a == 0 || nof_cols_a == 0 || nof_rows_b == 0 || nof_cols_b == 0) {
       ICICLE_LOG_ERROR << "Matmul: invalid size or nullptr input";
@@ -65,20 +63,20 @@ namespace {
     for (uint32_t row = 0; row < nof_rows_a; ++row) {
       taskflow.emplace([=]() {
         for (uint32_t col = 0; col < nof_cols_b; ++col) {
-          Zq acc[degree];
+          T acc[degree];
           std::memset(acc, 0, sizeof(acc));
 
           // Compute dot product of row from A and column from B
           for (uint32_t k = 0; k < nof_cols_a; ++k) {
-            const Zq* a = mat_a + (row * nof_cols_a + k) * degree;
-            const Zq* b = mat_b + (k * nof_cols_b + col) * degree;
+            const scalar_t* a = mat_a + (row * nof_cols_a + k) * degree;
+            const scalar_t* b = mat_b + (k * nof_cols_b + col) * degree;
             for (uint32_t d = 0; d < degree; ++d) {
               acc[d] = acc[d] + a[d] * b[d];
             }
           }
 
-          Zq* out = mat_out + (row * nof_cols_b + col) * degree;
-          std::memcpy(out, acc, sizeof(Zq) * degree);
+          scalar_t* out = mat_out + (row * nof_cols_b + col) * degree;
+          std::memcpy(out, acc, sizeof(T) * degree);
         }
       });
     }
