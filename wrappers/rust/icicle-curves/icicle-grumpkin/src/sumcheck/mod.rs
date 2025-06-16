@@ -5,6 +5,7 @@ impl_sumcheck!("grumpkin", grumpkin, ScalarField, ScalarCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use super::grumpkin::SumcheckWrapper;
     use crate::curve::ScalarField;
     use icicle_core::impl_sumcheck_tests;
 

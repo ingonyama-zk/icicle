@@ -256,344 +256,361 @@ where
 #[macro_export]
 macro_rules! impl_sumcheck {
     ($field_prefix:literal, $field_prefix_ident:ident, $field:ident, $field_cfg:ident) => {
-        use crate::symbol::$field_prefix_ident::FieldSymbol;
-        use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
-        use icicle_core::sumcheck::{
-            FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
-        };
-        use icicle_core::traits::{FieldImpl, Handle};
-        use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
-        use serde::de::{self, Visitor};
-        use serde::{Deserialize, Deserializer, Serialize, Serializer};
-        use std::ffi::c_void;
-        use std::slice;
+        mod $field_prefix_ident {
+            use super::{$field, $field_cfg};
+            use crate::symbol::$field_prefix_ident::FieldSymbol;
+            use icicle_core::program::{PreDefinedProgram, ProgramHandle, ReturningValueProgram};
+            use icicle_core::sumcheck::{
+                FFISumcheckTranscriptConfig, Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig,
+            };
+            use icicle_core::traits::{FieldImpl, Handle};
+            use icicle_runtime::{eIcicleError, memory::HostOrDeviceSlice};
+            use serde::de::{self, Visitor};
+            use serde::{Deserialize, Deserializer, Serialize, Serializer};
+            use std::ffi::c_void;
+            use std::slice;
 
-        extern "C" {
-            #[link_name = concat!($field_prefix, "_sumcheck_create")]
-            fn icicle_sumcheck_create() -> SumcheckHandle;
+            extern "C" {
+                #[link_name = concat!($field_prefix, "_sumcheck_create")]
+                fn icicle_sumcheck_create() -> SumcheckHandle;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_delete")]
-            fn icicle_sumcheck_delete(handle: SumcheckHandle) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_delete")]
+                fn icicle_sumcheck_delete(handle: SumcheckHandle) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_get_proof")]
-            fn icicle_sumcheck_prove(
-                handle: SumcheckHandle,
-                mle_polys: *const *const $field,
-                mle_poly_size: u64,
-                num_mle_polys: u64,
-                claimed_sum: &$field,
-                combine_function_handle: ProgramHandle,
-                transcript_config: &FFISumcheckTranscriptConfig<$field>,
-                sumcheck_config: &SumcheckConfig,
-            ) -> SumcheckProofHandle;
+                #[link_name = concat!($field_prefix, "_sumcheck_get_proof")]
+                fn icicle_sumcheck_prove(
+                    handle: SumcheckHandle,
+                    mle_polys: *const *const $field,
+                    mle_poly_size: u64,
+                    num_mle_polys: u64,
+                    claimed_sum: &$field,
+                    combine_function_handle: ProgramHandle,
+                    transcript_config: &FFISumcheckTranscriptConfig<$field>,
+                    sumcheck_config: &SumcheckConfig,
+                ) -> SumcheckProofHandle;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_verify")]
-            fn icicle_sumcheck_verify(
-                handle: SumcheckHandle,
-                proof: SumcheckProofHandle,
-                claimed_sum: *const $field,
-                transcript_config: &FFISumcheckTranscriptConfig<$field>,
-                is_verified: &mut bool,
-            ) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_verify")]
+                fn icicle_sumcheck_verify(
+                    handle: SumcheckHandle,
+                    proof: SumcheckProofHandle,
+                    claimed_sum: *const $field,
+                    transcript_config: &FFISumcheckTranscriptConfig<$field>,
+                    is_verified: &mut bool,
+                ) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_get_challenge_vector")]
-            fn icicle_sumcheck_get_challenge_vector(
-                handle: SumcheckHandle,
-                challenge_vector: *mut $field,
-                challenge_vector_size: &mut usize,
-            ) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_get_challenge_vector")]
+                fn icicle_sumcheck_get_challenge_vector(
+                    handle: SumcheckHandle,
+                    challenge_vector: *mut $field,
+                    challenge_vector_size: &mut usize,
+                ) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_create")]
-            fn icicle_sumcheck_proof_create(
-                polys: *const *const $field,
-                nof_polys: u64,
-                poly_size: u64,
-            ) -> SumcheckProofHandle;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_create")]
+                fn icicle_sumcheck_proof_create(
+                    polys: *const *const $field,
+                    nof_polys: u64,
+                    poly_size: u64,
+                ) -> SumcheckProofHandle;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_delete")]
-            fn icicle_sumcheck_proof_delete(handle: SumcheckProofHandle) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_delete")]
+                fn icicle_sumcheck_proof_delete(handle: SumcheckProofHandle) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_get_poly_sizes")]
-            fn icicle_sumcheck_proof_get_proof_sizes(
-                handle: SumcheckProofHandle,
-                poly_size: *mut u64,
-                nof_polys: *mut u64,
-            ) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_get_poly_sizes")]
+                fn icicle_sumcheck_proof_get_proof_sizes(
+                    handle: SumcheckProofHandle,
+                    poly_size: *mut u64,
+                    nof_polys: *mut u64,
+                ) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_get_round_poly_at")]
-            fn icicle_sumcheck_proof_get_proof_at(handle: SumcheckProofHandle, index: u64) -> *const $field;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_get_round_poly_at")]
+                fn icicle_sumcheck_proof_get_proof_at(handle: SumcheckProofHandle, index: u64) -> *const $field;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_print")]
-            fn icicle_sumcheck_proof_print(handle: SumcheckProofHandle) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_print")]
+                fn icicle_sumcheck_proof_print(handle: SumcheckProofHandle) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_get_serialized_size")]
-            fn icicle_sumcheck_proof_get_serialized_size(handle: SumcheckProofHandle, size: *mut usize)
-                -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_get_serialized_size")]
+                fn icicle_sumcheck_proof_get_serialized_size(
+                    handle: SumcheckProofHandle,
+                    size: *mut usize,
+                ) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize")]
-            fn icicle_sumcheck_proof_serialize(
-                handle: SumcheckProofHandle,
-                buffer: *mut u8,
-                size: usize,
-            ) -> eIcicleError;
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_serialize")]
+                fn icicle_sumcheck_proof_serialize(
+                    handle: SumcheckProofHandle,
+                    buffer: *mut u8,
+                    size: usize,
+                ) -> eIcicleError;
 
-            #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize")]
-            fn icicle_sumcheck_proof_deserialize(
-                handle: *mut SumcheckProofHandle,
-                buffer: *const u8,
-                size: usize,
-            ) -> eIcicleError;
-        }
-
-        /***************** SumcheckWrapper *************************/
-        pub type SumcheckHandle = *const c_void;
-
-        pub struct SumcheckWrapper {
-            handle: SumcheckHandle,
-        }
-
-        impl Sumcheck for SumcheckWrapper {
-            type Field = $field;
-            type FieldConfig = $field_cfg;
-            type Proof = SumcheckProof;
-
-            fn new() -> Result<Self, eIcicleError> {
-                let handle = unsafe { icicle_sumcheck_create() };
-                if handle.is_null() {
-                    return Err(eIcicleError::UnknownError);
-                }
-
-                Ok(SumcheckWrapper { handle })
+                #[link_name = concat!($field_prefix, "_sumcheck_proof_deserialize")]
+                fn icicle_sumcheck_proof_deserialize(
+                    handle: *mut SumcheckProofHandle,
+                    buffer: *const u8,
+                    size: usize,
+                ) -> eIcicleError;
             }
 
-            fn prove(
-                &self,
-                mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
-                mle_poly_size: u64,
-                claimed_sum: $field,
-                combine_function: impl ReturningValueProgram,
-                transcript_config: &SumcheckTranscriptConfig<$field>,
-                sumcheck_config: &SumcheckConfig,
-            ) -> Self::Proof {
-                let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
+            /***************** SumcheckWrapper *************************/
+            pub type SumcheckHandle = *const c_void;
 
-                let mut cfg = sumcheck_config.clone();
-                if mle_polys[0].is_on_device() {
-                    for mle_poly in mle_polys {
-                        assert!(mle_poly.is_on_active_device());
+            pub struct SumcheckWrapper {
+                handle: SumcheckHandle,
+            }
+
+            impl Sumcheck for SumcheckWrapper {
+                type Field = $field;
+                type FieldConfig = $field_cfg;
+                type Proof = SumcheckProof;
+
+                fn new() -> Result<Self, eIcicleError> {
+                    let handle = unsafe { icicle_sumcheck_create() };
+                    if handle.is_null() {
+                        return Err(eIcicleError::UnknownError);
                     }
-                    cfg.are_inputs_on_device = true;
+
+                    Ok(SumcheckWrapper { handle })
                 }
 
-                unsafe {
-                    let mle_polys_internal: Vec<*const $field> = mle_polys
-                        .iter()
-                        .map(|mle_poly| mle_poly.as_ptr())
-                        .collect();
+                fn prove(
+                    &self,
+                    mle_polys: &[&(impl HostOrDeviceSlice<$field> + ?Sized)],
+                    mle_poly_size: u64,
+                    claimed_sum: $field,
+                    combine_function: impl ReturningValueProgram,
+                    transcript_config: &SumcheckTranscriptConfig<$field>,
+                    sumcheck_config: &SumcheckConfig,
+                ) -> Self::Proof {
+                    let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
 
-                    let proof_handle = icicle_sumcheck_prove(
-                        self.handle,
-                        mle_polys_internal.as_ptr() as *const *const $field,
-                        mle_poly_size,
-                        mle_polys.len() as u64,
-                        &claimed_sum,
-                        combine_function.handle(),
-                        &ffi_transcript_config,
-                        &cfg,
-                    );
+                    let mut cfg = sumcheck_config.clone();
+                    if mle_polys[0].is_on_device() {
+                        for mle_poly in mle_polys {
+                            assert!(mle_poly.is_on_active_device());
+                        }
+                        cfg.are_inputs_on_device = true;
+                    }
 
-                    Self::Proof { handle: proof_handle }
-                }
-            }
-
-            fn verify(
-                &self,
-                proof: &Self::Proof,
-                claimed_sum: $field,
-                transcript_config: &SumcheckTranscriptConfig<$field>,
-            ) -> Result<bool, eIcicleError> {
-                let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
-                let mut is_verified = false;
-                let err = unsafe {
-                    icicle_sumcheck_verify(
-                        self.handle,
-                        proof.handle,
-                        &claimed_sum,
-                        &ffi_transcript_config,
-                        &mut is_verified,
-                    )
-                };
-
-                if err != eIcicleError::Success {
-                    return Err(err);
-                }
-
-                Ok(is_verified)
-            }
-
-            fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
-                let mut challenge_len = 0usize;
-
-                let err = unsafe {
-                    icicle_sumcheck_get_challenge_vector(self.handle, std::ptr::null_mut(), &mut challenge_len)
-                };
-                // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
-                let mut challenge_vector = vec![$field::zero(); challenge_len];
-                let err = unsafe {
-                    icicle_sumcheck_get_challenge_vector(self.handle, challenge_vector.as_mut_ptr(), &mut challenge_len)
-                };
-
-                if err != eIcicleError::Success {
-                    return Err(err);
-                }
-
-                Ok(challenge_vector)
-            }
-        }
-
-        impl Drop for SumcheckWrapper {
-            fn drop(&mut self) {
-                if !self
-                    .handle
-                    .is_null()
-                {
                     unsafe {
-                        let _ = icicle_sumcheck_delete(self.handle);
+                        let mle_polys_internal: Vec<*const $field> = mle_polys
+                            .iter()
+                            .map(|mle_poly| mle_poly.as_ptr())
+                            .collect();
+
+                        let proof_handle = icicle_sumcheck_prove(
+                            self.handle,
+                            mle_polys_internal.as_ptr() as *const *const $field,
+                            mle_poly_size,
+                            mle_polys.len() as u64,
+                            &claimed_sum,
+                            combine_function.handle(),
+                            &ffi_transcript_config,
+                            &cfg,
+                        );
+
+                        Self::Proof { handle: proof_handle }
                     }
                 }
-            }
-        }
 
-        /***************** SumcheckProof *************************/
-
-        type SumcheckProofHandle = *const c_void;
-
-        pub struct SumcheckProof {
-            pub(crate) handle: SumcheckProofHandle,
-        }
-
-        impl SumcheckProofOps<$field> for SumcheckProof {
-            fn get_round_polys(&self) -> Result<Vec<Vec<$field>>, eIcicleError> {
-                let mut poly_size = 0;
-                let mut num_polys = 0;
-                unsafe {
-                    let err = icicle_sumcheck_proof_get_proof_sizes(self.handle, &mut poly_size, &mut num_polys);
+                fn verify(
+                    &self,
+                    proof: &Self::Proof,
+                    claimed_sum: $field,
+                    transcript_config: &SumcheckTranscriptConfig<$field>,
+                ) -> Result<bool, eIcicleError> {
+                    let ffi_transcript_config = FFISumcheckTranscriptConfig::from(transcript_config);
+                    let mut is_verified = false;
+                    let err = unsafe {
+                        icicle_sumcheck_verify(
+                            self.handle,
+                            proof.handle,
+                            &claimed_sum,
+                            &ffi_transcript_config,
+                            &mut is_verified,
+                        )
+                    };
 
                     if err != eIcicleError::Success {
                         return Err(err);
                     }
 
-                    let mut rounds: Vec<Vec<$field>> = Vec::with_capacity(num_polys as usize);
+                    Ok(is_verified)
+                }
 
-                    for i in 0..num_polys {
-                        let round = icicle_sumcheck_proof_get_proof_at(self.handle, i as u64);
-                        let round_slice = slice::from_raw_parts(round, poly_size as usize);
-                        rounds.push(round_slice.to_vec());
+                fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
+                    let mut challenge_len = 0usize;
+
+                    let err = unsafe {
+                        icicle_sumcheck_get_challenge_vector(self.handle, std::ptr::null_mut(), &mut challenge_len)
+                    };
+
+                    if err != eIcicleError::Success {
+                        return Err(err);
+                    }
+                    // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
+                    let mut challenge_vector = vec![$field::zero(); challenge_len];
+                    let err = unsafe {
+                        icicle_sumcheck_get_challenge_vector(
+                            self.handle,
+                            challenge_vector.as_mut_ptr(),
+                            &mut challenge_len,
+                        )
+                    };
+
+                    if err != eIcicleError::Success {
+                        return Err(err);
                     }
 
+                    Ok(challenge_vector)
+                }
+            }
+
+            impl Drop for SumcheckWrapper {
+                fn drop(&mut self) {
+                    if !self
+                        .handle
+                        .is_null()
+                    {
+                        unsafe {
+                            let _ = icicle_sumcheck_delete(self.handle);
+                        }
+                    }
+                }
+            }
+
+            impl Handle for SumcheckWrapper {
+                fn handle(&self) -> *const c_void {
+                    self.handle
+                }
+            }
+
+            /***************** SumcheckProof *************************/
+            pub type SumcheckProofHandle = *const c_void;
+
+            pub struct SumcheckProof {
+                handle: SumcheckProofHandle,
+            }
+
+            impl SumcheckProofOps<$field> for SumcheckProof {
+                fn get_round_polys(&self) -> Result<Vec<Vec<$field>>, eIcicleError> {
+                    let mut poly_size = 0u64;
+                    let mut nof_polys = 0u64;
+                    let err =
+                        unsafe { icicle_sumcheck_proof_get_proof_sizes(self.handle, &mut poly_size, &mut nof_polys) };
+
+                    if err != eIcicleError::Success {
+                        return Err(err);
+                    }
+
+                    let mut rounds = Vec::with_capacity(nof_polys as usize);
+                    for i in 0..nof_polys {
+                        let poly_ptr = unsafe { icicle_sumcheck_proof_get_proof_at(self.handle, i) };
+                        let poly = unsafe { slice::from_raw_parts(poly_ptr, poly_size as usize) }.to_vec();
+                        rounds.push(poly);
+                    }
                     Ok(rounds)
                 }
-            }
 
-            fn print(&self) -> eIcicleError {
-                unsafe { icicle_sumcheck_proof_print(self.handle) }
-            }
-        }
-
-        impl Serialize for SumcheckProof {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: serde::Serializer,
-            {
-                let mut size = 0;
-                unsafe {
-                    icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size)
-                        .wrap_value(size)
-                        .map_err(serde::ser::Error::custom)?;
-                    let mut buffer = vec![0u8; size];
-                    icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
-                        .wrap()
-                        .map_err(serde::ser::Error::custom)?;
-                    serializer.serialize_bytes(&buffer)
+                fn print(&self) -> eIcicleError {
+                    unsafe { icicle_sumcheck_proof_print(self.handle) }
                 }
             }
-        }
 
-        impl<'de> Deserialize<'de> for SumcheckProof {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                struct SumcheckProofVisitor;
+            impl From<Vec<Vec<$field>>> for SumcheckProof {
+                fn from(polys: Vec<Vec<$field>>) -> Self {
+                    let nof_polys = polys.len() as u64;
+                    let poly_size = if nof_polys > 0 { polys[0].len() as u64 } else { 0 };
 
-                impl<'de> Visitor<'de> for SumcheckProofVisitor {
-                    type Value = SumcheckProof;
-
-                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                        formatter.write_str("a byte array representing a SumcheckProof")
+                    let mut polys_ptrs: Vec<*const $field> = Vec::with_capacity(nof_polys as usize);
+                    for poly in &polys {
+                        polys_ptrs.push(poly.as_ptr());
                     }
 
-                    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-                    where
-                        E: de::Error,
+                    let handle = unsafe {
+                        icicle_sumcheck_proof_create(polys_ptrs.as_ptr() as *const *const $field, nof_polys, poly_size)
+                    };
+
+                    SumcheckProof { handle }
+                }
+            }
+
+            impl Drop for SumcheckProof {
+                fn drop(&mut self) {
+                    if !self
+                        .handle
+                        .is_null()
                     {
-                        let mut handle = std::ptr::null();
                         unsafe {
-                            icicle_sumcheck_proof_deserialize(&mut handle, v.as_ptr(), v.len())
-                                .wrap_value(SumcheckProof { handle })
-                                .map_err(de::Error::custom)
+                            let _ = icicle_sumcheck_proof_delete(self.handle);
                         }
                     }
-                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: serde::de::SeqAccess<'de>,
-                    {
-                        let mut buffer = Vec::with_capacity(
-                            seq.size_hint()
-                                .unwrap_or(0),
-                        );
-                        while let Some(byte) = seq.next_element::<u8>()? {
-                            buffer.push(byte);
-                        }
-                        self.visit_bytes(&buffer)
-                    }
-                }
-
-                deserializer.deserialize_bytes(SumcheckProofVisitor)
-            }
-        }
-
-        impl From<Vec<Vec<$field>>> for SumcheckProof {
-            fn from(value: Vec<Vec<$field>>) -> Self {
-                let vec_of_pointers: Vec<*const $field> = value
-                    .iter()
-                    .map(|vec| vec.as_ptr())
-                    .collect();
-                unsafe {
-                    let handle = icicle_sumcheck_proof_create(
-                        vec_of_pointers.as_ptr() as *const *const $field,
-                        value.len() as u64,
-                        value[0].len() as u64,
-                    );
-
-                    if handle.is_null() {
-                        panic!("Couldn't convert into SumcheckProof");
-                    }
-
-                    Self { handle }
                 }
             }
-        }
 
-        impl Drop for SumcheckProof {
-            fn drop(&mut self) {
-                if !self
-                    .handle
-                    .is_null()
+            impl Handle for SumcheckProof {
+                fn handle(&self) -> *const c_void {
+                    self.handle
+                }
+            }
+
+            impl Serialize for SumcheckProof {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: Serializer,
                 {
+                    let mut size = 0;
                     unsafe {
-                        let _ = icicle_sumcheck_proof_delete(self.handle);
+                        icicle_sumcheck_proof_get_serialized_size(self.handle, &mut size)
+                            .wrap_value(size)
+                            .map_err(serde::ser::Error::custom)?;
+                        let mut buffer = vec![0u8; size];
+                        icicle_sumcheck_proof_serialize(self.handle, buffer.as_mut_ptr(), buffer.len())
+                            .wrap()
+                            .map_err(serde::ser::Error::custom)?;
+                        serializer.serialize_bytes(&buffer)
                     }
+                }
+            }
+
+            impl<'de> Deserialize<'de> for SumcheckProof {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    struct SumcheckProofVisitor;
+
+                    impl<'de> Visitor<'de> for SumcheckProofVisitor {
+                        type Value = SumcheckProof;
+
+                        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                            formatter.write_str("a byte array representing a SumcheckProof")
+                        }
+
+                        fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+                        where
+                            E: de::Error,
+                        {
+                            let mut handle = std::ptr::null();
+                            unsafe {
+                                icicle_sumcheck_proof_deserialize(&mut handle, v.as_ptr(), v.len())
+                                    .wrap_value(SumcheckProof { handle })
+                                    .map_err(de::Error::custom)
+                            }
+                        }
+                        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+                        where
+                            A: serde::de::SeqAccess<'de>,
+                        {
+                            let mut buffer = Vec::with_capacity(
+                                seq.size_hint()
+                                    .unwrap_or(0),
+                            );
+                            while let Some(byte) = seq.next_element::<u8>()? {
+                                buffer.push(byte);
+                            }
+                            self.visit_bytes(&buffer)
+                        }
+                    }
+
+                    deserializer.deserialize_bytes(SumcheckProofVisitor)
                 }
             }
         }
@@ -607,7 +624,7 @@ macro_rules! impl_sumcheck_tests {
         $field_prefix_ident: ident,
         $field:ident
     ) => {
-        use super::SumcheckWrapper;
+        use super::*;
         use crate::program::$field_prefix_ident::FieldReturningValueProgram as Program;
         use icicle_core::sumcheck::tests::*;
         use icicle_hash::keccak::Keccak256;
