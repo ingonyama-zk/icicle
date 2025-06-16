@@ -38,34 +38,32 @@ namespace icicle {
 #ifdef RING
   ICICLE_DISPATCHER_INST(PolyRingMatrixMultiplicationDispatcher, poly_ring_matrix_mult, polyRingBinaryMatrixOpImpl);
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(
-    uint32_t degree,
-    const scalar_t* mat_a,
+    const PolyRing* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
-    const scalar_t* mat_b,
+    const PolyRing* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
     const VecOpsConfig* config,
-    scalar_t* mat_out)
+    PolyRing* mat_out)
   {
     return PolyRingMatrixMultiplicationDispatcher::execute(
-      degree, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
   }
 
   template <>
-  eIcicleError poly_ring_matrix_mult(
-    uint32_t degree,
-    const scalar_t* mat_a,
+  eIcicleError matrix_mult(
+    const PolyRing* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
-    const scalar_t* mat_b,
+    const PolyRing* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
     const VecOpsConfig& config,
-    scalar_t* mat_out)
+    PolyRing* mat_out)
   {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(
-      degree, mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
   }
 #endif
 
