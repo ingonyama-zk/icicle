@@ -1,4 +1,5 @@
-use crate::jl_projection::JLProjection;
+use crate::jl_projection::{JLProjection, JLProjectionPolyRing};
+use crate::polynomial_ring::PolynomialRing;
 use crate::traits::{Arithmetic, FieldImpl};
 use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::HostSlice;
@@ -72,4 +73,84 @@ where
     }
 }
 
-// TODO Yuval: test JL-projection conjugated matrix in Rq
+pub fn check_jl_projection_polyring<Poly>()
+where
+    Poly: PolynomialRing + JLProjection<Poly::Base> + JLProjectionPolyRing<Poly>,
+    Poly::Base: FieldImpl + Arithmetic,
+{
+    let d = Poly::DEGREE;
+    let num_rows = 10;
+    let row_size = 13; // Number of polynomials per row
+    let total_polys = num_rows * row_size;
+    let total_scalars = total_polys * d;
+
+    let cfg = VecOpsConfig::default();
+
+    let mut seed = [0u8; 32];
+    rand::thread_rng().fill(&mut seed);
+
+    for conjugate in [false, true] {
+        // Step 1: Generate raw scalar JL matrix rows
+        let mut scalar_data = vec![Poly::Base::zero(); total_scalars];
+        Poly::get_jl_matrix_rows(
+            &seed,
+            row_size * d,
+            0,
+            num_rows,
+            &cfg,
+            HostSlice::from_mut_slice(&mut scalar_data),
+        )
+        .expect("scalar JL matrix gen failed");
+
+        // Step 2: Convert into Poly instances manually
+        let mut expected = vec![Poly::zero(); total_polys];
+
+        for row in 0..num_rows {
+            for col in 0..row_size {
+                let poly_index = row * row_size + col;
+                let base_idx = poly_index * d;
+                let coeffs = &scalar_data[base_idx..base_idx + d];
+
+                let coeffs_array: Vec<Poly::Base> = if conjugate {
+                    let minus_one = Poly::Base::zero() - Poly::Base::one();
+                    (0..d)
+                        .map(|i| {
+                            let j = d - i;
+                            if i == 0 {
+                                coeffs[0]
+                            } else {
+                                coeffs[j] * minus_one
+                            }
+                        })
+                        .collect()
+                } else {
+                    coeffs.to_vec()
+                };
+
+                expected[poly_index] = Poly::from_slice(&coeffs_array);
+            }
+        }
+
+        // Step 3: Get polyring JL rows from API
+        let mut actual = vec![Poly::zero(); total_polys];
+        Poly::get_jl_matrix_rows_as_polyring(
+            &seed,
+            row_size,
+            0,
+            num_rows,
+            conjugate,
+            &cfg,
+            HostSlice::from_mut_slice(&mut actual),
+        )
+        .expect("polyring JL matrix gen failed");
+
+        // Step 4: Compare
+        for i in 0..total_polys {
+            assert_eq!(
+                actual[i], expected[i],
+                "Mismatch at index {} (conjugate = {}):\nExpected: {:?}\nActual: {:?}",
+                i, conjugate, expected[i], actual[i]
+            );
+        }
+    }
+}

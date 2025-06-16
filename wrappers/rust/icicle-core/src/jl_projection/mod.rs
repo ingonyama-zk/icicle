@@ -88,6 +88,7 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
 
 // TODO Yuval: floating functions
 
+// TODO Yuval: maybe instead implement it for Field::Config like everywhere
 #[macro_export]
 macro_rules! impl_jl_projection {
     // implement_for is the type for which we implement the trait.
@@ -119,8 +120,6 @@ macro_rules! impl_jl_projection {
                 cfg: *const VecOpsConfig,
                 output: *mut $scalar_type,
             ) -> eIcicleError;
-
-            // TODO Yuval: jl_projection_get_rows_polyring
         }
 
         impl JLProjection<$scalar_type> for $implement_for {
@@ -192,25 +191,110 @@ macro_rules! impl_jl_projection {
 }
 
 #[macro_export]
-macro_rules! impl_jl_projection_tests {
-    ($scalar_type: ident, $implemented_for: ident) => {
-        use icicle_core::jl_projection::tests::*;
-        use icicle_runtime::test_utilities;
+macro_rules! impl_jl_projection_as_polyring {
+    ($prefix: literal, $poly_type: ty) => {
+        use icicle_core::jl_projection::JLProjectionPolyRing;
 
-        /// Initializes devices before running tests.
-        pub fn initialize() {
-            test_utilities::test_load_and_init_devices();
-            test_utilities::test_set_main_device();
+        extern "C" {
+            #[link_name = concat!($prefix, "_jl_projection_get_rows_polyring")]
+            fn jl_projection_get_rows_as_polyring_ffi(
+                seed: *const u8,
+                seed_len: usize,
+                row_size: usize,
+                start_row: usize,
+                num_rows: usize,
+                conjugate: bool,
+                cfg: *const VecOpsConfig,
+                output: *mut $poly_type,
+            ) -> eIcicleError;
         }
 
-        #[test]
-        fn test_jl_projection() {
-            initialize();
-            test_utilities::test_set_main_device();
-            // TODO uncomment when implemented for CUDA
-            // check_jl_projection::<$implemented_for, $scalar_type>();
-            test_utilities::test_set_ref_device();
-            check_jl_projection::<$implemented_for, $scalar_type>();
+        impl JLProjectionPolyRing<$poly_type> for $poly_type {
+            fn get_jl_matrix_rows_as_polyring(
+                seed: &[u8],
+                row_size: usize,
+                start_row: usize,
+                num_rows: usize,
+                conjugate: bool,
+                cfg: &VecOpsConfig,
+                output_rows: &mut (impl HostOrDeviceSlice<$poly_type> + ?Sized),
+            ) -> Result<(), eIcicleError> {
+                if output_rows.is_on_device() && !output_rows.is_on_active_device() {
+                    eprintln!("Output is on an inactive device");
+                    return Err(eIcicleError::InvalidArgument);
+                }
+
+                let mut cfg_clone = cfg.clone();
+                cfg_clone.is_result_on_device = output_rows.is_on_device();
+
+                unsafe {
+                    jl_projection_get_rows_as_polyring_ffi(
+                        seed.as_ptr(),
+                        seed.len(),
+                        row_size,
+                        start_row,
+                        num_rows,
+                        conjugate,
+                        &cfg_clone,
+                        output_rows.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_jl_projection_tests {
+    ($scalar_type: ident, $implemented_for: ident) => {
+        mod test_scalar {
+            use super::*;
+            use icicle_core::jl_projection::tests::*;
+            use icicle_runtime::test_utilities;
+
+            /// Initializes devices before running tests.
+            pub fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            fn test_jl_projection() {
+                initialize();
+                test_utilities::test_set_main_device();
+                // TODO uncomment when implemented for CUDA
+                // check_jl_projection::<$implemented_for, $scalar_type>();
+                test_utilities::test_set_ref_device();
+                check_jl_projection::<$implemented_for, $scalar_type>();
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_jl_projection_polyring_tests {
+    ($poly_type: ident) => {
+        mod test_poly {
+            use super::*;
+            use icicle_core::jl_projection::tests::*;
+            use icicle_runtime::test_utilities;
+
+            /// Initializes devices before running tests.
+            pub fn initialize() {
+                test_utilities::test_load_and_init_devices();
+                test_utilities::test_set_main_device();
+            }
+
+            #[test]
+            fn test_jl_projection() {
+                initialize();
+                test_utilities::test_set_main_device();
+                // TODO uncomment when implemented for CUDA
+                // check_jl_projection_polyring<$poly_type>();
+                test_utilities::test_set_ref_device();
+                check_jl_projection_polyring::<$poly_type>();
+            }
         }
     };
 }
