@@ -55,7 +55,7 @@ pub trait JLProjection<T: FieldImpl> {
         num_rows: usize,
         cfg: &VecOpsConfig,
         output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
-    );
+    ) -> Result<(), eIcicleError>;
 }
 
 /// Trait for generating JL matrix rows in polynomial ring form (e.g., Rq),
@@ -83,5 +83,134 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
         conjugate: bool,
         cfg: &VecOpsConfig,
         output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
-    );
+    ) -> Result<(), eIcicleError>;
+}
+
+// TODO Yuval: floating functions
+
+#[macro_export]
+macro_rules! impl_jl_projection {
+    // implement_for is the type for which we implement the trait.
+    ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
+        use icicle_core::jl_projection::JLProjection;
+        use icicle_core::vec_ops::VecOpsConfig;
+        use icicle_runtime::eIcicleError;
+        use icicle_runtime::memory::HostOrDeviceSlice;
+
+        extern "C" {
+            #[link_name = concat!($prefix, "_jl_projection")]
+            fn jl_projection_ffi(
+                input: *const $scalar_type,
+                size: usize,
+                seed: *const u8,
+                seed_len: usize,
+                cfg: *const VecOpsConfig,
+                output: *mut $scalar_type,
+                output_size: usize,
+            ) -> eIcicleError;
+
+            #[link_name = concat!($prefix, "_jl_projection_get_rows")]
+            fn jl_projection_get_rows(
+                seed: *const u8,
+                seed_len: usize,
+                row_size: usize,
+                start_row: usize,
+                num_rows: usize,
+                cfg: *const VecOpsConfig,
+                output: *mut $scalar_type,
+            ) -> eIcicleError;
+
+            // TODO Yuval: jl_projection_get_rows_polyring
+        }
+
+        impl JLProjection<$scalar_type> for $implement_for {
+            fn jl_projection(
+                input: &(impl HostOrDeviceSlice<$scalar_type> + ?Sized),
+                seed: &[u8],
+                cfg: &VecOpsConfig,
+                output: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
+            ) -> Result<(), eIcicleError> {
+                if input.is_on_device() && !input.is_on_active_device() {
+                    eprintln!("Input is on an inactive device");
+                    return Err(eIcicleError::InvalidArgument);
+                }
+
+                if output.is_on_device() && !output.is_on_active_device() {
+                    eprintln!("Output is on an inactive device");
+                    return Err(eIcicleError::InvalidArgument);
+                }
+
+                let mut cfg_clone = cfg.clone();
+                cfg_clone.is_a_on_device = input.is_on_device();
+                cfg_clone.is_result_on_device = output.is_on_device();
+
+                unsafe {
+                    jl_projection_ffi(
+                        input.as_ptr(),
+                        input.len(),
+                        seed.as_ptr(),
+                        seed.len(),
+                        &cfg_clone,
+                        output.as_mut_ptr(),
+                        output.len(),
+                    )
+                    .wrap()
+                }
+            }
+
+            fn get_jl_matrix_rows(
+                seed: &[u8],
+                row_size: usize,
+                start_row: usize,
+                num_rows: usize,
+                cfg: &VecOpsConfig,
+                output_rows: &mut (impl HostOrDeviceSlice<$scalar_type> + ?Sized),
+            ) -> Result<(), eIcicleError> {
+                if output_rows.is_on_device() && !output_rows.is_on_active_device() {
+                    eprintln!("Output is on an inactive device");
+                    return Err(eIcicleError::InvalidArgument);
+                }
+
+                let mut cfg_clone = cfg.clone();
+                cfg_clone.is_result_on_device = output_rows.is_on_device();
+
+                unsafe {
+                    jl_projection_get_rows(
+                        seed.as_ptr(),
+                        seed.len(),
+                        row_size,
+                        start_row,
+                        num_rows,
+                        &cfg_clone,
+                        output_rows.as_mut_ptr(),
+                    )
+                    .wrap()
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_jl_projection_tests {
+    ($scalar_type: ident, $implemented_for: ident) => {
+        use icicle_core::jl_projection::tests::*;
+        use icicle_runtime::test_utilities;
+
+        /// Initializes devices before running tests.
+        pub fn initialize() {
+            test_utilities::test_load_and_init_devices();
+            test_utilities::test_set_main_device();
+        }
+
+        #[test]
+        fn test_jl_projection() {
+            initialize();
+            test_utilities::test_set_main_device();
+            // TODO uncomment when implemented for CUDA
+            // check_jl_projection::<$implemented_for, $scalar_type>();
+            test_utilities::test_set_ref_device();
+            check_jl_projection::<$implemented_for, $scalar_type>();
+        }
+    };
 }

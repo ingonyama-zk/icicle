@@ -19,7 +19,7 @@ where
 
     let input = vec![one; input_size];
     let mut output = vec![zero; output_size];
-    let mut matrix = vec![zero; input_size * output_size];
+    let mut matrix = vec![one; input_size * output_size];
 
     // Seed for matrix generation
     let mut seed = [0u8; 32];
@@ -42,7 +42,8 @@ where
         output_size,
         &cfg,
         HostSlice::from_mut_slice(&mut matrix),
-    );
+    )
+    .expect("JL-projection failed");
 
     // Step 3: Check matrix elements are only in {0, 1, -1}
     for (i, &elem) in matrix
