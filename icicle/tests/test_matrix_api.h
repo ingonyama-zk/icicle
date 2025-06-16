@@ -27,7 +27,7 @@ protected:
 
   // Helper function to multiply matrices in O(n^3) time using host math
   template <typename T>
-  void multiply_matrices(
+  void matmul_ref(
     const std::vector<T>& a,
     const std::vector<T>& b,
     std::vector<T>& out,
@@ -49,24 +49,6 @@ protected:
         out[i * cols_b + j] = sum;
       }
     }
-  }
-
-  std::vector<scalar_t> element_wise_multiply(const std::vector<scalar_t>& a, const std::vector<scalar_t>& b)
-  {
-    std::vector<scalar_t> result(a.size());
-    for (size_t i = 0; i < a.size(); i++) {
-      result[i] = a[i] * b[i];
-    }
-    return result;
-  }
-
-  std::vector<scalar_t> element_wise_add(const std::vector<scalar_t>& a, const std::vector<scalar_t>& b)
-  {
-    std::vector<scalar_t> result(a.size());
-    for (size_t i = 0; i < a.size(); i++) {
-      result[i] = a[i] + b[i];
-    }
-    return result;
   }
 };
 
@@ -92,7 +74,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationBatched)
 
   // Compute reference results using host math
   for (size_t i = 0; i < batch_size; i++) {
-    multiply_matrices(batch_a[i], single_b, direct_output[i], matrix_size, matrix_size, matrix_size);
+    matmul_ref(batch_a[i], single_b, direct_output[i], matrix_size, matrix_size, matrix_size);
   }
 
   // Compute results using icicle CPU backend
@@ -141,7 +123,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
   direct_output.resize(N * M);
   icicle_output.resize(N * M);
   // Compute reference result using host math
-  multiply_matrices(direct_input_a, direct_input_b, direct_output, N, M, N);
+  matmul_ref(direct_input_a, direct_input_b, direct_output, N, M, N);
 
   // Compute result using icicle device
   auto cfg = VecOpsConfig{};
@@ -235,7 +217,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
 
     // Verify result dimensions and values
     std::vector<scalar_t> expected_vector_result(matrix_size);
-    multiply_matrices(random_matrix, vector, expected_vector_result, matrix_size, matrix_size, 1);
+    matmul_ref(random_matrix, vector, expected_vector_result, matrix_size, matrix_size, 1);
 
     ASSERT_EQ(
       0, std::memcmp(
@@ -274,7 +256,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
 
     // Verify result dimensions and values
     std::vector<scalar_t> expected_vector_matrix_result(matrix_size);
-    multiply_matrices(vector, random_matrix, expected_vector_matrix_result, 1, matrix_size, matrix_size);
+    matmul_ref(vector, random_matrix, expected_vector_matrix_result, 1, matrix_size, matrix_size);
 
     ASSERT_EQ(
       0, std::memcmp(
@@ -416,7 +398,7 @@ PolyRing operator*(const PolyRing& a, const PolyRing& b)
   const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
   Zq* c_zq = reinterpret_cast<Zq*>(&c);
   auto config = default_vec_ops_config();
-  vector_mul(a_zq, b_zq, degree, config, c_zq);
+  ICICLE_CHECK(vector_mul(a_zq, b_zq, degree, config, c_zq));
   return c;
 }
 
@@ -428,7 +410,7 @@ PolyRing operator+(const PolyRing& a, const PolyRing& b)
   const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
   Zq* c_zq = reinterpret_cast<Zq*>(&c);
   auto config = default_vec_ops_config();
-  vector_add(a_zq, b_zq, degree, config, c_zq);
+  ICICLE_CHECK(vector_add(a_zq, b_zq, degree, config, c_zq));
   return c;
 }
 
@@ -439,22 +421,17 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquarePolyRing)
   const size_t M = 1 << 2;
 
   auto degree = PolyRing::d;
-  auto direct_input_a = std::vector<PolyRing>(N);
-  auto direct_input_b = std::vector<PolyRing>(M);
-  auto direct_output = std::vector<PolyRing>(N);
-  auto icicle_output = std::vector<PolyRing>(N);
+  auto direct_input_a = std::vector<PolyRing>(N * M);
+  auto direct_input_b = std::vector<PolyRing>(M * N);
+  auto direct_output = std::vector<PolyRing>(N * N);
+  auto icicle_output = std::vector<PolyRing>(N * N);
 
   // Initialize input with N random vectors of M elements
-  direct_input_a.resize(N * M * degree);
-  direct_input_b.resize(M * N * degree);
   Zq::rand_host_many(reinterpret_cast<Zq*>(direct_input_a.data()), PolyRing::d * N * M);
   Zq::rand_host_many(reinterpret_cast<Zq*>(direct_input_b.data()), PolyRing::d * M * N);
 
-  // Initialize output buffer with correct size
-  direct_output.resize(N * M * degree);
-  icicle_output.resize(N * M * degree);
   // Compute reference result using host math
-  multiply_matrices(direct_input_a, direct_input_b, direct_output, N, M, N);
+  matmul_ref(direct_input_a, direct_input_b, direct_output, N, M, N);
 
   // Compute result using icicle device
   auto cfg = VecOpsConfig{};
@@ -468,7 +445,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquarePolyRing)
     ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
 
     // Compare results
-    ASSERT_EQ(0, std::memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(scalar_t)));
+    ASSERT_EQ(0, memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(PolyRing)));
   }
 }
 
