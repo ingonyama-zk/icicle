@@ -36,6 +36,7 @@ namespace icicle {
   }
 
 #ifdef RING
+  // Matmul for polynomial rings
   ICICLE_DISPATCHER_INST(PolyRingMatrixMultiplicationDispatcher, poly_ring_matrix_mult, polyRingBinaryMatrixOpImpl);
   extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(
     const PolyRing* mat_a,

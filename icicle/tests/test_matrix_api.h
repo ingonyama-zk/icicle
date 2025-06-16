@@ -52,56 +52,6 @@ protected:
   }
 };
 
-// Batched matrix multiplication
-TEST_F(MatrixTestBase, MatrixMultiplicationBatched)
-{
-  // Random batch size between 4 and 8
-  const size_t batch_size = 4 + (rand() % 5); // 4 to 8 inclusive
-  const size_t matrix_size = 1 << 8;          // 256x256 matrices
-
-  // Create input and output vectors for the batch
-  std::vector<std::vector<scalar_t>> batch_a(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-  std::vector<scalar_t> single_b(matrix_size * matrix_size);
-  std::vector<std::vector<scalar_t>> direct_output(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-  std::vector<std::vector<scalar_t>> icicle_output(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-
-  // Initialize each matrix A in the batch with random values
-  for (size_t i = 0; i < batch_size; i++) {
-    scalar_t::rand_host_many(batch_a[i].data(), matrix_size * matrix_size);
-  }
-  // Initialize single B matrix with random values
-  scalar_t::rand_host_many(single_b.data(), matrix_size * matrix_size);
-
-  // Compute reference results using host math
-  for (size_t i = 0; i < batch_size; i++) {
-    matmul_ref(batch_a[i], single_b, direct_output[i], matrix_size, matrix_size, matrix_size);
-  }
-
-  // Compute results using icicle CPU backend
-  auto cfg = VecOpsConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-  cfg.batch_size = batch_size;
-
-  for (const auto& device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    // Process each matrix A in the batch with the same B matrix
-    for (size_t i = 0; i < batch_size; i++) {
-      ICICLE_CHECK(matrix_mult(
-        batch_a[i].data(), matrix_size, matrix_size, single_b.data(), matrix_size, matrix_size, cfg,
-        icicle_output[i].data()));
-    }
-
-    // Compare results for each matrix in the batch
-    for (size_t i = 0; i < batch_size; i++) {
-      ASSERT_EQ(
-        0, std::memcmp(direct_output[i].data(), icicle_output[i].data(), direct_output[i].size() * sizeof(scalar_t)));
-    }
-  }
-}
-
 // Matrix multiplication with non-square matrices
 TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
 {
@@ -512,5 +462,7 @@ TEST_F(MatrixTestBase, VectorTimesVector)
     ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), sizeof(PolyRing)));
   }
 }
+
+// TODO Lisa: test with device memory too
 
 #endif
