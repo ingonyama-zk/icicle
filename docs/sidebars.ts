@@ -234,6 +234,11 @@ export default {
           label: "Merkle-Tree",
           id: "api/golang-bindings/merkle",
         },
+        {
+          type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/golang-bindings/lattice/pqc-ml-kem",
+        },
       ],
     },
     {
@@ -290,11 +295,6 @@ export default {
           type: "doc",
           label: "Sumcheck",
           id: "api/rust-bindings/sumcheck",
-        },
-        {
-          type: "doc",
-          label: "PQC ML-KEM",
-          id: "api/rust-bindings/lattice/pqc-ml-kem",
         },
         {
           type: "doc",

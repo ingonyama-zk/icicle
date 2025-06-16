@@ -6,7 +6,7 @@ import (
 )
 
 type MlKemConfig struct {
-	Stream                runtime.Stream
+	StreamHandle          runtime.Stream
 	IsAsync               bool
 	MessagesOnDevice      bool
 	EntropyOnDevice       bool
@@ -20,7 +20,7 @@ type MlKemConfig struct {
 
 func GetDefaultMlKemConfig() MlKemConfig {
 	return MlKemConfig{
-		Stream:                nil,
+		StreamHandle:          nil,
 		IsAsync:               false,
 		MessagesOnDevice:      false,
 		EntropyOnDevice:       false,

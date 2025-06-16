@@ -86,6 +86,100 @@ func (s *mlkemTestSuite) runConsistencyHost(params *mlkem.KyberParams, batchSize
 	s.Equal(sharedEnc, sharedDec, "shared secrets should match")
 }
 
+func (s *mlkemTestSuite) runConsistencyDeviceAsync(params *mlkem.KyberParams, batchSize int) {
+	// --- Host buffers ---
+	publicKeysLen := batchSize * params.PublicKeyBytes
+	secretKeysLen := batchSize * params.SecretKeyBytes
+	ciphertextsLen := batchSize * params.CiphertextBytes
+	sharedSecretsLen := batchSize * params.SharedSecretBytes
+	messagesLen := batchSize * mlkem.MESSAGE_BYTES
+	entropyLen := batchSize * mlkem.ENTROPY_BYTES
+
+	hostEntropy := make([]byte, entropyLen)
+	hostMessages := make([]byte, messagesLen)
+	if _, err := rand.Read(hostEntropy); err != nil {
+		s.FailNow(fmt.Sprintf("could not fill entropy: %v", err))
+	}
+	if _, err := rand.Read(hostMessages); err != nil {
+		s.FailNow(fmt.Sprintf("could not fill messages: %v", err))
+	}
+
+	// Host slots for results
+	hostSharedEnc := make([]byte, sharedSecretsLen)
+	hostSharedDec := make([]byte, sharedSecretsLen)
+
+	// --- Device setup ---
+	device := runtime.CreateDevice("CUDA-PQC", 0)
+	runtime.SetDevice(&device)
+
+	cfg := mlkem.GetDefaultMlKemConfig()
+	cfg.BatchSize = uint64(batchSize)
+	cfg.IsAsync = true
+	stream, err := runtime.CreateStream()
+	if err != runtime.Success {
+		s.FailNow(fmt.Sprintf("CreateStream failed: %v", err))
+	}
+	cfg.StreamHandle = stream
+
+	// Allocate device slices
+	var dEntropy, dMessages, dPublicKeys, dSecretKeys, dCiphertexts, dSharedEnc, dSharedDec core.DeviceSlice
+
+	// Copy host -> device
+	core.HostSliceFromElements(hostEntropy).CopyToDeviceAsync(&dEntropy, stream, true)
+	core.HostSliceFromElements(hostMessages).CopyToDeviceAsync(&dMessages, stream, true)
+
+	dPublicKeys.MallocAsync(1, publicKeysLen, stream)
+	dSecretKeys.MallocAsync(1, secretKeysLen, stream)
+	dCiphertexts.MallocAsync(1, ciphertextsLen, stream)
+	dSharedEnc.MallocAsync(1, sharedSecretsLen, stream)
+	dSharedDec.MallocAsync(1, sharedSecretsLen, stream)
+
+	// --- Keygen on device ---
+	err = mlkem.Keygen(params,
+		dEntropy,
+		cfg,
+		dPublicKeys,
+		dSecretKeys,
+	)
+	if err != runtime.Success {
+		s.FailNow(fmt.Sprintf("Keygen failed: %v", err))
+	}
+
+	// --- Encapsulate on device ---
+	err = mlkem.Encapsulate(params,
+		dMessages,
+		dPublicKeys,
+		cfg,
+		dCiphertexts,
+		dSharedEnc,
+	)
+	if err != runtime.Success {
+		s.FailNow(fmt.Sprintf("Encapsulate failed: %v", err))
+	}
+
+	// --- Decapsulate on device ---
+	err = mlkem.Decapsulate(params,
+		dSecretKeys,
+		dCiphertexts,
+		cfg,
+		dSharedDec,
+	)
+	if err != runtime.Success {
+		s.FailNow(fmt.Sprintf("Decapsulate failed: %v", err))
+	}
+
+	// Copy results back host <- device
+	core.HostSliceFromElements(hostSharedEnc).CopyFromDeviceAsync(&dSharedEnc, stream)
+	core.HostSliceFromElements(hostSharedDec).CopyFromDeviceAsync(&dSharedDec, stream)
+
+	// Wait for everything
+	runtime.SynchronizeStream(stream)
+	runtime.DestroyStream(stream)
+
+	// Compare
+	s.Equal(hostSharedEnc, hostSharedDec, "shared secrets should match on device async")
+}
+
 func (s *mlkemTestSuite) TestKyberConsistencyHost() {
 	batch_size := 1 << 13
 	s.Run("Kyber512", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
@@ -99,6 +193,20 @@ func (s *mlkemTestSuite) TestKyberConsistencyHost() {
 	}))
 }
 
+func (s *mlkemTestSuite) TestKyberConsistencyDeviceAsync() {
+	batch_size := 1 << 13
+	s.Run("Kyber512", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
+		s.runConsistencyDeviceAsync(&mlkem.Kyber512Params, batch_size)
+	}))
+	s.Run("Kyber768", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
+		s.runConsistencyDeviceAsync(&mlkem.Kyber768Params, batch_size)
+	}))
+	s.Run("Kyber1024", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
+		s.runConsistencyDeviceAsync(&mlkem.Kyber1024Params, batch_size)
+	}))
+}
+
 func TestSuitemlkem(t *testing.T) {
+
 	suite.Run(t, new(mlkemTestSuite))
 }
