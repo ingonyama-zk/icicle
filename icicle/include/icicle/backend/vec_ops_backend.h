@@ -222,12 +222,12 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_matrix_mult(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
+  void register_matmul(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
 
-#define REGISTER_MATRIX_MULT_BACKEND(DEVICE_TYPE, FUNC)                                                                \
+#define REGISTER_MATMUL_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_matrix_mult) = []() -> bool {                                                              \
-      register_matrix_mult(DEVICE_TYPE, FUNC);                                                                         \
+    static bool UNIQUE(_reg_matmul) = []() -> bool {                                                                   \
+      register_matmul(DEVICE_TYPE, FUNC);                                                                              \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -850,11 +850,11 @@ namespace icicle {
     const VecOpsConfig& config,
     PolyRing* mat_out)>;
 
-  void register_poly_ring_matrix_mult(const std::string& deviceType, polyRingBinaryMatrixOpImpl impl);
-  #define REGISTER_POLY_RING_MATRIX_MULT_BACKEND(DEVICE_TYPE, FUNC)                                                    \
+  void register_poly_ring_matmul(const std::string& deviceType, polyRingBinaryMatrixOpImpl impl);
+  #define REGISTER_POLY_RING_MATMUL_BACKEND(DEVICE_TYPE, FUNC)                                                         \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_poly_ring_matrix_mult) = []() -> bool {                                                  \
-        register_poly_ring_matrix_mult(DEVICE_TYPE, FUNC);                                                             \
+      static bool UNIQUE(_reg_poly_ring_matmul) = []() -> bool {                                                       \
+        register_poly_ring_matmul(DEVICE_TYPE, FUNC);                                                                  \
         return true;                                                                                                   \
       }();                                                                                                             \
     }

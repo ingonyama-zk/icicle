@@ -335,7 +335,7 @@ namespace icicle {
    *       This function multiplies an matrix A  or a batch of matrices with matrix B.
    */
   template <typename T>
-  eIcicleError matrix_mult(
+  eIcicleError matmul(
     const T* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,

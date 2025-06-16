@@ -31,7 +31,7 @@ namespace {
    * - degree: number of coefficients per matrix element (e.g., PolyRing<Zq, d> has degree = d)
    */
   template <typename Zq, uint32_t degree>
-  static eIcicleError cpu_matrix_mult_internal(
+  static eIcicleError cpu_matmul_internal(
     const Zq* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
@@ -95,7 +95,7 @@ namespace {
    * performs coefficient-wise multiplication, and reassembles the result.
    */
   template <typename T>
-  static eIcicleError cpu_matrix_mult_polynomial_ring(
+  static eIcicleError cpu_matmul_polynomial_ring(
     const Device& device,
     const T* mat_a,
     uint32_t nof_rows_a,
@@ -109,7 +109,7 @@ namespace {
     using Zq = typename T::Base;
     constexpr uint32_t d = T::d;
 
-    return cpu_matrix_mult_internal<Zq, d>(
+    return cpu_matmul_internal<Zq, d>(
       reinterpret_cast<const Zq*>(mat_a), nof_rows_a, nof_cols_a, reinterpret_cast<const Zq*>(mat_b), nof_rows_b,
       nof_cols_b, config, reinterpret_cast<Zq*>(mat_out));
   }
@@ -118,7 +118,7 @@ namespace {
    * @brief Scalar matrix multiplication (e.g., over Zq)
    */
   template <typename T>
-  static eIcicleError cpu_matrix_mult(
+  static eIcicleError cpu_matmul(
     const Device& device,
     const T* mat_a,
     uint32_t nof_rows_a,
@@ -129,14 +129,13 @@ namespace {
     const VecOpsConfig& config,
     T* mat_out)
   {
-    return cpu_matrix_mult_internal<T, 1>(
-      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
+    return cpu_matmul_internal<T, 1>(mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, config, mat_out);
   }
 
 } // namespace
 
 // === Registration with runtime ===
-REGISTER_MATRIX_MULT_BACKEND("CPU", cpu_matrix_mult<scalar_t>);
+REGISTER_MATMUL_BACKEND("CPU", cpu_matmul<scalar_t>);
 #ifdef RING
-REGISTER_POLY_RING_MATRIX_MULT_BACKEND("CPU", (cpu_matrix_mult_polynomial_ring<PolyRing>));
+REGISTER_POLY_RING_MATMUL_BACKEND("CPU", (cpu_matmul_polynomial_ring<PolyRing>));
 #endif

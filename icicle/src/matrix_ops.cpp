@@ -4,9 +4,9 @@
 namespace icicle {
   /*********************************** MATRIX  MULTIPLICATION *************************/
 
-  ICICLE_DISPATCHER_INST(MatrixMultiplicationDispatcher, matrix_mult, scalarBinaryMatrixOpImpl);
+  ICICLE_DISPATCHER_INST(MatrixMultiplicationDispatcher, matmul, scalarBinaryMatrixOpImpl);
 
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, matrix_mult)(
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, matmul)(
     const scalar_t* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
@@ -21,7 +21,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError matrix_mult(
+  eIcicleError matmul(
     const scalar_t* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
@@ -31,14 +31,14 @@ namespace icicle {
     const VecOpsConfig& config,
     scalar_t* mat_out)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, matrix_mult)(
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, matmul)(
       mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
   }
 
 #ifdef RING
   // Matmul for polynomial rings
-  ICICLE_DISPATCHER_INST(PolyRingMatrixMultiplicationDispatcher, poly_ring_matrix_mult, polyRingBinaryMatrixOpImpl);
-  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(
+  ICICLE_DISPATCHER_INST(PolyRingMatrixMultiplicationDispatcher, poly_ring_matmul, polyRingBinaryMatrixOpImpl);
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matmul)(
     const PolyRing* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
@@ -53,7 +53,7 @@ namespace icicle {
   }
 
   template <>
-  eIcicleError matrix_mult(
+  eIcicleError matmul(
     const PolyRing* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
@@ -63,7 +63,7 @@ namespace icicle {
     const VecOpsConfig& config,
     PolyRing* mat_out)
   {
-    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matrix_mult)(
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matmul)(
       mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
   }
 #endif

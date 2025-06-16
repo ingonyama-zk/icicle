@@ -84,7 +84,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
+    ICICLE_CHECK(matmul(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
 
     // Compare results
     ASSERT_EQ(0, std::memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(scalar_t)));
@@ -115,13 +115,13 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     ICICLE_CHECK(icicle_set_device(device));
 
     // A * I = A
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       random_matrix.data(), matrix_size, matrix_size, identity.data(), matrix_size, matrix_size, cfg, result.data()));
 
     ASSERT_EQ(0, std::memcmp(random_matrix.data(), result.data(), random_matrix.size() * sizeof(scalar_t)));
 
     // I * A = A
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       identity.data(), matrix_size, matrix_size, random_matrix.data(), matrix_size, matrix_size, cfg, result.data()));
 
     ASSERT_EQ(0, std::memcmp(random_matrix.data(), result.data(), random_matrix.size() * sizeof(scalar_t)));
@@ -131,14 +131,14 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     std::vector<scalar_t> expected_zero(matrix_size * matrix_size, scalar_t::zero());
 
     // A * 0 = 0
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       random_matrix.data(), matrix_size, matrix_size, zero_matrix.data(), matrix_size, matrix_size, cfg,
       result.data()));
 
     ASSERT_EQ(0, std::memcmp(expected_zero.data(), result.data(), expected_zero.size() * sizeof(scalar_t)));
 
     // 0 * A = 0
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       zero_matrix.data(), matrix_size, matrix_size, random_matrix.data(), matrix_size, matrix_size, cfg,
       result.data()));
 
@@ -152,7 +152,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     scalar_t::rand_host_many(single_a.data(), 1);
     scalar_t::rand_host_many(single_b.data(), 1);
 
-    ICICLE_CHECK(matrix_mult(single_a.data(), 1, 1, single_b.data(), 1, 1, cfg, single_result.data()));
+    ICICLE_CHECK(matmul(single_a.data(), 1, 1, single_b.data(), 1, 1, cfg, single_result.data()));
 
     ASSERT_EQ(single_a[0] * single_b[0], single_result[0]);
 
@@ -162,8 +162,8 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     scalar_t::rand_host_many(vector.data(), matrix_size);
 
     // Matrix * Vector
-    ICICLE_CHECK(matrix_mult(
-      random_matrix.data(), matrix_size, matrix_size, vector.data(), matrix_size, 1, cfg, vector_result.data()));
+    ICICLE_CHECK(
+      matmul(random_matrix.data(), matrix_size, matrix_size, vector.data(), matrix_size, 1, cfg, vector_result.data()));
 
     // Verify result dimensions and values
     std::vector<scalar_t> expected_vector_result(matrix_size);
@@ -182,7 +182,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
 
     // Vector * Vector^T (outer product)
     ICICLE_CHECK(
-      matrix_mult(vector_a.data(), matrix_size, 1, vector_b.data(), 1, matrix_size, cfg, outer_product_result.data()));
+      matmul(vector_a.data(), matrix_size, 1, vector_b.data(), 1, matrix_size, cfg, outer_product_result.data()));
 
     // Verify outer product properties
     std::vector<scalar_t> expected_outer_product(matrix_size * matrix_size);
@@ -201,7 +201,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     std::vector<scalar_t> vector_matrix_result(matrix_size);
 
     // Vector^T * Matrix
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       vector.data(), 1, matrix_size, random_matrix.data(), matrix_size, matrix_size, cfg, vector_matrix_result.data()));
 
     // Verify result dimensions and values
@@ -235,7 +235,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationDimensionMismatch)
     ICICLE_CHECK(icicle_set_device(device));
 
     // Should fail because inner dimensions don't match
-    auto error = matrix_mult(
+    auto error = matmul(
       matrix_a.data(), matrix_size, matrix_size, matrix_b.data(), matrix_size + 1, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
   }
@@ -266,7 +266,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationBatchedDimensionMismatch)
 
     // Should fail for each matrix in batch
     for (size_t i = 0; i < batch_size; i++) {
-      auto error = matrix_mult(
+      auto error = matmul(
         batch_a[i].data(), matrix_size, matrix_size, single_b.data(), matrix_size + 1, matrix_size, cfg,
         batch_result[i].data());
       ASSERT_NE(error, eIcicleError::SUCCESS);
@@ -290,19 +290,19 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNullInputs)
     ICICLE_CHECK(icicle_set_device(device));
 
     // Test null A matrix
-    auto error = matrix_mult(
+    auto error = matmul(
       static_cast<const scalar_t*>(nullptr), matrix_size, matrix_size,
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
 
     // Test null B matrix
-    error = matrix_mult(
+    error = matmul(
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size,
       static_cast<const scalar_t*>(nullptr), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
 
     // Test null result matrix
-    error = matrix_mult(
+    error = matmul(
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size,
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size, cfg,
       static_cast<scalar_t*>(nullptr));
@@ -326,13 +326,13 @@ TEST_F(MatrixTestBase, MatrixMultiplicationZeroDimensions)
     ICICLE_CHECK(icicle_set_device(device));
 
     // Test zero rows
-    auto error = matrix_mult(
-      valid_matrix.data(), 0, matrix_size, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
+    auto error =
+      matmul(valid_matrix.data(), 0, matrix_size, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
 
     // Test zero columns
-    error = matrix_mult(
-      valid_matrix.data(), matrix_size, 0, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
+    error =
+      matmul(valid_matrix.data(), matrix_size, 0, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
   }
 }
@@ -379,7 +379,7 @@ TEST_F(MatrixTestBase, VectorTimesMatrix)
   VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    ICICLE_CHECK(matrix_mult(vec.data(), 1, M, mat.data(), M, N, cfg, actual.data()));
+    ICICLE_CHECK(matmul(vec.data(), 1, M, mat.data(), M, N, cfg, actual.data()));
     ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * sizeof(PolyRing)));
   }
 }
@@ -399,7 +399,7 @@ TEST_F(MatrixTestBase, MatrixTimesVector)
   VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    ICICLE_CHECK(matrix_mult(mat.data(), N, M, vec.data(), M, 1, cfg, actual.data()));
+    ICICLE_CHECK(matmul(mat.data(), N, M, vec.data(), M, 1, cfg, actual.data()));
     ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * sizeof(PolyRing)));
   }
 }
@@ -418,7 +418,7 @@ TEST_F(MatrixTestBase, SquareMatrixTimesMatrix)
   VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    ICICLE_CHECK(matrix_mult(a.data(), N, N, b.data(), N, N, cfg, actual.data()));
+    ICICLE_CHECK(matmul(a.data(), N, N, b.data(), N, N, cfg, actual.data()));
     ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * N * sizeof(PolyRing)));
   }
 }
@@ -439,7 +439,7 @@ TEST_F(MatrixTestBase, NonSquareMatrixTimesMatrix)
   VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    ICICLE_CHECK(matrix_mult(a.data(), N, M, b.data(), M, P, cfg, actual.data()));
+    ICICLE_CHECK(matmul(a.data(), N, M, b.data(), M, P, cfg, actual.data()));
     ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * P * sizeof(PolyRing)));
   }
 }
@@ -458,7 +458,7 @@ TEST_F(MatrixTestBase, VectorTimesVector)
   VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-    ICICLE_CHECK(matrix_mult(a.data(), 1, N, b.data(), N, 1, cfg, actual.data()));
+    ICICLE_CHECK(matmul(a.data(), 1, N, b.data(), N, 1, cfg, actual.data()));
     ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), sizeof(PolyRing)));
   }
 }
