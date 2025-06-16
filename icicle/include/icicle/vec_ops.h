@@ -335,19 +335,7 @@ namespace icicle {
    *       This function multiplies an matrix A  or a batch of matrices with matrix B.
    */
   template <typename T>
-  eIcicleError matrix_mult(
-    const T* mat_a,
-    uint32_t nof_rows_a,
-    uint32_t nof_cols_a,
-    const T* mat_b,
-    uint32_t nof_rows_b,
-    uint32_t nof_cols_b,
-    const VecOpsConfig& config,
-    T* mat_out);
-
-  template <typename T>
-  eIcicleError poly_ring_matrix_mult(
-    uint32_t degree,
+  eIcicleError matmul(
     const T* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,

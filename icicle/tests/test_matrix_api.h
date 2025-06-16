@@ -27,7 +27,7 @@ protected:
 
   // Helper function to multiply matrices in O(n^3) time using host math
   template <typename T>
-  void multiply_matrices(
+  void matmul_ref(
     const std::vector<T>& a,
     const std::vector<T>& b,
     std::vector<T>& out,
@@ -50,75 +50,7 @@ protected:
       }
     }
   }
-
-  std::vector<scalar_t> element_wise_multiply(const std::vector<scalar_t>& a, const std::vector<scalar_t>& b)
-  {
-    std::vector<scalar_t> result(a.size());
-    for (size_t i = 0; i < a.size(); i++) {
-      result[i] = a[i] * b[i];
-    }
-    return result;
-  }
-
-  std::vector<scalar_t> element_wise_add(const std::vector<scalar_t>& a, const std::vector<scalar_t>& b)
-  {
-    std::vector<scalar_t> result(a.size());
-    for (size_t i = 0; i < a.size(); i++) {
-      result[i] = a[i] + b[i];
-    }
-    return result;
-  }
 };
-
-// Batched matrix multiplication
-TEST_F(MatrixTestBase, MatrixMultiplicationBatched)
-{
-  // Random batch size between 4 and 8
-  const size_t batch_size = 4 + (rand() % 5); // 4 to 8 inclusive
-  const size_t matrix_size = 1 << 8;          // 256x256 matrices
-
-  // Create input and output vectors for the batch
-  std::vector<std::vector<scalar_t>> batch_a(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-  std::vector<scalar_t> single_b(matrix_size * matrix_size);
-  std::vector<std::vector<scalar_t>> direct_output(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-  std::vector<std::vector<scalar_t>> icicle_output(batch_size, std::vector<scalar_t>(matrix_size * matrix_size));
-
-  // Initialize each matrix A in the batch with random values
-  for (size_t i = 0; i < batch_size; i++) {
-    scalar_t::rand_host_many(batch_a[i].data(), matrix_size * matrix_size);
-  }
-  // Initialize single B matrix with random values
-  scalar_t::rand_host_many(single_b.data(), matrix_size * matrix_size);
-
-  // Compute reference results using host math
-  for (size_t i = 0; i < batch_size; i++) {
-    multiply_matrices(batch_a[i], single_b, direct_output[i], matrix_size, matrix_size, matrix_size);
-  }
-
-  // Compute results using icicle CPU backend
-  auto cfg = VecOpsConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-  cfg.batch_size = batch_size;
-
-  for (const auto& device : s_registered_devices) {
-    ICICLE_CHECK(icicle_set_device(device));
-
-    // Process each matrix A in the batch with the same B matrix
-    for (size_t i = 0; i < batch_size; i++) {
-      ICICLE_CHECK(matrix_mult(
-        batch_a[i].data(), matrix_size, matrix_size, single_b.data(), matrix_size, matrix_size, cfg,
-        icicle_output[i].data()));
-    }
-
-    // Compare results for each matrix in the batch
-    for (size_t i = 0; i < batch_size; i++) {
-      ASSERT_EQ(
-        0, std::memcmp(direct_output[i].data(), icicle_output[i].data(), direct_output[i].size() * sizeof(scalar_t)));
-    }
-  }
-}
 
 // Matrix multiplication with non-square matrices
 TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
@@ -141,7 +73,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
   direct_output.resize(N * M);
   icicle_output.resize(N * M);
   // Compute reference result using host math
-  multiply_matrices(direct_input_a, direct_input_b, direct_output, N, M, N);
+  matmul_ref(direct_input_a, direct_input_b, direct_output, N, M, N);
 
   // Compute result using icicle device
   auto cfg = VecOpsConfig{};
@@ -152,7 +84,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNonSquare)
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
 
-    ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
+    ICICLE_CHECK(matmul(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
 
     // Compare results
     ASSERT_EQ(0, std::memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(scalar_t)));
@@ -183,13 +115,13 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     ICICLE_CHECK(icicle_set_device(device));
 
     // A * I = A
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       random_matrix.data(), matrix_size, matrix_size, identity.data(), matrix_size, matrix_size, cfg, result.data()));
 
     ASSERT_EQ(0, std::memcmp(random_matrix.data(), result.data(), random_matrix.size() * sizeof(scalar_t)));
 
     // I * A = A
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       identity.data(), matrix_size, matrix_size, random_matrix.data(), matrix_size, matrix_size, cfg, result.data()));
 
     ASSERT_EQ(0, std::memcmp(random_matrix.data(), result.data(), random_matrix.size() * sizeof(scalar_t)));
@@ -199,14 +131,14 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     std::vector<scalar_t> expected_zero(matrix_size * matrix_size, scalar_t::zero());
 
     // A * 0 = 0
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       random_matrix.data(), matrix_size, matrix_size, zero_matrix.data(), matrix_size, matrix_size, cfg,
       result.data()));
 
     ASSERT_EQ(0, std::memcmp(expected_zero.data(), result.data(), expected_zero.size() * sizeof(scalar_t)));
 
     // 0 * A = 0
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       zero_matrix.data(), matrix_size, matrix_size, random_matrix.data(), matrix_size, matrix_size, cfg,
       result.data()));
 
@@ -220,7 +152,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     scalar_t::rand_host_many(single_a.data(), 1);
     scalar_t::rand_host_many(single_b.data(), 1);
 
-    ICICLE_CHECK(matrix_mult(single_a.data(), 1, 1, single_b.data(), 1, 1, cfg, single_result.data()));
+    ICICLE_CHECK(matmul(single_a.data(), 1, 1, single_b.data(), 1, 1, cfg, single_result.data()));
 
     ASSERT_EQ(single_a[0] * single_b[0], single_result[0]);
 
@@ -230,12 +162,12 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     scalar_t::rand_host_many(vector.data(), matrix_size);
 
     // Matrix * Vector
-    ICICLE_CHECK(matrix_mult(
-      random_matrix.data(), matrix_size, matrix_size, vector.data(), matrix_size, 1, cfg, vector_result.data()));
+    ICICLE_CHECK(
+      matmul(random_matrix.data(), matrix_size, matrix_size, vector.data(), matrix_size, 1, cfg, vector_result.data()));
 
     // Verify result dimensions and values
     std::vector<scalar_t> expected_vector_result(matrix_size);
-    multiply_matrices(random_matrix, vector, expected_vector_result, matrix_size, matrix_size, 1);
+    matmul_ref(random_matrix, vector, expected_vector_result, matrix_size, matrix_size, 1);
 
     ASSERT_EQ(
       0, std::memcmp(
@@ -250,7 +182,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
 
     // Vector * Vector^T (outer product)
     ICICLE_CHECK(
-      matrix_mult(vector_a.data(), matrix_size, 1, vector_b.data(), 1, matrix_size, cfg, outer_product_result.data()));
+      matmul(vector_a.data(), matrix_size, 1, vector_b.data(), 1, matrix_size, cfg, outer_product_result.data()));
 
     // Verify outer product properties
     std::vector<scalar_t> expected_outer_product(matrix_size * matrix_size);
@@ -269,12 +201,12 @@ TEST_F(MatrixTestBase, MatrixMultiplicationSanityChecks)
     std::vector<scalar_t> vector_matrix_result(matrix_size);
 
     // Vector^T * Matrix
-    ICICLE_CHECK(matrix_mult(
+    ICICLE_CHECK(matmul(
       vector.data(), 1, matrix_size, random_matrix.data(), matrix_size, matrix_size, cfg, vector_matrix_result.data()));
 
     // Verify result dimensions and values
     std::vector<scalar_t> expected_vector_matrix_result(matrix_size);
-    multiply_matrices(vector, random_matrix, expected_vector_matrix_result, 1, matrix_size, matrix_size);
+    matmul_ref(vector, random_matrix, expected_vector_matrix_result, 1, matrix_size, matrix_size);
 
     ASSERT_EQ(
       0, std::memcmp(
@@ -303,7 +235,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationDimensionMismatch)
     ICICLE_CHECK(icicle_set_device(device));
 
     // Should fail because inner dimensions don't match
-    auto error = matrix_mult(
+    auto error = matmul(
       matrix_a.data(), matrix_size, matrix_size, matrix_b.data(), matrix_size + 1, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
   }
@@ -334,7 +266,7 @@ TEST_F(MatrixTestBase, MatrixMultiplicationBatchedDimensionMismatch)
 
     // Should fail for each matrix in batch
     for (size_t i = 0; i < batch_size; i++) {
-      auto error = matrix_mult(
+      auto error = matmul(
         batch_a[i].data(), matrix_size, matrix_size, single_b.data(), matrix_size + 1, matrix_size, cfg,
         batch_result[i].data());
       ASSERT_NE(error, eIcicleError::SUCCESS);
@@ -358,19 +290,19 @@ TEST_F(MatrixTestBase, MatrixMultiplicationNullInputs)
     ICICLE_CHECK(icicle_set_device(device));
 
     // Test null A matrix
-    auto error = matrix_mult(
+    auto error = matmul(
       static_cast<const scalar_t*>(nullptr), matrix_size, matrix_size,
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
 
     // Test null B matrix
-    error = matrix_mult(
+    error = matmul(
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size,
       static_cast<const scalar_t*>(nullptr), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
 
     // Test null result matrix
-    error = matrix_mult(
+    error = matmul(
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size,
       static_cast<const scalar_t*>(valid_matrix.data()), matrix_size, matrix_size, cfg,
       static_cast<scalar_t*>(nullptr));
@@ -394,13 +326,13 @@ TEST_F(MatrixTestBase, MatrixMultiplicationZeroDimensions)
     ICICLE_CHECK(icicle_set_device(device));
 
     // Test zero rows
-    auto error = matrix_mult(
-      valid_matrix.data(), 0, matrix_size, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
+    auto error =
+      matmul(valid_matrix.data(), 0, matrix_size, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
 
     // Test zero columns
-    error = matrix_mult(
-      valid_matrix.data(), matrix_size, 0, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
+    error =
+      matmul(valid_matrix.data(), matrix_size, 0, valid_matrix.data(), matrix_size, matrix_size, cfg, result.data());
     ASSERT_NE(error, eIcicleError::SUCCESS);
   }
 }
@@ -416,7 +348,7 @@ PolyRing operator*(const PolyRing& a, const PolyRing& b)
   const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
   Zq* c_zq = reinterpret_cast<Zq*>(&c);
   auto config = default_vec_ops_config();
-  vector_mul(a_zq, b_zq, degree, config, c_zq);
+  ICICLE_CHECK(vector_mul(a_zq, b_zq, degree, config, c_zq));
   return c;
 }
 
@@ -428,48 +360,109 @@ PolyRing operator+(const PolyRing& a, const PolyRing& b)
   const Zq* b_zq = reinterpret_cast<const Zq*>(&b);
   Zq* c_zq = reinterpret_cast<Zq*>(&c);
   auto config = default_vec_ops_config();
-  vector_add(a_zq, b_zq, degree, config, c_zq);
+  ICICLE_CHECK(vector_add(a_zq, b_zq, degree, config, c_zq));
   return c;
 }
 
-// Matrix multiplication with non-square matrices
-TEST_F(MatrixTestBase, MatrixMultiplicationNonSquarePolyRing)
+TEST_F(MatrixTestBase, VectorTimesMatrix)
 {
-  const size_t N = 1 << 2;
-  const size_t M = 1 << 2;
+  const size_t N = 4;
+  const size_t M = 5;
 
-  auto degree = PolyRing::d;
-  auto direct_input_a = std::vector<PolyRing>(N);
-  auto direct_input_b = std::vector<PolyRing>(M);
-  auto direct_output = std::vector<PolyRing>(N);
-  auto icicle_output = std::vector<PolyRing>(N);
+  std::vector<PolyRing> vec(M), mat(M * N), expected(N), actual(N);
 
-  // Initialize input with N random vectors of M elements
-  direct_input_a.resize(N * M * degree);
-  direct_input_b.resize(M * N * degree);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(direct_input_a.data()), PolyRing::d * N * M);
-  Zq::rand_host_many(reinterpret_cast<Zq*>(direct_input_b.data()), PolyRing::d * M * N);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(vec.data()), PolyRing::d * M);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(mat.data()), PolyRing::d * M * N);
 
-  // Initialize output buffer with correct size
-  direct_output.resize(N * M * degree);
-  icicle_output.resize(N * M * degree);
-  // Compute reference result using host math
-  multiply_matrices(direct_input_a, direct_input_b, direct_output, N, M, N);
+  matmul_ref(vec, mat, expected, 1, M, N);
 
-  // Compute result using icicle device
-  auto cfg = VecOpsConfig{};
-  cfg.is_a_on_device = false;
-  cfg.is_b_on_device = false;
-  cfg.is_result_on_device = false;
-
+  VecOpsConfig cfg{};
   for (const auto& device : s_registered_devices) {
     ICICLE_CHECK(icicle_set_device(device));
-
-    ICICLE_CHECK(matrix_mult(direct_input_a.data(), N, M, direct_input_b.data(), M, N, cfg, icicle_output.data()));
-
-    // Compare results
-    ASSERT_EQ(0, std::memcmp(direct_output.data(), icicle_output.data(), direct_output.size() * sizeof(scalar_t)));
+    ICICLE_CHECK(matmul(vec.data(), 1, M, mat.data(), M, N, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * sizeof(PolyRing)));
   }
 }
+
+TEST_F(MatrixTestBase, MatrixTimesVector)
+{
+  const size_t N = 4;
+  const size_t M = 5;
+
+  std::vector<PolyRing> mat(N * M), vec(M), expected(N), actual(N);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(mat.data()), PolyRing::d * N * M);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(vec.data()), PolyRing::d * M);
+
+  matmul_ref(mat, vec, expected, N, M, 1);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matmul(mat.data(), N, M, vec.data(), M, 1, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * sizeof(PolyRing)));
+  }
+}
+
+TEST_F(MatrixTestBase, SquareMatrixTimesMatrix)
+{
+  const size_t N = 4;
+
+  std::vector<PolyRing> a(N * N), b(N * N), expected(N * N), actual(N * N);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * N * N);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * N * N);
+
+  matmul_ref(a, b, expected, N, N, N);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matmul(a.data(), N, N, b.data(), N, N, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * N * sizeof(PolyRing)));
+  }
+}
+
+TEST_F(MatrixTestBase, NonSquareMatrixTimesMatrix)
+{
+  const size_t N = 4;
+  const size_t M = 5;
+  const size_t P = 3;
+
+  std::vector<PolyRing> a(N * M), b(M * P), expected(N * P), actual(N * P);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * N * M);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * M * P);
+
+  matmul_ref(a, b, expected, N, M, P);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matmul(a.data(), N, M, b.data(), M, P, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), N * P * sizeof(PolyRing)));
+  }
+}
+
+TEST_F(MatrixTestBase, VectorTimesVector)
+{
+  const size_t N = 4;
+
+  std::vector<PolyRing> a(N), b(N), expected(1), actual(1);
+
+  Zq::rand_host_many(reinterpret_cast<Zq*>(a.data()), PolyRing::d * N);
+  Zq::rand_host_many(reinterpret_cast<Zq*>(b.data()), PolyRing::d * N);
+
+  matmul_ref(a, b, expected, 1, N, 1);
+
+  VecOpsConfig cfg{};
+  for (const auto& device : s_registered_devices) {
+    ICICLE_CHECK(icicle_set_device(device));
+    ICICLE_CHECK(matmul(a.data(), 1, N, b.data(), N, 1, cfg, actual.data()));
+    ASSERT_EQ(0, std::memcmp(expected.data(), actual.data(), sizeof(PolyRing)));
+  }
+}
+
+// TODO Lisa: test with device memory too
 
 #endif

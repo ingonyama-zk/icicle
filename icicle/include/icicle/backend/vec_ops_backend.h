@@ -222,12 +222,12 @@ namespace icicle {
     }();                                                                                                               \
   }
 
-  void register_matrix_mult(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
+  void register_matmul(const std::string& deviceType, scalarBinaryMatrixOpImpl impl);
 
-#define REGISTER_MATRIX_MULT_BACKEND(DEVICE_TYPE, FUNC)                                                                \
+#define REGISTER_MATMUL_BACKEND(DEVICE_TYPE, FUNC)                                                                     \
   namespace {                                                                                                          \
-    static bool UNIQUE(_reg_matrix_mult) = []() -> bool {                                                              \
-      register_matrix_mult(DEVICE_TYPE, FUNC);                                                                         \
+    static bool UNIQUE(_reg_matmul) = []() -> bool {                                                                   \
+      register_matmul(DEVICE_TYPE, FUNC);                                                                              \
       return true;                                                                                                     \
     }();                                                                                                               \
   }
@@ -841,21 +841,20 @@ namespace icicle {
 
   using polyRingBinaryMatrixOpImpl = std::function<eIcicleError(
     const Device& device,
-    uint32_t degree,
-    const scalar_t* mat_a,
+    const PolyRing* mat_a,
     uint32_t nof_rows_a,
     uint32_t nof_cols_a,
-    const scalar_t* mat_b,
+    const PolyRing* mat_b,
     uint32_t nof_rows_b,
     uint32_t nof_cols_b,
     const VecOpsConfig& config,
-    scalar_t* mat_out)>;
+    PolyRing* mat_out)>;
 
-  void register_poly_ring_matrix_mult(const std::string& deviceType, polyRingBinaryMatrixOpImpl impl);
-  #define REGISTER_POLY_RING_MATRIX_MULT_BACKEND(DEVICE_TYPE, FUNC)                                                    \
+  void register_poly_ring_matmul(const std::string& deviceType, polyRingBinaryMatrixOpImpl impl);
+  #define REGISTER_POLY_RING_MATMUL_BACKEND(DEVICE_TYPE, FUNC)                                                         \
     namespace {                                                                                                        \
-      static bool UNIQUE(_reg_poly_ring_matrix_mult) = []() -> bool {                                                  \
-        register_poly_ring_matrix_mult(DEVICE_TYPE, FUNC);                                                             \
+      static bool UNIQUE(_reg_poly_ring_matmul) = []() -> bool {                                                       \
+        register_poly_ring_matmul(DEVICE_TYPE, FUNC);                                                                  \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
