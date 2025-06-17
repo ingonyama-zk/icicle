@@ -396,12 +396,12 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
   auto omega_index = [this](size_t k, size_t l) { return k * JL_out + l; };
 
-  // sample psi_k
+  // sample psi
   std::vector<std::byte> psi_seed(seed2);
   psi_seed.push_back(std::byte('1'));
   ICICLE_CHECK(random_sampling(psi_seed.data(), psi_seed.size(), false, {}, psi.data(), psi.size()));
 
-  // Sample omega_k
+  // Sample omega
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
   ICICLE_CHECK(random_sampling(omega_seed.data(), omega_seed.size(), false, {}, omega.data(), omega.size()));
@@ -457,7 +457,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   std::vector<Rq> LS(r * r);
   ICICLE_CHECK(ntt(LS_hat.data(), r * r, NTTDir::kInverse, {}, LS.data()));
 
-  // Compute H = 2^{-1}(LS + LS^T)
+  // Compute H = 2^{-1}(LS + (LS)^T)
   std::vector<Rq> H;
   Zq two_inv = Zq::inverse(Zq::from(2)); // 2^{-1} in Z_q
 
@@ -473,7 +473,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   }
 
   // Step 24: Decompose h
-  size_t l3 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base3));
+  size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base3);
 
   std::vector<Rq> H_tilde(l3 * H.size());
   ICICLE_CHECK(decompose(H.data(), H.size(), base3, {}, H_tilde.data(), H_tilde.size()));
