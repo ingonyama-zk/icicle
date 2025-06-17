@@ -16,13 +16,13 @@ func main() {
 	runtime.LoadBackendFromEnvOrDefault()
 
 	// Allocate buffers on the host
-	params := &mlkem.Kyber768Params
+	params := mlkem.Kyber768
 	entropyLen := BATCH * mlkem.ENTROPY_BYTES
 	messagesLen := BATCH * mlkem.MESSAGE_BYTES
-	publicKeysLen := BATCH * params.PublicKeyBytes
-	secretKeysLen := BATCH * params.SecretKeyBytes
-	ciphertextsLen := BATCH * params.CiphertextBytes
-	sharedSecretsLen := BATCH * params.SharedSecretBytes
+	publicKeysLen := BATCH * params.GetPublicKeyBytes()
+	secretKeysLen := BATCH * params.GetSecretKeyBytes()
+	ciphertextsLen := BATCH * params.GetCiphertextBytes()
+	sharedSecretsLen := BATCH * params.GetSharedSecretBytes()
 
 	entropy := make([]byte, entropyLen)
 	messages := make([]byte, messagesLen)

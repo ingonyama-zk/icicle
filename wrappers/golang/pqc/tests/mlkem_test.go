@@ -16,12 +16,12 @@ type mlkemTestSuite struct {
 	suite.Suite
 }
 
-func (s *mlkemTestSuite) runConsistencyHost(params *mlkem.KyberParams, batchSize int) {
+func (s *mlkemTestSuite) runConsistencyHost(params mlkem.KyberMode, batchSize int) {
 	// Allocate buffers
-	publicKeysLen := batchSize * params.PublicKeyBytes
-	secretKeysLen := batchSize * params.SecretKeyBytes
-	ciphertextsLen := batchSize * params.CiphertextBytes
-	sharedSecretsLen := batchSize * params.SharedSecretBytes
+	publicKeysLen := batchSize * params.GetPublicKeyBytes()
+	secretKeysLen := batchSize * params.GetSecretKeyBytes()
+	ciphertextsLen := batchSize * params.GetCiphertextBytes()
+	sharedSecretsLen := batchSize * params.GetSharedSecretBytes()
 	messagesLen := batchSize * mlkem.MESSAGE_BYTES
 	entropyLen := batchSize * mlkem.ENTROPY_BYTES
 
@@ -86,12 +86,12 @@ func (s *mlkemTestSuite) runConsistencyHost(params *mlkem.KyberParams, batchSize
 	s.Equal(sharedEnc, sharedDec, "shared secrets should match")
 }
 
-func (s *mlkemTestSuite) runConsistencyDeviceAsync(params *mlkem.KyberParams, batchSize int) {
+func (s *mlkemTestSuite) runConsistencyDeviceAsync(params mlkem.KyberMode, batchSize int) {
 	// --- Host buffers ---
-	publicKeysLen := batchSize * params.PublicKeyBytes
-	secretKeysLen := batchSize * params.SecretKeyBytes
-	ciphertextsLen := batchSize * params.CiphertextBytes
-	sharedSecretsLen := batchSize * params.SharedSecretBytes
+	publicKeysLen := batchSize * params.GetPublicKeyBytes()
+	secretKeysLen := batchSize * params.GetSecretKeyBytes()
+	ciphertextsLen := batchSize * params.GetCiphertextBytes()
+	sharedSecretsLen := batchSize * params.GetSharedSecretBytes()
 	messagesLen := batchSize * mlkem.MESSAGE_BYTES
 	entropyLen := batchSize * mlkem.ENTROPY_BYTES
 
@@ -183,26 +183,26 @@ func (s *mlkemTestSuite) runConsistencyDeviceAsync(params *mlkem.KyberParams, ba
 func (s *mlkemTestSuite) TestKyberConsistencyHost() {
 	batch_size := 1 << 13
 	s.Run("Kyber512", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyHost(&mlkem.Kyber512Params, batch_size)
+		s.runConsistencyHost(mlkem.Kyber512, batch_size)
 	}))
 	s.Run("Kyber768", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyHost(&mlkem.Kyber768Params, batch_size)
+		s.runConsistencyHost(mlkem.Kyber768, batch_size)
 	}))
 	s.Run("Kyber1024", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyHost(&mlkem.Kyber1024Params, batch_size)
+		s.runConsistencyHost(mlkem.Kyber1024, batch_size)
 	}))
 }
 
 func (s *mlkemTestSuite) TestKyberConsistencyDeviceAsync() {
 	batch_size := 1 << 13
 	s.Run("Kyber512", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyDeviceAsync(&mlkem.Kyber512Params, batch_size)
+		s.runConsistencyDeviceAsync(mlkem.Kyber512, batch_size)
 	}))
 	s.Run("Kyber768", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyDeviceAsync(&mlkem.Kyber768Params, batch_size)
+		s.runConsistencyDeviceAsync(mlkem.Kyber768, batch_size)
 	}))
 	s.Run("Kyber1024", test_helpers.TestWrapper(&s.Suite, func(_ *suite.Suite) {
-		s.runConsistencyDeviceAsync(&mlkem.Kyber1024Params, batch_size)
+		s.runConsistencyDeviceAsync(mlkem.Kyber1024, batch_size)
 	}))
 }
 

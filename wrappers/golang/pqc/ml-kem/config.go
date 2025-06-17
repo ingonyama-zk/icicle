@@ -22,12 +22,12 @@ func GetDefaultMlKemConfig() MlKemConfig {
 	return MlKemConfig{
 		StreamHandle:          nil,
 		IsAsync:               false,
-		MessagesOnDevice:      false,
-		EntropyOnDevice:       false,
-		PublicKeysOnDevice:    false,
-		SecretKeysOnDevice:    false,
-		CiphertextsOnDevice:   false,
-		SharedSecretsOnDevice: false,
+		messagesOnDevice:      false,
+		entropyOnDevice:       false,
+		publicKeysOnDevice:    false,
+		secretKeysOnDevice:    false,
+		ciphertextsOnDevice:   false,
+		sharedSecretsOnDevice: false,
 		BatchSize:             1,
 		Ext:                   nil,
 	}
