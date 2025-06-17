@@ -88,7 +88,6 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
 
 // TODO Yuval: floating functions
 
-// TODO Yuval: maybe instead implement it for Field::Config like everywhere
 #[macro_export]
 macro_rules! impl_jl_projection {
     // implement_for is the type for which we implement the trait.
@@ -247,7 +246,7 @@ macro_rules! impl_jl_projection_as_polyring {
 
 #[macro_export]
 macro_rules! impl_jl_projection_tests {
-    ($scalar_type: ident, $implemented_for: ident) => {
+    ($scalar_type: ident) => {
         mod test_scalar {
             use super::*;
             use icicle_core::jl_projection::tests::*;
@@ -266,7 +265,7 @@ macro_rules! impl_jl_projection_tests {
                 // TODO uncomment when implemented for CUDA
                 // check_jl_projection::<$implemented_for, $scalar_type>();
                 test_utilities::test_set_ref_device();
-                check_jl_projection::<$implemented_for, $scalar_type>();
+                check_jl_projection::<$scalar_type>();
             }
         }
     };

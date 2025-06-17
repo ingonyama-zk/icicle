@@ -5,10 +5,10 @@ use crate::vec_ops::VecOpsConfig;
 use icicle_runtime::memory::HostSlice;
 use rand::Rng;
 
-pub fn check_jl_projection<T, F>()
+pub fn check_jl_projection<F>()
 where
-    T: JLProjection<F>,
     F: FieldImpl + Arithmetic,
+    F::Config: JLProjection<F>,
 {
     let input_size = 1 << 10;
     let output_size = 256;
@@ -27,7 +27,7 @@ where
     rand::thread_rng().fill(&mut seed);
 
     // Step 1: Run JL projection
-    T::jl_projection(
+    F::Config::jl_projection(
         HostSlice::from_slice(&input),
         &seed,
         &cfg,
@@ -36,7 +36,7 @@ where
     .expect("JL projection failed");
 
     // Step 2: Get JL matrix rows
-    T::get_jl_matrix_rows(
+    F::Config::get_jl_matrix_rows(
         &seed,
         input_size,
         0,
@@ -75,8 +75,9 @@ where
 
 pub fn check_jl_projection_polyring<Poly>()
 where
-    Poly: PolynomialRing + JLProjection<Poly::Base> + JLProjectionPolyRing<Poly>,
+    Poly: PolynomialRing + JLProjectionPolyRing<Poly>,
     Poly::Base: FieldImpl + Arithmetic,
+    <Poly::Base as FieldImpl>::Config: JLProjection<Poly::Base>,
 {
     let d = Poly::DEGREE;
     let num_rows = 10;
@@ -92,7 +93,7 @@ where
     for conjugate in [false, true] {
         // Step 1: Generate raw scalar JL matrix rows
         let mut scalar_data = vec![Poly::Base::zero(); total_scalars];
-        Poly::get_jl_matrix_rows(
+        <Poly::Base as FieldImpl>::Config::get_jl_matrix_rows(
             &seed,
             row_size * d,
             0,
