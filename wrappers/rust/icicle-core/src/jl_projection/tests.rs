@@ -73,6 +73,27 @@ where
     }
 }
 
+fn conjugate_poly<P: PolynomialRing>(poly: P) -> P
+where
+    P::Base: FieldImpl + Arithmetic,
+{
+    // negate and flip coeffs, except for coeff0
+    let d = P::DEGREE;
+    let coeffs = poly.values();
+    let minus_one = P::Base::zero() - P::Base::one();
+    let conjugated_coeffs: Vec<P::Base> = (0..d)
+        .map(|i| {
+            let j = d - i;
+            if i == 0 {
+                coeffs[0]
+            } else {
+                coeffs[j] * minus_one
+            }
+        })
+        .collect();
+    P::from_slice(&conjugated_coeffs)
+}
+
 pub fn check_jl_projection_polyring<Poly>()
 where
     Poly: PolynomialRing + JLProjectionPolyRing<Poly>,
@@ -103,34 +124,19 @@ where
         )
         .expect("scalar JL matrix gen failed");
 
-        // Step 2: Convert into Poly instances manually
-        let mut expected = vec![Poly::zero(); total_polys];
-
-        for row in 0..num_rows {
-            for col in 0..row_size {
-                let poly_index = row * row_size + col;
-                let base_idx = poly_index * d;
-                let coeffs = &scalar_data[base_idx..base_idx + d];
-
-                let coeffs_array: Vec<Poly::Base> = if conjugate {
-                    let minus_one = Poly::Base::zero() - Poly::Base::one();
-                    (0..d)
-                        .map(|i| {
-                            let j = d - i;
-                            if i == 0 {
-                                coeffs[0]
-                            } else {
-                                coeffs[j] * minus_one
-                            }
-                        })
-                        .collect()
+        // Step 2: Convert into Poly instances (with optional conjugation)
+        let expected: Vec<Poly> = (0..total_polys)
+            .map(|i| {
+                let offset = i * d;
+                let coeffs = &scalar_data[offset..offset + d];
+                let poly = Poly::from_slice(coeffs);
+                if conjugate {
+                    conjugate_poly(poly)
                 } else {
-                    coeffs.to_vec()
-                };
-
-                expected[poly_index] = Poly::from_slice(&coeffs_array);
-            }
-        }
+                    poly
+                }
+            })
+            .collect();
 
         // Step 3: Get polyring JL rows from API
         let mut actual = vec![Poly::zero(); total_polys];
