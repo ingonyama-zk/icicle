@@ -15,11 +15,12 @@ members = [
   "icicle-fields/icicle-stark252",
   "icicle-rings/icicle-labrador",
   "icicle-hash",
+  "icicle-pqc",
 ]
 exclude = []
 
 [workspace.package]
-version = "3.9.0"
+version = "3.9.2"
 edition = "2021"
 authors = ["Ingonyama"]
 homepage = "https://www.ingonyama.com"

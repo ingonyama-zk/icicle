@@ -9,11 +9,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
+include(CMakeDependentOption)
 include(cmake/field.cmake)
 include(cmake/curve.cmake)
 include(cmake/ring.cmake)
 include(cmake/hash.cmake)
-include(CMakeDependentOption)
+include(cmake/pqc.cmake)
 
 # Prevent build if both SANITIZE and CUDA_BACKEND are enabled
 if(SANITIZE AND CUDA_BACKEND)
@@ -24,6 +25,7 @@ endif()
 option(BUILD_TESTS "Build unit test2s. Default=OFF" OFF)
 # Backends: typically CPU is built into the frontend, the rest are DSOs loaded at runtime from installation
 option(CPU_BACKEND "Build CPU backend. Default=ON" ON)
+option(CUDA_PQC_BACKEND "Build CUDA-PQC backend. Default=OFF" OFF)
 # To enable building backends, use the following options: (note they are in private repos)
 option(CUDA_BACKEND "Branch/commit to pull for CUDA backend or `local` if under icicle/backend/cuda. Default=OFF" OFF)
 option(METAL_BACKEND "Branch/commit to pull for METAL backend or `local` if under icicle/backend/metal. Default=OFF" OFF)
@@ -40,6 +42,7 @@ CMAKE_DEPENDENT_OPTION(POSEIDON "Build poseidon hash" OFF "INGO_CI_ENV" ON)
 CMAKE_DEPENDENT_OPTION(POSEIDON2 "Build poseidon2 hash" OFF "INGO_CI_ENV" ON)
 CMAKE_DEPENDENT_OPTION(SUMCHECK "Build sumcheck" OFF "INGO_CI_ENV" ON)
 CMAKE_DEPENDENT_OPTION(FRI "Build fri" OFF "INGO_CI_ENV" ON)
+CMAKE_DEPENDENT_OPTION(PQC "Build pqc" OFF "INGO_CI_ENV" CUDA_PQC_BACKEND) # Post-Quantum Cryptography. TODO: default to ON? do we care about CPU too?
 option(SANITIZE "Enable memory address sanitizer" OFF)
 
 # address sanitizer
@@ -99,6 +102,10 @@ endif()
 
 if (HASH)
   setup_hash_target()
+endif()
+
+if (PQC)
+  setup_pqc_target()
 endif()
 
 if (CPU_BACKEND)

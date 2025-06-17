@@ -2,6 +2,7 @@ pub mod balanced_decomposition;
 pub mod norm;
 #[cfg(feature = "ntt")]
 pub mod ntt;
+pub mod polynomial_ring;
 pub mod program;
 pub mod ring;
 pub mod rns;
