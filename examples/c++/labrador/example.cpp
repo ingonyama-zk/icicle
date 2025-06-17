@@ -4,6 +4,159 @@
 
 using namespace icicle::labrador;
 
+/// @brief Computes the Ajtai input of the given input S. Views input S as matrix of vectors to be committed. Vectors
+/// are arranged in the row major form.
+/// @param ajtai_mat_seed seed for calculating entries of random Ajtai commitment matrix
+/// @param seed_len length of ajtai_mat_seed
+/// @param input_len length of vectors to be committed
+/// @param output_len length of commitments
+/// @param S data to be committed
+/// @param S_len length of data to be committed. If `S_len > input_len` then S_len must be a multiple of input_len. The
+/// input S will be viewed as a row major arrangement of S_len/input_len vectors to be committed.
+/// @return S_len/input_len commitments of length equal to output_len arranged in row major form.
+Tq* ajtai_commitment(
+  const std::byte* ajtai_mat_seed, size_t seed_len, size_t input_len, size_t output_len, const Tq* S, size_t S_len)
+{
+  size_t batch_size = S_len / input_len;
+  // Assert that data_len is a multiple of input_len
+  assert(batch_size * input_len == S_len);
+  // TODO: change this so that A need not be computed and stored
+  std::vector<Tq> A(input_len * output_len);
+  ICICLE_CHECK(random_sampling(ajtai_mat_seed, seed_len, false, {}, A.data(), A.size()));
+
+  std::vector<Tq> comm(batch_size * output_len);
+  ICICLE_CHECK(matmul(S, batch_size, input_len, A.data(), input_len, output_len, {}, comm.data()));
+  return comm.data();
+}
+
+std::vector<Tq> LabradorInstance::aggregate_const_zero_inst(
+  size_t num_aggregation_rounds,
+  size_t JL_out,
+  const std::vector<Tq>& S_hat,
+  const std::vector<Tq>& g_hat,
+  const std::vector<Rq>& Q,
+  const std::vector<Zq>& psi,
+  const std::vector<Zq>& omega)
+{
+  size_t d = Rq::d;
+  const size_t L = const_zero_constraints.size();
+
+  // indexes into a multidim array of dim = r X JL_out X n
+  auto Q_index = [n = this->n, JL_out](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
+  // indexes into multidim arrays: psi[k][l] and omega[k][l]
+  auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
+  auto omega_index = [JL_out](size_t k, size_t l) { return k * JL_out + l; };
+
+  std::vector<Tq> msg3;
+  for (size_t k = 0; k < num_aggregation_rounds; k++) {
+    EqualityInstance new_constraint(r, n);
+
+    // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
+    for (size_t i = 0; i < r; i++) {
+      for (size_t j = 0; j < r; j++) {
+        Tq sum = Tq(); // Initialize to zero polynomial
+
+        // TODO vectorize loop
+        for (size_t l = 0; l < L; l++) {
+          // Get psi^{(k)}(l) as scalar
+          Zq psi_scalar = psi[psi_index(k, l)];
+
+          // Get a_{ij}^{(l)} from const_zero_constraints
+          Tq a_ij_l = const_zero_constraints[l].a[i][j];
+
+          // Scalar multiply and add: sum += psi_scalar * a_ij_l
+          // TODO: use vector_mul<Rq,Zq> and vector_sum<Rq> to aggregate in a vectorized way
+          Tq temp;
+          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, a_ij_l.values, d, {}, temp.values));
+          ICICLE_CHECK(vector_add(sum.values, temp.values, d, {}, sum.values));
+        }
+
+        new_constraint.a[i][j] = sum;
+      }
+    }
+
+    // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
+    for (size_t i = 0; i < r; i++) {
+      // First sum: over const_zero_constraints
+      for (size_t l = 0; l < L; l++) {
+        Zq psi_scalar = psi[psi_index(k, l)];
+
+        for (size_t m = 0; m < n; m++) {
+          Tq phi_il_m = const_zero_constraints[l].phi[i][m];
+
+          // phi_prime[i,m] += psi_scalar * phi_il_m
+          Tq temp;
+          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, phi_il_m.values, d, {}, temp.values));
+          ICICLE_CHECK(
+            vector_add(new_constraint.phi[i][m].values, temp.values, d, {}, new_constraint.phi[i][m].values));
+        }
+      }
+
+      // Second sum: over JL projection rows (256 rows)
+      for (size_t l = 0; l < JL_out; l++) { // JL_out = 256
+        Zq omega_scalar = omega[omega_index(k, l)];
+
+        // TODO: can vectorize the loop?
+        for (size_t m = 0; m < n; m++) {
+          // q_{il} is stored in Q[i][l][:]
+          Rq q_ilm = Q[Q_index(i, l, m)];
+          Tq q_ilm_hat;
+          ICICLE_CHECK(ntt(&q_ilm, 1, NTTDir::kForward, {}, &q_ilm_hat));
+
+          // phi_i_k[m] += omega_scalar * q_ilm
+          Tq temp;
+          ICICLE_CHECK(scalar_mul_vec(&omega_scalar, q_ilm_hat.values, d, {}, temp.values));
+          ICICLE_CHECK(
+            vector_add(new_constraint.phi[i][m].values, temp.values, d, {}, new_constraint.phi[i][m].values));
+        }
+      }
+    }
+
+    // Compute B^{(k)} = (sum_{i<j} (a''_{ij}^{(k)} + a''_{ji}^{(k)}) * g_{ij} + sum_i a''_{ii}^{(k)} * g_{ii})
+    //                       + sum_i <phi'_i^{(k)}, s_i>
+
+    // First part: sum over g terms
+
+    std::vector<Tq> a_vec;
+    // shape a_vec like g
+    for (size_t i = 0; i < r; i++) {
+      for (size_t j = i; j < r; j++) {
+        if (i == j) {
+          a_vec.push_back(new_constraint.a[i][i]);
+        } else {
+          // Off-diagonal: (a''_{ij} + a''_{ji})
+          Tq a_ij = new_constraint.a[i][j];
+          Tq a_ji = new_constraint.a[j][i];
+          Tq temp;
+          ICICLE_CHECK(vector_add(a_ij.values, a_ji.values, d, {}, temp.values));
+          a_vec.push_back(temp);
+        }
+      }
+    }
+
+    ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
+
+    // Second part: sum_i <phi'_i^{(k)}, s_i>
+    for (size_t i = 0; i < r; i++) {
+      // Compute inner product <phi'_i^{(k)}, s_i>
+      Tq prod;
+      ICICLE_CHECK(matmul(new_constraint.phi[i].data(), 1, n, &S_hat[i * n], n, 1, {}, &prod));
+      ICICLE_CHECK(vector_add(new_constraint.b.values, prod.values, d, {}, new_constraint.b.values));
+    }
+
+    // Add the EqualityInstance to LabradorInstance
+    add_equality_constraint(new_constraint);
+
+    // Send B^(k) to the Verifier
+    msg3.push_back(new_constraint.b);
+  }
+  // delete the const zero constraints
+  const_zero_constraints.clear();
+  const_zero_constraints.shrink_to_fit();
+
+  return msg3;
+}
+
 LabradorRecursionRawInstance LabradorProtocol::base_prover(
   LabradorInstance& lab_inst,
   const std::vector<std::byte>& ajtai_seed,
@@ -23,15 +176,12 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
 
   // Step 3: S@A = T
-  // Generate A
-  // TODO: change this so that A need not be computed and stored
-  std::vector<Tq> A(n * kappa);
   std::vector<std::byte> seed_A(ajtai_seed);
   seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
 
-  std::vector<Tq> T_hat(r * kappa);
-  ICICLE_CHECK(matmul(S_hat.data(), r, n, A.data(), n, kappa, {}, T_hat.data()));
+  // Use ajtai_commitment to compute T_hat = S_hat @ A
+  Tq* T_hat_ptr = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, S_hat.data(), r * n);
+  std::vector<Tq> T_hat(T_hat_ptr, T_hat_ptr + r * kappa);
 
   // Step 4: already done
 
@@ -149,8 +299,10 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   // TODO: add serialization to p and JL_i and put them in the placeholder
   std::vector<std::byte> seed2(hasher.output_size());
-  hasher.hash("Placeholder2", 12, {}, seed2.data());
-
+  {
+    const char* hash_input = "Placeholder2";
+    hasher.hash(hash_input, strlen(hash_input), {}, seed2.data());
+  }
   // Step 14: removed
   // Step 15, 16: already done
 
@@ -180,7 +332,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   const size_t L = lab_inst.const_zero_constraints.size();
   const size_t num_aggregation_rounds = std::ceil(128.0 / std::log2(get_q<Zq>()));
 
-  std::vector<Zq> psi_k(num_aggregation_rounds * L), omega_k(num_aggregation_rounds * JL_out);
+  std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
   auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
   auto omega_index = [this](size_t k, size_t l) { return k * JL_out + l; };
@@ -188,126 +340,27 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // sample psi_k
   std::vector<std::byte> psi_seed(seed2);
   psi_seed.push_back(std::byte('1'));
-  ICICLE_CHECK(random_sampling(psi_seed.data(), psi_seed.size(), false, {}, psi_k.data(), psi_k.size()));
+  ICICLE_CHECK(random_sampling(psi_seed.data(), psi_seed.size(), false, {}, psi.data(), psi.size()));
 
   // Sample omega_k
   std::vector<std::byte> omega_seed(seed2);
   omega_seed.push_back(std::byte('2'));
-  ICICLE_CHECK(random_sampling(omega_seed.data(), omega_seed.size(), false, {}, omega_k.data(), omega_k.size()));
+  ICICLE_CHECK(random_sampling(omega_seed.data(), omega_seed.size(), false, {}, omega.data(), omega.size()));
 
   // Step 19: Aggregate ConstZeroInstance constraints
   // For every 0 ≤ k < ceil(128/log(q)) compute aggregated constraints
 
-  std::vector<Zq> msg3;
-  for (size_t k = 0; k < num_aggregation_rounds; k++) {
-    EqualityInstance new_constraint(r, n);
-
-    // Compute a''_{ij} = sum_{l=0}^{L-1} psi^{(k)}(l) * a'_{ij}^{(l)}
-    for (size_t i = 0; i < r; i++) {
-      for (size_t j = 0; j < r; j++) {
-        Tq sum = Tq(); // Initialize to zero polynomial
-
-        // TODO vectorize loop
-        for (size_t l = 0; l < L; l++) {
-          // Get psi^{(k)}(l) as scalar
-          Zq psi_scalar = psi_k[psi_index(k, l)];
-
-          // Get a_{ij}^{(l)} from const_zero_constraints
-          Tq a_ij_l = lab_inst.const_zero_constraints[l].a[i][j];
-
-          // Scalar multiply and add: sum += psi_scalar * a_ij_l
-          // TODO: use vector_mul<Rq,Zq> and vector_sum<Rq> to aggregate in a vectorized way
-          Tq temp;
-          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, a_ij_l.values, d, {}, temp.values));
-          ICICLE_CHECK(vector_add(sum.values, temp.values, d, {}, sum.values));
-        }
-
-        new_constraint.a[i][j] = sum;
-      }
-    }
-
-    // Compute varphi'_i^{(k)} = sum_{l=0}^{L-1} psi^{(k)}(l) * phi'_i^{(l)} + sum_{l=0}^{255} omega^{(k)}(l) * q_{il}
-    for (size_t i = 0; i < r; i++) {
-      // First sum: over const_zero_constraints
-      for (size_t l = 0; l < L; l++) {
-        Zq psi_scalar = psi_k[psi_index(k, l)];
-
-        for (size_t m = 0; m < n; m++) {
-          Tq phi_il_m = lab_inst.const_zero_constraints[l].phi[i][m];
-
-          // phi_prime[i,m] += psi_scalar * phi_il_m
-          Tq temp;
-          ICICLE_CHECK(scalar_mul_vec(&psi_scalar, phi_il_m.values, d, {}, temp.values));
-          ICICLE_CHECK(
-            vector_add(new_constraint.phi[i][m].values, temp.values, d, {}, new_constraint.phi[i][m].values));
-        }
-      }
-
-      // Second sum: over JL projection rows (256 rows)
-      for (size_t l = 0; l < JL_out; l++) { // JL_out = 256
-        Zq omega_scalar = omega_k[omega_index(k, l)];
-
-        // TODO: can vectorize the loop?
-        for (size_t m = 0; m < n; m++) {
-          // q_{il} is stored in Q[i][l][:]
-          Rq q_ilm = Q[Q_index(i, l, m)];
-          Tq q_ilm_hat;
-          ICICLE_CHECK(ntt(&q_ilm, 1, NTTDir::kForward, {}, &q_ilm_hat));
-
-          // phi_i_k[m] += omega_scalar * q_ilm
-          Tq temp;
-          ICICLE_CHECK(scalar_mul_vec(&omega_scalar, q_ilm_hat.values, d, {}, temp.values));
-          ICICLE_CHECK(
-            vector_add(new_constraint.phi[i][m].values, temp.values, d, {}, new_constraint.phi[i][m].values));
-        }
-      }
-    }
-
-    // Compute B^{(k)} = (sum_{i<j} (a''_{ij}^{(k)} + a''_{ji}^{(k)}) * g_{ij} + sum_i a''_{ii}^{(k)} * g_{ii})
-    //                       + sum_i <phi'_i^{(k)}, s_i>
-
-    // First part: sum over g terms
-
-    std::vector<Tq> a_vec;
-    // shape a_vec like g
-    for (size_t i = 0; i < r; i++) {
-      for (size_t j = i; j < r; j++) {
-        if (i == j) {
-          a_vec.push_back(new_constraint.a[i][i]);
-        } else {
-          // Off-diagonal: (a''_{ij} + a''_{ji})
-          Tq a_ij = new_constraint.a[i][j];
-          Tq a_ji = new_constraint.a[j][i];
-          Tq temp;
-          ICICLE_CHECK(vector_add(a_ij.values, a_ji.values, d, {}, temp.values));
-          a_vec.push_back(temp);
-        }
-      }
-    }
-
-    ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
-
-    // Second part: sum_i <phi'_i^{(k)}, s_i>
-    for (size_t i = 0; i < r; i++) {
-      // Compute inner product <phi'_i^{(k)}, s_i>
-      Tq prod;
-      ICICLE_CHECK(matmul(new_constraint.phi[i].data(), 1, n, &S_hat[i * n], n, 1, {}, &prod));
-      ICICLE_CHECK(vector_add(new_constraint.b.values, prod.values, d, {}, new_constraint.b.values));
-    }
-
-    // Add the EqualityInstance to LabradorInstance
-    lab_inst.add_equality_constraint(new_constraint);
-
-    // Send B^(k) to the Verifier
-    msg3.insert(msg3.end(), new_constraint.b.values, new_constraint.b.values + d);
-  }
+  std::vector<Tq> msg3 =
+    lab_inst.aggregate_const_zero_inst(num_aggregation_rounds, JL_out, S_hat, g_hat, Q, psi, omega);
 
   // Step 20: seed3 = hash(seed2, msg3)
   // TODO: add serialization to msg3 and put them in the placeholder
   std::vector<std::byte> seed3(hasher.output_size());
   hasher.hash("Placeholder3", 12, {}, seed3.data());
 
-  proof.insert(proof.end(), msg3.begin(), msg3.end());
+  proof.insert(
+    proof.end(), reinterpret_cast<const Zq*>(msg3.data()),
+    reinterpret_cast<const Zq*>(msg3.data() + num_aggregation_rounds));
 
   // Step 21: Sample random polynomial vectors α using seed3
   // Let K be the number of EqualityInstances in the LabradorInstance
@@ -861,6 +914,7 @@ void prover(LabradorInstance lab_inst, const std::vector<Rq>& S, size_t num_rec)
     auto [new_lab_inst, new_witness] = L.prepare_recursive_problem(ajtai_seed, raw_inst, 1 << 4, 1 << 4);
     lab_inst = new_lab_inst;
     witness = new_witness;
+    ajtai_seed.pop_back();
   }
 }
 
