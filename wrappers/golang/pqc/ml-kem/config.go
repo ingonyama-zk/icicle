@@ -8,12 +8,12 @@ import (
 type MlKemConfig struct {
 	StreamHandle          runtime.Stream
 	IsAsync               bool
-	MessagesOnDevice      bool
-	EntropyOnDevice       bool
-	PublicKeysOnDevice    bool
-	SecretKeysOnDevice    bool
-	CiphertextsOnDevice   bool
-	SharedSecretsOnDevice bool
+	messagesOnDevice      bool
+	entropyOnDevice       bool
+	publicKeysOnDevice    bool
+	secretKeysOnDevice    bool
+	ciphertextsOnDevice   bool
+	sharedSecretsOnDevice bool
 	BatchSize             uint64
 	Ext                   config_extension.ConfigExtensionHandler
 }
