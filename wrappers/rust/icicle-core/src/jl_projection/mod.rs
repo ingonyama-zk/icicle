@@ -2,33 +2,17 @@ use crate::vec_ops::VecOpsConfig;
 use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
 use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
 
-/// JL projection traits and tests
 pub mod tests;
 
 /// Trait for performing Johnson–Lindenstrauss (JL) projection operations
 /// on scalar field elements (e.g., Zq).
 ///
-/// This trait provides two core methods:
-/// - `jl_projection`: projects an input vector to a lower-dimensional output
-///   using a pseudo-random {-1, 0, 1} matrix generated from a seed.
-/// - `get_jl_matrix_rows`: directly generates the raw JL matrix rows
-///   encoded in the scalar ring.
-///
-/// JL projection is deterministic given the same seed and supports host or device memory
-/// representations via the `HostOrDeviceSlice` trait.
+/// This trait defines two core methods:
+/// - `jl_projection` projects an input vector using a pseudo-random matrix
+/// - `get_jl_matrix_rows` generates the raw matrix rows deterministically
 pub trait JLProjection<T: FieldImpl> {
     /// Projects the input vector into a lower-dimensional space using a
-    /// pseudo-random JL matrix with entries in {-1, 0, 1}.
-    ///
-    /// # Parameters
-    /// - `input`: Input slice over field elements (`T`), e.g., a Zq vector.
-    /// - `seed`: Cryptographic seed used to generate the matrix deterministically.
-    /// - `cfg`: Configuration for vector operations (e.g., CPU/GPU backend, parallelism).
-    /// - `output_projection`: Output slice to hold the projected result.
-    ///
-    /// # Returns
-    /// - `Ok(())` on success.
-    /// - `Err(eIcicleError)` if an error occurs (e.g., invalid size or memory layout).
+    /// deterministic JL matrix with values in {-1, 0, 1}.
     fn jl_projection(
         input: &(impl HostOrDeviceSlice<T> + ?Sized),
         seed: &[u8],
@@ -36,18 +20,9 @@ pub trait JLProjection<T: FieldImpl> {
         output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
     ) -> Result<(), eIcicleError>;
 
-    /// Generates raw JL matrix rows encoded in the scalar ring `T` (e.g., Zq).
+    /// Generates raw JL matrix rows over the scalar ring `T`.
     ///
-    /// Each row has `row_size` elements, and values are generated using 2-bit decoding
-    /// of a hash function seeded with the row index and user-provided seed.
-    ///
-    /// # Parameters
-    /// - `seed`: Seed buffer for deterministic row generation.
-    /// - `row_size`: Number of elements per row.
-    /// - `start_row`: Index of the first JL row to generate.
-    /// - `num_rows`: Total number of rows to generate.
-    /// - `cfg`: Vector operation configuration.
-    /// - `output_rows`: Output buffer to hold the generated matrix rows (row-major layout).
+    /// The output is written in row-major order: row 0 | row 1 | ...
     fn get_jl_matrix_rows(
         seed: &[u8],
         row_size: usize,
@@ -58,23 +33,14 @@ pub trait JLProjection<T: FieldImpl> {
     ) -> Result<(), eIcicleError>;
 }
 
-/// Trait for generating JL matrix rows in polynomial ring form (e.g., Rq),
-/// optionally applying a conjugation transformation on each polynomial.
-///
-/// The resulting matrix can be interpreted as rows of structured polynomials,
-/// useful for lattice-based cryptographic protocols or SNARKs.
+/// Trait for JL matrix generation in polynomial ring form (e.g., Rq),
+/// with optional polynomial conjugation.
 pub trait JLProjectionPolyRing<P: PolynomialRing> {
-    /// Generates JL matrix rows grouped as polynomials over `P` (e.g., Rq),
-    /// optionally conjugated as `a(X) ↦ a(X⁻¹) mod (X^d + 1)`.
+    /// Generates JL matrix rows grouped as polynomials.
     ///
-    /// # Parameters
-    /// - `seed`: Cryptographic seed for matrix generation.
-    /// - `row_size`: Number of polynomials per row.
-    /// - `start_row`: First row index.
-    /// - `num_rows`: Number of rows to generate.
-    /// - `conjugate`: If true, applies polynomial conjugation.
-    /// - `cfg`: Configuration for vector operations.
-    /// - `output_rows`: Output buffer for polynomial rows (row-major layout).
+    /// Each row contains `row_size` polynomials of degree `P::DEGREE`.
+    /// If `conjugate = true`, applies the transformation:
+    /// a(X) ↦ a(X⁻¹) mod X^d + 1.
     fn get_jl_matrix_rows_as_polyring(
         seed: &[u8],
         row_size: usize,
@@ -86,11 +52,117 @@ pub trait JLProjectionPolyRing<P: PolynomialRing> {
     ) -> Result<(), eIcicleError>;
 }
 
-// TODO Yuval: floating functions
+/// Projects an input vector using a Johnson–Lindenstrauss (JL) random projection matrix.
+///
+/// This is a generic wrapper over the `JLProjection` trait implemented for `T::Config`,
+/// where `T` is a `FieldImpl`. The input vector is projected into a lower-dimensional
+/// space defined by the shape of `output_projection`. The projection matrix is derived
+/// deterministically from the given `seed`.
+///
+/// # Type Parameters
+/// - `T`: The scalar field element type implementing `FieldImpl`.
+///
+/// # Parameters
+/// - `input`: The input vector to be projected. Must implement `HostOrDeviceSlice<T>`.
+/// - `seed`: Seed for deterministic JL matrix generation.
+/// - `cfg`: Configuration for vector operations (e.g., backend, device).
+/// - `output_projection`: Mutable output vector where projected values are written.
+///
+/// # Returns
+/// - `Ok(())` if the projection succeeded.
+/// - `Err(eIcicleError)` if an error occurred (e.g., invalid dimensions or device mismatch).
+pub fn jl_projection<T>(
+    input: &(impl HostOrDeviceSlice<T> + ?Sized),
+    seed: &[u8],
+    cfg: &VecOpsConfig,
+    output_projection: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>
+where
+    T: FieldImpl,
+    T::Config: JLProjection<T>,
+{
+    T::Config::jl_projection(input, seed, cfg, output_projection)
+}
 
+/// Generates raw rows from a JL projection matrix over the field type `T`.
+///
+/// This function uses the `JLProjection` trait implemented by `T::Config`, where `T` is a scalar field.
+/// The generated matrix rows are pseudo-random, derived from a cryptographic hash of the seed
+/// and row indices. Each row contains `row_size` entries, and `num_rows` rows are generated,
+/// starting from `start_row`.
+///
+/// # Type Parameters
+/// - `T`: The scalar field type implementing `FieldImpl`.
+///
+/// # Parameters
+/// - `seed`: Seed used to deterministically generate matrix content.
+/// - `row_size`: Number of elements in each row (input dimensionality).
+/// - `start_row`: Index of the first row to generate.
+/// - `num_rows`: Number of rows to generate.
+/// - `cfg`: Vector operations configuration (e.g., backend and device preferences).
+/// - `output_rows`: Output buffer where matrix rows are written, in row-major order.
+///
+/// # Returns
+/// - `Ok(())` if the rows were generated successfully.
+/// - `Err(eIcicleError)` if an error occurred (e.g., dimension mismatch or backend failure).
+pub fn get_jl_matrix_rows<T>(
+    seed: &[u8],
+    row_size: usize,
+    start_row: usize,
+    num_rows: usize,
+    cfg: &VecOpsConfig,
+    output_rows: &mut (impl HostOrDeviceSlice<T> + ?Sized),
+) -> Result<(), eIcicleError>
+where
+    T: FieldImpl,
+    T::Config: JLProjection<T>,
+{
+    T::Config::get_jl_matrix_rows(seed, row_size, start_row, num_rows, cfg, output_rows)
+}
+
+/// Generates JL projection matrix rows in polynomial ring form.
+///
+/// This is a generic wrapper over the `JLProjectionPolyRing` trait implementation
+/// for the polynomial type `P`. The projection matrix is generated deterministically
+/// from the provided seed, and each row contains `row_size` polynomials of degree `P::DEGREE`.
+/// The matrix is laid out in row-major order.
+///
+/// If `conjugate` is `true`, each polynomial is transformed via:
+/// `a(X) ↦ a(X⁻¹) mod X^d + 1`
+///
+/// # Type Parameters
+/// - `P`: A type implementing `PolynomialRing` and `JLProjectionPolyRing`.
+///
+/// # Parameters
+/// - `seed`: Seed used to deterministically generate JL matrix content.
+/// - `row_size`: Number of polynomials per row.
+/// - `start_row`: Index of the first JL matrix row to generate.
+/// - `num_rows`: Total number of JL matrix rows to generate.
+/// - `conjugate`: Whether to apply the polynomial conjugation transformation.
+/// - `cfg`: Vector operations configuration (e.g., backend settings, device targeting).
+/// - `output_rows`: Output buffer to hold the resulting polynomials, in row-major order.
+///
+/// # Returns
+/// - `Ok(())` if successful.
+/// - `Err(eIcicleError)` if an error occurs during generation (e.g., backend/device issues).
+pub fn get_jl_matrix_rows_as_polyring<P>(
+    seed: &[u8],
+    row_size: usize,
+    start_row: usize,
+    num_rows: usize,
+    conjugate: bool,
+    cfg: &VecOpsConfig,
+    output_rows: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> Result<(), eIcicleError>
+where
+    P: PolynomialRing + JLProjectionPolyRing<P>,
+{
+    P::get_jl_matrix_rows_as_polyring(seed, row_size, start_row, num_rows, conjugate, cfg, output_rows)
+}
+
+/// Implements JLProjection for a scalar ring type using FFI.
 #[macro_export]
 macro_rules! impl_jl_projection {
-    // implement_for is the type for which we implement the trait.
     ($prefix:literal, $scalar_type:ty, $implement_for:ty) => {
         use icicle_core::jl_projection::JLProjection;
         use icicle_core::vec_ops::VecOpsConfig;
@@ -189,6 +261,7 @@ macro_rules! impl_jl_projection {
     };
 }
 
+/// Implements JLProjectionPolyRing for a polynomial ring type using FFI.
 #[macro_export]
 macro_rules! impl_jl_projection_as_polyring {
     ($prefix: literal, $poly_type: ty) => {
@@ -244,6 +317,7 @@ macro_rules! impl_jl_projection_as_polyring {
     };
 }
 
+/// Implements unit tests for JLProjection on scalar ring types.
 #[macro_export]
 macro_rules! impl_jl_projection_tests {
     ($scalar_type: ident) => {
@@ -271,6 +345,7 @@ macro_rules! impl_jl_projection_tests {
     };
 }
 
+/// Implements unit tests for JLProjectionPolyRing on polynomial ring types.
 #[macro_export]
 macro_rules! impl_jl_projection_polyring_tests {
     ($poly_type: ident) => {

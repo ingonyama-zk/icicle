@@ -1,4 +1,6 @@
-use crate::jl_projection::{JLProjection, JLProjectionPolyRing};
+use crate::jl_projection::{
+    get_jl_matrix_rows, get_jl_matrix_rows_as_polyring, jl_projection, JLProjection, JLProjectionPolyRing,
+};
 use crate::polynomial_ring::PolynomialRing;
 use crate::traits::{Arithmetic, FieldImpl};
 use crate::vec_ops::VecOpsConfig;
@@ -27,7 +29,7 @@ where
     rand::thread_rng().fill(&mut seed);
 
     // Step 1: Run JL projection
-    F::Config::jl_projection(
+    jl_projection(
         HostSlice::from_slice(&input),
         &seed,
         &cfg,
@@ -36,7 +38,7 @@ where
     .expect("JL projection failed");
 
     // Step 2: Get JL matrix rows
-    F::Config::get_jl_matrix_rows(
+    get_jl_matrix_rows(
         &seed,
         input_size,
         0,
@@ -140,7 +142,7 @@ where
 
         // Step 3: Get polyring JL rows from API
         let mut actual = vec![Poly::zero(); total_polys];
-        Poly::get_jl_matrix_rows_as_polyring(
+        get_jl_matrix_rows_as_polyring(
             &seed,
             row_size,
             0,
