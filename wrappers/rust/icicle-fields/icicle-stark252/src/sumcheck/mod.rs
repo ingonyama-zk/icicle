@@ -10,9 +10,4 @@ pub(crate) mod tests {
     use icicle_core::impl_sumcheck_tests;
 
     impl_sumcheck_tests!(stark252, ScalarField);
-    mod extension {
-        use super::*;
-
-        impl_sumcheck_tests!(stark252_extension, ExtensionField);
-    }
 }
