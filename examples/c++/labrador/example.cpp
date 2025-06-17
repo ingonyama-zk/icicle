@@ -29,7 +29,7 @@ Tq* ajtai_commitment(
   return comm.data();
 }
 
-std::vector<Tq> LabradorInstance::aggregate_const_zero_inst(
+std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
   size_t num_aggregation_rounds,
   size_t JL_out,
   const std::vector<Tq>& S_hat,
@@ -155,6 +155,65 @@ std::vector<Tq> LabradorInstance::aggregate_const_zero_inst(
   const_zero_constraints.shrink_to_fit();
 
   return msg3;
+}
+
+void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat)
+{ // Step 22: Say the EqualityInstances in LabradorInstance are:
+  // [{a_{ij}^{(k)}; 0 ≤ i,j < r} ⊂ T_q, b^{(k)} ∈ T_q, {φ_i^{(k)} : 0 ≤ i < r} ⊂ T_q^n : 0 ≤ k < K]
+
+  // For 0 ≤ i,j < r, the Prover computes a''_{ij}:
+  const size_t K = equality_constraints.size();
+  const size_t d = Rq::d;
+  std::vector<std::vector<Tq>> a_final(r, std::vector<Tq>(r, Tq()));
+  for (size_t i = 0; i < r; i++) {
+    for (size_t j = 0; j < r; j++) {
+      // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)} (multiplication in T_q)
+      for (size_t k = 0; k < K; k++) {
+        // Get a_{ij}^{(k)} from equality constraint k (already in T_q)
+        Tq a_ij_k = equality_constraints[k].a[i][j];
+
+        // Multiply by α_k and add to sum (T_q operations)
+        Tq temp;
+        ICICLE_CHECK(vector_mul(alpha_hat[k].values, a_ij_k.values, d, {}, temp.values));
+        ICICLE_CHECK(vector_add(a_final[i][j].values, temp.values, d, {}, a_final[i][j].values));
+      }
+    }
+  }
+
+  // For 0 ≤ i < r, the Prover computes φ'_i:
+  std::vector<std::vector<Tq>> phi_final(r, std::vector<Tq>(n, Tq()));
+  for (size_t i = 0; i < r; i++) {
+    for (size_t m = 0; m < n; m++) {
+      // φ'_i[m] = ∑_{k=0}^{K-1} α_k * φ_i^{(k)}[m] (multiplication in T_q)
+      for (size_t k = 0; k < K; k++) {
+        // Get φ_i^{(k)}[m] from equality constraint k (already in T_q)
+        Tq phi_i_k_m = equality_constraints[k].phi[i][m];
+
+        // Multiply by α_k and add to sum (T_q operations)
+        Tq temp;
+        ICICLE_CHECK(vector_mul(alpha_hat[k].values, phi_i_k_m.values, d, {}, temp.values));
+        ICICLE_CHECK(vector_add(phi_final[i][m].values, temp.values, d, {}, phi_final[i][m].values));
+      }
+    }
+  }
+
+  // The Prover also computes b':
+  Tq b_final;
+
+  for (size_t k = 0; k < K; k++) {
+    // Get b^{(k)} from equality constraint k (already in T_q)
+    Tq b_k = equality_constraints[k].b;
+
+    // Multiply by α_k and add to sum (T_q operations)
+    Tq temp;
+    ICICLE_CHECK(vector_mul(alpha_hat[k].values, b_k.values, d, {}, temp.values));
+    ICICLE_CHECK(vector_add(b_final.values, temp.values, d, {}, b_final.values));
+  }
+
+  // roll a_final, phi_final, b_final into a single EqualityInstance and put it in the equality_constraints
+  EqualityInstance final_const(r, n, a_final, phi_final, b_final);
+
+  equality_constraints = {final_const};
 }
 
 LabradorRecursionRawInstance LabradorProtocol::base_prover(
@@ -351,7 +410,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // For every 0 ≤ k < ceil(128/log(q)) compute aggregated constraints
 
   std::vector<Tq> msg3 =
-    lab_inst.aggregate_const_zero_inst(num_aggregation_rounds, JL_out, S_hat, g_hat, Q, psi, omega);
+    lab_inst.agg_const_zero_constraints(num_aggregation_rounds, JL_out, S_hat, g_hat, Q, psi, omega);
 
   // Step 20: seed3 = hash(seed2, msg3)
   // TODO: add serialization to msg3 and put them in the placeholder
@@ -371,58 +430,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   alpha_seed.push_back(std::byte('1'));
   ICICLE_CHECK(random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, alpha_hat.data(), K));
 
-  // Step 22: Say the EqualityInstances in LabradorInstance are:
-  // [{a_{ij}^{(k)}; 0 ≤ i,j < r} ⊂ T_q, b^{(k)} ∈ T_q, {φ_i^{(k)} : 0 ≤ i < r} ⊂ T_q^n : 0 ≤ k < K]
-
-  // For 0 ≤ i,j < r, the Prover computes a''_{ij}:
-  std::vector<std::vector<Tq>> a_final(r, std::vector<Tq>(r, Tq()));
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = 0; j < r; j++) {
-      // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)} (multiplication in T_q)
-      for (size_t k = 0; k < K; k++) {
-        // Get a_{ij}^{(k)} from equality constraint k (already in T_q)
-        Tq a_ij_k = lab_inst.equality_constraints[k].a[i][j];
-
-        // Multiply by α_k and add to sum (T_q operations)
-        Tq temp;
-        ICICLE_CHECK(vector_mul(alpha_hat[k].values, a_ij_k.values, d, {}, temp.values));
-        ICICLE_CHECK(vector_add(a_final[i][j].values, temp.values, d, {}, a_final[i][j].values));
-      }
-    }
-  }
-
-  // For 0 ≤ i < r, the Prover computes φ'_i:
-  std::vector<std::vector<Tq>> phi_final(r, std::vector<Tq>(n, Tq()));
-  for (size_t i = 0; i < r; i++) {
-    for (size_t m = 0; m < n; m++) {
-      // φ'_i[m] = ∑_{k=0}^{K-1} α_k * φ_i^{(k)}[m] (multiplication in T_q)
-      for (size_t k = 0; k < K; k++) {
-        // Get φ_i^{(k)}[m] from equality constraint k (already in T_q)
-        Tq phi_i_k_m = lab_inst.equality_constraints[k].phi[i][m];
-
-        // Multiply by α_k and add to sum (T_q operations)
-        Tq temp;
-        ICICLE_CHECK(vector_mul(alpha_hat[k].values, phi_i_k_m.values, d, {}, temp.values));
-        ICICLE_CHECK(vector_add(phi_final[i][m].values, temp.values, d, {}, phi_final[i][m].values));
-      }
-    }
-  }
-
-  // The Prover also computes b':
-  Tq b_final;
-
-  for (size_t k = 0; k < K; k++) {
-    // Get b^{(k)} from equality constraint k (already in T_q)
-    Tq b_k = lab_inst.equality_constraints[k].b;
-
-    // Multiply by α_k and add to sum (T_q operations)
-    Tq temp;
-    ICICLE_CHECK(vector_mul(alpha_hat[k].values, b_k.values, d, {}, temp.values));
-    ICICLE_CHECK(vector_add(b_final.values, temp.values, d, {}, b_final.values));
-  }
-
-  // roll a_final, phi_final, b_final into a single EqualityInstance
-  EqualityInstance final_const(r, n, a_final, phi_final, b_final);
+  // Step 22:
+  lab_inst.agg_equality_constraints(alpha_hat);
 
   // Step 23: For 0 ≤ i ≤ j < r, the Prover computes:
   // h_{ij} = 2^{-1}(<φ'_i, s_j> + <φ'_j, s_i>) ∈ R_q
@@ -432,6 +441,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Then, H = 2^{-1}(Λ @ S^T + (Λ @ S^T)^T)
 
   // Construct Lambda_hat
+  std::vector<std::vector<Tq>> phi_final = lab_inst.equality_constraints[0].phi;
   std::vector<Tq> Lambda_hat(r * n);
   for (size_t i = 0; i < r; i++) {
     for (size_t j = 0; j < n; j++) {
@@ -526,7 +536,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
       ICICLE_CHECK(vector_add(z_hat[i].values, temp.values, d, {}, z_hat[i].values));
     }
   }
-  LabradorRecursionRawInstance raw_inst{final_const, u1, u2, challenge_hat, z_hat, T_tilde, g_tilde, H_tilde};
+  LabradorRecursionRawInstance raw_inst{
+    lab_inst.equality_constraints[0], u1, u2, challenge_hat, z_hat, T_tilde, g_tilde, H_tilde};
 
   return raw_inst;
 }

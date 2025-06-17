@@ -70,7 +70,7 @@ struct LabradorInstance {
   // Add a ConstZeroInstance
   void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
 
-  std::vector<Tq> aggregate_const_zero_inst(
+  std::vector<Tq> agg_const_zero_constraints(
     size_t num_aggregation_rounds,
     size_t JL_out,
     const std::vector<Tq>& S_hat,
@@ -78,6 +78,8 @@ struct LabradorInstance {
     const std::vector<Rq>& Q,
     const std::vector<Zq>& psi,
     const std::vector<Zq>& omega);
+
+  void agg_equality_constraints(const std::vector<Tq>& alpha_hat);
 };
 
 struct LabradorRecursionRawInstance;
