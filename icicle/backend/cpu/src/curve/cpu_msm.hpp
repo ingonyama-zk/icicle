@@ -61,7 +61,6 @@ public:
     m_workers_buckets.resize(m_nof_workers);
     m_workers_buckets_busy.resize(m_nof_workers);
     for (int worker_i = 0; worker_i < m_nof_workers; worker_i++) {
-      ICICLE_LOG_INFO << "worker " << worker_i;
       m_workers_buckets[worker_i].resize(m_nof_total_buckets);
       m_workers_buckets_busy[worker_i].resize(m_nof_total_buckets);
     }
@@ -148,7 +147,6 @@ public:
 #ifdef G2_ENABLED
     else if (std::is_same_v<A, g2_affine_t>) {
       if (cpu_vendor == "ARM") {
-        ICICLE_LOG_INFO << "CPU VENDOR ARM";
         DecisionTree arm_tree = DecisionTree(
           NOF_FEATURES_C_TREE_ARM_G2, thresholds_c_tree_arm_g2, indices_c_tree_arm_g2, left_childs_c_tree_arm_g2,
           right_childs_c_tree_arm_g2, class_predictions_c_tree_arm_g2);
@@ -159,7 +157,6 @@ public:
           left_childs_c_tree_intel_g2, right_childs_c_tree_intel_g2, class_predictions_c_tree_intel_g2);
         optimal_c = intel_tree.predict(features);
       } else { // AMD
-        ICICLE_LOG_INFO << "CPU VENDOR ELSE";
         DecisionTree amd_tree = DecisionTree(
           NOF_FEATURES_C_TREE_AMD_G2, thresholds_c_tree_amd_g2, indices_c_tree_amd_g2, left_childs_c_tree_amd_g2,
           right_childs_c_tree_amd_g2, class_predictions_c_tree_amd_g2);
