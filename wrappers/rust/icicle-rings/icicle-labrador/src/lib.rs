@@ -1,4 +1,5 @@
 pub mod balanced_decomposition;
+pub mod jl_projection;
 pub mod norm;
 pub mod ntt;
 pub mod polynomial_ring;
