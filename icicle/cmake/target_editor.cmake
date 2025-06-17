@@ -31,7 +31,6 @@ function(handle_ring TARGET)
     src/balanced_decomposition.cpp
     src/norm.cpp
     src/jl_projection.cpp)
-  target_link_libraries(${TARGET} INTERFACE icicle_hash)
 endfunction()
 
 function(handle_ntt TARGET FEATURE_LIST)
