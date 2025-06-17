@@ -4,6 +4,10 @@ use icicle_core::impl_sumcheck;
 impl_sumcheck!("koalabear", koalabear, ScalarField, ScalarCfg);
 impl_sumcheck!("koalabear_extension", koalabear_extension, ExtensionField, ExtensionCfg);
 
+// Re-export types from the koalabear module
+pub use koalabear::{SumcheckWrapper as ScalarSumcheckWrapper, SumcheckProof as ScalarSumcheckProof};
+pub use koalabear_extension::{SumcheckWrapper as ExtensionSumcheckWrapper, SumcheckProof as ExtensionSumcheckProof};
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::koalabear::SumcheckWrapper;

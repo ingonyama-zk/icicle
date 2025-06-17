@@ -4,6 +4,10 @@ use icicle_core::impl_sumcheck;
 impl_sumcheck!("m31", m31, ScalarField, ScalarCfg);
 impl_sumcheck!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);
 
+// Re-export types from the m31 module
+pub use m31::{SumcheckWrapper as ScalarSumcheckWrapper, SumcheckProof as ScalarSumcheckProof};
+pub use m31_extension::{SumcheckWrapper as ExtensionSumcheckWrapper, SumcheckProof as ExtensionSumcheckProof};
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::m31::SumcheckWrapper;
