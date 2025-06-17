@@ -5,8 +5,8 @@ impl_sumcheck!("koalabear", koalabear, ScalarField, ScalarCfg);
 impl_sumcheck!("koalabear_extension", koalabear_extension, ExtensionField, ExtensionCfg);
 
 // Re-export types from the koalabear module
-pub use koalabear::{SumcheckWrapper as ScalarSumcheckWrapper, SumcheckProof as ScalarSumcheckProof};
-pub use koalabear_extension::{SumcheckWrapper as ExtensionSumcheckWrapper, SumcheckProof as ExtensionSumcheckProof};
+pub use koalabear::{SumcheckProof as ScalarSumcheckProof, SumcheckWrapper as ScalarSumcheckWrapper};
+pub use koalabear_extension::{SumcheckProof as ExtensionSumcheckProof, SumcheckWrapper as ExtensionSumcheckWrapper};
 
 #[cfg(test)]
 pub(crate) mod tests {

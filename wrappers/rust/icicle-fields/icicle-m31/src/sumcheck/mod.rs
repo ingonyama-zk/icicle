@@ -5,8 +5,8 @@ impl_sumcheck!("m31", m31, ScalarField, ScalarCfg);
 impl_sumcheck!("m31_extension", m31_extension, ExtensionField, ExtensionCfg);
 
 // Re-export types from the m31 module
-pub use m31::{SumcheckWrapper as ScalarSumcheckWrapper, SumcheckProof as ScalarSumcheckProof};
-pub use m31_extension::{SumcheckWrapper as ExtensionSumcheckWrapper, SumcheckProof as ExtensionSumcheckProof};
+pub use m31::{SumcheckProof as ScalarSumcheckProof, SumcheckWrapper as ScalarSumcheckWrapper};
+pub use m31_extension::{SumcheckProof as ExtensionSumcheckProof, SumcheckWrapper as ExtensionSumcheckWrapper};
 
 #[cfg(test)]
 pub(crate) mod tests {

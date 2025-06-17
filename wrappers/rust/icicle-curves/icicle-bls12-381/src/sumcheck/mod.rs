@@ -4,7 +4,7 @@ use icicle_core::impl_sumcheck;
 impl_sumcheck!("bls12_381", bls12_381, ScalarField, ScalarCfg);
 
 // Re-export types from the bls12_381 module
-pub use bls12_381::{SumcheckWrapper, SumcheckProof};
+pub use bls12_381::{SumcheckProof, SumcheckWrapper};
 
 #[cfg(test)]
 pub(crate) mod tests {

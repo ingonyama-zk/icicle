@@ -5,8 +5,8 @@ impl_sumcheck!("babybear", babybear, ScalarField, ScalarCfg);
 impl_sumcheck!("babybear_extension", babybear_extension, ExtensionField, ExtensionCfg);
 
 // Re-export types from the babybear module
-pub use babybear::{SumcheckWrapper as ScalarSumcheckWrapper, SumcheckProof as ScalarSumcheckProof};
-pub use babybear_extension::{SumcheckWrapper as ExtensionSumcheckWrapper, SumcheckProof as ExtensionSumcheckProof};
+pub use babybear::{SumcheckProof as ScalarSumcheckProof, SumcheckWrapper as ScalarSumcheckWrapper};
+pub use babybear_extension::{SumcheckProof as ExtensionSumcheckProof, SumcheckWrapper as ExtensionSumcheckWrapper};
 
 #[cfg(test)]
 pub(crate) mod tests {

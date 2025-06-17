@@ -10,8 +10,8 @@ impl_sumcheck!(
 );
 
 // Re-export types from the goldilocks module
-pub use goldilocks::{SumcheckWrapper as ScalarSumcheckWrapper, SumcheckProof as ScalarSumcheckProof};
-pub use goldilocks_extension::{SumcheckWrapper as ExtensionSumcheckWrapper, SumcheckProof as ExtensionSumcheckProof};
+pub use goldilocks::{SumcheckProof as ScalarSumcheckProof, SumcheckWrapper as ScalarSumcheckWrapper};
+pub use goldilocks_extension::{SumcheckProof as ExtensionSumcheckProof, SumcheckWrapper as ExtensionSumcheckWrapper};
 
 #[cfg(test)]
 pub(crate) mod tests {

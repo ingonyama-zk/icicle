@@ -4,7 +4,7 @@ use icicle_core::impl_sumcheck;
 impl_sumcheck!("grumpkin", grumpkin, ScalarField, ScalarCfg);
 
 // Re-export types from the grumpkin module
-pub use grumpkin::{SumcheckWrapper, SumcheckProof};
+pub use grumpkin::{SumcheckProof, SumcheckWrapper};
 
 #[cfg(test)]
 pub(crate) mod tests {
