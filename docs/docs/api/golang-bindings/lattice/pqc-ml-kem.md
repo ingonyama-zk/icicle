@@ -6,7 +6,7 @@ For an in-depth explanation of the primitive, performance advice and backend-spe
 
 ## Overview
 
-The `mlkem` package provides Golang bindings for Icicle's batched **ML-KEM** implementation (Kyber). It exposes three main functions – **`Keygen`**, **`Encapsulate`** and **`Decapsulate`** – that work on host or device memory.
+The `mlkem` package provides Golang bindings for ICICLE's batched **ML-KEM** implementation (Kyber). It exposes three main functions – **`Keygen`**, **`Encapsulate`** and **`Decapsulate`** – that work on host or device memory.
 
 ---
 
