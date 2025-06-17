@@ -1,4 +1,4 @@
-use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
+use crate::field::{ScalarCfg, ScalarField};
 use icicle_core::impl_sumcheck;
 
 impl_sumcheck!("stark252", stark252, ScalarField, ScalarCfg);

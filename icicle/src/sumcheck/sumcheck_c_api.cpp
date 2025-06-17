@@ -356,18 +356,53 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_challenge_vector)(
     ICICLE_LOG_ERROR << "Cannot get challenge vector from a null Sumcheck instance.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  if (!challenge_vector_size) {
-    ICICLE_LOG_ERROR << "challenge_vector_size pointer is null.";
-    return eIcicleError::INVALID_POINTER;
+  if (!challenge_vector_size || challenge_vector_size == 0) {
+    ICICLE_LOG_ERROR << "challenge_vector_size is null or zero.";
+    return eIcicleError::INVALID_ARGUMENT;
   }
 
   ICICLE_LOG_DEBUG << "Getting challenge vector from Sumcheck instance from FFI";
   const auto& vec = sumcheck_handle->get_challenge_vector();
 
-  *challenge_vector_size = vec.size();
-  if (challenge_vector != nullptr && !vec.empty()) {
-    std::memcpy(challenge_vector, vec.data(), vec.size() * sizeof(scalar_t));
+  if (challenge_vector == nullptr) {
+    ICICLE_LOG_ERROR << "challenge_vector pointer is null.";
+    return eIcicleError::INVALID_POINTER;
   }
+
+  std::memcpy(challenge_vector, vec.data(), *challenge_vector_size * sizeof(scalar_t));
+
+  return eIcicleError::SUCCESS;
+}
+
+/**
+ * @brief Gets the size of the challenge vector from a Sumcheck instance.
+ *
+ * The challenge vector contains the alpha values used in each round of the sumcheck protocol.
+ * This function retrieves the size of this vector without actually copying the data.
+ *
+ * @param sumcheck_handle Pointer to the Sumcheck instance to get the challenge size from.
+ * @param challenge_size Pointer to store the size of the challenge vector.
+ * @return eIcicleError indicating the success or failure of the operation.
+ *         - SUCCESS if the challenge size was retrieved successfully
+ *         - INVALID_ARGUMENT if sumcheck_handle is null
+ *         - INVALID_POINTER if challenge_size is null
+ */
+
+eIcicleError
+CONCAT_EXPAND(ICICLE_FFI_PREFIX, sumcheck_get_challenge_size)(SumcheckHandle* sumcheck_handle, size_t* challenge_size)
+{
+  if (!sumcheck_handle) {
+    ICICLE_LOG_ERROR << "Cannot get challenge size from a null Sumcheck instance.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+  if (!challenge_size) {
+    ICICLE_LOG_ERROR << "challenge_size pointer is null.";
+    return eIcicleError::INVALID_POINTER;
+  }
+
+  ICICLE_LOG_DEBUG << "Getting challenge size from Sumcheck instance from FFI";
+  const auto& vec = sumcheck_handle->get_challenge_vector();
+  *challenge_size = vec.size();
 
   return eIcicleError::SUCCESS;
 }
@@ -396,18 +431,21 @@ eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, extension_icicle_sumcheck_get_chal
     ICICLE_LOG_ERROR << "Cannot get challenge vector from a null Sumcheck instance.";
     return eIcicleError::INVALID_ARGUMENT;
   }
-  if (!challenge_vector_size) {
-    ICICLE_LOG_ERROR << "challenge_vector_size pointer is null.";
-    return eIcicleError::INVALID_POINTER;
+  if (!challenge_vector_size || challenge_vector_size == 0) {
+    ICICLE_LOG_ERROR << "challenge_vector_size is null or zero.";
+    return eIcicleError::INVALID_ARGUMENT;
   }
 
   ICICLE_LOG_DEBUG << "Getting challenge vector from Sumcheck instance from FFI";
   const auto& vec = sumcheck_handle->get_challenge_vector();
 
-  *challenge_vector_size = vec.size();
-  if (challenge_vector != nullptr && !vec.empty()) {
-    std::memcpy(challenge_vector, vec.data(), vec.size() * sizeof(extension_t));
+  if (challenge_vector == nullptr) {
+    ICICLE_LOG_ERROR << "challenge_vector pointer is null.";
+    return eIcicleError::INVALID_POINTER;
   }
+
+  *challenge_vector_size = vec.size();
+  std::memcpy(challenge_vector, vec.data(), *challenge_vector_size * sizeof(extension_t));
 
   return eIcicleError::SUCCESS;
 }

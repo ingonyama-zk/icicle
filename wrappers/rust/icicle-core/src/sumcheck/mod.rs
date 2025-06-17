@@ -305,6 +305,12 @@ macro_rules! impl_sumcheck {
                     challenge_vector_size: &mut usize,
                 ) -> eIcicleError;
 
+                #[link_name = concat!($field_prefix, "_sumcheck_get_challenge_size")]
+                fn icicle_sumcheck_get_challenge_size(
+                    handle: SumcheckHandle,
+                    challenge_size: *mut usize,
+                ) -> eIcicleError;
+
                 #[link_name = concat!($field_prefix, "_sumcheck_proof_create")]
                 fn icicle_sumcheck_proof_create(
                     polys: *const *const $field,
@@ -436,22 +442,20 @@ macro_rules! impl_sumcheck {
                 }
 
                 fn get_challenge_vector(&self) -> Result<Vec<$field>, eIcicleError> {
-                    let mut challenge_len = 0usize;
+                    let mut challenge_size = 0usize;
 
-                    let err = unsafe {
-                        icicle_sumcheck_get_challenge_vector(self.handle, std::ptr::null_mut(), &mut challenge_len)
-                    };
+                    let err = unsafe { icicle_sumcheck_get_challenge_size(self.handle, &mut challenge_size) };
 
                     if err != eIcicleError::Success {
                         return Err(err);
                     }
                     // Initialize the challenge vector with zeros; will be resized after getting the actual size from FFI
-                    let mut challenge_vector = vec![$field::zero(); challenge_len];
+                    let mut challenge_vector = vec![$field::zero(); challenge_size];
                     let err = unsafe {
                         icicle_sumcheck_get_challenge_vector(
                             self.handle,
                             challenge_vector.as_mut_ptr(),
-                            &mut challenge_len,
+                            &mut challenge_size,
                         )
                     };
 
@@ -483,10 +487,10 @@ macro_rules! impl_sumcheck {
             }
 
             /***************** SumcheckProof *************************/
-            pub type SumcheckProofHandle = *const c_void;
+            type SumcheckProofHandle = *const c_void;
 
             pub struct SumcheckProof {
-                handle: SumcheckProofHandle,
+                pub(crate) handle: SumcheckProofHandle,
             }
 
             impl SumcheckProofOps<$field> for SumcheckProof {
@@ -542,12 +546,6 @@ macro_rules! impl_sumcheck {
                             let _ = icicle_sumcheck_proof_delete(self.handle);
                         }
                     }
-                }
-            }
-
-            impl Handle for SumcheckProof {
-                fn handle(&self) -> *const c_void {
-                    self.handle
                 }
             }
 
