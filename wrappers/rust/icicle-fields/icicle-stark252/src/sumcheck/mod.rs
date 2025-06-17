@@ -2,7 +2,6 @@ use crate::field::{ExtensionCfg, ExtensionField, ScalarCfg, ScalarField};
 use icicle_core::impl_sumcheck;
 
 impl_sumcheck!("stark252", stark252, ScalarField, ScalarCfg);
-impl_sumcheck!("stark252_extension", stark252_extension, ExtensionField, ExtensionCfg);
 
 #[cfg(test)]
 pub(crate) mod tests {
