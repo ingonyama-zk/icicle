@@ -174,6 +174,11 @@ export default {
         },
         {
           type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/cpp/lattice/pqc_ml_kem",
+        },
+        {
+          type: "doc",
           label: "Serialization",
           id: "api/cpp/serialization",
         },
@@ -290,6 +295,11 @@ export default {
           type: "doc",
           label: "FRI",
           id: "api/rust-bindings/fri",
+        },
+        {
+          type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/rust-bindings/lattice/pqc-ml-kem",
         },
         {
           type: "doc",
