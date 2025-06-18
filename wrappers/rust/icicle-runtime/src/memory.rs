@@ -250,6 +250,14 @@ impl<T> HostSlice<T> {
         self.0
             .iter_mut()
     }
+
+    pub unsafe fn from_raw_parts<'a>(ptr: *const T, len: usize) -> &'a HostSlice<T> {
+        &*(std::slice::from_raw_parts(ptr, len) as *const [T] as *const HostSlice<T>)
+    }
+
+    pub unsafe fn from_raw_parts_mut<'a>(ptr: *mut T, len: usize) -> &'a mut HostSlice<T> {
+        &mut *(std::slice::from_raw_parts_mut(ptr, len) as *mut [T] as *mut HostSlice<T>)
+    }
 }
 
 impl<T> DeviceSlice<T> {

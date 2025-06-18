@@ -1,11 +1,11 @@
-use crate::polynomial_ring::PolynomialRing;
+use crate::polynomial_ring::{flatten_polynomials_host_slice, PolynomialRing};
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
     traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceSlice, DeviceVec, HostOrDeviceSlice, HostSlice},
     stream::IcicleStream,
 };
 
@@ -209,10 +209,41 @@ where
     assert_eq!(poly.values(), input.as_slice());
 }
 
-pub fn check_vector_alloc<P: PolynomialRing>()
-where
-    P: Clone,
-{
+pub fn check_vector_alloc<P: PolynomialRing>() {
     let vec = vec![P::zero(); 10];
     assert_eq!(vec.len(), 10);
+}
+
+/// Verifies that flattening a slice of polynomials yields a correctly sized,
+/// reinterpreted slice of base field elements.
+pub fn check_polyring_flatten_host_memory<P>()
+where
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl,
+{
+    // Generate a vector of one random polynomial
+    let polynomials = P::generate_random(1);
+    let poly_slice = HostSlice::from_slice(&polynomials);
+
+    // Flatten the polynomial slice to a scalar slice
+    let scalar_slice = flatten_polynomials_host_slice(poly_slice);
+
+    // Ensure the flattened slice has the correct number of base elements
+    let expected_len = poly_slice.len() * P::DEGREE;
+    assert_eq!(
+        scalar_slice.len(),
+        expected_len,
+        "Expected flattened length {}, got {}",
+        expected_len,
+        scalar_slice.len()
+    );
+
+    // Ensure the underlying memory was reinterpreted, not copied
+    unsafe {
+        assert_eq!(
+            poly_slice.as_ptr() as *const P::Base,
+            scalar_slice.as_ptr(),
+            "Pointer mismatch: flattening should preserve memory layout"
+        );
+    }
 }
