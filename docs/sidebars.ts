@@ -234,6 +234,11 @@ export default {
           label: "Merkle-Tree",
           id: "api/golang-bindings/merkle",
         },
+        {
+          type: "doc",
+          label: "PQC ML-KEM",
+          id: "api/golang-bindings/lattice/pqc-ml-kem",
+        },
       ],
     },
     {
