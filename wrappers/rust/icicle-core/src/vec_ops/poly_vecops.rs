@@ -1,9 +1,167 @@
-use super::{VecOps, VecOpsConfig};
-use crate::{polynomial_ring::{PolynomialRing, flatt}, traits::FieldImpl};
-use icicle_runtime::{errors::eIcicleError, memory::HostOrDeviceSlice};
+use super::{add_scalars, mul_scalars, scalar_mul, sub_scalars, sum_scalars, VecOps, VecOpsConfig};
+use crate::{polynomial_ring::PolynomialRing, traits::FieldImpl};
+use icicle_runtime::{
+    errors::eIcicleError,
+    memory::{DeviceSlice, HostOrDeviceSlice, HostSlice},
+    stream::IcicleStream,
+};
+
+// TODO Yuval: should we expose those flatten methods too?
+
+enum UnifiedSlice<'a, T: 'a> {
+    Host(&'a HostSlice<T>),
+    Device(&'a DeviceSlice<T>),
+}
+
+enum UnifiedSliceMut<'a, T: 'a> {
+    Host(&'a mut HostSlice<T>),
+    Device(&'a mut DeviceSlice<T>),
+}
+
+/// SAFETY: Caller must ensure layout of P as [P::Base; DEGREE]
+unsafe fn flatten_polyring_slice<P>(input: &(impl HostOrDeviceSlice<P> + ?Sized)) -> UnifiedSlice<'_, P::Base>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+{
+    let len = input.len();
+    let flat_len = len * P::DEGREE;
+    let ptr = input.as_ptr() as *const P::Base;
+
+    if input.is_on_device() {
+        UnifiedSlice::Device(DeviceSlice::from_raw_parts(ptr, flat_len))
+    } else {
+        UnifiedSlice::Host(HostSlice::from_raw_parts(ptr, flat_len))
+    }
+}
+
+unsafe fn flatten_polyring_slice_mut<P>(
+    input: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+) -> UnifiedSliceMut<'_, P::Base>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+{
+    let len = input.len();
+    let flat_len = len * P::DEGREE;
+    let ptr = input.as_mut_ptr() as *mut P::Base;
+
+    if input.is_on_device() {
+        UnifiedSliceMut::Device(DeviceSlice::from_raw_parts_mut(ptr, flat_len))
+    } else {
+        UnifiedSliceMut::Host(HostSlice::from_raw_parts_mut(ptr, flat_len))
+    }
+}
+
+impl<'a, T> HostOrDeviceSlice<T> for UnifiedSlice<'a, T> {
+    fn is_on_device(&self) -> bool {
+        match self {
+            UnifiedSlice::Device(d) => d.is_on_device(),
+            UnifiedSlice::Host(h) => h.is_on_device(),
+        }
+    }
+
+    fn is_on_active_device(&self) -> bool {
+        match self {
+            UnifiedSlice::Device(d) => d.is_on_active_device(),
+            UnifiedSlice::Host(h) => h.is_on_active_device(),
+        }
+    }
+
+    unsafe fn as_ptr(&self) -> *const T {
+        match self {
+            UnifiedSlice::Device(d) => d.as_ptr(),
+            UnifiedSlice::Host(h) => h.as_ptr(),
+        }
+    }
+
+    unsafe fn as_mut_ptr(&mut self) -> *mut T {
+        panic!("Cannot get mutable pointer from immutable UnifiedSlice")
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            UnifiedSlice::Device(d) => d.len(),
+            UnifiedSlice::Host(h) => h.len(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            UnifiedSlice::Device(d) => d.is_empty(),
+            UnifiedSlice::Host(h) => h.is_empty(),
+        }
+    }
+
+    fn memset(&mut self, _: u8, _: usize) -> Result<(), eIcicleError> {
+        panic!("Cannot memset immutable UnifiedSlice");
+    }
+
+    fn memset_async(&mut self, _: u8, _: usize, _: &IcicleStream) -> Result<(), eIcicleError> {
+        panic!("Cannot memset_async immutable UnifiedSlice");
+    }
+}
+
+impl<'a, T> HostOrDeviceSlice<T> for UnifiedSliceMut<'a, T> {
+    fn is_on_device(&self) -> bool {
+        match self {
+            UnifiedSliceMut::Device(d) => d.is_on_device(),
+            UnifiedSliceMut::Host(h) => h.is_on_device(),
+        }
+    }
+
+    fn is_on_active_device(&self) -> bool {
+        match self {
+            UnifiedSliceMut::Device(d) => d.is_on_active_device(),
+            UnifiedSliceMut::Host(h) => h.is_on_active_device(),
+        }
+    }
+
+    unsafe fn as_ptr(&self) -> *const T {
+        match self {
+            UnifiedSliceMut::Device(d) => d.as_ptr(),
+            UnifiedSliceMut::Host(h) => h.as_ptr(),
+        }
+    }
+
+    unsafe fn as_mut_ptr(&mut self) -> *mut T {
+        match self {
+            UnifiedSliceMut::Device(d) => d.as_mut_ptr(),
+            UnifiedSliceMut::Host(h) => h.as_mut_ptr(),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            UnifiedSliceMut::Device(d) => d.len(),
+            UnifiedSliceMut::Host(h) => h.len(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            UnifiedSliceMut::Device(d) => d.is_empty(),
+            UnifiedSliceMut::Host(h) => h.is_empty(),
+        }
+    }
+
+    fn memset(&mut self, value: u8, size: usize) -> Result<(), eIcicleError> {
+        match self {
+            UnifiedSliceMut::Device(d) => d.memset(value, size),
+            UnifiedSliceMut::Host(h) => h.memset(value, size),
+        }
+    }
+
+    fn memset_async(&mut self, value: u8, size: usize, stream: &IcicleStream) -> Result<(), eIcicleError> {
+        match self {
+            UnifiedSliceMut::Device(d) => d.memset_async(value, size, stream),
+            UnifiedSliceMut::Host(h) => h.memset_async(value, size, stream),
+        }
+    }
+}
 
 // <Rq,Zq> vector-mul
-pub fn vector_mul_by_scalar<P>(
+pub fn polyvec_mul_by_scalar<P>(
     input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
     input_scalarvec: &(impl HostOrDeviceSlice<P::Base> + ?Sized),
     result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
@@ -14,10 +172,95 @@ where
     P::Base: FieldImpl,
     <P::Base as FieldImpl>::Config: VecOps<P::Base>,
 {
-    Ok(())
+    // TODO identify device slices
+    unsafe {
+        let vec_flat = flatten_polyring_slice(input_polyvec);
+        let mut result_flat = flatten_polyring_slice_mut(result);
+        let mut local_cfg = cfg.clone();
+        local_cfg.batch_size = input_scalarvec.len() as i32;
+        scalar_mul(input_scalarvec, &vec_flat, &mut result_flat, &local_cfg)
+    }
 }
 
 // <Rq,Rq> vector-mul
+pub fn polyvec_mul<P>(
+    input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+{
+    // TODO identify device slices
+    unsafe {
+        let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
+        let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
+        let mut result_flat = flatten_polyring_slice_mut(result);
+        mul_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
+    }
+}
+
 // <Rq,Rq> vector-add
+pub fn polyvec_add<P>(
+    input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+{
+    // TODO identify device slices
+    unsafe {
+        let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
+        let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
+        let mut result_flat = flatten_polyring_slice_mut(result);
+        add_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
+    }
+}
 // <Rq,Rq> vector-sub
+pub fn polyvec_sub<P>(
+    input_polyvec_a: &(impl HostOrDeviceSlice<P> + ?Sized),
+    input_polyvec_b: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+{
+    // TODO identify device slices
+    unsafe {
+        let vec_a_flat = flatten_polyring_slice(input_polyvec_a);
+        let vec_b_flat = flatten_polyring_slice(input_polyvec_b);
+        let mut result_flat = flatten_polyring_slice_mut(result);
+        sub_scalars(&vec_a_flat, &vec_b_flat, &mut result_flat, cfg)
+    }
+}
 // <Rq> vector-reduce
+pub fn polyvec_sum_reduce<P>(
+    input_polyvec: &(impl HostOrDeviceSlice<P> + ?Sized),
+    result: &mut (impl HostOrDeviceSlice<P> + ?Sized),
+    cfg: &VecOpsConfig,
+) -> Result<(), eIcicleError>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+    <P::Base as FieldImpl>::Config: VecOps<P::Base>,
+{
+    // TODO identify device slices
+    unsafe {
+        let input_flat = flatten_polyring_slice(input_polyvec);
+        let mut result_flat = flatten_polyring_slice_mut(result);
+        let mut local_cfg = cfg.clone();
+        local_cfg.batch_size = P::DEGREE as i32;
+        local_cfg.columns_batch = true;
+        sum_scalars(&input_flat, &mut result_flat, &local_cfg)
+    }
+}
