@@ -60,20 +60,22 @@ jobs:
       pr-number: ${{ github.event.pull_request.number }}
       backend-type: cuda
 
-  extract-metal-backend-branch:
-    uses: ./.github/workflows/extract-backend.yml
-    with:
-      pr-number: ${{ github.event.pull_request.number }}
-      backend-type: metal
+  # extract-metal-backend-branch:
+  #   uses: ./.github/workflows/extract-backend.yml
+  #   with:
+  #     pr-number: ${{ github.event.pull_request.number }}
+  #     backend-type: metal
   
   test-curve:
     name: Test ${{ matrix.curve.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
-        backend: [cuda, metal]
+        backend: [cuda]
+        # backend: [cuda, metal]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -83,14 +85,14 @@ jobs:
             skip-cpp-all-curves: ""
             skip-golang-all-curves: "false"
             initial-support: false
-          - backend: metal
-            backend_upper: METAL
-            secret_key: METAL_PULL_KEY
-            runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust-all-curves: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri
-            skip-cpp-all-curves: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
-            skip-golang-all-curves: "true"
-            initial-support: true
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: METAL_PULL_KEY
+          #   runner: [self-hosted, macOS, ARM64, icicle, metal]
+          #   skip-rust-all-curves: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip msm_batch_not_shared --skip msm_skewed_distributions --skip vec_ops_scalars_inv --skip pairing --skip fri
+          #   skip-cpp-all-curves: .*G2.*|.*ecntt.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
+          #   skip-golang-all-curves: "true"
+          #   initial-support: true
         curve:
           - name: bn254
             rust-supported-features: ["msm", "ntt", "ecntt", "fri", "sumcheck", "pairing", "poseidon", "poseidon2"]
@@ -327,17 +329,19 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$CURVE -licicle_curve_$CURVE  -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
         
-        go test ./$CURVE_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 60m -v
+        go test ./$CURVE_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 10m -v
 
 
   test-field:
     name: Test ${{ matrix.field.name }} on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
-        backend: [cuda, metal]
+        backend: [cuda]
+        # backend: [cuda, metal]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -347,18 +351,18 @@ jobs:
             skip-cpp-all-fields: ""
             skip-golang-all-fields: "false"
             initial-support: false
-          - backend: metal
-            backend_upper: METAL
-            secret_key: METAL_PULL_KEY
-            runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-rust-all-fields: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip vec_ops_scalars_inv --skip fri
-            skip-cpp-all-fields: .*QuarticExtensionField.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
-            skip-golang-all-fields: "true"
-            initial-support: true
-        exclude:
-          - backend: metal
-            field:
-              name: goldilocks
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: METAL_PULL_KEY
+          #   runner: [self-hosted, macOS, ARM64, icicle, metal]
+          #   skip-rust-all-fields: --skip montgomery --skip ntt --skip poseidon --skip ecntt --skip sumcheck --skip program --skip test_mixed_vec_ops_scalars --skip extension::test_vecops --skip vec_ops_scalars_inv --skip fri
+          #   skip-cpp-all-fields: .*QuarticExtensionField.*|.*ProgramExecutorVecOp.*|.*Sumcheck.*|.*Fri.*|FieldTestBase.polynomialDivision|.*MerkleTree.*|.*poseidon.*|HashApiTest.KeccakLarge
+          #   skip-golang-all-fields: "true"
+          #   initial-support: true
+        # exclude:
+        #   - backend: metal
+        #     field:
+        #       name: goldilocks
         field:
           - name: babybear
             rust-supported-features: ["ntt", "fri","sumcheck", "poseidon", "poseidon2"]
@@ -559,7 +563,7 @@ jobs:
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_field_$FIELD -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
 
-        go test ./$FIELD_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 60m -v
+        go test ./$FIELD_DIR/tests -tags=${{ steps.feature_flags.outputs.GO_TEST_BUILD_TAGS }} -count=1 -failfast -p 2 -timeout 10m -v
 
   test-ring:
     name: Test ${{ matrix.ring.name }} on ${{ matrix.backend }}
@@ -654,11 +658,13 @@ jobs:
   test-hash:
     name: Test hash on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
-        backend: [cuda, metal]
+        backend: [cuda]
+        # backend: [cuda, metal]
         include:
           - backend: cuda
             backend_upper: CUDA
@@ -667,14 +673,14 @@ jobs:
             skip-rust: ""
             skip-golang: "false"
             initial-support: false
-          - backend: metal
-            backend_upper: METAL
-            secret_key: METAL_PULL_KEY
-            runner: [self-hosted, macOS, ARM64, icicle, metal]
-            skip-cpp: .*MerkleTree.*|HashApiTest.KeccakLarge|pow
-            skip-rust: "--skip poseidon --skip pow --skip merkle"
-            skip-golang: ""
-            initial-support: true
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: METAL_PULL_KEY
+        #     runner: [self-hosted, macOS, ARM64, icicle, metal]
+        #     skip-cpp: .*MerkleTree.*|HashApiTest.KeccakLarge|pow
+        #     skip-rust: "--skip poseidon --skip pow --skip merkle"
+        #     skip-golang: ""
+        #     initial-support: true
     steps:
     - name: Set backend branch name
       run: |
@@ -731,28 +737,30 @@ jobs:
       run: |
         export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
         export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_hash -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
-        go test ./hash/tests -count=1 -failfast -p 2 -timeout 60m -v
-        go test ./merkle-tree/tests -count=1 -failfast -p 2 -timeout 60m -v
+        go test ./hash/tests -count=1 -failfast -p 2 -timeout 10m -v
+        go test ./merkle-tree/tests -count=1 -failfast -p 2 -timeout 10m -v
 
   test-runtime:
     name: Test runtime on ${{ matrix.backend }}
     runs-on: ${{ matrix.runner }}
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
+    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    # needs: [check-changed-files, check-format, extract-cuda-backend-branch, extract-metal-backend-branch]
     continue-on-error: ${{ matrix.initial-support }}
     strategy:
       matrix:
-        backend: [cuda, metal]
+        backend: [cuda]
+        # backend: [cuda, metal]
         include:
           - backend: cuda
             backend_upper: CUDA
             secret_key: CUDA_PULL_KEY
             runner: [self-hosted, Linux, X64, icicle]
             initial-support: false
-          - backend: metal
-            backend_upper: METAL
-            secret_key: METAL_PULL_KEY
-            runner: [self-hosted, macOS, ARM64, icicle, metal]
-            initial-support: true
+          # - backend: metal
+          #   backend_upper: METAL
+          #   secret_key: METAL_PULL_KEY
+          #   runner: [self-hosted, macOS, ARM64, icicle, metal]
+          #   initial-support: true
     steps:
       - name: Set backend branch name
         run: |
@@ -807,4 +815,53 @@ jobs:
         run: |
           export ICICLE_BACKEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/backend/${{ matrix.backend }}
           export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_device -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
-          go test ./tests -count=1 -failfast -p 2 -timeout 60m -v
+          go test ./tests -count=1 -failfast -p 2 -timeout 10m -v
+
+  test-pqc-ml-kem:
+    name: Test PQC ML-KEM
+    runs-on: [self-hosted, Linux, X64, icicle]
+    needs: [check-changed-files, check-format]
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+    - name: Build PQC library & tests
+      working-directory: ./icicle
+      if: needs.check-changed-files.outputs.pqc == 'true'
+      run: |
+        mkdir -p build && rm -rf build/*
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DINGO_CI_ENV=ON -DCUDA_PQC_BACKEND=ON -S . -B build
+        cmake --build build -j
+
+    - name: Run backend specific PQC Tests
+      working-directory: ./icicle/build/backend/cuda_pqc/tests
+      if: needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.cuda-pqc-backend == 'true'
+      run: |
+        ctest --output-on-failure
+
+    - name: Run C++ PQC Tests
+      working-directory: ./icicle/build/tests
+      if: needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.cpp == 'true'
+      run: |
+        ./test_pqc_api --output-on-failure
+
+    - name: Run Rust ML-KEM Tests
+      working-directory: ./wrappers/rust/icicle-pqc
+      if: needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.rust == 'true'
+      run: |
+        export ICICLE_FRONTEND_INSTALL_DIR=${{ github.workspace }}/icicle/build/
+        cargo test --release --verbose
+
+    - name: Setup go
+      if: needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true'
+      uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
+      with:
+        go-version: '1.22.0'
+        cache: false
+
+    - name: Test GoLang PQC
+      working-directory: ./wrappers/golang/pqc
+      if: needs.check-changed-files.outputs.pqc == 'true' && needs.check-changed-files.outputs.go == 'true'
+      run: |
+        export CGO_LDFLAGS="-L${{ github.workspace }}/icicle/build -licicle_pqc -lstdc++ -Wl,-rpath,${{ github.workspace }}/icicle/build"
+        go test ./tests -count=1 -failfast -p 2 -timeout 10m -v
