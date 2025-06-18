@@ -27,10 +27,7 @@ namespace icicle {
 
     friend bool operator==(const PolynomialRing& lhs, const PolynomialRing& rhs)
     {
-      for (uint32_t i = 0; i < d; ++i) {
-        if (!(lhs.values[i] == rhs.values[i])) return false;
-      }
-      return true;
+      return std::memcmp(lhs.values, rhs.values, sizeof(F) * d) == 0;
     }
     friend bool operator!=(const PolynomialRing& lhs, const PolynomialRing& rhs) { return !(lhs == rhs); }
   };
