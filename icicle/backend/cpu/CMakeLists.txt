@@ -101,6 +101,7 @@ if (RING)
         src/ring/cpu_balanced_decomposition.cpp
         src/ring/cpu_norm.cpp
         src/ring/cpu_jl_projection.cpp
+        src/ring/cpu_random_sampling.cpp
     )
     if (NTT)
         target_sources(icicle_ring PRIVATE src/field/cpu_ntt.cpp)

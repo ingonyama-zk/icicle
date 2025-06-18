@@ -75,4 +75,6 @@ namespace labrador {
    */
   using PolyRing = icicle::PolynomialRing<Zq, 64>;
 
+  using Rq = PolyRing;
+
 } // namespace labrador

@@ -24,6 +24,12 @@ namespace icicle {
     static constexpr uint32_t d = degree; ///< Number of coefficients or evaluations
 
     F values[d]; ///< Polynomial data (coeffs or NTT values)
+
+    friend bool operator==(const PolynomialRing& lhs, const PolynomialRing& rhs)
+    {
+      return std::memcmp(lhs.values, rhs.values, sizeof(F) * d) == 0;
+    }
+    friend bool operator!=(const PolynomialRing& lhs, const PolynomialRing& rhs) { return !(lhs == rhs); }
   };
 
 } // namespace icicle
