@@ -95,16 +95,12 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    - name: Convert changed-files.json to YAML
-      uses: mikefarah/yq@40808838baac982122165ab2114a08c7b4d0629c
-      with:
-        cmd: yq '.' feature-file-mapping.json > changed-files.yml
     - name: Get all changed files
       id: changed-files-yaml
       uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c
       # https://github.com/tj-actions/changed-files#input_files_yaml_from_source_file
       with:
-        files_yaml_from_source_file: ./changed-files.yml
+        files_yaml_from_source_file: .github/changed-files.yml
     - name: Run Changed Files script
       id: changed_files
       # https://github.com/tj-actions/changed-files#outputs-
