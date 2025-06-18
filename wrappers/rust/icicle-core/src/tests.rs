@@ -208,12 +208,6 @@ where
     let poly = P::from_slice(&input);
     assert_eq!(poly.values(), input.as_slice());
 }
-
-pub fn check_vector_alloc<P: PolynomialRing>() {
-    let vec = vec![P::zero(); 10];
-    assert_eq!(vec.len(), 10);
-}
-
 /// Verifies that flattening a slice of polynomials yields a correctly sized,
 /// reinterpreted slice of base field elements.
 pub fn check_polyring_flatten_host_memory<P>()

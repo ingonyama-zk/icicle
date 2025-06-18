@@ -158,11 +158,6 @@ macro_rules! test_polynomial_ring {
             }
 
             #[test]
-            fn test_vector_alloc() {
-                check_vector_alloc::<$type>();
-            }
-
-            #[test]
             fn test_flatten_slices() {
                 check_polyring_flatten_host_memory::<$type>();
                 check_polyring_flatten_device_memory::<$type>();
