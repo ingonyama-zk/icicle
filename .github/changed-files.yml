@@ -127,6 +127,10 @@ rust-ring: &rust-ring
   - *rust-field
   - wrappers/rust/icicle-core/src/rns/**/*.rs
   - wrappers/rust/icicle-core/src/balanced_decomposition/**/*.rs
+  - wrappers/rust/icicle-core/src/jl_projection/**/*.rs
+  - wrappers/rust/icicle-core/src/norm/**/*.rs
+  - wrappers/rust/icicle-core/src/negacyclic_ntt/**/*.rs
+  - wrappers/rust/icicle-core/src/polynomial_ring.rs
   - wrappers/rust/icicle-rings/**/*.rs
 rust-pqc: &rust-pqc
   - wrappers/rust/icicle-pqc/**/*.rs
