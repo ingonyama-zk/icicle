@@ -522,7 +522,7 @@ namespace icicle {
 #endif // EXT_FIELD
 
 #ifdef RING
-// for Zq type
+  // for Zq type
   using ringZqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
     uint64_t size,
@@ -533,15 +533,15 @@ namespace icicle {
     field_t* output)>;
   void register_ring_zq_random_sampling(const std::string& deviceType, ringZqRandomSamplingImpl);
 
-  #define REGISTER_RING_ZQ_RANDOM_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                                    \
+  #define REGISTER_RING_ZQ_RANDOM_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                                  \
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_ring_zq_random_sampling) = []() -> bool {                                                \
-        register_ring_zq_random_sampling(DEVICE_TYPE, FUNC);                                                            \
+        register_ring_zq_random_sampling(DEVICE_TYPE, FUNC);                                                           \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
 
-// for Rq type
+  // for Rq type
   using ringRqRandomSamplingImpl = std::function<eIcicleError(
     const Device& device,
     uint64_t size,
@@ -549,18 +549,18 @@ namespace icicle {
     const std::byte* seed,
     uint64_t seed_len,
     const VecOpsConfig& cfg,
-    Rq* output)>;  
+    Rq* output)>;
   void register_ring_rq_random_sampling(const std::string& deviceType, ringRqRandomSamplingImpl);
 
-  #define REGISTER_RING_RQ_RANDOM_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                                    \
+  #define REGISTER_RING_RQ_RANDOM_SAMPLING_BACKEND(DEVICE_TYPE, FUNC)                                                  \
     namespace {                                                                                                        \
       static bool UNIQUE(_reg_ring_rq_random_sampling) = []() -> bool {                                                \
-        register_ring_rq_random_sampling(DEVICE_TYPE, FUNC);                                                            \
+        register_ring_rq_random_sampling(DEVICE_TYPE, FUNC);                                                           \
         return true;                                                                                                   \
       }();                                                                                                             \
     }
 
-// for RNS type
+  // for RNS type
   using ringRnsVectorReduceOpImpl = std::function<eIcicleError(
     const Device& device, const scalar_rns_t* vec_a, uint64_t size, const VecOpsConfig& config, scalar_rns_t* output)>;
   using ringRnsVectorOpImpl = std::function<eIcicleError(

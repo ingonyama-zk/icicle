@@ -7,6 +7,8 @@
 #include "icicle/negacyclic_ntt.h"
 #include "icicle/fields/field_config.h"
 #include "icicle/fields/field.h"
+#include <chrono>
+#include <iostream>
 
 using namespace field_config;
 using namespace icicle;
@@ -1088,7 +1090,7 @@ TEST_F(RingTestBase, NegacyclicNTT)
 
 TEST_F(RingTestBase, RandomSampling)
 {
-  size_t size = 1 << 15;
+  size_t size = 1 << 20;
   size_t seed_len = 32;
   std::vector<std::byte> seed(seed_len);
   for (size_t i = 0; i < seed_len; ++i) {
@@ -1096,13 +1098,23 @@ TEST_F(RingTestBase, RandomSampling)
   }
   std::vector<field_t> a(size);
   std::vector<field_t> b(size);
+  std::vector<Rq> c(size);
+  std::vector<Rq> d(size);
 
   ICICLE_CHECK(icicle_set_device(IcicleTestBase::main_device()));
-  ICICLE_CHECK(ring_random_sampling(size, false, seed.data(), seed_len, VecOpsConfig{}, a.data()));
-  ICICLE_CHECK(icicle_set_device(IcicleTestBase::reference_device()));
-  ICICLE_CHECK(ring_random_sampling(size, false, seed.data(), seed_len, VecOpsConfig{}, b.data()));
+  const int N = 10;
 
-  for (size_t i = 0; i < size; ++i) {
-    ASSERT_EQ(a[i], b[i]);
-  }
+  auto test_random_sampling = [&](bool fast_mode, auto& a, auto& b) {
+    for (int i = 0; i < N; ++i) {
+      ICICLE_CHECK(ring_random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, a.data()));
+      ICICLE_CHECK(ring_random_sampling(size, fast_mode, seed.data(), seed_len, VecOpsConfig{}, b.data()));
+      for (size_t i = 0; i < size; ++i) {
+        ASSERT_EQ(a[i], b[i]);
+      }
+    }
+  };
+  test_random_sampling(true, a, b);
+  test_random_sampling(false, a, b);
+  test_random_sampling(true, c, d);
+  test_random_sampling(false, c, d);
 }
