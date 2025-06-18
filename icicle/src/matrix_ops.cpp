@@ -2,6 +2,72 @@
 #include "icicle/dispatcher.h"
 
 namespace icicle {
+  /*********************************** MATRIX  MULTIPLICATION *************************/
+
+  ICICLE_DISPATCHER_INST(MatrixMultiplicationDispatcher, matmul, scalarBinaryMatrixOpImpl);
+
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, matmul)(
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig* config,
+    scalar_t* mat_out)
+  {
+    return MatrixMultiplicationDispatcher::execute(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
+  }
+
+  template <>
+  eIcicleError matmul(
+    const scalar_t* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const scalar_t* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    scalar_t* mat_out)
+  {
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, matmul)(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+  }
+
+#ifdef RING
+  // Matmul for polynomial rings
+  ICICLE_DISPATCHER_INST(PolyRingMatrixMultiplicationDispatcher, poly_ring_matmul, polyRingBinaryMatrixOpImpl);
+  extern "C" eIcicleError CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matmul)(
+    const PolyRing* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const PolyRing* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig* config,
+    PolyRing* mat_out)
+  {
+    return PolyRingMatrixMultiplicationDispatcher::execute(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, *config, mat_out);
+  }
+
+  template <>
+  eIcicleError matmul(
+    const PolyRing* mat_a,
+    uint32_t nof_rows_a,
+    uint32_t nof_cols_a,
+    const PolyRing* mat_b,
+    uint32_t nof_rows_b,
+    uint32_t nof_cols_b,
+    const VecOpsConfig& config,
+    PolyRing* mat_out)
+  {
+    return CONCAT_EXPAND(ICICLE_FFI_PREFIX, poly_ring_matmul)(
+      mat_a, nof_rows_a, nof_cols_a, mat_b, nof_rows_b, nof_cols_b, &config, mat_out);
+  }
+#endif
+
   /*********************************** TRANSPOSE ***********************************/
   ICICLE_DISPATCHER_INST(MatrixTransposeDispatcher, matrix_transpose, scalarMatrixOpImpl);
 
@@ -50,5 +116,6 @@ namespace icicle {
   {
     return CONCAT_EXPAND(ICICLE_FFI_PREFIX, rns_matrix_transpose)(mat_in, nof_rows, nof_cols, &config, mat_out);
   }
+
 #endif // RING
 } // namespace icicle

@@ -48,6 +48,9 @@ namespace icicle {
      *
      *     x ≡ r₀ + b·r₁ + b²·r₂ + ... + b^{t−1}·r_{t−1} mod q
      *
+     *   The output layout is **element-major**, meaning all t digits of the first
+     *   element are stored consecutively, followed by the digits of the second element, and so on.
+     *
      * For polynomials (T = PolynomialRing<Zq, d>):
      *   Each coefficient a_j ∈ Zq of a polynomial P(x) is decomposed independently into t digits:
      *
@@ -57,8 +60,8 @@ namespace icicle {
      *
      *     P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
      *
-     *   Layout in memory: [P₀(x), P₁(x), P₂(x),..., P_{t−1}(x)] such that the t digits of each coefficient are d
-     * elements apart. output[i * t + k].coeffs[j] = r_{j,k} where:
+     *   The output layout is **digit-major**, meaning all first digits of all input polynomials
+     *   come first (as polynomials), followed by all second digits, and so on.
      *
      * @tparam T             Element type (`Zq` or `PolynomialRing<Zq, d>`)
      * @param input          Pointer to input elements.
@@ -81,9 +84,12 @@ namespace icicle {
      *     x = ∑ r_i · b^i mod q
      *
      * For PolynomialRing<Zq, d>, this applies to each coefficient independently.
-     * The input layout must match the output of `decompose()` and the output reconstructs each original polynomial as:
      *
-     *     P(x) = P₀(x) + b·P₁(x) + b²·P₂(x) + ... + b^{t−1}·P_{t−1}(x)
+     * Input layout expectations:
+     *   - For scalars (Zq): the digits are stored element-major (each element's digits in sequence).
+     *   - For polynomials: the digits are stored digit-major (all P₀(x), then all P₁(x), ...).
+     *
+     * The layout must match that produced by `decompose()`.
      *
      * @tparam T             Element type (`Zq` or `PolynomialRing<Zq, d>`)
      * @param input          Pointer to flattened input digits.

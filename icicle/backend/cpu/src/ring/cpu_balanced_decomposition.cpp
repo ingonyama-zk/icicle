@@ -237,28 +237,31 @@ static eIcicleError cpu_decompose_balanced_digits_PolyRing(
     tasks.emplace([=] {
       const PolyRing& input_poly = input[poly_idx];
       const int64_t* input_coeffs = reinterpret_cast<const int64_t*>(input_poly.values);
-      for (int digit_idx = 0; digit_idx < digits_per_element /*=t (steps)*/; ++digit_idx) {
-        PolyRing& output_poly = output[poly_idx * digits_per_element + digit_idx];
+
+      // Temporary buffer to hold intermediate remainders during decomposition.
+      int64_t remainder[PolyRing::d];
+      std::memcpy(remainder, input_coeffs, sizeof(remainder));
+
+      for (int digit_idx = 0; digit_idx < digits_per_element; ++digit_idx) {
+        PolyRing& output_poly = output[digit_idx * total_size + poly_idx];
         int64_t* output_coeffs = reinterpret_cast<int64_t*>(output_poly.values);
-        // Store intermediate value of the decomposition in stack memory (assuming d is not too large. Otherwise, use
-        // heap memory)
-        int64_t values[PolyRing::d]; // Those are intermediate values computed during the decomposition
+
         for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
-          int64_t val = digit_idx == 0 ? input_coeffs[coeff_idx] : values[coeff_idx];
+          int64_t val = remainder[coeff_idx];
           int64_t digit = 0;
+
           // we need to handle case where val>q/2 by subtracting q (only for base>2)
-          if (base > 2 && val > q_div2) { val = val - q; }
+          if (base > 2 && val > q_div2) { val -= q; }
 
           std::tie(val, digit) = divmod(val, base);
-
           // Shift into balanced digit range [-b/2, b/2)
           if (digit > base_div2) {
             digit -= base;
             ++val;
           }
 
-          values[coeff_idx] = val;                                  // store the updated value for the next digit
-          output_coeffs[coeff_idx] = digit < 0 ? digit + q : digit; // Wrap negative digits to [0, q]
+          remainder[coeff_idx] = val;
+          output_coeffs[coeff_idx] = digit < 0 ? digit + q : digit;
         }
       }
     });
@@ -298,19 +301,18 @@ static eIcicleError cpu_recompose_from_balanced_digits_PolyRing(
   const size_t total_size = output_size * config.batch_size;
   for (int poly_idx = 0; poly_idx < total_size; ++poly_idx) {
     tasks.emplace([=]() {
-      PolyRing output_poly;
-      // Iterate of 'digits_per_element' input polynomials, one per digit, and recompose them into a single polynomial
-      for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
-        const bool is_first_digit = (digit_idx == digits_per_element - 1);
-        const PolyRing& input_poly = input[poly_idx * digits_per_element + digit_idx];
-        for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
-          PolyRing::Base output_coeff = is_first_digit ? PolyRing::Base::zero() : output_poly.values[coeff_idx];
-          auto digit = input_poly.values[coeff_idx];
-          output_coeff = output_coeff * base_as_field + digit;
-          output_poly.values[coeff_idx] = output_coeff; // Store the recomposed coefficient
+      PolyRing result;
+      // Recompose a single output polynomial from its digit-wise components
+      for (int coeff_idx = 0; coeff_idx < PolyRing::d; ++coeff_idx) {
+        PolyRing::Base acc = PolyRing::Base::zero();
+        // Accumulate from most significant digit to least
+        for (int digit_idx = digits_per_element - 1; digit_idx >= 0; --digit_idx) {
+          const PolyRing& input_poly = input[digit_idx * total_size + poly_idx];
+          acc = acc * base_as_field + input_poly.values[coeff_idx];
         }
+        result.values[coeff_idx] = acc;
       }
-      output[poly_idx] = output_poly;
+      output[poly_idx] = result;
     });
   }
 

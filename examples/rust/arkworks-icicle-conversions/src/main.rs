@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use ark_bn254::{Fq, Fr, G1Affine as ArkAffine, G1Projective as ArkProjective};
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
-use ark_ff::{BigInteger, PrimeField, Field};
+use ark_ff::{BigInteger, Field, PrimeField};
 
 use icicle_bn254::curve::{G1Affine as IcicleAffine, G1Projective as IcicleProjective, ScalarField as IcicleScalar};
 use icicle_core::{
@@ -72,7 +72,6 @@ where
     T: Field,
     I: FieldImpl,
 {
-
     let mut ark_bytes = vec![];
     for base_elem in ark.to_base_prime_field_elements() {
         ark_bytes.extend_from_slice(

@@ -88,6 +88,8 @@ Now we are ready to clone ICICE repository,
 
 ```sh
 !git clone https://github.com/ingonyama-zk/icicle.git
++%cd icicle
++!git checkout v3.1.0
 ```
 
 We can browse the repository and run tests to check the runtime environment:
@@ -120,8 +122,7 @@ In this example we are using [ICICLE Cuda backend v3.1.0](https://github.com/ing
 Point colab to the extracted cuda backend using an [environment variable](https://github.com/ingonyama-zk/icicle/blob/f638e9d3056d2a5d6271a67ba4f63973a2ba2c1a/docs/docs/icicle/getting_started.md#backend-loading)
 
 ```sh
-import os
-os.envvar["ICICLE_BACKEND_INSTALL_DIR"] = "/content/cuda_backend/icicle"
+%env ICICLE_BACKEND_INSTALL_DIR=/content/cuda_backend/icicle
 ```
 
 ## Fun with ICICLE

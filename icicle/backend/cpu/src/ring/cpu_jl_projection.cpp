@@ -107,4 +107,106 @@ static eIcicleError cpu_jl_projection(
   return eIcicleError::SUCCESS;
 }
 
-REGISTER_JL_PROJECTION_BACKEND("CPU", cpu_jl_projection);
+static eIcicleError cpu_get_jl_matrix_rows(
+  const Device& device,
+  const std::byte* seed,
+  size_t seed_len,
+  size_t row_size,
+  size_t start_row,
+  size_t num_rows,
+  bool negacyclic_conjugate,
+  size_t polyring_size_for_conjugate,
+  const VecOpsConfig& cfg,
+  field_t* output)
+{
+  if (!seed || !output) {
+    ICICLE_LOG_ERROR << "Invalid argument: null pointer.";
+    return eIcicleError::INVALID_POINTER;
+  }
+
+  if (seed_len == 0 || row_size == 0 || num_rows == 0) {
+    ICICLE_LOG_ERROR << "Invalid argument: zero size.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  if (cfg.batch_size != 1) {
+    ICICLE_LOG_ERROR << "Unsupported config: JL matrix row generation does not support batch.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  if (negacyclic_conjugate && polyring_size_for_conjugate == 0) {
+    ICICLE_LOG_ERROR << "Invalid conjugation config: conjugation requested but polynomial size is zero.";
+    return eIcicleError::INVALID_ARGUMENT;
+  }
+
+  auto keccak512 = Keccak512::create();
+  constexpr uint32_t bits_per_entry = 2;
+  const size_t entries_per_hash = keccak512.output_size() * 8 / bits_per_entry;
+  const size_t hashes_per_row = (row_size + entries_per_hash - 1) / entries_per_hash;
+
+  const int nof_workers = std::min((int)num_rows, get_nof_workers(cfg));
+  tf::Taskflow taskflow;
+  tf::Executor executor(nof_workers);
+
+  for (size_t r = 0; r < num_rows; ++r) {
+    taskflow.emplace([=]() {
+      const size_t row_index = start_row + r;
+      field_t* row_out = output + r * row_size;
+
+      std::vector<std::byte> hash_input(seed_len + sizeof(uint32_t));
+      std::memcpy(hash_input.data(), seed, seed_len);
+      std::vector<std::byte> hash_output(keccak512.output_size());
+
+      HashConfig hash_cfg{};
+
+      // Static table: 0b00 → 0, 0b01 → +1, 0b10 → -1, 0b11 → 0
+      static const field_t JL_LUT[4] = {
+        field_t::zero(),              // 0b00
+        field_t::one(),               // 0b01
+        field_t::neg(field_t::one()), // 0b10
+        field_t::zero()               // 0b11
+      };
+
+      for (size_t hash_idx = 0; hash_idx < hashes_per_row; ++hash_idx) {
+        uint32_t counter = static_cast<uint32_t>(row_index * hashes_per_row + hash_idx);
+        std::memcpy(hash_input.data() + seed_len, &counter, sizeof(counter));
+        keccak512.hash(hash_input.data(), hash_input.size(), hash_cfg, hash_output.data());
+
+        for (size_t entry_idx = 0; entry_idx < entries_per_hash; ++entry_idx) {
+          const size_t col_idx = hash_idx * entries_per_hash + entry_idx;
+          if (col_idx >= row_size) break;
+
+          const size_t byte_idx = entry_idx >> 2;
+          const size_t bit_offset = (entry_idx & 0x3) * 2;
+          const uint8_t byte = std::to_integer<uint8_t>(hash_output[byte_idx]);
+          uint8_t rnd_2b = (byte >> bit_offset) & 0x3;
+
+          // Conjugation in a negacyclic polynomial-ring is implemented by flipping and inverting indices
+          if (negacyclic_conjugate) {
+            const size_t d = polyring_size_for_conjugate;
+            const size_t which_poly = col_idx / d;
+            const size_t coeff_idx = col_idx % d;
+            const bool is_constant_term = coeff_idx == 0;
+
+            size_t conj_idx = which_poly * d + (is_constant_term ? 0 : d - coeff_idx);
+
+            // Flip sign except for constant-term coeff
+            rnd_2b = is_constant_term
+                       ? rnd_2b
+                       : (rnd_2b ^ 0x3) & 0x3; // Swaps 1 ↔ 2, leaves 0 and 3 unchanged. This flips 1 and -1.
+            row_out[conj_idx] = JL_LUT[rnd_2b];
+          } else { // no conjugate
+            row_out[col_idx] = JL_LUT[rnd_2b];
+          }
+        }
+      }
+    });
+  }
+
+  executor.run(taskflow).wait();
+  taskflow.clear();
+
+  return eIcicleError::SUCCESS;
+}
+
+REGISTER_JL_PROJECTION_BACKEND("CPU", cpu_jl_projection, cpu_get_jl_matrix_rows);
