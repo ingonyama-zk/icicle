@@ -25,34 +25,31 @@ pub trait PolynomialRing: Sized + Clone + PartialEq + core::fmt::Debug {
     fn from_slice(values: &[Self::Base]) -> Self;
 }
 
-pub fn flatten_polynomials_host_slice<P>(input: &HostSlice<P>) -> &HostSlice<P::Base>
+/// Reinterprets a host slice of polynomials as a flat slice of scalar coefficients.
+///
+/// # Safety
+/// Assumes `P: #[repr(C)]` with `[P::Base; DEGREE]` layout.
+pub fn flatten_host_polynomials<P>(input: &HostSlice<P>) -> &HostSlice<P::Base>
 where
     P: PolynomialRing,
     P::Base: FieldImpl,
 {
-    let poly_len = input.len();
-    let coeffs_per_poly = P::DEGREE; // or P::Config::N or similar
-
-    // SAFETY:
-    // - We assume that `P` is `#[repr(C)]` and contains exactly `[Zq; N]`
-    // - So a `[P]` of length `n` can be viewed as a `[Zq]` of length `n * N`
-    unsafe { HostSlice::from_raw_parts(input.as_ptr() as *const P::Base, poly_len * coeffs_per_poly) }
+    let total = input.len() * P::DEGREE;
+    unsafe { HostSlice::from_raw_parts(input.as_ptr() as *const P::Base, total) }
 }
 
-// pub fn flatten_polynomials_device_slice<P>(input: &DeviceSlice<P>) -> &DeviceSlice<P::Base>
-// where
-//     P: PolynomialRing,
-//     P::Base: FieldImpl,
-// {
-//     let poly_len = input.len();
-//     let coeffs_per_poly = P::DEGREE;
-
-//     // SAFETY:
-//     // - `P` must be `#[repr(C)]` or compatible and contain exactly `[Zq; DEGREE]`.
-//     // - Device memory layout of `[P]` must match a flat layout of `[Zq]`.
-//     // - `DeviceSlice<T>` must be `#[repr(transparent)]` over `[T]`.
-//     unsafe { unsafe { DeviceSlice::from_raw_parts(input.as_ptr() as *const P::Base, poly_len * coeffs_per_poly) } }
-// }
+/// Reinterprets a device slice of polynomials as a flat slice of scalar coefficients.
+///
+/// # Safety
+/// Assumes device memory is laid out like `[P::Base; DEGREE]` per polynomial.
+pub fn flatten_device_polynomials<P>(input: &DeviceSlice<P>) -> &DeviceSlice<P::Base>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+{
+    let total = input.len() * P::DEGREE;
+    unsafe { DeviceSlice::from_raw_parts(input.as_ptr() as *const P::Base, total) }
+}
 
 #[macro_export]
 macro_rules! impl_polynomial_ring {
@@ -140,6 +137,7 @@ macro_rules! test_polynomial_ring {
             #[test]
             fn test_flatten_slices() {
                 check_polyring_flatten_host_memory::<$type>();
+                check_polyring_flatten_device_memory::<$type>();
             }
         }
     };
