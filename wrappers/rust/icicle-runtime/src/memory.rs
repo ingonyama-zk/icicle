@@ -371,6 +371,24 @@ impl<T> DeviceVec<T> {
         }
     }
 
+    /// Fallible allocation that panics on failure, yielding slightly cleaner call sites:
+    /// `let mut buf = DeviceVec::<F>::malloc(size);`
+    pub fn malloc(count: usize) -> Self {
+        Self::device_malloc(count).expect("device allocation failed")
+    }
+
+    /// Allocate and zero-initialise the memory in a single call. Useful when the caller
+    /// needs the buffer to be in a well-defined state before copying or computing into it.
+    pub fn zeros(count: usize) -> Self
+    where
+        T: Copy,
+    {
+        let mut v = Self::malloc(count);
+        // Ignore potential failure because we just allocated the buffer on the active device.
+        let _ = v.memset(0, count);
+        v
+    }
+
     pub fn device_malloc_async(count: usize, stream: &IcicleStream) -> Result<Self, eIcicleError> {
         let size = count
             .checked_mul(size_of::<T>())
