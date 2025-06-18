@@ -1,7 +1,7 @@
 use icicle_bls12_377::curve::ScalarField as BLS12377ScalarField;
 use icicle_bn254::curve::ScalarField;
 use icicle_core::field::PrimeField;
-use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice};
+use icicle_runtime::memory::{DeviceVec, HostOrDeviceSlice, HostSlice, DeviceSlice};
 
 use clap::Parser;
 use icicle_core::{
@@ -56,6 +56,69 @@ impl<T: PrimeField + Copy> DeviceVecExt<T> for DeviceVec<T> {
     }
 }
 
+// -----------------------------------------------------------------------------
+// Adapter traits that allow calling `ntt/ntt_inplace` without manual slice casts
+// -----------------------------------------------------------------------------
+
+/// Immutable adapter – turns common buffer types into something that implements
+/// `HostOrDeviceSlice`, which is what the low-level API expects.
+pub trait IntoIcicleSlice<'a, T: PrimeField + 'a> {
+    type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
+    fn into_icicle_slice(self) -> &'a Self::Out;
+}
+
+/// Mutable adapter counterpart.
+pub trait IntoIcicleSliceMut<'a, T: PrimeField + 'a> {
+    type Out: HostOrDeviceSlice<T> + ?Sized + 'a;
+    fn into_icicle_slice_mut(self) -> &'a mut Self::Out;
+}
+
+// ------------------------ host-side buffers ----------------------------------
+
+impl<'a, T: PrimeField> IntoIcicleSlice<'a, T> for &'a [T] {
+    type Out = HostSlice<T>;
+    fn into_icicle_slice(self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self)
+    }
+}
+
+impl<'a, T: PrimeField> IntoIcicleSlice<'a, T> for &'a Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_icicle_slice(self) -> &'a HostSlice<T> {
+        HostSlice::from_slice(self.as_slice())
+    }
+}
+
+impl<'a, T: PrimeField> IntoIcicleSliceMut<'a, T> for &'a mut [T] {
+    type Out = HostSlice<T>;
+    fn into_icicle_slice_mut(self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self)
+    }
+}
+
+impl<'a, T: PrimeField> IntoIcicleSliceMut<'a, T> for &'a mut Vec<T> {
+    type Out = HostSlice<T>;
+    fn into_icicle_slice_mut(self) -> &'a mut HostSlice<T> {
+        HostSlice::from_mut_slice(self.as_mut_slice())
+    }
+}
+
+// ------------------------ device-side buffers --------------------------------
+
+impl<'a, T: PrimeField> IntoIcicleSlice<'a, T> for &'a DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_icicle_slice(self) -> &'a DeviceSlice<T> {
+        &**self // `Deref` to DeviceSlice
+    }
+}
+
+impl<'a, T: PrimeField> IntoIcicleSliceMut<'a, T> for &'a mut DeviceVec<T> {
+    type Out = DeviceSlice<T>;
+    fn into_icicle_slice_mut(self) -> &'a mut DeviceSlice<T> {
+        &mut **self // `DerefMut`
+    }
+}
+
 fn main() {
     let args = Args::parse();
     println!("{:?}", args);
@@ -74,13 +137,13 @@ fn main() {
     println!("Generating random inputs on host for bn254...");
     let mut scalars = ScalarField::generate_random(size);
     let scalars_orig = scalars.clone();
-    let mut ntt_results = DeviceVec::<ScalarField>::device_malloc(size).unwrap();
+    let mut ntt_results = DeviceVec::<ScalarField>::malloc(size);
 
     // Setting bls12377 points and scalars
     println!("Generating random inputs on host for bls12377...");
     let mut scalars_bls12377 = BLS12377ScalarField::generate_random(size);
     let scalars_bls12377_orig = scalars_bls12377.clone();
-    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::device_malloc(size).unwrap();
+    let mut ntt_results_bls12377 = DeviceVec::<BLS12377ScalarField>::malloc(size);
 
     println!("Setting up bn254 Domain...");
     initialize_domain(
@@ -111,10 +174,10 @@ fn main() {
     println!("Executing bn254 NTT on device...");
     let start = Instant::now();
     ntt::ntt(
-        HostSlice::from_slice(&scalars),
+        scalars.into_icicle_slice(),
         ntt::NTTDir::kForward,
         &cfg,
-        &mut ntt_results[..],
+        ntt_results.into_icicle_slice_mut(),
     )
     .unwrap();
     println!(
@@ -129,7 +192,7 @@ fn main() {
     assert_ne!(host_bn254_results, scalars); // check that the results are not the same as the inputs
 
     ntt::ntt_inplace(
-        HostSlice::from_mut_slice(&mut scalars),
+        scalars.into_icicle_slice_mut(),
         ntt::NTTDir::kForward,
         &cfg,
     )
@@ -141,10 +204,10 @@ fn main() {
     println!("Executing bls12377 NTT on device...");
     let start = Instant::now();
     ntt::ntt(
-        HostSlice::from_slice(&scalars_bls12377),
+        scalars_bls12377.into_icicle_slice(),
         ntt::NTTDir::kForward,
         &cfg_bls12377,
-        &mut ntt_results_bls12377[..],
+        ntt_results_bls12377.into_icicle_slice_mut(),
     )
     .unwrap();
     println!(
@@ -158,7 +221,7 @@ fn main() {
     assert_ne!(host_bls12377_results, scalars_bls12377); // check that the results are not the same as the inputs
 
     ntt::ntt_inplace(
-        HostSlice::from_mut_slice(&mut scalars_bls12377),
+        scalars_bls12377.into_icicle_slice_mut(),
         ntt::NTTDir::kForward,
         &cfg_bls12377,
     )
