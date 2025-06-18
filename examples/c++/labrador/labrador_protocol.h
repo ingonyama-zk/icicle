@@ -1,74 +1,131 @@
 #include "examples_utils.h"
-
-// ICICLE runtime
 #include "icicle/runtime.h"
-
-#include "icicle/lattice/labrador.h" // For Zq, Rq, Tq, and the labrador APIs
+#include "icicle/lattice/labrador.h"
 
 using namespace icicle::labrador;
 
-struct EqualityInstance {
-  size_t r;                         // Number of witness vectors
-  size_t n;                         // Dimension of each vector in Rq
-  std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Rq (r x r matrix)
-  std::vector<std::vector<Tq>> phi; // phi[i] vector over Rq (r vectors, each of size n)
-  Tq b;                             // Polynomial in Rq
+PolyRing zero()
+{
+  PolyRing z;
+  for (size_t i = 0; i < PolyRing::d; i++) {
+    z.values[i] = Zq::zero();
+  }
+  return z;
+}
 
-  EqualityInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
-  EqualityInstance(size_t r, size_t n, std::vector<std::vector<Tq>> a, std::vector<std::vector<Tq>> phi, Tq b)
+struct QuadraticConstraint {
+  size_t r;            // Number of witness vectors
+  size_t n;            // Dimension of each vector in Tq
+  std::vector<Tq> a;   // a[i][j] matrix over Tq (r x r matrix)
+  std::vector<Tq> phi; // phi[i] vector over Tq (r vectors, each of size n; arranged in row major)
+  Tq b;                // Polynomial in Tq
+
+  QuadraticConstraint(size_t r, size_t n) : r(r), n(n), a(r * r, zero()), phi(r * n, zero()), b(zero()) {}
+  QuadraticConstraint(size_t r, size_t n, std::vector<Tq> a, std::vector<Tq> phi, Tq b)
       : r(r), n(n), a(std::move(a)), phi(std::move(phi)), b(std::move(b))
   {
     // check if the sizes of a and phi are correct
-    if (a.size() != r || phi.size() != r) {
-      throw std::invalid_argument("EqualityInstance: 'a' and 'phi' must have size r");
-    }
-    for (const auto& row : a) {
-      if (row.size() != r) { throw std::invalid_argument("EqualityInstance: each row of 'a' must have size r"); }
-    }
-    for (const auto& vec : phi) {
-      if (vec.size() != n) { throw std::invalid_argument("EqualityInstance: each vector in 'phi' must have size n"); }
+    if (a.size() != r * r || phi.size() != r * n) {
+      throw std::invalid_argument("QuadraticConstraint: Incorrect sizes for 'a' or 'phi'");
     }
   }
 
   // Copy constructor
-  EqualityInstance(const EqualityInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
+  QuadraticConstraint(const QuadraticConstraint& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b)
+  {
+  }
 };
+using ConstZeroInstance = QuadraticConstraint;
+using EqualityInstance = QuadraticConstraint;
 
-// TODO: ConstZeroInstance and EqualityInstance are the same? consolidate to one type?
-struct ConstZeroInstance {
-  size_t r;                         // Number of witness vectors
-  size_t n;                         // Dimension of each vector in Rq
-  std::vector<std::vector<Tq>> a;   // a[i][j] matrix over Tq (r x r matrix)
-  std::vector<std::vector<Tq>> phi; // phi[i] vector over Tq (r vectors, each of size n)
-  Tq b;                             // Polynomial in Rq
+struct LabradorParam {
+  // Seed to calculate Ajtai Matrix
+  const std::vector<std::byte> ajtai_seed;
 
-  ConstZeroInstance(size_t r, size_t n) : r(r), n(n), a(r, std::vector<Tq>(r)), phi(r, std::vector<Tq>(n)), b() {}
+  // Matrix dimensions for Ajtai commitments
+  const size_t kappa;  // Ajtai matrix A dimensions: n × kappa
+  const size_t kappa1; // Matrix B,C dimensions for committing to decomposed vectors
+  const size_t kappa2; // Matrix D dimensions for committing to h vectors
 
-  // Copy constructor
-  ConstZeroInstance(const ConstZeroInstance& other) : r(other.r), n(other.n), a(other.a), phi(other.phi), b(other.b) {}
+  // Decomposition bases
+  const uint32_t base1; // Base for decomposing T
+  const uint32_t base2; // Base for decomposing g
+  const uint32_t base3; // Base for decomposing h
+
+  // JL projection parameters
+  const size_t JL_out = 256; // Output dimension for Johnson-Lindenstrauss projection (typically 256)
+
+  // Norm bounds
+  const double beta;                 // Witness norm bound
+  const uint64_t op_norm_bound = 15; // Operator norm bound for challenges
+
+  // Constructor with default values matching the base implementation
+  LabradorParam(
+    const std::vector<std::byte>& ajtai_seed,
+    size_t kappa,
+    size_t kappa1,
+    size_t kappa2,
+    size_t base1,
+    size_t base2,
+    size_t base3,
+    double beta)
+      : ajtai_seed(ajtai_seed), kappa(kappa), kappa1(kappa1), kappa2(kappa2), base1(base1), base2(base2), base3(base3),
+        beta(beta)
+  {
+  }
+
+  size_t t_len(size_t r)
+  {
+    size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
+    return l1 * r * kappa;
+  }
+  size_t g_len(size_t r)
+  {
+    size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
+    size_t r_choose_2 = (r * (r + 1)) / 2;
+    return (l2 * r_choose_2);
+  }
+  size_t h_len(size_t r)
+  {
+    size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base3);
+    size_t r_choose_2 = (r * (r + 1)) / 2;
+    return (l3 * r_choose_2);
+  }
 };
 
 struct LabradorInstance {
   size_t r;                                              // Number of witness vectors
   size_t n;                                              // Dimension of each vector in Tq
-  double beta;                                           // Norm bound
+  LabradorParam param;                                   // LabradorParam for this instance
   std::vector<EqualityInstance> equality_constraints;    // K EqualityInstances
   std::vector<ConstZeroInstance> const_zero_constraints; // L ConstZeroInstances
 
-  LabradorInstance(size_t r, size_t n, double beta) : r(r), n(n), beta(beta) {}
+  LabradorInstance(size_t r, size_t n, const LabradorParam& param) : r(r), n(n), param(param) {}
 
   // Copy constructor
   LabradorInstance(const LabradorInstance& other)
-      : r(other.r), n(other.n), beta(other.beta), equality_constraints(other.equality_constraints),
+      : r(other.r), n(other.n), param(other.param), equality_constraints(other.equality_constraints),
         const_zero_constraints(other.const_zero_constraints)
   {
   }
 
   // Add an EqualityInstance
-  void add_equality_constraint(const EqualityInstance& instance) { equality_constraints.push_back(instance); }
+  void add_equality_constraint(const EqualityInstance& instance)
+  {
+    if (instance.r == r || instance.n == n) {
+      throw std::invalid_argument("EqualityInstance not compatible with LabradorInstance");
+    }
+    equality_constraints.push_back(instance);
+  }
 
   // Add a ConstZeroInstance
-  void add_const_zero_constraint(const ConstZeroInstance& instance) { const_zero_constraints.push_back(instance); }
+  void add_const_zero_constraint(const ConstZeroInstance& instance)
+  {
+    if (instance.r == r || instance.n == n) {
+      throw std::invalid_argument("ConstZeroInstance not compatible with LabradorInstance");
+    }
+    const_zero_constraints.push_back(instance);
+  }
 
   std::vector<Tq> agg_const_zero_constraints(
     size_t num_aggregation_rounds,
@@ -82,58 +139,36 @@ struct LabradorInstance {
   void agg_equality_constraints(const std::vector<Tq>& alpha_hat);
 };
 
-struct LabradorRecursionRawInstance;
-// Struct containing parameters for Labrador protocol
-struct LabradorProtocol {
-  // Matrix dimensions for Ajtai commitments
-  const size_t kappa;  // Ajtai matrix A dimensions: n × kappa
-  const size_t kappa1; // Matrix B,C dimensions for committing to decomposed vectors
-  const size_t kappa2; // Matrix D dimensions for committing to h vectors
+struct PartialTranscript {
+  // committed by the Prover
+  std::vector<Tq> u1;
+  size_t JL_i;
+  std::vector<Zq> p;
+  std::vector<Tq> b_agg;
+  std::vector<Tq> u2;
 
-  // Decomposition bases
-  const uint32_t base1; // Base for decomposing T
-  const uint32_t base2; // Base for decomposing g
-  const uint32_t base3; // Base for decomposing h
-  const uint32_t base0; // Base for decomposing z in recursion
+  // hash evaluations
+  std::vector<std::byte> seed1;
+  std::vector<std::byte> seed2;
+  std::vector<std::byte> seed3;
+  std::vector<std::byte> seed4;
 
-  // JL projection parameters
-  const size_t JL_out; // Output dimension for Johnson-Lindenstrauss projection (typically 256)
+  // challenges- stored for convenience
+  std::vector<Zq> psi;
+  std::vector<Zq> omega;
+  std::vector<Tq> alpha_hat;
+  std::vector<Tq> challenges_hat;
 
-  // Challenge space parameters
-  const size_t challenge_num_1; // Number of ±1s (typically 31)
-  const size_t challenge_num_2; // Number of ±2s (typically 10)
-
-  // Norm bounds
-  const double beta;            // Witness norm bound
-  const uint64_t op_norm_bound; // Operator norm bound for challenges
-
-  // Constructor with default values matching the base implementation
-  LabradorProtocol()
-      : kappa(1 << 4), kappa1(1 << 4), kappa2(1 << 4), base1(1 << 16), base2(1 << 16), base3(1 << 16), base0(1 << 16),
-        JL_out(256), challenge_num_1(31), challenge_num_2(10), beta(10.0), op_norm_bound(15)
+  /// @brief Returns the size of the partial proof (only includes necessary elements)
+  size_t proof_size()
   {
+    return sizeof(Zq) * (u1.size() * Tq::d + p.size() + b_agg.size() * Tq::d + u2.size() * Tq::d) + sizeof(size_t);
   }
-
-  // Method declarations
-  LabradorRecursionRawInstance base_prover(
-    LabradorInstance& lab_inst,
-    const std::vector<std::byte>& ajtai_seed,
-    const std::vector<Rq>& S,
-    std::vector<Zq>& proof);
-
-  std::pair<LabradorInstance, std::vector<Rq>> prepare_recursive_problem(
-    std::vector<std::byte> ajtai_seed, LabradorRecursionRawInstance raw_inst, size_t mu, size_t nu);
 };
 
-/// Encapsulates the problem and witness for the recursion instance
+/// Encapsulates the problem and witness for the reduced instance
 ///
 /// final_const: is the EqualityInstance prepared in Step 22
-///
-/// u1: is the commitment prepared in Step 10 of the base_prover
-///
-/// u2: is the commitment prepared in Step 26 of the base_prover
-///
-/// challenges_hat: are the polynomial challenges sent by the Verifier in Step 28
 ///
 /// z_hat: is the vector computed in Step 29
 ///
@@ -142,31 +177,44 @@ struct LabradorProtocol {
 /// g: vector computed in Step 9 (g_tilde in the code)
 ///
 /// h: vector computed in Step 25 (H_tilde in the code)
-struct LabradorRecursionRawInstance {
+struct LabradorBaseCaseProof {
   EqualityInstance final_const;
-  std::vector<Tq> u1;
-  std::vector<Tq> u2;
-  std::vector<Tq> challenges_hat;
   std::vector<Tq> z_hat;
   std::vector<Rq> t;
   std::vector<Rq> g;
   std::vector<Rq> h;
 
-  LabradorRecursionRawInstance(size_t r, size_t n)
-      : final_const(r, n), u1(), u2(), challenges_hat(), z_hat(), t(), g(), h() {};
-  LabradorRecursionRawInstance(
-    EqualityInstance final_const,
-    std::vector<Tq> u1,
-    std::vector<Tq> u2,
-    std::vector<Tq> challenges_hat,
-    std::vector<Tq> z_hat,
-    std::vector<Tq> t,
-    std::vector<Tq> g,
-    std::vector<Tq> h)
-      : final_const(final_const), u1(std::move(u1)), u2(std::move(u2)), challenges_hat(std::move(challenges_hat)),
-        z_hat(std::move(z_hat)), t(std::move(t)), g(std::move(g)), h(std::move(h))
+  LabradorBaseCaseProof(size_t r, size_t n) : final_const(r, n), z_hat(), t(), g(), h() {};
+  LabradorBaseCaseProof(
+    EqualityInstance final_const, std::vector<Tq> z_hat, std::vector<Tq> t, std::vector<Tq> g, std::vector<Tq> h)
+      : final_const(final_const), z_hat(std::move(z_hat)), t(std::move(t)), g(std::move(g)), h(std::move(h))
   {
   }
+};
+
+struct LabradorBaseProver {
+  LabradorInstance lab_inst;
+  // S consists of r vectors of dim n arranged in row major order
+  std::vector<Rq> S;
+
+  std::pair<LabradorBaseCaseProof, PartialTranscript> base_case_prover();
+};
+
+struct LabradorBaseVerifier {
+  LabradorInstance lab_inst;
+};
+
+struct LabradorProver {
+  LabradorInstance lab_inst;
+  // S consists of r vectors of dim n arranged in row major order
+  std::vector<Rq> S;
+  const size_t NUM_REC;
+  std::vector<Rq>
+  prepare_recursion_witness(PartialTranscript trs, LabradorBaseCaseProof pf, size_t base0, size_t mu, size_t nu);
+};
+
+struct LabradorVerifier {
+  LabradorInstance lab_inst;
 };
 
 template <typename Zq>

@@ -4,6 +4,7 @@
 
 using namespace icicle::labrador;
 
+// A*B
 /// @brief Computes the Ajtai input of the given input S. Views input S as matrix of vectors to be committed. Vectors
 /// are arranged in the row major form.
 /// @param ajtai_mat_seed seed for calculating entries of random Ajtai commitment matrix
@@ -29,6 +30,8 @@ Tq* ajtai_commitment(
   return comm.data();
 }
 
+// modifies the instance
+// returns num_aggregation_rounds number of polynomials
 std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
   size_t num_aggregation_rounds,
   size_t JL_out,
@@ -62,7 +65,7 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
           Zq psi_scalar = psi[psi_index(k, l)];
 
           // Get a_{ij}^{(l)} from const_zero_constraints
-          Tq a_ij_l = const_zero_constraints[l].a[i][j];
+          Tq a_ij_l = const_zero_constraints[l].a[i * r + j];
 
           // Scalar multiply and add: sum += psi_scalar * a_ij_l
           // TODO: use vector_mul<Rq,Zq> and vector_sum<Rq> to aggregate in a vectorized way
@@ -71,7 +74,7 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
           ICICLE_CHECK(vector_add(sum.values, temp.values, d, {}, sum.values));
         }
 
-        new_constraint.a[i][j] = sum;
+        new_constraint.a[r * i + j] = sum;
       }
     }
 
@@ -82,13 +85,13 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
         Zq psi_scalar = psi[psi_index(k, l)];
 
         for (size_t m = 0; m < n; m++) {
-          Tq phi_il_m = const_zero_constraints[l].phi[i][m];
+          Tq phi_il_m = const_zero_constraints[l].phi[i * n + m];
 
           // phi_prime[i,m] += psi_scalar * phi_il_m
           Tq temp;
           ICICLE_CHECK(scalar_mul_vec(&psi_scalar, phi_il_m.values, d, {}, temp.values));
           ICICLE_CHECK(
-            vector_add(new_constraint.phi[i][m].values, temp.values, d, {}, new_constraint.phi[i][m].values));
+            vector_add(new_constraint.phi[i * n + m].values, temp.values, d, {}, new_constraint.phi[i * n + m].values));
         }
       }
 
@@ -107,7 +110,7 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
           Tq temp;
           ICICLE_CHECK(scalar_mul_vec(&omega_scalar, q_ilm_hat.values, d, {}, temp.values));
           ICICLE_CHECK(
-            vector_add(new_constraint.phi[i][m].values, temp.values, d, {}, new_constraint.phi[i][m].values));
+            vector_add(new_constraint.phi[i * n + m].values, temp.values, d, {}, new_constraint.phi[i * n + m].values));
         }
       }
     }
@@ -122,11 +125,11 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
     for (size_t i = 0; i < r; i++) {
       for (size_t j = i; j < r; j++) {
         if (i == j) {
-          a_vec.push_back(new_constraint.a[i][i]);
+          a_vec.push_back(new_constraint.a[i * r + i]);
         } else {
           // Off-diagonal: (a''_{ij} + a''_{ji})
-          Tq a_ij = new_constraint.a[i][j];
-          Tq a_ji = new_constraint.a[j][i];
+          Tq a_ij = new_constraint.a[i * r + j];
+          Tq a_ji = new_constraint.a[j * r + i];
           Tq temp;
           ICICLE_CHECK(vector_add(a_ij.values, a_ji.values, d, {}, temp.values));
           a_vec.push_back(temp);
@@ -137,12 +140,10 @@ std::vector<Tq> LabradorInstance::agg_const_zero_constraints(
     ICICLE_CHECK(matmul(g_hat.data(), 1, g_hat.size(), a_vec.data(), a_vec.size(), 1, {}, &new_constraint.b));
 
     // Second part: sum_i <phi'_i^{(k)}, s_i>
-    for (size_t i = 0; i < r; i++) {
-      // Compute inner product <phi'_i^{(k)}, s_i>
-      Tq prod;
-      ICICLE_CHECK(matmul(new_constraint.phi[i].data(), 1, n, &S_hat[i * n], n, 1, {}, &prod));
-      ICICLE_CHECK(vector_add(new_constraint.b.values, prod.values, d, {}, new_constraint.b.values));
-    }
+
+    Tq prod;
+    ICICLE_CHECK(matmul(new_constraint.phi.data(), 1, r * n, S_hat.data(), r * n, 1, {}, &prod));
+    ICICLE_CHECK(vector_add(new_constraint.b.values, prod.values, d, {}, new_constraint.b.values));
 
     // Add the EqualityInstance to LabradorInstance
     add_equality_constraint(new_constraint);
@@ -164,35 +165,35 @@ void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat
   // For 0 ≤ i,j < r, the Prover computes a''_{ij}:
   const size_t K = equality_constraints.size();
   const size_t d = Rq::d;
-  std::vector<std::vector<Tq>> a_final(r, std::vector<Tq>(r, Tq()));
+  std::vector<Tq> a_final(r * n, zero());
   for (size_t i = 0; i < r; i++) {
     for (size_t j = 0; j < r; j++) {
       // a''_{ij} = ∑_{k=0}^{K-1} α_k * a_{ij}^{(k)} (multiplication in T_q)
       for (size_t k = 0; k < K; k++) {
         // Get a_{ij}^{(k)} from equality constraint k (already in T_q)
-        Tq a_ij_k = equality_constraints[k].a[i][j];
+        Tq a_ij_k = equality_constraints[k].a[i * r + j];
 
         // Multiply by α_k and add to sum (T_q operations)
         Tq temp;
         ICICLE_CHECK(vector_mul(alpha_hat[k].values, a_ij_k.values, d, {}, temp.values));
-        ICICLE_CHECK(vector_add(a_final[i][j].values, temp.values, d, {}, a_final[i][j].values));
+        ICICLE_CHECK(vector_add(a_final[i * r + j].values, temp.values, d, {}, a_final[i * r + j].values));
       }
     }
   }
 
   // For 0 ≤ i < r, the Prover computes φ'_i:
-  std::vector<std::vector<Tq>> phi_final(r, std::vector<Tq>(n, Tq()));
+  std::vector<Tq> phi_final(r * n, zero());
   for (size_t i = 0; i < r; i++) {
     for (size_t m = 0; m < n; m++) {
       // φ'_i[m] = ∑_{k=0}^{K-1} α_k * φ_i^{(k)}[m] (multiplication in T_q)
       for (size_t k = 0; k < K; k++) {
         // Get φ_i^{(k)}[m] from equality constraint k (already in T_q)
-        Tq phi_i_k_m = equality_constraints[k].phi[i][m];
+        Tq phi_i_k_m = equality_constraints[k].phi[i * n + m];
 
         // Multiply by α_k and add to sum (T_q operations)
         Tq temp;
         ICICLE_CHECK(vector_mul(alpha_hat[k].values, phi_i_k_m.values, d, {}, temp.values));
-        ICICLE_CHECK(vector_add(phi_final[i][m].values, temp.values, d, {}, phi_final[i][m].values));
+        ICICLE_CHECK(vector_add(phi_final[i * n + m].values, temp.values, d, {}, phi_final[i * n + m].values));
       }
     }
   }
@@ -216,11 +217,8 @@ void LabradorInstance::agg_equality_constraints(const std::vector<Tq>& alpha_hat
   equality_constraints = {final_const};
 }
 
-LabradorRecursionRawInstance LabradorProtocol::base_prover(
-  LabradorInstance& lab_inst,
-  const std::vector<std::byte>& ajtai_seed,
-  const std::vector<Rq>& S,
-  std::vector<Zq>& proof)
+// This destroys the lab_inst in LabradorBaseProver
+std::pair<LabradorBaseCaseProof, PartialTranscript> LabradorBaseProver::base_case_prover()
 {
   // Step 1: Pack the Witnesses into a Matrix S
   const size_t r = lab_inst.r; // Number of witness vectors
@@ -229,16 +227,19 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Ensure S is of the correct size
   if (S.size() != r * n) { throw std::invalid_argument("S must have size r * n"); }
 
+  PartialTranscript trs;
   // Step 2: Convert S to the NTT Domain
   std::vector<Tq> S_hat(r * n);
   // Perform negacyclic NTT on the witness S
   ICICLE_CHECK(ntt(S.data(), r * n, NTTDir::kForward, {}, S_hat.data()));
 
   // Step 3: S@A = T
+  const std::vector<std::byte>& ajtai_seed = lab_inst.param.ajtai_seed;
   std::vector<std::byte> seed_A(ajtai_seed);
   seed_A.push_back(std::byte('0'));
 
   // Use ajtai_commitment to compute T_hat = S_hat @ A
+  size_t kappa = lab_inst.param.kappa;
   Tq* T_hat_ptr = ajtai_commitment(seed_A.data(), seed_A.size(), n, kappa, S_hat.data(), r * n);
   std::vector<Tq> T_hat(T_hat_ptr, T_hat_ptr + r * kappa);
 
@@ -250,6 +251,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   ICICLE_CHECK(ntt(T_hat.data(), r * kappa, NTTDir::kInverse, {}, T.data()));
 
   // Step 6: decompose T to T_tilde
+  size_t base1 = lab_inst.param.base1;
   size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base1);
   std::vector<Rq> T_tilde(l1 * r * kappa);
   ICICLE_CHECK(decompose(T.data(), r * kappa, base1, {}, T_tilde.data(), T_tilde.size()));
@@ -273,6 +275,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   ICICLE_CHECK(ntt(g_hat.data(), r_choose_2, NTTDir::kInverse, {}, g.data()));
 
   // Step 8: decompose g to g_tilde
+  size_t base2 = lab_inst.param.base2;
   size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base2);
   std::vector<Rq> g_tilde(l2 * g.size());
   ICICLE_CHECK(decompose(g.data(), g.size(), base2, {}, g_tilde.data(), g_tilde.size()));
@@ -282,7 +285,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Step 10: u1 = B@T_tilde + C@g_tilde
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
-  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * ((r * (r + 1)) / 2) * l2);
+  size_t kappa1 = lab_inst.param.kappa1;
+  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * r_choose_2 * l2);
 
   std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
   seed_B.push_back(std::byte('1'));
@@ -304,11 +308,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   vector_add(v1.data(), v2.data(), kappa1, {}, u1.data());
 
   // Step 11: hash (lab_inst, ajtai_seed, u1) to get seed1
-  // add u1 to the proof
-  // TODO: this loop should be flattened and use icicle_copy() to handle device memory
-  for (size_t i = 0; i < kappa1; i++) {
-    proof.insert(proof.end(), u1[i].values, u1[i].values + d);
-  }
+
   // hash and get a challenge
   Hash hasher = Sha3_256::create();
   // TODO: add serialization to lab_inst, ajtai_seed, u1 and put them in the placeholder
@@ -317,8 +317,12 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
     const char* hash_input = "Placeholder1";
     hasher.hash(hash_input, strlen(hash_input), {}, seed1.data());
   }
+  // add u1 to the trs
+  trs.u1 = u1;
+  trs.seed1 = seed1;
 
   // Step 12: Select a JL projection
+  size_t JL_out = lab_inst.param.JL_out;
   std::vector<Zq> p(JL_out, Zq::from(0));
   size_t JL_i = 0;
   // TODO:convert this to just 1 call of JL projection
@@ -341,6 +345,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
     }
     // check norm
     bool JL_check = false;
+    double beta = lab_inst.param.beta;
     ICICLE_CHECK(check_norm_bound(p.data(), JL_out, eNormType::L2, uint64_t(sqrt(JL_out / 2) * beta), {}, &JL_check));
 
     if (JL_check) {
@@ -353,8 +358,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // at the end JL projection is defined by JL_i and p is the projection output
 
   // Step 13: send (JL_i, p) to the Verifier and get a challenge
-  proof.push_back(Zq::from(JL_i));
-  proof.insert(proof.end(), p.begin(), p.end());
+  trs.JL_i = JL_i;
+  trs.p = p;
 
   // TODO: add serialization to p and JL_i and put them in the placeholder
   std::vector<std::byte> seed2(hasher.output_size());
@@ -362,13 +367,15 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
     const char* hash_input = "Placeholder2";
     hasher.hash(hash_input, strlen(hash_input), {}, seed2.data());
   }
+  trs.seed2 = seed2;
+
   // Step 14: removed
   // Step 15, 16: already done
 
   // Step 17: Create conjugated polynomial vectors from JL matrix rows
   std::vector<Rq> Q(r * JL_out * n);
   // indexes into a multidim array of dim = r X JL_out X n
-  auto Q_index = [n, this](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
+  auto Q_index = [n, JL_out](size_t i, size_t j, size_t k) { return (i * JL_out * n + j * n + k); };
   for (size_t i = 0; i < r; i++) {
     // Create seed for P_i matrix (same as in step 12)
     std::vector<std::byte> base_jl_seed(seed1);
@@ -394,7 +401,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   std::vector<Zq> psi(num_aggregation_rounds * L), omega(num_aggregation_rounds * JL_out);
   // indexes into multidim arrays: psi[k][l] and omega[k][l]
   auto psi_index = [L](size_t k, size_t l) { return k * L + l; };
-  auto omega_index = [this](size_t k, size_t l) { return k * JL_out + l; };
+  auto omega_index = [JL_out](size_t k, size_t l) { return k * JL_out + l; };
 
   // sample psi
   std::vector<std::byte> psi_seed(seed2);
@@ -406,6 +413,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   omega_seed.push_back(std::byte('2'));
   ICICLE_CHECK(random_sampling(omega_seed.data(), omega_seed.size(), false, {}, omega.data(), omega.size()));
 
+  trs.psi = psi;
+  trs.omega = omega;
   // Step 19: Aggregate ConstZeroInstance constraints
   // For every 0 ≤ k < ceil(128/log(q)) compute aggregated constraints
 
@@ -417,10 +426,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   std::vector<std::byte> seed3(hasher.output_size());
   hasher.hash("Placeholder3", 12, {}, seed3.data());
 
-  proof.insert(
-    proof.end(), reinterpret_cast<const Zq*>(msg3.data()),
-    reinterpret_cast<const Zq*>(msg3.data() + num_aggregation_rounds));
-
+  trs.b_agg = msg3;
+  trs.seed3 = seed3;
   // Step 21: Sample random polynomial vectors α using seed3
   // Let K be the number of EqualityInstances in the LabradorInstance
   const size_t K = lab_inst.equality_constraints.size();
@@ -430,6 +437,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   alpha_seed.push_back(std::byte('1'));
   ICICLE_CHECK(random_sampling(alpha_seed.data(), alpha_seed.size(), false, {}, alpha_hat.data(), K));
 
+  trs.alpha_hat = alpha_hat;
   // Step 22:
   lab_inst.agg_equality_constraints(alpha_hat);
 
@@ -441,17 +449,11 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Then, H = 2^{-1}(Λ @ S^T + (Λ @ S^T)^T)
 
   // Construct Lambda_hat
-  std::vector<std::vector<Tq>> phi_final = lab_inst.equality_constraints[0].phi;
-  std::vector<Tq> Lambda_hat(r * n);
-  for (size_t i = 0; i < r; i++) {
-    for (size_t j = 0; j < n; j++) {
-      Lambda_hat[i * n + j] = phi_final[i][j];
-    }
-  }
+  std::vector<Tq> phi_final = lab_inst.equality_constraints[0].phi;
 
   // Compute Λ @ S^T using the transposed S_hat
   std::vector<Tq> LS_hat(r * r);
-  ICICLE_CHECK(matmul(Lambda_hat.data(), r, n, S_hat_transposed.data(), n, r, {}, LS_hat.data()));
+  ICICLE_CHECK(matmul(phi_final.data(), r, n, S_hat_transposed.data(), n, r, {}, LS_hat.data()));
 
   // Convert back to Rq domain
   std::vector<Rq> LS(r * r);
@@ -473,6 +475,7 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   }
 
   // Step 24: Decompose h
+  size_t base3 = lab_inst.param.base3;
   size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base3);
 
   std::vector<Rq> H_tilde(l3 * H.size());
@@ -483,7 +486,8 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
   // Step 25: already done
   // Step 26: commit to H_tilde
   // TODO: change this so that D need not be computed and stored
-  std::vector<Tq> D(kappa2 * l3 * ((r * (r + 1)) / 2));
+  size_t kappa2 = lab_inst.param.kappa2;
+  std::vector<Tq> D(kappa2 * l3 * r_choose_2);
 
   std::vector<std::byte> seed_D(ajtai_seed);
   seed_D.push_back(std::byte('3'));
@@ -491,18 +495,17 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
 
   std::vector<Tq> u2(kappa2);
   // u2 = D@H_tilde
-  ICICLE_CHECK(
-    matmul(D.data(), kappa2, l3 * ((r * (r + 1)) / 2), H_tilde_hat.data(), H_tilde_hat.size(), 1, {}, u2.data()));
+  ICICLE_CHECK(matmul(D.data(), kappa2, l3 * r_choose_2, H_tilde_hat.data(), H_tilde_hat.size(), 1, {}, u2.data()));
 
   // Step 27:
-  // add u2 to the proof
-  for (size_t i = 0; i < kappa2; i++) {
-    proof.insert(proof.end(), u2[i].values, u2[i].values + d);
-  }
+  // add u2 to the trs
+  trs.u2 = u2;
+
   // TODO: add serialization to u2 and put them in the placeholder
   std::vector<std::byte> seed4(hasher.output_size());
   hasher.hash("Placeholder4", 12, {}, seed4.data());
 
+  trs.seed4 = seed4;
   // Step 28: sampling low operator norm challenges
   std::vector<Rq> challenge(r);
   std::vector<size_t> j_ch(r, 0);
@@ -524,52 +527,36 @@ LabradorRecursionRawInstance LabradorProtocol::base_prover(
     }
   }
 
-  std::vector<Tq> challenge_hat(r);
-  ICICLE_CHECK(ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, challenge_hat.data()));
+  std::vector<Tq> challenges_hat(r);
+  ICICLE_CHECK(ntt(challenge.data(), challenge.size(), NTTDir::kForward, {}, challenges_hat.data()));
+  trs.challenges_hat = challenges_hat;
 
   // Step 29: Compute z_hat
   std::vector<Tq> z_hat(n);
   for (size_t i = 0; i < n; i++) {
     for (size_t j = 0; j < r; j++) {
       Tq temp;
-      ICICLE_CHECK(vector_mul(challenge_hat[j].values, S_hat[j * n + i].values, d, {}, temp.values));
+      ICICLE_CHECK(vector_mul(challenges_hat[j].values, S_hat[j * n + i].values, d, {}, temp.values));
       ICICLE_CHECK(vector_add(z_hat[i].values, temp.values, d, {}, z_hat[i].values));
     }
   }
-  LabradorRecursionRawInstance raw_inst{
-    lab_inst.equality_constraints[0], u1, u2, challenge_hat, z_hat, T_tilde, g_tilde, H_tilde};
+  LabradorBaseCaseProof final_proof{lab_inst.equality_constraints[0], z_hat, T_tilde, g_tilde, H_tilde};
 
-  return raw_inst;
+  return std::make_pair(final_proof, trs);
 }
 
-/// Returns the LabradorInstance for recursion problem and the witness for it
-///
-/// ajtai_seed: is the same seed used for Ajtai hashing in `base_prover`
-///
-/// rec_inst: contains the recursion problem and the witness for it
-///
-/// mu, nu: parameters for recursion
-std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive_problem(
-  std::vector<std::byte> ajtai_seed, LabradorRecursionRawInstance rec_inst, size_t mu, size_t nu)
+std::vector<Rq> LabradorProver::prepare_recursion_witness(
+  PartialTranscript trs, LabradorBaseCaseProof pf, size_t base0, size_t mu, size_t nu)
 {
-  EqualityInstance final_const = rec_inst.final_const;
-  std::vector<Tq> u1 = rec_inst.u1;
-  std::vector<Tq> u2 = rec_inst.u2;
-  std::vector<Tq> challenges_hat = rec_inst.challenges_hat;
-  std::vector<Tq> z_hat = rec_inst.z_hat;
-  std::vector<Rq> t = rec_inst.t;
-  std::vector<Rq> g = rec_inst.g;
-  std::vector<Rq> h = rec_inst.h;
-  const size_t r = final_const.r;
-  const size_t n = final_const.n;
-  constexpr size_t d = Rq::d;
-
   // Step 1: Convert z_hat back to polynomial domain
+  size_t n = pf.final_const.n;
+  size_t r = pf.final_const.r;
+
   std::vector<Rq> z(n);
-  ICICLE_CHECK(ntt(z_hat.data(), z_hat.size(), NTTDir::kInverse, {}, z.data()));
+  ICICLE_CHECK(ntt(pf.z_hat.data(), pf.z_hat.size(), NTTDir::kInverse, {}, z.data()));
 
   // Step 2: Decompose z using base0
-  size_t l0 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base0));
+  size_t l0 = icicle::balanced_decomposition::compute_nof_digits<Zq>(base0);
 
   // Decompose all elements first
   std::vector<Rq> z_tilde(l0 * n);
@@ -581,7 +568,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   // z0 = z_tilde[:n]
   // z1 = z_tilde[n:2*n]
 
-  size_t m = t.size() + g.size() + h.size();
+  size_t m = pf.t.size() + pf.g.size() + pf.h.size();
 
   // Step 4, 5:
   size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
@@ -607,141 +594,140 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   // now s_prime is 2*nu*n_prime long and can be viewed as a 2*nu long array of n_prime dimension Tq vectors
 
   // add the polynomials in t to s_prime and zero pad to make them L_t*n_prime length
-  size_t L_t = (t.size() + n_prime - 1) / n_prime;
-  for (size_t i = 0; i < t.size(); i++) {
-    s_prime.push_back(t[i]);
+  size_t L_t = (pf.t.size() + n_prime - 1) / n_prime;
+  for (size_t i = 0; i < pf.t.size(); i++) {
+    s_prime.push_back(pf.t[i]);
   }
-  for (size_t i = t.size(); i < L_t * n_prime; i++) {
+  for (size_t i = pf.t.size(); i < L_t * n_prime; i++) {
     s_prime.push_back(Rq());
   }
 
   // add the polynomials in g to s_prime and zero pad to make them L_g*n_prime length
-  size_t L_g = (g.size() + n_prime - 1) / n_prime;
-  for (size_t i = 0; i < g.size(); i++) {
-    s_prime.push_back(g[i]);
+  size_t L_g = (pf.g.size() + n_prime - 1) / n_prime;
+  for (size_t i = 0; i < pf.g.size(); i++) {
+    s_prime.push_back(pf.g[i]);
   }
-  for (size_t i = g.size(); i < L_g * n_prime; i++) {
+  for (size_t i = pf.g.size(); i < L_g * n_prime; i++) {
     s_prime.push_back(Rq());
   }
 
   // add the polynomials in h to s_prime and zero pad to make them L_h*n_prime length
-  size_t L_h = (h.size() + n_prime - 1) / n_prime;
-  for (size_t i = 0; i < h.size(); i++) {
-    s_prime.push_back(h[i]);
+  size_t L_h = (pf.h.size() + n_prime - 1) / n_prime;
+  for (size_t i = 0; i < pf.h.size(); i++) {
+    s_prime.push_back(pf.h[i]);
   }
-  for (size_t i = h.size(); i < L_h * n_prime; i++) {
+  for (size_t i = pf.h.size(); i < L_h * n_prime; i++) {
     s_prime.push_back(Rq());
   }
+  return s_prime;
+}
 
-  // Step 7: Let recursive_instance be a new empty LabradorInstance
+/// Returns the LabradorInstance for recursion problem
+LabradorInstance prepare_recursion_instance(
+  LabradorParam prev_param, EqualityInstance final_const, PartialTranscript trs, size_t base0, size_t mu, size_t nu)
+{
+  const size_t r = final_const.r;
+  const size_t n = final_const.n;
+  constexpr size_t d = Rq::d;
+
+  std::vector<Tq> u1 = trs.u1;
+  std::vector<Tq> u2 = trs.u2;
+  std::vector<Tq> challenges_hat = trs.challenges_hat;
+
+  size_t t_len = prev_param.t_len(r);
+  size_t g_len = prev_param.g_len(r);
+  size_t h_len = prev_param.h_len(r);
+
+  size_t m = t_len + g_len + h_len;
+  size_t n_prime = std::max(std::ceil((double)n / nu), std::ceil((double)m / mu));
+  size_t L_t = (prev_param.t_len(r) + n_prime - 1) / n_prime;
+  size_t L_g = (prev_param.g_len(r) + n_prime - 1) / n_prime;
+  size_t L_h = (prev_param.h_len(r) + n_prime - 1) / n_prime;
+
+  // Step 7: Let recursion_instance be a new empty LabradorInstance
   size_t r_prime = 2 * nu + L_t + L_g + L_h;
-  assert(r_prime == (s_prime.size() / n_prime));
-  LabradorInstance recursive_instance(r_prime, n_prime, 10 * beta);
+  std::vector<std::byte> new_ajtai_seed(prev_param.ajtai_seed);
+  new_ajtai_seed.push_back(std::byte('1'));
+  // TODO: set new beta correctly
+  LabradorParam recursion_param{
+    new_ajtai_seed,
+    prev_param.kappa,      // kappa
+    prev_param.kappa1,     // kappa1
+    prev_param.kappa2,     // kappa2,
+    prev_param.base1,      // base1
+    prev_param.base2,      // base2
+    prev_param.base3,      // base3
+    100 * prev_param.beta, // beta
+  };
+  LabradorInstance recursion_instance{r_prime, n_prime, recursion_param};
 
-  // Step 8: add the equality constraint u1=Bt + Cg to recursive_instance
+  // Step 8: add the equality constraint u1=Bt + Cg to recursion_instance
   // Generate B, C
   // TODO: change this so that B,C need not be computed and stored
-  size_t l1 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base1));
-  size_t l2 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base2));
-  std::vector<Tq> B(kappa1 * l1 * r * kappa), C(kappa1 * ((r * (r + 1)) / 2) * l2);
+  size_t l1 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base1);
+  size_t l2 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base2);
+  size_t r_choose_2 = (r * (r + 1)) / 2;
+  std::vector<Tq> B(prev_param.kappa1 * l1 * r * prev_param.kappa), C(prev_param.kappa1 * r_choose_2 * l2);
 
-  std::vector<std::byte> seed_B(ajtai_seed), seed_C(ajtai_seed);
+  std::vector<std::byte> seed_B(prev_param.ajtai_seed), seed_C(prev_param.ajtai_seed);
   seed_B.push_back(std::byte('1'));
   seed_C.push_back(std::byte('2'));
   ICICLE_CHECK(random_sampling(seed_B.data(), seed_B.size(), false, {}, B.data(), B.size()));
   ICICLE_CHECK(random_sampling(seed_C.data(), seed_C.size(), false, {}, C.data(), C.size()));
 
-  assert(t.size() == l1 * r * kappa);
-  assert(g.size() == ((r * (r + 1)) / 2) * l2);
-
-  for (size_t i = 0; i < kappa1; i++) {
+  for (size_t i = 0; i < prev_param.kappa1; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
-    size_t j = 0;
-    while ((j + 1) * n_prime <= t.size()) {
-      // new_constraint.phi[2*nu+j] = B[i][j*n_prime: (j+1)*n_prime]
-      new_constraint.phi[2 * nu + j].assign(&B[i * t.size() + j * n_prime], &B[i * t.size() + (j + 1) * n_prime]);
-      j++;
-    }
-    for (size_t k = 0; k < t.size() - j * n_prime; k++) {
-      new_constraint.phi[2 * nu + j][k] = B[i * t.size() + j * n_prime + k];
-    }
 
-    j = 0;
-    while ((j + 1) * n_prime <= g.size()) {
-      // new_constraint.phi[2*nu + L_t + j] = C[i][j*n_prime: (j+1)*n_prime]
-      new_constraint.phi[2 * nu + L_t + j].assign(&C[i * g.size() + j * n_prime], &C[i * g.size() + (j + 1) * n_prime]);
-      j++;
-    }
-    for (size_t k = 0; k < g.size() - j * n_prime; k++) {
-      new_constraint.phi[2 * nu + j][k] = B[i * l1 * r * kappa + j * n_prime + k];
-    }
+    std::copy(&B[i * t_len], &B[(i + 1) * t_len], &new_constraint.phi[2 * nu * n_prime]);
+    std::copy(&C[i * g_len], &C[(i + 1) * g_len], &new_constraint.phi[(2 * nu + L_t) * n_prime]);
+
     new_constraint.b = u1[i];
 
-    recursive_instance.add_equality_constraint(new_constraint);
+    recursion_instance.add_equality_constraint(new_constraint);
   }
 
-  // Step 9: add the equality constraint u2=Dh to recursive_instance
+  // Step 9: add the equality constraint u2=Dh to recursion_instance
   // Generate D
   // TODO: change this so that D need not be computed and stored
-  size_t l3 = std::ceil(std::log2(get_q<Zq>()) / std::log2(base3));
-  std::vector<Tq> D(kappa2 * l3 * ((r * (r + 1)) / 2));
+  size_t l3 = icicle::balanced_decomposition::compute_nof_digits<Zq>(prev_param.base3);
+  std::vector<Tq> D(prev_param.kappa2 * l3 * r_choose_2);
 
-  std::vector<std::byte> seed_D(ajtai_seed);
+  std::vector<std::byte> seed_D(prev_param.ajtai_seed);
   seed_D.push_back(std::byte('3'));
   ICICLE_CHECK(random_sampling(seed_D.data(), seed_D.size(), false, {}, D.data(), D.size()));
 
-  assert(h.size() == l3 * ((r * (r + 1)) / 2));
-
-  for (size_t i = 0; i < kappa2; i++) {
+  for (size_t i = 0; i < prev_param.kappa2; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
-    size_t j = 0;
-    while ((j + 1) * n_prime <= h.size()) {
-      // new_constraint.phi[2*nu + L_t +L_g +j] = D[i][j*n_prime: (j+1)*n_prime]
-      new_constraint.phi[2 * nu + L_t + L_g + j].assign(
-        &D[i * h.size() + j * n_prime], &D[i * h.size() + (j + 1) * n_prime]);
-      j++;
-    }
-    for (size_t k = 0; k < h.size() - j * n_prime; k++) {
-      new_constraint.phi[2 * nu + L_t + L_g + j][k] = D[i * h.size() + j * n_prime + k];
-    }
 
+    std::copy(&D[i * h_len], &D[(i + 1) * h_len], &new_constraint.phi[(2 * nu + L_t + L_g) * n_prime]);
     new_constraint.b = u2[i];
 
-    recursive_instance.add_equality_constraint(new_constraint);
+    recursion_instance.add_equality_constraint(new_constraint);
   }
 
-  // Step 10: add the equality constraint Az - sum_i c_i t_i =0 to recursive_instance
+  // Step 10: add the equality constraint Az - sum_i c_i t_i =0 to recursion_instance
   // Generate A
   // TODO: change this so that A need not be computed and stored
-  std::vector<Tq> A(n * kappa);
+  std::vector<Tq> A(n * prev_param.kappa);
 
-  std::vector<std::byte> seed_A(ajtai_seed);
+  std::vector<std::byte> seed_A(prev_param.ajtai_seed);
   seed_A.push_back(std::byte('0'));
-  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * kappa));
+  ICICLE_CHECK(random_sampling(seed_A.data(), seed_A.size(), false, {}, A.data(), n * prev_param.kappa));
 
-  for (size_t i = 0; i < kappa; i++) {
+  // A transpose
+  std::vector<Tq> A_t(prev_param.kappa * n);
+  ICICLE_CHECK(matrix_transpose<Tq>(A.data(), n, prev_param.kappa, {}, A_t.data()));
+
+  for (size_t i = 0; i < prev_param.kappa; i++) {
     EqualityInstance new_constraint(r_prime, n_prime);
-    size_t j = 0;
-    while ((j + 1) * n_prime <= n) {
-      // new_constraint.phi[j] = A[i][j*n_prime: (j+1)*n_prime]
-      // new_constraint.phi[nu+ j] = A[i][j*n_prime: (j+1)*n_prime]
-      new_constraint.phi[j].assign(&A[i * n + j * n_prime], &A[i * n + (j + 1) * n_prime]);
-      new_constraint.phi[nu + j].assign(&A[i * n + j * n_prime], &A[i * n + (j + 1) * n_prime]);
-      j++;
-    }
-    for (size_t k = 0; k < n - j * n_prime; k++) {
-      new_constraint.phi[j][k] = A[i * n + j * n_prime + k];
-      new_constraint.phi[nu + j][k] = A[i * n + j * n_prime + k];
-    }
 
+    std::copy(&A_t[i * n], &A_t[(i + 1) * n], new_constraint.phi.data());
+    std::copy(&A_t[i * n], &A_t[(i + 1) * n], new_constraint.phi[nu * n_prime]);
     // new_constraint.phi[nu+ j] = base0*new_constraint.phi[nu+ j]
-    for (size_t k1 = 0; k1 < nu; k1++) {
-      for (size_t k2 = 0; k2 < n_prime; k2++) {
-        Zq base0_scalar = Zq::from(base0);
-        ICICLE_CHECK(scalar_mul_vec(
-          &base0_scalar, new_constraint.phi[nu + k1][k2].values, d, {}, new_constraint.phi[nu + k1][k2].values));
-      }
-    }
+    Zq base0_scalar = Zq::from(base0);
+    ICICLE_CHECK(scalar_mul_vec(
+      &base0_scalar, reinterpret_cast<const Zq*>(&new_constraint.phi[nu]), n * d, {},
+      reinterpret_cast<Zq*>(&new_constraint.phi[nu])));
 
     // Step 10.d
     size_t k1 = 2 * nu, k2 = 0;
@@ -750,9 +736,9 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
         for (size_t i3 = 0; i3 < l1; i3++) {
           if (i2 == i) {
             Tq temp;
-            Zq base1_pow = Zq::from(static_cast<int64_t>(std::pow(base1, i3)));
+            Zq base1_pow = Zq::from(static_cast<int64_t>(std::pow(prev_param.base1, i3)));
             ICICLE_CHECK(scalar_mul_vec(&base1_pow, challenges_hat[i2].values, d, {}, temp.values));
-            new_constraint.phi[k1][k2] = temp;
+            new_constraint.phi[k1 * n_prime + k2] = temp;
           }
           k2++;
           if (k2 == n_prime) {
@@ -763,40 +749,28 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       }
     }
 
-    recursive_instance.add_equality_constraint(new_constraint);
+    recursion_instance.add_equality_constraint(new_constraint);
   }
 
   // Step 11:
   EqualityInstance step11_constraint(r_prime, n_prime);
   std::vector<Tq> c_times_phi(n);
+  // TODO: vectorize
   for (size_t i = 0; i < r; i++) {
     for (size_t j = 0; j < n; j++) {
       Tq temp;
-      ICICLE_CHECK(vector_mul(challenges_hat[i].values, final_const.phi[i][j].values, d, {}, temp.values));
+      ICICLE_CHECK(vector_mul(challenges_hat[i].values, final_const.phi[i * n_prime + j].values, d, {}, temp.values));
       ICICLE_CHECK(vector_add(c_times_phi[j].values, temp.values, d, {}, c_times_phi[j].values));
     }
   }
-  size_t idx = 0;
-  while ((idx + 1) * n_prime <= n) {
-    // step11_constraint.phi[j] = c_times_phi[j*n_prime: (j+1)*n_prime]
-    // step11_constraint.phi[nu+ j] = c_times_phi[j*n_prime: (j+1)*n_prime]
-    step11_constraint.phi[idx].assign(&c_times_phi[idx * n_prime], &c_times_phi[(idx + 1) * n_prime]);
-    step11_constraint.phi[nu + idx].assign(&c_times_phi[idx * n_prime], &c_times_phi[(idx + 1) * n_prime]);
-    idx++;
-  }
-  for (size_t k = 0; k < n - idx * n_prime; k++) {
-    step11_constraint.phi[idx][k] = c_times_phi[idx * n_prime + k];
-    step11_constraint.phi[nu + idx][k] = c_times_phi[idx * n_prime + k];
-  }
+  std::copy(c_times_phi.begin(), c_times_phi.end(), step11_constraint.phi.data());
+  std::copy(c_times_phi.begin(), c_times_phi.end(), &step11_constraint.phi[nu]);
 
   // step11_constraint.phi[nu+ j] = base0*step11_constraint.phi[nu+ j]
-  for (size_t k1 = 0; k1 < nu; k1++) {
-    for (size_t k2 = 0; k2 < n_prime; k2++) {
-      Zq base0_scalar = Zq::from(base0);
-      ICICLE_CHECK(scalar_mul_vec(
-        &base0_scalar, step11_constraint.phi[nu + k1][k2].values, d, {}, step11_constraint.phi[nu + k1][k2].values));
-    }
-  }
+  Zq base0_scalar = Zq::from(base0);
+  ICICLE_CHECK(scalar_mul_vec(
+    &base0_scalar, reinterpret_cast<const Zq*>(&step11_constraint.phi[nu]), n * d, {},
+    reinterpret_cast<Zq*>(&step11_constraint.phi[nu])));
 
   size_t s11_k1 = 2 * nu + L_t + L_g, s11_k2 = 0;
   for (size_t i1 = 0; i1 < r; i1++) {
@@ -804,10 +778,10 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       for (size_t i3 = 0; i3 < l3; i3++) {
         Tq temp;
         ICICLE_CHECK(vector_mul(challenges_hat[i1].values, challenges_hat[i2].values, d, {}, temp.values));
-        Zq multiplier = Zq::from(-1 * std::pow(base3, i3));
+        Zq multiplier = Zq::from(-1 * std::pow(prev_param.base3, i3));
         if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
         ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
-        step11_constraint.phi[s11_k1][s11_k2] = temp;
+        step11_constraint.phi[s11_k1 * n_prime + s11_k2] = temp;
         s11_k2++;
         if (s11_k2 == n_prime) {
           s11_k2 = 0;
@@ -816,7 +790,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       }
     }
   }
-  recursive_instance.add_equality_constraint(step11_constraint);
+  recursion_instance.add_equality_constraint(step11_constraint);
 
   // Step 12:
   EqualityInstance step12_constraint(r_prime, n_prime);
@@ -825,12 +799,12 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
   for (size_t i1 = 0; i1 < r; i1++) {
     for (size_t i2 = i1; i2 < r; i2++) {
       for (size_t i3 = 0; i3 < l2; i3++) {
-        Tq temp = final_const.a[i1][i2];
-        Zq multiplier = Zq::from(std::pow(base2, i3));
+        Tq temp = final_const.a[i1 * n + i2];
+        Zq multiplier = Zq::from(std::pow(prev_param.base2, i3));
         if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
 
         ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
-        step12_constraint.phi[s12_k1][s12_k2] = temp;
+        step12_constraint.phi[s12_k1 * n_prime + s12_k2] = temp;
         s12_k2++;
         if (s12_k2 == n_prime) {
           s12_k2 = 0;
@@ -845,11 +819,11 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       for (size_t i3 = 0; i3 < l3; i3++) {
         if (i1 == i2) {
           Tq temp;
-          Zq multiplier = Zq::from(std::pow(base3, i3));
+          Zq multiplier = Zq::from(std::pow(prev_param.base3, i3));
           for (size_t k = 0; k < d; k++) {
             temp.values[k] = multiplier;
           }
-          step12_constraint.phi[s12_k1][s12_k2] = temp;
+          step12_constraint.phi[s12_k1 * n_prime + s12_k2] = temp;
         }
         s12_k2++;
         if (s12_k2 == n_prime) {
@@ -860,7 +834,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
     }
   }
   step12_constraint.b = final_const.b;
-  recursive_instance.add_equality_constraint(step12_constraint);
+  recursion_instance.add_equality_constraint(step12_constraint);
 
   // Step 13:
   EqualityInstance step13_constraint(r_prime, n_prime);
@@ -881,7 +855,7 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       for (size_t k = 0; k < d; k++) {
         temp.values[k] = c;
       }
-      step13_constraint.a[i1][i2] = temp;
+      step13_constraint.a[i1 * n + i2] = temp;
     }
   }
 
@@ -891,10 +865,10 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       for (size_t i3 = 0; i3 < l2; i3++) {
         Tq temp;
         ICICLE_CHECK(vector_mul(challenges_hat[i1].values, challenges_hat[i2].values, d, {}, temp.values));
-        Zq multiplier = Zq::from(-1 * std::pow(base2, i3));
+        Zq multiplier = Zq::from(-1 * std::pow(prev_param.base2, i3));
         if (i1 != i2) { multiplier = Zq::from(2) * multiplier; }
         ICICLE_CHECK(scalar_mul_vec(&multiplier, temp.values, d, {}, temp.values));
-        step11_constraint.phi[s13_k1][s13_k2] = temp;
+        step11_constraint.phi[s13_k1 * n_prime + s13_k2] = temp;
         s13_k2++;
         if (s13_k2 == n_prime) {
           s13_k2 = 0;
@@ -903,37 +877,36 @@ std::pair<LabradorInstance, std::vector<Rq>> LabradorProtocol::prepare_recursive
       }
     }
   }
-  recursive_instance.add_equality_constraint(step11_constraint);
+  recursion_instance.add_equality_constraint(step11_constraint);
 
-  // Step 14: set new beta
-  // TODO: what should the value be?
-  recursive_instance.beta = 100.0;
-  return std::make_pair(recursive_instance, s_prime);
+  // Step 14: already done
+
+  return recursion_instance;
 }
 
-void prover(LabradorInstance lab_inst, const std::vector<Rq>& S, size_t num_rec)
-{
-  std::vector<std::byte> ajtai_seed;
-  const char* str = "INSERT PREFIXED RANDOM VALUE HERE";
-  ajtai_seed.assign(reinterpret_cast<const std::byte*>(str), reinterpret_cast<const std::byte*>(str + strlen(str)));
-  std::vector<Zq> proof;
-  std::vector<Rq> witness(S);
-  LabradorProtocol L;
-  for (size_t i = 0; i < num_rec; i++) {
-    ajtai_seed.push_back(std::byte(i));
-    LabradorRecursionRawInstance raw_inst = L.base_prover(lab_inst, ajtai_seed, witness, proof);
-    auto [new_lab_inst, new_witness] = L.prepare_recursive_problem(ajtai_seed, raw_inst, 1 << 4, 1 << 4);
-    lab_inst = new_lab_inst;
-    witness = new_witness;
-    ajtai_seed.pop_back();
-  }
-}
+// void prover(LabradorInstance lab_inst, const std::vector<Rq>& S, size_t num_rec)
+// {
+//   std::vector<std::byte> ajtai_seed;
+//   const char* str = "INSERT PREFIXED RANDOM VALUE HERE";
+//   ajtai_seed.assign(reinterpret_cast<const std::byte*>(str), reinterpret_cast<const std::byte*>(str + strlen(str)));
+//   std::vector<Zq> proof;
+//   std::vector<Rq> witness(S);
+//   LabradorProtocol L;
+//   for (size_t i = 0; i < num_rec; i++) {
+//     ajtai_seed.push_back(std::byte(i));
+//     LabradorRecursionRawInstance raw_inst = L.base_prover(lab_inst, ajtai_seed, witness, proof);
+//     auto [new_lab_inst, new_witness] = L.prepare_recursive_problem(ajtai_seed, raw_inst, 1 << 4, 1 << 4);
+//     lab_inst = new_lab_inst;
+//     witness = new_witness;
+//     ajtai_seed.pop_back();
+//   }
+// }
 
-eIcicleError verify(/*TODO params*/)
-{
-  // TODO Ash: labrador verifier
-  return eIcicleError::SUCCESS;
-}
+// eIcicleError verify(/*TODO params*/)
+// {
+//   // TODO Ash: labrador verifier
+//   return eIcicleError::SUCCESS;
+// }
 
 // === Main driver ===
 
@@ -972,3 +945,13 @@ int main(int argc, char* argv[])
 
   return 0;
 }
+
+// n*r = 2^30
+// r^2 = n
+// r= 2^10, n=2^20
+
+// A*B
+// A: k X n
+// B: n X r
+
+// Zq, base = q^{1/t} t=2,4,6
