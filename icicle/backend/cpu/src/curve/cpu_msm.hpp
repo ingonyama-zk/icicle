@@ -197,7 +197,7 @@ private:
   void calc_optimal_parameters()
   {
     m_precompute_factor = m_config.precompute_factor;
-    m_scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+    m_scalar_size = m_config.bitsize != 0 ? m_config.bitsize : scalar_t::NBITS;
     m_nof_workers = get_optimal_nof_workers(m_config, m_msm_size, m_scalar_size, m_precompute_factor);
 
     // phase 1 properties
@@ -307,23 +307,6 @@ private:
       }
     }
   }
-
-  //   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
-  //   void phase2_collapse_segments()
-  //   {
-  //     for (int worker_i = 0; worker_i < 10;
-  //       worker_i++) { // TBD: divide the work among m_nof_workers only.
-  //       // Each thread is responsible for a sinעle thread
-  //       m_taskflow.emplace([&, worker_i]() {
-  //         for (int segment_idx = worker_i*16; segment_idx < worker_i*16+16; segment_idx++) {
-  //         const uint64_t bucket_start = segment_idx * m_segment_size;
-  //         const uint32_t segment_size = std::min(m_nof_total_buckets - bucket_start, (uint64_t)m_segment_size);
-  //         worker_collapse_segment(m_segments[segment_idx], bucket_start, segment_size);
-  //         }
-  //       });
-  //     }
-  //     run_workers_and_wait();
-  //   }
 
   // phase 2: accumulate m_segment_size buckets into a line_sum and triangle_sum
   void phase2_collapse_segments()
@@ -472,7 +455,7 @@ eIcicleError cpu_msm_precompute_bases(
   A* output_bases) // Pre assigned?
 {
   const int precompute_factor = config.precompute_factor;
-  const uint scalar_size = scalar_t::NBITS; // TBD handle this config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
+  const uint scalar_size = config.bitsize != 0 ? config.bitsize : scalar_t::NBITS;
   const std::string cpu_vendor = get_cpu_vendor();
   const uint32_t nof_workers = Msm<A, P>::get_optimal_nof_workers(config, nof_bases, scalar_size, precompute_factor);
   const int c = Msm<A, P>::get_optimal_c(config, nof_bases, scalar_size, precompute_factor, nof_workers, cpu_vendor);
