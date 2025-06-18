@@ -51,6 +51,34 @@ where
     unsafe { DeviceSlice::from_raw_parts(input.as_ptr() as *const P::Base, total) }
 }
 
+/// Reinterprets a mutable host slice of polynomials as a flat mutable slice of scalar coefficients.
+///
+/// # Safety
+/// Assumes device memory is laid out like `[P::Base; DEGREE]` per polynomial.
+/// Caller must ensure the slice is valid for mutation as `P::Base` elements.
+pub fn flatten_host_polynomials_mut<P>(input: &mut HostSlice<P>) -> &mut HostSlice<P::Base>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+{
+    let total = input.len() * P::DEGREE;
+    unsafe { HostSlice::from_raw_parts_mut(input.as_mut_ptr() as *mut P::Base, total) }
+}
+
+/// Reinterprets a mutable device slice of polynomials as a flat mutable slice of scalar coefficients.
+///
+/// # Safety
+/// Assumes device memory is laid out like `[P::Base; DEGREE]` per polynomial.
+/// Assumes memory layout is compatible. Caller must ensure it is valid and exclusive.
+pub fn flatten_device_polynomials_mut<P>(input: &mut DeviceSlice<P>) -> &mut DeviceSlice<P::Base>
+where
+    P: PolynomialRing,
+    P::Base: FieldImpl,
+{
+    let total = input.len() * P::DEGREE;
+    unsafe { DeviceSlice::from_raw_parts_mut(input.as_mut_ptr() as *mut P::Base, total) }
+}
+
 #[macro_export]
 macro_rules! impl_polynomial_ring {
     ($polyring:ident, $base:ty, $degree:expr, $modulus_coeff:expr) => {
