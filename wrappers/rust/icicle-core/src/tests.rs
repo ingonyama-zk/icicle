@@ -1,11 +1,11 @@
-use crate::polynomial_ring::PolynomialRing;
+use crate::polynomial_ring::{flatten_device_polynomials, flatten_host_polynomials, PolynomialRing};
 use crate::{
     curve::{Affine, Curve, Projective},
     field::Field,
     traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom, MontgomeryConvertible},
 };
 use icicle_runtime::{
-    memory::{DeviceVec, HostSlice},
+    memory::{DeviceVec, HostOrDeviceSlice, HostSlice},
     stream::IcicleStream,
 };
 
@@ -208,11 +208,73 @@ where
     let poly = P::from_slice(&input);
     assert_eq!(poly.values(), input.as_slice());
 }
-
-pub fn check_vector_alloc<P: PolynomialRing>()
+/// Verifies that flattening a slice of polynomials yields a correctly sized,
+/// reinterpreted slice of base field elements.
+pub fn check_polyring_flatten_host_memory<P>()
 where
-    P: Clone,
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl,
 {
-    let vec = vec![P::zero(); 10];
-    assert_eq!(vec.len(), 10);
+    // Generate a vector of one random polynomial
+    let polynomials = P::generate_random(5);
+    let poly_slice = HostSlice::from_slice(&polynomials);
+
+    // Flatten the polynomial slice to a scalar slice
+    let scalar_slice = flatten_host_polynomials(poly_slice);
+
+    // Ensure the flattened slice has the correct number of base elements
+    let expected_len = poly_slice.len() * P::DEGREE;
+    assert_eq!(
+        scalar_slice.len(),
+        expected_len,
+        "Expected flattened length {}, got {}",
+        expected_len,
+        scalar_slice.len()
+    );
+
+    // Ensure the underlying memory was reinterpreted, not copied
+    unsafe {
+        assert_eq!(
+            poly_slice.as_ptr() as *const P::Base,
+            scalar_slice.as_ptr(),
+            "Pointer mismatch: flattening should preserve memory layout"
+        );
+    }
+}
+
+/// Verifies that flattening a device slice of polynomials yields a correctly sized,
+/// reinterpreted device slice of base field elements without copying.
+pub fn check_polyring_flatten_device_memory<P>()
+where
+    P: PolynomialRing + GenerateRandom<P>,
+    P::Base: FieldImpl,
+{
+    // Generate a single random polynomial on host and copy to device
+    let size = 7;
+    let host_polys = P::generate_random(size);
+    let mut device_vec = DeviceVec::<P>::device_malloc(size).unwrap();
+    device_vec
+        .copy_from_host(&HostSlice::from_slice(&host_polys))
+        .unwrap();
+
+    // Flatten the device polynomial slice
+    let device_slice = &device_vec;
+    let scalar_slice = flatten_device_polynomials(device_slice);
+
+    // Check length is DEGREE × num_polynomials
+    let expected_len = device_slice.len() * P::DEGREE;
+    assert_eq!(
+        scalar_slice.len(),
+        expected_len,
+        "Flattened device slice has incorrect length"
+    );
+
+    // Check underlying memory is reinterpreted, not copied
+    unsafe {
+        assert_eq!(
+            device_slice.as_ptr() as *const P::Base,
+            scalar_slice.as_ptr(),
+            "Flattened device slice does not share memory with original"
+        );
+    }
 }
